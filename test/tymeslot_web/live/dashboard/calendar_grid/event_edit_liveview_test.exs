@@ -142,6 +142,40 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventEditLiveViewTest do
   end
 
   describe "an edit the calendar could not accept" do
+    test "a write queued for retry keeps the edit and says it will sync", %{
+      conn: conn,
+      user: user
+    } do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          is_active: true,
+          provider: "caldav",
+          calendar_paths: ["/cal/"]
+        )
+
+      event = insert_timed_event(integration, %{provider: "caldav"})
+      expect_provider_update({:error, :server_error})
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_event_title", %{"value" => "Renamed"})
+
+      await_provider_update(lv)
+      html = render(lv)
+
+      assert html =~ "will sync"
+      refute html =~ "changes reverted"
+      assert html =~ "Renamed"
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+      assert row.sync_state == "locally_modified"
+      assert row.summary == "Renamed"
+    end
+
     test "a write that cannot be retried is reverted and never queued", %{
       conn: conn,
       user: user

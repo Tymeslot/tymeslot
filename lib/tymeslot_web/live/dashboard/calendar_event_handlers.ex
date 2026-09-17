@@ -79,12 +79,32 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     {:noreply, socket}
   end
 
-  @doc "Handles the result of an event update — no-op on success, reverts on failure."
+  @doc """
+  Handles the result of an event update: nothing to do on success; on
+  failure, keeps the edit when it was queued to sync later and reverts it
+  otherwise.
+  """
   @spec handle_event_update_result(:ok | {:error, keyword()}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event_update_result(:ok, socket), do: {:noreply, socket}
 
   def handle_event_update_result({:error, payload}, socket) do
+    if payload[:retry] == :queued do
+      {:noreply,
+       put_flash(
+         socket,
+         :warning,
+         dgettext(
+           "dashboard_calendar_events",
+           "Your calendar could not be reached. The change is saved and will sync on the next attempt."
+         )
+       )}
+    else
+      revert_failed_update(payload, socket)
+    end
+  end
+
+  defp revert_failed_update(payload, socket) do
     send_update(CalendarGridComponent,
       id: "calendar",
       action: :revert_event,
