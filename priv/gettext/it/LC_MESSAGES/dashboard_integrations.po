@@ -248,7 +248,7 @@ msgstr "Modifica tipo di riunione"
 msgid "Edit integration"
 msgstr "Modifica integrazione"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a URL to see a preview"
 msgstr "Inserisci un URL per vedere un'anteprima"
@@ -330,7 +330,7 @@ msgstr "Aggiornamento del tipo di riunione non riuscito"
 msgid "Finish connecting Stripe to accept payments."
 msgstr "Completa la connessione a Stripe per accettare pagamenti."
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Found 'meeting_id' without brackets - use {{meeting_id}}"
 msgstr "Trovato 'meeting_id' senza parentesi - usa {{meeting_id}}"
@@ -429,42 +429,42 @@ msgstr "Tipi di riunione riordinati"
 msgid "Microsoft Teams connected successfully!"
 msgstr "Microsoft Teams collegato con successo!"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Mismatched brackets detected - use {{meeting_id}}"
 msgstr "Rilevate parentesi non corrispondenti - usa {{meeting_id}}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Mismatched brackets: [[meeting_id}} should be {{meeting_id}}"
 msgstr "Parentesi non corrispondenti: [[meeting_id}} dovrebbe essere {{meeting_id}}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Mismatched brackets: {meeting_id}} should be {{meeting_id}}"
 msgstr "Parentesi non corrispondenti: {meeting_id}} dovrebbe essere {{meeting_id}}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Mismatched brackets: {{meeting_id) should be {{meeting_id}}"
 msgstr "Parentesi non corrispondenti: {{meeting_id) dovrebbe essere {{meeting_id}}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Mismatched brackets: {{meeting_id]] should be {{meeting_id}}"
 msgstr "Parentesi non corrispondenti: {{meeting_id]] dovrebbe essere {{meeting_id}}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Missing brackets - use {{meeting_id}}"
 msgstr "Parentesi mancanti - usa {{meeting_id}}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Missing closing brackets - should be {{meeting_id}}"
 msgstr "Parentesi di chiusura mancanti - dovrebbe essere {{meeting_id}}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Missing opening brackets - should be {{meeting_id}}"
 msgstr "Parentesi di apertura mancanti - dovrebbe essere {{meeting_id}}"
@@ -474,7 +474,7 @@ msgstr "Parentesi di apertura mancanti - dovrebbe essere {{meeting_id}}"
 msgid "Missing required Microsoft Teams information. Please try again."
 msgstr "Informazioni obbligatorie di Microsoft Teams mancanti. Riprova."
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Missing underscore: {{meeting_id}} not {{meetingid}}"
 msgstr "Trattino basso mancante: {{meeting_id}} non {{meetingid}}"
@@ -566,7 +566,7 @@ msgstr "URL del server"
 msgid "Static Meeting Room"
 msgstr "Stanza riunioni statica"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Static URL - all meetings will use the same room"
 msgstr "URL statico - tutte le riunioni useranno la stessa stanza"
@@ -576,13 +576,13 @@ msgstr "URL statico - tutte le riunioni useranno la stessa stanza"
 msgid "Stripe is still reviewing your account."
 msgstr "Stripe sta ancora esaminando il tuo account."
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Template in fragment (#) won't work - fragments aren't sent to servers. Use path instead: https://example.com/{{meeting_id}}"
 msgstr "Un template nel frammento (#) non funzionerà - i frammenti non vengono inviati ai server. Usa invece il percorso: https://example.com/{{meeting_id}}"
 
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Template variable detected: {{meeting_id}}"
@@ -618,47 +618,47 @@ msgstr "Questa azione non può essere annullata e rimuoverà tutti i dati associ
 msgid "Too many requests. Please try again later."
 msgstr "Troppe richieste. Riprova più tardi."
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown template variable. Only {{meeting_id}} is supported"
 msgstr "Variabile di template sconosciuta. È supportato solo {{meeting_id}}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Use curly brackets: {{meeting_id}} not ((meeting_id))"
 msgstr "Usa le parentesi graffe: {{meeting_id}} non ((meeting_id))"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Use curly brackets: {{meeting_id}} not <meeting_id>"
 msgstr "Usa le parentesi graffe: {{meeting_id}} non <meeting_id>"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Use curly brackets: {{meeting_id}} not [[meeting_id]]"
 msgstr "Usa le parentesi graffe: {{meeting_id}} non [[meeting_id]]"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Use double curly brackets: {{meeting_id}}"
 msgstr "Usa le doppie parentesi graffe: {{meeting_id}}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Use double curly brackets: {{meeting_id}} not {meeting_id}"
 msgstr "Usa le doppie parentesi graffe: {{meeting_id}} non {meeting_id}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Use lowercase: {{meeting_id}} not {{MEETING_ID}} or {{Meeting_Id}}"
 msgstr "Usa il minuscolo: {{meeting_id}} non {{MEETING_ID}} o {{Meeting_Id}}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Use underscore not hyphen: {{meeting_id}} not {{meeting-id}}"
 msgstr "Usa il trattino basso, non il trattino: {{meeting_id}} non {{meeting-id}}"
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/custom_config/template_analyzer.ex
+#: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Variable name should be: {{meeting_id}}"
 msgstr "Il nome della variabile dovrebbe essere: {{meeting_id}}"

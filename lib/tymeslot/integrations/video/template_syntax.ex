@@ -1,4 +1,4 @@
-defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplateAnalyzer do
+defmodule Tymeslot.Integrations.Video.TemplateSyntax do
   @moduledoc """
   Analyzes custom video URL templates for syntax correctness and common mistakes.
 
