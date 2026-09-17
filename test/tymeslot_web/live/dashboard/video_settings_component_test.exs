@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
   import Tymeslot.Factory
   import Tymeslot.AuthTestHelpers
 
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
 
@@ -264,6 +265,80 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
 
       assert [%{custom_meeting_url: "https://meet.jit.si/my-room"}] =
                Repo.all(VideoIntegrationSchema)
+    end
+
+    test "connects kMeet without asking for a URL", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='kmeet']")
+      |> render_click()
+
+      assert has_element?(view, "#kmeet-video-integration-form")
+
+      refute has_element?(
+               view,
+               "#kmeet-video-integration-form input[name^='integration[']:not([name='integration[name]']):not([type='hidden'])"
+             )
+
+      assert has_element?(view, "#kmeet_host[readonly][value='https://kmeet.infomaniak.com']")
+
+      view
+      |> form("#kmeet-video-integration-form", integration: %{name: "My kMeet"})
+      |> render_submit()
+
+      assert render(view) =~ "Video integration added successfully"
+      assert render(view) =~ "My kMeet"
+      assert [%{provider: "kmeet", name: "My kMeet"}] = Video.list_integrations(user.id)
+    end
+
+    test "marks kMeet as connected and refuses a second kMeet with a clear message", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, _first} = Video.create_integration(user.id, :kmeet, %{name: "My kMeet"})
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      assert view
+             |> element("button[phx-value-provider='kmeet']")
+             |> render() =~ "Connected"
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='kmeet']")
+      |> render_click()
+
+      html =
+        view
+        |> form("#kmeet-video-integration-form", integration: %{name: "Second kMeet"})
+        |> render_submit()
+
+      assert html =~ "This provider is already connected"
+      assert [%{name: "My kMeet"}] = Video.list_integrations(user.id)
+    end
+
+    test "renames a kMeet integration through the edit dialog", %{conn: conn, user: user} do
+      {:ok, integration} = Video.create_integration(user.id, :kmeet, %{name: "My kMeet"})
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element(
+        "button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#edit-video-modal']"
+      )
+      |> render_click()
+
+      assert has_element?(
+               view,
+               "#edit-video-integration-form #edit_kmeet_host[readonly][value='https://kmeet.infomaniak.com']"
+             )
+
+      view
+      |> form("#edit-video-integration-form", integration: %{name: "Team kMeet"})
+      |> render_submit()
+
+      assert render(view) =~ "Integration updated successfully"
+      assert Repo.get!(VideoIntegrationSchema, integration.id).name == "Team kMeet"
     end
 
     test "initiates google meet oauth", %{conn: conn} do

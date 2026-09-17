@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @doc """
@@ -122,6 +123,61 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
           <p class="mt-2 text-xs text-tymeslot-500">{@helper_text}</p>
         <% end %>
       <% end %>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders a read-only server address for a provider whose host is fixed.
+
+  The value is shown but never submitted: the provider supplies its own host
+  server-side. The input stays `readonly` rather than `disabled` so keyboard
+  and screen reader users can still reach it, and both it and the info icon
+  point at the tooltip text through `aria-describedby`.
+  """
+  attr :id, :string, required: true
+  attr :value, :string, required: true
+  attr :tooltip, :string, required: true
+  attr :helper_text, :string, default: nil
+
+  @spec locked_host_field(map()) :: Phoenix.LiveView.Rendered.t()
+  def locked_host_field(assigns) do
+    ~H"""
+    <div>
+      <div class="flex items-center gap-1.5 mb-2">
+        <label for={@id} class="label mb-0!">
+          {dgettext("dashboard_integrations", "Server URL")}
+        </label>
+        <span
+          tabindex="0"
+          aria-label={dgettext("dashboard_integrations", "About this address")}
+          aria-describedby={"#{@id}-tooltip"}
+          class="group relative inline-flex text-tymeslot-400 shrink-0 rounded-token-full focus:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-500"
+        >
+          <Icons.icon name="hero-information-circle-mini" class="w-4 h-4" />
+          <span
+            id={"#{@id}-tooltip"}
+            role="tooltip"
+            class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus:visible group-focus:opacity-100 transition-opacity absolute left-1/2 bottom-full z-10 mb-2 w-64 -translate-x-1/2 rounded-token-lg bg-tymeslot-800 px-3 py-2 text-token-xs font-medium text-white shadow-glass-md"
+          >
+            {@tooltip}
+          </span>
+        </span>
+      </div>
+      <div class="relative">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-tymeslot-300">
+          <Icons.icon name="hero-lock-closed" class="w-5 h-5" />
+        </div>
+        <input
+          type="text"
+          id={@id}
+          value={@value}
+          readonly
+          aria-describedby={"#{@id}-tooltip"}
+          class="input input-with-icon w-full cursor-not-allowed bg-tymeslot-100 text-tymeslot-500"
+        />
+      </div>
+      <p :if={@helper_text} class="mt-2 text-xs text-tymeslot-500">{@helper_text}</p>
     </div>
     """
   end

@@ -213,6 +213,25 @@ defmodule Tymeslot.Integrations.Video.InputValidationTest do
     end
   end
 
+  describe "validate_video_integration_form/2 - kmeet" do
+    test "accepts a name and returns only the name" do
+      params = %{
+        "provider" => "kmeet",
+        "name" => "  Team kMeet  ",
+        "base_url" => "https://elsewhere.example.com"
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_video_integration_form(params)
+      assert sanitized == %{"name" => "Team kMeet"}
+    end
+
+    test "rejects a missing name" do
+      params = %{"provider" => "kmeet", "name" => ""}
+      assert {:error, errors} = InputValidation.validate_video_integration_form(params)
+      assert Map.has_key?(errors, :name)
+    end
+  end
+
   describe "validate_video_integration_form/2 - unknown provider" do
     test "returns error for unknown provider" do
       params = %{"provider" => "zoom", "name" => "Zoom Meeting"}

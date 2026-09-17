@@ -8,11 +8,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Video
-  alias Tymeslot.Integrations.Video.AttrsCasting
   alias Tymeslot.Integrations.Video.InputValidation, as: VideoInputValidation
   alias Tymeslot.Integrations.Video.TemplateSyntax
   alias Tymeslot.Utils.SanitizeMerge
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplatePreviewBox
+  alias TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponents,
     as: SharedForm
@@ -117,7 +117,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
            metadata: DashboardHelpers.get_security_metadata(socket)
          ) do
       {:ok, sanitized} ->
-        attrs = AttrsCasting.atomize_known_attrs(SanitizeMerge.merge(params, sanitized))
+        # `Video.update_integration/3` atomises the keys and drops any it does
+        # not recognise, so the merged string-keyed params go in as they are.
+        attrs = SanitizeMerge.merge(params, sanitized)
 
         case Video.update_integration(user_id, integration.id, attrs) do
           {:ok, _updated} ->
@@ -135,12 +137,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
              |> assign(:integration, nil)
              |> assign(:saving, false)}
 
-          {:error, _reason} ->
-            send(
-              self(),
-              {:flash,
-               {:error, dgettext("dashboard_integrations", "Failed to update integration")}}
-            )
+          {:error, reason} ->
+            send(self(), {:flash, {:error, update_error_message(reason)}})
 
             {:noreply, assign(socket, :saving, false)}
         end
@@ -240,6 +238,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                       target={@myself}
                     />
                   </div>
+                <% "kmeet" -> %>
+                  <KmeetConfig.host_field id="edit_kmeet_host" />
                 <% _ -> %>
               <% end %>
             </div>
@@ -309,6 +309,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   end
 
   # Private helpers
+
+  # A provider's own validation (Jitsi's credential checks, for one) returns
+  # a message written for the organiser; anything else is not fit to show.
+  defp update_error_message(message) when is_binary(message), do: message
+
+  defp update_error_message(_reason),
+    do: dgettext("dashboard_integrations", "Failed to update integration")
 
   defp find_integration(integrations, id) do
     Enum.find(integrations, &(&1.id == id))

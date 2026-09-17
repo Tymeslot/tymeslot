@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   Video integration input validation and sanitization.
 
   Provides specialized validation for video integration forms including
-  MiroTalk and Custom Video configuration forms.
+  MiroTalk, kMeet and Custom Video configuration forms.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -34,6 +34,9 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
 
       "custom" ->
         validate_custom_video_form(params, metadata)
+
+      "kmeet" ->
+        validate_kmeet_form(params, metadata)
 
       _unknown_provider ->
         SecurityLogger.log_security_event("video_integration_unknown_provider", %{
@@ -150,6 +153,25 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
     else
       {:error, errors} when is_map(errors) ->
         SecurityLogger.log_security_event("custom_video_integration_validation_failure", %{
+          ip_address: metadata[:ip],
+          user_agent: metadata[:user_agent],
+          user_id: metadata[:user_id],
+          errors: Map.keys(errors)
+        })
+
+        {:error, errors}
+    end
+  end
+
+  # kMeet always runs on Infomaniak's fixed host, so the name is the only
+  # thing the organiser supplies.
+  defp validate_kmeet_form(params, metadata) do
+    case InputValidators.validate_integration_name(params["name"], metadata) do
+      {:ok, sanitized_name} ->
+        {:ok, %{"name" => sanitized_name}}
+
+      {:error, errors} ->
+        SecurityLogger.log_security_event("kmeet_integration_validation_failure", %{
           ip_address: metadata[:ip],
           user_agent: metadata[:user_agent],
           user_id: metadata[:user_id],

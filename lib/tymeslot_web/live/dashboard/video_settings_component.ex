@@ -330,10 +330,23 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:form_values, %{})}
   end
 
+  # A provider with a single fixed host (kMeet) has no account to dedupe on
+  # before inserting, so a second active row is refused by the partial unique
+  # index and arrives here as a changeset rather than `:duplicate_integration`.
   defp handle_create_result({:error, %Ecto.Changeset{} = changeset}, socket) do
+    base =
+      if provider_already_connected?(changeset) do
+        dgettext(
+          "dashboard_integrations",
+          "This provider is already connected. Deactivate or remove the existing integration before adding another."
+        )
+      else
+        ChangesetUtils.get_first_error(changeset)
+      end
+
     {:noreply,
      socket
-     |> assign(:form_errors, ChangesetUtils.get_first_error(changeset))
+     |> assign(:form_errors, %{base: base})
      |> assign(:saving, false)}
   end
 
@@ -355,6 +368,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      socket
      |> assign(:saving, false)
      |> assign(:form_errors, IntegrationProviders.reason_to_form_errors(reason))}
+  end
+
+  defp provider_already_connected?(%Ecto.Changeset{errors: errors}) do
+    Enum.any?(errors, fn {_field, {_message, opts}} ->
+      opts[:constraint_name] == "unique_active_video_null_account_per_user"
+    end)
   end
 
   defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do

@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Providers.Directory, as: ProviderDirectory
   alias Tymeslot.Integrations.Video.ProviderConfig
+  alias Tymeslot.Integrations.Video.Providers.KmeetProvider
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow
 
   @doc """
@@ -140,6 +141,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     [Map.get(integration, :custom_meeting_url), dgettext("dashboard_integrations", "custom link")]
   end
 
+  defp summary_segments(%{provider: "kmeet"}) do
+    [host(KmeetProvider.host()), dgettext("dashboard_integrations", "hosted")]
+  end
+
   # OAuth membership is read from the video family table rather than restated
   # here, so a new OAuth provider describes itself correctly without an edit.
   defp summary_segments(%{provider: provider} = integration) do
@@ -168,6 +173,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
 
   defp type_tag("mirotalk"), do: dgettext("dashboard_integrations", "self-hosted")
   defp type_tag("custom"), do: dgettext("dashboard_integrations", "custom")
+  defp type_tag("kmeet"), do: dgettext("dashboard_integrations", "hosted")
 
   defp type_tag(provider) do
     if ProviderConfig.oauth_provider?(provider) do
