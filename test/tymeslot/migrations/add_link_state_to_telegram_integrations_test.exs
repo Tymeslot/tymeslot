@@ -34,7 +34,12 @@ defmodule Tymeslot.Migrations.AddLinkStateToTelegramIntegrationsTest do
     end
 
     test "stamps a disconnected integration that has delivered a message" do
-      integration = integration(chat_id: nil, last_triggered_at: ~U[2026-07-01 09:00:00Z])
+      integration =
+        integration(
+          chat_id: nil,
+          link_token: "reconnect-token",
+          last_triggered_at: ~U[2026-07-01 09:00:00Z]
+        )
 
       MigrationRunner.rerun!(@version)
 
@@ -42,7 +47,7 @@ defmodule Tymeslot.Migrations.AddLinkStateToTelegramIntegrationsTest do
     end
 
     test "stamps a disconnected integration that has a delivery log" do
-      integration = integration(chat_id: nil)
+      integration = integration(chat_id: nil, link_token: "reconnect-token")
       insert(:telegram_delivery, integration: integration)
 
       MigrationRunner.rerun!(@version)
@@ -50,8 +55,19 @@ defmodule Tymeslot.Migrations.AddLinkStateToTelegramIntegrationsTest do
       assert column(integration, "linked_at") == @updated_at
     end
 
+    # Linking clears the token, so a row with neither a chat nor a token was
+    # linked and later disconnected. Without this disjunct it reads as a stub
+    # and is deleted with its configuration the next time the list loads.
+    test "stamps a disconnected integration that never delivered and has no log" do
+      integration = integration(chat_id: nil, link_token: nil, last_triggered_at: nil)
+
+      MigrationRunner.rerun!(@version)
+
+      assert column(integration, "linked_at") == @updated_at
+    end
+
     test "leaves a setup stub that was never linked unstamped" do
-      stub = integration(chat_id: nil)
+      stub = integration(chat_id: nil, link_token: "setup-token")
 
       MigrationRunner.rerun!(@version)
 

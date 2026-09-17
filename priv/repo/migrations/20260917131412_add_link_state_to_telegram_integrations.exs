@@ -17,9 +17,16 @@ defmodule Tymeslot.Repo.Migrations.AddLinkStateToTelegramIntegrations do
   ## Backfill
 
   An integration counts as linked if it has a chat, has ever delivered a
-  message (`last_triggered_at`), or has a delivery log row. It is stamped with
-  `updated_at`, the latest moment by which it had certainly been linked; the
-  exact moment was never recorded.
+  message (`last_triggered_at`), has a delivery log row, or holds no link
+  token. The last of those catches the rest: every unfinished stub carries the
+  token its setup generated, and linking a chat clears it, so an integration
+  with neither a chat nor a token is one that was linked and later
+  disconnected. Without it, a chat that was linked and disconnected before any
+  delivery succeeded reads as a stub and is deleted, taking its configuration
+  with it.
+
+  A linked integration is stamped with `updated_at`, the latest moment by
+  which it had certainly been linked; the exact moment was never recorded.
 
   A token that is already outstanding is stamped with `updated_at` too, the
   last write to the row and so no earlier than the token itself. An in-flight
@@ -47,6 +54,7 @@ defmodule Tymeslot.Repo.Migrations.AddLinkStateToTelegramIntegrations do
       AND (
         ti.chat_id IS NOT NULL
         OR ti.last_triggered_at IS NOT NULL
+        OR ti.link_token IS NULL
         OR EXISTS (SELECT 1 FROM telegram_deliveries d WHERE d.integration_id = ti.id)
       )
     """)
