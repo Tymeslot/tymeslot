@@ -197,6 +197,8 @@ config :tymeslot, :video_providers, %{
   mirotalk: [enabled: true],
   google_meet: [enabled: true],
   teams: [enabled: true],
+  kmeet: [enabled: true],
+  jitsi: [enabled: true],
   custom: [enabled: true]
 }
 

@@ -1202,3 +1202,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "The App secret must be at least %{bytes} bytes long. Every guest receives a token signed with it, so a short secret can be recovered from any booking link."
 msgstr ""
+
+#: lib/tymeslot/integrations/video/provider_config.ex
+#, elixir-autogen, elixir-format
+msgid "Infomaniak's hosted video meetings, Swiss-based"
+msgstr ""
+
+#: lib/tymeslot/integrations/video/provider_config.ex
+#, elixir-autogen, elixir-format
+msgid "Your own Jitsi Meet server"
+msgstr ""

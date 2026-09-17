@@ -3,6 +3,8 @@ defmodule Tymeslot.Integrations.Video.ProviderConfigTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Video.ProviderConfig
+  alias Tymeslot.Integrations.Video.Providers.JitsiProvider
+  alias Tymeslot.Integrations.Video.Providers.KmeetProvider
 
   describe "parse/1" do
     test "accepts a valid provider atom" do
@@ -116,6 +118,41 @@ defmodule Tymeslot.Integrations.Video.ProviderConfigTest do
       assert ProviderConfig.family_of(:none) == :other
       assert ProviderConfig.family_of("not_a_provider_xyzzy") == :other
       assert ProviderConfig.family_of(nil) == :other
+    end
+  end
+
+  describe "kmeet and jitsi registration" do
+    test "both parse from their string form" do
+      assert {:ok, :kmeet} = ProviderConfig.parse_known("kmeet")
+      assert {:ok, :jitsi} = ProviderConfig.parse_known("jitsi")
+    end
+
+    test "both are link-based, not OAuth" do
+      refute ProviderConfig.oauth_provider?(:kmeet)
+      refute ProviderConfig.oauth_provider?(:jitsi)
+    end
+
+    test "both carry a display name and metadata" do
+      assert ProviderConfig.display_name(:kmeet) == "kMeet"
+      assert ProviderConfig.display_name(:jitsi) == "Jitsi Meet"
+    end
+
+    test "both agree with their provider module's hardcoded display name and type" do
+      assert ProviderConfig.display_name(:kmeet) == KmeetProvider.display_name()
+      assert ProviderConfig.display_name(:jitsi) == JitsiProvider.display_name()
+      assert KmeetProvider.provider_type() == :kmeet
+      assert JitsiProvider.provider_type() == :jitsi
+    end
+
+    test "both appear in the changeset constraint list" do
+      list = ProviderConfig.provider_constraint_list_all()
+      assert "kmeet" in list
+      assert "jitsi" in list
+    end
+
+    test "both resolve to a provider module" do
+      assert ProviderConfig.get_provider_module(:kmeet) == KmeetProvider
+      assert ProviderConfig.get_provider_module(:jitsi) == JitsiProvider
     end
   end
 end

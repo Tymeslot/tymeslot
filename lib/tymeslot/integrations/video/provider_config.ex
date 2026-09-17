@@ -13,7 +13,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   alias Tymeslot.Integrations.Providers.Families
   alias Tymeslot.Integrations.Shared.{ProviderConfigHelper, ProviderToggle}
 
-  @providers [:mirotalk, :google_meet, :teams, :zoom, :custom]
+  @providers [:mirotalk, :google_meet, :teams, :zoom, :kmeet, :jitsi, :custom]
   @dev_only_providers []
 
   # The single declaration site for "how does this provider connect?", in the
@@ -22,7 +22,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   # here; a provider missing from this table fails the build.
   @provider_families %{
     oauth: [:google_meet, :teams, :zoom],
-    other: [:mirotalk, :custom]
+    other: [:mirotalk, :kmeet, :jitsi, :custom]
   }
 
   # Keyed by both the atom and the string form of every provider, so the two
@@ -79,6 +79,21 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
       button_text: "Connect Zoom",
       click_event: "connect_zoom",
       circuit_breaker_enabled: true
+    },
+    kmeet: %{
+      icon: "kmeet",
+      description:
+        dgettext_noop("dashboard_integrations", "Infomaniak's hosted video meetings, Swiss-based"),
+      button_text: "Connect kMeet",
+      click_event: "connect_kmeet",
+      circuit_breaker_enabled: false
+    },
+    jitsi: %{
+      icon: "jitsi",
+      description: dgettext_noop("dashboard_integrations", "Your own Jitsi Meet server"),
+      button_text: "Connect Jitsi",
+      click_event: "connect_jitsi",
+      circuit_breaker_enabled: false
     },
     custom: %{
       icon: "custom",
@@ -309,6 +324,8 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
     google_meet: "Google Meet",
     teams: "Microsoft Teams",
     zoom: "Zoom",
+    kmeet: "kMeet",
+    jitsi: "Jitsi Meet",
     custom: "Custom Video Link"
   }
 
@@ -329,6 +346,8 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
 
   def get_provider_module(:teams), do: Tymeslot.Integrations.Video.Providers.TeamsProvider
   def get_provider_module(:zoom), do: Tymeslot.Integrations.Video.Providers.ZoomProvider
+  def get_provider_module(:kmeet), do: Tymeslot.Integrations.Video.Providers.KmeetProvider
+  def get_provider_module(:jitsi), do: Tymeslot.Integrations.Video.Providers.JitsiProvider
   def get_provider_module(:custom), do: Tymeslot.Integrations.Video.Providers.CustomProvider
   def get_provider_module(_provider), do: nil
 
