@@ -17,15 +17,20 @@ config :tymeslot, :pubsub_name, Tymeslot.PubSub
 # Force core router for tests
 config :tymeslot, :router, TymeslotWeb.Router
 
+# What keeps one test run's database and upload directory apart from
+# another's. A worktree sets MIX_TEST_PARTITION to its own suffix; a
+# partitioned run (`mix precommit`, via Tymeslot.Precommit.Runner) needs that
+# variable to be the bare partition number, so it hands the worktree suffix on
+# as MIX_TEST_PARTITION_BASE and the two are joined here.
+test_run_suffix =
+  "#{System.get_env("MIX_TEST_PARTITION_BASE")}#{System.get_env("MIX_TEST_PARTITION")}"
+
 # Upload directory for tests: a per-partition temp dir, cleaned up after the
 # suite (see test_helper.exs). Keeps generated avatars/attachments out of the
 # repo tree entirely.
 config :tymeslot,
        :upload_directory,
-       Path.join(
-         System.tmp_dir!(),
-         "tymeslot_test_uploads#{System.get_env("MIX_TEST_PARTITION")}"
-       )
+       Path.join(System.tmp_dir!(), "tymeslot_test_uploads#{test_run_suffix}")
 
 config :tymeslot, TymeslotWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("TEST_PORT") || "4002")],
@@ -74,7 +79,7 @@ config :tymeslot, Tymeslot.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: "tymeslot_test#{System.get_env("MIX_TEST_PARTITION")}",
+  database: "tymeslot_test#{test_run_suffix}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: test_pool_size,
   queue_target: 10_000,

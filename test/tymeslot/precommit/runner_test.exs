@@ -116,7 +116,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
       # Both block until released, and the test releases them only once both
       # have reported starting, so the run can only finish if the suite and
       # credo were genuinely in flight at the same time.
-      capture_fun = fn [name], _env ->
+      capture_fun = fn [name], _env, [] ->
         send(test_pid, {:started, name, self()})
 
         receive do
@@ -156,7 +156,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
         capture_plain(fn ->
           assert Runner.run(steps, false,
                    cmd: stub(%{["compile"] => 0}),
-                   capture: fn args, _env ->
+                   capture: fn args, _env, [] ->
                      {"", Map.fetch!(%{["test"] => 0, ["dialyzer.incremental"] => 0}, args)}
                    end
                  ) == :ok
@@ -176,7 +176,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
           assert catch_exit(
                    Runner.run(steps, false,
                      cmd: stub(%{["compile"] => 0}),
-                     capture: fn ["test"], :test -> {"1 test, 1 failure\n", 2} end
+                     capture: fn ["test"], :test, [] -> {"1 test, 1 failure\n", 2} end
                    )
                  ) == {:shutdown, 1}
         end)
@@ -188,7 +188,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
     test "a broken build never starts the suite" do
       steps = [{"compile", ["compile"], :dev}, {"test", ["test"], :test}]
 
-      capture_fun = fn _args, _env ->
+      capture_fun = fn _args, _env, _extra_env ->
         flunk("the suite ran against a build that does not compile")
       end
 
@@ -210,7 +210,9 @@ defmodule Tymeslot.Precommit.RunnerTest do
         {"test", ["test"], :test}
       ]
 
-      capture_fun = fn _args, _env -> flunk("--fail-fast must not run a step concurrently") end
+      capture_fun = fn _args, _env, _extra_env ->
+        flunk("--fail-fast must not run a step concurrently")
+      end
 
       output =
         capture_plain(fn ->
@@ -238,7 +240,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
       # Each check reports that it started and then blocks until released. The
       # test releases them only once both have reported, so a runner that ran
       # them one after the other never gets the second report.
-      capture_fun = fn [name], :dev ->
+      capture_fun = fn [name], :dev, [] ->
         send(test_pid, {:started, name, self()})
 
         receive do
@@ -288,7 +290,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
           0
       end
 
-      capture_fun = fn ["credo"], :dev ->
+      capture_fun = fn ["credo"], :dev, [] ->
         send(test_pid, :credo_started)
         {"", 0}
       end
@@ -310,8 +312,8 @@ defmodule Tymeslot.Precommit.RunnerTest do
       ]
 
       capture_fun = fn
-        ["credo"], :dev -> {"2 issues found\n", 4}
-        ["sobelow"], :dev -> {"", 0}
+        ["credo"], :dev, [] -> {"2 issues found\n", 4}
+        ["sobelow"], :dev, [] -> {"", 0}
       end
 
       output =
@@ -324,6 +326,98 @@ defmodule Tymeslot.Precommit.RunnerTest do
       assert output =~ "2 issues found"
       assert output =~ "failed  credo (4)"
       assert output =~ "ok      sobelow"
+    end
+  end
+
+  describe "run/3 with a partitioned suite" do
+    setup do
+      steps = [{"compile", ["compile"], :dev}, {"test", ["test"], :test}]
+      %{steps: steps, cmd: stub(%{["compile"] => 0})}
+    end
+
+    test "runs one mix test per partition, each numbered and capped, all at once",
+         %{steps: steps, cmd: cmd} do
+      test_pid = self()
+
+      # Each partition reports and blocks until released, and the test releases
+      # them only once all three have reported, so they must overlap.
+      capture_fun = fn ["test", "--partitions", "3"], :test, extra_env ->
+        env = Map.new(extra_env)
+        send(test_pid, {:partition, env["MIX_TEST_PARTITION"], env, self()})
+
+        receive do
+          :release -> {"partition #{env["MIX_TEST_PARTITION"]} ran\n", 0}
+        end
+      end
+
+      output =
+        capture_plain(fn ->
+          runner =
+            Task.async(fn ->
+              Runner.run(steps, false,
+                cmd: cmd,
+                capture: capture_fun,
+                suite_plan: fn -> %{partitions: 3, schedulers: 4} end
+              )
+            end)
+
+          partitions =
+            for _partition <- 1..3 do
+              assert_receive {:partition, number, env, pid}, 1_000
+              send(pid, :release)
+              {number, env}
+            end
+
+          assert partitions |> Enum.map(&elem(&1, 0)) |> Enum.sort() == ["1", "2", "3"]
+
+          for {_number, env} <- partitions do
+            assert env["ERL_FLAGS"] =~ ~r/\+S 4:4$/
+          end
+
+          assert Task.await(runner) == :ok
+        end)
+
+      assert output =~ "3 partitions of 4 schedulers each"
+      assert output =~ "--- partition 1 of 3 ---\npartition 1 ran"
+      assert output =~ "--- partition 3 of 3 ---\npartition 3 ran"
+      assert output =~ "ok      test"
+    end
+
+    test "one failing partition fails the suite", %{steps: steps, cmd: cmd} do
+      capture_fun = fn _args, :test, extra_env ->
+        case List.keyfind(extra_env, "MIX_TEST_PARTITION", 0) do
+          {_key, "2"} -> {"1 failure\n", 2}
+          _other -> {"", 0}
+        end
+      end
+
+      output =
+        capture_plain(fn ->
+          assert catch_exit(
+                   Runner.run(steps, false,
+                     cmd: cmd,
+                     capture: capture_fun,
+                     suite_plan: fn -> %{partitions: 3, schedulers: 2} end
+                   )
+                 ) == {:shutdown, 1}
+        end)
+
+      assert output =~ "--- partition 2 of 3 ---\n1 failure"
+      assert output =~ "failed  test (2)"
+    end
+
+    test "no plan runs the suite whole", %{steps: steps, cmd: cmd} do
+      output =
+        capture_plain(fn ->
+          assert Runner.run(steps, false,
+                   cmd: cmd,
+                   capture: fn ["test"], :test, [] -> {"whole\n", 0} end,
+                   suite_plan: fn -> nil end
+                 ) == :ok
+        end)
+
+      assert output =~ "whole"
+      refute output =~ "partition"
     end
   end
 

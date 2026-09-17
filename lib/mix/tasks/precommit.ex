@@ -46,6 +46,15 @@ defmodule Mix.Tasks.Precommit do
   is passed explicitly because the incremental task takes it as an argument
   rather than reading `:list_unused_filters` from the `dialyzer:` config.
 
+  ## Why the suite is partitioned
+
+  Most of the suite's wall clock is synchronous modules, which one `mix test`
+  runs one at a time. The suite is split into `mix test --partitions` runs
+  sized to the CPU that is free when it starts: on an idle 16-core host that
+  took it from 126s to about 60s. `PRECOMMIT_TEST_PARTITIONS` forces the count.
+  See `Tymeslot.Precommit.CpuBudget` for the sizing and
+  `Tymeslot.Precommit.Runner` for how partitions get their own databases.
+
   ## Why each step is a separate process
 
   Mix resolves `MIX_ENV` once, from the invoked task. The suite has to run in
@@ -57,6 +66,7 @@ defmodule Mix.Tasks.Precommit do
 
   use Mix.Task
 
+  alias Tymeslot.Precommit.CpuBudget
   alias Tymeslot.Precommit.Runner
 
   @steps [
@@ -92,6 +102,6 @@ defmodule Mix.Tasks.Precommit do
     {opts, _rest} = OptionParser.parse!(argv, strict: [fail_fast: :boolean])
     fail_fast? = Keyword.get(opts, :fail_fast, false)
 
-    Runner.run(@steps, fail_fast?)
+    Runner.run(@steps, fail_fast?, suite_plan: &CpuBudget.suite_plan/0)
   end
 end

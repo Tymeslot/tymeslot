@@ -123,7 +123,7 @@ defmodule TymeslotWeb.Endpoint do
 
   # Resolved at runtime rather than through `compile_env`. The upload root is
   # the one endpoint setting the test suite varies per run: `config/test.exs`
-  # suffixes it with `MIX_TEST_PARTITION` so partitioned suites cannot write
+  # suffixes it per test partition so partitioned suites cannot write
   # over each other. Pinned at compile time, that suffix makes every partition
   # but the one the build was compiled for abort at boot on a compile-env
   # mismatch, which rules out `mix test --partitions` entirely.

@@ -16,7 +16,9 @@ defmodule Tymeslot.Precommit.Runner do
 
     * **The suite** starts in the background straight away. It is the long pole
       and the only step under `MIX_ENV=test`, so it takes a different build lock
-      from everything else and never waits on it.
+      from everything else and never waits on it. Given a `:suite_plan`, it is
+      also split into `mix test --partitions` runs of its own (see
+      *Partitioning the suite*).
     * **Steps that write the dev build** (`gettext.check`, which recompiles when
       its inputs moved) run next, one at a time in the foreground, so nothing
       reads the build while it is being rewritten.
@@ -34,6 +36,26 @@ defmodule Tymeslot.Precommit.Runner do
   `--fail-fast` turns all of this off and runs everything in sequence. It asks
   for the first failure as soon as possible, which is incompatible with steps
   whose results are only known when they finish together.
+
+  ## Partitioning the suite
+
+  Most of the suite's wall clock is its synchronous modules, which ExUnit runs
+  one at a time however many cores are free. Partitions are separate OS
+  processes, so they run those modules side by side. The `:suite_plan` option
+  is called when the suite starts, after the compile steps have finished using
+  the CPU, and returns how many partitions to run and how many schedulers each
+  may use (see `Tymeslot.Precommit.CpuBudget`), or `nil` to run it whole.
+
+  Each partition gets its own database and upload directory through
+  `MIX_TEST_PARTITION`, which `mix test --partitions` requires to be the bare
+  partition number. A worktree already uses that variable as its database
+  suffix, so the incoming value is passed on as `MIX_TEST_PARTITION_BASE` and
+  the test config joins the two: partition 3 in a worktree suffixed `_next`
+  uses `tymeslot_test_next3`. The databases are created and migrated by the
+  `test` alias on first use.
+
+  A partitioned run therefore never touches the unnumbered test database, which
+  is what lets another repository's suite use that one at the same time.
   """
 
   @barrier_prefix "compile"
@@ -41,13 +63,16 @@ defmodule Tymeslot.Precommit.Runner do
   @type step :: {name :: String.t(), args :: [String.t()], env :: atom()}
   @type result :: {name :: String.t(), :passed | :failed | :skipped, non_neg_integer()}
   @type cmd_fun :: ([String.t()], atom() -> non_neg_integer())
-  @type capture_fun :: ([String.t()], atom() -> {String.t(), non_neg_integer()})
+  @type capture_fun ::
+          ([String.t()], atom(), [{String.t(), String.t()}] -> {String.t(), non_neg_integer()})
+  @type suite_plan_fun :: (-> Tymeslot.Precommit.CpuBudget.plan() | nil)
 
   @spec run([step()], boolean(), keyword()) :: :ok
   def run(steps, fail_fast?, opts \\ []) do
     cmd_fun = Keyword.get(opts, :cmd, &cmd/2)
-    capture_fun = Keyword.get(opts, :capture, &capture/2)
-    results = run_all(steps, fail_fast?, cmd_fun, capture_fun)
+    capture_fun = Keyword.get(opts, :capture, &capture/3)
+    suite_plan_fun = Keyword.get(opts, :suite_plan, fn -> nil end)
+    results = run_all(steps, fail_fast?, cmd_fun, {capture_fun, suite_plan_fun})
 
     report(results)
 
@@ -60,9 +85,9 @@ defmodule Tymeslot.Precommit.Runner do
 
   # `--fail-fast` keeps the plain sequential path: a run that stops at the first
   # failure cannot also be waiting on a step that only reports at the end.
-  defp run_all(steps, true, cmd_fun, _capture_fun), do: run_steps(steps, true, cmd_fun, [])
+  defp run_all(steps, true, cmd_fun, _background), do: run_steps(steps, true, cmd_fun, [])
 
-  defp run_all(steps, false, cmd_fun, capture_fun) do
+  defp run_all(steps, false, cmd_fun, {capture_fun, suite_plan_fun}) do
     {head, tail} = split_after_last_barrier(steps)
     head_results = run_steps(head, false, cmd_fun, [])
 
@@ -74,7 +99,7 @@ defmodule Tymeslot.Precommit.Runner do
       # Started here rather than at the top of the run because the suite needs
       # the beams the compile steps produce, and a build that does not compile
       # is the case those barriers exist to stop.
-      tasks = Enum.map(backgrounded, &start_background(&1, capture_fun))
+      tasks = Enum.map(backgrounded, &start_background(&1, capture_fun, suite_plan_fun))
       tail_results = run_tail(head, tail, cmd_fun, capture_fun)
 
       order_like(steps, head_results ++ tail_results ++ Enum.map(tasks, &join/1))
@@ -109,7 +134,7 @@ defmodule Tymeslot.Precommit.Runner do
     ])
 
     steps
-    |> Task.async_stream(fn {name, args, env} -> {name, args, capture_fun.(args, env)} end,
+    |> Task.async_stream(fn {name, args, env} -> {name, args, capture_fun.(args, env, [])} end,
       max_concurrency: length(steps),
       ordered: false,
       timeout: :infinity
@@ -141,16 +166,53 @@ defmodule Tymeslot.Precommit.Runner do
     end)
   end
 
-  defp start_background({name, args, env}, capture_fun) do
+  defp start_background({name, args, env}, capture_fun, suite_plan_fun) do
+    plan = suite_plan_fun.()
+
     Mix.shell().info([
       :bright,
       "\n==> #{name}",
       :reset,
       :faint,
-      "  mix #{Enum.join(args, " ")}  (in the background; output follows at the end)"
+      "  mix #{Enum.join(args, " ")}  (#{describe_plan(plan)}in the background; output follows at the end)"
     ])
 
-    {name, Task.async(fn -> capture_fun.(args, env) end)}
+    {name, Task.async(fn -> capture_suite(args, env, capture_fun, plan) end)}
+  end
+
+  defp describe_plan(nil), do: ""
+
+  defp describe_plan(%{partitions: 1, schedulers: schedulers}),
+    do: "1 partition of #{schedulers} schedulers, "
+
+  defp describe_plan(%{partitions: partitions, schedulers: schedulers}),
+    do: "#{partitions} partitions of #{schedulers} schedulers each, "
+
+  defp capture_suite(args, env, capture_fun, nil), do: capture_fun.(args, env, [])
+
+  defp capture_suite(args, env, capture_fun, %{partitions: count, schedulers: schedulers}) do
+    base = System.get_env("MIX_TEST_PARTITION", "")
+    erl_flags = String.trim("#{System.get_env("ERL_FLAGS")} +S #{schedulers}:#{schedulers}")
+    partition_args = args ++ ["--partitions", Integer.to_string(count)]
+
+    1..count
+    |> Task.async_stream(
+      fn index ->
+        capture_fun.(partition_args, env, [
+          {"MIX_TEST_PARTITION", Integer.to_string(index)},
+          {"MIX_TEST_PARTITION_BASE", base},
+          {"ERL_FLAGS", erl_flags}
+        ])
+      end,
+      max_concurrency: count,
+      timeout: :infinity
+    )
+    |> Enum.with_index(1)
+    |> Enum.reduce({[], 0}, fn {{:ok, {output, code}}, index}, {outputs, worst} ->
+      header = "\n--- partition #{index} of #{count} ---\n"
+      {[outputs, header, output], if(worst == 0, do: code, else: worst)}
+    end)
+    |> then(fn {outputs, code} -> {IO.iodata_to_binary(outputs), code} end)
   end
 
   # No timeout: the step takes as long as it takes, and a run that has already
@@ -251,10 +313,10 @@ defmodule Tymeslot.Precommit.Runner do
   # The concurrent counterpart to `cmd/2`: the same invocation, with the output
   # collected rather than streamed so it can be printed in one block when the
   # step finishes.
-  defp capture(args, env) do
+  defp capture(args, env, extra_env) do
     System.cmd("mix", args,
       stderr_to_stdout: true,
-      env: [{"MIX_ENV", to_string(env)} | step_env(args)]
+      env: [{"MIX_ENV", to_string(env)} | step_env(args)] ++ extra_env
     )
   end
 
