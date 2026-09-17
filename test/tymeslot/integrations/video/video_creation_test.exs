@@ -110,10 +110,79 @@ defmodule Tymeslot.Integrations.Video.VideoCreationTest do
     end
   end
 
+  describe "update_integration/3 for jitsi" do
+    setup %{user: user} do
+      {:ok, integration} = create_jitsi(user, client_id: @app_id, client_secret: @secret)
+      %{integration: integration}
+    end
+
+    test "refuses a secret shorter than 32 bytes and keeps the stored one", %{
+      user: user,
+      integration: integration
+    } do
+      assert {:error, message} =
+               Video.update_integration(user.id, integration.id, %{client_secret: @short_secret})
+
+      assert message =~ "at least 32 bytes"
+      assert stored_secret(user, integration) == @secret
+    end
+
+    test "refuses an App ID replaced with whitespace, which would leave half a pair", %{
+      user: user,
+      integration: integration
+    } do
+      assert {:error, message} =
+               Video.update_integration(user.id, integration.id, %{client_id: "   "})
+
+      assert message =~ "Enter the App ID"
+    end
+
+    test "accepts a new valid secret", %{user: user, integration: integration} do
+      new_secret = String.duplicate("n", 40)
+
+      assert {:ok, _updated} =
+               Video.update_integration(user.id, integration.id, %{client_secret: new_secret})
+
+      assert stored_secret(user, integration) == new_secret
+    end
+
+    # A blank secret leaves the stored one in place, so the new App ID pairs
+    # with it rather than being refused as half a pair.
+    test "validates a new App ID against the stored secret when the secret is left blank", %{
+      user: user,
+      integration: integration
+    } do
+      assert {:ok, _updated} =
+               Video.update_integration(user.id, integration.id, %{
+                 client_id: "other-app",
+                 client_secret: ""
+               })
+
+      assert {:ok, stored} = VideoIntegrationQueries.get_for_user(integration.id, user.id)
+      assert stored.client_id == "other-app"
+      assert stored.client_secret == @secret
+    end
+
+    test "renames without being refused over the config it leaves alone", %{
+      user: user,
+      integration: integration
+    } do
+      assert {:ok, updated} =
+               Video.update_integration(user.id, integration.id, %{name: "Renamed"})
+
+      assert updated.name == "Renamed"
+    end
+  end
+
   defp create_jitsi(user, credentials) do
     attrs =
       Map.merge(%{name: "Our Jitsi", base_url: "https://meet.example.com"}, Map.new(credentials))
 
     Video.create_integration(user.id, :jitsi, attrs)
+  end
+
+  defp stored_secret(user, integration) do
+    {:ok, stored} = VideoIntegrationQueries.get_for_user(integration.id, user.id)
+    stored.client_secret
   end
 end

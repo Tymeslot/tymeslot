@@ -40,6 +40,10 @@ defmodule Tymeslot.Integrations.Video do
           | :none
           | String.t()
 
+  # What a Jitsi integration's provider validates. Its credentials are
+  # optional, so the changeset cannot enforce the pair or the secret length.
+  @jitsi_config_fields [:base_url, :client_id, :client_secret]
+
   @impl Tymeslot.Security.EncryptedStorage
   def encrypted_storage,
     do:
@@ -269,13 +273,14 @@ defmodule Tymeslot.Integrations.Video do
   # ---------------
   @spec update_integration(pos_integer(), pos_integer(), %{atom() => term()}) ::
           {:ok, any()} | {:error, any()}
-  def update_integration(user_id, id, attrs) when is_integer(user_id) and is_integer(id) do
+  def update_integration(user_id, id, attrs)
+      when is_integer(user_id) and is_integer(id) and is_map(attrs) do
+    attrs = AttrsCasting.atomize_known_attrs(attrs)
+
     case VideoIntegrationQueries.get_for_user(id, user_id) do
       {:ok, integration} ->
-        if credentials_in_attrs?(attrs) do
-          update_with_credentials(integration, attrs)
-        else
-          VideoIntegrationQueries.update(integration, attrs)
+        with :ok <- validate_update(integration, attrs) do
+          save_update(integration, attrs)
         end
 
       {:error, :not_found} = err ->
@@ -285,6 +290,38 @@ defmodule Tymeslot.Integrations.Video do
         {:error, :requires_reencryption}
     end
   end
+
+  defp save_update(integration, attrs) do
+    if credentials_in_attrs?(attrs) do
+      update_with_credentials(integration, attrs)
+    else
+      VideoIntegrationQueries.update(integration, attrs)
+    end
+  end
+
+  # An edit to a Jitsi server URL or credentials is validated exactly as a
+  # create is, against the config the row will hold once saved. A blank
+  # credential in `attrs` leaves the stored one in place (the changeset never
+  # overwrites an encrypted credential with nothing), so the stored value
+  # stands in for it here too; a blank server URL is refused either way. An
+  # update touching none of these fields, such as a rename, is not
+  # re-validated, so it cannot be refused over a value it leaves alone.
+  defp validate_update(%VideoIntegrationSchema{provider: "jitsi"} = integration, attrs) do
+    changes = Map.take(attrs, @jitsi_config_fields)
+
+    if map_size(changes) == 0 do
+      :ok
+    else
+      integration
+      |> Map.take(@jitsi_config_fields)
+      |> Map.merge(changes, fn _field, stored, new ->
+        if new in [nil, ""], do: stored, else: new
+      end)
+      |> JitsiProvider.validate_config()
+    end
+  end
+
+  defp validate_update(_integration, _attrs), do: :ok
 
   defp update_with_credentials(integration, attrs) do
     with {:ok, updated} = ok <- VideoIntegrationQueries.update_credentials(integration, attrs) do
@@ -297,9 +334,7 @@ defmodule Tymeslot.Integrations.Video do
   # ones — those only exist after `encrypt_credentials/1` runs inside the
   # changeset, by which point the attrs have already been consumed.
   defp credentials_in_attrs?(attrs) when is_map(attrs) do
-    fields = VideoIntegrationSchema.credential_fields()
-
-    Enum.any?(fields, fn f -> Map.has_key?(attrs, f) or Map.has_key?(attrs, Atom.to_string(f)) end)
+    Enum.any?(VideoIntegrationSchema.credential_fields(), &Map.has_key?(attrs, &1))
   end
 
   # ---------------
