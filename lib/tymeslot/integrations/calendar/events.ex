@@ -130,6 +130,11 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   Accepts a user_id, Meeting, or MeetingType to determine the target calendar.
   If a Meeting or MeetingType is provided, uses their configured calendar integration.
   Falls back to the user's primary calendar if not specified.
+
+  What `{:ok, created}` carries depends on the provider: Google and Outlook
+  return the created event as a map, while every CalDAV provider returns the
+  UID it was written under as a string. Callers that need the UID must handle
+  both.
   """
   @spec create_event(calendar_event_data(), create_context()) ::
           {:ok, map() | String.t()} | {:error, term()}
