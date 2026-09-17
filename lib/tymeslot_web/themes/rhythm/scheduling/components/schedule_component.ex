@@ -21,32 +21,19 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
     {:ok, assign(socket, filtered_assigns)}
   end
 
+  # Selection is decided by the shared scheduling LiveView, which owns
+  # `selected_date` and `selected_time` and passes them back down: a day click
+  # re-selects rather than clears, a time click toggles.
   @impl Phoenix.LiveComponent
-  # Selecting is not a toggle: clicking the day already selected re-selects it
-  # rather than clearing it, which is how Quill has always behaved.
-  #
-  # It used to clear it, and that was survivable only while the step opened
-  # with nothing selected — the booker could reach a selected day only by
-  # having just clicked it. The schedule step now opens on the first bookable
-  # day, so the highlighted day is the one most likely to be clicked first, and
-  # the toggle turned that click into an empty time list with the day
-  # unhighlighted. Nothing on screen distinguishes that from a day with no
-  # availability, and no affordance ever advertised deselection.
   def handle_event("select_date", %{"date" => date}, socket) do
-    socket =
-      socket
-      |> assign(:selected_date, date)
-      |> assign(:selected_time, nil)
-
     send(self(), {:step_event, :schedule, :select_date, date})
     {:noreply, socket}
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("select_time", %{"time" => time}, socket) do
-    new_time = if socket.assigns[:selected_time] == time, do: nil, else: time
-    send(self(), {:step_event, :schedule, :select_time, new_time})
-    {:noreply, assign(socket, :selected_time, new_time)}
+    send(self(), {:step_event, :schedule, :select_time, time})
+    {:noreply, socket}
   end
 
   @impl Phoenix.LiveComponent

@@ -222,6 +222,46 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
       assert times |> Enum.map(&TimeSlots.parse_time_slot(&1).hour) |> Enum.uniq() |> length() > 1,
              "expected the flat grid to show every hour's slots at once"
     end
+
+    @tag :capture_log
+    test "selecting the chosen time again clears it", %{conn: conn, profile: profile} do
+      view = reach_loaded_slots(conn, profile)
+      chosen = view |> rendered_times() |> List.first()
+
+      view |> element(slot_selector(chosen)) |> render_click()
+      assert has_element?(view, "button.time-slot.selected[data-time='#{chosen}']")
+      refute has_element?(view, "button[data-testid='next-step'][disabled]")
+
+      view |> element(slot_selector(chosen)) |> render_click()
+      refute has_element?(view, "button.time-slot.selected")
+      assert has_element?(view, "button[data-testid='next-step'][disabled]")
+    end
+
+    @tag :capture_log
+    test "choosing another day moves the selection and clears the chosen time",
+         %{conn: conn, profile: profile} do
+      view = reach_loaded_slots(conn, profile)
+      chosen = view |> rendered_times() |> List.first()
+      view |> element(slot_selector(chosen)) |> render_click()
+
+      [first_day] =
+        view |> document() |> Floki.attribute("button.calendar-day.selected", "phx-value-date")
+
+      other_day =
+        view
+        |> document()
+        |> Floki.attribute("button.calendar-day:not([disabled])", "phx-value-date")
+        |> Enum.find(&(&1 != first_day))
+
+      assert is_binary(other_day) and other_day != first_day
+
+      view |> element("button.calendar-day[phx-value-date='#{other_day}']") |> render_click()
+
+      assert has_element?(view, "button.calendar-day.selected[phx-value-date='#{other_day}']")
+      refute has_element?(view, "button.calendar-day.selected[phx-value-date='#{first_day}']")
+      refute has_element?(view, "button.time-slot.selected")
+      wait_until(fn -> has_element?(view, "button.time-slot") end)
+    end
   end
 
   # Rhythm's calendar is a week strip rather than Quill's month grid, so
