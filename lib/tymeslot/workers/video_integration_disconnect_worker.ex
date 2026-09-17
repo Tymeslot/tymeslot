@@ -15,6 +15,8 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
   (`ProviderConfig.rooms_deleted_after_meeting/0`): every room such an
   integration still holds is deleted, ended and cancelled meetings included,
   because once the row is purged nothing has the credentials to reach them.
+  `Tymeslot.Integrations.Video.disconnect_room_scope/1` makes that choice, for
+  the disconnect modal's count as much as for this drain.
 
   This runs only when the user explicitly asked for the rooms to be deleted.
   Disconnecting on its own leaves them alone, because their join URLs are
@@ -29,7 +31,6 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
 
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
-  alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingQueries
@@ -40,10 +41,8 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
 
   @max_attempts 5
 
-  # Matches `MeetingListQueries.list_upcoming_with_video_room_for_integration/3`'s
-  # own default. Overridable at runtime (rather than a plain module attribute)
-  # so tests can drive the full-page retry path without inserting hundreds of
-  # meetings.
+  # Overridable at runtime (rather than a plain module attribute) so tests can
+  # drive the full-page retry path without inserting hundreds of meetings.
   @default_drain_page_limit 500
 
   @doc """
@@ -147,10 +146,10 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
         ErrorPolicy.to_result(:circuit_open, executions, integration.provider)
 
       length(meetings) == limit ->
-        # A full page: more upcoming meetings on this integration than one
-        # pass covers. `clear_room/1` removed every drained meeting from the
-        # result set, so retrying re-queries the next page rather than
-        # purging with the rest silently orphaned.
+        # A full page: more rooms on this integration than one pass covers.
+        # `clear_room/1` removed every drained meeting from the result set, so
+        # retrying re-queries the next page rather than purging with the rest
+        # silently orphaned.
         Logger.warning("Video room drain page full, more meetings likely remain",
           integration_id: integration.id,
           drained_this_pass: length(meetings) - failures
@@ -164,15 +163,12 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
   end
 
   defp rooms_to_drain(integration, limit) do
-    if integration.provider in ProviderConfig.rooms_deleted_after_meeting() do
-      MeetingListQueries.list_with_video_room_for_integration(integration.id, limit)
-    else
-      MeetingListQueries.list_upcoming_with_video_room_for_integration(
-        integration.id,
-        DateTime.utc_now(),
-        limit
-      )
-    end
+    MeetingListQueries.list_with_video_room_for_integration(
+      integration.id,
+      Video.disconnect_room_scope(integration.provider),
+      DateTime.utc_now(),
+      limit
+    )
   end
 
   defp drain_page_limit,

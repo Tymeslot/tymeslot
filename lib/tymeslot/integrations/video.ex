@@ -323,8 +323,8 @@ defmodule Tymeslot.Integrations.Video do
   Disconnects a video integration.
 
   With `delete_rooms: true` the integration is soft-deleted and a background job
-  deletes the provider-side rooms of the user's upcoming bookings before purging
-  the row. Without it the row goes immediately and existing rooms are left
+  deletes the provider-side rooms covered by `disconnect_room_scope/1` before
+  purging the row. Without it the row goes immediately and existing rooms are left
   running, so join URLs already sitting in attendees' calendar invites keep
   working.
   """
@@ -333,19 +333,23 @@ defmodule Tymeslot.Integrations.Video do
   defdelegate delete_integration(user_id, id, opts \\ []), to: Disconnect, as: :run
 
   @doc """
-  Counts the user's upcoming bookings whose provider room belongs to the given
-  integration: the rooms `delete_integration/3` with `delete_rooms: true` would
-  remove. Returns 0 for an integration the user does not own.
+  Which of an integration's rooms disconnecting with `delete_rooms: true`
+  deletes, for the given provider: `:upcoming` bookings' rooms only, or `:all`
+  the rooms it still holds for a provider whose rooms never expire.
   """
-  @spec count_upcoming_rooms(pos_integer(), pos_integer()) :: non_neg_integer()
-  def count_upcoming_rooms(user_id, integration_id)
-      when is_integer(user_id) and is_integer(integration_id) do
-    MeetingQueries.count_upcoming_with_video_room_for_user_integration(
-      user_id,
-      integration_id,
-      DateTime.utc_now()
-    )
-  end
+  @spec disconnect_room_scope(String.t()) :: :upcoming | :all
+  defdelegate disconnect_room_scope(provider), to: Disconnect, as: :room_scope
+
+  @doc """
+  The scope and number of rooms disconnecting the user's integration with
+  `delete_rooms: true` would delete. The count is zero when there is nothing
+  such a disconnect could delete.
+  """
+  @spec rooms_deleted_on_disconnect(pos_integer(), pos_integer()) :: %{
+          scope: :upcoming | :all,
+          count: non_neg_integer()
+        }
+  defdelegate rooms_deleted_on_disconnect(user_id, id), to: Disconnect, as: :rooms_to_delete
 
   @doc """
   Removes every video integration matching `(provider, provider_account_id)`,

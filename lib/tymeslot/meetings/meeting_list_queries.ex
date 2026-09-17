@@ -81,45 +81,54 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> Repo.all()
   end
 
+  @typedoc """
+  Which of an integration's rooms a disconnect deletes: those of upcoming live
+  bookings, or every room the integration still holds.
+  """
+  @type room_scope :: :upcoming | :all
+
   @doc """
-  Returns upcoming live bookings that still hold a provider-side room created by
-  the given integration.
+  Builds the query for meetings that still hold a provider-side room created by
+  the given integration, within `scope`.
+
+  `:upcoming` keeps to live bookings that have not ended by `now`: past
+  bookings are history, and most providers' rooms expire on their own. `:all`
+  takes every meeting, whatever its time or status, for providers whose rooms
+  stay on the organiser's server until something deletes them.
+
+  Shared by the list and the count, so what the disconnect modal offers to
+  delete is exactly what the disconnect deletes.
+  """
+  @spec with_video_room_for_integration(pos_integer(), room_scope(), DateTime.t()) ::
+          Ecto.Query.t()
+  def with_video_room_for_integration(integration_id, scope, %DateTime{} = now) do
+    Meeting
+    |> where([m], m.video_integration_id == ^integration_id)
+    |> where([m], not is_nil(m.video_room_id))
+    |> within_room_scope(scope, now)
+  end
+
+  defp within_room_scope(query, :all, _now), do: query
+
+  defp within_room_scope(query, :upcoming, now),
+    do: query |> MeetingState.where_live_booking() |> upcoming(now)
+
+  @doc """
+  Returns up to `limit` meetings holding a provider-side room created by the
+  given integration, within `scope` (see `with_video_room_for_integration/3`).
 
   Used when a user disconnects an integration and asks for the rooms to be
-  deleted along with it. Past bookings are left alone: they are history, and
-  their provider rooms have generally expired on their own. Providers whose
-  rooms do not expire use `list_with_video_room_for_integration/2` instead.
+  deleted along with it.
   """
-  @spec list_upcoming_with_video_room_for_integration(
+  @spec list_with_video_room_for_integration(
           pos_integer(),
+          room_scope(),
           DateTime.t(),
           pos_integer()
         ) :: [Meeting.t()]
-  def list_upcoming_with_video_room_for_integration(integration_id, now, limit) do
-    Meeting
-    |> MeetingState.where_live_booking()
-    |> upcoming(now)
-    |> where([m], m.video_integration_id == ^integration_id)
-    |> where([m], not is_nil(m.video_room_id))
-    |> limit(^limit)
-    |> Repo.all()
-  end
-
-  @doc """
-  Returns every meeting, whatever its time or status, that still holds a
-  provider-side room created by the given integration.
-
-  Used when a user disconnects an integration whose provider keeps rooms on
-  the organiser's server until something deletes them, and asks for the rooms
-  to be deleted. Once the integration row is gone no scan can reach those rooms
-  again, so the ended and cancelled meetings' rooms go along with the upcoming
-  ones.
-  """
-  @spec list_with_video_room_for_integration(pos_integer(), pos_integer()) :: [Meeting.t()]
-  def list_with_video_room_for_integration(integration_id, limit) do
-    Meeting
-    |> where([m], m.video_integration_id == ^integration_id)
-    |> where([m], not is_nil(m.video_room_id))
+  def list_with_video_room_for_integration(integration_id, scope, now, limit) do
+    integration_id
+    |> with_video_room_for_integration(scope, now)
     |> limit(^limit)
     |> Repo.all()
   end

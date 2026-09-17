@@ -12,10 +12,16 @@ defmodule Tymeslot.Integrations.Video.Disconnect do
   calls run in a background job, so the row is soft-deleted rather than dropped:
   hidden from every user-facing read, retained just long enough for
   `Tymeslot.Workers.VideoIntegrationDisconnectWorker` to use it, then purged.
+
+  Which rooms go depends on the provider (`room_scope/1`). The modal that asks
+  the question and the worker that acts on the answer both choose through it.
   """
 
+  alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.Meetings.MeetingListQueries
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.VideoIntegrationDisconnectWorker
 
   require Logger
@@ -37,6 +43,55 @@ defmodule Tymeslot.Integrations.Video.Disconnect do
         # The credentials cannot be decrypted, so no provider call could succeed.
         # Drop the row regardless of what was asked for.
         remove(integration, false)
+    end
+  end
+
+  @doc """
+  Which of an integration's rooms deleting them on disconnect covers.
+
+  Most providers' rooms expire on their own, so only upcoming bookings' rooms
+  are worth deleting. A provider whose rooms stay on the organiser's server
+  until something deletes them (`ProviderConfig.rooms_deleted_after_meeting/0`)
+  has every room it still holds deleted, ended and cancelled meetings included,
+  because once the row is purged nothing has the credentials to reach them.
+  """
+  @spec room_scope(String.t()) :: MeetingListQueries.room_scope()
+  def room_scope(provider) do
+    if provider in ProviderConfig.rooms_deleted_after_meeting(), do: :all, else: :upcoming
+  end
+
+  @doc """
+  The rooms disconnecting the user's integration with `delete_rooms: true`
+  would delete: their scope and how many there are.
+
+  The count is zero when there is nothing such a disconnect could delete: the
+  integration is not the user's, or its credentials cannot be read, in which
+  case `run/3` drops the row without touching any room.
+  """
+  @spec rooms_to_delete(pos_integer(), pos_integer()) :: %{
+          scope: MeetingListQueries.room_scope(),
+          count: non_neg_integer()
+        }
+  def rooms_to_delete(user_id, id) when is_integer(user_id) do
+    case VideoIntegrationQueries.get_for_user(id, user_id) do
+      {:ok, integration} ->
+        scope = room_scope(integration.provider)
+
+        %{
+          scope: scope,
+          count:
+            MeetingQueries.count_with_video_room_for_integration(
+              integration.id,
+              scope,
+              DateTime.utc_now()
+            )
+        }
+
+      {:error, :not_found} ->
+        %{scope: :upcoming, count: 0}
+
+      {:error, :requires_reencryption, integration} ->
+        %{scope: room_scope(integration.provider), count: 0}
     end
   end
 

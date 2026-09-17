@@ -11,13 +11,15 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
   alias Tymeslot.Integrations.Video
   alias TymeslotWeb.Dashboard.{CalendarSettingsComponent, VideoSettingsComponent}
 
+  @no_rooms %{scope: :upcoming, count: 0}
+
   @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,
      socket
      |> assign(:show, false)
      |> assign(:integration_id, nil)
-     |> assign(:affected_bookings, 0)
+     |> assign(:rooms_to_delete, @no_rooms)
      |> assign(:delete_rooms, false)}
   end
 
@@ -36,12 +38,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
          |> assign(:integration_id, integration_id)
          |> assign(:delete_rooms, false)
          |> assign(
-           :affected_bookings,
-           count_affected(
-             socket.assigns.integration_type,
-             socket.assigns.current_user.id,
-             integration_id
-           )
+           :rooms_to_delete,
+           rooms_to_delete(socket.assigns, integration_id)
          )}
 
       {:error, _reason} ->
@@ -178,17 +176,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
               data: format_integration_data(@integration_type)
             )}
           </p>
-          <%!-- Only video integrations own provider-side rooms, and only rooms
-                that still belong to an upcoming booking are worth asking about. --%>
-          <div :if={@integration_type == :video and @affected_bookings > 0} class="space-y-3">
+          <%!-- Only video integrations own provider-side rooms, and only the
+                rooms the disconnect would actually delete are worth asking about. --%>
+          <div :if={@integration_type == :video and @rooms_to_delete.count > 0} class="space-y-3">
             <p class="text-tymeslot-500 font-medium">
-              {dngettext(
-                "dashboard_integrations",
-                "%{count} upcoming booking still uses this integration. Its meeting room keeps working unless you delete it here.",
-                "%{count} upcoming bookings still use this integration. Their meeting rooms keep working unless you delete them here.",
-                @affected_bookings,
-                count: @affected_bookings
-              )}
+              {rooms_summary(@rooms_to_delete)}
             </p>
             <label class="flex items-start gap-3 p-4 rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 cursor-pointer transition-colors">
               <%!-- For a non-array name the input component derives its checked
@@ -202,10 +194,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
                 phx-click={JS.push("toggle_delete_rooms", target: @myself)}
               />
               <span class="flex-1 text-token-sm text-tymeslot-600 font-medium">
-                {dgettext(
-                  "dashboard_integrations",
-                  "Also delete their meeting rooms. Attendees who already have the join link will find it no longer works."
-                )}
+                {delete_rooms_label(@rooms_to_delete.scope)}
               </span>
             </label>
           </div>
@@ -235,12 +224,47 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
 
   # Only video integrations own provider-side rooms; calendar disconnect has no
   # equivalent cleanup, so it never asks the question.
-  # The id comes from the client, so the count is scoped to the current user's
-  # own integrations: a forged id reads as 0.
-  defp count_affected(:video, user_id, integration_id),
-    do: Video.count_upcoming_rooms(user_id, integration_id)
+  defp rooms_to_delete(%{integration_type: :video, current_user: user}, integration_id),
+    do: Video.rooms_deleted_on_disconnect(user.id, integration_id)
 
-  defp count_affected(_other_type, _user_id, _integration_id), do: 0
+  defp rooms_to_delete(_assigns, _integration_id), do: @no_rooms
+
+  # The `:all` scope covers providers whose rooms stay on the organiser's own
+  # server (`ProviderConfig.rooms_deleted_after_meeting/0`), which today means
+  # Nextcloud Talk alone, hence its wording.
+  defp rooms_summary(%{scope: :upcoming, count: count}) do
+    dngettext(
+      "dashboard_integrations",
+      "%{count} upcoming booking still uses this integration. Its meeting room keeps working unless you delete it here.",
+      "%{count} upcoming bookings still use this integration. Their meeting rooms keep working unless you delete them here.",
+      count,
+      count: count
+    )
+  end
+
+  defp rooms_summary(%{scope: :all, count: count}) do
+    dngettext(
+      "dashboard_integrations",
+      "%{count} conversation from this integration is still on your Nextcloud server, even if its meeting is over. It stays there unless you delete it here.",
+      "%{count} conversations from this integration are still on your Nextcloud server, including those of past meetings. They stay there unless you delete them here.",
+      count,
+      count: count
+    )
+  end
+
+  defp delete_rooms_label(:upcoming) do
+    dgettext(
+      "dashboard_integrations",
+      "Also delete their meeting rooms. Attendees who already have the join link will find it no longer works."
+    )
+  end
+
+  defp delete_rooms_label(:all) do
+    dgettext(
+      "dashboard_integrations",
+      "Also delete these conversations from your Nextcloud server. Attendees of upcoming meetings will find their join link no longer works."
+    )
+  end
 
   defp get_parent_component_module(:calendar), do: CalendarSettingsComponent
   defp get_parent_component_module(:video), do: VideoSettingsComponent

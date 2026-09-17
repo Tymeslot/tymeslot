@@ -364,6 +364,52 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
     end
   end
 
+  describe "count_with_video_room_for_integration/3" do
+    setup do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "nextcloud_talk")
+      now = DateTime.utc_now()
+
+      insert_room(user, integration, 1, "upcoming")
+      insert_room(user, integration, -2, "ended")
+      insert_room(user, integration, 2, "cancelled", status: "cancelled")
+
+      # Neither of these holds a room this integration could delete.
+      insert_room(user, integration, 3, nil)
+      other = insert(:video_integration, user: user, provider: "nextcloud_talk")
+      insert_room(user, other, 4, "elsewhere")
+
+      %{integration: integration, now: now}
+    end
+
+    test "counts only upcoming live bookings for the upcoming scope", ctx do
+      assert MeetingQueries.count_with_video_room_for_integration(
+               ctx.integration.id,
+               :upcoming,
+               ctx.now
+             ) == 1
+    end
+
+    test "counts every room still held, ended and cancelled included, for the all scope",
+         ctx do
+      assert MeetingQueries.count_with_video_room_for_integration(
+               ctx.integration.id,
+               :all,
+               ctx.now
+             ) == 3
+    end
+  end
+
+  defp insert_room(user, integration, offset_days, room_id, extra \\ []) do
+    start_time = build_base_start_time(offset_days)
+
+    insert_meeting_at(
+      user.id,
+      start_time,
+      [video_integration_id: integration.id, video_room_id: room_id] ++ extra
+    )
+  end
+
   defp insert_meeting_at(organizer_id, start_time, extra \\ []) do
     attrs =
       [
