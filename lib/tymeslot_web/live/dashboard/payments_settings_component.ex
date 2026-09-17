@@ -178,28 +178,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   end
 
   def handle_event("open_refund_modal", %{"id" => id}, socket) do
-    user = socket.assigns.current_user
-    payment = MeetingPayments.get_payment(id)
-
-    cond do
-      is_nil(payment) ->
-        {:noreply, socket}
-
-      payment.host_user_id != user.id ->
-        {:noreply, socket}
-
-      not MeetingPayments.refundable?(payment) ->
-        Flash.error(
-          dgettext(
-            "dashboard_payments",
-            "This payment can no longer be refunded from Tymeslot. Refunds older than 60 days must be processed in your Stripe dashboard."
-          )
-        )
-
-        {:noreply, socket}
-
-      true ->
-        {:noreply, assign(socket, :refund_modal_payment, payment)}
+    case MeetingPayments.get_payment_for_host(id, socket.assigns.current_user.id) do
+      {:ok, payment} -> open_refund_modal(socket, payment)
+      {:error, :not_found} -> {:noreply, socket}
     end
   end
 
@@ -210,30 +191,39 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
      |> assign(:refund_submitting, false)}
   end
 
+  # The payment always comes from the open modal, never from params: the form
+  # posts a `payment_id` this handler deliberately ignores.
+  def handle_event("submit_refund", _params, %{assigns: %{refund_modal_payment: nil}} = socket),
+    do: {:noreply, socket}
+
   def handle_event("submit_refund", params, socket) do
-    user = socket.assigns.current_user
-    payment = socket.assigns.refund_modal_payment
+    %{refund_modal_payment: payment, current_user: user} = socket.assigns
 
-    cond do
-      is_nil(payment) ->
-        {:noreply, socket}
-
-      payment.host_user_id != user.id ->
-        {:noreply, socket}
-
-      true ->
-        # Re-fetch from DB to pick up any concurrent state changes (e.g. a
-        # refund issued from another tab) before parsing the amount. The
-        # MeetingPayments.issue_refund/2 call still acquires a FOR UPDATE
-        # lock, so this is defence-in-depth rather than a guarantee.
-        case MeetingPayments.get_payment(payment.id) do
-          nil -> {:noreply, socket}
-          fresh_payment -> do_submit_refund(socket, fresh_payment, params)
-        end
+    # Re-fetch to pick up concurrent changes (e.g. a refund issued from another
+    # tab) before parsing the amount, so "full" means the balance left now.
+    # The refund itself re-checks ownership and re-validates under the row lock.
+    case MeetingPayments.get_payment_for_host(payment.id, user.id) do
+      {:ok, fresh_payment} -> do_submit_refund(socket, fresh_payment, params)
+      {:error, :not_found} -> {:noreply, socket}
     end
   end
 
   # ── Private orchestration ─────────────────────────────────────────
+
+  defp open_refund_modal(socket, payment) do
+    if MeetingPayments.refundable?(payment) do
+      {:noreply, assign(socket, :refund_modal_payment, payment)}
+    else
+      Flash.error(
+        dgettext(
+          "dashboard_payments",
+          "This payment can no longer be refunded from Tymeslot. Refunds older than 60 days must be processed in your Stripe dashboard."
+        )
+      )
+
+      {:noreply, socket}
+    end
+  end
 
   defp change_currency(socket, user, currency) do
     case MeetingPayments.change_default_currency(socket.assigns.connect_account, currency) do
@@ -274,27 +264,17 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   # Run the blocking Stripe refund call in an async task so the
   # `refund_submitting` spinner actually paints — assigning it and then making
   # the synchronous call in the same handle_event would never yield a render
-  # between the two. We re-assert host ownership inside the task closure so a
-  # forged/raced request still cannot refund another host's payment, and
-  # `issue_refund/2` itself re-locks and re-validates the row under FOR UPDATE.
+  # between the two. The host-scoped refund decides ownership under the row
+  # lock, in the same transaction as the Stripe call, so a forged or raced
+  # request still cannot refund another host's payment.
   defp process_refund(socket, payment, amount_cents) do
     user_id = socket.assigns.current_user.id
     payment_id = payment.id
 
     {:noreply,
      start_async(socket, :issue_refund, fn ->
-       issue_refund_authorized(payment_id, user_id, amount_cents)
+       MeetingPayments.refund_payment_for_host(payment_id, user_id, amount_cents)
      end)}
-  end
-
-  defp issue_refund_authorized(payment_id, user_id, amount_cents) do
-    case MeetingPayments.get_payment(payment_id) do
-      %{host_user_id: ^user_id} = fresh_payment ->
-        MeetingPayments.issue_refund(fresh_payment, amount_cents)
-
-      _missing_or_not_owner ->
-        {:error, :not_authorized}
-    end
   end
 
   @impl Phoenix.LiveComponent
