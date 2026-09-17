@@ -143,6 +143,22 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
       refute changeset.valid?
       assert "cannot have more than 3 reminders" in errors_on(changeset).reminder_config
     end
+
+    test "prevents a reminder more than one year in advance" do
+      user = insert(:user)
+
+      attrs = %{
+        name: "Far Ahead",
+        duration_minutes: 30,
+        user_id: user.id,
+        reminder_config: [%{value: 400, unit: "days"}]
+      }
+
+      changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs)
+      refute changeset.valid?
+
+      assert "cannot be set for more than 1 year in advance" in errors_on(changeset).reminder_config
+    end
   end
 
   describe "payment_required validation" do
