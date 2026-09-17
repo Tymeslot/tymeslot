@@ -118,11 +118,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
            metadata: DashboardHelpers.get_security_metadata(socket)
          ) do
       {:ok, sanitized} ->
-        # `Video.update_integration/3` atomises the keys and drops any it does
-        # not recognise, so the merged string-keyed params go in as they are.
-        attrs = SanitizeMerge.merge(params, sanitized)
-
-        case Video.update_integration(user_id, integration.id, attrs) do
+        # The validated map is the whole set of fields the provider's form
+        # accepts, so anything else the browser sent never reaches the context.
+        case Video.update_integration(user_id, integration.id, sanitized) do
           {:ok, _updated} ->
             send(
               self(),

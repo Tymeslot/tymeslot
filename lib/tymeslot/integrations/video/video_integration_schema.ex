@@ -148,6 +148,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     )
     |> unique_constraint([:user_id, :provider],
       name: :unique_active_video_null_account_per_user,
+      error_key: :provider,
       message: dgettext_noop("errors", "an integration for this provider already exists")
     )
   end

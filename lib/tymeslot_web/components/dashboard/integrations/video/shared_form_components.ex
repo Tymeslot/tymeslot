@@ -109,6 +109,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
               )
           }
           required
+          aria-describedby={@helper_text && "#{@id}-help"}
           class={[
             "input input-with-icon w-full",
             if(FormValidationHelpers.field_errors(@form_errors, @error_key) != [],
@@ -125,7 +126,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
         <% end %>
       <% else %>
         <%= if @helper_text do %>
-          <p class="mt-2 text-xs text-tymeslot-500">{@helper_text}</p>
+          <p id={"#{@id}-help"} class="mt-2 text-token-xs text-tymeslot-500">{@helper_text}</p>
         <% end %>
       <% end %>
     </div>
@@ -137,8 +138,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
 
   The value is shown but never submitted: the provider supplies its own host
   server-side. The input stays `readonly` rather than `disabled` so keyboard
-  and screen reader users can still reach it, and both it and the info icon
-  point at the tooltip text through `aria-describedby`.
+  and screen reader users can still reach it; it points at the tooltip and
+  the helper text through `aria-describedby`, and focusing it shows the
+  tooltip. The info icon is decorative and only reveals the tooltip on hover.
   """
   attr :id, :string, required: true
   attr :value, :string, required: true
@@ -147,23 +149,28 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
 
   @spec locked_host_field(map()) :: Phoenix.LiveView.Rendered.t()
   def locked_host_field(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :describedby,
+        Enum.join(
+          ["#{assigns.id}-tooltip" | List.wrap(assigns.helper_text && "#{assigns.id}-help")],
+          " "
+        )
+      )
+
     ~H"""
-    <div>
+    <div class="group/field">
       <div class="flex items-center gap-1.5 mb-2">
         <label for={@id} class="label mb-0!">
           {dgettext("dashboard_integrations", "Server URL")}
         </label>
-        <span
-          tabindex="0"
-          aria-label={dgettext("dashboard_integrations", "About this address")}
-          aria-describedby={"#{@id}-tooltip"}
-          class="group relative inline-flex text-tymeslot-400 shrink-0 rounded-token-full focus:outline-hidden focus-visible:ring-2 focus-visible:ring-turquoise-500"
-        >
+        <span class="group relative inline-flex text-tymeslot-500 shrink-0">
           <Icons.icon name="hero-information-circle-mini" class="w-4 h-4" />
           <span
             id={"#{@id}-tooltip"}
             role="tooltip"
-            class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus:visible group-focus:opacity-100 transition-opacity absolute left-1/2 bottom-full z-10 mb-2 w-64 -translate-x-1/2 rounded-token-lg bg-tymeslot-800 px-3 py-2 text-token-xs font-medium text-white shadow-glass-md"
+            class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within/field:visible group-focus-within/field:opacity-100 transition-opacity absolute left-1/2 bottom-full z-10 mb-2 w-64 -translate-x-1/2 rounded-token-lg bg-tymeslot-800 px-3 py-2 text-token-xs font-medium text-white shadow-glass-md"
           >
             {@tooltip}
           </span>
@@ -178,11 +185,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
           id={@id}
           value={@value}
           readonly
-          aria-describedby={"#{@id}-tooltip"}
-          class="input input-with-icon w-full cursor-not-allowed bg-tymeslot-100 text-tymeslot-500"
+          aria-describedby={@describedby}
+          class="input input-with-icon w-full cursor-not-allowed bg-tymeslot-100 text-tymeslot-600"
         />
       </div>
-      <p :if={@helper_text} class="mt-2 text-xs text-tymeslot-500">{@helper_text}</p>
+      <p :if={@helper_text} id={"#{@id}-help"} class="mt-2 text-token-xs text-tymeslot-500">
+        {@helper_text}
+      </p>
     </div>
     """
   end

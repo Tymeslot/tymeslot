@@ -61,6 +61,31 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.JitsiFormTest do
       assert render(view) =~ "https://meet.example.com · Jitsi"
     end
 
+    test "stores only the Jitsi form's own fields when the browser sends more", %{
+      conn: conn,
+      user: user
+    } do
+      stub_jitsi_server(200)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='jitsi']")
+      |> render_click()
+
+      view
+      |> element("#jitsi-video-integration-form")
+      |> render_submit(%{
+        integration: %{
+          name: "Our Jitsi",
+          base_url: "https://meet.example.com",
+          custom_meeting_url: "https://elsewhere.example.com"
+        }
+      })
+
+      assert [%{provider: "jitsi", custom_meeting_url: nil}] = Video.list_integrations(user.id)
+    end
+
     test "the Jitsi server URL field starts empty rather than defaulting to the public instance",
          %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
@@ -70,6 +95,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.JitsiFormTest do
       |> render_click()
 
       assert has_element?(view, "#jitsi_base_url[placeholder='https://meet.example.com']")
+      assert has_element?(view, "#jitsi_base_url[aria-describedby='jitsi_base_url-help']")
       refute has_element?(view, "#jitsi_base_url[value]:not([value=''])")
     end
 
@@ -265,15 +291,15 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.JitsiFormTest do
       assert has_element?(view, "#edit_jitsi_client_id[disabled]")
       assert has_element?(view, "#edit_jitsi_client_secret[disabled]")
 
+      # `is_active` is not a field of the dialog, so it must not reach the save.
       view
-      |> form("#edit-video-integration-form",
-        integration: %{remove_token_authentication: "true"}
-      )
-      |> render_submit()
+      |> element("#edit-video-integration-form")
+      |> render_submit(%{integration: %{remove_token_authentication: "true", is_active: "false"}})
 
       assert render(view) =~ "Integration updated successfully"
 
       row = Repo.get!(VideoIntegrationSchema, integration.id)
+      assert row.is_active
       assert is_nil(row.client_id_encrypted)
       assert is_nil(row.client_secret_encrypted)
     end

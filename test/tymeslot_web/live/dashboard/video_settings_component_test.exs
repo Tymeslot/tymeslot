@@ -283,13 +283,66 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
 
       assert has_element?(view, "#kmeet_host[readonly][value='https://kmeet.infomaniak.com']")
 
+      assert has_element?(
+               view,
+               "#kmeet_host[aria-describedby='kmeet_host-tooltip kmeet_host-help']"
+             )
+
+      assert has_element?(view, "#kmeet_host-help")
+      refute has_element?(view, "#kmeet-video-integration-form [tabindex]")
+
       view
       |> form("#kmeet-video-integration-form", integration: %{name: "My kMeet"})
       |> render_submit()
 
       assert render(view) =~ "Video integration added successfully"
       assert render(view) =~ "My kMeet"
+      assert render(view) =~ "kmeet.infomaniak.com · rooms created automatically"
       assert [%{provider: "kmeet", name: "My kMeet"}] = Video.list_integrations(user.id)
+    end
+
+    test "stores only the kMeet form's own fields when the browser sends more", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='kmeet']")
+      |> render_click()
+
+      view
+      |> element("#kmeet-video-integration-form")
+      |> render_submit(%{
+        integration: %{name: "My kMeet", base_url: "https://elsewhere.example.com"}
+      })
+
+      assert [%{provider: "kmeet", base_url: nil}] = Video.list_integrations(user.id)
+    end
+
+    test "renames kMeet without storing extra fields sent from the edit dialog", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, integration} = Video.create_integration(user.id, :kmeet, %{name: "My kMeet"})
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element(
+        "button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#edit-video-modal']"
+      )
+      |> render_click()
+
+      view
+      |> element("#edit-video-integration-form")
+      |> render_submit(%{
+        integration: %{name: "Team kMeet", custom_meeting_url: "https://elsewhere.example.com"}
+      })
+
+      row = Repo.get!(VideoIntegrationSchema, integration.id)
+      assert row.name == "Team kMeet"
+      assert is_nil(row.custom_meeting_url)
     end
 
     test "marks kMeet as connected and refuses a second kMeet with a clear message", %{

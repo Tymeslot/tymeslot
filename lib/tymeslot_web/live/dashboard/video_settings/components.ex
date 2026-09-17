@@ -142,7 +142,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   end
 
   defp summary_segments(%{provider: "kmeet"}) do
-    [host(KmeetProvider.host()), dgettext("dashboard_integrations", "hosted")]
+    [
+      host(KmeetProvider.host()),
+      dgettext("dashboard_integrations", "rooms created automatically")
+    ]
   end
 
   defp summary_segments(%{provider: "jitsi"} = integration) do

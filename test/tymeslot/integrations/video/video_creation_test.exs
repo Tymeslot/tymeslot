@@ -30,10 +30,10 @@ defmodule Tymeslot.Integrations.Video.VideoCreationTest do
     test "refuses a second active kMeet integration for the same user", %{user: user} do
       assert {:ok, _first} = Video.create_integration(user.id, :kmeet, %{name: "My kMeet"})
 
-      assert {:error, changeset} =
+      assert {:error, :provider_already_connected} =
                Video.create_integration(user.id, :kmeet, %{name: "Another kMeet"})
 
-      assert "an integration for this provider already exists" in errors_on(changeset).user_id
+      assert [%{name: "My kMeet"}] = Video.list_integrations(user.id)
     end
   end
 

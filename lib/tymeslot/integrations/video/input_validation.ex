@@ -21,6 +21,9 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
 
   ## Returns
   - `{:ok, sanitized_params}` | `{:error, validation_errors}`
+
+  `sanitized_params` holds every field the provider's form accepts and nothing
+  else, so callers pass it on in place of the submitted params.
   """
   @spec validate_video_integration_form(%{String.t() => term()}, keyword()) ::
           {:ok, %{String.t() => term()}} | {:error, %{atom() => String.t()}}

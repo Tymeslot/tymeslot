@@ -13,7 +13,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
-  alias Tymeslot.Utils.SanitizeMerge
   alias TymeslotWeb.Dashboard.VideoSettings.ComponentView
   alias TymeslotWeb.Dashboard.VideoSettings.FormInput
   alias TymeslotWeb.Helpers.IntegrationProviders
@@ -134,9 +133,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
       metadata = DashboardHelpers.get_security_metadata(socket)
 
       case VideoInputValidation.validate_video_integration_form(params, metadata: metadata) do
+        # The validated map is the whole set of fields the provider's form
+        # accepts, so anything else the browser sent never reaches the context.
         {:ok, sanitized_params} ->
-          validated_params = SanitizeMerge.merge(params, sanitized_params)
-          provider = validated_params["provider"] || socket.assigns.config_provider
+          provider = params["provider"] || socket.assigns.config_provider
 
           if is_nil(provider) do
             {:noreply,
@@ -150,7 +150,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
               Video.create_integration(
                 user_id,
                 provider,
-                FormInput.to_atom_keys(validated_params)
+                FormInput.to_atom_keys(sanitized_params)
               ),
               provider,
               socket
@@ -332,23 +332,24 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> announce_added(integration)}
   end
 
-  # A provider with a single fixed host (kMeet) has no account to dedupe on
-  # before inserting, so a second active row is refused by the partial unique
-  # index and arrives here as a changeset rather than `:duplicate_integration`.
   defp handle_create_result({:error, %Ecto.Changeset{} = changeset}, _provider, socket) do
-    base =
-      if provider_already_connected?(changeset) do
-        dgettext(
-          "dashboard_integrations",
-          "This provider is already connected. Deactivate or remove the existing integration before adding another."
-        )
-      else
-        ChangesetUtils.get_first_error(changeset)
-      end
-
     {:noreply,
      socket
-     |> assign(:form_errors, %{base: base})
+     |> assign(:form_errors, %{base: ChangesetUtils.get_first_error(changeset)})
+     |> assign(:saving, false)}
+  end
+
+  # A provider with a single fixed host (kMeet) allows one active integration.
+  defp handle_create_result({:error, :provider_already_connected}, _provider, socket) do
+    {:noreply,
+     socket
+     |> assign(:form_errors, %{
+       base:
+         dgettext(
+           "dashboard_integrations",
+           "This provider is already connected. Deactivate or remove the existing integration before adding another."
+         )
+     })
      |> assign(:saving, false)}
   end
 
@@ -433,12 +434,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
   defp integration_added_message,
     do: dgettext("dashboard_integrations", "Video integration added successfully")
-
-  defp provider_already_connected?(%Ecto.Changeset{errors: errors}) do
-    Enum.any?(errors, fn {_field, {_message, opts}} ->
-      opts[:constraint_name] == "unique_active_video_null_account_per_user"
-    end)
-  end
 
   defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do
     notify_parent({:flash, {:error, message}})

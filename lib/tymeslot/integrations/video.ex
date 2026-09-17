@@ -213,9 +213,18 @@ defmodule Tymeslot.Integrations.Video do
   # `unique_active_video_null_account_per_user`, which is precisely the
   # "one active kMeet per user" rule we want. Like every provider without an
   # account id, the rule covers active rows only, so an inactive kMeet row does
-  # not block a new one.
+  # not block a new one. The index refusal is translated here, so callers learn
+  # the provider is already connected without knowing the index exists.
   defp do_create_integration(:kmeet, attrs) do
-    VideoIntegrationQueries.create(attrs)
+    case VideoIntegrationQueries.create(attrs) do
+      {:error, %Ecto.Changeset{} = changeset} = error ->
+        if provider_already_connected?(changeset),
+          do: {:error, :provider_already_connected},
+          else: error
+
+      result ->
+        result
+    end
   end
 
   # The server URL is the dedup key, so one user can connect several Jitsi
@@ -266,6 +275,12 @@ defmodule Tymeslot.Integrations.Video do
   end
 
   defp check_no_duplicate(_attrs), do: :ok
+
+  defp provider_already_connected?(%Ecto.Changeset{errors: errors}) do
+    Enum.any?(Keyword.get_values(errors, :provider), fn {_message, opts} ->
+      opts[:constraint] == :unique
+    end)
+  end
 
   # ---------------
   # Update
