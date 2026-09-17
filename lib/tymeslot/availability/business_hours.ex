@@ -7,6 +7,8 @@ defmodule Tymeslot.Availability.BusinessHours do
 
   alias Tymeslot.Availability.AvailabilityOverrideQueries
   alias Tymeslot.Availability.Calculate
+  alias Tymeslot.Availability.TimeOff
+  alias Tymeslot.Availability.TimeOffPeriodQueries
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Utils.DateTimeUtils
@@ -62,6 +64,17 @@ defmodule Tymeslot.Availability.BusinessHours do
   end
 
   def get_business_hours_in_timezone(date, schedule_id, owner_timezone, user_timezone, config) do
+    if TimeOff.all_day?(lookup_time_off(date, schedule_id, config), date) do
+      {:ok, %{start_datetime: nil, end_datetime: nil, selected_date: date}}
+    else
+      hours_from_schedule(date, schedule_id, owner_timezone, user_timezone, config)
+    end
+  end
+
+  # Time off is checked before this is reached, and deliberately outranks the
+  # override below: a period is profile-wide, so one schedule's `available`
+  # exception must not reopen a day the owner is away for.
+  defp hours_from_schedule(date, schedule_id, owner_timezone, user_timezone, config) do
     override = lookup_override(date, schedule_id, config)
 
     case override do
@@ -186,21 +199,32 @@ defmodule Tymeslot.Availability.BusinessHours do
   end
 
   @doc """
-  Returns the breaks for a date as a list of `{start_time, end_time}` tuples,
-  reading from preloaded weekly schedule when available.
+  Returns the windows a date is *not* bookable inside its business hours, as a
+  list of `{start_time, end_time}` tuples, reading from the preloaded weekly
+  schedule when available.
+
+  Two sources feed it: the weekly pattern's recurring breaks, and the part-day
+  edges of any time-off period covering the date. Both are excluded from the
+  same slot grid by the same code, so a half-day of holiday behaves exactly
+  like a one-off lunch break — which is what it is. Whole days of time off do
+  not appear here; `get_business_hours_in_timezone/5` has already refused those
+  outright.
   """
   @spec breaks_for_day(Date.t(), integer() | nil, Calculate.availability_config()) ::
           [{Time.t(), Time.t()}]
   def breaks_for_day(date, schedule_id, config) do
     day_of_week = Date.day_of_week(date)
 
-    case lookup_day_availability(day_of_week, schedule_id, config) do
-      %{breaks: breaks} when is_list(breaks) ->
-        Enum.map(breaks, &{&1.start_time, &1.end_time})
+    weekly_breaks =
+      case lookup_day_availability(day_of_week, schedule_id, config) do
+        %{breaks: breaks} when is_list(breaks) ->
+          Enum.map(breaks, &{&1.start_time, &1.end_time})
 
-      _other ->
-        []
-    end
+        _other ->
+          []
+      end
+
+    weekly_breaks ++ TimeOff.windows_for_day(lookup_time_off(date, schedule_id, config), date)
   end
 
   @doc """
@@ -261,6 +285,14 @@ defmodule Tymeslot.Availability.BusinessHours do
   end
 
   def business_day?(date, schedule_id, config) do
+    if TimeOff.all_day?(lookup_time_off(date, schedule_id, config), date) do
+      false
+    else
+      business_day_from_schedule?(date, schedule_id, config)
+    end
+  end
+
+  defp business_day_from_schedule?(date, schedule_id, config) do
     override = lookup_override(date, schedule_id, config)
 
     case override do
@@ -286,6 +318,18 @@ defmodule Tymeslot.Availability.BusinessHours do
 
   defp lookup_override(date, schedule_id, _config) do
     AvailabilityOverrideQueries.get_override_by_schedule_and_date(schedule_id, date)
+  end
+
+  # Periods are profile-wide, so unlike the override lookup this one is not
+  # filtered by schedule: the prefetched list was already resolved from the
+  # schedule's profile, and the fallback query makes that hop itself.
+  defp lookup_time_off(_date, _schedule_id, %{time_off: periods}) when is_list(periods),
+    do: periods
+
+  defp lookup_time_off(_date, nil, _config), do: []
+
+  defp lookup_time_off(date, schedule_id, _config) do
+    TimeOffPeriodQueries.list_for_schedule_in_range(schedule_id, date, date)
   end
 
   @spec lookup_day_availability(integer(), integer() | nil, Calculate.availability_config()) ::

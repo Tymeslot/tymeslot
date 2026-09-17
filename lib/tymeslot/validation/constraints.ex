@@ -201,6 +201,9 @@ defmodule Tymeslot.Validation.Constraints do
   @spec override_reason_max_length() :: pos_integer()
   def override_reason_max_length, do: 100
 
+  @spec time_off_label_max_length() :: pos_integer()
+  def time_off_label_max_length, do: 60
+
   # Booking-page introductory text. The caps are the point at which the copy
   # stops behaving on the tightest viewport the booker supports: at 80
   # characters a Rhythm heading pushes the primary action to the bottom edge of
