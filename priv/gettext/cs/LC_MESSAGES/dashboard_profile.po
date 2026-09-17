@@ -274,3 +274,13 @@ msgstr "odkazy v již odeslaných potvrzovacích a připomínkových e-mailech"
 #, elixir-autogen, elixir-format
 msgid "your booking page and every event link on it"
 msgstr "vaši rezervační stránku a všechny odkazy na události na ní"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "This username is already taken"
+msgstr "Toto uživatelské jméno je již obsazené"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "This username is reserved"
+msgstr "Toto uživatelské jméno je vyhrazené"

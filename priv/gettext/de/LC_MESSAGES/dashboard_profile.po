@@ -273,3 +273,13 @@ msgstr "Links in bereits versendeten Bestätigungs- und Erinnerungs-E-Mails"
 #, elixir-autogen, elixir-format
 msgid "your booking page and every event link on it"
 msgstr "Ihre Buchungsseite und jeden Termin-Link darauf"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "This username is already taken"
+msgstr "Dieser Nutzername ist bereits vergeben"
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "This username is reserved"
+msgstr "Dieser Nutzername ist reserviert"

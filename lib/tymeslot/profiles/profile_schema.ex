@@ -190,7 +190,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
 
       username ->
         if username in Profiles.reserved_paths() do
-          add_error(changeset, :username, "is reserved")
+          add_error(changeset, :username, "is reserved", validation: :reserved)
         else
           changeset
         end

@@ -52,24 +52,36 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
     end
   end
 
-  # Setting a username for the first time breaks nothing, so it saves straight
-  # away. Replacing one that is already live is irreversible for everybody
-  # holding a link to it, so it stops for a confirmation that says which
-  # surfaces go with it.
+  # A username that cannot be used is explained inline straight away, before
+  # anything else: asking to confirm a change that is bound to be refused wastes
+  # the organiser's decision. Setting a username for the first time breaks
+  # nothing, so it saves straight away. Replacing one that is already live is
+  # irreversible for everybody holding a link to it, so it stops for a
+  # confirmation that says which surfaces go with it. Resubmitting the current
+  # username changes nothing.
   def handle_event("update_username", %{"username" => username}, socket) do
     metadata = DashboardHelpers.get_security_metadata(socket)
-    current = socket.assigns.profile && socket.assigns.profile.username
+    profile = socket.assigns.profile
 
-    case InputProcessor.validate_field(username, :username) do
-      {:ok, sanitized} when is_binary(current) and current != "" and sanitized != current ->
+    case {Profiles.username_status(profile, username), live_username?(profile)} do
+      {:ok, true} ->
         {:noreply,
          assign(socket,
-           pending_username: sanitized,
+           pending_username: String.trim(username),
            open_poll_count: Polls.count_open_polls(socket.assigns.current_user.id)
          )}
 
-      _first_time_or_invalid ->
+      {:ok, false} ->
         perform_username_update(socket, username, metadata)
+
+      {:unchanged, _live} ->
+        {:noreply, clear_username_error(socket)}
+
+      {{:invalid, message}, _live} ->
+        {:noreply, put_username_error(socket, message)}
+
+      {reason, _live} when reason in [:reserved, :taken] ->
+        {:noreply, put_username_error(socket, username_error(reason))}
     end
   end
 
@@ -86,26 +98,25 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
     |> perform_username_update(username, metadata)
   end
 
+  defp live_username?(%{username: username}) when is_binary(username) and username != "",
+    do: true
+
+  defp live_username?(_profile), do: false
+
+  defp update_username_availability(socket, "", _metadata),
+    do: assign(socket, username_check: nil, username_available: nil)
+
   defp update_username_availability(socket, username, _metadata) do
-    cond do
-      username == "" ->
-        assign(socket, username_check: nil, username_available: nil)
+    available =
+      case Profiles.username_status(socket.assigns.profile, username) do
+        :unchanged -> :current
+        :ok -> true
+        :taken -> false
+        :reserved -> {:error, username_error(:reserved)}
+        {:invalid, message} -> {:error, message}
+      end
 
-      socket.assigns.profile && username == socket.assigns.profile.username ->
-        assign(socket, username_check: username, username_available: :current)
-
-      true ->
-        case InputProcessor.validate_field(username, :username,
-               reserved_words: Profiles.reserved_paths()
-             ) do
-          {:ok, sanitized_username} ->
-            available = Profiles.username_available?(sanitized_username)
-            assign(socket, username_check: sanitized_username, username_available: available)
-
-          {:error, message} ->
-            assign(socket, username_check: username, username_available: {:error, message})
-        end
-    end
+    assign(socket, username_check: username, username_available: available)
   end
 
   defp perform_username_update(socket, username, _metadata) do
@@ -114,7 +125,8 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
 
     socket = assign(socket, :saving, true)
 
-    with {:ok, sanitized_username} <- InputProcessor.validate_field(username, :username),
+    with {:ok, sanitized_username} <-
+           InputProcessor.validate_field(String.trim(username), :username),
          {:ok, updated_profile} <-
            Profiles.update_username(profile, sanitized_username, user_id) do
       handle_successful_username_update(socket, updated_profile, sanitized_username)
@@ -141,23 +153,50 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
      socket
      |> assign(profile: updated_profile)
      |> assign(saving: false)
-     |> assign(
-       :form_errors,
-       FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :username)
-     )}
+     |> clear_username_error()}
   end
 
   defp handle_username_update_error(socket, error) do
     case error do
       {:error, %Ecto.Changeset{} = changeset} ->
-        Flash.error(ChangesetUtils.get_first_error(changeset))
-        {:noreply, assign(socket, saving: false)}
+        {:noreply,
+         socket
+         |> assign(saving: false)
+         |> explain_refused_changeset(changeset)}
 
       {:error, message} when is_binary(message) ->
         Flash.error(message)
         {:noreply, assign(socket, saving: false)}
     end
   end
+
+  # The username can still be refused on write, e.g. taken since it was checked.
+  defp explain_refused_changeset(socket, changeset) do
+    case Profiles.username_error(changeset) do
+      nil ->
+        Flash.error(ChangesetUtils.get_first_error(changeset))
+        socket
+
+      reason ->
+        put_username_error(socket, username_error(reason))
+    end
+  end
+
+  defp put_username_error(socket, message),
+    do: assign(socket, :form_errors, Map.put(socket.assigns.form_errors, :username, message))
+
+  defp clear_username_error(socket) do
+    assign(
+      socket,
+      :form_errors,
+      FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :username)
+    )
+  end
+
+  defp username_error(:reserved), do: dgettext("dashboard_profile", "This username is reserved")
+
+  defp username_error(:taken),
+    do: dgettext("dashboard_profile", "This username is already taken")
 
   defp display_url, do: String.replace(Policy.app_url(), ~r/^https?:\/\//, "")
 
