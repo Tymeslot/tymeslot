@@ -156,15 +156,27 @@ defmodule Tymeslot.Emails.SMTPDeliveryTest do
 
     # Once the message is on the wire it may well have been delivered, so a
     # retry could duplicate it.
+    #
+    # The send deadline has to outlast connecting, logging in and sending the
+    # message, or it fires mid-handshake and the message never arrives. Warm,
+    # that takes 90-320ms even on a contended machine, but the first delivery
+    # in a fresh VM took 5.4s there, and in a partitioned suite this can be the
+    # first. One delivery to a relay that answers takes the first-use cost
+    # before the deadline starts counting.
     test "after taking the message, is assumed delivered and counted against the breaker", %{
       breaker: breaker
     } do
+      use_relay(FakeSmtpRelay.start())
+      assert {:ok, _receipt} = Delivery.deliver(email("Warm-up"))
+      flush_relay_messages()
+
       relay = FakeSmtpRelay.start(after_data: :silent)
       use_relay(relay)
-      setup_config(:tymeslot, :email_send_deadline_ms, 500)
+      setup_config(:tymeslot, :email_send_deadline_ms, 1_000)
 
       assert {:ok, :assumed_delivered} = Delivery.deliver(email("Relay stalls after DATA"))
-      assert_received {:smtp_relay, {:message, _data}}
+      assert_received {:smtp_relay, {:message, data}}
+      assert data =~ "Subject: Relay stalls after DATA"
       assert CircuitBreaker.status(breaker).failure_count == 1
     end
   end
@@ -181,6 +193,14 @@ defmodule Tymeslot.Emails.SMTPDeliveryTest do
       |> Keyword.merge(adapter_overrides)
 
     setup_config(:tymeslot, Tymeslot.Mailer, config)
+  end
+
+  defp flush_relay_messages do
+    receive do
+      {:smtp_relay, _event} -> flush_relay_messages()
+    after
+      0 -> :ok
+    end
   end
 
   defp email(subject) do

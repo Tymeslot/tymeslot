@@ -12,9 +12,7 @@ defmodule Tymeslot.Workers.EmailWorkerTimeoutTest do
   import Tymeslot.Factory
 
   alias Tymeslot.EmailServiceMock
-  alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
-  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.EmailWorker
 
   setup :verify_on_exit!
@@ -54,35 +52,44 @@ defmodule Tymeslot.Workers.EmailWorkerTimeoutTest do
     end
 
     # A fixed 30 seconds let two stalled sends exhaust the job, which was then
-    # discarded before the remaining recipients were emailed. Each send here
-    # takes nearly the whole send deadline, so the job only completes if its
-    # budget covers every recipient of the largest confirmation.
-    test "outlasts a confirmation whose every send takes nearly the full send deadline" do
+    # discarded before the remaining recipients were emailed. The job's budget
+    # must therefore give every recipient of the largest confirmation (the
+    # organiser, the attendee and every guest) a full send deadline.
+    #
+    # That is checked from the side a busy machine cannot break: a send that
+    # never returns holds the job open until its budget runs out, and the job
+    # must not give up sooner. Timing the opposite, that slow sends still
+    # finish inside the budget, cannot be made reliable at test scale: with
+    # instant sends the job's own work already takes 130-170ms, and on a
+    # contended machine over a second, more than the whole budget.
+    test "gives every recipient of the largest confirmation a full send deadline before giving up" do
       meeting = insert(:meeting, organizer_email_sent: false, attendee_email_sent: false)
       guest_emails = for n <- 1..Guests.max_guests(), do: "guest#{n}@example.com"
       {:ok, _guests} = Guests.create_for_meeting(meeting.id, guest_emails)
 
-      slow_send = fn _email, _details ->
+      stalled_send = fn _email, _details ->
         receive do
           :never -> :unreachable
-        after
-          @send_deadline_ms - 10 -> {:ok, "sent"}
         end
       end
 
-      stub(EmailServiceMock, :send_appointment_confirmation_to_organizer, slow_send)
-      stub(EmailServiceMock, :send_appointment_confirmation_to_attendee, slow_send)
-      stub(EmailServiceMock, :send_guest_confirmation, slow_send)
+      stub(EmailServiceMock, :send_appointment_confirmation_to_organizer, stalled_send)
+      stub(EmailServiceMock, :send_appointment_confirmation_to_attendee, stalled_send)
+      stub(EmailServiceMock, :send_guest_confirmation, stalled_send)
 
-      assert :ok =
+      started = System.monotonic_time(:millisecond)
+
+      assert {:discard, "Email sending timed out"} =
                perform_job(EmailWorker, %{
                  "action" => "send_confirmation_emails",
                  "meeting_id" => meeting.id
                })
 
-      {:ok, meeting} = MeetingQueries.get_meeting(meeting.id)
-      assert meeting.attendee_email_sent
-      assert GuestQueries.list_unsent_for_meeting(meeting.id) == []
+      waited_ms = System.monotonic_time(:millisecond) - started
+      recipients = Guests.max_guests() + 2
+
+      assert waited_ms >= recipients * @send_deadline_ms,
+             "gave up after #{waited_ms}ms, before #{recipients} sends of #{@send_deadline_ms}ms"
     end
   end
 end
