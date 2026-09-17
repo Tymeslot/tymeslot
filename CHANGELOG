@@ -1,4 +1,17 @@
 
+[1.15.8]
+* Keep the video link on calendar events when booking jobs overlap
+* Only ask for a calendar reconnect when the provider refused it
+* Book into a working calendar when the chosen one needs reconnecting
+* Apply values from /app/data/.env in the Docker image
+* Stop raising admin alerts for unknown LiveView events
+* Rebuild database indexes an interrupted upgrade left invalid
+* Allow booking a time freed by a host's reschedule request
+* Ask owners to reconnect a calendar whose access was refused
+* Tell calendar owners when Google or Outlook access was revoked
+* Give Google Meet participants the plain meeting link
+
+
 [1.15.7]
 * [BREAKING] Read .env files identically at boot and in the release: .env values are no longer interpolated. ${VAR} and $(command) are kept as literal text, and a # not preceded by whitespace is part of an unquoted value. A .env that relied on either needs the final value written out.
 * Tell users when a calendar has stopped syncing
