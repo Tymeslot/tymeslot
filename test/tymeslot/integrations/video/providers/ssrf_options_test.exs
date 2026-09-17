@@ -13,7 +13,7 @@ defmodule Tymeslot.Integrations.Video.Providers.SsrfOptionsTest do
     assert Keyword.fetch!(SsrfOptions.request_options(), :ssrf_protect) == true
   end
 
-  test "permits private hosts only when the video opt-out is on" do
+  test "permits private hosts when the video opt-out is on" do
     with_config(:tymeslot,
       allow_private_ips_for_video: true,
       allow_private_ips_for_calendar: false
@@ -22,7 +22,16 @@ defmodule Tymeslot.Integrations.Video.Providers.SsrfOptionsTest do
     assert Keyword.fetch!(SsrfOptions.request_options(), :ssrf_allow_private) == true
   end
 
-  test "refuses private hosts while the video opt-out is off" do
+  test "permits private hosts when only the older calendar opt-out is on" do
+    with_config(:tymeslot,
+      allow_private_ips_for_video: false,
+      allow_private_ips_for_calendar: true
+    )
+
+    assert Keyword.fetch!(SsrfOptions.request_options(), :ssrf_allow_private) == true
+  end
+
+  test "refuses private hosts while both opt-outs are off" do
     with_config(:tymeslot,
       allow_private_ips_for_video: false,
       allow_private_ips_for_calendar: false

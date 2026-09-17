@@ -15,6 +15,10 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
   Never probe a conversation with GET: Nextcloud counts a GET for an unknown
   token as a brute-force attempt against the calling address, whereas a DELETE
   for one is not.
+
+  A conversation token is checked against Talk's own route constraint (4 to 30
+  lowercase letters and digits) before any request is built, so a malformed
+  token can never reshape the request path.
   """
 
   alias Req.Response
@@ -24,6 +28,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
   @capabilities_path "/ocs/v2.php/cloud/capabilities"
   @room_path "/ocs/v2.php/apps/spreed/api/v4/room"
 
+  @connect_timeout_ms 5_000
   @receive_timeout_ms 15_000
 
   @type credentials :: %{
@@ -40,8 +45,10 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
     * `:not_found`: no such endpoint or conversation (404)
     * `{:redirected, location}`: the server answered with a redirect, never followed
     * `{:rejected, status, error}`: a 400 or 403, with the OCS `error` key when the body has one
+    * `:rate_limited`: Nextcloud's rate limit or brute-force protection refused the calling address (429)
     * `{:http_error, status}`: any other status outside 2xx
     * `:invalid_response`: a 2xx whose body is not the OCS JSON envelope
+    * `:invalid_token`: the conversation token does not match Talk's token format; no request was sent
     * an exception: the request never completed (transport failure, SSRF refusal)
   """
   @type error ::
@@ -49,8 +56,10 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
           | :not_found
           | {:redirected, String.t() | nil}
           | {:rejected, 400 | 403, String.t() | nil}
+          | :rate_limited
           | {:http_error, pos_integer()}
           | :invalid_response
+          | :invalid_token
           | Exception.t()
 
   @doc "Reads the server's capabilities as the signed-in user."
@@ -61,25 +70,48 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
   @spec create_room(credentials(), map()) :: {:ok, term()} | {:error, error()}
   def create_room(credentials, params), do: request(:post, credentials, @room_path, params)
 
-  @doc "Sets a conversation's lobby state and the time the lobby lifts itself."
+  @doc """
+  Sets a conversation's lobby state and the time the lobby lifts itself.
+
+  `params` carries `"state"` (0 for no lobby, 1 for a lobby for everyone but
+  moderators) and an optional `"timer"`: the moment the lobby lifts, as a Unix
+  timestamp in seconds.
+  """
   @spec set_lobby(credentials(), String.t(), map()) :: {:ok, term()} | {:error, error()}
-  def set_lobby(credentials, token, params),
-    do: request(:put, credentials, room_path(token) <> "/webinar/lobby", params)
+  def set_lobby(credentials, token, params) do
+    with {:ok, path} <- room_path(token),
+         do: request(:put, credentials, path <> "/webinar/lobby", params)
+  end
 
   @doc "Renames a conversation."
   @spec rename_room(credentials(), String.t(), String.t()) :: {:ok, term()} | {:error, error()}
-  def rename_room(credentials, token, name),
-    do: request(:put, credentials, room_path(token), %{"roomName" => name})
+  def rename_room(credentials, token, name) do
+    with {:ok, path} <- room_path(token),
+         do: request(:put, credentials, path, %{"roomName" => name})
+  end
 
   @doc "Deletes a conversation."
   @spec delete_room(credentials(), String.t()) :: {:ok, term()} | {:error, error()}
-  def delete_room(credentials, token), do: request(:delete, credentials, room_path(token), nil)
+  def delete_room(credentials, token) do
+    with {:ok, path} <- room_path(token), do: request(:delete, credentials, path, nil)
+  end
 
-  defp room_path(token), do: @room_path <> "/" <> URI.encode_www_form(token)
+  # Talk's route requirement for a token, so anything it would not route is
+  # refused here rather than sent.
+  defp room_path(token) when is_binary(token) do
+    if token =~ ~r/\A[a-z0-9]{4,30}\z/,
+      do: {:ok, @room_path <> "/" <> token},
+      else: {:error, :invalid_token}
+  end
+
+  defp room_path(_token), do: {:error, :invalid_token}
 
   defp request(method, credentials, path, params) do
     url = String.trim_trailing(credentials.base_url, "/") <> path
-    options = [receive_timeout: @receive_timeout_ms] ++ SsrfOptions.request_options()
+
+    options =
+      [receive_timeout: @receive_timeout_ms, connect_options: [timeout: @connect_timeout_ms]] ++
+        SsrfOptions.request_options()
 
     response =
       Config.http_client_module().request(
@@ -114,6 +146,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
 
   defp classify({:ok, %Response{status: 401}}), do: {:error, :unauthorized}
   defp classify({:ok, %Response{status: 404}}), do: {:error, :not_found}
+  defp classify({:ok, %Response{status: 429}}), do: {:error, :rate_limited}
 
   defp classify({:ok, %Response{status: status} = response}) when status in 300..399 do
     {:error, {:redirected, response |> Response.get_header("location") |> List.first()}}

@@ -29,6 +29,8 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
         assert {"OCS-APIRequest", "true"} in headers
         assert {"Accept", "application/json"} in headers
         assert opts[:ssrf_protect] == true
+        assert opts[:receive_timeout] == 15_000
+        assert opts[:connect_options][:timeout] == 5_000
 
         {:ok, %Req.Response{status: 200, body: ocs(%{"capabilities" => %{}})}}
       end)
@@ -78,6 +80,32 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
     end
   end
 
+  describe "conversation tokens" do
+    test "a token outside Talk's route format is refused before any request" do
+      # No expectation is set, so any request would fail the test with
+      # Mox.UnexpectedCallError.
+      tokens = ["..", "", "abc 123xy", "ABC123xy", "abc", "abc123xy/../users", "abc%2F123"]
+
+      assert Enum.reject(
+               tokens,
+               &(Client.delete_room(@credentials, &1) == {:error, :invalid_token})
+             ) ==
+               []
+
+      assert Enum.reject(
+               tokens,
+               &(Client.rename_room(@credentials, &1, "Call") == {:error, :invalid_token})
+             ) ==
+               []
+
+      assert Enum.reject(
+               tokens,
+               &(Client.set_lobby(@credentials, &1, %{"state" => 0}) == {:error, :invalid_token})
+             ) ==
+               []
+    end
+  end
+
   describe "response classification" do
     test "a 401 is a refused credential" do
       assert {:error, :unauthorized} = respond_with(status: 401, body: "")
@@ -105,12 +133,52 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
       assert {:error, {:rejected, 403, nil}} = respond_with(status: 403, body: ocs([]))
     end
 
+    test "a redirect without a location is still reported" do
+      assert {:error, {:redirected, nil}} = respond_with(status: 302, body: "")
+    end
+
+    test "a 400 with a body that is not JSON is a rejection without an error key" do
+      assert {:error, {:rejected, 400, nil}} =
+               respond_with(status: 400, body: "<html><body>Bad Request</body></html>")
+    end
+
+    test "a 429 is a rate limit, not a server error" do
+      assert {:error, :rate_limited} = respond_with(status: 429, body: ocs(nil))
+    end
+
     test "a server error keeps its status" do
       assert {:error, {:http_error, 503}} = respond_with(status: 503, body: "")
     end
 
     test "a success that is not the OCS envelope is an invalid response" do
       assert {:error, :invalid_response} = respond_with(status: 200, body: "<html></html>")
+    end
+
+    test "a success with an empty body is an invalid response" do
+      assert {:error, :invalid_response} = respond_with(status: 200, body: "")
+    end
+
+    test "no error result carries the app password or the Authorization header" do
+      results = [
+        respond_with(status: 401, body: ""),
+        respond_with(status: 404, body: ocs(nil)),
+        respond_with(status: 302, headers: %{"location" => ["https://cloud.example.com/login"]}),
+        respond_with(status: 400, body: ocs(%{"error" => "password"})),
+        respond_with(status: 429, body: ""),
+        respond_with(status: 503, body: ""),
+        respond_with(status: 200, body: "<html></html>"),
+        Client.delete_room(@credentials, "..")
+      ]
+
+      basic = Base.encode64("organiser:Abcde-Fghij-Klmno-Pqrst-Uvwxy")
+
+      assert Enum.filter(
+               results,
+               &(inspect(&1) =~ @credentials.client_secret or inspect(&1) =~ basic)
+             ) ==
+               []
+
+      assert Enum.all?(results, &match?({:error, _reason}, &1))
     end
 
     test "a transport failure passes through untouched" do
