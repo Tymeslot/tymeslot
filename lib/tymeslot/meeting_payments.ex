@@ -267,6 +267,26 @@ defmodule Tymeslot.MeetingPayments do
   defdelegate currency_allowlist(), to: Currency, as: :allowlist
 
   @doc """
+  Returns the host's pricing currency: the default currency of their live
+  (non-deleted) Connect account, or the fallback currency when there is no
+  such account, the account carries no currency yet, or there is no user.
+
+  Checkout charges the account's currency directly and never reaches the
+  fallback, since it requires a live account with charges enabled; the
+  fallback only labels prices and minimums shown to a host who cannot
+  currently take payments.
+  """
+  @spec host_currency(integer() | nil) :: String.t()
+  def host_currency(nil), do: Currency.fallback()
+
+  def host_currency(user_id) do
+    case ConnectAccountQueries.live_for_user(user_id) do
+      %{default_currency: currency} when is_binary(currency) and currency != "" -> currency
+      _no_currency -> Currency.fallback()
+    end
+  end
+
+  @doc """
   Returns `true` if the given currency code is in the supported allowlist.
   """
   @spec currency_allowed?(String.t()) :: boolean()
