@@ -68,7 +68,8 @@ defmodule TymeslotWeb.Helpers.IntegrationProviders do
   it would pick the right field in English only. Providers that can tell the
   two apart return `{tag, message}` (see
   `Tymeslot.Integrations.Video.Providers.MiroTalkProvider`), a refused
-  login (`{:unauthorized, _}`) is blamed on the secret, and a server
+  login (`{:unauthorized, _}`) and a secret that has to be entered again
+  (`{:secret_required, _}`) are blamed on the secret, and a server
   throttling Tymeslot (`{:throttled, _}`) on no field at all; a bare string
   carries no such signal and lands on `:base_url`, which is where an
   unrecognised reason has always gone.
@@ -91,6 +92,9 @@ defmodule TymeslotWeb.Helpers.IntegrationProviders do
     do: %{api_key: message}
 
   def reason_to_form_errors({:unauthorized, message}) when is_binary(message),
+    do: %{client_secret: message}
+
+  def reason_to_form_errors({:secret_required, message}) when is_binary(message),
     do: %{client_secret: message}
 
   def reason_to_form_errors({:throttled, message}) when is_binary(message),

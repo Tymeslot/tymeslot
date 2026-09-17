@@ -206,8 +206,8 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     end
 
     # Nextcloud moved to a new address: the old host refuses the app password,
-    # the organiser enters the new server and leaves the password blank, and
-    # the server proves it. That proof is the reconnect.
+    # the organiser enters the new server with the app password again, and the
+    # server proves it. That proof is the reconnect.
     test "a proven new server address clears the reconnect flag", %{user: user} do
       integration = insert_talk_integration(user, needs_reauth: true)
 
@@ -220,11 +220,56 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
 
       assert {:ok, updated} =
                Video.update_integration(user.id, integration.id, %{
-                 dialog_attrs("")
+                 dialog_attrs(@app_password)
                  | base_url: "https://talk.example.org"
                })
 
       refute updated.needs_reauth
+      assert updated.base_url == "https://talk.example.org"
+    end
+
+    # The stored app password may have been copied from a calendar connection,
+    # so it is never sent to a different server unless it is entered again.
+    for {label, new_server} <- [
+          {"host", "https://talk.example.org"},
+          {"port", "https://cloud.example.com:8443"}
+        ] do
+      test "a new server #{label} without the app password is refused without contacting either server",
+           %{user: user} do
+        integration = insert_talk_integration(user, needs_reauth: true)
+
+        assert {:error, {:secret_required, message}} =
+                 Video.update_integration(user.id, integration.id, %{
+                   dialog_attrs("")
+                   | base_url: unquote(new_server)
+                 })
+
+        assert message =~ "Enter the app password again"
+
+        assert {:ok, %{base_url: @server, client_secret: @app_password, needs_reauth: true}} =
+                 VideoIntegrationQueries.get_for_user(integration.id, user.id)
+      end
+    end
+
+    test "a new subfolder on the same server keeps the stored app password and is proven", %{
+      user: user
+    } do
+      integration = insert_talk_integration(user)
+
+      expect_capabilities(
+        @server <> "/nextcloud",
+        "organiser",
+        @app_password,
+        talk_capabilities()
+      )
+
+      assert {:ok, updated} =
+               Video.update_integration(user.id, integration.id, %{
+                 dialog_attrs("")
+                 | base_url: "https://CLOUD.example.com:443/nextcloud/"
+               })
+
+      assert updated.base_url == @server <> "/nextcloud"
     end
 
     test "a server and login already connected in another integration are refused without contacting the server",
@@ -238,7 +283,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
 
       assert {:error, :duplicate_integration} =
                Video.update_integration(user.id, integration.id, %{
-                 dialog_attrs("")
+                 dialog_attrs(@app_password)
                  | base_url: "https://Talk.example.org/"
                })
 
@@ -258,7 +303,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
       assert updated.provider_account_id == @server <> "||organiser"
     end
 
-    test "a new server address is proven with the stored credentials and moves the account key",
+    test "a new server address is proven with the app password entered again and moves the account key",
          %{user: user} do
       integration = insert_talk_integration(user)
 
@@ -271,7 +316,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
 
       assert {:ok, updated} =
                Video.update_integration(user.id, integration.id, %{
-                 dialog_attrs("")
+                 dialog_attrs(@app_password)
                  | base_url: "https://talk.example.org/"
                })
 

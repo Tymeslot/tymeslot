@@ -275,8 +275,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   Renders a credential input with an icon: a login or client id, or a secret.
 
   A secret is rendered without a value, so a typed or stored secret never
-  comes back into the page, and with `autocomplete="off"`. Field errors show
-  under the input, followed by the slot, which is where help text goes.
+  comes back into the page. Browsers ignore `autocomplete="off"` on a password
+  input and a password manager would fill in the organiser's own Tymeslot
+  password, so a secret is marked `new-password`, which password managers do
+  not fill; any other credential stays `off`, so the pair never reads as a
+  sign-in form. Field errors show under the input, followed by the slot, which
+  is where help text goes.
   """
   attr :id, :string, required: true
   attr :name, :string, required: true
@@ -303,7 +307,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
           id={@id}
           name={@name}
           value={@value}
-          autocomplete="off"
+          autocomplete={if @type == "password", do: "new-password", else: "off"}
           disabled={@disabled}
           aria-describedby={@describedby}
           class={["input input-with-icon w-full", @errors != [] && "input-error"]}

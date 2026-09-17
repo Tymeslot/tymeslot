@@ -351,9 +351,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   # correct without the dialog losing what was typed. A tagged refusal from
   # the server check (Nextcloud Talk's refused login or throttled address, for
   # one) and the connection-test limiter's refusals are placed exactly as the
-  # connect form places them. Anything else is flashed.
+  # connect form places them, and so is a Nextcloud Talk validation message,
+  # which the connect form shows for the whole form. Anything else is flashed.
   defp show_update_error(socket, :duplicate_integration, provider),
     do: assign(socket, :form_errors, %{base: duplicate_message(provider)})
+
+  defp show_update_error(socket, message, "nextcloud_talk") when is_binary(message),
+    do: assign(socket, :form_errors, %{base: message})
 
   defp show_update_error(socket, {tag, message} = reason, _provider)
        when is_atom(tag) and is_binary(message),

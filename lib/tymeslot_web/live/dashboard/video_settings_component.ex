@@ -68,7 +68,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   def handle_event("hide_picker", _params, socket) do
-    {:noreply, assign(socket, show_picker: false, config_provider: nil)}
+    {:noreply,
+     assign(socket, show_picker: false, config_provider: nil, copied_nextcloud_login: nil)}
   end
 
   def handle_event("track_form_change", %{"integration" => params}, socket) do
@@ -100,26 +101,18 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
        )}
     else
       _unavailable ->
-        {:noreply,
-         assign(socket,
-           form_errors: %{
-             base:
-               dgettext(
-                 "dashboard_integrations",
-                 "That calendar connection is no longer available."
-               )
-           },
-           copied_nextcloud_login: nil
-         )}
+        {:noreply, copied_login_unavailable(socket)}
     end
   end
 
   def handle_event("back_to_providers", _params, socket) do
     {:noreply,
-     socket
-     |> assign(:config_provider, nil)
-     |> assign(:form_errors, %{})
-     |> assign(:form_values, %{})}
+     assign(socket,
+       config_provider: nil,
+       form_errors: %{},
+       form_values: %{},
+       copied_nextcloud_login: nil
+     )}
   end
 
   def handle_event("setup_provider", %{"provider" => provider}, socket) do
@@ -146,9 +139,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
   def handle_event("provider_changed", %{"value" => provider}, socket) do
     {:noreply,
-     socket
-     |> assign(:config_provider, provider)
-     |> assign(:form_errors, %{})}
+     assign(socket, config_provider: provider, form_errors: %{}, copied_nextcloud_login: nil)}
   end
 
   def handle_event("validate_field", %{"field" => field} = params, socket) do
@@ -175,40 +166,14 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
     with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
       socket = assign(socket, :saving, true)
-      metadata = DashboardHelpers.get_security_metadata(socket)
-      params = with_copied_app_password(submitted, socket.assigns.copied_nextcloud_login, user_id)
 
-      case VideoInputValidation.validate_video_integration_form(params, metadata: metadata) do
-        # The validated map is the whole set of fields the provider's form
-        # accepts, so anything else the browser sent never reaches the context.
-        {:ok, sanitized_params} ->
-          provider = params["provider"] || socket.assigns.config_provider
+      case with_copied_app_password(submitted, socket.assigns.copied_nextcloud_login, user_id) do
+        {:ok, params} ->
+          create_from_form(socket, submitted, params)
 
-          if is_nil(provider) do
-            {:noreply,
-             socket
-             |> assign(:form_errors, %{
-               base: dgettext("dashboard_integrations", "Please select a provider")
-             })
-             |> assign(:saving, false)}
-          else
-            handle_create_result(
-              Video.create_integration(
-                user_id,
-                provider,
-                FormInput.to_atom_keys(sanitized_params)
-              ),
-              provider,
-              socket
-            )
-          end
-
-        {:error, validation_errors} ->
+        {:error, :copied_login_unavailable} ->
           {:noreply,
-           socket
-           |> assign(:form_errors, validation_errors)
-           |> assign(:form_values, submitted)
-           |> assign(:saving, false)}
+           socket |> copied_login_unavailable() |> assign(form_values: submitted, saving: false)}
       end
     end)
   end
@@ -502,6 +467,57 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     )
   end
 
+  # `submitted` is what the browser sent; `params` may also carry an app
+  # password read from a copied calendar connection, so only `submitted` is ever
+  # kept in the socket.
+  defp create_from_form(socket, submitted, params) do
+    user_id = socket.assigns.current_user.id
+    metadata = DashboardHelpers.get_security_metadata(socket)
+
+    case VideoInputValidation.validate_video_integration_form(params, metadata: metadata) do
+      # The validated map is the whole set of fields the provider's form
+      # accepts, so anything else the browser sent never reaches the context.
+      {:ok, sanitized_params} ->
+        provider = params["provider"] || socket.assigns.config_provider
+
+        if is_nil(provider) do
+          {:noreply,
+           socket
+           |> assign(:form_errors, %{
+             base: dgettext("dashboard_integrations", "Please select a provider")
+           })
+           |> assign(:saving, false)}
+        else
+          handle_create_result(
+            Video.create_integration(
+              user_id,
+              provider,
+              FormInput.to_atom_keys(sanitized_params)
+            ),
+            provider,
+            socket
+          )
+        end
+
+      {:error, validation_errors} ->
+        {:noreply,
+         socket
+         |> assign(:form_errors, validation_errors)
+         |> assign(:form_values, submitted)
+         |> assign(:saving, false)}
+    end
+  end
+
+  defp copied_login_unavailable(socket) do
+    assign(socket,
+      form_errors: %{
+        base:
+          dgettext("dashboard_integrations", "That calendar connection is no longer available.")
+      },
+      copied_nextcloud_login: nil
+    )
+  end
+
   defp nextcloud_calendars(socket, :nextcloud_talk),
     do: Calendar.nextcloud_logins(socket.assigns.current_user.id)
 
@@ -512,21 +528,26 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   # socket or sent to the browser. A password typed into the form wins, and a
   # server or login name changed since the copy gets no password at all, so
   # the calendar's password only ever goes to the account it belongs to.
+  #
+  # A calendar connection deleted or deactivated since the copy is reported as
+  # such, rather than as a missing app password the organiser never had to type.
   defp with_copied_app_password(
          %{"provider" => "nextcloud_talk"} = submitted,
          %{id: calendar_id},
          user_id
        ) do
     with true <- blank?(submitted["client_secret"]),
-         {:ok, login} <- Calendar.nextcloud_login(calendar_id, user_id),
-         true <- FormInput.copied_login_applies?(login, submitted) do
-      Map.put(submitted, "client_secret", login.password)
+         {:ok, login} <- Calendar.nextcloud_login(calendar_id, user_id) do
+      if FormInput.copied_login_applies?(login, submitted),
+        do: {:ok, Map.put(submitted, "client_secret", login.password)},
+        else: {:ok, submitted}
     else
-      _typed_changed_or_unavailable -> submitted
+      false -> {:ok, submitted}
+      {:error, :not_found} -> {:error, :copied_login_unavailable}
     end
   end
 
-  defp with_copied_app_password(submitted, _copied_login, _user_id), do: submitted
+  defp with_copied_app_password(submitted, _copied_login, _user_id), do: {:ok, submitted}
 
   defp blank?(nil), do: true
   defp blank?(value) when is_binary(value), do: String.trim(value) == ""
@@ -555,10 +576,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   defp reset_form_state(socket) do
-    socket
-    |> assign(:config_provider, nil)
-    |> assign(:form_errors, %{})
-    |> assign(:saving, false)
+    assign(socket,
+      config_provider: nil,
+      form_errors: %{},
+      saving: false,
+      copied_nextcloud_login: nil
+    )
   end
 
   defp initiate_oauth(socket, provider) do

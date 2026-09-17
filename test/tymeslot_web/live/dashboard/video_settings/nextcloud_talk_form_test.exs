@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Plug.Test
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video
@@ -42,7 +43,17 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
       expect_capabilities("organiser", @app_password)
 
       view = open_talk_form(conn)
-      assert render(view) =~ "Join from a browser where you are signed in to Nextcloud"
+      html = render(view)
+      assert html =~ "Join from a browser signed in to Nextcloud as this login name"
+      assert html =~ "about a week after the meeting ends"
+
+      # A password manager must not take the pair for a sign-in to Tymeslot.
+      assert has_element?(view, "#nextcloud_talk_client_id[autocomplete='off']")
+
+      assert has_element?(
+               view,
+               "#nextcloud_talk_client_secret[type='password'][autocomplete='new-password']:not([value])"
+             )
 
       view
       |> form("#nextcloud-talk-video-integration-form",
@@ -144,6 +155,19 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
       assert html =~ "Leave blank to use the app password of your calendar connection."
       refute html =~ @app_password
 
+      assert has_element?(
+               view,
+               "[role='group'][aria-labelledby='nextcloud_talk_copy_heading'][aria-describedby='nextcloud_talk_copy_help'] button[phx-click='copy_nextcloud_login']"
+             )
+
+      assert has_element?(
+               view,
+               "#nextcloud_talk_copy_heading",
+               "Use your Nextcloud calendar connection"
+             )
+
+      assert has_element?(view, "#nextcloud_talk_copy_help")
+
       expect_capabilities("olivia", @app_password)
 
       view
@@ -177,6 +201,81 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
 
       assert [%{client_id: "olivia", client_secret: "Typed-App-Password"}] =
                Video.list_integrations(user.id)
+    end
+
+    test "uses a copied app password when the server and login differ only in spacing and a trailing slash",
+         %{conn: conn, user: user} do
+      view = copy_calendar_login(conn, insert_nextcloud_calendar(user))
+      expect_capabilities("olivia", @app_password)
+
+      view
+      |> form("#nextcloud-talk-video-integration-form",
+        integration: %{name: "Team Talk", base_url: " #{@server}/ ", client_id: " olivia "}
+      )
+      |> render_submit()
+
+      assert [%{client_id: "olivia", client_secret: @app_password}] =
+               Video.list_integrations(user.id)
+    end
+
+    test "adds no copied password when only the login name was changed", %{conn: conn, user: user} do
+      view = copy_calendar_login(conn, insert_nextcloud_calendar(user))
+
+      html =
+        view
+        |> form("#nextcloud-talk-video-integration-form",
+          integration: %{name: "Team Talk", client_id: "someone-else"}
+        )
+        |> render_submit()
+
+      assert html =~ "App password is required"
+      assert Video.list_integrations(user.id) == []
+    end
+
+    for {label, change} <- [
+          {"server", [base_url: "https://other.example.com/remote.php/dav"]},
+          {"login name", [username_encrypted: Encryption.encrypt("someone-else")]}
+        ] do
+      test "adds no copied password when the calendar connection's #{label} changed after the copy",
+           %{conn: conn, user: user} do
+        calendar = insert_nextcloud_calendar(user)
+        view = copy_calendar_login(conn, calendar)
+
+        calendar |> Changeset.change(unquote(change)) |> Repo.update!()
+
+        html =
+          view
+          |> form("#nextcloud-talk-video-integration-form", integration: %{name: "Team Talk"})
+          |> render_submit()
+
+        assert html =~ "App password is required"
+        assert Video.list_integrations(user.id) == []
+      end
+    end
+
+    test "says so when the copied calendar connection was deactivated before saving", %{
+      conn: conn,
+      user: user
+    } do
+      calendar = insert_nextcloud_calendar(user)
+      view = copy_calendar_login(conn, calendar)
+
+      calendar |> Changeset.change(is_active: false) |> Repo.update!()
+
+      html =
+        view
+        |> form("#nextcloud-talk-video-integration-form", integration: %{name: "Team Talk"})
+        |> render_submit()
+
+      assert has_element?(
+               view,
+               "#nextcloud-talk-video-integration-form [role='alert']",
+               "That calendar connection is no longer available."
+             )
+
+      refute html =~ "App password is required"
+      refute html =~ "Leave blank to use the app password of your calendar connection."
+      assert Video.list_integrations(user.id) == []
     end
 
     test "never sends a copied password to a server other than the calendar's", %{
@@ -285,6 +384,55 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
       assert Encryption.decrypt(row.client_secret_encrypted) == "New-App-Password"
     end
 
+    test "asks for the app password again before moving to a different server", %{
+      conn: conn,
+      user: user
+    } do
+      integration = insert_talk_integration(user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+      open_edit_dialog(view, integration)
+
+      assert has_element?(
+               view,
+               "#edit_nextcloud_talk_client_secret[type='password'][autocomplete='new-password']"
+             )
+
+      view
+      |> form("#edit-video-integration-form",
+        integration: %{base_url: "https://talk.example.org"}
+      )
+      |> render_submit()
+
+      assert has_element?(
+               view,
+               "#edit-video-integration-form p.form-error",
+               "Enter the app password again"
+             )
+
+      assert has_element?(view, "#edit_nextcloud_talk_client_secret.input-error")
+
+      assert {:ok, %{base_url: @server, client_secret: @app_password}} =
+               Video.get_integration(user.id, integration.id)
+    end
+
+    test "shows the provider's own refusal of an edit in the dialog", %{conn: conn, user: user} do
+      integration = insert_talk_integration(user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+      open_edit_dialog(view, integration)
+
+      view
+      |> form("#edit-video-integration-form", integration: %{base_url: " "})
+      |> render_submit()
+
+      assert has_element?(
+               view,
+               "#edit-video-integration-form [role='alert']",
+               "Base URL is required"
+             )
+
+      assert {:ok, %{base_url: @server}} = Video.get_integration(user.id, integration.id)
+    end
+
     test "shows Nextcloud's refusal of a new app password on the password field", %{
       conn: conn,
       user: user
@@ -368,6 +516,16 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
 
     view
     |> element("button[phx-click='setup_provider'][phx-value-provider='nextcloud_talk']")
+    |> render_click()
+
+    view
+  end
+
+  defp copy_calendar_login(conn, calendar) do
+    view = open_talk_form(conn)
+
+    view
+    |> element("button[phx-click='copy_nextcloud_login'][phx-value-id='#{calendar.id}']")
     |> render_click()
 
     view

@@ -73,17 +73,22 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
         class="p-4 space-y-3 rounded-token-xl border-2 border-tymeslot-100"
       >
         <div>
-          <p class="text-token-sm font-bold text-tymeslot-900">
+          <p id="nextcloud_talk_copy_heading" class="text-token-sm font-bold text-tymeslot-900">
             {dgettext("dashboard_integrations", "Use your Nextcloud calendar connection")}
           </p>
-          <p class="mt-1 text-token-xs text-tymeslot-500">
+          <p id="nextcloud_talk_copy_help" class="mt-1 text-token-xs text-tymeslot-500">
             {dgettext(
               "dashboard_integrations",
               "Fills in the server and login name, and uses the same app password unless you enter a different one."
             )}
           </p>
         </div>
-        <div class="flex flex-wrap gap-2">
+        <div
+          role="group"
+          aria-labelledby="nextcloud_talk_copy_heading"
+          aria-describedby="nextcloud_talk_copy_help"
+          class="flex flex-wrap gap-2"
+        >
           <button
             :for={calendar <- @nextcloud_calendars}
             type="button"
@@ -133,7 +138,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
         <p class="text-token-xs text-tymeslot-500 leading-relaxed">
           {dgettext(
             "dashboard_integrations",
-            "Each booking gets its own public Talk conversation, and guests join from its link without a Nextcloud account. Join from a browser where you are signed in to Nextcloud to skip the lobby and moderate. A conversation is deleted when its booking is cancelled, and a few days after the meeting ends."
+            "Each booking gets its own public Talk conversation, and guests join from its link without a Nextcloud account. Join from a browser signed in to Nextcloud as this login name to skip the lobby and moderate; anyone else, other Nextcloud users included, waits in the lobby until the meeting starts. A conversation is deleted when its booking is cancelled, and about a week after the meeting ends."
           )}
         </p>
 

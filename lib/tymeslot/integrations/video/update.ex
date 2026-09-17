@@ -10,9 +10,15 @@ defmodule Tymeslot.Integrations.Video.Update do
 
   A Nextcloud Talk edit is proven against the server, as a new integration
   is, but only when its server, login name or app password actually changes.
-  Such a proven edit is the reconnect, so it clears `needs_reauth` even when
-  only the server changed; an edit that is not proven never does.
+  Such a proven edit is the reconnect, so it clears `needs_reauth`; an edit
+  that is not proven never does. The stored app password is never sent to a
+  different server (another scheme, host or port): moving the integration
+  there means entering the app password again, so a moved Nextcloud is
+  reconnected by entering its new address together with the app password. A
+  new subfolder on the same server keeps the stored one.
   """
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Plug.Crypto
   alias Tymeslot.Integrations.HealthCheck
@@ -72,7 +78,10 @@ defmodule Tymeslot.Integrations.Video.Update do
   # own normalising is kept as a change, together with the account key it implies,
   # and a submitted account key is never taken as given. Dropping the rest is
   # what keeps a rename or an unchanged resubmission from contacting the server
-  # and from clearing a reconnect flag no new credential earned.
+  # and from clearing a reconnect flag no new credential earned. The one
+  # exception is an app password entered with a move to a different server:
+  # it is kept even when it matches the stored one, since entering it is what
+  # allows it to be sent there.
   defp effective_changes(%VideoIntegrationSchema{provider: "nextcloud_talk"} = integration, attrs) do
     stored =
       integration |> Map.take(@server_config_fields) |> NextcloudTalkProvider.account_attrs()
@@ -82,12 +91,19 @@ defmodule Tymeslot.Integrations.Video.Update do
       |> Map.take(@server_config_fields)
       |> Map.reject(fn {field, value} -> field in @client_credential_fields and blank?(value) end)
 
+    updated = stored |> Map.merge(submitted) |> NextcloudTalkProvider.account_attrs()
+
+    keep_app_password? =
+      Map.has_key?(submitted, :client_secret) and
+        not same_origin?(updated.base_url, stored.base_url)
+
     changes =
-      stored
-      |> Map.merge(submitted)
-      |> NextcloudTalkProvider.account_attrs()
+      updated
       |> Map.take(@talk_saved_fields)
-      |> Map.reject(fn {field, value} -> unchanged?(field, value, Map.fetch!(stored, field)) end)
+      |> Map.reject(fn
+        {:client_secret, _value} when keep_app_password? -> false
+        {field, value} -> unchanged?(field, value, Map.fetch!(stored, field))
+      end)
 
     attrs |> Map.drop(@talk_saved_fields) |> Map.merge(changes)
   end
@@ -113,8 +129,10 @@ defmodule Tymeslot.Integrations.Video.Update do
 
   # A Talk edit that still carries a server, login name or app password has
   # been proven against the server, and that proof is the reconnect: it clears
-  # `needs_reauth` even when only the server changed, as when Nextcloud moved to
-  # a new address and the old one refused the app password.
+  # `needs_reauth` whichever of them changed, as when Nextcloud moved to a new
+  # address, the old one refused the app password, and the organiser entered
+  # the new address together with the app password (which a different server
+  # requires).
   defp save_update(%VideoIntegrationSchema{provider: "nextcloud_talk"} = integration, attrs) do
     if talk_connection_changed?(attrs) do
       update_with_credentials(integration, attrs)
@@ -167,7 +185,9 @@ defmodule Tymeslot.Integrations.Video.Update do
   # configuration before any request, so a blank server address is refused
   # without one, and a refusal comes back worded as the connection test words
   # it. The probe carries no integration id, so a refused new app password does
-  # not flag the row.
+  # not flag the row. The configuration is validated first, so an unusable
+  # server address is refused with its own message before the organiser is
+  # asked for an app password it could not be used with anyway.
   defp validate_update(%VideoIntegrationSchema{provider: "nextcloud_talk"} = integration, attrs) do
     if talk_connection_changed?(attrs) do
       config =
@@ -175,7 +195,9 @@ defmodule Tymeslot.Integrations.Video.Update do
         |> Map.take(@server_config_fields)
         |> Map.merge(Map.take(attrs, @server_config_fields))
 
-      with :ok <- check_account_free(integration, attrs),
+      with :ok <- NextcloudTalkProvider.validate_config(config),
+           :ok <- check_app_password_entered(integration, attrs),
+           :ok <- check_account_free(integration, attrs),
            {:ok, _message} <-
              Connection.probe(:nextcloud_talk, config, {:user, integration.user_id}),
            do: :ok
@@ -188,6 +210,38 @@ defmodule Tymeslot.Integrations.Video.Update do
 
   defp talk_connection_changed?(attrs),
     do: Enum.any?(@server_config_fields, &Map.has_key?(attrs, &1))
+
+  # The stored app password may have been copied from a calendar connection or
+  # typed for this server only, so it goes to a different server only when the
+  # organiser enters it again. `effective_changes/2` keeps an app password
+  # entered with such a move, so its absence here means none was entered.
+  defp check_app_password_entered(integration, %{base_url: base_url} = attrs)
+       when not is_map_key(attrs, :client_secret) do
+    if same_origin?(base_url, integration.base_url) do
+      :ok
+    else
+      {:error,
+       {:secret_required,
+        dgettext(
+          "dashboard_integrations",
+          "Enter the app password again to connect to a different server."
+        )}}
+    end
+  end
+
+  defp check_app_password_entered(_integration, _attrs), do: :ok
+
+  # Scheme, host and port: what decides which server receives a request. A
+  # port left out is the scheme's default, so the same server written with and
+  # without it is one origin.
+  defp same_origin?(url, other_url), do: origin(url) == origin(other_url)
+
+  defp origin(url) when is_binary(url) do
+    %URI{scheme: scheme, host: host, port: port} = URI.parse(url)
+    {scheme && String.downcase(scheme), host && String.downcase(host), port}
+  end
+
+  defp origin(_url), do: nil
 
   # Active or not, as creation checks, so no two rows share an account key.
   defp check_account_free(integration, %{provider_account_id: account_id}) do

@@ -181,7 +181,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.JitsiFormTest do
 
       assert has_element?(
                view,
-               "#jitsi_client_secret[type='password'][autocomplete='off']:not([value])"
+               "#jitsi_client_secret[type='password'][autocomplete='new-password']:not([value])"
              )
 
       params = %{
