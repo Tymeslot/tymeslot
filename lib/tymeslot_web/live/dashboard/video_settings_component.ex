@@ -152,6 +152,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
                 provider,
                 FormInput.to_atom_keys(validated_params)
               ),
+              provider,
               socket
             )
           end
@@ -309,17 +310,17 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     {:noreply, assign(socket, :testing_connection, nil)}
   end
 
+  def handle_async(:connection_advisory, result, socket) do
+    notify_parent({:flash, connection_advisory_flash(result)})
+    {:noreply, socket}
+  end
+
   @impl Phoenix.LiveComponent
   def render(assigns), do: ComponentView.settings(assigns)
 
   # Private functions
 
-  defp handle_create_result({:ok, _integration}, socket) do
-    notify_parent(
-      {:flash,
-       {:info, dgettext("dashboard_integrations", "Video integration added successfully")}}
-    )
-
+  defp handle_create_result({:ok, integration}, _provider, socket) do
     notify_parent({:integration_added, :video})
 
     {:noreply,
@@ -327,13 +328,14 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> reset_form_state()
      |> assign(:show_picker, false)
      |> load_integrations()
-     |> assign(:form_values, %{})}
+     |> assign(:form_values, %{})
+     |> announce_added(integration)}
   end
 
   # A provider with a single fixed host (kMeet) has no account to dedupe on
   # before inserting, so a second active row is refused by the partial unique
   # index and arrives here as a changeset rather than `:duplicate_integration`.
-  defp handle_create_result({:error, %Ecto.Changeset{} = changeset}, socket) do
+  defp handle_create_result({:error, %Ecto.Changeset{} = changeset}, _provider, socket) do
     base =
       if provider_already_connected?(changeset) do
         dgettext(
@@ -350,7 +352,32 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:saving, false)}
   end
 
-  defp handle_create_result({:error, :duplicate_integration}, socket) do
+  # A Jitsi integration is keyed on its server URL, so the duplicate is that
+  # server, active or not.
+  defp handle_create_result({:error, :duplicate_integration}, "jitsi", socket) do
+    {:noreply,
+     socket
+     |> assign(:form_errors, %{
+       base:
+         dgettext(
+           "dashboard_integrations",
+           "This server is already connected. Edit or remove the existing integration instead."
+         )
+     })
+     |> assign(:saving, false)}
+  end
+
+  # The Jitsi provider's own validation words its messages for the organiser,
+  # and they concern the credentials as often as the URL, so they are shown
+  # for the whole form rather than under the URL field.
+  defp handle_create_result({:error, message}, "jitsi", socket) when is_binary(message) do
+    {:noreply,
+     socket
+     |> assign(:form_errors, %{base: message})
+     |> assign(:saving, false)}
+  end
+
+  defp handle_create_result({:error, :duplicate_integration}, _provider, socket) do
     {:noreply,
      socket
      |> assign(:form_errors, %{
@@ -363,12 +390,49 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:saving, false)}
   end
 
-  defp handle_create_result({:error, reason}, socket) do
+  defp handle_create_result({:error, reason}, _provider, socket) do
     {:noreply,
      socket
      |> assign(:saving, false)
      |> assign(:form_errors, IntegrationProviders.reason_to_form_errors(reason))}
   end
+
+  # Advisory only. A Jitsi root path may legitimately answer with a redirect,
+  # a 403 or an authentication wall, and a server that is briefly unreachable
+  # is still worth keeping configured, so the probe can only change the wording
+  # of the flash, never the outcome of the save. It runs after the form has
+  # closed, so a slow server never holds the dialog open.
+  defp announce_added(socket, %{provider: "jitsi"} = integration) do
+    start_async(socket, :connection_advisory, fn ->
+      Video.probe_integration(integration, scope: :interactive)
+    end)
+  end
+
+  defp announce_added(socket, _integration) do
+    notify_parent({:flash, {:info, integration_added_message()}})
+    socket
+  end
+
+  defp connection_advisory_flash({:ok, {:ok, _message}}),
+    do: {:info, integration_added_message()}
+
+  # A refused probe never reached the server, so it says nothing about it.
+  defp connection_advisory_flash({:ok, {:error, {:rate_limited, _message}}}),
+    do: {:info, integration_added_message()}
+
+  defp connection_advisory_flash({:ok, {:error, :unattributable}}),
+    do: {:info, integration_added_message()}
+
+  defp connection_advisory_flash(_failed) do
+    {:warning,
+     dgettext(
+       "dashboard_integrations",
+       "Saved, but the server did not answer as expected. Check the URL, or use Test connection once it is reachable."
+     )}
+  end
+
+  defp integration_added_message,
+    do: dgettext("dashboard_integrations", "Video integration added successfully")
 
   defp provider_already_connected?(%Ecto.Changeset{errors: errors}) do
     Enum.any?(errors, fn {_field, {_message, opts}} ->

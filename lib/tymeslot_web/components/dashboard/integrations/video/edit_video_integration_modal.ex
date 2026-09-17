@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   alias Tymeslot.Integrations.Video.TemplateSyntax
   alias Tymeslot.Utils.SanitizeMerge
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplatePreviewBox
+  alias TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponents,
@@ -240,6 +241,20 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                   </div>
                 <% "kmeet" -> %>
                   <KmeetConfig.host_field id="edit_kmeet_host" />
+                <% "jitsi" -> %>
+                  <JitsiConfig.server_url_field
+                    id="edit_jitsi_base_url"
+                    value={Map.get(@form_values, "base_url", @integration.base_url || "")}
+                    form_errors={@form_errors}
+                    target={@myself}
+                  />
+
+                  <JitsiConfig.credential_fields
+                    id_prefix="edit_jitsi"
+                    form_values={@form_values}
+                    form_errors={@form_errors}
+                    stored_credentials={stored_credentials?(@integration)}
+                  />
                 <% _ -> %>
               <% end %>
             </div>
@@ -317,6 +332,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   defp update_error_message(_reason),
     do: dgettext("dashboard_integrations", "Failed to update integration")
 
+  defp stored_credentials?(%{client_id_encrypted: nil, client_secret_encrypted: nil}), do: false
+  defp stored_credentials?(_integration), do: true
+
   defp find_integration(integrations, id) do
     Enum.find(integrations, &(&1.id == id))
   end
@@ -332,6 +350,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
         base
         |> Map.put("base_url", integration.base_url || "")
         |> Map.put("api_key", "")
+
+      # The App ID is shown so the organiser can see which one is in use; the
+      # secret never leaves the server.
+      "jitsi" ->
+        Map.merge(base, %{
+          "base_url" => integration.base_url || "",
+          "client_id" => integration.client_id || ""
+        })
 
       _oauth ->
         base

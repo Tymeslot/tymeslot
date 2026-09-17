@@ -74,6 +74,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   attr :target, :any, required: true
   attr :helper_text, :string, default: nil
 
+  attr :validate_on_blur, :boolean,
+    default: true,
+    doc: "pushes `validate_field` to `target` when the input loses focus"
+
   @spec url_field(map()) :: Phoenix.LiveView.Rendered.t()
   def url_field(assigns) do
     ~H"""
@@ -98,10 +102,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
           name={@name}
           value={@value}
           phx-blur={
-            JS.push("validate_field",
-              value: %{"field" => Atom.to_string(@error_key)},
-              target: @target
-            )
+            @validate_on_blur &&
+              JS.push("validate_field",
+                value: %{"field" => Atom.to_string(@error_key)},
+                target: @target
+              )
           }
           required
           class={[

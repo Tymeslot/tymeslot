@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   Video integration input validation and sanitization.
 
   Provides specialized validation for video integration forms including
-  MiroTalk, kMeet and Custom Video configuration forms.
+  MiroTalk, kMeet, Jitsi and Custom Video configuration forms.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -37,6 +37,9 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
 
       "kmeet" ->
         validate_kmeet_form(params, metadata)
+
+      "jitsi" ->
+        validate_jitsi_form(params, metadata)
 
       _unknown_provider ->
         SecurityLogger.log_security_event("video_integration_unknown_provider", %{
@@ -181,6 +184,38 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
         {:error, errors}
     end
   end
+
+  # Only the name is checked here. The server URL and credentials are checked
+  # by `JitsiProvider.validate_config/1` when the integration is saved, so the
+  # connect form and the edit dialog share one set of rules and messages. The
+  # credentials are trimmed but never sanitised: a secret may legitimately
+  # contain characters a sanitiser would strip.
+  defp validate_jitsi_form(params, metadata) do
+    case InputValidators.validate_integration_name(params["name"], metadata) do
+      {:ok, sanitized_name} ->
+        {:ok,
+         %{
+           "name" => sanitized_name,
+           "base_url" => trim(params["base_url"]),
+           "client_id" => trim(params["client_id"]),
+           "client_secret" => trim(params["client_secret"]),
+           "remove_token_authentication" => params["remove_token_authentication"] == "true"
+         }}
+
+      {:error, errors} ->
+        SecurityLogger.log_security_event("jitsi_integration_validation_failure", %{
+          ip_address: metadata[:ip],
+          user_agent: metadata[:user_agent],
+          user_id: metadata[:user_id],
+          errors: Map.keys(errors)
+        })
+
+        {:error, errors}
+    end
+  end
+
+  defp trim(value) when is_binary(value), do: String.trim(value)
+  defp trim(_value), do: nil
 
   # Helper validation functions
 

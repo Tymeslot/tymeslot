@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrationModal
+  alias TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig
   alias TymeslotWeb.Dashboard.VideoSettings.Components
@@ -151,6 +152,15 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
               :if={@config_provider == "kmeet"}
               module={KmeetConfig}
               id="kmeet-config"
+              target={@myself}
+              form_errors={@form_errors}
+              form_values={@form_values}
+              saving={@saving}
+            />
+            <.live_component
+              :if={@config_provider == "jitsi"}
+              module={JitsiConfig}
+              id="jitsi-config"
               target={@myself}
               form_errors={@form_errors}
               form_values={@form_values}

@@ -232,6 +232,45 @@ defmodule Tymeslot.Integrations.Video.InputValidationTest do
     end
   end
 
+  describe "validate_video_integration_form/2 - jitsi" do
+    test "trims the server URL and credentials and leaves their checks to the provider" do
+      params = %{
+        "provider" => "jitsi",
+        "name" => "  Our Jitsi  ",
+        "base_url" => " https://meet.example.com ",
+        "client_id" => " tymeslot ",
+        "client_secret" => " <secret&with?symbols> "
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_video_integration_form(params)
+
+      assert sanitized == %{
+               "name" => "Our Jitsi",
+               "base_url" => "https://meet.example.com",
+               "client_id" => "tymeslot",
+               "client_secret" => "<secret&with?symbols>",
+               "remove_token_authentication" => false
+             }
+    end
+
+    test "turns the removal checkbox into a boolean" do
+      params = %{
+        "provider" => "jitsi",
+        "name" => "Our Jitsi",
+        "remove_token_authentication" => "true"
+      }
+
+      assert {:ok, %{"remove_token_authentication" => true, "client_secret" => nil}} =
+               InputValidation.validate_video_integration_form(params)
+    end
+
+    test "rejects a missing name" do
+      params = %{"provider" => "jitsi", "name" => "", "base_url" => "https://meet.example.com"}
+      assert {:error, errors} = InputValidation.validate_video_integration_form(params)
+      assert Map.has_key?(errors, :name)
+    end
+  end
+
   describe "validate_video_integration_form/2 - unknown provider" do
     test "returns error for unknown provider" do
       params = %{"provider" => "zoom", "name" => "Zoom Meeting"}
