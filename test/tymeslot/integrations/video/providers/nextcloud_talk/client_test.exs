@@ -56,6 +56,11 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
       assert {:ok, [%{"token" => "abc123xy"}]} = Client.list_rooms(@credentials)
     end
 
+    test "declare the budget of one request from the timeouts every request is sent with" do
+      assert Client.request_budget_ms(:get) == 20_000
+      assert Client.request_budget_ms(:post) == 20_000
+    end
+
     test "create a conversation from a JSON body and return its data" do
       expect(HTTPClientMock, :request, fn :post, url, body, headers, _opts ->
         assert url == @room_api

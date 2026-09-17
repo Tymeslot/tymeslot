@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
   alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.OAuthTokenManager
@@ -132,6 +133,12 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       do: error,
       else: {:provider_error, reason}
   end
+
+  # The slowest creation refreshes the token, creates the meeting and reads it
+  # back, each request at the HTTP client's default timeouts.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def room_creation_budget_ms,
+    do: HTTPClient.request_budget_ms(:post) * 2 + HTTPClient.request_budget_ms(:get)
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, _participant_email, _role, _meeting_time) do

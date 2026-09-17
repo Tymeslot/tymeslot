@@ -32,6 +32,22 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistry do
   end
 
   @doc """
+  The longest room creation on any registered provider can wait on the
+  network, in milliseconds: the largest `room_creation_budget_ms/0` a provider
+  declares, or 0 when none creates its rooms over the network.
+  """
+  @spec room_creation_budget_ms() :: non_neg_integer()
+  def room_creation_budget_ms do
+    list_providers()
+    |> Enum.map(&get_provider!/1)
+    |> Enum.filter(
+      &(Code.ensure_loaded?(&1) and function_exported?(&1, :room_creation_budget_ms, 0))
+    )
+    |> Enum.map(& &1.room_creation_budget_ms())
+    |> Enum.max(fn -> 0 end)
+  end
+
+  @doc """
   Validates and normalizes a provider type.
   Returns {:ok, provider} or {:error, reason}.
   """

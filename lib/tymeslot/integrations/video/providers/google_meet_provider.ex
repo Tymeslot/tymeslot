@@ -25,6 +25,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
@@ -170,6 +171,11 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   # selects a signed-in Google account, so a participant not signed in under
   # exactly that address is sent to a sign-in or account chooser instead of the
   # room. It would also put their email address into a forwardable link.
+  # The slowest creation refreshes the token and creates the space, both at the
+  # HTTP client's default timeouts.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def room_creation_budget_ms, do: HTTPClient.request_budget_ms(:post) * 2
+
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(%{meeting_url: meeting_url}, _name, _email, _role, _meeting_time)
       when is_binary(meeting_url) and meeting_url != "",

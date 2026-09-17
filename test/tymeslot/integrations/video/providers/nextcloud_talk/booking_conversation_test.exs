@@ -14,6 +14,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
 
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video.EventDetails
+  alias Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversation
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
   alias Tymeslot.Integrations.Video.RoomData
 
@@ -125,6 +126,11 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
 
       assert {:error, :invalid_response} =
                NextcloudTalkProvider.create_meeting_room(booking(@config))
+    end
+
+    test "declares a network budget covering the lookup and the creation" do
+      assert BookingConversation.budget_ms() == 40_000
+      assert NextcloudTalkProvider.room_creation_budget_ms() == BookingConversation.budget_ms()
     end
   end
 

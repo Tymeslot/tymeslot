@@ -108,6 +108,9 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   end
 
   @impl ProviderBehaviour
+  def room_creation_budget_ms, do: BookingConversation.budget_ms()
+
+  @impl ProviderBehaviour
   def create_join_url(room_data, _participant_name, _participant_email, _role, _meeting_time),
     do: {:ok, room_data.meeting_url}
 

@@ -29,6 +29,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     priority: 0
 
   alias Ecto.Changeset
+  alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Notifications.Events
@@ -37,7 +38,10 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
   require Logger
 
-  @video_api_timeout_ms 20_000
+  # What the provider call may spend beyond waiting on the provider itself:
+  # reading and writing the meeting, and asking the circuit breaker.
+  @local_work_margin_ms 10_000
+
   @backoff_base_ms 1_000
   @backoff_cap_ms 16_000
 
@@ -170,15 +174,30 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     end
   end
 
+  @doc """
+  How long the job waits for room creation before giving up on it, in
+  milliseconds.
+
+  Longer than the slowest provider's declared network budget, so the job only
+  stops waiting on a call its own request timeouts have failed to end. Giving
+  up any sooner would abandon a room the provider may already have created,
+  and the retry would create another that no booking records.
+  """
+  @spec creation_timeout_ms() :: pos_integer()
+  def creation_timeout_ms,
+    do: ProviderRegistry.room_creation_budget_ms() + @local_work_margin_ms
+
   # The provider call runs in a supervised task so a hung connection cannot pin
   # the queue's worker for longer than the timeout.
   defp create_room(meeting_id, announce, execution) do
+    timeout_ms = creation_timeout_ms()
+
     task =
       Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
         Meetings.add_video_room_to_meeting(meeting_id)
       end)
 
-    case Task.yield(task, @video_api_timeout_ms) || Task.shutdown(task) do
+    case Task.yield(task, timeout_ms) || Task.shutdown(task) do
       {:ok, {:ok, meeting}} ->
         handle_success(meeting, announce)
 
@@ -193,7 +212,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
       nil ->
         Logger.error("Video room creation timed out",
           meeting_id: meeting_id,
-          timeout_ms: @video_api_timeout_ms
+          timeout_ms: timeout_ms
         )
 
         handle_timeout(meeting_id, announce, execution)

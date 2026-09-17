@@ -61,6 +61,29 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     propfind: 60_000
   }
 
+  # How long Req's Finch adapter waits for a connection unless a request passes
+  # `connect_options: [timeout: ms]`.
+  @default_connect_timeout_ms 30_000
+
+  @doc """
+  The longest a single request can wait on the network before it gives up:
+  its connect timeout plus its receive timeout, as `request/5` applies them to
+  a request sent with `method` and `options`.
+
+  A caller that has to outlast a request, such as a job running it under a
+  timeout of its own, derives that timeout from this rather than repeating the
+  numbers.
+  """
+  @spec request_budget_ms(atom(), keyword()) :: pos_integer()
+  def request_budget_ms(method, options \\ []) when is_atom(method) do
+    connect_timeout =
+      options
+      |> Keyword.get(:connect_options, [])
+      |> Keyword.get(:timeout, @default_connect_timeout_ms)
+
+    connect_timeout + get_timeout(method, options)
+  end
+
   @doc """
   Reduces a URL to `scheme://host` for logging: never the path or query,
   since some destinations (the Telegram Bot API) carry their credential in

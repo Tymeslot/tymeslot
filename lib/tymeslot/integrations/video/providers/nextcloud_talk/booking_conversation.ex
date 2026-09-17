@@ -67,6 +67,13 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
   end
 
   @doc """
+  The longest `find_or_create/2` can wait on the network, in milliseconds: a
+  lookup, then the creation it did not make unnecessary.
+  """
+  @spec budget_ms() :: pos_integer()
+  def budget_ms, do: Client.request_budget_ms(:get) + Client.request_budget_ms(:post)
+
+  @doc """
   The lobby settings that hold guests until `start_time`, as Talk's lobby
   endpoint takes them.
   """

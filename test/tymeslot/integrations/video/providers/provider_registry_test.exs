@@ -4,7 +4,12 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
 
   import Mox
   alias Tymeslot.Integrations.Video.ProviderConfig
+  alias Tymeslot.Integrations.Video.Providers.GoogleMeetProvider
+  alias Tymeslot.Integrations.Video.Providers.MiroTalkProvider
+  alias Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
   alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
+  alias Tymeslot.Integrations.Video.Providers.TeamsProvider
+  alias Tymeslot.Integrations.Video.Providers.ZoomProvider
 
   setup :verify_on_exit!
 
@@ -14,6 +19,32 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
                [:custom, :google_meet, :jitsi, :kmeet, :mirotalk, :nextcloud_talk, :teams, :zoom]
 
       assert ProviderRegistry.provider_count() == 8
+    end
+  end
+
+  describe "room_creation_budget_ms/0" do
+    test "is the largest network budget any provider declares for creating a room" do
+      # Teams: a token refresh, the event, and the deletion of an event that
+      # came back without a Teams link, each 30s to connect and 45s to answer.
+      assert ProviderRegistry.room_creation_budget_ms() == 225_000
+      assert TeamsProvider.room_creation_budget_ms() == 225_000
+
+      for smaller <- [
+            GoogleMeetProvider.room_creation_budget_ms(),
+            MiroTalkProvider.room_creation_budget_ms(),
+            NextcloudTalkProvider.room_creation_budget_ms(),
+            ZoomProvider.room_creation_budget_ms()
+          ] do
+        assert smaller < 225_000
+      end
+    end
+
+    test "leaves out the providers that build their link without a network call" do
+      for type <- [:custom, :jitsi, :kmeet] do
+        module = ProviderRegistry.get_provider!(type)
+        assert Code.ensure_loaded?(module)
+        refute function_exported?(module, :room_creation_budget_ms, 0)
+      end
     end
   end
 

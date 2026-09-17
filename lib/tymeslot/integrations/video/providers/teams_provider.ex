@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
   alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
@@ -125,6 +126,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
       do: error,
       else: {:provider_error, reason}
   end
+
+  # The slowest creation refreshes the token, creates the event and, when the
+  # event came back without a Teams link, deletes it again, each request at the
+  # HTTP client's default timeouts.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def room_creation_budget_ms,
+    do: HTTPClient.request_budget_ms(:post) * 2 + HTTPClient.request_budget_ms(:delete)
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, _participant_email, _role, _meeting_time) do

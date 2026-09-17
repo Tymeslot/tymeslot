@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.Providers.Capabilities
@@ -327,6 +328,11 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   defp presence(nil), do: nil
   defp presence(""), do: nil
   defp presence(value), do: value
+
+  # The slowest creation tries https and then falls back to plain http, both at
+  # the HTTP client's default timeouts.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def room_creation_budget_ms, do: HTTPClient.request_budget_ms(:post) * 2
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, participant_email, role, meeting_time) do

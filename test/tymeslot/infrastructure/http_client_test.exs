@@ -49,6 +49,25 @@ defmodule Tymeslot.Infrastructure.HTTPClientTest do
     end
   end
 
+  describe "request_budget_ms/2" do
+    test "adds Req's default connect timeout to the method's default receive timeout" do
+      assert HTTPClient.request_budget_ms(:get) == 60_000
+      assert HTTPClient.request_budget_ms(:post) == 75_000
+      assert HTTPClient.request_budget_ms(:report) == 90_000
+    end
+
+    test "uses the timeouts a request is sent with" do
+      options = [receive_timeout: 15_000, connect_options: [timeout: 5_000]]
+
+      assert HTTPClient.request_budget_ms(:post, options) == 20_000
+    end
+
+    test "honours the older timeout option, which takes precedence over the receive timeout" do
+      assert HTTPClient.request_budget_ms(:post, timeout: 5_000, receive_timeout: 15_000) ==
+               35_000
+    end
+  end
+
   describe "retry behaviour" do
     test "does not retry failed GET requests" do
       call_count = :counters.new(1, [:atomics])

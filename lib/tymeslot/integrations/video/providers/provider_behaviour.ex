@@ -277,11 +277,28 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   """
   @callback ensure_valid_token(config :: map()) :: {:ok, map()} | {:error, any()}
 
+  @doc """
+  The longest `create_meeting_room/1` can wait on the network: every request
+  its slowest path may send, each at the timeouts it is sent with, in
+  milliseconds.
+
+  The room job runs creation under a timeout derived from the largest of
+  these, so a room the provider has already made is never abandoned by a job
+  that stopped waiting for the answer. Declare it from the same timeouts the
+  requests use (`Tymeslot.Infrastructure.HTTPClient.request_budget_ms/2`), never
+  as a separate number.
+
+  Optional: a provider that builds its room without a network call does not
+  implement it.
+  """
+  @callback room_creation_budget_ms() :: pos_integer()
+
   @optional_callbacks time_bound_join_urls?: 1,
                       update_meeting_room: 2,
                       delete_meeting_room: 2,
                       url_patterns: 0,
                       precheck_create_meeting_room: 1,
                       finish_create_meeting_room: 2,
-                      ensure_valid_token: 1
+                      ensure_valid_token: 1,
+                      room_creation_budget_ms: 0
 end
