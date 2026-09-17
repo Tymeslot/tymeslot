@@ -26,6 +26,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.CalendarGrid.EventVideo
+  alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
@@ -90,7 +91,19 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     plan =
       MeetingProvisioning.plan(creating.integration_id, creating[:video_integration_id], user_id)
 
-    video_context = provision_video_room_for_plan(plan, event_details, user_id, uid)
+    # What recording a room made for this event needs: the event's identity in
+    # the calendar and its timing (see `EventVideoRooms.record/2`).
+    grid_event = %{
+      user_id: user_id,
+      calendar_integration_id: creating.integration_id,
+      uid: uid,
+      all_day: Map.get(creating, :all_day, false),
+      start: start_at,
+      end: end_at,
+      recurrence_rule: Map.get(creating, :recurrence_rule)
+    }
+
+    video_context = provision_video_room_for_plan(plan, event_details, grid_event)
 
     event_data =
       build_event_data(uid, creating, start_at, end_at, event_details, video_context, plan)
@@ -226,13 +239,13 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     end
   end
 
-  defp provision_video_room_for_plan(:none, _event_details, _user_id, _uid), do: %{}
+  defp provision_video_room_for_plan(:none, _event_details, _grid_event), do: %{}
 
-  defp provision_video_room_for_plan({:inline, _video_id}, _event_details, _user_id, _uid),
+  defp provision_video_room_for_plan({:inline, _video_id}, _event_details, _grid_event),
     do: %{}
 
-  defp provision_video_room_for_plan({:separate, video_id}, event_details, user_id, uid) do
-    provision_video_room(video_id, user_id, event_details, uid)
+  defp provision_video_room_for_plan({:separate, video_id}, event_details, grid_event) do
+    provision_video_room(video_id, event_details, grid_event)
   end
 
   defp build_create_success(created, creating, user_id, start_at, end_at, video_context) do
@@ -278,12 +291,24 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
      }}
   end
 
-  defp provision_video_room(integration_id, user_id, event_details, meeting_id)
+  defp provision_video_room(integration_id, event_details, %{user_id: user_id} = grid_event)
        when is_integer(integration_id) do
-    opts = [integration_id: integration_id, event_details: event_details, meeting_id: meeting_id]
+    opts = [
+      integration_id: integration_id,
+      event_details: event_details,
+      meeting_id: grid_event.uid
+    ]
 
     case VideoRooms.create_meeting_room(user_id, opts) do
-      {:ok, %{room_data: room_data}} ->
+      {:ok, %{room_data: room_data} = meeting_context} ->
+        # Recorded as soon as the room exists, before the calendar write: a
+        # room whose event never reaches the calendar still falls due.
+        :ok =
+          EventVideoRooms.record(
+            meeting_context,
+            Map.put(grid_event, :video_integration_id, integration_id)
+          )
+
         %{
           meeting_url: room_data.meeting_url,
           room_id: room_data.room_id,

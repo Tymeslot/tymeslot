@@ -13,6 +13,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.CalendarGrid.EventVideo
+  alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
@@ -379,6 +380,28 @@ defmodule Tymeslot.CalendarGrid do
       {:error, :not_found} -> {:error, :not_found}
     end
   end
+
+  @doc "Records a video room made for a grid event. See `EventVideoRooms.record/2`."
+  @spec record_event_video_room(map(), map()) :: :ok
+  defdelegate record_event_video_room(meeting_context, event),
+    to: EventVideoRooms,
+    as: :record
+
+  @doc "Brings a grid event's video rooms in step with its timing. See `EventVideoRooms.rescheduled/1`."
+  @spec reschedule_event_video_rooms(map()) :: :ok
+  defdelegate reschedule_event_video_rooms(event), to: EventVideoRooms, as: :rescheduled
+
+  @doc "Follows a grid event moved to another integration. See `EventVideoRooms.moved/4`."
+  @spec move_event_video_rooms(pos_integer(), String.t(), pos_integer(), String.t()) :: :ok
+  defdelegate move_event_video_rooms(from_integration_id, from_uid, to_integration_id, to_uid),
+    to: EventVideoRooms,
+    as: :moved
+
+  @doc "Deletes a deleted grid event's video rooms. See `EventVideoRooms.event_deleted/2`."
+  @spec delete_event_video_rooms(pos_integer(), String.t()) :: :ok
+  defdelegate delete_event_video_rooms(calendar_integration_id, uid),
+    to: EventVideoRooms,
+    as: :event_deleted
 
   @doc """
   Returns active calendar integrations for the given user.

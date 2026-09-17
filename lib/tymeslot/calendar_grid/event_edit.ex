@@ -20,6 +20,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   the cache, so the grid keeps showing what the organiser saved.
   """
 
+  alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.ProviderPayload
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
@@ -73,6 +74,9 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     case CalendarEvents.update_event(event.uid, payload, {event.calendar_integration_id, user_id}) do
       :ok ->
         record_local_edit(user_id, updated)
+        # A no-op unless the event holds a recorded video room whose times the
+        # change moved.
+        EventVideoRooms.rescheduled(updated)
         {:ok, updated}
 
       {:error, reason} ->

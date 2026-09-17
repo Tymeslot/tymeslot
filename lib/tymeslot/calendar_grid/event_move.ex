@@ -45,6 +45,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   occurrence.
   """
 
+  alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.ProviderPayload
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar
@@ -131,6 +132,17 @@ defmodule Tymeslot.CalendarGrid.EventMove do
          {:ok, payload} <- ProviderPayload.from_event(moved),
          {:ok, created} <- create_on_destination(user_id, moved, payload) do
       moved = %{moved | uid: created_uid(created, moved.uid)}
+
+      # The event keeps its description, and with it the join link, so its
+      # video rooms follow it to the new identity.
+      :ok =
+        EventVideoRooms.moved(
+          event.calendar_integration_id,
+          event.uid,
+          integration.id,
+          moved.uid
+        )
+
       cache_destination(moved)
       result = %{uid: moved.uid, integration_id: integration.id}
 

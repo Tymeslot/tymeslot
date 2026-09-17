@@ -17,6 +17,11 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   current times — never stale args captured at enqueue time. A meeting that no
   longer carries a video room (or vanished entirely) is treated as already
   synced and the job is discarded.
+
+  The same sync serves the rooms of events created on the dashboard calendar
+  grid, which no meeting holds. Those are recorded by
+  `Tymeslot.CalendarGrid.EventVideoRooms` and enqueued with
+  `enqueue_event_room/2`; a delete removes the record once the room is gone.
   """
 
   use Oban.Worker,
@@ -24,6 +29,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     max_attempts: 5,
     priority: 2
 
+  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.IntegrationResolver
@@ -47,15 +53,32 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   window resolves to `{:ok, :already_scheduled}`.
   """
   @spec enqueue(String.t(), String.t()) :: {:ok, atom()} | {:error, term()}
-  def enqueue(meeting_id, action) when is_binary(meeting_id) and action in ["update", "delete"] do
+  def enqueue(meeting_id, action) when is_binary(meeting_id) and action in ["update", "delete"],
+    do: insert_job(%{"meeting_id" => meeting_id, "action" => action}, :meeting_id)
+
+  @doc """
+  Enqueues a video-room sync job for the room of a calendar grid event, by the
+  id of its `Tymeslot.CalendarGrid.EventVideoRoomSchema` record.
+
+  `action` is `"update"` (the event moved) or `"delete"` (the event was
+  deleted, or the room has outlived it).
+  """
+  @spec enqueue_event_room(pos_integer(), String.t()) :: {:ok, atom()} | {:error, term()}
+  def enqueue_event_room(room_id, action)
+      when is_integer(room_id) and action in ["update", "delete"],
+      do: insert_job(%{"event_room_id" => room_id, "action" => action}, :event_room_id)
+
+  # Uniqueness keys on the record's own id: keyed on an absent `meeting_id`,
+  # every event room's jobs for one action would count as duplicates.
+  defp insert_job(args, id_key) do
     job_changeset =
-      new(%{"meeting_id" => meeting_id, "action" => action},
+      new(args,
         queue: :video_rooms,
         priority: 2,
         unique: [
           period: 300,
           fields: [:args, :queue],
-          keys: [:meeting_id, :action],
+          keys: [id_key, :action],
           states: [:available, :scheduled, :executing, :retryable]
         ]
       )
@@ -79,12 +102,24 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   end
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: args, attempt: attempt} = job) do
-    %{"meeting_id" => meeting_id, "action" => action} = args
-    # Snoozes are paced and bounded by how many times the job has run, which
-    # `job.attempt` stopped counting in Oban 2.24.
-    executions = SnoozePolicy.executions(job)
-    Logger.metadata(job_id: job.id, attempt: attempt, execution: executions)
+  def perform(%Oban.Job{args: %{"event_room_id" => room_id, "action" => action}} = job) do
+    executions = start_execution(job)
+
+    case EventVideoRoomQueries.get_with_integration(room_id) do
+      {:ok, room} ->
+        perform_action(action, event_room_target(room), room.video_integration_id, executions)
+
+      {:error, :not_found} ->
+        Logger.info("Calendar event video room gone before video sync, discarding",
+          calendar_event_video_room_id: room_id
+        )
+
+        {:discard, "Calendar event video room not found"}
+    end
+  end
+
+  def perform(%Oban.Job{args: %{"meeting_id" => meeting_id, "action" => action}} = job) do
+    executions = start_execution(job)
 
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
@@ -96,6 +131,36 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     end
   end
 
+  # Snoozes are paced and bounded by how many times the job has run, which
+  # `job.attempt` stopped counting in Oban 2.24.
+  defp start_execution(job) do
+    executions = SnoozePolicy.executions(job)
+    Logger.metadata(job_id: job.id, attempt: job.attempt, execution: executions)
+    executions
+  end
+
+  # What syncing a room needs, whichever record holds it: a booking, or the
+  # record of a calendar grid event's room.
+  defp meeting_target(meeting),
+    do: %{
+      kind: :meeting,
+      record: meeting,
+      user_id: meeting.organizer_user_id,
+      room_id: meeting.video_room_id,
+      provider: meeting.video_provider,
+      log: [meeting_id: meeting.id]
+    }
+
+  defp event_room_target(room),
+    do: %{
+      kind: :event_room,
+      record: room,
+      user_id: room.user_id,
+      room_id: room.room_id,
+      provider: room.video_integration.provider,
+      log: [calendar_event_video_room_id: room.id]
+    }
+
   # Clause order matters: a meeting with no room at all is an ordinary no-op and
   # stays silent, whereas a meeting that holds a room nothing can reach is a
   # problem worth surfacing. Testing for the room first keeps the two apart.
@@ -104,35 +169,46 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
 
   defp dispatch(action, meeting, executions) do
     case IntegrationResolver.resolve_for_meeting(meeting) do
-      {:ok, integration_id} -> perform_action(action, meeting, integration_id, executions)
-      {:error, reason} -> discard_unreachable(meeting, action, reason)
+      {:ok, integration_id} ->
+        perform_action(action, meeting_target(meeting), integration_id, executions)
+
+      {:error, reason} ->
+        discard_unreachable(meeting, action, reason)
     end
   end
 
-  defp perform_action("update", meeting, integration_id, executions) do
+  defp perform_action("update", target, integration_id, executions) do
     result =
-      Video.update_meeting_room(meeting.organizer_user_id,
-        integration_id: integration_id,
-        room_id: meeting.video_room_id,
-        # The name the room was created with, so a reschedule renames it to
-        # the same value creation would have used.
-        topic: EventDetails.from_meeting(meeting).summary,
-        start_time: meeting.start_time,
-        end_time: meeting.end_time
+      Video.update_meeting_room(
+        target.user_id,
+        [integration_id: integration_id, room_id: target.room_id] ++ room_changes(target)
       )
 
-    handle_result(result, "update", meeting, executions)
+    handle_result(result, "update", target, executions)
   end
 
-  defp perform_action("delete", meeting, integration_id, executions) do
+  defp perform_action("delete", target, integration_id, executions) do
     result =
-      Video.delete_meeting_room(meeting.organizer_user_id,
+      Video.delete_meeting_room(target.user_id,
         integration_id: integration_id,
-        room_id: meeting.video_room_id
+        room_id: target.room_id
       )
 
-    handle_result(result, "delete", meeting, executions)
+    handle_result(result, "delete", target, executions)
   end
+
+  defp room_changes(%{kind: :meeting, record: meeting}),
+    do: [
+      # The name the room was created with, so a reschedule renames it to the
+      # same value creation would have used.
+      topic: EventDetails.from_meeting(meeting).summary,
+      start_time: meeting.start_time,
+      end_time: meeting.end_time
+    ]
+
+  # A grid event's room keeps its name: only the lobby follows the event.
+  defp room_changes(%{kind: :event_room, record: room}),
+    do: [start_time: room.starts_at, end_time: room.ends_at]
 
   defp discard_no_room, do: {:discard, "No provider video room to sync"}
 
@@ -163,27 +239,27 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   # `Tymeslot.Workers.OrphanedVideoRoomScanWorker` (cancelled meetings) and
   # `Tymeslot.Workers.ExpiredVideoRoomCleanupWorker` (meetings that ended a while
   # ago) rely on to converge instead of re-deleting the same rooms nightly.
-  defp handle_result(:ok, "delete", meeting, _executions), do: clear_video_room(meeting)
+  defp handle_result(:ok, "delete", target, _executions), do: clear_room(target)
 
-  defp handle_result(:ok, _action, _meeting, _executions), do: :ok
+  defp handle_result(:ok, _action, _target, _executions), do: :ok
 
-  defp handle_result({:error, :meeting_not_found}, action, meeting, _executions) do
-    Logger.info("Provider video meeting already gone, treating as synced",
-      meeting_id: meeting.id,
-      action: action
+  defp handle_result({:error, :meeting_not_found}, action, target, _executions) do
+    Logger.info(
+      "Provider video meeting already gone, treating as synced",
+      target.log ++ [action: action]
     )
 
-    if action == "delete", do: clear_video_room(meeting), else: :ok
+    if action == "delete", do: clear_room(target), else: :ok
   end
 
   # The integration's OAuth grant lacks the scope this action needs. Only the
   # user reconnecting can fix that, and the provider has already flagged the
   # integration for reauth, so retrying would just replay a guaranteed failure
   # until the job exhausts its attempts and pages an admin.
-  defp handle_result({:error, :insufficient_scope}, action, meeting, _executions) do
-    Logger.error("Video provider scope insufficient, discarding job",
-      meeting_id: meeting.id,
-      action: action
+  defp handle_result({:error, :insufficient_scope}, action, target, _executions) do
+    Logger.error(
+      "Video provider scope insufficient, discarding job",
+      target.log ++ [action: action]
     )
 
     {:discard, "Video provider scope insufficient — reconnect required"}
@@ -193,10 +269,10 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   # for reconnection. Retrying would replay a guaranteed refusal, and on a
   # self-hosted server such as Nextcloud each refusal also counts against the
   # server's brute-force protection for Tymeslot's address.
-  defp handle_result({:error, :unauthorized}, action, meeting, _executions) do
-    Logger.error("Video provider refused the stored credentials, discarding job",
-      meeting_id: meeting.id,
-      action: action
+  defp handle_result({:error, :unauthorized}, action, target, _executions) do
+    Logger.error(
+      "Video provider refused the stored credentials, discarding job",
+      target.log ++ [action: action]
     )
 
     {:discard, "Video provider refused the stored credentials: reconnect required"}
@@ -208,13 +284,12 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   defp handle_result(
          {:error, {:configuration_error, _details} = reason},
          action,
-         meeting,
+         target,
          _executions
        ) do
-    Logger.error("Video provider refused the change for good, discarding job",
-      meeting_id: meeting.id,
-      action: action,
-      reason: inspect(reason)
+    Logger.error(
+      "Video provider refused the change for good, discarding job",
+      target.log ++ [action: action, reason: inspect(reason)]
     )
 
     {:error, categorized} = ErrorPolicy.categorize(reason)
@@ -224,7 +299,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   # The provider is throttling Tymeslot. Retrying at once would only extend the
   # throttle, so the job snoozes on the growing interval room creation uses,
   # which costs no attempt, until the snooze budget is spent.
-  defp handle_result({:error, :rate_limited}, _action, _meeting, executions)
+  defp handle_result({:error, :rate_limited}, _action, _target, executions)
        when executions < @max_rate_limit_snoozes do
     ErrorPolicy.to_result(:rate_limited, executions)
   end
@@ -233,19 +308,24 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   # recovers is refused instantly. Snooze past the recovery window, the same
   # policy `VideoRoomWorker` already applies, rather than burning one of this
   # job's five attempts on a call known to be refused.
-  defp handle_result({:error, :circuit_open}, _action, meeting, executions) do
-    ErrorPolicy.to_result(:circuit_open, executions, meeting.video_provider)
+  defp handle_result({:error, :circuit_open}, _action, target, executions) do
+    ErrorPolicy.to_result(:circuit_open, executions, target.provider)
   end
 
-  defp handle_result({:error, reason}, action, meeting, _executions) do
-    Logger.warning("Provider video sync failed, will retry",
-      meeting_id: meeting.id,
-      action: action,
-      reason: inspect(reason)
+  defp handle_result({:error, reason}, action, target, _executions) do
+    Logger.warning(
+      "Provider video sync failed, will retry",
+      target.log ++ [action: action, reason: inspect(reason)]
     )
 
     {:error, reason}
   end
+
+  defp clear_room(%{kind: :meeting, record: meeting}), do: clear_video_room(meeting)
+
+  # A grid event's room exists only as this record, so once the room is gone
+  # the record goes too, and nothing scans for it again.
+  defp clear_room(%{kind: :event_room, record: room}), do: EventVideoRoomQueries.delete(room)
 
   defp clear_video_room(meeting) do
     case MeetingQueries.update_meeting(meeting, %{

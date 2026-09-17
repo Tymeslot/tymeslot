@@ -22,6 +22,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   deleted the event.
   """
 
+  alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -72,6 +73,8 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
            opts
          ) do
       {:ok, result} ->
+        :ok = EventVideoRooms.event_deleted(integration_id, uid)
+
         {:ok, _deleted_or_missing} =
           ProviderCalendarEventQueries.delete_by_uid(integration_id, uid)
 

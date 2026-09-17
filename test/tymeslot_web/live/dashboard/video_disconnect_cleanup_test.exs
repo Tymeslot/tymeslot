@@ -15,6 +15,8 @@ defmodule TymeslotWeb.Dashboard.VideoDisconnectCleanupTest do
   import Tymeslot.Factory
   import Tymeslot.MeetingTestHelpers
 
+  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
+  alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Repo
@@ -167,6 +169,46 @@ defmodule TymeslotWeb.Dashboard.VideoDisconnectCleanupTest do
              perform_job(VideoIntegrationDisconnectWorker, %{"integration_id" => integration.id})
 
     assert Enum.map(ended, &Repo.reload!(&1).video_room_id) == [nil, nil]
+    assert {:error, :not_found} = VideoIntegrationQueries.get(integration.id)
+  end
+
+  # A conversation made with an event on the calendar grid has no booking, so
+  # it is counted and drained from the grid's own record of it.
+  test "a Talk conversation made with a calendar grid event is counted and deleted on disconnect",
+       %{conn: conn, user: user} do
+    host = "modal-grid.example.com"
+    integration = insert_talk_integration(user, host)
+    calendar = insert(:calendar_integration, user: user)
+
+    {:ok, room} =
+      EventVideoRoomQueries.insert(%{
+        user_id: user.id,
+        video_integration_id: integration.id,
+        calendar_integration_id: calendar.id,
+        event_uid: "grid-event",
+        room_id: "grid0001",
+        starts_at: DateTime.add(DateTime.utc_now(:second), @day, :second),
+        ends_at: DateTime.add(DateTime.utc_now(:second), @day + 1800, :second)
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+    html = open_delete_modal(view, "delete-video-modal", integration.id)
+
+    assert html =~ "1 conversation from this integration is still on your Nextcloud server"
+
+    tick_delete_rooms(view, "delete-video-modal")
+    confirm_delete(view, "delete-video-modal")
+
+    expect(HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
+      assert url == "https://#{host}/ocs/v2.php/apps/spreed/api/v4/room/grid0001"
+      {:ok, %Req.Response{status: 200, body: talk_ocs(nil)}}
+    end)
+
+    assert :ok =
+             perform_job(VideoIntegrationDisconnectWorker, %{"integration_id" => integration.id})
+
+    assert Repo.get(EventVideoRoomSchema, room.id) == nil
     assert {:error, :not_found} = VideoIntegrationQueries.get(integration.id)
   end
 

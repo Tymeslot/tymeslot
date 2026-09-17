@@ -15,8 +15,11 @@ defmodule Tymeslot.Integrations.Video.Disconnect do
 
   Which rooms go depends on the provider (`room_scope/1`). The modal that asks
   the question and the worker that acts on the answer both choose through it.
+  The rooms are those of bookings and those made for events on the dashboard
+  calendar grid (`Tymeslot.CalendarGrid.EventVideoRooms`).
   """
 
+  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
@@ -76,15 +79,13 @@ defmodule Tymeslot.Integrations.Video.Disconnect do
     case VideoIntegrationQueries.get_for_user(id, user_id) do
       {:ok, integration} ->
         scope = room_scope(integration.provider)
+        now = DateTime.utc_now()
 
         %{
           scope: scope,
           count:
-            MeetingQueries.count_with_video_room_for_integration(
-              integration.id,
-              scope,
-              DateTime.utc_now()
-            )
+            MeetingQueries.count_with_video_room_for_integration(integration.id, scope, now) +
+              EventVideoRoomQueries.count_for_integration(integration.id, scope, now)
         }
 
       {:error, :not_found} ->

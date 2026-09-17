@@ -17,6 +17,9 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
   import Tymeslot.MeetingTestHelpers
 
   alias Oban.Cron.Expression
+  alias Tymeslot.CalendarGrid.EventCreation
+  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
+  alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
@@ -152,6 +155,122 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
     refute_enqueued(worker: VideoSyncWorker)
   end
 
+  describe "rooms made for calendar grid events" do
+    # A grid event lives only in the organiser's calendar, so no meeting holds
+    # its conversation: the grid records it when the event is created.
+    test "a conversation made with a grid event is deleted once the event is past retention", %{
+      user: user
+    } do
+      host = "grid-journey.example.com"
+      talk = insert_talk_integration(user, host)
+      calendar = insert(:calendar_integration, user: user, is_active: true)
+
+      # Plays the organiser's Nextcloud server: no conversation exists until
+      # one is created, and every delete it receives reaches the test.
+      test = self()
+      rooms_url = "https://#{host}/ocs/v2.php/apps/spreed/api/v4/room"
+
+      stub(HTTPClientMock, :request, fn
+        :get, _url, _body, _headers, _opts ->
+          {:ok, %Req.Response{status: 200, body: ocs([])}}
+
+        :post, ^rooms_url, _body, _headers, _opts ->
+          {:ok, %Req.Response{status: 201, body: ocs(%{"token" => "grid0001"})}}
+
+        :delete, url, _body, _headers, _opts ->
+          send(test, {:deleted, url})
+          {:ok, %Req.Response{status: 200, body: ocs(nil)}}
+      end)
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
+        {:ok, "grid-journey-uid"}
+      end)
+
+      start_at = DateTime.add(DateTime.utc_now(:second), -8 * @day - 3600, :second)
+
+      assert {:ok, %{video_room_id: "grid0001"}} =
+               EventCreation.run_create_event(%{
+                 creating: %{
+                   title: "Planning",
+                   integration_id: calendar.id,
+                   calendar_id: "primary",
+                   attendees: [],
+                   video_integration_id: talk.id
+                 },
+                 user_id: user.id,
+                 start_at: start_at,
+                 end_at: DateTime.add(start_at, 1800, :second)
+               })
+
+      assert [%EventVideoRoomSchema{id: room_id, room_id: "grid0001"}] =
+               Repo.all(EventVideoRoomSchema)
+
+      assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
+      assert_enqueued(worker: VideoSyncWorker, args: event_room_delete_args(room_id))
+
+      refute_received {:deleted, _url}
+
+      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :video_rooms)
+      assert_received {:deleted, url}
+      assert url == rooms_url <> "/grid0001"
+      assert Repo.get(EventVideoRoomSchema, room_id) == nil
+
+      assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
+      refute_enqueued(worker: VideoSyncWorker)
+    end
+
+    test "keeps a grid event's conversation within the retention period", %{user: user} do
+      room = insert_event_room(user, insert_talk_integration(user, "grid-recent.example.com"), 6)
+
+      assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
+
+      refute_enqueued(worker: VideoSyncWorker, args: event_room_delete_args(room.id))
+    end
+
+    test "gives up on a grid event's conversation a month after it fell due", %{user: user} do
+      room = insert_event_room(user, insert_talk_integration(user, "grid-stale.example.com"), 40)
+
+      assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
+
+      refute_enqueued(worker: VideoSyncWorker, args: event_room_delete_args(room.id))
+    end
+
+    test "never deletes the conversation of a series with no end", %{user: user} do
+      talk = insert_talk_integration(user, "grid-series.example.com")
+      room = insert_event_room(user, talk, 8, ends_at: nil)
+
+      assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
+
+      refute_enqueued(worker: VideoSyncWorker, args: event_room_delete_args(room.id))
+    end
+
+    test "skips a grid event's conversation whose integration is waiting to be reconnected", %{
+      user: user
+    } do
+      talk = insert_talk_integration(user, "grid-flagged.example.com", needs_reauth: true)
+      room = insert_event_room(user, talk, 8)
+
+      assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
+
+      refute_enqueued(worker: VideoSyncWorker, args: event_room_delete_args(room.id))
+    end
+
+    test "skips a grid event's conversation whose integration is being disconnected", %{
+      user: user
+    } do
+      talk =
+        insert_talk_integration(user, "grid-leaving.example.com",
+          deleted_at: DateTime.utc_now(:second)
+        )
+
+      room = insert_event_room(user, talk, 8)
+
+      assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
+
+      refute_enqueued(worker: VideoSyncWorker, args: event_room_delete_args(room.id))
+    end
+  end
+
   # The production crontab is only assembled in runtime.exs and never loaded in
   # test, so a typo in the schedule or the module name would otherwise ship
   # silently and leave every conversation in place. The pattern is anchored to
@@ -179,6 +298,30 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
     do: refute_enqueued(worker: VideoSyncWorker, args: delete_args(meeting))
 
   defp delete_args(meeting), do: %{"meeting_id" => meeting.id, "action" => "delete"}
+
+  defp event_room_delete_args(room_id), do: %{"event_room_id" => room_id, "action" => "delete"}
+
+  defp insert_event_room(user, integration, ended_days_ago, attrs \\ []) do
+    ends_at = DateTime.add(DateTime.utc_now(:second), -ended_days_ago * @day, :second)
+
+    {:ok, room} =
+      EventVideoRoomQueries.insert(
+        Map.merge(
+          %{
+            user_id: user.id,
+            video_integration_id: integration.id,
+            calendar_integration_id: insert(:calendar_integration, user: user).id,
+            event_uid: "grid-" <> Integer.to_string(System.unique_integer([:positive])),
+            room_id: "room" <> Integer.to_string(ended_days_ago),
+            starts_at: DateTime.add(ends_at, -1800, :second),
+            ends_at: ends_at
+          },
+          Map.new(attrs)
+        )
+      )
+
+    room
+  end
 
   defp insert_ended(user, ended_days_ago, provider, room_id, attrs \\ []) do
     insert_meeting_for_user(

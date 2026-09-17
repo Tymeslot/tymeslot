@@ -25,7 +25,6 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Video.Urls
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
-  alias Tymeslot.Meetings.MeetingQueries
 
   @behaviour Tymeslot.Security.EncryptedStorage
 

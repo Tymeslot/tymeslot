@@ -17,10 +17,16 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorker do
   Mirrors `Tymeslot.Workers.OrphanedVideoRoomScanWorker`, which does the same
   for cancelled meetings, so this scan leaves those to it. Rooms whose
   integration is waiting to be reconnected are skipped until it is.
+
+  Rooms made for events on the dashboard calendar grid have no meeting, so
+  they are read from their own records (`Tymeslot.CalendarGrid.EventVideoRooms`)
+  and deleted through the same job, which removes each record once its room is
+  gone. The same retention, look-back window and skips apply.
   """
 
   use Oban.Worker, queue: :default, max_attempts: 1, unique: [period: 60]
 
+  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Workers.VideoSyncWorker
@@ -43,24 +49,24 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorker do
     ended_before = DateTime.add(DateTime.utc_now(), -retention_days * @seconds_per_day, :second)
     ended_after = DateTime.add(ended_before, -@lookback_days * @seconds_per_day, :second)
 
-    meetings =
-      MeetingListQueries.list_ended_with_video_room(
-        ProviderConfig.rooms_deleted_after_meeting(),
-        ended_before,
-        ended_after
-      )
+    providers = ProviderConfig.rooms_deleted_after_meeting()
+
+    meetings = MeetingListQueries.list_ended_with_video_room(providers, ended_before, ended_after)
+    event_rooms = EventVideoRoomQueries.list_ended(providers, ended_before, ended_after)
 
     enqueued =
-      Enum.count(meetings, fn meeting ->
-        match?({:ok, _status}, VideoSyncWorker.enqueue(meeting.id, "delete"))
-      end)
+      Enum.count(meetings, &enqueued?(VideoSyncWorker.enqueue(&1.id, "delete"))) +
+        Enum.count(event_rooms, &enqueued?(VideoSyncWorker.enqueue_event_room(&1.id, "delete")))
 
     Logger.info("Expired video room clean-up completed",
       total_meetings: length(meetings),
+      total_calendar_event_rooms: length(event_rooms),
       enqueued: enqueued,
       retention_days: retention_days
     )
 
     :ok
   end
+
+  defp enqueued?(result), do: match?({:ok, _status}, result)
 end

@@ -28,6 +28,7 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   """
 
   alias Tymeslot.CalendarGrid.EventEdit
+  alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.EventDetails
@@ -124,7 +125,9 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
     ]
 
     case Video.create_meeting_room(user_id, opts) do
-      {:ok, %{room_data: %{meeting_url: url}}} when is_binary(url) and url != "" ->
+      {:ok, %{room_data: %{meeting_url: url}} = meeting_context}
+      when is_binary(url) and url != "" ->
+        :ok = record_room(meeting_context, event, video_integration_id, user_id)
         {:ok, url}
 
       # A 2xx whose body lacks the URL still passes `RoomData`'s key check.
@@ -148,6 +151,23 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
 
         error
     end
+  end
+
+  # Recorded as soon as the provider reports the room, so that a provider
+  # whose rooms Tymeslot has to delete (Nextcloud Talk today) has its room
+  # deleted with the event or once the event has ended, rather than left on
+  # the organiser's server with nothing pointing at it.
+  defp record_room(meeting_context, event, video_integration_id, user_id) do
+    EventVideoRooms.record(meeting_context, %{
+      user_id: user_id,
+      video_integration_id: video_integration_id,
+      calendar_integration_id: event.calendar_integration_id,
+      uid: event.uid,
+      all_day: event.all_day,
+      start: if(event.all_day, do: event.start_date, else: event.start_at),
+      end: if(event.all_day, do: event.end_date, else: event.end_at),
+      recurrence_rule: Map.get(event, :recurrence_rule)
+    })
   end
 
   # The new room is only referenced once the calendar has the link, so a

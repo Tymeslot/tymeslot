@@ -1189,6 +1189,7 @@ msgstr ""
 #: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Write the template variable exactly as {{meeting_id}}"
+msgstr ""
 
 #: lib/tymeslot/integrations/video/providers/kmeet_provider.ex
 
