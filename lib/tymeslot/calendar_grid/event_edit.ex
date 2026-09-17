@@ -5,23 +5,12 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   ## Why the whole event is sent
 
-  Provider updates are full replaces. CalDAV rebuilds the VEVENT from the
-  payload and Google's `events.update` is a `PUT`, so any field a payload
-  leaves out is deleted from the organiser's calendar. A rename that sent
-  only the title used to strip the event's attendees, reminders, repeat rule
-  and colour. The payload is therefore always built from the complete event
-  after the change is applied, never from the change alone.
-
-  Complete means complete with respect to what the cache models. Properties
-  Tymeslot never reads (categories, custom `X-` properties, alarm repeats)
-  are still lost on a CalDAV or Google write.
-
-  ## Vocabularies
-
-  `changes` speaks the cache's vocabulary (`start_at`, `start_date`, ...);
-  the provider payload speaks the adapters' (`start_time`, `end_time`). The
-  two are translated here in one direction only, so a key cannot silently
-  mean something to one side and nothing to the other.
+  Provider updates are full replaces, so a rename that sent only the title
+  used to strip the event's attendees, reminders, repeat rule and colour. The
+  payload is therefore always built by `Tymeslot.CalendarGrid.ProviderPayload`
+  from the complete event after the change is applied, never from the change
+  alone. `changes` speaks the cache's vocabulary; that module is the one place
+  it is translated into the adapters'.
 
   ## Failure
 
@@ -31,6 +20,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   the cache, so the grid keeps showing what the organiser saved.
   """
 
+  alias Tymeslot.CalendarGrid.ProviderPayload
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -38,11 +28,6 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   require Logger
 
   @editable_fields ~w(summary description location start_at end_at all_day start_date end_date reminders recurrence_rule colour attendees)a
-
-  # Only provider statuses every adapter accepts on a write. A cached
-  # `declined` describes the organiser's response, not the event, and Google
-  # rejects it as an event status.
-  @writable_statuses ~w(confirmed tentative cancelled)
 
   @typedoc "An allowlisted map of cache fields to their new values."
   @type changes :: %{optional(atom()) => term()}
@@ -74,18 +59,24 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     ensure_editable!(changes)
     updated = apply_changes(event, changes)
 
-    with :ok <- validate_timing(updated) do
-      payload = provider_payload(updated, opts)
-      context = {event.calendar_integration_id, user_id}
+    case ProviderPayload.from_event(updated) do
+      {:ok, payload} ->
+        payload = maybe_put_scope(payload, Keyword.get(opts, :recurrence_scope))
+        write_to_provider(user_id, event, updated, payload)
 
-      case CalendarEvents.update_event(event.uid, payload, context) do
-        :ok ->
-          record_local_edit(user_id, updated)
-          {:ok, updated}
+      {:error, :invalid_timing} ->
+        {:error, %{reason: :invalid_timing, retry: :not_queued}}
+    end
+  end
 
-        {:error, reason} ->
-          {:error, %{reason: reason, retry: queue_retry(user_id, updated, payload, reason)}}
-      end
+  defp write_to_provider(user_id, event, updated, payload) do
+    case CalendarEvents.update_event(event.uid, payload, {event.calendar_integration_id, user_id}) do
+      :ok ->
+        record_local_edit(user_id, updated)
+        {:ok, updated}
+
+      {:error, reason} ->
+        {:error, %{reason: reason, retry: queue_retry(user_id, updated, payload, reason)}}
     end
   end
 
@@ -109,54 +100,6 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   defp normalise_timing(%{all_day: true} = event), do: %{event | start_at: nil, end_at: nil}
   defp normalise_timing(event), do: %{event | start_date: nil, end_date: nil}
-
-  # A provider write without usable timing either crashes the CalDAV builder
-  # or reaches the provider as an event with no start, so it never leaves.
-  defp validate_timing(%{all_day: true, start_date: %Date{}, end_date: %Date{}}), do: :ok
-  defp validate_timing(%{all_day: false, start_at: %DateTime{}, end_at: %DateTime{}}), do: :ok
-
-  defp validate_timing(_event),
-    do: {:error, %{reason: :invalid_timing, retry: :not_queued}}
-
-  defp provider_payload(event, opts) do
-    {start_time, end_time} = provider_timing(event)
-
-    payload = %{
-      summary: event.summary || "",
-      description: event.description || "",
-      location: event.location || "",
-      start_time: start_time,
-      end_time: end_time,
-      all_day: event.all_day,
-      attendees: event.attendees || [],
-      reminders: event.reminders || [],
-      recurrence_rule: event.recurrence_rule,
-      recurrence_exceptions: event.recurrence_exceptions || [],
-      colour: event.colour,
-      transparency: event.transparency,
-      visibility: event.visibility,
-      status: writable_status(event.status),
-      provider_event_id: event.provider_event_id,
-      calendar_id: calendar_id(event.provider_calendar_id)
-    }
-
-    maybe_put_scope(payload, Keyword.get(opts, :recurrence_scope))
-  end
-
-  # Adapters read a `Date` as an all-day boundary and a `DateTime` as an
-  # instant, so the type itself carries the distinction.
-  defp provider_timing(%{all_day: true} = event), do: {event.start_date, event.end_date}
-  defp provider_timing(event), do: {event.start_at, event.end_at}
-
-  defp writable_status(status) when status in @writable_statuses, do: status
-  defp writable_status(_status), do: nil
-
-  # "primary" is the placeholder the Outlook sync writes when it does not know
-  # which calendar an event is on, and Microsoft Graph has no calendar by that
-  # id. Leaving it out lets each provider fall back to its own default, which
-  # for Google is that same "primary" alias.
-  defp calendar_id("primary"), do: nil
-  defp calendar_id(calendar_id), do: calendar_id
 
   defp maybe_put_scope(payload, nil), do: payload
   defp maybe_put_scope(payload, scope), do: Map.put(payload, :recurrence_scope, scope)
