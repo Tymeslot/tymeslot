@@ -454,6 +454,10 @@ The managed cloud offering (tymeslot.app) is built in a separate, private reposi
 2. **Domain Logic**: Business rules live in domain modules, not controllers or LiveViews.
 3. **Repository Pattern**: All database access through dedicated `*_queries.ex` modules.
 4. **No queries in `mount/3`**: Defer data loading to `handle_params/3` to avoid double-loading.
+5. **The web layer calls contexts only**: Everything under `lib/tymeslot_web/` (LiveViews, LiveComponents, controllers, handler and helper modules, function components, themes) is the presentation layer. It calls context functions, never `*_queries.ex` modules, Oban workers or `Oban.insert`, or runtime adapter modules. `CredoChecks.WebLayerBoundary` enforces this.
+6. **Contexts enforce ownership**: A context function that acts on a user-owned resource checks ownership itself: it takes the acting user or is scoped by them, and returns `{:error, :not_found}` for an id the user does not own. A check in a LiveView is never the only guard.
+7. **Async work stays in the domain**: Write it as a synchronous context function; the LiveView runs it asynchronously with `start_async/3` or a task.
+8. **UI pre-validation reuses the domain rule**: When the UI validates before submitting, it calls the context's predicate rather than restating the rule.
 
 ### Security First
 
