@@ -69,8 +69,8 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   alias Tymeslot.Integrations.Video.Providers.LinkRoom
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversation
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client
+  alias Tymeslot.Integrations.Video.Providers.NextcloudTalk.ServerRefusals
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  alias Tymeslot.Integrations.Video.RoomCreationError
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Security.SsrfGuard
   alias Tymeslot.Security.UrlValidation
@@ -104,14 +104,15 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   def create_meeting_room(%{needs_reauth: true}), do: {:error, :unauthorized}
 
   def create_meeting_room(config) do
-    with {:ok, data} <- booking_conversation(config),
+    with {:ok, data, origin} <- booking_conversation(config),
          {:ok, token} <- fetch_token(data) do
       {:ok,
        %RoomData{
          room_id: token,
          meeting_url: join_link(config.base_url, token),
          provider_data: %{base_url: config.base_url, created_at: DateTime.utc_now()},
-         provider_config: config
+         provider_config: config,
+         adopted: origin == :adopted
        }}
     end
   end
@@ -170,9 +171,11 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   end
 
   def perform_connection_test(config) do
-    case Client.capabilities(credentials(config)) do
-      {:ok, data} -> check_talk(data, config)
-      {:error, reason} -> {:error, connection_failure(reason, config)}
+    credentials = credentials(config)
+
+    with {:ok, _account} <- signed_in(credentials, config),
+         {:ok, capabilities} <- capabilities(credentials, config) do
+      check_talk(capabilities, config)
     end
   end
 
@@ -299,7 +302,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
   defp booking_conversation(config) do
     case BookingConversation.find_or_create(credentials(config), config) do
-      {:ok, data} -> {:ok, data}
+      {:ok, data, origin} -> {:ok, data, origin}
       {:error, reason} -> {:error, creation_failure(reason, config)}
     end
   end
@@ -398,51 +401,37 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
   defp join_link(base_url, token), do: String.trim_trailing(base_url, "/") <> @call_path <> token
 
-  # What a refusal at creation means for the booking. A refused credential
-  # flags the integration and is never retried. A throttled address is a rate
-  # limit, which the room job snoozes rather than retrying at once. A refusal
-  # caused by the server's own configuration repeats on every attempt, so it is
-  # a configuration error, which the room job discards, and its code (see
-  # `Tymeslot.Integrations.Video.RoomCreationError`) is recorded on the
-  # integration for its owner. Talk tells these apart, identically in Talk 24
-  # and 25:
-  #
-  #   * 403 `{"error": "permissions"}`: only some groups may create
-  #     conversations (`start_conversations`)
-  #   * 403 without an error key, "Can not use Talk" in the OCS meta: only some
-  #     groups may use Talk (`allowed_groups`), which already refuses the lookup
-  #   * 400 `{"error": "password"}`: public conversations need a password
-  #     (`force_passwords`); the accompanying message is translated, so only the
-  #     key is read
-  #
-  # Any other 400 or 403, Talk missing and a redirect are configuration errors
-  # too. Anything else passes through for the breaker and the retry policy to
-  # judge.
+  # A refused credential flags the integration and is never retried. A
+  # throttled address is a rate limit, which the room job snoozes rather than
+  # retrying at once. Everything else is
+  # `Tymeslot.Integrations.Video.Providers.NextcloudTalk.ServerRefusals`' to
+  # read, since what a refusal means is Talk's own vocabulary.
   defp creation_failure(:unauthorized, config) do
     flag_rejected_credentials(config)
     :unauthorized
   end
 
   defp creation_failure(:rate_limited, _config), do: :rate_limited
+  defp creation_failure(reason, _config), do: ServerRefusals.at_creation(reason)
 
-  defp creation_failure({:rejected, 403, "permissions"}, _config),
-    do: {:configuration_error, :conversation_creation_restricted}
+  # Nextcloud answers the capabilities endpoint in full without credentials, so
+  # what it says about the account is worth nothing until the login is proven.
+  # A proxy that drops the Authorization header would otherwise make the save
+  # fail with "this user may not create conversations" when what is wrong is
+  # that nobody is signed in.
+  defp signed_in(credentials, config) do
+    case Client.user(credentials) do
+      {:ok, account} -> {:ok, account}
+      {:error, reason} -> {:error, connection_failure(reason, config)}
+    end
+  end
 
-  defp creation_failure({:rejected, 403, nil}, _config),
-    do: {:configuration_error, :talk_not_allowed}
-
-  defp creation_failure({:rejected, 400, "password"}, _config),
-    do: {:configuration_error, :password_required}
-
-  defp creation_failure({:rejected, _status, _error}, _config),
-    do: {:configuration_error, :conversation_refused}
-
-  defp creation_failure(:not_found, _config), do: {:configuration_error, :talk_not_found}
-
-  defp creation_failure({:redirected, _location}, _config),
-    do: {:configuration_error, :redirected}
-
-  defp creation_failure(reason, _config), do: reason
+  defp capabilities(credentials, config) do
+    case Client.capabilities(credentials) do
+      {:ok, data} -> {:ok, data}
+      {:error, reason} -> {:error, connection_failure(reason, config)}
+    end
+  end
 
   defp check_talk(%{"capabilities" => %{"spreed" => %{"features" => features} = spreed}}, config)
        when is_list(features) do
@@ -481,22 +470,11 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
   # A test someone asked for (saving the integration, or the Test connection
   # button) also proves that the account may create the public conversations a
-  # booking needs, which Talk announces in its capabilities: `can-create` and
-  # `force-passwords` under `config.conversations`, both present in Talk 24
-  # and 25. The background health check does not: a server setting is not a
-  # broken connection, and the room job reports it when a booking meets it. A
-  # server that announces neither key is taken to allow it.
+  # booking needs. The background health check does not: a server setting is
+  # not a broken connection, and the room job reports it when a booking meets
+  # one.
   defp check_conversation_rights(_spreed, %{connection_test_scope: :background}), do: :ok
-
-  defp check_conversation_rights(spreed, _config) do
-    case get_in(spreed, ["config", "conversations"]) do
-      %{"can-create" => false} -> not_permitted(:conversation_creation_restricted)
-      %{"force-passwords" => true} -> not_permitted(:password_required)
-      _allowed -> :ok
-    end
-  end
-
-  defp not_permitted(code), do: {:error, {:not_permitted, RoomCreationError.message(code)}}
+  defp check_conversation_rights(spreed, _config), do: ServerRefusals.conversation_rights(spreed)
 
   defp connection_failure(:unauthorized, config) do
     flag_rejected_credentials(config)

@@ -346,7 +346,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
 
     # Reconnecting with a new app password deletes the conversation the
     # cancellation could not.
-    nextcloud_answers([{200, talk_capabilities()}])
+    nextcloud_answers([{200, signed_in()}, {200, talk_capabilities()}])
 
     assert {:ok, %{needs_reauth: false}} =
              Video.update_integration(user.id, integration.id, %{
@@ -356,7 +356,9 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
                client_secret: @new_app_password
              })
 
-    assert [{:get, _capabilities_url, nil}] = requests(@new_app_password)
+    assert [{:get, _user_url, nil}, {:get, _capabilities_url, nil}] =
+             requests(@new_app_password)
+
     assert_enqueued(worker: VideoSyncWorker, args: sync_args(meeting, "delete"))
 
     nextcloud_answers([{200, ocs(nil)}])
@@ -396,7 +398,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
 
     # The organiser enters a new app password in the edit dialog, which is
     # proven against the server before it is saved.
-    nextcloud_answers([{200, talk_capabilities()}])
+    nextcloud_answers([{200, signed_in()}, {200, talk_capabilities()}])
 
     assert {:ok, %{needs_reauth: false}} =
              Video.update_integration(user.id, integration.id, %{
@@ -406,7 +408,8 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
                client_secret: @new_app_password
              })
 
-    assert [{:get, capabilities_url, nil}] = requests(@new_app_password)
+    assert [{:get, user_url, nil}, {:get, capabilities_url, nil}] = requests(@new_app_password)
+    assert user_url == server <> "/ocs/v2.php/cloud/user"
     assert capabilities_url == server <> "/ocs/v2.php/cloud/capabilities"
     assert_enqueued(worker: VideoSyncWorker, args: sync_args(meeting, "update"))
 
@@ -469,6 +472,10 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   defp decode(body), do: Jason.decode!(body)
 
   defp ocs(data), do: Jason.encode!(%{"ocs" => %{"meta" => %{"status" => "ok"}, "data" => data}})
+
+  # What Nextcloud answers the account endpoint with, which a connection test
+  # asks before it trusts anything the capabilities say.
+  defp signed_in, do: ocs(%{"id" => @login})
 
   defp talk_capabilities do
     ocs(%{

@@ -574,22 +574,30 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
     end)
   end
 
+  # A connection test asks who is signed in before reading what the server says
+  # about them, since Nextcloud answers the capabilities endpoint anonymously.
   defp expect_capabilities(login, app_password) do
-    expect(HTTPClientMock, :request, fn :get, _url, _body, headers, _opts ->
+    expect(HTTPClientMock, :request, 2, fn :get, url, _body, headers, _opts ->
       assert {"Authorization", "Basic " <> Base.encode64(login <> ":" <> app_password)} in headers
 
-      body =
-        Jason.encode!(%{
-          "ocs" => %{
-            "data" => %{
-              "capabilities" => %{
-                "spreed" => %{"version" => "25.0.0", "features" => ["conversation-creation-all"]}
+      data =
+        if String.ends_with?(url, "/ocs/v2.php/cloud/user") do
+          %{"id" => login}
+        else
+          %{
+            "capabilities" => %{
+              "spreed" => %{
+                "version" => "25.0.0",
+                "features" => ["conversation-creation-all"],
+                "config" => %{
+                  "conversations" => %{"can-create" => true, "force-passwords" => false}
+                }
               }
             }
           }
-        })
+        end
 
-      {:ok, %Req.Response{status: 200, body: body}}
+      {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"ocs" => %{"data" => data}})}}
     end)
   end
 end

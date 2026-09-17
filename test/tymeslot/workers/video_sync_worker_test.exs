@@ -379,7 +379,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       %{meeting: meeting} = talk_meeting("forbidden.example.com")
 
       expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 403, body: ""}}
+        {:ok, %Req.Response{status: 403, body: talk_refusal()}}
       end)
 
       assert {:discard, "Invalid configuration"} =
@@ -570,5 +570,17 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       oauth_scope: "meeting:write:meeting meeting:update:meeting meeting:delete:meeting",
       provider_account_id: nil
     )
+  end
+
+  # A refusal Talk itself worded: a 403 whose body is not the OCS envelope
+  # comes from something in front of Nextcloud, which the client reports as an
+  # HTTP error instead.
+  defp talk_refusal do
+    Jason.encode!(%{
+      "ocs" => %{
+        "meta" => %{"status" => "failure", "statuscode" => 403, "message" => ""},
+        "data" => %{"error" => "permissions"}
+      }
+    })
   end
 end

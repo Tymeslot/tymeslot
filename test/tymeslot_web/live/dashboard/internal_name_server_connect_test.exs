@@ -113,9 +113,13 @@ defmodule TymeslotWeb.Dashboard.InternalNameServerConnectTest do
     } do
       with_config(:tymeslot, :allow_private_ips_for_video, true)
 
-      expect(HTTPClientMock, :request, fn :get, url, _body, _headers, _opts ->
+      # Two requests: who is signed in, then what the server says about them.
+      expect(HTTPClientMock, :request, 2, fn :get, url, _body, _headers, _opts ->
         assert %URI{scheme: "http", host: "nextcloud"} = URI.parse(url)
-        {:ok, %Req.Response{status: 200, body: capabilities_body()}}
+
+        if String.ends_with?(url, "/ocs/v2.php/cloud/user"),
+          do: {:ok, %Req.Response{status: 200, body: signed_in_body()}},
+          else: {:ok, %Req.Response{status: 200, body: capabilities_body()}}
       end)
 
       view = open_talk_form(conn)
@@ -184,6 +188,10 @@ defmodule TymeslotWeb.Dashboard.InternalNameServerConnectTest do
       }
     )
     |> render_submit()
+  end
+
+  defp signed_in_body do
+    Jason.encode!(%{"ocs" => %{"data" => %{"id" => "organiser"}}})
   end
 
   defp capabilities_body do

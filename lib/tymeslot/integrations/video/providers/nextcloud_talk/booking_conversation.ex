@@ -64,26 +64,37 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
   @reference_label "Reference: "
 
   @doc """
-  Returns the booking's conversation as Talk describes it: the one an earlier
-  attempt created, brought up to date, or a new one.
+  Returns the booking's conversation as Talk describes it, and whether it was
+  `:created` now or `:adopted` from an earlier attempt and brought up to date.
+
+  The two are told apart because an adopted conversation says nothing about
+  what the server would do with a new one: it was made when the server still
+  allowed it.
 
   `config` carries the booking's `:event_details`, its `:meeting_id` and the
   organiser's `:user_id`. Without a meeting id nothing earlier can belong to
   it, so a conversation is created straight away.
   """
   @spec find_or_create(Client.credentials(), map()) ::
-          {:ok, term()} | {:error, Client.error()}
+          {:ok, term(), :created | :adopted} | {:error, Client.error()}
   def find_or_create(credentials, config) do
     case LinkRoom.slug(Map.get(config, :meeting_id)) do
       {:ok, reference} ->
         wanted = params(config, reference)
 
-        with {:ok, nil} <- find(credentials, reference, wanted, config),
-             do: Client.create_room(credentials, wanted)
+        case find(credentials, reference, wanted, config) do
+          {:ok, nil} -> created(credentials, wanted)
+          {:ok, room} -> {:ok, room, :adopted}
+          {:error, _reason} = error -> error
+        end
 
       {:error, :empty_meeting_id} ->
-        Client.create_room(credentials, params(config, nil))
+        created(credentials, params(config, nil))
     end
+  end
+
+  defp created(credentials, wanted) do
+    with {:ok, room} <- Client.create_room(credentials, wanted), do: {:ok, room, :created}
   end
 
   @doc """

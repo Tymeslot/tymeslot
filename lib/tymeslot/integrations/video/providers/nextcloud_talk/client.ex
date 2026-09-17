@@ -28,6 +28,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
   alias Tymeslot.Integrations.Video.Providers.SsrfOptions
 
   @capabilities_path "/ocs/v2.php/cloud/capabilities"
+  @user_path "/ocs/v2.php/cloud/user"
   @room_path "/ocs/v2.php/apps/spreed/api/v4/room"
 
   # Only what a lookup reads: no last message, and the user's online status
@@ -51,7 +52,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
     * `:unauthorized`: Nextcloud refused the login name or app password (401)
     * `:not_found`: no such endpoint or conversation (404)
     * `{:redirected, location}`: the server answered with a redirect, never followed
-    * `{:rejected, status, error}`: a 400 or 403, with the OCS `error` key when the body has one
+    * `{:rejected, status, error}`: a 400 or 403 Talk itself answered, with the OCS `error` key when the body has one
     * `:rate_limited`: Nextcloud's rate limit or brute-force protection refused the calling address (429)
     * `{:http_error, status}`: any other status outside 2xx
     * `:invalid_response`: a 2xx whose body is not the OCS JSON envelope
@@ -68,6 +69,16 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
           | :invalid_response
           | :invalid_token
           | Exception.t()
+
+  @doc """
+  Reads the signed-in user's own account, which Nextcloud answers only to a
+  request it authenticated: anonymous, it is a 401 rather than a 200 about
+  nobody. The capabilities endpoint answers an anonymous request in full, so
+  this is what proves the login before anything the capabilities say is
+  trusted.
+  """
+  @spec user(credentials()) :: {:ok, term()} | {:error, error()}
+  def user(credentials), do: request(:get, credentials, @user_path, nil)
 
   @doc "Reads the server's capabilities as the signed-in user."
   @spec capabilities(credentials()) :: {:ok, term()} | {:error, error()}
@@ -178,8 +189,18 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
     {:error, {:redirected, response |> Response.get_header("location") |> List.first()}}
   end
 
-  defp classify({:ok, %Response{status: status, body: body}}) when status in [400, 403],
-    do: {:error, {:rejected, status, ocs_error(body)}}
+  # Only a refusal Talk itself worded is one the provider can read: a proxy in
+  # front of Nextcloud (a web application firewall, a login wall) answers 400
+  # and 403 with pages of its own, and reading those as Talk's would tell the
+  # organiser to change a Talk setting that is not the problem. A body that is
+  # not the OCS envelope is therefore reported as the HTTP error it is, for the
+  # breaker and the retry policy to judge.
+  defp classify({:ok, %Response{status: status, body: body}}) when status in [400, 403] do
+    case ocs_refusal(body) do
+      {:ok, error} -> {:error, {:rejected, status, error}}
+      :not_ocs -> {:error, {:http_error, status}}
+    end
+  end
 
   defp classify({:ok, %Response{status: status}}), do: {:error, {:http_error, status}}
 
@@ -194,10 +215,13 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
     end
   end
 
-  defp ocs_error(body) do
+  # `{:ok, error}` for an OCS envelope, carrying its `error` key when it has
+  # one; `:not_ocs` for anything else, including a body that is not JSON.
+  defp ocs_refusal(body) do
     case decode(body) do
-      {:ok, %{"ocs" => %{"data" => %{"error" => error}}}} when is_binary(error) -> error
-      _other -> nil
+      {:ok, %{"ocs" => %{"data" => %{"error" => error}}}} when is_binary(error) -> {:ok, error}
+      {:ok, %{"ocs" => %{"meta" => meta}}} when is_map(meta) -> {:ok, nil}
+      _other -> :not_ocs
     end
   end
 

@@ -44,6 +44,21 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
       assert {:ok, %{"capabilities" => %{}}} = Client.capabilities(@credentials)
     end
 
+    # The capabilities endpoint answers an anonymous request in full, so the
+    # account endpoint is what shows whether the credentials arrived.
+    test "read the signed-in user's own account" do
+      expect(HTTPClientMock, :request, fn :get, url, "", headers, _opts ->
+        assert url == "https://cloud.example.com/ocs/v2.php/cloud/user"
+
+        assert {"Authorization",
+                "Basic " <> Base.encode64("organiser:Abcde-Fghij-Klmno-Pqrst-Uvwxy")} in headers
+
+        {:ok, %Req.Response{status: 200, body: ocs(%{"id" => "organiser"})}}
+      end)
+
+      assert {:ok, %{"id" => "organiser"}} = Client.user(@credentials)
+    end
+
     test "list the signed-in user's conversations without their last messages" do
       expect(HTTPClientMock, :request, fn :get, url, "", headers, opts ->
         assert url == @room_api <> "?noStatusUpdate=1&includeLastMessage=0"
@@ -172,17 +187,25 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
                respond_with(status: 400, body: @password_required)
     end
 
-    test "a 403 without an error key is still a rejection" do
-      assert {:error, {:rejected, 403, nil}} = respond_with(status: 403, body: ocs([]))
+    test "a 403 Talk worded without an error key is still a rejection" do
+      assert {:error, {:rejected, 403, nil}} =
+               respond_with(status: 403, body: failure(403, [], "Can not use Talk"))
     end
 
     test "a redirect without a location is still reported" do
       assert {:error, {:redirected, nil}} = respond_with(status: 302, body: "")
     end
 
-    test "a 400 with a body that is not JSON is a rejection without an error key" do
-      assert {:error, {:rejected, 400, nil}} =
+    # A page from a proxy in front of Nextcloud says nothing about Talk, so it
+    # is the HTTP error it is rather than a refusal the provider would read.
+    test "a 400 whose body is not the OCS envelope is an HTTP error" do
+      assert {:error, {:http_error, 400}} =
                respond_with(status: 400, body: "<html><body>Bad Request</body></html>")
+    end
+
+    test "a 403 whose body is not the OCS envelope is an HTTP error" do
+      assert {:error, {:http_error, 403}} =
+               respond_with(status: 403, body: "<html><body>Access denied</body></html>")
     end
 
     test "a 429 is a rate limit, not a server error" do
@@ -249,10 +272,10 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
     Jason.encode!(%{"ocs" => %{"meta" => %{"status" => "ok"}, "data" => data}})
   end
 
-  defp failure(status, data) do
+  defp failure(status, data, message \\ "") do
     Jason.encode!(%{
       "ocs" => %{
-        "meta" => %{"status" => "failure", "statuscode" => status, "message" => ""},
+        "meta" => %{"status" => "failure", "statuscode" => status, "message" => message},
         "data" => data
       }
     })

@@ -145,32 +145,31 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkRoomCreationErrorTest
 
   # A Talk 25.0.0 server's capabilities, with the account's conversation rights
   # as `conversations` changes them.
+  # A connection test asks who is signed in before reading what the server says
+  # about them, since Nextcloud answers the capabilities endpoint anonymously.
   defp expect_capabilities(login, app_password, conversations) do
-    expect(HTTPClientMock, :request, fn :get, _url, _body, headers, _opts ->
+    expect(HTTPClientMock, :request, 2, fn :get, url, _body, headers, _opts ->
       assert {"Authorization", "Basic " <> Base.encode64(login <> ":" <> app_password)} in headers
 
-      body =
-        Jason.encode!(%{
-          "ocs" => %{
-            "data" => %{
-              "capabilities" => %{
-                "spreed" => %{
-                  "version" => "25.0.0",
-                  "features" => ["conversation-creation-all"],
-                  "config" => %{
-                    "conversations" =>
-                      Map.merge(
-                        %{"can-create" => true, "force-passwords" => false},
-                        conversations
-                      )
-                  }
+      data =
+        if String.ends_with?(url, "/ocs/v2.php/cloud/user") do
+          %{"id" => login}
+        else
+          %{
+            "capabilities" => %{
+              "spreed" => %{
+                "version" => "25.0.0",
+                "features" => ["conversation-creation-all"],
+                "config" => %{
+                  "conversations" =>
+                    Map.merge(%{"can-create" => true, "force-passwords" => false}, conversations)
                 }
               }
             }
           }
-        })
+        end
 
-      {:ok, %Req.Response{status: 200, body: body}}
+      {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"ocs" => %{"data" => data}})}}
     end)
   end
 end

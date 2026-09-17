@@ -261,9 +261,14 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
       integration = insert_talk_integration(user, client_secret: "Old")
       meeting = insert_meeting_with_room(integration, 2)
 
-      expect(HTTPClientMock, :request, fn :get, _url, "", _headers, _opts ->
+      # The flag is set while the server is being asked, which takes two
+      # requests: who is signed in, then what the server says about them.
+      expect(HTTPClientMock, :request, 2, fn :get, url, "", _headers, _opts ->
         Repo.update!(Changeset.change(Repo.reload!(integration), needs_reauth: true))
-        talk_capabilities()
+
+        if String.ends_with?(url, "/ocs/v2.php/cloud/user"),
+          do: signed_in(),
+          else: talk_capabilities()
       end)
 
       assert {:ok, updated} =
@@ -594,12 +599,26 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     |> Enum.sort()
   end
 
+  # A connection test asks who is signed in before reading what the server says
+  # about them, since Nextcloud answers the capabilities endpoint anonymously.
   defp expect_capabilities(server, login, app_password, response) do
-    expect(HTTPClientMock, :request, fn :get, url, "", headers, _opts ->
-      assert url == server <> "/ocs/v2.php/cloud/capabilities"
+    expect(HTTPClientMock, :request, 2, fn :get, url, "", headers, _opts ->
       assert {"Authorization", "Basic " <> Base.encode64(login <> ":" <> app_password)} in headers
-      response
+
+      case url do
+        ^server <> "/ocs/v2.php/cloud/user" -> signed_in()
+        ^server <> "/ocs/v2.php/cloud/capabilities" -> response
+      end
     end)
+  end
+
+  defp signed_in do
+    body =
+      Jason.encode!(%{
+        "ocs" => %{"meta" => %{"status" => "ok"}, "data" => %{"id" => "organiser"}}
+      })
+
+    {:ok, %Req.Response{status: 200, body: body}}
   end
 
   # A Talk 25.0.0 server's capabilities, with the account's conversation rights

@@ -279,6 +279,8 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
   describe "perform_connection_test/1" do
     test "succeeds against a Talk that can create configured conversations" do
+      expect_signed_in()
+
       expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
         capabilities(%{"version" => "25.0.0", "features" => ["conversation-creation-all"]})
       end)
@@ -288,6 +290,8 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
     end
 
     test "refuses a Talk too old to set the lobby when creating a conversation" do
+      expect_signed_in()
+
       expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
         capabilities(%{"version" => "20.0.0", "features" => ["chat-v2"]})
       end)
@@ -299,6 +303,8 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
     end
 
     test "refuses a server where Talk is not available to the account" do
+      expect_signed_in()
+
       expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 200, body: ocs(%{"capabilities" => %{"core" => %{}}})}}
       end)
@@ -558,6 +564,15 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
     do: Map.merge(config, %{meeting_start_time: @moved_start, meeting_topic: "Moved call"})
 
   defp created(data), do: {:ok, %Req.Response{status: 201, body: ocs(data)}}
+
+  # Nextcloud answers the capabilities endpoint anonymously too, so every
+  # connection test asks who is signed in first.
+  defp expect_signed_in do
+    expect(HTTPClientMock, :request, fn :get, url, _body, _headers, _opts ->
+      assert String.ends_with?(url, "/ocs/v2.php/cloud/user")
+      {:ok, %Req.Response{status: 200, body: ocs(%{"id" => "organiser"})}}
+    end)
+  end
 
   defp capabilities(spreed),
     do: {:ok, %Req.Response{status: 200, body: ocs(%{"capabilities" => %{"spreed" => spreed}})}}

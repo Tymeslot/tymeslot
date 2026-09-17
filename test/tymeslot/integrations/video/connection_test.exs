@@ -80,23 +80,24 @@ defmodule Tymeslot.Integrations.Video.ConnectionTest do
           provider_account_id: "https://restricted.connection.example.com||organiser"
         )
 
-      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
-        body =
-          Jason.encode!(%{
-            "ocs" => %{
-              "data" => %{
-                "capabilities" => %{
-                  "spreed" => %{
-                    "version" => "25.0.0",
-                    "features" => ["conversation-creation-all"],
-                    "config" => %{"conversations" => %{"can-create" => false}}
-                  }
+      # Two requests: who is signed in, then what the server says about them.
+      expect(Tymeslot.HTTPClientMock, :request, 2, fn :get, url, _body, _headers, _opts ->
+        data =
+          if String.ends_with?(url, "/ocs/v2.php/cloud/user") do
+            %{"id" => "organiser"}
+          else
+            %{
+              "capabilities" => %{
+                "spreed" => %{
+                  "version" => "25.0.0",
+                  "features" => ["conversation-creation-all"],
+                  "config" => %{"conversations" => %{"can-create" => false}}
                 }
               }
             }
-          })
+          end
 
-        {:ok, %Req.Response{status: 200, body: body}}
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"ocs" => %{"data" => data}})}}
       end)
 
       %{integration: integration}

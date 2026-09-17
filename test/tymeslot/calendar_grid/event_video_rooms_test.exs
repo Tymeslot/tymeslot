@@ -359,7 +359,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
       room = insert_room(user, calendar, "refused.example.com", "refu0001", "grid-refused")
 
       expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 403, body: ""}}
+        {:ok, %Req.Response{status: 403, body: talk_refusal()}}
       end)
 
       assert {:discard, "Invalid configuration"} =
@@ -619,4 +619,16 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
   end
 
   defp ocs(data), do: Jason.encode!(%{"ocs" => %{"meta" => %{"status" => "ok"}, "data" => data}})
+
+  # A refusal Talk itself worded: a 403 whose body is not the OCS envelope
+  # comes from something in front of Nextcloud, which the client reports as an
+  # HTTP error instead.
+  defp talk_refusal do
+    Jason.encode!(%{
+      "ocs" => %{
+        "meta" => %{"status" => "failure", "statuscode" => 403, "message" => ""},
+        "data" => %{"error" => "permissions"}
+      }
+    })
+  end
 end

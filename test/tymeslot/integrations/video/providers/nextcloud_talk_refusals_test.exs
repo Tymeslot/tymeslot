@@ -43,8 +43,11 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkRefusalsTest do
           {"passwords enforced on public conversations (force_passwords)", 400,
            ~s({"ocs":{"meta":{"status":"failure","statuscode":400,"message":""},"data":{"error":"password","message":"Password needs to be set"}}}),
            :password_required},
+          {"a refusal naming a field of the request", 400,
+           ~s({"ocs":{"meta":{"status":"failure","statuscode":400,"message":""},"data":{"error":"name"}}}),
+           :invalid_request},
           {"a refusal of anything else", 400,
-           ~s({"ocs":{"meta":{"status":"failure","statuscode":400,"message":""},"data":{"error":"lobby-timer"}}}),
+           ~s({"ocs":{"meta":{"status":"failure","statuscode":400,"message":""},"data":{"error":"breakout-room"}}}),
            :conversation_refused},
           {"a refusal without an error key", 400,
            ~s({"ocs":{"meta":{"status":"failure","statuscode":400,"message":""},"data":[]}}),
@@ -77,6 +80,27 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkRefusalsTest do
                NextcloudTalkProvider.create_meeting_room(config)
     end
 
+    # A web application firewall, a login wall or an "untrusted domain" page:
+    # none of them are Talk, and none say anything about its settings.
+    test "a page from something in front of Nextcloud is an HTTP error, not a Talk refusal" do
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: "<html><body>Access denied</body></html>"}}
+      end)
+
+      assert {:error, {:http_error, 403}} =
+               NextcloudTalkProvider.create_meeting_room(with_event(@config))
+    end
+
+    test "such a page on the lookup that precedes creation is an HTTP error too" do
+      expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: "<html><body>Blocked</body></html>"}}
+      end)
+
+      config = Map.put(with_event(@config), :meeting_id, "meeting-1")
+
+      assert {:error, {:http_error, 403}} = NextcloudTalkProvider.create_meeting_room(config)
+    end
+
     test "a redirect is a configuration error" do
       expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok,
@@ -100,6 +124,8 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkRefusalsTest do
            %{"can-create" => true, "force-passwords" => true}, "password requirement"}
         ] do
       test "refuses an account that #{setting}, saying how to allow it" do
+        expect_signed_in()
+
         expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
           capabilities(talk_25(unquote(Macro.escape(conversations))))
         end)
@@ -111,6 +137,8 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkRefusalsTest do
       end
 
       test "the background health check passes an account that #{setting}" do
+        expect_signed_in()
+
         expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
           capabilities(talk_25(unquote(Macro.escape(conversations))))
         end)
@@ -120,7 +148,59 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkRefusalsTest do
       end
     end
 
+    # Nextcloud answers the capabilities endpoint without credentials, and what
+    # it says then is that nobody may create conversations. A proxy that drops
+    # the Authorization header must therefore be reported as a refused login,
+    # not as an account without the right.
+    test "reports a login that never reached Nextcloud as refused, not as a missing right" do
+      expect(HTTPClientMock, :request, fn :get, url, _body, _headers, _opts ->
+        assert String.ends_with?(url, "/ocs/v2.php/cloud/user")
+
+        {:ok,
+         %Req.Response{
+           status: 401,
+           body:
+             ~s({"ocs":{"meta":{"status":"failure","statuscode":997,"message":"Current user is not logged in"},"data":[]}})
+         }}
+      end)
+
+      assert {:error, {:unauthorized, message}} =
+               NextcloudTalkProvider.perform_connection_test(@config)
+
+      assert message =~ "app password"
+    end
+
+    test "asks who is signed in before reading what the server says about them" do
+      test = self()
+
+      expect(HTTPClientMock, :request, 2, fn :get, url, _body, _headers, _opts ->
+        send(test, {:asked, url})
+
+        if String.ends_with?(url, "/ocs/v2.php/cloud/user") do
+          {:ok,
+           %Req.Response{
+             status: 200,
+             body:
+               Jason.encode!(%{
+                 "ocs" => %{"meta" => %{"status" => "ok"}, "data" => %{"id" => "organiser"}}
+               })
+           }}
+        else
+          capabilities(talk_25(%{"can-create" => true, "force-passwords" => false}))
+        end
+      end)
+
+      assert {:ok, _message} = NextcloudTalkProvider.perform_connection_test(@config)
+
+      assert_received {:asked, first}
+      assert String.ends_with?(first, "/ocs/v2.php/cloud/user")
+      assert_received {:asked, second}
+      assert String.ends_with?(second, "/ocs/v2.php/cloud/capabilities")
+    end
+
     test "passes a Talk that announces neither right, as older servers may not" do
+      expect_signed_in()
+
       expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
         capabilities(%{
           "version" => "24.0.5",
@@ -133,6 +213,8 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkRefusalsTest do
     end
 
     test "passes an account that may create conversations without a password" do
+      expect_signed_in()
+
       expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
         capabilities(talk_25(%{"can-create" => true, "force-passwords" => false}))
       end)
@@ -160,6 +242,23 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkRefusalsTest do
           Map.merge(%{"list-style" => "two-lines", "description-length" => 2000}, conversations)
       }
     }
+  end
+
+  # Nextcloud answers the capabilities endpoint anonymously too, so every
+  # connection test asks who is signed in first.
+  defp expect_signed_in do
+    expect(HTTPClientMock, :request, fn :get, url, _body, _headers, _opts ->
+      assert String.ends_with?(url, "/ocs/v2.php/cloud/user")
+
+      {:ok,
+       %Req.Response{
+         status: 200,
+         body:
+           Jason.encode!(%{
+             "ocs" => %{"meta" => %{"status" => "ok"}, "data" => %{"id" => "organiser"}}
+           })
+       }}
+    end)
   end
 
   defp capabilities(spreed) do
