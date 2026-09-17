@@ -103,13 +103,6 @@ defmodule Tymeslot.AuthTest do
     end
   end
 
-  describe "password_reset" do
-    test "oauth users cannot reset passwords" do
-      oauth_user = insert(:user, provider: "google", password_hash: nil)
-      assert {:error, :oauth_user, _reason} = Auth.initiate_password_reset(oauth_user.email)
-    end
-  end
-
   describe "verify_user_email/1" do
     test "verifies the email without re-broadcasting :user_registered" do
       user = insert(:unverified_user)

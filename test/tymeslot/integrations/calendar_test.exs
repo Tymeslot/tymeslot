@@ -103,13 +103,25 @@ defmodule Tymeslot.Integrations.CalendarTest do
     end
 
     test "falls back to Operations when configured module does not exist" do
-      # Set to a non-existent module
       Application.put_env(:tymeslot, :calendar_module, NonExistentModule)
 
-      # We don't need to mock Operations because we just want to see if it's called
-      # If it falls back to Operations, it will try to call Operations.get_event.
-      # Since no integrations are set up in this test context, it should return an error.
-      assert {:error, _reason} = CalendarEvents.get_event("some-uid")
+      user = insert(:user)
+      insert(:calendar_integration, user: user, provider: "google", is_active: true)
+
+      # Only the real Operations path reaches the provider API; calling the
+      # configured module instead would raise `UndefinedFunctionError`.
+      expect(GoogleCalendarAPIMock, :list_primary_events, fn _int, _start, _end ->
+        {:ok, [%{"id" => "fallback-event", "summary" => "Fallback Event"}]}
+      end)
+
+      assert {:ok, [event]} =
+               CalendarEvents.get_events_for_range_fresh(
+                 user.id,
+                 ~D[2026-01-05],
+                 ~D[2026-01-06]
+               )
+
+      assert event.uid == "fallback-event"
     end
   end
 

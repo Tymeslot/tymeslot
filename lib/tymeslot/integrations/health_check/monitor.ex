@@ -12,9 +12,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
 
   require Logger
 
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
   alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
   alias Tymeslot.Integrations.HealthCheck.HealthStatus
@@ -342,58 +340,6 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   end
 
   @doc """
-  Builds a health report for all integrations belonging to a user.
-  Reads current health state from the database.
-  """
-  @spec build_user_report(integer()) :: map()
-  def build_user_report(user_id) do
-    calendar_integrations = CalendarIntegrationQueries.list_all_for_user(user_id)
-    video_integrations = VideoIntegrationQueries.list_all_for_user(user_id)
-
-    calendar_health =
-      Enum.map(calendar_integrations, fn integration ->
-        health =
-          case IntegrationHealthStateQueries.get(:calendar, integration.id) do
-            {:ok, record} -> from_db_record(record)
-            {:error, :not_found} -> initial_state()
-          end
-
-        %{
-          id: integration.id,
-          provider: integration.provider,
-          is_active: integration.is_active,
-          health: health
-        }
-      end)
-
-    video_health =
-      Enum.map(video_integrations, fn integration ->
-        health =
-          case IntegrationHealthStateQueries.get(:video, integration.id) do
-            {:ok, record} -> from_db_record(record)
-            {:error, :not_found} -> initial_state()
-          end
-
-        %{
-          id: integration.id,
-          provider: integration.provider,
-          is_active: integration.is_active,
-          health: health
-        }
-      end)
-
-    %{
-      calendar_integrations: calendar_health,
-      video_integrations: video_health,
-      summary: %{
-        healthy_count: count_by_status([calendar_health, video_health], :healthy),
-        degraded_count: count_by_status([calendar_health, video_health], :degraded),
-        unhealthy_count: count_by_status([calendar_health, video_health], :unhealthy)
-      }
-    }
-  end
-
-  @doc """
   Converts a database record into a health_state map with atom values.
   """
   @spec from_db_record(IntegrationHealthStateSchema.t()) :: health_state()
@@ -470,12 +416,4 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
 
   defp safe_to_error_class(str) when is_binary(str),
     do: Map.get(@error_classes_by_name, str, :hard)
-
-  defp count_by_status(integration_lists, status) do
-    integration_lists
-    |> List.flatten()
-    |> Enum.count(fn integration ->
-      integration.health.status == status
-    end)
-  end
 end

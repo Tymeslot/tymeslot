@@ -353,6 +353,25 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
       assert result.booking_url == "http://localhost:4002/sarah-rodriguez"
     end
 
+    test "carries the host's uploaded avatar as an absolute URL" do
+      %{user: user, profile: profile} = create_user_with_profile(%{avatar: "photo.png"})
+      meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert result.organizer_avatar_url ==
+               "http://localhost:4002/uploads/avatars/#{profile.id}/photo.png"
+    end
+
+    test "leaves the avatar unset, never a data URI, when the host has not uploaded one" do
+      %{user: user} = create_user_with_profile()
+      meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert result.organizer_avatar_url == nil
+    end
+
     test "falls back to the app root when the host has no username" do
       %{user: user} = create_user_with_profile()
       meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})

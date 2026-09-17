@@ -20,14 +20,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
   @spec handle_today(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_today(_params, socket) do
-    today =
-      DateTime.utc_now()
-      |> DateTime.shift_zone!(socket.assigns.user_timezone)
-      |> DateTime.to_date()
-
     socket =
       socket
-      |> assign(:date, today)
+      |> assign(:date, Helpers.today(socket.assigns.user_timezone))
       |> Helpers.load_events()
 
     {:noreply, socket}

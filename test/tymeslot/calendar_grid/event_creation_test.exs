@@ -277,6 +277,46 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
       refute_received {:flash, _}
     end
 
+    test "returns reauth_required: true when the chosen integration is already flagged" do
+      user = insert(:user)
+
+      # Flagged by the token refresh job after the provider refused the
+      # credentials. The booking client never writes to a flagged integration,
+      # so the event just created went to another of the user's calendars and
+      # the reconnect prompt is what tells them why.
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          is_active: true,
+          needs_reauth: true,
+          default_booking_calendar_id: "primary"
+        )
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
+        {:ok, "flagged-uid-1"}
+      end)
+
+      payload = %{
+        creating: %{
+          title: "Flagged Calendar",
+          integration_id: integration.id,
+          calendar_id: "primary",
+          attendees: [],
+          video_integration_id: nil
+        },
+        user_id: user.id,
+        start_at: ~U[2026-04-08 10:00:00Z],
+        end_at: ~U[2026-04-08 10:30:00Z]
+      }
+
+      assert {:ok, result} = EventCreation.run_create_event(payload)
+
+      assert result.reauth_required == true
+      assert result.provider == "google"
+      assert result.default_booking_calendar_id == "primary"
+    end
+
     test "returns reauth_required: false on the happy path" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, is_active: true)

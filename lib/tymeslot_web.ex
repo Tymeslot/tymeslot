@@ -125,13 +125,6 @@ defmodule TymeslotWeb do
     end
   end
 
-  @spec channel() :: Macro.t()
-  def channel do
-    quote do
-      use Phoenix.Channel
-    end
-  end
-
   @spec controller() :: Macro.t()
   def controller do
     quote do

@@ -1114,20 +1114,10 @@ msgstr "Ověření proběhlo pod jiným účtem, než který je propojen s tout
 msgid "Zoom access was revoked. Please reconnect your Zoom account."
 msgstr "Přístup ke službě Zoom byl odvolán. Připojte prosím svůj účet Zoom znovu."
 
-#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
-#, elixir-autogen, elixir-format
-msgid "Zoom is missing the permission needed to %{action}. Please reconnect your Zoom account."
-msgstr "Službě Zoom chybí oprávnění pro tuto akci: %{action}. Připojte prosím svůj účet Zoom znovu."
-
 #: lib/tymeslot/integrations/video/providers/zoom_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom token refresh failed after 401. Please reconnect your Zoom account."
 msgstr "Obnovení tokenu Zoom po chybě 401 se nezdařilo. Připojte prosím svůj účet Zoom znovu."
-
-#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
-#, elixir-autogen, elixir-format
-msgid "cancel meetings"
-msgstr "rušení schůzek"
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format
@@ -1174,10 +1164,15 @@ msgstr "URL adresa přesměrovává příliš mnohokrát"
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
-msgid "create meetings"
-msgstr "vytváření schůzek"
+msgid "Zoom is missing the permission needed to cancel meetings. Please reconnect your Zoom account."
+msgstr "Službě Zoom chybí oprávnění potřebné ke zrušení schůzek. Připojte prosím svůj účet Zoom znovu."
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
-msgid "reschedule meetings"
-msgstr "přeplánování schůzek"
+msgid "Zoom is missing the permission needed to create meetings. Please reconnect your Zoom account."
+msgstr "Službě Zoom chybí oprávnění potřebné k vytváření schůzek. Připojte prosím svůj účet Zoom znovu."
+
+#: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
+#, elixir-autogen, elixir-format
+msgid "Zoom is missing the permission needed to reschedule meetings. Please reconnect your Zoom account."
+msgstr "Službě Zoom chybí oprávnění potřebné k přeplánování schůzek. Připojte prosím svůj účet Zoom znovu."

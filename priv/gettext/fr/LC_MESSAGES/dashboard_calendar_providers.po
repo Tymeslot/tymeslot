@@ -1283,3 +1283,23 @@ msgstr "Cette boîte aux lettres est lue et écrite : elle bloque les périodes 
 #, elixir-autogen, elixir-format
 msgid "No calendar is selected for this integration, so nothing can be synced. Please reconnect the integration and select a calendar."
 msgstr "Aucun calendrier n’est sélectionné pour cette intégration, rien ne peut donc être synchronisé. Veuillez reconnecter l’intégration et sélectionner un calendrier."
+
+#: lib/tymeslot/integrations/calendar/discovery.ex
+#, elixir-autogen, elixir-format
+msgid "No calendars were discovered. Create a calendar on your server first, or check your credentials and try again."
+msgstr "Aucun calendrier n’a été découvert. Créez d’abord un calendrier sur votre serveur, ou vérifiez vos identifiants et réessayez."
+
+#: lib/tymeslot/workers/sync_google_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "This Google account doesn't have Google Calendar enabled. Turn on Google Calendar for the account (a Google Workspace administrator may need to do this), or connect a different Google account."
+msgstr "Google Agenda n’est pas activé pour ce compte Google. Activez Google Agenda pour ce compte (un administrateur Google Workspace devra peut-être le faire) ou connectez un autre compte Google."
+
+#: lib/tymeslot/workers/sync_google_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Google rejected the stored credentials. Please reconnect the integration."
+msgstr "Google a rejeté les identifiants enregistrés. Veuillez reconnecter l’intégration."
+
+#: lib/tymeslot/workers/sync_outlook_calendar_worker.ex
+#, elixir-autogen, elixir-format
+msgid "Microsoft rejected the stored credentials. Please reconnect the integration."
+msgstr "Microsoft a rejeté les identifiants enregistrés. Veuillez reconnecter l’intégration."

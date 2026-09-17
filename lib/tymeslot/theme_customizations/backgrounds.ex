@@ -1,12 +1,9 @@
 defmodule Tymeslot.ThemeCustomizations.Backgrounds do
   @moduledoc """
   Pure functions for background operations and transformations.
-  Handles background type changes, cleanup logic, and CSS generation.
+  Handles background type changes and cleanup logic.
   """
 
-  alias Tymeslot.ThemeCustomizations.Validation
-
-  @type presets_map :: Tymeslot.ThemeCustomizations.Presets.all_presets()
   @type cleanup_file ::
           %{required(:background_image_path) => String.t()}
           | %{required(:background_video_path) => String.t()}
@@ -80,133 +77,7 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
     cleanup_files
   end
 
-  @doc """
-  Generates a description of the current background configuration.
-  """
-  @spec generate_background_description(term(), presets_map()) :: String.t()
-  def generate_background_description(customization, presets) do
-    case customization.background_type do
-      "gradient" -> describe_gradient(customization, presets)
-      "color" -> describe_color(customization)
-      "image" -> describe_image(customization, presets)
-      "video" -> describe_video(customization, presets)
-      _unknown -> "No Background Selected"
-    end
-  end
-
-  defp describe_gradient(customization, presets) do
-    gradient = get_preset(presets, :gradients, customization.background_value)
-    "Gradient: #{(gradient && gradient.name) || "Custom"}"
-  end
-
-  defp describe_color(customization) do
-    "Solid Color: #{customization.background_value || "Default"}"
-  end
-
-  defp describe_image(customization, presets) do
-    cond do
-      custom_image?(customization) -> "Custom Image Uploaded"
-      preset_image?(customization) -> get_preset_image_name(customization, presets)
-      true -> "No Image Selected"
-    end
-  end
-
-  defp describe_video(customization, presets) do
-    cond do
-      custom_video?(customization) -> "Custom Video Uploaded"
-      preset_video?(customization) -> get_preset_video_name(customization, presets)
-      true -> "No Video Selected"
-    end
-  end
-
-  defp custom_image?(customization) do
-    customization.background_value == "custom" && customization.background_image_path
-  end
-
-  defp custom_video?(customization) do
-    customization.background_value == "custom" && customization.background_video_path
-  end
-
-  defp preset_image?(customization) do
-    String.starts_with?(customization.background_value || "", "preset:")
-  end
-
-  defp preset_video?(customization) do
-    String.starts_with?(customization.background_value || "", "preset:")
-  end
-
-  defp get_preset_image_name(customization, presets) do
-    preset = get_preset(presets, :images, customization.background_value)
-    "Preset: #{(preset && preset.name) || "Unknown"}"
-  end
-
-  defp get_preset_video_name(customization, presets) do
-    preset = get_preset(presets, :videos, customization.background_value)
-    "Preset: #{(preset && preset.name) || "Unknown"}"
-  end
-
-  @doc """
-  Gets CSS value for a background configuration.
-  """
-  @spec get_background_css(term(), presets_map()) :: String.t() | nil
-  def get_background_css(customization, presets) do
-    case customization.background_type do
-      "gradient" -> get_gradient_css(customization, presets)
-      "color" -> customization.background_value
-      "image" -> get_image_css(customization, presets)
-      "video" -> get_video_css(customization, presets)
-      _unknown -> nil
-    end
-  end
-
-  defp get_gradient_css(customization, presets) do
-    gradient = get_preset(presets, :gradients, customization.background_value)
-    gradient && gradient.value
-  end
-
-  defp get_image_css(customization, presets) do
-    cond do
-      custom_image?(customization) ->
-        path = Validation.sanitize_path(customization.background_image_path)
-        "/uploads/#{path}"
-
-      preset_image?(customization) ->
-        get_preset_image_path(customization, presets)
-
-      true ->
-        nil
-    end
-  end
-
-  defp get_video_css(customization, presets) do
-    cond do
-      custom_video?(customization) ->
-        path = Validation.sanitize_path(customization.background_video_path)
-        "/uploads/#{path}"
-
-      preset_video?(customization) ->
-        get_preset_video_path(customization, presets)
-
-      true ->
-        nil
-    end
-  end
-
-  defp get_preset_image_path(customization, presets) do
-    preset = get_preset(presets, :images, customization.background_value)
-    preset && "/images/ui/backgrounds/#{preset.file}"
-  end
-
-  defp get_preset_video_path(customization, presets) do
-    preset = get_preset(presets, :videos, customization.background_value)
-    preset && "/videos/backgrounds/#{preset.file}"
-  end
-
   # Private helper functions
-
-  defp get_preset(presets, category, key) do
-    Map.get(Map.get(presets, category, %{}), key)
-  end
 
   defp should_cleanup_image?(old_customization, new_customization) do
     # Cleanup if we had a custom image and now we don't, or the path changed

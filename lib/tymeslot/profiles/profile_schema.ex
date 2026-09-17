@@ -102,6 +102,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     |> validate_embed_domains()
     |> validate_booking_limits(:profiles)
     |> unique_constraint(:username)
+    |> foreign_key_constraint(:primary_calendar_integration_id)
   end
 
   @doc """

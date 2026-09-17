@@ -44,9 +44,9 @@ defmodule Tymeslot.Telegram.InputValidation do
   end
 
   @spec validate_bot_token_optional(String.t() | nil, map()) :: {String.t() | nil, map()}
-  def validate_bot_token_optional(nil, errors), do: {nil, errors}
-  def validate_bot_token_optional("", errors), do: {nil, errors}
-  def validate_bot_token_optional(token, errors), do: validate_bot_token(token, errors)
+  defp validate_bot_token_optional(nil, errors), do: {nil, errors}
+  defp validate_bot_token_optional("", errors), do: {nil, errors}
+  defp validate_bot_token_optional(token, errors), do: validate_bot_token(token, errors)
 
   @spec validate_bot_token(String.t() | nil, map()) :: {String.t() | nil, map()}
   def validate_bot_token(nil, errors), do: {nil, Map.put(errors, :bot_token, "is required")}

@@ -112,7 +112,11 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     field(:google_channel_expires_at, :utc_datetime)
     # Stored as plaintext: random verification token with no credential reuse risk.
     # Used solely to verify webhook authenticity. Follow _encrypted pattern if threat model changes.
-    field(:google_channel_secret, :string)
+    # Redacted like the virtual credential fields below: Google and Outlook
+    # hand this whole struct to the availability fan-out as the provider
+    # client, so it reaches anything that inspects a client — including an OTP
+    # crash report. It is the token inbound webhooks are verified against.
+    field(:google_channel_secret, :string, redact: true)
     field(:google_sync_token, :string)
     field(:last_google_notification_at, :utc_datetime)
 

@@ -469,19 +469,8 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
   describe "perform/1 - sync gating" do
     test "does not enqueue a job for a Google integration with enough consecutive hard failures" do
       integration = insert(:calendar_integration, provider: "google", is_active: true)
-      user_id = integration.user_id
 
-      {:ok, _upserted} =
-        IntegrationHealthStateQueries.upsert(:calendar, integration.id, %{
-          user_id: user_id,
-          status: "unhealthy",
-          failures: SyncGating.threshold(),
-          consecutive_hard_failures: SyncGating.threshold(),
-          successes: 0,
-          backoff_ms: 1_800_000,
-          last_check_at: DateTime.utc_now(),
-          last_error_class: "hard"
-        })
+      seed_sustained_hard_failures(integration)
 
       assert :ok = perform_job(FallbackSyncSweepWorker, %{})
 
@@ -495,17 +484,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
       gated = insert(:calendar_integration, provider: "google", is_active: true)
       healthy = insert(:calendar_integration, provider: "google", is_active: true)
 
-      {:ok, _upserted} =
-        IntegrationHealthStateQueries.upsert(:calendar, gated.id, %{
-          user_id: gated.user_id,
-          status: "unhealthy",
-          failures: SyncGating.threshold(),
-          consecutive_hard_failures: SyncGating.threshold(),
-          successes: 0,
-          backoff_ms: 1_800_000,
-          last_check_at: DateTime.utc_now(),
-          last_error_class: "hard"
-        })
+      seed_sustained_hard_failures(gated)
 
       assert :ok = perform_job(FallbackSyncSweepWorker, %{})
 
@@ -628,5 +607,22 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
       # stamped timestamp above is what makes the next real sweep skip this
       # integration — no separate re-run needed to prove it.
     end
+  end
+
+  # Puts the integration over the sync-gating threshold through the production
+  # write path: `get_or_init/3` seeds the row, `update_fields/3` records the
+  # hard-failure streak.
+  defp seed_sustained_hard_failures(integration) do
+    {:ok, _record} =
+      IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, integration.user_id)
+
+    {1, nil} =
+      IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
+        status: "unhealthy",
+        failures: SyncGating.threshold(),
+        consecutive_hard_failures: SyncGating.threshold(),
+        last_check_at: DateTime.utc_now(),
+        last_error_class: "hard"
+      )
   end
 end

@@ -2,10 +2,9 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
   @moduledoc """
   Builds join URLs for MiroTalk P2P video conferencing sessions.
 
-  Supports three strategies:
+  Supports two strategies:
   - API-based generation via the MiroTalk `/api/v1/join` endpoint
-  - Legacy API-based generation (backward-compatible variant)
-  - Direct URL construction with optional HMAC-signed JWT tokens
+  - Direct URL construction with an HMAC-signed JWT token
   """
 
   require Logger
@@ -24,7 +23,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
   Creates a join URL by calling the MiroTalk `/api/v1/join` endpoint.
   """
   @spec create_join_url_via_api(config(), String.t(), String.t(), String.t(), String.t()) ::
-          {:ok, String.t()} | {:error, String.t()}
+          {:ok, String.t()} | {:error, term()}
   def create_join_url_via_api(config, room_id, participant_name, _participant_email, role) do
     base_url = Map.get(config, :base_url)
 
@@ -51,72 +50,13 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
     handle_join_api_response(
       HttpHelpers.try_https_then_http(base_url, "/api/v1/join", fn url ->
         Config.http_client_module().post(url, body, headers, HttpHelpers.ssrf_options())
-      end),
-      :with_validation
-    )
-  end
-
-  @doc """
-  Creates a join URL via the legacy MiroTalk API path (backward-compatible).
-  """
-  @spec create_join_url_legacy(config(), String.t(), String.t(), String.t()) ::
-          {:ok, String.t()} | {:error, term()}
-  def create_join_url_legacy(config, room_id, participant_name, _participant_email)
-      when room_id != "" and participant_name != "" do
-    base_url = Map.get(config, :base_url)
-
-    headers = [
-      {"authorization", Map.get(config, :api_key)},
-      {"Content-Type", "application/json"}
-    ]
-
-    sanitized_name = sanitize_input(participant_name)
-
-    body =
-      Jason.encode!(%{
-        room: room_id,
-        name: sanitized_name,
-        avatar: false,
-        audio: true,
-        video: true,
-        screen: false,
-        hide: false,
-        notify: true
-      })
-
-    handle_join_api_response(
-      HttpHelpers.try_https_then_http(base_url, "/api/v1/join", fn url ->
-        Config.http_client_module().post(url, body, headers, HttpHelpers.ssrf_options())
-      end),
-      :legacy
+      end)
     )
   end
 
   # ---------------------------------------------------------------------------
   # Direct URL construction
   # ---------------------------------------------------------------------------
-
-  @doc """
-  Builds a direct join URL with query parameters (no authentication token).
-  """
-  @spec create_direct_join_url(config(), String.t(), String.t()) :: String.t()
-  def create_direct_join_url(config, room_id, participant_name) do
-    base_url = "#{Map.get(config, :base_url)}/join"
-    sanitized_name = sanitize_input(participant_name)
-
-    params = %{
-      room: room_id,
-      name: sanitized_name,
-      audio: 1,
-      video: 1,
-      screen: 0,
-      hide: 0,
-      notify: 1
-    }
-
-    query_string = URI.encode_query(params)
-    "#{base_url}?#{query_string}"
-  end
 
   @doc """
   Builds a direct join URL with an HMAC-signed JWT token for secure access.
@@ -201,46 +141,31 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
   # API response handling
   # ---------------------------------------------------------------------------
 
-  defp handle_join_api_response(http_result, mode) do
+  defp handle_join_api_response(http_result) do
     case http_result do
       {:ok, %Req.Response{status: 200, body: response_body}} ->
         case Jason.decode(response_body) do
           {:ok, response} ->
-            extract_join_url(response, mode)
+            extract_join_url(response)
 
           {:error, _decode_error} ->
-            error_msg =
-              if mode == :with_validation,
-                do: "Invalid JSON response from MiroTalk API join endpoint",
-                else: "Invalid JSON response from MiroTalk API"
-
-            Logger.error(error_msg)
+            Logger.error("Invalid JSON response from MiroTalk API join endpoint")
             {:error, :invalid_json}
         end
 
       {:ok, %Req.Response{status: status, body: body}} ->
-        error_msg =
-          if mode == :with_validation,
-            do: "MiroTalk join API error",
-            else: "MiroTalk API error"
-
-        redacted_body = Redactor.redact_and_truncate(body)
+        error_msg = "MiroTalk join API error"
 
         Logger.error("MiroTalk API error",
           message: error_msg,
           status: status,
-          body: redacted_body
+          body: Redactor.redact_and_truncate(body)
         )
 
         {:error, {:http_error, status, "#{error_msg} (see logs for details)"}}
 
       {:error, reason} ->
-        error_msg =
-          if mode == :with_validation,
-            do: "Failed to call MiroTalk join API: #{Redactor.redact(reason)}",
-            else: "Failed to create join URL: #{Redactor.redact(reason)}"
-
-        Logger.error(error_msg)
+        Logger.error("Failed to call MiroTalk join API", reason: Redactor.redact(reason))
         {:error, reason}
     end
   end
@@ -249,7 +174,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
   # Private helpers
   # ---------------------------------------------------------------------------
 
-  defp extract_join_url(response, :with_validation) do
+  defp extract_join_url(response) do
     if response["join"] do
       {:ok, response["join"]}
     else
@@ -259,10 +184,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
 
       {:error, :missing_join_url}
     end
-  end
-
-  defp extract_join_url(response, :legacy) do
-    {:ok, response["join"]}
   end
 
   defp map_role("organizer"), do: "admin"

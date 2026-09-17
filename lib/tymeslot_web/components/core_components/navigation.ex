@@ -22,24 +22,6 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   end
 
   @doc """
-  Renders a styled back link.
-  """
-  attr :to, :string, required: true
-  slot :inner_block, required: true
-
-  @spec back_link(map()) :: Phoenix.LiveView.Rendered.t()
-  def back_link(assigns) do
-    ~H"""
-    <.link
-      navigate={@to}
-      class="text-sm underline text-white/70 hover:text-white/90 transition duration-200"
-    >
-      {render_slot(@inner_block)}
-    </.link>
-    """
-  end
-
-  @doc """
   Renders a tabbed navigation interface.
 
   ## Usage

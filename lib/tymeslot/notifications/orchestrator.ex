@@ -7,7 +7,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   require Logger
 
   alias Tymeslot.Clock
-  alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Meetings.ApprovalJobs
   alias Tymeslot.Notifications.{ContentBuilder, Recipients, SchedulingRules}
@@ -62,7 +62,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
     Logger.info("Scheduling booking request notifications", meeting_id: meeting.id)
 
     results = [
-      request_emails: MeetingScheduler.schedule_request_emails(meeting.id),
+      request_emails: EmailScheduler.schedule_request_emails(meeting.id),
       approval_nudge: schedule_approval_nudge(meeting),
       expiry: ApprovalJobs.schedule_expiry(meeting)
     ]
@@ -96,7 +96,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
     if seconds_remaining > 0 do
       send_at = DateTime.add(requested_at, div(seconds_remaining, 2), :second)
-      MeetingScheduler.schedule_approval_nudge(meeting.id, send_at)
+      EmailScheduler.schedule_approval_nudge(meeting.id, send_at)
     else
       :ok
     end
@@ -108,7 +108,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   @spec send_request_outcome_notifications(%{atom() => term()}, :declined | :expired) ::
           {:ok, :notifications_scheduled} | {:error, term()}
   def send_request_outcome_notifications(meeting, variant) do
-    case MeetingScheduler.schedule_request_outcome(meeting.id, variant) do
+    case EmailScheduler.schedule_request_outcome(meeting.id, variant) do
       :ok -> {:ok, :notifications_scheduled}
       {:error, reason} -> {:error, reason}
     end
@@ -122,7 +122,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   """
   @spec cancel_request_notifications(%{atom() => term()}) :: :ok
   def cancel_request_notifications(meeting) do
-    :ok = MeetingScheduler.cancel_approval_emails(meeting.id)
+    :ok = EmailScheduler.cancel_approval_emails(meeting.id)
     ApprovalJobs.cancel(meeting)
   end
 

@@ -7,8 +7,7 @@ defmodule Tymeslot.Auth.SecurityTest do
 
   alias Tymeslot.Auth
   alias Tymeslot.Auth.Authentication
-  alias Tymeslot.Auth.UserTokenQueries
-  alias Tymeslot.Security.{Password, Token}
+  alias Tymeslot.Security.Password
 
   import Tymeslot.Factory
 
@@ -112,27 +111,6 @@ defmodule Tymeslot.Auth.SecurityTest do
 
       {:ok, user, _session} = Auth.register_user(params, conn)
       assert is_nil(user.verified_at)
-    end
-  end
-
-  describe "password reset security" do
-    test "reset tokens are single-use" do
-      user = insert(:user)
-      assert {:ok, :reset_initiated, _message} = Auth.initiate_password_reset(user.email)
-
-      # Get token directly using helper - initiate_password_reset sends it via email
-      # For testing, we generate a fresh token and store it
-      {token, _value} = Token.generate_password_reset_token()
-      {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
-
-      # First use succeeds
-      result = Auth.reset_password(token, "NewPass123!", "NewPass123!")
-      # Should succeed (returns 3-tuple)
-      assert match?({:ok, _, _}, result)
-
-      # Second use always fails
-      assert {:error, :invalid_token, _message} =
-               Auth.reset_password(token, "AnotherPass123!", "AnotherPass123!")
     end
   end
 

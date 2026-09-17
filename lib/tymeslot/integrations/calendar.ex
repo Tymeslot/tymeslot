@@ -208,6 +208,21 @@ defmodule Tymeslot.Integrations.Calendar do
   defdelegate writable_calendars(calendar_list), to: Selection
 
   @doc """
+  Drops cached events from calendars the user has deselected. See
+  `Tymeslot.Integrations.Calendar.Selection.visible_events/2`.
+  """
+  @spec visible_events([map()], [map()]) :: [map()]
+  defdelegate visible_events(events, integrations), to: Selection
+
+  @doc """
+  Derives, per integration id, a query-ready description of calendar
+  selection for filtering cached events in SQL. See
+  `Tymeslot.Integrations.Calendar.Selection.visibility_rules/1`.
+  """
+  @spec visibility_rules([map()]) :: %{integer() => Selection.visibility_rule()}
+  defdelegate visibility_rules(integrations), to: Selection
+
+  @doc """
   Returns whether the integration has calendars selected but none of them
   are writable — the booking-target picker has nothing to offer even
   though the user has enabled calendars for this account. Distinguishes

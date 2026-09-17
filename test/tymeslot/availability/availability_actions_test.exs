@@ -8,6 +8,7 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
   @moduletag :availability
 
   alias Tymeslot.Availability.AvailabilityActions
+  alias Tymeslot.Availability.AvailabilityBreakSchema
   alias Tymeslot.Availability.Breaks
   alias Tymeslot.Availability.WeeklySchedule
   import Tymeslot.AvailabilityTestHelpers
@@ -265,7 +266,7 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
     test "successfully deletes existing break", %{schedule: schedule, day: day, break: break} do
       assert {:ok, _deleted} = AvailabilityActions.delete_break(break.id, schedule.id)
 
-      breaks = Breaks.get_breaks_for_day(day.id)
+      breaks = breaks_for_day(day.id)
       assert breaks == []
     end
 
@@ -295,7 +296,7 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
       assert {:error, "Unauthorized"} = result
 
       # Verify break still exists
-      breaks = Breaks.get_breaks_for_day(other_day.id)
+      breaks = breaks_for_day(other_day.id)
       assert length(breaks) == 1
     end
 
@@ -313,7 +314,7 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
 
       assert {:ok, _deleted} = AvailabilityActions.delete_break(break.id, schedule.id)
 
-      breaks = Breaks.get_breaks_for_day(day.id)
+      breaks = breaks_for_day(day.id)
       assert breaks == []
     end
   end
@@ -376,7 +377,7 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
       updated = WeeklySchedule.get_day_availability(schedule.id, 1)
       assert updated.is_available == false
 
-      breaks = Breaks.get_breaks_for_day(day.id)
+      breaks = breaks_for_day(day.id)
       assert breaks == []
     end
 
@@ -445,4 +446,7 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
       assert AvailabilityActions.day_name(8) == "Unknown"
     end
   end
+
+  defp breaks_for_day(day_id),
+    do: Repo.all_by(AvailabilityBreakSchema, weekly_availability_id: day_id)
 end

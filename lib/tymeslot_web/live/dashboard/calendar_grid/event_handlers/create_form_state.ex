@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
+  alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @spec handle_show_create_form(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -55,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   # Builds a `creating_event` map, filling defaults for any field the caller omits.
   defp base_creating(socket, overrides) do
     default_int_id = EditWorkflow.default_integration_id(socket)
-    today = Date.to_iso8601(Date.utc_today())
+    today = Date.to_iso8601(Helpers.today(socket.assigns.user_timezone))
 
     defaults = %{
       date: today,

@@ -522,8 +522,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
           ]
         })
 
+      # The field is declared on every client; what must not happen is this
+      # one naming a folder.
       assert [client] = Provider.build_client_configs(integration)
-      refute Map.has_key?(client, :calendar_id)
+      refute client.calendar_id
     end
 
     test "carries the integration the availability read caches under" do
@@ -537,8 +539,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderTest do
   describe "config from a persisted integration" do
     test "carries the integration's opt-out of certificate verification to the transport" do
       # `to_provider_config/1` is shaped for the CalDAV family and drops
-      # `verify_ssl`, so the merge in `to_config/1` is the only thing keeping
-      # it. Without it every on-premises server with a self-signed certificate
+      # `verify_ssl`, so the merge in `ClientConfig.new/1` is the only thing
+      # keeping it. Without it an on-premises server with a self-signed cert
       # fails its TLS handshake however the account owner set the option.
       #
       # Asserted at the HTTP-client boundary because Req.Test replaces the

@@ -473,11 +473,16 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
     test "a 412 on a create retries instead of discarding" do
       meeting = insert(:meeting)
 
-      # On a create the 412 comes from `If-None-Match: *` finding an event
-      # already at the UID. The offline queue replays creates without a
-      # conflict policy, so discarding here would loop silently forever;
-      # the ordinary retry path must keep the job (and its exhaustion alert).
+      # `If-None-Match: *` found an event already at the UID, so the create
+      # switches to an update, and here that update conflicts too. The offline
+      # queue replays creates without a conflict policy, so discarding here
+      # would loop silently forever; the ordinary retry path must keep the job
+      # (and its exhaustion alert).
       expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _user_id ->
+        {:error, :precondition_failed}
+      end)
+
+      expect(Tymeslot.CalendarMock, :update_event, fn _uid, _event_data, _meeting ->
         {:error, :precondition_failed}
       end)
 
@@ -595,15 +600,6 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
   end
 
   describe "scheduling" do
-    test "schedule_calendar_creation/1 enqueues job" do
-      assert :ok = CalendarEventScheduler.schedule_calendar_creation(123)
-
-      assert_enqueued(
-        worker: CalendarEventWorker,
-        args: %{"action" => "create", "meeting_id" => 123}
-      )
-    end
-
     test "schedule_calendar_update/1 enqueues job" do
       assert {:ok, _result} = CalendarEventScheduler.schedule_calendar_update(123)
 

@@ -8,7 +8,7 @@ defmodule Tymeslot.Polls.VotingTest do
 
   alias Ecto.UUID
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.{PollParticipantQueries, PollVoteQueries, Voting}
+  alias Tymeslot.Polls.{PollParticipantQueries, Voting}
 
   describe "register_participant/2" do
     test "creates a participant with a generated token" do
@@ -92,7 +92,7 @@ defmodule Tymeslot.Polls.VotingTest do
                  slot_b.id => "if_need_be"
                })
 
-      votes = PollVoteQueries.list_for_participant(participant.id)
+      votes = PollParticipantQueries.get_by_token(participant.token).votes
       assert length(votes) == 2
 
       responses = Map.new(votes, &{&1.poll_time_slot_id, &1.response})
@@ -112,7 +112,7 @@ defmodule Tymeslot.Polls.VotingTest do
       assert {:ok, _replacement} =
                Voting.cast_votes(poll, participant.token, %{slot_a.id => "no"})
 
-      assert [vote] = PollVoteQueries.list_for_participant(participant.id)
+      assert [vote] = PollParticipantQueries.get_by_token(participant.token).votes
       assert vote.poll_time_slot_id == slot_a.id
       assert vote.response == :no
     end
@@ -127,9 +127,10 @@ defmodule Tymeslot.Polls.VotingTest do
                })
 
       responses =
-        participant.id
-        |> PollVoteQueries.list_for_participant()
-        |> Map.new(&{&1.poll_time_slot_id, &1.response})
+        Map.new(
+          PollParticipantQueries.get_by_token(participant.token).votes,
+          &{&1.poll_time_slot_id, &1.response}
+        )
 
       assert responses[slot_a.id] == :yes
       assert responses[slot_b.id] == :if_need_be
@@ -141,7 +142,7 @@ defmodule Tymeslot.Polls.VotingTest do
       assert {:error, :invalid_slot} =
                Voting.cast_votes(poll, participant.token, %{UUID.generate() => "yes"})
 
-      assert PollVoteQueries.list_for_participant(participant.id) == []
+      assert PollParticipantQueries.get_by_token(participant.token).votes == []
       assert PollParticipantQueries.get_by_token(participant.token).voted_at == nil
     end
 
@@ -151,7 +152,7 @@ defmodule Tymeslot.Polls.VotingTest do
       assert {:error, :invalid_response} =
                Voting.cast_votes(poll, participant.token, %{slot_a.id => "maybe"})
 
-      assert PollVoteQueries.list_for_participant(participant.id) == []
+      assert PollParticipantQueries.get_by_token(participant.token).votes == []
       assert PollParticipantQueries.get_by_token(participant.token).voted_at == nil
     end
 
@@ -164,7 +165,7 @@ defmodule Tymeslot.Polls.VotingTest do
                  slot_b.id => "maybe"
                })
 
-      assert PollVoteQueries.list_for_participant(participant.id) == []
+      assert PollParticipantQueries.get_by_token(participant.token).votes == []
       assert PollParticipantQueries.get_by_token(participant.token).voted_at == nil
     end
 
@@ -199,7 +200,7 @@ defmodule Tymeslot.Polls.VotingTest do
       assert {:ok, returned} = Voting.cast_votes(poll, participant.token, %{})
       assert returned.id == participant.id
       assert PollParticipantQueries.get_by_token(participant.token).voted_at == nil
-      assert PollVoteQueries.list_for_participant(participant.id) == []
+      assert PollParticipantQueries.get_by_token(participant.token).votes == []
     end
   end
 end

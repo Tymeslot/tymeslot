@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Video do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Emails.EmailScheduler.IntegrationScheduler
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
@@ -98,14 +99,48 @@ defmodule Tymeslot.Integrations.Video do
   end
 
   # Shared helper: delegates to ReauthHandling.flag/2 with video-specific opts.
+  # `mark_needs_reauth` is wired to `flag_and_notify/2` rather than the bare
+  # DB write, so that every path ending in "the owner has to reconnect", this
+  # one included and not just the provider-level 401 handling in
+  # `OAuthTokenManager`, sends the reauth email on the false to true
+  # transition. Keeping this symmetrical with `CalendarManagement` is
+  # deliberate: the two used to disagree on which paths notified.
   defp flag_for_reauth(integration, opts \\ []) do
     ReauthHandling.flag(
       integration,
       Keyword.merge(
-        [mark_needs_reauth: &VideoIntegrationQueries.mark_needs_reauth/2, log_prefix: "Video"],
+        [mark_needs_reauth: &flag_and_notify/2, log_prefix: "Video"],
         opts
       )
     )
+  end
+
+  @doc """
+  Marks a video integration `needs_reauth` and emails the owner on the
+  false → true transition. Shared by `flag_for_reauth/2` and by
+  `OAuthTokenManager`'s provider-level 401 handling, so the two paths cannot
+  drift on whether reconnecting is announced.
+
+  Re-flagging an integration already awaiting reconnection is not news: the
+  owner has already been told, and the scheduler's uniqueness window is a
+  backstop for that, not the place to decide it.
+  """
+  @spec flag_and_notify(VideoIntegrationSchema.t(), String.t()) ::
+          {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def flag_and_notify(%{needs_reauth: true} = integration, message),
+    do: VideoIntegrationQueries.mark_needs_reauth(integration, message)
+
+  def flag_and_notify(integration, message) do
+    with {:ok, updated} = result <-
+           VideoIntegrationQueries.mark_needs_reauth(integration, message) do
+      IntegrationScheduler.schedule_integration_reauth_notification(
+        %{id: updated.user_id},
+        updated,
+        :video
+      )
+
+      result
+    end
   end
 
   # ---------------

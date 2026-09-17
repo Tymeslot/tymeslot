@@ -46,6 +46,21 @@ defmodule Tymeslot.Integrations.Video.ProviderConfigTest do
     end
   end
 
+  describe "valid_provider?/1" do
+    test "returns true for valid video providers" do
+      assert ProviderConfig.valid_provider?(:mirotalk)
+      assert ProviderConfig.valid_provider?(:google_meet)
+      assert ProviderConfig.valid_provider?(:custom)
+      assert ProviderConfig.valid_provider?(:zoom)
+    end
+
+    test "returns false for unknown providers and non-atoms" do
+      refute ProviderConfig.valid_provider?(:invalid)
+      refute ProviderConfig.valid_provider?(:unknown)
+      refute ProviderConfig.valid_provider?("mirotalk")
+    end
+  end
+
   describe "oauth_provider?/1" do
     test "returns true for an OAuth provider atom" do
       assert ProviderConfig.oauth_provider?(:google_meet) == true

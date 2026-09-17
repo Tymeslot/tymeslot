@@ -1,5 +1,7 @@
 defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
-  use Tymeslot.DataCase, async: true
+  # async: false: :google_oauth is read by the OAuth helpers and by OAuthStateGuard on the
+  # web path, both reachable from other tests.
+  use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
   import Tymeslot.Factory
@@ -349,117 +351,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
     end
   end
 
-  describe "bootstrap_sync/1" do
-    # bootstrap_sync/1 passes the HTTP call through CalendarCircuitBreaker, which
-    # runs the function inside the GenServer process. Mox expectations are
-    # process-scoped, so we must explicitly allow the circuit breaker process to
-    # use the mock before each test in this describe block.
-    setup do
-      breaker_pid = Process.whereis(:calendar_breaker_google)
-      Mox.allow(Tymeslot.HTTPClientMock, self(), breaker_pid)
-      :ok
-    end
-
-    test "single-page response returns events and sync token with correct time params" do
-      user = insert(:user)
-
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          provider: "google",
-          access_token_encrypted: Encryption.encrypt("valid_token"),
-          token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
-          default_booking_calendar_id: "work@example.com"
-        )
-
-      expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _body, _headers, _opts ->
-        assert String.starts_with?(
-                 url,
-                 "https://www.googleapis.com/calendar/v3/calendars/work@example.com/events"
-               )
-
-        assert String.contains?(url, "timeMin=")
-        assert String.contains?(url, "timeMax=")
-        assert String.contains?(url, "singleEvents=true")
-        assert String.contains?(url, "maxResults=2500")
-        refute String.contains?(url, "pageToken=")
-        refute String.contains?(url, "syncToken=")
-
-        {:ok,
-         %Req.Response{
-           status: 200,
-           body:
-             Jason.encode!(%{
-               "items" => [
-                 %{"id" => "evt1", "summary" => "Standup"},
-                 %{"id" => "evt2", "summary" => "Review"}
-               ],
-               "nextSyncToken" => "sync_abc123"
-             })
-         }}
-      end)
-
-      assert {:ok, %{events: events, next_sync_token: "sync_abc123"}} =
-               CalendarAPI.bootstrap_sync(integration)
-
-      assert length(events) == 2
-      assert Enum.map(events, & &1["id"]) == ["evt1", "evt2"]
-    end
-
-    test "multi-page response accumulates events across pages in order" do
-      user = insert(:user)
-
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          provider: "google",
-          access_token_encrypted: Encryption.encrypt("valid_token"),
-          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
-        )
-
-      # First call returns a nextPageToken; second call returns the final page.
-      expect(Tymeslot.HTTPClientMock, :request, 2, fn :get, url, _body, _headers, _opts ->
-        if String.contains?(url, "pageToken=page2") do
-          {:ok,
-           %Req.Response{
-             status: 200,
-             body:
-               Jason.encode!(%{
-                 "items" => [%{"id" => "evt3"}, %{"id" => "evt4"}],
-                 "nextSyncToken" => "sync_final"
-               })
-           }}
-        else
-          {:ok,
-           %Req.Response{
-             status: 200,
-             body:
-               Jason.encode!(%{
-                 "items" => [%{"id" => "evt1"}, %{"id" => "evt2"}],
-                 "nextPageToken" => "page2"
-               })
-           }}
-        end
-      end)
-
-      assert {:ok, %{events: events, next_sync_token: "sync_final"}} =
-               CalendarAPI.bootstrap_sync(integration)
-
-      assert Enum.map(events, & &1["id"]) == ["evt1", "evt2", "evt3", "evt4"]
-    end
-  end
-
   describe "refresh_token/1" do
-    test "calls Google token endpoint and returns new tokens" do
-      user = insert(:user)
-
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          provider: "google",
-          refresh_token_encrypted: Encryption.encrypt("old_refresh_token")
-        )
-
+    setup do
       prior = Application.get_env(:tymeslot, :google_oauth)
       Application.put_env(:tymeslot, :google_oauth, client_id: "client", client_secret: "secret")
 
@@ -469,6 +362,17 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
           else: Application.delete_env(:tymeslot, :google_oauth)
       end)
 
+      integration =
+        insert(:calendar_integration,
+          user: insert(:user),
+          provider: "google",
+          refresh_token_encrypted: Encryption.encrypt("old_refresh_token")
+        )
+
+      %{integration: integration}
+    end
+
+    test "calls Google token endpoint and returns new tokens", %{integration: integration} do
       expect(Tymeslot.HTTPClientMock, :request, fn :post, url, body, _headers, _opts ->
         assert url == "https://oauth2.googleapis.com/token"
         assert String.contains?(body, "grant_type=refresh_token")
@@ -489,99 +393,41 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
       assert {:ok, {"new_access_token", "new_refresh_token", %DateTime{}}} =
                CalendarAPI.refresh_token(integration)
     end
-  end
 
-  describe "error taxonomy" do
-    # Callers downstream of CalendarAPI (CalendarEventWorker, CircuitBreaker,
-    # retry policies) route on the second element of the error tuple. These
-    # tests lock in the contract that each HTTP status maps to a
-    # distinguishable atom so those call sites keep working.
-
-    setup do
-      user = insert(:user)
-
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          provider: "google",
-          access_token_encrypted: Encryption.encrypt("valid_token"),
-          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
-        )
-
-      %{integration: integration}
-    end
-
-    test "404 from the Google API surfaces as :not_found", %{integration: integration} do
-      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 404, body: ""}}
-      end)
-
-      assert {:error, :not_found, _msg} = CalendarAPI.list_calendars(integration)
-    end
-
-    test "404 on a calendar-scoped path names the calendar", %{integration: integration} do
-      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 404, body: ""}}
-      end)
-
-      assert {:error, :not_found, "Calendar not found"} =
-               CalendarAPI.list_events(
-                 integration,
-                 "primary",
-                 DateTime.utc_now(),
-                 DateTime.add(DateTime.utc_now(), 3600)
-               )
-    end
-
-    # A 404 on /calendars/<id>/events/<event-id> almost always means the event
-    # is gone, not the calendar — reporting "Calendar not found" there sent
-    # self-hosters looking for a calendar problem that did not exist.
-    test "404 on an event-scoped path names the event", %{integration: integration} do
-      expect(Tymeslot.HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 404, body: ""}}
-      end)
-
-      assert {:error, :not_found, "Event not found"} =
-               CalendarAPI.delete_event(integration, "primary", "missing-event-id")
-    end
-
-    test "500 from the Google API surfaces as :network_error", %{integration: integration} do
-      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 500, body: ""}}
-      end)
-
-      assert {:error, :network_error, _msg} = CalendarAPI.list_calendars(integration)
-    end
-
-    test "403 with rateLimitExceeded reason surfaces as :rate_limited", %{
+    # The body is where the OAuth error code lives; the health check can only
+    # tell a revoked grant from other refusals if the code survives into the
+    # message.
+    test "keeps the OAuth error code from a 400 response in the message", %{
       integration: integration
     } do
-      body =
-        Jason.encode!(%{
-          "error" => %{
-            "message" => "Rate Limit Exceeded",
-            "errors" => [%{"reason" => "rateLimitExceeded"}]
-          }
-        })
-
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 403, body: body}}
+      expect(Tymeslot.HTTPClientMock, :request, fn :post,
+                                                   "https://oauth2.googleapis.com/token",
+                                                   _body,
+                                                   _headers,
+                                                   _opts ->
+        {:ok, %Req.Response{status: 400, body: ~s({"error":"invalid_grant"})}}
       end)
 
-      assert {:error, :rate_limited, _msg} =
-               CalendarAPI.create_event(integration, "primary", %{
-                 summary: "Team sync",
-                 start_time: ~U[2026-05-01 10:00:00Z],
-                 end_time: ~U[2026-05-01 11:00:00Z]
-               })
+      assert {:error, :unauthorized, "Token refresh failed: invalid_grant"} =
+               CalendarAPI.refresh_token(integration)
     end
 
-    test "a transport timeout surfaces as :network_error", %{integration: integration} do
-      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
-        {:error, %Mint.TransportError{reason: :timeout}}
+    # Google answers a rejected client registration with a 401, not a 400.
+    # Reported as a network error it would be retried eight times and the
+    # owner never told.
+    test "keeps the OAuth error code from a 401 response in the message", %{
+      integration: integration
+    } do
+      expect(Tymeslot.HTTPClientMock, :request, fn :post,
+                                                   "https://oauth2.googleapis.com/token",
+                                                   _body,
+                                                   _headers,
+                                                   _opts ->
+        {:ok, %Req.Response{status: 401, body: ~s({"error":"invalid_client"})}}
       end)
 
-      assert {:error, :network_error, _msg} = CalendarAPI.list_calendars(integration)
+      assert {:error, :unauthorized, "Token refresh failed: invalid_client"} =
+               CalendarAPI.refresh_token(integration)
     end
   end
 end

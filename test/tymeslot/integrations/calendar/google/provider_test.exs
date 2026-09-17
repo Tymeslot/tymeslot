@@ -531,6 +531,18 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
 
       assert {:error, :unauthorized} = Provider.perform_connection_test(integration)
     end
+
+    test "test_connection reports a revoked grant as an expired token" do
+      integration = insert(:calendar_integration, provider: "google", access_token: "test_token")
+
+      expect(GoogleCalendarAPIMock, :list_primary_events, fn _integration,
+                                                             _start_date,
+                                                             _end_date ->
+        {:error, :unauthorized, "Token refresh failed: invalid_grant"}
+      end)
+
+      assert {:error, :token_expired} = Provider.perform_connection_test(integration)
+    end
   end
 
   describe "discover_calendars/1 read_only mapping" do

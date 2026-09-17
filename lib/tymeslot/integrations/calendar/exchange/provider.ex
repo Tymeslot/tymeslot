@@ -114,6 +114,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Exchange.Client
+  alias Tymeslot.Integrations.Calendar.Exchange.ClientConfig
   alias Tymeslot.Integrations.Calendar.Exchange.EventNormaliser
   alias Tymeslot.Integrations.Calendar.Exchange.FolderDiscovery
   alias Tymeslot.Integrations.Calendar.Exchange.FreeBusy
@@ -202,8 +203,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
     end
   end
 
+  # `ClientConfig.new/1` rather than a conversion of its own: one construction
+  # site is what keeps the password out of anything that inspects a client.
   @impl Tymeslot.Integrations.Calendar.Provider
-  def new(config), do: {:ok, Map.new(config)}
+  def new(config), do: {:ok, ClientConfig.new(config)}
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def perform_connection_test(config) do
@@ -229,7 +232,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def discover_calendars(client) do
-    case Client.call(to_config(client), Requests.find_folder()) do
+    case Client.call(ClientConfig.new(client), Requests.find_folder()) do
       {:ok, doc} -> FolderDiscovery.parse_calendars(doc)
       {:error, _reason} = error -> error
     end
@@ -238,7 +241,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   @impl Tymeslot.Integrations.Calendar.Provider
   def discover_calendars_for_integration(integration) do
     integration
-    |> to_config()
+    |> ClientConfig.new()
     |> discover_calendars()
   end
 
@@ -257,7 +260,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   """
   @impl Tymeslot.Integrations.Calendar.Provider
   def build_client_configs(integration) do
-    [Map.put(to_config(integration), :calendar_integration_id, integration_id(integration))]
+    [%{ClientConfig.new(integration) | calendar_integration_id: integration_id(integration)}]
   end
 
   @doc """
@@ -272,13 +275,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
 
   Falls back to the mailbox's default calendar when nothing is selected.
   """
-  @spec item_client_configs(CalendarIntegrationSchema.t() | map()) :: [map()]
+  @spec item_client_configs(CalendarIntegrationSchema.t() | map()) :: [ClientConfig.t()]
   def item_client_configs(integration) do
-    config = to_config(integration)
+    config = ClientConfig.new(integration)
 
     case selected_calendar_ids(integration) do
-      [] -> [Map.put(config, :calendar_id, :calendar)]
-      ids -> Enum.map(ids, &Map.put(config, :calendar_id, &1))
+      [] -> [%{config | calendar_id: :calendar}]
+      ids -> Enum.map(ids, &%{config | calendar_id: &1})
     end
   end
 
@@ -293,12 +296,11 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   """
   @impl Tymeslot.Integrations.Calendar.Provider
   def build_booking_client_config(integration) do
-    integration
-    |> to_config()
-    |> Map.merge(%{
-      calendar_integration_id: integration_id(integration),
-      booking_folder_id: booking_folder(integration)
-    })
+    %{
+      ClientConfig.new(integration)
+      | calendar_integration_id: integration_id(integration),
+        booking_folder_id: booking_folder(integration)
+    }
   end
 
   @doc """
@@ -362,8 +364,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   @spec list_calendar_items(map() | CalendarIntegrationSchema.t(), keyword()) ::
           {:ok, [term()]} | {:error, term()}
   def list_calendar_items(client, opts) do
-    config = to_config(client)
-    folder = Keyword.get(opts, :calendar_id) || Map.get(config, :calendar_id) || :calendar
+    config = ClientConfig.new(client)
+    folder = Keyword.get(opts, :calendar_id) || config.calendar_id || :calendar
     from = Keyword.fetch!(opts, :start_time)
     to = Keyword.fetch!(opts, :end_time)
 
@@ -420,7 +422,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   @spec list_busy_intervals(map() | CalendarIntegrationSchema.t(), keyword()) ::
           {:ok, [FreeBusy.interval()]} | {:error, term()}
   def list_busy_intervals(client, opts) do
-    config = to_config(client)
+    config = ClientConfig.new(client)
     from = Keyword.fetch!(opts, :start_time)
     to = Keyword.fetch!(opts, :end_time)
 
@@ -453,8 +455,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   """
   @impl Tymeslot.Integrations.Calendar.Provider
   def create_event(client, event_data) do
-    config = to_config(client)
-    folder = Map.get(config, :booking_folder_id) || booking_folder(client)
+    config = ClientConfig.new(client)
+    folder = config.booking_folder_id || booking_folder(client)
 
     with {:ok, item_id} <-
            Writes.create_item(config, Writes.from_event_data(event_data), folder) do
@@ -472,7 +474,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   @impl Tymeslot.Integrations.Calendar.Provider
   def update_event(client, item_id, event_data) do
     client
-    |> to_config()
+    |> ClientConfig.new()
     |> Writes.update_item(item_id, Writes.from_event_data(event_data))
   end
 
@@ -486,22 +488,20 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   @impl Tymeslot.Integrations.Calendar.Provider
   def delete_event(client, item_id, _opts) do
     client
-    |> to_config()
+    |> ClientConfig.new()
     |> Writes.delete_item(item_id)
   end
 
   @doc """
   Builds the transport config an EWS call is issued with.
 
-  Public for `Calendar.Diagnostics` alone, which reaches `Exchange.Writes`
-  with it to plant and remove audit fixtures. It is the same conversion every
-  read in this module performs, and sharing it is the point: a second one would
-  be a second place to remember that the credentials arrive encrypted, and that
-  `verify_ssl` and `provider_account_email` have to be merged back on top of a
-  provider config shaped for the CalDAV family.
+  Public for `Calendar.Diagnostics` alone, which reaches `Exchange.Writes` with
+  it to plant and remove audit fixtures. Nothing more than the `ClientConfig`
+  conversion every read in this module performs, named for what the diagnostic
+  wants rather than leaving it to construct one of its own.
   """
-  @spec transport_config(CalendarIntegrationSchema.t() | map()) :: map()
-  def transport_config(integration), do: to_config(integration)
+  @spec transport_config(CalendarIntegrationSchema.t() | map()) :: ClientConfig.t()
+  def transport_config(integration), do: ClientConfig.new(integration)
 
   # --- Private ---
 
@@ -516,7 +516,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   # `discover_calendars/1`'s business, and it applies the same guard through
   # `FolderDiscovery.parse_calendars/1`.
   defp find_folder(client) do
-    with {:ok, doc} <- Client.call(to_config(client), Requests.find_folder()) do
+    with {:ok, doc} <- Client.call(ClientConfig.new(client), Requests.find_folder()) do
       Soap.require_success(doc, "FindFolderResponseMessage")
     end
   end
@@ -578,8 +578,9 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   defp resolve_mailbox(%{provider_account_email: email}) when is_binary(email) and email != "",
     do: email
 
+  # No catch-all: a `ClientConfig` declares both fields, so these two clauses
+  # cover it, and `address_or_nil/1` takes the nil username.
   defp resolve_mailbox(%{username: username}), do: address_or_nil(username)
-  defp resolve_mailbox(_config), do: nil
 
   defp address_or_nil(username) when is_binary(username) do
     if String.contains?(username, "@"), do: username, else: nil
@@ -617,30 +618,4 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
     |> Enum.map(& &1.id)
     |> Enum.reject(&(&1 in [nil, ""]))
   end
-
-  # Credentials live encrypted on the schema; `decrypt_credentials/1` populates
-  # the virtual fields that `to_provider_config/1` then reads. Reading
-  # `integration.username` directly would yield nil on a freshly loaded row, so
-  # both steps are required and neither is optional.
-  #
-  # Two fields are merged back on top because `to_provider_config/1` is shaped
-  # for the CalDAV family and deliberately carries neither: `verify_ssl`, which
-  # an on-premises server with a self-signed certificate needs, and
-  # `provider_account_email`, without which the availability read has no
-  # mailbox to address. It is stored in plaintext, so it survives the
-  # conversion untouched.
-  defp to_config(%CalendarIntegrationSchema{} = integration) do
-    integration
-    |> CalendarIntegrationSchema.decrypt_credentials()
-    |> CalendarIntegrationSchema.to_provider_config()
-    |> Map.merge(%{
-      verify_ssl: integration.verify_ssl,
-      provider_account_email: integration.provider_account_email
-    })
-  end
-
-  # Already-decrypted plain maps (the connection-test and discovery paths build
-  # one from form input before any row exists, and `build_client_configs/1`
-  # answers them) pass straight through.
-  defp to_config(config) when is_map(config), do: config
 end

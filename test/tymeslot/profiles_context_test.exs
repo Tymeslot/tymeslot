@@ -104,11 +104,6 @@ defmodule Tymeslot.ProfilesContextTest do
       assert updated.max_bookings_per_day == 5
       assert updated.full_name == "Test User"
     end
-
-    test "update_field updates a single profile field", %{profile: profile} do
-      assert {:ok, updated} = ProfileQueries.update_field(profile, :timezone, "Europe/London")
-      assert updated.timezone == "Europe/London"
-    end
   end
 
   # =====================================
@@ -243,6 +238,16 @@ defmodule Tymeslot.ProfilesContextTest do
 
       assert Profiles.avatar_url(nil) =~ "data:image/svg+xml"
       assert Profiles.avatar_url(%{profile | avatar: nil}) =~ "data:image/svg+xml"
+    end
+
+    test "uploaded_avatar_url is absolute for an upload and nil otherwise, never a data URI" do
+      profile = insert(:profile, avatar: "test.jpg")
+
+      assert Profiles.uploaded_avatar_url(profile) ==
+               "http://localhost:4002/uploads/avatars/#{profile.id}/test.jpg"
+
+      assert Profiles.uploaded_avatar_url(%{profile | avatar: nil}) == nil
+      assert Profiles.uploaded_avatar_url(nil) == nil
     end
 
     test "update_avatar validates image content" do

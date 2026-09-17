@@ -206,8 +206,8 @@ defmodule Tymeslot.TestFixtures do
 
     {:ok, user} = UserQueries.create_user(attrs)
 
-    # Automatically create profile for user if it doesn't exist
-    {:ok, _profile} = ProfileQueries.get_or_create_by_user_id(user.id)
+    # A freshly created user never has a profile yet, so insert one directly
+    {:ok, _profile} = ProfileQueries.insert_profile(user.id)
 
     user
   end

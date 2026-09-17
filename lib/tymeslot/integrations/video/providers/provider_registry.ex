@@ -32,12 +32,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistry do
   end
 
   @doc """
-  Checks if a provider type is supported (centralized).
-  """
-  @spec valid_provider?(atom()) :: boolean()
-  defdelegate valid_provider?(provider), to: ProviderConfig
-
-  @doc """
   Validates and normalizes a provider type.
   Returns {:ok, provider} or {:error, reason}.
   """
@@ -55,27 +49,5 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistry do
       Map.get(capabilities, capability, false)
     end)
     |> Enum.map(fn provider_metadata -> provider_metadata.type end)
-  end
-
-  @doc """
-  Returns the best provider for a given set of requirements.
-
-  This can be used to automatically select the most appropriate provider
-  based on meeting requirements (e.g., number of participants, recording needs, etc.).
-  """
-  @spec recommend_provider(map()) :: atom()
-  def recommend_provider(requirements \\ %{}) do
-    # For now, just return the default provider
-    # In the future, this could implement intelligent provider selection
-    # based on requirements like:
-    # - participant_count
-    # - recording_required
-    # - screen_sharing_required
-    # - waiting_room_required
-    # - etc.
-
-    # Suppress unused variable warning
-    _requirements = requirements
-    default_provider()
   end
 end

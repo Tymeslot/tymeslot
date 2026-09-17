@@ -243,37 +243,6 @@ defmodule Tymeslot.Availability.Calculate do
   end
 
   @doc """
-  Gets availability status for multiple dates in a month.
-  Optimized for calendar display.
-
-  Delegates to `range_availability/6` using the first and last day of the month.
-
-  ## Returns
-    Map of date strings to availability boolean
-  """
-  @spec month_availability(
-          integer(),
-          integer(),
-          String.t(),
-          String.t(),
-          [CalendarEvent.t()],
-          availability_config()
-        ) :: {:ok, %{String.t() => boolean()}}
-  def month_availability(
-        year,
-        month,
-        owner_timezone,
-        user_timezone,
-        events,
-        config \\ %{}
-      ) do
-    start_date = Date.new!(year, month, 1)
-    end_date = Date.end_of_month(start_date)
-
-    range_availability(start_date, end_date, owner_timezone, user_timezone, events, config)
-  end
-
-  @doc """
   Computes the 42-day display range for a calendar grid.
 
   Returns `{start_date, end_date}` covering exactly the dates rendered by

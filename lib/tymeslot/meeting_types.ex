@@ -165,14 +165,6 @@ defmodule Tymeslot.MeetingTypes do
   defdelegate validate_duration_selection(duration, available_types), to: Duration
 
   @doc """
-  Gets a meeting type by ID, raising if not found.
-  """
-  @spec get_meeting_type!(integer()) :: Ecto.Schema.t()
-  def get_meeting_type!(id) do
-    MeetingTypeQueries.get_meeting_type!(id)
-  end
-
-  @doc """
   Creates a meeting type from form parameters with validation.
   """
   @spec create_meeting_type_from_form(integer(), map(), map()) ::

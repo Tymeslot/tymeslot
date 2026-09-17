@@ -14,9 +14,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   alias Tymeslot.Integrations.Calendar.Outlook.TymeslotFingerprint
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.Shared.ApiResponse
+  alias Tymeslot.Integrations.Common.OAuth.ErrorParser
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.OAuth.TokenFlow
+
+  import ErrorParser, only: [is_oauth_error_status: 1]
 
   @base_url "https://graph.microsoft.com/v1.0"
   @silent_event_headers [
@@ -239,8 +242,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
            {response["access_token"], response["refresh_token"] || integration.refresh_token,
             expires_at}}
 
-        {:error, {:http_error, 400, _body}} ->
-          {:error, :unauthorized, "Token refresh failed"}
+        {:error, {:http_error, status, body}} when is_oauth_error_status(status) ->
+          {:error, :unauthorized, ErrorParser.build_message("Token refresh failed", status, body)}
 
         {:error, {:http_error, status, _body}} ->
           {:error, :network_error, "HTTP #{status}"}

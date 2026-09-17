@@ -35,6 +35,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.Exchange.IntervalNormaliser
+  alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
@@ -359,6 +360,31 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
                perform_job(SyncExchangeCalendarWorker, %{"calendar_integration_id" => 0})
     end
 
+    # `sync_error` reaches only an owner who opens the dashboard, and a discard
+    # is invisible to `ObanFailureAlerter` by design. The failure streak is
+    # what raises the badge on a mailbox that has stopped answering.
+    test "counts each failed cycle against the integration's health, and a snooze against none",
+         %{integration: integration} do
+      ReqTest.stub(:tymeslot_http, fn conn -> ReqTest.transport_error(conn, :econnrefused) end)
+
+      for expected <- 1..@breaker_threshold do
+        assert {:error, :network_error} = run(integration)
+        assert health(integration).consecutive_sync_failures == expected
+      end
+
+      # The host's breaker is now open, and its refusal is not the mailbox
+      # failing again: nothing was sent, and the failures that opened it were
+      # counted above.
+      assert {:snooze, _seconds} = run(integration)
+      assert health(integration).consecutive_sync_failures == @breaker_threshold
+
+      ExchangeCase.reset_breaker(@base_url)
+      stub_full_sync()
+
+      assert :ok = run(integration)
+      assert health(integration).consecutive_sync_failures == 0
+    end
+
     test "snoozes rather than calling a server its breaker has already given up on", %{
       integration: integration
     } do
@@ -470,4 +496,6 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
       |> Conn.resp(status, body)
     end)
   end
+
+  defp health(integration), do: Monitor.get_state(:calendar, integration.id, integration.user_id)
 end

@@ -53,13 +53,8 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
     end)
   end
 
-  @doc "Formats the meeting time line using the default locale."
-  @spec format_meeting_time(meeting_details()) :: String.t()
-  def format_meeting_time(details), do: format_meeting_time(details, "en")
-
-  @doc "Formats the meeting time line in a specific locale."
   @spec format_meeting_time(meeting_details(), String.t()) :: String.t()
-  def format_meeting_time(details, locale) do
+  defp format_meeting_time(details, locale) do
     # Set only by organiser-addressed emails; nil everywhere else means the
     # recipient's locale decides.
     time_format = Map.get(details, :time_format)

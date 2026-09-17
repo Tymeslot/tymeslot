@@ -175,12 +175,6 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   end
 
   @doc """
-  Get a single event by UID.
-  """
-  @spec get_event(String.t(), user_id() | nil) :: {:ok, map()} | {:error, :not_found | term()}
-  def get_event(uid, user_id \\ nil), do: behaviour_module().get_event(uid, user_id)
-
-  @doc """
   Returns the booking calendar integration info for a user or meeting type (id and path) used for event creation.
   """
   @spec get_booking_integration_info(

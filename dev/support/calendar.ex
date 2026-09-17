@@ -83,14 +83,6 @@ defmodule Tymeslot.Dev.Calendar do
     {:ok, generate(user_id, range_start, range_end, timezone)}
   end
 
-  @impl true
-  def get_event(uid, _user_id) do
-    case DebugStore.fetch_event(uid) do
-      {:ok, event} -> {:ok, event}
-      :error -> {:error, :not_found}
-    end
-  end
-
   # Records the event in-memory so a booking made in-app immediately shows as
   # busy on the debug calendar. Keyed by the meeting uid carried in event_data,
   # so later update/delete target the same entry.

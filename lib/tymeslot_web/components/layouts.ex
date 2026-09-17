@@ -267,6 +267,13 @@ defmodule TymeslotWeb.Layouts do
   authorises an action on someone's behalf, and the analytics vendor's script
   reports the page path, which would ship that credential to the analytics
   store and every intermediate proxy.
+
+  Pages that stay tracked still pass every address through the
+  `tymeslotAnalyticsBeforeSend` scrubber in `assets/js/analytics.js`, which
+  removes meeting uids from paths (the cancel and reschedule links share the
+  booking-page LiveView, so they cannot be excluded by module) and drops every
+  query parameter except `utm_*`. The loader skips the tracker entirely when the
+  scrubber is missing.
   """
   attr :nonce, :string, default: nil
   attr :live_module, :atom, default: nil
@@ -363,12 +370,17 @@ defmodule TymeslotWeb.Layouts do
         if (!tag) return;
 
         function load() {
+          // Fail closed: without the scrubber that strips meeting uids and
+          // query strings, the tracker would record credential-bearing URLs.
+          if (typeof window.tymeslotAnalyticsBeforeSend !== "function") return;
+
           var script = document.createElement("script");
           script.src = tag.getAttribute("data-analytics-src");
           script.setAttribute(
             "data-website-id",
             tag.getAttribute("data-analytics-website-id")
           );
+          script.setAttribute("data-before-send", "tymeslotAnalyticsBeforeSend");
           script.addEventListener("load", function () {
             window.dispatchEvent(new Event("tymeslot:analytics-ready"));
           });

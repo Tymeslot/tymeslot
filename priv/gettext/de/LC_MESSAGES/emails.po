@@ -663,11 +663,6 @@ msgstr "Aktion erforderlich: „%{title}“ wurde in Ihrem externen Kalender ver
 msgid "Active"
 msgstr "Aktiv"
 
-#: lib/tymeslot/emails/shared/meeting/calendar_links.ex
-#, elixir-autogen, elixir-format
-msgid "Add to your calendar"
-msgstr "Zum Kalender hinzufügen"
-
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex
 #, elixir-autogen, elixir-format
 msgid "All future emails will be sent to your new address"

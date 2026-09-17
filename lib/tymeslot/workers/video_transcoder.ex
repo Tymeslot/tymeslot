@@ -17,7 +17,7 @@ defmodule Tymeslot.Workers.VideoTranscoder do
 
   require Logger
 
-  alias Tymeslot.Jobs.ObanJobQueries
+  alias Tymeslot.Jobs
   alias Tymeslot.Media.Transcoder
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationQueries
 
@@ -108,7 +108,7 @@ defmodule Tymeslot.Workers.VideoTranscoder do
   # if the path has moved on, snooze so the next run picks the replacement up
   # rather than letting it die with a cancelled job.
   defp handle_missing_source(id, %Oban.Job{args: %{"video_path" => ran_path}} = job) do
-    case ObanJobQueries.get_current_args(job) do
+    case Jobs.get_current_args(job) do
       %{"video_path" => current_path} when current_path != ran_path ->
         Logger.info("Video source replaced mid-transcode, rerunning for the replacement",
           theme_customization_id: id

@@ -43,7 +43,7 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
-  alias Tymeslot.Integrations.HealthCheck
+  alias Tymeslot.Workers.SyncHealth
 
   @calendar_id "subscription"
 
@@ -51,7 +51,9 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
-        sync(integration)
+        integration
+        |> sync()
+        |> tap(&SyncHealth.record_outcome(integration, &1))
 
       {:error, :not_found} ->
         Logger.warning("Calendar subscription not found, discarding sync job",
@@ -156,8 +158,6 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
 
     case CalendarIntegrationQueries.update_sync_state(integration, attrs) do
       {:ok, _updated} ->
-        HealthCheck.mark_synced_successfully(:calendar, integration.id)
-
         Logger.info("Calendar subscription refreshed",
           calendar_integration_id: integration.id,
           event_count: count
@@ -175,6 +175,10 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
     end
   end
 
+  # The failure streak is not recorded here: `perform/1` feeds the whole
+  # cycle's verdict to `SyncHealth.record_outcome/2`, and the revoked-URL and
+  # missing-URL clauses never reach this helper. This one owns the message the
+  # dashboard shows.
   defp record_failure(integration, reason) do
     Logger.error("Calendar subscription sync failed",
       calendar_integration_id: integration.id,

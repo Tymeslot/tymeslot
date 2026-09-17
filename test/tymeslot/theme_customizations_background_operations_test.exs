@@ -4,8 +4,6 @@ defmodule Tymeslot.ThemeCustomizationsBackgroundOperationsTest do
 
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
-  alias Tymeslot.ThemeCustomizations.Backgrounds
-  alias Tymeslot.ThemeCustomizations.Presets
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   describe "ThemeCustomizations background operations" do
@@ -111,34 +109,6 @@ defmodule Tymeslot.ThemeCustomizationsBackgroundOperationsTest do
 
     test "get_gradient_css/1 returns nil for invalid preset" do
       assert ThemeCustomizations.get_gradient_css("nonexistent") == nil
-    end
-
-    test "generate_background_description/2 for gradient type", %{profile: profile} do
-      customization = %ThemeCustomizationSchema{
-        profile_id: profile.id,
-        theme_id: "1",
-        background_type: "gradient",
-        background_value: "gradient_1"
-      }
-
-      description =
-        Backgrounds.generate_background_description(customization, Presets.get_all_presets())
-
-      assert description =~ "Gradient:"
-    end
-
-    test "generate_background_description/2 for color type", %{profile: profile} do
-      customization = %ThemeCustomizationSchema{
-        profile_id: profile.id,
-        theme_id: "1",
-        background_type: "color",
-        background_value: "#ff5500"
-      }
-
-      description =
-        Backgrounds.generate_background_description(customization, Presets.get_all_presets())
-
-      assert description =~ "Solid Color:"
     end
   end
 end

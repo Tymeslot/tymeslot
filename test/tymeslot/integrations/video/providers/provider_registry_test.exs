@@ -80,24 +80,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
     end
   end
 
-  describe "valid_provider?/1" do
-    test "returns true for valid video providers" do
-      assert ProviderRegistry.valid_provider?(:mirotalk)
-      assert ProviderRegistry.valid_provider?(:google_meet)
-      assert ProviderRegistry.valid_provider?(:custom)
-      # Teams provider may not be available in all environments
-    end
-
-    test "returns true for :zoom" do
-      assert ProviderRegistry.valid_provider?(:zoom)
-    end
-
-    test "returns false for invalid video providers" do
-      refute ProviderRegistry.valid_provider?(:invalid)
-      refute ProviderRegistry.valid_provider?(:unknown)
-    end
-  end
-
   describe "test_provider_connection/2" do
     test "tests mirotalk connection with valid config" do
       config = %{
@@ -155,6 +137,17 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
       assert Enum.sort(Map.keys(mirotalk.config_schema)) == [:api_key, :base_url]
     end
 
+    test "every provider carries a loadable module, a display name and a config schema" do
+      providers = ProviderRegistry.list_providers_with_metadata()
+
+      assert Enum.sort(Enum.map(providers, & &1.type)) ==
+               [:custom, :google_meet, :mirotalk, :teams, :zoom]
+
+      assert Enum.reject(providers, &Code.ensure_loaded?(&1.module)) == []
+      assert Enum.reject(providers, &(String.length(&1.display_name) > 0)) == []
+      assert Enum.reject(providers, &(map_size(&1.config_schema) > 0)) == []
+    end
+
     test "includes capabilities metadata for video providers" do
       providers = ProviderRegistry.list_providers_with_metadata()
 
@@ -194,34 +187,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
 
     test "returns empty list for non-existent capability" do
       assert ProviderRegistry.providers_with_capability(:nonexistent_feature) == []
-    end
-  end
-
-  describe "recommend_provider/1" do
-    test "ignores the requirements it is given and returns the default" do
-      # Requirement-aware selection is not implemented: the argument is
-      # discarded. Pinning the answer keeps this honest — a membership check
-      # would pass just as happily once the behaviour does change, hiding the
-      # moment this test needs revisiting.
-      requirements = %{
-        participant_count: 10,
-        recording_required: false
-      }
-
-      assert ProviderRegistry.recommend_provider(requirements) == :mirotalk
-      assert ProviderRegistry.recommend_provider(%{participant_count: 500}) == :mirotalk
-    end
-
-    test "returns default provider when no requirements specified" do
-      provider = ProviderRegistry.recommend_provider(%{})
-
-      assert provider == ProviderRegistry.default_provider()
-    end
-
-    test "returns default provider when called without arguments" do
-      provider = ProviderRegistry.recommend_provider()
-
-      assert provider == :mirotalk
     end
   end
 

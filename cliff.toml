@@ -3,6 +3,11 @@ header = "# Changelog\n\nAll notable changes to Tymeslot are documented here. Ve
 # `core` is the scope on all but a handful of commits here, so printing it
 # would repeat the same prefix down the whole list without distinguishing
 # anything. Narrower scopes still say something and are kept.
+#
+# A breaking change carries its `BREAKING CHANGE:` footer after the subject, as
+# the Cloudron config does: the subject says what changed, the footer what to do
+# about it. The bare `type!:` form sets the description to the subject itself,
+# which is not repeated.
 body = """
 {% if version %}\
 ## [{{ version | trim_start_matches(pat="v") }}] — {{ timestamp | date(format="%Y-%m-%d") }}
@@ -12,7 +17,7 @@ body = """
 {% for group, commits in commits | group_by(attribute="group") %}
 ### {{ group }}
 {% for commit in commits %}\
-- {% if commit.scope and commit.scope != "core" %}**{{ commit.scope }}:** {% endif %}{{ commit.message | upper_first }}
+- {% if commit.scope and commit.scope != "core" %}**{{ commit.scope }}:** {% endif %}{{ commit.message | upper_first }}{% if commit.breaking and commit.breaking_description and commit.breaking_description != commit.message %}: {{ commit.breaking_description | replace(from="\n", to=" ") }}{% endif %}
 {% endfor %}\
 {% endfor %}
 """

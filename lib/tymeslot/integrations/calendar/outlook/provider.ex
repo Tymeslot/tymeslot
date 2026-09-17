@@ -198,8 +198,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
         {:ok,
          dgettext("dashboard_calendar_providers", "Outlook Calendar connected successfully!")}
 
-      {:error, :unauthorized, _message} ->
-        {:error, :unauthorized}
+      {:error, :unauthorized, message} ->
+        {:error, ProviderCommon.unauthorized_reason(message)}
 
       {:error, :rate_limited, _message} ->
         {:error,

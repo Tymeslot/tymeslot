@@ -5,7 +5,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
   import Mox
   import Tymeslot.Factory
   import Tymeslot.AuthTestHelpers
-  import Tymeslot.TestHelpers.Eventually
 
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
@@ -92,9 +91,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       |> element("button[phx-click='test_connection'][phx-value-id='#{integration.id}']")
       |> render_click()
 
-      eventually(fn ->
-        assert render(view) =~ "MiroTalk connection verified"
-      end)
+      # The probe runs in a `start_async` task whose result reaches the parent
+      # LiveView as a flash message. Waiting on the task rather than polling
+      # for a fixed second keeps this green on a loaded machine, and the
+      # `render/1` after it is queued behind that flash message.
+      render_async(view, 10_000)
+      assert render(view) =~ "MiroTalk connection verified"
     end
 
     test "navigates to setup form for mirotalk", %{conn: conn} do
@@ -237,6 +239,39 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
                view,
                "button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']"
              )
+    end
+
+    test "shows why a flagged video integration needs reconnecting", %{conn: conn, user: user} do
+      insert(:video_integration,
+        user: user,
+        provider: "google_meet",
+        is_active: true,
+        needs_reauth: true,
+        sync_error: "Stored credentials could not be decrypted."
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      assert html =~ "Stored credentials could not be decrypted."
+    end
+
+    # sync_error also carries transient failures, which are not the owner's to
+    # fix, so an unflagged row must keep the stored text to itself.
+    test "keeps a stored sync error to itself while a video integration is not flagged", %{
+      conn: conn,
+      user: user
+    } do
+      insert(:video_integration,
+        user: user,
+        provider: "google_meet",
+        is_active: true,
+        needs_reauth: false,
+        sync_error: "Timed out talking to the server."
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      refute html =~ "Timed out talking to the server."
     end
 
     # NOTE: the end-to-end click → OAuth-redirect for a *reconnect* is not

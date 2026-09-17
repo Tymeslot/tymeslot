@@ -1,4 +1,6 @@
 defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
+  # credo:global-config-safe — :test_extensions has no reader anywhere in lib/;
+  # it exists only for this module's own fixtures.
   use ExUnit.Case, async: true
   @moduletag :utils
 

@@ -332,6 +332,13 @@ defmodule Tymeslot.Profiles do
   @spec delete_avatar(profile) :: result(profile)
   def delete_avatar(profile), do: Avatars.delete_avatar(profile)
 
+  @doc """
+  Removes every avatar file stored for a deleted profile. See
+  `Avatars.delete_all_files/1`.
+  """
+  @spec delete_avatar_files(pos_integer()) :: :ok | {:error, File.posix(), Path.t()}
+  def delete_avatar_files(profile_id), do: Avatars.delete_all_files(profile_id)
+
   @spec avatar_url(profile | nil, atom()) :: String.t()
   def avatar_url(profile, version \\ :original), do: Avatars.avatar_url(profile, version)
 
@@ -341,6 +348,13 @@ defmodule Tymeslot.Profiles do
   """
   @spec uploaded_avatar_path(profile | nil) :: String.t() | nil
   def uploaded_avatar_path(profile), do: Avatars.uploaded_avatar_path(profile)
+
+  @doc """
+  Returns the absolute URL of a profile's uploaded avatar image, or `nil` when
+  none has been uploaded (see `Avatars.uploaded_avatar_url/1`).
+  """
+  @spec uploaded_avatar_url(profile | nil) :: String.t() | nil
+  def uploaded_avatar_url(profile), do: Avatars.uploaded_avatar_url(profile)
 
   @spec avatar_alt_text(profile | nil) :: String.t()
   def avatar_alt_text(profile), do: Avatars.avatar_alt_text(profile)

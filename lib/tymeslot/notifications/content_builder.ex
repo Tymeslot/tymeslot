@@ -215,12 +215,10 @@ defmodule Tymeslot.Notifications.ContentBuilder do
     end
   end
 
+  # Never the initials data URI `Profiles.avatar_url/2` falls back to: Gmail
+  # refuses to render data URI images in email.
   defp get_organizer_avatar_url(meeting) do
-    # Try to get the organizer's profile to fetch their avatar
-    case get_organizer_profile(meeting) do
-      nil -> nil
-      profile -> Profiles.avatar_url(profile, :thumb)
-    end
+    meeting |> get_organizer_profile() |> Profiles.uploaded_avatar_url()
   end
 
   defp get_organizer_profile(meeting) do

@@ -164,33 +164,18 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   def delete_meeting_room(_space_id, _config), do: :ok
 
+  # Every participant gets the plain meeting URL. Google Meet has no per-person
+  # join link: `uname` and `role` are not Meet parameters, and `authuser` only
+  # selects a signed-in Google account, so a participant not signed in under
+  # exactly that address is sent to a sign-in or account chooser instead of the
+  # room. It would also put their email address into a forwardable link.
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def create_join_url(room_data, participant_name, participant_email, role, _meeting_time) do
-    base_url = room_data.meeting_url
+  def create_join_url(%{meeting_url: meeting_url}, _name, _email, _role, _meeting_time)
+      when is_binary(meeting_url) and meeting_url != "",
+      do: {:ok, meeting_url}
 
-    if base_url do
-      # Add participant info as URL parameters
-      params = %{
-        "authuser" => participant_email,
-        "uname" => participant_name
-      }
-
-      params = if role == "organizer", do: Map.put(params, "role", "host"), else: params
-
-      query_string = URI.encode_query(params)
-      join_url = "#{base_url}?#{query_string}"
-
-      Logger.debug("Created Google Meet join URL",
-        participant: participant_name,
-        role: role,
-        room_id: room_data.room_id
-      )
-
-      {:ok, join_url}
-    else
-      {:error, "Missing meeting URL in room data"}
-    end
-  end
+  def create_join_url(_room_data, _name, _email, _role, _meeting_time),
+    do: {:error, "Missing meeting URL in room data"}
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def extract_room_id(meeting_url) when is_binary(meeting_url) and meeting_url != "" do
@@ -534,7 +519,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
       label: "Google Meet",
       event: "google_meet_token_revoked",
       message:
-        dgettext(
+        dgettext_noop(
           "dashboard_integrations",
           "Google Meet access was revoked. Please reconnect your Google account."
         )

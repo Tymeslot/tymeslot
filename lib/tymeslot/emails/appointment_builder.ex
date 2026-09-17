@@ -26,11 +26,13 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       owner_timezone = owner_timezone(meeting)
       attendee_timezone = attendee_timezone(meeting, owner_timezone)
 
+      organizer_profile = organizer_profile(meeting)
+
       base_details = base_details(meeting)
       timezone_details = timezone_details(meeting, owner_timezone, attendee_timezone)
-      participant_details = participant_details(meeting)
+      participant_details = participant_details(meeting, organizer_profile)
       preparation_details = preparation_details()
-      url_details = url_details(meeting)
+      url_details = url_details(meeting, organizer_profile)
       reminder_details = reminder_details(meeting, reminder_interval)
 
       base_details
@@ -126,12 +128,13 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     }
   end
 
-  defp participant_details(meeting) do
+  defp participant_details(meeting, organizer_profile) do
     %{
       # Organizer details
       organizer_name: meeting.organizer_name,
       organizer_email: meeting.organizer_email,
       organizer_title: meeting.organizer_title,
+      organizer_avatar_url: Profiles.uploaded_avatar_url(organizer_profile),
       organizer_contact_info: dgettext("emails", "reply to this email"),
 
       # Attendee details
@@ -151,33 +154,28 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     }
   end
 
-  defp url_details(meeting) do
+  defp url_details(meeting, organizer_profile) do
     %{
       view_url: meeting.view_url || "#",
       reschedule_url: meeting.reschedule_url || "#",
       cancel_url: meeting.cancel_url || "#",
-      booking_url: booking_url(meeting),
+      # The host's public booking page, resolved at send time rather than read
+      # from the meeting row. Unlike the per-meeting action URLs it is not
+      # persisted, so it always reflects the host's current username.
+      booking_url: UrlBuilder.booking_url(organizer_profile && organizer_profile.username),
       meeting_url: meeting.meeting_url,
       organizer_video_url: meeting.organizer_video_url,
       attendee_video_url: meeting.attendee_video_url
     }
   end
 
-  # The host's public booking page, resolved at send time rather than read from
-  # the meeting row. Unlike the per-meeting action URLs it is not persisted, so
-  # it always reflects the host's current username.
-  defp booking_url(meeting) do
-    meeting
-    |> Map.get(:organizer_user_id)
-    |> organizer_username()
-    |> UrlBuilder.booking_url()
-  end
+  defp organizer_profile(meeting), do: meeting |> Map.get(:organizer_user_id) |> profile_for()
 
-  defp organizer_username(nil), do: nil
+  defp profile_for(nil), do: nil
 
-  defp organizer_username(user_id) do
+  defp profile_for(user_id) do
     case Profiles.get_profile_by_user_id(user_id) do
-      {:ok, %{username: username}} -> username
+      {:ok, profile} -> profile
       {:error, :not_found} -> nil
     end
   end

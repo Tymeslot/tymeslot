@@ -93,9 +93,6 @@ defmodule Tymeslot.Timezones.Data do
   # Lookup maps
   @timezone_to_country Map.new(@all_entries, fn e -> {e.timezone_id, e.country_alpha3} end)
   @timezone_to_label Map.new(@all_entries, fn e -> {e.timezone_id, e.label} end)
-  # Zones the picker can render as "City, Country" with a flag. This is a
-  # presentation list, not a validity list — see `valid?/1` vs `offered?/1`.
-  @offered_ids MapSet.new(@all_entries, fn e -> e.timezone_id end)
 
   # Search index: lowercase label → entry, plus aliases
   @search_index (
@@ -300,8 +297,10 @@ defmodule Tymeslot.Timezones.Data do
   curated entry (`America/Detroit`) and fixed offsets (`Etc/GMT+5`, which
   `sanitize/1` itself emits) are all valid.
 
-  Callers asking "may I accept and store this value?" want this. Callers asking
-  "can the picker render this as a City, Country entry?" want `offered?/1`.
+  Callers asking "may I accept and store this value?" want this. It says nothing
+  about whether the picker can render the zone as a "City, Country" entry: a
+  valid zone with no curated entry falls back to its city segment in
+  `display_name/1`, and `country_code/1` returns nil for it.
   """
   @spec valid?(term()) :: boolean()
   def valid?(timezone_id) when is_binary(timezone_id) do
@@ -309,24 +308,6 @@ defmodule Tymeslot.Timezones.Data do
   end
 
   def valid?(_other), do: false
-
-  @doc """
-  Returns true when `timezone_id` has a curated entry, so the picker can render
-  it with a "City, Country" label and a flag.
-
-  A zone can be valid without being offered: `display_name/1` falls back to the
-  city segment of the id and `country_code/1` returns nil, which the selector
-  renders with a globe instead of a flag.
-  """
-  @spec offered?(term()) :: boolean()
-  def offered?(timezone_id) when is_binary(timezone_id) do
-    MapSet.member?(@offered_ids, timezone_id)
-  end
-
-  def offered?(_other), do: false
-
-  @spec offered_ids() :: MapSet.t(String.t())
-  def offered_ids, do: @offered_ids
 
   @spec flag_exists?(term()) :: boolean()
   def flag_exists?(nil), do: false

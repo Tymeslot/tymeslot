@@ -6,7 +6,6 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
   @moduletag :database
   @moduletag :queries
 
-  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
 
@@ -21,39 +20,6 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
     start_time = build_base_start_time(start_offset_days)
     end_time = DateTime.add(start_time, duration_minutes, :minute)
     {start_time, end_time}
-  end
-
-  describe "reminder notification data access" do
-    test "queries meetings in time window for reminders" do
-      now = DateTime.utc_now()
-
-      meeting_in_window =
-        insert(:meeting,
-          start_time: DateTime.add(now, 30, :minute),
-          status: "confirmed",
-          reminder_email_sent: true
-        )
-
-      # Should not appear: too far in future
-      insert(:meeting,
-        start_time: DateTime.add(now, 2, :hour),
-        status: "confirmed",
-        reminder_email_sent: true
-      )
-
-      # Should not appear: not confirmed yet
-      insert(:meeting,
-        start_time: DateTime.add(now, 30, :minute),
-        status: "pending",
-        reminder_email_sent: true
-      )
-
-      one_hour_from_now = DateTime.add(now, 1, :hour)
-      meetings = MeetingListQueries.list_meetings_needing_reminders(now, one_hour_from_now)
-
-      assert length(meetings) == 1
-      assert hd(meetings).id == meeting_in_window.id
-    end
   end
 
   describe "upsert_reminder_sent/2" do

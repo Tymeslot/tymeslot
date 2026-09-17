@@ -219,12 +219,6 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     |> Repo.update()
   end
 
-  @doc "Deletes a meeting."
-  @spec delete_meeting(Meeting.t()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
-  def delete_meeting(%Meeting{} = meeting) do
-    Repo.delete(meeting)
-  end
-
   @doc """
   Records that the host has been nudged about an unanswered request.
 

@@ -18,6 +18,8 @@
       requires: [
         # Tag taxonomy must be loaded first so the check can call TagTaxonomy.all()
         "test/support/tag_taxonomy.ex",
+        # Same: the check reads its template list from this module.
+        "test/support/global_config_templates.ex",
         "dev_support/credo_checks/**/*.ex"
       ],
       strict: false,
@@ -105,6 +107,7 @@
           {CredoChecks.RequireDashboardSectionHeader, [priority: :low]},
           {CredoChecks.Phoenix.RequireComponentAttrs, [priority: :high]},
           {CredoChecks.TestModuleTagRequired, [priority: :high]},
+          {CredoChecks.TestGlobalConfigRequiresSync, [priority: :high]},
           # Logger hygiene: violations are :low while being cleared; raise to :high after Phase 3-4
           {CredoChecks.NoStringInterpolationInLogger, [priority: :high]},
           {CredoChecks.NoMapMetadataInLogger, [priority: :high]},

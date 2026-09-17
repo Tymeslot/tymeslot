@@ -249,12 +249,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
           |> assign(:_initialized, true)
           |> Helpers.load_integrations()
           |> Helpers.assign_view_from_preferences()
+          |> Helpers.assign_timezone()
+          |> open_on_today()
           |> Helpers.load_events()
           |> maybe_auto_refresh()
       end
 
     {:ok, assign_desktop_reminder_feed(socket)}
   end
+
+  defp open_on_today(socket),
+    do: assign(socket, :date, Helpers.today(socket.assigns.user_timezone))
 
   # Recomputes the upcoming desktop-reminder feed. Runs on the initial connect
   # and again on every 60s `current_time` tick (which routes through this same
@@ -269,10 +274,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
       timezone = socket.assigns[:user_timezone] || "Etc/UTC"
       time_format = Helpers.time_format(socket.assigns)
 
+      integrations = Map.get(socket.assigns, :integrations, [])
+
       feed =
         socket
         |> visible_integration_ids()
-        |> CalendarGrid.list_upcoming_events_with_reminders(now)
+        |> CalendarGrid.list_upcoming_events_with_reminders(now, integrations)
         |> DesktopReminderFeed.build(now, timezone, time_format)
 
       assign(socket, :desktop_reminders_feed, feed)

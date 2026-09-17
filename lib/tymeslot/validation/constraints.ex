@@ -168,9 +168,6 @@ defmodule Tymeslot.Validation.Constraints do
   @spec name_length_range() :: Range.t()
   def name_length_range, do: 1..100
 
-  @spec integration_name_length_range() :: Range.t()
-  def integration_name_length_range, do: 2..100
-
   @spec webhook_name_length_range() :: Range.t()
   def webhook_name_length_range, do: 1..255
 

@@ -42,16 +42,10 @@ defmodule Tymeslot.Dashboard.ExtensionSchema do
 
   ## Validation
 
-  To validate extensions at startup and catch configuration errors early:
+  To validate extensions at startup and catch configuration errors early,
+  call `validate_and_log!/1`, which logs every error and raises:
 
-      extensions = Application.get_env(:tymeslot, :dashboard_sidebar_extensions, [])
-
-      case ExtensionSchema.validate_all(extensions) do
-        :ok -> :ok
-        {:error, errors} ->
-          Logger.error("Invalid dashboard extensions: \#{inspect(errors)}")
-          raise "Dashboard extension validation failed"
-      end
+      ExtensionSchema.validate_and_log!(:dashboard_sidebar_extensions)
 
   ## Component Requirements
 

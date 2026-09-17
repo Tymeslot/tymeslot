@@ -3364,6 +3364,288 @@
       },
       "publishState": "published",
       "ts": "Tue, 08 Sep 2026 05:50:46 GMT"
+    },
+    "1.15.3": {
+      "creationDate": "Wed, 09 Sep 2026 20:01:05 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* Sync every changed Google Calendar event, not just the first 250\n* Connect to CalDAV servers that require digest authentication\n* Keep calendar credentials out of crash reports\n* Keep all-day and Google events visible in the fallback fetch\n* Keep embed pages scrollable after reopening the booking popup",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.15.3",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.15.3",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Wed, 09 Sep 2026 20:01:05 GMT"
+    },
+    "1.15.4": {
+      "creationDate": "Thu, 10 Sep 2026 19:45:04 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* Keep calendar deletion working when two calendars are removed at once\n* Stop the popup and floating previews creating real bookings\n* Restore a CalDAV booking the server no longer has\n* Refuse a CalDAV connection that discovers no calendars\n* Stop the booking rate limit refusing legitimate bookings\n* Let the live preview complete a test booking\n* Keep the organiser signed in when an embedded booking page loads\n* Write through outbound calendar updates to the local event cache",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.15.4",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.15.4",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Thu, 10 Sep 2026 19:45:04 GMT"
+    },
+    "1.15.5": {
+      "creationDate": "Mon, 14 Sep 2026 08:15:37 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* Hide deselected calendars from the dashboard agenda\n* Open the dashboard calendar on today in your own timezone\n* Show the host's avatar in booking emails opened in Gmail\n* Restore outbound HTTPS requests through a configured proxy",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.15.5",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.15.5",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Mon, 14 Sep 2026 08:15:37 GMT"
+    },
+    "1.15.6": {
+      "creationDate": "Tue, 15 Sep 2026 15:02:56 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "Email delivery and calendar fixes: mail survives slow or unreachable SMTP relays, owners are told when a calendar needs reconnecting, and deselected calendars stay out of search and reminders.\n* Email is no longer silently dropped when the SMTP relay is slow or unreachable\n* SMTP login is now optional, always used when set, and SMTP_SSL forces TLS\n* Calendar owners are emailed when a calendar needs reconnecting\n* Booking invites are no longer deferred by strict mail gateways",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.15.6",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.15.6",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Tue, 15 Sep 2026 15:02:56 GMT"
+    },
+    "1.15.7": {
+      "creationDate": "Wed, 16 Sep 2026 09:59:44 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* [BREAKING] Read .env files identically at boot and in the release: .env values are no longer interpolated. ${VAR} and $(command) are kept as literal text, and a # not preceded by whitespace is part of an unquoted value. A .env that relied on either needs the final value written out.\nCalendar health and privacy fixes: stalled Google, Outlook, Exchange and subscribed calendars now show as unhealthy, meeting links stay out of analytics, and .env values are no longer interpolated.\n* Calendars that stop syncing now show as unhealthy and their owners are notified\n* Owners are emailed whenever a calendar or video connection needs reconnecting\n* Meeting links and query strings are scrubbed before reaching analytics\n* The Link embed preview no longer makes real bookings and is marked as a test\n* Telegram and Slack notifications show meeting times in the organiser's timezone",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.15.7",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.15.7",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Wed, 16 Sep 2026 09:59:44 GMT"
+    },
+    "1.15.8": {
+      "creationDate": "Thu, 17 Sep 2026 08:18:33 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "Calendar reconnection and upgrade fixes: revoked Google and Outlook access now reaches owners, bookings avoid calendars awaiting reconnection, and interrupted upgrades repair their database indexes.\n* Owners are asked to reconnect when Google or Outlook revokes calendar access\n* Bookings go to a working calendar while the chosen one needs reconnecting\n* Google Meet participants get the plain link, without Google's account chooser\n* The Docker image now applies values set in /app/data/.env\n* A time freed by a host's reschedule request can be booked again",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.15.8",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.15.8",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Thu, 17 Sep 2026 08:18:33 GMT"
     }
   }
 }

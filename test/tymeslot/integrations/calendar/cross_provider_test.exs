@@ -226,9 +226,5 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
     test "provider metadata is accessible through registry" do
       assert_provider_metadata_accessible(ProviderRegistry, @production_providers)
     end
-
-    test "provider validation works through registry" do
-      assert_provider_validation_works(ProviderRegistry, @production_providers)
-    end
   end
 end
