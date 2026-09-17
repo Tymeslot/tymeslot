@@ -10,7 +10,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
 
   alias Tymeslot.Integrations.Shared.InputValidators
   alias Tymeslot.Integrations.Video.TemplateSyntax
-  alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer, UrlValidation}
+  alias Tymeslot.Security.{SecurityLogger, SsrfGuard, UniversalSanitizer, UrlValidation}
 
   @doc """
   Validates video integration form input based on provider type.
@@ -305,6 +305,9 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   defp validate_base_url(nil, _metadata), do: {:error, %{base_url: base_url_required_message()}}
   defp validate_base_url("", _metadata), do: {:error, %{base_url: base_url_required_message()}}
 
+  # Also the on-blur check of the Nextcloud Talk and Jitsi server address, so
+  # the private-address opt-out that lets those providers reach a server on a
+  # Docker service name admits a single-label host here too.
   defp validate_base_url(base_url, metadata) when is_binary(base_url) do
     case InputValidators.validate_server_url(base_url, metadata,
            error_message:
@@ -312,6 +315,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
                "dashboard_integrations",
                "Please enter a valid server URL (e.g., https://mirotalk.example.com)"
              ),
+           internal_names_local: SsrfGuard.allow_private_for_video?(),
            validate_url_fn: &validate_video_url/1
          ) do
       {:ok, sanitized_url} -> {:ok, sanitized_url}
