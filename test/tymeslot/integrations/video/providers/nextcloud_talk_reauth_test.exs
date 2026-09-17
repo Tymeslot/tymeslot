@@ -84,6 +84,34 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkReauthTest do
     assert Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
   end
 
+  test "a refused app password during a cancellation flags the integration", %{
+    integration: integration,
+    config: config
+  } do
+    expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+      {:ok, %Req.Response{status: 401, body: ""}}
+    end)
+
+    assert {:error, :unauthorized} = NextcloudTalkProvider.delete_meeting_room("abc123xy", config)
+    assert Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
+  end
+
+  test "a refused app password during a reschedule flags the integration and stops there", %{
+    integration: integration,
+    config: config
+  } do
+    # One request only: the rename must not spend a second login attempt.
+    expect(HTTPClientMock, :request, fn :put, _url, _body, _headers, _opts ->
+      {:ok, %Req.Response{status: 401, body: ""}}
+    end)
+
+    config =
+      Map.merge(config, %{meeting_start_time: ~U[2026-10-08 09:30:00Z], meeting_topic: "Moved"})
+
+    assert {:error, :unauthorized} = NextcloudTalkProvider.update_meeting_room("abc123xy", config)
+    assert Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
+  end
+
   test "a throttled server leaves the integration unflagged", %{
     integration: integration,
     config: config

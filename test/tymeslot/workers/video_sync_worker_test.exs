@@ -21,6 +21,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
   alias Ecto.UUID
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.VideoSyncWorker
@@ -356,6 +357,79 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
     end
   end
 
+  describe "perform/1, refused credentials" do
+    test "discards rather than retrying when the provider refuses the stored credentials" do
+      %{meeting: meeting, integration: integration} = talk_meeting("refused.example.com")
+
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 401, body: ""}}
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "delete"})
+
+      assert Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
+      assert Repo.reload!(meeting).video_room_id == "abc123xy"
+    end
+  end
+
+  describe "perform/1, refusals that repeat" do
+    test "discards a deletion the server refuses, keeping the room id" do
+      %{meeting: meeting} = talk_meeting("forbidden.example.com")
+
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: ""}}
+      end)
+
+      assert {:discard, "Invalid configuration"} =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "delete"})
+
+      assert Repo.reload!(meeting).video_room_id == "abc123xy"
+    end
+
+    test "clears the room id when the conversation is already gone" do
+      %{meeting: meeting} = talk_meeting("gone.example.com")
+
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      assert :ok =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "delete"})
+
+      assert Repo.reload!(meeting).video_room_id == nil
+    end
+  end
+
+  describe "perform/1, rate limited" do
+    test "snoozes on an interval that grows with each execution" do
+      %{meeting: meeting} = talk_meeting("throttled.example.com")
+
+      expect(HTTPClientMock, :request, 2, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 429, body: ""}}
+      end)
+
+      args = %{"meeting_id" => meeting.id, "action" => "delete"}
+
+      assert {:snooze, 60} = perform_job(VideoSyncWorker, args)
+      assert {:snooze, 180} = perform_job(VideoSyncWorker, args, meta: %{"snoozed" => 2})
+      assert Repo.reload!(meeting).video_room_id == "abc123xy"
+    end
+
+    test "falls back to the ordinary retries once the snooze budget is spent" do
+      %{meeting: meeting} = talk_meeting("still-throttled.example.com")
+
+      expect(HTTPClientMock, :request, fn :put, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 429, body: ""}}
+      end)
+
+      assert {:error, :rate_limited} =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "update"},
+                 meta: %{"snoozed" => 9}
+               )
+    end
+  end
+
   describe "perform/1 — guards" do
     test "discards when the meeting carries no video room" do
       %{user: user} = create_user_with_profile()
@@ -377,6 +451,32 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
                  "action" => "update"
                })
     end
+  end
+
+  # Each test gets its own server, so the failures one test induces never open
+  # the per-host breaker another test calls through.
+  defp talk_meeting(host) do
+    %{user: user} = create_user_with_profile()
+    base_url = "https://" <> host
+
+    integration =
+      insert(:video_integration,
+        user: user,
+        provider: "nextcloud_talk",
+        base_url: base_url,
+        client_id_encrypted: Encryption.encrypt("organiser"),
+        client_secret_encrypted: Encryption.encrypt("Abcde-Fghij-Klmno-Pqrst-Uvwxy"),
+        provider_account_id: base_url <> "||organiser"
+      )
+
+    meeting =
+      insert_meeting_for_user(user, %{
+        video_integration_id: integration.id,
+        video_provider: "nextcloud_talk",
+        video_room_id: "abc123xy"
+      })
+
+    %{meeting: meeting, integration: integration}
   end
 
   defp insert_zoom_integration(user) do

@@ -12,7 +12,10 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   The conversation token is the room id, which rescheduling and cancelling
   address: a reschedule moves the lobby timer and renames the conversation, a
   cancellation deletes it, and a scheduled clean-up deletes it some days after
-  the meeting has ended.
+  the meeting has ended. A conversation already deleted on the server counts as
+  deleted. A refusal that would repeat on every attempt (a 400 or 403, a
+  redirect) is reported as a configuration error, which the sync job discards
+  rather than retries.
 
   The join link is `<server>/index.php/call/<token>`. That form works whether
   or not the server has pretty URLs configured; the shorter `/call/<token>` is
@@ -34,7 +37,8 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   throttling the calling address. It is not the credential's fault, so nothing
   is flagged, but it is not a fault worth retrying at once either: room
   creation passes `:rate_limited` on, which the room job snoozes on a growing
-  interval, and a connection test asks the user to wait.
+  interval, and a connection test asks the user to wait. A reschedule or
+  cancellation passes it on as well, and the sync job snoozes it the same way.
 
   The credentials never enter `RoomData.provider_data` or the meeting
   metadata; they travel only in `RoomData.provider_config`, which is never
@@ -51,6 +55,8 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Security.SsrfGuard
   alias Tymeslot.Security.UrlValidation
+
+  require Logger
 
   @behaviour ProviderBehaviour
 
@@ -102,6 +108,26 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   @impl ProviderBehaviour
   def create_join_url(room_data, _participant_name, _participant_email, _role, _meeting_time),
     do: {:ok, room_data.meeting_url}
+
+  @impl ProviderBehaviour
+  def update_meeting_room(_room_id, %{needs_reauth: true}), do: {:error, :unauthorized}
+
+  def update_meeting_room(room_id, config) when is_binary(room_id) do
+    with :ok <- move_lobby(room_id, config) do
+      rename(room_id, config)
+    end
+  end
+
+  @impl ProviderBehaviour
+  def delete_meeting_room(_room_id, %{needs_reauth: true}), do: {:error, :unauthorized}
+
+  def delete_meeting_room(room_id, config) when is_binary(room_id) do
+    case config |> credentials() |> Client.delete_room(room_id) |> lifecycle_result(config) do
+      # Already gone, which is what a delete wants: cancelling stays idempotent.
+      {:error, :meeting_not_found} -> :ok
+      result -> result
+    end
+  end
 
   @impl ProviderBehaviour
   def extract_room_id(meeting_url) when is_binary(meeting_url) do
@@ -234,6 +260,71 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
       {:error, reason} -> {:error, creation_failure(reason, config)}
     end
   end
+
+  # The lobby timer is what guests depend on, so it moves first, and a failure
+  # to move it fails the sync.
+  defp move_lobby(room_id, %{meeting_start_time: %DateTime{} = start_time} = config) do
+    config
+    |> credentials()
+    |> Client.set_lobby(room_id, %{
+      "state" => @lobby_for_non_moderators,
+      "timer" => unix(start_time)
+    })
+    |> lifecycle_result(config)
+  end
+
+  defp move_lobby(_room_id, _config), do: :ok
+
+  defp rename(room_id, %{meeting_topic: topic} = config) when is_binary(topic) do
+    config
+    |> credentials()
+    |> Client.rename_room(room_id, room_name(topic))
+    |> tolerate_rename_refusal(config)
+    |> lifecycle_result(config)
+  end
+
+  defp rename(_room_id, _config), do: :ok
+
+  # By the time the rename runs, the lobby has already moved. A refused rename
+  # cannot be fixed by retrying, and failing the sync for it would move the
+  # lobby again on every attempt, so it is logged and the sync succeeds. The
+  # token is left out of the log: it is the guests' way into the call.
+  defp tolerate_rename_refusal({:error, {:rejected, status, error}}, config) do
+    Logger.warning("Nextcloud Talk refused to rename a conversation",
+      integration_id: Map.get(config, :integration_id),
+      status: status,
+      error: error
+    )
+
+    {:ok, nil}
+  end
+
+  defp tolerate_rename_refusal(result, _config), do: result
+
+  # What a failure during a reschedule or cancellation means for the sync job.
+  # A missing conversation is reported as such, and so is a token Talk would
+  # not route, which can address no conversation. A refused credential flags
+  # the integration and is never retried. A 400 or 403 (a conversation type
+  # Talk will not change, an account no longer allowed to moderate it) and a
+  # redirect repeat on every attempt, so they are configuration errors, which
+  # the sync job discards. Anything else, `:rate_limited` included, passes
+  # through for the breaker and the job's retry policy to judge.
+  defp lifecycle_result({:ok, _data}, _config), do: :ok
+  defp lifecycle_result({:error, :not_found}, _config), do: {:error, :meeting_not_found}
+  defp lifecycle_result({:error, :invalid_token}, _config), do: {:error, :meeting_not_found}
+
+  defp lifecycle_result({:error, :unauthorized}, config) do
+    flag_rejected_credentials(config)
+    {:error, :unauthorized}
+  end
+
+  defp lifecycle_result({:error, {:rejected, status, _error}}, _config),
+    do: {:error, {:configuration_error, {:rejected, status}}}
+
+  defp lifecycle_result({:error, {:redirected, _location}}, _config),
+    do: {:error, {:configuration_error, :redirected}}
+
+  defp lifecycle_result({:error, reason}, _config), do: {:error, reason}
 
   defp conversation_params(config) do
     details = Map.get(config, :event_details) || %{}

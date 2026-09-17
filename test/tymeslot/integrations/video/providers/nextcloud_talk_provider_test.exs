@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
   @server "https://cloud.example.com"
   @room_api "https://cloud.example.com/ocs/v2.php/apps/spreed/api/v4/room"
   @start ~U[2026-10-01 14:00:00Z]
+  @moved_start ~U[2026-10-08 09:30:00Z]
 
   @config %{
     base_url: @server,
@@ -385,6 +386,168 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
     end
   end
 
+  describe "update_meeting_room/2" do
+    test "moves the lobby to the new start, then renames the conversation" do
+      expect(HTTPClientMock, :request, fn :put, url, body, _headers, _opts ->
+        assert url == @room_api <> "/abc123xy/webinar/lobby"
+        assert Jason.decode!(body) == %{"state" => 1, "timer" => DateTime.to_unix(@moved_start)}
+        {:ok, %Req.Response{status: 200, body: ocs(%{})}}
+      end)
+
+      expect(HTTPClientMock, :request, fn :put, url, body, _headers, _opts ->
+        assert url == @room_api <> "/abc123xy"
+        assert Jason.decode!(body) == %{"roomName" => "Moved call"}
+        {:ok, %Req.Response{status: 200, body: ocs([])}}
+      end)
+
+      assert :ok = NextcloudTalkProvider.update_meeting_room("abc123xy", rescheduled(@config))
+    end
+
+    test "only moves the lobby when the booking has no title to rename to" do
+      expect(HTTPClientMock, :request, fn :put, url, _body, _headers, _opts ->
+        assert url == @room_api <> "/abc123xy/webinar/lobby"
+        {:ok, %Req.Response{status: 200, body: ocs(%{})}}
+      end)
+
+      config = Map.put(@config, :meeting_start_time, @moved_start)
+
+      assert :ok = NextcloudTalkProvider.update_meeting_room("abc123xy", config)
+    end
+
+    test "reports a conversation deleted on the server as not found" do
+      expect(HTTPClientMock, :request, fn :put, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ocs(nil)}}
+      end)
+
+      assert {:error, :meeting_not_found} =
+               NextcloudTalkProvider.update_meeting_room("abc123xy", rescheduled(@config))
+    end
+
+    test "keeps the moved lobby when the server refuses the rename" do
+      expect(HTTPClientMock, :request, fn :put, url, _body, _headers, _opts ->
+        assert url == @room_api <> "/abc123xy/webinar/lobby"
+        {:ok, %Req.Response{status: 200, body: ocs(%{})}}
+      end)
+
+      expect(HTTPClientMock, :request, fn :put, url, _body, _headers, _opts ->
+        assert url == @room_api <> "/abc123xy"
+        {:ok, %Req.Response{status: 400, body: ocs(%{"error" => "name"})}}
+      end)
+
+      assert :ok = NextcloudTalkProvider.update_meeting_room("abc123xy", rescheduled(@config))
+    end
+
+    test "reports a lobby the server refuses to move as a configuration error" do
+      expect(HTTPClientMock, :request, fn :put, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: ocs(nil)}}
+      end)
+
+      assert {:error, {:configuration_error, {:rejected, 403}}} =
+               NextcloudTalkProvider.update_meeting_room("abc123xy", rescheduled(@config))
+    end
+
+    test "fails, for the sync job to retry, when the lobby cannot be moved" do
+      expect(HTTPClientMock, :request, fn :put, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 503, body: ""}}
+      end)
+
+      assert {:error, {:http_error, 503}} =
+               NextcloudTalkProvider.update_meeting_room("abc123xy", rescheduled(@config))
+    end
+
+    test "passes a throttled server on for the sync job to snooze" do
+      expect(HTTPClientMock, :request, fn :put, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 429, body: ""}}
+      end)
+
+      assert {:error, :rate_limited} =
+               NextcloudTalkProvider.update_meeting_room("abc123xy", rescheduled(@config))
+    end
+
+    test "an integration flagged for reconnection never calls the server" do
+      assert {:error, :unauthorized} =
+               NextcloudTalkProvider.update_meeting_room(
+                 "abc123xy",
+                 rescheduled(%{@config | needs_reauth: true})
+               )
+    end
+  end
+
+  describe "delete_meeting_room/2" do
+    test "deletes the conversation" do
+      expect(HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
+        assert url == @room_api <> "/abc123xy"
+        {:ok, %Req.Response{status: 200, body: ocs(nil)}}
+      end)
+
+      assert :ok = NextcloudTalkProvider.delete_meeting_room("abc123xy", @config)
+    end
+
+    test "treats a conversation already gone as deleted" do
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ocs(nil)}}
+      end)
+
+      assert :ok = NextcloudTalkProvider.delete_meeting_room("abc123xy", @config)
+    end
+
+    test "treats a token Talk would not route as no conversation, without a request" do
+      assert :ok = NextcloudTalkProvider.delete_meeting_room("../abc", @config)
+    end
+
+    test "reports a deletion the server refuses as a configuration error" do
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 400, body: ocs(nil)}}
+      end)
+
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: ocs(nil)}}
+      end)
+
+      assert {:error, {:configuration_error, {:rejected, 400}}} =
+               NextcloudTalkProvider.delete_meeting_room("abc123xy", @config)
+
+      assert {:error, {:configuration_error, {:rejected, 403}}} =
+               NextcloudTalkProvider.delete_meeting_room("abc123xy", @config)
+    end
+
+    test "reports a redirecting server as a configuration error" do
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{status: 302, headers: %{"location" => ["https://cloud.example.com/login"]}}}
+      end)
+
+      assert {:error, {:configuration_error, :redirected}} =
+               NextcloudTalkProvider.delete_meeting_room("abc123xy", @config)
+    end
+
+    test "fails, for the sync job to retry, when the server is unwell" do
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 502, body: ""}}
+      end)
+
+      assert {:error, {:http_error, 502}} =
+               NextcloudTalkProvider.delete_meeting_room("abc123xy", @config)
+    end
+
+    test "passes a throttled server on for the sync job to snooze" do
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 429, body: ""}}
+      end)
+
+      assert {:error, :rate_limited} =
+               NextcloudTalkProvider.delete_meeting_room("abc123xy", @config)
+    end
+
+    test "an integration flagged for reconnection never calls the server" do
+      assert {:error, :unauthorized} =
+               NextcloudTalkProvider.delete_meeting_room("abc123xy", %{
+                 @config
+                 | needs_reauth: true
+               })
+    end
+  end
+
   defp with_event(config) do
     Map.put(config, :event_details, %EventDetails{
       summary: "Intro call",
@@ -392,6 +555,9 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
       end_time: DateTime.add(@start, 1800, :second)
     })
   end
+
+  defp rescheduled(config),
+    do: Map.merge(config, %{meeting_start_time: @moved_start, meeting_topic: "Moved call"})
 
   defp created(data), do: {:ok, %Req.Response{status: 201, body: ocs(data)}}
 
