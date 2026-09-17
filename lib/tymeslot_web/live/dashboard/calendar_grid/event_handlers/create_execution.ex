@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventCreation
-  alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGridComponent
@@ -244,7 +244,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       calendar_integration_id: context.calendar_integration_id
     }
 
-    queue_result = EventOperations.tag_for_offline_retry(meeting, :create, context)
+    queue_result = CalendarEvents.queue_for_offline_retry(meeting, :create, context)
 
     send_update(CalendarGridComponent,
       id: "calendar",

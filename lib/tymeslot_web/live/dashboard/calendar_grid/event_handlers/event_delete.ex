@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
   alias Tymeslot.CalendarGrid
-  alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings.AttendeeNotifications
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
         case EditWorkflow.assert_event_writable(socket, event) do
           :ok ->
             linked_to_booking =
-              EventOperations.event_linked_to_booking?(
+              CalendarEvents.event_linked_to_booking?(
                 event.calendar_integration_id,
                 event.provider_event_id,
                 event.uid
@@ -132,7 +132,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
     opts =
       if payload[:provider_event_id], do: [provider_event_id: payload.provider_event_id], else: []
 
-    case EventOperations.delete_event_and_reconcile(
+    case CalendarEvents.delete_event_and_reconcile(
            uid,
            payload[:provider_event_id],
            {integration_id, user_id},
@@ -194,7 +194,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
     # For CalDAV integrations, tag the cache row so OfflineQueue.flush/2
     # retries the delete on the next sync cycle. QueueWiring is a no-op
     # for non-CalDAV providers, so this is safe to call unconditionally.
-    queue_result = EventOperations.tag_for_offline_retry(context, :delete, %{})
+    queue_result = CalendarEvents.queue_for_offline_retry(context, :delete, %{})
 
     send_update(CalendarGridComponent,
       id: "calendar",

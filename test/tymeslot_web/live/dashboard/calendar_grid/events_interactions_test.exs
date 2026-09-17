@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
   @moduletag :calendar
   @moduletag :live
 
+  import Mox
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
@@ -202,6 +203,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
           end_at: nil
         })
 
+      # The source delete runs through the calendar module seam. Standing in
+      # for an unreachable source server keeps the move on its delete-failed
+      # path, where nothing is created on the destination.
+      test_pid = self()
+
+      stub(Tymeslot.CalendarMock, :delete_event, fn uid, context, _opts ->
+        send(test_pid, {:source_delete, uid, context})
+        {:error, :network_error}
+      end)
+
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
       # All-day events are in the banner row, not the time grid; open via the show_event hook
@@ -214,6 +225,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       |> render_hook("update_event_calendar", %{
         "integration-id" => to_string(other_integration.id)
       })
+
+      source_uid = event.uid
+      source_context = {integration.id, user.id}
+      assert_receive {:source_delete, ^source_uid, ^source_context}
 
       # The optimistic UI update must not raise; no permission error expected.
       # The flash reaches the DOM only on a later render, and renders escaped —

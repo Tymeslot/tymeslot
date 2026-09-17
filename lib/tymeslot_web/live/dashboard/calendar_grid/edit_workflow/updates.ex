@@ -3,7 +3,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
-  alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
 
   @spec update_event_async(
           Phoenix.LiveView.Socket.t(),
@@ -208,7 +207,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates do
       calendar_integration_id: event.calendar_integration_id
     }
 
-    EventOperations.tag_for_offline_retry(meeting, :update, event_data)
+    CalendarEvents.queue_for_offline_retry(meeting, :update, event_data)
   end
 
   # Provider event_data carrying the event's current timing (date-only for

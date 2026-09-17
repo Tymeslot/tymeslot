@@ -12,7 +12,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Moves do
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
-  alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
   alias Tymeslot.Utils.MapKeys
 
   @doc """
@@ -75,9 +74,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Moves do
   end
 
   defp run_move_steps(ctx) do
-    # Uses EventOperations directly: the 3-arity delete_event/3 with opts
-    # (provider_event_id) is not exposed on the Calendar.Events public API.
-    case EventOperations.delete_event(
+    case CalendarEvents.delete_event(
            ctx.event.uid,
            {ctx.event.calendar_integration_id, ctx.user_id},
            ctx.delete_opts
@@ -151,6 +148,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Moves do
       calendar_integration_id: ctx.new_integration_id
     }
 
-    EventOperations.tag_for_offline_retry(meeting, :create, ctx.event_attrs)
+    CalendarEvents.queue_for_offline_retry(meeting, :create, ctx.event_attrs)
   end
 end
