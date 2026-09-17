@@ -183,11 +183,17 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
   defp finalise_create_result({:ok, created}, ctx) do
     # Google and Outlook address the event by the id they returned, not by the
-    # uid it was written under, so a room recorded under that uid learns it.
+    # uid it was written under, so a room recorded under that uid learns it,
+    # and Google only within the calendar it was written to.
     if ctx.video_context[:room_id],
       do:
         :ok =
-          EventVideoRooms.identified(ctx.creating.integration_id, ctx.uid, created_uid(created))
+          EventVideoRooms.identified(
+            ctx.creating.integration_id,
+            ctx.uid,
+            created_uid(created),
+            written_calendar_id(ctx.creating)
+          )
 
     case MeetingProvisioning.finalise(ctx.video_context, created, ctx.plan) do
       {:ok, video_context} ->
@@ -296,6 +302,22 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
        video_room_id: video_room_id,
        description: notify_event.description
      }}
+  end
+
+  # The calendar the provider wrote the event to: the one picked in the form,
+  # else the integration's booking calendar, as the provider resolves it.
+  defp written_calendar_id(%{calendar_id: calendar_id})
+       when is_binary(calendar_id) and calendar_id != "",
+       do: calendar_id
+
+  defp written_calendar_id(creating) do
+    case CalendarIntegrationQueries.get(creating.integration_id) do
+      {:ok, %{default_booking_calendar_id: calendar_id}} when is_binary(calendar_id) ->
+        calendar_id
+
+      _no_booking_calendar ->
+        "primary"
+    end
   end
 
   defp created_uid(created) when is_binary(created), do: created

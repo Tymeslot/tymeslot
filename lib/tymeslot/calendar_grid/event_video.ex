@@ -163,6 +163,7 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
         :calendar_integration_id,
         :uid,
         :provider_event_id,
+        :provider_calendar_id,
         :recurring_event_id,
         :recurrence_rule,
         :all_day,

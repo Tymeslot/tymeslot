@@ -41,6 +41,16 @@ defmodule Tymeslot.Integrations.Calendar.Operations do
     EventOperations.delete_event(uid, context, opts)
   end
 
+  @doc """
+  Fetches one event straight from its calendar provider. See
+  `EventOperations.fetch_event/2`.
+  """
+  @spec fetch_event(map(), {integer(), integer()}) ::
+          {:ok, list()} | {:error, :not_found} | {:error, term()}
+  def fetch_event(event_ref, context) do
+    EventOperations.fetch_event(event_ref, context)
+  end
+
   @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def get_booking_integration_info(context) do
     ClientManager.get_booking_integration_info(context)

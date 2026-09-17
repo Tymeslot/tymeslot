@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Client, Discovery, Events, Http, UrlBuilder}
   alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.Integrations.Calendar.ICalNormaliser
 
   require Logger
 
@@ -338,6 +339,40 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     case primary_calendar_path(client) do
       nil -> :ok
       path -> Events.delete_calendar_event(client, path, uid, opts)
+    end
+  end
+
+  @doc """
+  Fetches one event straight from the server (see the provider behaviour's
+  `fetch_event/2`), by its href in `provider_event_id` or else by `uid` in the
+  client's calendar.
+  """
+  @spec fetch_event(caldav_client(), map()) ::
+          {:ok, list()} | {:error, :not_found} | {:error, term()}
+  def fetch_event(client, event_ref) do
+    href = Map.get(event_ref, :provider_event_id)
+    # CalDAV hrefs are paths, or on some servers absolute URLs. Any other
+    # identifier (a Google or Outlook id) does not address a resource here.
+    href = if is_binary(href) and String.starts_with?(href, ["/", "http"]), do: href
+
+    with {:ok, raw} <-
+           Events.fetch_calendar_event(
+             client,
+             primary_calendar_path(client),
+             Map.get(event_ref, :uid),
+             href
+           ) do
+      provider = Map.get(client, :provider, :caldav)
+
+      ICalNormaliser.normalise_events(
+        [raw],
+        %{
+          calendar_integration_id: Map.get(event_ref, :calendar_integration_id),
+          provider_calendar_id: primary_calendar_path(client) || "",
+          synced_at: DateTime.utc_now()
+        },
+        provider
+      )
     end
   end
 

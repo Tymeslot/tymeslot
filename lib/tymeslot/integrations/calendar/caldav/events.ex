@@ -28,6 +28,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   alias Tymeslot.Integrations.Calendar.CalDAV.{
     Base,
     ConflictResolution,
+    EventProcessor,
     Http,
     UrlBuilder,
     XmlHandler
@@ -312,6 +313,64 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
         {:error, reason} -> {:error, reason}
       end
     end)
+  end
+
+  @doc """
+  Fetches one event resource: `href` when known, otherwise the resource
+  Tymeslot writes for `uid` in `calendar_path`. Returns the parsed event as a
+  calendar-query would, or `{:error, :not_found}` when the server answers 404
+  or 410.
+  """
+  @spec fetch_calendar_event(Base.client(), String.t() | nil, String.t() | nil, String.t() | nil) ::
+          {:ok, map()} | {:error, :not_found} | {:error, term()}
+  def fetch_calendar_event(client, calendar_path, uid, href) do
+    with {:ok, url} <- fetch_url(client, calendar_path, uid, href) do
+      # A missing resource is a per-event answer, not a host outage, so it
+      # travels back through the breaker as a success and becomes an error
+      # again out here.
+      result =
+        with_events_breaker(client, [], fn -> get_event_resource(client, url, href) end)
+
+      case result do
+        {:ok, :not_found} -> {:error, :not_found}
+        other -> other
+      end
+    end
+  end
+
+  defp get_event_resource(client, url, href) do
+    case Http.get_event(url, client.username, client.password) do
+      {:ok, %Req.Response{body: body, headers: headers}} ->
+        parse_fetched_event(body, href || url, headers)
+
+      {:error, reason} when reason in [:not_found, :gone] ->
+        {:ok, :not_found}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp fetch_url(client, _calendar_path, _uid, href) when is_binary(href) and href != "",
+    do: {:ok, UrlBuilder.build_calendar_url(client.base_url, href)}
+
+  defp fetch_url(client, calendar_path, uid, _href)
+       when is_binary(calendar_path) and is_binary(uid) and uid != "",
+       do: {:ok, UrlBuilder.build_event_url(client.base_url, calendar_path, uid)}
+
+  defp fetch_url(_client, _calendar_path, _uid, _href), do: {:error, :unaddressable}
+
+  defp parse_fetched_event(body, href, headers) do
+    case EventProcessor.parse_ical_from_string(body) do
+      {:ok, event} ->
+        etag = headers |> Map.new() |> Map.get("etag") |> List.wrap() |> List.first()
+
+        {:ok,
+         Map.merge(event, %{href: href, etag: EventProcessor.clean_etag(etag), raw_ical: body})}
+
+      {:error, reason} ->
+        {:error, {:unparseable_event, reason}}
+    end
   end
 
   defp delete_url_from_opts(client, calendar_path, uid, opts),

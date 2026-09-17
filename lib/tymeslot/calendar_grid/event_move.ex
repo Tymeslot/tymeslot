@@ -137,7 +137,14 @@ defmodule Tymeslot.CalendarGrid.EventMove do
       # video rooms follow it to the new identity. `moved.uid` is the uid the
       # create was written with; `provider_uid` is what the provider answered
       # with, which is the same except where the provider assigns its own.
-      :ok = EventVideoRooms.moved(event, integration.id, moved.uid, provider_uid)
+      :ok =
+        EventVideoRooms.moved(
+          event,
+          integration.id,
+          moved.uid,
+          provider_uid,
+          moved.provider_calendar_id
+        )
 
       moved = %{moved | uid: provider_uid}
       cache_destination(moved)

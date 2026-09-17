@@ -168,7 +168,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     }
 
   defp dispatch_event_room("expire", room, executions) do
-    case CalendarGrid.check_event_video_room_expired(room) do
+    case CalendarGrid.confirm_event_video_room_expired(room) do
       :expired ->
         dispatch_event_room("delete", room, executions)
 

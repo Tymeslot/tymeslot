@@ -394,10 +394,22 @@ defmodule Tymeslot.CalendarGrid do
   defdelegate reschedule_event_video_rooms(event), to: EventVideoRooms, as: :rescheduled
 
   @doc "Follows a grid event moved to another integration. See `EventVideoRooms.moved/4`."
-  @spec move_event_video_rooms(map(), pos_integer(), String.t(), String.t() | nil) :: :ok
-  defdelegate move_event_video_rooms(event, to_integration_id, new_uid, provider_uid),
-    to: EventVideoRooms,
-    as: :moved
+  @spec move_event_video_rooms(
+          map(),
+          pos_integer(),
+          String.t(),
+          String.t() | nil,
+          String.t() | nil
+        ) :: :ok
+  defdelegate move_event_video_rooms(
+                event,
+                to_integration_id,
+                new_uid,
+                provider_uid,
+                provider_calendar_id
+              ),
+              to: EventVideoRooms,
+              as: :moved
 
   @doc "Deletes a deleted grid event's video rooms. See `EventVideoRooms.event_deleted/1`."
   @spec delete_event_video_rooms(map()) :: :ok
@@ -406,6 +418,12 @@ defmodule Tymeslot.CalendarGrid do
   @doc "Whether an ended grid event's room may be deleted. See `EventVideoRooms.check_expired/1`."
   @spec check_event_video_room_expired(EventVideoRoomSchema.t()) :: :expired | :kept
   defdelegate check_event_video_room_expired(room), to: EventVideoRooms, as: :check_expired
+
+  @doc "Whether an ended grid event's room may be deleted now. See `EventVideoRooms.confirm_expired/1`."
+  @spec confirm_event_video_room_expired(EventVideoRoomSchema.t()) :: :expired | :kept
+  defdelegate confirm_event_video_room_expired(room),
+    to: EventVideoRooms,
+    as: :confirm_expired
 
   @doc "A grid event's video room with its integrations loaded."
   @spec get_event_video_room(pos_integer()) ::

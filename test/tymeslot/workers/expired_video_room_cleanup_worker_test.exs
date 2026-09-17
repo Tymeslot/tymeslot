@@ -164,7 +164,15 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
     } do
       host = "grid-journey.example.com"
       talk = insert_talk_integration(user, host)
-      calendar = insert(:calendar_integration, user: user, is_active: true)
+
+      calendar =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          base_url: "https://dav-journey.example.com",
+          calendar_paths: ["/calendars/organiser/work/"],
+          is_active: true
+        )
 
       # Plays the organiser's Nextcloud server: no conversation exists until
       # one is created, and every delete it receives reaches the test.
@@ -183,14 +191,15 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
           {:ok, %Req.Response{status: 200, body: ocs(nil)}}
       end)
 
-      expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
-        {:ok, "grid-journey-uid"}
+      # A CalDAV server keeps the uid the event was written under.
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+        {:ok, event_data.uid}
       end)
 
       start_at = DateTime.add(DateTime.utc_now(:second), -8 * @day - 3600, :second)
       end_at = DateTime.add(start_at, 1800, :second)
 
-      assert {:ok, %{video_room_id: "grid0001"}} =
+      assert {:ok, %{uid: uid, video_room_id: "grid0001"}} =
                EventCreation.run_create_event(%{
                  creating: %{
                    title: "Planning",
@@ -211,7 +220,7 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
       # at its original, long past time.
       insert(:provider_calendar_event,
         calendar_integration: calendar,
-        uid: "grid-journey-uid",
+        uid: uid,
         start_at: start_at,
         end_at: end_at
       )
@@ -221,7 +230,17 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
 
       refute_received {:deleted, _url}
 
+      # Before deleting, the job asks the CalDAV server itself, which confirms
+      # the event is still at its long past time.
+      expect(HTTPClientMock, :get, fn url, _headers, _opts ->
+        send(test, {:dav_get, url})
+        {:ok, %Req.Response{status: 200, body: ical_event(uid, start_at, end_at)}}
+      end)
+
       assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :video_rooms)
+
+      dav_url = "https://dav-journey.example.com/calendars/organiser/work/#{uid}.ics"
+      assert_received {:dav_get, ^dav_url}
       assert_received {:deleted, url}
       assert url == rooms_url <> "/grid0001"
       assert Repo.get(EventVideoRoomSchema, room_id) == nil
@@ -353,6 +372,28 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
     do: refute_enqueued(worker: VideoSyncWorker, args: delete_args(meeting))
 
   defp delete_args(meeting), do: %{"meeting_id" => meeting.id, "action" => "delete"}
+
+  defp ical_event(uid, start_at, end_at) do
+    stamp = &Calendar.strftime(&1, "%Y%m%dT%H%M%SZ")
+
+    Enum.join(
+      [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Tymeslot//EN",
+        "BEGIN:VEVENT",
+        "UID:#{uid}",
+        "DTSTAMP:#{stamp.(DateTime.utc_now())}",
+        "DTSTART:#{stamp.(start_at)}",
+        "DTEND:#{stamp.(end_at)}",
+        "SUMMARY:Planning",
+        "END:VEVENT",
+        "END:VCALENDAR",
+        ""
+      ],
+      "\r\n"
+    )
+  end
 
   defp event_room_delete_args(room_id), do: %{"event_room_id" => room_id, "action" => "expire"}
 

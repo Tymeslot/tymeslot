@@ -34,6 +34,7 @@ defmodule Tymeslot.Repo.Migrations.CreateCalendarEventVideoRooms do
       add(:calendar_integration_id, references(:calendar_integrations, on_delete: :nilify_all))
       add(:event_uid, :string, null: false)
       add(:provider_event_id, :string)
+      add(:provider_calendar_id, :string)
       add(:room_id, :string, null: false)
       add(:lobby_opens_at, :utc_datetime)
       add(:ends_at, :utc_datetime)

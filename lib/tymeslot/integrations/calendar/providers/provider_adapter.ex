@@ -265,6 +265,25 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   end
 
   @doc """
+  Fetches one event straight from the provider (see the provider's
+  `fetch_event/2`). A provider that cannot fetch a single event answers
+  `{:error, :unsupported}`.
+  """
+  @spec fetch_event(adapter_client(), map()) ::
+          {:ok, list()} | {:error, :not_found} | {:error, term()}
+  def fetch_event(%{provider_module: module} = adapter_client, event_ref) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :fetch_event, 2) do
+      Metrics.time_operation(
+        :calendar_fetch_event,
+        %{provider: adapter_client.provider_type},
+        fn -> module.fetch_event(adapter_client.client, event_ref) end
+      )
+    else
+      {:error, :unsupported}
+    end
+  end
+
+  @doc """
   Deletes an event from the calendar.
   """
   @spec delete_event(adapter_client(), String.t(), keyword()) ::

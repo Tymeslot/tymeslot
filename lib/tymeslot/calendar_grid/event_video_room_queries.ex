@@ -58,16 +58,22 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
   end
 
   @doc """
-  Records the identifier the calendar provider returned for an event Tymeslot
-  wrote under `event_uid`.
+  Records where the calendar provider put an event written under `event_uid`:
+  `attrs` carries `:provider_event_id` and `:provider_calendar_id`.
   """
-  @spec set_provider_event_id(pos_integer(), String.t(), String.t()) :: non_neg_integer()
-  def set_provider_event_id(calendar_integration_id, event_uid, provider_event_id) do
+  @spec set_event_location(pos_integer(), String.t(), map()) :: non_neg_integer()
+  def set_event_location(calendar_integration_id, event_uid, attrs) do
     {count, _rows} =
       EventVideoRoomSchema
       |> where([r], r.calendar_integration_id == ^calendar_integration_id)
       |> where([r], r.event_uid == ^event_uid)
-      |> Repo.update_all(set: [provider_event_id: provider_event_id, updated_at: now()])
+      |> Repo.update_all(
+        set: [
+          provider_event_id: attrs.provider_event_id,
+          provider_calendar_id: attrs.provider_calendar_id,
+          updated_at: now()
+        ]
+      )
 
     count
   end
@@ -91,19 +97,20 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
 
   @doc """
   Points rooms at the identity their event was given in another calendar
-  integration.
+  integration: `identity` carries `:calendar_integration_id`, `:event_uid`,
+  `:provider_event_id` and `:provider_calendar_id`.
   """
-  @spec move_to_event([pos_integer()], pos_integer(), String.t(), String.t() | nil) ::
-          non_neg_integer()
-  def move_to_event(room_ids, calendar_integration_id, event_uid, provider_event_id) do
+  @spec move_to_event([pos_integer()], map()) :: non_neg_integer()
+  def move_to_event(room_ids, identity) do
     {count, _rows} =
       EventVideoRoomSchema
       |> where([r], r.id in ^room_ids)
       |> Repo.update_all(
         set: [
-          calendar_integration_id: calendar_integration_id,
-          event_uid: event_uid,
-          provider_event_id: provider_event_id,
+          calendar_integration_id: identity.calendar_integration_id,
+          event_uid: identity.event_uid,
+          provider_event_id: identity.provider_event_id,
+          provider_calendar_id: identity.provider_calendar_id,
           updated_at: now()
         ]
       )

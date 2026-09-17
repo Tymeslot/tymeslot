@@ -8,7 +8,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomSchema do
   uid Tymeslot generated for it, and `provider_event_id`, the identifier the
   calendar provider returned when the event was written. Google and Outlook
   address an event by the latter, CalDAV servers by the former; see
-  `Tymeslot.CalendarGrid.EventVideoRooms`. `calendar_integration_id` is cleared
+  `Tymeslot.CalendarGrid.EventVideoRooms`. `provider_calendar_id` is the
+  calendar the event was written to, which Google needs to look it up. `calendar_integration_id` is cleared
   if that integration goes.
 
   `video_integration_id` is cleared if the integration goes, as a meeting's is,
@@ -40,6 +41,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomSchema do
           calendar_integration_id: integer() | nil,
           event_uid: String.t() | nil,
           provider_event_id: String.t() | nil,
+          provider_calendar_id: String.t() | nil,
           room_id: String.t() | nil,
           lobby_opens_at: DateTime.t() | nil,
           ends_at: DateTime.t() | nil,
@@ -54,6 +56,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomSchema do
     field(:provider, :string)
     field(:event_uid, :string)
     field(:provider_event_id, :string)
+    field(:provider_calendar_id, :string)
     field(:room_id, :string)
     field(:lobby_opens_at, :utc_datetime)
     field(:ends_at, :utc_datetime)
@@ -78,6 +81,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomSchema do
       :calendar_integration_id,
       :event_uid,
       :provider_event_id,
+      :provider_calendar_id,
       :room_id,
       :lobby_opens_at,
       :ends_at

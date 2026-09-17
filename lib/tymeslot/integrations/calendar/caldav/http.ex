@@ -221,6 +221,34 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   end
 
   @doc """
+  Performs a GET request for one event resource.
+
+  Unlike DELETE, a 404 is an error here (`:not_found`), and so is a 410
+  (`:gone`): the caller is asking whether the event exists.
+  """
+  @spec get_event(String.t(), String.t(), String.t(), keyword()) ::
+          {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
+  def get_event(url, username, password, opts \\ []) do
+    timeout = Keyword.get(opts, :timeout, 30_000)
+
+    result =
+      authed_request("GET", url, username, password, [], fn headers ->
+        Config.http_client_module().get(url, headers,
+          receive_timeout: timeout,
+          ssrf_protect: true
+        )
+      end)
+
+    case result do
+      {:ok, response} ->
+        classify(response, :get, url, success: [200], status_overrides: %{410 => :gone})
+
+      {:error, _error_reason} ->
+        {:error, :network_error}
+    end
+  end
+
+  @doc """
   Performs a HEAD request to retrieve current headers (e.g., ETag) for an event.
   """
   @spec head_event(String.t(), String.t(), String.t(), keyword()) ::

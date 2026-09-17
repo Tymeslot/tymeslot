@@ -99,9 +99,10 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
     end
   end
 
-  describe "identified/3" do
-    # Google and Outlook address the event by the id they returned from then on.
-    test "records the identifier the calendar returned for the event", %{
+  describe "identified/4" do
+    # Google and Outlook address the event by the id they returned from then on,
+    # and Google only within the calendar it was written to.
+    test "records the identifier and calendar the provider wrote the event to", %{
       user: user,
       calendar: calendar
     } do
@@ -110,9 +111,10 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
           provider_event_id: nil
         )
 
-      assert :ok = EventVideoRooms.identified(calendar.id, "grid-uid", "googleid0001")
+      assert :ok = EventVideoRooms.identified(calendar.id, "grid-uid", "googleid0001", "work")
 
-      assert Repo.reload!(room).provider_event_id == "googleid0001"
+      assert %{provider_event_id: "googleid0001", provider_calendar_id: "work"} =
+               Repo.reload!(room)
     end
   end
 
@@ -250,7 +252,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
     end
   end
 
-  describe "moved/4" do
+  describe "moved/5" do
     test "a one-off event's room follows it to another calendar and its new identifiers", %{
       user: user,
       calendar: calendar
@@ -263,10 +265,15 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
                  %{calendar_integration_id: calendar.id, uid: "grid-old"},
                  destination.id,
                  "grid-new",
-                 "outlookid0001"
+                 "outlookid0001",
+                 "destination-calendar"
                )
 
-      assert %{event_uid: "grid-new", provider_event_id: "outlookid0001"} =
+      assert %{
+               event_uid: "grid-new",
+               provider_event_id: "outlookid0001",
+               provider_calendar_id: "destination-calendar"
+             } =
                moved = Repo.reload!(room)
 
       assert moved.calendar_integration_id == destination.id
@@ -285,7 +292,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
         recurrence_rule: "FREQ=WEEKLY"
       }
 
-      assert :ok = EventVideoRooms.moved(occurrence, destination.id, "grid-new-2", "grid-new-2")
+      assert :ok =
+               EventVideoRooms.moved(occurrence, destination.id, "grid-new-2", "grid-new-2", nil)
 
       assert %{event_uid: "grid-series-2"} = moved = Repo.reload!(room)
       assert moved.calendar_integration_id == calendar.id

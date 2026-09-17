@@ -216,8 +216,36 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
   """
   @callback build_booking_client_config(integration :: map()) :: any() | nil
 
+  @typedoc """
+  What addresses one event on the provider. Any field may be nil: Google and
+  Outlook address an event by `provider_event_id` (Google within
+  `calendar_id`), CalDAV servers by its href in `provider_event_id` or else by
+  `uid` within the client's calendar. `calendar_integration_id` labels the
+  events returned.
+  """
+  @type event_ref :: %{
+          optional(:uid) => String.t() | nil,
+          optional(:provider_event_id) => String.t() | nil,
+          optional(:calendar_id) => String.t() | nil,
+          optional(:calendar_integration_id) => integer() | nil
+        }
+
+  @doc """
+  Fetches one event straight from the provider, bypassing the sync cache and
+  its date window.
+
+  Returns the event as the sync would cache it (a recurring series expands
+  into its occurrences). `{:error, :not_found}` is returned only when the
+  provider says the event does not exist, or for Google and Outlook that it is
+  cancelled; any failure to find out (a transport error, refused credentials,
+  an event `event_ref` cannot address) is some other error.
+  """
+  @callback fetch_event(client :: any(), event_ref :: event_ref()) ::
+              {:ok, [CalendarEvent.t()]} | {:error, :not_found} | {:error, term()}
+
   @optional_callbacks discover_calendars_for_integration: 1,
                       discover_calendars: 1,
                       build_client_configs: 1,
-                      build_booking_client_config: 1
+                      build_booking_client_config: 1,
+                      fetch_event: 2
 end

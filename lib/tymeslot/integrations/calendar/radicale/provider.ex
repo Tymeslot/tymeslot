@@ -167,6 +167,9 @@ defmodule Tymeslot.Integrations.Calendar.Radicale.Provider do
   def delete_event(client, uid, opts), do: CaldavCommon.delete_event(client, uid, opts)
 
   @impl Tymeslot.Integrations.Calendar.Provider
+  def fetch_event(client, event_ref), do: CaldavCommon.fetch_event(client, event_ref)
+
+  @impl Tymeslot.Integrations.Calendar.Provider
   def list_events(client, opts), do: CaldavCommon.list_events(client, opts)
 
   @impl Tymeslot.Integrations.Calendar.Provider
