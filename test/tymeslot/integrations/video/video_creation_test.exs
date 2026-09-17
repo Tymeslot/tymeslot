@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.Video.VideoCreationTest do
 
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
@@ -191,6 +192,55 @@ defmodule Tymeslot.Integrations.Video.VideoCreationTest do
       assert updated.name == "Renamed"
     end
 
+    test "resubmitting the stored App ID with a blank secret keeps needs_reauth", %{
+      user: user,
+      integration: integration
+    } do
+      flag_for_reauth(integration)
+
+      assert {:ok, updated} =
+               Video.update_integration(user.id, integration.id, %{
+                 name: "Renamed",
+                 client_id: @app_id,
+                 client_secret: ""
+               })
+
+      assert updated.needs_reauth
+      assert Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
+    end
+
+    test "resubmitting the stored secret unchanged keeps needs_reauth", %{
+      user: user,
+      integration: integration
+    } do
+      flag_for_reauth(integration)
+
+      assert {:ok, _updated} =
+               Video.update_integration(user.id, integration.id, %{
+                 client_id: @app_id,
+                 client_secret: @secret
+               })
+
+      assert Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
+    end
+
+    test "a changed secret counts as reconnecting and clears needs_reauth", %{
+      user: user,
+      integration: integration
+    } do
+      flag_for_reauth(integration)
+      new_secret = String.duplicate("n", 40)
+
+      assert {:ok, _updated} =
+               Video.update_integration(user.id, integration.id, %{
+                 client_id: @app_id,
+                 client_secret: new_secret
+               })
+
+      refute Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
+      assert stored_secret(user, integration) == new_secret
+    end
+
     test "removing token authentication deletes both stored credentials", %{
       user: user,
       integration: integration
@@ -286,6 +336,13 @@ defmodule Tymeslot.Integrations.Video.VideoCreationTest do
       Map.merge(%{name: "Our Jitsi", base_url: "https://meet.example.com"}, Map.new(credentials))
 
     Video.create_integration(user.id, :jitsi, attrs)
+  end
+
+  defp flag_for_reauth(integration) do
+    VideoIntegrationSchema
+    |> Repo.get!(integration.id)
+    |> Changeset.change(needs_reauth: true)
+    |> Repo.update!()
   end
 
   defp stored_secret(user, integration) do

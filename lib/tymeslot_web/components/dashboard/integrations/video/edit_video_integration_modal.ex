@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   alias Tymeslot.Integrations.Video.InputValidation, as: VideoInputValidation
   alias Tymeslot.Integrations.Video.TemplateSyntax
   alias Tymeslot.Utils.ChangesetUtils
+  alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplatePreviewBox
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig
@@ -137,7 +138,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
              |> assign(:saving, false)}
 
           {:error, reason} ->
-            send(self(), {:flash, {:error, update_error_message(reason)}})
+            send(
+              self(),
+              {:flash, {:error, update_error_message(reason, integration.provider)}}
+            )
 
             {:noreply, assign(socket, :saving, false)}
         end
@@ -326,13 +330,27 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
 
   # A provider's own validation (Jitsi's credential checks, for one) returns
   # a message written for the organiser; anything else is not fit to show.
-  defp update_error_message(message) when is_binary(message), do: message
+  defp update_error_message(message, _provider) when is_binary(message), do: message
 
-  defp update_error_message(%Ecto.Changeset{} = changeset),
-    do: ChangesetUtils.get_first_error(changeset) || update_error_message(:unknown)
+  # The schema calls the server address `base_url`, which reads as "Base url"
+  # in `ChangesetUtils.get_first_error/1`; a URL error is instead named the way
+  # this dialog labels the field. Any other error keeps the generic wording.
+  defp update_error_message(%Ecto.Changeset{errors: errors} = changeset, provider) do
+    case {url_field_label(provider), Keyword.get(errors, :base_url)} do
+      {label, {_message, _opts} = error} when is_binary(label) ->
+        "#{label} #{Forms.translate_error(error)}"
 
-  defp update_error_message(_reason),
+      _other ->
+        ChangesetUtils.get_first_error(changeset) || update_error_message(:unknown, provider)
+    end
+  end
+
+  defp update_error_message(_reason, _provider),
     do: dgettext("dashboard_integrations", "Failed to update integration")
+
+  defp url_field_label("jitsi"), do: dgettext("dashboard_integrations", "Server URL")
+  defp url_field_label("mirotalk"), do: dgettext("dashboard_integrations", "Base URL")
+  defp url_field_label(_provider), do: nil
 
   defp stored_credentials?(%{client_id_encrypted: nil, client_secret_encrypted: nil}), do: false
   defp stored_credentials?(_integration), do: true

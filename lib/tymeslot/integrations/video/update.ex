@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Video.Update do
   also clears `needs_reauth`.
   """
 
+  alias Plug.Crypto
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Video.AttrsCasting
   alias Tymeslot.Integrations.Video.Providers.JitsiProvider
@@ -60,7 +61,7 @@ defmodule Tymeslot.Integrations.Video.Update do
   end
 
   defp save_update(integration, attrs) do
-    if credentials_in_attrs?(attrs) do
+    if credentials_changed?(integration, attrs) do
       update_with_credentials(integration, attrs)
     else
       VideoIntegrationQueries.update(integration, attrs)
@@ -116,10 +117,28 @@ defmodule Tymeslot.Integrations.Video.Update do
     end
   end
 
-  # Callers supply the virtual field names (`:api_key`), never the encrypted
-  # ones; those only exist after `encrypt_credentials/1` runs inside the
-  # changeset, by which point the attrs have already been consumed.
-  defp credentials_in_attrs?(attrs) when is_map(attrs) do
-    Enum.any?(VideoIntegrationSchema.credential_fields(), &Map.has_key?(attrs, &1))
+  # A credential counts as supplied only when it would change what is stored.
+  # The edit dialog fills in the stored App ID, so resubmitting it unchanged
+  # is not a reconnect and must not clear `needs_reauth`; neither is a blank
+  # value, which keeps the stored one. Callers supply the virtual field names
+  # (`:api_key`), never the encrypted ones, which only exist after
+  # `encrypt_credentials/1` runs inside the changeset.
+  defp credentials_changed?(integration, attrs) do
+    Enum.any?(VideoIntegrationSchema.credential_fields(), fn field ->
+      case Map.fetch(attrs, field) do
+        {:ok, value} when is_binary(value) ->
+          not blank?(value) and not same_credential?(value, Map.get(integration, field))
+
+        _absent_or_not_text ->
+          false
+      end
+    end)
   end
+
+  # Constant-time, so comparing against a stored secret leaks nothing through
+  # timing; neither value is ever logged or returned.
+  defp same_credential?(submitted, stored) when is_binary(stored),
+    do: Crypto.secure_compare(String.trim(submitted), stored)
+
+  defp same_credential?(_submitted, _stored), do: false
 end

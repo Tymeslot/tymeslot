@@ -430,6 +430,22 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.JitsiFormTest do
       assert row.needs_reauth
     end
 
+    test "resubmitting the edit dialog unchanged keeps a Jitsi integration flagged", %{
+      conn: conn,
+      user: user
+    } do
+      integration = create_jitsi_with_credentials(user, String.duplicate("s", 32))
+      integration |> Changeset.change(needs_reauth: true) |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+      open_edit_dialog(view, integration)
+
+      view |> form("#edit-video-integration-form") |> render_submit()
+
+      assert render(view) =~ "Integration updated successfully"
+      assert Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
+    end
+
     test "shows the first changeset error when an edit is refused by the schema", %{
       conn: conn,
       user: user
@@ -448,7 +464,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.JitsiFormTest do
       |> render_submit()
 
       refute render(view) =~ "Failed to update integration"
-      assert render(view) =~ "Base url"
+      assert render(view) =~ "Server URL"
+      refute render(view) =~ "Base url"
 
       assert Repo.get!(VideoIntegrationSchema, integration.id).base_url ==
                "https://meet.example.com"
