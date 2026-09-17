@@ -555,21 +555,22 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   defp conflict_segment(_integration, _calendar_list), do: nil
 
-  # This is a display-only summary, so it only names a booking target once
-  # one is confirmed — see `Calendar.confirmed_booking_calendar/1`. When the
-  # configured target exists but is read-only (no longer eligible), that
-  # helper returns nil like the unconfigured case would; surface a warning
-  # instead of silently dropping the segment, since a read-only target is a
-  # problem the user needs to fix, not an absent one.
+  # This is a display-only summary, so it only names a booking target once one
+  # is set; see `Calendar.booking_target/1`, which follows the calendar bookings
+  # are actually written to. A read-only target is a problem the user needs to
+  # fix, not an absent one, so it is surfaced rather than dropped.
   defp booking_segment(integration) do
-    case Calendar.confirmed_booking_calendar(integration) do
-      nil ->
-        booking_target_warning(integration)
-
-      calendar ->
+    case Calendar.booking_target(integration) do
+      {:ok, calendar} ->
         dgettext("dashboard_calendar_settings", "books into %{calendar}",
           calendar: DisplayHelpers.extract_calendar_display_name(calendar)
         )
+
+      {:read_only, _calendar} ->
+        read_only_target_segment(integration)
+
+      :none ->
+        if BookingEligibility.bookable?(integration), do: nil, else: feed_segment()
     end
   end
 
@@ -581,30 +582,16 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   # whose writable calendar has become read-only on the server and whose
   # bookings are now failing; saying it about a feed would report a breakage
   # where nothing has changed and nothing is wrong.
-  defp booking_target_warning(integration) do
+  defp read_only_target_segment(integration) do
     if BookingEligibility.bookable?(integration) do
-      writable_provider_warning(integration)
+      dgettext("dashboard_calendar_settings", "booking target can no longer accept bookings")
     else
-      dgettext("dashboard_calendar_settings", "read-only, blocks time but takes no bookings")
+      feed_segment()
     end
   end
 
-  defp writable_provider_warning(integration) do
-    calendar_list = integration.calendar_list || []
-    booking_id = Map.get(integration, :default_booking_calendar_id)
-
-    target =
-      (booking_id && Enum.find(calendar_list, &(&1.id == booking_id))) ||
-        Enum.find(calendar_list, & &1.primary)
-
-    case target do
-      %{read_only: true} ->
-        dgettext("dashboard_calendar_settings", "booking target can no longer accept bookings")
-
-      _not_read_only_or_absent ->
-        nil
-    end
-  end
+  defp feed_segment,
+    do: dgettext("dashboard_calendar_settings", "read-only, blocks time but takes no bookings")
 
   # `last_external_sync_at` is what every sync worker actually stamps, and what
   # the staleness banner reads. `last_sync_at` is written by nothing, so reading

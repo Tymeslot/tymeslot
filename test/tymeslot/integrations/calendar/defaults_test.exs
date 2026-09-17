@@ -141,16 +141,16 @@ defmodule Tymeslot.Integrations.Calendar.DefaultsTest do
   end
 
   # =====================================
-  # confirmed_booking_calendar/1
+  # booking_target/1
   # =====================================
 
-  describe "confirmed_booking_calendar/1" do
-    test "returns the entry matching default_booking_calendar_id" do
+  describe "booking_target/1" do
+    test "returns the writable entry matching default_booking_calendar_id" do
       list = Enum.map([%{id: "a"}, %{id: "b", primary: true}], &entry/1)
 
       integration = %{calendar_list: list, default_booking_calendar_id: "a"}
 
-      assert %CalendarEntry{id: "a"} = Defaults.confirmed_booking_calendar(integration)
+      assert {:ok, %CalendarEntry{id: "a"}} = Defaults.booking_target(integration)
     end
 
     test "falls back to primary when default_booking_calendar_id is nil" do
@@ -158,7 +158,7 @@ defmodule Tymeslot.Integrations.Calendar.DefaultsTest do
 
       integration = %{calendar_list: list, default_booking_calendar_id: nil}
 
-      assert %CalendarEntry{id: "b"} = Defaults.confirmed_booking_calendar(integration)
+      assert {:ok, %CalendarEntry{id: "b"}} = Defaults.booking_target(integration)
     end
 
     test "does not fall back to selected or first — narrower than default_booking_calendar/2" do
@@ -166,15 +166,40 @@ defmodule Tymeslot.Integrations.Calendar.DefaultsTest do
 
       integration = %{calendar_list: list, default_booking_calendar_id: nil}
 
-      assert Defaults.confirmed_booking_calendar(integration) == nil
+      assert Defaults.booking_target(integration) == :none
     end
 
-    test "a stale default_booking_calendar_id pointing at a read-only entry falls through to nil" do
-      list = Enum.map([%{id: "stale", read_only: true}], &entry/1)
+    test "tags a read-only booking calendar even when the primary is writable" do
+      list =
+        Enum.map([%{id: "team", read_only: true}, %{id: "main", primary: true}], &entry/1)
 
-      integration = %{calendar_list: list, default_booking_calendar_id: "stale"}
+      integration = %{calendar_list: list, default_booking_calendar_id: "team"}
 
-      assert Defaults.confirmed_booking_calendar(integration) == nil
+      assert {:read_only, %CalendarEntry{id: "team"}} = Defaults.booking_target(integration)
+    end
+
+    test "tags a read-only primary when no booking calendar is set" do
+      list = Enum.map([%{id: "main", primary: true, read_only: true}], &entry/1)
+
+      integration = %{calendar_list: list, default_booking_calendar_id: nil}
+
+      assert {:read_only, %CalendarEntry{id: "main"}} = Defaults.booking_target(integration)
+    end
+
+    test "a booking calendar missing from the list is :none, not the primary" do
+      list = Enum.map([%{id: "main", primary: true}], &entry/1)
+
+      integration = %{calendar_list: list, default_booking_calendar_id: "gone"}
+
+      assert Defaults.booking_target(integration) == :none
+    end
+
+    test "matches a booking calendar id stored in a differently encoded form" do
+      list = Enum.map([%{id: "/dav/cal%20work/"}], &entry/1)
+
+      integration = %{calendar_list: list, default_booking_calendar_id: "/dav/cal work/"}
+
+      assert {:ok, %CalendarEntry{id: "/dav/cal%20work/"}} = Defaults.booking_target(integration)
     end
   end
 

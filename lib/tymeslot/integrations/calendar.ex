@@ -244,18 +244,18 @@ defmodule Tymeslot.Integrations.Calendar do
   defdelegate default_booking_calendar(calendar_list, booking_id), to: Defaults
 
   @doc """
-  Resolves the calendar entry that booking is *confirmed* to target: the
-  entry matching `default_booking_calendar_id`, else the provider-primary
-  entry. Unlike `default_booking_calendar/2`, this never guesses "first
-  calendar" — it returns `nil` until a target has actually been chosen. See
-  `Tymeslot.Integrations.Calendar.Defaults.confirmed_booking_calendar/1`.
+  Resolves the calendar entry bookings on this integration are written to,
+  tagged `:ok` or `:read_only`, or `:none` when there is no such entry. Unlike
+  `default_booking_calendar/2`, this follows the stored booking calendar even
+  when it is read-only and never guesses "first calendar". See
+  `Tymeslot.Integrations.Calendar.Defaults.booking_target/1`.
   """
-  @spec confirmed_booking_calendar(%{
+  @spec booking_target(%{
           :calendar_list => [CalendarEntry.t()] | nil,
           :default_booking_calendar_id => String.t() | nil,
           optional(atom()) => term()
-        }) :: CalendarEntry.t() | nil
-  defdelegate confirmed_booking_calendar(integration), to: Defaults
+        }) :: {:ok, CalendarEntry.t()} | {:read_only, CalendarEntry.t()} | :none
+  defdelegate booking_target(integration), to: Defaults
 
   @doc """
   Finds the calendar entry with the given id. See
