@@ -18,7 +18,9 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.Sync
 
   setup :verify_on_exit!
 
@@ -351,6 +353,62 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
         assert {:error, :recurring_event} = move(user, event, destination)
         assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(source.id, event.uid)
       end
+    end
+
+    # One CalDAV resource holds a series' master and every occurrence edited on
+    # its own, and the sync caches the first VEVENT it finds there. When that is
+    # the edited occurrence, its row carries no repeat rule and names no series,
+    # yet its href is the whole series' resource: deleting the "original" after
+    # the copy would delete every occurrence. The row is built by the sync's own
+    # parse, normalise and cache steps, so a change to any of them that loses
+    # the occurrence's marker turns this red.
+    test "an occurrence edited on its own is refused before anything is written", %{
+      user: user,
+      source: source,
+      destination: destination
+    } do
+      resource = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:standup@example.com
+      RECURRENCE-ID:20261012T090000Z
+      DTSTART:20261012T140000Z
+      DTEND:20261012T150000Z
+      SUMMARY:Weekly standup (moved to the afternoon)
+      END:VEVENT
+      BEGIN:VEVENT
+      UID:standup@example.com
+      DTSTART:20261005T090000Z
+      DTEND:20261005T100000Z
+      RRULE:FREQ=WEEKLY;COUNT=3
+      SUMMARY:Weekly standup
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      {:ok, parsed} = EventProcessor.parse_ical_from_string(resource)
+      raw = Map.merge(parsed, %{href: "/src/standup.ics", etag: "etag-1", raw_ical: resource})
+
+      context = %{
+        calendar_integration_id: source.id,
+        provider_calendar_id: "/src/",
+        calendar_paths: ["/src/"],
+        synced_at: DateTime.utc_now()
+      }
+
+      {:ok, normalised} = EventProcessor.normalise_events([raw], context)
+      {:ok, 1} = Sync.upsert_cache(source, normalised)
+      {:ok, event} = ProviderCalendarEventQueries.get_by_uid(source.id, "standup@example.com")
+
+      assert {event.recurrence_rule, event.recurring_event_id, event.provider_event_id} ==
+               {nil, nil, "/src/standup.ics"}
+
+      expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context -> {:ok, "never"} end)
+      refute_delete()
+
+      assert {:error, :recurring_event} = move(user, event, destination)
+      assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(source.id, event.uid)
     end
 
     test "an all-day event without dates never reaches the destination", %{

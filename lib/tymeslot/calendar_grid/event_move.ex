@@ -31,6 +31,12 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   single event, so a move would turn a series into a one-off and, on CalDAV
   where an occurrence is addressed through its series' resource, delete
   every occurrence rather than the one the organiser picked.
+
+  An occurrence edited on its own needs its own check on the iCalendar
+  providers. It is a VEVENT with a `RECURRENCE-ID` and no `RRULE`, so its row
+  carries no repeat rule and names no series, yet it lives in the series'
+  resource like every other occurrence. Only the recurrence id the sync keeps
+  in `provider_metadata` marks it.
   """
 
   alias Tymeslot.CalendarGrid.ProviderPayload
@@ -65,13 +71,26 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   Whether `event` may be moved to another calendar.
 
   Returns `{:error, :recurring_event}` for a recurring series (it carries a
-  repeat rule) and for an occurrence of one (it names its series).
+  repeat rule), for an occurrence of one (it names its series) and for an
+  occurrence edited on its own (it carries a recurrence id).
   """
   @spec ensure_movable(map()) :: :ok | {:error, :recurring_event}
   def ensure_movable(event) do
-    if present?(Map.get(event, :recurrence_rule)) or present?(Map.get(event, :recurring_event_id)),
-      do: {:error, :recurring_event},
-      else: :ok
+    if part_of_series?(event), do: {:error, :recurring_event}, else: :ok
+  end
+
+  # The recurrence id has no column of its own: the sync keeps it in
+  # `provider_metadata`, atom-keyed when freshly normalised and string-keyed
+  # once it has been through the database.
+  defp part_of_series?(event) do
+    Enum.any?(
+      [
+        Map.get(event, :recurrence_rule),
+        Map.get(event, :recurring_event_id),
+        MapKeys.get_binary(Map.get(event, :provider_metadata), :recurrence_id)
+      ],
+      &present?/1
+    )
   end
 
   @doc """

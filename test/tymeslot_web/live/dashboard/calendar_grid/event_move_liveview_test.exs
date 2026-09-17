@@ -135,10 +135,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventMoveLiveViewTest do
 
   describe "moving a recurring event" do
     for {kind, attrs} <- [
-          series: quote(do: %{recurrence_rule: "FREQ=WEEKLY;BYDAY=MO"}),
-          occurrence: quote(do: %{recurring_event_id: "series-1"})
+          {"a series", quote(do: %{recurrence_rule: "FREQ=WEEKLY;BYDAY=MO"})},
+          {"an occurrence", quote(do: %{recurring_event_id: "series-1"})},
+          {"an occurrence edited on its own",
+           quote(do: %{provider_metadata: %{"recurrence_id" => "20261012T090000Z"}})}
         ] do
-      test "a #{kind} is refused with a clear message and stays where it is", %{
+      test "#{kind} is refused with a clear message and stays where it is", %{
         conn: conn,
         source: source,
         destination: destination
