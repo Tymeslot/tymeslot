@@ -437,38 +437,63 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueriesTest do
       other =
         insert(:video_integration, provider: "nextcloud_talk", base_url: "https://b.example.com")
 
-      assert VideoIntegrationQueries.claim_room_creation_error_notice(
-               integration.id,
-               :password_required
-             )
-
-      refute VideoIntegrationQueries.claim_room_creation_error_notice(
-               integration.id,
-               :password_required
-             )
-
-      assert VideoIntegrationQueries.claim_room_creation_error_notice(
-               integration.id,
-               :talk_not_allowed
-             )
-
-      assert VideoIntegrationQueries.claim_room_creation_error_notice(
-               other.id,
-               :password_required
-             )
+      assert claim(integration, :password_required)
+      refute claim(integration, :password_required)
+      assert claim(integration, :talk_not_allowed)
+      assert claim(other, :password_required)
 
       # Clearing the refusal keeps the record of what the owner was told.
       VideoIntegrationQueries.clear_room_creation_error(integration.id)
+      refute claim(integration, :password_required)
 
-      refute VideoIntegrationQueries.claim_room_creation_error_notice(
-               integration.id,
-               :password_required
-             )
+      assert %{"password_required" => _told_at, "talk_not_allowed" => _also_told_at} =
+               Repo.reload!(integration).room_creation_error_notices
+    end
 
-      assert Repo.reload!(integration).room_creation_errors_notified == [
-               :password_required,
-               :talk_not_allowed
-             ]
+    test "a code claimed long enough ago may be claimed again" do
+      integration = insert(:video_integration, provider: "nextcloud_talk")
+      assert claim(integration, :password_required)
+
+      long_ago = DateTime.add(DateTime.utc_now(:second), -40, :day)
+
+      integration
+      |> Changeset.change(
+        room_creation_error_notices: %{"password_required" => DateTime.to_iso8601(long_ago)}
+      )
+      |> Repo.update!()
+
+      assert claim(integration, :password_required)
+      refute claim(integration, :password_required)
+    end
+
+    test "a claim given back may be claimed again at once" do
+      integration = insert(:video_integration, provider: "nextcloud_talk")
+      assert claim(integration, :password_required)
+      assert claim(integration, :talk_not_allowed)
+
+      assert :ok =
+               VideoIntegrationQueries.release_room_creation_error_notice(
+                 integration.id,
+                 :password_required
+               )
+
+      assert %{"talk_not_allowed" => _kept} =
+               Repo.reload!(integration).room_creation_error_notices
+
+      assert claim(integration, :password_required)
+    end
+
+    # A refusal of the same code inside the window is the one the owner already
+    # knows about, whatever their integration's other codes have done since.
+    defp claim(integration, code) do
+      now = DateTime.utc_now(:second)
+
+      VideoIntegrationQueries.claim_room_creation_error_notice(
+        integration.id,
+        code,
+        now,
+        DateTime.add(now, -30, :day)
+      )
     end
   end
 end

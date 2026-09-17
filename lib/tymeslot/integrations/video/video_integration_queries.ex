@@ -329,7 +329,9 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   for why this cannot be inferred from the changeset. A Nextcloud Talk edit
   reaches it only once the new connection is proven against the server, which
   also checked the account's right to create conversations, so the refusal
-  recorded against the old connection no longer describes it.
+  recorded against the old connection no longer describes it. What the owner
+  was emailed about is forgotten with it: a refusal by the new connection is
+  news, whoever the old one belonged to.
   """
   @spec update_credentials(VideoIntegrationSchema.t(), map()) ::
           {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
@@ -365,6 +367,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
           |> Changeset.force_change(:needs_reauth, false)
           |> Changeset.force_change(:room_creation_error, nil)
           |> Changeset.force_change(:room_creation_error_since, nil)
+          |> Changeset.force_change(:room_creation_error_notices, %{})
 
         case Repo.update(changeset) do
           {:ok, updated} -> {updated, was_flagged? == true}
@@ -408,30 +411,70 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   end
 
   @doc """
-  Claims the one email about room creation error `code` for the integration
-  `id`: returns `true` for the first caller ever to claim it, and `false` for
-  every later one.
+  Claims the email about room creation error `code` for the integration `id`,
+  stamping `now` as the time the owner was told: returns `true` for the caller
+  that claims it, and `false` while a claim made since `resend_after` stands.
 
   One conditional update, so concurrent callers serialise on the row and only
-  the first one's condition still holds.
+  the first one's condition still holds. `release_room_creation_error_notice/2`
+  gives a claim back when its email never went out.
   """
-  @spec claim_room_creation_error_notice(integer(), atom()) :: boolean()
-  def claim_room_creation_error_notice(id, code) when is_integer(id) and is_atom(code) do
+  @spec claim_room_creation_error_notice(integer(), atom(), DateTime.t(), DateTime.t()) ::
+          boolean()
+  def claim_room_creation_error_notice(id, code, now, resend_after)
+      when is_integer(id) and is_atom(code) do
     code = Atom.to_string(code)
 
     {count, _rows} =
       VideoIntegrationSchema
       |> where([v], v.id == ^id)
-      |> where([v], fragment("NOT (?::varchar = ANY(?))", ^code, v.room_creation_errors_notified))
+      |> where(
+        [v],
+        fragment(
+          "? -> ? IS NULL OR (? ->> ?)::timestamptz < ?::timestamptz",
+          v.room_creation_error_notices,
+          type(^code, :string),
+          v.room_creation_error_notices,
+          type(^code, :string),
+          type(^DateTime.to_iso8601(resend_after), :string)
+        )
+      )
       |> update([v],
         set: [
-          room_creation_errors_notified:
-            fragment("array_append(?, ?::varchar)", v.room_creation_errors_notified, ^code)
+          room_creation_error_notices:
+            fragment(
+              "jsonb_set(coalesce(?, '{}'::jsonb), array[?], to_jsonb(?::text))",
+              v.room_creation_error_notices,
+              type(^code, :string),
+              type(^DateTime.to_iso8601(now), :string)
+            )
         ]
       )
       |> Repo.update_all([])
 
     count == 1
+  end
+
+  @doc """
+  Gives back the claim on the email about `code` for the integration `id`, for
+  an email that was never sent: the next refusal with that code claims it
+  again.
+  """
+  @spec release_room_creation_error_notice(integer(), atom()) :: :ok
+  def release_room_creation_error_notice(id, code) when is_integer(id) and is_atom(code) do
+    code = Atom.to_string(code)
+
+    VideoIntegrationSchema
+    |> where([v], v.id == ^id)
+    |> update([v],
+      set: [
+        room_creation_error_notices:
+          fragment("? - ?", v.room_creation_error_notices, type(^code, :string))
+      ]
+    )
+    |> Repo.update_all([])
+
+    :ok
   end
 
   @doc """

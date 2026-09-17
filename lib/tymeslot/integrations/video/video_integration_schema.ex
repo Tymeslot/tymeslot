@@ -49,7 +49,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
           sync_error: String.t() | nil,
           room_creation_error: atom() | nil,
           room_creation_error_since: DateTime.t() | nil,
-          room_creation_errors_notified: [atom()],
+          room_creation_error_notices: %{optional(String.t()) => String.t()},
           deleted_at: DateTime.t() | nil,
           settings: map(),
           user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
@@ -81,11 +81,11 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     # never cast from attrs.
     field(:room_creation_error, Ecto.Enum, values: @room_creation_errors)
     field(:room_creation_error_since, :utc_datetime)
-
-    field(:room_creation_errors_notified, {:array, Ecto.Enum},
-      values: @room_creation_errors,
-      default: []
-    )
+    # Code to the time the owner was last emailed about it, as
+    # `Tymeslot.Integrations.Video.RoomCreationError` describes. A map rather
+    # than a list of codes, so an entry can be given back when its email never
+    # went out, and a code nothing reads any more is an entry nothing looks up.
+    field(:room_creation_error_notices, :map, default: %{})
 
     # Set when the user disconnects and asked for the provider-side rooms to be
     # deleted: the row survives, hidden, only long enough for the cleanup job to

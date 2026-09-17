@@ -112,7 +112,7 @@ defmodule Tymeslot.Emails.Templates.VideoRoomCreationError do
       happening:
         dgettext(
           "emails",
-          "%{provider} refused to create a video room for a booking. The booking is confirmed, and its confirmation went out without a video link. New bookings on this integration get no video link either until the setting described above changes. Video links already sent keep working.",
+          "%{provider} refused to create a video room. Whatever it was for went ahead without one: a booking is still confirmed, and a calendar event is still in your calendar. Nothing on this integration gets a video link until the setting described above changes, and links already sent keep working.",
           provider: provider
         ),
       action:
@@ -125,7 +125,8 @@ defmodule Tymeslot.Emails.Templates.VideoRoomCreationError do
       footer:
         dgettext(
           "emails",
-          "You will not receive another email about this for this integration. Your video settings show the notice for as long as the problem lasts."
+          "This is the only email you will get about this for now. If the same problem is still there in %{days} days, you will hear about it again. Your video settings show the notice for as long as it lasts.",
+          days: RoomCreationError.resend_after_days()
         )
     }
   end

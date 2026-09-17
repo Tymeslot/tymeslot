@@ -17,11 +17,15 @@ defmodule Tymeslot.Emails.Templates.VideoRoomCreationErrorTest do
 
       for body <- [html, text] do
         assert body =~ "turn off the password requirement for public conversations"
-        assert body =~ "Nextcloud Talk refused to create a video room for a booking"
+        assert body =~ "Nextcloud Talk refused to create a video room"
+        # Nothing about a booking: a calendar grid event gets its room the same
+        # way, and the same email.
+        refute body =~ "its confirmation went out"
         assert body =~ "/dashboard/settings?tab=video"
       end
 
       assert html =~ "<!doctype html>"
+      assert html =~ "in 30 days, you will hear about it again"
       refute text =~ "<mj-"
     end
 

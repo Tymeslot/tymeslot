@@ -182,7 +182,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     ConnectionRow.reconnect_reason(integration) || room_creation_notice(integration)
   end
 
-  defp room_creation_notice(%{room_creation_error: code}) when is_atom(code) and code != nil do
+  defp room_creation_notice(%{room_creation_error: nil}), do: nil
+
+  defp room_creation_notice(%{room_creation_error: code}) do
     dgettext("dashboard_integrations", "New bookings get no video link. %{reason}",
       reason: RoomCreationError.message(code)
     )
@@ -203,7 +205,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     end
   end
 
-  defp healthy_status(%{room_creation_error: code}) when is_atom(code) and code != nil,
+  defp healthy_status(%{room_creation_error: nil}),
+    do: {:ok, dgettext("dashboard_integrations", "Healthy")}
+
+  defp healthy_status(%{room_creation_error: _code}),
     do: {:warning, dgettext("dashboard_integrations", "No video links")}
 
   defp healthy_status(_integration), do: {:ok, dgettext("dashboard_integrations", "Healthy")}

@@ -2344,11 +2344,6 @@ msgstr "Nový odkaz pro nový čas"
 
 #: lib/tymeslot/emails/templates/video_room_creation_error.ex
 #, elixir-autogen, elixir-format
-msgid "%{provider} refused to create a video room for a booking. The booking is confirmed, and its confirmation went out without a video link. New bookings on this integration get no video link either until the setting described above changes. Video links already sent keep working."
-msgstr "%{provider} odmítl vytvořit videomístnost pro rezervaci. Rezervace je potvrzená a její potvrzení odešlo bez odkazu na video. Ani nové rezervace této integrace nedostanou odkaz na video, dokud se výše popsané nastavení nezmění. Již odeslané odkazy na video dál fungují."
-
-#: lib/tymeslot/emails/templates/video_room_creation_error.ex
-#, elixir-autogen, elixir-format
 msgid "Bookings on %{provider} are getting no video link"
 msgstr "Rezervace přes %{provider} nedostávají odkaz na video"
 
@@ -2384,5 +2379,10 @@ msgstr "Co se děje?"
 
 #: lib/tymeslot/emails/templates/video_room_creation_error.ex
 #, elixir-autogen, elixir-format
-msgid "You will not receive another email about this for this integration. Your video settings show the notice for as long as the problem lasts."
-msgstr "K této integraci vám o tom další e-mail nepřijde. Nastavení videa zobrazuje upozornění, dokud problém trvá."
+msgid "%{provider} refused to create a video room. Whatever it was for went ahead without one: a booking is still confirmed, and a calendar event is still in your calendar. Nothing on this integration gets a video link until the setting described above changes, and links already sent keep working."
+msgstr "%{provider} odmítl vytvořit videomístnost. To, k čemu měla sloužit, proběhlo i bez ní: rezervace je stále potvrzená a událost je stále ve vašem kalendáři. Nic v této integraci nedostane odkaz na video, dokud se výše popsané nastavení nezmění, a již odeslané odkazy dál fungují."
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "This is the only email you will get about this for now. If the same problem is still there in %{days} days, you will hear about it again. Your video settings show the notice for as long as it lasts."
+msgstr "Zatím je to jediný e-mail, který o tom dostanete. Pokud stejný problém bude za %{days} dní trvat dál, ozveme se znovu. Nastavení videa zobrazuje upozornění, dokud platí."

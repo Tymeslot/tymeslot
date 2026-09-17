@@ -114,4 +114,63 @@ defmodule Tymeslot.Integrations.Video.ConnectionTest do
       assert {:ok, _message} = Connection.test_integration(integration, scope: :background)
     end
   end
+
+  describe "test_integration/2 for a Talk account whose server now allows conversations" do
+    setup do
+      user = insert(:user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "nextcloud_talk",
+          base_url: "https://allowed.connection.example.com",
+          client_id_encrypted: Encryption.encrypt("organiser"),
+          client_secret_encrypted: Encryption.encrypt("App-Password"),
+          provider_account_id: "https://allowed.connection.example.com||organiser",
+          room_creation_error: :password_required,
+          room_creation_error_since: DateTime.utc_now(:second)
+        )
+
+      expect(Tymeslot.HTTPClientMock, :request, 2, fn :get, url, _body, _headers, _opts ->
+        data =
+          if String.ends_with?(url, "/ocs/v2.php/cloud/user") do
+            %{"id" => "organiser"}
+          else
+            %{
+              "capabilities" => %{
+                "spreed" => %{
+                  "version" => "25.0.0",
+                  "features" => ["conversation-creation-all"],
+                  "config" => %{
+                    "conversations" => %{"can-create" => true, "force-passwords" => false}
+                  }
+                }
+              }
+            }
+          end
+
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"ocs" => %{"data" => data}})}}
+      end)
+
+      %{integration: integration}
+    end
+
+    # The owner fixed the setting and pressed Test connection: the notice on
+    # their integration's row has just been disproved.
+    test "a passing test the owner asked for clears the recorded refusal", %{
+      integration: integration
+    } do
+      assert {:ok, _message} = Connection.test_integration(integration)
+
+      assert %{room_creation_error: nil, room_creation_error_since: nil} =
+               Repo.reload!(integration)
+    end
+
+    test "the background health check leaves the recorded refusal alone", %{
+      integration: integration
+    } do
+      assert {:ok, _message} = Connection.test_integration(integration, scope: :background)
+      assert Repo.reload!(integration).room_creation_error == :password_required
+    end
+  end
 end

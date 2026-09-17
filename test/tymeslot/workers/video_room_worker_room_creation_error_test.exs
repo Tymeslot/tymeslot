@@ -67,11 +67,10 @@ defmodule Tymeslot.Workers.VideoRoomWorkerRoomCreationErrorTest do
 
     stored = Repo.get!(VideoIntegrationSchema, integration.id)
 
-    assert %{
-             room_creation_error: :conversation_creation_restricted,
-             room_creation_errors_notified: [:conversation_creation_restricted],
-             needs_reauth: false
-           } = stored
+    assert %{room_creation_error: :conversation_creation_restricted, needs_reauth: false} = stored
+
+    assert %{"conversation_creation_restricted" => _emailed_at} =
+             stored.room_creation_error_notices
 
     assert %DateTime{} = stored.room_creation_error_since
     assert Enum.all?(meetings, &is_nil(Repo.reload!(&1).video_room_id))
@@ -156,6 +155,38 @@ defmodule Tymeslot.Workers.VideoRoomWorkerRoomCreationErrorTest do
     assert length(refusal_emails()) == 1
   end
 
+  # A conversation an earlier attempt made was made when the server still
+  # allowed it, so handing it back proves nothing about what the server would
+  # do now: the notice stays until a room is genuinely created.
+  test "a conversation adopted from an earlier attempt does not clear the refusal" do
+    %{integration: integration, server: server} = talk_integration("adopted")
+
+    answer(:get, server, 200, ocs([]))
+    answer(:post, server, 403, @restricted)
+    perform_job(VideoRoomWorker, %{"meeting_id" => meeting(integration).id})
+
+    booked = meeting(integration)
+
+    earlier_attempt = %{
+      "token" => "kept12ab",
+      "type" => 3,
+      "participantType" => 1,
+      "name" => "Stale name",
+      "description" => "Booked through Tymeslot.\n\nReference: " <> reference(booked)
+    }
+
+    answer(:get, server, 200, ocs([earlier_attempt]))
+    # Brought up to date: its lobby is moved and it is renamed.
+    answer_url(:put, server <> @room_api <> "/kept12ab/webinar/lobby", 200, ocs(%{}))
+    answer_url(:put, server <> @room_api <> "/kept12ab", 200, ocs([]))
+
+    assert :ok = perform_job(VideoRoomWorker, %{"meeting_id" => booked.id})
+    assert Repo.reload!(booked).video_room_id == "kept12ab"
+
+    assert %{room_creation_error: :conversation_creation_restricted} =
+             Repo.get!(VideoIntegrationSchema, integration.id)
+  end
+
   test "a failure that says nothing about the server's settings leaves the record alone" do
     %{integration: integration, server: server} = talk_integration("outage")
 
@@ -178,13 +209,20 @@ defmodule Tymeslot.Workers.VideoRoomWorkerRoomCreationErrorTest do
   end
 
   defp answer(method, server, status, body) do
-    url =
-      server <>
-        @room_api <> if(method == :get, do: "?noStatusUpdate=1&includeLastMessage=0", else: "")
+    query = if method == :get, do: "?noStatusUpdate=1&includeLastMessage=0", else: ""
+    answer_url(method, server <> @room_api <> query, status, body)
+  end
 
+  defp answer_url(method, url, status, body) do
     expect(HTTPClientMock, :request, fn ^method, ^url, _body, _headers, _opts ->
       {:ok, %Req.Response{status: status, body: body}}
     end)
+  end
+
+  # The reference a booking's conversation carries: the first 16 hex characters
+  # of the SHA-256 of its meeting id.
+  defp reference(meeting) do
+    :sha256 |> :crypto.hash(meeting.id) |> Base.encode16(case: :lower) |> binary_part(0, 16)
   end
 
   defp ocs(data), do: Jason.encode!(%{"ocs" => %{"meta" => %{"status" => "ok"}, "data" => data}})

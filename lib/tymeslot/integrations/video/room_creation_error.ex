@@ -20,20 +20,27 @@ defmodule Tymeslot.Integrations.Video.RoomCreationError do
   reconnection: that flag makes every provider call refuse locally, which would
   also stop reschedules and deletions of rooms that already exist.
 
-  Each code is emailed at most once per integration, ever. The claim is a
-  single conditional update of the integration row, so two room jobs failing
-  at once, or a job retried, cannot both claim it; the email job is queued in
-  the same transaction, so a claim never stands without its email.
+  Each code is emailed once, and again only if it comes back after
+  `resend_after_days/0` without one. The claim on that email is a single
+  conditional update of the integration row, so two room jobs failing at once,
+  or a job retried, cannot both claim it; the email job is queued in the same
+  transaction, and a claim whose email never goes out is given back
+  (`release/2`), so the owner is told once rather than never.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
 
   require Logger
+
+  # How long an emailed code stays emailed about. Matches the window the
+  # reconnect and unhealthy notifications use.
+  @resend_after_days 30
 
   @typedoc """
   A refusal the provider's answer tells apart:
@@ -58,6 +65,22 @@ defmodule Tymeslot.Integrations.Video.RoomCreationError do
   def codes, do: Ecto.Enum.values(VideoIntegrationSchema, :room_creation_error)
 
   @doc """
+  The codes a connection test proves for itself, which Talk's capabilities
+  announce before any room is asked for. A successful test the owner asked for
+  clears these, since it has just seen the server allow what they describe.
+  """
+  @spec capability_codes() :: [code()]
+  def capability_codes, do: [:conversation_creation_restricted, :password_required]
+
+  @doc """
+  How long a code stays emailed about, in days. A refusal that comes back
+  later is news again: the server has been working in between, so the owner
+  has no open notice about it.
+  """
+  @spec resend_after_days() :: pos_integer()
+  def resend_after_days, do: @resend_after_days
+
+  @doc """
   Keeps an integration's recorded refusal in step with the outcome of a room
   creation for it.
 
@@ -68,6 +91,11 @@ defmodule Tymeslot.Integrations.Video.RoomCreationError do
   """
   @spec track(VideoIntegrationSchema.t(), {:ok, term()} | {:error, term()}) :: :ok
   def track(%VideoIntegrationSchema{room_creation_error: nil}, {:ok, _room}), do: :ok
+
+  # A room the provider had made earlier and has now handed back says nothing
+  # about what it would do with a new one, so it clears nothing: a server that
+  # started refusing after that room was made still refuses.
+  def track(%VideoIntegrationSchema{}, {:ok, %{room_data: %RoomData{adopted: true}}}), do: :ok
 
   def track(%VideoIntegrationSchema{} = integration, {:ok, _room}) do
     VideoIntegrationQueries.clear_room_creation_error(integration.id)
@@ -86,6 +114,56 @@ defmodule Tymeslot.Integrations.Video.RoomCreationError do
   end
 
   def track(_integration, _outcome), do: :ok
+
+  @doc """
+  The code `name` stands for, or `:error` for a name no code has.
+
+  Job arguments travel as text, so the name a job carries may be one no code
+  uses any more; it is looked up among the known codes rather than turned into
+  an atom.
+  """
+  @spec parse(String.t()) :: {:ok, code()} | :error
+  def parse(name) when is_binary(name) do
+    case Enum.find(codes(), &(Atom.to_string(&1) == name)) do
+      nil -> :error
+      code -> {:ok, code}
+    end
+  end
+
+  @doc """
+  Clears a recorded refusal that a connection test has just disproved.
+
+  Only the codes in `capability_codes/0`: the test saw the server allow what
+  they describe, whereas the others describe something it did not ask for.
+  """
+  @spec clear_proven_by_connection_test(VideoIntegrationSchema.t()) :: :ok
+  def clear_proven_by_connection_test(%VideoIntegrationSchema{room_creation_error: nil}), do: :ok
+
+  def clear_proven_by_connection_test(%VideoIntegrationSchema{} = integration) do
+    if integration.room_creation_error in capability_codes() do
+      VideoIntegrationQueries.clear_room_creation_error(integration.id)
+    end
+
+    :ok
+  end
+
+  def clear_proven_by_connection_test(_integration), do: :ok
+
+  @doc """
+  Gives back the claim on the email about `code`, for one that was never sent.
+
+  The email job calls this when it discards or finally gives up: an email the
+  owner never received must not spend the one notice they get.
+  """
+  @spec release(integer(), code()) :: :ok
+  def release(integration_id, code) when is_integer(integration_id) and is_atom(code) do
+    Logger.info("Giving back the claim on an unsent video room refusal email",
+      integration_id: integration_id,
+      code: code
+    )
+
+    VideoIntegrationQueries.release_room_creation_error_notice(integration_id, code)
+  end
 
   @doc """
   What the refusal means and how to fix it, in plain words and the current
@@ -151,8 +229,16 @@ defmodule Tymeslot.Integrations.Video.RoomCreationError do
   defp notify_once(integration, code) do
     result =
       Repo.transaction(fn ->
+        now = DateTime.utc_now(:second)
+        resend_after = DateTime.add(now, -@resend_after_days, :day)
+
         with true <-
-               VideoIntegrationQueries.claim_room_creation_error_notice(integration.id, code),
+               VideoIntegrationQueries.claim_room_creation_error_notice(
+                 integration.id,
+                 code,
+                 now,
+                 resend_after
+               ),
              {:error, reason} <-
                EmailScheduler.schedule_video_room_creation_error_notification(
                  integration.user_id,

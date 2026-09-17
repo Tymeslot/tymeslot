@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.Video.Connection do
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
+  alias Tymeslot.Integrations.Video.RoomCreationError
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   @spec test_connection(pos_integer(), pos_integer()) :: {:ok, String.t()} | {:error, any()}
@@ -65,13 +66,15 @@ defmodule Tymeslot.Integrations.Video.Connection do
         |> provider_module.build_config(decrypted, [])
         |> Map.put(:connection_test_scope, scope)
 
-      ConnectionProbe.probe_provider(provider_module, integration,
+      provider_module
+      |> ConnectionProbe.probe_provider(integration,
         scope: scope,
         # Video's `config` is always freshly built by a caller, so it really
         # is untrusted input worth validating before a token is charged.
         validate: fn -> provider_module.validate_config(config) end,
         run: fn -> ProviderAdapter.test_connection(provider_atom, config) end
       )
+      |> clear_disproved_refusal(integration, scope)
     else
       _other -> {:error, :unsupported_provider}
     end
@@ -115,6 +118,16 @@ defmodule Tymeslot.Integrations.Video.Connection do
         {:error, :unsupported_provider}
     end
   end
+
+  # A test the owner asked for that passes has just seen the server allow what
+  # a recorded refusal says it refuses, so the notice on the integration's row
+  # goes with it. The background probe proves no such thing: it does not ask.
+  defp clear_disproved_refusal({:ok, _message} = result, integration, :interactive) do
+    RoomCreationError.clear_proven_by_connection_test(integration)
+    result
+  end
+
+  defp clear_disproved_refusal(result, _integration, _scope), do: result
 
   defp run_connection_test(integration) do
     start_time = System.monotonic_time(:millisecond)

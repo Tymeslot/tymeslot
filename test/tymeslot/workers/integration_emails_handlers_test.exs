@@ -309,6 +309,73 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
       assert %DateTime{} = state.notification_sent_at
     end
 
+    test "discards for an integration switched off or disconnected meanwhile" do
+      user = insert(:user)
+
+      switched_off =
+        insert(:video_integration,
+          user: user,
+          provider: "nextcloud_talk",
+          is_active: false,
+          room_creation_error: :password_required
+        )
+
+      disconnected =
+        insert(:video_integration,
+          user: user,
+          provider: "nextcloud_talk",
+          base_url: "https://gone.example.com",
+          deleted_at: DateTime.utc_now(:second),
+          room_creation_error: :password_required
+        )
+
+      for integration <- [switched_off, disconnected] do
+        assert {:discard, "Room creation error no longer recorded"} =
+                 execute_room_creation_error_notification(
+                   user.id,
+                   integration.id,
+                   "password_required"
+                 )
+      end
+    end
+
+    # The owner is emailed about a code once, so an email that never goes out
+    # must leave that one email to the next refusal.
+    test "gives the claim on the email back when it discards" do
+      user = insert(:user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "nextcloud_talk",
+          room_creation_error: nil,
+          room_creation_error_notices: %{
+            "password_required" => DateTime.to_iso8601(DateTime.utc_now(:second))
+          }
+        )
+
+      assert {:discard, _reason} =
+               execute_room_creation_error_notification(
+                 user.id,
+                 integration.id,
+                 "password_required"
+               )
+
+      assert Repo.reload!(integration).room_creation_error_notices == %{}
+    end
+
+    test "discards a code no refusal uses any more" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "nextcloud_talk")
+
+      assert {:discard, "Unknown room creation error code"} =
+               execute_room_creation_error_notification(
+                 user.id,
+                 integration.id,
+                 "conversations_forbidden_in_2025"
+               )
+    end
+
     test "discards when the user or integration is missing" do
       assert {:discard, "User or integration not found"} =
                EmailWorkerHandlers.execute_email_action(
@@ -479,14 +546,17 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
                execute_room_creation_error_notification(999_999, 999_999, "password_required")
     end
 
-    test "returns a retriable error when delivery fails" do
+    test "returns a retriable error when delivery fails, keeping the claim for the retry" do
       user = insert(:user)
 
       integration =
         insert(:video_integration,
           user: user,
           provider: "nextcloud_talk",
-          room_creation_error: :password_required
+          room_creation_error: :password_required,
+          room_creation_error_notices: %{
+            "password_required" => DateTime.to_iso8601(DateTime.utc_now(:second))
+          }
         )
 
       expect(EmailServiceMock, :send_video_room_creation_error_notification, fn _user,
@@ -500,6 +570,41 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
                  integration.id,
                  "password_required"
                )
+
+      assert Map.has_key?(
+               Repo.reload!(integration).room_creation_error_notices,
+               "password_required"
+             )
+    end
+
+    # A rejected address is the one failure no retry mends, so the next refusal
+    # gets the email instead of nobody getting one.
+    test "gives the claim back when the address is refused for good" do
+      user = insert(:user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "nextcloud_talk",
+          room_creation_error: :password_required,
+          room_creation_error_notices: %{
+            "password_required" => DateTime.to_iso8601(DateTime.utc_now(:second))
+          }
+        )
+
+      expect(EmailServiceMock, :send_video_room_creation_error_notification, fn _user,
+                                                                                _integration ->
+        {:error, {:recipient_rejected, "550 unknown recipient"}}
+      end)
+
+      assert {:error, _reason} =
+               execute_room_creation_error_notification(
+                 user.id,
+                 integration.id,
+                 "password_required"
+               )
+
+      assert Repo.reload!(integration).room_creation_error_notices == %{}
     end
   end
 

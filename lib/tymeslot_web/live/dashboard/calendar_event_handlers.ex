@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Video.RoomCreationError
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Dashboard.CalendarGridComponent
@@ -283,6 +284,16 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       "dashboard_calendar_events",
       "The video provider did not return a meeting link, so the video link was not changed."
     )
+  end
+
+  # A provider that refuses to create rooms because of a setting on its own
+  # server says which one, and that is what the organiser has to change; the
+  # same words their video integration's row shows. Anything else is a failure
+  # they can only try again.
+  defp video_failed_message({:configuration_error, code}) when is_atom(code) do
+    if code in RoomCreationError.codes(),
+      do: RoomCreationError.message(code),
+      else: video_failed_message(:unknown)
   end
 
   defp video_failed_message(_reason),
