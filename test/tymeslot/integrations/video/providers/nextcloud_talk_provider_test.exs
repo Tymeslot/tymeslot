@@ -17,6 +17,13 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
   @start ~U[2026-10-01 14:00:00Z]
   @moved_start ~U[2026-10-08 09:30:00Z]
 
+  # Answers as Nextcloud 34 with Talk 24 sends them. A lobby move or a rename
+  # answers with the whole conversation; these are the fields that matter.
+  @room %{"token" => "abc123xy", "type" => 3, "name" => "Moved call", "lobbyState" => 1}
+  @password_required %{"error" => "password", "message" => "Password needs to be set"}
+  @unauthorised ~s({"ocs":{"meta":{"status":"failure","statuscode":997,"message":"Unauthorised"},"data":[]}})
+  @throttled ~s({"ocs":{"meta":{"status":"failure","statuscode":429,"message":"Reached maximum delay"},"data":[]}})
+
   @config %{
     base_url: @server,
     client_id: "organiser",
@@ -172,7 +179,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
     test "a server that restricts who may create conversations is a configuration error" do
       expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 403, body: ocs([])}}
+        {:ok, %Req.Response{status: 403, body: failure(403, %{"error" => "permissions"})}}
       end)
 
       assert {:error, {:configuration_error, :conversation_creation_restricted}} =
@@ -181,7 +188,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
     test "a server that enforces passwords on public conversations is a configuration error" do
       expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 400, body: ocs(%{"error" => "password"})}}
+        {:ok, %Req.Response{status: 400, body: failure(400, @password_required)}}
       end)
 
       assert {:error, {:configuration_error, :password_required}} =
@@ -190,7 +197,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
     test "a refusal without an error key is still a configuration error" do
       expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 400, body: ocs(nil)}}
+        {:ok, %Req.Response{status: 400, body: failure(400, nil)}}
       end)
 
       assert {:error, {:configuration_error, {:rejected, nil}}} =
@@ -199,7 +206,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
     test "a server throttling Tymeslot's address is a rate limit to back off from" do
       expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 429, body: ""}}
+        {:ok, %Req.Response{status: 429, body: @throttled}}
       end)
 
       assert {:error, :rate_limited} =
@@ -332,7 +339,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
     test "reports a refused app password against the password" do
       expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 401, body: ""}}
+        {:ok, %Req.Response{status: 401, body: @unauthorised}}
       end)
 
       assert {:error, {:unauthorized, message}} =
@@ -343,7 +350,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
     test "asks the user to wait when the server is throttling Tymeslot's address" do
       expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 429, body: ""}}
+        {:ok, %Req.Response{status: 429, body: @throttled}}
       end)
 
       assert {:error, {:throttled, message}} =
@@ -375,13 +382,13 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
       expect(HTTPClientMock, :request, fn :put, url, body, _headers, _opts ->
         assert url == @room_api <> "/abc123xy/webinar/lobby"
         assert Jason.decode!(body) == %{"state" => 1, "timer" => DateTime.to_unix(@moved_start)}
-        {:ok, %Req.Response{status: 200, body: ocs(%{})}}
+        {:ok, %Req.Response{status: 200, body: ocs(@room)}}
       end)
 
       expect(HTTPClientMock, :request, fn :put, url, body, _headers, _opts ->
         assert url == @room_api <> "/abc123xy"
         assert Jason.decode!(body) == %{"roomName" => "Moved call"}
-        {:ok, %Req.Response{status: 200, body: ocs([])}}
+        {:ok, %Req.Response{status: 200, body: ocs(@room)}}
       end)
 
       assert :ok = NextcloudTalkProvider.update_meeting_room("abc123xy", rescheduled(@config))
@@ -390,7 +397,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
     test "only moves the lobby when the booking has no title to rename to" do
       expect(HTTPClientMock, :request, fn :put, url, _body, _headers, _opts ->
         assert url == @room_api <> "/abc123xy/webinar/lobby"
-        {:ok, %Req.Response{status: 200, body: ocs(%{})}}
+        {:ok, %Req.Response{status: 200, body: ocs(@room)}}
       end)
 
       config = Map.put(@config, :meeting_start_time, @moved_start)
@@ -401,7 +408,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
     test "skips the rename when the new title is blank" do
       expect(HTTPClientMock, :request, fn :put, url, _body, _headers, _opts ->
         assert url == @room_api <> "/abc123xy/webinar/lobby"
-        {:ok, %Req.Response{status: 200, body: ocs(%{})}}
+        {:ok, %Req.Response{status: 200, body: ocs(@room)}}
       end)
 
       config = Map.merge(@config, %{meeting_start_time: @moved_start, meeting_topic: "  \n "})
@@ -411,12 +418,12 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
     test "renames to the trimmed title" do
       expect(HTTPClientMock, :request, fn :put, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 200, body: ocs(%{})}}
+        {:ok, %Req.Response{status: 200, body: ocs(@room)}}
       end)
 
       expect(HTTPClientMock, :request, fn :put, _url, body, _headers, _opts ->
         assert Jason.decode!(body) == %{"roomName" => "Moved call"}
-        {:ok, %Req.Response{status: 200, body: ocs([])}}
+        {:ok, %Req.Response{status: 200, body: ocs(@room)}}
       end)
 
       config =
@@ -427,7 +434,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
     test "reports a conversation deleted on the server as not found" do
       expect(HTTPClientMock, :request, fn :put, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 404, body: ocs(nil)}}
+        {:ok, %Req.Response{status: 404, body: failure(404, [])}}
       end)
 
       assert {:error, :meeting_not_found} =
@@ -437,12 +444,12 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
     test "keeps the moved lobby when the server refuses the rename" do
       expect(HTTPClientMock, :request, fn :put, url, _body, _headers, _opts ->
         assert url == @room_api <> "/abc123xy/webinar/lobby"
-        {:ok, %Req.Response{status: 200, body: ocs(%{})}}
+        {:ok, %Req.Response{status: 200, body: ocs(@room)}}
       end)
 
       expect(HTTPClientMock, :request, fn :put, url, _body, _headers, _opts ->
         assert url == @room_api <> "/abc123xy"
-        {:ok, %Req.Response{status: 400, body: ocs(%{"error" => "name"})}}
+        {:ok, %Req.Response{status: 400, body: failure(400, %{"error" => "value"})}}
       end)
 
       assert :ok = NextcloudTalkProvider.update_meeting_room("abc123xy", rescheduled(@config))
@@ -450,7 +457,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
     test "reports a lobby the server refuses to move as a configuration error" do
       expect(HTTPClientMock, :request, fn :put, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 403, body: ocs(nil)}}
+        {:ok, %Req.Response{status: 403, body: failure(403, nil)}}
       end)
 
       assert {:error, {:configuration_error, {:rejected, 403}}} =
@@ -468,7 +475,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
     test "passes a throttled server on for the sync job to snooze" do
       expect(HTTPClientMock, :request, fn :put, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 429, body: ""}}
+        {:ok, %Req.Response{status: 429, body: @throttled}}
       end)
 
       assert {:error, :rate_limited} =
@@ -496,7 +503,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
     test "treats a conversation already gone as deleted" do
       expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 404, body: ocs(nil)}}
+        {:ok, %Req.Response{status: 404, body: failure(404, [])}}
       end)
 
       assert :ok = NextcloudTalkProvider.delete_meeting_room("abc123xy", @config)
@@ -504,7 +511,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
     test "treats a conversation its owner marked to be preserved as done" do
       expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 403, body: ocs(%{"error" => "preserved"})}}
+        {:ok, %Req.Response{status: 403, body: failure(403, %{"error" => "preserved"})}}
       end)
 
       assert :ok = NextcloudTalkProvider.delete_meeting_room("abc123xy", @config)
@@ -516,11 +523,11 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
     test "reports a deletion the server refuses as a configuration error" do
       expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 400, body: ocs(nil)}}
+        {:ok, %Req.Response{status: 400, body: failure(400, nil)}}
       end)
 
       expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 403, body: ocs(nil)}}
+        {:ok, %Req.Response{status: 403, body: failure(403, nil)}}
       end)
 
       assert {:error, {:configuration_error, {:rejected, 400}}} =
@@ -551,7 +558,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
     test "passes a throttled server on for the sync job to snooze" do
       expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 429, body: ""}}
+        {:ok, %Req.Response{status: 429, body: @throttled}}
       end)
 
       assert {:error, :rate_limited} =
@@ -584,4 +591,13 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
     do: {:ok, %Req.Response{status: 200, body: ocs(%{"capabilities" => %{"spreed" => spreed}})}}
 
   defp ocs(data), do: Jason.encode!(%{"ocs" => %{"meta" => %{"status" => "ok"}, "data" => data}})
+
+  defp failure(status, data) do
+    Jason.encode!(%{
+      "ocs" => %{
+        "meta" => %{"status" => "failure", "statuscode" => status, "message" => ""},
+        "data" => data
+      }
+    })
+  end
 end

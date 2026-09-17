@@ -18,6 +18,11 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
 
   @room_api "https://cloud.example.com/ocs/v2.php/apps/spreed/api/v4/room"
 
+  # Error bodies as Nextcloud 34 with Talk 24 sends them.
+  @unauthorised ~s({"ocs":{"meta":{"status":"failure","statuscode":997,"message":"Unauthorised"},"data":[]}})
+  @throttled ~s({"ocs":{"meta":{"status":"failure","statuscode":429,"message":"Reached maximum delay"},"data":[]}})
+  @password_required ~s({"ocs":{"meta":{"status":"failure","statuscode":400,"message":""},"data":{"error":"password","message":"Password needs to be set"}}})
+
   describe "requests" do
     test "sign in with the login name and app password and carry the OCS headers" do
       expect(HTTPClientMock, :request, fn :get, url, "", headers, opts ->
@@ -55,28 +60,31 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
       expect(HTTPClientMock, :request, fn :put, url, body, _headers, _opts ->
         assert url == @room_api <> "/abc123xy/webinar/lobby"
         assert Jason.decode!(body) == %{"state" => 1, "timer" => 1_800_000_000}
-        {:ok, %Req.Response{status: 200, body: ocs(%{})}}
+        {:ok, %Req.Response{status: 200, body: ocs(room(%{"lobbyTimer" => 1_800_000_000}))}}
       end)
 
       expect(HTTPClientMock, :request, fn :put, url, body, _headers, _opts ->
         assert url == @room_api <> "/abc123xy"
         assert Jason.decode!(body) == %{"roomName" => "Moved call"}
-        {:ok, %Req.Response{status: 200, body: ocs([])}}
+        {:ok, %Req.Response{status: 200, body: ocs(room(%{"name" => "Moved call"}))}}
       end)
 
+      # Talk answers a deletion with `data: null`.
       expect(HTTPClientMock, :request, fn :delete, url, "", _headers, _opts ->
         assert url == @room_api <> "/abc123xy"
-        {:ok, %Req.Response{status: 200, body: ocs([])}}
+        {:ok, %Req.Response{status: 200, body: ocs(nil)}}
       end)
 
-      assert {:ok, _data} =
+      assert {:ok, %{"lobbyTimer" => 1_800_000_000}} =
                Client.set_lobby(@credentials, "abc123xy", %{
                  "state" => 1,
                  "timer" => 1_800_000_000
                })
 
-      assert {:ok, _data} = Client.rename_room(@credentials, "abc123xy", "Moved call")
-      assert {:ok, _data} = Client.delete_room(@credentials, "abc123xy")
+      assert {:ok, %{"name" => "Moved call"}} =
+               Client.rename_room(@credentials, "abc123xy", "Moved call")
+
+      assert {:ok, nil} = Client.delete_room(@credentials, "abc123xy")
     end
   end
 
@@ -117,11 +125,11 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
 
   describe "response classification" do
     test "a 401 is a refused credential" do
-      assert {:error, :unauthorized} = respond_with(status: 401, body: "")
+      assert {:error, :unauthorized} = respond_with(status: 401, body: @unauthorised)
     end
 
     test "a 404 is not found" do
-      assert {:error, :not_found} = respond_with(status: 404, body: ocs(nil))
+      assert {:error, :not_found} = respond_with(status: 404, body: failure(404, []))
     end
 
     test "a redirect is reported with its target and never followed" do
@@ -135,7 +143,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
 
     test "a 400 carries the OCS error key" do
       assert {:error, {:rejected, 400, "password"}} =
-               respond_with(status: 400, body: ocs(%{"error" => "password"}))
+               respond_with(status: 400, body: @password_required)
     end
 
     test "a 403 without an error key is still a rejection" do
@@ -152,7 +160,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
     end
 
     test "a 429 is a rate limit, not a server error" do
-      assert {:error, :rate_limited} = respond_with(status: 429, body: ocs(nil))
+      assert {:error, :rate_limited} = respond_with(status: 429, body: @throttled)
     end
 
     test "a server error keeps its status" do
@@ -169,11 +177,11 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
 
     test "no error result carries the app password or the Authorization header" do
       results = [
-        respond_with(status: 401, body: ""),
-        respond_with(status: 404, body: ocs(nil)),
+        respond_with(status: 401, body: @unauthorised),
+        respond_with(status: 404, body: failure(404, [])),
         respond_with(status: 302, headers: %{"location" => ["https://cloud.example.com/login"]}),
-        respond_with(status: 400, body: ocs(%{"error" => "password"})),
-        respond_with(status: 429, body: ""),
+        respond_with(status: 400, body: @password_required),
+        respond_with(status: 429, body: @throttled),
         respond_with(status: 503, body: ""),
         respond_with(status: 200, body: "<html></html>"),
         Client.delete_room(@credentials, "..")
@@ -213,5 +221,22 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
 
   defp ocs(data) do
     Jason.encode!(%{"ocs" => %{"meta" => %{"status" => "ok"}, "data" => data}})
+  end
+
+  defp failure(status, data) do
+    Jason.encode!(%{
+      "ocs" => %{
+        "meta" => %{"status" => "failure", "statuscode" => status, "message" => ""},
+        "data" => data
+      }
+    })
+  end
+
+  # The fields of Talk's conversation object that these tests read.
+  defp room(fields) do
+    Map.merge(
+      %{"token" => "abc123xy", "type" => 3, "name" => "Intro call", "lobbyState" => 1},
+      fields
+    )
   end
 end
