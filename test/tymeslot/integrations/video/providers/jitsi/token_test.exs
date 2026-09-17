@@ -38,11 +38,17 @@ defmodule Tymeslot.Integrations.Video.Providers.Jitsi.TokenTest do
       assert claims["iss"] == "my-app"
     end
 
-    test "scopes the token to one room and never to a wildcard" do
+    test "scopes the token to one room" do
       assert {:ok, token} = mint([])
-      claims = claims(token)
-      assert claims["room"] == "abc123def4567890"
-      refute claims["room"] == "*"
+      assert claims(token)["room"] == "abc123def4567890"
+    end
+
+    test "defaults the subject to the wildcard, but accepts an override" do
+      assert {:ok, token} = mint([])
+      assert claims(token)["sub"] == "*"
+
+      assert {:ok, token} = mint(sub: "tenant-1")
+      assert claims(token)["sub"] == "tenant-1"
     end
 
     test "carries the participant identity and moderator flag" do
@@ -60,10 +66,38 @@ defmodule Tymeslot.Integrations.Video.Providers.Jitsi.TokenTest do
       assert user["name"] == "Grace Hopper"
     end
 
+    test "defaults moderator to false when omitted" do
+      opts = [
+        app_id: "my-app",
+        secret: @secret,
+        room: "abc123def4567890",
+        expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      ]
+
+      assert {:ok, token} = Token.mint(opts)
+      user = claims(token)["context"]["user"]
+      assert user["moderator"] == false
+    end
+
+    test "omits absent identity fields instead of carrying them as null" do
+      assert {:ok, token} = mint(name: nil, email: nil)
+      user = claims(token)["context"]["user"]
+      refute Map.has_key?(user, "name")
+      refute Map.has_key?(user, "email")
+      assert Map.has_key?(user, "moderator")
+    end
+
     test "expires after the supplied time" do
       expires_at = DateTime.add(DateTime.utc_now(), 7200, :second)
       assert {:ok, token} = mint(expires_at: expires_at)
       assert claims(token)["exp"] == DateTime.to_unix(expires_at)
+    end
+
+    test "stamps the issued-at time close to now" do
+      assert {:ok, token} = mint([])
+      iat = claims(token)["iat"]
+      assert is_integer(iat)
+      assert_in_delta iat, DateTime.to_unix(DateTime.utc_now()), 5
     end
 
     test "signs with HS256" do
@@ -88,14 +122,17 @@ defmodule Tymeslot.Integrations.Video.Providers.Jitsi.TokenTest do
                Joken.verify(token, Signer.create("HS256", String.duplicate("z", 40)))
     end
 
-    test "refuses to mint without an app id or secret" do
-      assert {:error, _reason} = mint(app_id: nil)
-      assert {:error, _reason} = mint(secret: nil)
+    test "refuses to mint without an app id" do
+      assert {:error, :missing_app_id} = mint(app_id: nil)
+    end
+
+    test "refuses to mint without a secret" do
+      assert {:error, :missing_secret} = mint(secret: nil)
     end
 
     test "refuses to mint for an empty or wildcard room" do
-      assert {:error, _reason} = mint(room: "")
-      assert {:error, _reason} = mint(room: "*")
+      assert {:error, :invalid_room} = mint(room: "")
+      assert {:error, :invalid_room} = mint(room: "*")
     end
   end
 end

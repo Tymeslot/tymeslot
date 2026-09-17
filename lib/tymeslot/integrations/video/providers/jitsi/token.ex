@@ -1,14 +1,17 @@
 defmodule Tymeslot.Integrations.Video.Providers.Jitsi.Token do
   @moduledoc """
-  Mints the HS256 JSON Web Tokens a Jitsi instance accepts for authenticated
-  entry, covering both a self-hosted deployment configured with a shared
-  secret and 8x8's hosted JaaS.
+  Mints the HS256 JSON Web Tokens a self-hosted Jitsi instance accepts for
+  authenticated entry, when the instance is configured with a shared secret.
 
-  One token is minted per participant, which is what lets the organiser hold
-  moderator rights while the attendee joins as a guest. The `room` claim is
-  always the meeting's own slug rather than the `*` wildcard: these tokens
-  travel to external attendees in confirmation emails, and a wildcard would
-  admit its holder to every room on the instance.
+  One token is minted per participant and admits its holder to one room
+  only: the `room` claim is always the meeting's own slug, never the `*`
+  wildcard, because these tokens travel to external attendees in
+  confirmation emails. Jitsi compares that claim against the lower-cased room
+  name, which the lower-case hex slug already satisfies.
+
+  The organiser's token carries `moderator: true` and the attendee's
+  `moderator: false`. The flag does not grant rights by itself: it takes
+  effect only on a server configured to honour it.
   """
 
   alias Joken.Signer
@@ -18,8 +21,8 @@ defmodule Tymeslot.Integrations.Video.Providers.Jitsi.Token do
 
   @spec mint(keyword()) :: {:ok, String.t()} | {:error, mint_error()}
   def mint(opts) do
-    with {:ok, app_id} <- fetch(opts, :app_id),
-         {:ok, secret} <- fetch(opts, :secret),
+    with {:ok, app_id} <- fetch_present(opts, :app_id, :missing_app_id),
+         {:ok, secret} <- fetch_present(opts, :secret, :missing_secret),
          {:ok, room} <- fetch_room(opts) do
       signer = Signer.create("HS256", secret)
 
@@ -28,14 +31,9 @@ defmodule Tymeslot.Integrations.Video.Providers.Jitsi.Token do
         "iss" => app_id,
         "sub" => Keyword.get(opts, :sub, "*"),
         "room" => room,
+        "iat" => DateTime.to_unix(DateTime.utc_now()),
         "exp" => DateTime.to_unix(Keyword.fetch!(opts, :expires_at)),
-        "context" => %{
-          "user" => %{
-            "name" => Keyword.get(opts, :name),
-            "email" => Keyword.get(opts, :email),
-            "moderator" => Keyword.get(opts, :moderator, false)
-          }
-        }
+        "context" => %{"user" => user_claims(opts)}
       }
 
       case Joken.encode_and_sign(claims, signer) do
@@ -45,24 +43,25 @@ defmodule Tymeslot.Integrations.Video.Providers.Jitsi.Token do
     end
   end
 
-  defp fetch(opts, :app_id) do
-    case Keyword.get(opts, :app_id) do
-      value when is_binary(value) and value != "" -> {:ok, value}
-      _absent -> {:error, :missing_app_id}
-    end
+  defp user_claims(opts) do
+    %{"moderator" => Keyword.get(opts, :moderator, false)}
+    |> maybe_put("name", Keyword.get(opts, :name))
+    |> maybe_put("email", Keyword.get(opts, :email))
   end
 
-  defp fetch(opts, :secret) do
-    case Keyword.get(opts, :secret) do
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+  defp fetch_present(opts, key, error) do
+    case Keyword.get(opts, key) do
       value when is_binary(value) and value != "" -> {:ok, value}
-      _absent -> {:error, :missing_secret}
+      _absent -> {:error, error}
     end
   end
 
   defp fetch_room(opts) do
-    case Keyword.fetch!(opts, :room) do
-      value when is_binary(value) and value != "" and value != "*" -> {:ok, value}
-      _invalid -> {:error, :invalid_room}
+    with {:ok, room} <- fetch_present(opts, :room, :invalid_room) do
+      if room == "*", do: {:error, :invalid_room}, else: {:ok, room}
     end
   end
 end
