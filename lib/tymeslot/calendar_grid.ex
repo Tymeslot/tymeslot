@@ -308,6 +308,26 @@ defmodule Tymeslot.CalendarGrid do
     :ok
   end
 
+  # The cached events schema stores start/end/synced_at as :utc_datetime_usec
+  # and requires synced_at NOT NULL. The dashboard create flow builds datetimes
+  # at second precision and doesn't always supply synced_at; it is writing what
+  # it just committed, so "now" is the correct sync timestamp. synced_at is
+  # upcast unconditionally so a caller-supplied second-precision value does not
+  # fail Ecto's :utc_datetime_usec check.
+  defp normalise_cache_attrs(attrs) do
+    now = DateTime.utc_now(:microsecond)
+
+    attrs
+    |> Map.update(:start_at, nil, &to_usec/1)
+    |> Map.update(:end_at, nil, &to_usec/1)
+    |> Map.put_new(:synced_at, now)
+    |> Map.update!(:synced_at, &to_usec/1)
+  end
+
+  defp to_usec(%DateTime{microsecond: {_value, 6}} = dt), do: dt
+  defp to_usec(%DateTime{} = dt), do: %{dt | microsecond: {elem(dt.microsecond, 0), 6}}
+  defp to_usec(other), do: other
+
   @doc """
   Applies `changes` to an existing event, writes the whole updated event to
   its provider, and records the edit on the cached row. See
@@ -350,37 +370,6 @@ defmodule Tymeslot.CalendarGrid do
   @spec ensure_movable(map()) :: :ok | {:error, :recurring_event}
   defdelegate ensure_movable(event), to: EventMove
 
-  @doc """
-  Updates a cached event's attributes via upsert.
-
-  Accepts a map with at least `:uid` and `:calendar_integration_id`.
-  """
-  @spec update_cached_event(map()) :: :ok
-  def update_cached_event(attrs) do
-    {:ok, _count} = ProviderCalendarEventQueries.upsert_batch([normalise_cache_attrs(attrs)])
-    :ok
-  end
-
-  # The cached events schema stores start/end/synced_at as :utc_datetime_usec
-  # and requires synced_at NOT NULL. Dashboard-originated create/update flows
-  # build datetimes at second precision and don't always supply synced_at —
-  # they're writing what they just committed, so "now" is the correct sync
-  # timestamp. synced_at is upcast unconditionally so a caller-supplied
-  # second-precision value does not fail Ecto's :utc_datetime_usec check.
-  defp normalise_cache_attrs(attrs) do
-    now = DateTime.utc_now(:microsecond)
-
-    attrs
-    |> Map.update(:start_at, nil, &to_usec/1)
-    |> Map.update(:end_at, nil, &to_usec/1)
-    |> Map.put_new(:synced_at, now)
-    |> Map.update!(:synced_at, &to_usec/1)
-  end
-
-  defp to_usec(%DateTime{microsecond: {_value, 6}} = dt), do: dt
-  defp to_usec(%DateTime{} = dt), do: %{dt | microsecond: {elem(dt.microsecond, 0), 6}}
-  defp to_usec(other), do: other
-
   @doc "Fetches a single cached event by integration ID and UID."
   @spec get_cached_event(integer(), String.t()) ::
           {:ok, CalendarEvent.t()} | {:error, :not_found}
@@ -389,14 +378,6 @@ defmodule Tymeslot.CalendarGrid do
       {:ok, record} -> {:ok, ProviderCalendarEventSchema.to_calendar_event(record)}
       {:error, :not_found} -> {:error, :not_found}
     end
-  end
-
-  @doc """
-  Removes a cached event by its integration ID and UID.
-  """
-  @spec delete_cached_event(integer(), String.t()) :: {:ok, :deleted | :not_found}
-  def delete_cached_event(integration_id, uid) do
-    ProviderCalendarEventQueries.delete_by_uid(integration_id, uid)
   end
 
   @doc """
