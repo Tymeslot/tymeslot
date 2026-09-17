@@ -31,11 +31,7 @@
           ## Consistency Checks
           #
           {Credo.Check.Consistency.ExceptionNames, []},
-          {Credo.Check.Consistency.LineEndings, []},
           {Credo.Check.Consistency.ParameterPatternMatching, []},
-          {Credo.Check.Consistency.SpaceAroundOperators, []},
-          {Credo.Check.Consistency.SpaceInParentheses, []},
-          {Credo.Check.Consistency.TabsOrSpaces, []},
 
           #
           ## Design Checks
@@ -44,7 +40,11 @@
            [priority: :normal, if_nested_deeper_than: 1, if_called_more_often_than: 0]},
           {Credo.Check.Design.TagFIXME, []},
           {Credo.Check.Design.TagTODO, [exit_status: 2]},
-          {Credo.Check.Design.DuplicatedCode, [nodes_threshold: 2, mass_threshold: 40]},
+          # Whole-project and the slowest single check; scoped to production
+          # code, where a duplicated body is a drift risk rather than a
+          # readable arrange/act/assert block, which halves its cost.
+          {Credo.Check.Design.DuplicatedCode,
+           [nodes_threshold: 2, mass_threshold: 40, files: %{excluded: ["test/"]}]},
 
           #
           ## Readability Checks
@@ -61,12 +61,7 @@
           {Credo.Check.Readability.PipeIntoAnonymousFunctions, []},
           {Credo.Check.Readability.PredicateFunctionNames, []},
           {Credo.Check.Readability.PreferImplicitTry, []},
-          {Credo.Check.Readability.RedundantBlankLines, []},
-          {Credo.Check.Readability.Semicolons, []},
-          {Credo.Check.Readability.SpaceAfterCommas, []},
           {Credo.Check.Readability.StringSigils, []},
-          {Credo.Check.Readability.TrailingBlankLine, []},
-          {Credo.Check.Readability.TrailingWhiteSpace, []},
           {Credo.Check.Readability.UnnecessaryAliasExpansion, []},
           {Credo.Check.Readability.VariableNames, []},
           {Credo.Check.Readability.WithSingleClause, []},
@@ -216,6 +211,25 @@
           {Credo.Check.Warning.MixEnv, []}
         ],
         disabled: [
+          #
+          # Whitespace and layout checks that `mix format --check-formatted`
+          # already enforces: the formatter rewrites every violation these
+          # report, over a superset of the files credo reads, and the gate
+          # runs it first. Dropping them roughly halved the credo step, and
+          # they could report nothing the formatter would let through.
+          #
+          {Credo.Check.Consistency.LineEndings, []},
+          {Credo.Check.Consistency.SpaceAroundOperators, []},
+          {Credo.Check.Consistency.SpaceInParentheses, []},
+          {Credo.Check.Consistency.TabsOrSpaces, []},
+          {Credo.Check.Readability.RedundantBlankLines, []},
+          {Credo.Check.Readability.Semicolons, []},
+          {Credo.Check.Readability.SpaceAfterCommas, []},
+          {Credo.Check.Readability.TrailingBlankLine, []},
+          {Credo.Check.Readability.TrailingWhiteSpace, []},
+          #
+          # Other disabled checks.
+          #
           {Credo.Check.Consistency.MultiAliasImportRequireUse, []},
           {Credo.Check.Readability.AliasAs, []},
           {Credo.Check.Readability.MultiAlias, []},

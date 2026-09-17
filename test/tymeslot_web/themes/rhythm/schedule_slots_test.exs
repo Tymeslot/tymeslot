@@ -20,8 +20,7 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
   # generic page reads live in Tymeslot.SlotPickerTestHelpers, but the assertions
   # stay inline: they are the subject of these tests, and folding them into a
   # helper taking per-theme selectors would trade the thing worth reading for
-  # indirection. Credo counts the two copies as duplication; that is the trade.
-  # credo:disable-for-this-file Credo.Check.Design.DuplicatedCode
+  # indirection.
 
   use TymeslotWeb.LiveCase, async: false
 
