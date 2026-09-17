@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     NextAvailable,
     OrganizerHelpers,
     PreviewToken,
+    SharedAvailabilityGuests,
     ThemeUtils
   }
 
@@ -64,6 +65,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       else
         OrganizerHelpers.handle_username_resolution(socket, params["username"])
       end
+
+    # Other users named in the link (`?with=michael,sandy`) join as guests whose
+    # availability every offered time is checked against.
+    socket = SharedAvailabilityGuests.assign_from_params(socket, params)
 
     # Apply theme customization after organizer is resolved
     socket = maybe_assign_customization(socket)
@@ -336,12 +341,20 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   defp invalid_meeting_type_redirect_path(socket) do
     base = ~p"/#{socket.assigns[:username_context]}"
 
-    case socket.assigns[:reschedule_meeting_uid] do
-      uid when is_binary(uid) and uid != "" ->
-        "#{base}?#{URI.encode_query(%{"reschedule_meeting_uid" => uid})}"
+    query =
+      case socket.assigns[:reschedule_meeting_uid] do
+        uid when is_binary(uid) and uid != "" -> %{"reschedule_meeting_uid" => uid}
+        _other -> %{}
+      end
+      |> SharedAvailabilityGuests.put_query_param(socket)
 
-      _other ->
-        base
+    if query == %{}, do: base, else: "#{base}?#{URI.encode_query(query)}"
+  end
+
+  defp with_shared_availability_query(path, socket) do
+    case SharedAvailabilityGuests.put_query_param(%{}, socket) do
+      query when query == %{} -> path
+      query -> "#{path}?#{URI.encode_query(query)}"
     end
   end
 
@@ -350,6 +363,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     |> assign(:meeting_type, meeting_type)
     |> assign(:engine, refreshed_engine(socket, meeting_type))
     |> OrganizerHelpers.assign_booking_window()
+    |> SharedAvailabilityGuests.check_meeting_type(meeting_type)
   end
 
   # Re-initialise only when the definitions actually changed, so re-entering a
@@ -433,7 +447,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       slug = socket.assigns[:selected_duration] || params["slug"]
 
       if is_binary(username) && is_binary(slug) do
-        redirect(socket, to: ~p"/#{username}/#{slug}")
+        redirect(socket, to: with_shared_availability_query(~p"/#{username}/#{slug}", socket))
       else
         redirect(socket, to: ~p"/")
       end

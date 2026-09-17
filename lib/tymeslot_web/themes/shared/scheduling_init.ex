@@ -59,6 +59,10 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     # life of the LiveView, so this entry signal is stable across step patches.
     |> assign(:entered_via_overview, socket.assigns[:live_action] == :overview)
     |> assign_new(:username_context, fn -> nil end)
+    |> assign_new(:shared_availability_guests, fn -> [] end)
+    |> assign_new(:shared_availability_param, fn -> nil end)
+    |> assign_new(:shared_availability_source, fn -> nil end)
+    |> assign_new(:shared_availability_error, fn -> nil end)
     |> assign_new(:organizer_profile, fn -> nil end)
     |> assign_new(:organizer_user_id, fn -> nil end)
     |> assign(:selected_duration, nil)

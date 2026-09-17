@@ -1882,3 +1882,24 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This booking wasn't accepted, so it won't be going ahead."
 msgstr ""
+
+#: lib/tymeslot_web/themes/shared/booking_text.ex
+#, elixir-autogen, elixir-format
+msgid "Additional participants: %{names}"
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/shared_availability_guests.ex
+#, elixir-autogen, elixir-format
+msgid "One of the participants named in this link isn’t available for booking. Please check the link."
+msgstr ""
+
+#: lib/tymeslot_web/live/scheduling/shared_availability_guests.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type can’t be booked together with other participants."
+msgstr ""
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#, elixir-autogen, elixir-format
+msgid "This booking link can’t be used"
+msgstr ""
