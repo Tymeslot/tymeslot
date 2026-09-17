@@ -85,6 +85,7 @@ defmodule Tymeslot.Meetings.Approval do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.MeetingTypes.MeetingTypeSchema, as: MeetingType
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Notifications.Orchestrator
@@ -208,7 +209,7 @@ defmodule Tymeslot.Meetings.Approval do
 
     cond do
       started?(meeting, now) -> {:error, :meeting_started}
-      deadline_passed?(meeting, now) -> approve_after_deadline(meeting)
+      MeetingState.approval_deadline_passed?(meeting, now) -> approve_after_deadline(meeting)
       true -> do_approve(meeting, now)
     end
   end
@@ -587,11 +588,6 @@ defmodule Tymeslot.Meetings.Approval do
 
   defp started?(%Meeting{start_time: start_time}, now),
     do: DateTime.compare(now, start_time) != :lt
-
-  defp deadline_passed?(%Meeting{approval_deadline_at: nil}, _now), do: false
-
-  defp deadline_passed?(%Meeting{approval_deadline_at: deadline}, now),
-    do: DateTime.compare(now, deadline) != :lt
 
   defp earliest(a, b), do: if(DateTime.compare(a, b) == :lt, do: a, else: b)
 
