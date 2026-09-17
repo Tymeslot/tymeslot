@@ -108,6 +108,7 @@
           {CredoChecks.NoMapMetadataInLogger, [priority: :high]},
           {CredoChecks.MigrationConstraintSafety, [priority: :high, enforce_after: "20260329"]},
           {CredoChecks.RepoCallBoundary, [priority: :normal]},
+          {CredoChecks.WebLayerBoundary, [priority: :normal]},
           {CredoChecks.RateLimiterBoundary, [priority: :normal]},
           {CredoChecks.ConnectionProbeBoundary, [priority: :normal]},
           {CredoChecks.ClockUsage,
