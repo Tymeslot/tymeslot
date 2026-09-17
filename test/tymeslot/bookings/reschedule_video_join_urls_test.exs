@@ -194,7 +194,7 @@ defmodule Tymeslot.Bookings.RescheduleVideoJoinUrlsTest do
   end
 
   describe "a refresh that fails" do
-    test "still reschedules, keeps the stored links and logs neither the secret nor a token",
+    test "keeps the stored links when building a link raises, and logs no secret or token",
          %{user: user} do
       LogCapture.attach()
 
@@ -206,14 +206,107 @@ defmodule Tymeslot.Bookings.RescheduleVideoJoinUrlsTest do
 
       assert_links_untouched_by_reschedule(user, meeting)
 
-      dump = "Could not refresh join links" |> LogCapture.await_log() |> LogCapture.dump()
-      assert dump =~ meeting.id
-      refute dump =~ @secret
-      refute dump =~ "eyJ"
+      events = LogCapture.drain()
+      event = refresh_failure_event(events)
+      assert LogCapture.user_metadata(event)[:meeting_id] == meeting.id
+      assert LogCapture.user_metadata(event)[:reason] == "FunctionClauseError"
+      refute_secret_or_token_logged(events)
+    end
+
+    test "keeps the stored links when the room cannot be rebuilt, and logs no secret or token",
+         %{user: user} do
+      LogCapture.attach()
+
+      integration = create_jitsi(user, client_id: @app_id, client_secret: @secret)
+
+      # A blank room id, as a row written outside the changeset could hold,
+      # leaves nothing to rebuild the room's context from: the rebuild answers
+      # with an error rather than raising.
+      meeting =
+        insert_meeting(
+          user,
+          %{
+            stored_room_attrs(integration, "jitsi", @jitsi_server <> "/0123456789abcdef")
+            | video_room_id: ""
+          }
+        )
+
+      assert_links_untouched_by_reschedule(user, meeting)
+
+      events = LogCapture.drain()
+      event = refresh_failure_event(events)
+      assert LogCapture.user_metadata(event)[:meeting_id] == meeting.id
+      # An atom rather than an exception name: the error tuple was logged, not
+      # rescued.
+      assert LogCapture.user_metadata(event)[:reason] == :unexpected_error
+      refute_secret_or_token_logged(events)
+    end
+  end
+
+  describe "a Jitsi booking rescheduled back into the approval gate" do
+    test "holds the request with links minted for the new start time", %{user: user} do
+      integration = create_jitsi(user, client_id: @app_id, client_secret: @secret)
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          user_id: user.id,
+          requires_approval: true,
+          approval_window_hours: 12
+        )
+
+      meeting =
+        insert_meeting(user, %{
+          video_integration_id: integration.id,
+          meeting_type_id: meeting_type.id
+        })
+
+      assert {:ok, attached} = VideoRooms.add_video_room_to_meeting(meeting.id)
+      new_start = DateTime.add(attached.start_time, 7, :day)
+
+      assert {:ok, updated} =
+               Reschedule.execute(meeting.uid, reschedule_params_for(new_start), %{}, user.id)
+
+      {:ok, stored} = MeetingQueries.get_meeting(meeting.id)
+
+      # Approval keeps whatever room is already attached, so links left pinned
+      # to the old time here would never be rebuilt.
+      assert updated.status == "awaiting_approval"
+      assert stored.status == "awaiting_approval"
+      assert stored.video_room_id == attached.video_room_id
+
+      expected_exp = DateTime.to_unix(new_start) + @grace_seconds
+      organiser = verified_claims(stored.organizer_video_url)
+      attendee = verified_claims(stored.attendee_video_url)
+
+      assert organiser["exp"] == expected_exp
+      assert attendee["exp"] == expected_exp
+      assert organiser["context"]["user"]["moderator"] == true
+      assert attendee["context"]["user"]["moderator"] == false
     end
   end
 
   # ----- helpers -----
+
+  # Drained in one go rather than awaited: `LogCapture.await_log/1` discards
+  # every event it skips on the way to a match, and those are exactly the
+  # ones the leak assertion below must also see. Logging is synchronous, so
+  # everything the reschedule logged has already arrived.
+  defp refresh_failure_event(events) do
+    event = Enum.find(events, &(LogCapture.dump(&1) =~ "Could not refresh join links"))
+    assert event, "expected the refresh failure to be logged"
+    event
+  end
+
+  # Every event captured during the test, not only the failure warning: a
+  # secret or token leaking through any other log line is just as bad.
+  defp refute_secret_or_token_logged(events) do
+    dumps = Enum.map(events, &LogCapture.dump/1)
+
+    assert dumps != []
+    refute Enum.any?(dumps, &(&1 =~ @secret))
+    refute Enum.any?(dumps, &(&1 =~ "eyJ"))
+  end
 
   # A booking with no usable integration is an ordinary state, not a fault.
   defp refute_refresh_failure_logged do
