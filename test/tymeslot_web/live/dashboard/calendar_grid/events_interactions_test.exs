@@ -18,6 +18,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
     {:ok, conn: conn, user: user}
   end
 
+  # Edits write to the provider from a background Task; answering it keeps a
+  # crashed write from reverting the grid underneath the assertions.
+  setup do
+    Mox.stub(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _context -> :ok end)
+    :ok
+  end
+
   describe "recurring event prompt" do
     setup %{user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)

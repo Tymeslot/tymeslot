@@ -10,7 +10,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Moves
-  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.VideoSync
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -407,7 +406,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
             |> assign(:selected_event, updated_event)
             |> assign(:events, updated_events)
             |> Helpers.precompute_derived()
-            |> Updates.update_field_async(event, field, trimmed)
+            |> EditWorkflow.update_event_async(event, %{field => trimmed})
 
           {:noreply, apply_notify_result(socket, event, updated_event)}
         else
@@ -440,7 +439,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
     result =
       Shared.apply_optimistic_update(socket, optimistic_event, fn s ->
-        Updates.update_colour_async(s, original_event, new_colour)
+        EditWorkflow.update_event_async(s, original_event, %{colour: new_colour})
       end)
 
     send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
@@ -452,7 +451,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
     result =
       Shared.apply_optimistic_update(socket, optimistic_event, fn s ->
-        Updates.update_reminders_async(s, original_event, new_reminders)
+        EditWorkflow.update_event_async(s, original_event, %{reminders: new_reminders})
       end)
 
     send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
@@ -490,7 +489,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
       {:noreply, assign(socket, :recurrence_prompt, prompt)}
     else
-      socket = Updates.update_recurrence_async(socket, original_event, new_rule)
+      socket =
+        EditWorkflow.update_event_async(socket, original_event, %{recurrence_rule: new_rule})
+
       send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
       {:noreply, socket}
     end
@@ -499,7 +500,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   defp push_all_day_change(socket, original_event, optimistic_event) do
     result =
       Shared.apply_optimistic_update(socket, optimistic_event, fn s ->
-        Updates.toggle_all_day_async(s, original_event, optimistic_event)
+        EditWorkflow.update_event_async(
+          s,
+          original_event,
+          Map.take(optimistic_event, [:all_day, :start_at, :end_at, :start_date, :end_date])
+        )
       end)
 
     send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
