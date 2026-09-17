@@ -178,24 +178,30 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   end
 
   defp update_or_create_calendar_event(meeting, event_data) do
+    case update_existing_event(meeting, event_data) do
+      {:error, :not_found} -> handle_missing_event(meeting.id, event_data, meeting)
+      result -> result
+    end
+  end
+
+  defp update_existing_event(meeting, event_data) do
     case calendar_module().update_event(calendar_event_identifier(meeting), event_data, meeting) do
       :ok ->
-        Logger.info("Calendar event updated successfully", meeting_id: meeting.id)
-        sync_cache_after_outbound_update(meeting, event_data)
-        :ok
+        record_successful_update(meeting, event_data)
 
       {:ok, _result} ->
         # Backward/forward compatibility if update returns tagged tuple
-        Logger.info("Calendar event updated successfully", meeting_id: meeting.id)
-        sync_cache_after_outbound_update(meeting, event_data)
-        :ok
-
-      {:error, :not_found} ->
-        handle_missing_event(meeting.id, event_data, meeting)
+        record_successful_update(meeting, event_data)
 
       error ->
         error
     end
+  end
+
+  defp record_successful_update(meeting, event_data) do
+    Logger.info("Calendar event updated successfully", meeting_id: meeting.id)
+    sync_cache_after_outbound_update(meeting, event_data)
+    :ok
   end
 
   # Write-through for the outbound push above: keeps the local
@@ -291,6 +297,20 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       {:ok, result} ->
         persist_or_compensate(meeting, result, result)
 
+      # The create's `If-None-Match: *` found an event at this UID after all:
+      # between the update reporting it missing and this create, a concurrent
+      # job for the same meeting wrote it. A booking whose video room arrives
+      # quickly does exactly that, since the room enqueues this update while
+      # the booking's own create is still in flight. The event exists now, so
+      # the update that missed it can land. Retried once only: missing it a
+      # second time is no longer that race.
+      {:error, :precondition_failed} ->
+        Logger.info("Calendar event appeared during recovery, retrying the update",
+          meeting_id: meeting_id
+        )
+
+        update_existing_event(meeting, event_data)
+
       error ->
         error
     end
@@ -327,6 +347,19 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
         Logger.info("Calendar event created successfully", meeting_id: meeting_id)
 
         persist_or_compensate(meeting, returned_value, returned_value)
+
+      # `If-None-Match: *` found an event already at this meeting's own UID, so
+      # it is this booking's event, written by a concurrent update job (see
+      # `handle_missing_event/3`). Retrying the create can only fail the same
+      # way, and on the last attempt would email the owner a sync error for an
+      # event that exists. Update it instead, from a fresh read of the meeting:
+      # this job's copy may predate the video link the other job carried.
+      {:error, :precondition_failed} ->
+        Logger.info("Calendar event already exists, switching to update",
+          meeting_id: meeting_id
+        )
+
+        update(meeting_id, attempt)
 
       {:error, error_type} ->
         handle_create_event_error(error_type, meeting, meeting_id, attempt)

@@ -255,11 +255,13 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   end
 
   defp handle_error_result(:precondition_failed, _job) do
-    # Only an update may hand a 412 to the offline queue. On a create the 412
-    # comes from `If-None-Match: *` finding an event already at the UID, and the
-    # queue replays creates without a conflict policy, so it would 412 again on
-    # every sync cycle without ever alerting anyone. Keep the ordinary retry
-    # path, whose exhaustion still surfaces the problem.
+    # Only an update may hand a 412 to the offline queue. A create that finds an
+    # event already at its UID has switched to an update inside
+    # `CalendarEventSync`, so a 412 surfacing here is that update's conflict
+    # still being carried as a create, and the queue replays creates without a
+    # conflict policy: it would 412 again on every sync cycle without ever
+    # alerting anyone. Keep the ordinary retry path, whose exhaustion still
+    # surfaces the problem.
     {:error, :precondition_failed}
   end
 
