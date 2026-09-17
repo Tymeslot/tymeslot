@@ -46,6 +46,19 @@ defmodule Tymeslot.Security.SsrfGuard do
 
   Both bypasses are honoured at save time as well as at request time, so a URL
   the operator is allowed to reach is also a URL they are allowed to store.
+
+  ## Plain http to an internal name
+
+  With private addresses allowed, a server on an internal name (a single label
+  such as a Docker service name, or a name under `.local`, `.lan`, `.internal`
+  or `.home.arpa`) may be saved with plain `http://`, decided from the name's
+  shape alone (see `Tymeslot.Security.UrlValidation`). The shape can be wrong:
+  a resolver search domain can complete a single label to a public name, and
+  nothing reserves `.lan`. Such requests carry credentials in clear text, so
+  the opt-out does not skip resolution for them: the name must resolve only to
+  private, loopback or link-local addresses, and the request is pinned to one
+  of them, or it is refused before anything is sent. `https://`, `localhost`
+  and address literals are unaffected.
   """
 
   alias Tymeslot.Security.{DnsResolution, UrlValidation}
@@ -77,24 +90,33 @@ defmodule Tymeslot.Security.SsrfGuard do
   hostname and then letting Finch resolve it again leaves the DNS-rebinding
   window this module's moduledoc describes.
 
-  An empty list means no address was resolved because none needed to be — the
-  environment or an operator opt-out permitted the request on syntax alone —
-  and there is correspondingly nothing to pin to.
+  An empty list means no address was resolved because none needed to be (the
+  environment or an operator opt-out permitted the request on syntax alone),
+  and there is correspondingly nothing to pin to. The one exception to the
+  opt-out is plain http to an internal name, described in the moduledoc.
   """
   @spec validate_pinned(String.t(), keyword()) ::
           {:ok, [:inet.ip_address()]} | {:error, atom() | String.t()}
   def validate_pinned(url, opts \\ []) do
     cond do
-      Keyword.get(opts, :allow_private, allow_private_for_calendar?()) ->
-        {:ok, []}
-
       not production?() ->
         {:ok, []}
+
+      Keyword.get(opts, :allow_private, allow_private_for_calendar?()) ->
+        validate_private_allowed(url)
 
       true ->
         with :ok <- UrlValidation.validate_http_url(url, block_private_ips: true) do
           resolve_public(dns_resolver(), url)
         end
+    end
+  end
+
+  defp validate_private_allowed(url) do
+    if UrlValidation.http_to_internal_name?(url) do
+      resolve_internal(dns_resolver(), url)
+    else
+      {:ok, []}
     end
   end
 
@@ -109,6 +131,18 @@ defmodule Tymeslot.Security.SsrfGuard do
       resolver.resolve_public(url, [])
     else
       with :ok <- resolver.check_private_ip(url, []), do: {:ok, []}
+    end
+  end
+
+  # Fails closed: a resolver that cannot confirm the name is internal leaves
+  # nothing to vouch for sending credentials over plain http.
+  @spec resolve_internal(module(), String.t()) ::
+          {:ok, [:inet.ip_address()]} | {:error, atom() | String.t()}
+  defp resolve_internal(resolver, url) do
+    if Code.ensure_loaded?(resolver) and function_exported?(resolver, :resolve_internal, 2) do
+      resolver.resolve_internal(url, [])
+    else
+      {:error, :internal_name_unverified}
     end
   end
 

@@ -617,4 +617,32 @@ defmodule Tymeslot.Security.UrlValidationTest do
                )
     end
   end
+
+  describe "http_to_internal_name?/1" do
+    test "is true for plain http to a name accepted only for its internal shape" do
+      for url <- [
+            "http://nextcloud/remote.php/dav",
+            "HTTP://Nextcloud:8080",
+            "http://organiser:secret@nextcloud/dav",
+            "http://talk.lan",
+            "http://meet.home.arpa/"
+          ] do
+        assert {url, true} == {url, UrlValidation.http_to_internal_name?(url)}
+      end
+    end
+
+    test "is false for https, localhost, address literals and public names" do
+      for url <- [
+            "https://nextcloud",
+            "http://localhost:8080",
+            "http://172.18.0.5",
+            "http://[fd00::5]",
+            "http://2130706433",
+            "http://cloud.example.com",
+            "not a url"
+          ] do
+        assert {url, false} == {url, UrlValidation.http_to_internal_name?(url)}
+      end
+    end
+  end
 end

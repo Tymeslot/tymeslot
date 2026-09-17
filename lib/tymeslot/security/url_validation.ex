@@ -17,6 +17,12 @@ defmodule Tymeslot.Security.UrlValidation do
   between validation and use, and the SSRF guard already pins resolution for
   each request. `block_private_ips` is unaffected, so no name ever counts as
   private for that check.
+
+  The shape is only a claim about where a name points: a single label can be
+  completed to a public name by a resolver search domain, and `.lan` is not
+  reserved. `http_to_internal_name?/1` tells the SSRF guard which requests
+  passed on that claim, so it can confirm at request time that the address it
+  connects to really is private before any credentials are sent.
   """
 
   alias Tymeslot.Security.{PrivateIPv4, PrivateIPv6}
@@ -73,6 +79,25 @@ defmodule Tymeslot.Security.UrlValidation do
 
     hostname?(labels) and not ip_literal?(name) and
       (match?([_single], labels) or internal_suffix?(name))
+  end
+
+  @doc """
+  Whether `url` is a plain `http://` URL that the https rule accepts only
+  because its host is an internal name (see `internal_name?/1`), rather than
+  because the host is `localhost` or a private address literal.
+
+  Such a request trusts the name's shape, so `Tymeslot.Security.SsrfGuard`
+  confirms at request time that the name resolves to a private address.
+  """
+  @spec http_to_internal_name?(String.t()) :: boolean()
+  def http_to_internal_name?(url) when is_binary(url) do
+    with %URI{scheme: "http", host: host, authority: authority}
+         when is_binary(host) and host != "" <- URI.parse(url),
+         {:ok, real_host} <- authority_host(authority, host) do
+      not local_or_private_host?(real_host) and internal_name?(real_host)
+    else
+      _not_http_to_a_name -> false
+    end
   end
 
   defp validate_url_checks(url, scheme, host, opts) do

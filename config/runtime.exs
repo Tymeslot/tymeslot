@@ -776,6 +776,11 @@ end
 # This does NOT relax webhook SSRF protection (Tymeslot.Webhooks.SsrfValidator);
 # webhooks have their own switch (ALLOW_PRIVATE_IPS_FOR_WEBHOOKS below).
 #
+# With this (or ALLOW_PRIVATE_IPS_FOR_VIDEO) set, a server on an internal name
+# (http://nextcloud, http://talk.lan) may be saved with plain http. Each such
+# request is still resolved first and refused unless the name resolves only to
+# private addresses, since it carries credentials in clear text.
+#
 # Seeded from env in non-test environments only, so an exported shell var can't
 # flip the default for the test suite (tests set the flag explicitly).
 if config_env() != :test and
