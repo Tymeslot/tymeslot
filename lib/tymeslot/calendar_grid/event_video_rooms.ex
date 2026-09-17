@@ -2,72 +2,77 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   @moduledoc """
   Keeps track of the video rooms made for events created on the dashboard
   calendar grid, so the rooms that would otherwise stay on the organiser's
-  server for ever are deleted.
+  server for ever are deleted, and never one still in use.
 
   A booking's room is held by its `meetings` row, which every clean-up path
   works from. A grid event lives only in the organiser's calendar, so for a
   provider whose rooms persist until something deletes them
   (`ProviderConfig.rooms_deleted_after_meeting/0`) the room is recorded here
   when it is made. The record follows the event through the grid: moving the
-  event moves the record's times, and the room's lobby with them; deleting the
-  event deletes the room. `Tymeslot.Workers.ExpiredVideoRoomCleanupWorker`
-  deletes rooms some days after their event has ended, and disconnecting the
-  integration with its rooms deletes them too.
+  event moves the record's times, and the room's lobby with them; deleting a
+  one-off event deletes the room. `Tymeslot.Workers.ExpiredVideoRoomCleanupWorker`
+  deletes rooms some days after their event has ended, once the calendar
+  confirms it (`check_expired/1`), and disconnecting the integration with its
+  rooms deletes them too.
+
+  ## Which event a room belongs to
 
   The room is never read back out of the event's description or location. The
   organiser can edit that text in any calendar client, and a room found there
   need not be one Tymeslot created.
 
-  ## When a room stops being needed
+  Instead the record holds the event's identifiers within its calendar
+  integration, and matches an event that shares any of them, as
+  `Tymeslot.Meetings.CalendarEventLink` does for bookings: the uid Tymeslot
+  generated, which CalDAV servers keep, and the identifier the provider
+  returned, which Google and Outlook cache as `provider_event_id`. Occurrences
+  of a series are matched too: Google and Outlook cache them with their
+  parent's id in `recurring_event_id`, and CalDAV under the series uid followed
+  by `_` and the occurrence's start.
 
-  A one-off event's room is needed until the event ends. An all-day event is
-  given the whole day after its exclusive end date, which covers every
-  timezone. A recurring series is given a time no occurrence can end after,
-  worked out from its `UNTIL` or `COUNT`; a series with no end, or a rule
-  beyond what the grid's recurrence editor writes, is never treated as over.
-  Editing one occurrence of a series only ever moves that time later, because
-  the occurrence edited says nothing about where the series itself ends.
+  ## Erring towards keeping a room
+
+  A conversation deleted while still in use leaves attendees with a dead join
+  link; one kept too long only lingers in the organiser's list. So a room is
+  deleted only when its event is known to be over:
+
+    * Deleting an occurrence of a series, or moving one to another calendar,
+      leaves the room with the series.
+    * The times a room keeps only ever widen for a series
+      (`Tymeslot.CalendarGrid.EventVideoRoomTimes`).
+    * Before an ended room is deleted, the cached calendar is consulted, since
+      the event may have been moved or made recurring outside the grid.
   """
 
   require Logger
 
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
-  alias Tymeslot.Integrations.Calendar.RecurrenceExpander
+  alias Tymeslot.CalendarGrid.EventVideoRoomTimes
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Workers.VideoSyncWorker
 
-  @typedoc """
-  A grid event's identity and timing. `start`/`end` are `DateTime`s for a timed
-  event and `Date`s (the end exclusive) for an all-day one.
-  """
-  @type schedule :: %{
-          required(:all_day) => boolean(),
-          required(:start) => DateTime.t() | Date.t() | nil,
-          required(:end) => DateTime.t() | Date.t() | nil,
-          required(:recurrence_rule) => String.t() | nil
-        }
-
   @seconds_per_day 86_400
 
-  # The most days one repetition of each frequency can span.
-  @period_days %{daily: 1, weekly: 7, monthly: 31, yearly: 366}
-
-  # The rule parts the grid's recurrence editor writes (`RRule.build/2`). A
-  # rule with any other part can space its occurrences in ways the bound below
-  # does not cover, so it is treated as having no end.
-  @bounded_rule_parts ~w(FREQ INTERVAL BYDAY COUNT UNTIL WKST)
+  # Google instance ids and CalDAV occurrence uids: the series id followed by
+  # the occurrence's start, as a date or a local or UTC date-time.
+  @occurrence_suffix ~r/_\d{8}(T\d{6}Z?)?\z/
 
   @doc """
   Records a room just made for a grid event, when its provider is one whose
-  rooms Tymeslot deletes. `event` carries `:user_id`, `:video_integration_id`,
-  `:calendar_integration_id`, `:uid` and the `schedule()` keys.
+  rooms Tymeslot deletes.
+
+  `event` carries `:user_id`, `:video_integration_id`,
+  `:calendar_integration_id`, `:uid`, optionally `:provider_event_id`, and the
+  event's timing and recurrence (see `EventVideoRoomTimes.for_event/1`).
   """
   @spec record(map(), map()) :: :ok
   def record(%{provider_type: provider, room_data: %{room_id: room_id}}, event)
       when is_binary(room_id) and room_id != "" do
-    if Atom.to_string(provider) in ProviderConfig.rooms_deleted_after_meeting() do
-      insert(room_id, event)
+    provider = Atom.to_string(provider)
+
+    if provider in ProviderConfig.rooms_deleted_after_meeting() do
+      insert(provider, room_id, event)
     else
       :ok
     end
@@ -76,81 +81,196 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   def record(_meeting_context, _event), do: :ok
 
   @doc """
-  Brings the rooms of a grid event in step with its timing after the event
-  changed, and moves each room's lobby when its start moved.
+  Records the identifier the calendar provider returned for an event written
+  under the uid Tymeslot generated, which is how Google and Outlook address it
+  from then on.
   """
-  @spec rescheduled(%{
-          required(:calendar_integration_id) => pos_integer(),
-          required(:uid) => String.t(),
-          optional(atom()) => term()
-        }) :: :ok
-  def rescheduled(%{calendar_integration_id: calendar_integration_id, uid: uid} = event)
-      when is_integer(calendar_integration_id) and is_binary(uid) do
-    calendar_integration_id
-    |> EventVideoRoomQueries.list_for_event(uid)
-    |> Enum.each(&reschedule_room(&1, event))
-  end
-
-  def rescheduled(_event), do: :ok
-
-  @doc """
-  Follows a grid event that moved to another calendar integration, where it
-  was created afresh under a new uid.
-  """
-  @spec moved(pos_integer(), String.t(), pos_integer(), String.t()) :: :ok
-  def moved(from_integration_id, from_uid, to_integration_id, to_uid) do
+  @spec identified(pos_integer(), String.t(), String.t() | nil) :: :ok
+  def identified(calendar_integration_id, event_uid, provider_uid)
+      when is_integer(calendar_integration_id) and is_binary(event_uid) and
+             is_binary(provider_uid) and provider_uid != event_uid do
     _count =
-      EventVideoRoomQueries.move_to_event(
-        from_integration_id,
-        from_uid,
-        to_integration_id,
-        to_uid
+      EventVideoRoomQueries.set_provider_event_id(
+        calendar_integration_id,
+        event_uid,
+        provider_uid
       )
 
     :ok
   end
 
+  def identified(_calendar_integration_id, _event_uid, _provider_uid), do: :ok
+
   @doc """
-  Deletes the rooms of a grid event that was deleted. The provider calls run in
-  `Tymeslot.Workers.VideoSyncWorker`, which removes each record once its room
-  is gone.
+  Brings the rooms of a grid event in step with its timing after the event
+  changed, and moves each room's lobby when it moved.
   """
-  @spec event_deleted(pos_integer(), String.t()) :: :ok
-  def event_deleted(calendar_integration_id, uid)
-      when is_integer(calendar_integration_id) and is_binary(uid) do
-    calendar_integration_id
-    |> EventVideoRoomQueries.list_for_event(uid)
+  @spec rescheduled(map()) :: :ok
+  def rescheduled(event) do
+    times = EventVideoRoomTimes.for_event(event)
+
+    event
+    |> rooms_of_event()
+    |> Enum.each(
+      &apply_times(&1, EventVideoRoomTimes.merge({&1.lobby_opens_at, &1.ends_at}, times))
+    )
+  end
+
+  @doc """
+  Follows a one-off grid event that moved to another calendar integration,
+  where it was created afresh under `new_uid` and the provider returned
+  `provider_uid`. An occurrence moved out of its series leaves the room with
+  the series.
+  """
+  @spec moved(map(), pos_integer(), String.t(), String.t() | nil) :: :ok
+  def moved(event, to_integration_id, new_uid, provider_uid) do
+    case one_off_rooms(event) do
+      [] ->
+        :ok
+
+      rooms ->
+        provider_event_id = if provider_uid != new_uid, do: provider_uid
+        ids = Enum.map(rooms, & &1.id)
+
+        _count =
+          EventVideoRoomQueries.move_to_event(ids, to_integration_id, new_uid, provider_event_id)
+
+        :ok
+    end
+  end
+
+  @doc """
+  Deletes the rooms of a one-off grid event that was deleted. The provider
+  calls run in `Tymeslot.Workers.VideoSyncWorker`, which removes each record
+  once its room is gone. Deleting an occurrence of a series leaves the room,
+  which the rest of the series still uses.
+  """
+  @spec event_deleted(map()) :: :ok
+  def event_deleted(event) do
+    event
+    |> one_off_rooms()
     |> Enum.each(&enqueue(&1, "delete"))
   end
 
-  def event_deleted(_calendar_integration_id, _uid), do: :ok
-
   @doc """
-  The start a room's lobby waits for and the time the room stops being needed,
-  for an event with the given timing. See the module documentation.
+  Whether a room whose recorded end is past the retention period
+  (`VIDEO_ROOM_RETENTION_DAYS`) may be deleted.
+
+  Its event is looked up in the calendar cache first, because it may have
+  changed outside the grid:
+
+    * An event still cached that ends later brings the room's times up to
+      date, and the room is kept.
+    * An event still cached that recurs is kept, with its end widened, or
+      cleared when no later end is known, so the nightly scan stops offering
+      it.
+    * An event no longer cached is only taken as deleted once its calendar has
+      synced successfully since the room fell due. Without that, and whenever
+      the room's calendar integration is gone, the room is kept.
+
+  `room` needs its calendar integration loaded.
   """
-  @spec times(schedule()) :: {DateTime.t() | nil, DateTime.t() | nil}
-  def times(%{recurrence_rule: rule} = schedule) when is_binary(rule) and rule != "",
-    do: {nil, series_end(rule, schedule)}
+  @spec check_expired(EventVideoRoomSchema.t()) :: :expired | :kept
+  def check_expired(%EventVideoRoomSchema{ends_at: nil}), do: :kept
 
-  def times(%{all_day: true, end: %Date{} = end_date}),
-    do: {nil, end_date |> midnight() |> DateTime.add(@seconds_per_day, :second)}
+  def check_expired(%EventVideoRoomSchema{} = room) do
+    retention_seconds = retention_days() * @seconds_per_day
+    cutoff = DateTime.add(DateTime.utc_now(), -retention_seconds, :second)
 
-  def times(%{start: %DateTime{} = start, end: %DateTime{} = finish}),
-    do: {truncate(start), truncate(finish)}
+    cond do
+      not DateTime.before?(room.ends_at, cutoff) -> :kept
+      is_nil(room.calendar_integration) -> :kept
+      true -> check_against_calendar(room, cutoff, retention_seconds)
+    end
+  end
 
-  def times(_schedule), do: {nil, nil}
+  defp check_against_calendar(room, cutoff, retention_seconds) do
+    identifiers = room_identifiers(room)
 
-  defp insert(room_id, event) do
-    {starts_at, ends_at} = times(event)
+    case EventVideoRoomQueries.list_cached_events(
+           room.calendar_integration_id,
+           identifiers,
+           [room.event_uid]
+         ) do
+      [] ->
+        if synced_since?(room.calendar_integration, room.ends_at, retention_seconds),
+          do: :expired,
+          else: :kept
+
+      events ->
+        check_cached_events(room, events, cutoff)
+    end
+  end
+
+  defp check_cached_events(room, events, cutoff) do
+    current = {room.lobby_opens_at, room.ends_at}
+
+    if Enum.any?(events, &EventVideoRoomTimes.recurring?/1) do
+      {lobby, ends} = widen(current, events)
+      ends = if ends && DateTime.after?(ends, cutoff), do: ends
+      apply_times(room, {lobby, ends})
+      :kept
+    else
+      case latest_one_off(events) do
+        # No cached copy has a time to judge by.
+        nil ->
+          :kept
+
+        {lobby, ends} ->
+          if DateTime.before?(ends, cutoff) do
+            :expired
+          else
+            apply_times(room, EventVideoRoomTimes.merge(current, {:exact, lobby, ends}))
+            :kept
+          end
+      end
+    end
+  end
+
+  defp widen(current, events) do
+    Enum.reduce(events, current, fn event, acc ->
+      {_mode, lobby, ends} = EventVideoRoomTimes.for_event(event)
+      EventVideoRoomTimes.merge(acc, {:series, lobby, ends})
+    end)
+  end
+
+  # A one-off event cached more than once (its own row and a stale copy) is
+  # judged by the latest of them.
+  defp latest_one_off(events) do
+    events
+    |> Enum.map(&EventVideoRoomTimes.for_event/1)
+    |> Enum.flat_map(fn
+      {_mode, _lobby, nil} -> []
+      {_mode, lobby, ends} -> [{lobby, ends}]
+    end)
+    |> Enum.max_by(fn {_lobby, ends} -> ends end, DateTime, fn -> nil end)
+  end
+
+  defp synced_since?(
+         %{last_external_sync_at: %DateTime{} = synced_at},
+         ends_at,
+         retention_seconds
+       ),
+       do: DateTime.after?(synced_at, DateTime.add(ends_at, retention_seconds, :second))
+
+  defp synced_since?(_calendar_integration, _ends_at, _retention_seconds), do: false
+
+  # Read at run time: `config/runtime.exs` sets it from the environment.
+  defp retention_days, do: Application.fetch_env!(:tymeslot, :video_room_retention_days)
+
+  defp insert(provider, room_id, event) do
+    {lobby_opens_at, ends_at} =
+      event |> EventVideoRoomTimes.for_event() |> EventVideoRoomTimes.initial()
 
     attrs = %{
       user_id: event.user_id,
       video_integration_id: event.video_integration_id,
+      provider: provider,
       calendar_integration_id: event.calendar_integration_id,
       event_uid: event.uid,
+      provider_event_id: provider_event_id(event),
       room_id: room_id,
-      starts_at: starts_at,
+      lobby_opens_at: lobby_opens_at,
       ends_at: ends_at
     }
 
@@ -171,58 +291,24 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
     end
   end
 
-  defp reschedule_room(%EventVideoRoomSchema{} = room, event) do
-    {starts_at, ends_at} = event |> schedule_of() |> times()
-    ends_at = if recurring?(event), do: later_end(room.ends_at, ends_at), else: ends_at
-    update_schedule(room, starts_at, ends_at)
-  end
+  defp provider_event_id(%{uid: uid, provider_event_id: id}) when is_binary(id) and id != uid,
+    do: id
 
-  defp update_schedule(%{starts_at: starts_at, ends_at: ends_at}, starts_at, ends_at), do: :ok
+  defp provider_event_id(_event), do: nil
 
-  defp update_schedule(room, starts_at, ends_at) do
-    case EventVideoRoomQueries.update_schedule(room, starts_at, ends_at) do
-      {:ok, updated} ->
-        maybe_move_lobby(room, updated)
+  defp apply_times(%{lobby_opens_at: lobby, ends_at: ends}, {lobby, ends}), do: :ok
 
-      {:error, changeset} ->
-        Logger.warning("Failed to update the video room of a calendar event",
-          calendar_event_video_room_id: room.id,
-          errors: inspect(changeset.errors)
-        )
-
-        :ok
+  defp apply_times(room, {lobby, ends}) do
+    case EventVideoRoomQueries.update_times(room, lobby, ends) do
+      :ok -> maybe_move_lobby(room, lobby)
+      # Deleted meanwhile, by a delete job or a disconnect: nothing to follow.
+      :gone -> :ok
     end
   end
 
-  # The grid's cache rows carry dates for an all-day event and timestamps for
-  # a timed one.
-  defp schedule_of(%{all_day: true} = event),
-    do: %{
-      all_day: true,
-      start: Map.get(event, :start_date),
-      end: Map.get(event, :end_date),
-      recurrence_rule: Map.get(event, :recurrence_rule)
-    }
-
-  defp schedule_of(event),
-    do: %{
-      all_day: false,
-      start: Map.get(event, :start_at),
-      end: Map.get(event, :end_at),
-      recurrence_rule: Map.get(event, :recurrence_rule)
-    }
-
-  defp recurring?(event), do: Map.get(event, :recurrence_rule) not in [nil, ""]
-
-  defp later_end(_current, nil), do: nil
-  defp later_end(nil, new), do: new
-
-  defp later_end(current, new),
-    do: if(DateTime.compare(new, current) == :gt, do: new, else: current)
-
-  defp maybe_move_lobby(%{starts_at: same}, %{starts_at: same}), do: :ok
-  defp maybe_move_lobby(_room, %{starts_at: nil}), do: :ok
-  defp maybe_move_lobby(_room, updated), do: enqueue(updated, "update")
+  defp maybe_move_lobby(%{lobby_opens_at: same}, same), do: :ok
+  defp maybe_move_lobby(_room, nil), do: :ok
+  defp maybe_move_lobby(room, _lobby), do: enqueue(room, "update")
 
   defp enqueue(room, action) do
     case VideoSyncWorker.enqueue_event_room(room.id, action) do
@@ -240,52 +326,35 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
     end
   end
 
-  defp series_end(rule, %{start: start, end: finish}) do
-    with true <- bounded_rule?(rule),
-         %DateTime{} = start_dt <- to_datetime(start),
-         %DateTime{} = end_dt <- to_datetime(finish),
-         {:ok, parsed} <- RecurrenceExpander.parse_rrule(rule),
-         %DateTime{} = last_start <- last_start_bound(parsed, start_dt) do
-      duration = max(DateTime.diff(end_dt, start_dt, :second), 0)
+  # The rooms of the series an event belongs to, or of the event itself.
+  defp rooms_of_event(%{calendar_integration_id: calendar_integration_id} = event)
+       when is_integer(calendar_integration_id) do
+    identifiers = event_identifiers(event)
 
-      last_start
-      |> DateTime.add(duration + @seconds_per_day, :second)
-      |> truncate()
-    else
-      _unbounded -> nil
-    end
+    identifiers =
+      if EventVideoRoomTimes.recurring?(event),
+        do: Enum.uniq(identifiers ++ Enum.map(identifiers, &series_identifier/1)),
+        else: identifiers
+
+    EventVideoRoomQueries.list_for_identifiers(calendar_integration_id, identifiers)
   end
 
-  defp bounded_rule?(rule) do
-    rule
-    |> String.replace_prefix("RRULE:", "")
-    |> String.split(";", trim: true)
-    |> Enum.all?(fn part ->
-      [key | _value] = String.split(part, "=", parts: 2)
-      String.upcase(key) in @bounded_rule_parts
-    end)
+  defp rooms_of_event(_event), do: []
+
+  defp one_off_rooms(event) do
+    if EventVideoRoomTimes.recurring?(event), do: [], else: rooms_of_event(event)
   end
 
-  # No occurrence can start after UNTIL, nor after COUNT repetitions of the
-  # longest span one repetition can take. A weekday filter can push matching
-  # days up to a week further apart per repetition.
-  defp last_start_bound(%{until: %DateTime{} = until}, _start), do: until
-
-  defp last_start_bound(%{count: count, freq: freq, interval: interval} = rule, start)
-       when is_integer(count) and count > 0 do
-    weekday_days = if rule.by_day, do: 7 * interval, else: 0
-    days = count * (Map.fetch!(@period_days, freq) * interval + weekday_days)
-    DateTime.add(start, days * @seconds_per_day, :second)
+  defp event_identifiers(event) do
+    [:uid, :provider_event_id, :recurring_event_id]
+    |> Enum.map(&Map.get(event, &1))
+    |> non_blank()
   end
 
-  defp last_start_bound(_rule, _start), do: nil
+  defp room_identifiers(room), do: non_blank([room.event_uid, room.provider_event_id])
 
-  defp to_datetime(%DateTime{} = datetime), do: datetime
-  defp to_datetime(%Date{} = date), do: midnight(date)
-  defp to_datetime(_other), do: nil
+  defp series_identifier(identifier), do: String.replace(identifier, @occurrence_suffix, "")
 
-  defp midnight(date), do: DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
-
-  defp truncate(datetime),
-    do: datetime |> DateTime.shift_zone!("Etc/UTC") |> DateTime.truncate(:second)
+  defp non_blank(values),
+    do: values |> Enum.filter(&(is_binary(&1) and String.trim(&1) != "")) |> Enum.uniq()
 end

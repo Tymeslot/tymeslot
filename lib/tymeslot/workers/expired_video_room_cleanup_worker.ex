@@ -21,12 +21,15 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorker do
   Rooms made for events on the dashboard calendar grid have no meeting, so
   they are read from their own records (`Tymeslot.CalendarGrid.EventVideoRooms`)
   and deleted through the same job, which removes each record once its room is
-  gone. The same retention, look-back window and skips apply.
+  gone. The same retention, look-back window and skips apply. Their recorded
+  end can be stale, because the event may have been moved in a calendar
+  client, so each is checked against the calendar before it is queued, and
+  again by the job before it deletes.
   """
 
   use Oban.Worker, queue: :default, max_attempts: 1, unique: [period: 60]
 
-  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Workers.VideoSyncWorker
@@ -52,11 +55,15 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorker do
     providers = ProviderConfig.rooms_deleted_after_meeting()
 
     meetings = MeetingListQueries.list_ended_with_video_room(providers, ended_before, ended_after)
-    event_rooms = EventVideoRoomQueries.list_ended(providers, ended_before, ended_after)
+
+    event_rooms =
+      providers
+      |> CalendarGrid.list_ended_event_video_rooms(ended_before, ended_after)
+      |> Enum.filter(&(CalendarGrid.check_event_video_room_expired(&1) == :expired))
 
     enqueued =
       Enum.count(meetings, &enqueued?(VideoSyncWorker.enqueue(&1.id, "delete"))) +
-        Enum.count(event_rooms, &enqueued?(VideoSyncWorker.enqueue_event_room(&1.id, "delete")))
+        Enum.count(event_rooms, &enqueued?(VideoSyncWorker.enqueue_event_room(&1.id, "expire")))
 
     Logger.info("Expired video room clean-up completed",
       total_meetings: length(meetings),

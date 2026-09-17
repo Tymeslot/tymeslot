@@ -33,7 +33,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
     max_attempts: 5,
     priority: 2
 
-  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -176,7 +176,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
     now = DateTime.utc_now()
 
     {MeetingListQueries.list_with_video_room_for_integration(integration.id, scope, now, limit),
-     EventVideoRoomQueries.list_for_integration(integration.id, scope, now, limit)}
+     CalendarGrid.list_event_video_rooms_for_integration(integration.id, scope, now, limit)}
   end
 
   defp drain_page_limit,
@@ -252,7 +252,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
     do:
       delete_room(integration, room.user_id, room.room_id,
         log: [calendar_event_video_room_id: room.id],
-        on_deleted: fn -> EventVideoRoomQueries.delete(room) end
+        on_deleted: fn -> CalendarGrid.forget_event_video_room(room) end
       )
 
   defp delete_room(integration, user_id, room_id, opts) do

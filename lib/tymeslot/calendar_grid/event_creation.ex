@@ -182,6 +182,13 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   end
 
   defp finalise_create_result({:ok, created}, ctx) do
+    # Google and Outlook address the event by the id they returned, not by the
+    # uid it was written under, so a room recorded under that uid learns it.
+    if ctx.video_context[:room_id],
+      do:
+        :ok =
+          EventVideoRooms.identified(ctx.creating.integration_id, ctx.uid, created_uid(created))
+
     case MeetingProvisioning.finalise(ctx.video_context, created, ctx.plan) do
       {:ok, video_context} ->
         build_create_success(
@@ -249,7 +256,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   end
 
   defp build_create_success(created, creating, user_id, start_at, end_at, video_context) do
-    uid = if is_binary(created), do: created, else: MapKeys.get_binary(created, :uid)
+    uid = created_uid(created)
 
     {provider, default_booking_calendar_id, reauth_required?} =
       lookup_integration_metadata(creating.integration_id)
@@ -290,6 +297,9 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
        description: notify_event.description
      }}
   end
+
+  defp created_uid(created) when is_binary(created), do: created
+  defp created_uid(created), do: MapKeys.get_binary(created, :uid)
 
   defp provision_video_room(integration_id, event_details, %{user_id: user_id} = grid_event)
        when is_integer(integration_id) do

@@ -131,18 +131,15 @@ defmodule Tymeslot.CalendarGrid.EventMove do
          :ok <- ensure_destination(moved),
          {:ok, payload} <- ProviderPayload.from_event(moved),
          {:ok, created} <- create_on_destination(user_id, moved, payload) do
-      moved = %{moved | uid: created_uid(created, moved.uid)}
+      provider_uid = created_uid(created, moved.uid)
 
       # The event keeps its description, and with it the join link, so its
-      # video rooms follow it to the new identity.
-      :ok =
-        EventVideoRooms.moved(
-          event.calendar_integration_id,
-          event.uid,
-          integration.id,
-          moved.uid
-        )
+      # video rooms follow it to the new identity. `moved.uid` is the uid the
+      # create was written with; `provider_uid` is what the provider answered
+      # with, which is the same except where the provider assigns its own.
+      :ok = EventVideoRooms.moved(event, integration.id, moved.uid, provider_uid)
 
+      moved = %{moved | uid: provider_uid}
       cache_destination(moved)
       result = %{uid: moved.uid, integration_id: integration.id}
 

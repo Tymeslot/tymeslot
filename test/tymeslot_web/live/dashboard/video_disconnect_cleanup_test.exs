@@ -184,10 +184,11 @@ defmodule TymeslotWeb.Dashboard.VideoDisconnectCleanupTest do
       EventVideoRoomQueries.insert(%{
         user_id: user.id,
         video_integration_id: integration.id,
+        provider: "nextcloud_talk",
         calendar_integration_id: calendar.id,
         event_uid: "grid-event",
         room_id: "grid0001",
-        starts_at: DateTime.add(DateTime.utc_now(:second), @day, :second),
+        lobby_opens_at: DateTime.add(DateTime.utc_now(:second), @day, :second),
         ends_at: DateTime.add(DateTime.utc_now(:second), @day + 1800, :second)
       })
 

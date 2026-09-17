@@ -73,7 +73,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
            opts
          ) do
       {:ok, result} ->
-        :ok = EventVideoRooms.event_deleted(integration_id, uid)
+        :ok = EventVideoRooms.event_deleted(event)
 
         {:ok, _deleted_or_missing} =
           ProviderCalendarEventQueries.delete_by_uid(integration_id, uid)

@@ -1,30 +1,40 @@
 defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
   @moduledoc """
   Database queries for the video rooms of calendar grid events
-  (`Tymeslot.CalendarGrid.EventVideoRoomSchema`).
+  (`Tymeslot.CalendarGrid.EventVideoRoomSchema`), and for the cached calendar
+  events that tell whether such a room is still in use.
   """
 
   import Ecto.Query
 
-  alias Ecto.Changeset
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Repo
 
   @doc """
-  Records a room.
+  Records a room. A room already recorded for the same video integration is
+  left as it is, so a conversation adopted again is never recorded twice.
   """
   @spec insert(map()) :: {:ok, EventVideoRoomSchema.t()} | {:error, Ecto.Changeset.t()}
-  def insert(attrs), do: attrs |> EventVideoRoomSchema.create_changeset() |> Repo.insert()
+  def insert(attrs) do
+    attrs
+    |> EventVideoRoomSchema.create_changeset()
+    |> Repo.insert(on_conflict: :nothing, conflict_target: [:video_integration_id, :room_id])
+  end
 
   @doc """
-  The room with its video integration loaded, which is what reaching the room
-  on the provider needs.
+  The room with its video and calendar integrations loaded: the first reaches
+  the room on the provider, the second tells whether its event is still there.
   """
-  @spec get_with_integration(pos_integer()) ::
+  @spec get_with_integrations(pos_integer()) ::
           {:ok, EventVideoRoomSchema.t()} | {:error, :not_found}
-  def get_with_integration(id) do
-    query = from(r in EventVideoRoomSchema, where: r.id == ^id, preload: :video_integration)
+  def get_with_integrations(id) do
+    query =
+      from(r in EventVideoRoomSchema,
+        where: r.id == ^id,
+        preload: [:video_integration, :calendar_integration]
+      )
 
     case Repo.one(query) do
       nil -> {:error, :not_found}
@@ -33,44 +43,68 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
   end
 
   @doc """
-  The rooms recorded for one calendar event.
+  The rooms recorded for an event of the calendar integration that any of
+  `identifiers` addresses.
   """
-  @spec list_for_event(pos_integer(), String.t()) :: [EventVideoRoomSchema.t()]
-  def list_for_event(calendar_integration_id, event_uid) do
+  @spec list_for_identifiers(pos_integer(), [String.t()]) :: [EventVideoRoomSchema.t()]
+  def list_for_identifiers(_calendar_integration_id, []), do: []
+
+  def list_for_identifiers(calendar_integration_id, identifiers) do
     EventVideoRoomSchema
     |> where([r], r.calendar_integration_id == ^calendar_integration_id)
-    |> where([r], r.event_uid == ^event_uid)
+    |> where([r], r.event_uid in ^identifiers or r.provider_event_id in ^identifiers)
     |> order_by([r], asc: r.id)
     |> Repo.all()
   end
 
   @doc """
-  Sets when a room's event starts and ends.
+  Records the identifier the calendar provider returned for an event Tymeslot
+  wrote under `event_uid`.
   """
-  @spec update_schedule(EventVideoRoomSchema.t(), DateTime.t() | nil, DateTime.t() | nil) ::
-          {:ok, EventVideoRoomSchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_schedule(%EventVideoRoomSchema{} = room, starts_at, ends_at) do
-    room
-    |> Changeset.change(starts_at: starts_at, ends_at: ends_at)
-    |> Repo.update()
+  @spec set_provider_event_id(pos_integer(), String.t(), String.t()) :: non_neg_integer()
+  def set_provider_event_id(calendar_integration_id, event_uid, provider_event_id) do
+    {count, _rows} =
+      EventVideoRoomSchema
+      |> where([r], r.calendar_integration_id == ^calendar_integration_id)
+      |> where([r], r.event_uid == ^event_uid)
+      |> Repo.update_all(set: [provider_event_id: provider_event_id, updated_at: now()])
+
+    count
   end
 
   @doc """
-  Points every room of one calendar event at the event's new identity, after
-  the event moved to another calendar integration and was given a new uid
-  there. Returns how many rooms moved.
+  Sets when a room's lobby opens and when the room stops being needed. A room
+  deleted meanwhile is left deleted.
   """
-  @spec move_to_event(pos_integer(), String.t(), pos_integer(), String.t()) :: non_neg_integer()
-  def move_to_event(from_integration_id, from_uid, to_integration_id, to_uid) do
+  @spec update_times(EventVideoRoomSchema.t(), DateTime.t() | nil, DateTime.t() | nil) ::
+          :ok | :gone
+  def update_times(%EventVideoRoomSchema{id: id}, lobby_opens_at, ends_at) do
     {count, _rows} =
       EventVideoRoomSchema
-      |> where([r], r.calendar_integration_id == ^from_integration_id)
-      |> where([r], r.event_uid == ^from_uid)
+      |> where([r], r.id == ^id)
+      |> Repo.update_all(
+        set: [lobby_opens_at: lobby_opens_at, ends_at: ends_at, updated_at: now()]
+      )
+
+    if count == 1, do: :ok, else: :gone
+  end
+
+  @doc """
+  Points rooms at the identity their event was given in another calendar
+  integration.
+  """
+  @spec move_to_event([pos_integer()], pos_integer(), String.t(), String.t() | nil) ::
+          non_neg_integer()
+  def move_to_event(room_ids, calendar_integration_id, event_uid, provider_event_id) do
+    {count, _rows} =
+      EventVideoRoomSchema
+      |> where([r], r.id in ^room_ids)
       |> Repo.update_all(
         set: [
-          calendar_integration_id: to_integration_id,
-          event_uid: to_uid,
-          updated_at: DateTime.utc_now(:second)
+          calendar_integration_id: calendar_integration_id,
+          event_uid: event_uid,
+          provider_event_id: provider_event_id,
+          updated_at: now()
         ]
       )
 
@@ -88,22 +122,29 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
 
   @doc """
   Rooms on one of `providers` whose event ended at or after `ended_after` and
-  before `ended_before`, mirroring `MeetingListQueries.list_ended_with_video_room/4`.
+  before `ended_before`, with their calendar integration loaded, mirroring
+  `MeetingListQueries.list_ended_with_video_room/4`.
 
-  Rooms whose integration is waiting to be reconnected or is being disconnected
-  are left out, because every delete through it would be refused. A series with
-  no end (`ends_at` nil) never falls due.
+  Rooms whose integration is waiting to be reconnected or is being
+  disconnected are left out, because every delete through it would be
+  refused. A room whose integration link is gone stays in, to be reached
+  through the organiser's current integration for the same provider. A room
+  with no known end (`ends_at` nil) never falls due.
   """
   @spec list_ended([String.t()], DateTime.t(), DateTime.t(), pos_integer()) ::
           [EventVideoRoomSchema.t()]
   def list_ended(providers, ended_before, ended_after, limit \\ 500) do
     EventVideoRoomSchema
-    |> join(:inner, [r], vi in assoc(r, :video_integration))
-    |> where([_r, vi], vi.provider in ^providers)
-    |> where([_r, vi], not vi.needs_reauth and is_nil(vi.deleted_at))
+    |> join(:left, [r], vi in assoc(r, :video_integration))
+    |> where([r], r.provider in ^providers)
+    |> where(
+      [r, vi],
+      is_nil(r.video_integration_id) or (not vi.needs_reauth and is_nil(vi.deleted_at))
+    )
     |> where([r], r.ends_at < ^ended_before and r.ends_at >= ^ended_after)
     |> order_by([r], asc: r.ends_at)
     |> limit(^limit)
+    |> preload(:calendar_integration)
     |> Repo.all()
   end
 
@@ -137,6 +178,35 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
     |> Repo.aggregate(:count, :id)
   end
 
+  @doc """
+  The cached calendar events of the calendar integration that `identifiers`
+  address, as an event's own row or as a row of one of its occurrences: a row
+  whose parent is one of them, or whose uid is one of `series_uids` followed by
+  the occurrence suffix CalDAV occurrences are cached under.
+  """
+  @spec list_cached_events(pos_integer(), [String.t()], [String.t()]) ::
+          [ProviderCalendarEventSchema.t()]
+  def list_cached_events(_calendar_integration_id, [], []), do: []
+
+  def list_cached_events(calendar_integration_id, identifiers, series_uids) do
+    addressed =
+      dynamic(
+        [e],
+        e.uid in ^identifiers or e.provider_event_id in ^identifiers or
+          e.recurring_event_id in ^identifiers
+      )
+
+    addressed_or_occurrence =
+      Enum.reduce(series_uids, addressed, fn uid, acc ->
+        dynamic([e], ^acc or like(e.uid, ^(escape_like(uid) <> "\\_%")))
+      end)
+
+    ProviderCalendarEventSchema
+    |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+    |> where(^addressed_or_occurrence)
+    |> Repo.all()
+  end
+
   defp for_integration(integration_id, scope, %DateTime{} = now) do
     EventVideoRoomSchema
     |> where([r], r.video_integration_id == ^integration_id)
@@ -147,4 +217,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
 
   defp within_scope(query, :upcoming, now),
     do: where(query, [r], is_nil(r.ends_at) or r.ends_at > ^now)
+
+  defp escape_like(value), do: String.replace(value, ~r/([\\%_])/, "\\\\\\1")
+
+  defp now, do: DateTime.utc_now(:second)
 end

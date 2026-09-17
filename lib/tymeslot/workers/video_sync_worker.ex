@@ -22,6 +22,11 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   grid, which no meeting holds. Those are recorded by
   `Tymeslot.CalendarGrid.EventVideoRooms` and enqueued with
   `enqueue_event_room/2`; a delete removes the record once the room is gone.
+  Such a room's integration is resolved as a meeting's is, from its recorded
+  provider when the link is gone. An `"expire"` job asks the calendar again
+  whether the event is really over before deleting
+  (`Tymeslot.CalendarGrid.check_event_video_room_expired/1`), since the event
+  may have moved in between.
   """
 
   use Oban.Worker,
@@ -29,7 +34,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     max_attempts: 5,
     priority: 2
 
-  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.IntegrationResolver
@@ -60,12 +65,13 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   Enqueues a video-room sync job for the room of a calendar grid event, by the
   id of its `Tymeslot.CalendarGrid.EventVideoRoomSchema` record.
 
-  `action` is `"update"` (the event moved) or `"delete"` (the event was
-  deleted, or the room has outlived it).
+  `action` is `"update"` (the event moved), `"delete"` (the event was
+  deleted) or `"expire"` (the room seems to have outlived its event, which the
+  job confirms before deleting it).
   """
   @spec enqueue_event_room(pos_integer(), String.t()) :: {:ok, atom()} | {:error, term()}
   def enqueue_event_room(room_id, action)
-      when is_integer(room_id) and action in ["update", "delete"],
+      when is_integer(room_id) and action in ["update", "delete", "expire"],
       do: insert_job(%{"event_room_id" => room_id, "action" => action}, :event_room_id)
 
   # Uniqueness keys on the record's own id: keyed on an absent `meeting_id`,
@@ -105,9 +111,9 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   def perform(%Oban.Job{args: %{"event_room_id" => room_id, "action" => action}} = job) do
     executions = start_execution(job)
 
-    case EventVideoRoomQueries.get_with_integration(room_id) do
+    case CalendarGrid.get_event_video_room(room_id) do
       {:ok, room} ->
-        perform_action(action, event_room_target(room), room.video_integration_id, executions)
+        dispatch_event_room(action, room, executions)
 
       {:error, :not_found} ->
         Logger.info("Calendar event video room gone before video sync, discarding",
@@ -157,9 +163,47 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
       record: room,
       user_id: room.user_id,
       room_id: room.room_id,
-      provider: room.video_integration.provider,
+      provider: room.provider,
       log: [calendar_event_video_room_id: room.id]
     }
+
+  defp dispatch_event_room("expire", room, executions) do
+    case CalendarGrid.check_event_video_room_expired(room) do
+      :expired ->
+        dispatch_event_room("delete", room, executions)
+
+      :kept ->
+        Logger.info("Calendar event still uses its video room, keeping it",
+          calendar_event_video_room_id: room.id
+        )
+
+        :ok
+    end
+  end
+
+  defp dispatch_event_room(action, room, executions) do
+    resolvable = %{
+      video_integration_id: room.video_integration_id,
+      organizer_user_id: room.user_id,
+      video_provider: room.provider
+    }
+
+    case IntegrationResolver.resolve_for_meeting(resolvable) do
+      {:ok, integration_id} ->
+        perform_action(action, event_room_target(room), integration_id, executions)
+
+      {:error, reason} ->
+        Logger.warning(
+          "Calendar event holds a provider video room but no video integration can reach it",
+          calendar_event_video_room_id: room.id,
+          action: action,
+          provider: room.provider,
+          reason: reason
+        )
+
+        {:discard, "No video integration can reach the provider room"}
+    end
+  end
 
   # Clause order matters: a meeting with no room at all is an ordinary no-op and
   # stays silent, whereas a meeting that holds a room nothing can reach is a
@@ -208,7 +252,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
 
   # A grid event's room keeps its name: only the lobby follows the event.
   defp room_changes(%{kind: :event_room, record: room}),
-    do: [start_time: room.starts_at, end_time: room.ends_at]
+    do: [start_time: room.lobby_opens_at, end_time: room.ends_at]
 
   defp discard_no_room, do: {:discard, "No provider video room to sync"}
 
@@ -325,7 +369,8 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
 
   # A grid event's room exists only as this record, so once the room is gone
   # the record goes too, and nothing scans for it again.
-  defp clear_room(%{kind: :event_room, record: room}), do: EventVideoRoomQueries.delete(room)
+  defp clear_room(%{kind: :event_room, record: room}),
+    do: CalendarGrid.forget_event_video_room(room)
 
   defp clear_video_room(meeting) do
     case MeetingQueries.update_meeting(meeting, %{

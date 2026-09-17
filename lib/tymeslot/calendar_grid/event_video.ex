@@ -158,16 +158,24 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   # deleted with the event or once the event has ended, rather than left on
   # the organiser's server with nothing pointing at it.
   defp record_room(meeting_context, event, video_integration_id, user_id) do
-    EventVideoRooms.record(meeting_context, %{
-      user_id: user_id,
-      video_integration_id: video_integration_id,
-      calendar_integration_id: event.calendar_integration_id,
-      uid: event.uid,
-      all_day: event.all_day,
-      start: if(event.all_day, do: event.start_date, else: event.start_at),
-      end: if(event.all_day, do: event.end_date, else: event.end_at),
-      recurrence_rule: Map.get(event, :recurrence_rule)
-    })
+    event_fields =
+      Map.take(event, [
+        :calendar_integration_id,
+        :uid,
+        :provider_event_id,
+        :recurring_event_id,
+        :recurrence_rule,
+        :all_day,
+        :start_at,
+        :end_at,
+        :start_date,
+        :end_date
+      ])
+
+    EventVideoRooms.record(
+      meeting_context,
+      Map.merge(event_fields, %{user_id: user_id, video_integration_id: video_integration_id})
+    )
   end
 
   # The new room is only referenced once the calendar has the link, so a

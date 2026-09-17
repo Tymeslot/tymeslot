@@ -17,6 +17,7 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
   import Tymeslot.MeetingTestHelpers
 
   alias Oban.Cron.Expression
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
@@ -187,6 +188,7 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
       end)
 
       start_at = DateTime.add(DateTime.utc_now(:second), -8 * @day - 3600, :second)
+      end_at = DateTime.add(start_at, 1800, :second)
 
       assert {:ok, %{video_room_id: "grid0001"}} =
                EventCreation.run_create_event(%{
@@ -199,11 +201,20 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
                  },
                  user_id: user.id,
                  start_at: start_at,
-                 end_at: DateTime.add(start_at, 1800, :second)
+                 end_at: end_at
                })
 
       assert [%EventVideoRoomSchema{id: room_id, room_id: "grid0001"}] =
                Repo.all(EventVideoRoomSchema)
+
+      # The grid caches the event it created, and the calendar still has it
+      # at its original, long past time.
+      insert(:provider_calendar_event,
+        calendar_integration: calendar,
+        uid: "grid-journey-uid",
+        start_at: start_at,
+        end_at: end_at
+      )
 
       assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
       assert_enqueued(worker: VideoSyncWorker, args: event_room_delete_args(room_id))
@@ -217,6 +228,50 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
 
       assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
       refute_enqueued(worker: VideoSyncWorker)
+    end
+
+    # Moved in a calendar client: the grid's record still holds the old time,
+    # but the calendar cache has the new one.
+    test "keeps a grid event's conversation when the calendar has moved the event later", %{
+      user: user
+    } do
+      room = insert_event_room(user, insert_talk_integration(user, "grid-moved.example.com"), 8)
+      {:ok, loaded} = CalendarGrid.get_event_video_room(room.id)
+      new_start = DateTime.add(DateTime.utc_now(:second), @day, :second)
+
+      insert(:provider_calendar_event,
+        calendar_integration: loaded.calendar_integration,
+        uid: room.event_uid,
+        start_at: new_start,
+        end_at: DateTime.add(new_start, 1800, :second)
+      )
+
+      assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
+
+      refute_enqueued(worker: VideoSyncWorker, args: event_room_delete_args(room.id))
+      assert Repo.reload!(room).ends_at == DateTime.add(new_start, 1800, :second)
+    end
+
+    test "deletes a grid event's conversation whose event is gone from a synced calendar", %{
+      user: user
+    } do
+      room = insert_event_room(user, insert_talk_integration(user, "grid-gone.example.com"), 8)
+
+      assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
+
+      assert_enqueued(worker: VideoSyncWorker, args: event_room_delete_args(room.id))
+    end
+
+    # As for meetings: disconnected without deleting its rooms, the
+    # integration's rooms stay reachable through a reconnected one.
+    test "deletes a grid event's conversation whose integration link is gone", %{user: user} do
+      talk = insert_talk_integration(user, "grid-unlinked.example.com")
+      room = insert_event_room(user, talk, 8)
+      Repo.delete!(talk)
+
+      assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
+
+      assert_enqueued(worker: VideoSyncWorker, args: event_room_delete_args(room.id))
     end
 
     test "keeps a grid event's conversation within the retention period", %{user: user} do
@@ -299,7 +354,7 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
 
   defp delete_args(meeting), do: %{"meeting_id" => meeting.id, "action" => "delete"}
 
-  defp event_room_delete_args(room_id), do: %{"event_room_id" => room_id, "action" => "delete"}
+  defp event_room_delete_args(room_id), do: %{"event_room_id" => room_id, "action" => "expire"}
 
   defp insert_event_room(user, integration, ended_days_ago, attrs \\ []) do
     ends_at = DateTime.add(DateTime.utc_now(:second), -ended_days_ago * @day, :second)
@@ -310,10 +365,17 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
           %{
             user_id: user.id,
             video_integration_id: integration.id,
-            calendar_integration_id: insert(:calendar_integration, user: user).id,
+            provider: "nextcloud_talk",
+            # Synced since the room fell due, so an event absent from it is
+            # known to be gone: only the case under test keeps the room.
+            calendar_integration_id:
+              insert(:calendar_integration,
+                user: user,
+                last_external_sync_at: DateTime.utc_now(:second)
+              ).id,
             event_uid: "grid-" <> Integer.to_string(System.unique_integer([:positive])),
             room_id: "room" <> Integer.to_string(ended_days_ago),
-            starts_at: DateTime.add(ends_at, -1800, :second),
+            lobby_opens_at: DateTime.add(ends_at, -1800, :second),
             ends_at: ends_at
           },
           Map.new(attrs)

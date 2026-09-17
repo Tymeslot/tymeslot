@@ -20,6 +20,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
   import Mox
 
   alias Phoenix.Component
+  alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.HTTPClientMock
@@ -30,6 +32,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.VideoSync
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
 
   @rooms_path "/ocs/v2.php/apps/spreed/api/v4/room"
 
@@ -151,7 +154,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
 
     assert_receive {:event_update_result, :ok}, @task_timeout
 
-    assert %{starts_at: ^new_start, ends_at: ^new_end} = Repo.reload!(room)
+    assert %{lobby_opens_at: ^new_start, ends_at: ^new_end} = Repo.reload!(room)
 
     expect(HTTPClientMock, :request, fn :put, url, body, _headers, _opts ->
       assert url == "https://#{host}#{@rooms_path}/grid0001/webinar/lobby"
@@ -179,7 +182,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
 
     assert_receive {:event_update_result, {:error, _details}}, @task_timeout
 
-    assert Repo.reload!(room).starts_at == ~U[2026-10-05 09:00:00Z]
+    assert Repo.reload!(room).lobby_opens_at == ~U[2026-10-05 09:00:00Z]
     refute_enqueued(worker: VideoSyncWorker)
   end
 
@@ -203,8 +206,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
     assert_receive {:event_move_result, {:ok, uid: "relocated-uid", integration_id: _id}},
                    @task_timeout
 
-    assert %{calendar_integration_id: calendar_integration_id, event_uid: "relocated-uid"} =
-             Repo.reload!(room)
+    # Written under a new uid, which the destination calendar answered with
+    # its own identifier.
+    assert %{calendar_integration_id: calendar_integration_id, provider_event_id: "relocated-uid"} =
+             moved = Repo.reload!(room)
+
+    refute moved.event_uid == event.uid
 
     assert calendar_integration_id == destination.id
   end
@@ -239,12 +246,185 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
              %EventVideoRoomSchema{
                room_id: "swit0001",
                video_integration_id: video_integration_id,
-               starts_at: ~U[2026-10-05 09:00:00Z],
+               lobby_opens_at: ~U[2026-10-05 09:00:00Z],
                ends_at: ~U[2026-10-05 10:00:00Z]
              }
-           ] = EventVideoRoomQueries.list_for_event(calendar.id, event.uid)
+           ] = EventVideoRoomQueries.list_for_identifiers(calendar.id, [event.uid])
 
     assert video_integration_id == talk.id
+  end
+
+  describe "a conversation made with a new grid event" do
+    # Google hands back its own event id, and a sync then caches the event
+    # under its iCalUID with that id as `provider_event_id`: neither is the uid
+    # the event was written under.
+    test "on a Google calendar follows the synced event through a drag and a delete", %{
+      user: user,
+      calendar: calendar,
+      socket: socket
+    } do
+      host = "grid-google.example.com"
+      talk = insert_talk_integration(user, host)
+      play_nextcloud(host, "goog0001")
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
+        {:ok, %{uid: "googlehex0001", summary: "Planning"}}
+      end)
+
+      assert {:ok, %{video_room_id: "goog0001"}} = create_grid_event(user, calendar, talk)
+
+      synced =
+        insert(:provider_calendar_event,
+          calendar_integration: calendar,
+          provider: "google",
+          uid: "googlehex0001@google.com",
+          provider_event_id: "googlehex0001",
+          summary: "Planning",
+          description: "",
+          location: "",
+          attendees: [],
+          start_at: ~U[2026-10-05 09:00:00.000000Z],
+          end_at: ~U[2026-10-05 10:00:00.000000Z]
+        )
+
+      # A drag moves the conversation's lobby with the event.
+      new_start = ~U[2026-10-06 14:00:00Z]
+      new_end = ~U[2026-10-06 15:00:00Z]
+      expect(Tymeslot.CalendarMock, :update_event, fn _uid, _event_data, _context -> :ok end)
+
+      optimistic = %{synced | start_at: new_start, end_at: new_end}
+      _socket = Updates.update_event_async(socket, synced, optimistic, new_start, new_end)
+      assert_receive {:event_update_result, :ok}, @task_timeout
+
+      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :video_rooms)
+      assert_received {:nextcloud, :put, lobby_url, %{"timer" => timer}}
+      assert lobby_url == "https://#{host}#{@rooms_path}/goog0001/webinar/lobby"
+      assert timer == DateTime.to_unix(new_start)
+
+      # Deleting the event deletes the conversation.
+      expect(GoogleCalendarAPIMock, :delete_event, fn _integration, "primary", _id -> :ok end)
+
+      assert {:ok, _result} =
+               synced
+               |> NotificationFlows.build_delete_payload(user.id, false)
+               |> EventDelete.run_delete_event()
+
+      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :video_rooms)
+      assert_received {:nextcloud, :delete, delete_url, nil}
+      assert delete_url == "https://#{host}#{@rooms_path}/goog0001"
+      assert Repo.all(EventVideoRoomSchema) == []
+    end
+
+    # A CalDAV series is cached as its occurrences, each under the series uid
+    # followed by the occurrence's start.
+    test "on a CalDAV series stays with the series its occurrences are cached as", %{
+      user: user,
+      socket: socket
+    } do
+      host = "grid-caldav.example.com"
+      talk = insert_talk_integration(user, host)
+      calendar = insert(:calendar_integration, user: user, provider: "caldav", is_active: true)
+      socket = Component.assign(socket, :integrations, [calendar])
+      play_nextcloud(host, "cald0001")
+
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+        {:ok, event_data.uid}
+      end)
+
+      assert {:ok, %{uid: uid, video_room_id: "cald0001"}} =
+               create_grid_event(user, calendar, talk, recurrence_rule: "FREQ=WEEKLY;COUNT=3")
+
+      [room] = Repo.all(EventVideoRoomSchema)
+      assert %{event_uid: ^uid, lobby_opens_at: ~U[2026-10-05 09:00:00Z]} = room
+      assert %DateTime{} = room.ends_at
+
+      [_first, second, _third] =
+        for {day, n} <- [{5, 1}, {12, 2}, {19, 3}] do
+          start_at = DateTime.new!(Date.new!(2026, 10, day), ~T[09:00:00], "Etc/UTC")
+
+          insert(:provider_calendar_event,
+            calendar_integration: calendar,
+            provider: "caldav",
+            uid: "#{uid}_202610#{String.pad_leading("#{day}", 2, "0")}T090000",
+            provider_event_id: "/calendars/organiser/#{uid}.ics",
+            recurrence_rule: "FREQ=WEEKLY;COUNT=3",
+            summary: "Planning #{n}",
+            description: "",
+            location: "",
+            attendees: [],
+            start_at: start_at,
+            end_at: DateTime.add(start_at, 3600, :second)
+          )
+        end
+
+      # Dragging the second occurrence to before the first opens the lobby
+      # earlier, and never brings the room's deletion forward.
+      new_start = ~U[2026-10-04 09:00:00Z]
+      expect(Tymeslot.CalendarMock, :update_event, fn _uid, _event_data, _context -> :ok end)
+
+      optimistic = %{second | start_at: new_start, end_at: ~U[2026-10-04 10:00:00Z]}
+
+      _socket =
+        Updates.update_event_async(
+          socket,
+          second,
+          optimistic,
+          new_start,
+          ~U[2026-10-04 10:00:00Z],
+          recurrence_scope: "this"
+        )
+
+      assert_receive {:event_update_result, :ok}, @task_timeout
+
+      moved = Repo.reload!(room)
+      assert moved.lobby_opens_at == new_start
+      refute DateTime.before?(moved.ends_at, room.ends_at)
+
+      # Deleting one occurrence keeps the conversation the others still use.
+      assert :ok =
+               second
+               |> NotificationFlows.build_delete_payload(user.id, false)
+               |> CalendarGrid.delete_event_video_rooms()
+
+      refute_enqueued(worker: VideoSyncWorker, args: %{"action" => "delete"})
+      assert Repo.get(EventVideoRoomSchema, room.id)
+    end
+  end
+
+  defp create_grid_event(user, calendar, talk, extra \\ []) do
+    EventCreation.run_create_event(%{
+      creating:
+        Map.merge(
+          %{
+            title: "Planning",
+            integration_id: calendar.id,
+            calendar_id: "primary",
+            attendees: [],
+            video_integration_id: talk.id
+          },
+          Map.new(extra)
+        ),
+      user_id: user.id,
+      start_at: ~U[2026-10-05 09:00:00Z],
+      end_at: ~U[2026-10-05 10:00:00Z]
+    })
+  end
+
+  # Plays the organiser's Nextcloud server: no conversation exists until one is
+  # created, and every request reaches the test.
+  defp play_nextcloud(host, token) do
+    test = self()
+    rooms_url = "https://#{host}#{@rooms_path}"
+
+    stub(HTTPClientMock, :request, fn method, url, body, _headers, _opts ->
+      send(test, {:nextcloud, method, url, if(body == "", do: nil, else: Jason.decode!(body))})
+
+      case {method, url} do
+        {:get, _url} -> {:ok, %Req.Response{status: 200, body: ocs([])}}
+        {:post, ^rooms_url} -> {:ok, %Req.Response{status: 201, body: ocs(%{"token" => token})}}
+        _other -> {:ok, %Req.Response{status: 200, body: ocs(nil)}}
+      end
+    end)
   end
 
   defp insert_room(user, event, host) do
@@ -254,10 +434,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       EventVideoRoomQueries.insert(%{
         user_id: user.id,
         video_integration_id: talk.id,
+        provider: "nextcloud_talk",
         calendar_integration_id: event.calendar_integration_id,
         event_uid: event.uid,
         room_id: "grid0001",
-        starts_at: ~U[2026-10-05 09:00:00Z],
+        lobby_opens_at: ~U[2026-10-05 09:00:00Z],
         ends_at: ~U[2026-10-05 10:00:00Z]
       })
 

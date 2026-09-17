@@ -1,9 +1,9 @@
 defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
   @moduledoc """
   The record of a video room made for a calendar grid event: what is recorded,
-  when the room stops being needed, and how moving and deleting the event
-  reach the room on the organiser's Nextcloud server. The jobs the grid queues
-  are drained from the queue, and only the HTTP client is stubbed.
+  which calendar events it follows, and when the calendar lets the room go.
+  The jobs the grid queues are drained from the queue, and only the HTTP
+  client is stubbed. Throughout, a room that may still be in use is kept.
   """
 
   use Tymeslot.DataCase, async: true
@@ -27,6 +27,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
   alias Tymeslot.Workers.VideoSyncWorker
 
   @room_path "/ocs/v2.php/apps/spreed/api/v4/room"
+  @day 86_400
 
   setup :verify_on_exit!
 
@@ -36,7 +37,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
   end
 
   describe "record/2" do
-    test "records a Nextcloud Talk room under its event's identity and times", %{
+    test "records a Nextcloud Talk room under its event's identifiers and times", %{
       user: user,
       calendar: calendar
     } do
@@ -48,6 +49,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
                  video_integration_id: talk.id,
                  calendar_integration_id: calendar.id,
                  uid: "grid-event-1",
+                 provider_event_id: "provider-event-1",
                  all_day: false,
                  start: ~U[2026-10-05 09:00:00.123456Z],
                  end: ~U[2026-10-05 10:00:00Z],
@@ -56,15 +58,16 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
 
       assert [
                %EventVideoRoomSchema{
-                 user_id: user_id,
-                 video_integration_id: video_integration_id,
+                 provider: "nextcloud_talk",
                  room_id: "rec00001",
-                 starts_at: ~U[2026-10-05 09:00:00Z],
+                 event_uid: "grid-event-1",
+                 provider_event_id: "provider-event-1",
+                 lobby_opens_at: ~U[2026-10-05 09:00:00Z],
                  ends_at: ~U[2026-10-05 10:00:00Z]
-               }
-             ] = EventVideoRoomQueries.list_for_event(calendar.id, "grid-event-1")
+               } = room
+             ] = Repo.all(EventVideoRoomSchema)
 
-      assert {user_id, video_integration_id} == {user.id, talk.id}
+      assert {room.user_id, room.video_integration_id} == {user.id, talk.id}
     end
 
     test "records nothing for a provider whose rooms need no deleting", %{
@@ -74,62 +77,42 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
       mirotalk = insert(:video_integration, user: user, provider: "mirotalk")
 
       assert :ok =
-               EventVideoRooms.record(context(:mirotalk, "miro-room"), %{
-                 user_id: user.id,
-                 video_integration_id: mirotalk.id,
-                 calendar_integration_id: calendar.id,
-                 uid: "grid-event-2",
-                 all_day: false,
-                 start: ~U[2026-10-05 09:00:00Z],
-                 end: ~U[2026-10-05 10:00:00Z],
-                 recurrence_rule: nil
-               })
+               EventVideoRooms.record(
+                 context(:mirotalk, "miro-room"),
+                 event(user, mirotalk, calendar)
+               )
 
-      assert EventVideoRoomQueries.list_for_event(calendar.id, "grid-event-2") == []
+      assert Repo.all(EventVideoRoomSchema) == []
+    end
+
+    test "records a conversation adopted again for the same event only once", %{
+      user: user,
+      calendar: calendar
+    } do
+      talk = insert_talk_integration(user, "adopted.example.com")
+      grid_event = event(user, talk, calendar)
+
+      assert :ok = EventVideoRooms.record(context(:nextcloud_talk, "adop0001"), grid_event)
+      assert :ok = EventVideoRooms.record(context(:nextcloud_talk, "adop0001"), grid_event)
+
+      assert [%EventVideoRoomSchema{room_id: "adop0001"}] = Repo.all(EventVideoRoomSchema)
     end
   end
 
-  describe "times/1" do
-    test "a one-off event's room is needed until the event ends, its lobby waiting for the start" do
-      assert EventVideoRooms.times(timed(nil)) ==
-               {~U[2026-10-05 09:00:00Z], ~U[2026-10-05 10:00:00Z]}
-    end
+  describe "identified/3" do
+    # Google and Outlook address the event by the id they returned from then on.
+    test "records the identifier the calendar returned for the event", %{
+      user: user,
+      calendar: calendar
+    } do
+      room =
+        insert_room(user, calendar, "identified.example.com", "iden0001", "grid-uid",
+          provider_event_id: nil
+        )
 
-    # The exclusive end date is midnight in some timezone, which can lie up to
-    # a day after midnight UTC.
-    test "an all-day event's room is kept for the whole day after its exclusive end date" do
-      schedule = %{
-        all_day: true,
-        start: ~D[2026-10-05],
-        end: ~D[2026-10-06],
-        recurrence_rule: nil
-      }
+      assert :ok = EventVideoRooms.identified(calendar.id, "grid-uid", "googleid0001")
 
-      assert EventVideoRooms.times(schedule) == {nil, ~U[2026-10-07 00:00:00Z]}
-    end
-
-    test "a series ending on a date is needed until a day after its last possible occurrence" do
-      assert EventVideoRooms.times(timed("FREQ=DAILY;UNTIL=20261031T235959Z")) ==
-               {nil, ~U[2026-11-02 00:59:59Z]}
-    end
-
-    # Three repetitions of a weekly rule, each allowed a week plus a week for
-    # its weekday filter: 42 days after the first start, then the event's hour
-    # and a day's margin. The real last occurrence (Monday 12 October) ends
-    # well inside that.
-    test "a series ending after a count is needed until no occurrence could still be running" do
-      assert EventVideoRooms.times(timed("RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=3")) ==
-               {nil, ~U[2026-11-17 10:00:00Z]}
-    end
-
-    test "a series with no end is never treated as over" do
-      assert EventVideoRooms.times(timed("FREQ=WEEKLY;BYDAY=MO")) == {nil, nil}
-    end
-
-    # BYMONTHDAY=31 skips the months without a 31st, so repetitions can lie
-    # further apart than the bound allows for.
-    test "a rule beyond what the grid's editor writes is never treated as over" do
-      assert EventVideoRooms.times(timed("FREQ=MONTHLY;BYMONTHDAY=31;COUNT=2")) == {nil, nil}
+      assert Repo.reload!(room).provider_event_id == "googleid0001"
     end
   end
 
@@ -140,7 +123,6 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
     } do
       host = "moved.example.com"
       room = insert_room(user, calendar, host, "move0001", "grid-move")
-
       new_start = ~U[2026-10-06 14:00:00Z]
 
       assert :ok =
@@ -153,12 +135,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
                  recurrence_rule: nil
                })
 
-      assert %{starts_at: ^new_start, ends_at: ~U[2026-10-06 15:00:00Z]} = Repo.reload!(room)
-
-      assert_enqueued(
-        worker: VideoSyncWorker,
-        args: %{"event_room_id" => room.id, "action" => "update"}
-      )
+      assert %{lobby_opens_at: ^new_start, ends_at: ~U[2026-10-06 15:00:00Z]} = Repo.reload!(room)
+      assert_enqueued(worker: VideoSyncWorker, args: event_room_args(room, "update"))
 
       expect(HTTPClientMock, :request, fn :put, url, body, _headers, _opts ->
         assert url == "https://#{host}#{@room_path}/move0001/webinar/lobby"
@@ -172,6 +150,28 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
       assert Repo.get(EventVideoRoomSchema, room.id)
     end
 
+    test "finds the room by the identifier the calendar returned", %{
+      user: user,
+      calendar: calendar
+    } do
+      room =
+        insert_room(user, calendar, "by-provider-id.example.com", "prov0001", "grid-uid-2",
+          provider_event_id: "googleid0002"
+        )
+
+      assert :ok =
+               EventVideoRooms.rescheduled(%{
+                 calendar_integration_id: calendar.id,
+                 uid: "googleid0002@google.com",
+                 provider_event_id: "googleid0002",
+                 all_day: false,
+                 start_at: ~U[2026-10-07 09:00:00Z],
+                 end_at: ~U[2026-10-07 10:00:00Z]
+               })
+
+      assert Repo.reload!(room).ends_at == ~U[2026-10-07 10:00:00Z]
+    end
+
     test "an edit that leaves the event's times alone queues nothing", %{
       user: user,
       calendar: calendar
@@ -183,60 +183,117 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
                  calendar_integration_id: calendar.id,
                  uid: "grid-still",
                  all_day: false,
-                 start_at: room.starts_at,
+                 start_at: room.lobby_opens_at,
                  end_at: room.ends_at,
-                 recurrence_rule: nil,
                  summary: "Renamed"
                })
 
       refute_enqueued(worker: VideoSyncWorker)
     end
 
-    # Moving one occurrence says nothing about where the series ends, so an
-    # earlier occurrence must not bring the room's deletion forward.
-    test "moving one occurrence of a series earlier keeps the later end", %{
+    # A lobby left at the old hour would hold guests out of an event that now
+    # runs all day.
+    test "making an event all-day opens its lobby as the day begins", %{
+      user: user,
+      calendar: calendar
+    } do
+      room = insert_room(user, calendar, "all-day.example.com", "alld0001", "grid-all-day")
+
+      assert :ok =
+               EventVideoRooms.rescheduled(%{
+                 calendar_integration_id: calendar.id,
+                 uid: "grid-all-day",
+                 all_day: true,
+                 start_date: ~D[2026-10-05],
+                 end_date: ~D[2026-10-06]
+               })
+
+      assert %{lobby_opens_at: ~U[2026-10-04 10:00:00Z], ends_at: ~U[2026-10-07 00:00:00Z]} =
+               Repo.reload!(room)
+
+      assert_enqueued(worker: VideoSyncWorker, args: event_room_args(room, "update"))
+    end
+
+    # Google caches each occurrence under its parent's id, and one occurrence
+    # moved earlier says nothing about where the series ends.
+    test "moving an occurrence of a Google series opens the lobby earlier and keeps the end", %{
       user: user,
       calendar: calendar
     } do
       room =
         insert_room(user, calendar, "series.example.com", "seri0001", "grid-series",
-          starts_at: nil,
+          provider_event_id: "googleseries1",
           ends_at: ~U[2026-12-01 10:00:00Z]
         )
 
       assert :ok =
                EventVideoRooms.rescheduled(%{
                  calendar_integration_id: calendar.id,
-                 uid: "grid-series",
+                 uid: "googleseries1@google.com",
+                 provider_event_id: "googleseries1_20261012T090000Z",
+                 recurring_event_id: "googleseries1",
                  all_day: false,
                  start_at: ~U[2026-10-01 09:00:00Z],
-                 end_at: ~U[2026-10-01 10:00:00Z],
-                 recurrence_rule: "FREQ=WEEKLY;COUNT=2"
+                 end_at: ~U[2026-10-01 10:00:00Z]
                })
 
-      assert %{starts_at: nil, ends_at: ~U[2026-12-01 10:00:00Z]} = Repo.reload!(room)
-      refute_enqueued(worker: VideoSyncWorker)
+      assert %{lobby_opens_at: ~U[2026-10-01 09:00:00Z], ends_at: nil} = Repo.reload!(room)
+      assert_enqueued(worker: VideoSyncWorker, args: event_room_args(room, "update"))
+    end
+
+    test "a room deleted meanwhile is left deleted", %{user: user, calendar: calendar} do
+      room = insert_room(user, calendar, "gone.example.com", "gone0001", "grid-gone")
+      :ok = EventVideoRoomQueries.delete(room)
+
+      assert EventVideoRoomQueries.update_times(room, nil, nil) == :gone
+      assert Repo.all(EventVideoRoomSchema) == []
     end
   end
 
   describe "moved/4" do
-    test "the room follows its event to another calendar and a new uid", %{
+    test "a one-off event's room follows it to another calendar and its new identifiers", %{
       user: user,
       calendar: calendar
     } do
       room = insert_room(user, calendar, "relocate.example.com", "relo0001", "grid-old")
       destination = insert(:calendar_integration, user: user)
 
-      assert :ok = EventVideoRooms.moved(calendar.id, "grid-old", destination.id, "grid-new")
+      assert :ok =
+               EventVideoRooms.moved(
+                 %{calendar_integration_id: calendar.id, uid: "grid-old"},
+                 destination.id,
+                 "grid-new",
+                 "outlookid0001"
+               )
 
-      assert EventVideoRoomQueries.list_for_event(calendar.id, "grid-old") == []
-      assert [%{id: id}] = EventVideoRoomQueries.list_for_event(destination.id, "grid-new")
-      assert id == room.id
+      assert %{event_uid: "grid-new", provider_event_id: "outlookid0001"} =
+               moved = Repo.reload!(room)
+
+      assert moved.calendar_integration_id == destination.id
+    end
+
+    test "an occurrence moved out of its series leaves the room with the series", %{
+      user: user,
+      calendar: calendar
+    } do
+      room = insert_room(user, calendar, "occurrence.example.com", "occu0001", "grid-series-2")
+      destination = insert(:calendar_integration, user: user)
+
+      occurrence = %{
+        calendar_integration_id: calendar.id,
+        uid: "grid-series-2_20261005T090000",
+        recurrence_rule: "FREQ=WEEKLY"
+      }
+
+      assert :ok = EventVideoRooms.moved(occurrence, destination.id, "grid-new-2", "grid-new-2")
+
+      assert %{event_uid: "grid-series-2"} = moved = Repo.reload!(room)
+      assert moved.calendar_integration_id == calendar.id
     end
   end
 
-  describe "event_deleted/2" do
-    test "deletes the event's conversation on the server and forgets it", %{
+  describe "event_deleted/1" do
+    test "deletes a one-off event's conversation on the server and forgets it", %{
       user: user,
       calendar: calendar
     } do
@@ -244,7 +301,11 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
       room = insert_room(user, calendar, host, "dele0001", "grid-deleted")
       other = insert_room(user, calendar, "kept.example.com", "keep0001", "grid-kept")
 
-      assert :ok = EventVideoRooms.event_deleted(calendar.id, "grid-deleted")
+      assert :ok =
+               EventVideoRooms.event_deleted(%{
+                 calendar_integration_id: calendar.id,
+                 uid: "grid-deleted"
+               })
 
       refute_enqueued(worker: VideoSyncWorker, args: %{"event_room_id" => other.id})
 
@@ -257,6 +318,28 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
 
       assert Repo.get(EventVideoRoomSchema, room.id) == nil
       assert Repo.get(EventVideoRoomSchema, other.id)
+    end
+
+    # The rest of the series still meets in the conversation.
+    test "deleting one occurrence of a series keeps its conversation", %{
+      user: user,
+      calendar: calendar
+    } do
+      room =
+        insert_room(user, calendar, "one-occurrence.example.com", "occd0001", "grid-series-3",
+          provider_event_id: "googleseries3"
+        )
+
+      assert :ok =
+               EventVideoRooms.event_deleted(%{
+                 calendar_integration_id: calendar.id,
+                 uid: "googleseries3@google.com",
+                 provider_event_id: "googleseries3_20261005T090000Z",
+                 recurring_event_id: "googleseries3"
+               })
+
+      refute_enqueued(worker: VideoSyncWorker)
+      assert Repo.get(EventVideoRoomSchema, room.id)
     end
 
     # The nightly clean-up retries a room whose record survives, so a refused
@@ -272,7 +355,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
       end)
 
       assert {:discard, "Invalid configuration"} =
-               perform_job(VideoSyncWorker, %{"event_room_id" => room.id, "action" => "delete"})
+               perform_job(VideoSyncWorker, event_room_args(room, "delete"))
 
       assert Repo.get(EventVideoRoomSchema, room.id)
     end
@@ -283,12 +366,138 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
     end
   end
 
+  describe "check_expired/1" do
+    test "keeps a room whose event ended within the retention period", %{
+      user: user,
+      calendar: calendar
+    } do
+      room = ended_room(user, calendar, "recent.example.com", 6)
+
+      assert EventVideoRooms.check_expired(room) == :kept
+    end
+
+    # Moved in a calendar client: the grid never heard of it, the cache did.
+    test "keeps a room whose event the calendar has since moved later, and follows it", %{
+      user: user,
+      calendar: calendar
+    } do
+      room = ended_room(user, calendar, "moved-later.example.com", 8)
+      new_start = DateTime.add(DateTime.utc_now(:second), 2 * @day, :second)
+      cache_event(calendar, room.event_uid, new_start)
+
+      assert EventVideoRooms.check_expired(room) == :kept
+
+      assert %{lobby_opens_at: ^new_start} = reloaded = Repo.reload!(room)
+      assert reloaded.ends_at == DateTime.add(new_start, 1800, :second)
+      assert_enqueued(worker: VideoSyncWorker, args: event_room_args(room, "update"))
+    end
+
+    test "lets a room go whose cached event also ended past retention", %{
+      user: user,
+      calendar: calendar
+    } do
+      room = ended_room(user, calendar, "cached-ended.example.com", 8)
+      cache_event(calendar, room.event_uid, DateTime.add(room.ends_at, -1800, :second))
+
+      assert EventVideoRooms.check_expired(room) == :expired
+    end
+
+    test "lets a room go whose event is gone from a calendar synced since it fell due", %{
+      user: user
+    } do
+      calendar =
+        insert(:calendar_integration,
+          user: user,
+          last_external_sync_at: DateTime.utc_now(:second)
+        )
+
+      room = ended_room(user, calendar, "gone-synced.example.com", 8)
+
+      assert EventVideoRooms.check_expired(room) == :expired
+    end
+
+    # Absent from a cache that has not been refreshed says nothing.
+    test "keeps a room whose event is absent from a calendar not synced since", %{user: user} do
+      calendar =
+        insert(:calendar_integration,
+          user: user,
+          last_external_sync_at: DateTime.add(DateTime.utc_now(:second), -30 * @day, :second)
+        )
+
+      room = ended_room(user, calendar, "gone-stale.example.com", 8)
+
+      assert EventVideoRooms.check_expired(room) == :kept
+    end
+
+    # A CalDAV series is cached as its occurrences, under the series uid.
+    test "keeps a room whose event the calendar now repeats, and stops offering it", %{
+      user: user,
+      calendar: calendar
+    } do
+      room = ended_room(user, calendar, "now-series.example.com", 8)
+      start = DateTime.add(room.ends_at, -1800, :second)
+
+      insert(:provider_calendar_event,
+        calendar_integration: calendar,
+        uid: room.event_uid <> "_20260901T090000",
+        start_at: start,
+        end_at: room.ends_at,
+        recurrence_rule: "FREQ=WEEKLY"
+      )
+
+      assert EventVideoRooms.check_expired(room) == :kept
+      assert Repo.reload!(room).ends_at == nil
+    end
+
+    test "keeps a room whose calendar integration is gone", %{user: user, calendar: calendar} do
+      room = ended_room(user, calendar, "no-calendar.example.com", 8)
+      Repo.delete!(calendar)
+
+      {:ok, orphan} = EventVideoRoomQueries.get_with_integrations(room.id)
+
+      assert EventVideoRooms.check_expired(orphan) == :kept
+    end
+
+    # The job asks again: the event may have moved after the scan queued it.
+    test "an expire job keeps a room whose event moved after it was queued", %{
+      user: user,
+      calendar: calendar
+    } do
+      room = ended_room(user, calendar, "moved-after-scan.example.com", 8)
+
+      cache_event(
+        calendar,
+        room.event_uid,
+        DateTime.add(DateTime.utc_now(:second), @day, :second)
+      )
+
+      assert :ok = perform_job(VideoSyncWorker, event_room_args(room, "expire"))
+
+      assert Repo.get(EventVideoRoomSchema, room.id)
+    end
+  end
+
   describe "the record's lifetime" do
-    test "goes with its video integration", %{user: user, calendar: calendar} do
-      room = insert_room(user, calendar, "cascade.example.com", "casc0001", "grid-cascade")
+    # As for a meeting: a disconnect without deleting the rooms, then a
+    # reconnect, must still be able to reach the conversation.
+    test "outlives its video integration and is reached through a reconnected one", %{
+      user: user,
+      calendar: calendar
+    } do
+      host = "reconnected.example.com"
+      room = insert_room(user, calendar, host, "reco0001", "grid-reconnect")
 
       Repo.delete!(Repo.get!(VideoIntegrationSchema, room.video_integration_id))
+      assert %{video_integration_id: nil, provider: "nextcloud_talk"} = Repo.reload!(room)
 
+      _reconnected = insert_talk_integration(user, host)
+
+      expect(HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
+        assert url == "https://#{host}#{@room_path}/reco0001"
+        {:ok, %Req.Response{status: 200, body: ocs(nil)}}
+      end)
+
+      assert :ok = perform_job(VideoSyncWorker, event_room_args(room, "delete"))
       assert Repo.get(EventVideoRoomSchema, room.id) == nil
     end
 
@@ -312,12 +521,15 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
     end
   end
 
-  defp timed(rule),
+  defp event(user, integration, calendar),
     do: %{
+      user_id: user.id,
+      video_integration_id: integration.id,
+      calendar_integration_id: calendar.id,
+      uid: "grid-event",
       all_day: false,
       start: ~U[2026-10-05 09:00:00Z],
-      end: ~U[2026-10-05 10:00:00Z],
-      recurrence_rule: rule
+      end: ~U[2026-10-05 10:00:00Z]
     }
 
   defp context(provider, room_id),
@@ -331,6 +543,37 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
       }
     }
 
+  defp event_room_args(room, action), do: %{"event_room_id" => room.id, "action" => action}
+
+  # A room whose event ended `days` days ago, loaded as the scan loads it.
+  defp ended_room(user, calendar, host, days) do
+    ends_at = DateTime.add(DateTime.utc_now(:second), -days * @day, :second)
+
+    room =
+      insert_room(
+        user,
+        calendar,
+        host,
+        "ended001",
+        "grid-ended-#{days}-#{System.unique_integer([:positive])}",
+        lobby_opens_at: DateTime.add(ends_at, -1800, :second),
+        ends_at: ends_at
+      )
+
+    {:ok, loaded} = EventVideoRoomQueries.get_with_integrations(room.id)
+    loaded
+  end
+
+  defp cache_event(calendar, uid, start_at),
+    do:
+      insert(:provider_calendar_event,
+        calendar_integration: calendar,
+        uid: uid,
+        start_at: start_at,
+        end_at: DateTime.add(start_at, 1800, :second),
+        all_day: false
+      )
+
   defp insert_room(user, calendar, host, room_id, uid, attrs \\ []) do
     talk = insert_talk_integration(user, host)
 
@@ -340,10 +583,11 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
           %{
             user_id: user.id,
             video_integration_id: talk.id,
+            provider: "nextcloud_talk",
             calendar_integration_id: calendar.id,
             event_uid: uid,
             room_id: room_id,
-            starts_at: ~U[2026-10-05 09:00:00Z],
+            lobby_opens_at: ~U[2026-10-05 09:00:00Z],
             ends_at: ~U[2026-10-05 10:00:00Z]
           },
           Map.new(attrs)

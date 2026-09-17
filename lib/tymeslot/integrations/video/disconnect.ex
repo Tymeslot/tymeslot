@@ -19,7 +19,7 @@ defmodule Tymeslot.Integrations.Video.Disconnect do
   calendar grid (`Tymeslot.CalendarGrid.EventVideoRooms`).
   """
 
-  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
@@ -85,7 +85,7 @@ defmodule Tymeslot.Integrations.Video.Disconnect do
           scope: scope,
           count:
             MeetingQueries.count_with_video_room_for_integration(integration.id, scope, now) +
-              EventVideoRoomQueries.count_for_integration(integration.id, scope, now)
+              CalendarGrid.count_event_video_rooms_for_integration(integration.id, scope, now)
         }
 
       {:error, :not_found} ->
