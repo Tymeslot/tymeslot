@@ -5,6 +5,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
 
   import Ecto.Query
 
+  alias Ecto.UUID
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Repo
 
@@ -26,12 +27,64 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     end
   end
 
+  @doc """
+  Like `get_for_update/1`, but only matches a payment taken by `host_user_id`.
+
+  Ownership is part of the locked query, so it is decided under the same row
+  lock as everything the caller validates afterwards. A malformed id, an
+  unknown id and another host's payment all return `{:error, :not_found}`.
+  """
+  @spec get_for_update(term(), integer()) ::
+          {:ok, BookingPaymentSchema.t()} | {:error, :not_found}
+  def get_for_update(id, host_user_id) when is_integer(host_user_id) do
+    with {:ok, uuid} <- cast_id(id) do
+      query =
+        from(b in BookingPaymentSchema,
+          where: b.id == ^uuid and b.host_user_id == ^host_user_id,
+          lock: "FOR UPDATE"
+        )
+
+      case Repo.one(query) do
+        nil -> {:error, :not_found}
+        schema -> {:ok, schema}
+      end
+    end
+  end
+
   @spec get(Ecto.UUID.t()) :: BookingPaymentSchema.t() | nil
   def get(id), do: Repo.get(BookingPaymentSchema, id)
+
+  @doc """
+  Fetches a payment by id only if `host_user_id` took it, or `nil`.
+
+  A malformed id returns `nil` rather than raising, since the id usually comes
+  from the client.
+  """
+  @spec get_for_host(term(), integer()) :: BookingPaymentSchema.t() | nil
+  def get_for_host(id, host_user_id) when is_integer(host_user_id) do
+    case cast_id(id) do
+      {:ok, uuid} -> Repo.get_by(BookingPaymentSchema, id: uuid, host_user_id: host_user_id)
+      {:error, :not_found} -> nil
+    end
+  end
 
   @spec by_meeting_id(Ecto.UUID.t()) :: BookingPaymentSchema.t() | nil
   def by_meeting_id(meeting_id),
     do: Repo.get_by(BookingPaymentSchema, meeting_id: meeting_id)
+
+  @doc """
+  Fetches the payment for a meeting only if `host_user_id` took it, or `nil`.
+  """
+  @spec by_meeting_id_for_host(term(), integer()) :: BookingPaymentSchema.t() | nil
+  def by_meeting_id_for_host(meeting_id, host_user_id) when is_integer(host_user_id) do
+    case cast_id(meeting_id) do
+      {:ok, uuid} ->
+        Repo.get_by(BookingPaymentSchema, meeting_id: uuid, host_user_id: host_user_id)
+
+      {:error, :not_found} ->
+        nil
+    end
+  end
 
   @spec by_checkout_session(String.t()) :: BookingPaymentSchema.t() | nil
   def by_checkout_session(session_id),
@@ -197,5 +250,12 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
         updated_at: now
       ]
     )
+  end
+
+  defp cast_id(id) do
+    case UUID.cast(id) do
+      {:ok, uuid} -> {:ok, uuid}
+      :error -> {:error, :not_found}
+    end
   end
 end

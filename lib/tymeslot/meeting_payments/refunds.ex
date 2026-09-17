@@ -3,7 +3,8 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   Issues refunds against `booking_payments` rows via the Stripe Refund
   API and reconciles the local row.
 
-  The contract for `issue_refund/3`:
+  The contract shared by `issue_refund/3` (system refunds, unscoped) and
+  `issue_host_refund/4` (a host refunding a payment they took):
 
     * Validates the payment is within the 60-day refund window.
     * Validates the requested amount is positive and does not exceed
@@ -105,20 +106,59 @@ defmodule Tymeslot.MeetingPayments.Refunds do
 
   def parse_refund_amount(_payment, _params), do: {:error, :choose_type}
 
+  @doc """
+  Refunds a payment on behalf of the platform, whoever took it.
+
+  Unscoped: this is for system rules that refund without an acting user, such
+  as releasing the payment for a request that was never approved. Anything
+  acting for a signed-in user must use `issue_host_refund/4` instead.
+  """
   @spec issue_refund(BookingPaymentSchema.t(), pos_integer(), String.t() | nil) ::
           {:ok, BookingPaymentSchema.t()} | {:error, refund_error()}
   def issue_refund(payment, amount_cents, reason \\ nil) do
-    # Run the full validate → Stripe call → DB update sequence inside a
-    # serialised transaction with a row lock so that two concurrent host
-    # clicks cannot both pass validation against stale `refunded_amount_cents`
-    # and issue duplicate refunds via Stripe.
-    #
-    # The second concurrent caller blocks on the lock, then re-fetches the
-    # updated row and re-validates — at which point the remaining refundable
-    # balance will reflect the first refund, causing the over-refund attempt
-    # to return {:error, :invalid_amount}.
+    refund_locked(
+      fn -> BookingPaymentQueries.get_for_update(payment.id) end,
+      amount_cents,
+      reason
+    )
+  end
+
+  @doc """
+  Refunds a payment on behalf of the host who took it.
+
+  Only the host whose Stripe account holds the money may refund it. Ownership
+  is checked in the locked query, inside the same transaction as the
+  validation and the Stripe call, so it cannot change between the check and
+  the refund. Another host's payment, an unknown id and a malformed id all
+  return `{:error, :not_found}`, so the answer reveals nothing about payments
+  the caller does not own.
+  """
+  @spec issue_host_refund(term(), integer(), pos_integer(), String.t() | nil) ::
+          {:ok, BookingPaymentSchema.t()} | {:error, :not_found | refund_error()}
+  def issue_host_refund(payment_id, host_user_id, amount_cents, reason \\ nil)
+      when is_integer(host_user_id) do
+    refund_locked(
+      fn -> BookingPaymentQueries.get_for_update(payment_id, host_user_id) end,
+      amount_cents,
+      reason
+    )
+  end
+
+  # Run the full validate → Stripe call → DB update sequence inside a
+  # serialised transaction with a row lock so that two concurrent host
+  # clicks cannot both pass validation against stale `refunded_amount_cents`
+  # and issue duplicate refunds via Stripe.
+  #
+  # The second concurrent caller blocks on the lock, then re-fetches the
+  # updated row and re-validates — at which point the remaining refundable
+  # balance will reflect the first refund, causing the over-refund attempt
+  # to return {:error, :invalid_amount}.
+  #
+  # `lock_payment` decides which row may be locked at all: the unscoped
+  # lookup for system refunds, or the host-scoped one for a host's own.
+  defp refund_locked(lock_payment, amount_cents, reason) do
     Repo.transaction(fn ->
-      with {:ok, locked} <- BookingPaymentQueries.get_for_update(payment.id),
+      with {:ok, locked} <- lock_payment.(),
            :ok <- validate_within_window(locked),
            :ok <- validate_amount(locked, amount_cents),
            :ok <- validate_charge(locked),

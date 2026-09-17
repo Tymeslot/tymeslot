@@ -86,24 +86,36 @@ defmodule Tymeslot.Meetings.Cancellation do
   @doc """
   Cancels the meeting, then issues the resolved refund.
 
+  `acting_user_id` is whoever asked for the cancellation. Anyone the caller
+  allows to cancel may cancel without a refund, but a refund moves the host's
+  money, so only the host who took the payment may ask for one. Anyone else
+  asking for a refund gets `{:error, :not_found}`, returned before the meeting
+  is touched: a refusal is not a failed refund, and must not leave a cancelled
+  meeting behind.
+
   A refund failure is reported as `{:error, {:refund_failed, reason}}` and
   leaves the meeting cancelled; see the module docs on ordering.
   """
-  @spec cancel(struct() | String.t(), map() | nil, refund_action()) ::
-          {:ok, struct()} | {:error, {:refund_failed, term()}} | {:error, term()}
-  def cancel(meeting_or_uid, payment, refund_action) do
-    with {:ok, cancelled} <- Cancel.execute(meeting_or_uid),
-         :ok <- issue_refund(payment, refund_action) do
-      {:ok, cancelled}
+  @spec cancel(struct(), integer(), refund_action()) ::
+          {:ok, struct()}
+          | {:error, :not_found}
+          | {:error, {:refund_failed, term()}}
+          | {:error, term()}
+  def cancel(meeting, _acting_user_id, :none), do: Cancel.execute(meeting)
+
+  def cancel(%{id: meeting_id} = meeting, acting_user_id, {:refund, amount_cents}) do
+    case MeetingPayments.payment_for_meeting(meeting_id, acting_user_id) do
+      nil -> {:error, :not_found}
+      payment -> cancel_and_refund(meeting, payment, acting_user_id, amount_cents)
     end
   end
 
-  defp issue_refund(_payment, :none), do: :ok
-
-  defp issue_refund(payment, {:refund, amount_cents}) do
-    case MeetingPayments.issue_refund(payment, amount_cents) do
-      {:ok, _payment} -> :ok
-      {:error, reason} -> {:error, {:refund_failed, reason}}
+  defp cancel_and_refund(meeting, payment, host_user_id, amount_cents) do
+    with {:ok, cancelled} <- Cancel.execute(meeting) do
+      case MeetingPayments.refund_payment_for_host(payment.id, host_user_id, amount_cents) do
+        {:ok, _payment} -> {:ok, cancelled}
+        {:error, reason} -> {:error, {:refund_failed, reason}}
+      end
     end
   end
 end

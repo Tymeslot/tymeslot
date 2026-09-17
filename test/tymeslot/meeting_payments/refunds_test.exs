@@ -7,6 +7,8 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
   import Mox
 
+  alias Ecto.UUID
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.StripeAdapterMock
@@ -476,5 +478,103 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
       assert {:ok, _payment} = Refunds.issue_refund(payment, 500)
     end
+  end
+
+  describe "refund_payment_for_host/4" do
+    test "refunds a payment the host took" do
+      payment = paid_booking_payment()
+
+      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
+        assert params.charge == payment.stripe_charge_id
+        assert params.amount == 1500
+        {:ok, %{id: "re_host"}}
+      end)
+
+      assert {:ok, updated} =
+               MeetingPayments.refund_payment_for_host(payment.id, payment.host_user_id, 1500)
+
+      assert updated.refunded_amount_cents == 1500
+      assert BookingPaymentQueries.get(payment.id).refunded_amount_cents == 1500
+
+      assert_enqueued(worker: SendBookingPaymentRefunded, args: %{booking_payment_id: payment.id})
+    end
+
+    # Stripe is stubbed to succeed for every refusal below, so a refund that does
+    # not land was refused by ownership, not by a missing mock.
+    test "refuses a payment another host took" do
+      stub_successful_stripe_refund()
+      payment = paid_booking_payment()
+
+      assert {:error, :not_found} =
+               MeetingPayments.refund_payment_for_host(payment.id, payment.host_user_id + 1, 1500)
+
+      assert_untouched(payment)
+    end
+
+    test "refuses a malformed payment id without raising" do
+      stub_successful_stripe_refund()
+      payment = paid_booking_payment()
+
+      assert {:error, :not_found} =
+               MeetingPayments.refund_payment_for_host("not-a-uuid", payment.host_user_id, 1500)
+
+      assert_untouched(payment)
+    end
+
+    test "still validates the payment for its owner" do
+      payment = paid_booking_payment()
+
+      assert {:error, :invalid_amount} =
+               MeetingPayments.refund_payment_for_host(payment.id, payment.host_user_id, 6000)
+    end
+  end
+
+  describe "get_payment_for_host/2" do
+    test "returns the host's own payment" do
+      payment = paid_booking_payment()
+
+      assert {:ok, %{id: id}} =
+               MeetingPayments.get_payment_for_host(payment.id, payment.host_user_id)
+
+      assert id == payment.id
+    end
+
+    test "is not found for another host, an unknown id, or a malformed id" do
+      payment = paid_booking_payment()
+
+      assert {:error, :not_found} =
+               MeetingPayments.get_payment_for_host(payment.id, payment.host_user_id + 1)
+
+      assert {:error, :not_found} =
+               MeetingPayments.get_payment_for_host(UUID.generate(), payment.host_user_id)
+
+      assert {:error, :not_found} =
+               MeetingPayments.get_payment_for_host("not-a-uuid", payment.host_user_id)
+    end
+  end
+
+  describe "payment_for_meeting/2" do
+    test "returns the payment only to the host who took it" do
+      meeting = insert(:meeting)
+      payment = paid_booking_payment(%{meeting_id: meeting.id})
+
+      assert %{id: id} = MeetingPayments.payment_for_meeting(meeting.id, payment.host_user_id)
+      assert id == payment.id
+
+      assert MeetingPayments.payment_for_meeting(meeting.id, payment.host_user_id + 1) == nil
+    end
+  end
+
+  defp stub_successful_stripe_refund do
+    stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
+      {:ok, %{id: "re_should_not_happen"}}
+    end)
+  end
+
+  defp assert_untouched(payment) do
+    reloaded = BookingPaymentQueries.get(payment.id)
+    assert reloaded.refunded_amount_cents == 0
+    assert reloaded.status == "paid"
+    refute_enqueued(worker: SendBookingPaymentRefunded)
   end
 end

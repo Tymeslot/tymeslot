@@ -121,8 +121,12 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   def handle_event("show_cancel_modal", %{"id" => _meeting_id} = params, socket) do
     case fetch_meeting_for_modal(socket, params, policy_fun: &Policy.can_cancel_meeting?/1) do
       {:ok, meeting} ->
-        Cancellation.emit_open(socket.assigns.current_user.id, meeting.id)
-        booking_payment = MeetingPayments.payment_for_meeting(meeting.id)
+        user_id = socket.assigns.current_user.id
+        Cancellation.emit_open(user_id, meeting.id)
+
+        # Scoped to the signed-in user: an attendee may cancel from here too,
+        # but the payment is the host's, so they see no refund options.
+        booking_payment = MeetingPayments.payment_for_meeting(meeting.id, user_id)
 
         {:noreply,
          socket
@@ -426,7 +430,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
       {:ok, refund_action} ->
         socket
         |> assign(:cancelling_meeting, meeting.id)
-        |> run_cancellation(meeting, booking_payment, refund_action)
+        |> run_cancellation(meeting, refund_action)
 
       {:error, reason} ->
         Flash.error(Cancellation.refund_error_message(reason))
@@ -434,8 +438,13 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     end
   end
 
-  defp run_cancellation(socket, meeting, booking_payment, refund_action) do
-    result = Meetings.cancel_meeting_with_refund(meeting, booking_payment, refund_action)
+  defp run_cancellation(socket, meeting, refund_action) do
+    result =
+      Meetings.cancel_meeting_with_refund(
+        meeting,
+        socket.assigns.current_user.id,
+        refund_action
+      )
 
     Cancellation.emit_confirm(socket.assigns.current_user.id, meeting.id, result)
     handle_cancellation(socket, meeting, refund_action, result)
