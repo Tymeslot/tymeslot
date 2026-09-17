@@ -59,6 +59,7 @@ defmodule Tymeslot.Precommit.Runner do
   """
 
   @barrier_prefix "compile"
+  @dialyzer_schedulers 8
 
   @type step :: {name :: String.t(), args :: [String.t()], env :: atom()}
   @type result :: {name :: String.t(), :passed | :failed | :skipped, non_neg_integer()}
@@ -287,6 +288,16 @@ defmodule Tymeslot.Precommit.Runner do
     code
   end
 
+  # The concurrent counterpart to `cmd/2`: the same invocation, with the output
+  # collected rather than streamed so it can be printed in one block when the
+  # step finishes.
+  defp capture(args, env, extra_env) do
+    System.cmd("mix", args,
+      stderr_to_stdout: true,
+      env: [{"MIX_ENV", to_string(env)} | step_env(args)] ++ extra_env
+    )
+  end
+
   # Dialyzer sizes its analysis worker pool to
   # `erlang:system_info(schedulers_online)` (`dialyzer_utils:parallelism/0`,
   # consumed by the regulator in `dialyzer_coordinator`), so the count decides
@@ -298,8 +309,11 @@ defmodule Tymeslot.Precommit.Runner do
   # the time holds 4.2G to 5.4G whether it is handed 4 schedulers or 16. So the
   # number is a speed setting, and the memory guard is the systemd scope in the
   # workspace `mix.sh`, which bounds the whole process tree however much
-  # dialyzer asks for. Measured on Core, three runs each, median wall clock: 92s
-  # at 4, 77s at 8, 92s at 16, the last losing to coordination overhead.
+  # dialyzer asks for. Measured on Core on a 16-core host, three runs each,
+  # median wall clock: 92s at 4, 77s at 8, 92s at 16, the last losing to
+  # coordination overhead. The cap is never more than the cores the run may use
+  # (`System.schedulers_online/0`, which honours a CPU quota), so a smaller
+  # machine is not handed more schedulers than it has.
   #
   # The cap is keyed off the command rather than the step's display name, and set
   # here rather than for the run as a whole, so the test suite in the same
@@ -310,24 +324,21 @@ defmodule Tymeslot.Precommit.Runner do
   # `dialyzer` remains available as the cross-check the incremental mode was
   # adopted against, and a cap that quietly stopped applying to either would be
   # invisible: the run would simply get slower.
-  # The concurrent counterpart to `cmd/2`: the same invocation, with the output
-  # collected rather than streamed so it can be printed in one block when the
-  # step finishes.
-  defp capture(args, env, extra_env) do
-    System.cmd("mix", args,
-      stderr_to_stdout: true,
-      env: [{"MIX_ENV", to_string(env)} | step_env(args)] ++ extra_env
-    )
-  end
-
   @doc false
   @spec step_env([String.t()]) :: [{String.t(), String.t()}]
   def step_env([command | _rest]) when command in ~w[dialyzer dialyzer.incremental] do
-    schedulers = System.get_env("MIX_DIALYZER_SCHEDULERS", "8")
+    schedulers =
+      System.get_env("MIX_DIALYZER_SCHEDULERS") ||
+        Integer.to_string(dialyzer_schedulers(System.schedulers_online()))
+
     [{"ERL_FLAGS", "+S #{schedulers}:#{schedulers}"}]
   end
 
   def step_env(_args), do: []
+
+  @doc false
+  @spec dialyzer_schedulers(pos_integer()) :: pos_integer()
+  def dialyzer_schedulers(cores), do: min(@dialyzer_schedulers, cores)
 
   defp report(results) do
     Mix.shell().info([:bright, "\nSummary", :reset])

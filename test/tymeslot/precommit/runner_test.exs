@@ -427,15 +427,26 @@ defmodule Tymeslot.Precommit.RunnerTest do
   # by about a fifth. Hence a test on the flag itself.
   describe "step_env/1" do
     test "caps schedulers for the dialyzer step" do
-      assert Runner.step_env(["dialyzer"]) == [{"ERL_FLAGS", "+S 8:8"}]
+      assert [{"ERL_FLAGS", flags}] = Runner.step_env(["dialyzer"])
+      assert flags == "+S #{expected_dialyzer_schedulers()}:#{expected_dialyzer_schedulers()}"
     end
 
     # The gate runs the incremental task and keeps `dialyzer` as the cross-check.
     # Both need the cap, and the clause that applies it matches on the task name,
     # so a step reworded to one and not the other would silently lose it.
     test "caps schedulers for the incremental dialyzer step too" do
-      assert Runner.step_env(["dialyzer.incremental", "--list-unused-filters"]) ==
-               [{"ERL_FLAGS", "+S 8:8"}]
+      assert [{"ERL_FLAGS", flags}] =
+               Runner.step_env(["dialyzer.incremental", "--list-unused-filters"])
+
+      assert flags == "+S #{expected_dialyzer_schedulers()}:#{expected_dialyzer_schedulers()}"
+    end
+
+    # Eight measured fastest on a 16-core host; a machine with fewer cores must
+    # not be handed more schedulers than it has.
+    test "caps dialyzer at eight schedulers, or the cores available when fewer" do
+      assert Runner.dialyzer_schedulers(16) == 8
+      assert Runner.dialyzer_schedulers(64) == 8
+      assert Runner.dialyzer_schedulers(4) == 4
     end
 
     test "leaves every other step's environment alone" do
@@ -450,4 +461,6 @@ defmodule Tymeslot.Precommit.RunnerTest do
     # that pushes modules to `async: false` across this suite. It is a plain
     # `System.get_env/2` default; the branch that matters is tested above.
   end
+
+  defp expected_dialyzer_schedulers, do: min(8, System.schedulers_online())
 end
