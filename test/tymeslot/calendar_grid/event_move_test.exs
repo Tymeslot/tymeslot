@@ -17,8 +17,11 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
   import Mox
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.ExchangeFixtures
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
+  alias Tymeslot.Integrations.Calendar.Exchange.EventNormaliser
+  alias Tymeslot.Integrations.Calendar.Exchange.Soap
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Sync
 
@@ -78,6 +81,31 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       start_date: ~D[2026-06-01],
       end_date: ~D[2026-06-02]
     })
+  end
+
+  # Caches one Exchange item of `item_type` the way the grid's read path does:
+  # a `GetItem` response through the Exchange normaliser into the cache.
+  defp cache_exchange_item(user, item_type) do
+    exchange = insert(:calendar_integration, user: user, provider: "exchange")
+
+    {:ok, doc} =
+      [id: "series-item", uid: "weekly-standup", calendar_item_type: item_type]
+      |> ExchangeFixtures.get_item_response()
+      |> Soap.parse()
+
+    context = %{
+      calendar_integration_id: exchange.id,
+      provider_calendar_id: "calendar-folder",
+      synced_at: DateTime.utc_now()
+    }
+
+    {:ok, normalised} =
+      doc |> EventNormaliser.parse_items() |> EventNormaliser.normalise_events(context)
+
+    {:ok, 1} = Sync.upsert_cache(exchange, normalised)
+    {:ok, event} = ProviderCalendarEventQueries.get_by_uid(exchange.id, "weekly-standup")
+
+    {exchange, event}
   end
 
   defp expect_create(result_fun) do
@@ -409,6 +437,51 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
 
       assert {:error, :recurring_event} = move(user, event, destination)
       assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(source.id, event.uid)
+    end
+
+    # EWS marks a series only by its item type: the normaliser writes no repeat
+    # rule and names no series. A server that does not expand series (grommunio)
+    # puts the RecurringMaster itself on the grid, and deleting it by its item
+    # id after the copy would remove every occurrence. The row is built by the
+    # sync's own parse, normalise and cache steps, so losing the marker in any
+    # of them turns these red.
+    for item_type <- ~w(RecurringMaster Occurrence Exception) do
+      test "an Exchange #{item_type} is refused before anything is written", %{
+        user: user,
+        destination: destination
+      } do
+        {exchange, event} = cache_exchange_item(user, unquote(item_type))
+
+        assert {event.recurrence_rule, event.recurring_event_id, event.provider_event_id} ==
+                 {nil, nil, "series-item"}
+
+        expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context ->
+          {:ok, "never"}
+        end)
+
+        refute_delete()
+
+        assert {:error, :recurring_event} = move(user, event, destination)
+        assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(exchange.id, event.uid)
+      end
+    end
+
+    test "a single Exchange item still moves, deleted by its item id", %{
+      user: user,
+      destination: destination
+    } do
+      {exchange, event} = cache_exchange_item(user, "Single")
+      expect_create(&created/1)
+      expect_delete(:ok)
+
+      assert {:ok, %{uid: uid}} = move(user, event, destination)
+
+      assert [{:create, _payload, _context}, {:delete, _uid, delete_context, opts}] =
+               provider_calls()
+
+      assert delete_context == {exchange.id, user.id}
+      assert opts == [provider_event_id: "series-item"]
+      assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(destination.id, uid)
     end
 
     test "an all-day event without dates never reaches the destination", %{

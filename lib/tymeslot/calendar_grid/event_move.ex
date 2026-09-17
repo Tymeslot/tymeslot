@@ -37,6 +37,12 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   carries no repeat rule and names no series, yet it lives in the series'
   resource like every other occurrence. Only the recurrence id the sync keeps
   in `provider_metadata` marks it.
+
+  Exchange sets none of those fields. Its only series marker is the EWS item
+  type the sync keeps in `provider_metadata`, and it matters most for the
+  series itself: a server that does not expand series (grommunio) puts the
+  `RecurringMaster` on the grid, and deleting it by its item id removes every
+  occurrence.
   """
 
   alias Tymeslot.CalendarGrid.ProviderPayload
@@ -71,27 +77,36 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   Whether `event` may be moved to another calendar.
 
   Returns `{:error, :recurring_event}` for a recurring series (it carries a
-  repeat rule), for an occurrence of one (it names its series) and for an
-  occurrence edited on its own (it carries a recurrence id).
+  repeat rule), for an occurrence of one (it names its series), for an
+  occurrence edited on its own (it carries a recurrence id) and for any
+  Exchange item that is not a `Single` one.
   """
   @spec ensure_movable(map()) :: :ok | {:error, :recurring_event}
   def ensure_movable(event) do
     if part_of_series?(event), do: {:error, :recurring_event}, else: :ok
   end
 
-  # The recurrence id has no column of its own: the sync keeps it in
-  # `provider_metadata`, atom-keyed when freshly normalised and string-keyed
-  # once it has been through the database.
+  # The recurrence id and the Exchange item type have no columns of their own:
+  # the sync keeps them in `provider_metadata`, atom-keyed when freshly
+  # normalised and string-keyed once it has been through the database.
   defp part_of_series?(event) do
+    metadata = Map.get(event, :provider_metadata)
+
     Enum.any?(
       [
         Map.get(event, :recurrence_rule),
         Map.get(event, :recurring_event_id),
-        MapKeys.get_binary(Map.get(event, :provider_metadata), :recurrence_id)
+        MapKeys.get_binary(metadata, :recurrence_id)
       ],
       &present?/1
-    )
+    ) or exchange_series_item?(MapKeys.get_binary(metadata, :calendar_item_type))
   end
+
+  # `RecurringMaster`, `Occurrence` and `Exception` all belong to a series. A
+  # server that omits the element leaves no type, which reads as a single item.
+  defp exchange_series_item?(nil), do: false
+  defp exchange_series_item?("Single"), do: false
+  defp exchange_series_item?(_series_type), do: true
 
   @doc """
   Moves `event` to `destination`'s integration, on the calendar named by

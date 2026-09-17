@@ -138,7 +138,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventMoveLiveViewTest do
           {"a series", quote(do: %{recurrence_rule: "FREQ=WEEKLY;BYDAY=MO"})},
           {"an occurrence", quote(do: %{recurring_event_id: "series-1"})},
           {"an occurrence edited on its own",
-           quote(do: %{provider_metadata: %{"recurrence_id" => "20261012T090000Z"}})}
+           quote(do: %{provider_metadata: %{"recurrence_id" => "20261012T090000Z"}})},
+          {"a repeating Exchange event",
+           quote(do: %{provider_metadata: %{"calendar_item_type" => "RecurringMaster"}})}
         ] do
       test "#{kind} is refused with a clear message and stays where it is", %{
         conn: conn,
