@@ -1546,11 +1546,6 @@ msgstr "kMeet"
 msgid "kMeet is Infomaniak's hosted service and always uses this address, which cannot be changed."
 msgstr "kMeet è il servizio in hosting di Infomaniak e usa sempre questo indirizzo, che non può essere modificato."
 
-#: lib/tymeslot/integrations/video/providers/nextcloud_talk/booking_conversation.ex
-#, elixir-autogen, elixir-format
-msgid "Booked through Tymeslot. Reference: %{reference}"
-msgstr "Prenotato tramite Tymeslot. Riferimento: %{reference}"
-
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "New bookings get no video link. %{reason}"
@@ -1590,3 +1585,8 @@ msgstr "Nessun link video"
 #, elixir-autogen, elixir-format
 msgid "This Nextcloud user may not use Talk. In the Talk administration settings on Nextcloud, add the user to a group that may use Talk, or connect a user who may."
 msgstr "Questo utente Nextcloud non può usare Talk. Nelle impostazioni di amministrazione di Talk su Nextcloud, aggiungi l'utente a un gruppo che può usare Talk, oppure collega un utente che possa farlo."
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk/booking_conversation.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through Tymeslot."
+msgstr "Prenotato tramite Tymeslot."

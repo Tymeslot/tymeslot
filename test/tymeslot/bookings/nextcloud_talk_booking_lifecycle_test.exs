@@ -96,7 +96,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
                 "roomName" => "Talk consultation with Ada Lovelace",
                 "lobbyState" => 1,
                 "lobbyTimer" => DateTime.to_unix(start_time),
-                "description" => "Booked through Tymeslot. Reference: " <> reference(booked)
+                "description" => "Booked through Tymeslot.\n\nReference: " <> reference(booked)
               }}
            ]
 
@@ -164,29 +164,13 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
        %{user: user} do
     server = server("late-answer")
     integration = insert_talk_integration(user, server)
-    meeting_type = insert_meeting_type(user, integration, "Talk consultation")
-
-    assert {:ok, %MeetingSchema{} = booked} =
-             Orchestrator.submit_booking(
-               booking_params(user, meeting_type, booking_start(3)),
-               organizer_user_id: user.id
-             )
+    booked = book(user, integration, booking_start(3))
 
     # Nextcloud creates the conversation, but its answer never arrives in time.
-    nextcloud_answers([{200, ocs([])}, {:error, %Req.TransportError{reason: :timeout}}])
-    assert %{success: 0} = drain_video_rooms()
-    assert [{:get, _list_url, nil}, {:post, _create_url, _params}] = requests()
-    assert Repo.reload!(booked).video_room_id == nil
+    made = create_without_answer(server)
 
     # The retry finds that conversation by the booking's reference and records
     # it, rather than creating a second one nothing would ever delete.
-    made = %{
-      "token" => @token,
-      "type" => 3,
-      "name" => "Talk consultation with Ada Lovelace",
-      "description" => "Booked through Tymeslot. Reference: " <> reference(booked)
-    }
-
     nextcloud_answers([{200, ocs([%{"token" => "other123", "description" => ""}, made])}])
     assert %{success: 1, failure: 0} = drain_video_rooms(with_scheduled: true)
 
@@ -196,6 +180,37 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
 
     assert %{video_room_id: @token, meeting_url: ^join_link, attendee_video_url: ^join_link} =
              Repo.reload!(booked)
+  end
+
+  test "a conversation adopted after a reschedule moves its lobby to the booking's new start",
+       %{user: user} do
+    server = server("late-answer-moved")
+    integration = insert_talk_integration(user, server)
+    booked = book(user, integration, booking_start(3))
+    made = create_without_answer(server)
+
+    # The guest moves the booking while it has no recorded room: nothing on
+    # Nextcloud can be moved yet.
+    new_start = DateTime.add(booked.start_time, 1, :day)
+
+    assert {:ok, _rescheduled} =
+             Reschedule.execute(booked.uid, reschedule_params(new_start), %{}, user.id)
+
+    refute_enqueued(worker: VideoSyncWorker)
+    assert requests() == []
+
+    # The retry adopts the conversation, still waiting for the old start, and
+    # moves its lobby. Its name already matches the booking.
+    nextcloud_answers([{200, ocs([made])}, {200, ocs(%{})}])
+    assert %{success: 1, failure: 0} = drain_video_rooms(with_scheduled: true)
+
+    assert requests() == [
+             {:get, server <> @room_list, nil},
+             {:put, server <> @room_path <> "/" <> @token <> "/webinar/lobby",
+              %{"state" => 1, "timer" => DateTime.to_unix(new_start)}}
+           ]
+
+    assert Repo.reload!(booked).video_room_id == @token
   end
 
   # Each answer leaves the conversation settled from Tymeslot's side: deleted
@@ -302,7 +317,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     refute Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
   end
 
-  test "a refused app password stops every later request until the integration is reconnected",
+  test "a refused app password stops every later request until the integration is reconnected, which deletes a cancelled booking's conversation",
        %{user: user} do
     server = server("refused")
     integration = insert_talk_integration(user, server)
@@ -328,6 +343,27 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
 
     assert requests() == []
     assert %{status: "cancelled", video_room_id: @token} = Repo.reload!(meeting)
+
+    # Reconnecting with a new app password deletes the conversation the
+    # cancellation could not.
+    nextcloud_answers([{200, talk_capabilities()}])
+
+    assert {:ok, %{needs_reauth: false}} =
+             Video.update_integration(user.id, integration.id, %{
+               name: "Nextcloud Talk",
+               base_url: server,
+               client_id: @login,
+               client_secret: @new_app_password
+             })
+
+    assert [{:get, _capabilities_url, nil}] = requests(@new_app_password)
+    assert_enqueued(worker: VideoSyncWorker, args: sync_args(meeting, "delete"))
+
+    nextcloud_answers([{200, ocs(nil)}])
+    assert %{success: 1, failure: 0, discard: 0} = drain_video_rooms()
+
+    assert requests(@new_app_password) == [{:delete, server <> @room_path <> "/" <> @token, nil}]
+    assert %{video_room_id: nil, video_room_enabled: false} = Repo.reload!(meeting)
   end
 
   test "a reschedule made while the app password was refused reaches the conversation once the organiser reconnects",
@@ -451,6 +487,38 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     do: Oban.drain_queue(Keyword.merge([queue: :video_rooms], opts))
 
   defp sync_args(meeting, action), do: %{"meeting_id" => meeting.id, "action" => action}
+
+  defp book(user, integration, start_time) do
+    meeting_type = insert_meeting_type(user, integration, "Talk consultation")
+
+    assert {:ok, %MeetingSchema{} = booked} =
+             Orchestrator.submit_booking(booking_params(user, meeting_type, start_time),
+               organizer_user_id: user.id
+             )
+
+    booked
+  end
+
+  # The room job's first attempt: Nextcloud creates the conversation, but the
+  # answer never arrives, so the job fails and nothing is recorded. Returns the
+  # conversation as Nextcloud would now list it to its owner.
+  defp create_without_answer(server) do
+    nextcloud_answers([{200, ocs([])}, {:error, %Req.TransportError{reason: :timeout}}])
+    assert %{success: 0} = drain_video_rooms()
+
+    assert [{:get, list_url, nil}, {:post, create_url, created}] = requests()
+    assert {list_url, create_url} == {server <> @room_list, server <> @room_path}
+
+    %{
+      "token" => @token,
+      "type" => created["roomType"],
+      "participantType" => 1,
+      "name" => created["roomName"],
+      "lobbyState" => created["lobbyState"],
+      "lobbyTimer" => created["lobbyTimer"],
+      "description" => created["description"]
+    }
+  end
 
   # A booking whose room job has already created its conversation.
   defp book_with_conversation(user, integration, server) do

@@ -12,9 +12,9 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomTimes do
 
   A timed event's lobby opens at its start and its room is needed until it
   ends. An all-day event has no hour to wait for: its lobby opens at the
-  earliest moment its first day begins anywhere (14 hours before midnight
-  UTC), and its room is kept for the whole day after its exclusive end date,
-  which covers every timezone.
+  earliest moment its first day begins anywhere (see
+  `Tymeslot.Integrations.Video.LobbyOpening`), and its room is kept for the
+  whole day after its exclusive end date, which covers every timezone.
 
   ## Recurring series
 
@@ -33,6 +33,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomTimes do
   """
 
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
+  alias Tymeslot.Integrations.Video.LobbyOpening
 
   @typedoc "Whether the times follow the event exactly or only ever widen."
   @type mode :: :exact | :series
@@ -40,9 +41,6 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomTimes do
   @type times :: {mode(), DateTime.t() | nil, DateTime.t() | nil}
 
   @seconds_per_day 86_400
-
-  # The earliest any timezone starts a calendar day, relative to midnight UTC.
-  @earliest_day_start_seconds -14 * 3600
 
   # The most days one repetition of each frequency can span, for the rules
   # whose repetitions never skip (see `skipping_rule?/2`).
@@ -119,10 +117,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomTimes do
   defp timing(event),
     do: %{all_day: false, start: Map.get(event, :start_at), end: Map.get(event, :end_at)}
 
-  defp lobby(true, %Date{} = start_date),
-    do: start_date |> midnight() |> DateTime.add(@earliest_day_start_seconds, :second)
-
-  defp lobby(false, %DateTime{} = start), do: truncate(start)
+  defp lobby(true, %Date{} = start_date), do: LobbyOpening.opens_at(start_date)
+  defp lobby(false, %DateTime{} = start), do: LobbyOpening.opens_at(start)
   defp lobby(_all_day, _start), do: nil
 
   defp one_off_end(true, %Date{} = end_date),
