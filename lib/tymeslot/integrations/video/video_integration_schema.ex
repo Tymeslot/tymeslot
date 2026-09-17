@@ -227,6 +227,10 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
                        |> String.to_atom()
                      end)
 
+  @encrypted_field_by_credential Map.new(
+                                   Enum.zip(@credential_fields, @encrypted_credential_fields)
+                                 )
+
   @doc """
   Returns the list of encrypted credential field atoms on this schema. Used by
   `decryption_status/1` so the authoritative list lives in one place.
@@ -242,6 +246,24 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   """
   @spec credential_fields() :: [atom()]
   def credential_fields, do: @credential_fields
+
+  @doc """
+  Removes stored credentials, named by their virtual fields, as part of
+  `changeset`.
+
+  An empty value in `changeset/2`'s attrs keeps a stored credential, so that
+  a form left blank cannot wipe one; removing a credential is therefore an
+  explicit step. Both the ciphertext and the decrypted virtual field are
+  cleared, so the struct an update returns does not still carry the value.
+  """
+  @spec remove_credentials(Ecto.Changeset.t(), [atom()]) :: Ecto.Changeset.t()
+  def remove_credentials(%Ecto.Changeset{} = changeset, fields) do
+    Enum.reduce(fields, changeset, fn field, acc ->
+      acc
+      |> put_change(field, nil)
+      |> put_change(Map.fetch!(@encrypted_field_by_credential, field), nil)
+    end)
+  end
 
   @doc """
   Reports whether any encrypted credential on the integration fails to decrypt

@@ -286,6 +286,22 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   end
 
   @doc """
+  Updates a video integration and removes the named stored credentials in the
+  same write, leaving any outstanding `needs_reauth` flag in place.
+
+  `fields` are virtual credential names (`:client_id`), as in
+  `VideoIntegrationSchema.remove_credentials/2`.
+  """
+  @spec update_removing_credentials(VideoIntegrationSchema.t(), map(), [atom()]) ::
+          {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_removing_credentials(%VideoIntegrationSchema{} = integration, attrs, fields) do
+    integration
+    |> VideoIntegrationSchema.changeset(attrs)
+    |> VideoIntegrationSchema.remove_credentials(fields)
+    |> Repo.update()
+  end
+
+  @doc """
   Updates a video integration with credentials its owner has just supplied,
   clearing `needs_reauth`.
 

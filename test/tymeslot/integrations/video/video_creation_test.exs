@@ -7,6 +7,8 @@ defmodule Tymeslot.Integrations.Video.VideoCreationTest do
 
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.Repo
 
   @app_id "tymeslot"
   @secret String.duplicate("s", 32)
@@ -187,6 +189,84 @@ defmodule Tymeslot.Integrations.Video.VideoCreationTest do
                Video.update_integration(user.id, integration.id, %{name: "Renamed"})
 
       assert updated.name == "Renamed"
+    end
+
+    test "removing token authentication deletes both stored credentials", %{
+      user: user,
+      integration: integration
+    } do
+      assert {:ok, updated} =
+               Video.update_integration(user.id, integration.id, %{
+                 name: "Open Jitsi",
+                 remove_token_authentication: true
+               })
+
+      assert updated.name == "Open Jitsi"
+      assert is_nil(updated.client_id) and is_nil(updated.client_secret)
+
+      row = Repo.get!(VideoIntegrationSchema, integration.id)
+      assert is_nil(row.client_id_encrypted)
+      assert is_nil(row.client_secret_encrypted)
+      assert row.base_url == "https://meet.example.com"
+    end
+
+    # Removal wins over credentials typed in the same submission, which would
+    # otherwise be stored and keep token authentication switched on.
+    test "removing token authentication ignores credentials submitted with it", %{
+      user: user,
+      integration: integration
+    } do
+      assert {:ok, _updated} =
+               Video.update_integration(user.id, integration.id, %{
+                 "client_id" => "other-app",
+                 "client_secret" => String.duplicate("n", 40),
+                 "remove_token_authentication" => true
+               })
+
+      assert {:ok, stored} = VideoIntegrationQueries.get_for_user(integration.id, user.id)
+      assert is_nil(stored.client_id)
+      assert is_nil(stored.client_secret)
+    end
+
+    test "removing token authentication still refuses an invalid server URL", %{
+      user: user,
+      integration: integration
+    } do
+      assert {:error, message} =
+               Video.update_integration(user.id, integration.id, %{
+                 base_url: "https://meet.example.com/?room=x",
+                 remove_token_authentication: true
+               })
+
+      assert message =~ "cannot contain a query string"
+      assert stored_secret(user, integration) == @secret
+    end
+
+    test "leaves the stored credentials alone when the flag is false", %{
+      user: user,
+      integration: integration
+    } do
+      assert {:ok, _updated} =
+               Video.update_integration(user.id, integration.id, %{
+                 name: "Renamed",
+                 remove_token_authentication: false
+               })
+
+      assert stored_secret(user, integration) == @secret
+    end
+  end
+
+  describe "update_integration/3 with remove_token_authentication for other providers" do
+    test "leaves a MiroTalk integration's stored credentials alone", %{user: user} do
+      mirotalk = insert(:video_integration, user: user, provider: "mirotalk")
+
+      assert {:ok, _updated} =
+               Video.update_integration(user.id, mirotalk.id, %{remove_token_authentication: true})
+
+      row = Repo.get!(VideoIntegrationSchema, mirotalk.id)
+      assert row.client_id_encrypted == mirotalk.client_id_encrypted
+      assert row.client_secret_encrypted == mirotalk.client_secret_encrypted
+      assert row.api_key_encrypted == mirotalk.api_key_encrypted
     end
   end
 

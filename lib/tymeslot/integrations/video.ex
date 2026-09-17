@@ -20,6 +20,7 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.JitsiProvider
   alias Tymeslot.Integrations.Video.Rooms
+  alias Tymeslot.Integrations.Video.Update
   alias Tymeslot.Integrations.Video.Urls
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
@@ -39,10 +40,6 @@ defmodule Tymeslot.Integrations.Video do
           | :jitsi
           | :none
           | String.t()
-
-  # What a Jitsi integration's provider validates. Its credentials are
-  # optional, so the changeset cannot enforce the pair or the secret length.
-  @jitsi_config_fields [:base_url, :client_id, :client_secret]
 
   @impl Tymeslot.Security.EncryptedStorage
   def encrypted_storage,
@@ -273,73 +270,14 @@ defmodule Tymeslot.Integrations.Video do
   # ---------------
   # Update
   # ---------------
+  @doc """
+  Updates a video integration owned by `user_id`. See
+  `Tymeslot.Integrations.Video.Update` for how credentials are kept, replaced
+  and removed.
+  """
   @spec update_integration(pos_integer(), pos_integer(), %{(String.t() | atom()) => term()}) ::
           {:ok, any()} | {:error, any()}
-  def update_integration(user_id, id, attrs)
-      when is_integer(user_id) and is_integer(id) and is_map(attrs) do
-    attrs = AttrsCasting.atomize_known_attrs(attrs)
-
-    case VideoIntegrationQueries.get_for_user(id, user_id) do
-      {:ok, integration} ->
-        with :ok <- validate_update(integration, attrs) do
-          save_update(integration, attrs)
-        end
-
-      {:error, :not_found} = err ->
-        err
-
-      {:error, :requires_reencryption, _integration} ->
-        {:error, :requires_reencryption}
-    end
-  end
-
-  defp save_update(integration, attrs) do
-    if credentials_in_attrs?(attrs) do
-      update_with_credentials(integration, attrs)
-    else
-      VideoIntegrationQueries.update(integration, attrs)
-    end
-  end
-
-  # An edit to a Jitsi server URL or credentials is validated exactly as a
-  # create is, against the config the row will hold once saved. A nil, empty
-  # or whitespace-only credential in `attrs` leaves the stored one in place
-  # (`cast/3` trims it to nil, and the changeset never overwrites an encrypted
-  # credential with nothing), so the stored value stands in for it here too; a
-  # blank server URL is refused by the changeset either way. An
-  # update touching none of these fields, such as a rename, is not
-  # re-validated, so it cannot be refused over a value it leaves alone.
-  defp validate_update(%VideoIntegrationSchema{provider: "jitsi"} = integration, attrs) do
-    changes = Map.take(attrs, @jitsi_config_fields)
-
-    if map_size(changes) == 0 do
-      :ok
-    else
-      integration
-      |> Map.take(@jitsi_config_fields)
-      |> Map.merge(changes, fn _field, stored, new -> if blank?(new), do: stored, else: new end)
-      |> JitsiProvider.validate_config()
-    end
-  end
-
-  defp validate_update(_integration, _attrs), do: :ok
-
-  defp blank?(value) when is_binary(value), do: String.trim(value) == ""
-  defp blank?(value), do: is_nil(value)
-
-  defp update_with_credentials(integration, attrs) do
-    with {:ok, updated} = ok <- VideoIntegrationQueries.update_credentials(integration, attrs) do
-      HealthCheck.mark_user_recovered(:video, updated.id)
-      ok
-    end
-  end
-
-  # Callers supply the virtual field names (`:api_key`), never the encrypted
-  # ones — those only exist after `encrypt_credentials/1` runs inside the
-  # changeset, by which point the attrs have already been consumed.
-  defp credentials_in_attrs?(attrs) when is_map(attrs) do
-    Enum.any?(VideoIntegrationSchema.credential_fields(), &Map.has_key?(attrs, &1))
-  end
+  defdelegate update_integration(user_id, id, attrs), to: Update, as: :run
 
   # ---------------
   # Delete
