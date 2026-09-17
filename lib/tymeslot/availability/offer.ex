@@ -145,7 +145,11 @@ defmodule Tymeslot.Availability.Offer do
 
   defp free_slots(%{profile: %{user_id: user_id} = profile} = request, date, duration) do
     with {:ok, events} <-
-           CalendarEvents.get_calendar_events_from_context(date, user_id, context(request)) do
+           CalendarEvents.get_calendar_events_from_context(
+             date,
+             user_id,
+             calendar_context(request)
+           ) do
       duration_minutes = bounded_duration(duration)
       meeting_type = request[:meeting_type]
 
@@ -235,7 +239,11 @@ defmodule Tymeslot.Availability.Offer do
     AvailabilityCache.get_or_compute_events(
       AvailabilityCache.booking_window_events_key(user_id),
       fn ->
-        CalendarEvents.get_calendar_events_from_context(start_date, user_id, context(request))
+        CalendarEvents.get_calendar_events_from_context(
+          start_date,
+          user_id,
+          calendar_context(request)
+        )
       end
     )
   end
@@ -278,14 +286,17 @@ defmodule Tymeslot.Availability.Offer do
     Demo.demo_profile?(profile) || request[:demo_mode?] == true
   end
 
-  # The context map the calendar fetch and the demo provider read.
-  defp context(%{profile: profile} = request) do
-    %{
-      demo_mode: request[:demo_mode?] == true,
-      organizer_profile: profile,
-      meeting_type: request[:meeting_type],
-      debug_calendar_module: request[:debug_calendar_module]
-    }
+  # The context map the calendar fetch reads. Its contract names these two keys
+  # only, so the demo provider's extra keys stay out of it.
+  defp calendar_context(%{profile: profile} = request) do
+    %{organizer_profile: profile, debug_calendar_module: request[:debug_calendar_module]}
+  end
+
+  # The context map the demo provider reads.
+  defp context(request) do
+    request
+    |> calendar_context()
+    |> Map.merge(%{demo_mode: request[:demo_mode?] == true, meeting_type: request[:meeting_type]})
   end
 
   defp owner_timezone(profile), do: profile.timezone || Profiles.get_default_timezone()
