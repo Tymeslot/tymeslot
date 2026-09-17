@@ -29,7 +29,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     priority: 0
 
   alias Ecto.Changeset
-  alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Notifications.Events
@@ -85,7 +85,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
           announce: announce
         )
 
-        create_room(meeting_id, announce, execution)
+        create_room(meeting, announce, execution)
 
       {:error, :not_found} ->
         Logger.warning("Meeting not found, discarding video room job", meeting_id: meeting_id)
@@ -175,22 +175,29 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   end
 
   @doc """
-  How long the job waits for room creation before giving up on it, in
-  milliseconds.
+  How long the job waits for room creation on `meeting`, in milliseconds.
 
-  Longer than the slowest provider's declared network budget, so the job only
-  stops waiting on a call its own request timeouts have failed to end. Giving
-  up any sooner would abandon a room the provider may already have created,
-  and the retry would create another that no booking records.
+  Longer than the network budget its video integration's provider declares,
+  so the job only stops waiting on a call its own request timeouts have failed
+  to end. Giving up any sooner would abandon a room the provider may already
+  have created, and the retry would create another that no booking records.
+  Waiting on the provider the meeting actually uses, rather than the slowest
+  of all, keeps a slow provider from holding the queue for every other one.
   """
-  @spec creation_timeout_ms() :: pos_integer()
-  def creation_timeout_ms,
-    do: ProviderRegistry.room_creation_budget_ms() + @local_work_margin_ms
+  @spec creation_timeout_ms(%{
+          organizer_user_id: pos_integer() | nil,
+          video_integration_id: pos_integer() | nil
+        }) :: pos_integer()
+  def creation_timeout_ms(meeting) do
+    Video.room_creation_budget_ms(meeting.organizer_user_id, meeting.video_integration_id) +
+      @local_work_margin_ms
+  end
 
   # The provider call runs in a supervised task so a hung connection cannot pin
   # the queue's worker for longer than the timeout.
-  defp create_room(meeting_id, announce, execution) do
-    timeout_ms = creation_timeout_ms()
+  defp create_room(meeting, announce, execution) do
+    meeting_id = meeting.id
+    timeout_ms = creation_timeout_ms(meeting)
 
     task =
       Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->

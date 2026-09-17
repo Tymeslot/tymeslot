@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
   import Mox
 
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client
 
   setup :verify_on_exit!
@@ -56,9 +57,16 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
       assert {:ok, [%{"token" => "abc123xy"}]} = Client.list_rooms(@credentials)
     end
 
-    test "declare the budget of one request from the timeouts every request is sent with" do
-      assert Client.request_budget_ms(:get) == 20_000
-      assert Client.request_budget_ms(:post) == 20_000
+    test "declare the budget of one request from the options every request is sent with, capping the whole response" do
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, opts ->
+        # A cap on the whole response is what makes the budget a real bound.
+        assert is_integer(opts[:request_timeout])
+        assert Client.request_budget_ms(:post) == HTTPClient.request_budget_ms(:post, opts)
+
+        {:ok, %Req.Response{status: 201, body: ocs(%{"token" => "abc123xy"})}}
+      end)
+
+      assert {:ok, _data} = Client.create_room(@credentials, %{"roomType" => 3})
     end
 
     test "create a conversation from a JSON body and return its data" do

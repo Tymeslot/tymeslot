@@ -34,7 +34,9 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
   # left alone, which a listing would otherwise refresh.
   @list_rooms_query "?noStatusUpdate=1&includeLastMessage=0"
 
-  @timeouts [receive_timeout: 15_000, connect_options: [timeout: 5_000]]
+  # `request_timeout` caps each whole response, so `request_budget_ms/1` is a
+  # real bound: without it the receive timeout would apply per chunk.
+  @timeouts [receive_timeout: 15_000, request_timeout: 15_000, connect_options: [timeout: 5_000]]
 
   @type credentials :: %{
           required(:base_url) => String.t(),

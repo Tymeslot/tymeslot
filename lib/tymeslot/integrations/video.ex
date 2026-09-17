@@ -408,6 +408,9 @@ defmodule Tymeslot.Integrations.Video do
   @spec create_meeting_room(pos_integer() | nil, keyword()) :: {:ok, map()} | {:error, any()}
   defdelegate create_meeting_room(user_id, opts), to: Rooms
 
+  @spec room_creation_budget_ms(pos_integer() | nil, pos_integer() | nil) :: non_neg_integer()
+  defdelegate room_creation_budget_ms(user_id, integration_id), to: Rooms
+
   @spec create_join_url(map(), String.t(), String.t(), String.t(), DateTime.t()) ::
           {:ok, String.t()} | {:error, any()}
   defdelegate create_join_url(

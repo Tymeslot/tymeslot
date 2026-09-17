@@ -5,6 +5,7 @@ defmodule Tymeslot.Infrastructure.HTTPClientTest do
 
   alias Plug.Conn
   alias Req.Test, as: ReqTest
+  alias Tymeslot.Infrastructure.FinchPool
   alias Tymeslot.Infrastructure.HTTPClient
 
   setup do
@@ -50,21 +51,46 @@ defmodule Tymeslot.Infrastructure.HTTPClientTest do
   end
 
   describe "request_budget_ms/2" do
-    test "adds Req's default connect timeout to the method's default receive timeout" do
-      assert HTTPClient.request_budget_ms(:get) == 60_000
-      assert HTTPClient.request_budget_ms(:post) == 75_000
-      assert HTTPClient.request_budget_ms(:report) == 90_000
+    # Only the part under test is left non-zero.
+    @no_wait [pool_timeout: 0, connect_options: [timeout: 0], request_timeout: 0]
+
+    test "adds the pool checkout, the connect and the response timeouts" do
+      assert HTTPClient.request_budget_ms(:post,
+               pool_timeout: 1_000,
+               connect_options: [timeout: 2_000],
+               request_timeout: 3_000
+             ) == 6_000
     end
 
-    test "uses the timeouts a request is sent with" do
-      options = [receive_timeout: 15_000, connect_options: [timeout: 5_000]]
-
-      assert HTTPClient.request_budget_ms(:post, options) == 20_000
+    test "waits for a pool checkout as long as Finch does by default" do
+      assert HTTPClient.request_budget_ms(:post, Keyword.delete(@no_wait, :pool_timeout)) == 5_000
     end
 
-    test "honours the older timeout option, which takes precedence over the receive timeout" do
-      assert HTTPClient.request_budget_ms(:post, timeout: 5_000, receive_timeout: 15_000) ==
-               35_000
+    test "connects as long as the shared pool does unless the request says otherwise" do
+      pool_connect =
+        FinchPool.default_options()
+        |> Keyword.fetch!(:conn_opts)
+        |> get_in([:transport_opts, :timeout])
+
+      assert HTTPClient.request_budget_ms(:post, Keyword.delete(@no_wait, :connect_options)) ==
+               pool_connect
+    end
+
+    test "counts the receive timeout for the response when nothing caps the whole response" do
+      unbounded = Keyword.delete(@no_wait, :request_timeout)
+
+      assert HTTPClient.request_budget_ms(:post, unbounded ++ [receive_timeout: 7_000]) == 7_000
+      assert HTTPClient.request_budget_ms(:get, unbounded) == 30_000
+      assert HTTPClient.request_budget_ms(:post, unbounded ++ [timeout: 4_000]) == 4_000
+    end
+
+    test "counts the cap on the whole response when the request carries one" do
+      assert HTTPClient.request_budget_ms(:post,
+               pool_timeout: 0,
+               connect_options: [timeout: 0],
+               receive_timeout: 45_000,
+               request_timeout: 15_000
+             ) == 15_000
     end
   end
 

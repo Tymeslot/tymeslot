@@ -61,27 +61,52 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     propfind: 60_000
   }
 
-  # How long Req's Finch adapter waits for a connection unless a request passes
-  # `connect_options: [timeout: ms]`.
-  @default_connect_timeout_ms 30_000
+  # How long a request waits to check a connection out of its Finch pool unless
+  # it passes `pool_timeout:`. This is Finch's own default; the application's
+  # pools do not change it.
+  @default_pool_timeout_ms 5_000
 
   @doc """
-  The longest a single request can wait on the network before it gives up:
-  its connect timeout plus its receive timeout, as `request/5` applies them to
-  a request sent with `method` and `options`.
+  How long a single request sent with `method` and `options` may wait on its
+  pool and the network, in milliseconds: checking a connection out of the pool,
+  connecting, and waiting for the response, as `request/5` applies them.
+
+  The connect timeout is the request's `connect_options: [timeout: ms]`, or the
+  one the shared pool connects with (`Tymeslot.Infrastructure.FinchPool`).
+
+  This is a hard bound only for a request that passes `request_timeout:`,
+  which caps the whole response, and does not follow redirects (every request
+  guarded by `ssrf_protect: true` refuses them). Without `request_timeout:` the
+  receive timeout applies to each chunk of the body rather than to the
+  response as a whole, and each redirect followed starts afresh, so a server
+  trickling its answer can exceed it. Name resolution is never counted: the
+  system resolver has no timeout of its own here.
 
   A caller that has to outlast a request, such as a job running it under a
   timeout of its own, derives that timeout from this rather than repeating the
-  numbers.
+  numbers, and passes `request_timeout:` when it needs the bound to hold.
   """
   @spec request_budget_ms(atom(), keyword()) :: pos_integer()
   def request_budget_ms(method, options \\ []) when is_atom(method) do
-    connect_timeout =
-      options
-      |> Keyword.get(:connect_options, [])
-      |> Keyword.get(:timeout, @default_connect_timeout_ms)
+    Keyword.get(options, :pool_timeout, @default_pool_timeout_ms) +
+      connect_timeout_ms(options) + response_timeout_ms(method, options)
+  end
 
-    connect_timeout + get_timeout(method, options)
+  defp connect_timeout_ms(options) do
+    options
+    |> Keyword.get(:connect_options, [])
+    |> Keyword.get_lazy(:timeout, fn ->
+      FinchPool.default_options()
+      |> Keyword.fetch!(:conn_opts)
+      |> get_in([:transport_opts, :timeout])
+    end)
+  end
+
+  defp response_timeout_ms(method, options) do
+    case Keyword.get(options, :request_timeout) do
+      timeout when is_integer(timeout) -> timeout
+      _unbounded -> get_timeout(method, options)
+    end
   end
 
   @doc """

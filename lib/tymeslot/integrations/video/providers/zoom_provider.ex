@@ -30,6 +30,13 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   @behaviour ProviderBehaviour
 
   @api_base_url "https://api.zoom.us/v2"
+
+  # Room creation's requests to the provider's API. `request_timeout` caps each
+  # whole response, so the budget below is a real bound; a create answers with
+  # one small JSON body, so the cap waits no less than the receive timeout
+  # alone did in practice. The API never redirects these requests, and one
+  # that did would get a fresh budget, so redirects are refused.
+  @create_request_options [receive_timeout: 45_000, request_timeout: 45_000, redirect: false]
   @zoom_url_pattern ~r/zoom\.us\/(j|my|w)\//
 
   @capabilities Capabilities.new!(
@@ -134,11 +141,15 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
       else: {:provider_error, reason}
   end
 
-  # The slowest creation refreshes the token, creates the meeting and reads it
-  # back, each request at the HTTP client's default timeouts.
+  # The slowest creation refreshes the token (through the shared OAuth client,
+  # at the HTTP client's default timeouts), creates the meeting and reads it
+  # back.
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def room_creation_budget_ms,
-    do: HTTPClient.request_budget_ms(:post) * 2 + HTTPClient.request_budget_ms(:get)
+    do:
+      HTTPClient.request_budget_ms(:post) +
+        HTTPClient.request_budget_ms(:post, @create_request_options) +
+        HTTPClient.request_budget_ms(:get, @create_request_options)
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, _participant_email, _role, _meeting_time) do
@@ -389,7 +400,13 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
     url = "#{@api_base_url}/users/me/meetings"
 
-    case Config.http_client_module().request(:post, url, Jason.encode!(payload), headers, []) do
+    case Config.http_client_module().request(
+           :post,
+           url,
+           Jason.encode!(payload),
+           headers,
+           @create_request_options
+         ) do
       {:ok, %Req.Response{status: 201, body: body}} ->
         Payload.parse_meeting_response(body)
 
@@ -415,7 +432,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     headers = [{"Authorization", "Bearer #{token}"}]
     url = "#{@api_base_url}/meetings/#{meeting_id}"
 
-    case Config.http_client_module().request(:get, url, "", headers, []) do
+    case Config.http_client_module().request(:get, url, "", headers, @create_request_options) do
       {:ok, %Req.Response{status: 200, body: body}} ->
         Logger.info("Verified Zoom meeting",
           room_id: to_string(meeting_id),

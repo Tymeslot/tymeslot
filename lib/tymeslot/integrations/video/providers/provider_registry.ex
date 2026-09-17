@@ -32,19 +32,32 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistry do
   end
 
   @doc """
-  The longest room creation on any registered provider can wait on the
-  network, in milliseconds: the largest `room_creation_budget_ms/0` a provider
-  declares, or 0 when none creates its rooms over the network.
+  How long room creation on `provider_type` can wait on the network, in
+  milliseconds: the `room_creation_budget_ms/0` it declares, or 0 for a
+  provider that builds its room without a network call.
+
+  Without a provider, or for one this registry does not know, the largest
+  budget any registered provider declares.
   """
-  @spec room_creation_budget_ms() :: non_neg_integer()
-  def room_creation_budget_ms do
+  @spec room_creation_budget_ms(atom() | nil) :: non_neg_integer()
+  def room_creation_budget_ms(provider_type \\ nil) do
+    case get_provider(provider_type) do
+      {:ok, module} -> declared_budget_ms(module)
+      {:error, _unknown} -> largest_budget_ms()
+    end
+  end
+
+  defp largest_budget_ms do
     list_providers()
-    |> Enum.map(&get_provider!/1)
-    |> Enum.filter(
-      &(Code.ensure_loaded?(&1) and function_exported?(&1, :room_creation_budget_ms, 0))
-    )
-    |> Enum.map(& &1.room_creation_budget_ms())
+    |> Enum.map(&(&1 |> get_provider!() |> declared_budget_ms()))
     |> Enum.max(fn -> 0 end)
+  end
+
+  defp declared_budget_ms(module) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :room_creation_budget_ms, 0),
+      # credo:disable-for-next-line Credo.Check.Refactor.Apply
+      do: apply(module, :room_creation_budget_ms, []),
+      else: 0
   end
 
   @doc """

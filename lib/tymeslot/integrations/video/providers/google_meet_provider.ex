@@ -35,6 +35,13 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   alias Tymeslot.Integrations.Video.Providers.OAuthCredentials
   alias Tymeslot.Integrations.Video.RoomData
 
+  # Room creation's requests to the provider's API. `request_timeout` caps each
+  # whole response, so the budget below is a real bound; a create answers with
+  # one small JSON body, so the cap waits no less than the receive timeout
+  # alone did in practice. The API never redirects these requests, and one
+  # that did would get a fresh budget, so redirects are refused.
+  @create_request_options [receive_timeout: 45_000, request_timeout: 45_000, redirect: false]
+
   @capabilities Capabilities.new!(
                   recording: true,
                   screen_sharing: true,
@@ -154,6 +161,14 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
       else: {:provider_error, reason}
   end
 
+  # The slowest creation refreshes the token (through the shared OAuth client,
+  # at the HTTP client's default timeouts) and creates the space.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def room_creation_budget_ms,
+    do:
+      HTTPClient.request_budget_ms(:post) +
+        HTTPClient.request_budget_ms(:post, @create_request_options)
+
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def delete_meeting_room(space_id, config) when is_binary(space_id) and space_id != "" do
     Logger.info("Ending active Google Meet conference on cancellation", room_id: space_id)
@@ -171,11 +186,6 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   # selects a signed-in Google account, so a participant not signed in under
   # exactly that address is sent to a sign-in or account chooser instead of the
   # room. It would also put their email address into a forwardable link.
-  # The slowest creation refreshes the token and creates the space, both at the
-  # HTTP client's default timeouts.
-  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def room_creation_budget_ms, do: HTTPClient.request_budget_ms(:post) * 2
-
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(%{meeting_url: meeting_url}, _name, _email, _role, _meeting_time)
       when is_binary(meeting_url) and meeting_url != "",
@@ -416,7 +426,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
     url = "https://meet.googleapis.com/v2/spaces"
 
-    case Config.http_client_module().request(:post, url, "{}", headers, []) do
+    case Config.http_client_module().request(:post, url, "{}", headers, @create_request_options) do
       {:ok, %Req.Response{status: 200, body: response_body}} ->
         case Jason.decode(response_body) do
           {:ok, space} -> {:ok, space}

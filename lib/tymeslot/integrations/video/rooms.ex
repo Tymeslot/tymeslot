@@ -87,6 +87,30 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   end
 
   @doc """
+  How long creating a room on the integration `integration_id` of `user_id`
+  can wait on the provider's network, in milliseconds (see
+  `ProviderRegistry.room_creation_budget_ms/1`).
+
+  When the integration cannot be resolved, creation fails before any request,
+  but the budget answered is still the largest any provider declares, so a
+  caller never waits less than a creation could take.
+  """
+  @spec room_creation_budget_ms(pos_integer() | nil, pos_integer() | nil) :: non_neg_integer()
+  def room_creation_budget_ms(user_id, integration_id)
+      when is_integer(user_id) and is_integer(integration_id) do
+    with {:ok, integration} <- Video.fetch_integration_for_user(integration_id, user_id),
+         {:ok, provider_type} when provider_type != :none <-
+           ProviderConfig.parse_known(integration.provider) do
+      ProviderRegistry.room_creation_budget_ms(provider_type)
+    else
+      _unresolved -> ProviderRegistry.room_creation_budget_ms()
+    end
+  end
+
+  def room_creation_budget_ms(_user_id, _integration_id),
+    do: ProviderRegistry.room_creation_budget_ms()
+
+  @doc """
   Rebuilds the context of a room that already exists, so its join URLs can be
   built again without asking the provider for a new room.
 

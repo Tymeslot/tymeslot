@@ -22,29 +22,37 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
     end
   end
 
-  describe "room_creation_budget_ms/0" do
-    test "is the largest network budget any provider declares for creating a room" do
-      # Teams: a token refresh, the event, and the deletion of an event that
-      # came back without a Teams link, each 30s to connect and 45s to answer.
-      assert ProviderRegistry.room_creation_budget_ms() == 225_000
-      assert TeamsProvider.room_creation_budget_ms() == 225_000
-
-      for smaller <- [
-            GoogleMeetProvider.room_creation_budget_ms(),
-            MiroTalkProvider.room_creation_budget_ms(),
-            NextcloudTalkProvider.room_creation_budget_ms(),
-            ZoomProvider.room_creation_budget_ms()
+  describe "room_creation_budget_ms/1" do
+    test "answers the budget the provider itself declares" do
+      for module <- [
+            GoogleMeetProvider,
+            MiroTalkProvider,
+            NextcloudTalkProvider,
+            TeamsProvider,
+            ZoomProvider
           ] do
-        assert smaller < 225_000
+        assert ProviderRegistry.room_creation_budget_ms(module.provider_type()) ==
+                 module.room_creation_budget_ms()
       end
     end
 
-    test "leaves out the providers that build their link without a network call" do
+    test "answers nothing to wait for on providers that build their link without a network call" do
       for type <- [:custom, :jitsi, :kmeet] do
-        module = ProviderRegistry.get_provider!(type)
-        assert Code.ensure_loaded?(module)
-        refute function_exported?(module, :room_creation_budget_ms, 0)
+        assert ProviderRegistry.room_creation_budget_ms(type) == 0
       end
+    end
+
+    test "answers the largest declared budget without a provider, or for an unknown one" do
+      budgets =
+        Enum.map(ProviderRegistry.list_providers(), &ProviderRegistry.room_creation_budget_ms/1)
+
+      assert ProviderRegistry.room_creation_budget_ms() == Enum.max(budgets)
+      assert ProviderRegistry.room_creation_budget_ms(:unknown) == Enum.max(budgets)
+    end
+
+    test "a provider's own budget can be well below the largest" do
+      assert ProviderRegistry.room_creation_budget_ms(:nextcloud_talk) <
+               ProviderRegistry.room_creation_budget_ms()
     end
   end
 
