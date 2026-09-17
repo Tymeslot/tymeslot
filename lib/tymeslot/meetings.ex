@@ -173,6 +173,13 @@ defmodule Tymeslot.Meetings do
     as: :list_for_organizer_in_range
 
   @doc """
+  How many booking requests this organiser has not yet answered; drives the
+  dashboard's Requests tab badge.
+  """
+  @spec count_awaiting_approval_for_organizer(integer()) :: non_neg_integer()
+  defdelegate count_awaiting_approval_for_organizer(organizer_user_id), to: MeetingQueries
+
+  @doc """
   Sends a reschedule request email for a meeting.
 
   Validates the request against policy and manages the workflow state.

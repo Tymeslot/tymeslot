@@ -10,7 +10,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
-  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Security.RateLimiter
 
   alias Phoenix.LiveView
@@ -535,7 +534,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     assign(
       socket,
       :awaiting_approval_count,
-      MeetingQueries.count_awaiting_approval_for_organizer(socket.assigns.current_user.id)
+      Meetings.count_awaiting_approval_for_organizer(socket.assigns.current_user.id)
     )
   end
 
