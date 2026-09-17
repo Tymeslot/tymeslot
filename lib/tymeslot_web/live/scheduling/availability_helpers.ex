@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
       profile: socket.assigns.organizer_profile,
       user_timezone: socket.assigns[:user_timezone],
       meeting_type: socket.assigns[:meeting_type],
+      reschedule_uid: socket.assigns[:reschedule_meeting_uid],
       demo_mode?: Demo.demo_mode?(socket),
       debug_calendar_module: socket.private[:debug_calendar_module]
     }

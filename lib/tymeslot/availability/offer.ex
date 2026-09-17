@@ -14,6 +14,7 @@ defmodule Tymeslot.Availability.Offer do
   """
 
   alias Tymeslot.Availability.{Calculate, Schedules, TimeSlots}
+  alias Tymeslot.Bookings.Orchestrator
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
@@ -33,6 +34,11 @@ defmodule Tymeslot.Availability.Offer do
       profile and the two cannot disagree.
     * `:user_timezone` - the booker's timezone.
     * `:meeting_type` - the resolved meeting type, or nil before one is chosen.
+    * `:reschedule_uid` - the meeting a reschedule page is moving, as the link
+      named it. The meeting does not count against the host's booking limits,
+      as `Tymeslot.Bookings.Reschedule` does not count it when the move is
+      submitted, but only once it is proven to be a movable meeting of this
+      organiser; any other value is ignored.
     * `:demo_mode?` - whether the page is running as a demo.
     * `:debug_calendar_module` - a calendar module override, for development.
   """
@@ -40,6 +46,7 @@ defmodule Tymeslot.Availability.Offer do
           required(:profile) => %{required(:user_id) => integer(), optional(atom()) => any()},
           required(:user_timezone) => String.t(),
           optional(:meeting_type) => map() | nil,
+          optional(:reschedule_uid) => String.t() | nil,
           optional(:demo_mode?) => boolean() | nil,
           optional(:debug_calendar_module) => module() | nil
         }
@@ -142,10 +149,12 @@ defmodule Tymeslot.Availability.Offer do
       duration_minutes = bounded_duration(duration)
       meeting_type = request[:meeting_type]
 
+      limit_checker = limit_checker(request, moving_uid(request), date, date)
+
       config =
         meeting_type
         |> Schedules.resolve_for(profile)
-        |> config(meeting_type, limit_checker(request, date, date), duration_minutes)
+        |> config(meeting_type, limit_checker, duration_minutes)
 
       Calculate.available_slots(
         date,
@@ -165,7 +174,10 @@ defmodule Tymeslot.Availability.Offer do
          duration_minutes
        ) do
     meeting_type = request[:meeting_type]
+    moving_uid = moving_uid(request)
 
+    # Keyed on the proven uid only, so a mover's view is never served to
+    # anyone else and an arbitrary link value cannot mint an entry of its own.
     cache_key =
       AvailabilityCache.availability_range_key(
         user_id,
@@ -173,7 +185,8 @@ defmodule Tymeslot.Availability.Offer do
         end_date,
         request.user_timezone,
         duration_minutes,
-        meeting_type && meeting_type.id
+        meeting_type && meeting_type.id,
+        moving_uid
       )
 
     AvailabilityCache.get_or_compute_events(cache_key, fn ->
@@ -183,7 +196,7 @@ defmodule Tymeslot.Availability.Offer do
           |> Schedules.resolve_for(profile)
           |> config(
             meeting_type,
-            limit_checker(request, start_date, end_date),
+            limit_checker(request, moving_uid, start_date, end_date),
             duration_minutes || @default_duration_minutes
           )
 
@@ -228,10 +241,38 @@ defmodule Tymeslot.Availability.Offer do
   end
 
   # Nil when the host has no booking limits configured, keeping the common path
-  # free of extra queries.
-  defp limit_checker(%{profile: %{user_id: user_id} = profile} = request, start_date, end_date) do
-    Checker.build_slot_checker(user_id, profile, request[:meeting_type], start_date, end_date)
+  # free of extra queries. The meeting being moved is left out of the counts,
+  # exactly as the reschedule submit leaves it out.
+  defp limit_checker(
+         %{profile: %{user_id: user_id} = profile} = request,
+         moving_uid,
+         start_date,
+         end_date
+       ) do
+    Checker.build_slot_checker(
+      user_id,
+      profile,
+      request[:meeting_type],
+      start_date,
+      end_date,
+      exclude_uid: moving_uid
+    )
   end
+
+  # The uid of the meeting a reschedule page is moving, once
+  # `Orchestrator.get_meeting_for_reschedule/2` proves it is this organiser's
+  # and still movable (the lookup the submit's own flow relies on); nil for
+  # anything else. The link parameter is visitor input, so it is never used
+  # unverified.
+  defp moving_uid(%{reschedule_uid: uid, profile: %{user_id: user_id}})
+       when is_binary(uid) and is_integer(user_id) do
+    case Orchestrator.get_meeting_for_reschedule(uid, user_id) do
+      {:ok, %{uid: verified_uid}} -> verified_uid
+      {:error, _not_movable} -> nil
+    end
+  end
+
+  defp moving_uid(_request), do: nil
 
   defp demo?(%{profile: profile} = request) do
     Demo.demo_profile?(profile) || request[:demo_mode?] == true
