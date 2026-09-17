@@ -13,7 +13,7 @@ defmodule TymeslotWeb.AccountLive.ErrorFormatter do
           {:error, :rate_limited, String.t()}
           | :rate_limited
           | {:error, String.t()}
-          | String.t()
+          | {atom(), String.t()}
           | map()
           | any()
         ) :: %{optional(atom()) => [String.t()]}
@@ -25,12 +25,15 @@ defmodule TymeslotWeb.AccountLive.ErrorFormatter do
     %{base: [dgettext("account", "Too many attempts. Please try again later.")]}
   end
 
+  # A bare message carries no field, so it belongs to the form as a whole.
   def format({:error, message}) when is_binary(message) do
-    format(message)
+    %{base: [message]}
   end
 
-  def format(message) when is_binary(message) do
-    %{field_for(message) => [message]}
+  # Domain errors name the field they belong to, so placement never depends
+  # on reading the (translated) message.
+  def format({field, message}) when is_atom(field) and is_binary(message) do
+    %{field => [message]}
   end
 
   def format(errors) when is_map(errors) do
@@ -38,17 +41,6 @@ defmodule TymeslotWeb.AccountLive.ErrorFormatter do
   end
 
   def format(_other), do: %{base: [dgettext("account", "An unexpected error occurred")]}
-
-  defp field_for("Current password is incorrect"), do: :current_password
-
-  defp field_for(msg) do
-    cond do
-      String.contains?(msg, "email") -> :new_email
-      String.contains?(msg, "match") -> :new_password_confirmation
-      String.contains?(msg, "8 characters") -> :new_password
-      true -> :base
-    end
-  end
 
   @doc """
   Formats validation errors from input processor.

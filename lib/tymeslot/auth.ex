@@ -46,9 +46,10 @@ defmodule Tymeslot.Auth do
   @doc """
   Requests an email change for a user.
   Validates password, creates token, stores pending email, and sends verification emails.
+  A failure is `{:error, {field, message}}`, naming the form field it belongs to.
   """
   @spec request_email_change(term(), String.t(), String.t()) ::
-          {:ok, term(), String.t()} | {:error, String.t()}
+          {:ok, term(), String.t()} | {:error, {:current_password | :new_email, String.t()}}
   def request_email_change(user, new_email, current_password) do
     EmailChange.request_email_change(user, new_email, current_password)
   end
@@ -74,10 +75,11 @@ defmodule Tymeslot.Auth do
 
   @doc """
   Updates a user's password after verifying their current password.
-  Pure domain logic without HTTP concerns.
+  Pure domain logic without HTTP concerns. A failure is
+  `{:error, {field, message}}`, naming the form field it belongs to.
   """
   @spec update_user_password(term(), String.t(), String.t(), String.t(), keyword()) ::
-          {:ok, term()} | {:error, String.t()}
+          {:ok, term()} | {:error, {PasswordUpdate.error_field(), String.t()}}
   def update_user_password(
         user,
         current_password,
