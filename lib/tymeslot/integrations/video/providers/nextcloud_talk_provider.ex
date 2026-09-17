@@ -21,7 +21,9 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   creation limited to some groups, Talk limited to some groups, a password
   enforced on public conversations) carries a code of
   `Tymeslot.Integrations.Video.RoomCreationError`, which records it on the
-  integration and tells its owner how to fix it.
+  integration and tells its owner how to fix it. A connection test someone
+  asked for, saving the integration included, refuses such a server up front
+  where Talk's capabilities announce the restriction.
 
   Creation first looks for a conversation an earlier attempt made for the same
   booking, as `Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversation`
@@ -68,6 +70,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversation
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  alias Tymeslot.Integrations.Video.RoomCreationError
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Security.SsrfGuard
   alias Tymeslot.Security.UrlValidation
@@ -168,7 +171,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
   def perform_connection_test(config) do
     case Client.capabilities(credentials(config)) do
-      {:ok, data} -> check_talk(data)
+      {:ok, data} -> check_talk(data, config)
       {:error, reason} -> {:error, connection_failure(reason, config)}
     end
   end
@@ -441,15 +444,31 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
   defp creation_failure(reason, _config), do: reason
 
-  defp check_talk(%{"capabilities" => %{"spreed" => %{"features" => features} = spreed}})
+  defp check_talk(%{"capabilities" => %{"spreed" => %{"features" => features} = spreed}}, config)
        when is_list(features) do
-    if @required_feature in features do
+    with :ok <- check_version(features),
+         :ok <- check_conversation_rights(spreed, config) do
       {:ok,
        String.trim(
          dgettext("dashboard_integrations", "Connected to Nextcloud Talk %{version}",
            version: Map.get(spreed, "version", "")
          )
        )}
+    end
+  end
+
+  defp check_talk(_data, _config) do
+    {:error,
+     {:unreachable,
+      dgettext(
+        "dashboard_integrations",
+        "Talk is not available to this account. Check that the Talk app is installed and enabled for your user."
+      )}}
+  end
+
+  defp check_version(features) do
+    if @required_feature in features do
+      :ok
     else
       {:error,
        {:unreachable,
@@ -460,14 +479,24 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
     end
   end
 
-  defp check_talk(_data) do
-    {:error,
-     {:unreachable,
-      dgettext(
-        "dashboard_integrations",
-        "Talk is not available to this account. Check that the Talk app is installed and enabled for your user."
-      )}}
+  # A test someone asked for (saving the integration, or the Test connection
+  # button) also proves that the account may create the public conversations a
+  # booking needs, which Talk announces in its capabilities: `can-create` and
+  # `force-passwords` under `config.conversations`, both present in Talk 24
+  # and 25. The background health check does not: a server setting is not a
+  # broken connection, and the room job reports it when a booking meets it. A
+  # server that announces neither key is taken to allow it.
+  defp check_conversation_rights(_spreed, %{connection_test_scope: :background}), do: :ok
+
+  defp check_conversation_rights(spreed, _config) do
+    case get_in(spreed, ["config", "conversations"]) do
+      %{"can-create" => false} -> not_permitted(:conversation_creation_restricted)
+      %{"force-passwords" => true} -> not_permitted(:password_required)
+      _allowed -> :ok
+    end
   end
+
+  defp not_permitted(code), do: {:error, {:not_permitted, RoomCreationError.message(code)}}
 
   defp connection_failure(:unauthorized, config) do
     flag_rejected_credentials(config)

@@ -1,7 +1,9 @@
 defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkRefusalsTest do
   @moduledoc """
   A Nextcloud Talk server whose own settings refuse the conversations a booking
-  needs: each refusal at creation carries its own code. The bodies are the ones a Talk 25.0.0 server sent with each
+  needs: each refusal at creation carries its own code, and a connection test
+  someone asked for refuses such a server up front where Talk's capabilities
+  announce it. The bodies are the ones a Talk 25.0.0 server sent with each
   setting switched on; a Talk 24.0.5 server's source sends them identically.
   """
 
@@ -90,11 +92,85 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkRefusalsTest do
     end
   end
 
+  describe "perform_connection_test/1" do
+    for {setting, conversations, expected} <- [
+          {"may not create conversations", %{"can-create" => false, "force-passwords" => false},
+           "create conversations"},
+          {"must set a password on public conversations",
+           %{"can-create" => true, "force-passwords" => true}, "password requirement"}
+        ] do
+      test "refuses an account that #{setting}, saying how to allow it" do
+        expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+          capabilities(talk_25(unquote(Macro.escape(conversations))))
+        end)
+
+        assert {:error, {:not_permitted, message}} =
+                 NextcloudTalkProvider.perform_connection_test(@config)
+
+        assert message =~ unquote(expected)
+      end
+
+      test "the background health check passes an account that #{setting}" do
+        expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+          capabilities(talk_25(unquote(Macro.escape(conversations))))
+        end)
+
+        config = Map.put(@config, :connection_test_scope, :background)
+        assert {:ok, _message} = NextcloudTalkProvider.perform_connection_test(config)
+      end
+    end
+
+    test "passes a Talk that announces neither right, as older servers may not" do
+      expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        capabilities(%{
+          "version" => "24.0.5",
+          "features" => ["conversation-creation-all"],
+          "config" => %{"conversations" => %{"list-style" => "two-lines"}}
+        })
+      end)
+
+      assert {:ok, _message} = NextcloudTalkProvider.perform_connection_test(@config)
+    end
+
+    test "passes an account that may create conversations without a password" do
+      expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        capabilities(talk_25(%{"can-create" => true, "force-passwords" => false}))
+      end)
+
+      assert {:ok, message} = NextcloudTalkProvider.perform_connection_test(@config)
+      assert message =~ "25.0.0"
+    end
+  end
+
   defp with_event(config) do
     Map.put(config, :event_details, %EventDetails{
       summary: "Intro call",
       start_time: @start,
       end_time: DateTime.add(@start, 1800, :second)
     })
+  end
+
+  # The part of a Talk 25.0.0 server's capabilities the connection test reads.
+  defp talk_25(conversations) do
+    %{
+      "version" => "25.0.0",
+      "features" => ["conversation-creation-all"],
+      "config" => %{
+        "conversations" =>
+          Map.merge(%{"list-style" => "two-lines", "description-length" => 2000}, conversations)
+      }
+    }
+  end
+
+  defp capabilities(spreed) do
+    body =
+      Jason.encode!(%{
+        "ocs" => %{
+          "meta" => %{"status" => "ok"},
+          "data" => %{"capabilities" => %{"spreed" => spreed}}
+        }
+      })
+
+    {:ok, %Req.Response{status: 200, body: body}}
   end
 end

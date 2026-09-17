@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Video.ConnectionTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Video.Connection
+  alias Tymeslot.Security.Encryption
   import Tymeslot.Factory
   import Mox
 
@@ -62,6 +63,54 @@ defmodule Tymeslot.Integrations.Video.ConnectionTest do
       integration = insert(:video_integration, user: user, provider: "unknown_provider_123")
 
       assert {:error, :unsupported_provider} = Connection.test_connection(user.id, integration.id)
+    end
+  end
+
+  describe "test_integration/2 for a Talk account that may not create conversations" do
+    setup do
+      user = insert(:user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "nextcloud_talk",
+          base_url: "https://restricted.connection.example.com",
+          client_id_encrypted: Encryption.encrypt("organiser"),
+          client_secret_encrypted: Encryption.encrypt("App-Password"),
+          provider_account_id: "https://restricted.connection.example.com||organiser"
+        )
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        body =
+          Jason.encode!(%{
+            "ocs" => %{
+              "data" => %{
+                "capabilities" => %{
+                  "spreed" => %{
+                    "version" => "25.0.0",
+                    "features" => ["conversation-creation-all"],
+                    "config" => %{"conversations" => %{"can-create" => false}}
+                  }
+                }
+              }
+            }
+          })
+
+        {:ok, %Req.Response{status: 200, body: body}}
+      end)
+
+      %{integration: integration}
+    end
+
+    test "a test the owner asked for reports it", %{integration: integration} do
+      assert {:error, {:not_permitted, message}} = Connection.test_integration(integration)
+      assert message =~ "create conversations"
+    end
+
+    # A server setting is not a broken connection: counting it against the
+    # integration's health would end in an unhealthy email and a pause.
+    test "the background health check passes it", %{integration: integration} do
+      assert {:ok, _message} = Connection.test_integration(integration, scope: :background)
     end
   end
 end

@@ -55,7 +55,15 @@ defmodule Tymeslot.Integrations.Video.Connection do
     with {:ok, provider_atom} <- ProviderConfig.parse_known(integration.provider),
          {:ok, provider_module} <- ProviderRegistry.get_provider(provider_atom) do
       decrypted = VideoIntegrationSchema.decrypt_credentials(integration)
-      config = provider_module.build_config(integration, decrypted, [])
+
+      # The scope travels in the config too, so a provider can keep a check
+      # meant for the owner (Nextcloud Talk's right to create conversations)
+      # out of the background health check. A config without it, such as the
+      # one `probe/3` proves before a save, is a test someone asked for.
+      config =
+        integration
+        |> provider_module.build_config(decrypted, [])
+        |> Map.put(:connection_test_scope, scope)
 
       ConnectionProbe.probe_provider(provider_module, integration,
         scope: scope,

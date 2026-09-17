@@ -89,7 +89,8 @@ defmodule Tymeslot.Integrations.Video.RoomCreationError do
 
   @doc """
   What the refusal means and how to fix it, in plain words and the current
-  locale. Shown on the integration's dashboard row and in the email about it.
+  locale. Shown on the integration's dashboard row, in the email about it, and
+  when saving an integration whose server would refuse.
   """
   @spec message(code()) :: String.t()
   def message(:conversation_creation_restricted),

@@ -136,6 +136,57 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
       assert message =~ "21.1"
       assert Video.list_integrations(user.id) == []
     end
+
+    for {right, conversations, expected} <- [
+          {"may not create conversations", %{"can-create" => false, "force-passwords" => false},
+           "does not allow this user to create conversations"},
+          {"must set a password on public conversations",
+           %{"can-create" => true, "force-passwords" => true},
+           "turn off the password requirement for public conversations"}
+        ] do
+      test "saves nothing for an account that #{right}, saying how to allow it", %{user: user} do
+        expect_capabilities(
+          @server,
+          "organiser",
+          @app_password,
+          talk_capabilities(["conversation-creation-all"], unquote(Macro.escape(conversations)))
+        )
+
+        assert {:error, {:not_permitted, message}} =
+                 Video.create_integration(user.id, :nextcloud_talk, %{
+                   name: "Team Talk",
+                   base_url: @server,
+                   client_id: "organiser",
+                   client_secret: @app_password
+                 })
+
+        assert message =~ unquote(expected)
+        assert Video.list_integrations(user.id) == []
+      end
+
+      test "an edit to a login that #{right} is refused and keeps the stored one", %{user: user} do
+        integration = insert_talk_integration(user)
+
+        expect_capabilities(
+          @server,
+          "organiser",
+          "New-App-Password",
+          talk_capabilities(["conversation-creation-all"], unquote(Macro.escape(conversations)))
+        )
+
+        assert {:error, {:not_permitted, message}} =
+                 Video.update_integration(
+                   user.id,
+                   integration.id,
+                   dialog_attrs("New-App-Password")
+                 )
+
+        assert message =~ unquote(expected)
+
+        assert {:ok, %{client_secret: @app_password}} =
+                 VideoIntegrationQueries.get_for_user(integration.id, user.id)
+      end
+    end
   end
 
   describe "update_integration/3" do
@@ -526,13 +577,24 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     end)
   end
 
-  defp talk_capabilities(features \\ ["conversation-creation-all"]) do
+  # A Talk 25.0.0 server's capabilities, with the account's conversation rights
+  # as `conversations` announces them.
+  defp talk_capabilities(
+         features \\ ["conversation-creation-all"],
+         conversations \\ %{"can-create" => true, "force-passwords" => false}
+       ) do
     body =
       Jason.encode!(%{
         "ocs" => %{
           "meta" => %{"status" => "ok"},
           "data" => %{
-            "capabilities" => %{"spreed" => %{"version" => "25.0.0", "features" => features}}
+            "capabilities" => %{
+              "spreed" => %{
+                "version" => "25.0.0",
+                "features" => features,
+                "config" => %{"conversations" => conversations}
+              }
+            }
           }
         }
       })

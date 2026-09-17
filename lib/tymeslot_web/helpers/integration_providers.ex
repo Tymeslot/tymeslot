@@ -70,7 +70,8 @@ defmodule TymeslotWeb.Helpers.IntegrationProviders do
   `Tymeslot.Integrations.Video.Providers.MiroTalkProvider`), a refused
   login (`{:unauthorized, _}`) and a secret that has to be entered again
   (`{:secret_required, _}`) are blamed on the secret, and a server
-  throttling Tymeslot (`{:throttled, _}`) on no field at all; a bare string
+  throttling Tymeslot (`{:throttled, _}`) or refusing the account a right a
+  booking needs (`{:not_permitted, _}`) on no field at all; a bare string
   carries no such signal and lands on `:base_url`, which is where an
   unrecognised reason has always gone.
 
@@ -98,6 +99,9 @@ defmodule TymeslotWeb.Helpers.IntegrationProviders do
     do: %{client_secret: message}
 
   def reason_to_form_errors({:throttled, message}) when is_binary(message),
+    do: %{base: message}
+
+  def reason_to_form_errors({:not_permitted, message}) when is_binary(message),
     do: %{base: message}
 
   def reason_to_form_errors({:unreachable, message}) when is_binary(message),

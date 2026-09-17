@@ -1,8 +1,9 @@
 defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkRoomCreationErrorTest do
   @moduledoc """
   A Nextcloud Talk server that refuses the conversations a booking needs, as
-  the dashboard shows it: the integration's row explains a refusal recorded
-  when a booking met it, with the fix, until rooms are created again.
+  the dashboard shows it: the connect form refuses an account Talk announces it
+  will refuse, and the integration's row explains a refusal recorded when a
+  booking met it, with the fix, until rooms are created again.
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -16,6 +17,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkRoomCreationErrorTest
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Security.Encryption
 
   setup :verify_on_exit!
@@ -31,6 +34,32 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkRoomCreationErrorTest
   end
 
   describe "a server refusing to create conversations" do
+    test "refuses to connect an account that may not create conversations, saying how to allow it",
+         %{conn: conn, user: user} do
+      expect_capabilities("organiser", @app_password, %{"can-create" => false})
+
+      view = open_talk_form(conn)
+
+      view
+      |> form("#nextcloud-talk-video-integration-form",
+        integration: %{
+          name: "Team Talk",
+          base_url: @server,
+          client_id: "organiser",
+          client_secret: @app_password
+        }
+      )
+      |> render_submit()
+
+      assert has_element?(
+               view,
+               "#nextcloud-talk-video-integration-form [role='alert']",
+               "allow the user's group to create conversations"
+             )
+
+      assert Video.list_integrations(user.id) == []
+    end
+
     test "the integration's row explains a refusal recorded at room creation, with its fix", %{
       conn: conn,
       user: user
@@ -86,6 +115,16 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkRoomCreationErrorTest
     end
   end
 
+  defp open_talk_form(conn) do
+    {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+    view
+    |> element("button[phx-click='setup_provider'][phx-value-provider='nextcloud_talk']")
+    |> render_click()
+
+    view
+  end
+
   defp insert_talk_integration(user, overrides \\ []) do
     insert(
       :video_integration,
@@ -102,5 +141,36 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkRoomCreationErrorTest
         overrides
       )
     )
+  end
+
+  # A Talk 25.0.0 server's capabilities, with the account's conversation rights
+  # as `conversations` changes them.
+  defp expect_capabilities(login, app_password, conversations) do
+    expect(HTTPClientMock, :request, fn :get, _url, _body, headers, _opts ->
+      assert {"Authorization", "Basic " <> Base.encode64(login <> ":" <> app_password)} in headers
+
+      body =
+        Jason.encode!(%{
+          "ocs" => %{
+            "data" => %{
+              "capabilities" => %{
+                "spreed" => %{
+                  "version" => "25.0.0",
+                  "features" => ["conversation-creation-all"],
+                  "config" => %{
+                    "conversations" =>
+                      Map.merge(
+                        %{"can-create" => true, "force-passwords" => false},
+                        conversations
+                      )
+                  }
+                }
+              }
+            }
+          }
+        })
+
+      {:ok, %Req.Response{status: 200, body: body}}
+    end)
   end
 end
