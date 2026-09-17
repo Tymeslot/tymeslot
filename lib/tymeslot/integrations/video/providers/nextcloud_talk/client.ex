@@ -96,15 +96,21 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
     with {:ok, path} <- room_path(token), do: request(:delete, credentials, path, nil)
   end
 
-  # Talk's route requirement for a token, so anything it would not route is
-  # refused here rather than sent.
-  defp room_path(token) when is_binary(token) do
-    if token =~ ~r/\A[a-z0-9]{4,30}\z/,
+  @doc """
+  Whether `token` matches Talk's route requirement for a conversation token:
+  4 to 30 lowercase letters and digits. Talk routes nothing else, so a token
+  that fails this addresses no conversation.
+  """
+  @spec valid_token?(term()) :: boolean()
+  def valid_token?(token) when is_binary(token), do: token =~ ~r/\A[a-z0-9]{4,30}\z/
+  def valid_token?(_token), do: false
+
+  # Anything Talk would not route is refused here rather than sent.
+  defp room_path(token) do
+    if valid_token?(token),
       do: {:ok, @room_path <> "/" <> token},
       else: {:error, :invalid_token}
   end
-
-  defp room_path(_token), do: {:error, :invalid_token}
 
   defp request(method, credentials, path, params) do
     url = String.trim_trailing(credentials.base_url, "/") <> path

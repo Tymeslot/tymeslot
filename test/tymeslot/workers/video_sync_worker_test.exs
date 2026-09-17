@@ -54,7 +54,8 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
         insert_meeting_for_user(user, %{
           video_integration_id: integration.id,
           video_room_id: "111",
-          title: "Strategy sync"
+          title: "Strategy sync",
+          summary: nil
         })
 
       stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
@@ -387,6 +388,23 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       assert Repo.reload!(meeting).video_room_id == "abc123xy"
     end
 
+    test "clears the room id when the owner marked the conversation to be preserved" do
+      %{meeting: meeting} = talk_meeting("preserved.example.com")
+
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 403,
+           body: Jason.encode!(%{"ocs" => %{"data" => %{"error" => "preserved"}}})
+         }}
+      end)
+
+      assert :ok =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "delete"})
+
+      assert Repo.reload!(meeting).video_room_id == nil
+    end
+
     test "clears the room id when the conversation is already gone" do
       %{meeting: meeting} = talk_meeting("gone.example.com")
 
@@ -398,6 +416,50 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
                perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "delete"})
 
       assert Repo.reload!(meeting).video_room_id == nil
+    end
+  end
+
+  describe "perform/1, Nextcloud Talk reschedule" do
+    test "renames the conversation to the name it was created with" do
+      %{meeting: meeting} = talk_meeting("rename.example.com")
+
+      meeting =
+        meeting
+        |> Changeset.change(title: "Intro call", summary: "  Quarterly review  ")
+        |> Repo.update!()
+
+      expect(HTTPClientMock, :request, fn :put, url, _body, _headers, _opts ->
+        assert url =~ "/webinar/lobby"
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"ocs" => %{"data" => %{}}})}}
+      end)
+
+      expect(HTTPClientMock, :request, fn :put, _url, body, _headers, _opts ->
+        assert Jason.decode!(body) == %{"roomName" => "Quarterly review"}
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"ocs" => %{"data" => []}})}}
+      end)
+
+      assert :ok =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "update"})
+    end
+  end
+
+  describe "perform/1, circuit open" do
+    test "discards once the snooze budget for an open breaker is spent" do
+      host = "breaker.example.com"
+      on_exit(fn -> VideoCircuitBreaker.reset(:nextcloud_talk, host) end)
+
+      %{meeting: meeting} = talk_meeting(host)
+      trip_talk_breaker(host)
+
+      args = %{"meeting_id" => meeting.id, "action" => "delete"}
+
+      assert {:snooze, _seconds} = perform_job(VideoSyncWorker, args)
+
+      assert {:discard, reason} =
+               perform_job(VideoSyncWorker, args, meta: %{"snoozed" => 9})
+
+      assert reason =~ "circuit breaker still open"
+      assert Repo.reload!(meeting).video_room_id == "abc123xy"
     end
   end
 
@@ -451,6 +513,18 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
                  "action" => "update"
                })
     end
+  end
+
+  defp trip_talk_breaker(host) do
+    %{failure_threshold: threshold} = VideoCircuitBreaker.get_config(:nextcloud_talk)
+
+    Enum.each(1..threshold, fn _i ->
+      VideoCircuitBreaker.call_with_host(:nextcloud_talk, host, fn ->
+        {:provider_error, :simulated_outage}
+      end)
+    end)
+
+    assert %{status: :open} = VideoCircuitBreaker.status(:nextcloud_talk, host)
   end
 
   # Each test gets its own server, so the failures one test induces never open

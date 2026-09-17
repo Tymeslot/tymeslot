@@ -81,6 +81,15 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
   end
 
   describe "conversation tokens" do
+    test "valid_token?/1 accepts only Talk's route format" do
+      assert Client.valid_token?("abc123xy")
+      assert Client.valid_token?("abcd")
+      assert Client.valid_token?(String.duplicate("a", 30))
+
+      invalid = ["abc", String.duplicate("a", 31), "ABC123xy", "abc-123x", "abc123xy\n", nil]
+      assert Enum.filter(invalid, &Client.valid_token?/1) == []
+    end
+
     test "a token outside Talk's route format is refused before any request" do
       # No expectation is set, so any request would fail the test with
       # Mox.UnexpectedCallError.

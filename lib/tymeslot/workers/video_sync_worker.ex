@@ -25,6 +25,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     priority: 2
 
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.IntegrationResolver
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.SnoozePolicy
@@ -112,7 +113,9 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
       Video.update_meeting_room(meeting.organizer_user_id,
         integration_id: integration_id,
         room_id: meeting.video_room_id,
-        topic: meeting.title,
+        # The name the room was created with, so a reschedule renames it to
+        # the same value creation would have used.
+        topic: EventDetails.from_meeting(meeting).summary,
         start_time: meeting.start_time,
         end_time: meeting.end_time
       )

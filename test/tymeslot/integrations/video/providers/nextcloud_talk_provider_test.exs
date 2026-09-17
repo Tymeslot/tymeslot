@@ -414,6 +414,33 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
       assert :ok = NextcloudTalkProvider.update_meeting_room("abc123xy", config)
     end
 
+    test "skips the rename when the new title is blank" do
+      expect(HTTPClientMock, :request, fn :put, url, _body, _headers, _opts ->
+        assert url == @room_api <> "/abc123xy/webinar/lobby"
+        {:ok, %Req.Response{status: 200, body: ocs(%{})}}
+      end)
+
+      config = Map.merge(@config, %{meeting_start_time: @moved_start, meeting_topic: "  \n "})
+
+      assert :ok = NextcloudTalkProvider.update_meeting_room("abc123xy", config)
+    end
+
+    test "renames to the trimmed title" do
+      expect(HTTPClientMock, :request, fn :put, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 200, body: ocs(%{})}}
+      end)
+
+      expect(HTTPClientMock, :request, fn :put, _url, body, _headers, _opts ->
+        assert Jason.decode!(body) == %{"roomName" => "Moved call"}
+        {:ok, %Req.Response{status: 200, body: ocs([])}}
+      end)
+
+      config =
+        Map.merge(@config, %{meeting_start_time: @moved_start, meeting_topic: " Moved call "})
+
+      assert :ok = NextcloudTalkProvider.update_meeting_room("abc123xy", config)
+    end
+
     test "reports a conversation deleted on the server as not found" do
       expect(HTTPClientMock, :request, fn :put, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 404, body: ocs(nil)}}
@@ -486,6 +513,14 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
     test "treats a conversation already gone as deleted" do
       expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 404, body: ocs(nil)}}
+      end)
+
+      assert :ok = NextcloudTalkProvider.delete_meeting_room("abc123xy", @config)
+    end
+
+    test "treats a conversation its owner marked to be preserved as done" do
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: ocs(%{"error" => "preserved"})}}
       end)
 
       assert :ok = NextcloudTalkProvider.delete_meeting_room("abc123xy", @config)

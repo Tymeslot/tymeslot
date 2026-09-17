@@ -13,7 +13,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   address: a reschedule moves the lobby timer and renames the conversation, a
   cancellation deletes it, and a scheduled clean-up deletes it some days after
   the meeting has ended. A conversation already deleted on the server counts as
-  deleted. A refusal that would repeat on every attempt (a 400 or 403, a
+  deleted, and so does one its owner marked to be preserved. A refusal that would repeat on every attempt (a 400 or 403, a
   redirect) is reported as a configuration error, which the sync job discards
   rather than retries.
 
@@ -122,7 +122,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   def delete_meeting_room(_room_id, %{needs_reauth: true}), do: {:error, :unauthorized}
 
   def delete_meeting_room(room_id, config) when is_binary(room_id) do
-    case config |> credentials() |> Client.delete_room(room_id) |> lifecycle_result(config) do
+    case config |> credentials() |> Client.delete_room(room_id) |> tolerate_preserved(config) do
       # Already gone, which is what a delete wants: cancelling stays idempotent.
       {:error, :meeting_not_found} -> :ok
       result -> result
@@ -132,7 +132,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   @impl ProviderBehaviour
   def extract_room_id(meeting_url) when is_binary(meeting_url) do
     with [_path, token] <- Regex.run(~r{/call/([^/]+)/?\z}, URI.parse(meeting_url).path || ""),
-         true <- token?(token) do
+         true <- Client.valid_token?(token) do
       token
     else
       _not_a_call -> nil
@@ -276,19 +276,27 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   defp move_lobby(_room_id, _config), do: :ok
 
   defp rename(room_id, %{meeting_topic: topic} = config) when is_binary(topic) do
-    config
-    |> credentials()
-    |> Client.rename_room(room_id, room_name(topic))
-    |> tolerate_rename_refusal(config)
-    |> lifecycle_result(config)
+    case String.trim(topic) do
+      # A blank title would rename the conversation to the generic fallback,
+      # which is worse than keeping the name it has.
+      "" ->
+        :ok
+
+      title ->
+        config
+        |> credentials()
+        |> Client.rename_room(room_id, room_name(title))
+        |> tolerate_rename_refusal(config)
+        |> lifecycle_result(config)
+    end
   end
 
   defp rename(_room_id, _config), do: :ok
 
   # By the time the rename runs, the lobby has already moved. A refused rename
   # cannot be fixed by retrying, and failing the sync for it would move the
-  # lobby again on every attempt, so it is logged and the sync succeeds. The
-  # token is left out of the log: it is the guests' way into the call.
+  # lobby again on every attempt, so it is logged and the sync succeeds. This
+  # log names the integration, not the conversation token.
   defp tolerate_rename_refusal({:error, {:rejected, status, error}}, config) do
     Logger.warning("Nextcloud Talk refused to rename a conversation",
       integration_id: Map.get(config, :integration_id),
@@ -300,6 +308,20 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   end
 
   defp tolerate_rename_refusal(result, _config), do: result
+
+  # Talk refuses to delete a conversation its owner marked to be preserved, and
+  # the owner can lift that only in Nextcloud. Tymeslot has nothing left to do
+  # for it, so the deletion counts as done; otherwise every later clean-up
+  # would send the same refused request again. Any other refusal stays one.
+  defp tolerate_preserved({:error, {:rejected, 403, "preserved"}}, config) do
+    Logger.info("Nextcloud Talk kept a conversation its owner marked to be preserved",
+      integration_id: Map.get(config, :integration_id)
+    )
+
+    :ok
+  end
+
+  defp tolerate_preserved(result, config), do: lifecycle_result(result, config)
 
   # What a failure during a reschedule or cancellation means for the sync job.
   # A missing conversation is reported as such, and so is a token Talk would
@@ -357,15 +379,11 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
   # A token Talk would not route could never be rescheduled or cancelled, so it
   # is no room either.
-  defp fetch_token(%{"token" => token}) when is_binary(token) do
-    if token?(token), do: {:ok, token}, else: {:error, :invalid_response}
+  defp fetch_token(%{"token" => token}) do
+    if Client.valid_token?(token), do: {:ok, token}, else: {:error, :invalid_response}
   end
 
   defp fetch_token(_data), do: {:error, :invalid_response}
-
-  # Talk's route requirement for a conversation token, the same rule the client
-  # checks before addressing a conversation.
-  defp token?(token), do: token =~ ~r/\A[a-z0-9]{4,30}\z/
 
   defp join_link(base_url, token), do: String.trim_trailing(base_url, "/") <> @call_path <> token
 
