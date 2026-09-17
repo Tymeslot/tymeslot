@@ -8,28 +8,32 @@ defmodule Tymeslot.Precommit.Runner do
   as a second compile in a different `MIX_ENV`) is a barrier: if it fails,
   downstream steps would only report noise, so the run stops there.
 
-  ## Why the suite runs alongside the rest
+  ## What runs at the same time
 
-  The suite is the longest step by a wide margin and needs nothing the other
-  steps produce beyond a compiled build, so run in sequence it simply adds its
-  wall clock to the gate's. Once the compile barriers have passed it is started
-  in the background and joined at the end, which hides the static checks behind
-  it rather than queueing them after it.
+  Once the compile barriers have passed, nothing downstream needs anything from
+  another step beyond the build they established, so run in sequence the gate
+  simply adds every step's wall clock together. Instead:
 
-  It is the suite rather than one of the static checks that goes to the
-  background for two reasons. It is the long pole, so it is the one worth
-  overlapping; and it is the only step running under `MIX_ENV=test`, so it
-  takes a different build lock. Two `mix` invocations sharing a build path
-  serialise on that lock, which would have handed back much of what the
-  concurrency won.
+    * **The suite** starts in the background straight away. It is the long pole
+      and the only step under `MIX_ENV=test`, so it takes a different build lock
+      from everything else and never waits on it.
+    * **Steps that write the dev build** (`gettext.check`, which recompiles when
+      its inputs moved) run next, one at a time in the foreground, so nothing
+      reads the build while it is being rewritten.
+    * **Every other step** then runs concurrently. They only read the build, or
+      reach it through `mix compile`, which Mix serialises behind its build lock
+      and which is a no-op by this point. Each of these is mostly Mix boot time
+      plus one tool, so the group finishes in about the time of its slowest
+      member, credo or dialyzer, instead of their sum.
 
-  Its output is buffered and printed at the join, so it cannot interleave with
-  the step running in the foreground. That is the cost of the arrangement: the
-  suite's output arrives in one block at the end instead of scrolling live.
+  Output from a concurrent step is buffered and printed whole when that step
+  finishes, so two steps never interleave; the suite's arrives in one block at
+  the end. That is the cost of the arrangement: nothing scrolls live after the
+  compile steps.
 
-  `--fail-fast` turns this off and runs everything in sequence. It asks for the
-  first failure as soon as possible, which is incompatible with a step whose
-  result is only known at the end.
+  `--fail-fast` turns all of this off and runs everything in sequence. It asks
+  for the first failure as soon as possible, which is incompatible with steps
+  whose results are only known when they finish together.
   """
 
   @barrier_prefix "compile"
@@ -60,19 +64,68 @@ defmodule Tymeslot.Precommit.Runner do
 
   defp run_all(steps, false, cmd_fun, capture_fun) do
     {head, tail} = split_after_last_barrier(steps)
-    {backgrounded, tail} = Enum.split_with(tail, &background?/1)
     head_results = run_steps(head, false, cmd_fun, [])
 
     if broken?(head_results) do
       head_results
     else
+      {backgrounded, tail} = Enum.split_with(tail, &background?/1)
+
       # Started here rather than at the top of the run because the suite needs
       # the beams the compile steps produce, and a build that does not compile
       # is the case those barriers exist to stop.
       tasks = Enum.map(backgrounded, &start_background(&1, capture_fun))
-      results = head_results ++ run_steps(tail, false, cmd_fun, []) ++ Enum.map(tasks, &join/1)
-      order_like(steps, results)
+      tail_results = run_tail(head, tail, cmd_fun, capture_fun)
+
+      order_like(steps, head_results ++ tail_results ++ Enum.map(tasks, &join/1))
     end
+  end
+
+  # Overlapping the static checks is only safe against a build the gate has
+  # established, so a step list without a compile barrier keeps them in
+  # sequence.
+  defp run_tail([], tail, cmd_fun, _capture_fun), do: run_steps(tail, false, cmd_fun, [])
+
+  defp run_tail(_head, tail, cmd_fun, capture_fun) do
+    {writers, readers} = Enum.split_with(tail, &writes_build?/1)
+    run_steps(writers, false, cmd_fun, []) ++ run_concurrently(readers, capture_fun)
+  end
+
+  # Each step's output is printed as it finishes rather than in declared order,
+  # so a fast failure is on screen while credo and dialyzer are still running.
+  # Printing happens here, in the calling process, which is what keeps two
+  # steps' blocks from interleaving.
+  defp run_concurrently([], _capture_fun), do: []
+
+  defp run_concurrently(steps, capture_fun) do
+    names = Enum.map_join(steps, ", ", fn {name, _args, _env} -> name end)
+
+    Mix.shell().info([
+      :bright,
+      "\n==> #{names}",
+      :reset,
+      :faint,
+      "  (concurrently; each step's output follows as it finishes)"
+    ])
+
+    steps
+    |> Task.async_stream(fn {name, args, env} -> {name, args, capture_fun.(args, env)} end,
+      max_concurrency: length(steps),
+      ordered: false,
+      timeout: :infinity
+    )
+    |> Enum.map(fn {:ok, {name, args, {output, code}}} ->
+      Mix.shell().info([
+        :bright,
+        "\n==> #{name}",
+        :reset,
+        :faint,
+        "  mix #{Enum.join(args, " ")}"
+      ])
+
+      IO.write(output)
+      status(name, code)
+    end)
   end
 
   # The summary reads as the gate's running order, not as the order results
@@ -109,8 +162,11 @@ defmodule Tymeslot.Precommit.Runner do
     Mix.shell().info([:bright, "\n==> #{name}", :reset, :faint, "  (background output)"])
     IO.write(output)
 
-    if code == 0, do: {name, :passed, 0}, else: {name, :failed, code}
+    status(name, code)
   end
+
+  defp status(name, 0), do: {name, :passed, 0}
+  defp status(name, code), do: {name, :failed, code}
 
   # Everything up to and including the last barrier runs in the foreground, so
   # a backgrounded step can never start against a build the gate has not yet
@@ -127,6 +183,11 @@ defmodule Tymeslot.Precommit.Runner do
   # contract.
   defp background?({_name, ["test" | _rest], _env}), do: true
   defp background?(_step), do: false
+
+  # Steps that can rewrite `_build/dev` and so must not overlap the steps that
+  # read it. Keyed off the command for the same reason as `background?/1`.
+  defp writes_build?({_name, ["gettext.check" | _rest], _env}), do: true
+  defp writes_build?(_step), do: false
 
   defp broken?(results), do: Enum.any?(results, &match?({_name, :skipped, _code}, &1))
 
@@ -187,8 +248,9 @@ defmodule Tymeslot.Precommit.Runner do
   # `dialyzer` remains available as the cross-check the incremental mode was
   # adopted against, and a cap that quietly stopped applying to either would be
   # invisible: the run would simply get slower.
-  # The background counterpart to `cmd/2`: the same invocation, with the output
-  # collected rather than streamed so it can be printed in one block at the join.
+  # The concurrent counterpart to `cmd/2`: the same invocation, with the output
+  # collected rather than streamed so it can be printed in one block when the
+  # step finishes.
   defp capture(args, env) do
     System.cmd("mix", args,
       stderr_to_stdout: true,
