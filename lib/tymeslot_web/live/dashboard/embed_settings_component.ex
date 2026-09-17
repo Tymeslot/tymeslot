@@ -243,7 +243,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   def handle_event("remove_domain", %{"domain" => domain}, socket) do
     if domain in socket.assigns.allowed_domains do
       updated_domains = Enum.reject(socket.assigns.allowed_domains, &(&1 == domain))
-      updated_domains = if updated_domains == [], do: ["none"], else: updated_domains
 
       perform_domain_update(
         socket,
@@ -278,20 +277,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   defp perform_domain_update(socket, domains_payload, success_message) do
     user_id = socket.assigns.current_user.id
 
-    # Rate limit: 10 updates per hour per user
-    case RateLimiter.check_rate(
-           "embed_domain_update:#{user_id}",
-           60_000 * 60,
-           10
-         ) do
-      {:allow, _count} ->
-        # Ensure we don't save duplicates and handle the "none" sentinel correctly
-        final_domains =
-          domains_payload
-          |> Enum.uniq()
-          |> Enum.reject(&(&1 == ""))
-
-        case Profiles.update_allowed_embed_domains(socket.assigns.profile, final_domains) do
+    case RateLimiter.check_embed_domain_update_rate_limit(user_id) do
+      :ok ->
+        case Profiles.update_allowed_embed_domains(socket.assigns.profile, domains_payload) do
           {:ok, updated_profile} ->
             # Notify parent of profile update
             send(self(), {:profile_updated, updated_profile})
@@ -318,9 +306,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
             {:noreply, socket}
         end
 
-      {:deny, _retry_after} ->
-        Logger.warning("Embed domain update rate limit exceeded", user_id: user_id)
-
+      # The limiter logs the rejection; the flash stays translated rather than
+      # showing its English message.
+      {:error, :rate_limited, _message} ->
         Flash.error(
           dgettext(
             "dashboard_embed",

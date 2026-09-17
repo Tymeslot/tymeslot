@@ -28,6 +28,7 @@ defmodule Tymeslot.Security.RateLimiterDashboardContractTest do
       &RateLimiter.check_integration_appearance_rate_limit/1,
       &RateLimiter.check_meeting_type_write_rate_limit/1,
       &RateLimiter.check_avatar_upload_rate_limit/1,
+      &RateLimiter.check_embed_domain_update_rate_limit/1,
       &RateLimiter.check_dashboard_cancel_rate_limit/1,
       &RateLimiter.check_dashboard_reschedule_rate_limit/1
     ]
