@@ -264,11 +264,6 @@ msgstr "Die Zeit muss im Format HH:MM angegeben werden (z. B. 09:30)"
 msgid "%{minutes} min"
 msgstr "%{minutes} Min."
 
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} (copy)"
-msgstr "%{name} (Kopie)"
-
 #: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} (default)"
@@ -623,3 +618,13 @@ msgstr "3 Stunden"
 #, elixir-autogen, elixir-format
 msgid "6 hours"
 msgstr "6 Stunden"
+
+#: lib/tymeslot/availability/schedules.ex
+#, elixir-autogen, elixir-format
+msgid "(copy)"
+msgstr "(Kopie)"
+
+#: lib/tymeslot/availability/schedules.ex
+#, elixir-autogen, elixir-format
+msgid "(copy) %{number}"
+msgstr "(Kopie) %{number}"

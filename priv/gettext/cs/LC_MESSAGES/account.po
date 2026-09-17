@@ -150,11 +150,6 @@ msgstr "Nová e-mailová adresa"
 msgid "New Password"
 msgstr "Nové heslo"
 
-#: lib/tymeslot_web/live/account_live/handlers.ex
-#, elixir-autogen, elixir-format
-msgid "New password must be different from current password"
-msgstr "Nové heslo se musí lišit od současného hesla"
-
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Password"

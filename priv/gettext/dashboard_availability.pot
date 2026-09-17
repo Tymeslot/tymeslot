@@ -264,11 +264,6 @@ msgstr ""
 msgid "%{minutes} min"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} (copy)"
-msgstr ""
-
 #: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} (default)"
@@ -620,4 +615,14 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/availability/policy_card.ex
 #, elixir-autogen, elixir-format
 msgid "6 hours"
+msgstr ""
+
+#: lib/tymeslot/availability/schedules.ex
+#, elixir-autogen, elixir-format
+msgid "(copy)"
+msgstr ""
+
+#: lib/tymeslot/availability/schedules.ex
+#, elixir-autogen, elixir-format
+msgid "(copy) %{number}"
 msgstr ""

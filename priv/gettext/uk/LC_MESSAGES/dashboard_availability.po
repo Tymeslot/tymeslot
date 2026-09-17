@@ -264,11 +264,6 @@ msgstr "Час має бути у форматі ГГ:ХХ (наприклад, 
 msgid "%{minutes} min"
 msgstr "%{minutes} хв"
 
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} (copy)"
-msgstr "%{name} (копія)"
-
 #: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} (default)"
@@ -622,3 +617,13 @@ msgstr "3 години"
 #, elixir-autogen, elixir-format
 msgid "6 hours"
 msgstr "6 годин"
+
+#: lib/tymeslot/availability/schedules.ex
+#, elixir-autogen, elixir-format
+msgid "(copy)"
+msgstr "(копія)"
+
+#: lib/tymeslot/availability/schedules.ex
+#, elixir-autogen, elixir-format
+msgid "(copy) %{number}"
+msgstr "(копія) %{number}"

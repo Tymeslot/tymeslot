@@ -150,11 +150,6 @@ msgstr "Нова адреса електронної пошти"
 msgid "New Password"
 msgstr "Новий пароль"
 
-#: lib/tymeslot_web/live/account_live/handlers.ex
-#, elixir-autogen, elixir-format
-msgid "New password must be different from current password"
-msgstr "Новий пароль має відрізнятися від поточного"
-
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Password"
