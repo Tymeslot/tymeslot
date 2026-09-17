@@ -121,6 +121,13 @@ defmodule Tymeslot.Meetings.VideoRooms do
   a network call out of this inline path. A meeting without a room, or whose
   integration is gone or inactive, is skipped without logging, as room
   creation skips it.
+
+  Unlike `Tymeslot.Workers.VideoSyncWorker`, this deliberately does not fall
+  back to another integration for the same provider through
+  `Tymeslot.Integrations.Video.IntegrationResolver`. A reconnected Jitsi
+  integration may point at a different server or hold a different secret, so
+  tokens signed with it for the old room would be wrong; skipping keeps the
+  stored links instead.
   """
   @spec refreshed_join_url_attrs(MeetingSchema.t(), DateTime.t()) ::
           %{optional(:organizer_video_url | :attendee_video_url) => String.t()}
