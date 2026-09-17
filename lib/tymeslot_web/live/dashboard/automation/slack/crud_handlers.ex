@@ -26,12 +26,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
       fn ->
         case SlackInputValidation.validate_form(params, mode: :webhook_url) do
           {:ok, sanitized} ->
-            attrs =
-              sanitized
-              |> Map.put(:app_mode, "webhook_url")
-              |> Map.put(:is_active, true)
-
-            persist_create(user_id, attrs, socket)
+            persist_create(user_id, sanitized, socket)
 
           {:error, errors} ->
             {:noreply, assign(socket, :slack_form_errors, errors)}
@@ -154,7 +149,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
   # ============================================================================
 
   defp persist_create(user_id, attrs, socket) do
-    case Slack.create_integration(user_id, attrs) do
+    case Slack.create_webhook_integration(user_id, attrs) do
       {:ok, _integration} ->
         Flash.info(dgettext("dashboard_automation_chat", "Slack integration created"))
 
