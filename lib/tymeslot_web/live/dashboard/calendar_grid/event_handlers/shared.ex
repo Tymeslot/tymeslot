@@ -164,24 +164,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
           |> put_by_day(freq, params["by_day"])
           |> put_end_condition(params["end_type"], params)
 
-        with :ok <- validate_until_after_start(opts, start_date) do
-          RRule.build(opts, all_day: all_day)
+        case RRule.retarget(RRule.build(opts), all_day: all_day, start_date: start_date) do
+          {:ok, rule} -> rule
+          {:error, :until_before_start} = error -> error
         end
     end
   end
-
-  # Returns :ok when there is no UNTIL, no start_date to compare, or when
-  # UNTIL is on or after the start date. Returns {:error, :until_before_start}
-  # when the rule would expand to zero occurrences.
-  defp validate_until_after_start(%{until: until}, %Date{} = start_date) do
-    if Date.compare(until, start_date) == :lt do
-      {:error, :until_before_start}
-    else
-      :ok
-    end
-  end
-
-  defp validate_until_after_start(_opts, _no_start), do: :ok
 
   defp parse_freq("daily"), do: :daily
   defp parse_freq("weekly"), do: :weekly

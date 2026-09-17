@@ -94,6 +94,76 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
     |> Enum.reduce(%{}, &parse_token/2)
   end
 
+  @doc """
+  Fits a rule's `UNTIL` to the event it repeats.
+
+  The recurrence editor composes a rule before the event's all-day flag and
+  start date are final, so a rule has to be checked against the event it is
+  saved with rather than the one the form showed when the end date was
+  picked. Two things are checked:
+
+    * `UNTIL` must not fall before `:start_date`, or the series would have
+      no occurrences at all (`{:error, :until_before_start}`); the check is
+      skipped when no start date is given;
+    * `UNTIL` must have the value type of `DTSTART` (RFC 5545 §3.3.10), so it
+      is rewritten as a bare date for an all-day event and as an end-of-day
+      UTC timestamp for a timed one, as `build/2` would emit it.
+
+  Only the `UNTIL` part is rewritten; every other part, including ones
+  `parse/1` does not understand, is kept as it was. A `nil` rule stays `nil`.
+
+  ## Options
+    - `:all_day` — boolean, default `false`
+    - `:start_date` — the event's start date, `Date.t()` or `nil`
+  """
+  @spec retarget(String.t() | nil, keyword()) ::
+          {:ok, String.t() | nil} | {:error, :until_before_start}
+  def retarget(nil, _opts), do: {:ok, nil}
+
+  def retarget(rrule, opts) when is_binary(rrule) do
+    all_day = Keyword.get(opts, :all_day, false)
+
+    case parse(rrule) do
+      %{until: until} ->
+        with :ok <- validate_until_after_start(until, Keyword.get(opts, :start_date)) do
+          {:ok, replace_until(rrule, format_until(until, all_day))}
+        end
+
+      _no_until ->
+        {:ok, rrule}
+    end
+  end
+
+  defp validate_until_after_start(until, %Date{} = start_date) do
+    if Date.compare(until, start_date) == :lt, do: {:error, :until_before_start}, else: :ok
+  end
+
+  defp validate_until_after_start(_until, _no_start), do: :ok
+
+  defp replace_until(rrule, until_value) do
+    {prefix, body} =
+      case rrule do
+        "RRULE:" <> body -> {"RRULE:", body}
+        body -> {"", body}
+      end
+
+    parts =
+      body
+      |> String.split(";", trim: true)
+      |> Enum.map(fn part ->
+        if until_part?(part), do: "UNTIL=" <> until_value, else: part
+      end)
+
+    prefix <> Enum.join(parts, ";")
+  end
+
+  defp until_part?(part) do
+    case String.split(part, "=", parts: 2) do
+      [key, _value] -> String.upcase(key) == "UNTIL"
+      _other -> false
+    end
+  end
+
   # --- build helpers ---
 
   defp build_freq(%{freq: freq}) when is_map_key(@freq_to_token, freq),

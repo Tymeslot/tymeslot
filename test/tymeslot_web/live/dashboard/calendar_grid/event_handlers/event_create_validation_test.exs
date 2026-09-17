@@ -190,6 +190,70 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
     end
   end
 
+  describe "handle_save_event/2 — recurrence end date" do
+    # The editor composes the rule as the form changes, before the event's
+    # all-day flag and start date are final, so the rule is fitted to the
+    # event at save time.
+    test "an all-day series ending on a date is saved with a date-only UNTIL" do
+      socket =
+        build_socket(
+          creating_overrides: %{
+            all_day: true,
+            date: "2026-04-18",
+            end_date: "2026-04-18",
+            recurrence_rule: "FREQ=WEEKLY;UNTIL=20260530T235959Z"
+          }
+        )
+
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
+
+      assert_received {:execute_create_event, payload}
+      assert payload.creating.recurrence_rule == "FREQ=WEEKLY;UNTIL=20260530"
+    end
+
+    test "a timed series ending on a date is saved with an end-of-day UNTIL" do
+      socket =
+        build_socket(creating_overrides: %{recurrence_rule: "FREQ=DAILY;UNTIL=20260530"})
+
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
+
+      assert_received {:execute_create_event, payload}
+      assert payload.creating.recurrence_rule == "FREQ=DAILY;UNTIL=20260530T235959Z"
+    end
+
+    test "a series ending before the event starts is refused without writing" do
+      socket =
+        build_socket(
+          creating_overrides: %{
+            all_day: true,
+            date: "2026-04-18",
+            end_date: "2026-04-18",
+            recurrence_rule: "FREQ=WEEKLY;UNTIL=20260417T235959Z"
+          }
+        )
+
+      {:noreply, updated_socket} = CreateExecution.handle_save_event(%{}, socket)
+
+      assert_received {:flash,
+                       {:error, "The recurrence end date must be on or after the event start."}}
+
+      refute_received {:execute_create_event, _payload}
+      refute Map.get(updated_socket.assigns, :saving_event)
+    end
+
+    test "a timed series ending before the event starts is refused without writing" do
+      socket =
+        build_socket(creating_overrides: %{recurrence_rule: "FREQ=DAILY;UNTIL=20260409T235959Z"})
+
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
+
+      assert_received {:flash,
+                       {:error, "The recurrence end date must be on or after the event start."}}
+
+      refute_received {:execute_create_event, _payload}
+    end
+  end
+
   describe "handle_save_event/2 — no creating_event in assigns" do
     test "is a no-op when there is no in-progress event" do
       socket = %Phoenix.LiveView.Socket{
