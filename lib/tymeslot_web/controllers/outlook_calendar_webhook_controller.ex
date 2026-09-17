@@ -10,8 +10,9 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
 
     2. Change notifications — a POST with a JSON body containing one or more
        notification objects. Each notification identifies a subscription and
-       carries a `clientState` value we compare against the stored secret using
-       a timing-safe comparison before enqueuing a sync job.
+       carries a `clientState` value. The controller hands the list to
+       `Tymeslot.Integrations.Calendar.Webhooks`, which verifies each one
+       against the stored secret and enqueues the sync.
 
   All well-formed change notification payloads receive HTTP 202; validation
   challenges receive HTTP 200 with the token echoed back. Invalid or unknown
@@ -22,10 +23,8 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
 
   require Logger
 
-  alias Plug.Crypto
   alias Tymeslot.Integrations.Calendar.Webhooks, as: CalendarWebhooks
   alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.Workers.SyncOutlookCalendarWorker
 
   @doc """
   Receives a Microsoft Graph change notification or validation challenge.
@@ -57,122 +56,9 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
         Logger.warning("Outlook webhook received request with no notification value")
 
       notifications when is_list(notifications) ->
-        notifications
-        |> Enum.take(50)
-        |> process_notifications_batch()
+        CalendarWebhooks.handle_outlook_notifications(notifications)
     end
 
     conn |> send_resp(202, "") |> halt()
-  end
-
-  # Private helpers
-
-  defp process_notifications_batch([]), do: :ok
-
-  defp process_notifications_batch(notifications) do
-    subscription_ids =
-      notifications
-      |> Enum.map(& &1["subscriptionId"])
-      |> Enum.reject(&is_nil/1)
-      |> Enum.uniq()
-
-    integrations_by_sub_id =
-      subscription_ids
-      |> CalendarWebhooks.get_by_graph_subscription_ids()
-      |> Map.new(fn integration -> {integration.graph_subscription_id, integration} end)
-
-    Enum.each(notifications, fn notification ->
-      process_notification(notification, integrations_by_sub_id)
-    end)
-  end
-
-  defp process_notification(
-         %{"subscriptionId" => subscription_id} = notification,
-         integrations_by_sub_id
-       ) do
-    case Map.fetch(integrations_by_sub_id, subscription_id) do
-      :error ->
-        :ok
-
-      {:ok, integration} ->
-        client_state = notification["clientState"] || ""
-        expected_state = integration.graph_client_state || ""
-
-        if valid_client_state?(client_state, expected_state) do
-          handle_valid_notification(integration, notification)
-        else
-          Logger.warning("Outlook Calendar webhook: clientState verification failed",
-            subscription_id: subscription_id,
-            integration_id: integration.id
-          )
-        end
-    end
-  end
-
-  defp process_notification(_notification, _integrations_by_sub_id), do: :ok
-
-  defp valid_client_state?(received, expected)
-       when is_binary(received) and is_binary(expected) and byte_size(received) > 0 and
-              byte_size(expected) > 0 do
-    Crypto.secure_compare(received, expected)
-  end
-
-  defp valid_client_state?(_received, _expected), do: false
-
-  defp handle_valid_notification(integration, notification) do
-    case RateLimiter.check_calendar_webhook_rate_limit(integration.id) do
-      :ok ->
-        case get_in(notification, ["resourceData", "id"]) do
-          nil ->
-            Logger.warning("Outlook webhook notification missing resourceData",
-              subscription_id: notification["subscriptionId"]
-            )
-
-          graph_resource_id ->
-            enqueue_sync(integration, graph_resource_id)
-            touch_notification_timestamp(integration)
-        end
-
-      {:error, :rate_limited} ->
-        Logger.warning("Outlook Calendar webhook rate limited",
-          integration_id: integration.id
-        )
-    end
-  end
-
-  defp enqueue_sync(integration, graph_resource_id) do
-    args = %{
-      "calendar_integration_id" => integration.id,
-      "graph_resource_id" => graph_resource_id
-    }
-
-    job = SyncOutlookCalendarWorker.new(args)
-
-    case Oban.insert(job) do
-      {:ok, _job} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to enqueue SyncOutlookCalendarWorker",
-          integration_id: integration.id,
-          reason: inspect(reason)
-        )
-    end
-  end
-
-  defp touch_notification_timestamp(integration) do
-    case CalendarWebhooks.touch_notification_at(
-           integration,
-           :last_outlook_notification_at
-         ) do
-      {:ok, _updated} ->
-        :ok
-
-      {:error, changeset} ->
-        Logger.error("Failed to update last_outlook_notification_at",
-          integration_id: integration.id,
-          reason: inspect(changeset)
-        )
-    end
   end
 end

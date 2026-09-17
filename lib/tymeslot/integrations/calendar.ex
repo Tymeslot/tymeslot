@@ -22,8 +22,8 @@ defmodule Tymeslot.Integrations.Calendar do
       message normalisation).
     * `Tymeslot.Integrations.Calendar.Events` — calendar event operations
       (list/create/update/delete events) used by the booking pipeline.
-    * `Tymeslot.Integrations.Calendar.Webhooks` — webhook lookup and
-      notification tracking.
+    * `Tymeslot.Integrations.Calendar.Webhooks` — handling of provider push
+      notifications: verification and the sync jobs they enqueue.
   """
 
   @behaviour Tymeslot.Security.EncryptedStorage

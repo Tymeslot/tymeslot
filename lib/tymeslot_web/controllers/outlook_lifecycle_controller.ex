@@ -4,13 +4,16 @@ defmodule TymeslotWeb.OutlookLifecycleController do
 
   Graph delivers lifecycle events when a subscription requires attention:
 
-    - `reauthorizationRequired` — the subscription's OAuth tokens need to be
-      refreshed and the subscription re-authorized. Enqueues a `TokenRefreshJob`
-      and asynchronously re-registers the Graph subscription.
+    - `reauthorizationRequired`: the subscription's OAuth tokens need to be
+      refreshed and the subscription re-authorised.
 
-    - `subscriptionRemoved` — Graph has removed the subscription (e.g. due to
-      token expiry or inactivity). We attempt to re-register it so that change
-      notifications resume automatically.
+    - `subscriptionRemoved`: Graph has removed the subscription (e.g. due to
+      token expiry or inactivity), so it has to be re-registered for change
+      notifications to resume.
+
+  The controller answers the validation handshake, applies the per-client rate
+  limit, and hands the events to `Tymeslot.Integrations.Calendar.Webhooks`,
+  which verifies each one and enqueues the token refresh and re-registration.
 
   All well-formed payloads return HTTP 202 regardless of the outcome, so Graph
   does not retry indefinitely.
@@ -18,13 +21,8 @@ defmodule TymeslotWeb.OutlookLifecycleController do
 
   use TymeslotWeb, :controller
 
-  require Logger
-
-  alias Plug.Crypto
-  alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Integrations.Calendar.Webhooks, as: CalendarWebhooks
   alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.Workers.ReregisterOutlookSubscriptionWorker
   alias TymeslotWeb.Helpers.ClientIP
 
   @doc """
@@ -55,115 +53,14 @@ defmodule TymeslotWeb.OutlookLifecycleController do
   def webhook(conn, _params) do
     case RateLimiter.check_webhook_rate_limit(ClientIP.get(conn)) do
       :ok ->
-        notifications = Enum.take(get_in(conn.body_params, ["value"]) || [], 50)
-
-        # Deduplicate by subscription_id within the batch — only process the
-        # first event per subscription to avoid spawning redundant work.
-        notifications
-        |> Enum.uniq_by(fn n -> n["subscriptionId"] end)
-        |> Enum.each(&process_lifecycle_notification/1)
+        CalendarWebhooks.handle_outlook_lifecycle_notifications(
+          get_in(conn.body_params, ["value"]) || []
+        )
 
         conn |> send_resp(202, "") |> halt()
 
       {:error, :rate_limited} ->
         conn |> send_resp(429, "") |> halt()
-    end
-  end
-
-  # Private helpers
-
-  defp process_lifecycle_notification(
-         %{
-           "subscriptionId" => subscription_id,
-           "lifecycleEvent" => event_type
-         } = notification
-       ) do
-    client_state = notification["clientState"] || ""
-
-    case CalendarWebhooks.get_by_graph_subscription_id(subscription_id) do
-      {:error, :not_found} ->
-        :ok
-
-      {:ok, integration} ->
-        expected_state = integration.graph_client_state || ""
-
-        if valid_client_state?(client_state, expected_state) do
-          case RateLimiter.check_calendar_webhook_rate_limit(integration.id) do
-            :ok ->
-              handle_lifecycle_event(integration, event_type)
-
-            {:error, :rate_limited} ->
-              Logger.warning("Outlook lifecycle webhook rate limited",
-                integration_id: integration.id
-              )
-          end
-        else
-          Logger.warning("Outlook lifecycle: clientState verification failed",
-            subscription_id: subscription_id,
-            integration_id: integration.id
-          )
-        end
-    end
-  end
-
-  defp process_lifecycle_notification(_notification), do: :ok
-
-  defp valid_client_state?(received, expected)
-       when is_binary(received) and is_binary(expected) and byte_size(received) > 0 and
-              byte_size(expected) > 0 do
-    Crypto.secure_compare(received, expected)
-  end
-
-  defp valid_client_state?(_received, _expected), do: false
-
-  defp handle_lifecycle_event(integration, "reauthorizationRequired") do
-    Logger.info("Outlook Graph subscription requires reauthorization",
-      integration_id: integration.id,
-      graph_subscription_id: integration.graph_subscription_id
-    )
-
-    enqueue_token_refresh(integration)
-    enqueue_reregistration(integration, schedule_in: 30)
-  end
-
-  defp handle_lifecycle_event(integration, "subscriptionRemoved") do
-    Logger.info("Outlook Graph subscription removed; re-registering",
-      integration_id: integration.id,
-      graph_subscription_id: integration.graph_subscription_id
-    )
-
-    enqueue_reregistration(integration)
-  end
-
-  defp handle_lifecycle_event(integration, event_type) do
-    Logger.warning("Outlook lifecycle: unrecognised event type",
-      integration_id: integration.id,
-      lifecycle_event: event_type
-    )
-  end
-
-  defp enqueue_token_refresh(integration) do
-    case %{"integration_id" => integration.id} |> TokenRefreshJob.new() |> Oban.insert() do
-      {:ok, _job} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Failed to enqueue TokenRefreshJob", reason: reason)
-    end
-  end
-
-  defp enqueue_reregistration(integration, opts \\ []) do
-    args = %{"calendar_integration_id" => integration.id}
-
-    case args |> ReregisterOutlookSubscriptionWorker.new(opts) |> Oban.insert() do
-      {:ok, _job} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Failed to enqueue ReregisterOutlookSubscriptionWorker",
-          integration_id: integration.id,
-          reason: reason
-        )
     end
   end
 end
