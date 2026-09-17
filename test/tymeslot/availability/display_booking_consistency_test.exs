@@ -3,13 +3,15 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
   Invariant tests asserting that the availability-display path and the
   booking-validation path agree.
 
-  `Calculate.available_slots/6` (display) and `Validation.check_slot_availability/4`
-  (booking) both rely on `CalendarEvent.blocking?/1` to decide whether a calendar
-  event should prevent a slot from being offered/booked. Nothing in the type
-  system keeps the two codepaths in sync, so these tests pin the end-to-end
-  invariant: if the display shows a slot, the booking API must accept it; if
-  the display hides a slot because a blocking event covers it, the booking API
-  must reject attempts to book that time.
+  The display side is `Offer.slots_for_date/3`, the booking page's own
+  pipeline: it reads the host's calendar, resolves the schedule and builds the
+  booking-limit check exactly as the page does. A config assembled by hand
+  here would test a copy of that pipeline, and a rule the copy carries but the
+  page does not is precisely the disagreement these tests exist to catch. The
+  booking side is `Create.execute/2`. Nothing in the type system keeps the two
+  in sync, so these tests pin the end-to-end invariant: if the display shows a
+  slot, the booking API must accept it; if the display hides a slot, the
+  booking API must reject attempts to book that time.
 
   These are the fixed-scenario anchors; `DisplayBookingConsistencyPropertyTest`
   fuzzes the same invariant across timezones, durations and event layouts.
@@ -23,8 +25,8 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
   import Mox
   import Tymeslot.AvailabilityTestHelpers
 
-  alias Tymeslot.Availability.Calculate
-  alias Tymeslot.Availability.TimeSlots
+  alias Ecto.Changeset
+  alias Tymeslot.Availability.{Offer, TimeSlots}
   alias Tymeslot.Bookings.Create
   alias Tymeslot.CalendarMock
   alias Tymeslot.Meetings.MeetingSchema
@@ -41,16 +43,13 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
   describe "availability-display ↔ booking-validation invariant" do
     test "a slot shown as available can be booked successfully" do
       timezone = "Etc/UTC"
-      %{user: user, schedule_id: schedule_id} = create_bookable_profile(timezone: timezone)
+      %{user: user, profile: profile} = create_bookable_profile(timezone: timezone)
       target_date = next_bookable_weekday()
 
       TestMocks.stub_no_calendar_events()
 
       # Display path
-      {:ok, slots} =
-        Calculate.available_slots(target_date, 30, timezone, timezone, [], %{
-          schedule_id: schedule_id
-        })
+      slots = offered(profile, target_date, "30min")
 
       # Sanity check: with no conflicts the weekday schedule should surface slots.
       assert slots != [], "expected at least one available slot on a weekday"
@@ -79,7 +78,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
 
     test "a slot hidden by a blocking event is rejected by the booking API" do
       timezone = "Etc/UTC"
-      %{user: user, schedule_id: schedule_id} = create_bookable_profile(timezone: timezone)
+      %{user: user, profile: profile} = create_bookable_profile(timezone: timezone)
       target_date = next_bookable_weekday()
 
       # The plain-map shape used by provider runtime adapters (Google, Outlook, CalDAV) —
@@ -94,24 +93,19 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
         summary: "All-day focus block"
       }
 
-      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
-        {:ok, [blocking_event]}
-      end)
-
-      # Display path without the blocking event — establishes the baseline set.
-      {:ok, slots_without_block} =
-        Calculate.available_slots(target_date, 30, timezone, timezone, [], %{
-          schedule_id: schedule_id
-        })
+      # Display path without the blocking event: establishes the baseline set.
+      TestMocks.stub_no_calendar_events()
+      slots_without_block = offered(profile, target_date, "30min")
 
       assert slots_without_block != [],
              "expected at least one slot before the blocking event was introduced"
 
-      # Display path with the blocking event — every slot must disappear.
-      {:ok, slots_with_block} =
-        Calculate.available_slots(target_date, 30, timezone, timezone, [blocking_event], %{
-          schedule_id: schedule_id
-        })
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+        {:ok, [blocking_event]}
+      end)
+
+      # Display path with the blocking event: every slot must disappear.
+      slots_with_block = offered(profile, target_date, "30min")
 
       assert slots_with_block == [],
              "expected all slots to be hidden by the blocking event, got: #{inspect(slots_with_block)}"
@@ -157,7 +151,7 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
       # 09:00-10:15: a 60-minute meeting fits only one duration-locked start
       # (9:00). A 15-minute interval additionally legalises 9:15, which is
       # the case under test.
-      %{user: user, schedule_id: schedule_id} =
+      %{user: user, profile: profile} =
         create_bookable_profile(
           timezone: timezone,
           hours: %{is_available: true, start_time: ~T[09:00:00], end_time: ~T[10:15:00]}
@@ -170,16 +164,8 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
 
       TestMocks.stub_no_calendar_events()
 
-      {:ok, duration_locked_slots} =
-        Calculate.available_slots(target_date, 60, timezone, timezone, [], %{
-          schedule_id: schedule_id
-        })
-
-      {:ok, interval_slots} =
-        Calculate.available_slots(target_date, 60, timezone, timezone, [], %{
-          schedule_id: schedule_id,
-          slot_interval_minutes: 15
-        })
+      duration_locked_slots = offered(profile, target_date, "60min")
+      interval_slots = offered(profile, target_date, "60min", meeting_type: meeting_type)
 
       # The 9:15 start exists only because the interval was set — proving the
       # test actually exercises the interval path rather than a start the
@@ -245,20 +231,20 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
       # zone's DST changeover, so the phase asserted below never moves.
       booker_timezone = "Asia/Kolkata"
 
-      %{user: user, schedule_id: schedule_id} = create_bookable_profile(timezone: host_timezone)
+      %{user: user, profile: profile} = create_bookable_profile(timezone: host_timezone)
 
       target_date = next_bookable_weekday()
 
       meeting_type =
         insert(:meeting_type, user: user, duration_minutes: 60, slot_interval_minutes: 60)
 
-      config = %{schedule_id: schedule_id, slot_interval_minutes: 60}
+      host_slots = offered(profile, target_date, "60min", meeting_type: meeting_type)
 
-      {:ok, host_slots} =
-        Calculate.available_slots(target_date, 60, host_timezone, host_timezone, [], config)
-
-      {:ok, booker_slots} =
-        Calculate.available_slots(target_date, 60, booker_timezone, host_timezone, [], config)
+      booker_slots =
+        offered(profile, target_date, "60min",
+          meeting_type: meeting_type,
+          timezone: booker_timezone
+        )
 
       # The helper's window is 11:00-17:00, and the host's own grid sits on the
       # hour inside it.
@@ -327,6 +313,111 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
     end
   end
 
+  # Every scheduling rule the page offers under, set at once and read through
+  # the page's own pipeline: a rule the display path drops (or builds without
+  # the check that enforces it) shows up here as an offered time the booking
+  # API refuses, or a refused time the display never hid.
+  describe "the invariant under buffer, notice, interval and a booking limit" do
+    setup do
+      timezone = "Etc/UTC"
+
+      %{user: user, profile: profile, schedule: schedule} =
+        create_always_bookable_profile(timezone: timezone, profile: %{max_bookings_per_day: 1})
+
+      schedule
+      |> Changeset.change(buffer_minutes: 30, min_advance_hours: 48)
+      |> Repo.update!()
+
+      meeting_type =
+        insert(:meeting_type, user: user, duration_minutes: 30, slot_interval_minutes: 15)
+
+      target_date = Date.add(Date.utc_today(), 10)
+
+      # The host's calendar is busy 12:00-12:30 on the target date.
+      busy = %{
+        uid: "busy-#{System.unique_integer([:positive])}",
+        start_time: DateTime.new!(target_date, ~T[12:00:00], timezone),
+        end_time: DateTime.new!(target_date, ~T[12:30:00], timezone),
+        status: "confirmed",
+        transparency: "opaque",
+        summary: "Busy"
+      }
+
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+        {:ok, [busy]}
+      end)
+
+      %{
+        user: user,
+        profile: profile,
+        meeting_type: meeting_type,
+        target_date: target_date,
+        timezone: timezone
+      }
+    end
+
+    test "a time inside the buffer is hidden and refused, one clear of it is offered and booked",
+         %{user: user, profile: profile, meeting_type: meeting_type, target_date: date} do
+      slots = offered(profile, date, "30min", meeting_type: meeting_type)
+
+      # 11:30-12:00 touches the busy block, so only the 30-minute buffer hides it.
+      refute "11:30 AM" in slots
+      assert {:error, :slot_taken} = book(user, meeting_type, date, "11:30 AM")
+
+      # 1:15 PM exists only on the 15-minute grid, and clears the buffer.
+      assert "1:15 PM" in slots
+      assert {:ok, meeting} = book(user, meeting_type, date, "1:15 PM")
+      assert meeting.status == "confirmed"
+    end
+
+    test "a day inside the minimum notice offers nothing and is refused",
+         %{user: user, profile: profile, meeting_type: meeting_type} do
+      tomorrow = Date.add(Date.utc_today(), 1)
+
+      assert offered(profile, tomorrow, "30min", meeting_type: meeting_type) == []
+
+      assert {:error, "Booking requires at least 48 hours in advance"} =
+               book(user, meeting_type, tomorrow, "11:00 PM")
+    end
+
+    test "a day at its booking limit offers nothing and is refused",
+         %{user: user, profile: profile, meeting_type: meeting_type, target_date: date} do
+      full_date = Date.add(date, 1)
+      start_time = DateTime.new!(full_date, ~T[09:00:00], "Etc/UTC")
+
+      insert(:meeting,
+        organizer_user_id: user.id,
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 30, :minute)
+      )
+
+      # Anchor: the day before is not at its limit, so an empty list below is
+      # the limit's doing rather than the schedule's.
+      assert offered(profile, date, "30min", meeting_type: meeting_type) != []
+
+      assert offered(profile, full_date, "30min", meeting_type: meeting_type) == []
+      assert {:error, :booking_limit_reached} = book(user, meeting_type, full_date, "2:00 PM")
+    end
+
+    defp book(user, meeting_type, date, time) do
+      Create.execute(
+        %{
+          date: date,
+          time: time,
+          duration: "30min",
+          user_timezone: "Etc/UTC",
+          organizer_user_id: user.id,
+          meeting_type_id: meeting_type.id
+        },
+        %{
+          "name" => "Rules Attendee",
+          "email" => "rules-attendee@example.com",
+          "message" => "Booking under every scheduling rule at once"
+        }
+      )
+    end
+  end
+
   # The converse of the invariant above, and the reason it is enforced in the
   # domain rather than in the booking page's step machine: `/:username/:slug/book`
   # is directly enterable, so a booker can arrive at the submit path having
@@ -340,13 +431,10 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
 
     test "a time outside the host's working hours is refused" do
       timezone = "Etc/UTC"
-      %{user: user, schedule_id: schedule_id} = create_bookable_profile(timezone: timezone)
+      %{user: user, profile: profile} = create_bookable_profile(timezone: timezone)
       target_date = next_bookable_weekday()
 
-      {:ok, slots} =
-        Calculate.available_slots(target_date, 30, timezone, timezone, [], %{
-          schedule_id: schedule_id
-        })
+      slots = offered(profile, target_date, "30min")
 
       # The helper's window is 11:00–17:00, so 08:00 is a real time on a real
       # working day that the display simply never offers.
@@ -414,5 +502,17 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
       |> Stream.iterate(&Date.add(&1, 1))
       |> Enum.find(&(Date.day_of_week(&1) == day_of_week))
     end
+  end
+
+  # The times the booking page offers, through its own pipeline.
+  defp offered(profile, date, duration, opts \\ []) do
+    request = %{
+      profile: profile,
+      user_timezone: Keyword.get(opts, :timezone, profile.timezone),
+      meeting_type: Keyword.get(opts, :meeting_type)
+    }
+
+    {:ok, slots} = Offer.slots_for_date(request, Date.to_iso8601(date), duration)
+    slots
   end
 end

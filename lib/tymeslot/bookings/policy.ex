@@ -45,55 +45,21 @@ defmodule Tymeslot.Bookings.Policy do
         }
   def scheduling_config(nil, _meeting_type) do
     nil
-    |> policy_values()
+    |> Schedules.config(nil)
     |> Map.put(:owner_timezone, Profiles.get_default_timezone())
-    |> Map.put(:slot_interval_minutes, nil)
   end
 
   def scheduling_config(organizer_user_id, meeting_type) do
+    # `Profiles.get_profile_settings/1` already resolves a profile with no
+    # timezone to `Profiles.get_default_timezone()`, the same fallback the
+    # booking page applies, so a nil profile timezone resolves to one zone on
+    # both sides.
     settings = Profiles.get_profile_settings(organizer_user_id)
 
     organizer_user_id
     |> resolve_schedule(meeting_type)
-    |> policy_values()
+    |> Schedules.config(meeting_type)
     |> Map.put(:owner_timezone, settings.timezone)
-    |> Map.put(:slot_interval_minutes, slot_interval_minutes(meeting_type))
-  end
-
-  @doc """
-  Resolves a meeting type's booking interval, in minutes.
-
-  NULL means "use the meeting type's own duration" — the default for almost
-  every meeting type, since most have not configured an explicit interval.
-  Nil for a nil meeting type and for meeting-type maps (such as the demo
-  provider's) that omit the key entirely, so this never raises regardless of
-  what shape of meeting type it is handed.
-
-  The single resolver for this value, shared by `scheduling_config/2` here and
-  by `TymeslotWeb.Live.Scheduling.AvailabilityHelpers`, so the display path
-  and the submit path cannot disagree about the interval.
-  """
-  @spec slot_interval_minutes(map() | nil) :: pos_integer() | nil
-  def slot_interval_minutes(%{slot_interval_minutes: minutes}), do: minutes
-  def slot_interval_minutes(_meeting_type), do: nil
-
-  # `max_advance_booking_days` is this map's name for the schedule's
-  # `advance_booking_days`; every other key is carried through unrenamed.
-  # `schedule_id` is carried so callers can recompute the schedule's own
-  # windows from this config alone. `owner_timezone` is set by the caller from
-  # `Profiles.get_profile_settings/1`, which already resolves a profile with no
-  # timezone to `Profiles.get_default_timezone()` — the same fallback the
-  # display path applies in
-  # `TymeslotWeb.Live.Scheduling.AvailabilityHelpers.get_owner_timezone/1` and
-  # `CalendarHelpers.availability_config/2`, so a nil profile timezone
-  # resolves to the same zone on both the display and enforcement paths.
-  defp policy_values(schedule) do
-    %{
-      schedule_id: schedule && schedule.id,
-      buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
-      min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
-      max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days)
-    }
   end
 
   defp resolve_schedule(_organizer_user_id, %{} = meeting_type) do

@@ -267,6 +267,51 @@ defmodule Tymeslot.Availability.Schedules do
   def policy(nil, key), do: Map.fetch!(Constraints.scheduling_policy_defaults(), key)
   def policy(schedule, key), do: Map.fetch!(schedule, key)
 
+  @typedoc "The scheduling rules every availability and booking config carries."
+  @type config :: %{
+          required(:schedule_id) => integer() | nil,
+          required(:buffer_minutes) => non_neg_integer(),
+          required(:min_advance_hours) => non_neg_integer(),
+          required(:max_advance_booking_days) => pos_integer(),
+          required(:slot_interval_minutes) => pos_integer() | nil
+        }
+
+  @doc """
+  The scheduling rules a resolved schedule and meeting type impose, as the
+  keys the slot engine and the booking validation both read.
+
+  This is the one place those keys are assembled. The booking page builds its
+  offer from it and the submit re-checks against it, so a rule added here
+  reaches both; a key present in one copy but not the other is how a slot
+  comes to be offered and then refused.
+
+  `max_advance_booking_days` is this map's name for the schedule's
+  `advance_booking_days`. `schedule_id` is carried so callers can recompute
+  the schedule's own windows from the config alone.
+  """
+  @spec config(schedule() | nil, map() | nil) :: config()
+  def config(schedule, meeting_type) do
+    %{
+      schedule_id: schedule && schedule.id,
+      buffer_minutes: policy(schedule, :buffer_minutes),
+      min_advance_hours: policy(schedule, :min_advance_hours),
+      max_advance_booking_days: policy(schedule, :advance_booking_days),
+      slot_interval_minutes: slot_interval_minutes(meeting_type)
+    }
+  end
+
+  @doc """
+  A meeting type's booking interval, in minutes.
+
+  NULL means "use the meeting type's own duration", the default for almost
+  every meeting type. Nil for a nil meeting type and for meeting-type maps
+  (such as the demo provider's) that omit the key entirely, so this never
+  raises whatever shape of meeting type it is handed.
+  """
+  @spec slot_interval_minutes(map() | nil) :: pos_integer() | nil
+  def slot_interval_minutes(%{slot_interval_minutes: minutes}), do: minutes
+  def slot_interval_minutes(_meeting_type), do: nil
+
   defp check_limit(profile_id) do
     if can_create?(profile_id), do: :ok, else: {:error, :schedule_limit_reached}
   end

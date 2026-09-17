@@ -6,7 +6,7 @@ defmodule Tymeslot.Bookings.Create do
 
   require Logger
 
-  alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.Availability.Offer
 
   alias Tymeslot.Bookings.{
     Activation,
@@ -137,9 +137,9 @@ defmodule Tymeslot.Bookings.Create do
     # the persisted meeting rather than trusting `params.duration`. Only an
     # unresolvable type (ad-hoc booking, or one that fails
     # `validate_meeting_type_active/1` a few steps later) falls back to the
-    # client-supplied value.
+    # client-supplied value, bounded exactly as the booking page bounds it.
     meeting_type = resolve_meeting_type_for_duration(meeting_params)
-    duration_minutes = effective_duration_minutes(meeting_params, meeting_type)
+    duration_minutes = Offer.duration_minutes(meeting_type, meeting_params.duration)
 
     with {:ok, date_string} <- normalize_date_input(meeting_params.date),
          {:ok, {start_datetime, end_datetime}} <-
@@ -196,13 +196,6 @@ defmodule Tymeslot.Bookings.Create do
       MeetingTypes.get_meeting_type(type_id, user_id)
     end
   end
-
-  defp effective_duration_minutes(_meeting_params, %{duration_minutes: minutes})
-       when is_integer(minutes),
-       do: minutes
-
-  defp effective_duration_minutes(meeting_params, _unresolved_type),
-    do: TimeSlots.parse_duration(meeting_params.duration)
 
   defp normalize_date_input(%Date{} = date), do: {:ok, Date.to_iso8601(date)}
   defp normalize_date_input(date) when is_binary(date), do: {:ok, date}
