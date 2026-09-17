@@ -17,7 +17,7 @@ defmodule Tymeslot.Notifications.IntegrationQueries do
   Notifications domain, which Slack and Telegram both implement.
 
   Provider-specific quirks (e.g. `SlackQueries.delete_pending_stubs/1`'s
-  OAuth-pending-stub cleanup, `TelegramQueries.find_by_link_token/1`'s
+  OAuth-pending-stub cleanup, `TelegramQueries.find_by_link_token/2`'s
   link-token + chat-id lookup, Telegram's `derive_status/1` post-processing)
   stay in the per-provider query module.
   """

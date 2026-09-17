@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.ConfigTestHelpers
   alias Tymeslot.Telegram
+  alias Tymeslot.Telegram.TelegramQueries
 
   setup %{conn: conn} do
     user = create_user_fixture()
@@ -255,6 +256,26 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
 
       assert render(view) =~ "Pro plans"
     end
+
+    test "a refused shared-bot create leaves a disconnected integration in place", %{
+      conn: conn,
+      user: user
+    } do
+      ConfigTestHelpers.setup_config(:tymeslot,
+        telegram_shared_bot: true,
+        feature_access_checker: __MODULE__.InsufficientPlanChecker
+      )
+
+      disconnected = insert(:telegram_integration, user: user, bot_mode: "shared", chat_id: nil)
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      open_telegram_tab(view)
+
+      view |> element("button", "Add Telegram Account") |> render_click()
+
+      assert render(view) =~ "Pro plans"
+      assert {:ok, _integration} = Telegram.get_integration(disconnected.id, user.id)
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -291,6 +312,67 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
       view |> element("button", "Close") |> render_click()
 
       assert Telegram.list_integrations(user.id) == []
+    end
+
+    test "opening the wizard keeps an integration that was disconnected", %{
+      conn: conn,
+      user: user
+    } do
+      an_hour_ago = DateTime.add(DateTime.utc_now(:second), -3600, :second)
+
+      disconnected =
+        insert(:telegram_integration,
+          user: user,
+          bot_mode: "shared",
+          chat_id: nil,
+          linked_at: an_hour_ago
+        )
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      open_telegram_tab(view)
+
+      view |> element("button", "Add Telegram Account") |> render_click()
+
+      assert render(view) =~ "Open in Telegram"
+      assert {:ok, _integration} = Telegram.get_integration(disconnected.id, user.id)
+    end
+
+    test "generating a new link for a stub deleted elsewhere closes the wizard", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      open_telegram_tab(view)
+
+      view |> element("button", "Add Telegram Account") |> render_click()
+      [stub] = Telegram.list_integrations(user.id)
+      send(view.pid, {:telegram_link_expired, stub.id})
+      eventually(fn -> assert render(view) =~ "Generate New Link" end)
+
+      {:ok, _deleted} = Telegram.delete_integration(stub)
+      view |> element("button", "Generate New Link") |> render_click()
+
+      html = render(view)
+      assert html =~ "Integration not found"
+      refute html =~ "Generate New Link"
+    end
+
+    # The webhook can link the stub between the wizard opening and the user
+    # closing it, without the dashboard having seen the broadcast yet.
+    test "closing the form after the bot linked the stub keeps the integration", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      open_telegram_tab(view)
+
+      view |> element("button", "Add Telegram Account") |> render_click()
+      [stub] = Telegram.list_integrations(user.id)
+      {:ok, _linked} = TelegramQueries.update_integration(stub, %{chat_id: "444333222"})
+
+      view |> element("button", "Close") |> render_click()
+
+      assert {:ok, %{chat_id: "444333222"}} = Telegram.get_integration(stub.id, user.id)
     end
 
     test "shows Link Expired state when the timer message arrives", %{conn: conn, user: user} do

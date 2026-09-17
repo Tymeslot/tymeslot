@@ -253,6 +253,7 @@ msgid "Failed to disconnect Slack"
 msgstr "Slack se nepodařilo odpojit."
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to generate link. Please try again."
 msgstr "Odkaz se nepodařilo vygenerovat. Zkuste to prosím znovu."
@@ -323,6 +324,7 @@ msgid "Integration deleted"
 msgstr "Integrace byla smazána."
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram/modal_handlers.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
 #, elixir-autogen, elixir-format
@@ -743,3 +745,8 @@ msgstr "opakovaně omezováno Telegramem"
 #, elixir-autogen, elixir-format
 msgid "too many consecutive delivery failures"
 msgstr "příliš mnoho po sobě jdoucích chyb doručení"
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "My Telegram"
+msgstr "Můj Telegram"
