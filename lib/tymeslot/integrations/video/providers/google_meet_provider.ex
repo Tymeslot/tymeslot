@@ -28,6 +28,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
+  alias Tymeslot.Integrations.Video.NeedsReauth
   alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.OAuthCredentials
@@ -515,7 +516,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   # surfaces this via the "Reconnect required" badge on the video row. Purely
   # additive: it does not touch token validation or the OAuthTokenManager flow.
   defp flag_revoked_token(config) do
-    OAuthTokenManager.flag_needs_reauth(config,
+    NeedsReauth.flag(config,
       label: "Google Meet",
       event: "google_meet_token_revoked",
       message:

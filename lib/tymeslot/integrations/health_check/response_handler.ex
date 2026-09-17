@@ -15,6 +15,9 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   - Recovery is silent — no email is sent.
   - The in-app badge shows immediately on `:unhealthy` status, regardless
     of the 48-hour email threshold.
+  - An integration already flagged `needs_reauth` never gets the unhealthy
+    email: the reauth email has told its owner, and nothing recovers until
+    they reconnect.
   - Permanent auth failures (e.g. Google `invalid_grant`) bypass the 48-hour
     threshold via `handle_permanent_auth_failure/4`: the integration is
     flagged `needs_reauth: true`, which itself owns the notification (the
@@ -233,6 +236,14 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
       notification_sent_at: nil
     )
   end
+
+  # An integration flagged `needs_reauth` already told its owner to reconnect,
+  # through the reauth email sent when the flag was set, and cannot recover
+  # until they do. Its probes keep failing, however they are classified (a
+  # provider that refuses to spend flagged credentials reports the refusal
+  # locally), so without this guard the 48-hour threshold would send the
+  # unhealthy email about the same failure as well.
+  defp maybe_notify_user(_type, %{needs_reauth: true}, _health_state, _now), do: :ok
 
   defp maybe_notify_user(type, integration, health_state, now) do
     with %{became_unhealthy_at: at} when at != nil <- health_state,

@@ -1,12 +1,14 @@
 defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
   @moduledoc """
-  Shared core for the video providers that are addressed purely by URL:
-  the custom link, kMeet and Jitsi.
+  Shared core for the video providers addressed by a URL on a server the user
+  names: the custom link, kMeet and Jitsi build their rooms here, and Nextcloud
+  Talk, whose rooms its own API creates, reuses the server address checks
+  (`validate_base_url/1`, `http_url?/1`).
 
-  All three do the same three things (build a meeting URL, validate it, and
-  hand it out), so the URL assembly, the length and scheme checks, the room-id
-  derivation and the SSRF-guarded reachability probe live here rather than in
-  three near-identical copies. The probe in particular carries the redirect
+  The link providers do the same three things (build a meeting URL, validate
+  it, and hand it out), so the URL assembly, the length and scheme checks, the
+  room-id derivation and the SSRF-guarded reachability probe live here rather
+  than in near-identical copies. The probe in particular carries the redirect
   budget, the overall deadline, the per-hop private-address classification and
   the `ALLOW_PRIVATE_IPS_FOR_VIDEO` opt-out; centralising it is what guarantees
   a new provider cannot quietly omit any of them.
@@ -107,20 +109,43 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
   end
 
   @doc """
-  Refuses a base URL carrying a query string or a fragment.
+  Refuses a base URL that cannot safely have a room path appended.
 
-  The room slug is appended to the path, so anything after it would end up in
-  front of the slug (`https://m.example.com/?x=1/<slug>`): the room lands
-  somewhere other than the path says, and `slug_from_url/1` no longer finds
-  it. A plain sub-path (`https://example.com/jitsi`) is fine.
+    * Whitespace inside the address (surrounding whitespace is ignored): it
+      would end up in every room link.
+    * A login name or password in the address (`https://user:pass@host`): every
+      room link is built from the address and sent to guests, so the
+      credentials would travel with it.
+    * A query string or a fragment: the room slug is appended to the path, so
+      anything after it would end up in front of the slug
+      (`https://m.example.com/?x=1/<slug>`), the room lands somewhere other
+      than the path says, and `slug_from_url/1` no longer finds it.
+
+  A plain sub-path (`https://example.com/jitsi`) is fine.
   """
   @spec validate_base_url(String.t()) :: :ok | {:error, String.t()}
   def validate_base_url(base_url) do
-    case URI.parse(base_url) do
-      %URI{query: nil, fragment: nil} ->
+    trimmed = String.trim(base_url)
+
+    cond do
+      String.match?(trimmed, ~r/\s/u) ->
+        {:error,
+         dgettext(
+           "dashboard_integrations",
+           "The server URL cannot contain spaces. Enter only the address of the server."
+         )}
+
+      URI.parse(trimmed).userinfo != nil ->
+        {:error,
+         dgettext(
+           "dashboard_integrations",
+           "The server URL cannot contain a login name or password. Enter only the address of the server."
+         )}
+
+      match?(%URI{query: nil, fragment: nil}, URI.parse(trimmed)) ->
         :ok
 
-      _with_query_or_fragment ->
+      true ->
         {:error,
          dgettext(
            "dashboard_integrations",

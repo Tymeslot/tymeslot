@@ -70,8 +70,7 @@ defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
     html_body = IntegrationReauthRequired.render(user, integration, type)
     text_body = IntegrationReauthRequired.render_text(user, integration, type)
 
-    provider_label =
-      integration.provider |> to_string() |> String.replace("_", " ") |> String.capitalize()
+    provider_label = IntegrationReauthRequired.provider_label(integration, type)
 
     display_name = Map.get(user, :name) || user.email
 

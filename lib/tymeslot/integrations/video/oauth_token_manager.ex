@@ -34,15 +34,17 @@ defmodule Tymeslot.Integrations.Video.OAuthTokenManager do
 
   ## Beyond the lock
 
-  Three further steps sit either side of the locked refresh and were, until
+  Two further steps sit either side of the locked refresh and were, until
   they moved here, reimplemented per provider:
 
     * `validated_access_token/2` — ask the provider's OAuth helper whether the
       stored token is still good, and refresh when it is not.
     * `persist_tokens/3` — write refreshed credentials back to the integration
       row, tolerating an integration that vanished mid-refresh.
-    * `flag_needs_reauth/2` — mark the integration "Reconnect required" after a
-      401 that survived a forced refresh.
+
+  Marking the integration "Reconnect required" after a 401 that survived a
+  forced refresh is not OAuth-specific, so it lives in
+  `Tymeslot.Integrations.Video.NeedsReauth`.
 
   Each provider still owns what genuinely differs: which OAuth helper to call,
   which scope to request, and which attributes a refresh response maps to.
@@ -271,61 +273,6 @@ defmodule Tymeslot.Integrations.Video.OAuthTokenManager do
         )
 
         {:error, reason}
-    end
-  end
-
-  @doc """
-  Marks an integration as needing reconnection, surfacing the "Reconnect
-  required" badge on the dashboard's video row.
-
-  Called after a 401 that survived a forced refresh (server-side revocation),
-  or when a grant predates a scope the provider now requires. A config with no
-  `integration_id`/`user_id` has no row to flag, which is logged rather than
-  treated as an error: the caller's own failure is already being reported.
-
-  ## Options
-
-    * `:label` — provider name used in log lines. **Required.**
-    * `:event` — machine-readable event name, e.g. `"zoom_token_revoked"`.
-      **Required.**
-    * `:message`: the message the account owner reads on the dashboard, as
-      its untranslated msgid (`dgettext_noop/2` in `dashboard_integrations`),
-      which the dashboard translates into the viewer's locale. **Required.**
-  """
-  @spec flag_needs_reauth(config(), keyword()) :: :ok
-  def flag_needs_reauth(config, opts) do
-    label = Keyword.fetch!(opts, :label)
-    event = Keyword.fetch!(opts, :event)
-    message = Keyword.fetch!(opts, :message)
-
-    integration_id = Map.get(config, :integration_id)
-    user_id = Map.get(config, :user_id)
-
-    if is_nil(integration_id) or is_nil(user_id) do
-      Logger.warning("Video integration needs reauth but no integration_id to flag",
-        provider: label,
-        event: event
-      )
-    else
-      Logger.warning("Flagging video integration for reauth",
-        provider: label,
-        event: event,
-        integration_id: integration_id
-      )
-
-      mark_needs_reauth(integration_id, user_id, message)
-    end
-
-    :ok
-  end
-
-  # Delegates to `Video.flag_and_notify/2`, the same false → true seam used by
-  # `Video.handle_reauth_required/2`, so the two paths cannot drift on whether
-  # reconnecting is announced.
-  defp mark_needs_reauth(integration_id, user_id, message) do
-    case Video.fetch_integration_for_user(integration_id, user_id) do
-      {:ok, integration} -> Video.flag_and_notify(integration, message)
-      {:error, :not_found} -> :ok
     end
   end
 end

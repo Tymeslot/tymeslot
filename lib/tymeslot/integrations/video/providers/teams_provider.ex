@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
+  alias Tymeslot.Integrations.Video.NeedsReauth
   alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
@@ -399,7 +400,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   # surfaces this via the "Reconnect required" badge on the video row. Purely
   # additive: it does not touch token validation or the OAuthTokenManager flow.
   defp flag_revoked_token(config) do
-    OAuthTokenManager.flag_needs_reauth(config,
+    NeedsReauth.flag(config,
       label: "Teams",
       event: "teams_token_revoked",
       message:

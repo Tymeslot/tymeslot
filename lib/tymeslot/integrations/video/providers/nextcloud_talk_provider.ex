@@ -43,7 +43,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Integrations.Video.OAuthTokenManager
+  alias Tymeslot.Integrations.Video.NeedsReauth
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.LinkRoom
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client
@@ -105,9 +105,11 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
   @impl ProviderBehaviour
   def extract_room_id(meeting_url) when is_binary(meeting_url) do
-    case Regex.run(~r{/call/([A-Za-z0-9]+)/?\z}, URI.parse(meeting_url).path || "") do
-      [_path, token] -> token
-      nil -> nil
+    with [_path, token] <- Regex.run(~r{/call/([^/]+)/?\z}, URI.parse(meeting_url).path || ""),
+         true <- token?(token) do
+      token
+    else
+      _not_a_call -> nil
     end
   end
 
@@ -209,9 +211,6 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
     }
   end
 
-  @impl ProviderBehaviour
-  def url_patterns, do: ["/call/"]
-
   @doc """
   Trims a new or edited integration's server address and login name, and
   derives the key that stops one Nextcloud account being connected twice:
@@ -265,8 +264,17 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   defp unix(%NaiveDateTime{} = time),
     do: time |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_unix()
 
-  defp fetch_token(%{"token" => token}) when is_binary(token) and token != "", do: {:ok, token}
+  # A token Talk would not route could never be rescheduled or cancelled, so it
+  # is no room either.
+  defp fetch_token(%{"token" => token}) when is_binary(token) do
+    if token?(token), do: {:ok, token}, else: {:error, :invalid_response}
+  end
+
   defp fetch_token(_data), do: {:error, :invalid_response}
+
+  # Talk's route requirement for a conversation token, the same rule the client
+  # checks before addressing a conversation.
+  defp token?(token), do: token =~ ~r/\A[a-z0-9]{4,30}\z/
 
   defp join_link(base_url, token), do: String.trim_trailing(base_url, "/") <> @call_path <> token
 
@@ -396,10 +404,9 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
   # Only a saved integration can be flagged. The check a new integration runs
   # before it is saved has no row; its caller shows the refusal on the form.
-  # `OAuthTokenManager.flag_needs_reauth/2` is the video domain's one
-  # flag-and-notify path, OAuth or not.
+  # `NeedsReauth.flag/2` is the video domain's one flag-and-notify path.
   defp flag_rejected_credentials(%{integration_id: id} = config) when is_integer(id) do
-    OAuthTokenManager.flag_needs_reauth(config,
+    NeedsReauth.flag(config,
       label: "Nextcloud Talk",
       event: "nextcloud_talk_credentials_rejected",
       message:
@@ -415,12 +422,21 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   defp validate_base_url(nil),
     do: {:error, dgettext("dashboard_integrations", "Base URL is required")}
 
-  # API paths are appended to the server address, so a query string or a
-  # fragment would land in the middle of every request URL.
+  # Every request carries the app password over Basic auth, so a public server
+  # must be reached over https; a server on localhost or a private network stays
+  # allowed, as it is for CalDAV. API paths are appended to the server address,
+  # so `LinkRoom.validate_base_url/1` refuses a query string or a fragment, and
+  # credentials embedded in the address, which would reach guests in the link.
   defp validate_base_url(base_url) do
     with :ok <-
            UrlValidation.validate_http_url(base_url,
-             block_private_ips: not SsrfGuard.allow_private_for_video?()
+             block_private_ips: not SsrfGuard.allow_private_for_video?(),
+             enforce_https_for_public: true,
+             https_error_message:
+               dgettext(
+                 "dashboard_integrations",
+                 "Use an https:// server URL. Nextcloud receives your app password with every request."
+               )
            ),
          :ok <- LinkRoom.validate_base_url(base_url) do
       {:ok, base_url}

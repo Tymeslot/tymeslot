@@ -127,6 +127,29 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProviderTest do
       assert JitsiProvider.validate_config(credential_config()) == :ok
     end
 
+    test "refuses plain http on a public server when tokens would travel in the links" do
+      assert {:error, message} =
+               JitsiProvider.validate_config(
+                 credential_config(base_url: "http://meet.example.com")
+               )
+
+      assert message =~ "https://"
+    end
+
+    test "allows plain http without credentials, and on a local server with them" do
+      assert JitsiProvider.validate_config(%{base_url: "http://meet.example.com"}) == :ok
+
+      assert JitsiProvider.validate_config(credential_config(base_url: "http://localhost:8443")) ==
+               :ok
+    end
+
+    test "refuses a login name and password embedded in the server URL" do
+      assert {:error, message} =
+               JitsiProvider.validate_config(%{base_url: "https://user:secret@meet.example.com"})
+
+      assert message =~ "login name or password"
+    end
+
     test "refuses half a credential pair, which would silently mint nothing" do
       assert JitsiProvider.validate_config(%{base_url: @base_url, client_id: @app_id}) ==
                {:error, "Enter the App secret that belongs to this App ID"}

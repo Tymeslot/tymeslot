@@ -95,6 +95,34 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoomTest do
     end
   end
 
+  describe "validate_base_url/1" do
+    test "accepts a server address with a sub-path and surrounding whitespace" do
+      assert LinkRoom.validate_base_url(" https://example.com/jitsi/ ") == :ok
+    end
+
+    test "refuses whitespace inside the address" do
+      assert {:error, message} = LinkRoom.validate_base_url("https://meet.example.com/my room")
+      assert message =~ "spaces"
+    end
+
+    test "refuses a login name and password in the address" do
+      assert {:error, message} =
+               LinkRoom.validate_base_url("https://user:secret@meet.example.com")
+
+      assert message =~ "login name or password"
+    end
+
+    test "refuses a login name alone in the address" do
+      assert {:error, message} = LinkRoom.validate_base_url("https://user@meet.example.com")
+      assert message =~ "login name or password"
+    end
+
+    test "refuses a fragment" do
+      assert {:error, message} = LinkRoom.validate_base_url("https://meet.example.com/#room")
+      assert message =~ "fragment"
+    end
+  end
+
   describe "append_slug/2" do
     test "joins base URL and slug with a single separator" do
       assert LinkRoom.append_slug("https://meet.example.com", "abc123") ==

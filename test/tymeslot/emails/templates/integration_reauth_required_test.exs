@@ -51,6 +51,47 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequiredTest do
     end
   end
 
+  describe "render/3 for an OAuth video integration" do
+    test "asks the owner to select Reconnect" do
+      html = IntegrationReauthRequired.render(@user, integration(), :video)
+
+      assert html =~ "Select <strong>Reconnect</strong> on the Zoom row"
+      refute html =~ "<strong>Edit</strong>"
+    end
+  end
+
+  describe "render/3 for a video integration with typed-in credentials" do
+    test "names the provider by its display name" do
+      html = IntegrationReauthRequired.render(@user, talk_integration(), :video)
+
+      assert html =~ "Your Nextcloud Talk video integration needs reconnecting"
+      refute html =~ "Nextcloud talk"
+    end
+
+    test "asks the owner to edit the integration, since its row has no Reconnect button" do
+      html = IntegrationReauthRequired.render(@user, talk_integration(), :video)
+
+      assert html =~ "Select <strong>Edit</strong> on the Nextcloud Talk row"
+      assert html =~ "Enter the credentials again"
+      assert html =~ "Edit Nextcloud Talk"
+      refute html =~ "<strong>Reconnect</strong>"
+      refute html =~ "Reconnect Nextcloud Talk"
+    end
+  end
+
+  describe "provider_label/2" do
+    test "uses the video provider's display name and humanises a calendar provider" do
+      assert IntegrationReauthRequired.provider_label(%{provider: "nextcloud_talk"}, :video) ==
+               "Nextcloud Talk"
+
+      assert IntegrationReauthRequired.provider_label(%{provider: "teams"}, :video) ==
+               "Microsoft Teams"
+
+      assert IntegrationReauthRequired.provider_label(%{provider: "google"}, :calendar) ==
+               "Google"
+    end
+  end
+
   describe "render_text/3" do
     test "carries the same reason as the HTML part" do
       text = IntegrationReauthRequired.render_text(@user, integration(), :video)
@@ -65,6 +106,23 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequiredTest do
 
       assert text =~ "Zoom needs reconnecting before Tymeslot can use it again."
     end
+
+    test "gives the same steps as the HTML part" do
+      oauth = IntegrationReauthRequired.render_text(@user, integration(), :video)
+      talk = IntegrationReauthRequired.render_text(@user, talk_integration(), :video)
+
+      assert oauth =~ "- Select Reconnect on the Zoom row"
+      assert talk =~ "- Select Edit on the Nextcloud Talk row"
+      refute talk =~ "Reconnect Nextcloud Talk"
+    end
+  end
+
+  defp talk_integration do
+    %{
+      provider: "nextcloud_talk",
+      sync_error:
+        "Nextcloud refused the app password. Edit this integration and enter a new app password."
+    }
   end
 
   defp integration(overrides \\ []) do

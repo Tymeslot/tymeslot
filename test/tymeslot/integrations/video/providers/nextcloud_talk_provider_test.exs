@@ -65,6 +65,43 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
                NextcloudTalkProvider.validate_config(%{@config | base_url: "cloud.example.com"})
     end
 
+    test "refuses a server address with a fragment" do
+      assert {:error, message} =
+               NextcloudTalkProvider.validate_config(%{@config | base_url: @server <> "/#talk"})
+
+      assert message =~ "fragment"
+    end
+
+    test "refuses plain http on a public server, which would send the app password unencrypted" do
+      assert {:error, message} =
+               NextcloudTalkProvider.validate_config(%{
+                 @config
+                 | base_url: "http://cloud.example.com"
+               })
+
+      assert message =~ "https://"
+    end
+
+    test "refuses a login name and password embedded in the server address" do
+      assert {:error, message} =
+               NextcloudTalkProvider.validate_config(%{
+                 @config
+                 | base_url: "https://organiser:secret@cloud.example.com"
+               })
+
+      assert message =~ "login name or password"
+    end
+
+    test "refuses whitespace inside the server address" do
+      assert {:error, message} =
+               NextcloudTalkProvider.validate_config(%{
+                 @config
+                 | base_url: "https://cloud.example.com/next cloud"
+               })
+
+      assert message =~ "spaces"
+    end
+
     test "refuses a server and login too long to store together" do
       long_server = "https://cloud.example.com/" <> String.duplicate("a", 230)
 
@@ -109,6 +146,18 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
       assert room.room_id == "abc123xy"
       assert room.meeting_url == "https://cloud.example.com/index.php/call/abc123xy"
+    end
+
+    test "keeps a sub-path on the server address, trailing slash or not" do
+      expect(HTTPClientMock, :request, fn :post, url, _body, _headers, _opts ->
+        assert url == "https://cloud.example.com/nextcloud/ocs/v2.php/apps/spreed/api/v4/room"
+        created(%{"token" => "abc123xy"})
+      end)
+
+      config = with_event(%{@config | base_url: "https://cloud.example.com/nextcloud/"})
+
+      assert {:ok, room} = NextcloudTalkProvider.create_meeting_room(config)
+      assert room.meeting_url == "https://cloud.example.com/nextcloud/index.php/call/abc123xy"
     end
 
     test "keeps the credentials out of the room's provider data" do
@@ -186,6 +235,15 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
                NextcloudTalkProvider.create_meeting_room(with_event(@config))
     end
 
+    test "a token Talk would not route is not a room" do
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        created(%{"token" => "../ABC"})
+      end)
+
+      assert {:error, :invalid_response} =
+               NextcloudTalkProvider.create_meeting_room(with_event(@config))
+    end
+
     test "a transport failure passes through for the breaker to witness" do
       failure = %Req.TransportError{reason: :timeout}
 
@@ -246,6 +304,12 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
       assert NextcloudTalkProvider.extract_room_id(@server <> "/apps/files") == nil
       refute NextcloudTalkProvider.valid_meeting_url?(@server <> "/apps/files")
       refute NextcloudTalkProvider.valid_meeting_url?("ftp://cloud.example.com/call/abc123xy")
+    end
+
+    test "refuse a token outside Talk's token format" do
+      assert NextcloudTalkProvider.extract_room_id(@server <> "/call/ABC123XY") == nil
+      assert NextcloudTalkProvider.extract_room_id(@server <> "/call/abc") == nil
+      refute NextcloudTalkProvider.valid_meeting_url?(@server <> "/call/abc-123")
     end
   end
 

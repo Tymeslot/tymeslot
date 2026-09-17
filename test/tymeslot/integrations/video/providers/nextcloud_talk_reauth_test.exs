@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkReauthTest do
   """
 
   use Tymeslot.DataCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :integrations
 
@@ -17,6 +18,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkReauthTest do
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Workers.EmailWorker
 
   setup :verify_on_exit!
 
@@ -56,6 +58,16 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkReauthTest do
     flagged = Repo.get!(VideoIntegrationSchema, integration.id)
     assert flagged.needs_reauth
     assert flagged.sync_error =~ "app password"
+
+    assert_enqueued(
+      worker: EmailWorker,
+      args: %{
+        "action" => "send_integration_reauth_notification",
+        "user_id" => integration.user_id,
+        "integration_id" => integration.id,
+        "integration_type" => "video"
+      }
+    )
   end
 
   test "a refused app password during a connection test flags the integration", %{
@@ -88,6 +100,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkReauthTest do
              NextcloudTalkProvider.perform_connection_test(config)
 
     refute Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
+    refute_enqueued(worker: EmailWorker)
   end
 
   test "build_config/3 carries the flag the provider refuses on", %{integration: integration} do

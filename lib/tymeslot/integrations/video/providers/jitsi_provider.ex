@@ -50,6 +50,7 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
   alias Tymeslot.Integrations.Video.Providers.LinkRoom
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.RoomData
+  alias Tymeslot.Security.UrlValidation
 
   @behaviour ProviderBehaviour
 
@@ -150,8 +151,10 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
 
   @impl ProviderBehaviour
   def validate_config(config) do
-    with {:ok, _base_url} <- fetch_base_url(config) do
-      validate_credentials(present(config[:client_id]), present(config[:client_secret]))
+    with {:ok, base_url} <- fetch_base_url(config),
+         :ok <-
+           validate_credentials(present(config[:client_id]), present(config[:client_secret])) do
+      require_https_for_tokens(base_url, credentials(config))
     end
   end
 
@@ -211,6 +214,24 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
          "Invalid URL format. Please provide a valid HTTP/HTTPS URL."
        )}
     end
+  end
+
+  # With credentials every join link carries a token signed with the App
+  # secret, so a public server reached over plain http would hand those tokens
+  # to anyone on the path. A server on localhost or a private network stays
+  # allowed, as it is for CalDAV; without credentials the bare room link carries
+  # nothing to protect.
+  defp require_https_for_tokens(_base_url, nil), do: :ok
+
+  defp require_https_for_tokens(base_url, _credentials) do
+    UrlValidation.validate_http_url(String.trim(base_url),
+      enforce_https_for_public: true,
+      https_error_message:
+        dgettext(
+          "dashboard_integrations",
+          "Use an https:// server URL when token authentication is configured, so the tokens in meeting links are not sent unencrypted."
+        )
+    )
   end
 
   defp validate_credentials(nil, nil), do: :ok
