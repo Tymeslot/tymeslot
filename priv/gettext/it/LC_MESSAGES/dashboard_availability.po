@@ -266,11 +266,6 @@ msgstr "L'orario deve essere nel formato HH:MM (es. 09:30)"
 msgid "%{minutes} min"
 msgstr "%{minutes} min"
 
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} (copy)"
-msgstr "%{name} (copia)"
-
 #: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} (default)"
@@ -789,3 +784,13 @@ msgstr "In corso e in arrivo"
 #, elixir-autogen, elixir-format
 msgid "No upcoming time off. Anything you add appears here."
 msgstr "Nessuna assenza in arrivo. Tutto ciò che aggiungi apparirà qui."
+
+#: lib/tymeslot/availability/schedules.ex
+#, elixir-autogen, elixir-format
+msgid "(copy)"
+msgstr "(copia)"
+
+#: lib/tymeslot/availability/schedules.ex
+#, elixir-autogen, elixir-format
+msgid "(copy) %{number}"
+msgstr "(copia) %{number}"

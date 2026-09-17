@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.Defaults do
 
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Utils.UriUtils
 
   @doc """
   Determine best default calendar within an integration struct.
@@ -139,32 +140,38 @@ defmodule Tymeslot.Integrations.Calendar.Defaults do
   end
 
   @doc """
-  Resolves the calendar entry that booking is *confirmed* to target: the
-  entry matching `default_booking_calendar_id`, else the provider-primary
-  entry. Returns `nil` when neither is present — deliberately narrower than
-  `default_booking_calendar/2`, which also falls back to the first/selected
-  entry.
+  Resolves the calendar entry bookings on this integration are written to, and
+  whether it can take them.
 
-  Both tiers are restricted to eligible (not read-only) calendars, for the
-  same reason `default_booking_calendar/2` is: a summary must not claim a
-  read-only calendar as the confirmed booking target.
+  Mirrors the providers' write path rather than the booking ladder: when
+  `default_booking_calendar_id` is set, bookings go to that calendar and nowhere
+  else, so it is the answer even when it is read-only (`{:read_only, entry}`)
+  and `:none` when it is no longer listed. Only with no id set does the
+  provider-primary entry stand in. It never guesses a selected or first
+  calendar, so an unconfigured integration answers `:none`.
 
-  Use this for display-only summaries that must only name a booking target
-  once one is actually confirmed; it must not guess "first calendar" the way
-  the calendar grid's editor default does, which would claim an
-  unconfigured integration books into an arbitrary calendar before the user
-  has chosen one.
+  Use this for display-only summaries: unlike `default_booking_calendar/2`, it
+  does not skip read-only calendars, because a summary has to say where
+  bookings actually go, including when that is somewhere they will fail.
   """
-  @spec confirmed_booking_calendar(%{
+  @spec booking_target(%{
           :calendar_list => [CalendarEntry.t()] | nil,
           :default_booking_calendar_id => String.t() | nil,
           optional(atom()) => term()
-        }) :: CalendarEntry.t() | nil
-  def confirmed_booking_calendar(%{calendar_list: calendar_list} = integration) do
-    eligible = eligible_for_booking(calendar_list || [])
-    booking_id = Map.get(integration, :default_booking_calendar_id)
+        }) :: {:ok, CalendarEntry.t()} | {:read_only, CalendarEntry.t()} | :none
+  def booking_target(%{calendar_list: calendar_list} = integration) do
+    calendars = Enum.map(calendar_list || [], &CalendarEntry.normalize/1)
 
-    (booking_id && Enum.find(eligible, &(&1.id == booking_id))) ||
-      Enum.find(eligible, & &1.primary)
+    target =
+      case Map.get(integration, :default_booking_calendar_id) do
+        nil -> Enum.find(calendars, & &1.primary)
+        booking_id -> Enum.find(calendars, &UriUtils.uri_safe_match?(&1.id, booking_id))
+      end
+
+    case target do
+      nil -> :none
+      %CalendarEntry{read_only: true} = entry -> {:read_only, entry}
+      entry -> {:ok, entry}
+    end
   end
 end

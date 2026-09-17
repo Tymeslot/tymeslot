@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   defp assign_payment_state(socket, type, current_user) do
     feature_enabled? = payments_feature_enabled?(current_user)
     charges_enabled? = feature_enabled? and charges_enabled?(current_user)
-    currency = host_currency(current_user)
+    currency = current_user |> user_id() |> MeetingPayments.host_currency()
 
     socket
     |> Component.assign(:payments_feature_enabled, feature_enabled?)
@@ -119,17 +119,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   defp charges_enabled?(%{id: user_id}), do: MeetingPayments.charges_enabled_for_user?(user_id)
   defp charges_enabled?(_user), do: false
 
-  defp host_currency(%{id: user_id}) do
-    case MeetingPayments.get_connect_account_for_user(user_id) do
-      %{default_currency: currency} when is_binary(currency) and currency != "" ->
-        currency
-
-      _other ->
-        List.first(MeetingPayments.currency_allowlist()) || "usd"
-    end
-  end
-
-  defp host_currency(_user), do: List.first(MeetingPayments.currency_allowlist()) || "usd"
+  defp user_id(%{id: user_id}), do: user_id
+  defp user_id(_user), do: nil
 
   @spec get_payment_required(Ecto.Schema.t() | nil) :: boolean()
   defp get_payment_required(%{payment_required: true}), do: true

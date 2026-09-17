@@ -145,6 +145,45 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
   end
 
   # ---------------------------------------------------------------------------
+  # check_embed_domain_update_rate_limit/1 — 10 per hour
+  # ---------------------------------------------------------------------------
+
+  describe "check_embed_domain_update_rate_limit/1" do
+    test "blocks requests exceeding the limit" do
+      user_id = 11_652
+
+      for _i <- 1..10 do
+        assert :ok = RateLimiter.check_embed_domain_update_rate_limit(user_id)
+      end
+
+      assert {:error, :rate_limited, message} =
+               RateLimiter.check_embed_domain_update_rate_limit(user_id)
+
+      assert message =~ "10"
+      assert message =~ "60 minutes"
+      assert message =~ "embed domain update"
+    end
+
+    test "is scoped per user" do
+      for _i <- 1..10, do: RateLimiter.check_embed_domain_update_rate_limit(11_653)
+
+      assert {:error, :rate_limited, _message} =
+               RateLimiter.check_embed_domain_update_rate_limit(11_653)
+
+      assert :ok = RateLimiter.check_embed_domain_update_rate_limit(11_654)
+    end
+
+    test "counts against the embed_domain_update bucket" do
+      user_id = 11_655
+
+      for _i <- 1..10, do: RateLimiter.check_rate("embed_domain_update:#{user_id}", 3_600_000, 10)
+
+      assert {:error, :rate_limited, _message} =
+               RateLimiter.check_embed_domain_update_rate_limit(user_id)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # check_dashboard_cancel_rate_limit/1 — 20 per 10 minutes
   # ---------------------------------------------------------------------------
 

@@ -300,7 +300,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
     end
   end
 
-  describe "confirmed_booking_calendar/1" do
+  describe "booking_target/1" do
     test "returns the entry matching default_booking_calendar_id" do
       calendars =
         Enum.map(
@@ -310,7 +310,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
 
       integration = %{calendar_list: calendars, default_booking_calendar_id: "cal-2"}
 
-      assert %{id: "cal-2"} = Calendar.confirmed_booking_calendar(integration)
+      assert {:ok, %{id: "cal-2"}} = Calendar.booking_target(integration)
     end
 
     test "falls back to the provider-primary entry when no id is set" do
@@ -322,26 +322,26 @@ defmodule Tymeslot.Integrations.CalendarTest do
 
       integration = %{calendar_list: calendars, default_booking_calendar_id: nil}
 
-      assert %{id: "cal-2"} = Calendar.confirmed_booking_calendar(integration)
+      assert {:ok, %{id: "cal-2"}} = Calendar.booking_target(integration)
     end
 
-    test "returns nil rather than guessing the first calendar" do
+    test "returns :none rather than guessing the first calendar" do
       calendars = Enum.map([%{id: "cal-1"}, %{id: "cal-2"}], &CalendarEntry.normalize/1)
       integration = %{calendar_list: calendars, default_booking_calendar_id: nil}
 
-      assert Calendar.confirmed_booking_calendar(integration) == nil
+      assert Calendar.booking_target(integration) == :none
     end
 
-    test "does not confirm a booking id that now matches a read-only entry" do
+    test "tags a booking id that now matches a read-only entry" do
       calendars =
         Enum.map(
-          [%{id: "cal-1", read_only: true}],
+          [%{id: "cal-1", read_only: true}, %{id: "cal-2", primary: true}],
           &CalendarEntry.normalize/1
         )
 
       integration = %{calendar_list: calendars, default_booking_calendar_id: "cal-1"}
 
-      assert Calendar.confirmed_booking_calendar(integration) == nil
+      assert {:read_only, %{id: "cal-1"}} = Calendar.booking_target(integration)
     end
   end
 

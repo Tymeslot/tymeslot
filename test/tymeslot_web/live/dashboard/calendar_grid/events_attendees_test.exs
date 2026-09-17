@@ -285,6 +285,35 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
       refute html =~ "border-dashed"
     end
 
+    test "rejects an existing attendee typed in a different case", %{
+      conn: conn,
+      integration: integration
+    } do
+      # CalDAV and Outlook keep the case the address was stored with.
+      event =
+        insert_event(integration, %{
+          summary: "Mixed Case Attendee Event",
+          start_at: DateTime.new!(Date.utc_today(), ~T[13:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
+          all_day: false,
+          attendees: [
+            %{"email" => "Mixed.Case@Example.com", "name" => "Mixed", "status" => "accepted"}
+          ]
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      html_before = lv |> element("[id^='event-#{event.id}-']") |> render_click()
+      count_before = occurrences(html_before, "mixed.case@example.com")
+      assert count_before >= 1
+
+      html_after =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("add_event_attendee", %{"email" => "mixed.case@example.com"})
+
+      assert occurrences(html_after, "mixed.case@example.com") == count_before
+    end
+
     test "rejects duplicate of newly-added attendee", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       lv |> element("[id^='event-#{event.id}-']") |> render_click()
@@ -392,5 +421,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
 
   defp insert_event(integration, attrs) do
     insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
+  end
+
+  defp occurrences(html, email) do
+    length(String.split(String.downcase(html), email)) - 1
   end
 end

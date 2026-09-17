@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventCreation
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGridComponent
@@ -70,7 +71,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       :ok ->
         with {:ok, start_date} <- Date.from_iso8601(creating.date),
              {:ok, end_date} <- Date.from_iso8601(creating.end_date) do
-          save_resolved(creating, start_date, end_date, socket)
+          save_with_fitted_recurrence(creating, start_date, end_date, socket)
         else
           {:error, _reason} ->
             send(
@@ -80,6 +81,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
 
             {:noreply, socket}
         end
+    end
+  end
+
+  # The recurrence editor composes the rule as the form changes, so it can
+  # predate the final all-day flag and start date. Fit it to the event being
+  # saved: a date-only UNTIL for an all-day event, and no series that ends
+  # before it starts.
+  defp save_with_fitted_recurrence(creating, start_date, end_date, socket) do
+    case RRule.retarget(Map.get(creating, :recurrence_rule),
+           all_day: Map.get(creating, :all_day, false),
+           start_date: start_date
+         ) do
+      {:ok, rule} ->
+        creating
+        |> Map.put(:recurrence_rule, rule)
+        |> save_resolved(start_date, end_date, socket)
+
+      {:error, :until_before_start} = error ->
+        Shared.flash_guard_error(socket, error)
     end
   end
 

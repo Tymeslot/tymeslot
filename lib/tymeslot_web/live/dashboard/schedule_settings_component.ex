@@ -15,7 +15,6 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
 
   alias Tymeslot.Availability.{
     AvailabilityActions,
-    AvailabilityScheduleSchema,
     Schedules,
     WeeklySchedule
   }
@@ -136,9 +135,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
 
   def handle_event("duplicate_schedule", _params, socket) do
     with_selected(socket, fn schedule ->
-      taken = Enum.map(socket.assigns.schedules, & &1.name)
-
-      case Schedules.duplicate(schedule, copy_name(schedule.name, taken)) do
+      case Schedules.duplicate(schedule) do
         {:ok, copy} ->
           Flash.info(duplicate_message(schedule))
           {:noreply, select_and_reload(socket, copy.id)}
@@ -348,22 +345,6 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     else
       dgettext("dashboard_availability", "Schedule duplicated")
     end
-  end
-
-  # Appends a "(copy)" suffix, numbering it when that name is already taken and
-  # trimming it to the column limit so the insert cannot fail on length.
-  defp copy_name(source_name, taken) do
-    base = truncate_name(dgettext("dashboard_availability", "%{name} (copy)", name: source_name))
-    if base in taken, do: number_copy(base, taken, 2), else: base
-  end
-
-  defp number_copy(base, taken, counter) do
-    candidate = truncate_name("#{base} #{counter}")
-    if candidate in taken, do: number_copy(base, taken, counter + 1), else: candidate
-  end
-
-  defp truncate_name(name) do
-    String.slice(name, 0, AvailabilityScheduleSchema.name_max_length())
   end
 
   defp parse_id(schedule_id) when is_binary(schedule_id) do

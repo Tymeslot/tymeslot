@@ -479,4 +479,43 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
       assert length(updated.calendar_list) == 2
     end
   end
+
+  describe "calendar_for_event/2" do
+    @caldav_list [
+      %CalendarEntry{id: "/dav/work/", path: "/dav/work/", selected: true},
+      %CalendarEntry{id: "/dav/home/", path: "/dav/home/", selected: true}
+    ]
+
+    @google_list [
+      %CalendarEntry{id: "me@gmail.com", primary: true, selected: true},
+      %CalendarEntry{id: "team@group.calendar.google.com", selected: true}
+    ]
+
+    test "matches a CalDAV event by the collection its href lives in" do
+      # The row's calendar tag disagrees with the href; the href wins.
+      event = %{provider_event_id: "/dav/home/abc.ics", provider_calendar_id: "/dav/work/"}
+
+      assert %CalendarEntry{id: "/dav/home/"} = Selection.calendar_for_event(event, @caldav_list)
+    end
+
+    test "matches any other event by the calendar the sync tagged it with" do
+      event = %{
+        provider_event_id: "evt-1",
+        provider_calendar_id: "team@group.calendar.google.com"
+      }
+
+      assert %CalendarEntry{id: "team@group.calendar.google.com"} =
+               Selection.calendar_for_event(event, @google_list)
+    end
+
+    test "returns nil for an untagged event" do
+      assert Selection.calendar_for_event(%{provider_event_id: "evt-2"}, @google_list) == nil
+    end
+
+    test "returns nil without a calendar list" do
+      event = %{provider_event_id: "evt-3", provider_calendar_id: "me@gmail.com"}
+
+      assert Selection.calendar_for_event(event, nil) == nil
+    end
+  end
 end

@@ -113,32 +113,42 @@ defmodule Tymeslot.Utils.DateTimeUtils do
   end
 
   @doc """
-  Creates a DateTime safely with timezone fallback and DST gap handling.
+  Resolves a wall-clock date and time in `timezone` to a single instant.
+
+  Around a daylight-saving transition a local time does not map to exactly
+  one instant, and every caller turning one into a `DateTime` must decide the
+  same way, or a slot offered on one path lands on a different instant on
+  another:
+
+    * a time skipped by a spring-forward gap resolves to the end of the gap,
+      the first instant that exists afterwards (02:30 on a day the clocks
+      jump from 02:00 to 03:00 becomes 03:00, and on a half-hour gap from
+      02:00 to 02:30 it becomes 02:30);
+    * a time repeated by a fall-back overlap resolves to its first
+      occurrence.
+
+  Returns `{:error, reason}` when the timezone is unknown, leaving the
+  fallback to the caller.
+  """
+  @spec resolve_local(Date.t(), Time.t(), String.t()) :: {:ok, DateTime.t()} | {:error, term()}
+  def resolve_local(date, time, timezone) do
+    case DateTime.new(date, time, timezone) do
+      {:ok, datetime} -> {:ok, datetime}
+      {:ambiguous, first, _second} -> {:ok, first}
+      {:gap, _just_before, just_after} -> {:ok, just_after}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Resolves a wall-clock date and time like `resolve_local/3`, falling back
+  to the same wall-clock time in UTC when the timezone is unknown.
   """
   @spec create_datetime_safe(Date.t(), Time.t(), String.t()) :: DateTime.t()
   def create_datetime_safe(date, time, timezone) do
-    case DateTime.new(date, time, timezone) do
-      {:ok, datetime} ->
-        datetime
-
-      {:ambiguous, first, _second} ->
-        # In case of ambiguity (e.g. DST fall back), use the first occurrence
-        first
-
-      {:gap, _just_before, _just_after} ->
-        # Time is in a DST gap (spring forward). Shift forward by 1 hour.
-        naive = NaiveDateTime.new!(date, time)
-        shifted = NaiveDateTime.add(naive, 3600, :second)
-
-        case DateTime.from_naive(shifted, timezone) do
-          {:ok, dt} -> dt
-          {:ambiguous, first, _second} -> first
-          {:error, _naive_error} -> DateTime.new!(date, time, "Etc/UTC")
-        end
-
-      {:error, _new_error} ->
-        # Fallback to UTC if timezone is invalid
-        DateTime.new!(date, time, "Etc/UTC")
+    case resolve_local(date, time, timezone) do
+      {:ok, datetime} -> datetime
+      {:error, _reason} -> DateTime.new!(date, time, "Etc/UTC")
     end
   end
 
@@ -252,17 +262,12 @@ defmodule Tymeslot.Utils.DateTimeUtils do
   defp adjust_hour_for_period(hour, :pm), do: hour + 12
 
   defp do_convert_to_utc(naive_dt, clean, original) do
-    case DateTime.from_naive(naive_dt, clean) do
+    date = NaiveDateTime.to_date(naive_dt)
+    time = NaiveDateTime.to_time(naive_dt)
+
+    case resolve_local(date, time, clean) do
       {:ok, dt} ->
         shift_to_utc(dt, naive_dt, clean, original)
-
-      {:ambiguous, first, _second} ->
-        # DST fall-back: two valid local times exist — resolve to the earlier one (first)
-        shift_to_utc(first, naive_dt, clean, original)
-
-      {:gap, _just_before, just_after} ->
-        # DST spring-forward: local time does not exist — resolve to just_after
-        shift_to_utc(just_after, naive_dt, clean, original)
 
       {:error, reason} ->
         Logger.warning("Unknown timezone when parsing external datetime; falling back to UTC",

@@ -857,3 +857,8 @@ msgstr "Conformément à la durée du rendez-vous, les heures seront proposées 
 #, elixir-autogen, elixir-format
 msgid "Times will be offered every %{minutes} minutes: %{examples}…"
 msgstr "Les heures seront proposées toutes les %{minutes} minutes : %{examples}…"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders cannot be set for more than 1 year in advance"
+msgstr "Les rappels ne peuvent pas être programmés plus d'un an à l'avance"

@@ -160,6 +160,21 @@ defmodule Tymeslot.Security.RateLimiter.Dashboard do
 
   def check_avatar_upload(user_id), do: Helpers.invalid_user_id("avatar upload", user_id)
 
+  @spec check_embed_domain_update(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_embed_domain_update(user_id) when is_integer(user_id) and user_id > 0 do
+    Helpers.check_with_logging(
+      "embed_domain_update:#{user_id}",
+      10,
+      3_600_000,
+      "embed domain update",
+      to_string(user_id)
+    )
+  end
+
+  def check_embed_domain_update(user_id),
+    do: Helpers.invalid_user_id("embed domain update", user_id)
+
   @spec check_cancel(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_cancel(user_id) when is_integer(user_id) and user_id > 0 do

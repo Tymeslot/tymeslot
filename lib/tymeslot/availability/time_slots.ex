@@ -28,8 +28,8 @@ defmodule Tymeslot.Availability.TimeSlots do
   def resolve_breaks(breaks, owner_date, owner_timezone)
       when is_list(breaks) and is_binary(owner_timezone) do
     Enum.map(breaks, fn {break_start_time, break_end_time} ->
-      {resolve_wall_time(owner_date, break_start_time, owner_timezone),
-       resolve_wall_time(owner_date, break_end_time, owner_timezone)}
+      {DateTimeUtils.create_datetime_safe(owner_date, break_start_time, owner_timezone),
+       DateTimeUtils.create_datetime_safe(owner_date, break_end_time, owner_timezone)}
     end)
   end
 
@@ -148,18 +148,26 @@ defmodule Tymeslot.Availability.TimeSlots do
 
       {:lt, :eq} ->
         # Availability spans from previous day (e.g., late night hours)
-        midnight = resolve_wall_time(selected_date, ~T[00:00:00], start_dt.time_zone)
+        midnight =
+          DateTimeUtils.create_datetime_safe(selected_date, ~T[00:00:00], start_dt.time_zone)
+
         {midnight, end_dt}
 
       {:eq, :gt} ->
         # Availability spans to next day (e.g., early morning hours)
-        end_of_day = resolve_wall_time(selected_date, ~T[23:59:59], start_dt.time_zone)
+        end_of_day =
+          DateTimeUtils.create_datetime_safe(selected_date, ~T[23:59:59], start_dt.time_zone)
+
         {start_dt, end_of_day}
 
       {:lt, :gt} ->
         # Full day availability (extreme timezone difference)
-        midnight = resolve_wall_time(selected_date, ~T[00:00:00], start_dt.time_zone)
-        end_of_day = resolve_wall_time(selected_date, ~T[23:59:59], start_dt.time_zone)
+        midnight =
+          DateTimeUtils.create_datetime_safe(selected_date, ~T[00:00:00], start_dt.time_zone)
+
+        end_of_day =
+          DateTimeUtils.create_datetime_safe(selected_date, ~T[23:59:59], start_dt.time_zone)
+
         {midnight, end_of_day}
 
       _other ->
@@ -343,22 +351,12 @@ defmodule Tymeslot.Availability.TimeSlots do
 
     Enum.filter(slots, fn slot ->
       slot_time = parse_time_slot(slot)
-      slot_start_dt = resolve_wall_time(date, slot_time, timezone)
+      slot_start_dt = DateTimeUtils.create_datetime_safe(date, slot_time, timezone)
       slot_end_dt = DateTime.add(slot_start_dt, duration_minutes, :minute)
 
       not Enum.any?(breaks, fn {break_start_dt, break_end_dt} ->
         TimeRange.overlaps?(slot_start_dt, slot_end_dt, break_start_dt, break_end_dt)
       end)
     end)
-  end
-
-  # DST wall-clock resolution: fall-back anchors to the first occurrence;
-  # spring-forward snaps forward past the gap.
-  defp resolve_wall_time(date, time, timezone) do
-    case DateTime.new(date, time, timezone) do
-      {:ok, dt} -> dt
-      {:ambiguous, first, _second} -> first
-      {:gap, _before, just_after} -> just_after
-    end
   end
 end

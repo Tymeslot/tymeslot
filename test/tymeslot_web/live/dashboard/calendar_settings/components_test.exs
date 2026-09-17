@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :utils
+  @moduletag :calendar
 
   import Phoenix.LiveViewTest
   alias Tymeslot.Integrations.Calendar.CalendarEntry
@@ -44,6 +45,37 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
 
       assert Components.calendar_summary(integration) ==
                "booking target can no longer accept bookings"
+    end
+
+    # Booking writes to the configured calendar, not to the primary, so a
+    # read-only booking calendar must be reported even while the primary can
+    # still be written.
+    test "warns when the booking calendar turned read-only while the primary stays writable" do
+      integration =
+        summary_integration(
+          provider: "google",
+          default_booking_calendar_id: "cal-team",
+          calendar_list: [
+            %CalendarEntry{id: "cal-team", name: "Team", read_only: true, primary: false},
+            %CalendarEntry{id: "cal-primary", name: "Primary", read_only: false, primary: true}
+          ]
+        )
+
+      assert Components.calendar_summary(integration) ==
+               "booking target can no longer accept bookings"
+    end
+
+    test "does not name the primary when the booking calendar is no longer listed" do
+      integration =
+        summary_integration(
+          provider: "google",
+          default_booking_calendar_id: "cal-gone",
+          calendar_list: [
+            %CalendarEntry{id: "cal-primary", name: "Primary", read_only: false, primary: true}
+          ]
+        )
+
+      assert Components.calendar_summary(integration) == ""
     end
 
     test "stays silent (no warning) when no booking target has ever been configured" do

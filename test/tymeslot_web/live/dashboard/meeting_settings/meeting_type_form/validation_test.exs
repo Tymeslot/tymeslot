@@ -73,6 +73,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ValidationTest d
                Validation.validate_new_reminder(existing, "1", "days")
     end
 
+    test "rejects a reminder more than one year in advance" do
+      assert {:error, "Reminders cannot be set for more than 1 year in advance"} =
+               Validation.validate_new_reminder([], "366", "days")
+    end
+
+    test "accepts a reminder exactly one year in advance" do
+      assert {:ok, %{value: 365, unit: "days"}} =
+               Validation.validate_new_reminder([], "365", "days")
+    end
+
     test "allows up to 3 reminders" do
       existing = [
         %{value: 10, unit: "minutes"},

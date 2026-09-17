@@ -197,14 +197,7 @@ defmodule Tymeslot.Agenda do
 
   # Total by construction: midnight can be a DST gap or ambiguous in some zones,
   # and an all-day chip must never crash the dashboard.
-  defp local_midnight(date, tz) do
-    case DateTime.new(date, ~T[00:00:00], tz) do
-      {:ok, datetime} -> datetime
-      {:ambiguous, first, _second} -> first
-      {:gap, _just_before, just_after} -> just_after
-      {:error, _reason} -> DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
-    end
-  end
+  defp local_midnight(date, tz), do: DateTimeUtils.create_datetime_safe(date, ~T[00:00:00], tz)
 
   defp organiser_name(organiser) when is_map(organiser) do
     presence(organiser["displayName"]) || presence(organiser["name"]) ||

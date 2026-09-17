@@ -428,6 +428,17 @@ defmodule Tymeslot.Security.RateLimiter do
   def check_avatar_upload_rate_limit(user_id), do: Dashboard.check_avatar_upload(user_id)
 
   @doc """
+  Rate limit changes to the embed domain whitelist from the dashboard.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Limit: 10 updates per hour per user.
+  """
+  @spec check_embed_domain_update_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_embed_domain_update_rate_limit(user_id),
+    do: Dashboard.check_embed_domain_update(user_id)
+
+  @doc """
   Rate limit owner-side meeting cancellation from the dashboard.
   Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
 

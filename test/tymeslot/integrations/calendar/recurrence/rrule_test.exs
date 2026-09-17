@@ -172,4 +172,57 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRuleTest do
       end
     end
   end
+
+  describe "retarget/2" do
+    test "leaves a missing rule missing" do
+      assert RRule.retarget(nil, all_day: true, start_date: ~D[2026-06-01]) == {:ok, nil}
+    end
+
+    test "rewrites a timed UNTIL as a bare date for an all-day event" do
+      assert RRule.retarget("FREQ=WEEKLY;BYDAY=MO;UNTIL=20260630T235959Z",
+               all_day: true,
+               start_date: ~D[2026-06-01]
+             ) == {:ok, "FREQ=WEEKLY;BYDAY=MO;UNTIL=20260630"}
+    end
+
+    test "rewrites a bare-date UNTIL as an end-of-day timestamp for a timed event" do
+      assert RRule.retarget("FREQ=DAILY;UNTIL=20260630",
+               all_day: false,
+               start_date: ~D[2026-06-01]
+             ) ==
+               {:ok, "FREQ=DAILY;UNTIL=20260630T235959Z"}
+    end
+
+    test "keeps parts the editor does not understand" do
+      assert RRule.retarget("RRULE:FREQ=MONTHLY;BYSETPOS=-1;UNTIL=20261231T235959Z",
+               all_day: true,
+               start_date: ~D[2026-06-01]
+             ) == {:ok, "RRULE:FREQ=MONTHLY;BYSETPOS=-1;UNTIL=20261231"}
+    end
+
+    test "leaves a rule without UNTIL untouched" do
+      assert RRule.retarget("FREQ=WEEKLY;COUNT=5", all_day: true, start_date: ~D[2026-06-01]) ==
+               {:ok, "FREQ=WEEKLY;COUNT=5"}
+    end
+
+    test "accepts an UNTIL on the start date" do
+      assert {:ok, "FREQ=DAILY;UNTIL=20260601"} =
+               RRule.retarget("FREQ=DAILY;UNTIL=20260601T235959Z",
+                 all_day: true,
+                 start_date: ~D[2026-06-01]
+               )
+    end
+
+    test "rejects an UNTIL before the start date" do
+      assert RRule.retarget("FREQ=DAILY;UNTIL=20260531T235959Z",
+               all_day: false,
+               start_date: ~D[2026-06-01]
+             ) == {:error, :until_before_start}
+    end
+
+    test "skips the start check when no start date is known" do
+      assert RRule.retarget("FREQ=DAILY;UNTIL=20200101", all_day: false) ==
+               {:ok, "FREQ=DAILY;UNTIL=20200101T235959Z"}
+    end
+  end
 end

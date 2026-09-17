@@ -78,7 +78,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   """
   @spec payment_opts(integer()) :: keyword()
   def payment_opts(user_id) do
-    currency = host_currency(user_id)
+    currency = MeetingPayments.host_currency(user_id)
 
     [
       host_charges_enabled: MeetingPayments.charges_enabled_for_user?(user_id),
@@ -142,20 +142,6 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value
-
-  # The host's pricing currency is their Connect account's default currency.
-  # When no account exists yet, fall back to the first entry of the currency
-  # allowlist (defaulting to "usd"), matching the default the payments
-  # dashboard surfaces.
-  defp host_currency(user_id) do
-    case MeetingPayments.get_connect_account_for_user(user_id) do
-      %{default_currency: currency} when is_binary(currency) and currency != "" ->
-        currency
-
-      _other ->
-        List.first(MeetingPayments.currency_allowlist()) || "usd"
-    end
-  end
 
   # Converts the major-unit price string from the form into integer cents.
   # When payment is not required the price is irrelevant and stored as nil.

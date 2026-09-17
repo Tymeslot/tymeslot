@@ -25,12 +25,17 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
     end
 
     test "fails with wrong current password", %{user: user} do
-      assert {:error, "Current password is incorrect"} =
+      assert {:error, {:current_password, "Current password is incorrect"}} =
                Auth.update_user_password(user, "WrongPass123!", "NewPass456!", "NewPass456!")
     end
 
+    test "reports a wrong current password even when the new password equals it", %{user: user} do
+      assert {:error, {:current_password, "Current password is incorrect"}} =
+               Auth.update_user_password(user, "WrongPass123!", "WrongPass123!", "WrongPass123!")
+    end
+
     test "fails when new password is the same as the current password", %{user: user} do
-      assert {:error, message} =
+      assert {:error, {:new_password, message}} =
                Auth.update_user_password(
                  user,
                  "CurrentPass123!",
@@ -42,7 +47,7 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
     end
 
     test "fails when new password and confirmation do not match", %{user: user} do
-      assert {:error, message} =
+      assert {:error, {:new_password_confirmation, message}} =
                Auth.update_user_password(
                  user,
                  "CurrentPass123!",
@@ -54,7 +59,7 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
     end
 
     test "fails when new password is too short", %{user: user} do
-      assert {:error, message} =
+      assert {:error, {:new_password, message}} =
                Auth.update_user_password(user, "CurrentPass123!", "short", "short")
 
       assert message =~ "8 characters"

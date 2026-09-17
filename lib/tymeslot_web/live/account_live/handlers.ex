@@ -241,8 +241,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
            PasswordValidator.validate_confirmation(
              sanitized_params["new_password"],
              sanitized_params["new_password_confirmation"]
-           ),
-         :ok <- check_passwords_differ(sanitized_params) do
+           ) do
       {:ok, sanitized_params}
     else
       {:error, errors} when is_map(errors) ->
@@ -250,24 +249,6 @@ defmodule TymeslotWeb.AccountLive.Handlers do
 
       {:error, confirmation_msg} when is_binary(confirmation_msg) ->
         {:error, %{new_password_confirmation: confirmation_msg}}
-
-      {:error, :same_password} ->
-        {:error,
-         %{
-           new_password:
-             dgettext("account", "New password must be different from current password")
-         }}
-    end
-  end
-
-  defp check_passwords_differ(params) do
-    current = Map.get(params, "current_password", "")
-    new_pw = Map.get(params, "new_password", "")
-
-    if current == new_pw and current != "" do
-      {:error, :same_password}
-    else
-      :ok
     end
   end
 end

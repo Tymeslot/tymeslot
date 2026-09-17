@@ -266,11 +266,6 @@ msgstr "Час має бути у форматі ГГ:ХХ (наприклад, 
 msgid "%{minutes} min"
 msgstr "%{minutes} хв"
 
-#: lib/tymeslot_web/live/dashboard/schedule_settings_component.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} (copy)"
-msgstr "%{name} (копія)"
-
 #: lib/tymeslot_web/live/dashboard/availability/schedule_switcher.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} (default)"
@@ -788,3 +783,13 @@ msgstr "Поточні та майбутні"
 #, elixir-autogen, elixir-format
 msgid "No upcoming time off. Anything you add appears here."
 msgstr "Майбутніх відсутностей немає. Усе, що ви додасте, з'явиться тут."
+
+#: lib/tymeslot/availability/schedules.ex
+#, elixir-autogen, elixir-format
+msgid "(copy)"
+msgstr "(копія)"
+
+#: lib/tymeslot/availability/schedules.ex
+#, elixir-autogen, elixir-format
+msgid "(copy) %{number}"
+msgstr "(копія) %{number}"
