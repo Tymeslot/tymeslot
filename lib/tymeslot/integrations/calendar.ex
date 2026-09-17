@@ -41,6 +41,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.Exchange.Creation, as: ExchangeCreation
   alias Tymeslot.Integrations.Calendar.Exchange.FreeBusy
+  alias Tymeslot.Integrations.Calendar.Nextcloud.Login, as: NextcloudLogin
   alias Tymeslot.Integrations.Calendar.OAuth
   alias Tymeslot.Integrations.Calendar.Orchestration.Workflows
   alias Tymeslot.Integrations.Calendar.ProviderConfig
@@ -105,6 +106,21 @@ defmodule Tymeslot.Integrations.Calendar do
   def get_integration(id, user_id) when is_integer(id) and is_integer(user_id) do
     CalendarManagement.get_calendar_integration(id, user_id)
   end
+
+  @doc """
+  The user's active Nextcloud calendar integrations, by id and name, for
+  another integration to copy its server and login from.
+  """
+  @spec nextcloud_logins(user_id()) :: [%{id: integration_id(), name: String.t()}]
+  defdelegate nextcloud_logins(user_id), to: NextcloudLogin, as: :list
+
+  @doc """
+  The server root, login name and password of one of the user's active
+  Nextcloud calendar integrations. The password must never reach a browser.
+  """
+  @spec nextcloud_login(integration_id(), user_id()) ::
+          {:ok, NextcloudLogin.login()} | {:error, :not_found}
+  defdelegate nextcloud_login(integration_id, user_id), to: NextcloudLogin, as: :fetch
 
   @doc """
   Creates a new calendar integration, with provider-specific parsing and optional pre-validation.
