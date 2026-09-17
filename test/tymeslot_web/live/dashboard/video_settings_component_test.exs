@@ -35,6 +35,40 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       end
     end
 
+    test "groups the provider picker by hosting model", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      document = Floki.parse_document!(html)
+
+      headings =
+        document |> Floki.find("h3") |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+
+      assert "Hosted services" in headings
+      assert "Self-hosted" in headings
+      assert "Other" in headings
+
+      groups =
+        document
+        # Each picker group renders as its own "space-y-3" div holding the
+        # heading and the provider grid as siblings.
+        |> Floki.find("div.space-y-3")
+        |> Enum.filter(&(Floki.find(&1, "h3") != []))
+        |> Map.new(fn group ->
+          label = group |> Floki.find("h3") |> Floki.text() |> String.trim()
+
+          providers =
+            group
+            |> Floki.find("[phx-value-provider]")
+            |> Enum.map(&(&1 |> Floki.attribute("phx-value-provider") |> List.first()))
+
+          {label, providers}
+        end)
+
+      assert groups["Hosted services"] == ~w(google_meet teams zoom kmeet)
+      assert groups["Self-hosted"] == ~w(mirotalk jitsi)
+      assert groups["Other"] == ~w(custom)
+    end
+
     test "renders the Zoom option in the provider picker", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
