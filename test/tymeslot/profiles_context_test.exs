@@ -450,6 +450,40 @@ defmodule Tymeslot.ProfilesContextTest do
     end
   end
 
+  describe "ensure_timezone/2" do
+    test "never overwrites a timezone the profile already has" do
+      profile = insert(:profile, timezone: "Asia/Tokyo")
+
+      assert {:ok, ensured} = Profiles.ensure_timezone(profile, "America/Chicago")
+      assert ensured.timezone == "Asia/Tokyo"
+      assert Repo.reload!(profile).timezone == "Asia/Tokyo"
+    end
+
+    test "persists the detected timezone when the profile has none" do
+      profile = insert(:profile, timezone: nil)
+
+      assert {:ok, ensured} = Profiles.ensure_timezone(profile, "America/Chicago")
+      assert ensured.timezone == "America/Chicago"
+      assert Repo.reload!(profile).timezone == "America/Chicago"
+    end
+
+    test "persists the default instead of an unrecognised detected timezone" do
+      profile = insert(:profile, timezone: nil)
+
+      assert {:ok, ensured} = Profiles.ensure_timezone(profile, "Etc/Unknown")
+      assert ensured.timezone == Profiles.get_default_timezone()
+      assert Repo.reload!(profile).timezone == Profiles.get_default_timezone()
+    end
+
+    test "persists the default when no timezone was detected" do
+      profile = insert(:profile, timezone: nil)
+
+      assert {:ok, ensured} = Profiles.ensure_timezone(profile, nil)
+      assert ensured.timezone == Profiles.get_default_timezone()
+      assert Repo.reload!(profile).timezone == Profiles.get_default_timezone()
+    end
+  end
+
   # =====================================
   # Theme & Embed Domain Updates
   # =====================================

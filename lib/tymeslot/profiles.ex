@@ -199,6 +199,36 @@ defmodule Tymeslot.Profiles do
   end
 
   @doc """
+  Gives a profile with no timezone one, persisted: the detected (browser)
+  timezone when it is a real zone, otherwise the business default.
+
+  A timezone the profile already has is never overwritten. Always returns
+  `{:ok, profile}`: if the write fails, the profile comes back exactly as
+  loaded, so a caller never holds a timezone that was not saved.
+  """
+  @spec ensure_timezone(profile(), String.t() | nil) :: {:ok, profile()}
+  def ensure_timezone(%ProfileSchema{} = profile, detected_timezone) do
+    case Timezone.prefill_timezone(profile.timezone, detected_timezone) do
+      unchanged when unchanged == profile.timezone ->
+        {:ok, profile}
+
+      timezone ->
+        case update_timezone(profile, timezone) do
+          {:ok, updated} ->
+            {:ok, updated}
+
+          {:error, reason} ->
+            Logger.warning("Could not persist a prefilled profile timezone",
+              profile_id: profile.id,
+              reason: inspect(reason)
+            )
+
+            {:ok, profile}
+        end
+    end
+  end
+
+  @doc """
   Gets the timezone for a user, returning the default if no profile exists.
   """
   @spec get_user_timezone(user_id) :: timezone
