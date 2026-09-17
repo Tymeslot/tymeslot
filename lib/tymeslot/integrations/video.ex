@@ -214,7 +214,9 @@ defmodule Tymeslot.Integrations.Video do
   # kMeet has exactly one host, so there is no account to key on. Leaving
   # `provider_account_id` nil files the row under
   # `unique_active_video_null_account_per_user`, which is precisely the
-  # "one active kMeet per user" rule we want.
+  # "one active kMeet per user" rule we want. Like every provider without an
+  # account id, the rule covers active rows only, so an inactive kMeet row does
+  # not block a new one.
   defp do_create_integration(:kmeet, attrs) do
     VideoIntegrationQueries.create(attrs)
   end
@@ -271,7 +273,7 @@ defmodule Tymeslot.Integrations.Video do
   # ---------------
   # Update
   # ---------------
-  @spec update_integration(pos_integer(), pos_integer(), %{atom() => term()}) ::
+  @spec update_integration(pos_integer(), pos_integer(), %{(String.t() | atom()) => term()}) ::
           {:ok, any()} | {:error, any()}
   def update_integration(user_id, id, attrs)
       when is_integer(user_id) and is_integer(id) and is_map(attrs) do
@@ -300,10 +302,11 @@ defmodule Tymeslot.Integrations.Video do
   end
 
   # An edit to a Jitsi server URL or credentials is validated exactly as a
-  # create is, against the config the row will hold once saved. A blank
-  # credential in `attrs` leaves the stored one in place (the changeset never
-  # overwrites an encrypted credential with nothing), so the stored value
-  # stands in for it here too; a blank server URL is refused either way. An
+  # create is, against the config the row will hold once saved. A nil, empty
+  # or whitespace-only credential in `attrs` leaves the stored one in place
+  # (`cast/3` trims it to nil, and the changeset never overwrites an encrypted
+  # credential with nothing), so the stored value stands in for it here too; a
+  # blank server URL is refused by the changeset either way. An
   # update touching none of these fields, such as a rename, is not
   # re-validated, so it cannot be refused over a value it leaves alone.
   defp validate_update(%VideoIntegrationSchema{provider: "jitsi"} = integration, attrs) do
@@ -314,14 +317,15 @@ defmodule Tymeslot.Integrations.Video do
     else
       integration
       |> Map.take(@jitsi_config_fields)
-      |> Map.merge(changes, fn _field, stored, new ->
-        if new in [nil, ""], do: stored, else: new
-      end)
+      |> Map.merge(changes, fn _field, stored, new -> if blank?(new), do: stored, else: new end)
       |> JitsiProvider.validate_config()
     end
   end
 
   defp validate_update(_integration, _attrs), do: :ok
+
+  defp blank?(value) when is_binary(value), do: String.trim(value) == ""
+  defp blank?(value), do: is_nil(value)
 
   defp update_with_credentials(integration, attrs) do
     with {:ok, updated} = ok <- VideoIntegrationQueries.update_credentials(integration, attrs) do

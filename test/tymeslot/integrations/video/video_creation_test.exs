@@ -127,14 +127,30 @@ defmodule Tymeslot.Integrations.Video.VideoCreationTest do
       assert stored_secret(user, integration) == @secret
     end
 
-    test "refuses an App ID replaced with whitespace, which would leave half a pair", %{
+    # `cast/3` trims a whitespace-only value to nil, so the stored credential
+    # is never overwritten and validation must not treat it as half a pair.
+    test "a whitespace App ID keeps the stored one", %{user: user, integration: integration} do
+      assert {:ok, _updated} =
+               Video.update_integration(user.id, integration.id, %{client_id: "   "})
+
+      assert {:ok, stored} = VideoIntegrationQueries.get_for_user(integration.id, user.id)
+      assert stored.client_id == @app_id
+      assert stored.client_secret == @secret
+    end
+
+    test "refuses a server URL carrying a query string and keeps the stored one", %{
       user: user,
       integration: integration
     } do
       assert {:error, message} =
-               Video.update_integration(user.id, integration.id, %{client_id: "   "})
+               Video.update_integration(user.id, integration.id, %{
+                 base_url: "https://meet.example.com/?room=x"
+               })
 
-      assert message =~ "Enter the App ID"
+      assert message =~ "cannot contain a query string"
+
+      assert {:ok, stored} = VideoIntegrationQueries.get_for_user(integration.id, user.id)
+      assert stored.base_url == "https://meet.example.com"
     end
 
     test "accepts a new valid secret", %{user: user, integration: integration} do
@@ -171,6 +187,17 @@ defmodule Tymeslot.Integrations.Video.VideoCreationTest do
                Video.update_integration(user.id, integration.id, %{name: "Renamed"})
 
       assert updated.name == "Renamed"
+    end
+  end
+
+  describe "update_integration/3 with string keys" do
+    test "renames a MiroTalk integration", %{user: user} do
+      integration = insert(:video_integration, user: user, provider: "mirotalk", name: "Before")
+
+      assert {:ok, updated} =
+               Video.update_integration(user.id, integration.id, %{"name" => "After"})
+
+      assert updated.name == "After"
     end
   end
 
