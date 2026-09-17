@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig
+  alias TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfig
   alias TymeslotWeb.Dashboard.VideoSettings.Components
   alias TymeslotWeb.Live.Dashboard.VideoSettings.ProviderPicker
 
@@ -165,6 +166,17 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
               form_errors={@form_errors}
               form_values={@form_values}
               saving={@saving}
+            />
+            <.live_component
+              :if={@config_provider == "nextcloud_talk"}
+              module={NextcloudTalkConfig}
+              id="nextcloud-talk-config"
+              target={@myself}
+              form_errors={@form_errors}
+              form_values={@form_values}
+              saving={@saving}
+              nextcloud_calendars={@nextcloud_calendars}
+              copied_login={@copied_nextcloud_login}
             />
           </:config>
         </ProviderPickerModal.provider_picker_modal>

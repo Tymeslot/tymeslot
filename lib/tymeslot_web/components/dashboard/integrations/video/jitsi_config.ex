@@ -165,7 +165,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
       )
 
     ~H"""
-    <.credential_input
+    <SharedForm.credential_input
       id={"#{@id_prefix}_client_id"}
       name="integration[client_id]"
       type="text"
@@ -177,7 +177,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
       errors={FormValidationHelpers.field_errors(@form_errors, :client_id)}
     />
 
-    <.credential_input
+    <SharedForm.credential_input
       id={"#{@id_prefix}_client_secret"}
       name="integration[client_secret]"
       type="password"
@@ -198,7 +198,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
       >
         {dgettext("dashboard_integrations", "Leave blank to keep the current secret.")}
       </p>
-    </.credential_input>
+    </SharedForm.credential_input>
 
     <p
       id={"#{@id_prefix}_credentials_help"}
@@ -233,42 +233,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
         </div>
       </div>
     </label>
-    """
-  end
-
-  attr :id, :string, required: true
-  attr :name, :string, required: true
-  attr :type, :string, required: true
-  attr :icon, :string, required: true
-  attr :label, :string, required: true
-  attr :value, :string, default: nil, doc: "left unset for a secret, which is never rendered"
-  attr :describedby, :string, required: true
-  attr :disabled, :boolean, default: false
-  attr :errors, :list, default: []
-  slot :inner_block
-
-  defp credential_input(assigns) do
-    ~H"""
-    <div>
-      <label for={@id} class="label">{@label}</label>
-      <div class="relative">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-tymeslot-400">
-          <.icon name={@icon} class="w-5 h-5" />
-        </div>
-        <input
-          type={@type}
-          id={@id}
-          name={@name}
-          value={@value}
-          autocomplete="off"
-          disabled={@disabled}
-          aria-describedby={@describedby}
-          class={["input input-with-icon w-full", @errors != [] && "input-error"]}
-        />
-      </div>
-      <p :for={error <- @errors} class="form-error">{error}</p>
-      {render_slot(@inner_block)}
-    </div>
     """
   end
 end

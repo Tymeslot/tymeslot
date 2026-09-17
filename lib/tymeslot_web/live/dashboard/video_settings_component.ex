@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Integrations.Providers.Directory
@@ -31,6 +32,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:testing_connection, nil)
      |> assign(:health_states, %{})
      |> assign(:show_picker, false)
+     |> assign(:nextcloud_calendars, [])
+     |> assign(:copied_nextcloud_login, nil)
      |> assign(:available_video_providers, Directory.list(:video))}
   end
 
@@ -72,6 +75,45 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     {:noreply, assign(socket, :form_values, params)}
   end
 
+  # Only the server and login name enter the socket. The app password stays in
+  # the calendar integration and is read again when the form is submitted.
+  def handle_event("copy_nextcloud_login", %{"id" => id}, socket) do
+    user_id = socket.assigns.current_user.id
+
+    with integration_id when is_integer(integration_id) <- FormInput.integration_id(id),
+         {:ok, login} <- Calendar.nextcloud_login(integration_id, user_id) do
+      form_values =
+        Map.merge(socket.assigns.form_values || %{}, %{
+          "base_url" => login.server_url,
+          "client_id" => login.username
+        })
+
+      {:noreply,
+       assign(socket,
+         form_values: form_values,
+         form_errors: %{},
+         copied_nextcloud_login: %{
+           id: integration_id,
+           server_url: login.server_url,
+           username: login.username
+         }
+       )}
+    else
+      _unavailable ->
+        {:noreply,
+         assign(socket,
+           form_errors: %{
+             base:
+               dgettext(
+                 "dashboard_integrations",
+                 "That calendar connection is no longer available."
+               )
+           },
+           copied_nextcloud_login: nil
+         )}
+    end
+  end
+
   def handle_event("back_to_providers", _params, socket) do
     {:noreply,
      socket
@@ -87,11 +129,14 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
           initiate_oauth(socket, provider_atom)
         else
           {:noreply,
-           socket
-           |> assign(:config_provider, provider)
-           |> assign(:show_picker, true)
-           |> assign(:form_errors, %{})
-           |> assign(:form_values, %{})}
+           assign(socket,
+             config_provider: provider,
+             show_picker: true,
+             form_errors: %{},
+             form_values: %{},
+             nextcloud_calendars: nextcloud_calendars(socket, provider_atom),
+             copied_nextcloud_login: nil
+           )}
         end
 
       _other ->
@@ -125,12 +170,13 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     {:noreply, assign(socket, form_values: form_values, form_errors: form_errors)}
   end
 
-  def handle_event("add_integration", %{"integration" => params}, socket) do
+  def handle_event("add_integration", %{"integration" => submitted}, socket) do
     user_id = socket.assigns.current_user.id
 
     with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
       socket = assign(socket, :saving, true)
       metadata = DashboardHelpers.get_security_metadata(socket)
+      params = with_copied_app_password(submitted, socket.assigns.copied_nextcloud_login, user_id)
 
       case VideoInputValidation.validate_video_integration_form(params, metadata: metadata) do
         # The validated map is the whole set of fields the provider's form
@@ -161,7 +207,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
           {:noreply,
            socket
            |> assign(:form_errors, validation_errors)
-           |> assign(:form_values, params)
+           |> assign(:form_values, submitted)
            |> assign(:saving, false)}
       end
     end)
@@ -371,10 +417,26 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:saving, false)}
   end
 
-  # The Jitsi provider's own validation words its messages for the organiser,
-  # and they concern the credentials as often as the URL, so they are shown
-  # for the whole form rather than under the URL field.
-  defp handle_create_result({:error, message}, "jitsi", socket) when is_binary(message) do
+  # A Nextcloud Talk integration is keyed on its server and login name, so the
+  # duplicate is that account, active or not.
+  defp handle_create_result({:error, :duplicate_integration}, "nextcloud_talk", socket) do
+    {:noreply,
+     socket
+     |> assign(:form_errors, %{
+       base:
+         dgettext(
+           "dashboard_integrations",
+           "This Nextcloud account is already connected. Edit or remove the existing integration instead."
+         )
+     })
+     |> assign(:saving, false)}
+  end
+
+  # The Jitsi and Nextcloud Talk providers' own validation words its messages
+  # for the organiser, and they concern the credentials as often as the URL, so
+  # they are shown for the whole form rather than under the URL field.
+  defp handle_create_result({:error, message}, provider, socket)
+       when provider in ["jitsi", "nextcloud_talk"] and is_binary(message) do
     {:noreply,
      socket
      |> assign(:form_errors, %{base: message})
@@ -439,6 +501,36 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
       "Saved, but the server did not answer as expected. Check the URL, or use Test connection once it is reachable."
     )
   end
+
+  defp nextcloud_calendars(socket, :nextcloud_talk),
+    do: Calendar.nextcloud_logins(socket.assigns.current_user.id)
+
+  defp nextcloud_calendars(_socket, _provider), do: []
+
+  # A copied login carries its app password only from here to the save: it is
+  # read from the calendar integration at submit time and never kept in the
+  # socket or sent to the browser. A password typed into the form wins, and a
+  # server or login name changed since the copy gets no password at all, so
+  # the calendar's password only ever goes to the account it belongs to.
+  defp with_copied_app_password(
+         %{"provider" => "nextcloud_talk"} = submitted,
+         %{id: calendar_id},
+         user_id
+       ) do
+    with true <- blank?(submitted["client_secret"]),
+         {:ok, login} <- Calendar.nextcloud_login(calendar_id, user_id),
+         true <- FormInput.copied_login_applies?(login, submitted) do
+      Map.put(submitted, "client_secret", login.password)
+    else
+      _typed_changed_or_unavailable -> submitted
+    end
+  end
+
+  defp with_copied_app_password(submitted, _copied_login, _user_id), do: submitted
+
+  defp blank?(nil), do: true
+  defp blank?(value) when is_binary(value), do: String.trim(value) == ""
+  defp blank?(_value), do: false
 
   defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do
     notify_parent({:flash, {:error, message}})

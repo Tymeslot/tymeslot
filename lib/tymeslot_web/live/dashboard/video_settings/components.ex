@@ -152,6 +152,14 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     [Map.get(integration, :base_url), dgettext("dashboard_integrations", "Jitsi")]
   end
 
+  defp summary_segments(%{provider: "nextcloud_talk"} = integration) do
+    [
+      Map.get(integration, :client_id),
+      host(integration.base_url),
+      dgettext("dashboard_integrations", "self-hosted")
+    ]
+  end
+
   # OAuth membership is read from the video family table rather than restated
   # here, so a new OAuth provider describes itself correctly without an edit.
   defp summary_segments(%{provider: provider} = integration) do
@@ -182,6 +190,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   defp type_tag("custom"), do: dgettext("dashboard_integrations", "custom")
   defp type_tag("kmeet"), do: dgettext("dashboard_integrations", "hosted")
   defp type_tag("jitsi"), do: dgettext("dashboard_integrations", "self-hosted")
+  defp type_tag("nextcloud_talk"), do: dgettext("dashboard_integrations", "self-hosted")
 
   defp type_tag(provider) do
     if ProviderConfig.oauth_provider?(provider) do
