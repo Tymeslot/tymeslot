@@ -17,10 +17,8 @@ defmodule Tymeslot.Integrations.Video.AccountKey do
   """
 
   alias Ecto.Changeset
+  alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
-
-  # The partial unique index on active rows' account keys.
-  @account_index "unique_active_video_account_per_user"
 
   @url_fields %{"mirotalk" => :base_url, "jitsi" => :base_url, "custom" => :custom_meeting_url}
 
@@ -97,14 +95,11 @@ defmodule Tymeslot.Integrations.Video.AccountKey do
   """
   @spec refuse_taken_key({:ok, term()} | {:error, term()}) ::
           {:ok, term()} | {:error, term()}
-  def refuse_taken_key({:error, %Changeset{errors: errors}} = error) do
-    if Enum.any?(errors, &account_index_error?/1),
+  def refuse_taken_key({:error, %Changeset{} = changeset} = error) do
+    if AccountMatch.unique_account_violation?(changeset),
       do: {:error, :duplicate_integration},
       else: error
   end
 
   def refuse_taken_key(result), do: result
-
-  defp account_index_error?({_field, {_message, opts}}),
-    do: opts[:constraint_name] == @account_index
 end

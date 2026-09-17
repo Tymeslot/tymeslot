@@ -28,6 +28,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.SsrfGuard
 
+  # The partial unique index allowing one active integration per user,
+  # provider and account key.
+  @account_index :unique_active_calendar_account_per_user
+
   @type t :: %__MODULE__{
           id: integer() | nil,
           user_id: integer() | nil,
@@ -160,6 +164,13 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     timestamps(type: :utc_datetime)
   end
 
+  @doc """
+  The name of the unique index on active integrations' account keys, as a
+  refused write reports it.
+  """
+  @spec account_index() :: String.t()
+  def account_index, do: Atom.to_string(@account_index)
+
   @doc false
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(calendar_integration, attrs) do
@@ -213,7 +224,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     |> foreign_key_constraint(:user_id)
     |> check_constraint(:provider, name: :calendar_integrations_provider_check)
     |> unique_constraint([:user_id, :provider, :provider_account_id],
-      name: :unique_active_calendar_account_per_user,
+      name: @account_index,
       # `TymeslotWeb.Components.CoreComponents.Forms.translate_error/1` runs the stored msgid
       # through the "errors" domain at render time, so the changeset must
       # carry the untranslated msgid — hence `dgettext_noop/2`, not
@@ -240,7 +251,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     integration
     |> change(%{is_active: is_active})
     |> unique_constraint([:user_id, :provider, :provider_account_id],
-      name: :unique_active_calendar_account_per_user,
+      name: @account_index,
       message: dgettext_noop("errors", "an integration for this account already exists")
     )
     |> unique_constraint([:user_id, :provider],

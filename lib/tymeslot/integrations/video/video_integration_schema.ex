@@ -21,6 +21,10 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     :conversation_refused
   ]
 
+  # The partial unique index allowing one active integration per user,
+  # provider and account key.
+  @account_index :unique_active_video_account_per_user
+
   @type t :: %__MODULE__{
           id: integer() | nil,
           user_id: integer() | nil,
@@ -104,6 +108,13 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     timestamps(type: :utc_datetime)
   end
 
+  @doc """
+  The name of the unique index on active integrations' account keys, as a
+  refused write reports it.
+  """
+  @spec account_index() :: String.t()
+  def account_index, do: Atom.to_string(@account_index)
+
   @doc false
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(video_integration, attrs) do
@@ -163,7 +174,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   defp apply_active_uniqueness_constraints(changeset) do
     changeset
     |> unique_constraint([:user_id, :provider, :provider_account_id],
-      name: :unique_active_video_account_per_user,
+      name: @account_index,
       # `TymeslotWeb.Components.CoreComponents.Forms.translate_error/1` runs the stored msgid
       # through the "errors" domain at render time, so the changeset must
       # carry the untranslated msgid — hence `dgettext_noop/2`, not
