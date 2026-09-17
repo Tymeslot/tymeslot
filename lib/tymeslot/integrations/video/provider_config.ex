@@ -13,7 +13,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   alias Tymeslot.Integrations.Providers.Families
   alias Tymeslot.Integrations.Shared.{ProviderConfigHelper, ProviderToggle}
 
-  @providers [:mirotalk, :google_meet, :teams, :zoom, :kmeet, :jitsi, :custom]
+  @providers [:mirotalk, :google_meet, :teams, :zoom, :kmeet, :jitsi, :nextcloud_talk, :custom]
   @dev_only_providers []
 
   # The single declaration site for "how does this provider connect?", in the
@@ -22,7 +22,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   # here; a provider missing from this table fails the build.
   @provider_families %{
     oauth: [:google_meet, :teams, :zoom],
-    other: [:mirotalk, :kmeet, :jitsi, :custom]
+    other: [:mirotalk, :kmeet, :jitsi, :nextcloud_talk, :custom]
   }
 
   # Keyed by both the atom and the string form of every provider, so the two
@@ -94,6 +94,17 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
       button_text: "Connect Jitsi",
       click_event: "connect_jitsi",
       circuit_breaker_enabled: false
+    },
+    nextcloud_talk: %{
+      icon: "nextcloud_talk",
+      description:
+        dgettext_noop(
+          "dashboard_integrations",
+          "A Talk conversation on your own Nextcloud for every booking"
+        ),
+      button_text: "Connect Nextcloud Talk",
+      click_event: "connect_nextcloud_talk",
+      circuit_breaker_enabled: true
     },
     custom: %{
       icon: "custom",
@@ -326,6 +337,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
     zoom: "Zoom",
     kmeet: "kMeet",
     jitsi: "Jitsi Meet",
+    nextcloud_talk: "Nextcloud Talk",
     custom: "Custom Video Link"
   }
 
@@ -348,6 +360,10 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   def get_provider_module(:zoom), do: Tymeslot.Integrations.Video.Providers.ZoomProvider
   def get_provider_module(:kmeet), do: Tymeslot.Integrations.Video.Providers.KmeetProvider
   def get_provider_module(:jitsi), do: Tymeslot.Integrations.Video.Providers.JitsiProvider
+
+  def get_provider_module(:nextcloud_talk),
+    do: Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
+
   def get_provider_module(:custom), do: Tymeslot.Integrations.Video.Providers.CustomProvider
   def get_provider_module(_provider), do: nil
 

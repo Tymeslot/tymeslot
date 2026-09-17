@@ -38,6 +38,7 @@ defmodule Tymeslot.Integrations.Video do
           | :custom
           | :kmeet
           | :jitsi
+          | :nextcloud_talk
           | :none
           | String.t()
 

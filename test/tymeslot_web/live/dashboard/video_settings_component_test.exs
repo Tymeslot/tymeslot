@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
         end)
 
       assert groups["Hosted services"] == ~w(google_meet teams zoom kmeet)
-      assert groups["Self-hosted"] == ~w(mirotalk jitsi)
+      assert groups["Self-hosted"] == ~w(mirotalk jitsi nextcloud_talk)
       assert groups["Other"] == ~w(custom)
     end
 

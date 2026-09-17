@@ -18,7 +18,10 @@ defmodule TymeslotWeb.Live.Dashboard.VideoSettings.ProviderPickerTest do
   end
 
   defp all_descriptors do
-    Enum.map([:google_meet, :teams, :zoom, :kmeet, :mirotalk, :jitsi, :custom], &descriptor/1)
+    Enum.map(
+      [:google_meet, :teams, :zoom, :kmeet, :mirotalk, :jitsi, :nextcloud_talk, :custom],
+      &descriptor/1
+    )
   end
 
   describe "groups/2" do
@@ -33,7 +36,7 @@ defmodule TymeslotWeb.Live.Dashboard.VideoSettings.ProviderPickerTest do
       [hosted, self_hosted, other] = ProviderPicker.groups(all_descriptors(), [])
 
       assert providers(hosted) == ~w(google_meet teams zoom kmeet)
-      assert providers(self_hosted) == ~w(mirotalk jitsi)
+      assert providers(self_hosted) == ~w(mirotalk jitsi nextcloud_talk)
       assert providers(other) == ~w(custom)
     end
 
@@ -41,7 +44,9 @@ defmodule TymeslotWeb.Live.Dashboard.VideoSettings.ProviderPickerTest do
       groups = ProviderPicker.groups(all_descriptors(), [])
       all = Enum.flat_map(groups, &providers/1)
 
-      assert Enum.sort(all) == Enum.sort(~w(google_meet teams zoom kmeet mirotalk jitsi custom))
+      assert Enum.sort(all) ==
+               Enum.sort(~w(google_meet teams zoom kmeet mirotalk jitsi nextcloud_talk custom))
+
       assert Enum.uniq(all) == all
     end
 

@@ -199,6 +199,7 @@ config :tymeslot, :video_providers, %{
   teams: [enabled: true],
   kmeet: [enabled: true],
   jitsi: [enabled: true],
+  nextcloud_talk: [enabled: true],
   custom: [enabled: true]
 }
 

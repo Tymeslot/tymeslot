@@ -84,7 +84,15 @@ defmodule Tymeslot.Integrations.Video.Providers.CapabilitiesTest do
 
   describe "providers_with_capability/1 across all providers" do
     test "reports every provider that supports screen sharing" do
-      assert_capability(:screen_sharing, [:mirotalk, :google_meet, :teams, :zoom, :kmeet, :jitsi])
+      assert_capability(:screen_sharing, [
+        :mirotalk,
+        :google_meet,
+        :teams,
+        :zoom,
+        :kmeet,
+        :jitsi,
+        :nextcloud_talk
+      ])
     end
 
     test "reports every provider that supports recording" do
@@ -92,11 +100,19 @@ defmodule Tymeslot.Integrations.Video.Providers.CapabilitiesTest do
     end
 
     test "reports every provider that supports a waiting room" do
-      assert_capability(:waiting_room, [:teams, :zoom])
+      assert_capability(:waiting_room, [:teams, :zoom, :nextcloud_talk])
     end
 
     test "reports every provider that supports chat" do
-      assert_capability(:chat, [:mirotalk, :google_meet, :teams, :zoom, :kmeet, :jitsi])
+      assert_capability(:chat, [
+        :mirotalk,
+        :google_meet,
+        :teams,
+        :zoom,
+        :kmeet,
+        :jitsi,
+        :nextcloud_talk
+      ])
     end
 
     test "reports every provider that supports breakout rooms" do

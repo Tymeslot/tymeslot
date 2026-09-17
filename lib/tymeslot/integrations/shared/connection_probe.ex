@@ -90,6 +90,7 @@ defmodule Tymeslot.Integrations.Shared.ConnectionProbe do
           | :custom
           | :kmeet
           | :jitsi
+          | :nextcloud_talk
           | :ics_url
           | :oauth
           | :discovery

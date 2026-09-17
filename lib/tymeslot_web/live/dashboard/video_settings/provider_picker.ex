@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Live.Dashboard.VideoSettings.ProviderPicker do
     kmeet: :hosted,
     mirotalk: :self_hosted,
     jitsi: :self_hosted,
+    nextcloud_talk: :self_hosted,
     custom: :other
   }
 

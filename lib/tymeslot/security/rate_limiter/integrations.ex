@@ -8,9 +8,9 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
   @connection_test_limit 20
   @connection_test_window_ms 600_000
 
-  # The custom video provider, Jitsi and ICS subscriptions all probe an
-  # arbitrary user-supplied host (raw URL, redirects followed), unlike the
-  # other buckets which only ever reach a server the operator configured or
+  # The custom video provider, Jitsi, Nextcloud Talk and ICS subscriptions all
+  # probe an arbitrary user-supplied host (raw URL, redirects followed), unlike
+  # the other buckets which only ever reach a server the operator configured or
   # one fixed provider host. Give them the tightest budget of the bunch, over
   # the same window as everything else.
   @arbitrary_host_connection_test_limit 5
@@ -48,6 +48,7 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
           | :custom
           | :kmeet
           | :jitsi
+          | :nextcloud_talk
           | :ics_url
           | :oauth
           | :discovery
@@ -91,12 +92,17 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
   defp bucket_info(:custom), do: {"custom_video_connection", "Custom video connection test"}
   defp bucket_info(:kmeet), do: {"kmeet_connection", "kMeet connection test"}
   defp bucket_info(:jitsi), do: {"jitsi_connection", "Jitsi connection test"}
+
+  defp bucket_info(:nextcloud_talk),
+    do: {"nextcloud_talk_connection", "Nextcloud Talk connection test"}
+
   defp bucket_info(:ics_url), do: {"ics_url_connection", "Calendar subscription test"}
   defp bucket_info(:oauth), do: {"oauth_connection", "OAuth connection test"}
   defp bucket_info(:discovery), do: {"calendar_discovery", "calendar discovery"}
 
   defp bucket_limit(:custom), do: @arbitrary_host_connection_test_limit
   defp bucket_limit(:jitsi), do: @arbitrary_host_connection_test_limit
+  defp bucket_limit(:nextcloud_talk), do: @arbitrary_host_connection_test_limit
   defp bucket_limit(:ics_url), do: @arbitrary_host_connection_test_limit
   defp bucket_limit(:discovery), do: @discovery_limit
   defp bucket_limit(_bucket), do: @connection_test_limit

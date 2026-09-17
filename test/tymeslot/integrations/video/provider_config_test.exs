@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfigTest do
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.JitsiProvider
   alias Tymeslot.Integrations.Video.Providers.KmeetProvider
+  alias Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
 
   describe "parse/1" do
     test "accepts a valid provider atom" do
@@ -153,6 +154,26 @@ defmodule Tymeslot.Integrations.Video.ProviderConfigTest do
     test "both resolve to a provider module" do
       assert ProviderConfig.get_provider_module(:kmeet) == KmeetProvider
       assert ProviderConfig.get_provider_module(:jitsi) == JitsiProvider
+    end
+  end
+
+  describe "nextcloud_talk registration" do
+    test "parses from its string form and is not OAuth" do
+      assert {:ok, :nextcloud_talk} = ProviderConfig.parse_known("nextcloud_talk")
+      refute ProviderConfig.oauth_provider?(:nextcloud_talk)
+    end
+
+    test "carries its display name and module" do
+      assert ProviderConfig.display_name(:nextcloud_talk) == "Nextcloud Talk"
+      assert ProviderConfig.get_provider_module(:nextcloud_talk) == NextcloudTalkProvider
+    end
+
+    test "is accepted by the changeset's provider constraint" do
+      assert "nextcloud_talk" in ProviderConfig.provider_constraint_list_all()
+    end
+
+    test "runs its API calls behind the circuit breaker" do
+      assert ProviderConfig.circuit_breaker_enabled?(:nextcloud_talk)
     end
   end
 end
