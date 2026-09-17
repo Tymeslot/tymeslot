@@ -183,6 +183,50 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
     end
   end
 
+  describe "edit modal — custom meeting URL template syntax" do
+    @tag :capture_log
+    test "saving a malformed meeting ID placeholder is refused and keeps the stored link", %{
+      conn: conn,
+      user: user
+    } do
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "custom",
+          name: "Per-booking Jitsi",
+          base_url: nil,
+          custom_meeting_url: "https://meet.jit.si/{{meeting_id}}",
+          provider_account_id: "https://meet.jit.si/{{meeting_id}}"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element(
+        "button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#edit-video-modal']"
+      )
+      |> render_click()
+
+      view
+      |> form("#edit-video-integration-form", %{
+        "integration" => %{
+          "name" => "Per-booking Jitsi",
+          "custom_meeting_url" => "https://meet.jit.si/{{Meeting_ID}}"
+        }
+      })
+      |> render_submit()
+
+      assert has_element?(
+               view,
+               "#edit-video-integration-form p.form-error",
+               "Use lowercase: {{meeting_id}} not {{MEETING_ID}} or {{Meeting_Id}}"
+             )
+
+      assert Repo.get!(VideoIntegrationSchema, integration.id).custom_meeting_url ==
+               "https://meet.jit.si/{{meeting_id}}"
+    end
+  end
+
   describe "edit modal — forged extra field" do
     @tag :capture_log
     test "an unrecognised extra param is dropped instead of crashing the save", %{

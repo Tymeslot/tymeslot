@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
   use TymeslotWeb.LiveCase, async: true
   @moduletag :utils
+  @moduletag :video
 
   import Mox
   import Tymeslot.Factory
@@ -184,6 +185,51 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
         |> render_submit()
 
       assert html =~ "A video integration with this configuration already exists"
+    end
+
+    test "refuses a custom video link with a malformed meeting ID placeholder", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='custom']")
+      |> render_click()
+
+      view
+      |> form("#custom-video-config-modal form", %{
+        "integration" => %{
+          "name" => "Per-booking Jitsi",
+          "custom_meeting_url" => "https://meet.jit.si/{meeting_id}"
+        }
+      })
+      |> render_submit()
+
+      assert has_element?(
+               view,
+               "#custom-video-config-modal p.form-error",
+               "Use double curly brackets: {{meeting_id}} not {meeting_id}"
+             )
+
+      assert Repo.all(VideoIntegrationSchema) == []
+    end
+
+    test "still adds a custom video link that is a static room", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='custom']")
+      |> render_click()
+
+      view
+      |> form("#custom-video-config-modal form", %{
+        "integration" => %{
+          "name" => "Team Room",
+          "custom_meeting_url" => "https://meet.jit.si/my-room"
+        }
+      })
+      |> render_submit()
+
+      assert [%{custom_meeting_url: "https://meet.jit.si/my-room"}] =
+               Repo.all(VideoIntegrationSchema)
     end
 
     test "initiates google meet oauth", %{conn: conn} do

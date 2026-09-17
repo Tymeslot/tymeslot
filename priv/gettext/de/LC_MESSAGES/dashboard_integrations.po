@@ -1174,3 +1174,8 @@ msgstr "Zoom fehlt die für das Erstellen von Meetings erforderliche Berechtigun
 #, elixir-autogen, elixir-format
 msgid "Zoom is missing the permission needed to reschedule meetings. Please reconnect your Zoom account."
 msgstr "Zoom fehlt die für das Verschieben von Meetings erforderliche Berechtigung. Bitte verbinden Sie Ihr Zoom-Konto erneut."
+
+#: lib/tymeslot/integrations/video/template_syntax.ex
+#, elixir-autogen, elixir-format
+msgid "Write the template variable exactly as {{meeting_id}}"
+msgstr "Schreiben Sie die Vorlagenvariable genau als {{meeting_id}}"

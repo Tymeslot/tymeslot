@@ -1174,3 +1174,8 @@ msgstr "A Zoom manca il permesso necessario per creare le riunioni. Ricollega il
 #, elixir-autogen, elixir-format
 msgid "Zoom is missing the permission needed to reschedule meetings. Please reconnect your Zoom account."
 msgstr "A Zoom manca il permesso necessario per riprogrammare le riunioni. Ricollega il tuo account Zoom."
+
+#: lib/tymeslot/integrations/video/template_syntax.ex
+#, elixir-autogen, elixir-format
+msgid "Write the template variable exactly as {{meeting_id}}"
+msgstr "Scrivi la variabile di template esattamente come {{meeting_id}}"
