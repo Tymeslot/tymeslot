@@ -16,6 +16,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
 
   import Mox
 
+  alias Ecto.Changeset
   alias Tymeslot.CalendarGrid
   alias Tymeslot.ExchangeFixtures
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -250,6 +251,49 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
 
       assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(destination.id, uid)
       assert row.provider_calendar_id == "/dest/home/"
+    end
+
+    # Rediscovery can leave a booking calendar id that matches no collection,
+    # which resolves no path. The CalDAV create writes to the first discovered
+    # collection regardless, so the row has to follow it: filing the row under
+    # a null is rejected by the column, and the event would sit on the
+    # destination while the organiser is told nothing moved.
+    test "files a CalDAV destination whose booking calendar id matches nothing under the first collection",
+         %{user: user, source: source, destination: destination} do
+      destination =
+        destination
+        |> Changeset.change(%{
+          default_booking_calendar_id: "/dest/deleted/",
+          calendar_list: [%{id: "/dest/home/", path: "/dest/home/", name: "Home"}]
+        })
+        |> Repo.update!()
+
+      event = insert_event(source)
+      expect_create(&created/1)
+      expect_delete(:ok)
+
+      assert {:ok, %{uid: uid}} = move(user, event, destination)
+
+      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(destination.id, uid)
+      assert row.provider_calendar_id == "/dest/home/"
+    end
+
+    test "refuses a destination with no collection at all, writing nothing", %{
+      user: user,
+      source: source,
+      destination: destination
+    } do
+      destination =
+        destination
+        |> Changeset.change(%{calendar_paths: [], calendar_list: []})
+        |> Repo.update!()
+
+      event = insert_event(source)
+
+      assert {:error, :no_destination_calendar} = move(user, event, destination)
+
+      assert provider_calls() == []
+      assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(source.id, event.uid)
     end
 
     test "files a Google destination under the chosen calendar, keyed by Google's id", %{

@@ -117,13 +117,17 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   result also carries `:source`: `:queued_delete` when the delete will be
   replayed on the next sync, `:left_behind` when the original is still on its
   calendar. Returns `{:error, reason}`, with nothing written anywhere, when
-  the event cannot be moved or the destination refused it.
+  the event cannot be moved or the destination refused it, including
+  `{:error, :no_destination_calendar}` when the destination integration has no
+  calendar to write to.
   """
   @spec move_event(pos_integer(), map(), destination()) ::
-          {:ok, moved()} | {:error, :recurring_event | :invalid_timing | term()}
+          {:ok, moved()}
+          | {:error, :recurring_event | :no_destination_calendar | :invalid_timing | term()}
   def move_event(user_id, event, %{integration: integration} = destination) do
     with :ok <- ensure_movable(event),
          moved = moved_event(event, integration, Map.get(destination, :calendar_id)),
+         :ok <- ensure_destination(moved),
          {:ok, payload} <- ProviderPayload.from_event(moved),
          {:ok, created} <- create_on_destination(user_id, moved, payload) do
       moved = %{moved | uid: created_uid(created, moved.uid)}
@@ -156,15 +160,26 @@ defmodule Tymeslot.CalendarGrid.EventMove do
 
   # The CalDAV family writes every new event to the integration's booking
   # collection whatever calendar was asked for, so the row is filed under the
-  # path actually written to. The "primary" placeholder is only meaningful
-  # to the OAuth providers, where it names the account's own calendar.
+  # path actually written to. `booking_calendar_path/1` resolves nothing when
+  # the stored booking calendar id matches no discovered collection, which is
+  # the state a rediscovery leaves behind; the create falls back to the first
+  # discovered collection, so the row follows it rather than being filed under
+  # a null the column rejects. The "primary" placeholder is only meaningful to
+  # the OAuth providers, where it names the account's own calendar.
   defp destination_calendar_id(integration, calendar_id) do
     if integration.provider in Calendar.caldav_based_provider_strings() do
-      Calendar.booking_calendar_path(integration)
+      Calendar.booking_calendar_path(integration) || List.first(integration.calendar_paths)
     else
       calendar_id || integration.default_booking_calendar_id || "primary"
     end
   end
+
+  # An integration whose discovery left no collection at all has nowhere to
+  # write to. Refusing before the create keeps a destination the cache row
+  # cannot name from accepting the event anyway, which would leave a copy on
+  # the destination while the organiser is told nothing moved.
+  defp ensure_destination(%{provider_calendar_id: nil}), do: {:error, :no_destination_calendar}
+  defp ensure_destination(_moved), do: :ok
 
   defp create_on_destination(user_id, moved, payload) do
     payload =
