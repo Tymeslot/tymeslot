@@ -69,8 +69,11 @@ defmodule Tymeslot.Bookings.CreateSharedAvailabilityTest do
                skip_calendar_check: true
              )
 
-    emails = meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.email)
-    assert emails == [ctx.michael.email, "friend@example.com"]
+    # Guests of one booking are inserted within the same second, so the order
+    # they are listed in is not defined; that named users come first is pinned
+    # by `SharedAvailability.merge_guest_emails/2`'s own test.
+    emails = meeting.id |> Guests.list_for_meeting() |> Enum.map(& &1.email) |> Enum.sort()
+    assert emails == Enum.sort([ctx.michael.email, "friend@example.com"])
   end
 
   test "refuses a time outside the named user's working hours", ctx do
