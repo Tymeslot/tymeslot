@@ -16,9 +16,9 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.RedirectLocation
+  alias Tymeslot.Integrations.Video.Providers.SsrfOptions
   alias Tymeslot.Integrations.Video.TemplateConfig
   alias Tymeslot.Security.SsrfBlockedError
-  alias Tymeslot.Security.SsrfGuard
 
   # The host is user-supplied, so every hop is classified in its own right.
   # `ssrf_protect: true` hands the private-address decision to `SsrfGuard`,
@@ -259,19 +259,13 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
 
   defp probe_deadline, do: System.monotonic_time(:millisecond) + @overall_budget_ms
 
-  # Built per call rather than as a module attribute: the opt-out is read from
-  # application config at runtime, and an attribute would freeze it at compile
-  # time. `budget_ms` shrinks the per-request timeout to whatever remains of
-  # the overall probe deadline, capped at the original 3s.
+  # `budget_ms` shrinks the per-request timeout to whatever remains of the
+  # overall probe deadline, capped at the original 3s.
   defp probe_opts(budget_ms) do
     per_request_timeout = min(3_000, budget_ms)
 
-    [
-      receive_timeout: per_request_timeout,
-      connect_options: [timeout: per_request_timeout],
-      ssrf_protect: true,
-      ssrf_allow_private: SsrfGuard.allow_private_for_video?()
-    ]
+    [receive_timeout: per_request_timeout, connect_options: [timeout: per_request_timeout]] ++
+      SsrfOptions.request_options()
   end
 
   defp check_reachable(_url, hops_left, _deadline) when hops_left < 0 do
