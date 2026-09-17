@@ -62,6 +62,35 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
                })
     end
 
+    test "refuses the same account written with a capitalised host and its default port", %{
+      user: user
+    } do
+      insert_talk_integration(user)
+
+      assert {:error, :duplicate_integration} =
+               Video.create_integration(user.id, :nextcloud_talk, %{
+                 name: "Again",
+                 base_url: "https://Cloud.Example.com:443",
+                 client_id: "organiser",
+                 client_secret: @app_password
+               })
+    end
+
+    test "proves and saves the app password without the spaces around it", %{user: user} do
+      expect_capabilities(@server, "organiser", @app_password, talk_capabilities())
+
+      assert {:ok, integration} =
+               Video.create_integration(user.id, :nextcloud_talk, %{
+                 name: "Team Talk",
+                 base_url: @server,
+                 client_id: "organiser",
+                 client_secret: " " <> @app_password <> " "
+               })
+
+      assert {:ok, %{client_secret: @app_password}} =
+               VideoIntegrationQueries.get_for_user(integration.id, user.id)
+    end
+
     test "refuses a missing app password without contacting the server", %{user: user} do
       assert {:error, "App password is required"} =
                Video.create_integration(user.id, :nextcloud_talk, %{
@@ -133,6 +162,100 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
 
       assert {:ok, %{client_secret: @app_password, needs_reauth: true}} =
                VideoIntegrationQueries.get_for_user(integration.id, user.id)
+    end
+
+    test "a refused new app password leaves an unflagged integration unflagged", %{user: user} do
+      integration = insert_talk_integration(user)
+
+      expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 401, body: ""}}
+      end)
+
+      assert {:error, {:unauthorized, _message}} =
+               Video.update_integration(user.id, integration.id, dialog_attrs("Wrong"))
+
+      assert {:ok, %{client_secret: @app_password, needs_reauth: false}} =
+               VideoIntegrationQueries.get_for_user(integration.id, user.id)
+    end
+
+    test "a new app password is proven and saved without the spaces around it", %{user: user} do
+      integration = insert_talk_integration(user, client_secret: "Revoked")
+      expect_capabilities(@server, "organiser", "New-App-Password", talk_capabilities())
+
+      assert {:ok, _updated} =
+               Video.update_integration(
+                 user.id,
+                 integration.id,
+                 dialog_attrs(" New-App-Password ")
+               )
+
+      assert {:ok, %{client_secret: "New-App-Password"}} =
+               VideoIntegrationQueries.get_for_user(integration.id, user.id)
+    end
+
+    test "an app password that is not text is refused without contacting the server", %{
+      user: user
+    } do
+      integration = insert_talk_integration(user)
+
+      assert {:error, "App password is required"} =
+               Video.update_integration(user.id, integration.id, %{
+                 dialog_attrs("")
+                 | client_secret: 12_345
+               })
+    end
+
+    # Nextcloud moved to a new address: the old host refuses the app password,
+    # the organiser enters the new server and leaves the password blank, and
+    # the server proves it. That proof is the reconnect.
+    test "a proven new server address clears the reconnect flag", %{user: user} do
+      integration = insert_talk_integration(user, needs_reauth: true)
+
+      expect_capabilities(
+        "https://talk.example.org",
+        "organiser",
+        @app_password,
+        talk_capabilities()
+      )
+
+      assert {:ok, updated} =
+               Video.update_integration(user.id, integration.id, %{
+                 dialog_attrs("")
+                 | base_url: "https://talk.example.org"
+               })
+
+      refute updated.needs_reauth
+    end
+
+    test "a server and login already connected in another integration are refused without contacting the server",
+         %{user: user} do
+      integration = insert_talk_integration(user)
+
+      insert_talk_integration(user,
+        base_url: "https://talk.example.org",
+        is_active: false
+      )
+
+      assert {:error, :duplicate_integration} =
+               Video.update_integration(user.id, integration.id, %{
+                 dialog_attrs("")
+                 | base_url: "https://Talk.example.org/"
+               })
+
+      assert {:ok, %{base_url: @server}} =
+               VideoIntegrationQueries.get_for_user(integration.id, user.id)
+    end
+
+    test "a submitted account key is ignored", %{user: user} do
+      integration = insert_talk_integration(user)
+
+      assert {:ok, updated} =
+               Video.update_integration(user.id, integration.id, %{
+                 name: "Renamed",
+                 provider_account_id: "https://elsewhere.example.com||someone"
+               })
+
+      assert updated.provider_account_id == @server <> "||organiser"
     end
 
     test "a new server address is proven with the stored credentials and moves the account key",
@@ -236,16 +359,19 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
   end
 
   defp insert_talk_integration(user, overrides \\ []) do
+    server = Keyword.get(overrides, :base_url, @server)
+
     insert(:video_integration,
       user: user,
       name: "Team Talk",
       provider: "nextcloud_talk",
-      base_url: @server,
+      base_url: server,
       client_id_encrypted: Encryption.encrypt("organiser"),
       client_secret_encrypted:
         Encryption.encrypt(Keyword.get(overrides, :client_secret, @app_password)),
-      provider_account_id: @server <> "||organiser",
-      needs_reauth: Keyword.get(overrides, :needs_reauth, false)
+      provider_account_id: server <> "||organiser",
+      needs_reauth: Keyword.get(overrides, :needs_reauth, false),
+      is_active: Keyword.get(overrides, :is_active, true)
     )
   end
 

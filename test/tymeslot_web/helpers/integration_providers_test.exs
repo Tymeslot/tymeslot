@@ -38,6 +38,11 @@ defmodule TymeslotWeb.Helpers.IntegrationProvidersTest do
                %{client_secret: "Refused"}
     end
 
+    # A server throttling Tymeslot is no fault of any one field.
+    test "puts a :throttled refusal on the form as a whole" do
+      assert IntegrationProviders.reason_to_form_errors({:throttled, "Wait"}) == %{base: "Wait"}
+    end
+
     test "falls back to base_url for an untagged message" do
       assert %{base_url: "Some weird error"} =
                IntegrationProviders.reason_to_form_errors("Some weird error")

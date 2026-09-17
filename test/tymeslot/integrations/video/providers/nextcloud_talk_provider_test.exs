@@ -113,22 +113,6 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
     end
   end
 
-  describe "account_attrs/1" do
-    test "trims the server and login and keys the account on both" do
-      attrs =
-        NextcloudTalkProvider.account_attrs(%{
-          name: "Team Talk",
-          base_url: " https://cloud.example.com/ ",
-          client_id: " organiser "
-        })
-
-      assert attrs.base_url == @server
-      assert attrs.client_id == "organiser"
-      assert attrs.provider_account_id == "https://cloud.example.com||organiser"
-      assert attrs.name == "Team Talk"
-    end
-  end
-
   describe "create_meeting_room/1" do
     test "creates a public conversation named after the booking, its lobby lifting at the start" do
       expect(HTTPClientMock, :request, fn :post, @room_api, body, _headers, _opts ->
@@ -362,10 +346,10 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
         {:ok, %Req.Response{status: 429, body: ""}}
       end)
 
-      assert {:error, {:unreachable, message}} =
+      assert {:error, {:throttled, message}} =
                NextcloudTalkProvider.perform_connection_test(@config)
 
-      assert message =~ "Wait a few minutes"
+      assert message =~ "Wait a few minutes before trying again"
     end
 
     test "asks for the address the browser ends up on after a redirect" do

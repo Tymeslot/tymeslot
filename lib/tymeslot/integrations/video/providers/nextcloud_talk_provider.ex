@@ -30,15 +30,20 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   throttled for every Tymeslot user of that Nextcloud. So a 401 is never
   retried: it flags the integration `needs_reauth`, and while that flag is set
   this module refuses to send the stored credentials anywhere, since
-  `build_config/3` carries the flag into every config. Saving a new app
-  password, which is proven against the server first, clears it.
+  `build_config/3` carries the flag into every config. Saving an edit that
+  changes the server, login name or app password clears it, since such an edit
+  is proven against the server first; an edit that changes none of them never
+  does.
 
   A 429, which the client reports as `:rate_limited`, is Nextcloud already
   throttling the calling address. It is not the credential's fault, so nothing
   is flagged, but it is not a fault worth retrying at once either: room
   creation passes `:rate_limited` on, which the room job snoozes on a growing
-  interval, and a connection test asks the user to wait. A reschedule or
-  cancellation passes it on as well, and the sync job snoozes it the same way.
+  interval, and a connection test reports it as `{:throttled, message}`, asking
+  the user to wait. That tag is its own, not the `{:rate_limited, message}` of
+  Tymeslot's own connection-test limiter, which means the test never ran. A
+  reschedule or cancellation passes it on as well, and the sync job snoozes it
+  the same way.
 
   The credentials never enter `RoomData.provider_data` or the meeting
   metadata; they travel only in `RoomData.provider_config`, which is never
@@ -238,21 +243,50 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   end
 
   @doc """
-  Trims a new or edited integration's server address and login name, and
-  derives the key that stops one Nextcloud account being connected twice:
-  `<server>||<login>`, the shape the CalDAV integrations use.
+  Normalises a new or edited integration's server address, login name and app
+  password, and derives the key that stops one Nextcloud account being
+  connected twice: `<server>||<login>`, the shape the CalDAV integrations use.
+
+  All three are trimmed. The server address also loses a trailing slash, its
+  host is lower-cased and a default port (443 for https, 80 for http) is
+  dropped, so the same server written two ways is one account. An app password
+  that is not text is left for `validate_config/1` to refuse.
   """
   @spec account_attrs(map()) :: map()
   def account_attrs(attrs) do
-    base_url = attrs |> Map.get(:base_url) |> trimmed() |> String.trim_trailing("/")
+    base_url = attrs |> Map.get(:base_url) |> trimmed() |> normalise_server()
     login = attrs |> Map.get(:client_id) |> trimmed()
 
-    Map.merge(attrs, %{
+    attrs
+    |> Map.merge(%{
       base_url: base_url,
       client_id: login,
       provider_account_id: account_id(base_url, login)
     })
+    |> trim_app_password()
   end
+
+  # Only an http or https address with a host is rewritten, and only in its
+  # scheme, host and port: a path keeps its case, and a query, fragment or login
+  # stays in place for `validate_config/1` to refuse. `URI.to_string/1` leaves
+  # out a port that is the scheme's default.
+  defp normalise_server(base_url) do
+    case URI.parse(base_url) do
+      %URI{scheme: scheme, host: host} = uri
+      when scheme in ["http", "https"] and is_binary(host) and host != "" ->
+        %URI{uri | host: String.downcase(host)}
+        |> URI.to_string()
+        |> String.trim_trailing("/")
+
+      _not_a_server ->
+        String.trim_trailing(base_url, "/")
+    end
+  end
+
+  defp trim_app_password(%{client_secret: app_password} = attrs) when is_binary(app_password),
+    do: %{attrs | client_secret: String.trim(app_password)}
+
+  defp trim_app_password(attrs), do: attrs
 
   defp create_conversation(config) do
     case Client.create_room(credentials(config), conversation_params(config)) do
@@ -458,10 +492,10 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   end
 
   defp connection_failure(:rate_limited, _config) do
-    {:unreachable,
+    {:throttled,
      dgettext(
        "dashboard_integrations",
-       "Nextcloud is refusing requests from Tymeslot for now, usually after too many failed logins. Wait a few minutes before testing again."
+       "Nextcloud is refusing requests from Tymeslot for now, usually after too many failed logins. Wait a few minutes before trying again."
      )}
   end
 

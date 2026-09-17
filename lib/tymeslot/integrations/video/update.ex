@@ -10,6 +10,8 @@ defmodule Tymeslot.Integrations.Video.Update do
 
   A Nextcloud Talk edit is proven against the server, as a new integration
   is, but only when its server, login name or app password actually changes.
+  Such a proven edit is the reconnect, so it clears `needs_reauth` even when
+  only the server changed; an edit that is not proven never does.
   """
 
   alias Plug.Crypto
@@ -21,16 +23,16 @@ defmodule Tymeslot.Integrations.Video.Update do
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
-  # What a Jitsi integration's provider validates. Its credentials are
-  # optional, so the changeset cannot enforce the pair or the secret length.
-  @jitsi_credential_fields [:client_id, :client_secret]
-  @jitsi_config_fields [:base_url | @jitsi_credential_fields]
+  # What a Jitsi or Nextcloud Talk integration connects with: a server of the
+  # organiser's choosing and a client id and secret. Jitsi's provider validates
+  # them, since its credentials are optional and the changeset cannot enforce
+  # the pair or the secret length; a Talk edit is proven with them.
+  @client_credential_fields [:client_id, :client_secret]
+  @server_config_fields [:base_url | @client_credential_fields]
 
-  # What a Nextcloud Talk integration signs in with, and what an edit to it
-  # can save: the account key follows from the server and login name.
-  @talk_credential_fields [:client_id, :client_secret]
-  @talk_config_fields [:base_url | @talk_credential_fields]
-  @talk_saved_fields [:provider_account_id | @talk_config_fields]
+  # What a Talk edit can save: the account key follows from the server and
+  # login name.
+  @talk_saved_fields [:provider_account_id | @server_config_fields]
 
   @doc """
   Updates the integration `id` owned by `user_id`.
@@ -67,17 +69,18 @@ defmodule Tymeslot.Integrations.Video.Update do
   # three. A blank login name or app password keeps the stored one, as a blank
   # Jitsi credential does; a blank server address is kept, for the provider to
   # refuse. Only a value that differs from the stored one after the provider's
-  # own trimming is kept as a change, together with the account key it implies,
+  # own normalising is kept as a change, together with the account key it implies,
   # and a submitted account key is never taken as given. Dropping the rest is
   # what keeps a rename or an unchanged resubmission from contacting the server
   # and from clearing a reconnect flag no new credential earned.
   defp effective_changes(%VideoIntegrationSchema{provider: "nextcloud_talk"} = integration, attrs) do
-    stored = integration |> Map.take(@talk_config_fields) |> NextcloudTalkProvider.account_attrs()
+    stored =
+      integration |> Map.take(@server_config_fields) |> NextcloudTalkProvider.account_attrs()
 
     submitted =
       attrs
-      |> Map.take(@talk_config_fields)
-      |> Map.reject(fn {field, value} -> field in @talk_credential_fields and blank?(value) end)
+      |> Map.take(@server_config_fields)
+      |> Map.reject(fn {field, value} -> field in @client_credential_fields and blank?(value) end)
 
     changes =
       stored
@@ -91,7 +94,10 @@ defmodule Tymeslot.Integrations.Video.Update do
 
   defp effective_changes(_integration, attrs), do: attrs
 
-  defp unchanged?(:client_secret, submitted, stored), do: same_credential?(submitted, stored)
+  defp unchanged?(:client_secret, submitted, stored) when is_binary(submitted),
+    do: same_credential?(submitted, stored)
+
+  defp unchanged?(:client_secret, _submitted, _stored), do: false
   defp unchanged?(_field, submitted, stored), do: submitted == stored
 
   defp save_update(
@@ -100,9 +106,21 @@ defmodule Tymeslot.Integrations.Video.Update do
        ) do
     VideoIntegrationQueries.update_removing_credentials(
       integration,
-      Map.drop(attrs, @jitsi_credential_fields),
-      @jitsi_credential_fields
+      Map.drop(attrs, @client_credential_fields),
+      @client_credential_fields
     )
+  end
+
+  # A Talk edit that still carries a server, login name or app password has
+  # been proven against the server, and that proof is the reconnect: it clears
+  # `needs_reauth` even when only the server changed, as when Nextcloud moved to
+  # a new address and the old one refused the app password.
+  defp save_update(%VideoIntegrationSchema{provider: "nextcloud_talk"} = integration, attrs) do
+    if talk_connection_changed?(attrs) do
+      update_with_credentials(integration, attrs)
+    else
+      VideoIntegrationQueries.update(integration, attrs)
+    end
   end
 
   defp save_update(integration, attrs) do
@@ -127,13 +145,13 @@ defmodule Tymeslot.Integrations.Video.Update do
          %{remove_token_authentication: true} = attrs
        ) do
     integration
-    |> jitsi_config_after_update(Map.drop(attrs, @jitsi_credential_fields))
-    |> Map.merge(Map.new(@jitsi_credential_fields, &{&1, nil}))
+    |> jitsi_config_after_update(Map.drop(attrs, @client_credential_fields))
+    |> Map.merge(Map.new(@client_credential_fields, &{&1, nil}))
     |> JitsiProvider.validate_config()
   end
 
   defp validate_update(%VideoIntegrationSchema{provider: "jitsi"} = integration, attrs) do
-    if Enum.any?(@jitsi_config_fields, &Map.has_key?(attrs, &1)) do
+    if Enum.any?(@server_config_fields, &Map.has_key?(attrs, &1)) do
       integration
       |> jitsi_config_after_update(attrs)
       |> JitsiProvider.validate_config()
@@ -144,18 +162,21 @@ defmodule Tymeslot.Integrations.Video.Update do
 
   # A changed server, login name or app password is proven against the server
   # before it is saved, as on creation, with the configuration the row will then
-  # hold. `Connection.probe/3` validates that configuration first, so a blank
-  # server address is refused without a request, and a refusal comes back
-  # worded as the connection test words it. The probe carries no integration id,
-  # so a refused new app password does not flag the row again.
+  # hold. As on creation, an account already connected comes first, so moving
+  # onto it spends no login attempt. `Connection.probe/3` validates the
+  # configuration before any request, so a blank server address is refused
+  # without one, and a refusal comes back worded as the connection test words
+  # it. The probe carries no integration id, so a refused new app password does
+  # not flag the row.
   defp validate_update(%VideoIntegrationSchema{provider: "nextcloud_talk"} = integration, attrs) do
-    if Enum.any?(@talk_config_fields, &Map.has_key?(attrs, &1)) do
+    if talk_connection_changed?(attrs) do
       config =
         integration
-        |> Map.take(@talk_config_fields)
-        |> Map.merge(Map.take(attrs, @talk_config_fields))
+        |> Map.take(@server_config_fields)
+        |> Map.merge(Map.take(attrs, @server_config_fields))
 
-      with {:ok, _message} <-
+      with :ok <- check_account_free(integration, attrs),
+           {:ok, _message} <-
              Connection.probe(:nextcloud_talk, config, {:user, integration.user_id}),
            do: :ok
     else
@@ -165,10 +186,30 @@ defmodule Tymeslot.Integrations.Video.Update do
 
   defp validate_update(_integration, _attrs), do: :ok
 
+  defp talk_connection_changed?(attrs),
+    do: Enum.any?(@server_config_fields, &Map.has_key?(attrs, &1))
+
+  # Active or not, as creation checks, so no two rows share an account key.
+  defp check_account_free(integration, %{provider_account_id: account_id}) do
+    case VideoIntegrationQueries.get_any_by_account_for_user(
+           integration.user_id,
+           integration.provider,
+           account_id
+         ) do
+      {:ok, %VideoIntegrationSchema{id: id}} when id != integration.id ->
+        {:error, :duplicate_integration}
+
+      _free_or_this_integration ->
+        :ok
+    end
+  end
+
+  defp check_account_free(_integration, _attrs), do: :ok
+
   defp jitsi_config_after_update(integration, attrs) do
     integration
-    |> Map.take(@jitsi_config_fields)
-    |> Map.merge(Map.take(attrs, @jitsi_config_fields), fn _field, stored, new ->
+    |> Map.take(@server_config_fields)
+    |> Map.merge(Map.take(attrs, @server_config_fields), fn _field, stored, new ->
       if blank?(new), do: stored, else: new
     end)
   end

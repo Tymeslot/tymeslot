@@ -124,7 +124,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkReauthTest do
 
     assert {:error, :rate_limited} = NextcloudTalkProvider.create_meeting_room(config)
 
-    assert {:error, {:unreachable, _message}} =
+    assert {:error, {:throttled, _message}} =
              NextcloudTalkProvider.perform_connection_test(config)
 
     refute Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
