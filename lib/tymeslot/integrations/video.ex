@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Video.Discovery
   alias Tymeslot.Integrations.Video.OAuth
   alias Tymeslot.Integrations.Video.ProviderConfig
+  alias Tymeslot.Integrations.Video.Providers.JitsiProvider
   alias Tymeslot.Integrations.Video.Rooms
   alias Tymeslot.Integrations.Video.Urls
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -28,7 +29,16 @@ defmodule Tymeslot.Integrations.Video do
 
   require Logger
 
-  @type provider :: :google_meet | :teams | :zoom | :mirotalk | :custom | :none | String.t()
+  @type provider ::
+          :google_meet
+          | :teams
+          | :zoom
+          | :mirotalk
+          | :custom
+          | :kmeet
+          | :jitsi
+          | :none
+          | String.t()
 
   @impl Tymeslot.Security.EncryptedStorage
   def encrypted_storage,
@@ -193,6 +203,27 @@ defmodule Tymeslot.Integrations.Video do
     attrs = Map.put(attrs, :provider_account_id, custom_url)
 
     with :ok <- check_no_duplicate(attrs) do
+      VideoIntegrationQueries.create(attrs)
+    end
+  end
+
+  # kMeet has exactly one host, so there is no account to key on. Leaving
+  # `provider_account_id` nil files the row under
+  # `unique_active_video_null_account_per_user`, which is precisely the
+  # "one active kMeet per user" rule we want.
+  defp do_create_integration(:kmeet, attrs) do
+    VideoIntegrationQueries.create(attrs)
+  end
+
+  # The server URL is the dedup key, so one user can connect several Jitsi
+  # servers but not the same one twice. The config is validated before
+  # anything is saved: a half-filled credential pair or a short secret would
+  # otherwise only surface when a later booking fails to get its video link.
+  defp do_create_integration(:jitsi, attrs) do
+    attrs = Map.put(attrs, :provider_account_id, attrs[:base_url])
+
+    with :ok <- JitsiProvider.validate_config(attrs),
+         :ok <- check_no_duplicate(attrs) do
       VideoIntegrationQueries.create(attrs)
     end
   end

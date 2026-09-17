@@ -84,7 +84,16 @@ defmodule Tymeslot.Integrations.Shared.ConnectionProbe do
   real external service.
   """
   @type bucket ::
-          :caldav | :nextcloud | :mirotalk | :custom | :ics_url | :oauth | :discovery | :unmetered
+          :caldav
+          | :nextcloud
+          | :mirotalk
+          | :custom
+          | :kmeet
+          | :jitsi
+          | :ics_url
+          | :oauth
+          | :discovery
+          | :unmetered
 
   @typedoc """
   Why `probe/1` refused to run the test. `{:rate_limited, message}` carries
