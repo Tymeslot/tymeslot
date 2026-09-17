@@ -355,6 +355,28 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   def rooms_deleted_after_meeting,
     do: Enum.map(@rooms_deleted_after_meeting, &Atom.to_string/1)
 
+  # Providers whose rooms hold the meeting's time or name on the provider's side
+  # (a Zoom meeting's start, a Talk conversation's lobby timer and name), so a
+  # reschedule has to be sent to the room. Every other provider's room is a
+  # link that stays right whatever the meeting's time.
+  @rooms_updated_on_reschedule [:zoom, :nextcloud_talk]
+
+  @doc """
+  Whether a provider's rooms hold the meeting's time or name, so a reschedule
+  must update the room on the provider. Accepts the atom or the stored string
+  form.
+  """
+  @spec rooms_updated_on_reschedule?(atom() | String.t()) :: boolean()
+  def rooms_updated_on_reschedule?(provider) when is_binary(provider) do
+    case Map.fetch(@provider_atoms, provider) do
+      {:ok, atom} -> rooms_updated_on_reschedule?(atom)
+      :error -> false
+    end
+  end
+
+  def rooms_updated_on_reschedule?(provider) when is_atom(provider),
+    do: provider in @rooms_updated_on_reschedule
+
   @doc """
   Gets the display name for a provider.
   """

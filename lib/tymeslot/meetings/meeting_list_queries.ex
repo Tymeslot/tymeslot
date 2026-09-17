@@ -134,6 +134,33 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   end
 
   @doc """
+  Returns the ids of up to `limit` meetings holding a provider-side room created
+  by the given integration that have not ended by `now` and are not cancelled,
+  soonest first.
+
+  Used to send each room the meeting's current time and name again once the
+  integration is reconnected, since changes made while it could not reach the
+  provider were dropped. Ended meetings are left to the clean-up jobs, and a
+  cancelled meeting's room is deleted rather than updated.
+  """
+  @spec list_upcoming_ids_with_video_room_for_integration(
+          pos_integer(),
+          DateTime.t(),
+          pos_integer()
+        ) :: [String.t()]
+  def list_upcoming_ids_with_video_room_for_integration(integration_id, %DateTime{} = now, limit) do
+    Meeting
+    |> where([m], m.video_integration_id == ^integration_id)
+    |> where([m], not is_nil(m.video_room_id))
+    |> where([m], m.status != "cancelled")
+    |> upcoming(now)
+    |> order_by([m], asc: m.start_time)
+    |> limit(^limit)
+    |> select([m], m.id)
+    |> Repo.all()
+  end
+
+  @doc """
   Returns cancelled meetings that still hold a provider-side room.
 
   Successful provider deletion clears `video_room_id`, so a cancelled meeting

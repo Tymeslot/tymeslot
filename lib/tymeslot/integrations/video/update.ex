@@ -16,6 +16,12 @@ defmodule Tymeslot.Integrations.Video.Update do
   there means entering the app password again, so a moved Nextcloud is
   reconnected by entering its new address together with the app password. A
   new subfolder on the same server keeps the stored one.
+
+  A reschedule made while the integration needed reconnecting could not be
+  sent to its rooms, so a proven reconnect sends every upcoming meeting's room
+  its current time and name again. An unproven clear never does: those
+  updates would go out with credentials nothing has shown to work, and on a
+  self-hosted server each refusal counts against its brute-force protection.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -24,10 +30,15 @@ defmodule Tymeslot.Integrations.Video.Update do
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Video.AttrsCasting
   alias Tymeslot.Integrations.Video.Connection
+  alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.JitsiProvider
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.Meetings.MeetingListQueries
+  alias Tymeslot.Workers.VideoSyncWorker
+
+  require Logger
 
   # What a Jitsi or Nextcloud Talk integration connects with: a server of the
   # organiser's choosing and a client id and secret. Jitsi's provider validates
@@ -39,6 +50,10 @@ defmodule Tymeslot.Integrations.Video.Update do
   # What a Talk edit can save: the account key follows from the server and
   # login name.
   @talk_saved_fields [:provider_account_id | @server_config_fields]
+
+  # How many upcoming meetings a proven reconnect re-sends to their rooms, far
+  # more than one integration holds in practice.
+  @resync_limit 500
 
   @doc """
   Updates the integration `id` owned by `user_id`.
@@ -135,7 +150,10 @@ defmodule Tymeslot.Integrations.Video.Update do
   # requires).
   defp save_update(%VideoIntegrationSchema{provider: "nextcloud_talk"} = integration, attrs) do
     if talk_connection_changed?(attrs) do
-      update_with_credentials(integration, attrs)
+      with {:ok, updated} = ok <- update_with_credentials(integration, attrs) do
+        resync_rooms_after_proven_reconnect(integration, updated)
+        ok
+      end
     else
       VideoIntegrationQueries.update(integration, attrs)
     end
@@ -275,6 +293,45 @@ defmodule Tymeslot.Integrations.Video.Update do
     with {:ok, updated} = ok <- VideoIntegrationQueries.update_credentials(integration, attrs) do
       HealthCheck.mark_user_recovered(:video, updated.id)
       ok
+    end
+  end
+
+  # Only for an integration that needed reconnecting, whose reschedules were
+  # dropped while it did, and only once the saved row no longer needs it. The
+  # jobs are queued after the write has committed, so each one reads the
+  # reconnected integration. Re-sending a room its unchanged time and name is
+  # harmless, which is what lets every upcoming room be queued rather than only
+  # those that moved. A job still waiting to run for a meeting already covers
+  # it, since it reads the meeting when it runs.
+  defp resync_rooms_after_proven_reconnect(
+         %VideoIntegrationSchema{needs_reauth: true, id: id, provider: provider},
+         %VideoIntegrationSchema{needs_reauth: false}
+       ) do
+    if ProviderConfig.rooms_updated_on_reschedule?(provider) do
+      id
+      |> MeetingListQueries.list_upcoming_ids_with_video_room_for_integration(
+        DateTime.utc_now(),
+        @resync_limit
+      )
+      |> Enum.each(&enqueue_room_update(&1, id))
+    end
+
+    :ok
+  end
+
+  defp resync_rooms_after_proven_reconnect(_before, _after), do: :ok
+
+  defp enqueue_room_update(meeting_id, integration_id) do
+    case VideoSyncWorker.enqueue(meeting_id, "update") do
+      {:ok, _status} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to queue a room update after the integration was reconnected",
+          meeting_id: meeting_id,
+          integration_id: integration_id,
+          reason: inspect(reason)
+        )
     end
   end
 

@@ -29,6 +29,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   alias Tymeslot.Bookings.Orchestrator
   alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.Encryption
@@ -41,6 +42,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   @room_path "/ocs/v2.php/apps/spreed/api/v4/room"
   @login "organiser"
   @app_password "Abcde-Fghij-Klmno-Pqrst-Uvwxy"
+  @new_app_password "Zyxwv-Utsrq-Ponml-Kjihg-Fedcb"
   @timezone "Europe/Berlin"
   @token "abc123xy"
 
@@ -286,6 +288,63 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     assert %{status: "cancelled", video_room_id: @token} = Repo.reload!(meeting)
   end
 
+  test "a reschedule made while the app password was refused reaches the conversation once the organiser reconnects",
+       %{user: user} do
+    server = server("reconnected")
+    integration = insert_talk_integration(user, server)
+    meeting = book_with_conversation(user, integration, server)
+    new_start = DateTime.add(meeting.start_time, -1, :day)
+
+    # The app password is revoked: the first request refused flags the
+    # integration.
+    assert {:ok, _rescheduled} =
+             Reschedule.execute(meeting.uid, reschedule_params(new_start), %{}, user.id)
+
+    nextcloud_answers([{401, ""}])
+    assert %{discard: 1, failure: 0} = drain_video_rooms()
+    assert [{:put, _lobby_url, _lobby}] = requests()
+    assert Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
+
+    # A guest moves the booking again while the integration waits to be
+    # reconnected. Nextcloud is not asked, and nothing is left to retry.
+    newer_start = DateTime.add(new_start, 2, :hour)
+
+    assert {:ok, _rescheduled} =
+             Reschedule.execute(meeting.uid, reschedule_params(newer_start), %{}, user.id)
+
+    assert %{discard: 1, failure: 0} = drain_video_rooms()
+    assert requests() == []
+    refute_enqueued(worker: VideoSyncWorker)
+
+    # The organiser enters a new app password in the edit dialog, which is
+    # proven against the server before it is saved.
+    nextcloud_answers([{200, talk_capabilities()}])
+
+    assert {:ok, %{needs_reauth: false}} =
+             Video.update_integration(user.id, integration.id, %{
+               name: "Nextcloud Talk",
+               base_url: server,
+               client_id: @login,
+               client_secret: @new_app_password
+             })
+
+    assert [{:get, capabilities_url, nil}] = requests(@new_app_password)
+    assert capabilities_url == server <> "/ocs/v2.php/cloud/capabilities"
+    assert_enqueued(worker: VideoSyncWorker, args: sync_args(meeting, "update"))
+
+    # The queued update moves the lobby to the booking's current start and
+    # renames the conversation, signed in with the new app password.
+    nextcloud_answers([{200, ocs(%{})}, {200, ocs([])}])
+    assert %{success: 1, failure: 0, discard: 0} = drain_video_rooms()
+
+    assert requests(@new_app_password) == [
+             {:put, server <> @room_path <> "/" <> @token <> "/webinar/lobby",
+              %{"state" => 1, "timer" => DateTime.to_unix(newer_start)}},
+             {:put, server <> @room_path <> "/" <> @token,
+              %{"roomName" => "Talk consultation with Ada Lovelace"}}
+           ]
+  end
+
   # ----- the Nextcloud server -----
 
   # Queues Nextcloud's answers to the next requests, in order. Every request is
@@ -302,19 +361,19 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   end
 
   # The requests Nextcloud received since the last call, in order. Each must
-  # have signed in with the integration's login name and app password.
-  defp requests(acc \\ []) do
+  # have signed in with the integration's login name and `app_password`.
+  defp requests(app_password \\ @app_password, acc \\ []) do
     receive do
       {:nextcloud, method, url, body, headers} ->
-        assert_signed_in(headers)
-        requests([{method, url, body} | acc])
+        assert_signed_in(headers, app_password)
+        requests(app_password, [{method, url, body} | acc])
     after
       0 -> Enum.reverse(acc)
     end
   end
 
-  defp assert_signed_in(headers) do
-    assert {"Authorization", "Basic " <> Base.encode64(@login <> ":" <> @app_password)} in headers
+  defp assert_signed_in(headers, app_password) do
+    assert {"Authorization", "Basic " <> Base.encode64(@login <> ":" <> app_password)} in headers
     assert {"OCS-APIRequest", "true"} in headers
   end
 
@@ -322,6 +381,14 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   defp decode(body), do: Jason.decode!(body)
 
   defp ocs(data), do: Jason.encode!(%{"ocs" => %{"meta" => %{"status" => "ok"}, "data" => data}})
+
+  defp talk_capabilities do
+    ocs(%{
+      "capabilities" => %{
+        "spreed" => %{"version" => "25.0.0", "features" => ["conversation-creation-all"]}
+      }
+    })
+  end
 
   defp answer_body({:ocs, data}), do: ocs(data)
   defp answer_body(:empty), do: ""

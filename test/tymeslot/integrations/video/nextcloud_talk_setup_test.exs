@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
   """
 
   use Tymeslot.DataCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :integrations
 
@@ -17,6 +18,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Workers.VideoSyncWorker
 
   setup :verify_on_exit!
 
@@ -150,8 +152,45 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
                VideoIntegrationQueries.get_for_user(integration.id, user.id)
     end
 
+    # Reschedules made while the app password was refused never reached their
+    # conversations, so the proven reconnect sends every upcoming one its
+    # current time again. Ended and cancelled meetings are the clean-up's.
+    test "a proven reconnect queues a room update for each upcoming meeting", %{user: user} do
+      integration = insert_talk_integration(user, needs_reauth: true, client_secret: "Revoked")
+      upcoming = insert_meeting_with_room(integration, 2)
+      running = insert_meeting_with_room(integration, 0)
+      insert_meeting_with_room(integration, -2)
+      insert_meeting_with_room(integration, 3, status: "cancelled")
+
+      insert_meeting_with_room(
+        insert_talk_integration(user, base_url: "https://b.example.com"),
+        4
+      )
+
+      expect_capabilities(@server, "organiser", "New-App-Password", talk_capabilities())
+
+      assert {:ok, _updated} =
+               Video.update_integration(user.id, integration.id, dialog_attrs("New-App-Password"))
+
+      assert queued_room_updates() == Enum.sort([upcoming.id, running.id])
+    end
+
+    test "a proven new app password on a connected integration queues no room update", %{
+      user: user
+    } do
+      integration = insert_talk_integration(user, client_secret: "Old")
+      insert_meeting_with_room(integration, 2)
+      expect_capabilities(@server, "organiser", "New-App-Password", talk_capabilities())
+
+      assert {:ok, _updated} =
+               Video.update_integration(user.id, integration.id, dialog_attrs("New-App-Password"))
+
+      assert queued_room_updates() == []
+    end
+
     test "a refused app password leaves the stored one and the flag in place", %{user: user} do
       integration = insert_talk_integration(user, needs_reauth: true)
+      insert_meeting_with_room(integration, 2)
 
       expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 401, body: ""}}
@@ -162,6 +201,8 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
 
       assert {:ok, %{client_secret: @app_password, needs_reauth: true}} =
                VideoIntegrationQueries.get_for_user(integration.id, user.id)
+
+      assert queued_room_updates() == []
     end
 
     test "a refused new app password leaves an unflagged integration unflagged", %{user: user} do
@@ -343,6 +384,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
 
     test "a blank app password keeps the stored one and makes no server call", %{user: user} do
       integration = insert_talk_integration(user, needs_reauth: true)
+      insert_meeting_with_room(integration, 2)
 
       assert {:ok, updated} =
                Video.update_integration(user.id, integration.id, %{
@@ -355,6 +397,8 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
 
       assert {:ok, %{client_secret: @app_password}} =
                VideoIntegrationQueries.get_for_user(integration.id, user.id)
+
+      assert queued_room_updates() == []
     end
 
     # The stored values, written the way a person might type them again: the
@@ -418,6 +462,35 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
       needs_reauth: Keyword.get(overrides, :needs_reauth, false),
       is_active: Keyword.get(overrides, :is_active, true)
     )
+  end
+
+  # A meeting holding a conversation of `integration`, starting `offset_days`
+  # from now and lasting two hours, so one starting today is still running.
+  defp insert_meeting_with_room(integration, offset_days, overrides \\ []) do
+    start_time =
+      DateTime.utc_now(:second) |> DateTime.add(offset_days, :day) |> DateTime.add(-1, :hour)
+
+    insert(
+      :meeting,
+      Keyword.merge(
+        [
+          organizer_user_id: integration.user_id,
+          video_integration_id: integration.id,
+          video_provider: "nextcloud_talk",
+          video_room_id: "room-#{System.unique_integer([:positive])}",
+          start_time: start_time,
+          end_time: DateTime.add(start_time, 2, :hour)
+        ],
+        overrides
+      )
+    )
+  end
+
+  defp queued_room_updates do
+    [worker: VideoSyncWorker, args: %{"action" => "update"}]
+    |> all_enqueued()
+    |> Enum.map(& &1.args["meeting_id"])
+    |> Enum.sort()
   end
 
   defp expect_capabilities(server, login, app_password, response) do

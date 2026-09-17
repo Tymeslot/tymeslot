@@ -6,6 +6,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
   @moduletag :database
   @moduletag :queries
 
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
 
@@ -397,6 +398,49 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
                :all,
                ctx.now
              ) == 3
+    end
+  end
+
+  describe "list_upcoming_ids_with_video_room_for_integration/3" do
+    setup do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "nextcloud_talk")
+      now = DateTime.utc_now(:second)
+
+      later = insert_room(user, integration, 2, "later")
+      sooner = insert_room(user, integration, 1, "sooner", status: "pending")
+
+      # Started an hour ago and still running: it has not ended, so it counts.
+      running =
+        insert_meeting_at(user.id, DateTime.add(now, -1, :hour),
+          end_time: DateTime.add(now, 1, :hour),
+          video_integration_id: integration.id,
+          video_room_id: "running"
+        )
+
+      insert_room(user, integration, -2, "ended")
+      insert_room(user, integration, 3, "cancelled", status: "cancelled")
+      insert_room(user, integration, 4, nil)
+      other = insert(:video_integration, user: user, provider: "nextcloud_talk")
+      insert_room(user, other, 5, "elsewhere")
+
+      %{integration: integration, now: now, expected: [running.id, sooner.id, later.id]}
+    end
+
+    test "lists the uncancelled meetings with a room that have not ended, soonest first", ctx do
+      assert MeetingListQueries.list_upcoming_ids_with_video_room_for_integration(
+               ctx.integration.id,
+               ctx.now,
+               10
+             ) == ctx.expected
+    end
+
+    test "returns no more than the limit, keeping the soonest", ctx do
+      assert MeetingListQueries.list_upcoming_ids_with_video_room_for_integration(
+               ctx.integration.id,
+               ctx.now,
+               2
+             ) == Enum.take(ctx.expected, 2)
     end
   end
 

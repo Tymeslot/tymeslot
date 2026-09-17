@@ -157,6 +157,32 @@ defmodule Tymeslot.Integrations.Video.ProviderConfigTest do
     end
   end
 
+  describe "rooms_updated_on_reschedule?/1" do
+    # A provider that can update a room is one whose room holds the meeting's
+    # time or name, so the list and the callback cannot disagree.
+    test "is true exactly for the providers whose module can update a room" do
+      for provider <- ProviderConfig.known_providers() do
+        module = ProviderConfig.get_provider_module(provider)
+        Code.ensure_loaded!(module)
+
+        assert ProviderConfig.rooms_updated_on_reschedule?(provider) ==
+                 function_exported?(module, :update_meeting_room, 2),
+               "#{provider} disagrees with its module"
+      end
+
+      assert Enum.filter(
+               ProviderConfig.known_providers(),
+               &ProviderConfig.rooms_updated_on_reschedule?/1
+             ) == [:zoom, :nextcloud_talk]
+    end
+
+    test "answers the stored string form as the atom" do
+      assert ProviderConfig.rooms_updated_on_reschedule?("nextcloud_talk")
+      refute ProviderConfig.rooms_updated_on_reschedule?("jitsi")
+      refute ProviderConfig.rooms_updated_on_reschedule?("unknown")
+    end
+  end
+
   describe "nextcloud_talk registration" do
     test "parses from its string form and is not OAuth" do
       assert {:ok, :nextcloud_talk} = ProviderConfig.parse_known("nextcloud_talk")

@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.VideoTest do
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.IntegrationHealthWorker
   alias Tymeslot.Workers.VideoIntegrationDisconnectWorker
+  alias Tymeslot.Workers.VideoSyncWorker
 
   setup :verify_on_exit!
 
@@ -337,6 +338,28 @@ defmodule Tymeslot.Integrations.VideoTest do
         worker: IntegrationHealthWorker,
         args: %{"type" => "video", "integration_id" => integration.id}
       )
+    end
+
+    # Only a reconnect proven against the provider re-sends reschedules: a
+    # credential that merely replaces the stored one may still be refused.
+    test "an unproven credential that clears the reconnect flag queues no room update" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "zoom", needs_reauth: true)
+      start_time = DateTime.add(DateTime.utc_now(:second), 2, :day)
+
+      insert(:meeting,
+        organizer_user_id: user.id,
+        video_integration_id: integration.id,
+        video_room_id: "zoom-room",
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 30, :minute)
+      )
+
+      assert {:ok, updated} =
+               Video.update_integration(user.id, integration.id, %{api_key: "replaced-key"})
+
+      refute updated.needs_reauth
+      refute_enqueued(worker: VideoSyncWorker)
     end
 
     test "returns {:error, :not_found} for an integration belonging to another user" do
