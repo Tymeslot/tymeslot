@@ -103,6 +103,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
       assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
       assert row.sync_state == "locally_deleted"
     end
+
+    test "a delete the calendar refused for good is reported and the event stays", %{
+      conn: conn,
+      integration: integration
+    } do
+      event = insert_event(integration)
+      stub_delete({:error, :unauthorized})
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      confirm_delete(lv, event)
+      await_delete(lv)
+
+      html = render(lv)
+      assert html =~ "Failed to delete event"
+      refute html =~ "queued to retry"
+      assert html =~ "Quarterly Planning"
+
+      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+      assert row.sync_state == "synced"
+    end
   end
 
   defp insert_event(integration) do

@@ -57,8 +57,9 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   and flash the user (including `:reauth_required` when the integration's
   credentials need re-encrypting).
 
-  A failed create is queued for replay on the next sync when the integration
-  has an offline queue (the CalDAV family), and the failure reports
+  A failed create is queued for replay on the next sync when the error is one
+  a retry can recover (see `Calendar.Events.queueable_error?/1`) and the
+  integration has an offline queue (the CalDAV family), and the failure reports
   `retry: :queued`; otherwise `retry: :not_queued`.
   """
   @spec run_create_event(map()) ::
@@ -201,12 +202,12 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   end
 
   defp finalise_create_result({:error, reason}, ctx) do
-    {:error, %{reason: reason, retry: queue_retry(ctx)}}
+    {:error, %{reason: reason, retry: queue_retry(ctx, reason)}}
   end
 
   # The queued row carries the pre-generated UID, so the replayed create
   # addresses the same event the failed one tried to write.
-  defp queue_retry(ctx) do
+  defp queue_retry(ctx, reason) do
     target = %{uid: ctx.uid, calendar_integration_id: ctx.creating.integration_id}
 
     event_data = %{
@@ -217,9 +218,11 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
       description: ctx.creating[:description]
     }
 
-    case CalendarEvents.queue_for_offline_retry(target, :create, event_data) do
-      :ok -> :queued
-      :ignored -> :not_queued
+    with true <- CalendarEvents.queueable_error?(reason),
+         :ok <- CalendarEvents.queue_for_offline_retry(target, :create, event_data) do
+      :queued
+    else
+      _not_queued -> :not_queued
     end
   end
 

@@ -387,6 +387,21 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
                {"locally_created", "Offline Create", ~U[2026-04-08 11:00:00.000000Z]}
     end
 
+    test "does not queue a create a retry cannot recover" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
+
+      expect_refused_create(:unauthorized)
+
+      assert {:error, %{reason: :unauthorized, retry: :not_queued}} =
+               EventCreation.run_create_event(refused_create_payload(user, integration))
+
+      assert_received {:create_uid, uid}
+      assert {:error, :not_found} = ProviderCalendarEventQueries.get_by_uid(integration.id, uid)
+    end
+
     test "reports a create on a calendar without an offline queue as not queued" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, provider: "google")

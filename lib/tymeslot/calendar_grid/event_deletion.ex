@@ -13,10 +13,11 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
 
   ## Failure
 
-  A failed delete is queued for replay on the next sync when the integration
-  has an offline queue (the CalDAV family). The queue marks the cached row
-  `locally_deleted`, and the replay removes it once the server has deleted
-  the event.
+  A failed delete is queued for replay on the next sync when the error is one
+  a retry can recover (see `Calendar.Events.queueable_error?/1`) and the
+  integration has an offline queue (the CalDAV family). The queue marks the
+  cached row `locally_deleted`, and the replay removes it once the server has
+  deleted the event.
   """
 
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
@@ -74,7 +75,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
         {:ok, %{uid: uid, integration_id: integration_id, linked_meeting: linked_meeting(result)}}
 
       {:error, reason} ->
-        {:error, %{reason: reason, retry: queue_retry(event)}}
+        {:error, %{reason: reason, retry: queue_retry(event, reason)}}
     end
   end
 
@@ -85,12 +86,14 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
 
   defp linked_meeting(_result), do: :none
 
-  defp queue_retry(%{uid: uid, calendar_integration_id: integration_id}) do
+  defp queue_retry(%{uid: uid, calendar_integration_id: integration_id}, reason) do
     target = %{uid: uid, calendar_integration_id: integration_id}
 
-    case CalendarEvents.queue_for_offline_retry(target, :delete, %{}) do
-      :ok -> :queued
-      :ignored -> :not_queued
+    with true <- CalendarEvents.queueable_error?(reason),
+         :ok <- CalendarEvents.queue_for_offline_retry(target, :delete, %{}) do
+      :queued
+    else
+      _not_queued -> :not_queued
     end
   end
 end

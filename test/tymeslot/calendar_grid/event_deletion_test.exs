@@ -119,6 +119,17 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
       assert row.sync_state == "locally_deleted"
     end
 
+    test "does not queue a delete a retry cannot recover", %{user: user, caldav: caldav} do
+      event = insert_event(caldav)
+      expect_delete({:error, :unauthorized})
+
+      assert {:error, %{reason: :unauthorized, retry: :not_queued}} =
+               CalendarGrid.delete_event(user.id, event)
+
+      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
+      assert {row.sync_state, row.summary} == {"synced", "Design review"}
+    end
+
     test "leaves the linked meeting alone", %{user: user, caldav: caldav} do
       event = insert_event(caldav)
 
