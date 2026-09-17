@@ -50,8 +50,8 @@ defmodule Mix.Tasks.Precommit do
 
   Most of the suite's wall clock is synchronous modules, which one `mix test`
   runs one at a time. The suite is split into `mix test --partitions` runs
-  sized to the CPU that is free when it starts: on an idle 16-core host that
-  took it from 126s to about 60s. `PRECOMMIT_TEST_PARTITIONS` forces the count.
+  sized to the cores the run may use: on an idle 16-core host that took it from
+  126s to about 60s. `PRECOMMIT_TEST_PARTITIONS` forces the count.
   See `Tymeslot.Precommit.CpuBudget` for the sizing and
   `Tymeslot.Precommit.Runner` for how partitions get their own databases.
 

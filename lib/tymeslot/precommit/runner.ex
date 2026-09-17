@@ -42,9 +42,9 @@ defmodule Tymeslot.Precommit.Runner do
   Most of the suite's wall clock is its synchronous modules, which ExUnit runs
   one at a time however many cores are free. Partitions are separate OS
   processes, so they run those modules side by side. The `:suite_plan` option
-  is called when the suite starts, after the compile steps have finished using
-  the CPU, and returns how many partitions to run and how many schedulers each
-  may use (see `Tymeslot.Precommit.CpuBudget`), or `nil` to run it whole.
+  is called when the suite starts and returns how many partitions to run and how
+  many schedulers each may use (see `Tymeslot.Precommit.CpuBudget`), or `nil` to
+  run it whole.
 
   Each partition gets its own database and upload directory through
   `MIX_TEST_PARTITION`, which `mix test --partitions` requires to be the bare
