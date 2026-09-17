@@ -261,6 +261,8 @@ if config_env() == :prod do
         # Run daily at 03:45 UTC to re-attempt provider deletion for cancelled
         # meetings whose video room was never cleaned up
         {"45 3 * * *", Tymeslot.Workers.OrphanedVideoRoomScanWorker},
+        # Run daily at 04:15 UTC to delete video rooms that outlived their meeting
+        {"15 4 * * *", Tymeslot.Workers.ExpiredVideoRoomCleanupWorker},
         # Run daily at 03:15 UTC
         {"15 3 * * *", Tymeslot.Workers.ExpiredSessionCleanupWorker},
         # Run daily at 02:00 UTC to renew expiring webhook channels
@@ -510,6 +512,26 @@ case System.get_env("MEETING_PAYMENTS_APPLICATION_FEE_BP") do
         raise """
         MEETING_PAYMENTS_APPLICATION_FEE_BP must be an integer between 0 and 10000
         (basis points: 100 = 1%). Got: #{inspect(raw)}
+        """
+    end
+end
+
+case System.get_env("VIDEO_ROOM_RETENTION_DAYS") do
+  nil ->
+    :ok
+
+  "" ->
+    :ok
+
+  raw ->
+    case Integer.parse(raw) do
+      {days, ""} when days >= 1 ->
+        config :tymeslot, :video_room_retention_days, days
+
+      _other ->
+        raise """
+        VIDEO_ROOM_RETENTION_DAYS must be a whole number of days, 1 or more.
+        Got: #{inspect(raw)}
         """
     end
 end

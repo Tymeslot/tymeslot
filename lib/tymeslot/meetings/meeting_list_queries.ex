@@ -124,6 +124,26 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> Repo.all()
   end
 
+  @doc """
+  Meetings whose video room still exists on one of `providers` and whose end
+  lies at or after `ended_after` and before `ended_before`.
+
+  `ended_after` bounds how far back the scan reaches. A room nothing can reach
+  any more, because its integration was disconnected and never replaced, drops
+  out of the window instead of being retried every night for ever.
+  """
+  @spec list_ended_with_video_room([String.t()], DateTime.t(), DateTime.t(), pos_integer()) ::
+          [Meeting.t()]
+  def list_ended_with_video_room(providers, ended_before, ended_after, limit \\ 500) do
+    Meeting
+    |> where([m], m.video_provider in ^providers)
+    |> where([m], not is_nil(m.video_room_id))
+    |> where([m], m.end_time < ^ended_before and m.end_time >= ^ended_after)
+    |> order_by([m], asc: m.end_time)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
   defp meetings_missing_video_rooms_base(now) do
     Meeting
     |> MeetingState.where_live_booking()

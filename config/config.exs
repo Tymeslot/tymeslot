@@ -367,6 +367,11 @@ config :tymeslot, :video_providers, %{
   custom: [enabled: true]
 }
 
+# Days after a meeting ends before Tymeslot deletes its video room, for
+# providers whose rooms otherwise stay on the organiser's server (Nextcloud
+# Talk). Overridden by VIDEO_ROOM_RETENTION_DAYS in config/runtime.exs.
+config :tymeslot, :video_room_retention_days, 7
+
 # Whether this deployment's Zoom Marketplace app is configured for
 # `meeting:update:meeting`. On by default; a deployment whose app lacks the
 # scope must turn it off, because Zoom silently drops a scope the app lacks and

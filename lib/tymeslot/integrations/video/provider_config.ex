@@ -341,6 +341,20 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
     custom: "Custom Video Link"
   }
 
+  # Providers whose rooms persist on the organiser's own server until something
+  # deletes them, so Tymeslot deletes each one some days after its meeting has
+  # ended. Every other provider's room either expires by itself or lives in an
+  # account the organiser manages directly.
+  @rooms_deleted_after_meeting [:nextcloud_talk]
+
+  @doc """
+  The providers, in their stored string form, whose rooms Tymeslot deletes
+  some days after the meeting ends.
+  """
+  @spec rooms_deleted_after_meeting() :: [String.t()]
+  def rooms_deleted_after_meeting,
+    do: Enum.map(@rooms_deleted_after_meeting, &Atom.to_string/1)
+
   @doc """
   Gets the display name for a provider.
   """
