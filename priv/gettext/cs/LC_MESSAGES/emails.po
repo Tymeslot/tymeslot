@@ -810,6 +810,7 @@ msgstr "To se stává i těm nejlepším. Klikněte na tlačítko níže, zvolt
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Join when you're ready"
 msgstr "Připojte se, až budete chtít"
@@ -2335,3 +2336,8 @@ msgstr "Platba k vrácení"
 #, elixir-autogen, elixir-format
 msgid "You still hold %{amount} for this booking."
 msgstr "Za tuto rezervaci u vás stále zůstává %{amount}."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "New link for the new time"
+msgstr "Nový odkaz pro nový čas"

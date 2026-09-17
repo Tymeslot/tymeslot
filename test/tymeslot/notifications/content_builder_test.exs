@@ -95,6 +95,19 @@ defmodule Tymeslot.Notifications.ContentBuilderTest do
       assert details.start_time == ~U[2026-03-04 15:00:00Z]
     end
 
+    test "carries the attendee join link the meeting had before the move", %{
+      original: original,
+      updated: updated
+    } do
+      original = %{original | attendee_video_url: "https://meet.example.com/room?jwt=old"}
+      updated = %{updated | attendee_video_url: "https://meet.example.com/room?jwt=new"}
+
+      details = ContentBuilder.build_reschedule_details(updated, original)
+
+      assert details.original_attendee_video_url == "https://meet.example.com/room?jwt=old"
+      assert details.attendee_video_url == "https://meet.example.com/room?jwt=new"
+    end
+
     # Issue #76: this payload is handed straight to an email template rather
     # than to a worker that rebuilds it, so it has to satisfy the same contract
     # every other appointment email is built against. Building it from the

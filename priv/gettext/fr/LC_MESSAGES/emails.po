@@ -808,6 +808,7 @@ msgstr "Cela arrive aux meilleurs d’entre nous. Cliquez sur le bouton ci-desso
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Join when you're ready"
 msgstr "Rejoignez quand vous êtes prêt(e)"
@@ -2329,3 +2330,8 @@ msgstr "Remboursement en attente"
 #, elixir-autogen, elixir-format
 msgid "You still hold %{amount} for this booking."
 msgstr "Vous détenez encore %{amount} pour cette réservation."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "New link for the new time"
+msgstr "Nouveau lien pour le nouvel horaire"

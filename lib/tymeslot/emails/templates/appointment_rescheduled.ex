@@ -11,7 +11,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
   The reschedule context (`:original_start_time` and friends) is supplied by
   `Tymeslot.Notifications.ContentBuilder.build_reschedule_details/2`. Every key
   it adds is read defensively here: a payload without it still renders, minus
-  the "previously" line.
+  the "previously" line or the note on whether the join link changed.
   """
 
   import Swoosh.Email
@@ -75,7 +75,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
 
       #{if attendee_video_url do
         MeetingComponents.video_meeting_section(@intent, attendee_video_url,
-        title: dgettext("emails", "Same link, new time"),
+        title: attendee_video_title(appointment_details),
         button_text: dgettext("emails", "Join Video Meeting"))
       end}
 
@@ -209,6 +209,19 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
     Map.get(appointment_details, :original_start_time_owner_tz) ||
       Map.get(appointment_details, :original_start_time)
   end
+
+  # A reschedule does not always keep the join link: providers that sign links
+  # for the meeting's time (Jitsi with token authentication) issue new ones for
+  # the new time, so "same link" is only said when the payload shows it. A
+  # payload without the previous link makes no claim either way.
+  defp attendee_video_title(%{attendee_video_url: url, original_attendee_video_url: url}),
+    do: dgettext("emails", "Same link, new time")
+
+  defp attendee_video_title(%{original_attendee_video_url: _previous}),
+    do: dgettext("emails", "New link for the new time")
+
+  defp attendee_video_title(_appointment_details),
+    do: dgettext("emails", "Join when you're ready")
 
   # Read defensively: a payload built without reminder details must still
   # render. See the module doc.

@@ -810,6 +810,7 @@ msgstr "Таке трапляється з кожним. Натисніть кн
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Join when you're ready"
 msgstr "Приєднуйтесь, коли будете готові"
@@ -2335,3 +2336,8 @@ msgstr "Кошти до повернення"
 #, elixir-autogen, elixir-format
 msgid "You still hold %{amount} for this booking."
 msgstr "За це бронювання у вас досі залишається %{amount}."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "New link for the new time"
+msgstr "Нове посилання на новий час"

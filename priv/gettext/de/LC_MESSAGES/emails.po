@@ -808,6 +808,7 @@ msgstr "das passiert den Besten. Klicken Sie auf die Schaltfläche unten, um ein
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Join when you're ready"
 msgstr "Treten Sie dem Meeting bei, sobald Sie bereit sind"
@@ -2329,3 +2330,8 @@ msgstr "Offene Rückerstattung"
 #, elixir-autogen, elixir-format
 msgid "You still hold %{amount} for this booking."
 msgstr "Sie halten für diese Buchung noch %{amount}."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "New link for the new time"
+msgstr "Neuer Link für die neue Zeit"
