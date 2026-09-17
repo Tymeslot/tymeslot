@@ -11,6 +11,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.CalendarGrid.BookingEvents
   alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.CalendarGrid.EventMove
+  alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
@@ -322,6 +323,15 @@ defmodule Tymeslot.CalendarGrid do
   @spec move_event(pos_integer(), map(), EventMove.destination()) ::
           {:ok, EventMove.moved()} | {:error, term()}
   defdelegate move_event(user_id, event, destination), to: EventMove
+
+  @doc """
+  Gives an event a room on the organiser's video integration, or removes its
+  video link when the integration is `nil`, on both the provider event and the
+  cached row. See `Tymeslot.CalendarGrid.EventVideo.change_event_video/3`.
+  """
+  @spec change_event_video(pos_integer(), map(), pos_integer() | nil) ::
+          {:ok, String.t() | nil} | {:error, :missing_meeting_url | :not_found | term()}
+  defdelegate change_event_video(user_id, event, video_integration_id), to: EventVideo
 
   @doc """
   Whether an event may be moved to another calendar. See

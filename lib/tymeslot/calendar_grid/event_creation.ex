@@ -24,6 +24,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   require Logger
 
   alias Tymeslot.Bookings.CreateAdHoc
+  alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
@@ -283,21 +284,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     end
   end
 
-  defp build_description(existing, video_context) do
-    case video_context[:meeting_url] do
-      nil ->
-        existing
-
-      url when is_binary(url) ->
-        line = "Join video call: #{url}"
-
-        case existing do
-          nil -> line
-          "" -> line
-          text -> text <> "\n\n" <> line
-        end
-    end
-  end
+  defp build_description(existing, video_context),
+    do: EventVideo.put_join_link(existing, nil, video_context[:meeting_url])
 
   # Returns `{provider, default_booking_calendar_id, reauth_required?}`.
   #

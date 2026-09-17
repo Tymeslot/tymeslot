@@ -1,10 +1,10 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
   @moduledoc """
-  Tests for the Task 15 refactor: `notify_event_updated/3` routes edit-flow
-  notifications through `Tymeslot.Meetings.AttendeeNotifications`, and
-  `sync_video_integration_async/3` provisions a video room asynchronously
-  and persists the resulting `video_link` onto the event row when the video
-  selector changes.
+  Tests for the edit workflow helpers: `notify_event_updated/3` routes
+  edit-flow notifications through `Tymeslot.Meetings.AttendeeNotifications`,
+  and the ownership and writability guards every grid write goes through.
+  Changing an event's video room is covered in
+  `Tymeslot.CalendarGrid.EventVideoTest`.
   """
 
   use Tymeslot.DataCase, async: false
@@ -18,15 +18,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
   alias Phoenix.Component
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarEntry
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
-  alias Tymeslot.Integrations.Video.MeetingContext
-  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
-  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.VideoSync
-  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest.FakeRooms
 
   describe "default_calendar_id_for/1" do
     test "resolves to a calendar the picker actually renders, not an unselected primary" do
@@ -214,134 +209,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
     end
   end
 
-  describe "sync_video_integration_async/3" do
-    setup do
-      original = Application.get_env(:tymeslot, :video_rooms_module)
-      on_exit(fn -> restore_env(:video_rooms_module, original) end)
-
-      user = insert(:user)
-
-      socket = Component.assign(%Phoenix.LiveView.Socket{}, :current_user, user)
-
-      {:ok, socket: socket, user: user}
-    end
-
-    test "provisions a room and sends result when video_integration_id becomes set",
-         %{socket: socket} do
-      event = build_event(attendees: [])
-      integration_id = 42
-
-      Application.put_env(:tymeslot, :video_rooms_module, FakeRooms)
-
-      FakeRooms.set_response(
-        {:ok,
-         %MeetingContext{
-           provider_type: :mirotalk,
-           room_data: %RoomData{
-             meeting_url: "https://video.example.com/join/abc",
-             room_id: "abc",
-             provider_data: %{}
-           },
-           provider_module: Tymeslot.Integrations.Video.Providers.MiroTalkProvider
-         }}
-      )
-
-      updated_event = %{event | video_integration_id: integration_id}
-
-      _socket = VideoSync.sync_video_integration_async(socket, event, updated_event)
-
-      assert_receive {:video_sync_result, event_id, {:ok, "https://video.example.com/join/abc"}}
-      assert event_id == event.id
-
-      opts = FakeRooms.last_opts()
-      event_details = Keyword.fetch!(opts, :event_details)
-      assert %Tymeslot.Integrations.Video.EventDetails{} = event_details
-      assert event_details.summary == "Team Sync"
-      assert %DateTime{} = event_details.start_time
-      assert %DateTime{} = event_details.end_time
-    end
-
-    test "returns socket unchanged when the integration id did not change",
-         %{socket: socket} do
-      video_integration = insert(:video_integration)
-      event = build_event(video_integration_id: video_integration.id)
-
-      Application.put_env(:tymeslot, :video_rooms_module, FakeRooms)
-      FakeRooms.set_response({:error, :should_not_be_called})
-
-      returned_socket = VideoSync.sync_video_integration_async(socket, event, event)
-
-      assert returned_socket == socket
-      refute_receive {:video_sync_result, _, _}
-    end
-
-    test "clears video_link when the integration id is removed", %{socket: socket} do
-      video_integration = insert(:video_integration)
-
-      event =
-        build_event(
-          video_integration_id: video_integration.id,
-          video_link: "https://old.example.com/join"
-        )
-
-      updated = %{event | video_integration_id: nil}
-
-      Application.put_env(:tymeslot, :video_rooms_module, FakeRooms)
-      FakeRooms.set_response({:error, :should_not_be_called})
-
-      _socket = VideoSync.sync_video_integration_async(socket, event, updated)
-
-      assert_receive {:video_sync_result, event_id, {:ok, nil}}
-      assert event_id == event.id
-    end
-
-    test "sends error result and does not persist when provisioning fails", %{socket: socket} do
-      video_integration = insert(:video_integration)
-      event = build_event(video_integration_id: nil, video_link: nil)
-      updated = %{event | video_integration_id: video_integration.id}
-
-      Application.put_env(:tymeslot, :video_rooms_module, FakeRooms)
-      FakeRooms.set_response({:error, :provider_down})
-
-      _socket = VideoSync.sync_video_integration_async(socket, event, updated)
-
-      assert_receive {:video_sync_result, event_id, {:error, :provider_down}}
-      assert event_id == event.id
-    end
-
-    test "leaves video_link unchanged and sends an error when the provider's room has no URL",
-         %{socket: socket} do
-      video_integration = insert(:video_integration)
-
-      event =
-        build_event(
-          video_integration_id: nil,
-          video_link: "https://old.example.com/join"
-        )
-
-      updated = %{event | video_integration_id: video_integration.id}
-
-      Application.put_env(:tymeslot, :video_rooms_module, FakeRooms)
-
-      FakeRooms.set_response(
-        {:ok,
-         %MeetingContext{
-           provider_type: :mirotalk,
-           room_data: %RoomData{room_id: "r", meeting_url: nil, provider_data: %{}},
-           provider_module: Tymeslot.Integrations.Video.Providers.MiroTalkProvider
-         }}
-      )
-
-      _socket = VideoSync.sync_video_integration_async(socket, event, updated)
-
-      assert_receive {:video_sync_result, event_id, {:error, :missing_meeting_url}}
-      assert event_id == event.id
-
-      assert {:ok, %{video_link: "https://old.example.com/join"}} =
-               ProviderCalendarEventQueries.get_by_uid(event.calendar_integration_id, event.uid)
-    end
-  end
-
   # Helpers
 
   defp google_integration do
@@ -394,52 +261,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
         opts
       )
     )
-  end
-
-  defp restore_env(key, nil), do: Application.delete_env(:tymeslot, key)
-  defp restore_env(key, value), do: Application.put_env(:tymeslot, key, value)
-end
-
-# Minimal stub module used as a drop-in replacement for
-# `Tymeslot.Integrations.Video.Rooms` inside the EditWorkflow test. Only
-# `create_meeting_room/2` is reached by the code under test.
-defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest.FakeRooms do
-  @moduledoc false
-
-  @spec start() :: :ok | :ets.table()
-  def start do
-    case :ets.whereis(__MODULE__) do
-      :undefined -> :ets.new(__MODULE__, [:set, :public, :named_table])
-      _ref -> :ok
-    end
-  end
-
-  @spec set_response(term()) :: :ok
-  def set_response(resp) do
-    start()
-    :ets.insert(__MODULE__, {:response, resp})
-    :ok
-  end
-
-  @spec create_meeting_room(integer() | nil, keyword()) ::
-          {:ok, Tymeslot.Integrations.Video.MeetingContext.t()} | {:error, term()}
-  def create_meeting_room(_user_id, opts) do
-    start()
-    :ets.insert(__MODULE__, {:last_opts, opts})
-
-    case :ets.lookup(__MODULE__, :response) do
-      [{:response, resp}] -> resp
-      [] -> {:error, :no_response_configured}
-    end
-  end
-
-  @spec last_opts() :: keyword() | nil
-  def last_opts do
-    start()
-
-    case :ets.lookup(__MODULE__, :last_opts) do
-      [{:last_opts, opts}] -> opts
-      [] -> nil
-    end
   end
 end

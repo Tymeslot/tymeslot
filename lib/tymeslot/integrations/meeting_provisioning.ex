@@ -18,7 +18,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   The `:inline` path for *edits* requires the calendar update call to include
   `conferenceData` and `conferenceDataVersion=1`. That wiring is not yet
   implemented in `EventOperations`; the edit flow therefore falls back to
-  `:separate` (see `EditWorkflow.sync_video_integration_async/3`).
+  `:separate` (see `Tymeslot.CalendarGrid.change_event_video/3`).
   """
 
   require Logger
