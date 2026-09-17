@@ -14,18 +14,18 @@ defmodule Tymeslot.Polls.PollParticipantQueries do
           {:ok, PollParticipantSchema.t()} | {:error, Ecto.Changeset.t()}
   def update(changeset), do: Repo.update(changeset)
 
-  @spec get_by_token(String.t()) :: PollParticipantSchema.t() | nil
-  def get_by_token(token) when is_binary(token) do
-    PollParticipantSchema
-    |> where([p], p.token == ^token)
-    |> preload(:votes)
-    |> Repo.one()
-  end
-
   @spec get_by_poll_and_email(Ecto.UUID.t(), String.t()) :: PollParticipantSchema.t() | nil
   def get_by_poll_and_email(poll_id, email) do
     PollParticipantSchema
     |> where([p], p.poll_id == ^poll_id and p.email == ^email)
+    |> preload(:votes)
+    |> Repo.one()
+  end
+
+  @spec get_by_poll_and_token(Ecto.UUID.t(), String.t()) :: PollParticipantSchema.t() | nil
+  def get_by_poll_and_token(poll_id, token) when is_binary(token) do
+    PollParticipantSchema
+    |> where([p], p.poll_id == ^poll_id and p.token == ^token)
     |> preload(:votes)
     |> Repo.one()
   end
