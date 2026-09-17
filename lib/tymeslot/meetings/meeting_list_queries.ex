@@ -134,29 +134,25 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   end
 
   @doc """
-  Returns the ids of up to `limit` meetings holding a provider-side room created
-  by the given integration that have not ended by `now` and are not cancelled,
-  soonest first.
+  Returns the id and status of up to `limit` meetings holding a provider-side
+  room created by the given integration that have not ended by `now`, soonest
+  first, whatever their status.
 
-  Used to send each room the meeting's current time and name again once the
-  integration is reconnected, since changes made while it could not reach the
-  provider were dropped. Ended meetings are left to the clean-up jobs, and a
-  cancelled meeting's room is deleted rather than updated.
+  Used to bring each room in line with its booking once the integration is
+  reconnected, since changes made while it could not reach the provider were
+  dropped: the room of a live booking is updated, and the room of a released
+  one deleted. Ended meetings are left to the clean-up jobs.
   """
-  @spec list_upcoming_ids_with_video_room_for_integration(
-          pos_integer(),
-          DateTime.t(),
-          pos_integer()
-        ) :: [String.t()]
-  def list_upcoming_ids_with_video_room_for_integration(integration_id, %DateTime{} = now, limit) do
+  @spec list_upcoming_video_rooms_for_integration(pos_integer(), DateTime.t(), pos_integer()) ::
+          [%{id: String.t(), status: String.t()}]
+  def list_upcoming_video_rooms_for_integration(integration_id, %DateTime{} = now, limit) do
     Meeting
     |> where([m], m.video_integration_id == ^integration_id)
     |> where([m], not is_nil(m.video_room_id))
-    |> where([m], m.status != "cancelled")
     |> upcoming(now)
     |> order_by([m], asc: m.start_time)
     |> limit(^limit)
-    |> select([m], m.id)
+    |> select([m], %{id: m.id, status: m.status})
     |> Repo.all()
   end
 

@@ -281,12 +281,12 @@ defmodule TymeslotWeb.VideoOAuthControllerTest do
         {:ok, existing}
       end)
 
-      :meck.expect(VideoIntegrationQueries, :update_credentials, fn ^existing, attrs ->
+      :meck.expect(VideoIntegrationQueries, :reconnect, fn ^existing, attrs ->
         assert attrs.access_token == "new_at"
         assert attrs.refresh_token == "new_rt"
         refute Map.has_key?(attrs, :user_id)
         refute Map.has_key?(attrs, :provider)
-        {:ok, %{existing | access_token: attrs.access_token}}
+        {:ok, %{existing | access_token: attrs.access_token}, false}
       end)
 
       conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => "state"})
@@ -366,14 +366,14 @@ defmodule TymeslotWeb.VideoOAuthControllerTest do
         {:ok, existing}
       end)
 
-      :meck.expect(VideoIntegrationQueries, :update_credentials, fn ^existing, attrs ->
+      :meck.expect(VideoIntegrationQueries, :reconnect, fn ^existing, attrs ->
         assert attrs.access_token == "new_at"
         assert attrs.refresh_token == "new_rt"
         assert attrs.tenant_id == "new-tenant-id"
         assert attrs.teams_user_id == "new-teams-user-id"
         refute Map.has_key?(attrs, :user_id)
         refute Map.has_key?(attrs, :provider)
-        {:ok, %{existing | access_token: attrs.access_token}}
+        {:ok, %{existing | access_token: attrs.access_token}, false}
       end)
 
       conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => "state"})

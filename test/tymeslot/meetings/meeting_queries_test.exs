@@ -401,7 +401,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
     end
   end
 
-  describe "list_upcoming_ids_with_video_room_for_integration/3" do
+  describe "list_upcoming_video_rooms_for_integration/3" do
     setup do
       user = insert(:user)
       integration = insert(:video_integration, user: user, provider: "nextcloud_talk")
@@ -418,17 +418,28 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
           video_room_id: "running"
         )
 
-      insert_room(user, integration, -2, "ended")
-      insert_room(user, integration, 3, "cancelled", status: "cancelled")
-      insert_room(user, integration, 4, nil)
-      other = insert(:video_integration, user: user, provider: "nextcloud_talk")
-      insert_room(user, other, 5, "elsewhere")
+      cancelled = insert_room(user, integration, 3, "cancelled", status: "cancelled")
+      expired = insert_room(user, integration, 4, "expired", status: "expired")
 
-      %{integration: integration, now: now, expected: [running.id, sooner.id, later.id]}
+      insert_room(user, integration, -2, "ended")
+      insert_room(user, integration, 5, nil)
+      other = insert(:video_integration, user: user, provider: "nextcloud_talk")
+      insert_room(user, other, 6, "elsewhere")
+
+      expected = [
+        %{id: running.id, status: "confirmed"},
+        %{id: sooner.id, status: "pending"},
+        %{id: later.id, status: "confirmed"},
+        %{id: cancelled.id, status: "cancelled"},
+        %{id: expired.id, status: "expired"}
+      ]
+
+      %{integration: integration, now: now, expected: expected}
     end
 
-    test "lists the uncancelled meetings with a room that have not ended, soonest first", ctx do
-      assert MeetingListQueries.list_upcoming_ids_with_video_room_for_integration(
+    test "lists the meetings with a room that have not ended, soonest first, with their status",
+         ctx do
+      assert MeetingListQueries.list_upcoming_video_rooms_for_integration(
                ctx.integration.id,
                ctx.now,
                10
@@ -436,7 +447,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
     end
 
     test "returns no more than the limit, keeping the soonest", ctx do
-      assert MeetingListQueries.list_upcoming_ids_with_video_room_for_integration(
+      assert MeetingListQueries.list_upcoming_video_rooms_for_integration(
                ctx.integration.id,
                ctx.now,
                2

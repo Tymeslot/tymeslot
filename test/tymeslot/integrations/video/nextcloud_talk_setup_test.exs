@@ -14,6 +14,7 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
 
   import Mox
 
+  alias Ecto.Changeset
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -228,15 +229,15 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
                VideoIntegrationQueries.get_for_user(integration.id, user.id)
     end
 
-    # Reschedules made while the app password was refused never reached their
-    # conversations, so the proven reconnect sends every upcoming one its
-    # current time again. Ended and cancelled meetings are the clean-up's.
-    test "a proven reconnect queues a room update for each upcoming meeting", %{user: user} do
+    # Reschedules and cancellations made while the app password was refused
+    # never reached their conversations, so the proven reconnect sends every
+    # upcoming one again. Ended meetings are the clean-up's.
+    test "a proven reconnect queues a room sync for each upcoming meeting", %{user: user} do
       integration = insert_talk_integration(user, needs_reauth: true, client_secret: "Revoked")
       upcoming = insert_meeting_with_room(integration, 2)
       running = insert_meeting_with_room(integration, 0)
       insert_meeting_with_room(integration, -2)
-      insert_meeting_with_room(integration, 3, status: "cancelled")
+      cancelled = insert_meeting_with_room(integration, 3, status: "cancelled")
 
       insert_meeting_with_room(
         insert_talk_integration(user, base_url: "https://b.example.com"),
@@ -249,6 +250,28 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
                Video.update_integration(user.id, integration.id, dialog_attrs("New-App-Password"))
 
       assert queued_room_updates() == Enum.sort([upcoming.id, running.id])
+      assert queued_room_syncs("delete") == [cancelled.id]
+    end
+
+    # The proof takes a round trip to the server, during which a room job may
+    # meet the old app password and flag the integration again.
+    test "a proven reconnect clears a flag set while the app password was being proven", %{
+      user: user
+    } do
+      integration = insert_talk_integration(user, client_secret: "Old")
+      meeting = insert_meeting_with_room(integration, 2)
+
+      expect(HTTPClientMock, :request, fn :get, _url, "", _headers, _opts ->
+        Repo.update!(Changeset.change(Repo.reload!(integration), needs_reauth: true))
+        talk_capabilities()
+      end)
+
+      assert {:ok, updated} =
+               Video.update_integration(user.id, integration.id, dialog_attrs("New-App-Password"))
+
+      refute updated.needs_reauth
+      refute Repo.reload!(integration).needs_reauth
+      assert queued_room_updates() == [meeting.id]
     end
 
     test "a proven new app password on a connected integration queues no room update", %{
@@ -562,8 +585,10 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
     )
   end
 
-  defp queued_room_updates do
-    [worker: VideoSyncWorker, args: %{"action" => "update"}]
+  defp queued_room_updates, do: queued_room_syncs("update")
+
+  defp queued_room_syncs(action) do
+    [worker: VideoSyncWorker, args: %{"action" => action}]
     |> all_enqueued()
     |> Enum.map(& &1.args["meeting_id"])
     |> Enum.sort()

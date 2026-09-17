@@ -350,6 +350,54 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueriesTest do
     end
   end
 
+  describe "reconnect/2" do
+    test "clears the flag and reports that the row was flagged" do
+      integration = insert(:video_integration, provider: "zoom", needs_reauth: true)
+
+      assert {:ok, updated, true} =
+               VideoIntegrationQueries.reconnect(integration, %{access_token: "new-token"})
+
+      refute updated.needs_reauth
+      refute Repo.reload!(integration).needs_reauth
+    end
+
+    test "reports an unflagged row as not flagged" do
+      integration = insert(:video_integration, provider: "zoom")
+
+      assert {:ok, _updated, false} =
+               VideoIntegrationQueries.reconnect(integration, %{access_token: "new-token"})
+    end
+
+    # The struct was read before a proof that took a network round trip, and a
+    # refusal elsewhere flagged the row meanwhile.
+    test "clears a flag set after the struct was read, and reports it" do
+      integration = insert(:video_integration, provider: "nextcloud_talk")
+
+      Repo.update!(
+        Changeset.change(Repo.reload!(integration),
+          needs_reauth: true,
+          room_creation_error: :password_required
+        )
+      )
+
+      assert {:ok, _updated, true} =
+               VideoIntegrationQueries.reconnect(integration, %{client_secret: "New"})
+
+      reloaded = Repo.reload!(integration)
+      refute reloaded.needs_reauth
+      assert reloaded.room_creation_error == nil
+    end
+
+    test "returns a refused write and leaves the flag in place" do
+      integration = insert(:video_integration, provider: "zoom", needs_reauth: true)
+
+      assert {:error, %Changeset{}} =
+               VideoIntegrationQueries.reconnect(integration, %{name: nil})
+
+      assert Repo.reload!(integration).needs_reauth
+    end
+  end
+
   describe "room creation errors" do
     test "a refusal is recorded once with the time it was first seen, and cleared" do
       integration = insert(:video_integration, provider: "nextcloud_talk")

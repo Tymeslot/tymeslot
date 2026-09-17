@@ -334,12 +334,48 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   @spec update_credentials(VideoIntegrationSchema.t(), map()) ::
           {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def update_credentials(%VideoIntegrationSchema{} = integration, attrs) do
-    integration
-    |> VideoIntegrationSchema.changeset(attrs)
-    |> Changeset.put_change(:needs_reauth, false)
-    |> Changeset.put_change(:room_creation_error, nil)
-    |> Changeset.put_change(:room_creation_error_since, nil)
-    |> Repo.update()
+    with {:ok, updated, _was_flagged?} <- reconnect(integration, attrs), do: {:ok, updated}
+  end
+
+  @doc """
+  Updates a video integration with credentials proven to work, as
+  `update_credentials/2` does, and also says whether the row was flagged for
+  reconnection when it was written.
+
+  The flag is read from the row under a lock in the same transaction as the
+  write, not from `integration`: a proof can take a network round trip, during
+  which a refusal elsewhere may flag the row. For the same reason the cleared
+  fields are always written, even when `integration` already shows them clear.
+  """
+  @spec reconnect(VideoIntegrationSchema.t(), map()) ::
+          {:ok, VideoIntegrationSchema.t(), boolean()} | {:error, Ecto.Changeset.t()}
+  def reconnect(%VideoIntegrationSchema{id: id} = integration, attrs) do
+    result =
+      Repo.transaction(fn ->
+        was_flagged? =
+          VideoIntegrationSchema
+          |> where([v], v.id == ^id)
+          |> lock("FOR UPDATE")
+          |> select([v], v.needs_reauth)
+          |> Repo.one()
+
+        changeset =
+          integration
+          |> VideoIntegrationSchema.changeset(attrs)
+          |> Changeset.force_change(:needs_reauth, false)
+          |> Changeset.force_change(:room_creation_error, nil)
+          |> Changeset.force_change(:room_creation_error_since, nil)
+
+        case Repo.update(changeset) do
+          {:ok, updated} -> {updated, was_flagged? == true}
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+      end)
+
+    case result do
+      {:ok, {updated, was_flagged?}} -> {:ok, updated, was_flagged?}
+      {:error, changeset} -> {:error, changeset}
+    end
   end
 
   @doc """

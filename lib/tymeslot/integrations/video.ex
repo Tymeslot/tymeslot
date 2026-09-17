@@ -21,6 +21,7 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.JitsiProvider
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
+  alias Tymeslot.Integrations.Video.Reconnect
   alias Tymeslot.Integrations.Video.Rooms
   alias Tymeslot.Integrations.Video.Update
   alias Tymeslot.Integrations.Video.Urls
@@ -452,6 +453,10 @@ defmodule Tymeslot.Integrations.Video do
   1. Re-authorization of a specific integration (integration_id present)
   2. New connection with a known account (provider_account_id present)
   3. Legacy fallback — match by user + provider
+
+  An OAuth callback proves the grant, so every update of an existing row goes
+  through `Tymeslot.Integrations.Video.Reconnect`, which catches the rooms up
+  on what they missed while the integration needed reconnecting.
   """
   @spec match_or_create_oauth_integration(
           pos_integer(),
@@ -485,7 +490,7 @@ defmodule Tymeslot.Integrations.Video do
     case VideoIntegrationQueries.get_for_user(integration_id, user_id) do
       {:ok, existing} ->
         AccountMatch.verify_account_match(existing, provider_account_id, fn ->
-          VideoIntegrationQueries.update_credentials(existing, token_attrs)
+          Reconnect.save(existing, token_attrs)
         end)
 
       {:error, :not_found} ->
@@ -495,7 +500,7 @@ defmodule Tymeslot.Integrations.Video do
         # Credentials are stale but the user is reconnecting — allow the update
         # so fresh credentials replace the undecryptable ones.
         AccountMatch.verify_account_match(existing, provider_account_id, fn ->
-          VideoIntegrationQueries.update_credentials(existing, token_attrs)
+          Reconnect.save(existing, token_attrs)
         end)
     end
   end
@@ -503,7 +508,7 @@ defmodule Tymeslot.Integrations.Video do
   defp match_or_create_by_account(user_id, provider, name, provider_account_id, token_attrs) do
     case VideoIntegrationQueries.get_by_account_for_user(user_id, provider, provider_account_id) do
       {:ok, existing} ->
-        VideoIntegrationQueries.update_credentials(existing, token_attrs)
+        Reconnect.save(existing, token_attrs)
 
       {:error, :not_found} ->
         reactivate_or_create_video(user_id, provider, name, provider_account_id, token_attrs)
@@ -522,7 +527,7 @@ defmodule Tymeslot.Integrations.Video do
           provider_account_id
         )
       end,
-      fn existing -> VideoIntegrationQueries.update_credentials(existing, reactivation_attrs) end,
+      fn existing -> Reconnect.save(existing, reactivation_attrs) end,
       fn ->
         AccountMatch.create_with_race_protection(
           fn -> VideoIntegrationQueries.create(create_attrs) end,
@@ -533,7 +538,7 @@ defmodule Tymeslot.Integrations.Video do
               provider_account_id
             )
           end,
-          fn existing -> VideoIntegrationQueries.update_credentials(existing, token_attrs) end
+          fn existing -> Reconnect.save(existing, token_attrs) end
         )
       end
     )
