@@ -272,6 +272,13 @@ defmodule Tymeslot.Integrations.Calendar do
   @spec find_calendar_by_path([CalendarEntry.t()], String.t() | nil) :: CalendarEntry.t() | nil
   defdelegate find_calendar_by_path(calendar_list, path), to: Selection
 
+  @doc """
+  Resolves the calendar entry an event was synced from. See
+  `Tymeslot.Integrations.Calendar.Selection.calendar_for_event/2`.
+  """
+  @spec calendar_for_event(map(), [CalendarEntry.t()] | nil) :: CalendarEntry.t() | nil
+  defdelegate calendar_for_event(event, calendar_list), to: Selection
+
   # ---------------------------
   # Public API: Validation/Connection
   # ---------------------------
