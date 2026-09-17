@@ -200,8 +200,11 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomExpiry do
   defp retention_seconds,
     do: Application.fetch_env!(:tymeslot, :video_room_retention_days) * @seconds_per_day
 
+  # Names the outcome for the log line. `fetch_event/2` answers `{:ok, events}`
+  # or `{:error, reason}`, and every shape but an empty list and an atom reason
+  # has already been matched by the time this is reached, so the last clause
+  # stands for a reason no atom names rather than for an unexpected answer.
   defp describe({:ok, []}), do: :no_usable_event
   defp describe({:error, reason}) when is_atom(reason), do: reason
-  defp describe({:error, _reason}), do: :error
-  defp describe(_other), do: :unexpected
+  defp describe(_other), do: :error
 end
