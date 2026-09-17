@@ -10,7 +10,11 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
   credentials away before they had been used.
 
   Only *upcoming* bookings are touched. Past bookings are history, and their
-  provider rooms have usually expired on their own.
+  provider rooms have usually expired on their own. The exception is a provider
+  whose rooms stay on the organiser's server until something deletes them
+  (`ProviderConfig.rooms_deleted_after_meeting/0`): every room such an
+  integration still holds is deleted, ended and cancelled meetings included,
+  because once the row is purged nothing has the credentials to reach them.
 
   This runs only when the user explicitly asked for the rooms to be deleted.
   Disconnecting on its own leaves them alone, because their join URLs are
@@ -25,6 +29,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
 
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingQueries
@@ -126,12 +131,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
   defp drain(integration, executions) do
     limit = drain_page_limit()
 
-    meetings =
-      MeetingListQueries.list_upcoming_with_video_room_for_integration(
-        integration.id,
-        DateTime.utc_now(),
-        limit
-      )
+    meetings = rooms_to_drain(integration, limit)
 
     results = Enum.map(meetings, &delete_room(integration, &1))
     failures = Enum.count(results, &(&1 in [:error, :circuit_open]))
@@ -160,6 +160,18 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
 
       true ->
         finish(integration, executions, length(meetings), failures)
+    end
+  end
+
+  defp rooms_to_drain(integration, limit) do
+    if integration.provider in ProviderConfig.rooms_deleted_after_meeting() do
+      MeetingListQueries.list_with_video_room_for_integration(integration.id, limit)
+    else
+      MeetingListQueries.list_upcoming_with_video_room_for_integration(
+        integration.id,
+        DateTime.utc_now(),
+        limit
+      )
     end
   end
 

@@ -87,7 +87,8 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
   Used when a user disconnects an integration and asks for the rooms to be
   deleted along with it. Past bookings are left alone: they are history, and
-  their provider rooms have generally expired on their own.
+  their provider rooms have generally expired on their own. Providers whose
+  rooms do not expire use `list_with_video_room_for_integration/2` instead.
   """
   @spec list_upcoming_with_video_room_for_integration(
           pos_integer(),
@@ -98,6 +99,25 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     Meeting
     |> MeetingState.where_live_booking()
     |> upcoming(now)
+    |> where([m], m.video_integration_id == ^integration_id)
+    |> where([m], not is_nil(m.video_room_id))
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
+  @doc """
+  Returns every meeting, whatever its time or status, that still holds a
+  provider-side room created by the given integration.
+
+  Used when a user disconnects an integration whose provider keeps rooms on
+  the organiser's server until something deletes them, and asks for the rooms
+  to be deleted. Once the integration row is gone no scan can reach those rooms
+  again, so the ended and cancelled meetings' rooms go along with the upcoming
+  ones.
+  """
+  @spec list_with_video_room_for_integration(pos_integer(), pos_integer()) :: [Meeting.t()]
+  def list_with_video_room_for_integration(integration_id, limit) do
+    Meeting
     |> where([m], m.video_integration_id == ^integration_id)
     |> where([m], not is_nil(m.video_room_id))
     |> limit(^limit)
@@ -131,13 +151,26 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   `ended_after` bounds how far back the scan reaches. A room nothing can reach
   any more, because its integration was disconnected and never replaced, drops
   out of the window instead of being retried every night for ever.
+
+  Cancelled meetings are left out: `list_cancelled_with_video_room/2` covers
+  them, so no room is picked up by both scans. So are meetings whose
+  integration is waiting to be reconnected or is being disconnected, because
+  every delete through it would be refused. A meeting whose integration link is
+  gone stays in: `Tymeslot.Integrations.Video.IntegrationResolver` falls back on
+  the organiser's current integration for the same provider.
   """
   @spec list_ended_with_video_room([String.t()], DateTime.t(), DateTime.t(), pos_integer()) ::
           [Meeting.t()]
   def list_ended_with_video_room(providers, ended_before, ended_after, limit \\ 500) do
     Meeting
+    |> join(:left, [m], vi in assoc(m, :video_integration))
     |> where([m], m.video_provider in ^providers)
     |> where([m], not is_nil(m.video_room_id))
+    |> where([m], m.status != "cancelled")
+    |> where(
+      [m, vi],
+      is_nil(m.video_integration_id) or (not vi.needs_reauth and is_nil(vi.deleted_at))
+    )
     |> where([m], m.end_time < ^ended_before and m.end_time >= ^ended_after)
     |> order_by([m], asc: m.end_time)
     |> limit(^limit)

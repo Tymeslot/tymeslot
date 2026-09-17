@@ -42,8 +42,9 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   @doc """
   Enqueues a video-room sync job for a meeting.
 
-  `action` is `"update"` (reschedule) or `"delete"` (cancellation). Duplicate
-  scheduling within the uniqueness window resolves to `{:ok, :already_scheduled}`.
+  `action` is `"update"` (reschedule) or `"delete"` (cancellation, or a room
+  that has outlived its meeting). Duplicate scheduling within the uniqueness
+  window resolves to `{:ok, :already_scheduled}`.
   """
   @spec enqueue(String.t(), String.t()) :: {:ok, atom()} | {:error, term()}
   def enqueue(meeting_id, action) when is_binary(meeting_id) and action in ["update", "delete"] do
@@ -157,10 +158,11 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   # idempotent not-found cases both arrive here as :ok. Anything else is a
   # genuine failure worth retrying via Oban's backoff.
   #
-  # Clearing the room id after a delete is what makes "cancelled and still
-  # holding a room id" mean "cleanup has not happened yet", which
-  # `Tymeslot.Workers.OrphanedVideoRoomScanWorker` relies on to converge instead
-  # of re-deleting every cancelled meeting's room nightly.
+  # Clearing the room id after a delete is what makes "still holding a room id"
+  # mean "cleanup has not happened yet", which both
+  # `Tymeslot.Workers.OrphanedVideoRoomScanWorker` (cancelled meetings) and
+  # `Tymeslot.Workers.ExpiredVideoRoomCleanupWorker` (meetings that ended a while
+  # ago) rely on to converge instead of re-deleting the same rooms nightly.
   defp handle_result(:ok, "delete", meeting, _executions), do: clear_video_room(meeting)
 
   defp handle_result(:ok, _action, _meeting, _executions), do: :ok

@@ -15,7 +15,8 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorker do
   converge: a meeting still carrying a room id is still outstanding.
 
   Mirrors `Tymeslot.Workers.OrphanedVideoRoomScanWorker`, which does the same
-  for cancelled meetings.
+  for cancelled meetings, so this scan leaves those to it. Rooms whose
+  integration is waiting to be reconnected are skipped until it is.
   """
 
   use Oban.Worker, queue: :default, max_attempts: 1, unique: [period: 60]
@@ -26,8 +27,6 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorker do
 
   require Logger
 
-  @default_retention_days 7
-
   # A room nothing could delete within a month of falling due, typically
   # because its integration was disconnected and never replaced, is left to its
   # owner rather than retried every night for ever.
@@ -37,9 +36,9 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorker do
 
   @impl Oban.Worker
   def perform(_job) do
-    # Read at run time: `config/runtime.exs` sets it from the environment.
-    retention_days =
-      Application.get_env(:tymeslot, :video_room_retention_days, @default_retention_days)
+    # Read at run time: `config/runtime.exs` sets it from the environment, over
+    # the default in `config/config.exs`.
+    retention_days = Application.fetch_env!(:tymeslot, :video_room_retention_days)
 
     ended_before = DateTime.add(DateTime.utc_now(), -retention_days * @seconds_per_day, :second)
     ended_after = DateTime.add(ended_before, -@lookback_days * @seconds_per_day, :second)
