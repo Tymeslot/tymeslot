@@ -1,7 +1,9 @@
 defmodule Tymeslot.CalendarGrid.EventDeletion do
   @moduledoc """
   Deleting a calendar-grid event: the provider delete, the Tymeslot meeting
-  it may have been booked as, and the cached row the grid reads.
+  it may have been booked as, and the cached row the grid reads. Whenever the
+  row changes, the organiser's cached availability is invalidated so the
+  booking page stops treating the slot as taken.
 
   ## Linked meetings
 
@@ -20,6 +22,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   deleted the event.
   """
 
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
 
@@ -72,10 +75,11 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
         {:ok, _deleted_or_missing} =
           ProviderCalendarEventQueries.delete_by_uid(integration_id, uid)
 
+        AvailabilityCache.invalidate_for_user(user_id)
         {:ok, %{uid: uid, integration_id: integration_id, linked_meeting: linked_meeting(result)}}
 
       {:error, reason} ->
-        {:error, %{reason: reason, retry: queue_retry(event, reason)}}
+        {:error, %{reason: reason, retry: queue_retry(user_id, event, reason)}}
     end
   end
 
@@ -86,11 +90,14 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
 
   defp linked_meeting(_result), do: :none
 
-  defp queue_retry(%{uid: uid, calendar_integration_id: integration_id}, reason) do
+  # A queued delete clears the row's timing, so the slot it held is released
+  # locally as well.
+  defp queue_retry(user_id, %{uid: uid, calendar_integration_id: integration_id}, reason) do
     target = %{uid: uid, calendar_integration_id: integration_id}
 
     with true <- CalendarEvents.queueable_error?(reason),
          :ok <- CalendarEvents.queue_for_offline_retry(target, :delete, %{}) do
+      AvailabilityCache.invalidate_for_user(user_id)
       :queued
     else
       _not_queued -> :not_queued

@@ -17,6 +17,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
   import Mox
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.TestMocks
@@ -77,6 +78,17 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
       assert {:error, :not_found} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
     end
 
+    test "invalidates the organiser's cached availability", %{user: user, caldav: caldav} do
+      event = insert_event(caldav)
+      expect_delete(:ok)
+
+      key = AvailabilityCache.booking_window_events_key(user.id)
+      :ok = AvailabilityCache.put(key, :stale)
+
+      assert {:ok, _result} = CalendarGrid.delete_event(user.id, event)
+      assert AvailabilityCache.get_or_compute(key, fn -> :recomputed end) == :recomputed
+    end
+
     test "addresses an event without a provider id by its uid", %{user: user, caldav: caldav} do
       event = insert_event(caldav, %{provider_event_id: nil})
       expect_delete(:ok)
@@ -111,12 +123,15 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
     test "queues a CalDAV delete for the next sync", %{user: user, caldav: caldav} do
       event = insert_event(caldav)
       expect_delete({:error, :network_error})
+      key = AvailabilityCache.booking_window_events_key(user.id)
+      :ok = AvailabilityCache.put(key, :stale)
 
       assert {:error, %{reason: :network_error, retry: :queued}} =
                CalendarGrid.delete_event(user.id, event)
 
       assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
       assert row.sync_state == "locally_deleted"
+      assert AvailabilityCache.get_or_compute(key, fn -> :recomputed end) == :recomputed
     end
 
     test "does not queue a delete a retry cannot recover", %{user: user, caldav: caldav} do
