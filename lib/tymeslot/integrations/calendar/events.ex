@@ -131,7 +131,8 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   If a Meeting or MeetingType is provided, uses their configured calendar integration.
   Falls back to the user's primary calendar if not specified.
   """
-  @spec create_event(calendar_event_data(), create_context()) :: {:ok, map()} | {:error, term()}
+  @spec create_event(calendar_event_data(), create_context()) ::
+          {:ok, map() | String.t()} | {:error, term()}
   def create_event(event_data, context) do
     case context do
       id when is_integer(id) and id > 0 ->

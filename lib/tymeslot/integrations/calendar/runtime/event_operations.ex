@@ -37,9 +37,12 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
 
   @doc """
   Creates a new event using the user's booking calendar.
+
+  The success value is whatever the provider answers with: the CalDAV family
+  returns the event's uid, the OAuth providers the event they created.
   """
   @spec create_event(event_data(), context()) ::
-          {:ok, map()} | {:error, term()}
+          {:ok, map() | String.t()} | {:error, term()}
   def create_event(event_data, context) do
     Metrics.time_operation(:create_event, %{}, fn ->
       Logger.info("Creating new calendar event")

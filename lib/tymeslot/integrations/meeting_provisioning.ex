@@ -82,7 +82,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   For `:separate` and `:none`: returns `{:ok, video_context}` unchanged.
   """
-  @spec finalise(map(), map(), plan()) ::
+  @spec finalise(map(), map() | String.t(), plan()) ::
           {:ok, map()} | {:error, :no_meet_url, map()}
   def finalise(video_context, created, {:inline, video_id}) do
     case ConferenceData.meet_url_from_event(created) do

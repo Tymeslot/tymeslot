@@ -148,8 +148,6 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   defp created_uid(created, uid) when is_map(created),
     do: MapKeys.get_binary(created, :uid) || uid
 
-  defp created_uid(_created, uid), do: uid
-
   defp cache_destination(moved) do
     row =
       moved
