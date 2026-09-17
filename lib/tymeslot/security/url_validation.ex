@@ -56,6 +56,25 @@ defmodule Tymeslot.Security.UrlValidation do
 
   def validate_http_url(_url, _opts), do: {:error, @default_invalid_message}
 
+  @doc """
+  Whether `host` is shaped like a name on a private network: a single label (a
+  Docker service name such as `nextcloud`) or a name under `.local`, `.lan`,
+  `.internal` or `.home.arpa`. Never true for an IP literal.
+
+  This is the one definition of an internal name. Callers that relax a rule
+  for internal names (`internal_names_local: true` here, the server address
+  forms) do so only while the operator has allowed private addresses for that
+  integration, and never resolve the name to decide.
+  """
+  @spec internal_name?(String.t()) :: boolean()
+  def internal_name?(host) when is_binary(host) do
+    name = host |> String.downcase() |> String.trim_trailing(".")
+    labels = String.split(name, ".")
+
+    hostname?(labels) and not ip_literal?(name) and
+      (match?([_single], labels) or internal_suffix?(name))
+  end
+
   defp validate_url_checks(url, scheme, host, opts) do
     max_length = Keyword.get(opts, :max_length, @default_max_length)
 
@@ -167,16 +186,6 @@ defmodule Tymeslot.Security.UrlValidation do
 
   defp local_for_https?(host, internal_names_local) do
     local_or_private_host?(host) or (internal_names_local and internal_name?(host))
-  end
-
-  # A hostname, not an IP literal, that is either a single label or sits under
-  # a suffix reserved for private networks. A trailing root dot is ignored.
-  defp internal_name?(host) do
-    name = host |> String.downcase() |> String.trim_trailing(".")
-    labels = String.split(name, ".")
-
-    hostname?(labels) and not ip_literal?(name) and
-      (match?([_single], labels) or internal_suffix?(name))
   end
 
   defp hostname?(labels),

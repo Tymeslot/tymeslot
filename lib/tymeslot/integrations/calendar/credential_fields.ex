@@ -81,6 +81,9 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
   defp validate_server_url(nil, _metadata), do: {:ok, ""}
   defp validate_server_url("", _metadata), do: {:ok, ""}
 
+  # The private-address opt-out also admits a single-label host (a Docker
+  # service name), which the shape check would otherwise refuse before
+  # `do_validate_calendar_url/1` could apply the same opt-out to the https rule.
   defp validate_server_url(url, metadata) when is_binary(url) do
     case InputValidators.validate_server_url(url, metadata,
            error_message:
@@ -88,6 +91,7 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
                "dashboard_calendar_providers",
                "Please enter a valid server URL (e.g., https://cloud.example.com)"
              ),
+           internal_names_local: SsrfGuard.allow_private_for_calendar?(),
            validate_url_fn: &do_validate_calendar_url/1
          ) do
       {:ok, sanitized_url} -> {:ok, sanitized_url}

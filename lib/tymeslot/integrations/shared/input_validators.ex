@@ -8,7 +8,7 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Security.FieldValidators.IntegrationNameValidator
-  alias Tymeslot.Security.{InputProcessor, UniversalSanitizer}
+  alias Tymeslot.Security.{InputProcessor, UniversalSanitizer, UrlValidation}
 
   # See IntegrationNameValidator for the rationale behind this character set.
   @invisible_chars ~r/[\x{200B}-\x{200F}\x{2028}-\x{202F}\x{205F}-\x{206F}\x{FEFF}\x{00AD}]/u
@@ -59,6 +59,13 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
 
   @doc """
   Shared server URL validation logic.
+
+  A host needs a dot, as a public domain has, unless it is `localhost`. With
+  `internal_names_local: true` a single-label internal name (a Docker service
+  name such as `nextcloud`, see `Tymeslot.Security.UrlValidation.internal_name?/1`)
+  is accepted too; callers pass it exactly when the operator has allowed
+  private addresses for the integration, the same opt-in that lets the https
+  rule accept such a name.
   """
   @spec validate_server_url(any(), map(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
   def validate_server_url(url, metadata, opts \\ []) do
@@ -70,6 +77,7 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
       )
 
     validate_url_fn = Keyword.get(opts, :validate_url_fn, fn _url -> :ok end)
+    internal_names_local = Keyword.get(opts, :internal_names_local, false)
 
     case UniversalSanitizer.sanitize_and_validate(normalize_url_protocol(url),
            allow_html: false,
@@ -82,8 +90,7 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
           is_nil(uri.host) or uri.host == "" ->
             {:error, error_msg}
 
-          # Require at least one dot for public domains, or allow 'localhost'
-          not String.contains?(uri.host, ".") and uri.host != "localhost" ->
+          not host_shape_allowed?(uri.host, internal_names_local) ->
             {:error, error_msg}
 
           true ->
@@ -96,5 +103,11 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
       {:error, error} ->
         {:error, error}
     end
+  end
+
+  defp host_shape_allowed?("localhost", _internal_names_local), do: true
+
+  defp host_shape_allowed?(host, internal_names_local) do
+    String.contains?(host, ".") or (internal_names_local and UrlValidation.internal_name?(host))
   end
 end

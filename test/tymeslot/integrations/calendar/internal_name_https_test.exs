@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.InternalNameHttpsTest do
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Provider, as: CaldavProvider
   alias Tymeslot.Integrations.Calendar.CredentialFields
+  alias Tymeslot.Integrations.Calendar.InputValidation
 
   @internal_servers [
     "http://nextcloud/remote.php/dav",
@@ -58,6 +59,66 @@ defmodule Tymeslot.Integrations.Calendar.InternalNameHttpsTest do
     end
   end
 
+  # Every calendar form reaches the https rule through
+  # `CredentialFields.server_url/2`, whose shape check refused a host without a
+  # dot before the rule could run. These go through the forms themselves.
+  describe "the calendar connect forms" do
+    test "accept a Docker service name over plain http once private calendar addresses are allowed" do
+      with_config(:tymeslot, :allow_private_ips_for_calendar, true)
+
+      for server <- @internal_servers do
+        assert {:ok, %{"url" => ^server}} =
+                 InputValidation.validate_calendar_integration_form(credentials(server))
+
+        assert {:ok, %{"url" => ^server}} =
+                 InputValidation.validate_exchange_form(
+                   Map.put(credentials(server), "mailbox", "organiser@example.com"),
+                   []
+                 )
+
+        assert {:ok, ^server} = InputValidation.validate_single_field(:url, server)
+
+        assert {:ok, %{"url" => ^server}} =
+                 InputValidation.validate_calendar_discovery(credentials(server),
+                   provider: :nextcloud
+                 )
+      end
+    end
+
+    test "refuse a Docker service name while private calendar addresses are not allowed" do
+      server = "http://nextcloud/remote.php/dav"
+
+      assert {:error, %{url: message}} =
+               InputValidation.validate_calendar_integration_form(credentials(server))
+
+      assert message =~ "valid server URL"
+
+      assert {:error, %{url: ^message}} =
+               InputValidation.validate_exchange_form(
+                 Map.put(credentials(server), "mailbox", "organiser@example.com"),
+                 []
+               )
+
+      assert {:error, ^message} = InputValidation.validate_single_field(:url, server)
+
+      assert {:error, %{url: ^message}} =
+               InputValidation.validate_calendar_discovery(credentials(server),
+                 provider: :nextcloud
+               )
+    end
+
+    test "still ask for https on a public name" do
+      with_config(:tymeslot, :allow_private_ips_for_calendar, true)
+
+      assert {:error, %{url: message}} =
+               InputValidation.validate_calendar_integration_form(
+                 credentials("http://cloud.example.com/remote.php/dav")
+               )
+
+      assert message =~ "HTTPS"
+    end
+  end
+
   describe "the CalDAV provider's configuration check" do
     test "accepts plain http to an internal name once private calendar addresses are allowed" do
       with_config(:tymeslot, :allow_private_ips_for_calendar, true)
@@ -83,6 +144,14 @@ defmodule Tymeslot.Integrations.Calendar.InternalNameHttpsTest do
       end
     end
   end
+
+  defp credentials(server),
+    do: %{
+      "name" => "Team cloud",
+      "url" => server,
+      "username" => "organiser",
+      "password" => "secret-app-password"
+    }
 
   defp caldav(server), do: %{base_url: server, username: "organiser", password: "secret"}
 end
