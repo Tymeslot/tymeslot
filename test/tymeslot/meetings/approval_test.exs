@@ -405,6 +405,18 @@ defmodule Tymeslot.Meetings.ApprovalTest do
     end
   end
 
+  describe "refunds_on_release?/1" do
+    test "a request that never became a meeting is refunded when released" do
+      assert Approval.refunds_on_release?(held_meeting())
+    end
+
+    test "a confirmed meeting re-requested by a reschedule is not refunded automatically" do
+      refute Approval.refunds_on_release?(
+               held_meeting(%{first_announced_at: DateTime.utc_now(:second)})
+             )
+    end
+  end
+
   describe "expire/1" do
     test "releases the slot without recording a decline reason" do
       meeting = held_meeting()
