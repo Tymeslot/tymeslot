@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProviderTest do
   alias Joken.Signer
   alias Tymeslot.Integrations.Video.Providers.JitsiProvider
   alias Tymeslot.Integrations.Video.RoomData
+  alias Tymeslot.Test.LogCapture
 
   setup :verify_on_exit!
 
@@ -43,6 +44,35 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProviderTest do
                {:error, "Invalid URL format. Please provide a valid HTTP/HTTPS URL."}
     end
 
+    test "keeps a plain sub-path on the configured server" do
+      assert {:ok, room} =
+               JitsiProvider.create_meeting_room(%{
+                 base_url: "https://example.com/jitsi",
+                 meeting_id: "m-1"
+               })
+
+      assert room.meeting_url == "https://example.com/jitsi/" <> room.room_id
+      assert JitsiProvider.extract_room_id(room.meeting_url) == room.room_id
+    end
+
+    test "refuses a server URL with a query string or a fragment" do
+      assert {:error, query_message} =
+               JitsiProvider.create_meeting_room(%{
+                 base_url: "https://m.example.com/?x=1",
+                 meeting_id: "m-1"
+               })
+
+      assert query_message =~ "query string"
+
+      assert {:error, fragment_message} =
+               JitsiProvider.create_meeting_room(%{
+                 base_url: "https://m.example.com/#room",
+                 meeting_id: "m-1"
+               })
+
+      assert fragment_message =~ "fragment"
+    end
+
     test "refuses a missing meeting id rather than inventing a shared room" do
       assert JitsiProvider.create_meeting_room(%{base_url: @base_url}) ==
                {:error, "A meeting ID is required to create a video room"}
@@ -54,6 +84,13 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProviderTest do
       refute inspect(room.provider_data) =~ @secret
       refute inspect(JitsiProvider.generate_meeting_metadata(room)) =~ @secret
     end
+
+    test "keeps the credentials out of the inspected room data" do
+      {:ok, room} = create_room_with_credentials("m-1")
+
+      assert room.provider_config.client_secret == @secret
+      refute inspect(room) =~ @secret
+    end
   end
 
   describe "validate_config/1" do
@@ -63,6 +100,16 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProviderTest do
 
       assert JitsiProvider.validate_config(%{base_url: "ftp://x.example"}) ==
                {:error, "Invalid URL format. Please provide a valid HTTP/HTTPS URL."}
+    end
+
+    test "refuses a server URL with a query string or a fragment, and accepts a sub-path" do
+      assert {:error, _message} =
+               JitsiProvider.validate_config(%{base_url: "https://m.example.com/?x=1"})
+
+      assert {:error, _message} =
+               JitsiProvider.validate_config(%{base_url: "https://m.example.com/#room"})
+
+      assert JitsiProvider.validate_config(%{base_url: "https://example.com/jitsi"}) == :ok
     end
 
     test "accepts a server URL with no credentials" do
@@ -100,6 +147,22 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProviderTest do
                credential_config(client_secret: String.duplicate("a", 32))
              ) == :ok
     end
+
+    test "treats a whitespace-only credential as absent and measures a secret without its padding" do
+      assert JitsiProvider.validate_config(
+               credential_config(client_secret: String.duplicate(" ", 32))
+             ) == {:error, "Enter the App secret that belongs to this App ID"}
+
+      assert JitsiProvider.validate_config(credential_config(client_id: "   ")) ==
+               {:error, "Enter the App ID that belongs to this App secret"}
+
+      assert {:error, message} =
+               JitsiProvider.validate_config(
+                 credential_config(client_secret: "  " <> String.duplicate("a", 31) <> "  ")
+               )
+
+      assert message =~ "at least 32 bytes"
+    end
   end
 
   describe "create_join_url/5 without credentials" do
@@ -113,6 +176,48 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProviderTest do
                "organizer",
                DateTime.utc_now()
              ) == {:ok, room.meeting_url}
+    end
+  end
+
+  describe "create_join_url/5 with half the credentials" do
+    test "hands out the bare room URL" do
+      {:ok, room} = JitsiProvider.create_meeting_room(%{base_url: @base_url, meeting_id: "m-1"})
+
+      for half <- [%{client_id: @app_id}, %{client_secret: @secret}] do
+        room_with_half = %{room | provider_config: Map.merge(%{base_url: @base_url}, half)}
+
+        assert JitsiProvider.create_join_url(
+                 room_with_half,
+                 "Ada",
+                 "ada@example.com",
+                 "organizer",
+                 nil
+               ) == {:ok, room.meeting_url}
+      end
+    end
+  end
+
+  describe "create_join_url/5 when minting fails" do
+    test "hands out the bare room URL and logs neither the secret nor a token" do
+      LogCapture.attach()
+
+      # A room with no id is refused by the token minter, which is the one
+      # failure reachable without a broken signer.
+      room = %RoomData{
+        room_id: nil,
+        meeting_url: @base_url <> "/unminted-room",
+        provider_data: %{},
+        provider_config: credential_config()
+      }
+
+      assert JitsiProvider.create_join_url(room, "Ada", "ada@example.com", "organizer", nil) ==
+               {:ok, @base_url <> "/unminted-room"}
+
+      dump = "Failed to mint Jitsi access token" |> LogCapture.await_log() |> LogCapture.dump()
+      assert dump =~ "invalid_room"
+      refute dump =~ @secret
+      refute dump =~ "jwt"
+      refute dump =~ "eyJ"
     end
   end
 
@@ -204,9 +309,10 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProviderTest do
   end
 
   describe "valid_meeting_url?/1" do
-    test "accepts an HTTP room URL and rejects a non-HTTP one" do
+    test "accepts an HTTP room URL and rejects a non-HTTP one or one with no room" do
       assert JitsiProvider.valid_meeting_url?("https://meet.example.com/abc")
       refute JitsiProvider.valid_meeting_url?("ftp://meet.example.com/abc")
+      refute JitsiProvider.valid_meeting_url?("https://meet.example.com/")
     end
   end
 

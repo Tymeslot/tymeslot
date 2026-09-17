@@ -8,6 +8,10 @@ defmodule Tymeslot.Integrations.Video.RoomData do
   calls via `MeetingContext`.
   """
 
+  # `provider_config` carries the decrypted credentials the room was created
+  # with, so it is kept out of every inspected form: a log line, a crash
+  # report or an error tuple that happens to include the struct.
+  @derive {Inspect, except: [:provider_config]}
   @enforce_keys [:room_id, :meeting_url, :provider_data]
   defstruct room_id: nil, meeting_url: nil, provider_data: nil, provider_config: nil
 

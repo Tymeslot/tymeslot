@@ -61,9 +61,10 @@ defmodule Tymeslot.Integrations.Video.Providers.KmeetProviderTest do
   end
 
   describe "valid_meeting_url?/1" do
-    test "accepts a kMeet room URL and rejects a non-HTTP one" do
+    test "accepts a kMeet room URL and rejects a non-HTTP one or one with no room" do
       assert KmeetProvider.valid_meeting_url?("https://kmeet.infomaniak.com/abc")
       refute KmeetProvider.valid_meeting_url?("ftp://kmeet.infomaniak.com/abc")
+      refute KmeetProvider.valid_meeting_url?("https://kmeet.infomaniak.com")
     end
   end
 

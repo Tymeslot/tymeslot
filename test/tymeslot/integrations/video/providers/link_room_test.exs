@@ -71,6 +71,24 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoomTest do
                {:error, "A meeting ID is required to create a video room"}
     end
 
+    test "keeps a plain sub-path on the base URL" do
+      assert {:ok, %{room_id: room_id, meeting_url: url}} =
+               LinkRoom.build_room("https://example.com/jitsi", "meeting-42")
+
+      assert url == "https://example.com/jitsi/" <> room_id
+      assert LinkRoom.slug_from_url(url) == room_id
+    end
+
+    test "refuses a base URL with a query string" do
+      assert {:error, message} = LinkRoom.build_room("https://m.example.com/?x=1", "meeting-42")
+      assert message =~ "query string"
+    end
+
+    test "refuses a base URL with a fragment" do
+      assert {:error, message} = LinkRoom.build_room("https://m.example.com/#room", "meeting-42")
+      assert message =~ "fragment"
+    end
+
     test "refuses a URL over the length limit" do
       base_url = "https://" <> String.duplicate("e", TemplateConfig.max_url_length()) <> ".com"
       assert {:error, _message} = LinkRoom.build_room(base_url, "meeting-42")
@@ -104,6 +122,20 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoomTest do
       refute LinkRoom.http_url?("ftp://meet.example.com/room")
       refute LinkRoom.http_url?("https:///room")
       refute LinkRoom.http_url?(nil)
+    end
+  end
+
+  describe "room_url?/1" do
+    test "accepts an HTTP URL with a room segment, including under a sub-path" do
+      assert LinkRoom.room_url?("https://meet.example.com/abc123")
+      assert LinkRoom.room_url?("https://example.com/jitsi/abc123")
+    end
+
+    test "rejects a bare host, a non-HTTP URL and a non-binary" do
+      refute LinkRoom.room_url?("https://meet.example.com")
+      refute LinkRoom.room_url?("https://meet.example.com/")
+      refute LinkRoom.room_url?("ftp://meet.example.com/abc123")
+      refute LinkRoom.room_url?(nil)
     end
   end
 

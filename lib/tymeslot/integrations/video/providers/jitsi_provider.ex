@@ -17,13 +17,21 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
   starts. Without credentials the bare room URL is handed out, which suits an
   open server.
 
+  The token expires four hours after the meeting's start, so a participant
+  reconnecting later than that in a very long meeting is refused.
+
+  Should minting ever fail, the bare room URL is handed out instead and the
+  failure is logged (room id and reason only). A room link that may ask for
+  a login is strictly better than no usable link at all.
+
   The organiser's token flags them as a moderator and the attendee's does
   not. That flag grants nothing by itself: it takes effect only on a server
   configured to honour it.
 
   The credentials are optional, but all or nothing: `validate_config/1`
   refuses half a pair, and a secret shorter than 32 bytes, since every guest
-  receives a token signed with it.
+  receives a token signed with it. A credential that is only whitespace counts
+  as absent, and surrounding whitespace is trimmed before either is used.
 
   The credentials never enter `RoomData.provider_data`. `create_join_url/5`
   reads them from `RoomData.provider_config`, the in-memory config the room
@@ -97,7 +105,7 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
   def extract_room_id(meeting_url), do: LinkRoom.slug_from_url(meeting_url)
 
   @impl ProviderBehaviour
-  def valid_meeting_url?(meeting_url), do: LinkRoom.http_url?(meeting_url)
+  def valid_meeting_url?(meeting_url), do: LinkRoom.room_url?(meeting_url)
 
   @impl ProviderBehaviour
   def perform_connection_test(config) do
@@ -172,20 +180,28 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
     %{required: [:base_url], credential_pairs: [], url_fields: [:base_url]}
   end
 
+  # Checked at validation time as well as in `LinkRoom.build_room/2`, so a
+  # server URL carrying a query string or fragment is refused when the
+  # integration is set up rather than at the first booking.
   defp fetch_base_url(config) do
-    case present(Map.get(config, :base_url)) do
-      nil ->
-        {:error, dgettext("dashboard_integrations", "Base URL is required")}
+    with {:ok, base_url} <- fetch_http_base_url(Map.get(config, :base_url)),
+         :ok <- LinkRoom.validate_base_url(base_url) do
+      {:ok, base_url}
+    end
+  end
 
-      base_url ->
-        if LinkRoom.http_url?(base_url),
-          do: {:ok, base_url},
-          else:
-            {:error,
-             dgettext(
-               "dashboard_integrations",
-               "Invalid URL format. Please provide a valid HTTP/HTTPS URL."
-             )}
+  defp fetch_http_base_url(base_url) when base_url in [nil, ""],
+    do: {:error, dgettext("dashboard_integrations", "Base URL is required")}
+
+  defp fetch_http_base_url(base_url) do
+    if LinkRoom.http_url?(base_url) do
+      {:ok, base_url}
+    else
+      {:error,
+       dgettext(
+         "dashboard_integrations",
+         "Invalid URL format. Please provide a valid HTTP/HTTPS URL."
+       )}
     end
   end
 
@@ -225,21 +241,33 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
   defp mint_join_url(room_data, app_id, secret, claims) do
     case Token.mint([app_id: app_id, secret: secret, room: room_data.room_id] ++ claims) do
       {:ok, token} ->
-        {:ok, room_data.meeting_url <> "?" <> URI.encode_query(%{"jwt" => token})}
+        join_url =
+          room_data.meeting_url
+          |> URI.parse()
+          |> URI.append_query(URI.encode_query(%{"jwt" => token}))
+          |> URI.to_string()
 
-      {:error, reason} = error ->
-        Logger.error("Failed to mint Jitsi access token",
+        {:ok, join_url}
+
+      {:error, reason} ->
+        Logger.error("Failed to mint Jitsi access token, handing out the bare room URL",
           room_id: room_data.room_id,
           reason: inspect(reason)
         )
 
-        error
+        {:ok, room_data.meeting_url}
     end
   end
 
   defp expiry(nil), do: DateTime.add(DateTime.utc_now(), @token_grace_seconds, :second)
   defp expiry(meeting_time), do: DateTime.add(meeting_time, @token_grace_seconds, :second)
 
-  defp present(value) when is_binary(value) and value != "", do: value
+  defp present(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+  end
+
   defp present(_value), do: nil
 end

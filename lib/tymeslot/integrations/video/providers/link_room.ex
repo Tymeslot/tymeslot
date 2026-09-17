@@ -81,12 +81,14 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
 
   Refuses a missing meeting id with a plain-English message rather than the
   bare `:empty_meeting_id` atom `slug/1` returns, since this is the entry
-  point callers use directly.
+  point callers use directly. Refuses a base URL that `validate_base_url/1`
+  rejects.
   """
   @spec build_room(String.t(), String.t() | integer() | atom() | nil) ::
           {:ok, %{room_id: String.t(), meeting_url: String.t()}} | {:error, String.t()}
   def build_room(base_url, meeting_id) do
-    with {:ok, room_id} <- slug_or_missing_id_message(meeting_id),
+    with :ok <- validate_base_url(base_url),
+         {:ok, room_id} <- slug_or_missing_id_message(meeting_id),
          meeting_url = append_slug(base_url, room_id),
          :ok <- validate_length(meeting_url) do
       {:ok, %{room_id: room_id, meeting_url: meeting_url}}
@@ -105,6 +107,29 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
   end
 
   @doc """
+  Refuses a base URL carrying a query string or a fragment.
+
+  The room slug is appended to the path, so anything after it would end up in
+  front of the slug (`https://m.example.com/?x=1/<slug>`): the room lands
+  somewhere other than the path says, and `slug_from_url/1` no longer finds
+  it. A plain sub-path (`https://example.com/jitsi`) is fine.
+  """
+  @spec validate_base_url(String.t()) :: :ok | {:error, String.t()}
+  def validate_base_url(base_url) do
+    case URI.parse(base_url) do
+      %URI{query: nil, fragment: nil} ->
+        :ok
+
+      _with_query_or_fragment ->
+        {:error,
+         dgettext(
+           "dashboard_integrations",
+           "The server URL cannot contain a query string (?) or a fragment (#). Enter only the address of the server."
+         )}
+    end
+  end
+
+  @doc """
   Whether the value is an http or https URL with a non-empty host.
   """
   @spec http_url?(any()) :: boolean()
@@ -114,6 +139,13 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
   end
 
   def http_url?(_url), do: false
+
+  @doc """
+  Whether the value is an http or https URL naming a room: one with a
+  non-empty path segment for `slug_from_url/1` to return.
+  """
+  @spec room_url?(any()) :: boolean()
+  def room_url?(url), do: http_url?(url) and slug_from_url(url) != nil
 
   @doc """
   Refuses a URL longer than the database column holding it allows.

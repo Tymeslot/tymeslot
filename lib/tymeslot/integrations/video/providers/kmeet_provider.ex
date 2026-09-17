@@ -53,7 +53,7 @@ defmodule Tymeslot.Integrations.Video.Providers.KmeetProvider do
   def extract_room_id(meeting_url), do: LinkRoom.slug_from_url(meeting_url)
 
   @impl ProviderBehaviour
-  def valid_meeting_url?(meeting_url), do: LinkRoom.http_url?(meeting_url)
+  def valid_meeting_url?(meeting_url), do: LinkRoom.room_url?(meeting_url)
 
   @impl ProviderBehaviour
   def perform_connection_test(_config), do: LinkRoom.connection_test(@host)
