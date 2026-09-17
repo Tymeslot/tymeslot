@@ -103,6 +103,19 @@ defmodule Tymeslot.Repo.Migrations.NormaliseUrlKeyedVideoAccountIdsTest do
     assert key(disconnected) == "https://shared.example.com"
   end
 
+  test "counts a row whose active state was never set as inactive", %{user: user} do
+    integration(user, "jitsi", "https://unset.example.com")
+    unset = integration(user, "jitsi", "https://Unset.example.com/")
+
+    # The schema default fills in a nil, so only raw SQL can leave it unset, as
+    # a row written outside the application could.
+    Repo.query!("UPDATE video_integrations SET is_active = NULL WHERE id = $1", [unset.id])
+
+    MigrationRunner.replay!(@version)
+
+    assert key(unset) == "https://unset.example.com"
+  end
+
   test "rewrites a row onto a key another row gives up in the same backfill", %{user: user} do
     moving_on =
       integration(user, "custom", "https://z.example.com/c", key: "https://y.example.com/b")

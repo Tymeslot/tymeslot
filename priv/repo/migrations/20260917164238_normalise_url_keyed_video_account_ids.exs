@@ -15,7 +15,8 @@ defmodule Tymeslot.Repo.Migrations.NormaliseUrlKeyedVideoAccountIds do
 
   Every row of the three providers whose key differs from the normalised form
   of its address, soft-deleted and inactive rows included. A row without an
-  address is left alone.
+  address is left alone. `is_active` is nullable, and a NULL row is outside the
+  partial index (`is_active = true`), so it counts as inactive.
 
   The partial unique index `unique_active_video_account_per_user` allows one
   active row per user, provider and key. An active row is therefore only
@@ -67,7 +68,7 @@ defmodule Tymeslot.Repo.Migrations.NormaliseUrlKeyedVideoAccountIds do
     %{rows: rows} =
       repo().query!(
         """
-        SELECT id, user_id, provider, is_active, provider_account_id,
+        SELECT id, user_id, provider, COALESCE(is_active, false), provider_account_id,
                CASE WHEN provider = 'custom' THEN custom_meeting_url ELSE base_url END
         FROM video_integrations
         WHERE provider = ANY($1)
