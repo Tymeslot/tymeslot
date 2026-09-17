@@ -166,6 +166,12 @@ defmodule Tymeslot.ProfilesContextTest do
       assert reason =~ "reserved"
     end
 
+    test "every reserved path is written in lowercase" do
+      # Usernames must be lowercase, so an entry with a capital letter can never
+      # match one and reserves nothing.
+      assert Enum.reject(ReservedPaths.list(), &(&1 == String.downcase(&1))) == []
+    end
+
     test "every supported locale code is a reserved path" do
       # Locale codes are top-level URL prefixes on localised deployments; a
       # username matching one would shadow the locale scope (or vice versa),
