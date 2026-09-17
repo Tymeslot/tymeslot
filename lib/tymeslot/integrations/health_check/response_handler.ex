@@ -17,26 +17,25 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
     of the 48-hour email threshold.
   - An integration already flagged `needs_reauth` never gets the unhealthy
     email: the reauth email has told its owner, and nothing recovers until
-    they reconnect.
+    they reconnect. Once they have, an integration still unhealthy for
+    another reason gets the unhealthy email as usual, since the reauth path
+    leaves `notification_sent_at` untouched.
   - Permanent auth failures (e.g. Google `invalid_grant`) bypass the 48-hour
-    threshold via `handle_permanent_auth_failure/4`: the integration is
+    threshold via `handle_permanent_auth_failure/3`: the integration is
     flagged `needs_reauth: true`, which itself owns the notification (the
     reauth email, not the unhealthy one; see `CalendarManagement.flag_and_notify/2`
     and `Video.flag_and_notify/2`) on the false to true transition. This
-    fast-path only stamps `notification_sent_at` so the 48-hour threshold
-    does not also fire an unhealthy email for the same failure; it sends
-    nothing itself. Oban's 30-day uniqueness window prevents duplicate reauth
-    emails while the user has not reconnected.
+    fast-path sends nothing itself. Oban's 30-day uniqueness window prevents
+    duplicate reauth emails while the user has not reconnected.
 
   ## Atomicity Notes
 
   `became_unhealthy_at` is set by `Monitor.update_health/2` and persisted
   atomically with the rest of the health state via `Monitor.put_state/3`.
 
-  `notification_sent_at` is stamped by the email worker handler after
-  confirmed delivery for the 48-hour threshold path, and directly by
-  `maybe_notify_on_reauth/2` for the permanent-auth fast-path, which sends
-  no email of its own to stamp for.
+  `notification_sent_at` is stamped only by the email worker handler, after
+  confirmed delivery of the unhealthy email. The permanent-auth fast-path
+  never writes it.
   """
 
   require Logger
@@ -146,8 +145,9 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
 
   When the assessor's `check_result` carries a permanent auth marker, the
   integration is flagged `needs_reauth: true` so the dashboard reconnect
-  banner shows immediately, and the unhealthy-notification email is enqueued
-  on the same health check rather than waiting 48 hours.
+  banner shows immediately, and flagging enqueues the reauth email on the same
+  health check rather than leaving the owner to wait 48 hours for the
+  unhealthy one.
 
   Non-auth failures and successes are passed through untouched. Safe to call
   on every check — Oban's 30-day uniqueness window on the email job prevents
@@ -171,11 +171,11 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
 
       case flag_for_reauth(type, integration, ReauthHandling.rejection_cause(reason)) do
         :ok ->
-          maybe_notify_on_reauth(type, integration)
+          :ok
 
         {:error, _reason} ->
           Logger.error(
-            "Failed to set needs_reauth flag — skipping notification until next successful flag write",
+            "Failed to set needs_reauth flag, so no reauth email is sent until a flag write succeeds",
             type: type,
             integration_id: integration.id,
             provider: integration.provider
@@ -206,27 +206,6 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
     case CalendarManagement.handle_reauth_required(integration, cause: cause) do
       {:discard, _msg} -> :ok
       {:error, _reason} = err -> err
-    end
-  end
-
-  # A permanent auth failure is already announced by the reauth email that
-  # `flag_for_reauth/3` triggers on the false to true transition (see
-  # `CalendarManagement.flag_and_notify/2` / `Video.flag_and_notify/2`), so
-  # this fast-path sends nothing itself. It still stamps `notification_sent_at`
-  # when the cooldown window allows it, purely as bookkeeping: without that
-  # stamp the 48-hour unhealthy threshold would fire its own email on top of
-  # the reauth one for the same underlying failure.
-  defp maybe_notify_on_reauth(type, integration) do
-    now = DateTime.utc_now()
-
-    notification_sent_at =
-      case IntegrationHealthStateQueries.get(type, integration.id) do
-        {:ok, record} -> record.notification_sent_at
-        {:error, :not_found} -> nil
-      end
-
-    if outside_cooldown?(notification_sent_at, now) do
-      IntegrationHealthStateQueries.update_fields(type, integration.id, notification_sent_at: now)
     end
   end
 

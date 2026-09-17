@@ -79,6 +79,43 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequiredTest do
     end
   end
 
+  describe "render/3 for a calendar subscription" do
+    test "asks the owner to remove the subscription and subscribe again, since its row has no Reconnect button" do
+      html = IntegrationReauthRequired.render(@user, ics_integration(), :calendar)
+
+      assert html =~ "Select <strong>Remove connection</strong> on the Calendar subscription row"
+
+      assert html =~ "paste the current feed link and select Subscribe"
+
+      assert html =~ "Open calendar settings"
+      assert html =~ "Your Calendar subscription integration needs reconnecting"
+      refute html =~ "<strong>Reconnect</strong>"
+      refute html =~ "Ics url"
+    end
+
+    test "promises no further notice until the subscription is replaced" do
+      text = IntegrationReauthRequired.render_text(@user, ics_integration(), :calendar)
+
+      assert text =~
+               "You will not receive another notice about this until you replace it."
+
+      refute text =~ "30 days"
+    end
+  end
+
+  describe "footer" do
+    test "names the action that ends the notices for each kind of row" do
+      oauth = IntegrationReauthRequired.render_text(@user, integration(), :video)
+      talk = IntegrationReauthRequired.render_text(@user, talk_integration(), :video)
+      html = IntegrationReauthRequired.render(@user, talk_integration(), :video)
+
+      assert oauth =~ "You will not receive another notice about this until you reconnect it."
+      assert talk =~ "You will not receive another notice about this until you update it."
+      assert html =~ "until you update it"
+      refute html =~ "30 days"
+    end
+  end
+
   describe "provider_label/2" do
     test "uses the video provider's display name and humanises a calendar provider" do
       assert IntegrationReauthRequired.provider_label(%{provider: "nextcloud_talk"}, :video) ==
@@ -115,6 +152,14 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequiredTest do
       assert talk =~ "- Select Edit on the Nextcloud Talk row"
       refute talk =~ "Reconnect Nextcloud Talk"
     end
+  end
+
+  defp ics_integration do
+    %{
+      provider: "ics_url",
+      sync_error:
+        "The calendar feed refused the stored link. Subscribe again with the current link."
+    }
   end
 
   defp talk_integration do

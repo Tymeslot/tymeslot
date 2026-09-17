@@ -14,8 +14,9 @@ defmodule Tymeslot.Emails.EmailScheduler.IntegrationScheduler do
 
   Uses a 30-day uniqueness window per user + integration + type so that a
   re-occurring flap does not immediately re-send after a cooldown expires.
-  The ResponseHandler also tracks `notification_sent_at` in the DB for the same
-  reason; the Oban uniqueness is a belt-and-suspenders safeguard.
+  The ResponseHandler also honours the `notification_sent_at` the email worker
+  stamps after delivery, for the same reason; the Oban uniqueness is a
+  belt-and-suspenders safeguard.
   """
   @spec schedule_integration_unhealthy_notification(
           entity_with_id(),

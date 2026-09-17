@@ -117,6 +117,15 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoomTest do
       assert message =~ "login name or password"
     end
 
+    test "accepts an empty login section, which carries no credentials" do
+      assert LinkRoom.validate_base_url("https://@meet.example.com") == :ok
+    end
+
+    test "refuses a backslash before the @, which browsers and URI parsers read differently" do
+      assert {:error, message} = LinkRoom.validate_base_url("https://meet.example.com\\@evil.com")
+      assert message =~ "login name or password"
+    end
+
     test "refuses a fragment" do
       assert {:error, message} = LinkRoom.validate_base_url("https://meet.example.com/#room")
       assert message =~ "fragment"

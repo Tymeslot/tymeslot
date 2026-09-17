@@ -136,6 +136,18 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProviderTest do
       assert message =~ "https://"
     end
 
+    test "refuses plain http on a public server when the credentials only arrive padded" do
+      config =
+        credential_config(
+          base_url: "http://meet.example.com",
+          client_id: "  #{@app_id}  ",
+          client_secret: " #{@secret} "
+        )
+
+      assert {:error, message} = JitsiProvider.validate_config(config)
+      assert message =~ "https://"
+    end
+
     test "allows plain http without credentials, and on a local server with them" do
       assert JitsiProvider.validate_config(%{base_url: "http://meet.example.com"}) == :ok
 

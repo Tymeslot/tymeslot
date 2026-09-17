@@ -15,15 +15,18 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
   drift apart. The rest of the copy stays true for every cause, because the
   reason is the only part that varies.
 
-  The steps follow the button the integration's dashboard row actually has.
-  Every calendar row and every OAuth video row has a Reconnect button; a video
+  The steps follow the actions the integration's dashboard row actually has.
+  A calendar row and an OAuth video row have a Reconnect button. A video
   integration holding credentials the user typed in (Jitsi, Nextcloud Talk) is
-  fixed from its Edit button instead.
+  fixed from its Edit button instead. A calendar subscription has neither: its
+  feed link is the whole connection, so it is removed and subscribed to again
+  with the current link.
 
   This is an operational alert — always rendered in English.
   """
 
   alias Tymeslot.Emails.Shared.{Buttons, Callouts, Styles, TemplateHelper, Text}
+  alias Tymeslot.Integrations.Calendar.ProviderConfig, as: CalendarProviderConfig
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
   alias Tymeslot.Utils.UrlBuilder
 
@@ -44,7 +47,8 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
   def render(_user, integration, type) do
     {type_label, provider_label, settings_url} = labels(integration, type)
     reason = reason_for(integration, provider_label)
-    %{steps: steps, button: button} = fix(integration, type, provider_label)
+    %{steps: steps, button: button, action: action} = fix(integration, type, provider_label)
+    subject = integration_phrase(provider_label, type_label)
 
     mjml_content = """
     #{Callouts.alert_box(:alert, reason, title: "Reconnect required")}
@@ -58,7 +62,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
       align="left"
       css-class="mobile-text"
     >
-      Tymeslot can no longer use your <strong>#{provider_label}</strong> #{type_label} integration, and it will stay that way until you reconnect it. The reason is shown above. Your existing bookings are not affected.
+      Tymeslot can no longer use your <strong>#{subject}</strong> integration, and it will stay that way until you #{action} it. The reason is shown above. Your existing bookings are not affected.
     </mj-text>
 
     #{Text.divider()}
@@ -75,18 +79,17 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
 
     #{Text.divider()}
 
-    #{Text.system_footer_note("This notification is sent when an integration needs reconnecting. It will not repeat for 30 days.")}
+    #{Text.system_footer_note(footer(action))}
     """
 
     TemplateHelper.compile_system_template(
       mjml_content,
       "Reconnect required",
-      "Your #{provider_label} #{type_label} integration needs reconnecting",
+      "Your #{subject} integration needs reconnecting",
       intent: @intent,
       eyebrow: "Integration",
       stage_title: "Reconnect required",
-      stage_subtitle:
-        "Your #{provider_label} #{type_label} integration needs reconnecting before it can keep working."
+      stage_subtitle: "Your #{subject} integration needs reconnecting before it can keep working."
     )
   end
 
@@ -94,7 +97,8 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
   def render_text(_user, integration, type) do
     {type_label, provider_label, settings_url} = labels(integration, type)
     reason = reason_for(integration, provider_label)
-    %{steps: steps, button: button} = fix(integration, type, provider_label)
+    %{steps: steps, button: button, action: action} = fix(integration, type, provider_label)
+    subject = integration_phrase(provider_label, type_label)
 
     """
     Reconnect required
@@ -102,7 +106,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
     #{reason}
 
     WHAT'S HAPPENING?
-    Tymeslot can no longer use your #{provider_label} #{type_label} integration, and it will stay that way until you reconnect it. The reason is shown above. Your existing bookings are not affected.
+    Tymeslot can no longer use your #{subject} integration, and it will stay that way until you #{action} it. The reason is shown above. Your existing bookings are not affected.
 
     WHAT SHOULD I DO?
     #{text_steps(steps)}
@@ -110,7 +114,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
     #{button}:
     #{settings_url}
 
-    This notification is sent when an integration needs reconnecting. It will not repeat for 30 days.
+    #{footer(action)}
     """
   end
 
@@ -132,8 +136,9 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
 
   @doc """
   The provider's name as the owner knows it: the video provider's display name
-  (`Nextcloud Talk`, not `Nextcloud talk`), or the humanised identifier for a
-  calendar or an unknown provider. Shared with the email's subject line.
+  (`Nextcloud Talk`, not `Nextcloud talk`), `Calendar subscription` for a
+  subscribed feed, or the humanised identifier for any other calendar or an
+  unknown provider. Shared with the email's subject line.
   """
   @spec provider_label(integration(), atom() | String.t()) :: String.t()
   def provider_label(integration, :video) do
@@ -143,7 +148,28 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
     end
   end
 
+  def provider_label(integration, :calendar) do
+    if CalendarProviderConfig.subscription?(integration.provider),
+      do: "Calendar subscription",
+      else: humanize_provider(integration.provider)
+  end
+
   def provider_label(integration, _type), do: humanize_provider(integration.provider)
+
+  # "Zoom video", but "Calendar subscription" rather than "Calendar subscription
+  # calendar".
+  defp integration_phrase(provider_label, type_label) do
+    if String.contains?(String.downcase(provider_label), type_label),
+      do: provider_label,
+      else: "#{provider_label} #{type_label}"
+  end
+
+  # The owner is not told again while the integration stays flagged: the reauth
+  # email goes out when the flag is set, and the unhealthy email is withheld
+  # from a flagged integration.
+  defp footer(action),
+    do:
+      "This notification is sent when an integration needs attention. You will not receive another notice about this until you #{action} it."
 
   defp humanize_provider(provider),
     do: provider |> to_string() |> String.replace("_", " ") |> String.capitalize()
@@ -160,6 +186,14 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
       else: edit_fix(provider_label)
   end
 
+  # A subscription row has no Reconnect button: a revoked feed link is replaced
+  # by removing the row and subscribing again.
+  defp fix(integration, :calendar, provider_label) do
+    if CalendarProviderConfig.subscription?(integration.provider),
+      do: subscription_fix(provider_label),
+      else: reconnect_fix(provider_label)
+  end
+
   defp fix(_integration, _type, provider_label), do: reconnect_fix(provider_label)
 
   defp reconnect_fix(provider_label) do
@@ -169,7 +203,8 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
         {"Select ", "Reconnect", " on the #{provider_label} row"},
         "Follow the steps #{provider_label} asks for"
       ],
-      button: "Reconnect #{provider_label}"
+      button: "Reconnect #{provider_label}",
+      action: "reconnect"
     }
   end
 
@@ -180,7 +215,20 @@ defmodule Tymeslot.Emails.Templates.IntegrationReauthRequired do
         {"Select ", "Edit", " on the #{provider_label} row"},
         "Enter the credentials again, or new ones if the old ones were revoked, and save"
       ],
-      button: "Edit #{provider_label}"
+      button: "Edit #{provider_label}",
+      action: "update"
+    }
+  end
+
+  defp subscription_fix(provider_label) do
+    %{
+      steps: [
+        "Open your calendar settings",
+        {"Select ", "Remove connection", " on the #{provider_label} row"},
+        {"Choose ", "Calendar subscription", ", paste the current feed link and select Subscribe"}
+      ],
+      button: "Open calendar settings",
+      action: "replace"
     }
   end
 
