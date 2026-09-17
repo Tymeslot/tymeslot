@@ -19,7 +19,10 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
 
   ## Parameters
   - `params` - Map containing video integration form parameters
-  - `opts` - Options including metadata for logging
+  - `opts` - Options including metadata for logging, and `existing_credentials:
+    true` when the form edits an integration whose secret is already stored.
+    For Nextcloud Talk a blank app password then means "keep the stored one"
+    and is left out of the result instead of being rejected.
 
   ## Returns
   - `{:ok, sanitized_params}` | `{:error, validation_errors}`
@@ -28,6 +31,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
           {:ok, %{String.t() => term()}} | {:error, %{atom() => String.t()}}
   def validate_video_integration_form(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
+    existing_credentials? = Keyword.get(opts, :existing_credentials, false)
     provider = params["provider"]
 
     case provider do
@@ -35,7 +39,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
         validate_mirotalk_form(params, metadata)
 
       "nextcloud_talk" ->
-        validate_nextcloud_talk_form(params, metadata)
+        validate_nextcloud_talk_form(params, metadata, existing_credentials?)
 
       "custom" ->
         validate_custom_video_form(params, metadata)
@@ -148,7 +152,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   # The app password travels in the `api_key` field: it is the secret the
   # integration authenticates with, and `api_key_encrypted` is where every
   # self-hosted provider keeps that secret.
-  defp validate_nextcloud_talk_form(params, metadata) do
+  defp validate_nextcloud_talk_form(params, metadata, existing_credentials?) do
     with {:ok, sanitized_name} <-
            InputValidators.validate_integration_name(params["name"], metadata),
          {:ok, sanitized_base_url} <-
@@ -161,20 +165,21 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
              )
            ),
          {:ok, sanitized_username} <- validate_username(params["username"], metadata),
-         {:ok, sanitized_app_password} <- validate_app_password(params["api_key"], metadata) do
+         {:ok, app_password} <-
+           validate_app_password(params["api_key"], metadata, existing_credentials?) do
       SecurityLogger.log_security_event("nextcloud_talk_integration_validation_success", %{
         ip_address: metadata[:ip],
         user_agent: metadata[:user_agent],
         user_id: metadata[:user_id]
       })
 
-      {:ok,
-       %{
-         "name" => sanitized_name,
-         "base_url" => sanitized_base_url,
-         "username" => sanitized_username,
-         "api_key" => sanitized_app_password
-       }}
+      sanitized = %{
+        "name" => sanitized_name,
+        "base_url" => sanitized_base_url,
+        "username" => sanitized_username
+      }
+
+      {:ok, put_app_password(sanitized, app_password)}
     else
       {:error, errors} when is_map(errors) ->
         SecurityLogger.log_security_event("nextcloud_talk_integration_validation_failure", %{
@@ -286,11 +291,23 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   end
 
   # Nextcloud app passwords are generated, never typed, so the API key rules
-  # (trimmed, 8 to 500 characters) fit them; only the wording differs.
-  defp validate_app_password(value, _metadata) when value in [nil, ""],
-    do: {:error, %{api_key: dgettext("dashboard_integrations", "App password is required")}}
+  # (trimmed, 8 to 500 characters) fit them; only the wording differs. When
+  # editing, a blank field keeps the stored password: re-entering a generated
+  # secret just to rename the integration would push hosts towards creating a
+  # new app password for every edit.
+  defp validate_app_password(value, _metadata, true = _existing_credentials?)
+       when value in [nil, ""],
+       do: {:ok, :keep_stored}
 
-  defp validate_app_password(value, metadata), do: validate_api_key(value, metadata)
+  defp validate_app_password(value, _metadata, _existing_credentials?)
+       when value in [nil, ""],
+       do: {:error, %{api_key: dgettext("dashboard_integrations", "App password is required")}}
+
+  defp validate_app_password(value, metadata, _existing_credentials?),
+    do: validate_api_key(value, metadata)
+
+  defp put_app_password(sanitized, :keep_stored), do: sanitized
+  defp put_app_password(sanitized, app_password), do: Map.put(sanitized, "api_key", app_password)
 
   defp validate_base_url(base_url, metadata) do
     validate_base_url(

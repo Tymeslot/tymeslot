@@ -207,6 +207,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   attr :error_key, :atom, default: :api_key
   attr :target, :any, required: true
   attr :helper_text, :string, default: nil
+  attr :required, :boolean, default: true
 
   @spec api_key_field(map()) :: Phoenix.LiveView.Rendered.t()
   def api_key_field(assigns) do
@@ -237,7 +238,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
               target: @target
             )
           }
-          required
+          required={@required}
           class={[
             "input input-with-icon w-full",
             if(FormValidationHelpers.field_errors(@form_errors, @error_key) != [],

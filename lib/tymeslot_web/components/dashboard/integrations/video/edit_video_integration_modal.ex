@@ -114,10 +114,15 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
     params_with_provider = Map.put(params, "provider", integration.provider)
 
     case VideoInputValidation.validate_video_integration_form(params_with_provider,
-           metadata: DashboardHelpers.get_security_metadata(socket)
+           metadata: DashboardHelpers.get_security_metadata(socket),
+           existing_credentials: true
          ) do
       {:ok, sanitized} ->
-        attrs = AttrsCasting.atomize_known_attrs(SanitizeMerge.merge(params, sanitized))
+        attrs =
+          params
+          |> keep_stored_secret(sanitized)
+          |> SanitizeMerge.merge(sanitized)
+          |> AttrsCasting.atomize_known_attrs()
 
         case Video.update_integration(user_id, integration.id, attrs) do
           {:ok, _updated} ->
@@ -270,6 +275,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                       form_errors={@form_errors}
                       value={Map.get(@form_values, "api_key", "")}
                       placeholder={dgettext("dashboard_integrations", "Enter new app password")}
+                      required={false}
+                      helper_text={
+                        dgettext(
+                          "dashboard_integrations",
+                          "Leave empty to keep the current app password"
+                        )
+                      }
                       target={@myself}
                     />
                   </div>
@@ -342,6 +354,17 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   end
 
   # Private helpers
+
+  # A secret the validator chose to keep (a blank field when editing) is absent
+  # from `sanitized`, so the blank submitted value must not reach the update
+  # either: it would otherwise count as a credential change.
+  defp keep_stored_secret(params, sanitized) do
+    if Map.get(params, "api_key") in [nil, ""] and not Map.has_key?(sanitized, "api_key") do
+      Map.delete(params, "api_key")
+    else
+      params
+    end
+  end
 
   defp find_integration(integrations, id) do
     Enum.find(integrations, &(&1.id == id))

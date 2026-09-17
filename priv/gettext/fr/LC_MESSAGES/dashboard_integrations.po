@@ -1344,3 +1344,8 @@ msgstr "xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"
 #, elixir-autogen, elixir-format
 msgid "✓ Nextcloud Talk connection verified - %{message}"
 msgstr "✓ Connexion à Nextcloud Talk vérifiée - %{message}"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Leave empty to keep the current app password"
+msgstr "Laissez vide pour conserver le mot de passe d’application actuel"
