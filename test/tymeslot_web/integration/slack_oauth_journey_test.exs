@@ -180,8 +180,11 @@ defmodule TymeslotWeb.Integration.SlackOAuthJourneyTest do
       conn = log_in_user(conn, user)
       {:ok, view, _html} = live(conn, "/dashboard/automation?slack_pending=#{pending.id}")
 
-      # The channel picker opens with a channel field ready to submit.
+      # The form opens straight away, but the channel field only renders once
+      # the component's async channel load returns, so wait for it: asserting
+      # immediately races the load and fails whenever the machine is busy.
       assert has_element?(view, "#slack-form")
+      render_async(view, 2_000)
       assert has_element?(view, "#slack-form [name='slack[channel_id]']")
     end
 
