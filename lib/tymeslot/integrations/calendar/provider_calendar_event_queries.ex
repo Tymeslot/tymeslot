@@ -19,6 +19,11 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   # then silently match nothing.
   @role_busy_only EventRole.busy_only()
 
+  # The columns a dashboard edit may change on a cached row: what a user can
+  # edit on an event, plus the video room an edit can attach to it.
+  @local_edit_fields ~w(summary description location start_at end_at all_day start_date end_date
+                        reminders recurrence_rule colour attendees video_link video_integration_id)a
+
   @doc """
   Returns all cached events for the given integration IDs within a time range.
 
@@ -414,6 +419,25 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
       :transparency
     ])
     |> Repo.update()
+  end
+
+  @doc """
+  Writes a dashboard edit Tymeslot has just pushed to the provider onto the
+  cached row, touching only the columns a user can edit (#{Enum.map_join(@local_edit_fields, ", ", &"`#{&1}`")}).
+
+  Unlike `upsert_batch/1`'s full-row replace, everything the provider owns
+  (`etag`, `raw_ical`, `recurring_event_id`, `organiser`, ...) keeps its
+  value until the next inbound sync. Keys outside that list are ignored.
+  """
+  @spec apply_local_edit(integer(), String.t(), map()) ::
+          {:ok, ProviderCalendarEventSchema.t()} | {:error, :not_found | Changeset.t()}
+  def apply_local_edit(calendar_integration_id, uid, attrs) when is_map(attrs) do
+    with {:ok, event} <- get_by_uid(calendar_integration_id, uid) do
+      event
+      |> Changeset.cast(attrs, @local_edit_fields)
+      |> Changeset.foreign_key_constraint(:video_integration_id)
+      |> Repo.update()
+    end
   end
 
   @doc """

@@ -11,11 +11,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DeleteNotifyPromptTest do
   @moduletag :calendar
   @moduletag :live
 
+  import Mox
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
   alias Plug.Test
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
+
+  setup :verify_on_exit!
+
+  # The provider delete runs in a Task; allow for a busy test machine.
+  @task_timeout 5_000
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
@@ -24,6 +30,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DeleteNotifyPromptTest do
     conn = log_in_user(conn, user)
 
     integration = insert(:calendar_integration, user: user, is_active: true)
+
+    test_pid = self()
+
+    stub(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
+      send(test_pid, {:provider_delete, self()})
+      :ok
+    end)
 
     {:ok, conn: conn, user: user, integration: integration}
   end
@@ -83,15 +96,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DeleteNotifyPromptTest do
       )
 
       # Simulate successful delete completion.
-      send(
-        lv.pid,
-        {:delete_event_result, {:ok, %{uid: event.uid, integration_id: integration.id}}}
-      )
-
-      # Flush the :delete_event_result message before rendering. Its handler
-      # fires send_update to the calendar grid component (an async self-message),
-      # so without this the event removal can land after the assertion below.
-      :sys.get_state(lv.pid)
+      await_delete(lv)
       html = render(lv)
       assert html =~ "Event deleted. Attendees have been notified."
       refute html =~ "Cancel Me"
@@ -126,15 +131,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DeleteNotifyPromptTest do
         args: %{"event_id" => event.id, "action" => "delete"}
       )
 
-      send(
-        lv.pid,
-        {:delete_event_result, {:ok, %{uid: event.uid, integration_id: integration.id}}}
-      )
-
-      # Flush the :delete_event_result message before rendering. Its handler
-      # fires send_update to the calendar grid component (an async self-message),
-      # so without this the event removal can land after the assertion below.
-      :sys.get_state(lv.pid)
+      await_delete(lv)
       html = render(lv)
       assert html =~ "Event deleted."
       refute html =~ "Attendees have been notified"
@@ -169,19 +166,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DeleteNotifyPromptTest do
         args: %{"event_id" => event.id, "action" => "delete"}
       )
 
-      send(
-        lv.pid,
-        {:delete_event_result, {:ok, %{uid: event.uid, integration_id: integration.id}}}
-      )
-
-      # Flush the :delete_event_result message before rendering. Its handler
-      # fires send_update to the calendar grid component (an async self-message),
-      # so without this the event removal can land after the assertion below.
-      :sys.get_state(lv.pid)
+      await_delete(lv)
       html = render(lv)
       assert html =~ "Event deleted."
       refute html =~ "Attendees have been notified"
       refute html =~ "Cancel Me"
     end
+  end
+
+  # Waits for the Task running the provider delete to exit, then renders once
+  # for the LiveView to handle its result; the caller's render lets the grid
+  # apply what it was sent.
+  defp await_delete(lv) do
+    assert_receive {:provider_delete, task_pid}, @task_timeout
+    ref = Process.monitor(task_pid)
+    assert_receive {:DOWN, ^ref, :process, ^task_pid, _reason}, @task_timeout
+    render(lv)
   end
 end

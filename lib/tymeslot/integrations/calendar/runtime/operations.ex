@@ -12,7 +12,6 @@ defmodule Tymeslot.Integrations.Calendar.Operations do
   """
 
   @behaviour Tymeslot.Integrations.Calendar.CalendarBehaviour
-  alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
   alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
   alias Tymeslot.Integrations.Calendar.Runtime.EventOperations
@@ -37,41 +36,13 @@ defmodule Tymeslot.Integrations.Calendar.Operations do
     EventOperations.delete_event(uid, context, [])
   end
 
-  @spec delete_event(String.t(), term(), keyword()) :: :ok | {:error, term()}
+  @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def delete_event(uid, context, opts) do
     EventOperations.delete_event(uid, context, opts)
-  end
-
-  @spec delete_event_and_reconcile(
-          String.t(),
-          String.t() | nil,
-          {integer(), integer()},
-          keyword()
-        ) ::
-          {:ok, map()} | {:error, term()}
-  def delete_event_and_reconcile(uid, provider_event_id, context, opts) do
-    EventOperations.delete_event_and_reconcile(uid, provider_event_id, context, opts)
-  end
-
-  @spec event_linked_to_booking?(integer(), String.t() | nil, String.t() | nil) :: boolean()
-  def event_linked_to_booking?(integration_id, provider_event_id, uid) do
-    EventOperations.event_linked_to_booking?(integration_id, provider_event_id, uid)
   end
 
   @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def get_booking_integration_info(context) do
     ClientManager.get_booking_integration_info(context)
-  end
-
-  @doc """
-  Tags a calendar event cache row for offline retry on the next sync cycle.
-
-  Delegates to `QueueWiring.tag/3`. Returns `:ok` when the row is queued,
-  or `:ignored` when the meeting's integration is not a CalDAV-family provider.
-  """
-  @spec tag_for_offline_retry(QueueWiring.meeting(), QueueWiring.action(), map()) ::
-          :ok | :ignored
-  def tag_for_offline_retry(meeting, action, event_data) do
-    QueueWiring.tag(meeting, action, event_data)
   end
 end

@@ -9,6 +9,10 @@ defmodule Tymeslot.CalendarGrid do
 
   alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.CalendarGrid.BookingEvents
+  alias Tymeslot.CalendarGrid.EventDeletion
+  alias Tymeslot.CalendarGrid.EventEdit
+  alias Tymeslot.CalendarGrid.EventMove
+  alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
@@ -304,23 +308,12 @@ defmodule Tymeslot.CalendarGrid do
     :ok
   end
 
-  @doc """
-  Updates a cached event's attributes via upsert.
-
-  Accepts a map with at least `:uid` and `:calendar_integration_id`.
-  """
-  @spec update_cached_event(map()) :: :ok
-  def update_cached_event(attrs) do
-    {:ok, _count} = ProviderCalendarEventQueries.upsert_batch([normalise_cache_attrs(attrs)])
-    :ok
-  end
-
   # The cached events schema stores start/end/synced_at as :utc_datetime_usec
-  # and requires synced_at NOT NULL. Dashboard-originated create/update flows
-  # build datetimes at second precision and don't always supply synced_at —
-  # they're writing what they just committed, so "now" is the correct sync
-  # timestamp. synced_at is upcast unconditionally so a caller-supplied
-  # second-precision value does not fail Ecto's :utc_datetime_usec check.
+  # and requires synced_at NOT NULL. The dashboard create flow builds datetimes
+  # at second precision and doesn't always supply synced_at; it is writing what
+  # it just committed, so "now" is the correct sync timestamp. synced_at is
+  # upcast unconditionally so a caller-supplied second-precision value does not
+  # fail Ecto's :utc_datetime_usec check.
   defp normalise_cache_attrs(attrs) do
     now = DateTime.utc_now(:microsecond)
 
@@ -335,6 +328,48 @@ defmodule Tymeslot.CalendarGrid do
   defp to_usec(%DateTime{} = dt), do: %{dt | microsecond: {elem(dt.microsecond, 0), 6}}
   defp to_usec(other), do: other
 
+  @doc """
+  Applies `changes` to an existing event, writes the whole updated event to
+  its provider, and records the edit on the cached row. See
+  `Tymeslot.CalendarGrid.EventEdit.update_event/4`.
+  """
+  @spec update_event(pos_integer(), map(), EventEdit.changes(), keyword()) ::
+          {:ok, map()} | {:error, EventEdit.failure()}
+  defdelegate update_event(user_id, event, changes, opts \\ []), to: EventEdit
+
+  @doc """
+  Moves an event to another calendar, creating it on the destination before
+  deleting the original. See `Tymeslot.CalendarGrid.EventMove.move_event/3`.
+  """
+  @spec move_event(pos_integer(), map(), EventMove.destination()) ::
+          {:ok, EventMove.moved()} | {:error, term()}
+  defdelegate move_event(user_id, event, destination), to: EventMove
+
+  @doc """
+  Gives an event a room on the organiser's video integration, or removes its
+  video link when the integration is `nil`, on both the provider event and the
+  cached row. See `Tymeslot.CalendarGrid.EventVideo.change_event_video/3`.
+  """
+  @spec change_event_video(pos_integer(), map(), pos_integer() | nil) ::
+          {:ok, String.t() | nil} | {:error, :missing_meeting_url | :not_found | term()}
+  defdelegate change_event_video(user_id, event, video_integration_id), to: EventVideo
+
+  @doc """
+  Deletes an event from its calendar, cancels the Tymeslot meeting it was
+  booked as, and removes its cached row. See
+  `Tymeslot.CalendarGrid.EventDeletion.delete_event/2`.
+  """
+  @spec delete_event(pos_integer(), EventDeletion.event()) ::
+          {:ok, EventDeletion.deleted()} | {:error, EventDeletion.failure()}
+  defdelegate delete_event(user_id, event), to: EventDeletion
+
+  @doc """
+  Whether an event may be moved to another calendar. See
+  `Tymeslot.CalendarGrid.EventMove.ensure_movable/1`.
+  """
+  @spec ensure_movable(map()) :: :ok | {:error, :recurring_event}
+  defdelegate ensure_movable(event), to: EventMove
+
   @doc "Fetches a single cached event by integration ID and UID."
   @spec get_cached_event(integer(), String.t()) ::
           {:ok, CalendarEvent.t()} | {:error, :not_found}
@@ -343,14 +378,6 @@ defmodule Tymeslot.CalendarGrid do
       {:ok, record} -> {:ok, ProviderCalendarEventSchema.to_calendar_event(record)}
       {:error, :not_found} -> {:error, :not_found}
     end
-  end
-
-  @doc """
-  Removes a cached event by its integration ID and UID.
-  """
-  @spec delete_cached_event(integer(), String.t()) :: {:ok, :deleted | :not_found}
-  def delete_cached_event(integration_id, uid) do
-    ProviderCalendarEventQueries.delete_by_uid(integration_id, uid)
   end
 
   @doc """
@@ -446,9 +473,7 @@ defmodule Tymeslot.CalendarGrid do
   # A subscription refresh is always a full re-fetch of the feed; there is no
   # delta mode to force past.
   defp enqueue_sync_worker(%{provider: "ics_url"} = integration) do
-    %{"calendar_integration_id" => integration.id}
-    |> SyncIcsCalendarWorker.new()
-    |> Oban.insert()
+    SyncIcsCalendarWorker.enqueue(integration.id)
   end
 
   # EWS has no delta mode either: a refresh re-reads the whole window through

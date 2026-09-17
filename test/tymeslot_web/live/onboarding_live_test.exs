@@ -9,6 +9,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
 
   use TymeslotWeb.LiveCase, async: false
   @moduletag :utils
+  @moduletag :onboarding
 
   import Ecto.Query
   import Mox
@@ -159,6 +160,30 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       # The browser-detected timezone should already be in the DB after mount
       profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.timezone == "America/New_York"
+    end
+
+    test "an unrecognised detected timezone does not block saving the profile step", %{
+      conn: conn
+    } do
+      {:ok, view, _html, user} =
+        setup_onboarding(conn, %{name: "Odd Zone"}, nil,
+          connect_params: %{"timezone" => "Etc/Unknown"}
+        )
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      view
+      |> form("form#profile-form", %{"full_name" => "Odd Zone", "username" => "oddzone2024"})
+      |> render_change()
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      assert has_element?(view, ".onboarding-provider-cards")
+      refute render(view) =~ "Please check your input"
+
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
+      assert profile.username == "oddzone2024"
+      assert profile.timezone == "Europe/Tallinn"
     end
 
     test "onboarding with custom scheduling preference values", %{conn: conn} do

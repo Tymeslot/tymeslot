@@ -29,7 +29,12 @@ defmodule TymeslotWeb.TelegramWebhookControllerTest do
       token = Telegram.generate_link_token()
 
       integration =
-        insert(:telegram_integration, chat_id: nil, bot_mode: "shared", link_token: token)
+        insert(:telegram_integration,
+          chat_id: nil,
+          bot_mode: "shared",
+          link_token: token,
+          link_token_issued_at: DateTime.utc_now(:second)
+        )
 
       conn =
         conn

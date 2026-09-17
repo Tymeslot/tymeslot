@@ -141,6 +141,30 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramStateActionsTest do
       assert refreshed.chat_id == nil
     end
 
+    # An integration older than the abandoned-stub TTL is exactly what a real
+    # user disconnects; a freshly inserted row slips under the TTL and hides
+    # the list reload deleting it.
+    test "shared-bot integration older than the stub TTL survives and offers Connect", %{
+      conn: conn,
+      user: user
+    } do
+      ConfigTestHelpers.setup_config(:tymeslot, telegram_shared_bot: true)
+
+      integration = shared_bot_integration(user, %{inserted_at: an_hour_ago()})
+      insert(:telegram_delivery, integration: integration, response_status: 200)
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      open_telegram_tab(view)
+
+      view
+      |> element("button[title='Disconnect Telegram']")
+      |> render_click()
+
+      assert {:ok, %{chat_id: nil}} = Telegram.get_integration(integration.id, user.id)
+      assert [_delivery] = Telegram.list_deliveries(integration.id, limit: 50)
+      assert has_element?(view, "button", "Connect")
+    end
+
     test "own-bot integrations never expose the disconnect button", %{conn: conn, user: user} do
       _integration = own_bot_integration(user)
 
@@ -200,5 +224,55 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramStateActionsTest do
       assert html =~ "Connect Telegram"
       assert html =~ "Open in Telegram"
     end
+
+    test "reconnecting an old disconnected integration keeps it for the bot to link", %{
+      conn: conn,
+      user: user
+    } do
+      ConfigTestHelpers.setup_config(:tymeslot, telegram_shared_bot: true)
+
+      integration =
+        shared_bot_integration(user, %{
+          chat_id: nil,
+          linked_at: an_hour_ago(),
+          inserted_at: an_hour_ago()
+        })
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      open_telegram_tab(view)
+
+      view |> element("button", "Connect") |> render_click()
+
+      assert render(view) =~ "Open in Telegram"
+      assert {:ok, %{link_token: token}} = Telegram.get_integration(integration.id, user.id)
+      assert {:ok, %{id: linked_id}} = Telegram.handle_start_payload(token, "555000222")
+      assert linked_id == integration.id
+    end
+
+    test "an old integration disconnected and reconnected can still be linked by the bot", %{
+      conn: conn,
+      user: user
+    } do
+      ConfigTestHelpers.setup_config(:tymeslot, telegram_shared_bot: true)
+
+      integration = shared_bot_integration(user, %{inserted_at: an_hour_ago()})
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+      open_telegram_tab(view)
+
+      view |> element("button[title='Disconnect Telegram']") |> render_click()
+      view |> element("button", "Connect") |> render_click()
+
+      assert render(view) =~ "Open in Telegram"
+
+      assert {:ok, %{link_token: token}} = Telegram.get_integration(integration.id, user.id)
+      assert token =~ ~r/\A[A-Za-z0-9_-]{32}\z/
+
+      assert {:ok, linked} = Telegram.handle_start_payload(token, "555000111")
+      assert linked.id == integration.id
+      assert linked.chat_id == "555000111"
+    end
   end
+
+  defp an_hour_ago, do: DateTime.add(DateTime.utc_now(:second), -3600, :second)
 end

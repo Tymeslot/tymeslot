@@ -8,7 +8,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventCreation
-  alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGridComponent
@@ -182,10 +181,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   end
 
   @doc false
-  @spec handle_create_result(
-          {:ok, map()} | {:error, term()} | {:error, term(), map()},
-          Phoenix.LiveView.Socket.t()
-        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  @spec handle_create_result({:ok, map()} | {:error, term()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_create_result({:ok, result}, socket) do
     %{
       uid: uid,
@@ -234,45 +231,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
     |> then(&{:noreply, &1})
   end
 
-  def handle_create_result({:error, _reason, context}, socket) when is_map(context) do
-    # For CalDAV integrations, tag a placeholder cache row so the next
-    # OfflineQueue flush retries the create. A :ok return means the row
-    # is queued; :ignored means the integration is non-CalDAV and has
-    # no offline queue support, so the failure is final.
-    meeting = %{
-      uid: context.uid,
-      calendar_integration_id: context.calendar_integration_id
-    }
-
-    queue_result = EventOperations.tag_for_offline_retry(meeting, :create, context)
-
+  def handle_create_result({:error, failure}, socket) do
     send_update(CalendarGridComponent,
       id: "calendar",
       action: :event_create_failed
     )
 
-    flash_message =
-      case queue_result do
-        :ok ->
-          dgettext("dashboard_calendar_events", "Create failed - queued to retry on next sync")
-
-        :ignored ->
-          dgettext("dashboard_calendar_events", "Failed to create event")
-      end
-
-    {:noreply, put_flash(socket, :error, flash_message)}
+    {:noreply, put_flash(socket, :error, create_failed_message(failure))}
   end
 
-  def handle_create_result({:error, _reason}, socket) do
-    # Fallback for contextless failures.
-    send_update(CalendarGridComponent,
-      id: "calendar",
-      action: :event_create_failed
-    )
+  # A queued create will be replayed on the next sync; anything else is final.
+  defp create_failed_message(%{retry: :queued}),
+    do: dgettext("dashboard_calendar_events", "Create failed - queued to retry on next sync")
 
-    {:noreply,
-     put_flash(socket, :error, dgettext("dashboard_calendar_events", "Failed to create event"))}
-  end
+  defp create_failed_message(_failure),
+    do: dgettext("dashboard_calendar_events", "Failed to create event")
 
   # An ad-hoc meeting may be created with no integration at all; when one is
   # selected it must be the user's own.

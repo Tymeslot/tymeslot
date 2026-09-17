@@ -56,6 +56,20 @@ defmodule Tymeslot.Slack do
     end
   end
 
+  @doc """
+  Creates an integration that posts through a pasted Incoming Webhook URL.
+  """
+  @spec create_webhook_integration(integer(), map()) ::
+          {:ok, SlackIntegrationSchema.t()}
+          | {:error,
+             Ecto.Changeset.t()
+             | :insufficient_plan
+             | :feature_access_checker_failed
+             | :feature_disabled}
+  def create_webhook_integration(user_id, attrs) do
+    create_integration(user_id, Map.put(attrs, :app_mode, "webhook_url"))
+  end
+
   @spec update_integration(SlackIntegrationSchema.t(), map()) ::
           {:ok, SlackIntegrationSchema.t()}
           | {:error, Ecto.Changeset.t() | :insufficient_plan | :feature_access_checker_failed}

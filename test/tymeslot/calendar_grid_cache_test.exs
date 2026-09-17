@@ -3,7 +3,11 @@ defmodule Tymeslot.CalendarGridCacheTest do
 
   @moduletag :calendar
 
+  import Mox
+
   alias Tymeslot.CalendarGrid
+
+  setup :verify_on_exit!
 
   describe "cache_created_event/1" do
     test "accepts second-precision DateTimes from the dashboard create flow" do
@@ -35,41 +39,39 @@ defmodule Tymeslot.CalendarGridCacheTest do
     end
   end
 
-  describe "update_cached_event/1" do
-    test "accepts second-precision synced_at from the dashboard update flow" do
-      # Regression: EditWorkflow.Updates.update_event_async / update_attendees_async /
-      # update_field_async previously built cache rows with
-      # DateTime.utc_now(:second). synced_at is :utc_datetime_usec, so the cache
-      # path must upcast lower precision instead of crashing the async task in
-      # Repo.insert_all.
-      integration = insert(:calendar_integration)
+  describe "update_event/4" do
+    test "accepts second-precision DateTimes from the dashboard edit flow" do
+      # Regression: the grid builds a dragged or edited event's times at second
+      # precision, while the cached events schema stores :utc_datetime_usec, so
+      # recording the edit on the cached row must upcast rather than crash the
+      # async task.
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
 
-      insert(:provider_calendar_event,
-        uid: "regression-update-second-precision",
-        calendar_integration: integration,
-        summary: "Before"
-      )
+      event =
+        insert(:provider_calendar_event,
+          uid: "regression-update-second-precision",
+          calendar_integration: integration,
+          summary: "Before"
+        )
+
+      expect(Tymeslot.CalendarMock, :update_event, fn _uid, _payload, _context -> :ok end)
 
       start_at = DateTime.new!(~D[2026-04-14], ~T[15:45:00], "Etc/UTC")
       end_at = DateTime.new!(~D[2026-04-14], ~T[16:15:00], "Etc/UTC")
 
-      assert :ok =
-               CalendarGrid.update_cached_event(%{
-                 uid: "regression-update-second-precision",
-                 calendar_integration_id: integration.id,
-                 provider: "nextcloud",
-                 provider_calendar_id: "primary",
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, event, %{
                  summary: "After",
                  start_at: start_at,
-                 end_at: end_at,
-                 all_day: false,
-                 synced_at: DateTime.utc_now(:second)
+                 end_at: end_at
                })
 
       assert {:ok, cached} =
                CalendarGrid.get_cached_event(integration.id, "regression-update-second-precision")
 
-      assert cached.summary == "After"
+      assert {cached.summary, cached.start_at} ==
+               {"After", ~U[2026-04-14 15:45:00.000000Z]}
     end
   end
 end

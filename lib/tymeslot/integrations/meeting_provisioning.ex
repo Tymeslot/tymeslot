@@ -18,7 +18,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   The `:inline` path for *edits* requires the calendar update call to include
   `conferenceData` and `conferenceDataVersion=1`. That wiring is not yet
   implemented in `EventOperations`; the edit flow therefore falls back to
-  `:separate` (see `EditWorkflow.sync_video_integration_async/3`).
+  `:separate` (see `Tymeslot.CalendarGrid.change_event_video/3`).
   """
 
   require Logger
@@ -82,7 +82,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   For `:separate` and `:none`: returns `{:ok, video_context}` unchanged.
   """
-  @spec finalise(map(), map(), plan()) ::
+  @spec finalise(map(), map() | String.t(), plan()) ::
           {:ok, map()} | {:error, :no_meet_url, map()}
   def finalise(video_context, created, {:inline, video_id}) do
     case ConferenceData.meet_url_from_event(created) do

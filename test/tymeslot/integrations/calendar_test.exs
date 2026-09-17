@@ -10,7 +10,9 @@ defmodule Tymeslot.Integrations.CalendarTest do
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.ColourWriteBackWorker
+  alias Tymeslot.Workers.SyncIcsCalendarWorker
 
   setup :verify_on_exit!
 
@@ -431,6 +433,78 @@ defmodule Tymeslot.Integrations.CalendarTest do
           "colour" => "blueberry"
         }
       )
+    end
+  end
+
+  describe "refresh_integration/1" do
+    defp insert_subscription(user) do
+      insert(:calendar_integration,
+        user: user,
+        provider: "ics_url",
+        base_url: "https://feeds.example.com",
+        username_encrypted: nil,
+        password_encrypted: nil,
+        subscription_url_encrypted: Encryption.encrypt("https://feeds.example.com/feed.ics")
+      )
+    end
+
+    test "a subscription is refreshed by enqueueing a feed sync, not by discovery" do
+      user = insert(:user)
+      subscription = insert_subscription(user)
+
+      assert {:ok, :feed_sync_enqueued} = Calendar.refresh_integration(subscription)
+
+      assert_enqueued(
+        worker: SyncIcsCalendarWorker,
+        args: %{"calendar_integration_id" => subscription.id}
+      )
+    end
+
+    test "refreshing a subscription twice queues one sync and succeeds both times" do
+      user = insert(:user)
+      subscription = insert_subscription(user)
+
+      assert {:ok, :feed_sync_enqueued} = Calendar.refresh_integration(subscription)
+      assert {:ok, :feed_sync_enqueued} = Calendar.refresh_integration(subscription)
+
+      assert [_one] = all_enqueued(worker: SyncIcsCalendarWorker)
+    end
+
+    test "any other provider re-runs discovery and persists the discovered list" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, provider: "google")
+
+      expect(GoogleCalendarAPIMock, :list_calendars, fn _integration ->
+        {:ok, [%{"id" => "rediscovered", "summary" => "Rediscovered"}]}
+      end)
+
+      assert {:ok, :calendars_rediscovered} = Calendar.refresh_integration(integration)
+
+      refute_enqueued(worker: SyncIcsCalendarWorker)
+      {:ok, reloaded} = Calendar.get_integration(integration.id, user.id)
+      assert [%CalendarEntry{id: "rediscovered"}] = reloaded.calendar_list
+    end
+
+    test "an Exchange mailbox takes discovery, never the feed worker" do
+      user = insert(:user)
+
+      exchange =
+        insert(:calendar_integration,
+          user: user,
+          provider: "exchange",
+          base_url: "https://exchange.example.com/EWS/Exchange.asmx"
+        )
+
+      refute match?({:ok, :feed_sync_enqueued}, Calendar.refresh_integration(exchange))
+      refute_enqueued(worker: SyncIcsCalendarWorker)
+    end
+
+    test "an integration deleted since it was loaded returns the discovery path's not-found error" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, provider: "google")
+      Repo.delete!(integration)
+
+      assert {:error, :not_found} = Calendar.refresh_integration(integration)
     end
   end
 end

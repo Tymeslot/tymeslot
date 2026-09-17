@@ -47,6 +47,23 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
 
   @calendar_id "subscription"
 
+  @doc """
+  Enqueues a feed refresh for the subscription `integration_id`.
+
+  The worker's uniqueness window collapses repeat requests, so a refresh
+  already queued or running for the same integration answers
+  `{:ok, :already_scheduled}` rather than adding a second fetch of the feed.
+  Either `:ok` outcome means a refresh is on its way.
+  """
+  @spec enqueue(pos_integer()) :: {:ok, :enqueued | :already_scheduled} | {:error, term()}
+  def enqueue(integration_id) do
+    case %{"calendar_integration_id" => integration_id} |> new() |> Oban.insert() do
+      {:ok, %Oban.Job{conflict?: true}} -> {:ok, :already_scheduled}
+      {:ok, %Oban.Job{}} -> {:ok, :enqueued}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
     case CalendarIntegrationQueries.get(integration_id) do

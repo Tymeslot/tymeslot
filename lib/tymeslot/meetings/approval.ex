@@ -533,8 +533,22 @@ defmodule Tymeslot.Meetings.Approval do
     end
   end
 
+  @doc """
+  Whether releasing this request refunds its payment automatically.
+
+  False only for a request that was a confirmed meeting before a reschedule
+  sent it back through the gate (see `refund_unapproved_request/1`). The
+  attendee return page asks this too, so what it promises cannot drift from
+  what the release does.
+  """
+  @spec refunds_on_release?(Meeting.t() | map()) :: boolean()
+  def refunds_on_release?(%{first_announced_at: %DateTime{}}), do: false
+  def refunds_on_release?(_meeting), do: true
+
   defp refund_or_defer(payment, meeting) do
-    if previously_confirmed?(meeting) do
+    if refunds_on_release?(meeting) do
+      refund_remaining(payment, meeting)
+    else
       Logger.info(
         "Skipping automatic refund: request was a confirmed meeting before re-entering the approval gate",
         meeting_id: meeting.id,
@@ -542,13 +556,8 @@ defmodule Tymeslot.Meetings.Approval do
       )
 
       :ok
-    else
-      refund_remaining(payment, meeting)
     end
   end
-
-  defp previously_confirmed?(%Meeting{first_announced_at: %DateTime{}}), do: true
-  defp previously_confirmed?(_meeting), do: false
 
   defp refund_remaining(payment, meeting) do
     case MeetingPayments.refundable_remaining_cents(payment) do

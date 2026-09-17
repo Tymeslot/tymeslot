@@ -380,11 +380,6 @@ msgstr "Událost se nepodařilo vytvořit"
 msgid "Failed to delete event"
 msgstr "Událost se nepodařilo smazat"
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to move event"
-msgstr "Událost se nepodařilo přesunout"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex
 #, elixir-autogen, elixir-format
@@ -947,11 +942,6 @@ msgstr "Smazání se nezdařilo – zkusíme to znovu při příští synchroniz
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
-msgid "Failed to provision video room - link not updated"
-msgstr "Videomístnost se nepodařilo vytvořit – odkaz nebyl aktualizován"
-
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
-#, elixir-autogen, elixir-format
 msgid "Failed to update event - changes reverted"
 msgstr "Událost se nepodařilo aktualizovat – změny byly vráceny zpět"
 
@@ -1034,3 +1024,53 @@ msgstr "před událostí"
 #, elixir-autogen, elixir-format
 msgid "This calendar is read-only. Events on it can't be changed from Tymeslot."
 msgstr "Tento kalendář je jen pro čtení. Události v něm nelze měnit z Tymeslotu."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Could not change the video link - changes reverted"
+msgstr "Odkaz na videoschůzku se nepodařilo změnit – změny byly vráceny zpět"
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Could not move the event. It is still on its original calendar."
+msgstr "Událost se nepodařilo přesunout. Zůstává v původním kalendáři."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Event copied to the new calendar, but the original could not be removed. Please delete it from its original calendar."
+msgstr "Událost byla zkopírována do nového kalendáře, ale původní událost se nepodařilo odstranit. Smažte ji prosím z původního kalendáře."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Event copied to the new calendar. The original will be removed on the next sync."
+msgstr "Událost byla zkopírována do nového kalendáře. Původní událost bude odstraněna při příští synchronizaci."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Event moved to the new calendar."
+msgstr "Událost byla přesunuta do nového kalendáře."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring events cannot be moved to another calendar yet. Only single events can be moved."
+msgstr "Opakující se události zatím nelze přesunout do jiného kalendáře. Přesunout lze jen jednotlivé události."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "The video provider did not return a meeting link, so the video link was not changed."
+msgstr "Poskytovatel videa nevrátil odkaz na schůzku, takže odkaz na videoschůzku nebyl změněn."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Video link removed."
+msgstr "Odkaz na videoschůzku byl odebrán."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Video room created."
+msgstr "Místnost pro videoschůzku byla vytvořena."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar could not be reached. The change is saved and will sync on the next attempt."
+msgstr "K vašemu kalendáři se nepodařilo připojit. Změna je uložena a synchronizuje se při příštím pokusu."

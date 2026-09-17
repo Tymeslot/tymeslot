@@ -5,12 +5,17 @@ defmodule Tymeslot.Telegram do
 
   @behaviour Tymeslot.Security.EncryptedStorage
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Features
+  alias Tymeslot.Repo
   alias Tymeslot.Telegram.{API, MessageBuilder, TelegramDeliverySchema, TelegramIntegrationSchema}
   alias Tymeslot.Telegram.TelegramQueries
   alias Tymeslot.Workers.TelegramWorker
+
+  @link_token_ttl_ms :timer.minutes(10)
 
   @impl Tymeslot.Security.EncryptedStorage
   def encrypted_storage,
@@ -107,19 +112,17 @@ defmodule Tymeslot.Telegram do
   end
 
   @spec reconnect_integration(TelegramIntegrationSchema.t()) ::
-          {:ok, TelegramIntegrationSchema.t(), String.t()} | {:error, :own_bot_mode}
+          {:ok, TelegramIntegrationSchema.t(), String.t()}
+          | {:error, :own_bot_mode | :not_found | Ecto.Changeset.t()}
   def reconnect_integration(%TelegramIntegrationSchema{bot_mode: "own"}),
     do: {:error, :own_bot_mode}
 
   def reconnect_integration(%TelegramIntegrationSchema{} = integration) do
     token = generate_link_token()
 
-    case TelegramQueries.update_integration(integration, %{chat_id: nil, link_token: token}) do
-      {:ok, updated} ->
-        {:ok, updated, build_deep_link(token)}
-
-      error ->
-        error
+    with {:ok, updated} <-
+           TelegramQueries.update_link_state(integration, %{chat_id: nil, link_token: token}) do
+      {:ok, updated, build_deep_link(token)}
     end
   end
 
@@ -204,9 +207,42 @@ defmodule Tymeslot.Telegram do
   # Account Linking (Shared Bot Mode)
   # ============================================================================
 
-  @spec delete_pending_stubs(integer()) :: :ok
-  def delete_pending_stubs(user_id) do
-    TelegramQueries.delete_pending_stubs(user_id)
+  @doc """
+  How long a link token stays valid after it is issued, in milliseconds.
+  """
+  @spec link_token_ttl_ms() :: pos_integer()
+  def link_token_ttl_ms, do: @link_token_ttl_ms
+
+  @doc """
+  Starts linking a new Telegram chat through the shared bot.
+
+  Access is checked before anything is written. The user's never-linked setup
+  stubs are then replaced by a fresh one holding a new link token, in one
+  transaction; integrations that were linked and later disconnected are kept.
+  The default name is translated in the calling process's locale.
+  """
+  @spec start_link_flow(integer()) ::
+          {:ok, TelegramIntegrationSchema.t(), String.t()}
+          | {:error,
+             :feature_disabled
+             | :own_bot_mode
+             | :insufficient_plan
+             | :feature_access_checker_failed
+             | Ecto.Changeset.t()}
+  def start_link_flow(user_id) do
+    with :ok <- check_link_flow_access(user_id),
+         {:ok, stub} <- replace_pending_stubs(user_id) do
+      {:ok, stub, build_deep_link(stub.link_token)}
+    end
+  end
+
+  @doc """
+  Discards a setup stub the user abandoned. Does nothing if the stub has been
+  linked since it was loaded, or no longer exists.
+  """
+  @spec discard_pending(TelegramIntegrationSchema.t()) :: :ok
+  def discard_pending(%TelegramIntegrationSchema{id: id, user_id: user_id}) do
+    TelegramQueries.delete_pending_stub(id, user_id)
     :ok
   end
 
@@ -216,13 +252,12 @@ defmodule Tymeslot.Telegram do
   end
 
   @spec refresh_link_token(TelegramIntegrationSchema.t()) ::
-          {:ok, String.t()} | {:error, term()}
+          {:ok, String.t()} | {:error, :not_found | Ecto.Changeset.t()}
   def refresh_link_token(%TelegramIntegrationSchema{} = integration) do
     token = generate_link_token()
 
-    case TelegramQueries.update_integration(integration, %{link_token: token}) do
-      {:ok, _updated} -> {:ok, token}
-      error -> error
+    with {:ok, _updated} <- TelegramQueries.update_link_state(integration, %{link_token: token}) do
+      {:ok, token}
     end
   end
 
@@ -233,13 +268,14 @@ defmodule Tymeslot.Telegram do
   end
 
   @spec handle_start_payload(String.t(), String.t() | integer()) ::
-          {:ok, TelegramIntegrationSchema.t()} | {:error, atom()}
+          {:ok, TelegramIntegrationSchema.t()} | {:error, atom() | Ecto.Changeset.t()}
   def handle_start_payload(token, chat_id) do
     chat_id_str = to_string(chat_id)
+    issued_after = DateTime.add(DateTime.utc_now(), -@link_token_ttl_ms, :millisecond)
 
-    case TelegramQueries.find_by_link_token(token) do
+    case TelegramQueries.find_by_link_token(token, issued_after) do
       {:ok, %TelegramIntegrationSchema{bot_mode: "shared"} = integration} ->
-        case TelegramQueries.update_integration(integration, %{
+        case TelegramQueries.update_link_state(integration, %{
                chat_id: chat_id_str,
                link_token: nil
              }) do
@@ -384,6 +420,33 @@ defmodule Tymeslot.Telegram do
   # ============================================================================
   # Private Helpers
   # ============================================================================
+
+  defp check_link_flow_access(user_id) do
+    cond do
+      not telegram_enabled?() -> {:error, :feature_disabled}
+      not shared_bot_mode?() -> {:error, :own_bot_mode}
+      true -> Features.check_access(user_id, :automations_allowed)
+    end
+  end
+
+  defp replace_pending_stubs(user_id) do
+    attrs = %{
+      user_id: user_id,
+      bot_mode: "shared",
+      name: dgettext("dashboard_automation_chat", "My Telegram"),
+      events: ["meeting.created"],
+      link_token: generate_link_token()
+    }
+
+    Repo.transaction(fn ->
+      TelegramQueries.delete_pending_stubs(user_id)
+
+      case TelegramQueries.create_integration(attrs) do
+        {:ok, stub} -> stub
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
+  end
 
   defp send_telegram_message(bot_token, chat_id, text) do
     case API.send_message(bot_token, chat_id, text) do

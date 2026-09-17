@@ -19,6 +19,8 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchema do
           bot_token: String.t() | nil,
           chat_id: String.t() | nil,
           link_token: String.t() | nil,
+          link_token_issued_at: DateTime.t() | nil,
+          linked_at: DateTime.t() | nil,
           events: [String.t()],
           is_active: boolean(),
           last_triggered_at: DateTime.t() | nil,
@@ -45,6 +47,8 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchema do
     field(:bot_token_encrypted, :binary)
     field(:chat_id, :string)
     field(:link_token, :string)
+    field(:link_token_issued_at, :utc_datetime)
+    field(:linked_at, :utc_datetime)
     field(:events, {:array, :string}, default: [])
     field(:is_active, :boolean, default: true)
     field(:last_triggered_at, :utc_datetime)
@@ -85,6 +89,8 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchema do
     |> validate_length(:name, Constraints.webhook_name_length_opts())
     |> validate_inclusion(:bot_mode, @valid_bot_modes)
     |> validate_events()
+    |> stamp_link_token_issued_at()
+    |> stamp_linked_at()
     |> encrypt_token()
     |> foreign_key_constraint(:user_id)
   end
@@ -153,6 +159,32 @@ defmodule Tymeslot.Telegram.TelegramIntegrationSchema do
         end
     end
   end
+
+  # The issue time travels with the token, so no caller can hand out a token
+  # the server cannot expire.
+  defp stamp_link_token_issued_at(changeset) do
+    case fetch_change(changeset, :link_token) do
+      {:ok, nil} -> put_change(changeset, :link_token_issued_at, nil)
+      {:ok, _token} -> put_change(changeset, :link_token_issued_at, DateTime.utc_now(:second))
+      :error -> changeset
+    end
+  end
+
+  # `linked_at` records that the integration has had a chat at some point, so
+  # a disconnected integration (chat cleared) is never mistaken for an
+  # abandoned setup stub. It is set once and never cleared.
+  defp stamp_linked_at(%Ecto.Changeset{data: %{linked_at: %DateTime{}}} = changeset),
+    do: changeset
+
+  defp stamp_linked_at(%Ecto.Changeset{data: %{chat_id: nil}} = changeset) do
+    case get_change(changeset, :chat_id) do
+      nil -> changeset
+      _chat_id -> put_change(changeset, :linked_at, DateTime.utc_now(:second))
+    end
+  end
+
+  defp stamp_linked_at(changeset),
+    do: put_change(changeset, :linked_at, DateTime.utc_now(:second))
 
   defp encrypt_token(changeset) do
     case get_change(changeset, :bot_token) do

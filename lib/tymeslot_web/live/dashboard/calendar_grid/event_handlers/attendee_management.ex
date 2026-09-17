@@ -7,7 +7,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
 
   alias Tymeslot.Meetings.AttendeeNotifications
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
-  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -47,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
             |> assign(:events, updated_events)
             |> assign(:attendee_input, "")
             |> Helpers.precompute_derived()
-            |> Updates.update_attendees_async(event, new_attendees)
+            |> EditWorkflow.update_event_async(event, %{attendees: new_attendees})
 
           {:noreply, socket}
         else
@@ -96,7 +95,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
     |> assign(:events, updated_events)
     |> assign(:confirm_remove_attendee, nil)
     |> Helpers.precompute_derived()
-    |> Updates.update_attendees_async(event, new_attendees)
+    |> EditWorkflow.update_event_async(event, %{attendees: new_attendees})
   end
 
   @spec handle_request_remove_attendee(map(), Phoenix.LiveView.Socket.t()) ::

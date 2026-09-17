@@ -46,6 +46,20 @@ defmodule Tymeslot.SlackTest do
       assert integration.channel_id == "C1"
     end
 
+    test "create_webhook_integration/2 stores an active webhook-URL integration" do
+      user = insert(:user)
+
+      assert {:ok, integration} =
+               Slack.create_webhook_integration(user.id, %{
+                 name: "Team channel",
+                 webhook_url: "https://hooks.slack.com/services/TABC123/BABC123/sometoken123",
+                 events: ["meeting.created"]
+               })
+
+      assert integration.app_mode == "webhook_url"
+      assert integration.is_active == true
+    end
+
     test "create_integration/2 returns :feature_disabled when Slack is off" do
       user = insert(:user)
       setup_config(:tymeslot, slack_notifications_allowed: false)

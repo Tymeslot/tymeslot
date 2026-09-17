@@ -32,6 +32,7 @@ defmodule Tymeslot.MeetingPayments do
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.CheckoutOutcome
   alias Tymeslot.MeetingPayments.CheckoutSessions
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccounts
@@ -324,6 +325,15 @@ defmodule Tymeslot.MeetingPayments do
   defdelegate create_checkout_session(meeting),
     to: CheckoutSessions,
     as: :create_session_for_booking
+
+  @doc """
+  What an attendee returning from Stripe Checkout should be told about their
+  booking: still `:processing`, `:failed`, `:awaiting_approval`, `:declined`,
+  `:expired`, `:confirmed` or `:cancelled`. See `CheckoutOutcome` for the rules.
+  """
+  @spec checkout_outcome(booking_payment() | nil, Tymeslot.Meetings.MeetingSchema.t() | nil) ::
+          CheckoutOutcome.t()
+  defdelegate checkout_outcome(payment, meeting), to: CheckoutOutcome, as: :classify
 
   # ---------------------------------------------------------------------------
   # Currency

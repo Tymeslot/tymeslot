@@ -5,13 +5,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
-  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
+
+  require Logger
 
   @spec default_integration_id(Phoenix.LiveView.Socket.t()) :: integer() | nil
   def default_integration_id(socket) do
@@ -97,8 +99,148 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
       assign(socket, :recurrence_prompt, prompt)
     else
-      Updates.update_event_async(socket, event, optimistic_event, new_start, new_end)
+      update_event_async(socket, event, %{start_at: new_start, end_at: new_end})
     end
+  end
+
+  @doc """
+  Runs `fun` in a supervised Task and sends `{tag, result}` back to this
+  LiveView process once it returns.
+
+  If `fun` raises, throws or exits, `{tag, crash_result}` is sent instead, so
+  the handler for `tag` still hears back and an optimistic update on screen is
+  never left standing without an answer.
+  """
+  @spec run_async(Phoenix.LiveView.Socket.t(), atom(), (-> term()), term()) ::
+          Phoenix.LiveView.Socket.t()
+  def run_async(socket, tag, fun, crash_result) when is_atom(tag) and is_function(fun, 0) do
+    lv_pid = self()
+
+    {:ok, _pid} =
+      Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+        send(lv_pid, {tag, run_guarded(tag, fun, crash_result)})
+      end)
+
+    socket
+  end
+
+  defp run_guarded(tag, fun, crash_result) do
+    fun.()
+  catch
+    kind, reason ->
+      Logger.error("Calendar grid task crashed",
+        task: tag,
+        error: Exception.format(kind, reason, __STACKTRACE__)
+      )
+
+      crash_result
+  end
+
+  @doc """
+  Writes `changes` to `event` in the background through
+  `Tymeslot.CalendarGrid.update_event/4` and reports back with
+  `{:event_update_result, :ok}` or `{:event_update_result, {:error, payload}}`,
+  where `payload` carries `:original_event`, `:reason` and `:retry`
+  (`:queued` when the edit is saved locally and will sync, `:not_queued`
+  otherwise).
+
+  `opts` are passed through to `CalendarGrid.update_event/4`.
+  """
+  @spec update_event_async(Phoenix.LiveView.Socket.t(), map(), map(), keyword()) ::
+          Phoenix.LiveView.Socket.t()
+  def update_event_async(socket, event, changes, opts \\ []) do
+    user_id = socket.assigns.current_user.id
+
+    run_async(
+      socket,
+      :event_update_result,
+      fn ->
+        case CalendarGrid.update_event(user_id, event, changes, opts) do
+          {:ok, _updated} -> :ok
+          {:error, %{reason: reason, retry: retry}} -> update_failure(event, reason, retry)
+        end
+      end,
+      update_failure(event, :crashed, :not_queued)
+    )
+  end
+
+  defp update_failure(event, reason, retry),
+    do: {:error, original_event: event, reason: reason, retry: retry}
+
+  @doc """
+  Gives `event` a room on the video integration `video_integration_id`, or
+  removes its video link when that is `nil`, in the background through
+  `Tymeslot.CalendarGrid.change_event_video/3`.
+
+  Reports back with `{:event_video_result, {:ok, event_id: id,
+  video_integration_id: id, video_link: url}}`, or with
+  `{:event_video_result, {:error, original_event: event, reason: reason}}`
+  when nothing was changed.
+  """
+  @spec change_event_video_async(Phoenix.LiveView.Socket.t(), map(), pos_integer() | nil) ::
+          Phoenix.LiveView.Socket.t()
+  def change_event_video_async(socket, event, video_integration_id) do
+    user_id = socket.assigns.current_user.id
+
+    run_async(
+      socket,
+      :event_video_result,
+      fn ->
+        case CalendarGrid.change_event_video(user_id, event, video_integration_id) do
+          {:ok, url} ->
+            {:ok, event_id: event.id, video_integration_id: video_integration_id, video_link: url}
+
+          {:error, reason} ->
+            video_failure(event, reason)
+        end
+      end,
+      video_failure(event, :crashed)
+    )
+  end
+
+  defp video_failure(event, reason), do: {:error, original_event: event, reason: reason}
+
+  @doc """
+  Moves `event` to `integration` (on `calendar_id`, or its default calendar
+  when `nil`) in the background through `Tymeslot.CalendarGrid.move_event/3`.
+
+  Reports back with `{:event_move_result, {:ok, uid: uid, integration_id: id,
+  source: source}}`, where `source` is `nil` when the original was removed,
+  `:queued_delete` or `:left_behind` otherwise; or with
+  `{:event_move_result, {:error, original_event: event, reason: reason}}`
+  when nothing was moved.
+  """
+  @spec move_event_async(Phoenix.LiveView.Socket.t(), map(), map(), String.t() | nil) ::
+          Phoenix.LiveView.Socket.t()
+  def move_event_async(socket, event, integration, calendar_id) do
+    user_id = socket.assigns.current_user.id
+    destination = %{integration: integration, calendar_id: calendar_id}
+
+    run_async(
+      socket,
+      :event_move_result,
+      fn ->
+        case CalendarGrid.move_event(user_id, event, destination) do
+          {:ok, moved} ->
+            {:ok, uid: moved.uid, integration_id: moved.integration_id, source: moved[:source]}
+
+          {:error, reason} ->
+            move_failure(event, reason)
+        end
+      end,
+      move_failure(event, :crashed)
+    )
+  end
+
+  defp move_failure(event, reason), do: {:error, original_event: event, reason: reason}
+
+  @doc "The message shown when an organiser tries to move a recurring event."
+  @spec recurring_move_refused_message() :: String.t()
+  def recurring_move_refused_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "Recurring events cannot be moved to another calendar yet. Only single events can be moved."
+    )
   end
 
   @spec assert_owns_event(Phoenix.LiveView.Socket.t(), map()) :: :ok | {:error, :unauthorized}
