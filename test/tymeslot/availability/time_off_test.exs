@@ -14,6 +14,7 @@ defmodule Tymeslot.Availability.TimeOffTest do
   @moduletag :availability
 
   import Tymeslot.Factory
+  import Tymeslot.Test.ClockHelpers
 
   alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Availability.TimeOffPeriodQueries
@@ -159,6 +160,12 @@ defmodule Tymeslot.Availability.TimeOffTest do
   end
 
   describe "create/2" do
+    # The fixtures below sit in September 2026; pinning "today" before them
+    # keeps the past-date rule from rejecting them as the calendar moves on.
+    setup do
+      freeze_clock(~U[2026-09-01 12:00:00Z])
+    end
+
     test "stores a period against the profile and returns it" do
       profile = insert(:profile)
 
@@ -212,11 +219,41 @@ defmodule Tymeslot.Availability.TimeOffTest do
                })
     end
 
+    test "rejects a period starting before today" do
+      profile = insert(:profile, timezone: "Etc/UTC")
+
+      assert {:error, changeset} =
+               TimeOff.create(profile.id, %{starts_on: ~D[2026-08-31], ends_on: ~D[2026-09-03]})
+
+      assert "must not be in the past" in errors_on(changeset).starts_on
+      assert TimeOff.list(profile.id) == []
+    end
+
+    test "accepts a period starting today" do
+      profile = insert(:profile, timezone: "Etc/UTC")
+
+      assert {:ok, _period} =
+               TimeOff.create(profile.id, %{starts_on: ~D[2026-09-01], ends_on: ~D[2026-09-01]})
+    end
+
+    test "reads today in the owner's timezone, not the server's" do
+      # 23:30 UTC on 1 September is already 2 September in Tokyo and still
+      # 1 September in New York, so the same date is past for one owner only.
+      freeze_clock(~U[2026-09-01 23:30:00Z])
+      tokyo = insert(:profile, timezone: "Asia/Tokyo")
+      new_york = insert(:profile, timezone: "America/New_York")
+      attrs = %{starts_on: ~D[2026-09-01], ends_on: ~D[2026-09-01]}
+
+      assert {:error, changeset} = TimeOff.create(tokyo.id, attrs)
+      assert "must not be in the past" in errors_on(changeset).starts_on
+      assert {:ok, _period} = TimeOff.create(new_york.id, attrs)
+    end
+
     test "refuses to exceed the per-profile limit" do
       profile = insert(:profile)
 
       for offset <- 0..(TimeOff.max_periods() - 1) do
-        date = Date.add(~D[2026-01-01], offset)
+        date = Date.add(~D[2026-09-01], offset)
         insert(:time_off_period, profile: profile, starts_on: date, ends_on: date)
       end
 
@@ -225,9 +262,55 @@ defmodule Tymeslot.Availability.TimeOffTest do
 
       refute TimeOff.can_create?(profile.id)
     end
+
+    test "periods that have already ended do not count towards the limit" do
+      profile = insert(:profile, timezone: "Etc/UTC")
+
+      for offset <- 1..TimeOff.max_periods() do
+        date = Date.add(~D[2026-09-01], -offset)
+        insert(:time_off_period, profile: profile, starts_on: date, ends_on: date)
+      end
+
+      assert TimeOff.can_create?(profile.id)
+
+      assert {:ok, _period} =
+               TimeOff.create(profile.id, %{starts_on: ~D[2026-09-02], ends_on: ~D[2026-09-02]})
+    end
+  end
+
+  describe "list_by_status/1" do
+    setup do
+      freeze_clock(~U[2026-09-01 12:00:00Z])
+      %{profile: insert(:profile, timezone: "Etc/UTC")}
+    end
+
+    test "separates finished periods from current ones", %{profile: profile} do
+      under_way = period_for(profile, ~D[2026-08-28], ~D[2026-09-01])
+      upcoming = period_for(profile, ~D[2026-09-10], ~D[2026-09-12])
+      ended_yesterday = period_for(profile, ~D[2026-08-25], ~D[2026-08-31])
+
+      assert %{current: current, past: past} = TimeOff.list_by_status(profile.id)
+      assert Enum.map(current, & &1.id) == [under_way.id, upcoming.id]
+      assert Enum.map(past, & &1.id) == [ended_yesterday.id]
+    end
+
+    test "lists finished periods most recently ended first, back 30 days only", %{
+      profile: profile
+    } do
+      oldest_shown = period_for(profile, ~D[2026-07-30], ~D[2026-08-02])
+      recent = period_for(profile, ~D[2026-08-20], ~D[2026-08-21])
+      _too_old = period_for(profile, ~D[2026-07-20], ~D[2026-08-01])
+
+      assert %{past: past} = TimeOff.list_by_status(profile.id)
+      assert Enum.map(past, & &1.id) == [recent.id, oldest_shown.id]
+    end
   end
 
   describe "update/2 and delete/1" do
+    setup do
+      freeze_clock(~U[2026-09-01 12:00:00Z])
+    end
+
     test "update rewrites the stored dates" do
       period = insert(:time_off_period, starts_on: ~D[2026-09-10], ends_on: ~D[2026-09-12])
 
@@ -245,6 +328,38 @@ defmodule Tymeslot.Availability.TimeOffTest do
 
       assert TimeOffPeriodQueries.get_for_profile(period.profile_id, period.id).ends_on ==
                ~D[2026-09-12]
+    end
+
+    test "a period already under way can still be edited" do
+      # Its first day is in the past, but the edit does not change it, so the
+      # past-date rule must not stand in the way of moving the last day.
+      period =
+        insert(:time_off_period,
+          profile: build(:profile, timezone: "Etc/UTC"),
+          starts_on: ~D[2026-08-28],
+          ends_on: ~D[2026-09-04]
+        )
+
+      assert {:ok, updated} =
+               TimeOff.update(period, %{
+                 "starts_on" => "2026-08-28",
+                 "ends_on" => "2026-09-08",
+                 "label" => "Longer"
+               })
+
+      assert updated.ends_on == ~D[2026-09-08]
+    end
+
+    test "update refuses to move the last day into the past" do
+      period =
+        insert(:time_off_period,
+          profile: build(:profile, timezone: "Etc/UTC"),
+          starts_on: ~D[2026-08-28],
+          ends_on: ~D[2026-09-04]
+        )
+
+      assert {:error, changeset} = TimeOff.update(period, %{ends_on: ~D[2026-08-30]})
+      assert "must not be in the past" in errors_on(changeset).ends_on
     end
 
     test "clearing the times switches a part-day period back to whole days" do
@@ -293,6 +408,39 @@ defmodule Tymeslot.Availability.TimeOffTest do
       assert {:ok, _deleted} = TimeOff.delete(period)
       assert TimeOff.list(period.profile_id) == []
     end
+  end
+
+  describe "validate/2" do
+    setup do
+      freeze_clock(~U[2026-09-01 12:00:00Z])
+    end
+
+    test "reports a past date for a new period without storing anything" do
+      profile = insert(:profile, timezone: "Etc/UTC")
+
+      changeset =
+        TimeOff.validate(profile.id, %{"starts_on" => "2026-08-20", "ends_on" => "2026-09-02"})
+
+      assert changeset.action == :validate
+      assert "must not be in the past" in errors_on(changeset).starts_on
+      assert TimeOff.list(profile.id) == []
+    end
+
+    test "judges an edit against the stored period" do
+      period =
+        insert(:time_off_period,
+          profile: build(:profile, timezone: "Etc/UTC"),
+          starts_on: ~D[2026-08-28],
+          ends_on: ~D[2026-09-04]
+        )
+
+      assert TimeOff.validate(period, %{"starts_on" => "2026-08-28"}).valid?
+      refute TimeOff.validate(period, %{"starts_on" => "2026-08-27"}).valid?
+    end
+  end
+
+  defp period_for(profile, starts_on, ends_on) do
+    insert(:time_off_period, profile: profile, starts_on: starts_on, ends_on: ends_on)
   end
 
   describe "fetch/2" do

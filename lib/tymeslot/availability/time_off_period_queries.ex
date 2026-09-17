@@ -25,6 +25,18 @@ defmodule Tymeslot.Availability.TimeOffPeriodQueries do
   end
 
   @doc """
+  Lists a profile's periods whose last day is on or after `date`, soonest-starting
+  first.
+  """
+  @spec list_for_profile_ending_from(integer(), Date.t()) :: [TimeOffPeriodSchema.t()]
+  def list_for_profile_ending_from(profile_id, date) do
+    TimeOffPeriodSchema
+    |> where([p], p.profile_id == ^profile_id and p.ends_on >= ^date)
+    |> order_by(asc: :starts_on, asc: :id)
+    |> Repo.all()
+  end
+
+  @doc """
   Lists a profile's periods that overlap `start_date..end_date` inclusive.
   """
   @spec list_for_profile_in_range(integer(), Date.t(), Date.t()) :: [TimeOffPeriodSchema.t()]
@@ -64,33 +76,35 @@ defmodule Tymeslot.Availability.TimeOffPeriodQueries do
   end
 
   @doc """
-  How many periods a profile owns.
+  How many of a profile's periods have a last day on or after `date`.
   """
-  @spec count_for_profile(integer()) :: non_neg_integer()
-  def count_for_profile(profile_id) do
+  @spec count_for_profile_ending_from(integer(), Date.t()) :: non_neg_integer()
+  def count_for_profile_ending_from(profile_id, date) do
     TimeOffPeriodSchema
-    |> where([p], p.profile_id == ^profile_id)
+    |> where([p], p.profile_id == ^profile_id and p.ends_on >= ^date)
     |> Repo.aggregate(:count)
   end
 
   @doc """
-  Creates a time-off period.
+  Creates a time-off period. `opts` are passed to
+  `TimeOffPeriodSchema.changeset/3`, which requires `:today`.
   """
-  @spec create(map()) :: {:ok, TimeOffPeriodSchema.t()} | {:error, Ecto.Changeset.t()}
-  def create(attrs \\ %{}) when is_map(attrs) do
+  @spec create(map(), keyword()) :: {:ok, TimeOffPeriodSchema.t()} | {:error, Ecto.Changeset.t()}
+  def create(attrs, opts) when is_map(attrs) do
     %TimeOffPeriodSchema{}
-    |> TimeOffPeriodSchema.changeset(attrs)
+    |> TimeOffPeriodSchema.changeset(attrs, opts)
     |> Repo.insert()
   end
 
   @doc """
-  Updates a time-off period.
+  Updates a time-off period. `opts` are passed to
+  `TimeOffPeriodSchema.changeset/3`, which requires `:today`.
   """
-  @spec update(TimeOffPeriodSchema.t(), map()) ::
+  @spec update(TimeOffPeriodSchema.t(), map(), keyword()) ::
           {:ok, TimeOffPeriodSchema.t()} | {:error, Ecto.Changeset.t()}
-  def update(%TimeOffPeriodSchema{} = period, attrs) when is_map(attrs) do
+  def update(%TimeOffPeriodSchema{} = period, attrs, opts) when is_map(attrs) do
     period
-    |> TimeOffPeriodSchema.changeset(attrs)
+    |> TimeOffPeriodSchema.changeset(attrs, opts)
     |> Repo.update()
   end
 

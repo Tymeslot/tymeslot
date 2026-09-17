@@ -761,6 +761,7 @@ msgid "You already have the maximum of %{count} time off periods"
 msgstr "Hai già il numero massimo di %{count} periodi di assenza"
 
 #: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
 msgid "Away from (first day)"
 msgstr "Assente dalle (primo giorno)"
 
@@ -768,3 +769,23 @@ msgstr "Assente dalle (primo giorno)"
 #, elixir-autogen, elixir-format
 msgid "Back at (last day)"
 msgstr "Di ritorno alle (ultimo giorno)"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Past"
+msgstr "Passate"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Time off that ended in the last %{count} days. It no longer affects your availability."
+msgstr "Assenze terminate negli ultimi %{count} giorni. Non influiscono più sulla tua disponibilità."
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "Current and upcoming"
+msgstr "In corso e in arrivo"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "No upcoming time off. Anything you add appears here."
+msgstr "Nessuna assenza in arrivo. Tutto ciò che aggiungi apparirà qui."

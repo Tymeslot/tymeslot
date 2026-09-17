@@ -25,8 +25,9 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
   Renders the add/edit time-off form.
 
   `period_data` carries `:mode` (`:create` or `:edit`), the current field
-  values as strings, and `:errors`, a map of field to message rendered under
-  the field it belongs to.
+  values as strings, `:errors`, a map of field to message rendered under the
+  field it belongs to, and `:min_starts_on`/`:min_ends_on`, the earliest date
+  each picker offers.
   """
   attr :id, :string, required: true
   attr :show, :boolean, required: true
@@ -46,13 +47,20 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
         </div>
       </:header>
 
-      <form :if={@period_data} id={"#{@id}-form"} phx-submit="save_time_off" phx-target={@myself}>
+      <form
+        :if={@period_data}
+        id={"#{@id}-form"}
+        phx-change="validate_time_off"
+        phx-submit="save_time_off"
+        phx-target={@myself}
+      >
         <div class="space-y-6">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <CoreComponents.input
               type="date"
               name="starts_on"
               value={Map.get(@period_data, :starts_on, "")}
+              min={Map.get(@period_data, :min_starts_on)}
               label={dgettext("dashboard_availability", "First day away")}
               errors={field_errors(@period_data, :starts_on)}
             />
@@ -60,6 +68,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
               type="date"
               name="ends_on"
               value={Map.get(@period_data, :ends_on, "")}
+              min={Map.get(@period_data, :min_ends_on)}
               label={dgettext("dashboard_availability", "Last day away")}
               errors={field_errors(@period_data, :ends_on)}
             />
@@ -96,6 +105,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
             name="label"
             value={Map.get(@period_data, :label, "")}
             maxlength={Constraints.time_off_label_max_length()}
+            phx-debounce="300"
             label={dgettext("dashboard_availability", "Note (only you see this)")}
             placeholder={dgettext("dashboard_availability", "Holiday")}
             errors={field_errors(@period_data, :label)}

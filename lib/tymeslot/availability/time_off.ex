@@ -23,8 +23,10 @@ defmodule Tymeslot.Availability.TimeOff do
 
   alias Tymeslot.Availability.TimeOffPeriodQueries
   alias Tymeslot.Availability.TimeOffPeriodSchema
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Profiles.ProfileQueries
+  alias Tymeslot.Utils.DateTimeUtils
 
   @typedoc """
   What a period does to one date: nothing, blocks the whole of it, or blocks
@@ -43,10 +45,16 @@ defmodule Tymeslot.Availability.TimeOff do
 
   # A profile with more periods than this is not describing holidays any more,
   # and the availability read path holds every overlapping period in memory.
+  # Only periods that have not ended count: finished ones never reach that path,
+  # and counting them would lock an account out once enough holidays had passed.
   @max_periods 100
 
+  # How far back finished periods stay listed. Older ones affect nothing and
+  # would only push the upcoming ones down the page.
+  @recent_past_days 30
+
   @doc """
-  Maximum number of periods one profile may hold.
+  Maximum number of periods one profile may hold that have not yet ended.
   """
   @spec max_periods() :: pos_integer()
   def max_periods, do: @max_periods
@@ -58,18 +66,54 @@ defmodule Tymeslot.Availability.TimeOff do
   def list(profile_id), do: TimeOffPeriodQueries.list_for_profile(profile_id)
 
   @doc """
+  Days back that finished periods are still listed by `list_by_status/1`.
+  """
+  @spec recent_past_days() :: pos_integer()
+  def recent_past_days, do: @recent_past_days
+
+  @doc """
+  A profile's periods split by whether they are over, as the dashboard lists
+  them.
+
+  `:current` holds every period whose last day is today or later, soonest
+  first, including one already under way. `:past` holds those that ended
+  within `recent_past_days/0`, most recently ended first; anything older is
+  left out.
+  """
+  @spec list_by_status(integer()) :: %{current: [period()], past: [period()]}
+  def list_by_status(profile_id) do
+    today = owner_today(profile_id)
+
+    {past, current} =
+      profile_id
+      |> TimeOffPeriodQueries.list_for_profile_ending_from(Date.add(today, -@recent_past_days))
+      |> Enum.split_with(&ended?(&1, today))
+
+    %{current: current, past: Enum.sort_by(past, & &1.ends_on, {:desc, Date})}
+  end
+
+  @doc """
+  Whether `period` finished before `today`, so no longer affects availability.
+  """
+  @spec ended?(period(), Date.t()) :: boolean()
+  def ended?(%{ends_on: ends_on}, today), do: Date.compare(ends_on, today) == :lt
+
+  @doc """
   Whether the profile may add another period.
   """
   @spec can_create?(integer()) :: boolean()
-  def can_create?(profile_id),
-    do: TimeOffPeriodQueries.count_for_profile(profile_id) < @max_periods
+  def can_create?(profile_id) do
+    TimeOffPeriodQueries.count_for_profile_ending_from(profile_id, owner_today(profile_id)) <
+      @max_periods
+  end
 
   @doc """
   Creates a period for a profile.
 
   Returns `{:error, :limit_reached}` rather than a changeset when the profile
   already holds `max_periods/0`, so the caller can say why without inventing a
-  field to hang the message on.
+  field to hang the message on. Neither date may fall before `today/1` in the
+  owner's timezone.
   """
   @spec create(integer(), map()) :: result() | {:error, :limit_reached}
   def create(profile_id, attrs) do
@@ -77,7 +121,7 @@ defmodule Tymeslot.Availability.TimeOff do
       attrs
       |> normalise_attrs()
       |> Map.put(:profile_id, profile_id)
-      |> TimeOffPeriodQueries.create()
+      |> TimeOffPeriodQueries.create(today: owner_today(profile_id))
       |> invalidate_cache(profile_id)
     else
       {:error, :limit_reached}
@@ -86,13 +130,45 @@ defmodule Tymeslot.Availability.TimeOff do
 
   @doc """
   Updates a period.
+
+  A date the update changes may not fall before `today/1`; a date it leaves
+  alone may, so a period already under way stays editable.
   """
   @spec update(period(), map()) :: result()
   def update(%TimeOffPeriodSchema{} = period, attrs) do
     period
-    |> TimeOffPeriodQueries.update(normalise_attrs(attrs))
+    |> TimeOffPeriodQueries.update(normalise_attrs(attrs), today: owner_today(period.profile_id))
     |> invalidate_cache(period.profile_id)
   end
+
+  @doc """
+  Checks `attrs` without writing anything, as a new period for `profile_id` or
+  as an edit of `period`, so a form can show what is wrong while it is still
+  being filled in. Applies the same rules `create/2` and `update/2` do, bar
+  the per-profile limit.
+  """
+  @spec validate(integer() | period(), map()) :: Ecto.Changeset.t()
+  def validate(%TimeOffPeriodSchema{} = period, attrs) do
+    period
+    |> TimeOffPeriodSchema.changeset(normalise_attrs(attrs),
+      today: owner_today(period.profile_id)
+    )
+    |> Map.put(:action, :validate)
+  end
+
+  def validate(profile_id, attrs) when is_integer(profile_id),
+    do: validate(%TimeOffPeriodSchema{profile_id: profile_id}, attrs)
+
+  @doc """
+  The current date in `timezone`, the earliest day a period may be placed on.
+
+  Read in the owner's timezone because that is the one the period's dates are
+  in: late on the 17th in Berlin is already the 18th in Tokyo. A missing or
+  unknown timezone falls back to UTC.
+  """
+  @spec today(String.t() | nil) :: Date.t()
+  def today(nil), do: Clock.utc_today()
+  def today(timezone), do: timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
 
   @doc """
   Deletes a period.
@@ -195,6 +271,13 @@ defmodule Tymeslot.Availability.TimeOff do
   end
 
   defp invalidate_cache(outcome, _profile_id), do: outcome
+
+  defp owner_today(profile_id) do
+    case ProfileQueries.get_with_user(profile_id) do
+      %{timezone: timezone} -> today(timezone)
+      nil -> today(nil)
+    end
+  end
 
   # The UI submits string-keyed params while internal callers use atoms; the
   # profile_id merge above needs one consistent key type.

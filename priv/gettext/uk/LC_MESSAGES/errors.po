@@ -247,3 +247,18 @@ msgstr "інтеграція для цього провайдера вже іс�
 #, elixir-autogen, elixir-format
 msgid "is not a valid colour"
 msgstr "не є дійсним кольором"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be after the start time"
+msgstr "має бути пізніше за час початку"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must not be before the start date"
+msgstr "не може бути раніше за дату початку"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must not be in the past"
+msgstr "не може бути в минулому"

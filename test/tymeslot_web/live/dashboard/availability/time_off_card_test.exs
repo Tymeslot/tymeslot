@@ -14,8 +14,10 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Tymeslot.Availability.{Schedules, TimeOff}
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Repo
 
   setup %{conn: conn} do
     AvailabilityCache.clear_all()
@@ -31,6 +33,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
 
       assert html =~ "Time Off"
       assert html =~ "No time off booked"
+      refute html =~ ~s(data-testid="time-off-current")
     end
 
     test "lists a whole-day period by its dates alone", %{conn: conn, profile: profile} do
@@ -146,6 +149,165 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
     end
   end
 
+  describe "past periods" do
+    test "appear in their own section, without an edit button, for 30 days", %{
+      conn: conn,
+      profile: profile
+    } do
+      today = TimeOff.today(profile.timezone)
+
+      recent =
+        insert(:time_off_period,
+          profile: profile,
+          starts_on: Date.add(today, -10),
+          ends_on: Date.add(today, -8),
+          label: "Recent trip"
+        )
+
+      insert(:time_off_period,
+        profile: profile,
+        starts_on: Date.add(today, -45),
+        ends_on: Date.add(today, -40),
+        label: "Long ago"
+      )
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/availability")
+
+      assert has_element?(view, "[data-testid='time-off-past-list']", "Recent trip")
+      refute has_element?(view, "[data-testid='time-off-list']")
+      # Nothing coming up still gets its own, empty category above the past one,
+      # rather than the whole-card empty state.
+      assert has_element?(view, "[data-testid='time-off-current-empty']")
+      refute html =~ "No time off booked"
+      refute html =~ "Long ago"
+
+      refute has_element?(
+               view,
+               "button[phx-click='show_time_off_form'][phx-value-id='#{recent.id}']"
+             )
+
+      assert has_element?(
+               view,
+               "#time-off-past-#{recent.id} button[aria-label='Remove time off']"
+             )
+    end
+  end
+
+  describe "removing a past period" do
+    test "removes it at once, without the confirmation dialog", %{conn: conn, profile: profile} do
+      today = TimeOff.today(profile.timezone)
+
+      past =
+        insert(:time_off_period,
+          profile: profile,
+          starts_on: Date.add(today, -10),
+          ends_on: Date.add(today, -8)
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      view
+      |> element("#time-off-past-#{past.id} button[aria-label='Remove time off']")
+      |> render_click()
+
+      assert TimeOff.list(profile.id) == []
+      refute has_element?(view, "#time-off-past-#{past.id}")
+      refute render(view) =~ "Those days become bookable again straight away."
+    end
+  end
+
+  describe "past dates" do
+    test "flags a first day in the past beside the field before the form is submitted", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      view |> element("[data-testid='add-time-off']") |> render_click()
+
+      html =
+        view
+        |> form("#time-off-form-modal-form", %{"starts_on" => "2020-01-06", "ends_on" => ""})
+        |> render_change()
+
+      assert html =~ "must not be in the past"
+      # The last day is still empty: that is for the submit to complain about,
+      # not something to shout while the form is being filled in.
+      refute html =~ "can&#39;t be blank"
+    end
+
+    test "shows the error in the dashboard's language", %{conn: conn, user: user} do
+      user |> Changeset.change(locale: "de") |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      view |> element("[data-testid='add-time-off']") |> render_click()
+
+      html =
+        view
+        |> form("#time-off-form-modal-form", %{"starts_on" => "2020-01-06", "ends_on" => ""})
+        |> render_change()
+
+      assert html =~ "darf nicht in der Vergangenheit liegen"
+    end
+
+    test "refuses to save a period in the past and keeps the form open", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      view |> element("[data-testid='add-time-off']") |> render_click()
+
+      html =
+        view
+        |> form("#time-off-form-modal-form", %{
+          "starts_on" => "2020-01-06",
+          "ends_on" => "2020-01-10",
+          "start_time" => "",
+          "end_time" => "",
+          "label" => "Portugal"
+        })
+        |> render_submit()
+
+      assert TimeOff.list(profile.id) == []
+      assert html =~ "must not be in the past"
+      assert html =~ "2020-01-06"
+    end
+
+    test "a period already under way can still be edited", %{conn: conn, profile: profile} do
+      period =
+        insert(:time_off_period,
+          profile: profile,
+          starts_on: ~D[2020-01-06],
+          ends_on: ~D[2099-01-10],
+          label: "Sabbatical"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      html =
+        view
+        |> element("button[phx-click='show_time_off_form'][phx-value-id='#{period.id}']")
+        |> render_click()
+
+      # The picker must reach back to the stored first day, or the browser
+      # would refuse to submit the form at all.
+      assert html =~ ~s(min="2020-01-06")
+
+      view
+      |> form("#time-off-form-modal-form", %{
+        "starts_on" => "2020-01-06",
+        "ends_on" => "2099-01-10",
+        "start_time" => "",
+        "end_time" => "",
+        "label" => "Long sabbatical"
+      })
+      |> render_submit()
+
+      assert [%{label: "Long sabbatical"}] = TimeOff.list(profile.id)
+    end
+  end
+
   describe "editing" do
     test "loads the period into the form and saves the change", %{conn: conn, profile: profile} do
       period =
@@ -211,7 +373,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
 
       view
-      |> element("button[phx-click='show_delete_time_off'][phx-value-id='#{period.id}']")
+      |> element("#time-off-#{period.id} button[aria-label='Remove time off']")
       |> render_click()
 
       view |> element("#delete-time-off-modal button", "Remove") |> render_click()

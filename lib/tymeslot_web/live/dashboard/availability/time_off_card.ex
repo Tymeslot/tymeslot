@@ -48,7 +48,12 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   def handle_event("show_time_off_form", %{"id" => id}, socket) do
     case fetch_period(socket, id) do
       {:ok, period} ->
-        {:noreply, ModalHook.show_modal(socket, :time_off_form, edit_data(period))}
+        {:noreply,
+         ModalHook.show_modal(
+           socket,
+           :time_off_form,
+           edit_data(period, TimeOff.today(socket.assigns.profile.timezone))
+         )}
 
       {:error, _reason} ->
         Flash.error(dgettext("dashboard_availability", "That time off no longer exists"))
@@ -58,7 +63,12 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
 
   def handle_event("show_time_off_form", _params, socket) do
     if TimeOff.can_create?(profile_id(socket)) do
-      {:noreply, ModalHook.show_modal(socket, :time_off_form, blank_data())}
+      {:noreply,
+       ModalHook.show_modal(
+         socket,
+         :time_off_form,
+         blank_data(TimeOff.today(socket.assigns.profile.timezone))
+       )}
     else
       Flash.error(
         dgettext(
@@ -74,6 +84,19 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
 
   def handle_event("hide_time_off_form", _params, socket) do
     {:noreply, ModalHook.hide_modal(socket, :time_off_form)}
+  end
+
+  # Runs the same rules as saving, on every change, so a date in the past or a
+  # backwards range is flagged beside its field before the form is submitted.
+  def handle_event("validate_time_off", params, socket) do
+    ModalHook.with_modal_data(socket, :time_off_form, fn data ->
+      {:noreply,
+       ModalHook.show_modal(
+         socket,
+         :time_off_form,
+         validated_data(socket, data, attrs_from(params))
+       )}
+    end)
   end
 
   def handle_event("save_time_off", params, socket) do
@@ -106,19 +129,37 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
     end)
   end
 
-  defp save(socket, %{mode: :edit, id: id}, attrs) do
+  # A finished period is removed in place, without the confirmation dialog: it
+  # no longer affects availability, so there is nothing for the dialog to
+  # protect. The row crosses itself out and fades on the client; the check here
+  # keeps a period that has not ended from being removed this way.
+  def handle_event("delete_past_time_off", %{"id" => id}, socket) do
+    today = TimeOff.today(socket.assigns.profile.timezone)
+
+    with {:ok, period} <- fetch_period(socket, id),
+         true <- TimeOff.ended?(period, today),
+         {:ok, _deleted} <- TimeOff.delete(period) do
+      :ok
+    else
+      _other -> Flash.error(dgettext("dashboard_availability", "Could not remove your time off"))
+    end
+
+    {:noreply, load_periods(socket)}
+  end
+
+  defp save(socket, %{mode: :edit, id: id} = data, attrs) do
     with {:ok, period} <- TimeOff.fetch(profile_id(socket), id),
          {:ok, _updated} <- TimeOff.update(period, attrs) do
       saved(socket, dgettext("dashboard_availability", "Time off updated"))
     else
-      {:error, reason} -> save_failed(socket, reason, attrs, :edit, id)
+      {:error, reason} -> save_failed(socket, reason, data, attrs)
     end
   end
 
-  defp save(socket, _create, attrs) do
+  defp save(socket, data, attrs) do
     case TimeOff.create(profile_id(socket), attrs) do
       {:ok, _period} -> saved(socket, dgettext("dashboard_availability", "Time off added"))
-      {:error, reason} -> save_failed(socket, reason, attrs, :create, nil)
+      {:error, reason} -> save_failed(socket, reason, data, attrs)
     end
   end
 
@@ -133,10 +174,10 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   # The form stays open carrying what was typed, with the changeset's messages
   # under the fields they belong to; a validation failure that closed the modal
   # would discard the dates the user had just chosen.
-  defp save_failed(socket, %Changeset{} = changeset, attrs, mode, id) do
+  defp save_failed(socket, %Changeset{} = changeset, data, attrs) do
     data =
-      attrs
-      |> form_data(mode, id)
+      data
+      |> Map.merge(attrs)
       |> Map.put(:errors, form_errors(changeset))
 
     if map_size(data.errors) == 0 do
@@ -146,7 +187,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
     ModalHook.show_modal(socket, :time_off_form, data)
   end
 
-  defp save_failed(socket, :limit_reached, _attrs, _mode, _id) do
+  defp save_failed(socket, :limit_reached, _data, _attrs) do
     Flash.error(
       dgettext(
         "dashboard_availability",
@@ -158,7 +199,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
     ModalHook.hide_modal(socket, :time_off_form)
   end
 
-  defp save_failed(socket, :not_found, _attrs, _mode, _id) do
+  defp save_failed(socket, :not_found, _data, _attrs) do
     Flash.error(dgettext("dashboard_availability", "That time off no longer exists"))
 
     socket
@@ -179,6 +220,31 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
     |> load_periods()
   end
 
+  # Only fields that hold a value report while the form is being filled in: a
+  # last day not chosen yet is not an error until the form is submitted.
+  defp validated_data(socket, data, attrs) do
+    case validation_target(socket, data) do
+      {:ok, target} ->
+        errors =
+          target
+          |> TimeOff.validate(attrs)
+          |> form_errors()
+          |> Map.reject(fn {field, _message} -> Map.fetch!(attrs, field) == "" end)
+
+        data
+        |> Map.merge(attrs)
+        |> Map.put(:errors, errors)
+
+      {:error, :not_found} ->
+        Map.merge(data, attrs)
+    end
+  end
+
+  defp validation_target(socket, %{mode: :edit, id: id}),
+    do: TimeOff.fetch(profile_id(socket), id)
+
+  defp validation_target(socket, _create), do: {:ok, profile_id(socket)}
+
   defp fetch_period(socket, id) do
     case Integer.parse(to_string(id)) do
       {parsed, ""} -> TimeOff.fetch(profile_id(socket), parsed)
@@ -186,7 +252,10 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
     end
   end
 
-  defp load_periods(socket), do: assign(socket, :periods, TimeOff.list(profile_id(socket)))
+  defp load_periods(socket) do
+    %{current: current, past: past} = TimeOff.list_by_status(profile_id(socket))
+    assign(socket, periods: current, past_periods: past)
+  end
 
   defp profile_id(socket), do: socket.assigns.profile.id
 
@@ -196,17 +265,28 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
     end)
   end
 
-  defp blank_data do
+  # The `min_*` dates keep the date pickers from offering days already gone. On
+  # an edit they reach back to the stored date when that is earlier, or the
+  # browser would refuse to submit a period already under way at all.
+  defp blank_data(today) do
     @form_fields
     |> Map.new(&{&1, ""})
-    |> Map.merge(%{mode: :create, id: nil, errors: %{}})
+    |> Map.merge(%{
+      mode: :create,
+      id: nil,
+      errors: %{},
+      min_starts_on: Date.to_iso8601(today),
+      min_ends_on: Date.to_iso8601(today)
+    })
   end
 
-  defp edit_data(period) do
+  defp edit_data(period, today) do
     %{
       mode: :edit,
       id: period.id,
       errors: %{},
+      min_starts_on: earliest_iso8601(period.starts_on, today),
+      min_ends_on: earliest_iso8601(period.ends_on, today),
       starts_on: Date.to_iso8601(period.starts_on),
       ends_on: Date.to_iso8601(period.ends_on),
       start_time: wire_time(period.start_time),
@@ -215,15 +295,14 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
     }
   end
 
-  defp form_data(attrs, mode, id) do
-    attrs
-    |> Map.take(@form_fields)
-    |> Map.merge(%{mode: mode, id: id})
-  end
+  defp earliest_iso8601(date, today), do: [date, today] |> Enum.min(Date) |> Date.to_iso8601()
 
+  # Kept as `{message, opts}` rather than flattened to a string: the form input
+  # translates that shape through the `errors` domain, interpolating counts, in
+  # whatever language the dashboard is in.
   defp form_errors(changeset) do
     changeset
-    |> Changeset.traverse_errors(fn {message, _opts} -> message end)
+    |> Changeset.traverse_errors(& &1)
     |> Map.take(@form_fields)
     |> Map.new(fn {field, messages} -> {field, List.first(messages)} end)
   end
@@ -263,8 +342,11 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
         )}
       </p>
 
+      <%!-- The full empty state is only for a card with nothing in it at all.
+      Once past periods exist, both categories show, so an empty current one
+      reads as "nothing coming up" rather than disappearing above the past. --%>
       <.empty_state
-        :if={@periods == []}
+        :if={@periods == [] and @past_periods == []}
         message={dgettext("dashboard_availability", "No time off booked")}
         secondary_message={
           dgettext(
@@ -278,42 +360,57 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
         </:icon>
       </.empty_state>
 
-      <ul :if={@periods != []} class="space-y-3" data-testid="time-off-list">
-        <li
-          :for={period <- @periods}
-          class="flex flex-wrap items-center justify-between gap-3 rounded-token-xl border border-tymeslot-100 bg-tymeslot-50 px-4 py-3"
-        >
-          <div class="min-w-0">
-            <p class="font-bold text-tymeslot-700">{range_summary(period, @time_format)}</p>
-            <p :if={period.label} class="text-token-sm text-tymeslot-500 font-medium truncate">
-              {period.label}
-            </p>
-          </div>
+      <div :if={@periods != [] or @past_periods != []} data-testid="time-off-current">
+        <.section_header
+          level={4}
+          title={dgettext("dashboard_availability", "Current and upcoming")}
+          class="mb-4"
+        />
 
-          <div class="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              phx-click="show_time_off_form"
-              phx-value-id={period.id}
-              phx-target={@myself}
-              class="text-tymeslot-400 hover:text-turquoise-600 transition-colors"
-              aria-label={dgettext("dashboard_availability", "Edit time off")}
-            >
-              <.icon name="hero-pencil-square" class="w-5 h-5" />
-            </button>
-            <button
-              type="button"
-              phx-click="show_delete_time_off"
-              phx-value-id={period.id}
-              phx-target={@myself}
-              class="text-tymeslot-300 hover:text-red-500 transition-colors"
-              aria-label={dgettext("dashboard_availability", "Remove time off")}
-            >
-              <.icon name="hero-trash" class="w-5 h-5" />
-            </button>
-          </div>
-        </li>
-      </ul>
+        <ul :if={@periods != []} class="space-y-3" data-testid="time-off-list">
+          <.period_row
+            :for={period <- @periods}
+            period={period}
+            time_format={@time_format}
+            myself={@myself}
+          />
+        </ul>
+
+        <div
+          :if={@periods == []}
+          class="flex items-center gap-3 rounded-token-xl border-2 border-dashed border-tymeslot-200 px-4 py-4 text-token-sm font-medium text-tymeslot-500"
+          data-testid="time-off-current-empty"
+        >
+          <.icon name="hero-sun" class="w-5 h-5 shrink-0 text-tymeslot-300" />
+          {dgettext("dashboard_availability", "No upcoming time off. Anything you add appears here.")}
+        </div>
+      </div>
+
+      <div :if={@past_periods != []} class="mt-8" data-testid="time-off-past">
+        <.section_header
+          level={4}
+          title={dgettext("dashboard_availability", "Past")}
+          count={length(@past_periods)}
+          class="mb-2"
+        />
+        <p class="mb-4 text-token-sm text-tymeslot-500 font-medium">
+          {dgettext(
+            "dashboard_availability",
+            "Time off that ended in the last %{count} days. It no longer affects your availability.",
+            count: TimeOff.recent_past_days()
+          )}
+        </p>
+
+        <ul class="space-y-3" data-testid="time-off-past-list">
+          <.period_row
+            :for={period <- @past_periods}
+            period={period}
+            time_format={@time_format}
+            myself={@myself}
+            past
+          />
+        </ul>
+      </div>
 
       <TimeOffFormModal.time_off_form_modal
         id="time-off-form-modal"
@@ -333,6 +430,85 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
       />
     </div>
     """
+  end
+
+  attr :period, :any, required: true
+  attr :time_format, :string, required: true
+  attr :myself, :any, required: true
+  attr :past, :boolean, default: false
+
+  # A finished period has no edit button: there is nothing left to move, since
+  # neither of its dates may be placed in the past again.
+  defp period_row(assigns) do
+    ~H"""
+    <li
+      id={row_id(@period, @past)}
+      phx-remove={@past && row_removal()}
+      class={[
+        "flex flex-wrap items-center justify-between gap-3 rounded-token-xl border border-tymeslot-100 px-4 py-3",
+        if(@past, do: "bg-white", else: "bg-tymeslot-50")
+      ]}
+    >
+      <div class="min-w-0" data-strike>
+        <p class={["font-bold", if(@past, do: "text-tymeslot-500", else: "text-tymeslot-700")]}>
+          {range_summary(@period, @time_format)}
+        </p>
+        <p :if={@period.label} class="text-token-sm text-tymeslot-500 font-medium truncate">
+          {@period.label}
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <button
+          :if={not @past}
+          type="button"
+          phx-click="show_time_off_form"
+          phx-value-id={@period.id}
+          phx-target={@myself}
+          class="flex items-center justify-center h-9 w-9 bg-white text-tymeslot-700 rounded-token-lg border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
+          aria-label={dgettext("dashboard_availability", "Edit time off")}
+        >
+          <.icon name="hero-pencil-square" class="w-5 h-5" />
+        </button>
+        <button
+          type="button"
+          phx-click={
+            if @past,
+              do: remove_past(@period, @myself),
+              else: JS.push("show_delete_time_off", value: %{id: @period.id}, target: @myself)
+          }
+          class="flex items-center justify-center h-9 w-9 text-tymeslot-500 hover:text-red-500 hover:bg-red-50 rounded-token-lg border-2 border-transparent hover:border-red-100 transition-all"
+          aria-label={dgettext("dashboard_availability", "Remove time off")}
+        >
+          <.icon name="hero-trash" class="w-5 h-5" />
+        </button>
+      </div>
+    </li>
+    """
+  end
+
+  defp row_id(period, true), do: "time-off-past-#{period.id}"
+  defp row_id(period, false), do: "time-off-#{period.id}"
+
+  # Crossed out at once, then removed by the server: the row's `phx-remove`
+  # fades it once the re-render drops it, after a short pause so the line
+  # through it registers first.
+  defp remove_past(period, myself) do
+    row = "#" <> row_id(period, true)
+
+    "line-through decoration-2 decoration-tymeslot-400"
+    |> JS.add_class(to: "#{row} [data-strike]")
+    |> JS.add_class("pointer-events-none", to: row)
+    |> JS.push("delete_past_time_off", value: %{id: period.id}, target: myself)
+  end
+
+  defp row_removal do
+    JS.hide(
+      transition:
+        {"transition-all duration-700 delay-500 ease-in", "opacity-100 translate-x-0",
+         "opacity-0 translate-x-6"},
+      time: 1200
+    )
   end
 
   @doc """

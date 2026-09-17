@@ -14,6 +14,7 @@ defmodule Tymeslot.Availability.TimeOffPeriodSchema do
   blocks on a given date, and is the only place that reading is made.
   """
   use Ecto.Schema
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import Ecto.Changeset
 
@@ -45,9 +46,17 @@ defmodule Tymeslot.Availability.TimeOffPeriodSchema do
     timestamps(type: :utc_datetime)
   end
 
-  @doc false
-  @spec changeset(t(), map()) :: Ecto.Changeset.t()
-  def changeset(period, attrs) do
+  @doc """
+  Builds the changeset for a period.
+
+  `opts` must carry `:today`, the owner's current date: a period may not be
+  placed on days that have already gone. The caller supplies it because only
+  the caller knows whose timezone "today" is read in.
+  """
+  @spec changeset(t(), map(), keyword()) :: Ecto.Changeset.t()
+  def changeset(period, attrs, opts) do
+    today = Keyword.fetch!(opts, :today)
+
     period
     |> cast(blank_to_nil(attrs), [
       :profile_id,
@@ -59,6 +68,8 @@ defmodule Tymeslot.Availability.TimeOffPeriodSchema do
     ])
     |> update_change(:label, &trim_to_nil/1)
     |> validate_required([:profile_id, :starts_on, :ends_on])
+    |> validate_not_in_past(:starts_on, today)
+    |> validate_not_in_past(:ends_on, today)
     |> validate_date_order()
     |> validate_time_order_on_single_day()
     |> validate_label()
@@ -85,11 +96,23 @@ defmodule Tymeslot.Availability.TimeOffPeriodSchema do
     end
   end
 
+  # Only a date the submission actually changes is checked. A period already
+  # under way keeps a first day in the past, and editing its note or moving its
+  # last day must not trip over that; what is refused is placing either end on
+  # a day that has already gone.
+  defp validate_not_in_past(changeset, field, today) do
+    validate_change(changeset, field, fn ^field, date ->
+      if Date.compare(date, today) == :lt,
+        do: [{field, dgettext_noop("errors", "must not be in the past")}],
+        else: []
+    end)
+  end
+
   defp validate_date_order(changeset) do
     with %Date{} = starts_on <- get_field(changeset, :starts_on),
          %Date{} = ends_on <- get_field(changeset, :ends_on),
          :lt <- Date.compare(ends_on, starts_on) do
-      add_error(changeset, :ends_on, "must not be before the start date")
+      add_error(changeset, :ends_on, dgettext_noop("errors", "must not be before the start date"))
     else
       _in_order -> changeset
     end
@@ -107,14 +130,14 @@ defmodule Tymeslot.Availability.TimeOffPeriodSchema do
 
     if starts_on && starts_on == ends_on && start_time && end_time &&
          Time.compare(start_time, end_time) != :lt do
-      add_error(changeset, :end_time, "must be after the start time")
+      add_error(changeset, :end_time, dgettext_noop("errors", "must be after the start time"))
     else
       changeset
     end
   end
 
-  defp validate_label(changeset) do
-    max = Constraints.time_off_label_max_length()
-    validate_length(changeset, :label, max: max, message: "must be #{max} characters or less")
-  end
+  # Ecto's own length message, so the form translates it through the `errors`
+  # domain with its plural forms; an interpolated custom one never could be.
+  defp validate_label(changeset),
+    do: validate_length(changeset, :label, max: Constraints.time_off_label_max_length())
 end

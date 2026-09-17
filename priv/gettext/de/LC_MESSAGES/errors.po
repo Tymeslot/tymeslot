@@ -238,3 +238,18 @@ msgstr "für diesen Anbieter existiert bereits eine Integration"
 #, elixir-autogen, elixir-format
 msgid "is not a valid colour"
 msgstr "ist keine gültige Farbe"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be after the start time"
+msgstr "muss nach der Startzeit liegen"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must not be before the start date"
+msgstr "darf nicht vor dem Startdatum liegen"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must not be in the past"
+msgstr "darf nicht in der Vergangenheit liegen"
