@@ -134,10 +134,8 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   # connected. Enqueueing here closes that gap; a failure to enqueue is
   # non-fatal since the sweep will still pick the integration up.
   defp enqueue_initial_sync(integration) do
-    case %{"calendar_integration_id" => integration.id}
-         |> SyncIcsCalendarWorker.new()
-         |> Oban.insert() do
-      {:ok, _job} ->
+    case SyncIcsCalendarWorker.enqueue(integration.id) do
+      {:ok, _outcome} ->
         :ok
 
       {:error, reason} ->

@@ -446,9 +446,7 @@ defmodule Tymeslot.CalendarGrid do
   # A subscription refresh is always a full re-fetch of the feed; there is no
   # delta mode to force past.
   defp enqueue_sync_worker(%{provider: "ics_url"} = integration) do
-    %{"calendar_integration_id" => integration.id}
-    |> SyncIcsCalendarWorker.new()
-    |> Oban.insert()
+    SyncIcsCalendarWorker.enqueue(integration.id)
   end
 
   # EWS has no delta mode either: a refresh re-reads the whole window through

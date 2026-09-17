@@ -49,6 +49,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.{CalendarManagement, CalendarPrimary}
   alias Tymeslot.Integrations.Providers.Directory
   alias Tymeslot.Integrations.Shared.InputValidators
+  alias Tymeslot.Workers.SyncIcsCalendarWorker
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
@@ -465,6 +466,33 @@ defmodule Tymeslot.Integrations.Calendar do
           {:ok, integration()} | {:error, term()}
   def update_integration_with_discovery(integration) do
     Workflows.update_integration_with_discovery(integration)
+  end
+
+  @doc """
+  Refreshes an integration at the user's request.
+
+  A subscription has no discoverable calendar list to refresh (discovery
+  returns the same synthetic entry every time), so refreshing one re-fetches
+  the feed instead, through the same worker the scheduled sync sweep uses; a
+  refresh already queued for it counts as success. Every other provider
+  re-runs discovery via `update_integration_with_discovery/1`.
+
+  This asks about the feed family specifically, not about read-only
+  providers: `ics_url` is the only read-only provider left, but the two
+  questions are different and need not stay in step. An Exchange mailbox
+  discovers real folders and has no feed to re-fetch, so it belongs on the
+  discovery path with every other credentialed provider.
+  """
+  @spec refresh_integration(integration()) ::
+          {:ok, :feed_sync_enqueued | :calendars_rediscovered} | {:error, term()}
+  def refresh_integration(%{provider: provider} = integration) do
+    if ProviderConfig.subscription?(provider) do
+      with {:ok, _outcome} <- SyncIcsCalendarWorker.enqueue(integration.id),
+           do: {:ok, :feed_sync_enqueued}
+    else
+      with {:ok, _updated} <- update_integration_with_discovery(integration),
+           do: {:ok, :calendars_rediscovered}
+    end
   end
 
   @doc """

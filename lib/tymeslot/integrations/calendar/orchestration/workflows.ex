@@ -103,7 +103,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
   @spec update_integration_with_discovery(map()) ::
           {:ok, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()} | {:error, term()}
   def update_integration_with_discovery(integration) do
-    with {:ok, refreshed_integration} <- refresh_integration(integration),
+    with {:ok, refreshed_integration} <- reload_integration(integration),
          {:ok, merged} <- Selection.discover_with_selection(refreshed_integration) do
       final_calendar_list =
         keep_selection_if_emptied(merged, refreshed_integration.calendar_list)
@@ -160,7 +160,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
 
   # --- Private Helpers ---
 
-  defp refresh_integration(%{id: id, user_id: user_id} = _integration)
+  defp reload_integration(%{id: id, user_id: user_id} = _integration)
        when is_integer(id) and is_integer(user_id) do
     case CalendarManagement.get_calendar_integration(id, user_id) do
       {:ok, fresh} -> {:ok, fresh}
@@ -168,7 +168,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
     end
   end
 
-  defp refresh_integration(integration), do: {:ok, integration}
+  defp reload_integration(integration), do: {:ok, integration}
 
   # `calendar_paths` is derived from the `selected` flags on `calendar_list`, so
   # a re-discovery that matches nothing — an empty result, or a server that
