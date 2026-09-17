@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @weekday_atoms %{
@@ -43,33 +44,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   # The calendar grid renders events in the user's timezone, so drag/drop/create
   # coordinates are in that timezone and must be converted back to UTC for storage.
   #
-  # Returns `{:ok, utc_datetime}` on success. DST edge cases are handled
-  # gracefully rather than crashing:
-  #   - Gap (spring-forward): the time falls in the skipped hour; we use
-  #     `just_after` (the first valid instant post-gap) so the event is placed
-  #     at the nearest valid local time rather than raising.
-  #   - Ambiguous (fall-back): the time occurs twice; we pick `first` (the
-  #     DST instant) which is the intuitive choice when someone schedules a
-  #     meeting "at 1:30am" before they know the clocks fall back.
-  #   - Other errors: propagated as `{:error, reason}` so callers can surface
-  #     a flash instead of crashing the LiveView.
+  # DST gaps and overlaps resolve by `DateTimeUtils.resolve_local/3`, the rule
+  # every other wall-clock conversion uses. An unknown timezone is returned as
+  # `{:error, reason}` so callers can surface a flash instead of crashing the
+  # LiveView.
   @spec to_utc(Date.t(), non_neg_integer(), non_neg_integer(), String.t()) ::
           {:ok, DateTime.t()} | {:error, term()}
   def to_utc(date, hour, minute, timezone) do
     time = Time.new!(hour, minute, 0, {0, 6})
 
-    case DateTime.new(date, time, timezone) do
-      {:ok, dt} ->
-        {:ok, DateTime.shift_zone!(dt, "Etc/UTC")}
-
-      {:gap, _just_before, just_after} ->
-        {:ok, DateTime.shift_zone!(just_after, "Etc/UTC")}
-
-      {:ambiguous, first, _second} ->
-        {:ok, DateTime.shift_zone!(first, "Etc/UTC")}
-
-      {:error, reason} ->
-        {:error, reason}
+    with {:ok, local} <- DateTimeUtils.resolve_local(date, time, timezone) do
+      {:ok, DateTime.shift_zone!(local, "Etc/UTC")}
     end
   end
 

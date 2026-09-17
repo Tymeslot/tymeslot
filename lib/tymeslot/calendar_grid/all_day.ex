@@ -21,44 +21,40 @@ defmodule Tymeslot.CalendarGrid.AllDay do
   Going from all-day to timed needs a wall-clock time, and 09:00-10:00 local is
   the arbitrary but reasonable default. A DST gap or ambiguity at those hours is
   extremely unlikely, and this is a programmatic toggle rather than something
-  the user typed, so it resolves gracefully rather than failing: a gap uses the
-  shifted time just after it, an ambiguous time picks the DST side.
+  the user typed, so it resolves gracefully rather than failing, by the shared
+  rule in `Tymeslot.Utils.DateTimeUtils.resolve_local/3`: a gap resolves to its
+  end, an ambiguous time to its first occurrence.
   """
+
+  alias Tymeslot.Utils.DateTimeUtils
 
   @typedoc "Any struct or map carrying the grid's event fields."
   @type event :: map()
 
-  @default_start_hour 9
-  @default_end_hour 10
+  @default_start_time ~T[09:00:00.000000]
+  @default_end_time ~T[10:00:00.000000]
 
   @doc """
   Toggles an event between all-day and timed, deriving the new representation.
-
-  `to_utc` converts a `(date, hour, minute, timezone)` into a UTC datetime; it
-  is passed in so this module stays free of the web layer's timezone helpers.
   """
-  @spec toggle(event(), String.t(), (Date.t(), non_neg_integer(), non_neg_integer(), String.t() ->
-                                       {:ok, DateTime.t()})) :: event()
-  def toggle(event, timezone, to_utc)
+  @spec toggle(event(), String.t()) :: event()
+  def toggle(event, timezone)
 
-  def toggle(%{all_day: true} = event, timezone, to_utc) do
+  def toggle(%{all_day: true} = event, timezone) do
     start_date = event.start_date
     last_day = inclusive_last_day(start_date, event.end_date)
-
-    {:ok, start_at} = to_utc.(start_date, @default_start_hour, 0, timezone)
-    {:ok, end_at} = to_utc.(last_day, @default_end_hour, 0, timezone)
 
     %{
       event
       | all_day: false,
-        start_at: start_at,
-        end_at: end_at,
+        start_at: default_instant(start_date, @default_start_time, timezone),
+        end_at: default_instant(last_day, @default_end_time, timezone),
         start_date: nil,
         end_date: nil
     }
   end
 
-  def toggle(event, timezone, _to_utc) do
+  def toggle(event, timezone) do
     start_date = event.start_at |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
     last_day = event.end_at |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
 
@@ -70,6 +66,12 @@ defmodule Tymeslot.CalendarGrid.AllDay do
         start_at: nil,
         end_at: nil
     }
+  end
+
+  @spec default_instant(Date.t(), Time.t(), String.t()) :: DateTime.t()
+  defp default_instant(date, time, timezone) do
+    {:ok, local} = DateTimeUtils.resolve_local(date, time, timezone)
+    DateTime.shift_zone!(local, "Etc/UTC")
   end
 
   # The last day an all-day event actually covers, from its exclusive

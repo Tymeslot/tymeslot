@@ -27,6 +27,8 @@ defmodule Tymeslot.Integrations.Calendar.DebugSchedule do
     * `{:busy, date, start_time, end_time}` — a single busy period.
   """
 
+  alias Tymeslot.Utils.DateTimeUtils
+
   @type pattern :: :default | :empty
   @type rule :: {:block_date, Date.t()} | {:busy, Date.t(), Time.t(), Time.t()}
   @type event :: %{
@@ -154,19 +156,8 @@ defmodule Tymeslot.Integrations.Calendar.DebugSchedule do
       DateTime.compare(event.end_time, range_start) == :gt
   end
 
-  # Resolves a wall-clock date/time in the given zone, degrading gracefully over
-  # DST gaps/overlaps and falling back to UTC if the zone is unknown.
-  defp to_datetime(date, time, timezone) do
-    case DateTime.new(date, time, timezone) do
-      {:ok, datetime} -> datetime
-      {:ambiguous, datetime, _later} -> datetime
-      {:gap, _just_before, datetime} -> datetime
-      {:error, _reason} -> utc_datetime(date, time)
-    end
-  end
-
-  defp utc_datetime(date, time) do
-    {:ok, datetime} = DateTime.new(date, time, "Etc/UTC")
-    datetime
-  end
+  # Resolves a wall-clock date/time in the given zone by the shared DST rule,
+  # falling back to UTC if the zone is unknown.
+  defp to_datetime(date, time, timezone),
+    do: DateTimeUtils.create_datetime_safe(date, time, timezone)
 end

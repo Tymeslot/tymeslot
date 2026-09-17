@@ -136,8 +136,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       event ->
         with :ok <- EditWorkflow.assert_event_writable(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
-          optimistic_event =
-            AllDay.toggle(event, socket.assigns.user_timezone, &Shared.to_utc/4)
+          optimistic_event = AllDay.toggle(event, socket.assigns.user_timezone)
 
           push_all_day_change(socket, event, optimistic_event)
         else

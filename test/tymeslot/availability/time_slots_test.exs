@@ -302,7 +302,7 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       start_dt = DateTime.new!(date, ~T[09:00:00], "Europe/London")
       end_dt = DateTime.new!(date, ~T[12:00:00], "Europe/London")
       # A break at wall-clock 10:30–11:00 is unambiguous and must still apply
-      # — proves resolve_wall_time doesn't silently drop usable breaks.
+      # — proves break resolution doesn't silently drop usable breaks.
       breaks = TimeSlots.resolve_breaks([{~T[10:30:00], ~T[11:00:00]}], date, "Europe/London")
 
       slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
