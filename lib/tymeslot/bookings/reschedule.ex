@@ -36,6 +36,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
+  alias Tymeslot.Meetings.VideoRooms
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Notifications.{Events, Orchestrator}
   alias Tymeslot.Repo
@@ -62,7 +63,8 @@ defmodule Tymeslot.Bookings.Reschedule do
   This includes:
   1. Validating the new time
   2. Cancelling the original calendar event
-  3. Updating meeting times with conflict checking
+  3. Updating meeting times with conflict checking, together with any video
+     join URLs that are only valid relative to the meeting time
   4. Creating new calendar event
   5. Sending rescheduling notifications
 
@@ -117,17 +119,26 @@ defmodule Tymeslot.Bookings.Reschedule do
     # Reminder sent-tracking is reset too: the reminder(s) already sent were
     # pinned to the old time, so they must not suppress the re-pinned
     # reminder jobs scheduled for the new time.
+    #
+    # Join links that expire relative to the meeting time (Jitsi tokens) are
+    # rebuilt for the new time here, before the write, rather than in
+    # `VideoSyncWorker`: the reschedule emails below are rendered from the
+    # meeting this write returns, and the calendar and webhook jobs read the
+    # row it commits, so a link refreshed any later would already have been
+    # sent out stale. Writing them with the new time also leaves no moment
+    # where the row pairs the new time with the old links. Building them is
+    # local computation, and a failure keeps the stored links rather than
+    # failing the reschedule.
     attrs =
-      Map.merge(
-        %{
-          start_time: start_dt,
-          end_time: end_dt,
-          reschedule_requested_at: nil,
-          reminders_sent: [],
-          reminder_email_sent: false
-        },
-        gate_attributes(meeting_type, start_dt, meeting)
-      )
+      %{
+        start_time: start_dt,
+        end_time: end_dt,
+        reschedule_requested_at: nil,
+        reminders_sent: [],
+        reminder_email_sent: false
+      }
+      |> Map.merge(gate_attributes(meeting_type, start_dt, meeting))
+      |> Map.merge(VideoRooms.refreshed_join_url_attrs(meeting, start_dt))
 
     case Repo.transaction(fn ->
            with {:ok, updated} <- update_meeting(meeting, attrs),
@@ -414,7 +425,9 @@ defmodule Tymeslot.Bookings.Reschedule do
   # (e.g. Zoom) is updated to match the new booking time. Routed through Oban —
   # not done inline — so a transient Zoom 5xx/429 retries instead of permanently
   # desyncing. Never blocks the reschedule: the booking is already updated
-  # locally and the join URL remains valid. Whether an integration can still
+  # locally, and its join URLs either stay valid across the move or were
+  # already rebuilt for the new time by
+  # `apply_time_update_and_schedule_job/3`. Whether an integration can still
   # reach the room is decided inside the job by `IntegrationResolver`, so a
   # meeting whose integration was disconnected is still synced rather than left
   # advertising the old time.

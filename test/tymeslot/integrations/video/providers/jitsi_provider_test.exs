@@ -300,6 +300,18 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProviderTest do
     end
   end
 
+  describe "time_bound_join_urls?/1" do
+    test "is true with a complete credential pair, whose tokens expire after the meeting" do
+      assert JitsiProvider.time_bound_join_urls?(credential_config())
+    end
+
+    test "is false without a complete credential pair, whose bare room URL never expires" do
+      refute JitsiProvider.time_bound_join_urls?(%{base_url: @base_url})
+      refute JitsiProvider.time_bound_join_urls?(%{base_url: @base_url, client_id: @app_id})
+      refute JitsiProvider.time_bound_join_urls?(credential_config(client_secret: "   "))
+    end
+  end
+
   describe "extract_room_id/1" do
     test "round-trips with the room id" do
       {:ok, room} = JitsiProvider.create_meeting_room(%{base_url: @base_url, meeting_id: "m-1"})

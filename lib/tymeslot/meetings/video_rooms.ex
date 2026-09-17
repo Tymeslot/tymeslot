@@ -33,6 +33,14 @@ defmodule Tymeslot.Meetings.VideoRooms do
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.Repo
 
+  # The meeting has no reachable room to rebuild links for: the organiser or
+  # the integration is gone, or the integration was switched off.
+  @quiet_refresh_skips [
+    :organizer_not_found,
+    :video_integration_missing,
+    :video_integration_inactive
+  ]
+
   # Get Video module dynamically to avoid compile-time warnings with mocks
   @spec video_module() :: module()
   defp video_module do
@@ -91,9 +99,83 @@ defmodule Tymeslot.Meetings.VideoRooms do
     end
   end
 
+  @doc """
+  Builds a meeting's join URLs again for a new start time, when its provider's
+  join URLs stop working some time after the time they were built for.
+
+  Meant for a reschedule: the result is merged into the same write that moves
+  the meeting, so every reader of `organizer_video_url` and
+  `attendee_video_url` downstream (the reschedule emails, calendar sync,
+  webhook deliveries, reminders) sees links valid for the new time. The room
+  itself is left alone: `video_room_id` and `meeting_url` are never part of
+  the result, and the provider is never asked for a new room.
+
+  Returns `%{organizer_video_url: url, attendee_video_url: url}` when the links
+  were rebuilt, and `%{}` when there is nothing to rebuild or rebuilding
+  failed, in which case the stored links are kept. It never raises: a failure
+  here must not stand in the way of the reschedule itself.
+
+  Only providers declaring time-bound join URLs are rebuilt (see
+  `Tymeslot.Integrations.Video.Providers.ProviderBehaviour`'s
+  `time_bound_join_urls?/1`), which also keeps providers whose join URLs need
+  a network call out of this inline path. A meeting without a room, or whose
+  integration is gone or inactive, is skipped without logging, as room
+  creation skips it.
+  """
+  @spec refreshed_join_url_attrs(MeetingSchema.t(), DateTime.t()) ::
+          %{optional(:organizer_video_url | :attendee_video_url) => String.t()}
+  def refreshed_join_url_attrs(%MeetingSchema{video_room_id: nil}, _start_time), do: %{}
+
+  def refreshed_join_url_attrs(%MeetingSchema{} = meeting, %DateTime{} = start_time) do
+    rescheduled = %{meeting | start_time: start_time}
+
+    with {:ok, user_id} <- get_meeting_organizer_user_id(meeting),
+         {:ok, provider_type} when provider_type != :none <-
+           check_video_provider_type(meeting, user_id),
+         {:ok, meeting_context} <- existing_room_context(meeting, user_id),
+         true <- video_module().time_bound_join_urls?(meeting_context),
+         {:ok, organizer_url} <- build_join_url(rescheduled, meeting_context, "organizer"),
+         {:ok, attendee_url} <- build_join_url(rescheduled, meeting_context, "participant") do
+      %{organizer_video_url: organizer_url, attendee_video_url: attendee_url}
+    else
+      false -> %{}
+      {:ok, :none} -> %{}
+      {:error, reason} when reason in @quiet_refresh_skips -> %{}
+      {:error, reason} -> log_refresh_failure(meeting, reason)
+    end
+  rescue
+    exception -> log_refresh_failure(meeting, exception)
+  end
+
   # =====================================
   # Private Helper Functions
   # =====================================
+
+  defp existing_room_context(meeting, user_id) do
+    video_module().existing_room_context(user_id,
+      integration_id: meeting.video_integration_id,
+      room_id: meeting.video_room_id,
+      meeting_url: meeting.meeting_url,
+      meeting_id: meeting.id
+    )
+  end
+
+  # Only the shape of the failure is logged. The context holds the decrypted
+  # credentials and a join URL may carry a signed token, so neither the reason
+  # term nor an exception's message is safe to render.
+  defp log_refresh_failure(meeting, reason) do
+    Logger.warning(
+      "Could not refresh join links for the new meeting time, keeping the stored ones",
+      meeting_id: meeting.id,
+      reason: loggable_reason(reason)
+    )
+
+    %{}
+  end
+
+  defp loggable_reason(reason) when is_atom(reason), do: reason
+  defp loggable_reason(%{__exception__: true, __struct__: module}), do: inspect(module)
+  defp loggable_reason(_reason), do: :unexpected_error
 
   defp fetch_meeting(meeting_id) do
     case MeetingQueries.get_meeting(meeting_id) do
@@ -309,23 +391,27 @@ defmodule Tymeslot.Meetings.VideoRooms do
   end
 
   defp create_secure_join_url(meeting, meeting_context, role) do
-    {participant_name, participant_email} = get_participant_info(meeting, role)
-
-    # Try to create secure URL first
-    case create_secure_url(
-           meeting_context,
-           participant_name,
-           participant_email,
-           role,
-           meeting.start_time
-         ) do
+    case build_join_url(meeting, meeting_context, role) do
       {:ok, url} ->
         {:ok, url}
 
       {:error, reason} ->
         # Fallback to direct URL on any error
+        {participant_name, _participant_email} = get_participant_info(meeting, role)
         handle_join_url_error(meeting_context, participant_name, role, reason)
     end
+  end
+
+  defp build_join_url(meeting, meeting_context, role) do
+    {participant_name, participant_email} = get_participant_info(meeting, role)
+
+    create_secure_url(
+      meeting_context,
+      participant_name,
+      participant_email,
+      role,
+      meeting.start_time
+    )
   end
 
   defp get_participant_info(meeting, "organizer") do

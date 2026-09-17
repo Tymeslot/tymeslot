@@ -105,6 +105,28 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   end
 
   @doc """
+  Whether the context's join URLs stop working some time after the meeting
+  time they were built for, so a reschedule has to build them again.
+
+  Providers that do not implement the optional `time_bound_join_urls?/1`
+  callback answer `false`.
+  """
+  @spec time_bound_join_urls?(MeetingContext.t()) :: boolean()
+  def time_bound_join_urls?(%MeetingContext{
+        provider_module: provider_module,
+        room_data: room_data
+      }) do
+    if callback_exported?(provider_module, :time_bound_join_urls?, 1) do
+      # Optional callback resolved at runtime via the guard above; apply/3
+      # keeps the static type checker from flagging providers that omit it.
+      # credo:disable-for-next-line Credo.Check.Refactor.Apply
+      apply(provider_module, :time_bound_join_urls?, [room_data.provider_config || %{}])
+    else
+      false
+    end
+  end
+
+  @doc """
   Extracts room ID from a meeting URL.
   """
   @spec extract_room_id(String.t()) :: String.t() | nil

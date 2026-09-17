@@ -18,7 +18,10 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
   open server.
 
   The token expires four hours after the meeting's start, so a participant
-  reconnecting later than that in a very long meeting is refused.
+  reconnecting later than that in a very long meeting is refused. Because the
+  links depend on the start time, `time_bound_join_urls?/1` declares them
+  time-bound whenever credentials are configured, and a reschedule mints both
+  participants' tokens again for the new time.
 
   Should minting ever fail, the bare room URL is handed out instead and the
   failure is logged (room id and reason only). A room link that may ask for
@@ -100,6 +103,11 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
         )
     end
   end
+
+  # Without credentials the bare room URL is handed out, which no meeting time
+  # can invalidate, so only a credentialed config is time-bound.
+  @impl ProviderBehaviour
+  def time_bound_join_urls?(config), do: credentials(config) != nil
 
   @impl ProviderBehaviour
   def extract_room_id(meeting_url), do: LinkRoom.slug_from_url(meeting_url)

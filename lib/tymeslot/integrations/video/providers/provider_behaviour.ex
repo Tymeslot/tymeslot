@@ -40,6 +40,23 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
             ) :: {:ok, String.t()} | {:error, any()}
 
   @doc """
+  Whether the join URLs `create_join_url/5` builds for this config stop
+  working some time after the meeting time they were built for.
+
+  Join URLs are built once, when the room is attached, and stored on the
+  meeting. When this returns `true`, a reschedule builds them again for the
+  new time, inline and before any notification reads them, so the provider's
+  `create_join_url/5` must then be local computation with no network call.
+
+  `config` is the provider config the room's join URLs are built from, since
+  whether a link is time-bound can depend on how the integration is set up
+  (Jitsi's links are only when it holds token credentials).
+
+  Optional: a provider that does not implement it is treated as `false`.
+  """
+  @callback time_bound_join_urls?(config :: map()) :: boolean()
+
+  @doc """
   Extracts room identifier from a meeting URL.
 
   Different platforms use different URL structures, so this normalizes
@@ -260,7 +277,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   """
   @callback ensure_valid_token(config :: map()) :: {:ok, map()} | {:error, any()}
 
-  @optional_callbacks update_meeting_room: 2,
+  @optional_callbacks time_bound_join_urls?: 1,
+                      update_meeting_room: 2,
                       delete_meeting_room: 2,
                       url_patterns: 0,
                       precheck_create_meeting_room: 1,

@@ -13,6 +13,8 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   alias Tymeslot.Integrations.Video.MeetingContext
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
+  alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   @doc """
@@ -78,6 +80,49 @@ defmodule Tymeslot.Integrations.Video.Rooms do
       %{room_data | provider_config: config}
     end)
   end
+
+  @doc """
+  Rebuilds the context of a room that already exists, so its join URLs can be
+  built again without asking the provider for a new room.
+
+  The room keeps its stored identity (`:room_id`, `:meeting_url`); only the
+  provider config is resolved afresh from the integration, which is what
+  carries the credentials a join URL may be signed with.
+
+  ## Required opts
+    - `:integration_id` - the video integration that owns the room
+    - `:room_id` - provider-specific room identifier
+
+  ## Optional opts
+    - `:meeting_url` - the room's stored URL
+    - `:meeting_id` - the meeting the room belongs to
+  """
+  @spec existing_room_context(pos_integer() | nil, keyword()) ::
+          {:ok, MeetingContext.t()} | {:error, any()}
+  def existing_room_context(user_id, opts) do
+    with {:ok, room_id} <- fetch_required_opt(opts, :room_id),
+         {:ok, provider_type, config} <- get_provider_config(user_id, opts),
+         {:ok, provider_module} <- ProviderRegistry.get_provider(provider_type) do
+      {:ok,
+       %MeetingContext{
+         provider_type: provider_type,
+         provider_module: provider_module,
+         room_data: %RoomData{
+           room_id: room_id,
+           meeting_url: Keyword.get(opts, :meeting_url),
+           provider_data: %{},
+           provider_config: config
+         }
+       }}
+    end
+  end
+
+  @doc """
+  Whether a room's join URLs stop working some time after the meeting time
+  they were built for. See `ProviderAdapter.time_bound_join_urls?/1`.
+  """
+  @spec time_bound_join_urls?(MeetingContext.t()) :: boolean()
+  defdelegate time_bound_join_urls?(meeting_context), to: ProviderAdapter
 
   @doc """
   Updates a meeting room on the provider's side after the underlying

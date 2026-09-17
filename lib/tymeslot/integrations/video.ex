@@ -456,6 +456,13 @@ defmodule Tymeslot.Integrations.Video do
               ),
               to: Rooms
 
+  @spec existing_room_context(pos_integer() | nil, keyword()) ::
+          {:ok, map()} | {:error, any()}
+  defdelegate existing_room_context(user_id, opts), to: Rooms
+
+  @spec time_bound_join_urls?(map()) :: boolean()
+  defdelegate time_bound_join_urls?(meeting_context), to: Rooms
+
   @spec update_meeting_room(pos_integer() | nil, keyword()) :: :ok | {:error, any()}
   defdelegate update_meeting_room(user_id, opts), to: Rooms
 
