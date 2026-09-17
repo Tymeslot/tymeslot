@@ -24,6 +24,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings.CalendarEventSync
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.RetryHelpers
@@ -147,17 +148,14 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   # Offline queue integration (CalDAV only)
   # ---------------------------------------------------------------------------
 
-  # Errors that cannot be recovered by a later retry — tagging them would
-  # only keep a dead row in the queue forever.
-  @non_queueable_errors [:unauthorized, :not_found, :meeting_not_found, :rate_limited]
-
-  defp tag_for_offline_queue(_job, error_type) when error_type in @non_queueable_errors, do: :ok
-
-  defp tag_for_offline_queue(%Oban.Job{args: args}, _error_type) do
+  # Errors a later retry cannot recover are never tagged: they would only
+  # keep a dead row in the queue forever.
+  defp tag_for_offline_queue(%Oban.Job{args: args}, error_type) do
     action = args["action"]
     meeting_id = args["meeting_id"]
 
-    with {:ok, meeting} <- MeetingQueries.get_meeting(meeting_id),
+    with true <- CalendarEvents.queueable_error?(error_type),
+         {:ok, meeting} <- MeetingQueries.get_meeting(meeting_id),
          action_atom when action_atom in [:create, :update, :delete] <- action_to_atom(action) do
       event_data = CalendarEventBuilder.build_event_data(meeting)
       QueueWiring.tag(meeting, action_atom, event_data)

@@ -37,7 +37,7 @@ defmodule Tymeslot.Integrations.Calendar.Operations do
     EventOperations.delete_event(uid, context, [])
   end
 
-  @spec delete_event(String.t(), term(), keyword()) :: :ok | {:error, term()}
+  @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def delete_event(uid, context, opts) do
     EventOperations.delete_event(uid, context, opts)
   end
