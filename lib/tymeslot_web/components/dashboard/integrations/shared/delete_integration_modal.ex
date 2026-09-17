@@ -9,7 +9,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Video
-  alias Tymeslot.Meetings.MeetingQueries
   alias TymeslotWeb.Dashboard.{CalendarSettingsComponent, VideoSettingsComponent}
 
   @impl Phoenix.LiveComponent
@@ -38,7 +37,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
          |> assign(:delete_rooms, false)
          |> assign(
            :affected_bookings,
-           count_affected(socket.assigns.integration_type, integration_id)
+           count_affected(
+             socket.assigns.integration_type,
+             socket.assigns.current_user.id,
+             integration_id
+           )
          )}
 
       {:error, _reason} ->
@@ -232,14 +235,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
 
   # Only video integrations own provider-side rooms; calendar disconnect has no
   # equivalent cleanup, so it never asks the question.
-  defp count_affected(:video, integration_id) do
-    MeetingQueries.count_upcoming_with_video_room_for_integration(
-      integration_id,
-      DateTime.utc_now()
-    )
-  end
+  # The id comes from the client, so the count is scoped to the current user's
+  # own integrations: a forged id reads as 0.
+  defp count_affected(:video, user_id, integration_id),
+    do: Video.count_upcoming_rooms(user_id, integration_id)
 
-  defp count_affected(_other_type, _integration_id), do: 0
+  defp count_affected(_other_type, _user_id, _integration_id), do: 0
 
   defp get_parent_component_module(:calendar), do: CalendarSettingsComponent
   defp get_parent_component_module(:video), do: VideoSettingsComponent

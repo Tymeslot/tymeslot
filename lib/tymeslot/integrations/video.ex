@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Video.Urls
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.Meetings.MeetingQueries
 
   @behaviour Tymeslot.Security.EncryptedStorage
 
@@ -285,6 +286,21 @@ defmodule Tymeslot.Integrations.Video do
   @spec delete_integration(pos_integer(), pos_integer(), keyword()) ::
           {:ok, :deleted | :cleanup_scheduled} | {:error, any()}
   defdelegate delete_integration(user_id, id, opts \\ []), to: Disconnect, as: :run
+
+  @doc """
+  Counts the user's upcoming bookings whose provider room belongs to the given
+  integration: the rooms `delete_integration/3` with `delete_rooms: true` would
+  remove. Returns 0 for an integration the user does not own.
+  """
+  @spec count_upcoming_rooms(pos_integer(), pos_integer()) :: non_neg_integer()
+  def count_upcoming_rooms(user_id, integration_id)
+      when is_integer(user_id) and is_integer(integration_id) do
+    MeetingQueries.count_upcoming_with_video_room_for_user_integration(
+      user_id,
+      integration_id,
+      DateTime.utc_now()
+    )
+  end
 
   @doc """
   Removes every video integration matching `(provider, provider_account_id)`,
