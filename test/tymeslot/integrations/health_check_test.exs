@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.HealthCheck
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.ResponseHandler
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Repo
@@ -341,6 +342,78 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
         assert updated.needs_reauth
         assert updated.sync_error == ReauthHandling.reauth_error_message(:expired_grant)
       end
+    end
+
+    test "an integration already past the 48-hour threshold gets only the reauth email when its credentials are first refused" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true, provider: "google")
+
+      {:ok, _state} =
+        IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
+
+      {1, nil} =
+        IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
+          status: "unhealthy",
+          failures: 3,
+          became_unhealthy_at: DateTime.add(DateTime.utc_now(), -49, :hour)
+        )
+
+      expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _int, _start, _end ->
+        {:error, :unauthorized, "Token has been expired or revoked"}
+      end)
+
+      run_health_checks()
+      sync_with_server()
+
+      assert CalendarIntegrationQueries.get(integration.id) |> elem(1) |> Map.get(:needs_reauth)
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_reauth_notification",
+          "integration_id" => integration.id
+        }
+      )
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_integration_unhealthy_notification"}
+      )
+    end
+
+    test "an integration past the 48-hour threshold still gets the unhealthy email for a transient failure" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true, provider: "google")
+
+      {:ok, _state} =
+        IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
+
+      {1, nil} =
+        IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
+          status: "unhealthy",
+          failures: 3,
+          became_unhealthy_at: DateTime.add(DateTime.utc_now(), -49, :hour)
+        )
+
+      expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _int, _start, _end ->
+        {:error, :timeout}
+      end)
+
+      run_health_checks()
+      sync_with_server()
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_unhealthy_notification",
+          "integration_id" => integration.id
+        }
+      )
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_integration_reauth_notification"}
+      )
     end
 
     test "transient errors do not trigger fast path" do

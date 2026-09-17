@@ -140,6 +140,30 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   end
 
   @doc """
+  Responds to one completed health check: the permanent-auth fast-path, then
+  the status transition.
+
+  The order is the point. A check whose result is a permanent auth failure
+  flags the integration, which sends the reauth email, and the transition then
+  sees the flagged integration, so `maybe_notify_user/4` withholds the
+  unhealthy email. Run the other way round, an integration already past the
+  48-hour threshold would get both emails from the same check. For any other
+  result the fast-path changes nothing, so the transition behaves exactly as
+  it would on its own.
+  """
+  @spec handle_check_result(
+          integration_type(),
+          map(),
+          Monitor.transition(),
+          Monitor.health_state(),
+          {:ok, any()} | {:error, any()}
+        ) :: :ok
+  def handle_check_result(type, integration, transition, health_state, check_result) do
+    integration = apply_permanent_auth_failure(type, integration, check_result)
+    handle_transition(type, integration, transition, health_state)
+  end
+
+  @doc """
   Fast-path handler for permanent OAuth auth failures (e.g. Google
   `invalid_grant`, Outlook `invalid_client`, atomic `:unauthorized`).
 
@@ -150,19 +174,28 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   unhealthy one.
 
   Non-auth failures and successes are passed through untouched. Safe to call
-  on every check — Oban's 30-day uniqueness window on the email job prevents
-  duplicate sends until the user reconnects.
+  on every check: Oban's 30-day uniqueness window on the email job prevents
+  duplicate sends until the user reconnects. A health check goes through
+  `handle_check_result/5`, which also runs the transition in the right order.
   """
   @spec handle_permanent_auth_failure(
           integration_type(),
           map(),
           {:ok, any()} | {:error, any()}
         ) :: :ok
-  def handle_permanent_auth_failure(type, integration, check_result)
+  def handle_permanent_auth_failure(type, integration, check_result) do
+    _integration = apply_permanent_auth_failure(type, integration, check_result)
+    :ok
+  end
 
-  def handle_permanent_auth_failure(type, integration, {:error, reason}) do
+  # Private Functions
+
+  # Returns the integration as the rest of the check should see it: flagged
+  # when the flag was written, untouched otherwise (including when the write
+  # failed, since nothing was flagged and no reauth email went out).
+  defp apply_permanent_auth_failure(type, integration, {:error, reason}) do
     if BreakerOutcome.permanent_credential_error?(reason) do
-      Logger.warning("Permanent auth failure detected — flagging for reauth",
+      Logger.warning("Permanent auth failure detected, flagging for reauth",
         type: type,
         integration_id: integration.id,
         provider: integration.provider,
@@ -171,7 +204,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
 
       case flag_for_reauth(type, integration, ReauthHandling.rejection_cause(reason)) do
         :ok ->
-          :ok
+          %{integration | needs_reauth: true}
 
         {:error, _reason} ->
           Logger.error(
@@ -180,15 +213,15 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
             integration_id: integration.id,
             provider: integration.provider
           )
-      end
-    end
 
-    :ok
+          integration
+      end
+    else
+      integration
+    end
   end
 
-  def handle_permanent_auth_failure(_type, _integration, _check_result), do: :ok
-
-  # Private Functions
+  defp apply_permanent_auth_failure(_type, integration, _check_result), do: integration
 
   # Re-uses the worker entry points on each domain. Their return values are
   # Oban-shaped (`{:discard, _} | {:error, _}`). We normalise to `:ok | {:error, _}`
