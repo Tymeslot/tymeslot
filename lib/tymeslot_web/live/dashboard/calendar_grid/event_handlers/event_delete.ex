@@ -6,7 +6,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
-  alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings.AttendeeNotifications
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
@@ -125,104 +124,59 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
   end
 
   @doc false
-  @spec run_delete_event(map()) :: {:ok, map()} | {:error, term(), map()}
-  def run_delete_event(payload) do
-    %{uid: uid, calendar_integration_id: integration_id, user_id: user_id} = payload
-
-    opts =
-      if payload[:provider_event_id], do: [provider_event_id: payload.provider_event_id], else: []
-
-    case CalendarEvents.delete_event_and_reconcile(
-           uid,
-           payload[:provider_event_id],
-           {integration_id, user_id},
-           opts
-         ) do
-      {:ok, result} ->
-        {:ok, result}
-
-      {:error, reason} ->
-        # Carry the uid + integration_id into the failure branch so the
-        # LiveView can tag the cache row for offline retry.
-        {:error, reason, %{uid: uid, calendar_integration_id: integration_id}}
-    end
-  end
-
-  @doc false
-  @spec handle_delete_result(
-          {:ok, map()} | {:error, term()} | {:error, term(), map()},
-          Phoenix.LiveView.Socket.t()
-        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_delete_result({:ok, %{uid: uid, integration_id: integration_id} = result}, socket) do
-    CalendarGrid.delete_cached_event(integration_id, uid)
-
+  @spec handle_delete_result({:ok, map()} | {:error, map()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_delete_result({:ok, %{linked_meeting: linked_meeting}}, socket) do
     send_update(CalendarGridComponent,
       id: "calendar",
       action: :event_deleted
     )
 
     notify_on_delete = Map.get(socket.assigns, :pending_delete_notify, false)
-    socket = assign(socket, :pending_delete_notify, false)
 
-    socket =
-      case result do
-        %{reconcile_result: :ok, meeting_attendee_email: _email_ok} ->
-          put_flash(
-            socket,
-            :info,
-            dgettext("dashboard_calendar_events", "Event and linked meeting cancelled.")
-          )
-
-        %{reconcile_result: {:error, _reason}, meeting_attendee_email: _email_err} ->
-          put_flash(
-            socket,
-            :error,
-            dgettext(
-              "dashboard_calendar_events",
-              "Event deleted, but meeting cancellation failed. The attendee may not be notified."
-            )
-          )
-
-        _no_meeting ->
-          put_flash(socket, :info, delete_success_flash(notify_on_delete))
-      end
-
-    {:noreply, socket}
+    socket
+    |> assign(:pending_delete_notify, false)
+    |> put_deleted_flash(linked_meeting, notify_on_delete)
+    |> then(&{:noreply, &1})
   end
 
-  def handle_delete_result({:error, _reason, context}, socket) do
-    # For CalDAV integrations, tag the cache row so OfflineQueue.flush/2
-    # retries the delete on the next sync cycle. QueueWiring is a no-op
-    # for non-CalDAV providers, so this is safe to call unconditionally.
-    queue_result = CalendarEvents.queue_for_offline_retry(context, :delete, %{})
-
+  def handle_delete_result({:error, failure}, socket) do
     send_update(CalendarGridComponent,
       id: "calendar",
       action: :event_delete_failed
     )
 
-    flash_message =
-      case queue_result do
-        :ok ->
-          dgettext("dashboard_calendar_events", "Delete failed - queued to retry on next sync")
-
-        :ignored ->
-          dgettext("dashboard_calendar_events", "Failed to delete event")
-      end
-
-    {:noreply, put_flash(socket, :error, flash_message)}
+    {:noreply, put_flash(socket, :error, delete_failed_message(failure))}
   end
 
-  def handle_delete_result({:error, _reason}, socket) do
-    # Fallback: contextless failure (e.g. from tests or older call sites).
-    send_update(CalendarGridComponent,
-      id: "calendar",
-      action: :event_delete_failed
+  defp put_deleted_flash(socket, :cancelled, _notify_on_delete) do
+    put_flash(
+      socket,
+      :info,
+      dgettext("dashboard_calendar_events", "Event and linked meeting cancelled.")
     )
-
-    {:noreply,
-     put_flash(socket, :error, dgettext("dashboard_calendar_events", "Failed to delete event"))}
   end
+
+  defp put_deleted_flash(socket, :cancel_failed, _notify_on_delete) do
+    put_flash(
+      socket,
+      :error,
+      dgettext(
+        "dashboard_calendar_events",
+        "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+      )
+    )
+  end
+
+  defp put_deleted_flash(socket, :none, notify_on_delete),
+    do: put_flash(socket, :info, delete_success_flash(notify_on_delete))
+
+  # A queued delete will be replayed on the next sync; anything else is final.
+  defp delete_failed_message(%{retry: :queued}),
+    do: dgettext("dashboard_calendar_events", "Delete failed - queued to retry on next sync")
+
+  defp delete_failed_message(_failure),
+    do: dgettext("dashboard_calendar_events", "Failed to delete event")
 
   defp delete_success_flash(true),
     do: dgettext("dashboard_calendar_events", "Event deleted. Attendees have been notified.")

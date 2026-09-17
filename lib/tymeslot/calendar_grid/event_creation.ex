@@ -8,7 +8,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     * build iCal event data from the dashboard create form,
     * plan and attach video-conference data (inline Google Meet or a
       separately-provisioned room),
-    * call the calendar provider via `Calendar.Events`,
+    * call the calendar provider via `Calendar.Events`, queueing a failed
+      create for offline retry,
     * fire attendee notifications, and
     * look up integration metadata for the cache row.
 
@@ -54,10 +55,14 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   the parsed `:start_at`/`:end_at` datetimes. On success the returned map
   carries everything the web layer needs to cache the event, notify the grid,
   and flash the user (including `:reauth_required` when the integration's
-  credentials need re-encrypting). On failure it carries enough context for
-  the web layer to queue an offline retry.
+  credentials need re-encrypting).
+
+  A failed create is queued for replay on the next sync when the integration
+  has an offline queue (the CalDAV family), and the failure reports
+  `retry: :queued`; otherwise `retry: :not_queued`.
   """
-  @spec run_create_event(map()) :: {:ok, map()} | {:error, term(), map()}
+  @spec run_create_event(map()) ::
+          {:ok, map()} | {:error, %{reason: term(), retry: :queued | :not_queued}}
   def run_create_event(payload) do
     %{creating: creating, user_id: user_id, start_at: start_at, end_at: end_at} = payload
 
@@ -196,19 +201,26 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   end
 
   defp finalise_create_result({:error, reason}, ctx) do
-    # Carry context so the LiveView can tag the cache row for offline
-    # retry. Use the pre-generated UID so a later retry reconciles to
-    # the same cache entry.
-    {:error, reason,
-     %{
-       uid: ctx.uid,
-       calendar_integration_id: ctx.creating.integration_id,
-       summary: ctx.creating.title,
-       start_time: ctx.start_at,
-       end_time: ctx.end_at,
-       location: ctx.creating[:location],
-       description: ctx.creating[:description]
-     }}
+    {:error, %{reason: reason, retry: queue_retry(ctx)}}
+  end
+
+  # The queued row carries the pre-generated UID, so the replayed create
+  # addresses the same event the failed one tried to write.
+  defp queue_retry(ctx) do
+    target = %{uid: ctx.uid, calendar_integration_id: ctx.creating.integration_id}
+
+    event_data = %{
+      summary: ctx.creating.title,
+      start_time: ctx.start_at,
+      end_time: ctx.end_at,
+      location: ctx.creating[:location],
+      description: ctx.creating[:description]
+    }
+
+    case CalendarEvents.queue_for_offline_retry(target, :create, event_data) do
+      :ok -> :queued
+      :ignored -> :not_queued
+    end
   end
 
   defp provision_video_room_for_plan(:none, _event_details, _user_id), do: %{}

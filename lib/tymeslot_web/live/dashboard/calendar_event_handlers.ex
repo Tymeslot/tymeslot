@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
+  alias Tymeslot.CalendarGrid
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Dashboard.CalendarGridComponent
@@ -288,18 +289,24 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     do:
       dgettext("dashboard_calendar_events", "Could not change the video link - changes reverted")
 
-  @doc "Spawns a supervised task to delete a calendar event."
+  @doc """
+  Deletes the event `payload` names in the background through
+  `Tymeslot.CalendarGrid.delete_event/2`, reporting back with
+  `{:delete_event_result, result}`.
+  """
   @spec handle_execute_delete_event(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_execute_delete_event(payload, socket) do
-    lv_pid = self()
     notify_on_delete = Map.get(payload, :notify_on_delete, false)
 
-    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
-      send(lv_pid, {:delete_event_result, EventCrud.run_delete_event(payload)})
-    end)
-
-    {:noreply, assign(socket, :pending_delete_notify, notify_on_delete)}
+    socket
+    |> EditWorkflow.run_async(
+      :delete_event_result,
+      fn -> CalendarGrid.delete_event(payload.user_id, payload) end,
+      {:error, %{reason: :crashed, retry: :not_queued}}
+    )
+    |> assign(:pending_delete_notify, notify_on_delete)
+    |> then(&{:noreply, &1})
   end
 
   @doc "Delegates the delete-event result to `EventCrud`."

@@ -27,6 +27,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
 
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.EmailWorker
@@ -340,6 +341,62 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
 
       assert {:ok, result} = EventCreation.run_create_event(payload)
       assert result.reauth_required == false
+    end
+  end
+
+  describe "run_create_event/1 when the calendar refuses the create" do
+    defp refused_create_payload(user, integration) do
+      %{
+        creating: %{
+          title: "Offline Create",
+          integration_id: integration.id,
+          calendar_id: nil,
+          attendees: [],
+          video_integration_id: nil
+        },
+        user_id: user.id,
+        start_at: ~U[2026-04-08 11:00:00Z],
+        end_at: ~U[2026-04-08 11:30:00Z]
+      }
+    end
+
+    defp expect_refused_create(reason) do
+      test_pid = self()
+
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+        send(test_pid, {:create_uid, event_data.uid})
+        {:error, reason}
+      end)
+    end
+
+    test "queues a CalDAV create for the next sync under the uid it tried to write" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
+
+      expect_refused_create(:network_error)
+
+      assert {:error, %{reason: :network_error, retry: :queued}} =
+               EventCreation.run_create_event(refused_create_payload(user, integration))
+
+      assert_received {:create_uid, uid}
+      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, uid)
+
+      assert {row.sync_state, row.summary, row.start_at} ==
+               {"locally_created", "Offline Create", ~U[2026-04-08 11:00:00.000000Z]}
+    end
+
+    test "reports a create on a calendar without an offline queue as not queued" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, provider: "google")
+      expect_refused_create(:network_error)
+
+      assert {:error, %{reason: :network_error, retry: :not_queued}} =
+               EventCreation.run_create_event(refused_create_payload(user, integration))
+
+      assert_received {:create_uid, uid}
+      assert {:error, :not_found} = ProviderCalendarEventQueries.get_by_uid(integration.id, uid)
     end
   end
 

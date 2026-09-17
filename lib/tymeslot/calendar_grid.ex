@@ -9,6 +9,7 @@ defmodule Tymeslot.CalendarGrid do
 
   alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.CalendarGrid.BookingEvents
+  alias Tymeslot.CalendarGrid.EventDeletion
   alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.CalendarGrid.EventVideo
@@ -332,6 +333,15 @@ defmodule Tymeslot.CalendarGrid do
   @spec change_event_video(pos_integer(), map(), pos_integer() | nil) ::
           {:ok, String.t() | nil} | {:error, :missing_meeting_url | :not_found | term()}
   defdelegate change_event_video(user_id, event, video_integration_id), to: EventVideo
+
+  @doc """
+  Deletes an event from its calendar, cancels the Tymeslot meeting it was
+  booked as, and removes its cached row. See
+  `Tymeslot.CalendarGrid.EventDeletion.delete_event/2`.
+  """
+  @spec delete_event(pos_integer(), EventDeletion.event()) ::
+          {:ok, EventDeletion.deleted()} | {:error, EventDeletion.failure()}
+  defdelegate delete_event(user_id, event), to: EventDeletion
 
   @doc """
   Whether an event may be moved to another calendar. See

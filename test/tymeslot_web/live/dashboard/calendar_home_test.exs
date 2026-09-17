@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
 
   alias Ecto.Changeset
   alias Plug.Test
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
 
@@ -118,9 +119,13 @@ defmodule TymeslotWeb.Dashboard.CalendarHomeTest do
       {:ok, lv, html} = live(conn, ~p"/dashboard")
       assert strip_html(html) =~ "Dentist"
 
+      # The delete itself removes the cached row before reporting back.
+      {:ok, :deleted} = ProviderCalendarEventQueries.delete_by_uid(integration.id, event.uid)
+
       send(
         lv.pid,
-        {:delete_event_result, {:ok, %{uid: event.uid, integration_id: integration.id}}}
+        {:delete_event_result,
+         {:ok, %{uid: event.uid, integration_id: integration.id, linked_meeting: :none}}}
       )
 
       :sys.get_state(lv.pid)
