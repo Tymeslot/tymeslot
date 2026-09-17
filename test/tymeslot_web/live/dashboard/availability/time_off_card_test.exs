@@ -149,6 +149,42 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
     end
   end
 
+  describe "the form" do
+    test "links every label to its field", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      view |> element("[data-testid='add-time-off']") |> render_click()
+
+      for field <- ~w(starts-on ends-on start-time end-time label) do
+        id = "time-off-form-modal-#{field}"
+        assert has_element?(view, "label[for='#{id}']")
+        assert has_element?(view, "##{id}")
+      end
+    end
+
+    test "treats a malformed field in a hand-built event as blank rather than crashing", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      view |> element("[data-testid='add-time-off']") |> render_click()
+
+      html =
+        view
+        |> element("#time-off-form-modal-form")
+        |> render_submit(%{
+          "starts_on" => %{"nested" => "2027-07-05"},
+          "ends_on" => "2027-07-12",
+          "label" => ["Portugal"]
+        })
+
+      assert html =~ "can&#39;t be blank"
+      assert TimeOff.list(profile.id) == []
+      assert render(view) =~ "Time Off"
+    end
+  end
+
   describe "past periods" do
     test "appear in their own section, without an edit button, for 30 days", %{
       conn: conn,

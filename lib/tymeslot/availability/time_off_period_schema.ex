@@ -52,6 +52,9 @@ defmodule Tymeslot.Availability.TimeOffPeriodSchema do
   `opts` must carry `:today`, the owner's current date: a period may not be
   placed on days that have already gone. The caller supplies it because only
   the caller knows whose timezone "today" is read in.
+
+  `profile_id` is not cast: it is set on the struct by whoever creates the
+  row, so no submitted attrs can move a period onto another profile.
   """
   @spec changeset(t(), map(), keyword()) :: Ecto.Changeset.t()
   def changeset(period, attrs, opts) do
@@ -59,14 +62,13 @@ defmodule Tymeslot.Availability.TimeOffPeriodSchema do
 
     period
     |> cast(blank_to_nil(attrs), [
-      :profile_id,
       :starts_on,
       :ends_on,
       :start_time,
       :end_time,
       :label
     ])
-    |> update_change(:label, &trim_to_nil/1)
+    |> update_change(:label, &clean_label/1)
     |> validate_required([:profile_id, :starts_on, :ends_on])
     |> validate_not_in_past(:starts_on, today)
     |> validate_not_in_past(:ends_on, today)
@@ -87,10 +89,12 @@ defmodule Tymeslot.Availability.TimeOffPeriodSchema do
     end)
   end
 
-  defp trim_to_nil(nil), do: nil
+  # PostgreSQL rejects null bytes in text columns by raising, not with a
+  # changeset error, so they are stripped here before the row is written.
+  defp clean_label(nil), do: nil
 
-  defp trim_to_nil(value) do
-    case String.trim(value) do
+  defp clean_label(value) do
+    case value |> String.replace("\x00", "") |> String.trim() do
       "" -> nil
       trimmed -> trimmed
     end
@@ -122,14 +126,17 @@ defmodule Tymeslot.Availability.TimeOffPeriodSchema do
   # two sit on different dates, so an end time earlier in the clock than the
   # start time is the ordinary "away from Friday afternoon until Monday
   # morning" case rather than an error.
+  #
+  # A null time stands for its end of the day, so a single day that is "All
+  # day" to begin with and back at 00:00 is refused too: it would be listed as
+  # time off while blocking nothing.
   defp validate_time_order_on_single_day(changeset) do
     starts_on = get_field(changeset, :starts_on)
     ends_on = get_field(changeset, :ends_on)
-    start_time = get_field(changeset, :start_time)
-    end_time = get_field(changeset, :end_time)
+    start_time = get_field(changeset, :start_time) || ~T[00:00:00]
+    end_time = get_field(changeset, :end_time) || ~T[23:59:59]
 
-    if starts_on && starts_on == ends_on && start_time && end_time &&
-         Time.compare(start_time, end_time) != :lt do
+    if starts_on && starts_on == ends_on && Time.compare(start_time, end_time) != :lt do
       add_error(changeset, :end_time, dgettext_noop("errors", "must be after the start time"))
     else
       changeset
@@ -138,6 +145,13 @@ defmodule Tymeslot.Availability.TimeOffPeriodSchema do
 
   # Ecto's own length message, so the form translates it through the `errors`
   # domain with its plural forms; an interpolated custom one never could be.
-  defp validate_label(changeset),
-    do: validate_length(changeset, :label, max: Constraints.time_off_label_max_length())
+  # Counted in codepoints, the unit the column's varchar limit is measured in:
+  # graphemes would let a label of composed emoji pass here and then overflow
+  # the column, raising on insert.
+  defp validate_label(changeset) do
+    validate_length(changeset, :label,
+      max: Constraints.time_off_label_max_length(),
+      count: :codepoints
+    )
+  end
 end

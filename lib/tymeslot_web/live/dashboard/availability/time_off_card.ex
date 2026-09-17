@@ -222,35 +222,36 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
 
   # Only fields that hold a value report while the form is being filled in: a
   # last day not chosen yet is not an error until the form is submitted.
+  #
+  # Validation runs on every change, so it reads nothing from the database: the
+  # period being edited was loaded when the form opened, and today comes from
+  # the profile already assigned. Saving re-reads both.
   defp validated_data(socket, data, attrs) do
-    case validation_target(socket, data) do
-      {:ok, target} ->
-        errors =
-          target
-          |> TimeOff.validate(attrs)
-          |> form_errors()
-          |> Map.reject(fn {field, _message} -> Map.fetch!(attrs, field) == "" end)
+    errors =
+      data
+      |> validation_target(socket)
+      |> TimeOff.validate(attrs, today: TimeOff.today(socket.assigns.profile.timezone))
+      |> form_errors()
+      |> Map.reject(fn {field, _message} -> Map.fetch!(attrs, field) == "" end)
 
-        data
-        |> Map.merge(attrs)
-        |> Map.put(:errors, errors)
-
-      {:error, :not_found} ->
-        Map.merge(data, attrs)
-    end
+    data
+    |> Map.merge(attrs)
+    |> Map.put(:errors, errors)
   end
 
-  defp validation_target(socket, %{mode: :edit, id: id}),
-    do: TimeOff.fetch(profile_id(socket), id)
+  defp validation_target(%{mode: :edit, period: period}, _socket), do: period
+  defp validation_target(_create, socket), do: profile_id(socket)
 
-  defp validation_target(socket, _create), do: {:ok, profile_id(socket)}
+  defp fetch_period(socket, id) when is_integer(id), do: TimeOff.fetch(profile_id(socket), id)
 
-  defp fetch_period(socket, id) do
-    case Integer.parse(to_string(id)) do
-      {parsed, ""} -> TimeOff.fetch(profile_id(socket), parsed)
+  defp fetch_period(socket, id) when is_binary(id) do
+    case Integer.parse(id) do
+      {parsed, ""} -> fetch_period(socket, parsed)
       _other -> {:error, :not_found}
     end
   end
+
+  defp fetch_period(_socket, _id), do: {:error, :not_found}
 
   defp load_periods(socket) do
     %{current: current, past: past} = TimeOff.list_by_status(profile_id(socket))
@@ -259,9 +260,14 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
 
   defp profile_id(socket), do: socket.assigns.profile.id
 
+  # Anything but a string, which only a hand-built event can send, reads as
+  # blank rather than crashing the component.
   defp attrs_from(params) do
     Map.new(@form_fields, fn field ->
-      {field, params |> Map.get(to_string(field), "") |> String.trim()}
+      case Map.get(params, to_string(field)) do
+        value when is_binary(value) -> {field, String.trim(value)}
+        _missing_or_malformed -> {field, ""}
+      end
     end)
   end
 
@@ -284,6 +290,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
     %{
       mode: :edit,
       id: period.id,
+      period: period,
       errors: %{},
       min_starts_on: earliest_iso8601(period.starts_on, today),
       min_ends_on: earliest_iso8601(period.ends_on, today),

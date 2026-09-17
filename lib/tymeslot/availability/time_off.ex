@@ -82,7 +82,7 @@ defmodule Tymeslot.Availability.TimeOff do
   """
   @spec list_by_status(integer()) :: %{current: [period()], past: [period()]}
   def list_by_status(profile_id) do
-    today = owner_today(profile_id)
+    today = profile_id |> owner() |> owner_today()
 
     {past, current} =
       profile_id
@@ -103,8 +103,11 @@ defmodule Tymeslot.Availability.TimeOff do
   """
   @spec can_create?(integer()) :: boolean()
   def can_create?(profile_id) do
-    TimeOffPeriodQueries.count_for_profile_ending_from(profile_id, owner_today(profile_id)) <
-      @max_periods
+    can_create?(profile_id, profile_id |> owner() |> owner_today())
+  end
+
+  defp can_create?(profile_id, today) do
+    TimeOffPeriodQueries.count_for_profile_ending_from(profile_id, today) < @max_periods
   end
 
   @doc """
@@ -117,12 +120,13 @@ defmodule Tymeslot.Availability.TimeOff do
   """
   @spec create(integer(), map()) :: result() | {:error, :limit_reached}
   def create(profile_id, attrs) do
-    if can_create?(profile_id) do
-      attrs
-      |> normalise_attrs()
-      |> Map.put(:profile_id, profile_id)
-      |> TimeOffPeriodQueries.create(today: owner_today(profile_id))
-      |> invalidate_cache(profile_id)
+    owner = owner(profile_id)
+    today = owner_today(owner)
+
+    if can_create?(profile_id, today) do
+      profile_id
+      |> TimeOffPeriodQueries.create(attrs, today: today)
+      |> invalidate_cache(owner)
     else
       {:error, :limit_reached}
     end
@@ -136,9 +140,11 @@ defmodule Tymeslot.Availability.TimeOff do
   """
   @spec update(period(), map()) :: result()
   def update(%TimeOffPeriodSchema{} = period, attrs) do
+    owner = owner(period.profile_id)
+
     period
-    |> TimeOffPeriodQueries.update(normalise_attrs(attrs), today: owner_today(period.profile_id))
-    |> invalidate_cache(period.profile_id)
+    |> TimeOffPeriodQueries.update(attrs, today: owner_today(owner))
+    |> invalidate_cache(owner)
   end
 
   @doc """
@@ -146,18 +152,24 @@ defmodule Tymeslot.Availability.TimeOff do
   as an edit of `period`, so a form can show what is wrong while it is still
   being filled in. Applies the same rules `create/2` and `update/2` do, bar
   the per-profile limit.
+
+  A form that already knows the owner's date passes it as `:today`, so
+  validating on every change costs no query; saving reads it afresh either way.
   """
-  @spec validate(integer() | period(), map()) :: Ecto.Changeset.t()
-  def validate(%TimeOffPeriodSchema{} = period, attrs) do
+  @spec validate(integer() | period(), map(), keyword()) :: Ecto.Changeset.t()
+  def validate(period_or_profile_id, attrs, opts \\ [])
+
+  def validate(%TimeOffPeriodSchema{} = period, attrs, opts) do
+    today =
+      Keyword.get_lazy(opts, :today, fn -> period.profile_id |> owner() |> owner_today() end)
+
     period
-    |> TimeOffPeriodSchema.changeset(normalise_attrs(attrs),
-      today: owner_today(period.profile_id)
-    )
+    |> TimeOffPeriodSchema.changeset(attrs, today: today)
     |> Map.put(:action, :validate)
   end
 
-  def validate(profile_id, attrs) when is_integer(profile_id),
-    do: validate(%TimeOffPeriodSchema{profile_id: profile_id}, attrs)
+  def validate(profile_id, attrs, opts) when is_integer(profile_id),
+    do: validate(%TimeOffPeriodSchema{profile_id: profile_id}, attrs, opts)
 
   @doc """
   The current date in `timezone`, the earliest day a period may be placed on.
@@ -177,7 +189,7 @@ defmodule Tymeslot.Availability.TimeOff do
   def delete(%TimeOffPeriodSchema{} = period) do
     period
     |> TimeOffPeriodQueries.delete()
-    |> invalidate_cache(period.profile_id)
+    |> invalidate_cache(owner(period.profile_id))
   end
 
   @doc """
@@ -256,35 +268,77 @@ defmodule Tymeslot.Availability.TimeOff do
     end)
   end
 
-  # The slot engine reads these rows and the availability cache is keyed by
-  # user, so a mutation walks profile -> user and clears it; without that, a
-  # holiday entered now would keep being bookable for the cache's TTL. A failed
-  # write, or a missing link in the walk, is a no-op: invalidation must never
-  # turn a successful edit into an error.
-  defp invalidate_cache({:ok, _period} = outcome, profile_id) do
-    case ProfileQueries.get_with_user(profile_id) do
-      %{user_id: user_id} -> AvailabilityCache.invalidate_for_user(user_id)
-      _no_profile -> :ok
-    end
+  @doc """
+  The stretches `profile_id`'s periods block between `window_start` and
+  `window_end`, as UTC `{start, end}` pairs, reading the periods in the owner's
+  `timezone`.
 
+  Each period is one continuous interval, so it becomes one pair: from the
+  first day at its start time to the last day at its end time, or to midnight
+  after the last day when that end is open. A wall-clock time that falls in a
+  DST change resolves the way the slot engine resolves breaks, so the feed and
+  the booking page agree on where time off begins and ends.
+  """
+  @spec busy_intervals(integer(), String.t() | nil, DateTime.t(), DateTime.t()) ::
+          [{DateTime.t(), DateTime.t()}]
+  def busy_intervals(profile_id, timezone, window_start, window_end) do
+    timezone = timezone || "Etc/UTC"
+
+    # No timezone is a whole day away from UTC, so a day either side of the
+    # window's UTC dates covers every period that can reach into it.
+    profile_id
+    |> TimeOffPeriodQueries.list_for_profile_in_range(
+      Date.add(DateTime.to_date(window_start), -1),
+      Date.add(DateTime.to_date(window_end), 1)
+    )
+    |> Enum.map(&interval(&1, timezone))
+    |> Enum.filter(fn {from, to} ->
+      DateTime.before?(from, to) and DateTime.before?(from, window_end) and
+        DateTime.after?(to, window_start)
+    end)
+  end
+
+  defp interval(period, timezone) do
+    to =
+      case period.end_time do
+        nil -> utc_wall_clock(Date.add(period.ends_on, 1), ~T[00:00:00], timezone)
+        end_time -> utc_wall_clock(period.ends_on, end_time, timezone)
+      end
+
+    {utc_wall_clock(period.starts_on, period.start_time || ~T[00:00:00], timezone), to}
+  end
+
+  # Mirrors `TimeSlots.resolve_breaks/3`: the first occurrence of a repeated
+  # time, the first valid instant after a skipped one. An unknown timezone
+  # falls back to UTC, as `today/1` does.
+  defp utc_wall_clock(date, time, timezone) do
+    local =
+      case DateTime.new(date, time, timezone) do
+        {:ok, datetime} -> datetime
+        {:ambiguous, first, _second} -> first
+        {:gap, _before, just_after} -> just_after
+        {:error, _unknown_zone} -> DateTime.new!(date, time, "Etc/UTC")
+      end
+
+    DateTime.shift_zone!(local, "Etc/UTC")
+  end
+
+  # The slot engine reads these rows and the availability cache is keyed by
+  # user, so a mutation clears the owner's entries; without that, a holiday
+  # entered now would keep being bookable for the cache's TTL. A failed write,
+  # or a profile that could not be read, is a no-op: invalidation must never
+  # turn a successful edit into an error.
+  defp invalidate_cache({:ok, _period} = outcome, %{user_id: user_id}) do
+    AvailabilityCache.invalidate_for_user(user_id)
     outcome
   end
 
-  defp invalidate_cache(outcome, _profile_id), do: outcome
+  defp invalidate_cache(outcome, _no_owner), do: outcome
 
-  defp owner_today(profile_id) do
-    case ProfileQueries.get_with_user(profile_id) do
-      %{timezone: timezone} -> today(timezone)
-      nil -> today(nil)
-    end
-  end
+  # Read once per operation and threaded through, so a save does not look the
+  # same profile up again for its date check and for its cache invalidation.
+  defp owner(profile_id), do: ProfileQueries.get_with_user(profile_id)
 
-  # The UI submits string-keyed params while internal callers use atoms; the
-  # profile_id merge above needs one consistent key type.
-  defp normalise_attrs(attrs) do
-    Map.new(attrs, fn
-      {key, value} when is_binary(key) -> {String.to_existing_atom(key), value}
-      {key, value} -> {key, value}
-    end)
-  end
+  defp owner_today(%{timezone: timezone}), do: today(timezone)
+  defp owner_today(nil), do: today(nil)
 end

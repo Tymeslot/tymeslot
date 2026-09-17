@@ -86,12 +86,13 @@ defmodule Tymeslot.Availability.TimeOffPeriodQueries do
   end
 
   @doc """
-  Creates a time-off period. `opts` are passed to
+  Creates a time-off period for `profile_id`. `opts` are passed to
   `TimeOffPeriodSchema.changeset/3`, which requires `:today`.
   """
-  @spec create(map(), keyword()) :: {:ok, TimeOffPeriodSchema.t()} | {:error, Ecto.Changeset.t()}
-  def create(attrs, opts) when is_map(attrs) do
-    %TimeOffPeriodSchema{}
+  @spec create(integer(), map(), keyword()) ::
+          {:ok, TimeOffPeriodSchema.t()} | {:error, Ecto.Changeset.t()}
+  def create(profile_id, attrs, opts) when is_map(attrs) do
+    %TimeOffPeriodSchema{profile_id: profile_id}
     |> TimeOffPeriodSchema.changeset(attrs, opts)
     |> Repo.insert()
   end

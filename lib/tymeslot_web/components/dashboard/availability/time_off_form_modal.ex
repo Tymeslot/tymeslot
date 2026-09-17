@@ -58,6 +58,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <CoreComponents.input
               type="date"
+              id={"#{@id}-starts-on"}
               name="starts_on"
               value={Map.get(@period_data, :starts_on, "")}
               min={Map.get(@period_data, :min_starts_on)}
@@ -66,6 +67,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
             />
             <CoreComponents.input
               type="date"
+              id={"#{@id}-ends-on"}
               name="ends_on"
               value={Map.get(@period_data, :ends_on, "")}
               min={Map.get(@period_data, :min_ends_on)}
@@ -77,6 +79,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <CoreComponents.input
               type="select"
+              id={"#{@id}-start-time"}
               name="start_time"
               value={Map.get(@period_data, :start_time, "")}
               options={all_day_options(@time_format)}
@@ -85,6 +88,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
             />
             <CoreComponents.input
               type="select"
+              id={"#{@id}-end-time"}
               name="end_time"
               value={Map.get(@period_data, :end_time, "")}
               options={all_day_options(@time_format)}
@@ -102,6 +106,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
 
           <CoreComponents.input
             type="text"
+            id={"#{@id}-label"}
             name="label"
             value={Map.get(@period_data, :label, "")}
             maxlength={Constraints.time_off_label_max_length()}

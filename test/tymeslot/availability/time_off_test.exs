@@ -207,6 +207,66 @@ defmodule Tymeslot.Availability.TimeOffTest do
       assert "must be after the start time" in errors_on(changeset).end_time
     end
 
+    test "rejects a single day that is back at midnight, since it would block nothing" do
+      # "All day" to begin with reads as 00:00, so a return at 00:00 the same
+      # day is an empty window that would still be listed as time off.
+      profile = insert(:profile)
+
+      assert {:error, changeset} =
+               TimeOff.create(profile.id, %{
+                 starts_on: ~D[2026-09-10],
+                 ends_on: ~D[2026-09-10],
+                 start_time: nil,
+                 end_time: ~T[00:00:00]
+               })
+
+      assert "must be after the start time" in errors_on(changeset).end_time
+    end
+
+    test "accepts a single day away from the start of the day until a set time" do
+      profile = insert(:profile)
+
+      assert {:ok, period} =
+               TimeOff.create(profile.id, %{
+                 starts_on: ~D[2026-09-10],
+                 ends_on: ~D[2026-09-10],
+                 start_time: nil,
+                 end_time: ~T[09:00:00]
+               })
+
+      assert TimeOff.blocked_window(period, ~D[2026-09-10]) == {~T[00:00:00], ~T[09:00:00]}
+    end
+
+    test "strips null bytes from the note instead of failing the insert" do
+      profile = insert(:profile)
+
+      assert {:ok, period} =
+               TimeOff.create(profile.id, %{
+                 starts_on: ~D[2026-09-10],
+                 ends_on: ~D[2026-09-10],
+                 label: "Port\x00ugal"
+               })
+
+      assert period.label == "Portugal"
+    end
+
+    test "measures the note in codepoints, the unit the column is limited in" do
+      # Nine family emoji are nine graphemes but 63 codepoints: counted as
+      # graphemes the note would pass and then overflow the column on insert.
+      profile = insert(:profile)
+      family = "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466}"
+
+      assert {:error, changeset} =
+               TimeOff.create(profile.id, %{
+                 starts_on: ~D[2026-09-10],
+                 ends_on: ~D[2026-09-10],
+                 label: String.duplicate(family, 9)
+               })
+
+      assert errors_on(changeset).label != []
+      assert TimeOff.list(profile.id) == []
+    end
+
     test "accepts an end time before the start time when the period spans days" do
       profile = insert(:profile)
 
@@ -402,6 +462,17 @@ defmodule Tymeslot.Availability.TimeOffTest do
       assert period.label == nil
     end
 
+    test "update cannot move a period onto another profile" do
+      period = insert(:time_off_period, starts_on: ~D[2026-09-10], ends_on: ~D[2026-09-12])
+      other = insert(:profile)
+
+      assert {:ok, updated} =
+               TimeOff.update(period, %{"profile_id" => other.id, "label" => "Moved?"})
+
+      assert updated.profile_id == period.profile_id
+      assert TimeOff.list(other.id) == []
+    end
+
     test "delete removes the row" do
       period = insert(:time_off_period)
 
@@ -410,7 +481,7 @@ defmodule Tymeslot.Availability.TimeOffTest do
     end
   end
 
-  describe "validate/2" do
+  describe "validate/3" do
     setup do
       freeze_clock(~U[2026-09-01 12:00:00Z])
     end
@@ -437,10 +508,72 @@ defmodule Tymeslot.Availability.TimeOffTest do
       assert TimeOff.validate(period, %{"starts_on" => "2026-08-28"}).valid?
       refute TimeOff.validate(period, %{"starts_on" => "2026-08-27"}).valid?
     end
+
+    test "judges past dates against a supplied today instead of reading the profile" do
+      profile = insert(:profile, timezone: "Etc/UTC")
+      attrs = %{"starts_on" => "2026-08-20", "ends_on" => "2026-08-21"}
+
+      refute TimeOff.validate(profile.id, attrs).valid?
+      assert TimeOff.validate(profile.id, attrs, today: ~D[2026-08-01]).valid?
+    end
   end
 
   defp period_for(profile, starts_on, ends_on) do
     insert(:time_off_period, profile: profile, starts_on: starts_on, ends_on: ends_on)
+  end
+
+  describe "busy_intervals/4" do
+    @window_start ~U[2026-09-01 00:00:00Z]
+    @window_end ~U[2026-12-01 00:00:00Z]
+
+    test "publishes a whole-day period from its first midnight to the midnight after it" do
+      profile = insert(:profile)
+      period_for(profile, ~D[2026-09-10], ~D[2026-09-12])
+
+      assert TimeOff.busy_intervals(profile.id, "Europe/Berlin", @window_start, @window_end) ==
+               [{~U[2026-09-09 22:00:00Z], ~U[2026-09-12 22:00:00Z]}]
+    end
+
+    test "publishes a part-day period as one interval between its two times" do
+      profile = insert(:profile)
+
+      insert(:time_off_period,
+        profile: profile,
+        starts_on: ~D[2026-09-11],
+        ends_on: ~D[2026-09-14],
+        start_time: ~T[14:00:00],
+        end_time: ~T[09:00:00]
+      )
+
+      assert TimeOff.busy_intervals(profile.id, "Europe/Berlin", @window_start, @window_end) ==
+               [{~U[2026-09-11 12:00:00Z], ~U[2026-09-14 07:00:00Z]}]
+    end
+
+    test "reads each end in the offset in force on its own date" do
+      # Berlin leaves summer time on 25 October: the period starts at UTC+2 and
+      # ends at UTC+1.
+      profile = insert(:profile)
+      period_for(profile, ~D[2026-10-24], ~D[2026-10-25])
+
+      assert TimeOff.busy_intervals(profile.id, "Europe/Berlin", @window_start, @window_end) ==
+               [{~U[2026-10-23 22:00:00Z], ~U[2026-10-25 23:00:00Z]}]
+    end
+
+    test "falls back to UTC for a profile without a timezone" do
+      profile = insert(:profile)
+      period_for(profile, ~D[2026-09-10], ~D[2026-09-10])
+
+      assert TimeOff.busy_intervals(profile.id, nil, @window_start, @window_end) ==
+               [{~U[2026-09-10 00:00:00Z], ~U[2026-09-11 00:00:00Z]}]
+    end
+
+    test "leaves out periods outside the window and other profiles' periods" do
+      profile = insert(:profile)
+      period_for(profile, ~D[2026-12-05], ~D[2026-12-06])
+      insert(:time_off_period, starts_on: ~D[2026-09-10], ends_on: ~D[2026-09-10])
+
+      assert TimeOff.busy_intervals(profile.id, "Etc/UTC", @window_start, @window_end) == []
+    end
   end
 
   describe "fetch/2" do
