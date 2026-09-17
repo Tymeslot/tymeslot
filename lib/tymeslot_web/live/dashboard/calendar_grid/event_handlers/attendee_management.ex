@@ -20,8 +20,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
 
       event ->
         email = raw_email |> String.trim() |> String.downcase()
-        existing_emails = Enum.map(event.attendees || [], &attendee_email/1)
-        already_present = email in existing_emails
+        already_present = Enum.any?(event.attendees || [], &(comparable_email(&1) == email))
 
         with true <- Shared.valid_email?(email),
              false <- already_present,
@@ -65,6 +64,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
 
   defp attendee_email(%{} = attendee),
     do: Map.get(attendee, "email") || Map.get(attendee, :email)
+
+  # Providers keep the case an address was stored with (CalDAV, Outlook), but
+  # the mailbox is the same whatever its case, so duplicates are found by
+  # comparing lowercased addresses. Stored values are left as they are.
+  defp comparable_email(attendee) do
+    case attendee_email(attendee) do
+      email when is_binary(email) -> String.downcase(email)
+      _missing -> nil
+    end
+  end
 
   defp normalise_attendee(%{} = attendee) do
     %{
