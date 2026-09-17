@@ -114,12 +114,11 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
 
       # Retrying cannot widen a grant, so the job must not burn its budget and
-      # page an admin. Nor is the user flagged: Tymeslot does not request
-      # `meeting:update:meeting`, so reconnecting would change nothing.
+      # page an admin. Reconnecting can, so the owner is flagged instead.
       assert {:discard, _reason} =
                perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "update"})
 
-      refute Repo.reload!(integration).needs_reauth
+      assert Repo.reload!(integration).needs_reauth
     end
 
     test "discards instead of retrying when Zoom rejects the PATCH with 4711" do
@@ -151,7 +150,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       assert {:discard, _reason} =
                perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "update"})
 
-      refute Repo.reload!(integration).needs_reauth
+      assert Repo.reload!(integration).needs_reauth
     end
   end
 

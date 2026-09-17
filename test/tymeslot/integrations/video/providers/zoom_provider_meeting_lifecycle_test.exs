@@ -315,11 +315,11 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
       assert {:error, :insufficient_scope} =
                ZoomProvider.update_meeting_room("123456789", config)
 
-      # Tymeslot does not request `meeting:update:meeting` today, so no grant
-      # holds it and reconnecting would produce the same scopes. Putting
-      # "Reconnect required" on the dashboard would be an errand with no end.
+      # Tymeslot requests `meeting:update:meeting`, so this grant predates it
+      # and reconnecting restores it: the owner must be told.
       {:ok, reloaded} = VideoIntegrationQueries.get(integration.id)
-      refute reloaded.needs_reauth
+      assert reloaded.needs_reauth
+      assert reloaded.sync_error =~ "reschedule meetings"
     end
 
     test "accepts a classic meeting:write grant for the update" do
@@ -379,10 +379,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
       assert {:error, :insufficient_scope} =
                ZoomProvider.update_meeting_room("123456789", config)
 
-      # Same reasoning as the pre-flight case: an update scope Tymeslot never
-      # asks for is not something the account owner can grant.
+      # Zoom is the authority on the grant: its rejection flags the integration
+      # just as the pre-flight would have.
       {:ok, reloaded} = VideoIntegrationQueries.get(integration.id)
-      refute reloaded.needs_reauth
+      assert reloaded.needs_reauth
     end
   end
 

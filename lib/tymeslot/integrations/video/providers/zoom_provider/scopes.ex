@@ -32,10 +32,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes do
   # Scopes that are not tied to one meeting operation.
   @read_scopes ["meeting:read:meeting", "user:read:user"]
 
-  # The operations Tymeslot always asks Zoom for. `:update` is conditional and
-  # lives behind `:zoom_update_scope_enabled` instead, because whether it can be
-  # obtained is a property of the Marketplace app behind a given deployment, not
-  # of this code.
+  # The operations Tymeslot always asks Zoom for. `:update` is requested by
+  # default but lives behind `:zoom_update_scope_enabled`, because whether it
+  # can be obtained is a property of the Marketplace app behind a given
+  # deployment, not of this code.
   #
   # Zoom gives no signal when an app lacks a requested scope: the authorize
   # request is not rejected, the scope is silently dropped, the rest is
@@ -46,8 +46,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes do
   # scope is obtainable and start asking users to reconnect to get a scope no
   # reconnect can produce.
   #
-  # Enable it (`ZOOM_UPDATE_SCOPE_ENABLED=true`) only where the Zoom app is
-  # actually configured for the scope. The authorize request, the pre-flight,
+  # Disable it (`ZOOM_UPDATE_SCOPE_ENABLED=false`) wherever the Zoom app is not
+  # configured for the scope. The authorize request, the pre-flight,
   # and whether users are asked to reconnect all follow from this one setting.
   @always_requested [:write, :delete]
 
@@ -95,7 +95,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes do
   end
 
   defp update_scope_enabled? do
-    Application.get_env(:tymeslot, :zoom_update_scope_enabled, false) == true
+    Application.get_env(:tymeslot, :zoom_update_scope_enabled, true) == true
   end
 
   @doc """
