@@ -80,6 +80,19 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
 
   @spec url_field(map()) :: Phoenix.LiveView.Rendered.t()
   def url_field(assigns) do
+    errors = FormValidationHelpers.field_errors(assigns.form_errors, assigns.error_key)
+
+    # Errors replace the helper text, so the input is described by whichever
+    # of the two is on the page.
+    describedby =
+      cond do
+        errors != [] -> "#{assigns.id}-error"
+        assigns.helper_text -> "#{assigns.id}-help"
+        true -> nil
+      end
+
+    assigns = assign(assigns, errors: errors, describedby: describedby)
+
     ~H"""
     <div>
       <label for={@id} class="label">
@@ -109,26 +122,22 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
               )
           }
           required
-          aria-describedby={@helper_text && "#{@id}-help"}
-          class={[
-            "input input-with-icon w-full",
-            if(FormValidationHelpers.field_errors(@form_errors, @error_key) != [],
-              do: "input-error",
-              else: ""
-            )
-          ]}
+          aria-describedby={@describedby}
+          aria-invalid={@errors != [] && "true"}
+          class={["input input-with-icon w-full", @errors != [] && "input-error"]}
           placeholder={@placeholder}
         />
       </div>
-      <%= if FormValidationHelpers.field_errors(@form_errors, @error_key) != [] do %>
-        <%= for error <- FormValidationHelpers.field_errors(@form_errors, @error_key) do %>
-          <p class="form-error">{error}</p>
-        <% end %>
-      <% else %>
-        <%= if @helper_text do %>
-          <p id={"#{@id}-help"} class="mt-2 text-token-xs text-tymeslot-500">{@helper_text}</p>
-        <% end %>
-      <% end %>
+      <div :if={@errors != []} id={"#{@id}-error"}>
+        <p :for={error <- @errors} class="form-error">{error}</p>
+      </div>
+      <p
+        :if={@errors == [] && @helper_text}
+        id={"#{@id}-help"}
+        class="mt-2 text-token-xs text-tymeslot-500"
+      >
+        {@helper_text}
+      </p>
     </div>
     """
   end
@@ -270,9 +279,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   @spec error_banner(map()) :: Phoenix.LiveView.Rendered.t()
   def error_banner(assigns) do
     ~H"""
-    <div class="brand-card p-3 bg-red-50/50 border border-red-200/50">
+    <div role="alert" class="brand-card p-3 bg-red-50/50 border border-red-200/50">
       <p class="text-sm text-red-600 flex items-center">
-        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
           <path
             fill-rule="evenodd"
             d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"

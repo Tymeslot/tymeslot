@@ -42,10 +42,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
       <div class="flex items-center gap-4 mb-2">
         <ProviderIcon.provider_icon provider="jitsi" type="video" size="large" />
         <div>
-          <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">
+          <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
             {dgettext("dashboard_integrations", "Jitsi Meet")}
           </h3>
-          <p class="text-sm text-tymeslot-500 font-medium">
+          <p class="text-token-sm text-tymeslot-500 font-medium">
             {dgettext("dashboard_integrations", "Your own Jitsi Meet server")}
           </p>
         </div>
@@ -150,6 +150,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
   attr :form_errors, :map, required: true
   attr :stored_credentials, :boolean, default: false
 
+  attr :stored_client_id, :string,
+    default: "",
+    doc: "shown until the organiser edits the App ID; a disabled input is not submitted"
+
   @spec credential_fields(map()) :: Phoenix.LiveView.Rendered.t()
   def credential_fields(assigns) do
     assigns =
@@ -167,7 +171,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
       type="text"
       icon="hero-identification"
       label={dgettext("dashboard_integrations", "App ID (optional)")}
-      value={Map.get(@form_values, "client_id", "")}
+      value={Map.get(@form_values, "client_id", @stored_client_id)}
       describedby={"#{@id_prefix}_credentials_help"}
       disabled={@removing}
       errors={FormValidationHelpers.field_errors(@form_errors, :client_id)}
@@ -180,7 +184,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
       icon="hero-key"
       label={dgettext("dashboard_integrations", "App secret (optional)")}
       describedby={
-        if @stored_credentials,
+        if @stored_credentials and not @removing,
           do: "#{@id_prefix}_client_secret_keep #{@id_prefix}_credentials_help",
           else: "#{@id_prefix}_credentials_help"
       }
@@ -188,7 +192,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
       errors={FormValidationHelpers.field_errors(@form_errors, :client_secret)}
     >
       <p
-        :if={@stored_credentials}
+        :if={@stored_credentials and not @removing}
         id={"#{@id_prefix}_client_secret_keep"}
         class="mt-2 text-token-xs text-tymeslot-500"
       >

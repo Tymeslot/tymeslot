@@ -260,8 +260,51 @@ defmodule Tymeslot.Integrations.Video.InputValidationTest do
         "remove_token_authentication" => "true"
       }
 
-      assert {:ok, %{"remove_token_authentication" => true, "client_secret" => nil}} =
+      assert {:ok, %{"remove_token_authentication" => true} = sanitized} =
                InputValidation.validate_video_integration_form(params)
+
+      refute Map.has_key?(sanitized, "client_secret")
+    end
+
+    # A credential key in the result means "supplied", which clears
+    # `needs_reauth` on update; a blank field must not claim that.
+    test "leaves blank credentials out" do
+      params = %{
+        "provider" => "jitsi",
+        "name" => "Our Jitsi",
+        "base_url" => "https://meet.example.com",
+        "client_id" => "",
+        "client_secret" => "   "
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_video_integration_form(params)
+      refute Map.has_key?(sanitized, "client_id")
+      refute Map.has_key?(sanitized, "client_secret")
+    end
+
+    test "strips a null byte from the server URL" do
+      params = %{
+        "provider" => "jitsi",
+        "name" => "Our Jitsi",
+        "base_url" => "https://meet.example.com/a\0b"
+      }
+
+      assert {:ok, %{"base_url" => "https://meet.example.com/ab"}} =
+               InputValidation.validate_video_integration_form(params)
+    end
+
+    test "strips a null byte from the App ID and App secret and leaves the rest of the secret alone" do
+      params = %{
+        "provider" => "jitsi",
+        "name" => "Our Jitsi",
+        "base_url" => "https://meet.example.com",
+        "client_id" => "tyme\0slot",
+        "client_secret" => "<secret\0&symbols>"
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_video_integration_form(params)
+      assert sanitized["client_id"] == "tymeslot"
+      assert sanitized["client_secret"] == "<secret&symbols>"
     end
 
     test "rejects a missing name" do

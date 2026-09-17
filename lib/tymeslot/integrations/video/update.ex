@@ -117,7 +117,7 @@ defmodule Tymeslot.Integrations.Video.Update do
   end
 
   # Callers supply the virtual field names (`:api_key`), never the encrypted
-  # ones — those only exist after `encrypt_credentials/1` runs inside the
+  # ones; those only exist after `encrypt_credentials/1` runs inside the
   # changeset, by which point the attrs have already been consumed.
   defp credentials_in_attrs?(attrs) when is_map(attrs) do
     Enum.any?(VideoIntegrationSchema.credential_fields(), &Map.has_key?(attrs, &1))

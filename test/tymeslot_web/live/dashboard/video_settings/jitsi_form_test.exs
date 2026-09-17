@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.JitsiFormTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.TestHelpers.Eventually
 
+  alias Ecto.Changeset
   alias Plug.Test
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
@@ -86,6 +87,72 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.JitsiFormTest do
       assert [%{provider: "jitsi", custom_meeting_url: nil}] = Video.list_integrations(user.id)
     end
 
+    test "saves a Jitsi server URL carrying a null byte without it", %{conn: conn, user: user} do
+      stub_jitsi_server(200)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='jitsi']")
+      |> render_click()
+
+      view
+      |> form("#jitsi-video-integration-form",
+        integration: %{name: "Our Jitsi", base_url: "https://meet.example.com\0"}
+      )
+      |> render_submit()
+
+      assert [%{base_url: "https://meet.example.com"}] = Video.list_integrations(user.id)
+    end
+
+    # Each save probes under its own task name. The first server's probe is
+    # held until the second save has started its own, so a shared name would
+    # drop the first result and its warning.
+    test "two quick Jitsi saves each get their own connection feedback", %{
+      conn: conn,
+      user: user
+    } do
+      test_pid = self()
+
+      stub(Tymeslot.HTTPClientMock, :head, fn
+        "https://slow.example.com", _headers, _opts ->
+          send(test_pid, {:probing, self()})
+
+          receive do
+            :answer -> {:ok, %Req.Response{status: 503}}
+          end
+
+        "https://fast.example.com", _headers, _opts ->
+          {:ok, %Req.Response{status: 200}}
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      for {name, base_url} <- [
+            {"Slow", "https://slow.example.com"},
+            {"Fast", "https://fast.example.com"}
+          ] do
+        view
+        |> element("button[phx-click='setup_provider'][phx-value-provider='jitsi']")
+        |> render_click()
+
+        view
+        |> form("#jitsi-video-integration-form", integration: %{name: name, base_url: base_url})
+        |> render_submit()
+
+        assert render(view) =~ "Video integration added successfully"
+      end
+
+      assert_receive {:probing, slow_probe}
+      send(slow_probe, :answer)
+
+      eventually(fn ->
+        assert render(view) =~ "Saved, but the server did not answer as expected"
+      end)
+
+      assert length(Video.list_integrations(user.id)) == 2
+    end
+
     test "the Jitsi server URL field starts empty rather than defaulting to the public instance",
          %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
@@ -159,6 +226,13 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.JitsiFormTest do
         |> render_submit()
 
       assert html =~ "The App secret must be at least 32 bytes long"
+
+      assert has_element?(
+               view,
+               "#jitsi-video-integration-form [role='alert']",
+               "The App secret must be at least 32 bytes long"
+             )
+
       refute has_element?(view, "#jitsi-video-integration-form p.form-error")
       assert Video.list_integrations(user.id) == []
     end
@@ -210,11 +284,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.JitsiFormTest do
 
       assert [%{provider: "jitsi"}] = Video.list_integrations(user.id)
 
+      assert render(view) =~ "Video integration added successfully"
+
       eventually(fn ->
         assert render(view) =~ "Saved, but the server did not answer as expected"
       end)
-
-      refute render(view) =~ "Video integration added successfully"
     end
 
     test "edits a Jitsi integration and keeps the stored secret when it is left blank", %{
@@ -302,6 +376,82 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.JitsiFormTest do
       assert row.is_active
       assert is_nil(row.client_id_encrypted)
       assert is_nil(row.client_secret_encrypted)
+    end
+
+    test "restores the stored App ID and the keep-secret note when removal is unticked", %{
+      conn: conn,
+      user: user
+    } do
+      integration = create_jitsi_with_credentials(user, String.duplicate("s", 32))
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+      open_edit_dialog(view, integration)
+
+      view
+      |> element("#edit-video-integration-form")
+      |> render_change(%{integration: %{remove_token_authentication: "true"}})
+
+      refute has_element?(view, "#edit_jitsi_client_secret_keep")
+
+      # A disabled input is not submitted, so the App ID is absent from this change.
+      view
+      |> element("#edit-video-integration-form")
+      |> render_change(%{
+        integration: %{name: "Our Jitsi", remove_token_authentication: "false"}
+      })
+
+      assert has_element?(view, "#edit_jitsi_client_id[value='tymeslot']:not([disabled])")
+      assert has_element?(view, "#edit_jitsi_client_secret_keep")
+    end
+
+    test "renaming a Jitsi integration that needs attention leaves the flag set", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, integration} =
+        Video.create_integration(user.id, :jitsi, %{
+          name: "Open Jitsi",
+          base_url: "https://meet.example.com"
+        })
+
+      integration |> Changeset.change(needs_reauth: true) |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+      open_edit_dialog(view, integration)
+
+      view
+      |> form("#edit-video-integration-form", integration: %{name: "Renamed Jitsi"})
+      |> render_submit()
+
+      assert render(view) =~ "Integration updated successfully"
+
+      row = Repo.get!(VideoIntegrationSchema, integration.id)
+      assert row.name == "Renamed Jitsi"
+      assert row.needs_reauth
+    end
+
+    test "shows the first changeset error when an edit is refused by the schema", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, integration} =
+        Video.create_integration(user.id, :jitsi, %{
+          name: "Open Jitsi",
+          base_url: "https://meet.example.com"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+      open_edit_dialog(view, integration)
+
+      view
+      |> form("#edit-video-integration-form", integration: %{base_url: "https://10.0.0.1"})
+      |> render_submit()
+
+      refute render(view) =~ "Failed to update integration"
+      assert render(view) =~ "Base url"
+
+      assert Repo.get!(VideoIntegrationSchema, integration.id).base_url ==
+               "https://meet.example.com"
     end
 
     test "offers no credential removal for a Jitsi integration without credentials", %{

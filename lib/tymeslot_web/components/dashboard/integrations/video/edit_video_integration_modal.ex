@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.InputValidation, as: VideoInputValidation
   alias Tymeslot.Integrations.Video.TemplateSyntax
-  alias Tymeslot.Utils.SanitizeMerge
+  alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplatePreviewBox
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig
@@ -252,6 +252,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                     form_values={@form_values}
                     form_errors={@form_errors}
                     stored_credentials={stored_credentials?(@integration)}
+                    stored_client_id={@integration.client_id || ""}
                   />
                 <% _ -> %>
               <% end %>
@@ -326,6 +327,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   # A provider's own validation (Jitsi's credential checks, for one) returns
   # a message written for the organiser; anything else is not fit to show.
   defp update_error_message(message) when is_binary(message), do: message
+
+  defp update_error_message(%Ecto.Changeset{} = changeset),
+    do: ChangesetUtils.get_first_error(changeset) || update_error_message(:unknown)
 
   defp update_error_message(_reason),
     do: dgettext("dashboard_integrations", "Failed to update integration")

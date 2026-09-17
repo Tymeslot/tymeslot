@@ -310,8 +310,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     {:noreply, assign(socket, :testing_connection, nil)}
   end
 
-  def handle_async(:connection_advisory, result, socket) do
-    notify_parent({:flash, connection_advisory_flash(result)})
+  def handle_async({:connection_advisory, _integration_id}, result, socket) do
+    if warning = connection_advisory_warning(result) do
+      notify_parent({:flash, {:warning, warning}})
+    end
+
     {:noreply, socket}
   end
 
@@ -398,42 +401,44 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:form_errors, IntegrationProviders.reason_to_form_errors(reason))}
   end
 
+  # The confirmation goes out at once, so it survives this component going
+  # away before a probe finishes.
+  defp announce_added(socket, integration) do
+    notify_parent(
+      {:flash,
+       {:info, dgettext("dashboard_integrations", "Video integration added successfully")}}
+    )
+
+    maybe_probe_connection(socket, integration)
+  end
+
   # Advisory only. A Jitsi root path may legitimately answer with a redirect,
   # a 403 or an authentication wall, and a server that is briefly unreachable
-  # is still worth keeping configured, so the probe can only change the wording
-  # of the flash, never the outcome of the save. It runs after the form has
-  # closed, so a slow server never holds the dialog open.
-  defp announce_added(socket, %{provider: "jitsi"} = integration) do
-    start_async(socket, :connection_advisory, fn ->
+  # is still worth keeping configured, so the probe can only add a warning,
+  # never change the outcome of the save. It runs after the form has closed,
+  # so a slow server never holds the dialog open, and each save gets its own
+  # task name: a second `start_async/3` under the same name would drop the
+  # first save's result.
+  defp maybe_probe_connection(socket, %{provider: "jitsi"} = integration) do
+    start_async(socket, {:connection_advisory, integration.id}, fn ->
       Video.probe_integration(integration, scope: :interactive)
     end)
   end
 
-  defp announce_added(socket, _integration) do
-    notify_parent({:flash, {:info, integration_added_message()}})
-    socket
-  end
+  defp maybe_probe_connection(socket, _integration), do: socket
 
-  defp connection_advisory_flash({:ok, {:ok, _message}}),
-    do: {:info, integration_added_message()}
+  defp connection_advisory_warning({:ok, {:ok, _message}}), do: nil
 
   # A refused probe never reached the server, so it says nothing about it.
-  defp connection_advisory_flash({:ok, {:error, {:rate_limited, _message}}}),
-    do: {:info, integration_added_message()}
+  defp connection_advisory_warning({:ok, {:error, {:rate_limited, _message}}}), do: nil
+  defp connection_advisory_warning({:ok, {:error, :unattributable}}), do: nil
 
-  defp connection_advisory_flash({:ok, {:error, :unattributable}}),
-    do: {:info, integration_added_message()}
-
-  defp connection_advisory_flash(_failed) do
-    {:warning,
-     dgettext(
-       "dashboard_integrations",
-       "Saved, but the server did not answer as expected. Check the URL, or use Test connection once it is reachable."
-     )}
+  defp connection_advisory_warning(_failed) do
+    dgettext(
+      "dashboard_integrations",
+      "Saved, but the server did not answer as expected. Check the URL, or use Test connection once it is reachable."
+    )
   end
-
-  defp integration_added_message,
-    do: dgettext("dashboard_integrations", "Video integration added successfully")
 
   defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do
     notify_parent({:flash, {:error, message}})

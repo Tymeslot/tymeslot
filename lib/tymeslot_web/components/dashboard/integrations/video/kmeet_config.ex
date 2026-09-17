@@ -42,10 +42,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig do
       <div class="flex items-center gap-4 mb-2">
         <ProviderIcon.provider_icon provider="kmeet" type="video" size="large" />
         <div>
-          <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">
+          <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
             {dgettext("dashboard_integrations", "kMeet")}
           </h3>
-          <p class="text-sm text-tymeslot-500 font-medium">
+          <p class="text-token-sm text-tymeslot-500 font-medium">
             {dgettext("dashboard_integrations", "Infomaniak's hosted video meetings")}
           </p>
         </div>

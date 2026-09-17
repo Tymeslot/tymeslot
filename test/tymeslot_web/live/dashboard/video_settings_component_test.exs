@@ -192,6 +192,32 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       assert render(view) =~ "Integration name is required"
     end
 
+    test "ties a URL field's error to its input", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='mirotalk']")
+      |> render_click()
+
+      view
+      |> form("#mirotalk-config-modal form", %{
+        "integration" => %{
+          "name" => "New MiroTalk",
+          "base_url" => "not-a-url",
+          "api_key" => "secret-key-long-enough"
+        }
+      })
+      |> render_submit()
+
+      assert has_element?(
+               view,
+               "#mirotalk_base_url[aria-invalid='true'][aria-describedby='mirotalk_base_url-error']"
+             )
+
+      assert has_element?(view, "#mirotalk_base_url-error p.form-error")
+      refute has_element?(view, "#mirotalk_base_url-help")
+    end
+
     test "shows a message when adding a duplicate custom video integration", %{
       conn: conn,
       user: user

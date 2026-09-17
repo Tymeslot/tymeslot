@@ -188,23 +188,32 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
     end
   end
 
-  # Only the name is checked here. The server URL and credentials are checked
-  # by `JitsiProvider.validate_config/1` when the integration is saved, so the
-  # connect form and the edit dialog share one set of rules and messages. The
-  # credentials are trimmed but never sanitised: a secret may legitimately
-  # contain characters a sanitiser would strip.
+  # The name is validated and the server URL sanitised here; whether the URL
+  # and credentials make a usable config is `JitsiProvider.validate_config/1`'s
+  # call when the integration is saved, so the connect form and the edit dialog
+  # share one set of rules and messages.
+  #
+  # The credentials are only trimmed and stripped of null bytes, which
+  # PostgreSQL refuses: a secret may legitimately contain characters a
+  # sanitiser would remove. A blank credential is left out of the result
+  # altogether, so an edit that does not touch the credentials does not count
+  # as supplying them.
   defp validate_jitsi_form(params, metadata) do
-    case InputValidators.validate_integration_name(params["name"], metadata) do
-      {:ok, sanitized_name} ->
-        {:ok,
+    with {:ok, sanitized_name} <-
+           InputValidators.validate_integration_name(params["name"], metadata),
+         {:ok, sanitized_base_url} <- sanitize_jitsi_base_url(params["base_url"], metadata) do
+      {:ok,
+       Map.reject(
          %{
            "name" => sanitized_name,
-           "base_url" => trim(params["base_url"]),
-           "client_id" => trim(params["client_id"]),
-           "client_secret" => trim(params["client_secret"]),
+           "base_url" => sanitized_base_url,
+           "client_id" => jitsi_credential(params["client_id"]),
+           "client_secret" => jitsi_credential(params["client_secret"]),
            "remove_token_authentication" => params["remove_token_authentication"] == "true"
-         }}
-
+         },
+         fn {_field, value} -> is_nil(value) end
+       )}
+    else
       {:error, errors} ->
         SecurityLogger.log_security_event("jitsi_integration_validation_failure", %{
           ip_address: metadata[:ip],
@@ -217,8 +226,25 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
     end
   end
 
-  defp trim(value) when is_binary(value), do: String.trim(value)
-  defp trim(_value), do: nil
+  # A blank URL is kept, so that the provider can refuse it with its own
+  # message rather than an edit silently keeping the stored one.
+  defp sanitize_jitsi_base_url(base_url, metadata) when is_binary(base_url) do
+    case UniversalSanitizer.sanitize_and_validate(base_url, allow_html: false, metadata: metadata) do
+      {:ok, sanitized} -> {:ok, sanitized}
+      {:error, error} -> {:error, %{base_url: error}}
+    end
+  end
+
+  defp sanitize_jitsi_base_url(_base_url, _metadata), do: {:ok, nil}
+
+  defp jitsi_credential(value) when is_binary(value) do
+    case value |> String.replace("\x00", "") |> String.trim() do
+      "" -> nil
+      credential -> credential
+    end
+  end
+
+  defp jitsi_credential(_value), do: nil
 
   # Helper validation functions
 
