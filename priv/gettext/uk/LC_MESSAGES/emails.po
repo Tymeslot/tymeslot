@@ -2315,3 +2315,23 @@ msgstr "Передумали? Ви можете %{link} у будь-який ч�
 #, elixir-autogen, elixir-format
 msgid "withdraw your request"
 msgstr "відкликати запит"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling does not refund anything on its own. Issue or decline the refund under Payments in your dashboard."
+msgstr "Скасування саме собою не повертає кошти. Виконайте або відхиліть повернення коштів у розділі «Платежі» вашої панелі керування."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "REFUND OUTSTANDING:"
+msgstr "КОШТИ ДО ПОВЕРНЕННЯ:"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Refund outstanding"
+msgstr "Кошти до повернення"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "You still hold %{amount} for this booking."
+msgstr "За це бронювання у вас досі залишається %{amount}."

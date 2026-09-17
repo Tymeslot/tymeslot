@@ -26,6 +26,7 @@ msgstr ""
 msgid "Amount exceeds the remaining refundable balance."
 msgstr ""
 
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee"
@@ -179,6 +180,7 @@ msgstr ""
 msgid "Meeting payments require an upgraded plan."
 msgstr ""
 
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type"
@@ -254,6 +256,7 @@ msgstr ""
 msgid "Recent payments"
 msgstr ""
 
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Refund"
@@ -392,4 +395,29 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex
 #, elixir-autogen, elixir-format
 msgid "Changing the currency will reset every paid event type to free - existing prices are recorded in the previous currency and would otherwise be charged at the new one."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Outstanding"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Refund in Stripe"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds outstanding"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "These bookings were cancelled while you still held the attendee's money. Cancelling never refunds on its own."
 msgstr ""

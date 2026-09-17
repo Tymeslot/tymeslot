@@ -61,6 +61,58 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
   # refundable?/1
   # ---------------------------------------------------------------------------
 
+  describe "refund_outstanding?/1" do
+    test "returns true for a paid payment with nothing refunded yet" do
+      payment = payment_stub(%{status: "paid", refunded_amount_cents: 0})
+      assert Refunds.refund_outstanding?(payment)
+    end
+
+    test "returns true for a partially refunded payment with a balance left" do
+      payment =
+        payment_stub(%{
+          status: "partially_refunded",
+          amount_cents: 5000,
+          refunded_amount_cents: 2000
+        })
+
+      assert Refunds.refund_outstanding?(payment)
+    end
+
+    test "returns false once the whole amount has been given back" do
+      payment =
+        payment_stub(%{status: "refunded", amount_cents: 5000, refunded_amount_cents: 5000})
+
+      refute Refunds.refund_outstanding?(payment)
+    end
+
+    test "returns false for a disputed payment, since Stripe owns the decision" do
+      payment = payment_stub(%{status: "disputed", refunded_amount_cents: 0})
+      refute Refunds.refund_outstanding?(payment)
+    end
+
+    test "returns false for a payment that never settled" do
+      payment = payment_stub(%{status: "pending", refunded_amount_cents: 0})
+      refute Refunds.refund_outstanding?(payment)
+    end
+
+    test "returns false for no payment at all, as a free booking has none" do
+      refute Refunds.refund_outstanding?(nil)
+    end
+
+    # The distinction from refundable?/1: the host is still holding the money
+    # whether or not Tymeslot can be the one to send it back.
+    test "stays true outside the 60-day window, where refundable?/1 turns false" do
+      payment =
+        payment_stub(%{
+          status: "paid",
+          paid_at: DateTime.add(DateTime.utc_now(:second), -61, :day)
+        })
+
+      assert Refunds.refund_outstanding?(payment)
+      refute Refunds.refundable?(payment)
+    end
+  end
+
   describe "refundable?/1" do
     test "returns true for a paid payment within the window" do
       payment = payment_stub(%{status: "paid", paid_at: DateTime.utc_now(:second)})
@@ -76,6 +128,16 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
     test "returns false when paid_at is nil" do
       payment = payment_stub(%{status: "paid", paid_at: nil})
+      refute Refunds.refundable?(payment)
+    end
+
+    # Shouldn't occur — such a row should carry "refunded" — but the balance is
+    # the thing that decides, so a stale status must not offer a refund of zero
+    # that `validate_amount/2` would then reject.
+    test "returns false for a paid row whose balance is already fully refunded" do
+      payment =
+        payment_stub(%{status: "paid", amount_cents: 5000, refunded_amount_cents: 5000})
+
       refute Refunds.refundable?(payment)
     end
 

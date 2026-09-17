@@ -22,6 +22,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
   @foreign_key_type :binary_id
 
   @valid_statuses ~w(pending paid failed refunded partially_refunded disputed)
+  @refundable_statuses ~w(paid partially_refunded)
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,
@@ -119,6 +120,17 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
 
   @spec valid_statuses() :: [String.t()]
   def valid_statuses, do: @valid_statuses
+
+  @doc """
+  The statuses in which the host still holds some of the attendee's money.
+
+  `refunded` is absent because nothing is left to give back, and `disputed`
+  because Stripe has taken the decision out of the host's hands. Defined here
+  so the refund rule and the queries that look for outstanding refunds read
+  the same list.
+  """
+  @spec refundable_statuses() :: [String.t()]
+  def refundable_statuses, do: @refundable_statuses
 
   defp validate_refunded_bounds(changeset) do
     refunded = get_field(changeset, :refunded_amount_cents) || 0

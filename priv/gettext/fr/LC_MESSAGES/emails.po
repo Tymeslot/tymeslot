@@ -2309,3 +2309,23 @@ msgstr "Vous avez changé d’avis ? Vous pouvez %{link} à tout moment."
 #, elixir-autogen, elixir-format
 msgid "withdraw your request"
 msgstr "retirer votre demande"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling does not refund anything on its own. Issue or decline the refund under Payments in your dashboard."
+msgstr "Une annulation ne rembourse rien d'elle-même. Effectuez ou refusez le remboursement dans la section Paiements de votre tableau de bord."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "REFUND OUTSTANDING:"
+msgstr "REMBOURSEMENT EN ATTENTE :"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Refund outstanding"
+msgstr "Remboursement en attente"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "You still hold %{amount} for this booking."
+msgstr "Vous détenez encore %{amount} pour cette réservation."

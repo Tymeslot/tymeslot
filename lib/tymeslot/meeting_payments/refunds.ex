@@ -52,17 +52,33 @@ defmodule Tymeslot.MeetingPayments.Refunds do
     do: max(amount - refunded, 0)
 
   @doc """
-  Returns `true` when the payment is in a refundable status and was paid
+  Returns `true` when the host still holds money the attendee has not been
+  given back.
+
+  Deliberately says nothing about the #{@refund_window_days}-day window: the
+  attendee is out of pocket whether or not Tymeslot can still issue the refund
+  itself, and a host past the window needs telling more urgently rather than
+  less, since only their Stripe dashboard can settle it. Use `refundable?/1`
+  to decide whether to offer the in-app refund.
+  """
+  @spec refund_outstanding?(BookingPaymentSchema.t() | nil) :: boolean()
+  def refund_outstanding?(nil), do: false
+
+  def refund_outstanding?(payment) do
+    payment.status in BookingPaymentSchema.refundable_statuses() and
+      refundable_remaining_cents(payment) > 0
+  end
+
+  @doc """
+  Returns `true` when the payment still owes the attendee money and was paid
   within the #{@refund_window_days}-day refund window.
 
-  Encapsulates both the status check and the time-window check so the
-  constant has a single source of truth.
+  Encapsulates both the outstanding-balance check and the time-window check so
+  the constant has a single source of truth.
   """
-  @spec refundable?(BookingPaymentSchema.t()) :: boolean()
-  def refundable?(%{status: status} = payment) when status in ["paid", "partially_refunded"],
-    do: within_refund_window?(payment)
-
-  def refundable?(_payment), do: false
+  @spec refundable?(BookingPaymentSchema.t() | nil) :: boolean()
+  def refundable?(payment),
+    do: refund_outstanding?(payment) and within_refund_window?(payment)
 
   defp within_refund_window?(%{paid_at: %DateTime{} = paid_at}),
     do: DateTime.diff(DateTime.utc_now(), paid_at, :day) <= @refund_window_days

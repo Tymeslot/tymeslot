@@ -176,6 +176,18 @@ defmodule Tymeslot.MeetingPayments do
     do: BookingPaymentQueries.for_host(host_user_id, opts)
 
   @doc """
+  Lists the host's cancelled bookings that still hold the attendee's money,
+  oldest cancellation first.
+
+  Not bounded by `list_payments_for_host/2`'s recent-payments window, so an
+  older unrefunded cancellation stays visible instead of scrolling out of
+  sight.
+  """
+  @spec list_outstanding_refunds_for_host(integer(), keyword()) :: [booking_payment()]
+  def list_outstanding_refunds_for_host(host_user_id, opts \\ []),
+    do: BookingPaymentQueries.outstanding_refunds_for_host(host_user_id, opts)
+
+  @doc """
   Returns the total count of pending booking payments for a host.
 
   Unlike `list_payments_for_host/2`, this is not bounded by any pagination
@@ -250,11 +262,18 @@ defmodule Tymeslot.MeetingPayments do
   defdelegate refundable_remaining_cents(payment), to: Refunds
 
   @doc """
-  Returns `true` when the payment is in a refundable status and was paid
+  Returns `true` when the payment still owes the attendee money and was paid
   within the 60-day refund window.
   """
-  @spec refundable?(booking_payment()) :: boolean()
+  @spec refundable?(booking_payment() | nil) :: boolean()
   defdelegate refundable?(payment), to: Refunds
+
+  @doc """
+  Returns `true` when the host still holds money the attendee has not been
+  given back, regardless of whether the 60-day window has passed.
+  """
+  @spec refund_outstanding?(booking_payment() | nil) :: boolean()
+  defdelegate refund_outstanding?(payment), to: Refunds
 
   @doc """
   Parses raw refund-form params into a validated `{:ok, pos_integer()}` or

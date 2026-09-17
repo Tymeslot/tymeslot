@@ -156,6 +156,37 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   end
 
   @doc """
+  Lists the host's payments whose meeting has been cancelled while the host
+  still holds the attendee's money.
+
+  Derived from the meeting's status and the payment's own balance rather than
+  from a stored "refund owed" flag, so it cannot drift out of step with either
+  side. Ordered oldest cancellation first: the longer an attendee has been out
+  of pocket, the more urgent the row.
+
+  Deliberately not bounded by `for_host/2`'s recent-payments window, which is
+  what let an older unrefunded cancellation drop off the dashboard entirely.
+  """
+  @spec outstanding_refunds_for_host(integer(), keyword()) :: [BookingPaymentSchema.t()]
+  def outstanding_refunds_for_host(host_user_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 50)
+
+    query =
+      from b in BookingPaymentSchema,
+        join: m in assoc(b, :meeting),
+        where:
+          b.host_user_id == ^host_user_id and
+            b.status in ^BookingPaymentSchema.refundable_statuses() and
+            b.refunded_amount_cents < b.amount_cents and
+            m.status == "cancelled",
+        order_by: [asc: m.cancelled_at],
+        limit: ^limit,
+        preload: [meeting: m]
+
+    Repo.all(query)
+  end
+
+  @doc """
   Returns the count of `pending` booking payments for a host.
 
   Used by the payments dashboard to display an accurate pending count

@@ -27,6 +27,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   import TymeslotWeb.Dashboard.PaymentsSettings.CurrencySelector, only: [currency_selector: 1]
   import TymeslotWeb.Dashboard.PaymentsSettings.DisconnectModal, only: [disconnect_modal: 1]
   import TymeslotWeb.Dashboard.PaymentsSettings.LifetimeStats, only: [lifetime_stats: 1]
+
+  import TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds,
+    only: [outstanding_refunds: 1]
+
   import TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable, only: [payments_table: 1]
   import TymeslotWeb.Dashboard.PaymentsSettings.RefundModal, only: [refund_modal: 1]
 
@@ -43,6 +47,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
      |> assign(:disconnect_modal_open, false)
      |> assign(:connect_account, nil)
      |> assign(:payments, [])
+     |> assign(:outstanding_refunds, [])
      |> assign(:stats, %{received: 0, refunded: 0, platform_fee: 0})
      |> assign(:pending_payments_count, 0)}
   end
@@ -76,6 +81,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
         --%>
         <div :if={not needs_onboarding?(@connect_account)} class="space-y-8">
           <.currency_selector account={@connect_account} myself={@myself} />
+          <.outstanding_refunds
+            payments={@outstanding_refunds}
+            account={@connect_account}
+            myself={@myself}
+          />
           <.payments_table payments={@payments} account={@connect_account} myself={@myself} />
           <.lifetime_stats stats={@stats} account={@connect_account} />
           <.disconnect_zone myself={@myself} />
@@ -325,6 +335,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     socket
     |> assign(:connect_account, connect_account)
     |> assign(:payments, MeetingPayments.list_payments_for_host(user.id))
+    |> assign(:outstanding_refunds, MeetingPayments.list_outstanding_refunds_for_host(user.id))
     |> assign(:stats, MeetingPayments.lifetime_stats_for_host(user.id))
     |> assign(:pending_payments_count, MeetingPayments.count_pending_payments_for_host(user.id))
   end

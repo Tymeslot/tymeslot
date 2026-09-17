@@ -5,6 +5,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
 
   import Swoosh.Email
 
+  alias Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice
   alias Tymeslot.Integrations.Calendar.IcsGenerator
   alias Tymeslot.Locales
 
@@ -90,12 +91,16 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
 
   def render(:organizer, organizer_email, appointment_details) do
     Gettext.with_locale(TymeslotWeb.Gettext, organizer_locale(appointment_details), fn ->
+      refund_notice = RefundNotice.build(appointment_details)
+
       mjml_content = """
       #{Text.centered_text(dgettext("emails", "The appointment with %{name} has been cancelled.", name: appointment_details.attendee_name), padding: "8px 0 16px 0")}
 
       #{MeetingComponents.meeting_details_table(TemplateHelper.organizer_meeting_details(appointment_details), organizer_locale(appointment_details))}
 
       #{MeetingComponents.custom_answers_section(appointment_details)}
+
+      #{RefundNotice.html(refund_notice)}
 
       #{Text.system_footer_note(dgettext("emails", "The attendee has been notified of the cancellation."))}
       """
@@ -126,7 +131,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
         )
       )
       |> html_body(html_body)
-      |> text_body(text_body_organizer(appointment_details))
+      |> text_body(text_body_organizer(appointment_details, refund_notice))
     end)
   end
 
@@ -179,7 +184,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
     )
   end
 
-  defp text_body_organizer(appointment_details) do
+  defp text_body_organizer(appointment_details, refund_notice) do
     appointment_details = TemplateHelper.as_organizer_view(appointment_details)
 
     meeting_details =
@@ -206,7 +211,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
     #{dgettext("emails", "The appointment with %{name} has been cancelled.", name: appointment_details.attendee_name)}
 
     #{dgettext("emails", "CANCELLED APPOINTMENT DETAILS:")}
-    #{meeting_details}#{attendee_info}#{custom_answers}
+    #{meeting_details}#{attendee_info}#{custom_answers}#{RefundNotice.text(refund_notice)}
 
     #{dgettext("emails", "The attendee has been notified of the cancellation.")}
     """
