@@ -459,6 +459,38 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
     end)
   end
 
+  describe "test_connection/2 over plain http to an internal name" do
+    @internal_client %{@caldav_client | base_url: "http://nextcloud/remote.php/dav"}
+
+    test "reaches a Docker service name once private addresses are allowed" do
+      test = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        send(test, {:propfind, conn.scheme, conn.host})
+
+        conn
+        |> Conn.put_resp_header("content-type", "application/xml")
+        |> Conn.send_resp(207, "<D:multistatus xmlns:D=\"DAV:\"/>")
+      end)
+
+      assert {:ok, _message} =
+               Discovery.test_connection(@internal_client,
+                 ip_address: "127.0.0.1",
+                 allow_private_ips: true
+               )
+
+      assert_received {:propfind, :http, "nextcloud"}
+    end
+
+    test "asks for https, without contacting the server, while private addresses are not allowed" do
+      assert {:error, "Use HTTPS for non-local servers"} =
+               Discovery.test_connection(@internal_client,
+                 ip_address: "127.0.0.1",
+                 allow_private_ips: false
+               )
+    end
+  end
+
   describe "test_connection/2 URL validation (SSRF protection)" do
     test "rejects loopback IP before any network contact" do
       client = %{@caldav_client | base_url: "https://127.0.0.1:5232"}

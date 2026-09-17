@@ -535,14 +535,19 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
   # Every request carries the app password over Basic auth, so a public server
   # must be reached over https; a server on localhost or a private network stays
-  # allowed, as it is for CalDAV. API paths are appended to the server address,
+  # allowed, as it is for CalDAV, and so does one on an internal name (a Docker
+  # service name, `.lan`, `.home.arpa`) once the operator allows private video
+  # addresses. API paths are appended to the server address,
   # so `LinkRoom.validate_base_url/1` refuses a query string or a fragment, and
   # credentials embedded in the address, which would reach guests in the link.
   defp validate_base_url(base_url) do
+    allow_private = SsrfGuard.allow_private_for_video?()
+
     with :ok <-
            UrlValidation.validate_http_url(base_url,
-             block_private_ips: not SsrfGuard.allow_private_for_video?(),
+             block_private_ips: not allow_private,
              enforce_https_for_public: true,
+             internal_names_local: allow_private,
              https_error_message:
                dgettext(
                  "dashboard_integrations",

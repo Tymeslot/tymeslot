@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
+  alias Tymeslot.Security.SsrfGuard
   alias Tymeslot.Security.UrlValidation
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -183,6 +184,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
   defp validate_zimbra_url(url) do
     case UrlValidation.validate_http_url(url,
            enforce_https_for_public: true,
+           internal_names_local: SsrfGuard.allow_private_for_calendar?(),
            https_error_message:
              dgettext("dashboard_calendar_providers", "Use HTTPS for non-local Zimbra servers"),
            invalid_message:

@@ -64,7 +64,9 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   in `opts`, or for the whole deployment by the operator's
   `ALLOW_PRIVATE_IPS_FOR_CALENDAR` opt-out, read via
   `Tymeslot.Security.SsrfGuard.allow_private_for_calendar?/0`. The production default is
-  `false` in both cases.
+  `false` in both cases. Lifting it also lets plain HTTP reach a server on an
+  internal name (a single label such as a Docker service name, or a name under
+  `.local`, `.lan`, `.internal` or `.home.arpa`).
   """
   @spec validate_url(String.t(), keyword()) :: :ok | {:error, String.t()}
   def validate_url(url, opts \\ []) do
@@ -81,6 +83,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       invalid_message: invalid_message,
       disallowed_protocol_error: invalid_message,
       enforce_https_for_public: true,
+      internal_names_local: allow_private,
       block_private_ips: not allow_private,
       https_error_message:
         dgettext("dashboard_calendar_providers", "Use HTTPS for non-local calendar servers"),

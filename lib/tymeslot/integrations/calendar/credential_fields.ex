@@ -300,10 +300,16 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
   # guard honours. Reading it here is what makes that switch usable at all: a
   # URL the guard would permit still has to survive this form and the changeset
   # before it can be saved.
+  #
+  # The same opt-out lets plain http reach a server on an internal name (a
+  # Docker service name, `.lan`, `.home.arpa`), which never leaves the network.
   defp do_validate_calendar_url(url) do
+    allow_private = SsrfGuard.allow_private_for_calendar?()
+
     UrlValidation.validate_http_url(url,
       enforce_https_for_public: true,
-      block_private_ips: not SsrfGuard.allow_private_for_calendar?(),
+      internal_names_local: allow_private,
+      block_private_ips: not allow_private,
       https_error_message:
         dgettext("dashboard_calendar_providers", "Use HTTPS for non-local calendar servers"),
       private_ip_error_message:
