@@ -9,6 +9,7 @@ defmodule Tymeslot.CalendarGrid do
 
   alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.CalendarGrid.BookingEvents
+  alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
@@ -303,6 +304,15 @@ defmodule Tymeslot.CalendarGrid do
     {:ok, _count} = ProviderCalendarEventQueries.upsert_batch([normalise_cache_attrs(attrs)])
     :ok
   end
+
+  @doc """
+  Applies `changes` to an existing event, writes the whole updated event to
+  its provider, and records the edit on the cached row. See
+  `Tymeslot.CalendarGrid.EventEdit.update_event/4`.
+  """
+  @spec update_event(pos_integer(), map(), EventEdit.changes(), keyword()) ::
+          {:ok, map()} | {:error, EventEdit.failure()}
+  defdelegate update_event(user_id, event, changes, opts \\ []), to: EventEdit
 
   @doc """
   Updates a cached event's attributes via upsert.
