@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video.AccessToken
+  alias Tymeslot.Integrations.Video.AccountKey
   alias Tymeslot.Integrations.Video.AttrsCasting
   alias Tymeslot.Integrations.Video.Connection
   alias Tymeslot.Integrations.Video.Disconnect
@@ -177,15 +178,16 @@ defmodule Tymeslot.Integrations.Video do
     # Enforce provider in attrs consistently as string for DB layer
     attrs = Map.put(Map.put(attrs, :user_id, user_id), :provider, to_string(provider))
 
-    do_create_integration(provider, attrs)
+    provider
+    |> do_create_integration(attrs)
+    |> AccountKey.refuse_taken_key()
   end
 
   # `create_integration/3` has already atomised every key by the time these
   # clauses run, so the attrs are read one way here.
   defp do_create_integration(:mirotalk, attrs) do
-    # Set provider_account_id for dedup
     base_url = attrs[:base_url]
-    attrs = Map.put(attrs, :provider_account_id, base_url)
+    attrs = Map.put(attrs, :provider_account_id, AccountKey.from_url(base_url))
 
     # Pre-test the connection prior to creation for better UX
     config = %{
@@ -200,9 +202,7 @@ defmodule Tymeslot.Integrations.Video do
   end
 
   defp do_create_integration(:custom, attrs) do
-    # Set provider_account_id from custom_meeting_url for dedup
-    custom_url = attrs[:custom_meeting_url]
-    attrs = Map.put(attrs, :provider_account_id, custom_url)
+    attrs = Map.put(attrs, :provider_account_id, AccountKey.from_url(attrs[:custom_meeting_url]))
 
     with :ok <- check_no_duplicate(attrs) do
       VideoIntegrationQueries.create(attrs)
@@ -228,12 +228,12 @@ defmodule Tymeslot.Integrations.Video do
     end
   end
 
-  # The server URL is the dedup key, so one user can connect several Jitsi
-  # servers but not the same one twice. The config is validated before
+  # The server URL is the dedup key (`AccountKey`), so one user can connect
+  # several Jitsi servers but not the same one twice. The config is validated before
   # anything is saved: a half-filled credential pair or a short secret would
   # otherwise only surface when a later booking fails to get its video link.
   defp do_create_integration(:jitsi, attrs) do
-    attrs = Map.put(attrs, :provider_account_id, attrs[:base_url])
+    attrs = Map.put(attrs, :provider_account_id, AccountKey.from_url(attrs[:base_url]))
 
     with :ok <- JitsiProvider.validate_config(attrs),
          :ok <- check_no_duplicate(attrs) do
@@ -278,24 +278,9 @@ defmodule Tymeslot.Integrations.Video do
     Connection.probe(:mirotalk, config, {:user, user_id})
   end
 
-  defp check_no_duplicate(%{
-         user_id: user_id,
-         provider: provider,
-         provider_account_id: account_id
-       })
-       when is_binary(account_id) and account_id != "" do
-    # Check both active and inactive integrations to prevent duplicate rows
-    case VideoIntegrationQueries.get_any_by_account_for_user(
-           user_id,
-           to_string(provider),
-           account_id
-         ) do
-      {:ok, _existing} -> {:error, :duplicate_integration}
-      {:error, :not_found} -> :ok
-    end
-  end
-
-  defp check_no_duplicate(_attrs), do: :ok
+  # Active and inactive integrations alike, so no two rows share an account.
+  defp check_no_duplicate(%{user_id: user_id, provider: provider} = attrs),
+    do: AccountKey.check_free(user_id, provider, attrs[:provider_account_id], nil)
 
   defp provider_already_connected?(%Ecto.Changeset{errors: errors}) do
     Enum.any?(Keyword.get_values(errors, :provider), fn {_message, opts} ->

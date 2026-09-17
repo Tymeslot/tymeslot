@@ -17,6 +17,11 @@ defmodule Tymeslot.Integrations.Video.Update do
   reconnected by entering its new address together with the app password. A
   new subfolder on the same server keeps the stored one.
 
+  MiroTalk, Jitsi and the custom video link are keyed on their address
+  (`Tymeslot.Integrations.Video.AccountKey`), so a new address moves the key
+  with it and is refused when another of the owner's integrations, active or
+  not, already holds it.
+
   A reschedule made while the integration needed reconnecting could not be
   sent to its rooms, so a proven reconnect sends every upcoming meeting's room
   its current time and name again. An unproven clear never does: those
@@ -28,6 +33,7 @@ defmodule Tymeslot.Integrations.Video.Update do
 
   alias Plug.Crypto
   alias Tymeslot.Integrations.HealthCheck
+  alias Tymeslot.Integrations.Video.AccountKey
   alias Tymeslot.Integrations.Video.AttrsCasting
   alias Tymeslot.Integrations.Video.Connection
   alias Tymeslot.Integrations.Video.ProviderConfig
@@ -73,8 +79,9 @@ defmodule Tymeslot.Integrations.Video.Update do
       {:ok, integration} ->
         attrs = effective_changes(integration, attrs)
 
-        with :ok <- validate_update(integration, attrs) do
-          save_update(integration, attrs)
+        with :ok <- check_url_account_free(integration, attrs),
+             :ok <- validate_update(integration, attrs) do
+          integration |> save_update(attrs) |> AccountKey.refuse_taken_key()
         end
 
       {:error, :not_found} = err ->
@@ -123,7 +130,24 @@ defmodule Tymeslot.Integrations.Video.Update do
     attrs |> Map.drop(@talk_saved_fields) |> Map.merge(changes)
   end
 
-  defp effective_changes(_integration, attrs), do: attrs
+  # MiroTalk, Jitsi and the custom link are keyed on their address, so a new
+  # address moves the key with it; a submitted key is never taken as given. An
+  # address written differently but leading to the same place leaves the key
+  # alone, and so does a blank one, which the changeset refuses.
+  defp effective_changes(%VideoIntegrationSchema{provider: provider} = integration, attrs) do
+    case AccountKey.url_field(provider) do
+      nil ->
+        attrs
+
+      field ->
+        attrs = Map.delete(attrs, :provider_account_id)
+        new_key = attrs |> Map.get(field) |> AccountKey.from_url()
+
+        if is_nil(new_key) or new_key == AccountKey.from_url(Map.get(integration, field)),
+          do: attrs,
+          else: Map.put(attrs, :provider_account_id, new_key)
+    end
+  end
 
   defp unchanged?(:client_secret, submitted, stored) when is_binary(submitted),
     do: same_credential?(submitted, stored)
@@ -262,21 +286,17 @@ defmodule Tymeslot.Integrations.Video.Update do
   defp origin(_url), do: nil
 
   # Active or not, as creation checks, so no two rows share an account key.
-  defp check_account_free(integration, %{provider_account_id: account_id}) do
-    case VideoIntegrationQueries.get_any_by_account_for_user(
-           integration.user_id,
-           integration.provider,
-           account_id
-         ) do
-      {:ok, %VideoIntegrationSchema{id: id}} when id != integration.id ->
-        {:error, :duplicate_integration}
-
-      _free_or_this_integration ->
-        :ok
-    end
-  end
+  defp check_account_free(integration, %{provider_account_id: account_id}),
+    do:
+      AccountKey.check_free(integration.user_id, integration.provider, account_id, integration.id)
 
   defp check_account_free(_integration, _attrs), do: :ok
+
+  # A Nextcloud Talk key is checked in `validate_update/2`, after the server
+  # address is known to be usable and before any login attempt is spent.
+  defp check_url_account_free(%VideoIntegrationSchema{provider: provider} = integration, attrs) do
+    if AccountKey.url_field(provider), do: check_account_free(integration, attrs), else: :ok
+  end
 
   defp jitsi_config_after_update(integration, attrs) do
     integration

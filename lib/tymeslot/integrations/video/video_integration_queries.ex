@@ -261,6 +261,25 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   end
 
   @doc """
+  Lists the account keys of the user's integrations for `provider`, active or
+  not, leaving out the integration `except_id` (`nil` leaves out none).
+  """
+  @spec list_account_keys_for_user(integer(), String.t(), integer() | nil) :: [String.t()]
+  def list_account_keys_for_user(user_id, provider, except_id)
+      when is_integer(user_id) and is_binary(provider) do
+    VideoIntegrationSchema
+    |> exclude_deleted()
+    |> where([v], v.user_id == ^user_id and v.provider == ^provider)
+    |> where([v], not is_nil(v.provider_account_id))
+    |> except_integration(except_id)
+    |> select([v], v.provider_account_id)
+    |> Repo.all()
+  end
+
+  defp except_integration(query, nil), do: query
+  defp except_integration(query, id), do: where(query, [v], v.id != ^id)
+
+  @doc """
   Creates a new video integration.
   """
   @spec create(map()) :: {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
