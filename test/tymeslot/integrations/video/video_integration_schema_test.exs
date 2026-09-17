@@ -241,6 +241,48 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchemaTest do
     end
   end
 
+  describe "changeset/2 - nextcloud_talk provider specific fields" do
+    test "requires username and app password (api_key)" do
+      user = insert(:user)
+
+      attrs = %{
+        user_id: user.id,
+        name: "Nextcloud Talk",
+        provider: "nextcloud_talk",
+        base_url: "https://cloud.example.com"
+      }
+
+      changeset = VideoIntegrationSchema.changeset(%VideoIntegrationSchema{}, attrs)
+      refute changeset.valid?
+      assert "can't be blank" in errors_on(changeset).username
+      assert "can't be blank" in errors_on(changeset).api_key
+    end
+
+    test "stores the username encrypted and decrypts it again" do
+      user = insert(:user)
+
+      attrs = %{
+        user_id: user.id,
+        name: "Nextcloud Talk",
+        provider: "nextcloud_talk",
+        base_url: "https://cloud.example.com",
+        username: "alice",
+        api_key: "abcde-fghij-klmno-pqrst-uvwxy"
+      }
+
+      changeset = VideoIntegrationSchema.changeset(%VideoIntegrationSchema{}, attrs)
+      assert changeset.valid?
+      refute Map.has_key?(changeset.changes, :username)
+      assert Encryption.decrypt(changeset.changes.username_encrypted) == "alice"
+
+      {:ok, integration} = Repo.insert(changeset)
+      decrypted = VideoIntegrationSchema.decrypt_credentials(Repo.reload!(integration))
+
+      assert decrypted.username == "alice"
+      assert decrypted.api_key == "abcde-fghij-klmno-pqrst-uvwxy"
+    end
+  end
+
   describe "changeset/2 - credential encryption" do
     test "encrypts api_key before storage" do
       user = insert(:user)

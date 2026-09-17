@@ -11,9 +11,9 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
   describe "list_providers/0" do
     test "returns list of all registered video providers" do
       assert Enum.sort(ProviderRegistry.list_providers()) ==
-               [:custom, :google_meet, :mirotalk, :teams, :zoom]
+               [:custom, :google_meet, :mirotalk, :nextcloud_talk, :teams, :zoom]
 
-      assert ProviderRegistry.provider_count() == 5
+      assert ProviderRegistry.provider_count() == 6
     end
   end
 
@@ -141,7 +141,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
       providers = ProviderRegistry.list_providers_with_metadata()
 
       assert Enum.sort(Enum.map(providers, & &1.type)) ==
-               [:custom, :google_meet, :mirotalk, :teams, :zoom]
+               [:custom, :google_meet, :mirotalk, :nextcloud_talk, :teams, :zoom]
 
       assert Enum.reject(providers, &Code.ensure_loaded?(&1.module)) == []
       assert Enum.reject(providers, &(String.length(&1.display_name) > 0)) == []
@@ -179,10 +179,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
 
   describe "providers_with_capability/1" do
     test "filters providers by specific capability" do
-      # MiroTalk, Google Meet, Teams and Zoom declare screen_sharing; only the
-      # custom provider does not.
+      # MiroTalk, Nextcloud Talk, Google Meet, Teams and Zoom declare
+      # screen_sharing; only the custom provider does not.
       assert Enum.sort(ProviderRegistry.providers_with_capability(:screen_sharing)) ==
-               [:google_meet, :mirotalk, :teams, :zoom]
+               [:google_meet, :mirotalk, :nextcloud_talk, :teams, :zoom]
     end
 
     test "returns empty list for non-existent capability" do

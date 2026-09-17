@@ -44,6 +44,10 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreaker do
     mirotalk: %{
       failure_threshold: 3,
       recovery_timeout: :timer.minutes(2)
+    },
+    nextcloud_talk: %{
+      failure_threshold: 3,
+      recovery_timeout: :timer.minutes(2)
     }
   }
 

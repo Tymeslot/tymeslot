@@ -43,7 +43,14 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
   same window), it just isn't tied to any one provider's own bucket.
   """
   @type connection_bucket ::
-          :caldav | :nextcloud | :mirotalk | :custom | :ics_url | :oauth | :discovery
+          :caldav
+          | :nextcloud
+          | :mirotalk
+          | :nextcloud_talk
+          | :custom
+          | :ics_url
+          | :oauth
+          | :discovery
 
   @typedoc """
   What the person did to reach a connection-test bucket, which is not the same
@@ -104,6 +111,10 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
   defp bucket_info(:caldav), do: {"caldav_connection", "CalDAV connection test"}
   defp bucket_info(:nextcloud), do: {"nextcloud_connection", "Nextcloud connection test"}
   defp bucket_info(:mirotalk), do: {"mirotalk_connection", "MiroTalk connection test"}
+
+  defp bucket_info(:nextcloud_talk),
+    do: {"nextcloud_talk_connection", "Nextcloud Talk connection test"}
+
   defp bucket_info(:custom), do: {"custom_video_connection", "Custom video connection test"}
   defp bucket_info(:ics_url), do: {"ics_url_connection", "Calendar subscription test"}
   defp bucket_info(:oauth), do: {"oauth_connection", "OAuth connection test"}

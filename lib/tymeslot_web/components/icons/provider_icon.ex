@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   Renders a provider icon for calendar, video, and OAuth providers.
 
   Supports different sizes (compact, medium, large) and all providers:
-  - Video: mirotalk, google_meet, teams, zoom, custom, in_person, local, none
+  - Video: mirotalk, nextcloud_talk, google_meet, teams, zoom, custom, in_person, local, none
   - Calendar: google, google_calendar, outlook, outlook_calendar, nextcloud, nextcloud_calendar, caldav, radicale, zimbra, mailbox_org
   - OAuth: google, github
 
@@ -94,6 +94,14 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
   # at a bundled generic SVG — which scales to any size — instead of a
   # non-existent exchange.webp.
   defp build_icon_path("exchange", _type, _size), do: "/icons/providers/calendar/exchange.svg"
+
+  # Talk is part of Nextcloud and carries its logo, which already ships in every
+  # size for the Nextcloud calendar provider. Reuse those files rather than
+  # adding a second copy of the same mark under the video directory.
+  defp build_icon_path("nextcloud_talk", _type, size) do
+    actual_size = if size == "mini", do: "compact", else: size
+    "/icons/providers/calendar/#{actual_size}/nextcloud.webp"
+  end
 
   defp build_icon_path(provider, type, size) do
     # Determine the type based on provider if not explicitly set

@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Video.Urls do
   """
 
   alias Tymeslot.Integrations.Video.MeetingContext
+  alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
 
   @spec extract_room_id(String.t() | MeetingContext.t()) :: String.t() | nil
@@ -21,6 +22,24 @@ defmodule Tymeslot.Integrations.Video.Urls do
   end
 
   def extract_room_id(_other), do: nil
+
+  @doc """
+  The room id of `meeting_url` when it is a link of `provider` (a stored
+  provider name such as `"zoom"`), otherwise nil. For callers that act on a
+  room through one particular integration, where another provider's link has
+  no room there.
+  """
+  @spec extract_room_id(String.t(), String.t() | atom()) :: String.t() | nil
+  def extract_room_id(meeting_url, provider) when is_binary(meeting_url) do
+    with {:ok, provider_type} <- ProviderConfig.parse_known(to_string(provider)),
+         {:ok, ^provider_type} <- ProviderAdapter.provider_for_url(meeting_url) do
+      ProviderAdapter.extract_room_id(meeting_url)
+    else
+      _other -> nil
+    end
+  end
+
+  def extract_room_id(_meeting_url, _provider), do: nil
 
   @spec valid_meeting_url?(String.t()) :: boolean()
   def valid_meeting_url?(meeting_url) when is_binary(meeting_url) do

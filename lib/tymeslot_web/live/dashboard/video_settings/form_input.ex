@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.FormInput do
     "name" => :name,
     "base_url" => :base_url,
     "api_key" => :api_key,
+    "username" => :username,
     "custom_meeting_url" => :custom_meeting_url
   }
 

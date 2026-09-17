@@ -139,6 +139,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     [ConnectionRow.server_label(integration.base_url)]
   end
 
+  defp summary_segments(%{provider: "nextcloud_talk"} = integration) do
+    [ConnectionRow.server_label(integration.base_url)]
+  end
+
   defp summary_segments(%{provider: "custom"} = integration) do
     [Map.get(integration, :custom_meeting_url), dgettext("dashboard_integrations", "custom link")]
   end
@@ -170,6 +174,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   end
 
   defp type_tag("mirotalk"), do: dgettext("dashboard_integrations", "self-hosted")
+  defp type_tag("nextcloud_talk"), do: dgettext("dashboard_integrations", "self-hosted")
   defp type_tag("custom"), do: dgettext("dashboard_integrations", "custom")
 
   defp type_tag(provider) do

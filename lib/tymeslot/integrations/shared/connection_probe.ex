@@ -84,7 +84,15 @@ defmodule Tymeslot.Integrations.Shared.ConnectionProbe do
   real external service.
   """
   @type bucket ::
-          :caldav | :nextcloud | :mirotalk | :custom | :ics_url | :oauth | :discovery | :unmetered
+          :caldav
+          | :nextcloud
+          | :mirotalk
+          | :nextcloud_talk
+          | :custom
+          | :ics_url
+          | :oauth
+          | :discovery
+          | :unmetered
 
   @typedoc """
   What the person did to reach the bucket, as opposed to which bucket they

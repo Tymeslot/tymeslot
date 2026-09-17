@@ -240,6 +240,39 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                       target={@myself}
                     />
                   </div>
+                <% "nextcloud_talk" -> %>
+                  <SharedForm.url_field
+                    id="edit_base_url"
+                    name="integration[base_url]"
+                    label={dgettext("dashboard_integrations", "Server URL")}
+                    value={Map.get(@form_values, "base_url", @integration.base_url || "")}
+                    placeholder={dgettext("dashboard_integrations", "https://cloud.yourdomain.com")}
+                    form_errors={@form_errors}
+                    error_key={:base_url}
+                    target={@myself}
+                    helper_text={dgettext("dashboard_integrations", "Your Nextcloud server URL")}
+                  />
+
+                  <SharedForm.username_field
+                    id="edit_username"
+                    name="integration[username]"
+                    value={Map.get(@form_values, "username", @integration.username || "")}
+                    placeholder={dgettext("dashboard_integrations", "Your Nextcloud username")}
+                    form_errors={@form_errors}
+                    target={@myself}
+                  />
+
+                  <div class="md:col-span-2">
+                    <SharedForm.api_key_field
+                      id="edit_api_key"
+                      name="integration[api_key]"
+                      label={dgettext("dashboard_integrations", "App Password")}
+                      form_errors={@form_errors}
+                      value={Map.get(@form_values, "api_key", "")}
+                      placeholder={dgettext("dashboard_integrations", "Enter new app password")}
+                      target={@myself}
+                    />
+                  </div>
                 <% _ -> %>
               <% end %>
             </div>
@@ -326,6 +359,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
         |> Map.put("base_url", integration.base_url || "")
         |> Map.put("api_key", "")
 
+      "nextcloud_talk" ->
+        base
+        |> Map.put("base_url", integration.base_url || "")
+        |> Map.put("username", integration.username || "")
+        |> Map.put("api_key", "")
+
       _oauth ->
         base
     end
@@ -345,6 +384,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   defp map_field_to_atom("name"), do: :name
   defp map_field_to_atom("base_url"), do: :base_url
   defp map_field_to_atom("api_key"), do: :api_key
+  defp map_field_to_atom("username"), do: :username
   defp map_field_to_atom("custom_meeting_url"), do: :custom_meeting_url
   defp map_field_to_atom(_other), do: :unknown
 end

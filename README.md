@@ -142,6 +142,11 @@ Every connected calendar is checked the moment someone books. One conflict anywh
 <td align="center"><img src="./priv/static/icons/providers/video/medium/in_person.webp" alt="In person / phone" height="40" /><br /><sub>In person / phone</sub></td>
 <td align="center"><img src="./priv/static/icons/providers/video/medium/custom.webp" alt="Custom link" height="40" /><br /><sub>Custom link</sub></td>
 </tr>
+<tr>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/nextcloud.webp" alt="Nextcloud Talk" height="40" /><br /><sub>Nextcloud Talk</sub></td>
+<td></td>
+<td></td>
+</tr>
 </table>
 
 ---
