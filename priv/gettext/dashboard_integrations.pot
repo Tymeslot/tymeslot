@@ -1356,7 +1356,7 @@ msgstr ""
 msgid "Login name is required"
 msgstr ""
 
-#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk/booking_conversation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting"
 msgstr ""
@@ -1545,4 +1545,9 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
 #, elixir-autogen, elixir-format
 msgid "kMeet is Infomaniak's hosted service and always uses this address, which cannot be changed."
+msgstr ""
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk/booking_conversation.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through Tymeslot. Reference: %{reference}"
 msgstr ""

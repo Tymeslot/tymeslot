@@ -47,7 +47,9 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkReauthTest do
     integration: integration,
     config: config
   } do
-    expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+    # The lookup for an earlier attempt's conversation is refused, so no
+    # creation spends a second login attempt.
+    expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
       {:ok, %Req.Response{status: 401, body: ""}}
     end)
 

@@ -40,6 +40,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   alias Tymeslot.Workers.VideoSyncWorker
 
   @room_path "/ocs/v2.php/apps/spreed/api/v4/room"
+  @room_list @room_path <> "?noStatusUpdate=1&includeLastMessage=0"
   @login "organiser"
   @app_password "Abcde-Fghij-Klmno-Pqrst-Uvwxy"
   @new_app_password "Zyxwv-Utsrq-Ponml-Kjihg-Fedcb"
@@ -81,18 +82,21 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     assert DateTime.compare(booked.start_time, start_time) == :eq
     assert_enqueued(worker: VideoRoomWorker, args: %{"meeting_id" => booked.id})
 
-    # The booking: one call creates a public conversation named after it, with
-    # a lobby that lifts at the meeting's start.
-    nextcloud_answers([{201, ocs(%{"token" => @token})}])
+    # The booking: no earlier attempt left a conversation, so one call creates
+    # a public conversation named after it, with a lobby that lifts at the
+    # meeting's start and the booking's reference in its description.
+    nextcloud_answers([{200, ocs([])}, {201, ocs(%{"token" => @token})}])
     assert %{success: 1, failure: 0} = drain_video_rooms()
 
     assert requests() == [
+             {:get, server <> @room_list, nil},
              {:post, server <> @room_path,
               %{
                 "roomType" => 3,
                 "roomName" => "Talk consultation with Ada Lovelace",
                 "lobbyState" => 1,
-                "lobbyTimer" => DateTime.to_unix(start_time)
+                "lobbyTimer" => DateTime.to_unix(start_time),
+                "description" => "Booked through Tymeslot. Reference: " <> reference(booked)
               }}
            ]
 
@@ -153,6 +157,44 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     assert requests() == [{:delete, server <> @room_path <> "/" <> @token, nil}]
 
     assert %{status: "cancelled", video_room_id: nil, video_room_enabled: false} =
+             Repo.reload!(booked)
+  end
+
+  test "a room job that stopped waiting before Nextcloud answered adopts that conversation on its retry",
+       %{user: user} do
+    server = server("late-answer")
+    integration = insert_talk_integration(user, server)
+    meeting_type = insert_meeting_type(user, integration, "Talk consultation")
+
+    assert {:ok, %MeetingSchema{} = booked} =
+             Orchestrator.submit_booking(
+               booking_params(user, meeting_type, booking_start(3)),
+               organizer_user_id: user.id
+             )
+
+    # Nextcloud creates the conversation, but its answer never arrives in time.
+    nextcloud_answers([{200, ocs([])}, {:error, %Req.TransportError{reason: :timeout}}])
+    assert %{success: 0} = drain_video_rooms()
+    assert [{:get, _list_url, nil}, {:post, _create_url, _params}] = requests()
+    assert Repo.reload!(booked).video_room_id == nil
+
+    # The retry finds that conversation by the booking's reference and records
+    # it, rather than creating a second one nothing would ever delete.
+    made = %{
+      "token" => @token,
+      "type" => 3,
+      "name" => "Talk consultation with Ada Lovelace",
+      "description" => "Booked through Tymeslot. Reference: " <> reference(booked)
+    }
+
+    nextcloud_answers([{200, ocs([%{"token" => "other123", "description" => ""}, made])}])
+    assert %{success: 1, failure: 0} = drain_video_rooms(with_scheduled: true)
+
+    assert requests() == [{:get, server <> @room_list, nil}]
+
+    join_link = server <> "/index.php/call/" <> @token
+
+    assert %{video_room_id: @token, meeting_url: ^join_link, attendee_video_url: ^join_link} =
              Repo.reload!(booked)
   end
 
@@ -352,12 +394,22 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
   defp nextcloud_answers(answers) do
     test = self()
 
-    Enum.each(answers, fn {status, body} ->
+    Enum.each(answers, fn answer ->
       expect(HTTPClientMock, :request, fn method, url, request_body, headers, _opts ->
         send(test, {:nextcloud, method, url, decode(request_body), headers})
-        {:ok, %Req.Response{status: status, body: body}}
+        respond(answer)
       end)
     end)
+  end
+
+  # An answer is a status and body, or a request that never completed.
+  defp respond({:error, _exception} = failure), do: failure
+  defp respond({status, body}), do: {:ok, %Req.Response{status: status, body: body}}
+
+  # The reference a booking's conversation carries: the first 16 hex
+  # characters of the SHA-256 of its meeting id.
+  defp reference(meeting) do
+    :sha256 |> :crypto.hash(meeting.id) |> Base.encode16(case: :lower) |> binary_part(0, 16)
   end
 
   # The requests Nextcloud received since the last call, in order. Each must
@@ -410,9 +462,9 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
         organizer_user_id: user.id
       )
 
-    nextcloud_answers([{201, ocs(%{"token" => @token})}])
+    nextcloud_answers([{200, ocs([])}, {201, ocs(%{"token" => @token})}])
     assert %{success: 1} = drain_video_rooms()
-    assert [{:post, url, _params}] = requests()
+    assert [{:get, _list_url, nil}, {:post, url, _params}] = requests()
     assert url == server <> @room_path
 
     Repo.reload!(meeting)

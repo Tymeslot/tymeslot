@@ -17,6 +17,10 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   redirect) is reported as a configuration error, which the sync job discards
   rather than retries.
 
+  Creation first looks for a conversation an earlier attempt made for the same
+  booking, as `Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversation`
+  describes, so a retry never leaves a second one behind.
+
   The join link is `<server>/index.php/call/<token>`. That form works whether
   or not the server has pretty URLs configured; the shorter `/call/<token>` is
   a 404 on a server without them. The link is the same for every participant
@@ -55,6 +59,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   alias Tymeslot.Integrations.Video.NeedsReauth
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.LinkRoom
+  alias Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversation
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.RoomData
@@ -65,18 +70,10 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
   @behaviour ProviderBehaviour
 
-  # A public conversation: anyone holding the link may join as a guest.
-  @public_conversation 3
-
-  # Lobby state 1 holds everyone but moderators until the timer passes.
-  @lobby_for_non_moderators 1
-
   # Talk accepts the lobby in the creating call from 21.1 onwards. The server
   # announces it with this feature flag, which the connection test checks
   # instead of comparing version numbers.
   @required_feature "conversation-creation-all"
-
-  @max_room_name_length 255
 
   # `video_integrations.provider_account_id` is `varchar(255)` and holds
   # `<server>||<login>`.
@@ -98,7 +95,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   def create_meeting_room(%{needs_reauth: true}), do: {:error, :unauthorized}
 
   def create_meeting_room(config) do
-    with {:ok, data} <- create_conversation(config),
+    with {:ok, data} <- booking_conversation(config),
          {:ok, token} <- fetch_token(data) do
       {:ok,
        %RoomData{
@@ -288,8 +285,8 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
   defp trim_app_password(attrs), do: attrs
 
-  defp create_conversation(config) do
-    case Client.create_room(credentials(config), conversation_params(config)) do
+  defp booking_conversation(config) do
+    case BookingConversation.find_or_create(credentials(config), config) do
       {:ok, data} -> {:ok, data}
       {:error, reason} -> {:error, creation_failure(reason, config)}
     end
@@ -300,10 +297,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   defp move_lobby(room_id, %{meeting_start_time: %DateTime{} = start_time} = config) do
     config
     |> credentials()
-    |> Client.set_lobby(room_id, %{
-      "state" => @lobby_for_non_moderators,
-      "timer" => unix(start_time)
-    })
+    |> Client.set_lobby(room_id, BookingConversation.lobby(start_time))
     |> lifecycle_result(config)
   end
 
@@ -319,7 +313,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
       title ->
         config
         |> credentials()
-        |> Client.rename_room(room_id, room_name(title))
+        |> Client.rename_room(room_id, BookingConversation.room_name(title))
         |> tolerate_rename_refusal(config)
         |> lifecycle_result(config)
     end
@@ -381,35 +375,6 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
     do: {:error, {:configuration_error, :redirected}}
 
   defp lifecycle_result({:error, reason}, _config), do: {:error, reason}
-
-  defp conversation_params(config) do
-    details = Map.get(config, :event_details) || %{}
-
-    Map.merge(
-      %{
-        "roomType" => @public_conversation,
-        "roomName" => room_name(Map.get(details, :summary))
-      },
-      lobby_params(Map.get(details, :start_time))
-    )
-  end
-
-  # Without a start time there is nothing for the lobby to wait for, so the
-  # conversation opens at once.
-  defp lobby_params(nil), do: %{}
-
-  defp lobby_params(start_time),
-    do: %{"lobbyState" => @lobby_for_non_moderators, "lobbyTimer" => unix(start_time)}
-
-  defp room_name(summary) when is_binary(summary) and summary != "",
-    do: String.slice(summary, 0, @max_room_name_length)
-
-  defp room_name(_summary), do: dgettext("dashboard_integrations", "Meeting")
-
-  defp unix(%DateTime{} = time), do: DateTime.to_unix(time)
-
-  defp unix(%NaiveDateTime{} = time),
-    do: time |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_unix()
 
   # A token Talk would not route could never be rescheduled or cancelled, so it
   # is no room either.

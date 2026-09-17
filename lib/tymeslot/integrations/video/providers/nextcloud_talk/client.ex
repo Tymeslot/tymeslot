@@ -14,7 +14,8 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
 
   Never probe a conversation with GET: Nextcloud counts a GET for an unknown
   token as a brute-force attempt against the calling address, whereas a DELETE
-  for one is not.
+  for one is not. Listing the signed-in user's conversations carries no such
+  protection, so a conversation is looked for there instead.
 
   A conversation token is checked against Talk's own route constraint (4 to 30
   lowercase letters and digits) before any request is built, so a malformed
@@ -27,6 +28,10 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
 
   @capabilities_path "/ocs/v2.php/cloud/capabilities"
   @room_path "/ocs/v2.php/apps/spreed/api/v4/room"
+
+  # Only what a lookup reads: no last message, and the user's online status
+  # left alone, which a listing would otherwise refresh.
+  @list_rooms_query "?noStatusUpdate=1&includeLastMessage=0"
 
   @connect_timeout_ms 5_000
   @receive_timeout_ms 15_000
@@ -65,6 +70,14 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
   @doc "Reads the server's capabilities as the signed-in user."
   @spec capabilities(credentials()) :: {:ok, term()} | {:error, error()}
   def capabilities(credentials), do: request(:get, credentials, @capabilities_path, nil)
+
+  @doc """
+  Lists the conversations the signed-in user takes part in, each as its OCS
+  room map, which carries the `token` and the `description`.
+  """
+  @spec list_rooms(credentials()) :: {:ok, term()} | {:error, error()}
+  def list_rooms(credentials),
+    do: request(:get, credentials, @room_path <> @list_rooms_query, nil)
 
   @doc "Creates a conversation and returns its OCS `data`, which carries the `token`."
   @spec create_room(credentials(), map()) :: {:ok, term()} | {:error, error()}

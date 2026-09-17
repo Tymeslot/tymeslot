@@ -43,6 +43,19 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientTest do
       assert {:ok, %{"capabilities" => %{}}} = Client.capabilities(@credentials)
     end
 
+    test "list the signed-in user's conversations without their last messages" do
+      expect(HTTPClientMock, :request, fn :get, url, "", headers, opts ->
+        assert url == @room_api <> "?noStatusUpdate=1&includeLastMessage=0"
+        refute List.keymember?(headers, "Content-Type", 0)
+        assert opts[:ssrf_protect] == true
+
+        {:ok,
+         %Req.Response{status: 200, body: ocs([%{"token" => "abc123xy", "description" => ""}])}}
+      end)
+
+      assert {:ok, [%{"token" => "abc123xy"}]} = Client.list_rooms(@credentials)
+    end
+
     test "create a conversation from a JSON body and return its data" do
       expect(HTTPClientMock, :request, fn :post, url, body, headers, _opts ->
         assert url == @room_api

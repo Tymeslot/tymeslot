@@ -1358,7 +1358,7 @@ msgstr "Ім'я для входу"
 msgid "Login name is required"
 msgstr "Потрібно вказати ім'я для входу"
 
-#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk/booking_conversation.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting"
 msgstr "Зустріч"
@@ -1548,3 +1548,8 @@ msgstr "kMeet"
 #, elixir-autogen, elixir-format
 msgid "kMeet is Infomaniak's hosted service and always uses this address, which cannot be changed."
 msgstr "kMeet є хмарним сервісом Infomaniak і завжди використовує цю адресу, яку не можна змінити."
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk/booking_conversation.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through Tymeslot. Reference: %{reference}"
+msgstr "Заброньовано через Tymeslot. Ідентифікатор: %{reference}"
