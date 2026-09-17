@@ -10,7 +10,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
-  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.VideoSync
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -69,11 +68,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         {:noreply, socket}
 
       event ->
-        new_id = Shared.parse_optional_int(params["video_integration_id"])
-        updated_event = Map.put(event, :video_integration_id, new_id)
-        {:noreply, assign(socket, :selected_event, updated_event)}
+        with {:ok, new_id} <- parse_video_choice(params["video_integration_id"]),
+             :ok <- EditWorkflow.assert_event_writable(socket, event),
+             :ok <- Shared.check_edit_rate_limit(socket) do
+          optimistic_event = Map.put(event, :video_integration_id, new_id)
+
+          Shared.apply_optimistic_update(socket, optimistic_event, fn s ->
+            EditWorkflow.change_event_video_async(s, event, new_id)
+          end)
+        else
+          {:error, reason} = error when reason in [:unauthorized, :read_only] ->
+            Shared.flash_guard_error(socket, error)
+
+          {:error, :rate_limited, _message} = error ->
+            Shared.flash_guard_error(socket, error)
+
+          :error ->
+            {:noreply, socket}
+        end
     end
   end
+
+  # "None" arrives as an empty value; anything else must be an integration id,
+  # so a malformed value is ignored rather than read as a removal.
+  defp parse_video_choice(value) when value in [nil, ""], do: {:ok, nil}
+  defp parse_video_choice(value), do: Shared.parse_int(value)
 
   @spec handle_update_event_location(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -572,8 +591,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   end
 
   defp apply_notify_result(socket, original_event, updated_event) do
-    socket = VideoSync.sync_video_integration_async(socket, original_event, updated_event)
-
     attendees = updated_event.attendees || original_event.attendees || []
 
     case EditWorkflow.notify_event_updated(original_event, updated_event, attendees) do

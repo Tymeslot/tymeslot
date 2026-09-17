@@ -442,8 +442,8 @@ defmodule TymeslotWeb.DashboardLive do
   def handle_info({:event_move_result, result}, socket),
     do: result |> CalendarEventHandlers.handle_event_move_result(socket) |> rebuild_agenda()
 
-  def handle_info({:video_sync_result, event_id, result}, socket),
-    do: CalendarEventHandlers.handle_video_sync_result(event_id, result, socket)
+  def handle_info({:event_video_result, result}, socket),
+    do: CalendarEventHandlers.handle_event_video_result(result, socket)
 
   def handle_info({:execute_create_event, payload}, socket),
     do: CalendarEventHandlers.handle_execute_create_event(payload, socket)

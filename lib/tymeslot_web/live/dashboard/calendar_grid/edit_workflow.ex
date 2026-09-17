@@ -168,6 +168,39 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     do: {:error, original_event: event, reason: reason, retry: retry}
 
   @doc """
+  Gives `event` a room on the video integration `video_integration_id`, or
+  removes its video link when that is `nil`, in the background through
+  `Tymeslot.CalendarGrid.change_event_video/3`.
+
+  Reports back with `{:event_video_result, {:ok, event_id: id,
+  video_integration_id: id, video_link: url}}`, or with
+  `{:event_video_result, {:error, original_event: event, reason: reason}}`
+  when nothing was changed.
+  """
+  @spec change_event_video_async(Phoenix.LiveView.Socket.t(), map(), pos_integer() | nil) ::
+          Phoenix.LiveView.Socket.t()
+  def change_event_video_async(socket, event, video_integration_id) do
+    user_id = socket.assigns.current_user.id
+
+    run_async(
+      socket,
+      :event_video_result,
+      fn ->
+        case CalendarGrid.change_event_video(user_id, event, video_integration_id) do
+          {:ok, url} ->
+            {:ok, event_id: event.id, video_integration_id: video_integration_id, video_link: url}
+
+          {:error, reason} ->
+            video_failure(event, reason)
+        end
+      end,
+      video_failure(event, :crashed)
+    )
+  end
+
+  defp video_failure(event, reason), do: {:error, original_event: event, reason: reason}
+
+  @doc """
   Moves `event` to `integration` (on `calendar_id`, or its default calendar
   when `nil`) in the background through `Tymeslot.CalendarGrid.move_event/3`.
 

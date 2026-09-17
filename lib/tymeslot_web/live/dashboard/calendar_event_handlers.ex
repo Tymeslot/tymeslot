@@ -239,33 +239,54 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     {:noreply, put_flash(socket, :error, reason)}
   end
 
-  @doc "Applies the result of an async video room provisioning to the calendar grid."
-  @spec handle_video_sync_result(
-          integer() | nil,
-          {:ok, String.t() | nil} | {:error, term()},
+  @doc """
+  Handles the result of changing an event's video room: shows the new link,
+  or puts the previous choice back and says why nothing changed.
+  """
+  @spec handle_event_video_result(
+          {:ok, keyword()} | {:error, keyword()},
           Phoenix.LiveView.Socket.t()
         ) :: {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_video_sync_result(_event_id, {:error, _reason}, socket) do
-    {:noreply,
-     put_flash(
-       socket,
-       :error,
-       dgettext("dashboard_calendar_events", "Failed to provision video room - link not updated")
-     )}
-  end
-
-  def handle_video_sync_result(event_id, {:ok, video_link}, socket) do
+  def handle_event_video_result({:ok, result}, socket) do
     if socket.assigns.live_action == :calendar do
       send_update(CalendarGridComponent,
         id: "calendar",
         action: :video_link_updated,
-        event_id: event_id,
-        video_link: video_link
+        event_id: result[:event_id],
+        video_integration_id: result[:video_integration_id],
+        video_link: result[:video_link]
       )
     end
 
-    {:noreply, socket}
+    {:noreply, put_flash(socket, :info, video_changed_message(result[:video_link]))}
   end
+
+  def handle_event_video_result({:error, payload}, socket) do
+    send_update(CalendarGridComponent,
+      id: "calendar",
+      action: :revert_event,
+      original_event: payload[:original_event]
+    )
+
+    {:noreply, put_flash(socket, :error, video_failed_message(payload[:reason]))}
+  end
+
+  defp video_changed_message(nil),
+    do: dgettext("dashboard_calendar_events", "Video link removed.")
+
+  defp video_changed_message(_url),
+    do: dgettext("dashboard_calendar_events", "Video room created.")
+
+  defp video_failed_message(:missing_meeting_url) do
+    dgettext(
+      "dashboard_calendar_events",
+      "The video provider did not return a meeting link, so the video link was not changed."
+    )
+  end
+
+  defp video_failed_message(_reason),
+    do:
+      dgettext("dashboard_calendar_events", "Could not change the video link - changes reverted")
 
   @doc "Spawns a supervised task to delete a calendar event."
   @spec handle_execute_delete_event(map(), Phoenix.LiveView.Socket.t()) ::
