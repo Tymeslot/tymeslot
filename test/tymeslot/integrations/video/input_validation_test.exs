@@ -314,6 +314,61 @@ defmodule Tymeslot.Integrations.Video.InputValidationTest do
     end
   end
 
+  describe "validate_video_integration_form/2 - nextcloud_talk" do
+    @talk_params %{
+      "provider" => "nextcloud_talk",
+      "name" => "Team Talk",
+      "base_url" => " https://cloud.example.com ",
+      "client_id" => " organiser ",
+      "client_secret" => " Abcde-Fghij-Klmno-Pqrst-Uvwxy "
+    }
+
+    test "trims the server, login name and app password and passes nothing else on" do
+      assert {:ok, sanitized} =
+               InputValidation.validate_video_integration_form(
+                 Map.put(@talk_params, "remove_token_authentication", "true")
+               )
+
+      assert sanitized == %{
+               "name" => "Team Talk",
+               "base_url" => "https://cloud.example.com",
+               "client_id" => "organiser",
+               "client_secret" => "Abcde-Fghij-Klmno-Pqrst-Uvwxy"
+             }
+    end
+
+    # A credential key in the result means "supplied"; the edit dialog's blank
+    # app password field must keep the stored one instead.
+    test "leaves a blank app password out" do
+      assert {:ok, sanitized} =
+               InputValidation.validate_video_integration_form(%{
+                 @talk_params
+                 | "client_secret" => "   "
+               })
+
+      refute Map.has_key?(sanitized, "client_secret")
+    end
+
+    test "strips a null byte from the server, login name and app password" do
+      assert {:ok, sanitized} =
+               InputValidation.validate_video_integration_form(%{
+                 @talk_params
+                 | "base_url" => "https://cloud.example.com/nc\0",
+                   "client_id" => "organ\0iser",
+                   "client_secret" => "Abcde\0-Fghij"
+               })
+
+      assert sanitized["base_url"] == "https://cloud.example.com/nc"
+      assert sanitized["client_id"] == "organiser"
+      assert sanitized["client_secret"] == "Abcde-Fghij"
+    end
+
+    test "still requires a name" do
+      assert {:error, %{name: _message}} =
+               InputValidation.validate_video_integration_form(%{@talk_params | "name" => ""})
+    end
+  end
+
   describe "validate_video_integration_form/2 - unknown provider" do
     test "returns error for unknown provider" do
       params = %{"provider" => "zoom", "name" => "Zoom Meeting"}

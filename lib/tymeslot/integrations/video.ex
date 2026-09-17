@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Video.OAuth
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.JitsiProvider
+  alias Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
   alias Tymeslot.Integrations.Video.Rooms
   alias Tymeslot.Integrations.Video.Update
   alias Tymeslot.Integrations.Video.Urls
@@ -237,6 +238,26 @@ defmodule Tymeslot.Integrations.Video do
 
     with :ok <- JitsiProvider.validate_config(attrs),
          :ok <- check_no_duplicate(attrs) do
+      VideoIntegrationQueries.create(attrs)
+    end
+  end
+
+  # Keyed on server and login together, as the CalDAV integrations are, so one
+  # person can connect two accounts on the same Nextcloud but not one account
+  # twice. The duplicate check comes first, so a repeat never spends a login
+  # attempt against the server; the connection probe then validates the config
+  # and proves the app password and a recent enough Talk before anything is
+  # saved.
+  defp do_create_integration(:nextcloud_talk, attrs) do
+    attrs = NextcloudTalkProvider.account_attrs(attrs)
+
+    with :ok <- check_no_duplicate(attrs),
+         {:ok, _message} <-
+           Connection.probe(
+             :nextcloud_talk,
+             Map.take(attrs, [:base_url, :client_id, :client_secret]),
+             {:user, attrs[:user_id]}
+           ) do
       VideoIntegrationQueries.create(attrs)
     end
   end

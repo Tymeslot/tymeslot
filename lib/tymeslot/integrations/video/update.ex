@@ -7,12 +7,17 @@ defmodule Tymeslot.Integrations.Video.Update do
   therefore means "keep the stored one", and removing credentials has to be
   asked for explicitly. Supplying a credential counts as reconnecting, so it
   also clears `needs_reauth`.
+
+  A Nextcloud Talk edit is proven against the server, as a new integration
+  is, but only when its server, login name or app password actually changes.
   """
 
   alias Plug.Crypto
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Video.AttrsCasting
+  alias Tymeslot.Integrations.Video.Connection
   alias Tymeslot.Integrations.Video.Providers.JitsiProvider
+  alias Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
@@ -20,6 +25,12 @@ defmodule Tymeslot.Integrations.Video.Update do
   # optional, so the changeset cannot enforce the pair or the secret length.
   @jitsi_credential_fields [:client_id, :client_secret]
   @jitsi_config_fields [:base_url | @jitsi_credential_fields]
+
+  # What a Nextcloud Talk integration signs in with, and what an edit to it
+  # can save: the account key follows from the server and login name.
+  @talk_credential_fields [:client_id, :client_secret]
+  @talk_config_fields [:base_url | @talk_credential_fields]
+  @talk_saved_fields [:provider_account_id | @talk_config_fields]
 
   @doc """
   Updates the integration `id` owned by `user_id`.
@@ -37,6 +48,8 @@ defmodule Tymeslot.Integrations.Video.Update do
 
     case VideoIntegrationQueries.get_for_user(id, user_id) do
       {:ok, integration} ->
+        attrs = effective_changes(integration, attrs)
+
         with :ok <- validate_update(integration, attrs) do
           save_update(integration, attrs)
         end
@@ -48,6 +61,38 @@ defmodule Tymeslot.Integrations.Video.Update do
         {:error, :requires_reencryption}
     end
   end
+
+  # The Talk edit dialog submits the server and login name it opened with and
+  # whatever was typed into the app password field, so a rename carries all
+  # three. A blank login name or app password keeps the stored one, as a blank
+  # Jitsi credential does; a blank server address is kept, for the provider to
+  # refuse. Only a value that differs from the stored one after the provider's
+  # own trimming is kept as a change, together with the account key it implies,
+  # and a submitted account key is never taken as given. Dropping the rest is
+  # what keeps a rename or an unchanged resubmission from contacting the server
+  # and from clearing a reconnect flag no new credential earned.
+  defp effective_changes(%VideoIntegrationSchema{provider: "nextcloud_talk"} = integration, attrs) do
+    stored = integration |> Map.take(@talk_config_fields) |> NextcloudTalkProvider.account_attrs()
+
+    submitted =
+      attrs
+      |> Map.take(@talk_config_fields)
+      |> Map.reject(fn {field, value} -> field in @talk_credential_fields and blank?(value) end)
+
+    changes =
+      stored
+      |> Map.merge(submitted)
+      |> NextcloudTalkProvider.account_attrs()
+      |> Map.take(@talk_saved_fields)
+      |> Map.reject(fn {field, value} -> unchanged?(field, value, Map.fetch!(stored, field)) end)
+
+    attrs |> Map.drop(@talk_saved_fields) |> Map.merge(changes)
+  end
+
+  defp effective_changes(_integration, attrs), do: attrs
+
+  defp unchanged?(:client_secret, submitted, stored), do: same_credential?(submitted, stored)
+  defp unchanged?(_field, submitted, stored), do: submitted == stored
 
   defp save_update(
          %VideoIntegrationSchema{provider: "jitsi"} = integration,
@@ -92,6 +137,27 @@ defmodule Tymeslot.Integrations.Video.Update do
       integration
       |> jitsi_config_after_update(attrs)
       |> JitsiProvider.validate_config()
+    else
+      :ok
+    end
+  end
+
+  # A changed server, login name or app password is proven against the server
+  # before it is saved, as on creation, with the configuration the row will then
+  # hold. `Connection.probe/3` validates that configuration first, so a blank
+  # server address is refused without a request, and a refusal comes back
+  # worded as the connection test words it. The probe carries no integration id,
+  # so a refused new app password does not flag the row again.
+  defp validate_update(%VideoIntegrationSchema{provider: "nextcloud_talk"} = integration, attrs) do
+    if Enum.any?(@talk_config_fields, &Map.has_key?(attrs, &1)) do
+      config =
+        integration
+        |> Map.take(@talk_config_fields)
+        |> Map.merge(Map.take(attrs, @talk_config_fields))
+
+      with {:ok, _message} <-
+             Connection.probe(:nextcloud_talk, config, {:user, integration.user_id}),
+           do: :ok
     else
       :ok
     end

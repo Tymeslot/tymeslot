@@ -33,6 +33,11 @@ defmodule TymeslotWeb.Helpers.IntegrationProvidersTest do
                IntegrationProviders.reason_to_form_errors({:unreachable, "Domain nicht gefunden"})
     end
 
+    test "blames :client_secret on an :unauthorized tag" do
+      assert IntegrationProviders.reason_to_form_errors({:unauthorized, "Refused"}) ==
+               %{client_secret: "Refused"}
+    end
+
     test "falls back to base_url for an untagged message" do
       assert %{base_url: "Some weird error"} =
                IntegrationProviders.reason_to_form_errors("Some weird error")

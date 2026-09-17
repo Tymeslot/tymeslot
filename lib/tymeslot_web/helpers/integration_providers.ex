@@ -67,7 +67,8 @@ defmodule TymeslotWeb.Helpers.IntegrationProviders do
   message: the message is localised, so matching English keywords back out of
   it would pick the right field in English only. Providers that can tell the
   two apart return `{tag, message}` (see
-  `Tymeslot.Integrations.Video.Providers.MiroTalkProvider`); a bare string
+  `Tymeslot.Integrations.Video.Providers.MiroTalkProvider`), and a refused
+  login (`{:unauthorized, _}`) is blamed on the secret; a bare string
   carries no such signal and lands on `:base_url`, which is where an
   unrecognised reason has always gone.
 
@@ -87,6 +88,9 @@ defmodule TymeslotWeb.Helpers.IntegrationProviders do
 
   def reason_to_form_errors({:invalid_api_key, message}) when is_binary(message),
     do: %{api_key: message}
+
+  def reason_to_form_errors({:unauthorized, message}) when is_binary(message),
+    do: %{client_secret: message}
 
   def reason_to_form_errors({:unreachable, message}) when is_binary(message),
     do: %{base_url: message}

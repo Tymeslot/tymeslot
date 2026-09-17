@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   Video integration input validation and sanitization.
 
   Provides specialized validation for video integration forms including
-  MiroTalk, kMeet, Jitsi and Custom Video configuration forms.
+  MiroTalk, kMeet, Jitsi, Nextcloud Talk and Custom Video configuration forms.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -43,6 +43,9 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
 
       "jitsi" ->
         validate_jitsi_form(params, metadata)
+
+      "nextcloud_talk" ->
+        validate_nextcloud_talk_form(params, metadata)
 
       _unknown_provider ->
         SecurityLogger.log_security_event("video_integration_unknown_provider", %{
@@ -188,8 +191,26 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
     end
   end
 
-  # The name is validated and the server URL sanitised here; whether the URL
-  # and credentials make a usable config is `JitsiProvider.validate_config/1`'s
+  defp validate_jitsi_form(params, metadata) do
+    with {:ok, sanitized} <-
+           validate_server_form(params, metadata, "jitsi_integration_validation_failure") do
+      {:ok,
+       Map.put(
+         sanitized,
+         "remove_token_authentication",
+         params["remove_token_authentication"] == "true"
+       )}
+    end
+  end
+
+  defp validate_nextcloud_talk_form(params, metadata),
+    do: validate_server_form(params, metadata, "nextcloud_talk_integration_validation_failure")
+
+  # The shape shared by the providers that sign in to a server of the
+  # organiser's choosing with a client id and secret (Jitsi's App ID and App
+  # secret, Nextcloud Talk's login name and app password). The name is
+  # validated and the server URL sanitised here; whether the URL and
+  # credentials make a usable config is the provider's `validate_config/1`
   # call when the integration is saved, so the connect form and the edit dialog
   # share one set of rules and messages.
   #
@@ -198,24 +219,23 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   # sanitiser would remove. A blank credential is left out of the result
   # altogether, so an edit that does not touch the credentials does not count
   # as supplying them.
-  defp validate_jitsi_form(params, metadata) do
+  defp validate_server_form(params, metadata, failure_event) do
     with {:ok, sanitized_name} <-
            InputValidators.validate_integration_name(params["name"], metadata),
-         {:ok, sanitized_base_url} <- sanitize_jitsi_base_url(params["base_url"], metadata) do
+         {:ok, sanitized_base_url} <- sanitize_server_url(params["base_url"], metadata) do
       {:ok,
        Map.reject(
          %{
            "name" => sanitized_name,
            "base_url" => sanitized_base_url,
-           "client_id" => jitsi_credential(params["client_id"]),
-           "client_secret" => jitsi_credential(params["client_secret"]),
-           "remove_token_authentication" => params["remove_token_authentication"] == "true"
+           "client_id" => credential(params["client_id"]),
+           "client_secret" => credential(params["client_secret"])
          },
          fn {_field, value} -> is_nil(value) end
        )}
     else
       {:error, errors} ->
-        SecurityLogger.log_security_event("jitsi_integration_validation_failure", %{
+        SecurityLogger.log_security_event(failure_event, %{
           ip_address: metadata[:ip],
           user_agent: metadata[:user_agent],
           user_id: metadata[:user_id],
@@ -228,23 +248,23 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
 
   # A blank URL is kept, so that the provider can refuse it with its own
   # message rather than an edit silently keeping the stored one.
-  defp sanitize_jitsi_base_url(base_url, metadata) when is_binary(base_url) do
+  defp sanitize_server_url(base_url, metadata) when is_binary(base_url) do
     case UniversalSanitizer.sanitize_and_validate(base_url, allow_html: false, metadata: metadata) do
       {:ok, sanitized} -> {:ok, sanitized}
       {:error, error} -> {:error, %{base_url: error}}
     end
   end
 
-  defp sanitize_jitsi_base_url(_base_url, _metadata), do: {:ok, nil}
+  defp sanitize_server_url(_base_url, _metadata), do: {:ok, nil}
 
-  defp jitsi_credential(value) when is_binary(value) do
+  defp credential(value) when is_binary(value) do
     case value |> String.replace("\x00", "") |> String.trim() do
       "" -> nil
       credential -> credential
     end
   end
 
-  defp jitsi_credential(_value), do: nil
+  defp credential(_value), do: nil
 
   # Helper validation functions
 
