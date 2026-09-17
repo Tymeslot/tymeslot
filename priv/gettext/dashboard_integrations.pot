@@ -898,6 +898,7 @@ msgid "Authentication failed - Please check your API key"
 msgstr ""
 
 #: lib/tymeslot/integrations/video/input_validation.ex
+#: lib/tymeslot/integrations/video/providers/jitsi_provider.ex
 #: lib/tymeslot/integrations/video/providers/mirotalk_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Base URL is required"
@@ -999,6 +1000,7 @@ msgid "Invalid JSON response from Google Calendar API"
 msgstr ""
 
 #: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#: lib/tymeslot/integrations/video/providers/jitsi_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid URL format. Please provide a valid HTTP/HTTPS URL."
 msgstr ""
@@ -1184,4 +1186,19 @@ msgid "Write the template variable exactly as {{meeting_id}}"
 #: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "A meeting ID is required to create a video room"
+msgstr ""
+
+#: lib/tymeslot/integrations/video/providers/jitsi_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the App ID that belongs to this App secret"
+msgstr ""
+
+#: lib/tymeslot/integrations/video/providers/jitsi_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the App secret that belongs to this App ID"
+msgstr ""
+
+#: lib/tymeslot/integrations/video/providers/jitsi_provider.ex
+#, elixir-autogen, elixir-format
+msgid "The App secret must be at least %{bytes} bytes long. Every guest receives a token signed with it, so a short secret can be recovered from any booking link."
 msgstr ""
