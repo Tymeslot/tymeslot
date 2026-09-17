@@ -322,11 +322,14 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
 
   @doc """
   Updates a video integration with credentials its owner has just supplied,
-  clearing `needs_reauth`.
+  clearing `needs_reauth` and any recorded room creation error.
 
   Only reconnect paths may use this: an OAuth callback, or a credential form.
   See `Tymeslot.Integrations.Calendar.CalendarIntegrationQueries.update_credentials/2`
-  for why this cannot be inferred from the changeset.
+  for why this cannot be inferred from the changeset. A Nextcloud Talk edit
+  reaches it only once the new connection is proven against the server, which
+  also checked the account's right to create conversations, so the refusal
+  recorded against the old connection no longer describes it.
   """
   @spec update_credentials(VideoIntegrationSchema.t(), map()) ::
           {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
@@ -334,7 +337,65 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
     integration
     |> VideoIntegrationSchema.changeset(attrs)
     |> Changeset.put_change(:needs_reauth, false)
+    |> Changeset.put_change(:room_creation_error, nil)
+    |> Changeset.put_change(:room_creation_error_since, nil)
     |> Repo.update()
+  end
+
+  @doc """
+  Records that the provider refuses to create rooms for the integration `id`
+  with `code`, stamping the time only when the code is new, so the time stays
+  the one the refusal was first seen.
+  """
+  @spec record_room_creation_error(integer(), atom()) :: :ok
+  def record_room_creation_error(id, code) when is_integer(id) and is_atom(code) do
+    VideoIntegrationSchema
+    |> where([v], v.id == ^id)
+    |> where([v], is_nil(v.room_creation_error) or v.room_creation_error != ^code)
+    |> Repo.update_all(
+      set: [room_creation_error: code, room_creation_error_since: DateTime.utc_now(:second)]
+    )
+
+    :ok
+  end
+
+  @doc """
+  Clears the room creation error recorded for the integration `id`.
+  """
+  @spec clear_room_creation_error(integer()) :: :ok
+  def clear_room_creation_error(id) when is_integer(id) do
+    VideoIntegrationSchema
+    |> where([v], v.id == ^id and not is_nil(v.room_creation_error))
+    |> Repo.update_all(set: [room_creation_error: nil, room_creation_error_since: nil])
+
+    :ok
+  end
+
+  @doc """
+  Claims the one email about room creation error `code` for the integration
+  `id`: returns `true` for the first caller ever to claim it, and `false` for
+  every later one.
+
+  One conditional update, so concurrent callers serialise on the row and only
+  the first one's condition still holds.
+  """
+  @spec claim_room_creation_error_notice(integer(), atom()) :: boolean()
+  def claim_room_creation_error_notice(id, code) when is_integer(id) and is_atom(code) do
+    code = Atom.to_string(code)
+
+    {count, _rows} =
+      VideoIntegrationSchema
+      |> where([v], v.id == ^id)
+      |> where([v], fragment("NOT (?::varchar = ANY(?))", ^code, v.room_creation_errors_notified))
+      |> update([v],
+        set: [
+          room_creation_errors_notified:
+            fragment("array_append(?, ?::varchar)", v.room_creation_errors_notified, ^code)
+        ]
+      )
+      |> Repo.update_all([])
+
+    count == 1
   end
 
   @doc """

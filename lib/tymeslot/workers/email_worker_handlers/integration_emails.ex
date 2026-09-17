@@ -176,6 +176,68 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
     end
   end
 
+  @spec handle_video_room_creation_error_notification(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_video_room_creation_error_notification(%{
+        "user_id" => user_id,
+        "integration_id" => integration_id,
+        "error_code" => error_code
+      }) do
+    with {:ok, user} <- UserQueries.get_user(user_id),
+         {:ok, integration} <- fetch_integration("video", integration_id) do
+      send_room_creation_error_notification(user, integration, error_code)
+    else
+      {:error, :not_found} ->
+        Logger.warning("User or integration not found for room creation error notification",
+          user_id: user_id,
+          integration_id: integration_id
+        )
+
+        {:discard, "User or integration not found"}
+    end
+  end
+
+  # The integration is re-read at send time, so an owner whose server was fixed
+  # (and whose next booking got its room) between the refusal and the send is
+  # not told about something that already works.
+  defp send_room_creation_error_notification(user, integration, error_code) do
+    if integration.room_creation_error &&
+         Atom.to_string(integration.room_creation_error) == error_code do
+      deliver_room_creation_error_notification(user, integration)
+    else
+      Logger.info("Video room creation error no longer recorded, discarding notification",
+        integration_id: integration.id,
+        code: error_code
+      )
+
+      {:discard, "Room creation error no longer recorded"}
+    end
+  end
+
+  defp deliver_room_creation_error_notification(user, integration) do
+    case Config.email_service_module().send_video_room_creation_error_notification(
+           user,
+           integration
+         ) do
+      {:ok, _result} ->
+        Logger.info("Video room creation error notification sent",
+          user_id: user.id,
+          integration_id: integration.id
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to send video room creation error notification",
+          user_id: user.id,
+          integration_id: integration.id,
+          error: inspect(reason)
+        )
+
+        DeliveryOutcome.from_error(reason, "Failed to send notification")
+    end
+  end
+
   @spec handle_calendar_invitation(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_calendar_invitation(%{"user_id" => user_id} = args) do

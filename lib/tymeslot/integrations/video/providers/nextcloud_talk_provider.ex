@@ -17,6 +17,12 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   redirect) is reported as a configuration error, which the sync job discards
   rather than retries.
 
+  At creation, a refusal caused by the server's own settings (conversation
+  creation limited to some groups, Talk limited to some groups, a password
+  enforced on public conversations) carries a code of
+  `Tymeslot.Integrations.Video.RoomCreationError`, which records it on the
+  integration and tells its owner how to fix it.
+
   Creation first looks for a conversation an earlier attempt made for the same
   booking, as `Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversation`
   describes, so a retry never leaves a second one behind.
@@ -392,12 +398,23 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   # What a refusal at creation means for the booking. A refused credential
   # flags the integration and is never retried. A throttled address is a rate
   # limit, which the room job snoozes rather than retrying at once. A refusal
-  # caused by the server's own configuration (conversation creation limited to
-  # some users, a password enforced on public conversations, Talk missing, a
-  # redirect) repeats on every attempt, so it is a configuration error, which
-  # the room job discards. Anything else passes through for the breaker and the
-  # retry policy to judge. Some refusals carry no OCS error key, so `error` may
-  # be `nil`.
+  # caused by the server's own configuration repeats on every attempt, so it is
+  # a configuration error, which the room job discards, and its code (see
+  # `Tymeslot.Integrations.Video.RoomCreationError`) is recorded on the
+  # integration for its owner. Talk tells these apart, identically in Talk 24
+  # and 25:
+  #
+  #   * 403 `{"error": "permissions"}`: only some groups may create
+  #     conversations (`start_conversations`)
+  #   * 403 without an error key, "Can not use Talk" in the OCS meta: only some
+  #     groups may use Talk (`allowed_groups`), which already refuses the lookup
+  #   * 400 `{"error": "password"}`: public conversations need a password
+  #     (`force_passwords`); the accompanying message is translated, so only the
+  #     key is read
+  #
+  # Any other 400 or 403, Talk missing and a redirect are configuration errors
+  # too. Anything else passes through for the breaker and the retry policy to
+  # judge.
   defp creation_failure(:unauthorized, config) do
     flag_rejected_credentials(config)
     :unauthorized
@@ -405,14 +422,17 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
 
   defp creation_failure(:rate_limited, _config), do: :rate_limited
 
-  defp creation_failure({:rejected, 403, _error}, _config),
+  defp creation_failure({:rejected, 403, "permissions"}, _config),
     do: {:configuration_error, :conversation_creation_restricted}
+
+  defp creation_failure({:rejected, 403, nil}, _config),
+    do: {:configuration_error, :talk_not_allowed}
 
   defp creation_failure({:rejected, 400, "password"}, _config),
     do: {:configuration_error, :password_required}
 
-  defp creation_failure({:rejected, 400, error}, _config),
-    do: {:configuration_error, {:rejected, error}}
+  defp creation_failure({:rejected, _status, _error}, _config),
+    do: {:configuration_error, :conversation_refused}
 
   defp creation_failure(:not_found, _config), do: {:configuration_error, :talk_not_found}
 

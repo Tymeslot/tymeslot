@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   alias Tymeslot.Integrations.Providers.Directory, as: ProviderDirectory
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.KmeetProvider
+  alias Tymeslot.Integrations.Video.RoomCreationError
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow
 
   @doc """
@@ -47,7 +48,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
       title={@display_name}
       type_tag={@type_tag}
       summary={@summary}
-      notice={ConnectionRow.reconnect_reason(@integration)}
+      notice={notice(@integration)}
       status={@status}
       active?={@integration.is_active}
       toggle_event="toggle_integration"
@@ -174,17 +175,38 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     end
   end
 
+  # A needed reconnection says what to do first, since nothing works until it
+  # is done. Otherwise a provider refusing to create rooms is explained, with
+  # its fix: the connection itself is fine, so nothing else would show it.
+  defp notice(integration) do
+    ConnectionRow.reconnect_reason(integration) || room_creation_notice(integration)
+  end
+
+  defp room_creation_notice(%{room_creation_error: code}) when is_atom(code) and code != nil do
+    dgettext("dashboard_integrations", "New bookings get no video link. %{reason}",
+      reason: RoomCreationError.message(code)
+    )
+  end
+
+  defp room_creation_notice(_integration), do: nil
+
   # Status-first badge mapping. Precedence lives in the canonical
   # `HealthCheck.attention_status/2` classifier; this just maps the atom to
-  # this row's badge variant/label.
+  # this row's badge variant/label. A connection that works but whose rooms
+  # the provider refuses still needs the owner, so it is not shown as healthy.
   defp video_status(integration, health) do
     case HealthCheck.attention_status(integration, health) do
       :paused -> {:paused, dgettext("dashboard_integrations", "Paused")}
       :needs_reauth -> {:warning, dgettext("dashboard_integrations", "Reconnect")}
       :unhealthy -> {:warning, dgettext("dashboard_integrations", "Connection issues")}
-      :ok -> {:ok, dgettext("dashboard_integrations", "Healthy")}
+      :ok -> healthy_status(integration)
     end
   end
+
+  defp healthy_status(%{room_creation_error: code}) when is_atom(code) and code != nil,
+    do: {:warning, dgettext("dashboard_integrations", "No video links")}
+
+  defp healthy_status(_integration), do: {:ok, dgettext("dashboard_integrations", "Healthy")}
 
   defp type_tag("mirotalk"), do: dgettext("dashboard_integrations", "self-hosted")
   defp type_tag("custom"), do: dgettext("dashboard_integrations", "custom")

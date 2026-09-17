@@ -14,6 +14,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
+  alias Tymeslot.Integrations.Video.RoomCreationError
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
@@ -32,11 +33,15 @@ defmodule Tymeslot.Integrations.Video.Rooms do
     end)
   end
 
+  # The outcome is kept on the integration: a refusal its server will repeat
+  # for every booking is recorded for the owner, and a created room clears one.
   defp do_create_meeting_room(user_id, opts) do
-    case get_provider_config(user_id, opts) do
-      {:ok, provider_type, config} ->
+    case resolve_integration(user_id, opts) do
+      {:ok, integration, provider_type, config} ->
         config = maybe_attach_event_details(config, opts)
-        create_room_with_provider(provider_type, config)
+        result = create_room_with_provider(provider_type, config)
+        RoomCreationError.track(integration, result)
+        result
 
       {:error, reason} = error ->
         Logger.error("Failed to get provider configuration", reason: inspect(reason))
@@ -289,10 +294,16 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   defp extract_room_id(_meeting_context), do: "unknown"
 
   defp get_provider_config(user_id, opts) do
+    with {:ok, _integration, provider_type, config} <- resolve_integration(user_id, opts) do
+      {:ok, provider_type, config}
+    end
+  end
+
+  defp resolve_integration(user_id, opts) do
     case get_integration_from_database(user_id, opts) do
       {:ok, integration} ->
         {provider_type, config} = build_provider_config(integration, opts)
-        {:ok, provider_type, config}
+        {:ok, integration, provider_type, config}
 
       :not_found ->
         {:error,

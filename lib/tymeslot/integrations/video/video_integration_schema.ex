@@ -10,6 +10,17 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.SsrfGuard
 
+  # Why a provider refuses to create rooms for an integration, where its answer
+  # says so. `Tymeslot.Integrations.Video.RoomCreationError` describes each one.
+  @room_creation_errors [
+    :conversation_creation_restricted,
+    :talk_not_allowed,
+    :password_required,
+    :talk_not_found,
+    :redirected,
+    :conversation_refused
+  ]
+
   @type t :: %__MODULE__{
           id: integer() | nil,
           user_id: integer() | nil,
@@ -32,6 +43,9 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
           is_active: boolean(),
           needs_reauth: boolean(),
           sync_error: String.t() | nil,
+          room_creation_error: atom() | nil,
+          room_creation_error_since: DateTime.t() | nil,
+          room_creation_errors_notified: [atom()],
           deleted_at: DateTime.t() | nil,
           settings: map(),
           user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
@@ -59,6 +73,16 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     field(:is_active, :boolean, default: true)
     field(:needs_reauth, :boolean, default: false)
     field(:sync_error, :string)
+    # Written only by `VideoIntegrationQueries`' room creation error queries,
+    # never cast from attrs.
+    field(:room_creation_error, Ecto.Enum, values: @room_creation_errors)
+    field(:room_creation_error_since, :utc_datetime)
+
+    field(:room_creation_errors_notified, {:array, Ecto.Enum},
+      values: @room_creation_errors,
+      default: []
+    )
+
     # Set when the user disconnects and asked for the provider-side rooms to be
     # deleted: the row survives, hidden, only long enough for the cleanup job to
     # use its credentials.

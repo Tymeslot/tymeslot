@@ -152,6 +152,31 @@ defmodule Tymeslot.Integrations.Video.NextcloudTalkSetupTest do
                VideoIntegrationQueries.get_for_user(integration.id, user.id)
     end
 
+    test "a proven edit clears a recorded room creation refusal", %{user: user} do
+      integration = insert_talk_integration(user)
+      VideoIntegrationQueries.record_room_creation_error(integration.id, :password_required)
+      expect_capabilities(@server, "organiser", "New-App-Password", talk_capabilities())
+
+      assert {:ok, updated} =
+               Video.update_integration(user.id, integration.id, dialog_attrs("New-App-Password"))
+
+      assert %{room_creation_error: nil, room_creation_error_since: nil} = updated
+
+      assert {:ok, %{room_creation_error: nil}} =
+               VideoIntegrationQueries.get_for_user(integration.id, user.id)
+    end
+
+    test "a rename keeps a recorded room creation refusal", %{user: user} do
+      integration = insert_talk_integration(user)
+      VideoIntegrationQueries.record_room_creation_error(integration.id, :password_required)
+
+      assert {:ok, _renamed} =
+               Video.update_integration(user.id, integration.id, %{name: "Renamed"})
+
+      assert {:ok, %{room_creation_error: :password_required}} =
+               VideoIntegrationQueries.get_for_user(integration.id, user.id)
+    end
+
     # Reschedules made while the app password was refused never reached their
     # conversations, so the proven reconnect sends every upcoming one its
     # current time again. Ended and cancelled meetings are the clean-up's.

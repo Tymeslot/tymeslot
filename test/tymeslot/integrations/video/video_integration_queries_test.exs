@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueriesTest do
   @moduletag :database
   @moduletag :queries
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
   describe "get_by_provider_for_user/2" do
@@ -346,6 +347,80 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueriesTest do
 
       assert {:ok, reactivated} = VideoIntegrationQueries.toggle_active(dormant)
       assert reactivated.is_active
+    end
+  end
+
+  describe "room creation errors" do
+    test "a refusal is recorded once with the time it was first seen, and cleared" do
+      integration = insert(:video_integration, provider: "nextcloud_talk")
+
+      assert :ok =
+               VideoIntegrationQueries.record_room_creation_error(
+                 integration.id,
+                 :password_required
+               )
+
+      recorded = Repo.reload!(integration)
+      assert recorded.room_creation_error == :password_required
+      assert %DateTime{} = since = recorded.room_creation_error_since
+
+      Repo.update!(
+        Changeset.change(recorded, room_creation_error_since: ~U[2026-01-01 00:00:00Z])
+      )
+
+      VideoIntegrationQueries.record_room_creation_error(integration.id, :password_required)
+      assert Repo.reload!(integration).room_creation_error_since == ~U[2026-01-01 00:00:00Z]
+
+      VideoIntegrationQueries.record_room_creation_error(integration.id, :talk_not_allowed)
+      changed = Repo.reload!(integration)
+      assert changed.room_creation_error == :talk_not_allowed
+      refute changed.room_creation_error_since == ~U[2026-01-01 00:00:00Z]
+      assert DateTime.compare(changed.room_creation_error_since, since) != :lt
+
+      assert :ok = VideoIntegrationQueries.clear_room_creation_error(integration.id)
+
+      assert %{room_creation_error: nil, room_creation_error_since: nil} =
+               Repo.reload!(integration)
+    end
+
+    test "each code's email is claimed by exactly one caller, per integration" do
+      integration = insert(:video_integration, provider: "nextcloud_talk")
+
+      other =
+        insert(:video_integration, provider: "nextcloud_talk", base_url: "https://b.example.com")
+
+      assert VideoIntegrationQueries.claim_room_creation_error_notice(
+               integration.id,
+               :password_required
+             )
+
+      refute VideoIntegrationQueries.claim_room_creation_error_notice(
+               integration.id,
+               :password_required
+             )
+
+      assert VideoIntegrationQueries.claim_room_creation_error_notice(
+               integration.id,
+               :talk_not_allowed
+             )
+
+      assert VideoIntegrationQueries.claim_room_creation_error_notice(
+               other.id,
+               :password_required
+             )
+
+      # Clearing the refusal keeps the record of what the owner was told.
+      VideoIntegrationQueries.clear_room_creation_error(integration.id)
+
+      refute VideoIntegrationQueries.claim_room_creation_error_notice(
+               integration.id,
+               :password_required
+             )
+
+      assert Repo.reload!(integration).room_creation_errors_notified == [
+               :password_required,
+               :talk_not_allowed
+             ]
     end
   end
 end

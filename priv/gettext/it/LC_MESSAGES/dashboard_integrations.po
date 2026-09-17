@@ -1550,3 +1550,43 @@ msgstr "kMeet è il servizio in hosting di Infomaniak e usa sempre questo indiri
 #, elixir-autogen, elixir-format
 msgid "Booked through Tymeslot. Reference: %{reference}"
 msgstr "Prenotato tramite Tymeslot. Riferimento: %{reference}"
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "New bookings get no video link. %{reason}"
+msgstr "Le nuove prenotazioni non ricevono un link video. %{reason}"
+
+#: lib/tymeslot/integrations/video/room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud Talk does not allow this user to create conversations. In the Talk administration settings on Nextcloud, allow the user's group to create conversations, or connect a user who may."
+msgstr "Nextcloud Talk non consente a questo utente di creare conversazioni. Nelle impostazioni di amministrazione di Talk su Nextcloud, consenti al gruppo dell'utente di creare conversazioni, oppure collega un utente che possa farlo."
+
+#: lib/tymeslot/integrations/video/room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud Talk refused to create a conversation. Check the Talk administration settings on Nextcloud; the next booking tries again."
+msgstr "Nextcloud Talk ha rifiutato di creare una conversazione. Controlla le impostazioni di amministrazione di Talk su Nextcloud; la prossima prenotazione riproverà."
+
+#: lib/tymeslot/integrations/video/room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud Talk requires a password on public conversations, so guests could not join from the booking's link. In the Talk administration settings on Nextcloud, turn off the password requirement for public conversations."
+msgstr "Nextcloud Talk richiede una password per le conversazioni pubbliche, quindi gli ospiti non potrebbero entrare dal link della prenotazione. Nelle impostazioni di amministrazione di Talk su Nextcloud, disattiva l'obbligo di password per le conversazioni pubbliche."
+
+#: lib/tymeslot/integrations/video/room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud did not find Talk at this address. Check that the Talk app is installed and enabled, and that the server address is the one you open Nextcloud at."
+msgstr "Nextcloud non ha trovato Talk a questo indirizzo. Controlla che l'app Talk sia installata e attivata e che l'indirizzo del server sia quello da cui apri Nextcloud."
+
+#: lib/tymeslot/integrations/video/room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud redirected the request to create a conversation. Edit the integration and enter the address your browser ends up on when you open Nextcloud."
+msgstr "Nextcloud ha reindirizzato la richiesta di creare una conversazione. Modifica l'integrazione e inserisci l'indirizzo su cui arriva il tuo browser quando apri Nextcloud."
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "No video links"
+msgstr "Nessun link video"
+
+#: lib/tymeslot/integrations/video/room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "This Nextcloud user may not use Talk. In the Talk administration settings on Nextcloud, add the user to a group that may use Talk, or connect a user who may."
+msgstr "Questo utente Nextcloud non può usare Talk. Nelle impostazioni di amministrazione di Talk su Nextcloud, aggiungi l'utente a un gruppo che può usare Talk, oppure collega un utente che possa farlo."

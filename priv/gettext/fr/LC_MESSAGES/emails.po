@@ -2335,3 +2335,48 @@ msgstr "Vous détenez encore %{amount} pour cette réservation."
 #, elixir-autogen, elixir-format
 msgid "New link for the new time"
 msgstr "Nouveau lien pour le nouvel horaire"
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} refused to create a video room for a booking. The booking is confirmed, and its confirmation went out without a video link. New bookings on this integration get no video link either until the setting described above changes. Video links already sent keep working."
+msgstr "%{provider} a refusé de créer une salle vidéo pour une réservation. La réservation est confirmée, et sa confirmation a été envoyée sans lien vidéo. Les nouvelles réservations de cette intégration n’obtiendront pas non plus de lien vidéo tant que le paramètre décrit ci-dessus n’aura pas changé. Les liens vidéo déjà envoyés continuent de fonctionner."
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings on %{provider} are getting no video link"
+msgstr "Les réservations via %{provider} n’obtiennent pas de lien vidéo"
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Change the setting described above, or ask whoever runs the server to. Once a booking gets its video link again, the notice on your video integration disappears."
+msgstr "Modifiez le paramètre décrit ci-dessus, ou demandez-le à la personne qui gère le serveur. Dès qu’une réservation obtient de nouveau son lien vidéo, l’avis affiché sur votre intégration vidéo disparaît."
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Integration"
+msgstr "Intégration"
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Open video settings"
+msgstr "Ouvrir les paramètres vidéo"
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Video rooms not created"
+msgstr "Salles vidéo non créées"
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "What should I do?"
+msgstr "Que dois-je faire ?"
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "What's happening?"
+msgstr "Que se passe-t-il ?"
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "You will not receive another email about this for this integration. Your video settings show the notice for as long as the problem lasts."
+msgstr "Vous ne recevrez pas d’autre e-mail à ce sujet pour cette intégration. Vos paramètres vidéo affichent l’avis tant que le problème persiste."

@@ -171,6 +171,10 @@ defmodule Tymeslot.Emails.EmailService do
     to: IntegrationEmails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_video_room_creation_error_notification(user, integration),
+    to: IntegrationEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_admin_alert(recipient, category, severity, message, metadata),
     to: IntegrationEmails
 end

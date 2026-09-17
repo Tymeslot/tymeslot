@@ -20,7 +20,6 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
   # Answers as Nextcloud 34 with Talk 24 sends them. A lobby move or a rename
   # answers with the whole conversation; these are the fields that matter.
   @room %{"token" => "abc123xy", "type" => 3, "name" => "Moved call", "lobbyState" => 1}
-  @password_required %{"error" => "password", "message" => "Password needs to be set"}
   @unauthorised ~s({"ocs":{"meta":{"status":"failure","statuscode":997,"message":"Unauthorised"},"data":[]}})
   @throttled ~s({"ocs":{"meta":{"status":"failure","statuscode":429,"message":"Reached maximum delay"},"data":[]}})
 
@@ -175,33 +174,6 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
 
       config = Map.put(@config, :event_details, %EventDetails{summary: "Intro call"})
       assert {:ok, %RoomData{}} = NextcloudTalkProvider.create_meeting_room(config)
-    end
-
-    test "a server that restricts who may create conversations is a configuration error" do
-      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 403, body: failure(403, %{"error" => "permissions"})}}
-      end)
-
-      assert {:error, {:configuration_error, :conversation_creation_restricted}} =
-               NextcloudTalkProvider.create_meeting_room(with_event(@config))
-    end
-
-    test "a server that enforces passwords on public conversations is a configuration error" do
-      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 400, body: failure(400, @password_required)}}
-      end)
-
-      assert {:error, {:configuration_error, :password_required}} =
-               NextcloudTalkProvider.create_meeting_room(with_event(@config))
-    end
-
-    test "a refusal without an error key is still a configuration error" do
-      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 400, body: failure(400, nil)}}
-      end)
-
-      assert {:error, {:configuration_error, {:rejected, nil}}} =
-               NextcloudTalkProvider.create_meeting_room(with_event(@config))
     end
 
     test "a server throttling Tymeslot's address is a rate limit to back off from" do

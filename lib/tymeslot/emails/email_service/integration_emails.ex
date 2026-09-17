@@ -5,13 +5,15 @@ defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
 
   alias Swoosh.Email
   alias Tymeslot.Emails.Delivery
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.MjmlEmail
 
   alias Tymeslot.Emails.Templates.{
     AdminAlert,
     IntegrationPaused,
     IntegrationReauthRequired,
-    IntegrationUnhealthy
+    IntegrationUnhealthy,
+    VideoRoomCreationError
   }
 
   @doc """
@@ -118,6 +120,36 @@ defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
       |> Email.text_body(text_body)
 
     Delivery.deliver(email)
+  end
+
+  @doc """
+  Tells the owner of a video integration that its provider refuses to create
+  rooms for it, why, and how to fix it, from the refusal recorded on
+  `integration`.
+
+  Rendered in the owner's locale, since it asks them to change a setting.
+  """
+  @spec send_video_room_creation_error_notification(
+          Tymeslot.Emails.EmailService.user_map(),
+          map()
+        ) :: {:ok, any()} | {:error, any()}
+  def send_video_room_creation_error_notification(user, integration) do
+    Logger.info("Sending video room creation error notification",
+      user_id: user.id,
+      integration_id: integration.id,
+      code: integration.room_creation_error
+    )
+
+    RecipientLocale.with_user_locale(user, fn ->
+      {html_body, text_body} = VideoRoomCreationError.render_both(integration)
+
+      MjmlEmail.base_email()
+      |> Email.to({Map.get(user, :name) || user.email, user.email})
+      |> Email.subject(VideoRoomCreationError.subject(integration))
+      |> Email.html_body(html_body)
+      |> Email.text_body(text_body)
+      |> Delivery.deliver()
+    end)
   end
 
   @doc """
