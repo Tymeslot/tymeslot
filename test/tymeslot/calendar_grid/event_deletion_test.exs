@@ -131,7 +131,11 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
 
       assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
       assert row.sync_state == "locally_deleted"
-      assert AvailabilityCache.get_or_compute(key, fn -> :recomputed end) == :recomputed
+
+      # The event is still on the calendar until the queued delete lands, and
+      # the grid puts it back, so the slot it holds must not be offered to
+      # bookers in the meantime.
+      assert AvailabilityCache.get_or_compute(key, fn -> :recomputed end) == :stale
     end
 
     test "does not queue a delete a retry cannot recover", %{user: user, caldav: caldav} do

@@ -79,7 +79,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
         {:ok, %{uid: uid, integration_id: integration_id, linked_meeting: linked_meeting(result)}}
 
       {:error, reason} ->
-        {:error, %{reason: reason, retry: queue_retry(user_id, event, reason)}}
+        {:error, %{reason: reason, retry: queue_retry(event, reason)}}
     end
   end
 
@@ -90,14 +90,15 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
 
   defp linked_meeting(_result), do: :none
 
-  # A queued delete clears the row's timing, so the slot it held is released
-  # locally as well.
-  defp queue_retry(user_id, %{uid: uid, calendar_integration_id: integration_id}, reason) do
+  # A queued delete has not reached the calendar yet: the event is still on
+  # the server and the grid puts it back. The organiser's availability is
+  # therefore left alone until the delete actually lands, so a slot the event
+  # still occupies is not offered to bookers in the meantime.
+  defp queue_retry(%{uid: uid, calendar_integration_id: integration_id}, reason) do
     target = %{uid: uid, calendar_integration_id: integration_id}
 
     with true <- CalendarEvents.queueable_error?(reason),
          :ok <- CalendarEvents.queue_for_offline_retry(target, :delete, %{}) do
-      AvailabilityCache.invalidate_for_user(user_id)
       :queued
     else
       _not_queued -> :not_queued
