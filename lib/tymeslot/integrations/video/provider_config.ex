@@ -374,6 +374,21 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
     Enum.map(@providers, &Atom.to_string/1)
   end
 
+  @doc """
+  Returns every video provider this codebase knows about, as atoms
+  (`@providers` plus `@dev_only_providers`), regardless of whether it is
+  currently enabled via config.
+
+  Toggle-agnostic like `provider_constraint_list_all/0`, but atoms rather
+  than strings and including the development-only providers. Use this, not
+  `all_providers/0` or `all_providers_with_dev/0`, for anything that must
+  keep working for a provider a host already connected before it was
+  disabled or is only available in dev, such as `Tymeslot.Bookings.Activation`
+  deciding whether a meeting's provider creates its room through an API call.
+  """
+  @spec known_providers() :: list(atom())
+  def known_providers, do: @providers ++ @dev_only_providers
+
   # Private helpers
   defp format_invalid_provider_error(provider) do
     valid_list = Enum.join(all_providers_with_dev(), ", ")

@@ -121,6 +121,46 @@ defmodule Tymeslot.Bookings.ActivationTest do
       )
     end
 
+    test "a kMeet meeting takes the room-creating path" do
+      user = insert(:user)
+      video_integration = insert(:video_integration, user: user, provider: "kmeet")
+
+      meeting =
+        meeting_for(user, %{status: "confirmed", video_integration_id: video_integration.id})
+
+      assert :ok = Activation.activate(meeting)
+
+      assert_enqueued(
+        worker: VideoRoomWorker,
+        args: %{"meeting_id" => meeting.id, "announce" => true}
+      )
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_confirmation_emails", "meeting_id" => meeting.id}
+      )
+    end
+
+    test "a Jitsi meeting takes the room-creating path" do
+      user = insert(:user)
+      video_integration = insert(:video_integration, user: user, provider: "jitsi")
+
+      meeting =
+        meeting_for(user, %{status: "confirmed", video_integration_id: video_integration.id})
+
+      assert :ok = Activation.activate(meeting)
+
+      assert_enqueued(
+        worker: VideoRoomWorker,
+        args: %{"meeting_id" => meeting.id, "announce" => true}
+      )
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_confirmation_emails", "meeting_id" => meeting.id}
+      )
+    end
+
     test "a meeting whose provider is not API-created goes straight to notification" do
       user = insert(:user)
       meeting = meeting_for(user, %{status: "confirmed", video_integration_id: nil})
