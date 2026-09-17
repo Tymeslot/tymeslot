@@ -183,10 +183,15 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   have created, and the retry would create another that no booking records.
   Waiting on the provider the meeting actually uses, rather than the slowest
   of all, keeps a slow provider from holding the queue for every other one.
+
+  The meeting is read for those two fields alone, so a `MeetingSchema` and a
+  bare map of them are both accepted. `%{a: t}` in a spec is a map with
+  exactly that key, which a schema struct never is, hence the open map here.
   """
   @spec creation_timeout_ms(%{
-          organizer_user_id: pos_integer() | nil,
-          video_integration_id: pos_integer() | nil
+          :organizer_user_id => pos_integer() | nil,
+          :video_integration_id => pos_integer() | nil,
+          optional(any()) => any()
         }) :: pos_integer()
   def creation_timeout_ms(meeting) do
     Video.room_creation_budget_ms(meeting.organizer_user_id, meeting.video_integration_id) +
