@@ -139,6 +139,19 @@ defmodule Tymeslot.ProfilesContextTest do
       assert {:ok, _result} = Profiles.update_username(profile, new_username, user.id)
     end
 
+    test "update_username does not use up a change on a username it rejects" do
+      user = insert(:user)
+      profile = insert(:profile, user: user, username: "sarah")
+
+      # Six refusals, the whole two-hour allowance, must leave it untouched.
+      for _attempt <- 1..6 do
+        assert {:error, reason} = Profiles.update_username(profile, "admin", user.id)
+        assert reason =~ "reserved"
+      end
+
+      assert {:ok, %{username: "sarah-r"}} = Profiles.update_username(profile, "sarah-r", user.id)
+    end
+
     test "username validation rejects invalid formats" do
       reserved = [reserved_words: ReservedPaths.list()]
 
@@ -164,6 +177,12 @@ defmodule Tymeslot.ProfilesContextTest do
 
       assert {:error, reason} = Profiles.update_username(profile, "admin", user.id)
       assert reason =~ "reserved"
+    end
+
+    test "every reserved path is written in lowercase" do
+      # Usernames must be lowercase, so an entry with a capital letter can never
+      # match one and reserves nothing.
+      assert Enum.reject(ReservedPaths.list(), &(&1 == String.downcase(&1))) == []
     end
 
     test "every supported locale code is a reserved path" do

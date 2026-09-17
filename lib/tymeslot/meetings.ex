@@ -69,16 +69,20 @@ defmodule Tymeslot.Meetings do
   @doc """
   Cancels a meeting and issues the resolved refund to the attendee.
 
+  Only the host who took the payment may ask for a refund; anyone else gets
+  `{:error, :not_found}` before the meeting is cancelled. Cancelling with
+  `:none` is open to whoever the caller already allows to cancel.
+
   Returns `{:error, {:refund_failed, reason}}` when the meeting was cancelled
   but the refund could not be issued, so callers can tell the host to settle it
   manually rather than reporting a failed cancellation.
   """
   @spec cancel_meeting_with_refund(
-          Ecto.Schema.t() | String.t(),
-          map() | nil,
+          Ecto.Schema.t(),
+          integer(),
           Cancellation.refund_action()
         ) :: {:ok, Ecto.Schema.t()} | {:error, term()}
-  defdelegate cancel_meeting_with_refund(meeting_or_uid, payment, refund_action),
+  defdelegate cancel_meeting_with_refund(meeting, acting_user_id, refund_action),
     to: Cancellation,
     as: :cancel
 
@@ -167,6 +171,13 @@ defmodule Tymeslot.Meetings do
   defdelegate list_meetings_in_range_for_organizer(organizer_user_id, from, to),
     to: MeetingListQueries,
     as: :list_for_organizer_in_range
+
+  @doc """
+  How many booking requests this organiser has not yet answered; drives the
+  dashboard's Requests tab badge.
+  """
+  @spec count_awaiting_approval_for_organizer(integer()) :: non_neg_integer()
+  defdelegate count_awaiting_approval_for_organizer(organizer_user_id), to: MeetingQueries
 
   @doc """
   Sends a reschedule request email for a meeting.

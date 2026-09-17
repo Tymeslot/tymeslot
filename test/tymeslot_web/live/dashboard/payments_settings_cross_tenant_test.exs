@@ -2,17 +2,21 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
   @moduledoc """
   Refunding somebody else's payment.
 
-  `MeetingPayments.get_payment/1` loads the row before anyone checks who owns
-  it, so the guarantee is the component's to keep. Two separate properties hold
-  it up, and each is pinned here:
+  Ownership is a rule of the payments context: the component looks payments up
+  with `MeetingPayments.get_payment_for_host/2` and refunds them with
+  `MeetingPayments.refund_payment_for_host/4`, which decides ownership under
+  the payment's row lock. These tests pin that the screen goes through those
+  scoped paths end to end:
 
-    * `open_refund_modal` takes an id from the client and must compare
-      `host_user_id` against the signed-in user before storing it.
+    * `open_refund_modal` takes an id from the client, so another host's id
+      and a malformed one must both leave the modal shut without crashing.
     * `submit_refund` must read the payment from `@refund_modal_payment` rather
       than from params. The form posts a `payment_id` the handler deliberately
       ignores, and a refactor that "simplifies" the handler into trusting it
-      would turn the ownership check above into the only thing standing between
-      a crafted frame and another host's money.
+      would refund whichever payment the client names, as long as its owner
+      is the one asking.
+    * A payment that changes hands while the modal is open must not be
+      refunded, which only a fresh, scoped read at refund time can tell.
 
   The second property is invisible from the outside when the code is correct,
   which is why it is tested by forging a foreign id into a submit whose modal is
@@ -130,6 +134,20 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest do
       refute has_element?(view, "#refund-modal")
       assert reload(theirs).refunded_amount_cents == 0
       assert reload(theirs).status == "paid"
+    end
+
+    test "a malformed payment id is refused without crashing the page", %{conn: conn} do
+      host = connected_host()
+      mine = paid_payment_for(host)
+
+      view = open_payments(conn, host)
+      push_to_component(view, "open_refund_modal", %{"id" => "not-a-uuid"})
+
+      refute has_element?(view, "#refund-modal")
+
+      # The page is still alive and still answers a legitimate request.
+      push_to_component(view, "open_refund_modal", %{"id" => mine.id})
+      assert has_element?(view, "#refund-modal")
     end
   end
 

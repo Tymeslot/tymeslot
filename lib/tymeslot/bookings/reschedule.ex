@@ -29,6 +29,7 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   require Logger
 
+  alias Tymeslot.Availability.Offer
   alias Tymeslot.Bookings.{CalendarJobs, Errors, Policy, ScheduleCheck, Validation}
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -328,13 +329,12 @@ defmodule Tymeslot.Bookings.Reschedule do
   # meeting type has since been deleted and `fetch_meeting_type/3` falls back
   # to `nil`).
   #
-  # `ScheduleCheck`, however, is given the CURRENT meeting type's duration
-  # (`schedule_check_duration_minutes/2`) rather than the persisted one: the
-  # reschedule page's grid is stepped by the current meeting type's duration
-  # (`AvailabilityHelpers.duration_minutes/1`), so re-deriving the grid with a
-  # stale duration after a host edits the type would refuse slots the page
-  # just offered. Only the check's step size changes; the meeting's own
-  # duration, computed below via `duration_minutes`, never does.
+  # `ScheduleCheck`, however, is given the duration the reschedule page's grid
+  # is stepped by (`Offer.duration_minutes/2`): the CURRENT meeting type's,
+  # falling back to the persisted one only for an unresolved type. Re-deriving
+  # the grid with a stale duration after a host edits the type would refuse
+  # slots the page just offered. Only the check's step size changes; the
+  # meeting's own duration, computed below via `duration_minutes`, never does.
   #
   # `meeting_type` is resolved once by the caller and threaded through here
   # rather than re-fetched: two reads of the same row leave a window in which
@@ -344,8 +344,7 @@ defmodule Tymeslot.Bookings.Reschedule do
 
     duration_minutes = meeting.duration
 
-    schedule_check_duration_minutes =
-      schedule_check_duration_minutes(meeting_type, duration_minutes)
+    schedule_check_duration_minutes = Offer.duration_minutes(meeting_type, duration_minutes)
 
     config = Policy.scheduling_config(organizer_user_id, meeting_type)
 
@@ -381,17 +380,6 @@ defmodule Tymeslot.Bookings.Reschedule do
         error
     end
   end
-
-  # Mirrors `TymeslotWeb.Live.Scheduling.AvailabilityHelpers.duration_minutes/1`:
-  # the resolved meeting type's current duration is authoritative for grid
-  # generation, and only an unresolved type falls back to the persisted
-  # duration.
-  defp schedule_check_duration_minutes(%{duration_minutes: minutes}, _persisted_duration_minutes)
-       when is_integer(minutes),
-       do: minutes
-
-  defp schedule_check_duration_minutes(_meeting_type, persisted_duration_minutes),
-    do: persisted_duration_minutes
 
   # Ad-hoc meetings (no `meeting_type_id`) mirror the reschedule page's own
   # fallback (`ThemeFlow.resolve_meeting_type_for_duration/2`): resolve by a

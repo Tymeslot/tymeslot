@@ -12,6 +12,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
 
   alias Ecto.Changeset
   alias Ecto.UUID
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Repo
@@ -439,15 +440,28 @@ defmodule Tymeslot.Meetings.MeetingQueries do
 
   @doc """
   Counts upcoming live bookings holding a provider room created by the given
-  integration.
+  integration, provided `user_id` owns that integration; otherwise 0.
 
   Drives the "N upcoming bookings use this" line in the disconnect modal, so the
   user knows what the optional room cleanup would affect before choosing it.
+  The integration id arrives from the client, so ownership is part of the
+  query rather than left to the caller. For the owner it counts the same set
+  `MeetingListQueries.list_upcoming_with_video_room_for_integration/3` drains.
   """
-  @spec count_upcoming_with_video_room_for_integration(pos_integer(), DateTime.t()) ::
-          non_neg_integer()
-  def count_upcoming_with_video_room_for_integration(integration_id, %DateTime{} = now) do
+  @spec count_upcoming_with_video_room_for_user_integration(
+          pos_integer(),
+          pos_integer(),
+          DateTime.t()
+        ) :: non_neg_integer()
+  def count_upcoming_with_video_room_for_user_integration(
+        user_id,
+        integration_id,
+        %DateTime{} = now
+      ) do
     Meeting
+    |> join(:inner, [m], v in VideoIntegrationSchema,
+      on: v.id == m.video_integration_id and v.user_id == ^user_id
+    )
     |> MeetingState.where_live_booking()
     |> where([m], m.end_time > ^now)
     |> where([m], m.video_integration_id == ^integration_id)

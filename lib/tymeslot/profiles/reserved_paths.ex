@@ -83,7 +83,7 @@ defmodule Tymeslot.Profiles.ReservedPaths do
 
       jackass jack-ass jerk jrk douchebag douche douch dumbass dumb-ass
       dumb-fuck dumb-shit twat tw@t prick prck wanker wnker bollocks bugger
-      goddamn god-damn damn-it damnit Jesus-Christ jfc Christ-sake wtf
+      goddamn god-damn damn-it damnit jesus-christ jfc christ-sake wtf
       cunt-face dick-head dickhead shit-head shithead ass-hat asshat
       cock-sucker cocksucker mother-fucker mofo son-of-a-bitch soab sob
 

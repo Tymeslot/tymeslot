@@ -6,11 +6,13 @@ defmodule Tymeslot.Integrations.VideoTest do
 
   import Mox
   import Tymeslot.Factory
+  import Tymeslot.MeetingTestHelpers
 
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.IntegrationHealthWorker
@@ -150,6 +152,78 @@ defmodule Tymeslot.Integrations.VideoTest do
       assert {:ok, pending} = VideoIntegrationQueries.get(integration.id)
       assert pending.deleted_at
       refute pending.is_active
+    end
+  end
+
+  describe "count_upcoming_rooms/2" do
+    setup do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "zoom")
+      %{user: user, integration: integration}
+    end
+
+    # Each booking gets its own slot: confirmed bookings share a per-organiser
+    # uniqueness constraint on start time.
+    defp room_booking(user, integration, hours_ahead, attrs \\ %{}) do
+      insert_meeting_for_user(
+        user,
+        Map.merge(
+          %{
+            start_offset: hours_ahead * 3_600,
+            video_integration_id: integration.id,
+            video_provider: "zoom",
+            video_room_id: "room-#{hours_ahead}"
+          },
+          attrs
+        )
+      )
+    end
+
+    test "counts the owner's upcoming bookings holding a room from the integration",
+         %{user: user, integration: integration} do
+      room_booking(user, integration, 24)
+      room_booking(user, integration, 48)
+
+      assert Video.count_upcoming_rooms(user.id, integration.id) == 2
+    end
+
+    test "counts exactly the bookings the room cleanup drains",
+         %{user: user, integration: integration} do
+      room_booking(user, integration, 24)
+      room_booking(user, integration, -24)
+      room_booking(user, integration, 72, %{status: "cancelled"})
+
+      drained =
+        MeetingListQueries.list_upcoming_with_video_room_for_integration(
+          integration.id,
+          DateTime.utc_now(),
+          500
+        )
+
+      assert length(drained) == 1
+      assert Video.count_upcoming_rooms(user.id, integration.id) == length(drained)
+    end
+
+    test "is 0 for an integration the user does not own", %{integration: integration} do
+      owner = Repo.preload(integration, :user).user
+      room_booking(owner, integration, 24)
+      stranger = insert(:user)
+
+      assert Video.count_upcoming_rooms(stranger.id, integration.id) == 0
+    end
+
+    test "leaves out past, cancelled, room-less and voided bookings, and other integrations",
+         %{user: user, integration: integration} do
+      other = insert(:video_integration, user: user, provider: "zoom")
+
+      room_booking(user, integration, -24)
+      room_booking(user, integration, 24, %{status: "cancelled"})
+      room_booking(user, integration, 48, %{video_room_id: nil})
+      room_booking(user, integration, 72, %{reschedule_requested_at: DateTime.utc_now()})
+      room_booking(user, other, 96)
+      room_booking(user, integration, 120)
+
+      assert Video.count_upcoming_rooms(user.id, integration.id) == 1
     end
   end
 

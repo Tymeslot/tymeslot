@@ -57,7 +57,11 @@ defmodule Tymeslot.Polls.PollQueriesTest do
                  %{poll_participant_id: participant.id, poll_time_slot_id: slot.id, response: :no}
                ])
 
-      assert [%{response: :no}] = PollParticipantQueries.get_by_token(participant.token).votes
+      assert [%{response: :no}] =
+               PollParticipantQueries.get_by_poll_and_token(
+                 participant.poll_id,
+                 participant.token
+               ).votes
     end
   end
 

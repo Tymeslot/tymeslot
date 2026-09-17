@@ -26,6 +26,7 @@ msgstr "Importo"
 msgid "Amount exceeds the remaining refundable balance."
 msgstr "L'importo supera il saldo rimborsabile residuo."
 
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee"
@@ -179,6 +180,7 @@ msgstr "I pagamenti delle riunioni non sono abilitati per questo account."
 msgid "Meeting payments require an upgraded plan."
 msgstr "I pagamenti delle riunioni richiedono un piano superiore."
 
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type"
@@ -254,6 +256,7 @@ msgstr "Motivo: %{reason}"
 msgid "Recent payments"
 msgstr "Pagamenti recenti"
 
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Refund"
@@ -393,3 +396,28 @@ msgstr "Rimborsa %{attendee} per %{meeting_type}."
 #, elixir-autogen, elixir-format
 msgid "Changing the currency will reset every paid event type to free - existing prices are recorded in the previous currency and would otherwise be charged at the new one."
 msgstr "La modifica della valuta reimposterà su gratuito ogni tipo di evento a pagamento: i prezzi esistenti sono registrati nella valuta precedente e altrimenti verrebbero addebitati con quella nuova."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Annullato"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Outstanding"
+msgstr "Da rimborsare"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Refund in Stripe"
+msgstr "Rimborsa in Stripe"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds outstanding"
+msgstr "Rimborsi da effettuare"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "These bookings were cancelled while you still held the attendee's money. Cancelling never refunds on its own."
+msgstr "Queste prenotazioni sono state annullate mentre il denaro del partecipante era ancora in tuo possesso. Un annullamento non rimborsa nulla da sé."

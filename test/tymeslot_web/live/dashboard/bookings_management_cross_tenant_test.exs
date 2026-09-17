@@ -22,9 +22,12 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
 
   @moduletag :live
   @moduletag :meetings
+  @moduletag :payments
   @moduletag :cross_tenant
 
   alias Plug.Test
+  alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
 
@@ -67,6 +70,15 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
   end
 
   defp reload(meeting), do: Repo.get!(MeetingSchema, meeting.id)
+
+  defp paid_payment_on(meeting, host) do
+    insert(:paid_booking_payment,
+      meeting_id: meeting.id,
+      host_user_id: host.id,
+      host_email: host.email,
+      stripe_account_id: "acct_HOST"
+    )
+  end
 
   # The handlers live in a LiveComponent, so the forged event has to be pushed
   # at the component rather than at the page, which is what a crafted client
@@ -193,6 +205,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
     # it is their meeting too — but it is the one case where "belongs to another
     # host" and "may not be touched" come apart, so it is pinned rather than
     # left to be rediscovered as a suspected hole.
+    #
+    # What the attendee may not do is refund themselves. The payment sits in
+    # the host's Stripe account, so the refund options are the host's alone:
+    # an attendee cancels, and nothing is paid back unless the host decides so.
     test "an attendee may cancel the meeting they are booked on", %{
       conn: conn,
       host: host,
@@ -204,6 +220,58 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementCrossTenantTest do
       push_to_component(view, "show_cancel_modal", %{"id" => booked_on.id})
 
       assert cancel_modal_open?(view)
+    end
+
+    test "an attendee cancelling a paid booking is offered no refund", %{
+      conn: conn,
+      host: host,
+      stranger: stranger
+    } do
+      booked_on = meeting_for(stranger, %{attendee_email: host.email})
+      paid_payment_on(booked_on, stranger)
+
+      view = open_meetings(conn)
+      push_to_component(view, "show_cancel_modal", %{"id" => booked_on.id})
+
+      assert cancel_modal_open?(view),
+             "the modal must open, or the missing refund options prove nothing"
+
+      refute has_element?(view, "#cancel-meeting-form input[name='cancel_refund_choice']")
+    end
+
+    # Stripe is stubbed to succeed in both cases below, so a refund that is not
+    # issued was refused by the rule and not by a missing mock. The cancellation
+    # itself still goes through: only the money is the host's decision.
+    for {label, params} <- [
+          {"an explicit full refund", %{"cancel_refund_choice" => "full"}},
+          {"no refund choice at all", %{}}
+        ] do
+      test "an attendee cancelling with #{label} refunds nothing", %{
+        conn: conn,
+        host: host,
+        stranger: stranger
+      } do
+        stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
+          {:ok, %{id: "re_should_not_happen"}}
+        end)
+
+        booked_on = meeting_for(stranger, %{attendee_email: host.email})
+        payment = paid_payment_on(booked_on, stranger)
+
+        view = open_meetings(conn)
+        push_to_component(view, "show_cancel_modal", %{"id" => booked_on.id})
+        assert cancel_modal_open?(view)
+
+        view
+        |> with_target("#bookings-management")
+        |> render_submit("confirm_cancel_meeting", unquote(Macro.escape(params)))
+
+        assert reload(booked_on).status == "cancelled"
+
+        reloaded = BookingPaymentQueries.get(payment.id)
+        assert reloaded.refunded_amount_cents == 0
+        assert reloaded.status == "paid"
+      end
     end
 
     test "but a third party who is neither organizer nor attendee may not", %{conn: conn} do

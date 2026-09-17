@@ -150,6 +150,69 @@ defmodule Tymeslot.Integrations.Video.InputValidationTest do
     end
   end
 
+  describe "validate_video_integration_form/2 - custom meeting URL template syntax" do
+    defp custom_params(url),
+      do: %{"provider" => "custom", "name" => "My Video Tool", "custom_meeting_url" => url}
+
+    test "refuses a malformed meeting ID placeholder on the meeting URL field" do
+      assert {:error, %{custom_meeting_url: message}} =
+               InputValidation.validate_video_integration_form(
+                 custom_params("https://meet.jit.si/{meeting_id}")
+               )
+
+      assert message == "Use double curly brackets: {{meeting_id}} not {meeting_id}"
+    end
+
+    test "refuses a percent-encoded placeholder that decodes to a malformed one" do
+      assert {:error, %{custom_meeting_url: message}} =
+               InputValidation.validate_video_integration_form(
+                 custom_params("https://meet.jit.si/%7Bmeeting_id%7D")
+               )
+
+      assert message == "Use double curly brackets: {{meeting_id}} not {meeting_id}"
+    end
+
+    test "refuses an angle-bracket placeholder before sanitising strips it" do
+      assert {:error, %{custom_meeting_url: message}} =
+               InputValidation.validate_video_integration_form(
+                 custom_params("https://meet.jit.si/<meeting_id>")
+               )
+
+      assert message == "Use curly brackets: {{meeting_id}} not <meeting_id>"
+    end
+
+    test "accepts a correctly written template" do
+      url = "https://meet.jit.si/{{meeting_id}}"
+
+      assert {:ok, %{"custom_meeting_url" => ^url}} =
+               InputValidation.validate_video_integration_form(custom_params(url))
+    end
+
+    test "accepts a static URL" do
+      url = "https://meet.jit.si/my-room"
+
+      assert {:ok, %{"custom_meeting_url" => ^url}} =
+               InputValidation.validate_video_integration_form(custom_params(url))
+    end
+
+    test "accepts a permanent Teams link whose context decodes to braces" do
+      url =
+        "https://teams.microsoft.com/l/meetup-join/19%3ameeting_NjU4YTQ%40thread.v2/0?context=%7b%22Tid%22%3a%2272f988bf%22%2c%22Oid%22%3a%22a1b2c3d4%22%7d"
+
+      assert {:ok, %{"custom_meeting_url" => sanitized}} =
+               InputValidation.validate_video_integration_form(custom_params(url))
+
+      assert sanitized =~ ~s(context={"Tid":"72f988bf","Oid":"a1b2c3d4"})
+    end
+
+    test "validate_single_field/3 refuses the same malformed placeholder" do
+      assert InputValidation.validate_single_field(
+               :custom_meeting_url,
+               "https://meet.jit.si/{meeting_id}"
+             ) == {:error, "Use double curly brackets: {{meeting_id}} not {meeting_id}"}
+    end
+  end
+
   describe "validate_video_integration_form/2 - unknown provider" do
     test "returns error for unknown provider" do
       params = %{"provider" => "zoom", "name" => "Zoom Meeting"}

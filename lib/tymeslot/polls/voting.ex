@@ -73,6 +73,20 @@ defmodule Tymeslot.Polls.Voting do
     end
   end
 
+  @doc """
+  Returns the participant on `poll` identified by `token`, with votes
+  preloaded, or `nil`.
+
+  The token is the per-person `?p=` value from the voting link. A token that
+  belongs to a different poll, an unknown token, and a non-string value all
+  return `nil`, so a participant can never be resolved across polls.
+  """
+  @spec get_participant(PollSchema.t(), term()) :: PollParticipantSchema.t() | nil
+  def get_participant(%PollSchema{id: poll_id}, token) when is_binary(token),
+    do: PollParticipantQueries.get_by_poll_and_token(poll_id, token)
+
+  def get_participant(%PollSchema{}, _token), do: nil
+
   # --- Registration helpers ---
 
   defp register_open(poll, attrs) do
@@ -145,16 +159,11 @@ defmodule Tymeslot.Polls.Voting do
   end
 
   defp resolve_participant(poll, token) do
-    case PollParticipantQueries.get_by_token(token) do
+    case get_participant(poll, token) do
       nil -> {:error, :unknown_participant}
-      participant -> validate_participant_poll(participant, poll.id)
+      participant -> {:ok, participant}
     end
   end
-
-  defp validate_participant_poll(%{poll_id: poll_id} = participant, poll_id),
-    do: {:ok, participant}
-
-  defp validate_participant_poll(_participant, _poll_id), do: {:error, :unknown_participant}
 
   defp cast_for_participant(_poll, participant, votes_map) when map_size(votes_map) == 0 do
     {:ok, participant}

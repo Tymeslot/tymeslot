@@ -2315,3 +2315,23 @@ msgstr "Změna plánu? Můžete %{link} kdykoli."
 #, elixir-autogen, elixir-format
 msgid "withdraw your request"
 msgstr "stáhnout žádost"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling does not refund anything on its own. Issue or decline the refund under Payments in your dashboard."
+msgstr "Zrušení samo o sobě nic nevrací. Vraťte platbu nebo ji zamítněte v sekci Platby na své nástěnce."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "REFUND OUTSTANDING:"
+msgstr "PLATBA K VRÁCENÍ:"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Refund outstanding"
+msgstr "Platba k vrácení"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "You still hold %{amount} for this booking."
+msgstr "Za tuto rezervaci u vás stále zůstává %{amount}."

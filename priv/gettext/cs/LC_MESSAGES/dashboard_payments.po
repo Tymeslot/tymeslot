@@ -26,6 +26,7 @@ msgstr "Částka"
 msgid "Amount exceeds the remaining refundable balance."
 msgstr "Částka překračuje zbývající zůstatek k vrácení."
 
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee"
@@ -179,6 +180,7 @@ msgstr "Platby za schůzky nejsou pro tento účet zapnuté."
 msgid "Meeting payments require an upgraded plan."
 msgstr "Platby za schůzky vyžadují vyšší tarif."
 
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type"
@@ -254,6 +256,7 @@ msgstr "Důvod: %{reason}"
 msgid "Recent payments"
 msgstr "Poslední platby"
 
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Refund"
@@ -395,3 +398,28 @@ msgstr "Vrátit platbu účastníkovi %{attendee} za typ schůzky %{meeting_type
 #, elixir-autogen, elixir-format
 msgid "Changing the currency will reset every paid event type to free - existing prices are recorded in the previous currency and would otherwise be charged at the new one."
 msgstr "Změna měny vynuluje cenu u všech placených typů schůzek – stávající ceny jsou uložené v původní měně a jinak by se účtovaly v nové."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Zrušeno"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Outstanding"
+msgstr "K vrácení"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Refund in Stripe"
+msgstr "Vrátit ve Stripe"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds outstanding"
+msgstr "Platby k vrácení"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "These bookings were cancelled while you still held the attendee's money. Cancelling never refunds on its own."
+msgstr "Tyto rezervace byly zrušeny, zatímco peníze účastníka stále zůstaly u vás. Zrušení samo o sobě nikdy nic nevrací."

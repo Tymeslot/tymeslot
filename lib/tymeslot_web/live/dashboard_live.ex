@@ -480,13 +480,9 @@ defmodule TymeslotWeb.DashboardLive do
     do: TourEventHandlers.handle_event(action, params, socket)
 
   def handle_event("onboarding:toggle", %{"id" => key}, socket) do
-    user = socket.assigns.current_user
-
-    with true <- OnboardingChecklist.toggleable_item?(key),
-         {:ok, user} <- Onboarding.toggle_dashboard_setup_item(user, key) do
-      {:noreply, assign(socket, :current_user, user)}
-    else
-      _invalid_or_error -> {:noreply, socket}
+    case Onboarding.toggle_dashboard_setup_item(socket.assigns.current_user, key) do
+      {:ok, user} -> {:noreply, assign(socket, :current_user, user)}
+      {:error, _reason} -> {:noreply, socket}
     end
   end
 

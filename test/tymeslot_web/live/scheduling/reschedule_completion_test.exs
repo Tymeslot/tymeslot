@@ -383,6 +383,58 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
     end
   end
 
+  describe "a reschedule on a day at the host's booking limit" do
+    # The host takes one booking a day and the booker's meeting is that day's
+    # one. The submit does not count the meeting being moved against the cap,
+    # so any other time that day is a valid move; the page used to count it
+    # anyway, greying the whole day out and leaving the booker nothing to pick.
+    @tag :capture_log
+    test "offers the rest of the meeting's own day, and moving to it succeeds", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      meeting_type: meeting_type,
+      meeting: meeting
+    } do
+      profile |> Changeset.change(%{max_bookings_per_day: 1}) |> Repo.update!()
+
+      # The booking helper walks to tomorrow, so that is where the meeting sits.
+      tomorrow = Date.add(Date.utc_today(), 1)
+      original_start = DateTime.new!(tomorrow, ~T[14:00:00], "Etc/UTC")
+
+      meeting
+      |> Changeset.change(%{
+        start_time: original_start,
+        end_time: DateTime.add(original_start, 30, :minute)
+      })
+      |> Repo.update!()
+
+      # Flunks unless tomorrow is selectable and lists at least one time.
+      view =
+        navigate_to_booking_form(conn, profile, meeting_type, reschedule_meeting_uid: meeting.uid)
+
+      view
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{
+          "name" => "Test Attendee",
+          "email" => "attendee@example.com",
+          "message" => "Earlier the same day suits better"
+        }
+      })
+      |> render_submit()
+
+      wait_until(fn ->
+        Repo.get!(MeetingSchema, meeting.id).start_time != original_start
+      end)
+
+      moved = Repo.get!(MeetingSchema, meeting.id)
+
+      assert DateTime.to_date(moved.start_time) == tomorrow
+      assert DateTime.compare(moved.start_time, original_start) != :eq
+      assert meeting_count_for(user) == 1
+    end
+  end
+
   describe "without the reschedule context" do
     @tag :capture_log
     test "the same walk books a new meeting and leaves the original alone", %{

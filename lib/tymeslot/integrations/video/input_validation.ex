@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Shared.InputValidators
+  alias Tymeslot.Integrations.Video.TemplateSyntax
   alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer, UrlValidation}
 
   @doc """
@@ -236,11 +237,18 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
         http_https_only_message()
       end
 
-    case InputValidators.validate_server_url(trimmed_url, metadata,
-           error_message: invalid_meeting_url_error,
-           validate_url_fn: &validate_video_url/1
-         ) do
-      {:ok, sanitized_url} -> {:ok, sanitized_url}
+    # The template syntax is checked on the sanitised URL, which is what gets
+    # stored, and on the input as typed, because sanitising strips tag-like
+    # tokens such as <meeting_id> before they could be recognised.
+    with {:ok, sanitized_url} <-
+           InputValidators.validate_server_url(trimmed_url, metadata,
+             error_message: invalid_meeting_url_error,
+             validate_url_fn: &validate_video_url/1
+           ),
+         :ok <- TemplateSyntax.validate(trimmed_url),
+         :ok <- TemplateSyntax.validate(sanitized_url) do
+      {:ok, sanitized_url}
+    else
       {:error, error} -> {:error, %{custom_meeting_url: error}}
     end
   end

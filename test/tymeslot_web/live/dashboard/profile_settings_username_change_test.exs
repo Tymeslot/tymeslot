@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsUsernameChangeTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Security.RateLimiter
 
@@ -119,6 +120,60 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsUsernameChangeTest do
 
       assert render(view) =~ "Too many username change attempts"
       assert current_username(profile) == "sarah"
+    end
+  end
+
+  describe "choosing a username that cannot be used" do
+    setup %{profile: profile} do
+      insert(:profile, username: "taken-name")
+      %{profile: with_username(profile, "sarah")}
+    end
+
+    test "a reserved username is explained without asking to confirm",
+         %{conn: conn, profile: profile} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      html = submit_username(view, "admin")
+
+      refute html =~ "Change your URL to"
+      assert html =~ "This username is reserved"
+      assert current_username(profile) == "sarah"
+    end
+
+    test "a taken username is explained without asking to confirm",
+         %{conn: conn, profile: profile} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      html = submit_username(view, "taken-name")
+
+      refute html =~ "Change your URL to"
+      assert html =~ "This username is already taken"
+      assert current_username(profile) == "sarah"
+    end
+
+    test "refused attempts do not use up the change allowance",
+         %{conn: conn, user: user, profile: profile} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      for username <- ~w(admin taken-name admin taken-name admin taken-name) do
+        submit_username(view, username)
+
+        # Whatever the form offers, an organiser who presses on must not pay
+        # for a change that could never happen.
+        if has_element?(view, "#username-change-modal button", "Change URL") do
+          view |> element("#username-change-modal button", "Change URL") |> render_click()
+        end
+      end
+
+      assert current_username(profile) == "sarah"
+
+      # The whole allowance of six changes is still there.
+      Enum.reduce(1..6, profile, fn attempt, current ->
+        assert {:ok, updated} =
+                 Profiles.update_username(current, "sarah-#{attempt}", user.id)
+
+        updated
+      end)
     end
   end
 

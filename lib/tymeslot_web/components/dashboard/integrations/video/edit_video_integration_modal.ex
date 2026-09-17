@@ -10,8 +10,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.AttrsCasting
   alias Tymeslot.Integrations.Video.InputValidation, as: VideoInputValidation
+  alias Tymeslot.Integrations.Video.TemplateSyntax
   alias Tymeslot.Utils.SanitizeMerge
-  alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplateAnalyzer
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplatePreviewBox
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponents,
@@ -247,7 +247,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
             <%= if @integration.provider == "custom" do %>
               <% url_value =
                 Map.get(@form_values, "custom_meeting_url", @integration.custom_meeting_url || "") %>
-              <%= case TemplateAnalyzer.analyze(url_value) do %>
+              <%= case TemplateSyntax.analyze(url_value) do %>
                 <% {:ok, :valid_template, preview, _message} -> %>
                   <TemplatePreviewBox.render
                     status={:valid}
