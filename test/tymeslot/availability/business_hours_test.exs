@@ -190,7 +190,7 @@ defmodule Tymeslot.Availability.BusinessHoursTest do
         %{day_of_week: 7, is_available: true, start_time: ~T[02:30:00], end_time: ~T[06:00:00]}
       ]
 
-      config = %{weekly_schedule: schedule, overrides: []}
+      config = %{weekly_schedule: schedule, overrides: [], time_off: []}
 
       assert [%{start_dt: start_dt, date: ~D[2027-03-28]}] =
                BusinessHours.windows_for_target_date(
@@ -218,6 +218,7 @@ defmodule Tymeslot.Availability.BusinessHoursTest do
         schedule_id: 1,
         weekly_schedule: schedule,
         overrides: [],
+        time_off: [],
         min_advance_hours: 0,
         max_advance_booking_days: 365
       }
