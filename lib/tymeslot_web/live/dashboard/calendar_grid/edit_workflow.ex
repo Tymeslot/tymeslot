@@ -167,6 +167,49 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   defp update_failure(event, reason, retry),
     do: {:error, original_event: event, reason: reason, retry: retry}
 
+  @doc """
+  Moves `event` to `integration` (on `calendar_id`, or its default calendar
+  when `nil`) in the background through `Tymeslot.CalendarGrid.move_event/3`.
+
+  Reports back with `{:event_move_result, {:ok, uid: uid, integration_id: id,
+  source: source}}`, where `source` is `nil` when the original was removed,
+  `:queued_delete` or `:left_behind` otherwise; or with
+  `{:event_move_result, {:error, original_event: event, reason: reason}}`
+  when nothing was moved.
+  """
+  @spec move_event_async(Phoenix.LiveView.Socket.t(), map(), map(), String.t() | nil) ::
+          Phoenix.LiveView.Socket.t()
+  def move_event_async(socket, event, integration, calendar_id) do
+    user_id = socket.assigns.current_user.id
+    destination = %{integration: integration, calendar_id: calendar_id}
+
+    run_async(
+      socket,
+      :event_move_result,
+      fn ->
+        case CalendarGrid.move_event(user_id, event, destination) do
+          {:ok, moved} ->
+            {:ok, uid: moved.uid, integration_id: moved.integration_id, source: moved[:source]}
+
+          {:error, reason} ->
+            move_failure(event, reason)
+        end
+      end,
+      move_failure(event, :crashed)
+    )
+  end
+
+  defp move_failure(event, reason), do: {:error, original_event: event, reason: reason}
+
+  @doc "The message shown when an organiser tries to move a recurring event."
+  @spec recurring_move_refused_message() :: String.t()
+  def recurring_move_refused_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "Recurring events cannot be moved to another calendar yet. Only single events can be moved."
+    )
+  end
+
   @spec assert_owns_event(Phoenix.LiveView.Socket.t(), map()) :: :ok | {:error, :unauthorized}
   def assert_owns_event(socket, event) do
     assert_owns_integration(socket, event.calendar_integration_id)

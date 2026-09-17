@@ -45,6 +45,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.Orchestration.Workflows
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Reconnection
+  alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.{CalendarManagement, CalendarPrimary}
   alias Tymeslot.Integrations.Providers.Directory
@@ -272,6 +273,14 @@ defmodule Tymeslot.Integrations.Calendar do
   """
   @spec find_calendar_by_path([CalendarEntry.t()], String.t() | nil) :: CalendarEntry.t() | nil
   defdelegate find_calendar_by_path(calendar_list, path), to: Selection
+
+  @doc """
+  The collection path a CalDAV-family integration writes new events to, or
+  `nil` when it has none. See
+  `Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver.resolve/1`.
+  """
+  @spec booking_calendar_path(integration()) :: String.t() | nil
+  defdelegate booking_calendar_path(integration), to: CalendarPathResolver, as: :resolve
 
   # ---------------------------
   # Public API: Validation/Connection

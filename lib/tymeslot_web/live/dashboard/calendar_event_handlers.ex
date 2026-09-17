@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
+  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Dashboard.CalendarGridComponent
 
@@ -119,7 +120,10 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
      )}
   end
 
-  @doc "Handles the result of an event move — updates the grid or reverts on failure."
+  @doc """
+  Handles the result of an event move: shows the moved event and says where
+  the original ended up, or reverts the grid when nothing was moved.
+  """
   @spec handle_event_move_result(
           {:ok, keyword()} | {:error, keyword()},
           Phoenix.LiveView.Socket.t()
@@ -132,7 +136,8 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       new_event_integration_id: new_event_info[:integration_id]
     )
 
-    {:noreply, socket}
+    {level, message} = moved_flash(new_event_info[:source])
+    {:noreply, put_flash(socket, level, message)}
   end
 
   def handle_event_move_result({:error, payload}, socket) do
@@ -142,8 +147,35 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       original_event: payload[:original_event]
     )
 
-    {:noreply,
-     put_flash(socket, :error, dgettext("dashboard_calendar_events", "Failed to move event"))}
+    {:noreply, put_flash(socket, :error, move_failed_message(payload[:reason]))}
+  end
+
+  defp moved_flash(nil),
+    do: {:info, dgettext("dashboard_calendar_events", "Event moved to the new calendar.")}
+
+  defp moved_flash(:queued_delete) do
+    {:warning,
+     dgettext(
+       "dashboard_calendar_events",
+       "Event copied to the new calendar. The original will be removed on the next sync."
+     )}
+  end
+
+  defp moved_flash(:left_behind) do
+    {:warning,
+     dgettext(
+       "dashboard_calendar_events",
+       "Event copied to the new calendar, but the original could not be removed. Please delete it from its original calendar."
+     )}
+  end
+
+  defp move_failed_message(:recurring_event), do: EditWorkflow.recurring_move_refused_message()
+
+  defp move_failed_message(_reason) do
+    dgettext(
+      "dashboard_calendar_events",
+      "Could not move the event. It is still on its original calendar."
+    )
   end
 
   @doc "Spawns a supervised task to create a calendar event."

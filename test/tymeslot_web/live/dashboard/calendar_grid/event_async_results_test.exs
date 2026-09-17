@@ -166,8 +166,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       send(lv.pid, {:event_move_result, {:error, original_event: event, reason: :api_error}})
 
       html = render(lv)
-      assert html =~ "Failed to move event"
+      assert html =~ "Could not move the event. It is still on its original calendar."
       assert html =~ "Move Me"
+    end
+
+    test "a refused recurring move reverts and explains why", %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      event =
+        insert_event(integration, %{
+          summary: "Weekly Standup",
+          start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
+          all_day: false
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      send(
+        lv.pid,
+        {:event_move_result, {:error, original_event: event, reason: :recurring_event}}
+      )
+
+      html = render(lv)
+      assert html =~ "Recurring events cannot be moved to another calendar yet."
+      refute html =~ "Could not move the event"
     end
 
     test "success path keeps the grid rendering without errors", %{conn: conn, user: user} do
@@ -190,7 +213,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
 
       render(lv)
       html = render(lv)
-      refute html =~ "Failed to move event"
+      refute html =~ "Could not move the event"
+      assert html =~ "Event moved to the new calendar."
       assert html =~ "Moved Event"
     end
   end

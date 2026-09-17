@@ -10,6 +10,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.CalendarGrid.BookingEvents
   alias Tymeslot.CalendarGrid.EventEdit
+  alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
@@ -313,6 +314,21 @@ defmodule Tymeslot.CalendarGrid do
   @spec update_event(pos_integer(), map(), EventEdit.changes(), keyword()) ::
           {:ok, map()} | {:error, EventEdit.failure()}
   defdelegate update_event(user_id, event, changes, opts \\ []), to: EventEdit
+
+  @doc """
+  Moves an event to another calendar, creating it on the destination before
+  deleting the original. See `Tymeslot.CalendarGrid.EventMove.move_event/3`.
+  """
+  @spec move_event(pos_integer(), map(), EventMove.destination()) ::
+          {:ok, EventMove.moved()} | {:error, term()}
+  defdelegate move_event(user_id, event, destination), to: EventMove
+
+  @doc """
+  Whether an event may be moved to another calendar. See
+  `Tymeslot.CalendarGrid.EventMove.ensure_movable/1`.
+  """
+  @spec ensure_movable(map()) :: :ok | {:error, :recurring_event}
+  defdelegate ensure_movable(event), to: EventMove
 
   @doc """
   Updates a cached event's attributes via upsert.

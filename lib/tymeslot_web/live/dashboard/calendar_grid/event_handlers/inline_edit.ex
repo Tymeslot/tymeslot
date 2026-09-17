@@ -5,11 +5,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.AllDay
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
-  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Moves
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.VideoSync
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -335,18 +335,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       {event, {:ok, new_id}} ->
         with :ok <- EditWorkflow.assert_event_writable(socket, event),
              :ok <- EditWorkflow.assert_owns_integration(socket, new_id),
+             :ok <- CalendarGrid.ensure_movable(event),
              :ok <- Shared.check_move_rate_limit(socket) do
-          updated_event = %{event | calendar_integration_id: new_id}
-          updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
-
-          socket =
-            socket
-            |> assign(:selected_event, updated_event)
-            |> assign(:events, updated_events)
-            |> Helpers.precompute_derived()
-            |> Moves.move_event_async(event, new_id, calendar_id: cal_id)
-
-          {:noreply, socket}
+          {:noreply, start_move(socket, event, new_id, cal_id)}
         else
           error -> flash_move_error(socket, error)
         end
@@ -356,9 +347,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     end
   end
 
-  # The move guard's three refusals, each with its own wording: the target
-  # calendar rejects writes, the event is not the organiser's, or the move
-  # rate limit has been hit.
+  # Shows the event on its new calendar straight away; the move's result
+  # either confirms that or puts it back.
+  defp start_move(socket, event, new_id, calendar_id) do
+    destination = Enum.find(socket.assigns.integrations, &(&1.id == new_id))
+    updated_event = %{event | calendar_integration_id: new_id}
+    updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
+
+    socket
+    |> assign(:selected_event, updated_event)
+    |> assign(:events, updated_events)
+    |> Helpers.precompute_derived()
+    |> EditWorkflow.move_event_async(event, destination, calendar_id)
+  end
+
+  # The move guard's refusals, each with its own wording: the target calendar
+  # rejects writes, the event is not the organiser's, the event repeats, or
+  # the move rate limit has been hit.
   defp flash_move_error(socket, {:error, :read_only} = error),
     do: Shared.flash_guard_error(socket, error)
 
@@ -370,6 +375,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         dgettext("dashboard_calendar_events", "You don't have permission to move this event")}}
     )
 
+    {:noreply, socket}
+  end
+
+  defp flash_move_error(socket, {:error, :recurring_event}) do
+    send(self(), {:flash, {:error, EditWorkflow.recurring_move_refused_message()}})
     {:noreply, socket}
   end
 

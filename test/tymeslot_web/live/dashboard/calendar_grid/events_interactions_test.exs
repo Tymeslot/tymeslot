@@ -192,17 +192,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
   end
 
   describe "all-day event move" do
-    test "moving an all-day event to another integration does not crash", %{
+    test "moving an all-day event to another integration creates it there with its dates", %{
       conn: conn,
       user: user
     } do
       integration = insert(:calendar_integration, user: user, is_active: true)
-      other_integration = insert(:calendar_integration, user: user, is_active: true)
+
+      other_integration =
+        insert(:calendar_integration, user: user, is_active: true, calendar_paths: ["/other/"])
+
       today = Date.utc_today()
 
       event =
         insert_event(integration, %{
           summary: "All Day Conf",
+          provider: "caldav",
           all_day: true,
           start_date: today,
           end_date: Date.add(today, 1),
@@ -210,14 +214,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
           end_at: nil
         })
 
-      # The source delete runs through the calendar module seam. Standing in
-      # for an unreachable source server keeps the move on its delete-failed
-      # path, where nothing is created on the destination.
+      # Both provider writes report to the test in the order they are made. A
+      # create without dates is refused, as the adapters refuse it.
       test_pid = self()
 
+      stub(Tymeslot.CalendarMock, :create_event, fn payload, context ->
+        send(test_pid, {:provider_call, self(), {:create, payload, context}})
+
+        case payload do
+          %{start_time: %Date{}, end_time: %Date{}} -> {:ok, payload.uid}
+          _undated -> {:error, :invalid_event_data}
+        end
+      end)
+
       stub(Tymeslot.CalendarMock, :delete_event, fn uid, context, _opts ->
-        send(test_pid, {:source_delete, uid, context})
-        {:error, :network_error}
+        send(test_pid, {:provider_call, self(), {:delete, uid, context}})
+        :ok
       end)
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
@@ -233,15 +245,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
         "integration-id" => to_string(other_integration.id)
       })
 
-      source_uid = event.uid
-      source_context = {integration.id, user.id}
-      assert_receive {:source_delete, ^source_uid, ^source_context}
+      # The first write must be the create: deleting first is what lost the
+      # event whenever the create then failed.
+      assert_receive {:provider_call, task_pid, first_call}, 5_000
+      assert {:create, payload, create_context} = first_call
+      assert_receive {:provider_call, ^task_pid, {:delete, deleted_uid, delete_context}}, 5_000
+      ref = Process.monitor(task_pid)
+      assert_receive {:DOWN, ^ref, :process, ^task_pid, _reason}, 5_000
 
-      # The optimistic UI update must not raise; no permission error expected.
-      # The flash reaches the DOM only on a later render, and renders escaped —
-      # see the matching assertion in "rejects a move to an integration owned by
-      # another user" below.
-      refute render(lv) =~ "You don&#39;t have permission"
+      assert {payload.start_time, payload.end_time} == {today, Date.add(today, 1)}
+      assert create_context == {other_integration.id, user.id}
+      assert {deleted_uid, delete_context} == {event.uid, {integration.id, user.id}}
+
+      # One render for the LiveView to take the Task's result, one for the grid
+      # to reload from the cache what that result told it.
+      render(lv)
+      html = render(lv)
+      assert html =~ "Event moved to the new calendar."
+      assert html =~ "All Day Conf"
     end
 
     test "rejects a move to an integration owned by another user", %{conn: conn, user: user} do
