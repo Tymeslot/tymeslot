@@ -195,7 +195,13 @@ defmodule Tymeslot.MixProject do
       setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      # `--preload-modules` loads every application's modules before the suite
+      # starts. Otherwise `mix test` loads each one on first use, all through
+      # the single code server, while ExUnit is also compiling test files into
+      # the same queue; under CPU contention a LiveView's first render can wait
+      # there long enough to time out. One batch up front costs no measurable
+      # time and matches a release, which boots with every module loaded.
+      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test --preload-modules"],
       # Every `:e2e` test module lives in this repo, and `test_helper.exs` starts
       # the endpoint and Wallaby only when E2E is set, so the tag is unrunnable
       # without this alias. Needs a local Chrome and chromedriver, which is why
@@ -204,7 +210,7 @@ defmodule Tymeslot.MixProject do
         &set_e2e_env/1,
         "ecto.create --quiet",
         "ecto.migrate --quiet",
-        "test --color --only e2e"
+        "test --color --preload-modules --only e2e"
       ],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": [
