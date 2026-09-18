@@ -10,6 +10,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
       separately-provisioned room),
     * call the calendar provider via `Calendar.Events`, queueing a failed
       create for offline retry,
+    * drop the organiser's cached availability so the newly blocked time
+      stops being offered on the booking page,
     * fire attendee notifications, and
     * look up integration metadata for the cache row.
 
@@ -26,6 +28,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.CalendarGrid.EventVideo
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
@@ -207,6 +210,12 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
   # The queued row carries the pre-generated UID, so the replayed create
   # addresses the same event the failed one tried to write.
+  #
+  # Deliberately no availability invalidation: a queued create exists on no
+  # server yet, and availability is fetched from the providers rather than
+  # read out of this table, so the slot is genuinely still free and dropping
+  # the organiser's entries would only make the next booking page slower. The
+  # sync that flushes the queue invalidates when the create actually lands.
   defp queue_retry(ctx, reason) do
     target = %{uid: ctx.uid, calendar_integration_id: ctx.creating.integration_id}
 
@@ -257,6 +266,15 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
     attendees =
       Enum.map(creating[:attendees] || [], fn email -> %{email: email} end)
+
+    # The provider write has landed, so the organiser is now busy for this
+    # slot. Availability is memoised per user, so without this the booking
+    # page keeps offering the hour the host has just blocked until the entries
+    # expire. Drawing an event on the grid is the ordinary way to make oneself
+    # unavailable, so it is the write path that most needs the drop. Both
+    # `finalise_create_result/2` success clauses funnel through here, and the
+    # failure clause does not, so a queued create is left alone.
+    AvailabilityCache.invalidate_for_user(user_id)
 
     {:ok, _status} = AttendeeNotifications.event_created(notify_event, attendees)
 
