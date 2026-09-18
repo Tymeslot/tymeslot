@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   CalDAV transport layer.
 
   Provides credential-aware wrappers for the WebDAV/CalDAV HTTP methods
-  (PROPFIND, REPORT, PUT, DELETE, HEAD). Encodes Basic Auth credentials,
+  (PROPFIND, REPORT, GET, PUT, DELETE, HEAD). Encodes Basic Auth credentials,
   constructs method-specific headers, and maps raw HTTP status codes and
   transport exceptions into the typed `error_reason()` vocabulary.
 
@@ -217,6 +217,33 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
 
       {:error, reason} ->
         handle_write_transport_error(reason)
+    end
+  end
+
+  @doc """
+  Performs a GET request for a single calendar object resource.
+
+  Answers with the server's current iCalendar document and, in the response
+  headers, the ETag that identifies it — the pair a property-level patch has
+  to be applied to, since patching anything older would revert whatever
+  changed on the server in between.
+  """
+  @spec get_event(String.t(), String.t(), String.t(), keyword()) ::
+          {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
+  def get_event(url, username, password, opts \\ []) do
+    timeout = Keyword.get(opts, :timeout, 30_000)
+
+    result =
+      authed_request("GET", url, username, password, [], fn headers ->
+        Config.http_client_module().get(url, headers,
+          receive_timeout: timeout,
+          ssrf_protect: true
+        )
+      end)
+
+    case result do
+      {:ok, response} -> classify(response, :get, url, success: [200])
+      {:error, reason} -> handle_read_transport_error(reason, :get)
     end
   end
 

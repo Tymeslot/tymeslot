@@ -12,6 +12,15 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   alone. `changes` speaks the cache's vocabulary; that module is the one place
   it is translated into the adapters'.
 
+  That keeps everything the cache models, which is not everything the event
+  has: an event authored elsewhere carries properties Tymeslot never reads.
+  For the CalDAV family the payload therefore travels with the cached
+  `raw_ical` and its ETag, and the adapter patches that document property by
+  property instead of rebuilding it, so an `ATTENDEE` block with its
+  `PARTSTAT`, categories and `X-` properties survive an edit. Google and
+  Outlook have no equivalent: their updates replace the event with the
+  payload, and what the cache does not model is still lost there.
+
   ## Failure
 
   A failed provider write is queued for replay when the error is one a retry
@@ -67,10 +76,30 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
     with {:ok, updated} <- apply_changes(event, changes, opts),
          {:ok, payload} <- ProviderPayload.from_event(updated) do
-      payload = maybe_put_scope(payload, Keyword.get(opts, :recurrence_scope))
+      payload =
+        payload
+        |> maybe_put_scope(Keyword.get(opts, :recurrence_scope))
+        |> put_stored_document(event)
+
       write_to_provider(user_id, event, updated, payload)
     else
       {:error, reason} -> {:error, %{reason: reason, retry: :not_queued}}
+    end
+  end
+
+  # The document the provider last gave us, for the adapters that can patch it
+  # rather than rebuild the event from the payload. It is read from the cache
+  # row rather than taken off `event`, which is whatever the grid last
+  # assigned and may be an optimistic copy built from a form: a payload that
+  # quietly arrived without a document would be rebuilt, which is the loss
+  # this exists to prevent.
+  defp put_stored_document(payload, event) do
+    case ProviderCalendarEventQueries.get_by_uid(event.calendar_integration_id, event.uid) do
+      {:ok, %{raw_ical: raw_ical} = row} when is_binary(raw_ical) and raw_ical != "" ->
+        Map.merge(payload, %{raw_ical: raw_ical, etag: row.etag})
+
+      _never_synced ->
+        payload
     end
   end
 

@@ -292,6 +292,11 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   directly as `If-Match` without a HEAD probe) and any options accepted by
   `Events.update_calendar_event/5`.
 
+  When `event_data` carries the event's last-synced `:raw_ical` (and the
+  `:etag` it came with), that document is patched property by property rather
+  than rebuilt from the payload, so everything Tymeslot does not model — the
+  `ATTENDEE` block above all — survives the write.
+
   When `event_data` carries `colour_only: true` (the colour write-back
   path), dispatches to `Events.update_event_colour/5` instead — patching only
   the `COLOR` property on the event's cached `raw_ical` rather than rebuilding

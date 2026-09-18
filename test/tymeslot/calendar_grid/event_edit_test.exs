@@ -35,6 +35,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
   # date for an all-day one.
   @timed_rrule "FREQ=WEEKLY;BYDAY=MO;UNTIL=20261231T235959Z"
   @all_day_rrule "FREQ=WEEKLY;BYDAY=MO;UNTIL=20261231"
+  @raw_ical "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"
 
   setup do
     user = insert(:user)
@@ -67,7 +68,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       visibility: "private",
       recurring_event_id: "series-1",
       etag: "\"etag-1\"",
-      raw_ical: "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n",
+      raw_ical: @raw_ical,
       video_link: "https://video.example.com/room",
       sync_state: "synced"
     }
@@ -150,13 +151,53 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
               visibility: "private",
               status: "confirmed",
               provider_event_id: "/cal/weekly-sync.ics",
-              calendar_id: "team-calendar"
+              calendar_id: "team-calendar",
+              # The document the provider last gave us travels with the
+              # payload, for the adapters that patch it rather than rebuild
+              # the event from what the cache models.
+              raw_ical: @raw_ical,
+              etag: "\"etag-1\""
             },
             payload_changes(changes)
           )
 
         assert payload == expected
       end
+    end
+
+    test "an event that has never synced sends no stored document", %{
+      user: user,
+      integration: integration
+    } do
+      event = insert_event(integration, %{raw_ical: nil, etag: nil})
+      expect_provider_update()
+
+      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+
+      payload = captured_payload()
+      refute Map.has_key?(payload, :raw_ical)
+      refute Map.has_key?(payload, :etag)
+    end
+
+    test "the stored document is read from the cache row, not from the event passed in", %{
+      user: user,
+      integration: integration
+    } do
+      event = insert_event(integration, %{})
+      expect_provider_update()
+
+      # What the grid hands over is whatever it last assigned, which may be an
+      # optimistic copy built from a form. A document taken from that would be
+      # missing, and the write would silently rebuild the event instead of
+      # patching it.
+      optimistic = %{event | raw_ical: nil, etag: nil}
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, optimistic, %{summary: "Renamed"})
+
+      payload = captured_payload()
+      assert payload.raw_ical == @raw_ical
+      assert payload.etag == "\"etag-1\""
     end
 
     test "toggling a timed event to all-day sends Date timing and keeps everything else", %{
