@@ -24,6 +24,12 @@ defmodule Tymeslot.Meetings.Cancellation do
   is a cancelled meeting with no refund, which is visible to the host and can
   be settled manually from Stripe — hence the distinct `:refund_failed` reason,
   so callers can say so rather than reporting a failed cancellation.
+
+  The cancellation is announced third, once the refund has settled either
+  way. The host's cancellation email tells them what they still hold for the
+  booking, and it reads the payment when it is built: announced before the
+  refund, it would report the full amount as outstanding for a refund that
+  went through a moment later.
   """
 
   alias Tymeslot.Bookings.Cancel
@@ -110,11 +116,18 @@ defmodule Tymeslot.Meetings.Cancellation do
     end
   end
 
+  # The announcement waits for the refund, whichever way it went: the host's
+  # cancellation email reports what they still hold for the booking, read from
+  # the payment when the email is built.
   defp cancel_and_refund(meeting, payment, host_user_id, amount_cents) do
-    with {:ok, cancelled} <- Cancel.execute(meeting) do
-      case MeetingPayments.refund_payment_for_host(payment.id, host_user_id, amount_cents) do
-        {:ok, _payment} -> {:ok, cancelled}
-        {:error, reason} -> {:error, {:refund_failed, reason}}
+    with {:ok, cancelled} <- Cancel.execute(meeting, announce: false) do
+      try do
+        case MeetingPayments.refund_payment_for_host(payment.id, host_user_id, amount_cents) do
+          {:ok, _payment} -> {:ok, cancelled}
+          {:error, reason} -> {:error, {:refund_failed, reason}}
+        end
+      after
+        Cancel.announce(cancelled)
       end
     end
   end
