@@ -4,12 +4,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
   for one of its events: deleting the event deletes the conversation, moving it
   moves the conversation's lobby, moving it to another calendar keeps the
   conversation with it, and switching an event's video to Talk records the
-  conversation so it is deleted later. The grid's asynchronous paths run as in
-  production; only the calendar provider and the HTTP client are stubbed.
+  conversation so it is deleted later. The grid's edits are driven through the
+  context that performs them, exactly as the LiveView drives them; only the
+  calendar provider and the HTTP client are stubbed.
   """
 
-  # Not async: the grid's edits call the providers from supervised tasks, which
-  # needs the global Mox mode.
+  # Not async: the Talk circuit breakers are VM-wide, and the room jobs drained
+  # here reach the provider through the global Mox mode.
   use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
@@ -19,7 +20,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
 
   import Mox
 
-  alias Phoenix.Component
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
@@ -28,17 +28,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.VideoSyncWorker
-  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Moves
-  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates
-  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.VideoSync
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
 
   @rooms_path "/ocs/v2.php/apps/spreed/api/v4/room"
-
-  # The grid's edits report back from a supervised task, which a loaded
-  # machine can take longer than ExUnit's default wait to finish.
-  @task_timeout 2_000
 
   setup :set_mox_global
   setup :verify_on_exit!
@@ -68,10 +60,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
         all_day: false
       )
 
-    socket =
-      Component.assign(%Phoenix.LiveView.Socket{}, current_user: user, integrations: [calendar])
-
-    %{user: user, calendar: calendar, event: event, socket: socket}
+    %{user: user, calendar: calendar, event: event}
   end
 
   test "deleting a grid event deletes its conversation on the server", %{
@@ -82,17 +71,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
     host = "grid-delete.example.com"
     room = insert_room(user, event, host)
 
-    expect(GoogleCalendarAPIMock, :delete_event, fn _integration, "primary", uid ->
+    expect(Tymeslot.CalendarMock, :delete_event, fn uid, _context, _opts ->
       assert uid == event.uid
       :ok
     end)
 
     assert {:ok, _result} =
-             EventDelete.run_delete_event(%{
+             CalendarGrid.delete_event(user.id, %{
                uid: event.uid,
                provider_event_id: nil,
-               calendar_integration_id: calendar.id,
-               user_id: user.id
+               calendar_integration_id: calendar.id
              })
 
     assert_enqueued(
@@ -117,16 +105,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
   } do
     room = insert_room(user, event, "grid-delete-failed.example.com")
 
-    expect(GoogleCalendarAPIMock, :delete_event, fn _integration, "primary", _uid ->
-      {:error, :unauthorized, "Token expired or invalid"}
+    expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
+      {:error, :unauthorized}
     end)
 
-    assert {:error, _reason, _context} =
-             EventDelete.run_delete_event(%{
+    assert {:error, %{reason: _reason}} =
+             CalendarGrid.delete_event(user.id, %{
                uid: event.uid,
                provider_event_id: nil,
-               calendar_integration_id: calendar.id,
-               user_id: user.id
+               calendar_integration_id: calendar.id
              })
 
     refute_enqueued(worker: VideoSyncWorker)
@@ -135,8 +122,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
 
   test "dragging a grid event moves its conversation's lobby to the new start", %{
     user: user,
-    event: event,
-    socket: socket
+    event: event
   } do
     host = "grid-drag.example.com"
     room = insert_room(user, event, host)
@@ -149,10 +135,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       :ok
     end)
 
-    optimistic = %{event | start_at: new_start, end_at: new_end}
-    _socket = Updates.update_event_async(socket, event, optimistic, new_start, new_end)
-
-    assert_receive {:event_update_result, :ok}, @task_timeout
+    assert {:ok, _updated} =
+             CalendarGrid.update_event(user.id, event, %{start_at: new_start, end_at: new_end})
 
     assert %{lobby_opens_at: ^new_start, ends_at: ^new_end} = Repo.reload!(room)
 
@@ -167,8 +151,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
 
   test "a grid edit the calendar refuses leaves the conversation's times alone", %{
     user: user,
-    event: event,
-    socket: socket
+    event: event
   } do
     room = insert_room(user, event, "grid-drag-refused.example.com")
     new_start = ~U[2026-10-06 14:00:00Z]
@@ -177,10 +160,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       {:error, :server_error}
     end)
 
-    optimistic = %{event | start_at: new_start}
-    _socket = Updates.update_event_async(socket, event, optimistic, new_start, event.end_at)
-
-    assert_receive {:event_update_result, {:error, _details}}, @task_timeout
+    assert {:error, %{reason: :server_error}} =
+             CalendarGrid.update_event(user.id, event, %{
+               start_at: new_start,
+               end_at: event.end_at
+             })
 
     assert Repo.reload!(room).lobby_opens_at == ~U[2026-10-05 09:00:00Z]
     refute_enqueued(worker: VideoSyncWorker)
@@ -188,23 +172,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
 
   test "moving a grid event to another calendar keeps its conversation with it", %{
     user: user,
-    event: event,
-    socket: socket
+    event: event
   } do
     room = insert_room(user, event, "grid-relocate.example.com")
-    destination = insert(:calendar_integration, user: user, is_active: true)
-    socket = Component.assign(socket, :integrations, [destination | socket.assigns.integrations])
 
-    expect(GoogleCalendarAPIMock, :delete_event, fn _integration, "primary", _uid -> :ok end)
+    destination =
+      insert(:calendar_integration,
+        user: user,
+        provider: "google",
+        default_booking_calendar_id: "secondary",
+        is_active: true
+      )
+
+    expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts -> :ok end)
 
     expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
       {:ok, "relocated-uid"}
     end)
 
-    _socket = Moves.move_event_async(socket, event, destination.id, [])
-
-    assert_receive {:event_move_result, {:ok, uid: "relocated-uid", integration_id: _id}},
-                   @task_timeout
+    assert {:ok, %{integration_id: _id}} =
+             CalendarGrid.move_event(user.id, event, %{integration: destination})
 
     # Written under a new uid, which the destination calendar answered with
     # its own identifier.
@@ -219,8 +206,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
   test "switching an event's video to Talk records the new conversation", %{
     user: user,
     calendar: calendar,
-    event: event,
-    socket: socket
+    event: event
   } do
     host = "grid-switch.example.com"
     talk = insert_talk_integration(user, host)
@@ -243,10 +229,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       :ok
     end)
 
-    _socket = VideoSync.change_video_async(socket, event, talk.id)
-
-    event_id = event.id
-    assert_receive {:video_sync_result, ^event_id, {:ok, %{video_link: _url}}}, @task_timeout
+    assert {:ok, _url} = CalendarGrid.change_event_video(user.id, event, talk.id)
 
     assert [
              %EventVideoRoomSchema{
@@ -266,8 +249,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
     # the event was written under.
     test "on a Google calendar follows the synced event through a drag and a delete", %{
       user: user,
-      calendar: calendar,
-      socket: socket
+      calendar: calendar
     } do
       host = "grid-google.example.com"
       talk = insert_talk_integration(user, host)
@@ -298,9 +280,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       new_end = ~U[2026-10-06 15:00:00Z]
       expect(Tymeslot.CalendarMock, :update_event, fn _uid, _event_data, _context -> :ok end)
 
-      optimistic = %{synced | start_at: new_start, end_at: new_end}
-      _socket = Updates.update_event_async(socket, synced, optimistic, new_start, new_end)
-      assert_receive {:event_update_result, :ok}, @task_timeout
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, synced, %{start_at: new_start, end_at: new_end})
 
       assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :video_rooms)
       assert_received {:nextcloud, :put, lobby_url, %{"timer" => timer}}
@@ -308,12 +289,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       assert timer == DateTime.to_unix(new_start)
 
       # Deleting the event deletes the conversation.
-      expect(GoogleCalendarAPIMock, :delete_event, fn _integration, "primary", _id -> :ok end)
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts -> :ok end)
 
       assert {:ok, _result} =
-               synced
-               |> NotificationFlows.build_delete_payload(user.id, false)
-               |> EventDelete.run_delete_event()
+               CalendarGrid.delete_event(
+                 user.id,
+                 NotificationFlows.build_delete_payload(synced, user.id, false)
+               )
 
       assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :video_rooms)
       assert_received {:nextcloud, :delete, delete_url, nil}
@@ -324,13 +306,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
     # A CalDAV series is cached as its occurrences, each under the series uid
     # followed by the occurrence's start.
     test "on a CalDAV series stays with the series its occurrences are cached as", %{
-      user: user,
-      socket: socket
+      user: user
     } do
       host = "grid-caldav.example.com"
       talk = insert_talk_integration(user, host)
       calendar = insert(:calendar_integration, user: user, provider: "caldav", is_active: true)
-      socket = Component.assign(socket, :integrations, [calendar])
       play_nextcloud(host, "cald0001")
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
@@ -368,19 +348,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       new_start = ~U[2026-10-04 09:00:00Z]
       expect(Tymeslot.CalendarMock, :update_event, fn _uid, _event_data, _context -> :ok end)
 
-      optimistic = %{second | start_at: new_start, end_at: ~U[2026-10-04 10:00:00Z]}
-
-      _socket =
-        Updates.update_event_async(
-          socket,
-          second,
-          optimistic,
-          new_start,
-          ~U[2026-10-04 10:00:00Z],
-          recurrence_scope: "this"
-        )
-
-      assert_receive {:event_update_result, :ok}, @task_timeout
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(
+                 user.id,
+                 second,
+                 %{start_at: new_start, end_at: ~U[2026-10-04 10:00:00Z]},
+                 recurrence_scope: "this"
+               )
 
       moved = Repo.reload!(room)
       assert moved.lobby_opens_at == new_start

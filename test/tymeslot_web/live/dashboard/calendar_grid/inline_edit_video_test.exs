@@ -25,14 +25,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditVideoTest do
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Security.Encryption
-  alias TymeslotWeb.Dashboard.CalendarGrid.InlineEditVideoTest.RefusingRooms
 
   @rooms_path "/ocs/v2.php/apps/spreed/api/v4/room"
+  @password_required ~s({"ocs":{"meta":{"status":"failure","statuscode":400,"message":""},"data":{"error":"password","message":"Password needs to be set"}}})
 
   setup %{conn: conn} do
-    original = Application.get_env(:tymeslot, :video_rooms_module)
-    on_exit(fn -> restore_rooms_module(original) end)
-
     stub(Tymeslot.CalendarMock, :update_event, fn _uid, _event_data, _context -> :ok end)
 
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
@@ -107,14 +104,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditVideoTest do
     user: user,
     calendar: calendar
   } do
-    video = custom_video_integration(user)
-    event = insert_event(calendar, description: "Agenda")
+    host = "refuses-rooms.example.com"
+    talk = talk_integration(user, host)
+    rooms_url = "https://#{host}#{@rooms_path}"
 
-    Application.put_env(:tymeslot, :video_rooms_module, RefusingRooms)
+    # The organiser's own Nextcloud, whose Talk settings force a password on
+    # public conversations: the credentials are fine, the server simply will
+    # not make the room.
+    stub(HTTPClientMock, :request, fn
+      :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 200, body: ocs([])}}
+
+      :post, ^rooms_url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 400, body: @password_required}}
+    end)
+
+    event = insert_event(calendar, description: "Agenda")
 
     lv = open_event(conn, event)
 
-    lv |> element(picker_button(video.id)) |> render_click()
+    lv |> element(picker_button(talk.id)) |> render_click()
 
     eventually(fn ->
       assert render(lv) =~ "turn off the password requirement for public conversations"
@@ -123,7 +132,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditVideoTest do
     # The picker goes back to the choice the organiser could see before they
     # pressed it, rather than showing a provider the event never got.
     assert has_element?(lv, picker_button("") <> ".border-turquoise-400")
-    refute has_element?(lv, picker_button(video.id) <> ".border-turquoise-400")
+    refute has_element?(lv, picker_button(talk.id) <> ".border-turquoise-400")
 
     assert {:ok, %{video_integration_id: nil, video_link: nil, description: "Agenda"}} =
              ProviderCalendarEventQueries.get_by_uid(calendar.id, event.uid)
@@ -177,8 +186,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditVideoTest do
       )
 
     # Any call to a provider from here is a room the organiser did not ask
-    # for, and this one would refuse loudly enough to see.
-    Application.put_env(:tymeslot, :video_rooms_module, RefusingRooms)
+    # for; a templated link needs no round trip, so the assertions below are
+    # what catch one being made.
 
     lv = open_event(conn, event)
 
@@ -242,18 +251,4 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditVideoTest do
   end
 
   defp ocs(data), do: Jason.encode!(%{"ocs" => %{"meta" => %{"status" => "ok"}, "data" => data}})
-
-  defp restore_rooms_module(nil), do: Application.delete_env(:tymeslot, :video_rooms_module)
-  defp restore_rooms_module(value), do: Application.put_env(:tymeslot, :video_rooms_module, value)
-end
-
-# Stands in for `Tymeslot.Integrations.Video.Rooms` as a server that accepts
-# the organiser's credentials and still refuses every conversation because of
-# a setting of its own.
-defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditVideoTest.RefusingRooms do
-  @moduledoc false
-
-  @spec create_meeting_room(integer() | nil, keyword()) :: {:error, term()}
-  def create_meeting_room(_user_id, _opts),
-    do: {:error, {:configuration_error, :password_required}}
 end
