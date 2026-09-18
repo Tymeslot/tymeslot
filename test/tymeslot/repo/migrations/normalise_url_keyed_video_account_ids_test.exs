@@ -18,7 +18,7 @@ defmodule Tymeslot.Repo.Migrations.NormaliseUrlKeyedVideoAccountIdsTest do
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Test.MigrationRunner
 
-  @version 20_260_917_164_238
+  @version 20_260_917_172_100
 
   setup do
     %{user: insert(:user)}
