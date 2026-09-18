@@ -29,7 +29,17 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   integration has an offline queue (the CalDAV family). The queue marks the
   cached row `locally_deleted`, and the replay removes it once the server has
   deleted the event.
+
+  Only a delete the calendar refused is reported as a failure. Once the
+  provider has removed the event there is nothing left to retry, so the
+  local tidying that follows (the linked meeting, the cached row, the
+  organiser's cached availability) can fail without changing the answer: the
+  failure is logged, and the delete still returns `{:ok, deleted}`. The
+  linked meeting is the one such step the organiser is told about, as
+  `:cancel_failed`.
   """
+
+  require Logger
 
   alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -104,15 +114,44 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
            opts
          ) do
       {:ok, result} ->
-        {:ok, _deleted_or_missing} =
-          ProviderCalendarEventQueries.delete_by_uid(integration_id, uid)
-
-        AvailabilityCache.invalidate_for_user(user_id)
+        purge_local_traces(integration_id, uid, user_id)
         {:ok, %{uid: uid, integration_id: integration_id, linked_meeting: linked_meeting(result)}}
 
       {:error, reason} ->
         {:error, %{reason: reason, retry: queue_retry(event, reason)}}
     end
+  end
+
+  # Both steps run after the event has already gone from the calendar, so
+  # neither may turn a delete that happened into one the organiser is told to
+  # retry. A cached row that outlives its event is removed by the next sync
+  # anyway, and a stale availability entry expires on its own; a message
+  # telling the organiser to delete an event that no longer exists does not
+  # recover. They are rescued one by one so a failing cache delete still
+  # leaves the availability invalidated.
+  defp purge_local_traces(integration_id, uid, user_id) do
+    context = [user_id: user_id, calendar_integration_id: integration_id, uid: uid]
+
+    after_delete("delete the cached event row", context, fn ->
+      {:ok, _deleted_or_missing} = ProviderCalendarEventQueries.delete_by_uid(integration_id, uid)
+    end)
+
+    after_delete("invalidate cached availability", context, fn ->
+      AvailabilityCache.invalidate_for_user(user_id)
+    end)
+  end
+
+  defp after_delete(step, context, fun) do
+    fun.()
+    :ok
+  rescue
+    error ->
+      Logger.error(
+        "Calendar grid delete: local cleanup failed after the event was deleted",
+        [step: step, error: Exception.format(:error, error, __STACKTRACE__)] ++ context
+      )
+
+      :ok
   end
 
   defp linked_meeting(%{meeting_attendee_email: _email, reconcile_result: :ok}), do: :cancelled

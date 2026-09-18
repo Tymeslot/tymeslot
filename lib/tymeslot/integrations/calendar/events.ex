@@ -191,6 +191,12 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   Returns `{:ok, result}` where `result` carries `:uid`, `:integration_id`,
   `:reconcile_result` and, when a meeting was linked, `:meeting_attendee_email`.
+
+  An `{:error, _}` return means the provider refused the delete and the event
+  is still on the calendar. A reconciliation that fails once the event is
+  gone is not that: it is reported in `:reconcile_result`, whether it came
+  back as an error or blew up, so callers can tell the organiser their
+  booking may still stand rather than that the delete failed.
   """
   @spec delete_event_and_reconcile(
           String.t(),
@@ -207,7 +213,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
     linked_meeting = Sync.find_meeting(integration_id, provider_event_id, uid)
 
     with :ok <- delete_event(uid, context, opts) do
-      reconcile_result = Sync.reconcile(integration_id, provider_event_id, uid, :deleted)
+      reconcile_result = reconcile_deleted(integration_id, provider_event_id, uid)
       result = %{uid: uid, integration_id: integration_id, reconcile_result: reconcile_result}
 
       case linked_meeting do
@@ -215,6 +221,25 @@ defmodule Tymeslot.Integrations.Calendar.Events do
         {:error, :not_found} -> {:ok, result}
       end
     end
+  end
+
+  # The event is already off the calendar by the time this runs, so a raise
+  # here must not escape as a failed delete: the caller would report an event
+  # that no longer exists as still needing deleting, and say nothing about the
+  # booking that was left standing. Reported as a failed reconciliation
+  # instead, which is what it is.
+  defp reconcile_deleted(integration_id, provider_event_id, uid) do
+    Sync.reconcile(integration_id, provider_event_id, uid, :deleted)
+  rescue
+    error ->
+      Logger.error("Reconciliation crashed after the calendar event was deleted",
+        calendar_integration_id: integration_id,
+        provider_event_id: provider_event_id,
+        uid: uid,
+        error: Exception.format(:error, error, __STACKTRACE__)
+      )
+
+      {:error, error}
   end
 
   @doc """
