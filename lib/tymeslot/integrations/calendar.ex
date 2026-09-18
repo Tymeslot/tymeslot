@@ -555,31 +555,21 @@ defmodule Tymeslot.Integrations.Calendar do
   Reconnect an existing CalDAV-family integration. Returns either
   `{:ok, :updated, integration}` (password-only path, done) or
   `{:ok, :needs_calendar_selection, payload}` (account change; caller must
-  prompt for calendar selection and then call
-  `Calendar.finalise_caldav_reconnect/3`).
-
-  Arguments:
-    * `user_id` — owning user id, used to scope the fetch.
-    * `integration_id` — the integration to reconnect.
-    * `params` — map with `"url"`, `"username"`, `"password"`.
+  prompt for calendar selection and then call `finalise_caldav_reconnect/3`).
+  See `Reconnection.reconnect_for_user/3`.
   """
   @spec reconnect_caldav_integration(user_id(), integration_id(), map()) ::
-          {:ok, :needs_calendar_selection, %{calendars: [map()], credentials: map()}}
+          Reconnection.reconnect_ok()
           | {:error, :not_found}
-          | {:error, :invalid_credentials}
-          | {:error, {:changeset, Ecto.Changeset.t()}}
-          | {:error, term()}
-  def reconnect_caldav_integration(user_id, integration_id, params)
-      when is_integer(user_id) and is_integer(integration_id) and is_map(params) do
-    with {:ok, integration} <-
-           CalendarManagement.get_calendar_integration(integration_id, user_id) do
-      Reconnection.reconnect(integration, params)
-    end
-  end
+          | Reconnection.reconnect_error()
+  defdelegate reconnect_caldav_integration(user_id, integration_id, params),
+    to: Reconnection,
+    as: :reconnect_for_user
 
   @doc """
-  Finalise the `:account_change` branch by persisting the user's selected
-  calendars alongside the new credentials. See `reconnect_caldav_integration/3`.
+  Finalise the account-change branch by persisting the user's selected
+  calendars alongside the new credentials. See
+  `reconnect_caldav_integration/3` and `Reconnection.finalise_for_user/3`.
   """
   @spec finalise_caldav_reconnect(user_id(), integration_id(), %{
           required(:payload) => map(),
@@ -589,16 +579,9 @@ defmodule Tymeslot.Integrations.Calendar do
           | {:error, :not_found}
           | {:error, :no_calendars_selected}
           | {:error, {:changeset, Ecto.Changeset.t()}}
-  def finalise_caldav_reconnect(user_id, integration_id, %{
-        payload: payload,
-        selected_paths: paths
-      })
-      when is_integer(user_id) and is_integer(integration_id) do
-    with {:ok, integration} <-
-           CalendarManagement.get_calendar_integration(integration_id, user_id) do
-      Reconnection.finalise_account_change(integration, payload, paths)
-    end
-  end
+  defdelegate finalise_caldav_reconnect(user_id, integration_id, selection),
+    to: Reconnection,
+    as: :finalise_for_user
 
   # ---------------------------
   # Public API: Event colour
