@@ -1345,12 +1345,12 @@ msgid "Login name"
 msgstr ""
 
 #: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Login name is required"
 msgstr ""
 
 #: lib/tymeslot/integrations/video/providers/nextcloud_talk/booking_conversation.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Meeting"
 msgstr ""
 
@@ -1455,7 +1455,7 @@ msgid "Saved, but the server did not answer as expected. Check the URL, or use T
 msgstr ""
 
 #: lib/tymeslot_web/live/dashboard/video_settings/provider_picker.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Self-hosted"
 msgstr ""
 

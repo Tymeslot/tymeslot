@@ -1348,14 +1348,14 @@ msgid "Login name"
 msgstr "Ім'я для входу"
 
 #: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Login name is required"
-msgstr "Потрібно вказати URL-адресу зустрічі"
+msgstr "Потрібно вказати ім'я для входу"
 
 #: lib/tymeslot/integrations/video/providers/nextcloud_talk/booking_conversation.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Meeting"
-msgstr "URL-адреса зустрічі"
+msgstr "Зустріч"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
 #, elixir-autogen, elixir-format
@@ -1458,9 +1458,9 @@ msgid "Saved, but the server did not answer as expected. Check the URL, or use T
 msgstr "Збережено, але сервер відповів не так, як очікувалося. Перевірте URL-адресу або скористайтеся кнопкою «Перевірити підключення», коли сервер стане доступним."
 
 #: lib/tymeslot_web/live/dashboard/video_settings/provider_picker.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Self-hosted"
-msgstr "на власному сервері"
+msgstr "На власному сервері"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
 #, elixir-autogen, elixir-format
