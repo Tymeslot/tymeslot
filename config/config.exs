@@ -307,6 +307,31 @@ config :tailwind,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Parameter names whose values are replaced with "[FILTERED]" before Phoenix or
+# LiveView writes them to a log line. The match is a case-sensitive substring of
+# the parameter key, so "password" also covers "current_password" and
+# "new_password", "secret" covers "client_secret", and "token" covers
+# "access_token", "refresh_token" and "bot_token".
+#
+# Setting this replaces Phoenix's own default of ["password", "token"], so both
+# have to be repeated here. The two additions are the credential names this
+# app posts that neither of those words reaches: "api_key" (MiroTalk and the
+# other key-authenticated video providers) and "webhook_url" (a Slack incoming
+# webhook URL is itself the credential).
+#
+# This lives in compile-time config rather than runtime.exs so it holds at every
+# log level and in every environment. Production pins the level to :info, where
+# the "Parameters:" line is not emitted at all, but dev runs at :debug and a
+# deployment raising the level must not start logging whatever an organiser
+# typed into a connect form.
+config :phoenix, :filter_parameters, [
+  "password",
+  "secret",
+  "token",
+  "api_key",
+  "webhook_url"
+]
+
 # Precompressed siblings written by `mix phx.digest`, replacing the stock
 # [Phoenix.Digester.Gzip]. Order is irrelevant here; what a client is offered
 # is decided by the endpoint's :encodings list. See the module for why both
