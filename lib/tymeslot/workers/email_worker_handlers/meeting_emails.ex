@@ -6,12 +6,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
   require Logger
 
-  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Notifications.GuestNotifications
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
@@ -131,6 +131,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     case Config.email_service_module().send_cancellation_emails(appointment_details) do
       {{:ok, _organizer}, {:ok, _attendee}} ->
         Logger.info("Cancellation emails sent successfully", meeting_id: meeting.id)
+        GuestNotifications.notify_cancelled(meeting, appointment_details)
         :ok
 
       {organizer_result, attendee_result} ->
@@ -141,6 +142,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
         )
 
         if match?({:ok, _}, organizer_result) or match?({:ok, _}, attendee_result) do
+          # Discarded rather than retried, so the guests are told now or never.
+          GuestNotifications.notify_cancelled(meeting, appointment_details)
+
           {:discard,
            "Partial cancellation email failure: one email succeeded, retry would duplicate"}
         else
@@ -238,7 +242,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     meeting.id
     |> GuestQueries.list_unsent_for_meeting()
     |> Enum.each(fn guest ->
-      details = guest_appointment_details(appointment_details, guest)
+      details = GuestNotifications.guest_details(appointment_details, guest)
 
       case email_service.send_guest_confirmation(guest.email, details) do
         {:ok, _result} ->
@@ -252,15 +256,6 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           )
       end
     end)
-  end
-
-  defp guest_appointment_details(appointment_details, guest) do
-    urls = Policy.guest_rsvp_urls(guest.rsvp_token)
-
-    appointment_details
-    |> Map.put(:guest_name, guest.name || guest.email)
-    |> Map.put(:guest_accept_url, urls.accept_url)
-    |> Map.put(:guest_decline_url, urls.decline_url)
   end
 
   # Sends only to the recipient(s) not yet recorded as sent for this specific

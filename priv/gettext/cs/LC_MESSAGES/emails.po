@@ -165,6 +165,7 @@ msgstr "PŘIPOJIT SE K VIDEOSCHŮZCE:"
 #: lib/tymeslot/emails/shared/meeting/video_section.ex
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Join Meeting"
 msgstr "Připojit se ke schůzce"
@@ -1543,16 +1544,20 @@ msgid "%{booker} has invited you as a guest to this meeting with %{organizer}."
 msgstr "Jako hosta vás na tuto schůzku s uživatelem %{organizer} pozval uživatel %{booker}."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Can't make it"
 msgstr "Nemohu se zúčastnit"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Can't make it: %{url}"
 msgstr "Nemohu se zúčastnit: %{url}"
 
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{guest},"
 msgstr "Dobrý den, %{guest},"
@@ -1568,11 +1573,13 @@ msgid "Will you be there?"
 msgstr "Zúčastníte se?"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Yes, I'll attend"
 msgstr "Ano, zúčastním se"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Yes, I'll attend: %{url}"
 msgstr "Ano, zúčastním se: %{url}"
@@ -2335,3 +2342,48 @@ msgstr "Platba k vrácení"
 #, elixir-autogen, elixir-format
 msgid "You still hold %{amount} for this booking."
 msgstr "Za tuto rezervaci u vás stále zůstává %{amount}."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to has been cancelled."
+msgstr "Dobrý den, %{guest}, schůzka s %{organizer}, na kterou vás pozval(a) %{booker}, byla zrušena."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to has been moved to a new time."
+msgstr "Dobrý den, %{guest}, schůzka s %{organizer}, na kterou vás pozval(a) %{booker}, byla přesunuta na nový čas."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting has moved."
+msgstr "Schůzka byla přesunuta."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting with %{organizer} that %{booker} invited you to has been cancelled."
+msgstr "Schůzka s %{organizer}, na kterou vás pozval(a) %{booker}, byla zrušena."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting with %{organizer} that %{booker} invited you to has been moved to a new time."
+msgstr "Schůzka s %{organizer}, na kterou vás pozval(a) %{booker}, byla přesunuta na nový čas."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "WILL YOU BE THERE AT THE NEW TIME?"
+msgstr "ZÚČASTNÍTE SE V NOVÉM ČASE?"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Will you be there at the new time?"
+msgstr "Zúčastníte se v novém čase?"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "You don't need to do anything. If you added the meeting to your calendar, the attached file marks it as cancelled there."
+msgstr "Nemusíte nic dělat. Pokud jste si schůzku přidali do kalendáře, přiložený soubor ji tam označí jako zrušenou."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Your earlier response applied to the previous time, so please let us know again."
+msgstr "Vaše dřívější odpověď platila pro původní čas, dejte nám prosím vědět znovu."
