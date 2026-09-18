@@ -29,9 +29,9 @@ defmodule Tymeslot.Meetings.VideoRooms do
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.MeetingContext
   alias Tymeslot.Integrations.Video.ProviderConfig
-  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.Repo
+  alias Tymeslot.Security.UrlValidation
 
   # Get Video module dynamically to avoid compile-time warnings with mocks
   @spec video_module() :: module()
@@ -65,6 +65,8 @@ defmodule Tymeslot.Meetings.VideoRooms do
     - {:error, :unknown_provider} if provider is unsupported
     - {:error, :incomplete_video_room} if the provider returned a room carrying
       neither a room id nor a meeting URL
+    - {:error, :join_url_unavailable} if the provider could not mint a join URL
+      and the room carries no usable URL to fall back on
     - {:error, :database_update_failed} if the final write fails
     - {:error, reason} on other failures
 
@@ -164,7 +166,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
   end
 
   @spec build_video_room_attrs(MeetingSchema.t(), MeetingContext.t()) ::
-          {:ok, map()} | {:error, :incomplete_video_room}
+          {:ok, map()} | {:error, :incomplete_video_room | :join_url_unavailable}
   defp build_video_room_attrs(meeting, meeting_context) do
     meeting_url = get_meeting_url_from_context(meeting_context)
     room_id = video_module().extract_room_id(meeting_context)
@@ -188,7 +190,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
   end
 
   @spec complete_video_room_attrs(MeetingSchema.t(), map(), String.t() | nil, String.t() | nil) ::
-          {:ok, map()}
+          {:ok, map()} | {:error, :join_url_unavailable}
   defp complete_video_room_attrs(meeting, meeting_context, room_id, meeting_url) do
     with {:ok, organizer_url} <- create_secure_join_url(meeting, meeting_context, "organizer"),
          {:ok, attendee_url} <- create_secure_join_url(meeting, meeting_context, "participant") do
@@ -308,6 +310,8 @@ defmodule Tymeslot.Meetings.VideoRooms do
     end
   end
 
+  @spec create_secure_join_url(MeetingSchema.t(), MeetingContext.t(), String.t()) ::
+          {:ok, String.t()} | {:error, :join_url_unavailable}
   defp create_secure_join_url(meeting, meeting_context, role) do
     {participant_name, participant_email} = get_participant_info(meeting, role)
 
@@ -323,8 +327,8 @@ defmodule Tymeslot.Meetings.VideoRooms do
         {:ok, url}
 
       {:error, reason} ->
-        # Fallback to direct URL on any error
-        handle_join_url_error(meeting_context, participant_name, role, reason)
+        # Fall back to the room's own URL on any error
+        handle_join_url_error(meeting_context, role, reason)
     end
   end
 
@@ -349,8 +353,18 @@ defmodule Tymeslot.Meetings.VideoRooms do
       {:error, error}
   end
 
-  defp handle_join_url_error(meeting_context, participant_name, role, error) do
-    room_id = video_module().extract_room_id(meeting_context)
+  # A provider that cannot mint a personalised join URL still leaves the room's
+  # own URL behind, so that is what the participant is given. It is the weaker
+  # of the two links: a MiroTalk attendee arriving on `meeting_url` lands in the
+  # room's lobby and types their own name, rather than arriving already named
+  # and carrying a role token. It does open the right room, which matters. A
+  # room URL that is not an absolute http(s) address opens nothing at all, so
+  # that case fails the attachment instead, leaving the caller free to retry
+  # rather than persisting a link the attendee cannot follow.
+  @spec handle_join_url_error(MeetingContext.t(), String.t(), term()) ::
+          {:ok, String.t()} | {:error, :join_url_unavailable}
+  defp handle_join_url_error(%{room_data: %{meeting_url: meeting_url}} = context, role, error) do
+    room_id = video_module().extract_room_id(context)
 
     Logger.error("Failed to create secure join URL",
       room_id: room_id,
@@ -358,8 +372,23 @@ defmodule Tymeslot.Meetings.VideoRooms do
       error: inspect(error)
     )
 
-    fallback_url = create_direct_join_url_fallback(room_id, participant_name)
-    {:ok, fallback_url}
+    case UrlValidation.validate_http_url(meeting_url) do
+      :ok ->
+        Logger.warning("Falling back to the room URL for the join link",
+          room_id: room_id,
+          role: role
+        )
+
+        {:ok, meeting_url}
+
+      {:error, _message} ->
+        Logger.error("Video room has no usable join URL, refusing to attach it",
+          room_id: room_id,
+          role: role
+        )
+
+        {:error, :join_url_unavailable}
+    end
   end
 
   # No catch-all clause: `RoomData` enforces both keys, so `MeetingContext.t()`
@@ -391,34 +420,6 @@ defmodule Tymeslot.Meetings.VideoRooms do
 
       {:error, :not_found} ->
         {:error, :video_integration_missing}
-    end
-  end
-
-  defp get_meeting_context_from_room_id(room_id) do
-    # Create a minimal context for backward compatibility
-    %MeetingContext{
-      provider_type: :mirotalk,
-      room_data: %RoomData{room_id: room_id, meeting_url: room_id, provider_data: %{}},
-      provider_module: Tymeslot.Integrations.Video.Providers.MiroTalkProvider
-    }
-  end
-
-  defp create_direct_join_url_fallback(room_id, participant_name) do
-    # Fallback to direct URL creation for backward compatibility
-    case video_module().create_join_url(
-           get_meeting_context_from_room_id(room_id),
-           participant_name,
-           "",
-           "participant",
-           DateTime.utc_now()
-         ) do
-      {:ok, url} ->
-        url
-
-      {:error, _error} ->
-        # Ensure participant name is URL-encoded
-        query = URI.encode_query(%{name: participant_name})
-        "#{room_id}?#{query}"
     end
   end
 end
