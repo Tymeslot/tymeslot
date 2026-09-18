@@ -288,6 +288,13 @@ defmodule Tymeslot.TelegramTest do
       assert {:error, :own_bot_mode} = Telegram.disconnect_integration(integration)
     end
 
+    test "disconnect_integration/1 returns not_found when the integration is gone" do
+      integration = insert(:telegram_integration, bot_mode: "shared", chat_id: "123456")
+      Repo.delete!(integration)
+
+      assert {:error, :not_found} = Telegram.disconnect_integration(integration)
+    end
+
     test "reconnect_integration/1 clears chat_id and returns deep link for shared-bot" do
       setup_config(:tymeslot,
         telegram_bot_token: "shared_token",

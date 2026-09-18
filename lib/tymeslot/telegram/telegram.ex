@@ -102,12 +102,12 @@ defmodule Tymeslot.Telegram do
   end
 
   @spec disconnect_integration(TelegramIntegrationSchema.t()) ::
-          {:ok, TelegramIntegrationSchema.t()} | {:error, :own_bot_mode}
+          {:ok, TelegramIntegrationSchema.t()} | {:error, :own_bot_mode | :not_found}
   def disconnect_integration(%TelegramIntegrationSchema{bot_mode: "own"}),
     do: {:error, :own_bot_mode}
 
   def disconnect_integration(%TelegramIntegrationSchema{} = integration) do
-    TelegramQueries.update_integration(integration, %{chat_id: nil})
+    TelegramQueries.update_link_state(integration, %{chat_id: nil})
   end
 
   @spec reconnect_integration(TelegramIntegrationSchema.t()) ::
