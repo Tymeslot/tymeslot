@@ -85,6 +85,26 @@ defmodule CredoChecks.WebLayerBoundary do
 
       # Good: the context owns the enqueue
       Calendar.request_sync(integration)
+
+  ## Not attempted
+
+  This check covers one of the four web-layer boundary rules in
+  `CONTRIBUTING.md`. The other three, ownership enforcement in contexts,
+  async work staying in the domain, and UI pre-validation reusing the domain
+  rule, are conventions caught by review, and the documentation says so.
+
+  Ownership is the security-relevant one, so it was prototyped: flag a call
+  from a web module to a context function that names a resource id but no
+  acting user or scope. Measured against the two cross-tenant leaks this
+  codebase has fixed, it caught one (`payment_for_meeting(meeting.id)`) and
+  missed the other, whose offending call went through a query module and is
+  already this check's rule. Across the web layer it raised thirteen hits,
+  none of them a real gap: an id read off an already-scoped record
+  (`poll.confirmed_meeting_id`, a profile id fetched from the current user)
+  is indistinguishable, in the AST, from one posted by the browser, and that
+  distinction is the whole rule. Matching instead on an `{:error, :not_found}`
+  return is worse: both fixed bugs returned exactly that shape while broken,
+  because the row was found and simply belonged to someone else.
   """
 
   use Credo.Check,
