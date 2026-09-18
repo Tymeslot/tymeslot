@@ -40,10 +40,12 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   Gives `event` a room on the video integration `video_integration_id`, or
   removes its video link when that is `nil`.
 
-  Choosing the integration the event already has a link from changes nothing.
-
   Returns `{:ok, url}` with the new join URL (`nil` after a removal), or:
 
+    * `{:ok, :unchanged}` when the choice is the one the event already has:
+      the integration it already holds a link from, or "None" on an event
+      with no video. An integration with no link is not a no-op, since that
+      is how an organiser provisions a room after a failed earlier attempt;
     * `{:error, :not_found}` when the video integration is not the organiser's;
     * `{:error, :missing_meeting_url}` when the provider created a room but
       returned no join URL, in which case the event keeps its current link;
@@ -51,13 +53,14 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
       rejected the change. Nothing is changed.
   """
   @spec change_event_video(pos_integer(), map(), pos_integer() | nil) ::
-          {:ok, String.t() | nil} | {:error, :missing_meeting_url | :not_found | term()}
+          {:ok, String.t() | nil | :unchanged}
+          | {:error, :missing_meeting_url | :not_found | term()}
   def change_event_video(_user_id, %{video_integration_id: id, video_link: link}, id)
       when is_integer(id) and is_binary(link),
-      do: {:ok, link}
+      do: {:ok, :unchanged}
 
   def change_event_video(_user_id, %{video_integration_id: nil, video_link: nil}, nil),
-    do: {:ok, nil}
+    do: {:ok, :unchanged}
 
   def change_event_video(user_id, event, nil) do
     with :ok <- write_description(user_id, event, nil),

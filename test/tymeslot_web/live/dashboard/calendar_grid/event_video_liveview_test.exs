@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
   """
 
   use TymeslotWeb.LiveCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :calendar
   @moduletag :video
@@ -21,6 +22,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
 
   alias Plug.Test
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Meetings.AttendeeNotifications.Worker
 
   # Video room and provider writes run in a Task; allow for a busy test machine.
   @task_timeout 5_000
@@ -83,7 +85,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
       payload = await_provider_update(lv)
       assert payload.description == "Join video call: https://video.example.com/join/room-123"
 
-      assert render(lv) =~ "Video room created."
+      html = render(lv)
+      assert html =~ "Video room created."
+      refute html =~ "notify-prompt-modal"
 
       assert has_element?(
                lv,
@@ -172,6 +176,178 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
         ProviderCalendarEventQueries.get_by_uid(event.calendar_integration_id, event.uid)
 
       assert row.video_integration_id == nil
+    end
+  end
+
+  describe "re-picking the choice the event already has" do
+    setup %{user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      video_integration = insert(:video_integration, user: user, is_active: true)
+
+      {:ok, integration: integration, video_integration: video_integration}
+    end
+
+    test "leaves the organiser's edit allowance alone", %{
+      conn: conn,
+      integration: integration,
+      video_integration: video_integration
+    } do
+      link = "https://video.example.com/join/current-room"
+
+      event =
+        insert_event(integration, %{
+          summary: "Linked Event",
+          description: "Join video call: #{link}",
+          start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
+          all_day: false,
+          video_link: link,
+          video_integration_id: video_integration.id
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      # An organiser may edit a calendar event 30 times in five minutes.
+      # Clicking the button that is already active is not an edit, so it must
+      # not eat into that, or an idle hand leaves no allowance for a real one.
+      for _click <- 1..30 do
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("update_edit_video", %{
+          "video_integration_id" => to_string(video_integration.id)
+        })
+      end
+
+      stub(Tymeslot.CalendarMock, :update_event, fn _uid, _payload, _context -> :ok end)
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_event_title", %{"value" => "Renamed"})
+
+      html = render(lv)
+      assert html =~ "Changes saved."
+      refute html =~ "Too many edits."
+      refute html =~ "Video room created."
+    end
+
+    test "choosing None on an event that has no video says nothing happened", %{
+      conn: conn,
+      integration: integration
+    } do
+      event =
+        insert_event(integration, %{
+          summary: "Plain Event",
+          description: "Agenda",
+          start_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[16:00:00], "Etc/UTC"),
+          all_day: false,
+          video_link: nil,
+          video_integration_id: nil
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_edit_video", %{"video_integration_id" => ""})
+
+      html = render(lv)
+      refute html =~ "Video link removed."
+      refute html =~ "Could not change the video link"
+    end
+
+    test "still provisions the room a failed earlier attempt left missing", %{
+      conn: conn,
+      integration: integration,
+      video_integration: video_integration
+    } do
+      url = "https://video.example.com/join/repaired-room"
+
+      event =
+        insert_event(integration, %{
+          summary: "Half-linked Event",
+          description: "Agenda",
+          start_at: DateTime.new!(Date.utc_today(), ~T[16:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[17:00:00], "Etc/UTC"),
+          all_day: false,
+          video_link: nil,
+          video_integration_id: video_integration.id
+        })
+
+      stub_room_created(url)
+      expect_provider_update()
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_edit_video", %{
+        "video_integration_id" => to_string(video_integration.id)
+      })
+
+      payload = await_provider_update(lv)
+      assert payload.description == "Agenda\n\nJoin video call: #{url}"
+      assert render(lv) =~ "Video room created."
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+      assert row.video_link == url
+    end
+  end
+
+  describe "telling attendees about a video change" do
+    test "an event with attendees offers to notify them, and confirming queues the mail", %{
+      conn: conn,
+      user: user
+    } do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      video_integration = insert(:video_integration, user: user, is_active: true)
+
+      event =
+        insert_event(integration, %{
+          summary: "Team Sync",
+          description: "Agenda",
+          attendees: [%{"email" => "guest@example.com", "name" => "Guest"}],
+          start_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[12:00:00], "Etc/UTC"),
+          all_day: false,
+          video_link: nil,
+          video_integration_id: nil
+        })
+
+      stub_room_created("https://video.example.com/join/room-123")
+      expect_provider_update()
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_edit_video", %{
+        "video_integration_id" => to_string(video_integration.id)
+      })
+
+      await_provider_update(lv)
+
+      html = render(lv)
+      assert html =~ "notify-prompt-modal"
+      assert html =~ "Notify 1 attendee of this change?"
+      refute_enqueued(worker: Worker)
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("notify_prompt_confirm", %{})
+
+      assert_enqueued(
+        worker: Worker,
+        args: %{
+          "event_id" => event.id,
+          "kind" => "provider_calendar_event",
+          "action" => "update"
+        }
+      )
     end
   end
 

@@ -188,7 +188,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       assert row.video_integration_id == nil
     end
 
-    test "changes nothing when the event already has a link from that integration", %{
+    test "reports the choice as unchanged when the event already has a link from it", %{
       user: user,
       integration: integration,
       video_integration: video_integration
@@ -199,12 +199,41 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
           video_integration_id: video_integration.id
         })
 
-      assert {:ok, @old_url} =
+      assert {:ok, :unchanged} =
                CalendarGrid.change_event_video(user.id, event, video_integration.id)
+    end
+
+    test "still provisions a room when the integration is set but its link is missing", %{
+      user: user,
+      integration: integration,
+      video_integration: video_integration
+    } do
+      event =
+        insert_event(integration, %{
+          video_link: nil,
+          video_integration_id: video_integration.id
+        })
+
+      stub_room_created()
+      expect_provider_update(:ok)
+
+      assert {:ok, @new_url} =
+               CalendarGrid.change_event_video(user.id, event, video_integration.id)
+
+      assert reload(event).video_link == @new_url
     end
   end
 
   describe "change_event_video/3 removing the video link" do
+    test "reports the choice as unchanged when the event has no video to remove", %{
+      user: user,
+      integration: integration
+    } do
+      event = insert_event(integration)
+
+      assert {:ok, :unchanged} = CalendarGrid.change_event_video(user.id, event, nil)
+    end
+
     test "clears the link and integration, and takes the join line out of the description", %{
       user: user,
       integration: integration,

@@ -348,11 +348,21 @@ defmodule Tymeslot.CalendarGrid do
   @doc """
   Gives an event a room on the organiser's video integration, or removes its
   video link when the integration is `nil`, on both the provider event and the
-  cached row. See `Tymeslot.CalendarGrid.EventVideo.change_event_video/3`.
+  cached row, or answers `{:ok, :unchanged}` when the choice is the one the
+  event already has. See `Tymeslot.CalendarGrid.EventVideo.change_event_video/3`.
   """
   @spec change_event_video(pos_integer(), map(), pos_integer() | nil) ::
-          {:ok, String.t() | nil} | {:error, :missing_meeting_url | :not_found | term()}
+          {:ok, String.t() | nil | :unchanged}
+          | {:error, :missing_meeting_url | :not_found | term()}
   defdelegate change_event_video(user_id, event, video_integration_id), to: EventVideo
+
+  @doc """
+  Returns `description` with the "Join video call" line for the previous URL
+  taken out and one for the new URL appended. See
+  `Tymeslot.CalendarGrid.EventVideo.put_join_link/3`.
+  """
+  @spec put_join_link(String.t() | nil, String.t() | nil, String.t() | nil) :: String.t() | nil
+  defdelegate put_join_link(description, previous_url, url), to: EventVideo
 
   @doc """
   Deletes an event from its calendar, cancels the Tymeslot meeting it was

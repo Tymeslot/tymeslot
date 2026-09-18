@@ -69,6 +69,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
       event ->
         with {:ok, new_id} <- parse_video_choice(params["video_integration_id"]),
+             false <- video_unchanged?(event, new_id),
              :ok <- EditWorkflow.assert_event_writable(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           optimistic_event = Map.put(event, :video_integration_id, new_id)
@@ -77,6 +78,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
             EditWorkflow.change_event_video_async(s, event, new_id)
           end)
         else
+          true ->
+            {:noreply, socket}
+
           {:error, reason} = error when reason in [:unauthorized, :read_only] ->
             Shared.flash_guard_error(socket, error)
 
@@ -93,6 +97,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   # so a malformed value is ignored rather than read as a removal.
   defp parse_video_choice(value) when value in [nil, ""], do: {:ok, nil}
   defp parse_video_choice(value), do: Shared.parse_int(value)
+
+  # The active button stays clickable, so re-picking the current choice has to
+  # stop here: before the rate limit charges a token and before the result
+  # handler reports a room that was never created. Mirrors the short-circuit
+  # clauses of `Tymeslot.CalendarGrid.EventVideo.change_event_video/3`, which
+  # keep the same contract for its other callers. An integration whose link is
+  # `nil` is deliberately not a no-op: clicking its active button is how an
+  # organiser provisions the room a failed earlier attempt left missing.
+  defp video_unchanged?(%{video_integration_id: id, video_link: link}, id)
+       when is_integer(id) and is_binary(link),
+       do: true
+
+  defp video_unchanged?(%{video_integration_id: nil, video_link: nil}, nil), do: true
+  defp video_unchanged?(_event, _new_id), do: false
 
   @spec handle_update_event_location(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -436,7 +454,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
             |> Helpers.precompute_derived()
             |> EditWorkflow.update_event_async(event, %{field => trimmed})
 
-          {:noreply, apply_notify_result(socket, event, updated_event)}
+          {:noreply, EditWorkflow.apply_notify_result(socket, event, updated_event)}
         else
           true ->
             {:noreply, socket}
@@ -585,38 +603,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         |> assign(:selected_event, optimistic_event)
         |> EditWorkflow.apply_event_change(event, optimistic_event, new_start, new_end)
 
-      {:noreply, apply_notify_result(socket, event, optimistic_event)}
-    end
-  end
-
-  defp apply_notify_result(socket, original_event, updated_event) do
-    attendees = updated_event.attendees || original_event.attendees || []
-
-    case EditWorkflow.notify_event_updated(original_event, updated_event, attendees) do
-      {:ok, :no_changes} ->
-        send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
-        socket
-
-      {:ok, :already_pending} ->
-        send(
-          self(),
-          {:flash,
-           {:info,
-            dgettext(
-              "dashboard_calendar_events",
-              "Changes saved. Attendees will be notified shortly."
-            )}}
-        )
-
-        assign(socket, :pending_notification, true)
-
-      {:needs_confirmation, summary} ->
-        assign(socket, :notify_prompt, %{
-          kind: :update,
-          summary: summary,
-          event: updated_event,
-          attendees: attendees
-        })
+      {:noreply, EditWorkflow.apply_notify_result(socket, event, optimistic_event)}
     end
   end
 end

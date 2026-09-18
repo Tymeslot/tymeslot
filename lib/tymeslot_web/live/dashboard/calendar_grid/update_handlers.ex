@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
 
   alias Tymeslot.CalendarGrid
   alias TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed
+  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @spec handle_revert_event(map(), Phoenix.LiveView.Socket.t()) ::
@@ -218,14 +219,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     {:ok, socket}
   end
 
+  @doc """
+  Applies a finished video-room change to the loaded events, then runs the
+  same attendee-notification decision every other inline edit ends in.
+
+  Only the three columns the change wrote are merged, rather than the updated
+  event replacing what is on screen, so a sync that landed while the room was
+  being provisioned is not rolled back. The description is one of them: the
+  join link is written into it, and leaving it behind would show the previous
+  link in the detail modal.
+  """
   @spec handle_video_link_updated(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
-  def handle_video_link_updated(%{event_id: event_id} = assigns, socket) do
-    video = Map.take(assigns, [:video_link, :video_integration_id])
+  def handle_video_link_updated(%{original_event: original, updated_event: updated}, socket) do
+    video = Map.take(updated, [:video_link, :video_integration_id, :description])
 
     updated_events =
       Enum.map(socket.assigns.events, fn e ->
-        if e.id == event_id, do: Map.merge(e, video), else: e
+        if e.id == updated.id, do: Map.merge(e, video), else: e
       end)
 
     selected = socket.assigns.selected_event
@@ -234,12 +245,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
       socket
       |> assign(:events, updated_events)
       |> then(fn s ->
-        if selected && selected.id == event_id,
+        if selected && selected.id == updated.id,
           do: assign(s, :selected_event, Map.merge(selected, video)),
           else: s
       end)
 
-    {:ok, socket}
+    {:ok,
+     EditWorkflow.apply_notify_result(
+       socket,
+       original,
+       updated,
+       EditWorkflow.video_changed_message(updated.video_link)
+     )}
   end
 
   @spec handle_initial(map(), Phoenix.LiveView.Socket.t()) ::

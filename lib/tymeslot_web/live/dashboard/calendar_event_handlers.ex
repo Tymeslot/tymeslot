@@ -243,23 +243,33 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @doc """
   Handles the result of changing an event's video room: shows the new link,
   or puts the previous choice back and says why nothing changed.
+
+  The change is handed to the grid component as the pair of events it was,
+  because only the component owns the "notify attendees?" prompt. The prompt
+  is offered from here rather than when the buttons were clicked so that a
+  rejected calendar write never tells attendees about a link that was
+  discarded.
   """
   @spec handle_event_video_result(
-          {:ok, keyword()} | {:error, keyword()},
+          {:ok, :unchanged | keyword()} | {:error, keyword()},
           Phoenix.LiveView.Socket.t()
         ) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_event_video_result({:ok, :unchanged}, socket), do: {:noreply, socket}
+
   def handle_event_video_result({:ok, result}, socket) do
+    updated_event = result[:updated_event]
+
     if socket.assigns.live_action == :calendar do
       send_update(CalendarGridComponent,
         id: "calendar",
         action: :video_link_updated,
-        event_id: result[:event_id],
-        video_integration_id: result[:video_integration_id],
-        video_link: result[:video_link]
+        original_event: result[:original_event],
+        updated_event: updated_event
       )
     end
 
-    {:noreply, put_flash(socket, :info, video_changed_message(result[:video_link]))}
+    {:noreply,
+     put_flash(socket, :info, EditWorkflow.video_changed_message(updated_event.video_link))}
   end
 
   def handle_event_video_result({:error, payload}, socket) do
@@ -271,12 +281,6 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
 
     {:noreply, put_flash(socket, :error, video_failed_message(payload[:reason]))}
   end
-
-  defp video_changed_message(nil),
-    do: dgettext("dashboard_calendar_events", "Video link removed.")
-
-  defp video_changed_message(_url),
-    do: dgettext("dashboard_calendar_events", "Video room created.")
 
   defp video_failed_message(:missing_meeting_url) do
     dgettext(
