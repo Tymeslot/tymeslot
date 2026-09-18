@@ -150,11 +150,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
     if ConflictResolution.valid?(policy) do
       with_events_breaker(client, opts, fn ->
-        url = event_url_from_data(client, calendar_path, uid, event_data)
-        ical_data = ICalBuilder.build_simple_event(uid, Map.put(event_data, :uid, uid))
-        etag = resolve_etag(url, client, opts)
+        with {:ok, url} <- event_url(client, calendar_path, uid, event_data[:provider_event_id]) do
+          ical_data = ICalBuilder.build_simple_event(uid, Map.put(event_data, :uid, uid))
+          etag = resolve_etag(url, client, opts)
 
-        do_conditional_put(client, url, ical_data, etag, policy, opts)
+          do_conditional_put(client, url, ical_data, etag, policy, opts)
+        end
       end)
     else
       {:error, :invalid_conflict_resolution_policy}
@@ -193,11 +194,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
     if ConflictResolution.valid?(policy) do
       with_events_breaker(client, opts, fn ->
-        url = resolve_event_url(client, calendar_path, uid, opts[:provider_event_id])
-        ical_data = ICalBuilder.replace_colour_property(raw_ical, colour)
-        etag = resolve_etag(url, client, opts)
+        with {:ok, url} <- event_url(client, calendar_path, uid, opts[:provider_event_id]) do
+          ical_data = ICalBuilder.replace_colour_property(raw_ical, colour)
+          etag = resolve_etag(url, client, opts)
 
-        do_conditional_put(client, url, ical_data, etag, policy, opts)
+          do_conditional_put(client, url, ical_data, etag, policy, opts)
+        end
       end)
     else
       {:error, :invalid_conflict_resolution_policy}
@@ -305,12 +307,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
           :ok | {:error, Base.error_reason()}
   def delete_calendar_event(client, calendar_path, uid, opts) do
     with_events_breaker(client, opts, fn ->
-      url = delete_url_from_opts(client, calendar_path, uid, opts)
-      delete_opts = Keyword.take(opts, [:timeout])
+      with {:ok, url} <- event_url(client, calendar_path, uid, opts[:provider_event_id]) do
+        delete_opts = Keyword.take(opts, [:timeout])
 
-      case Http.delete_event(url, client.username, client.password, delete_opts) do
-        {:ok, %Req.Response{}} -> :ok
-        {:error, reason} -> {:error, reason}
+        case Http.delete_event(url, client.username, client.password, delete_opts) do
+          {:ok, %Req.Response{}} -> :ok
+          {:error, reason} -> {:error, reason}
+        end
       end
     end)
   end
@@ -324,7 +327,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   @spec fetch_calendar_event(Base.client(), String.t() | nil, String.t() | nil, String.t() | nil) ::
           {:ok, map()} | {:error, :not_found} | {:error, term()}
   def fetch_calendar_event(client, calendar_path, uid, href) do
-    with {:ok, url} <- fetch_url(client, calendar_path, uid, href) do
+    with {:ok, url} <- event_url(client, calendar_path, uid, href) do
       # A missing resource is a per-event answer, not a host outage, so it
       # travels back through the breaker as a success and becomes an error
       # again out here.
@@ -351,15 +354,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     end
   end
 
-  defp fetch_url(client, _calendar_path, _uid, href) when is_binary(href) and href != "",
-    do: {:ok, UrlBuilder.build_calendar_url(client.base_url, href)}
-
-  defp fetch_url(client, calendar_path, uid, _href)
-       when is_binary(calendar_path) and is_binary(uid) and uid != "",
-       do: {:ok, UrlBuilder.build_event_url(client.base_url, calendar_path, uid)}
-
-  defp fetch_url(_client, _calendar_path, _uid, _href), do: {:error, :unaddressable}
-
   defp parse_fetched_event(body, href, headers) do
     case EventProcessor.parse_ical_from_string(body) do
       {:ok, event} ->
@@ -373,24 +367,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     end
   end
 
-  defp delete_url_from_opts(client, calendar_path, uid, opts),
-    do: resolve_event_url(client, calendar_path, uid, Keyword.get(opts, :provider_event_id))
-
-  defp event_url_from_data(client, calendar_path, uid, event_data),
-    do: resolve_event_url(client, calendar_path, uid, Map.get(event_data, :provider_event_id))
-
-  # Use the event's href (provider_event_id) when available — it's the actual
-  # server path and is required when the event lives on a calendar other than
-  # the one supplied in `calendar_path`. Fall back to UID-based URL
-  # construction for Tymeslot-created events that have not yet been synced.
-  defp resolve_event_url(client, _calendar_path, _uid, href)
-       when is_binary(href) and href != "" do
-    base = String.trim_trailing(client.base_url, "/")
-    if String.starts_with?(href, "http"), do: href, else: "#{base}#{href}"
-  end
-
-  defp resolve_event_url(client, calendar_path, uid, _missing),
-    do: UrlBuilder.build_event_url(client.base_url, calendar_path, uid)
+  # Every event URL in this module resolves through `UrlBuilder`, which knows
+  # that a server-supplied href is server-root-relative and must therefore be
+  # joined to the base *origin*, never appended to a `base_url` that already
+  # carries the same DAV path.
+  defp event_url(client, calendar_path, uid, href),
+    do: UrlBuilder.resolve_event_url(client.base_url, calendar_path, uid, href)
 
   # Prefer the caller-supplied ETag (cached on provider_calendar_events.etag).
   # Fall back to a HEAD probe only when the caller does not know the current
