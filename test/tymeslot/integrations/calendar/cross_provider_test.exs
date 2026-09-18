@@ -21,15 +21,12 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
   # what decides each provider's result below.
   @reachable_url "https://cal.example.com"
 
-  # Every provider maps HTTP 401 onto its own copy, but all of them must
-  # report it as an authentication problem rather than a generic failure.
-  @unauthorized_results %{
-    caldav: {:error, :unauthorized},
-    nextcloud:
-      {:error,
-       "Authentication failed. Check your Nextcloud username and password. Consider using an app password."},
-    radicale: {:error, "Authentication failed. Check your Radicale username and password."}
-  }
+  # Every provider reports HTTP 401 as the same reason rather than as its own
+  # sentence. The copy an account owner reads is chosen later, on the paths
+  # that show one; the scheduled health probe classifies this value instead of
+  # reading it, and only the atom tells it the credentials are permanently
+  # refused (see `Calendar.Connection.test_connection/2`).
+  @unauthorized_result {:error, :unauthorized}
 
   @success_results %{
     caldav: {:ok, "CalDAV connection successful"},
@@ -132,7 +129,7 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
         }
 
         assert provider_module.perform_connection_test(invalid_config) ==
-                 @unauthorized_results[provider_type]
+                 @unauthorized_result
       end)
     end
 

@@ -124,16 +124,11 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
   Tests connection to an Apple iCloud account with provider-specific messaging.
   """
   @impl Tymeslot.Integrations.Calendar.Provider
-  @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, String.t()}
+  @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, term()}
   def perform_connection_test(integration) do
     ProviderCommon.test_caldav_provider_connection(integration,
       success_message:
         dgettext("dashboard_calendar_providers", "Apple iCloud connection successful"),
-      unauthorized_message:
-        dgettext(
-          "dashboard_calendar_providers",
-          "Authentication failed. iCloud requires an app-specific password — generate one at appleid.apple.com under Sign-In and Security, and use it instead of your Apple ID password."
-        ),
       not_found_message:
         dgettext(
           "dashboard_calendar_providers",

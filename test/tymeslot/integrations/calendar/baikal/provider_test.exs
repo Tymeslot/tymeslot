@@ -158,7 +158,7 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
       assert String.contains?(message, "Baikal")
     end
 
-    test "returns authentication-failure message on 401" do
+    test "reports 401 as :unauthorized rather than as copy" do
       integration = %{
         base_url: "https://baikal.example.com/dav.php",
         username: "alice",
@@ -171,8 +171,10 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
         {:ok, %Req.Response{status: 401, body: ""}}
       end)
 
-      assert {:error, message} = Provider.perform_connection_test(integration)
-      assert message =~ "Authentication failed"
+      # The reason, not a sentence: only the atom tells the scheduled health
+      # probe that the credentials are permanently refused. The copy is chosen
+      # later, by whoever is going to show one.
+      assert Provider.perform_connection_test(integration) == {:error, :unauthorized}
     end
 
     test "returns not-found message on 404 with RFC 4791 fallback also 404" do
