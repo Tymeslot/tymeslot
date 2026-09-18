@@ -244,6 +244,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             refreshing_calendars={@refreshing_calendars}
             available_calendars={@available_calendars}
             no_writable_calendars={@no_writable_calendars}
+            target_calendar_status={@target_calendar_status}
             selected_target_calendar_id={@selected_target_calendar_id}
             form_errors={@form_errors}
             myself={@myself}

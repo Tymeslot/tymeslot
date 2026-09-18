@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   use Gettext, backend: TymeslotWeb.Gettext
   import TymeslotWeb.Components.PaymentHelpers, only: [format_amount: 2]
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
+  alias Tymeslot.MeetingTypes
   alias TymeslotWeb.Components.CoreComponents.Icons
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Components.UI.StatusSwitch
@@ -137,6 +138,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
                 <span class="ml-1 text-tymeslot-500 shrink-0">
                   ({calendar_display_name(@type)})
                 </span>
+                <.target_calendar_warning type={@type} />
               </span>
             <% end %>
             <%= if custom_question_count(@type) > 0 do %>
@@ -200,6 +202,54 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
       </div>
     </div>
     """
+  end
+
+  # Flags a meeting type whose stored booking target can no longer take the
+  # booking, so a host reading the list sees the problem without opening the
+  # editor. Renders nothing while the target is healthy.
+  attr :type, :map, required: true
+
+  @spec target_calendar_warning(map()) :: Phoenix.LiveView.Rendered.t()
+  defp target_calendar_warning(assigns) do
+    assigns =
+      assign(assigns, :warning, target_calendar_warning_text(assigns.type))
+
+    ~H"""
+    <span
+      :if={@warning}
+      class="ml-1 shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-token-full bg-amber-50 text-amber-700 text-token-2xs font-semibold"
+      title={@warning.title}
+    >
+      <Icons.icon name="hero-exclamation-triangle-micro" class="w-3 h-3" />{@warning.label}
+    </span>
+    """
+  end
+
+  defp target_calendar_warning_text(type) do
+    case MeetingTypes.target_calendar_status(type) do
+      :ok ->
+        nil
+
+      :read_only ->
+        %{
+          label: dgettext("dashboard_meeting_types", "Read-only"),
+          title:
+            dgettext(
+              "dashboard_meeting_types",
+              "This meeting type books into a calendar you can no longer write to. Edit it and choose another calendar."
+            )
+        }
+
+      :missing ->
+        %{
+          label: dgettext("dashboard_meeting_types", "Calendar gone"),
+          title:
+            dgettext(
+              "dashboard_meeting_types",
+              "The calendar this meeting type books into is no longer on the connected account. Edit it and choose another calendar."
+            )
+        }
+    end
   end
 
   defp paid?(%{payment_required: true, price_cents: cents}) when is_integer(cents), do: true

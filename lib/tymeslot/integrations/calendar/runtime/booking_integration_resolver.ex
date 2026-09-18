@@ -95,6 +95,16 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver do
   # The integration a meeting or meeting type recorded, writing to the
   # calendar it recorded alongside; nil once that integration can no longer
   # take a booking, so the caller falls through to the user's other calendars.
+  #
+  # The recorded calendar is used as stored even when the integration's
+  # `calendar_list` currently flags it `read_only`. That flag is a cached
+  # snapshot from the last calendar list refresh, not a live answer, so
+  # rerouting on it would silently move bookings off the calendar the host
+  # chose on evidence that may be hours stale and simply wrong. The provider's
+  # own rejection of the write is the authoritative signal, and it already
+  # fails, retries and alerts the owner. The host is told about the stale flag
+  # instead, on the meeting type card and in the editor, via
+  # `Tymeslot.MeetingTypes.target_calendar_status/1`.
   defp stored_target(integration_id, user_id, calendar_id) do
     case explicit_target(integration_id, user_id) do
       nil -> nil

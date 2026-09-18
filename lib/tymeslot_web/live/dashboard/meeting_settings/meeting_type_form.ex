@@ -52,6 +52,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:default_schedule_name, Schedules.default_schedule_name())
      |> assign(:available_calendars, [])
      |> assign(:no_writable_calendars, false)
+     |> assign(:target_calendar_status, :ok)
      |> assign(:refreshing_calendars, false)
      |> assign(:reminders, [])
      |> assign(:max_reminders, MeetingTypes.max_reminders())
@@ -203,6 +204,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       |> assign(:refreshing_calendars, true)
       |> assign(:available_calendars, [])
       |> assign(:no_writable_calendars, false)
+      |> assign(:target_calendar_status, :ok)
       |> assign(:selected_target_calendar_id, nil)
       |> assign(
         :form_errors,
@@ -220,6 +222,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     socket =
       socket
       |> assign(:selected_target_calendar_id, id)
+      # The picker only offers writable calendars, so any pick clears the
+      # warning raised about the calendar that was stored before.
+      |> assign(:target_calendar_status, :ok)
       |> assign(
         :form_errors,
         FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :target_calendar)
