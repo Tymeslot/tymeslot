@@ -1272,11 +1272,6 @@ msgstr "Створіть його в Nextcloud у розділі «Мої нал
 msgid "Deletes the stored App ID and App secret. Links then open the room without a token, which only works on a server that lets anyone in."
 msgstr "Видаляє збережені App ID та App secret. Після цього посилання відкривають кімнату без токена, а це працює лише на сервері, який пускає будь-кого."
 
-#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
-#, elixir-autogen, elixir-format
-msgid "Each booking gets its own public Talk conversation, and guests join from its link without a Nextcloud account. Join from a browser signed in to Nextcloud as this login name to skip the lobby and moderate; anyone else, other Nextcloud users included, waits in the lobby until the meeting starts. A conversation is deleted when its booking is cancelled, and about a week after the meeting ends."
-msgstr "Кожне бронювання отримує власну публічну розмову Talk, і гості приєднуються за її посиланням без облікового запису Nextcloud. Приєднуйтеся з браузера, у якому ви увійшли в Nextcloud під цим ім'ям для входу, щоб пропустити зал очікування й модерувати; усі інші, зокрема інші користувачі Nextcloud, чекають у залі очікування до початку зустрічі. Розмову видаляють, коли її бронювання скасовано, а також приблизно через тиждень після завершення зустрічі."
-
 #: lib/tymeslot/integrations/video/providers/jitsi_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Enter the App ID that belongs to this App secret"
@@ -1598,3 +1593,8 @@ msgstr "kMeet"
 #, elixir-autogen, elixir-format
 msgid "kMeet is Infomaniak's hosted service and always uses this address, which cannot be changed."
 msgstr "kMeet є хмарним сервісом Infomaniak і завжди використовує цю адресу, яку не можна змінити."
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "Each booking gets its own public Talk conversation, and guests join from its link without a Nextcloud account. To skip the lobby and moderate, sign in to Nextcloud in your browser as this login name first, with your usual password and any second factor; the app password works only for Tymeslot. Anyone else, other Nextcloud users included, waits in the lobby until the meeting starts. A conversation is deleted when its booking is cancelled, and about a week after the meeting ends."
+msgstr "Кожне бронювання отримує власну публічну розмову Talk, і гості приєднуються за її посиланням без облікового запису Nextcloud. Щоб пропустити зал очікування й модерувати, спершу увійдіть у Nextcloud у браузері під цим ім'ям для входу, зі своїм звичайним паролем і другим фактором, якщо він є; пароль застосунку працює лише для Tymeslot. Усі інші, зокрема інші користувачі Nextcloud, чекають у залі очікування до початку зустрічі. Розмову видаляють, коли її бронювання скасовано, а також приблизно через тиждень після завершення зустрічі."

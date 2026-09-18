@@ -138,7 +138,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
         <p class="text-token-xs text-tymeslot-500 leading-relaxed">
           {dgettext(
             "dashboard_integrations",
-            "Each booking gets its own public Talk conversation, and guests join from its link without a Nextcloud account. Join from a browser signed in to Nextcloud as this login name to skip the lobby and moderate; anyone else, other Nextcloud users included, waits in the lobby until the meeting starts. A conversation is deleted when its booking is cancelled, and about a week after the meeting ends."
+            "Each booking gets its own public Talk conversation, and guests join from its link without a Nextcloud account. To skip the lobby and moderate, sign in to Nextcloud in your browser as this login name first, with your usual password and any second factor; the app password works only for Tymeslot. Anyone else, other Nextcloud users included, waits in the lobby until the meeting starts. A conversation is deleted when its booking is cancelled, and about a week after the meeting ends."
           )}
         </p>
 
