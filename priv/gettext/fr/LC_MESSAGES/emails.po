@@ -2329,3 +2329,53 @@ msgstr "Remboursement en attente"
 #, elixir-autogen, elixir-format
 msgid "You still hold %{amount} for this booking."
 msgstr "Vous détenez encore %{amount} pour cette réservation."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} didn't get to your reschedule request in time. Your previous time had already been given up for it, so your booking has been cancelled. The attached calendar file removes it from your calendar."
+msgstr "%{organizer} n'a pas répondu à temps à votre demande de report. Votre créneau précédent avait déjà été libéré pour cela, votre réservation a donc été annulée. Le fichier de calendrier joint la retire de votre agenda."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} wasn't able to accept the new time. Your previous time had already been given up for it, so your booking has been cancelled. The attached calendar file removes it from your calendar."
+msgstr "%{organizer} n'a pas pu accepter le nouveau créneau. Votre créneau précédent avait déjà été libéré pour cela, votre réservation a donc été annulée. Le fichier de calendrier joint la retire de votre agenda."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Booking cancelled"
+msgstr "Réservation annulée"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, %{organizer} can't make the new time."
+msgstr "Bonjour %{name}, %{organizer} n'est pas disponible au nouveau créneau."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, your reschedule request wasn't answered in time."
+msgstr "Bonjour %{name}, votre demande de report n'a pas reçu de réponse à temps."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Requested New Time"
+msgstr "Nouveau créneau demandé"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule Declined"
+msgstr "Report refusé"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule Request Expired"
+msgstr "Demande de report expirée"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule declined, booking cancelled: %{title} - %{date}"
+msgstr "Report refusé, réservation annulée : %{title} - %{date}"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule request expired, booking cancelled: %{title} - %{date}"
+msgstr "Demande de report expirée, réservation annulée : %{title} - %{date}"

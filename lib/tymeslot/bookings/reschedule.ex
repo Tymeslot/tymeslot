@@ -247,11 +247,13 @@ defmodule Tymeslot.Bookings.Reschedule do
   # (`BookingRequestReceived`) carries no calendar attachment, so that entry
   # is left showing the old, no-longer-accurate confirmed time until the host
   # answers again — approval re-sends a fresh confirmation ICS for the new
-  # time (self-healing), but a decline or expiry's outcome email does not
-  # correct it either. Fixing this needs a calendar-only correction path
-  # analogous to `Tymeslot.Meetings.AttendeeNotifications`'s ICS handling,
-  # which lives outside this module's booking-email templates and is left
-  # for that work rather than bolted on here.
+  # time (self-healing), and a decline or expiry cancels the booking, whose
+  # outcome email (`BookingRequestOutcome`) then carries a cancellation ICS
+  # for it. Correcting the entry while the request is still open would need
+  # a calendar-only path analogous to
+  # `Tymeslot.Meetings.AttendeeNotifications`'s ICS handling, which lives
+  # outside this module's booking-email templates and is left for that work
+  # rather than bolted on here.
   defp announce(%{status: "awaiting_approval"} = updated, _original) do
     cancel_stale_reminders(updated)
 

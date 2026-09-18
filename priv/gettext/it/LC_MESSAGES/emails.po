@@ -2324,3 +2324,53 @@ msgstr "Rimborso da effettuare"
 #, elixir-autogen, elixir-format
 msgid "You still hold %{amount} for this booking."
 msgstr "Hai ancora %{amount} per questa prenotazione."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} didn't get to your reschedule request in time. Your previous time had already been given up for it, so your booking has been cancelled. The attached calendar file removes it from your calendar."
+msgstr "%{organizer} non ha risposto in tempo alla tua richiesta di spostamento. Il tuo orario precedente era già stato liberato per questo, quindi la tua prenotazione è stata annullata. Il file di calendario allegato la rimuove dal tuo calendario."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} wasn't able to accept the new time. Your previous time had already been given up for it, so your booking has been cancelled. The attached calendar file removes it from your calendar."
+msgstr "%{organizer} non ha potuto accettare il nuovo orario. Il tuo orario precedente era già stato liberato per questo, quindi la tua prenotazione è stata annullata. Il file di calendario allegato la rimuove dal tuo calendario."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Booking cancelled"
+msgstr "Prenotazione annullata"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, %{organizer} can't make the new time."
+msgstr "Ciao %{name}, %{organizer} non è disponibile nel nuovo orario."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, your reschedule request wasn't answered in time."
+msgstr "Ciao %{name}, la tua richiesta di spostamento non ha ricevuto risposta in tempo."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Requested New Time"
+msgstr "Nuovo orario richiesto"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule Declined"
+msgstr "Spostamento rifiutato"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule Request Expired"
+msgstr "Richiesta di spostamento scaduta"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule declined, booking cancelled: %{title} - %{date}"
+msgstr "Spostamento rifiutato, prenotazione annullata: %{title} - %{date}"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule request expired, booking cancelled: %{title} - %{date}"
+msgstr "Richiesta di spostamento scaduta, prenotazione annullata: %{title} - %{date}"
