@@ -45,5 +45,75 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeLoggingTest do
       assert byte_size(LogCapture.user_metadata(event)[:body]) < byte_size(long_error)
       assert byte_size(LogCapture.dump(event)) < 5000
     end
+
+    # Without this the line says only which status came back, and attributing
+    # one of a batch of simultaneous refresh failures means joining against a
+    # neighbouring line from another module on timestamp.
+    test "names the integration behind a refresh failure" do
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 400, body: ~s({"error":"invalid_grant"})}}
+      end)
+
+      LogCapture.attach()
+
+      TokenExchange.refresh_access_token("http://oauth", %{refresh_token: "ref-123"},
+        log_context: [integration_id: 42, user_id: 7, provider: :google, correlation_id: "abc-1"]
+      )
+
+      meta = LogCapture.user_metadata(LogCapture.await_log("OAuth token refresh failed"))
+
+      assert meta[:integration_id] == 42
+      assert meta[:user_id] == 7
+      assert meta[:provider] == :google
+      assert meta[:correlation_id] == "abc-1"
+      assert meta[:status] == 400
+    end
+
+    test "names the integration behind a network error during refresh" do
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:error, :timeout}
+      end)
+
+      LogCapture.attach()
+
+      TokenExchange.refresh_access_token("http://oauth", %{refresh_token: "ref-123"},
+        log_context: [integration_id: 42, provider: :zoom]
+      )
+
+      meta = LogCapture.user_metadata(LogCapture.await_log("Network error during token refresh"))
+
+      assert meta[:integration_id] == 42
+      assert meta[:provider] == :zoom
+    end
+
+    # The allowed-key list is what stops a caller widening the line, and what
+    # stops an integration struct — which carries the encrypted credentials —
+    # reaching the logs through a key nobody vetted.
+    test "drops log context keys outside the allowed set" do
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 400, body: ~s({"error":"invalid_grant"})}}
+      end)
+
+      LogCapture.attach()
+
+      TokenExchange.refresh_access_token("http://oauth", %{refresh_token: "ref-123"},
+        log_context: [
+          integration_id: 42,
+          access_token: "secret-123",
+          refresh_token: "secret-456",
+          user_id: nil
+        ]
+      )
+
+      event = LogCapture.await_log("OAuth token refresh failed")
+      meta = LogCapture.user_metadata(event)
+
+      assert meta[:integration_id] == 42
+      refute Map.has_key?(meta, :access_token)
+      refute Map.has_key?(meta, :refresh_token)
+      refute Map.has_key?(meta, :user_id)
+      refute LogCapture.dump(event) =~ "secret-123"
+      refute LogCapture.dump(event) =~ "secret-456"
+    end
   end
 end

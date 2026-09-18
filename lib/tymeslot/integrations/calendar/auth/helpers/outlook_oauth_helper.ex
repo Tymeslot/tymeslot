@@ -10,7 +10,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
 
   require Logger
 
-  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.PrimarySelection
@@ -123,23 +122,20 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
       scope: current_scope || @calendar_scope
     }
 
+    # No second log line here: `TokenExchange` already logs the status and the
+    # redacted body, and now names the provider too.
     case TokenExchange.refresh_access_token(@token_url, body,
            fallback_refresh_token: refresh_token,
-           fallback_scope: current_scope || @calendar_scope
+           fallback_scope: current_scope || @calendar_scope,
+           log_context: [provider: :outlook]
          ) do
       {:ok, tokens} ->
         {:ok, tokens}
 
       {:error, {:http_error, status, resp_body}} ->
-        Logger.error("Outlook OAuth token refresh failed",
-          status: status,
-          response_body: Redactor.redact_and_truncate(resp_body)
-        )
-
         {:error, ErrorParser.build_message("Token refresh failed", status, resp_body)}
 
       {:error, {:network_error, reason}} ->
-        Logger.error("Network error during Outlook token refresh", reason: inspect(reason))
         {:error, "Network error during token refresh: #{inspect(reason)}"}
     end
   end
