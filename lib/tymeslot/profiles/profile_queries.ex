@@ -121,6 +121,11 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   @doc """
   Gets a profile by username.
   Returns {:ok, profile} if found, {:error, :not_found} otherwise.
+
+  Matched exactly. Which handle resolves which booking page is a routing
+  decision, so this lookup and `get_by_username_with_user/1` deliberately do
+  not fold case; `username_available?/1` does, because it answers a different
+  question.
   """
   @spec get_by_username(String.t()) :: {:ok, ProfileSchema.t()} | {:error, :not_found}
   def get_by_username(username) when is_binary(username) do
@@ -132,13 +137,21 @@ defmodule Tymeslot.Profiles.ProfileQueries do
 
   @doc """
   Checks if a username is available.
+
+  Asked the way the database answers it: the unique index behind `username`
+  is on `lower(username)`, so a row stored as `JohnSmith` makes `johnsmith`
+  taken. An exact-match lookup would call it free and leave the collision for
+  the insert to discover, one round trip after the live check could have said
+  so. Only rows written outside the changeset can be non-lowercase, which is
+  exactly the case the functional index exists to catch.
   """
   @spec username_available?(String.t()) :: boolean()
   def username_available?(username) when is_binary(username) do
-    case get_by_username(username) do
-      {:error, :not_found} -> true
-      {:ok, _result} -> false
-    end
+    normalised = String.downcase(username)
+
+    not Repo.exists?(
+      from(p in ProfileSchema, where: fragment("lower(?)", p.username) == ^normalised)
+    )
   end
 
   @doc """
