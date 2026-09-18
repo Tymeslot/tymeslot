@@ -161,9 +161,14 @@ defmodule Tymeslot.Integrations.Video.Rooms do
         provider: meeting_context.provider_type
       },
       fn ->
+        # The participant's name is personal data and says nothing a join URL
+        # failure needs: the role and the room identify the link just as well,
+        # and neither follows an attendee into the log sink.
+        room_id = extract_room_id(meeting_context)
+
         Logger.info("Creating join URL for participant",
-          participant: participant_name,
           role: role,
+          room_id: room_id,
           provider: meeting_context.provider_type
         )
 
@@ -176,7 +181,8 @@ defmodule Tymeslot.Integrations.Video.Rooms do
              ) do
           {:ok, _url} = result ->
             Logger.info("Successfully created join URL",
-              participant: participant_name,
+              role: role,
+              room_id: room_id,
               provider: meeting_context.provider_type
             )
 
@@ -184,7 +190,8 @@ defmodule Tymeslot.Integrations.Video.Rooms do
 
           {:error, reason} = error ->
             Logger.error("Failed to create join URL",
-              participant: participant_name,
+              role: role,
+              room_id: room_id,
               provider: meeting_context.provider_type,
               reason: inspect(reason)
             )

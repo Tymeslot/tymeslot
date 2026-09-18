@@ -23,6 +23,7 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Test.LogCapture
 
   @no_integration_error "No video integration configured. " <>
                           "Please add a video integration in the dashboard."
@@ -304,6 +305,57 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
         )
 
       assert {:error, :invalid_parameters} = result
+    end
+
+    test "logs the role and room but never the participant's name" do
+      meeting_context = %MeetingContext{
+        provider_type: :mirotalk,
+        provider_module: MiroTalkProvider,
+        room_data: %RoomData{
+          room_id: "https://mirotalk.example.com/room123",
+          meeting_url: "https://mirotalk.example.com/room123",
+          provider_data: %{},
+          provider_config: %{base_url: "https://mirotalk.example.com", api_key: "test-key"}
+        }
+      }
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body: Jason.encode!(%{"join" => "https://mirotalk.example.com/join/room123"})
+         }}
+      end)
+
+      # The info and debug lines this asserts on sit below the level
+      # `config/test.exs` pins, hence the `:logger_level` override. It is global,
+      # which is one of the reasons this module is `async: false`.
+      events =
+        LogCapture.with_capture([logger_level: :debug], fn ->
+          assert {:ok, _join_url} =
+                   Rooms.create_join_url(
+                     meeting_context,
+                     "Jonquil Featherstone",
+                     "jonquil@example.com",
+                     "participant",
+                     DateTime.utc_now()
+                   )
+
+          LogCapture.drain()
+        end)
+
+      logged = Enum.map_join(events, "\n", &LogCapture.dump/1)
+
+      # Anchor first: without these the refutes below would pass just as happily
+      # on an empty capture.
+      assert logged =~ "Creating join URL for participant"
+      assert logged =~ "Successfully created join URL"
+      assert logged =~ "role: \"participant\""
+      assert logged =~ "room_id: \"https://mirotalk.example.com/room123\""
+
+      refute logged =~ "Jonquil"
+      refute logged =~ "Featherstone"
+      refute logged =~ "jonquil@example.com"
     end
   end
 

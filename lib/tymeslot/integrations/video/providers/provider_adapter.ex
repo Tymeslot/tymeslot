@@ -71,10 +71,13 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
     } = meeting_context
 
     Metrics.time_operation(:video_create_join_url, %{provider: provider_type}, fn ->
+      # The role and room say whose link this is without copying the
+      # participant's name into the log sink, where it outlives the account it
+      # belongs to.
       Logger.debug("Creating join URL for participant",
         provider: provider_type,
-        participant: participant_name,
-        role: role
+        role: role,
+        room_id: room_data.room_id
       )
 
       case provider_module.create_join_url(
@@ -87,7 +90,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
         {:ok, join_url} ->
           Logger.debug("Successfully created join URL",
             provider: provider_type,
-            participant: participant_name
+            role: role,
+            room_id: room_data.room_id
           )
 
           {:ok, join_url}
@@ -95,7 +99,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
         {:error, reason} = error ->
           Logger.error("Failed to create join URL",
             provider: provider_type,
-            participant: participant_name,
+            role: role,
+            room_id: room_data.room_id,
             reason: inspect(reason)
           )
 
