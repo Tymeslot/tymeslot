@@ -56,13 +56,17 @@ defmodule Tymeslot.Notifications.Orchestrator do
   there degrades punctuality rather than correctness and is deliberately not
   surfaced as an error.
   """
-  @spec schedule_request_notifications(%{atom() => term()}) ::
+  @spec schedule_request_notifications(%{atom() => term()}, keyword()) ::
           {:ok, :notifications_scheduled} | {:error, term()}
-  def schedule_request_notifications(meeting) do
+  def schedule_request_notifications(meeting, opts \\ []) do
     Logger.info("Scheduling booking request notifications", meeting_id: meeting.id)
 
     results = [
-      request_emails: EmailScheduler.schedule_request_emails(meeting.id),
+      request_emails:
+        EmailScheduler.schedule_request_emails(
+          meeting.id,
+          Keyword.take(opts, [:previous_start_time])
+        ),
       approval_nudge: schedule_approval_nudge(meeting),
       expiry: ApprovalJobs.schedule_expiry(meeting)
     ]
@@ -228,6 +232,36 @@ defmodule Tymeslot.Notifications.Orchestrator do
       result = send_reschedule_emails(content)
       GuestNotifications.notify_rescheduled(updated_meeting, content)
       result
+    end
+  end
+
+  @doc """
+  Sends the reschedule notices for a booking whose new time the host has just
+  approved.
+
+  A reschedule of a confirmed booking on a meeting type requiring approval
+  holds the new time until the host answers, so the move is only final — and
+  only announced as such — on approval. Such a booking already had its
+  confirmation (`Activation` leaves it alone because the sent flags are still
+  set), and to both sides it is a move of a meeting they already have, so it
+  goes out as the reschedule notice with an updated calendar entry rather than
+  a second "new booking" confirmation. The time it was moved from is not kept
+  past the request emails, so these notices carry the new time alone.
+
+  A first approval (no `first_announced_at`) sends nothing here: the regular
+  confirmation announces it.
+  """
+  @spec send_reapproval_notifications(%{atom() => term()}) ::
+          {:ok, atom()} | {:error, term()}
+  def send_reapproval_notifications(%{first_announced_at: nil}), do: {:ok, :not_a_move}
+
+  def send_reapproval_notifications(meeting) do
+    recipients = Recipients.determine_recipients(meeting, :reschedule)
+    content = ContentBuilder.build_reapproval_details(meeting)
+
+    with :ok <- Recipients.validate_recipients(recipients),
+         :ok <- ContentBuilder.validate_content(content) do
+      send_reschedule_emails(content)
     end
   end
 

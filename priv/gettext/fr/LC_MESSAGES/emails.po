@@ -2381,3 +2381,70 @@ msgstr "Vous n’avez rien à faire. Si vous avez ajouté le rendez-vous à votr
 #, elixir-autogen, elixir-format
 msgid "Your earlier response applied to the previous time, so please let us know again."
 msgstr "Votre réponse précédente concernait l’ancien horaire, merci de nous répondre à nouveau."
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} would like to move their confirmed booking to a new time."
+msgstr "%{name} souhaite déplacer sa réservation confirmée vers un nouveau créneau."
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{organizer} confirms each change personally, so the new time isn't final yet."
+msgstr "%{organizer} confirme personnellement chaque modification : le nouveau créneau n'est donc pas encore définitif."
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Hi %{name}, %{organizer} confirms each change personally, so the new time isn't final yet."
+msgstr "Bonjour %{name}, %{organizer} confirme personnellement chaque modification : le nouveau créneau n'est donc pas encore définitif."
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Previously scheduled for %{time}."
+msgstr "Initialement prévu le %{time}."
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder - reschedule request: %{name} - %{date}"
+msgstr "Rappel - demande de report : %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Requested New Time"
+msgstr "Nouveau créneau demandé"
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule Request Received"
+msgstr "Demande de report reçue"
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule request"
+msgstr "Demande de report"
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule request still waiting"
+msgstr "Demande de report toujours en attente"
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule request: %{name} - %{date}"
+msgstr "Demande de report : %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule requested"
+msgstr "Report demandé"
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule requested: %{title} - %{date}"
+msgstr "Report demandé : %{title} - %{date}"
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format
+msgid "The new time is held for you in the meantime, so nobody else can take it. You'll get an email with the updated calendar entry as soon as %{organizer} accepts."
+msgstr "Le nouveau créneau vous est réservé en attendant, personne d'autre ne peut donc le prendre. Vous recevrez un e-mail avec l'entrée d'agenda mise à jour dès que %{organizer} aura accepté."

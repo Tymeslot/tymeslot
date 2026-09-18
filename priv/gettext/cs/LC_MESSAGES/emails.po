@@ -2387,3 +2387,70 @@ msgstr "Nemusíte nic dělat. Pokud jste si schůzku přidali do kalendáře, p�
 #, elixir-autogen, elixir-format
 msgid "Your earlier response applied to the previous time, so please let us know again."
 msgstr "Vaše dřívější odpověď platila pro původní čas, dejte nám prosím vědět znovu."
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} would like to move their confirmed booking to a new time."
+msgstr "%{name} chce přesunout svou potvrzenou rezervaci na nový termín."
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{organizer} confirms each change personally, so the new time isn't final yet."
+msgstr "%{organizer} potvrzuje každou změnu osobně, takže nový termín zatím není definitivní."
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Hi %{name}, %{organizer} confirms each change personally, so the new time isn't final yet."
+msgstr "Dobrý den %{name}, %{organizer} potvrzuje každou změnu osobně, takže nový termín zatím není definitivní."
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Previously scheduled for %{time}."
+msgstr "Původně naplánováno na %{time}."
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder - reschedule request: %{name} - %{date}"
+msgstr "Připomínka - žádost o přesunutí: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Requested New Time"
+msgstr "Požadovaný nový termín"
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule Request Received"
+msgstr "Žádost o přesunutí přijata"
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule request"
+msgstr "Žádost o přesunutí"
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule request still waiting"
+msgstr "Žádost o přesunutí stále čeká"
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule request: %{name} - %{date}"
+msgstr "Žádost o přesunutí: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule requested"
+msgstr "Přesunutí vyžádáno"
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule requested: %{title} - %{date}"
+msgstr "Přesunutí vyžádáno: %{title} - %{date}"
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format
+msgid "The new time is held for you in the meantime, so nobody else can take it. You'll get an email with the updated calendar entry as soon as %{organizer} accepts."
+msgstr "Nový termín je pro vás mezitím rezervován, takže ho nikdo jiný nemůže obsadit. Jakmile %{organizer} změnu přijme, dostanete e-mail s aktualizovanou položkou kalendáře."

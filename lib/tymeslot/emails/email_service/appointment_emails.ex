@@ -51,9 +51,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   request emails are about a booking that has not happened, so the confirmation
   vocabulary (video links, calendar files, payment receipts) does not apply.
   """
-  @spec send_booking_request_received(Meeting.t()) :: {:ok, any()} | {:error, any()}
-  def send_booking_request_received(%Meeting{} = meeting) do
-    Delivery.deliver(BookingRequestReceived.render(meeting))
+  @spec send_booking_request_received(Meeting.t(), keyword()) :: {:ok, any()} | {:error, any()}
+  def send_booking_request_received(%Meeting{} = meeting, opts \\ []) do
+    Delivery.deliver(BookingRequestReceived.render(meeting, opts))
   end
 
   @doc """
@@ -79,10 +79,11 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
           BookingApprovalRequest.variant(),
           Meeting.t(),
           map(),
-          String.t()
+          String.t(),
+          keyword()
         ) :: {:ok, any()} | {:error, any()}
-  def send_booking_approval_request(variant, %Meeting{} = meeting, urls, locale) do
-    Delivery.deliver(BookingApprovalRequest.render(variant, meeting, urls, locale))
+  def send_booking_approval_request(variant, %Meeting{} = meeting, urls, locale, opts \\ []) do
+    Delivery.deliver(BookingApprovalRequest.render(variant, meeting, urls, locale, opts))
   end
 
   @doc """

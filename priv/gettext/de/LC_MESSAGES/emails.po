@@ -2381,3 +2381,70 @@ msgstr "Sie müssen nichts weiter tun. Falls Sie den Termin in Ihren Kalender ü
 #, elixir-autogen, elixir-format
 msgid "Your earlier response applied to the previous time, so please let us know again."
 msgstr "Ihre bisherige Antwort galt für die alte Zeit – bitte geben Sie uns noch einmal Bescheid."
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} would like to move their confirmed booking to a new time."
+msgstr "%{name} möchte die bestätigte Buchung auf eine neue Zeit verschieben."
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{organizer} confirms each change personally, so the new time isn't final yet."
+msgstr "%{organizer} bestätigt jede Änderung persönlich, daher ist die neue Zeit noch nicht endgültig."
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Hi %{name}, %{organizer} confirms each change personally, so the new time isn't final yet."
+msgstr "Hallo %{name}, %{organizer} bestätigt jede Änderung persönlich, daher ist die neue Zeit noch nicht endgültig."
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Previously scheduled for %{time}."
+msgstr "Ursprünglich geplant für %{time}."
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder - reschedule request: %{name} - %{date}"
+msgstr "Erinnerung - Verschiebungsanfrage: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Requested New Time"
+msgstr "Gewünschte neue Zeit"
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule Request Received"
+msgstr "Verschiebungsanfrage eingegangen"
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule request"
+msgstr "Verschiebungsanfrage"
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule request still waiting"
+msgstr "Verschiebungsanfrage wartet weiterhin"
+
+#: lib/tymeslot/emails/templates/booking_approval_request.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule request: %{name} - %{date}"
+msgstr "Verschiebungsanfrage: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule requested"
+msgstr "Verschiebung angefragt"
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule requested: %{title} - %{date}"
+msgstr "Verschiebung angefragt: %{title} - %{date}"
+
+#: lib/tymeslot/emails/templates/booking_request_received.ex
+#, elixir-autogen, elixir-format
+msgid "The new time is held for you in the meantime, so nobody else can take it. You'll get an email with the updated calendar entry as soon as %{organizer} accepts."
+msgstr "Die neue Zeit ist in der Zwischenzeit für Sie reserviert, sodass niemand anderes sie buchen kann. Sobald %{organizer} zustimmt, erhalten Sie eine E-Mail mit dem aktualisierten Kalendereintrag."
