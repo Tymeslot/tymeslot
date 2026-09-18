@@ -122,6 +122,14 @@ defmodule Tymeslot.Bookings.Reschedule do
     # Reminder sent-tracking is reset too: the reminder(s) already sent were
     # pinned to the old time, so they must not suppress the re-pinned
     # reminder jobs scheduled for the new time.
+    #
+    # The new time is a new revision of the calendar entry, so `ical_sequence`
+    # moves on. It records the SEQUENCE of the last entry sent out, the same
+    # meaning `AttendeeNotifications.Worker` gives it when the host moves the
+    # event in their own calendar: the reschedule email carries this value, and
+    # anything sent later (another reschedule, a cancellation, a host-side
+    # change) goes past it. Left at 0, every reschedule sent SEQUENCE 1 again
+    # and calendar clients had only DTSTAMP to tell the entries apart.
     attrs =
       Map.merge(
         %{
@@ -129,7 +137,8 @@ defmodule Tymeslot.Bookings.Reschedule do
           end_time: end_dt,
           reschedule_requested_at: nil,
           reminders_sent: [],
-          reminder_email_sent: false
+          reminder_email_sent: false,
+          ical_sequence: meeting.ical_sequence + 1
         },
         gate_attributes(meeting_type, start_dt, meeting)
       )
