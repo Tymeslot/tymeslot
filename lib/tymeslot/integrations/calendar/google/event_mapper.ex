@@ -10,6 +10,24 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   alias Tymeslot.Integrations.Calendar.Reminder
   alias Tymeslot.Utils.UrlBuilder
 
+  # Google's attendee `responseStatus` vocabulary, keyed by every spelling a
+  # canonical status reaches this module in: the atom the normalisers produce,
+  # and the string the JSONB cache column hands back for the same value. The
+  # lookup is total on purpose: Google rejects a `responseStatus` it does not
+  # recognise, and the inbound normaliser has already folded anything unknown
+  # to `needs_action`, so an unrecognised value writes back as `needsAction`
+  # rather than travelling to the API unchanged.
+  @google_response_statuses %{
+    :accepted => "accepted",
+    "accepted" => "accepted",
+    :declined => "declined",
+    "declined" => "declined",
+    :tentative => "tentative",
+    "tentative" => "tentative",
+    :needs_action => "needsAction",
+    "needs_action" => "needsAction"
+  }
+
   @doc """
   Formats internal event data into a Google Calendar API event body.
 
@@ -117,25 +135,72 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   end
 
   defp build_attendees(event_data) do
-    attendees = get_field_value(event_data, :attendees)
+    case get_field_value(event_data, :attendees) do
+      attendees when is_list(attendees) and attendees != [] ->
+        Enum.map(attendees, &google_attendee/1)
 
-    if is_list(attendees) and attendees != [] do
-      Enum.map(attendees, fn attendee ->
-        remove_nil_values(%{
-          "email" => get_field_value(attendee, :email),
-          "displayName" => get_field_value(attendee, :name)
-        })
-      end)
-    else
-      # Legacy single-attendee path (ad-hoc meetings)
-      email = get_field_value(event_data, :attendee_email)
-      name = get_field_value(event_data, :attendee_name)
+      _none ->
+        legacy_attendee(event_data)
+    end
+  end
 
-      if email do
-        [remove_nil_values(%{"email" => email, "displayName" => name})]
-      else
+  # `events.update` is a full replace, so an attendee sent without its
+  # `responseStatus` comes back from Google as `needsAction` and every reply
+  # already given to the invitation is thrown away, silently, because the
+  # write suppresses notifications. The cached status is therefore carried
+  # across whenever the event has one. An attendee the edit just added has
+  # none, and the key is left out for them: Google's own default for a new
+  # invitee is `needsAction`, which is exactly right.
+  defp google_attendee(attendee) do
+    attendee = normalise_attendee(attendee)
+
+    remove_nil_values(%{
+      "email" => attendee.email,
+      "displayName" => attendee.display_name,
+      "responseStatus" => google_response_status(attendee.response_status),
+      "optional" => optional_flag(attendee.optional)
+    })
+  end
+
+  # Cached attendees come back from the JSONB column string-keyed, freshly
+  # added ones arrive atom-keyed from the edit flow, and the ad-hoc booking
+  # payloads spell the label `name` where the cache spells it `display_name`.
+  # The shape is settled once here so nothing below reads two spellings.
+  defp normalise_attendee(attendee) do
+    %{
+      email: get_field_value(attendee, :email),
+      display_name: get_field_value(attendee, :display_name) || get_field_value(attendee, :name),
+      response_status: get_field_value(attendee, :response_status),
+      optional: get_field_value(attendee, :optional)
+    }
+  end
+
+  defp google_response_status(nil), do: nil
+
+  defp google_response_status(status),
+    do: Map.get(@google_response_statuses, status, "needsAction")
+
+  # Google reads a missing `optional` as a required attendee, so only the
+  # optional case needs writing.
+  defp optional_flag(true), do: true
+  defp optional_flag("true"), do: true
+  defp optional_flag(_required), do: nil
+
+  # Legacy single-attendee path (ad-hoc meetings), which names the invitee on
+  # the event itself rather than in an attendee list. Such an event is always
+  # freshly created, so there is no response to carry.
+  defp legacy_attendee(event_data) do
+    case get_field_value(event_data, :attendee_email) do
+      email when is_binary(email) ->
+        [
+          remove_nil_values(%{
+            "email" => email,
+            "displayName" => get_field_value(event_data, :attendee_name)
+          })
+        ]
+
+      _none ->
         nil
-      end
     end
   end
 
