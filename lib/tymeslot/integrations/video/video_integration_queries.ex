@@ -322,7 +322,14 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
 
   @doc """
   Updates a video integration with credentials its owner has just supplied,
-  clearing `needs_reauth` and any recorded room creation error.
+  clearing `needs_reauth`, the message explaining it, and any recorded room
+  creation error.
+
+  `sync_error` is written alongside `needs_reauth` by `mark_needs_reauth/2` and
+  describes why the integration stopped working. Leaving it behind outlives the
+  flag it belongs to, and the row then carries an explanation of a problem it no
+  longer has: the dashboard reads it for the reconnect prompt's reason, and the
+  reauth email for the reason it quotes.
 
   Only reconnect paths may use this: an OAuth callback, or a credential form.
   See `Tymeslot.Integrations.Calendar.CalendarIntegrationQueries.update_credentials/2`
@@ -365,6 +372,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
           integration
           |> VideoIntegrationSchema.changeset(attrs)
           |> Changeset.force_change(:needs_reauth, false)
+          |> Changeset.force_change(:sync_error, nil)
           |> Changeset.force_change(:room_creation_error, nil)
           |> Changeset.force_change(:room_creation_error_since, nil)
           |> Changeset.force_change(:room_creation_error_notices, %{})

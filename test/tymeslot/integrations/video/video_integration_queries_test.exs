@@ -361,6 +361,28 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueriesTest do
       refute Repo.reload!(integration).needs_reauth
     end
 
+    # `mark_needs_reauth/2` writes the message beside the flag, so a reconnect
+    # that clears one and not the other leaves the row explaining a problem it
+    # no longer has.
+    test "clears the message that explained why reconnecting was needed" do
+      integration = insert(:video_integration, provider: "zoom")
+
+      assert {:ok, flagged} =
+               VideoIntegrationQueries.mark_needs_reauth(
+                 integration,
+                 "Zoom refused the stored token"
+               )
+
+      assert flagged.sync_error == "Zoom refused the stored token"
+
+      assert {:ok, updated, true} =
+               VideoIntegrationQueries.reconnect(flagged, %{access_token: "new-token"})
+
+      refute updated.needs_reauth
+      assert updated.sync_error == nil
+      assert Repo.reload!(integration).sync_error == nil
+    end
+
     test "reports an unflagged row as not flagged" do
       integration = insert(:video_integration, provider: "zoom")
 
