@@ -491,13 +491,19 @@ defmodule Tymeslot.Meetings.ApprovalTest do
     end
 
     test "a request with no payment releases the slot without touching Stripe" do
-      # No `expect/3` set up: Mox raises `UnexpectedCallError` on any call to
-      # `StripeAdapterMock`, so a passing test here proves the refund path was
-      # never entered.
       meeting = held_meeting()
+      test_pid = self()
+
+      # A stub rather than a missing expectation: the release runs its refund
+      # step inside a rescue, so an unexpected Mox call would be swallowed.
+      stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
+        send(test_pid, :refund_attempted)
+        {:ok, %{id: "re_unexpected"}}
+      end)
 
       assert {:ok, _declined} = Approval.decline(meeting, "No payment on this one")
 
+      refute_received :refund_attempted
       refute_enqueued(worker: SendBookingPaymentRefunded)
     end
 
