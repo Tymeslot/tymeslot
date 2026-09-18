@@ -44,8 +44,26 @@ config :tymeslot, TymeslotWeb.Endpoint,
       "1H+dLz1eQCL1mH8vjh5SJUR2Z5QULWP9bH3j8+BwnBSfS9J74akhHrGFpjezqJqd",
   live_view: [signing_salt: "dev_liveview_signing_salt"],
   session_signing_salt: "dev_session_signing_salt",
+  # One watcher per esbuild and tailwind profile: anything built only by
+  # `mix assets.build` is stale in the browser the moment its source is edited,
+  # and missing outright in a checkout that has never run the build. The route
+  # bundles are the sharp edge, since every dashboard, auth and booking page
+  # loads one and it is what connects the LiveSocket.
+  #
+  # Watcher lists are deep-merged by key across the config chain, so the SaaS
+  # overlay's dev.exs adds to this list rather than replacing it. The corollary
+  # is that every key here must stay distinct from the SaaS ones
+  # (`esbuild_saas`, `tailwind_saas`, `tailwind_marketing`): a collision
+  # silently drops one side's watcher.
+  #
+  # `--sourcemap=inline` belongs only here. `embed.js` and the iframe embed are
+  # served to third-party sites in production, so their deploy builds stay bare.
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:tymeslot, ~w(--sourcemap=inline --watch)]},
+    esbuild_bundles: {Esbuild, :install_and_run, [:bundles, ~w(--sourcemap=inline --watch)]},
+    esbuild_embed: {Esbuild, :install_and_run, [:embed, ~w(--sourcemap=inline --watch)]},
+    esbuild_iframe_embed:
+      {Esbuild, :install_and_run, [:iframe_embed, ~w(--sourcemap=inline --watch)]},
     tailwind: {Tailwind, :install_and_run, [:tymeslot, ~w(--watch)]},
     tailwind_quill: {Tailwind, :install_and_run, [:quill, ~w(--watch)]},
     tailwind_rhythm: {Tailwind, :install_and_run, [:rhythm, ~w(--watch)]}
@@ -101,7 +119,8 @@ config :tymeslot, Tymeslot.Repo,
 config :tymeslot, Oban,
   repo: Tymeslot.Repo,
   pruner: [max_age: {7, :days}],
-  lifeline: [rescue_after: {1, :hour}],
+  # Matches production: a shorter window here would exercise a rescue the
+  # deployed system never performs. See `Tymeslot.Infrastructure.ObanRescue`.
   cron: [
     crontab: [
       # Run every 30 minutes
