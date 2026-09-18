@@ -40,15 +40,28 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
     test "resets every answer and asks every guest again, declined ones included" do
       %{meeting: meeting, accepted: accepted, declined: declined} = meeting_with_guests()
 
-      for guest <- [accepted, declined] do
-        expect(EmailServiceMock, :send_guest_reschedule, fn email, details ->
-          assert email == guest.email
-          assert details.guest_accept_url == Policy.guest_rsvp_urls(guest.rsvp_token).accept_url
-          {:ok, :sent}
-        end)
-      end
+      test_pid = self()
+
+      expect(EmailServiceMock, :send_guest_reschedule, 2, fn email, details ->
+        send(test_pid, {:guest_reschedule, email, details.guest_accept_url})
+        {:ok, :sent}
+      end)
 
       assert :ok = GuestNotifications.notify_rescheduled(meeting, %{uid: meeting.uid})
+
+      # Guests are loaded without an order, so compare the set of emails sent
+      # rather than the sequence.
+      sent =
+        for _guest <- 1..2 do
+          assert_received {:guest_reschedule, email, accept_url}
+          {email, accept_url}
+        end
+
+      expected =
+        for guest <- [accepted, declined],
+            do: {guest.email, Policy.guest_rsvp_urls(guest.rsvp_token).accept_url}
+
+      assert Enum.sort(sent) == Enum.sort(expected)
 
       guests = GuestQueries.list_for_meeting(meeting.id)
       assert Enum.all?(guests, &(&1.status == "pending" and is_nil(&1.responded_at)))
