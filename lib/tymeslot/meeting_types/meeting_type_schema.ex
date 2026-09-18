@@ -330,7 +330,9 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
         true ->
           normalized
           |> Enum.map(fn {:ok, reminder} -> reminder end)
-          |> ReminderValidation.check_policy()
+          |> ReminderValidation.check_policy(
+            ReminderUtils.normalize_reminders(changeset.data.reminder_config)
+          )
       end
 
     case result do
