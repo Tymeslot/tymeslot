@@ -364,6 +364,13 @@ defmodule Tymeslot.CalendarGrid do
   defdelegate delete_event(user_id, event), to: EventDeletion
 
   @doc """
+  Whether an event may be deleted from the grid. See
+  `Tymeslot.CalendarGrid.EventDeletion.ensure_deletable/1`.
+  """
+  @spec ensure_deletable(map()) :: :ok | {:error, :recurring_event}
+  defdelegate ensure_deletable(event), to: EventDeletion
+
+  @doc """
   Whether an event may be moved to another calendar. See
   `Tymeslot.CalendarGrid.EventMove.ensure_movable/1`.
   """

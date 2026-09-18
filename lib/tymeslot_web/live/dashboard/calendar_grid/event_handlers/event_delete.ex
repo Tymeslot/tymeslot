@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings.AttendeeNotifications
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
@@ -21,25 +22,29 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
         {:noreply, socket}
 
       event ->
-        case EditWorkflow.assert_event_writable(socket, event) do
-          :ok ->
-            linked_to_booking =
-              CalendarEvents.event_linked_to_booking?(
-                event.calendar_integration_id,
-                event.provider_event_id,
-                event.uid
-              )
+        with :ok <- EditWorkflow.assert_event_writable(socket, event),
+             :ok <- CalendarGrid.ensure_deletable(event) do
+          linked_to_booking =
+            CalendarEvents.event_linked_to_booking?(
+              event.calendar_integration_id,
+              event.provider_event_id,
+              event.uid
+            )
 
-            socket =
-              socket
-              |> assign(:selected_event, nil)
-              |> assign(:confirm_delete_event, event)
-              |> assign(:confirm_delete_linked_to_booking, linked_to_booking)
+          socket =
+            socket
+            |> assign(:selected_event, nil)
+            |> assign(:confirm_delete_event, event)
+            |> assign(:confirm_delete_linked_to_booking, linked_to_booking)
 
-            {:noreply, socket}
-
+          {:noreply, socket}
+        else
           {:error, :read_only} = error ->
             Shared.flash_guard_error(socket, error)
+
+          {:error, :recurring_event} ->
+            send(self(), {:flash, {:error, recurring_delete_refused_message()}})
+            {:noreply, socket}
 
           {:error, :unauthorized} ->
             send(
@@ -175,8 +180,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
   defp delete_failed_message(%{retry: :queued}),
     do: dgettext("dashboard_calendar_events", "Delete failed - queued to retry on next sync")
 
+  defp delete_failed_message(%{reason: :recurring_event}), do: recurring_delete_refused_message()
+
   defp delete_failed_message(_failure),
     do: dgettext("dashboard_calendar_events", "Failed to delete event")
+
+  defp recurring_delete_refused_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "Recurring events cannot be deleted here yet. Please delete this one in your calendar app."
+    )
+  end
 
   defp delete_success_flash(true),
     do: dgettext("dashboard_calendar_events", "Event deleted. Attendees have been notified.")

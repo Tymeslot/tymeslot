@@ -178,4 +178,53 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
       assert row.sync_state == "synced"
     end
   end
+
+  # No provider expectation is set in these tests: under `verify_on_exit!` a
+  # delete that reached the calendar would fail them as an unexpected call.
+  describe "delete_event/2 on an event that belongs to a series" do
+    test "refuses a repeating event and leaves calendar and cache alone", %{
+      user: user,
+      caldav: caldav
+    } do
+      event = insert_event(caldav, %{recurrence_rule: "FREQ=WEEKLY;BYDAY=TU"})
+
+      assert {:error, %{reason: :recurring_event, retry: :not_queued}} =
+               CalendarGrid.delete_event(user.id, event)
+
+      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
+      assert row.sync_state == "synced"
+    end
+
+    test "refuses an occurrence that was edited on its own", %{user: user, caldav: caldav} do
+      event =
+        insert_event(caldav, %{provider_metadata: %{"recurrence_id" => "20260602T090000Z"}})
+
+      assert {:error, %{reason: :recurring_event}} = CalendarGrid.delete_event(user.id, event)
+      assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
+    end
+
+    test "refuses an occurrence of a Google series", %{user: user} do
+      google = insert(:calendar_integration, user: user, provider: "google")
+
+      event =
+        insert_event(google, %{provider_calendar_id: "primary", recurring_event_id: "series-1"})
+
+      assert {:error, %{reason: :recurring_event}} = CalendarGrid.delete_event(user.id, event)
+    end
+
+    test "reads the series from the cached row when handed only the address", %{
+      user: user,
+      caldav: caldav
+    } do
+      event = insert_event(caldav, %{recurrence_rule: "FREQ=DAILY"})
+
+      address = %{
+        uid: event.uid,
+        calendar_integration_id: caldav.id,
+        provider_event_id: event.provider_event_id
+      }
+
+      assert {:error, %{reason: :recurring_event}} = CalendarGrid.delete_event(user.id, address)
+    end
+  end
 end

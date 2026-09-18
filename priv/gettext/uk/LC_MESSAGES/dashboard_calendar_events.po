@@ -126,11 +126,6 @@ msgstr "Подання «Розклад»"
 msgid "All day"
 msgstr "Увесь день"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "All events in series"
-msgstr "Усі події серії"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Also switches the current view"
@@ -716,20 +711,10 @@ msgstr "Нд"
 msgid "The recurrence end date must be on or after the event start."
 msgstr "Дата завершення повторення має бути не раніше початку події."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This and following events"
-msgstr "Цю та наступні події"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This event is linked to a booking. The attendee will be notified of the cancellation."
 msgstr "Ця подія пов'язана з бронюванням. Учасник отримає сповіщення про скасування."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This event only"
-msgstr "Лише цю подію"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex
 #, elixir-autogen, elixir-format
@@ -838,11 +823,6 @@ msgstr "Тижневе подання"
 #, elixir-autogen, elixir-format
 msgid "Weekly"
 msgstr "Щотижня"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Which events do you want to update?"
-msgstr "Які події ви хочете оновити?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex
 #, elixir-autogen, elixir-format
@@ -1075,3 +1055,18 @@ msgstr "Кімнату для відеозустрічі створено."
 #, elixir-autogen, elixir-format
 msgid "Your calendar could not be reached. The change is saved and will sync on the next attempt."
 msgstr "Не вдалося зв'язатися з вашим календарем. Зміну збережено, її буде синхронізовано під час наступної спроби."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring events cannot be deleted here yet. Please delete this one in your calendar app."
+msgstr "Повторювані події поки що не можна видалити тут. Видаліть цю подію у своєму календарному застосунку."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This event is part of a repeating series. Your change applies to this event only, and the rest of the series stays as it is. To change the whole series, use your calendar app."
+msgstr "Ця подія є частиною серії. Ваша зміна стосується лише цієї події, решта серії залишається без змін. Щоб змінити всю серію, скористайтеся своїм календарним застосунком."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Update this event"
+msgstr "Оновити цю подію"

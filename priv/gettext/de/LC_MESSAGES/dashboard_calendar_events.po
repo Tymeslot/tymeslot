@@ -122,11 +122,6 @@ msgstr "Agenda-Ansicht"
 msgid "All day"
 msgstr "Ganztägig"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "All events in series"
-msgstr "Alle Ereignisse der Serie"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Also switches the current view"
@@ -705,20 +700,10 @@ msgstr "So"
 msgid "The recurrence end date must be on or after the event start."
 msgstr "Das Enddatum der Wiederholung muss am oder nach dem Ereignisbeginn liegen."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This and following events"
-msgstr "Dieses und folgende Ereignisse"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This event is linked to a booking. The attendee will be notified of the cancellation."
 msgstr "Dieses Ereignis ist mit einer Buchung verknüpft. Der Teilnehmer wird über die Absage benachrichtigt."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This event only"
-msgstr "Nur dieses Ereignis"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex
 #, elixir-autogen, elixir-format
@@ -827,11 +812,6 @@ msgstr "Wochenansicht"
 #, elixir-autogen, elixir-format
 msgid "Weekly"
 msgstr "Wöchentlich"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Which events do you want to update?"
-msgstr "Welche Ereignisse möchten Sie aktualisieren?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex
 #, elixir-autogen, elixir-format
@@ -1062,3 +1042,18 @@ msgstr "Meetingraum erstellt."
 #, elixir-autogen, elixir-format
 msgid "Your calendar could not be reached. The change is saved and will sync on the next attempt."
 msgstr "Ihr Kalender war nicht erreichbar. Die Änderung ist gespeichert und wird beim nächsten Versuch synchronisiert."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring events cannot be deleted here yet. Please delete this one in your calendar app."
+msgstr "Wiederkehrende Ereignisse können hier noch nicht gelöscht werden. Bitte löschen Sie dieses Ereignis in Ihrer Kalender-App."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This event is part of a repeating series. Your change applies to this event only, and the rest of the series stays as it is. To change the whole series, use your calendar app."
+msgstr "Dieses Ereignis gehört zu einer Serie. Ihre Änderung gilt nur für dieses Ereignis, der Rest der Serie bleibt unverändert. Um die gesamte Serie zu ändern, verwenden Sie Ihre Kalender-App."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Update this event"
+msgstr "Dieses Ereignis aktualisieren"

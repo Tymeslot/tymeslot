@@ -125,10 +125,38 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
     end
   end
 
-  defp insert_event(integration) do
+  describe "deleting an event that repeats" do
+    # No provider stub: under `verify_on_exit!` a delete that reached the
+    # calendar would fail the test as an unexpected call.
+    test "is refused before the confirmation, and the series stays", %{
+      conn: conn,
+      integration: integration
+    } do
+      event = insert_event(integration, %{recurrence_rule: "FREQ=WEEKLY;BYDAY=TU"})
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("show_event", %{"event-id" => to_string(event.id)})
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("request_delete_event", %{})
+
+      html = render(lv)
+      assert html =~ "Recurring events cannot be deleted here yet."
+      refute html =~ "confirm-delete-event-modal"
+
+      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+      assert row.sync_state == "synced"
+    end
+  end
+
+  defp insert_event(integration, attrs \\ %{}) do
     today = Date.utc_today()
 
-    insert(:provider_calendar_event,
+    defaults = %{
       calendar_integration: integration,
       provider: "caldav",
       provider_calendar_id: "/cal/",
@@ -138,7 +166,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
       end_at: DateTime.new!(today, ~T[11:00:00], "Etc/UTC"),
       all_day: false,
       sync_state: "synced"
-    )
+    }
+
+    insert(:provider_calendar_event, Map.merge(defaults, attrs))
   end
 
   # Opens the event, asks to delete it and confirms in the modal.

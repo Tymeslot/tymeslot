@@ -13,6 +13,15 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   and the result says whether that cancellation went through. Nothing is
   reconciled when the delete fails.
 
+  ## Recurring events
+
+  An event that belongs to a series is refused with `:recurring_event`. For
+  the CalDAV family every occurrence is addressed by the one resource that
+  holds the whole series, so deleting "this Tuesday" would delete every
+  occurrence on the organiser's calendar, and no provider has a scoped delete
+  yet. The check reads the cached row rather than the event it was handed,
+  because callers pass only the fields that address the event.
+
   ## Failure
 
   A failed delete is queued for replay on the next sync when the error is one
@@ -22,6 +31,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   deleted the event.
   """
 
+  alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -61,7 +71,29 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   next sync.
   """
   @spec delete_event(pos_integer(), event()) :: {:ok, deleted()} | {:error, failure()}
-  def delete_event(user_id, %{uid: uid, calendar_integration_id: integration_id} = event) do
+  def delete_event(user_id, event) do
+    case ensure_deletable(stored_event(event)) do
+      :ok -> delete_single_event(user_id, event)
+      {:error, reason} -> {:error, %{reason: reason, retry: :not_queued}}
+    end
+  end
+
+  @doc """
+  Whether `event` may be deleted from the grid: a single event may, anything
+  that belongs to a series may not. The series test is the one a move uses,
+  see `Tymeslot.CalendarGrid.EventMove.ensure_movable/1`.
+  """
+  @spec ensure_deletable(map()) :: :ok | {:error, :recurring_event}
+  defdelegate ensure_deletable(event), to: EventMove, as: :ensure_movable
+
+  defp stored_event(%{uid: uid, calendar_integration_id: integration_id} = event) do
+    case ProviderCalendarEventQueries.get_by_uid(integration_id, uid) do
+      {:ok, record} -> record
+      {:error, :not_found} -> event
+    end
+  end
+
+  defp delete_single_event(user_id, %{uid: uid, calendar_integration_id: integration_id} = event) do
     provider_event_id = Map.get(event, :provider_event_id)
     opts = if provider_event_id, do: [provider_event_id: provider_event_id], else: []
 
