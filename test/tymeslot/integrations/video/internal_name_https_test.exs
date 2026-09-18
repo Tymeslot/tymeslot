@@ -29,7 +29,7 @@ defmodule Tymeslot.Integrations.Video.InternalNameHttpsTest do
 
   setup do
     with_config(:tymeslot, :allow_private_ips_for_calendar, false)
-    with_config(:tymeslot, :allow_private_ips_for_video, false)
+    with_config(:tymeslot, :allow_private_ips_for_video, nil)
     :ok
   end
 

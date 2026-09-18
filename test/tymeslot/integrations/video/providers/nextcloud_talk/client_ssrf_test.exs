@@ -32,7 +32,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.ClientSsrfTest do
     with_config(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
     with_config(:tymeslot, :environment, :prod)
     with_config(:tymeslot, :allow_private_ips_for_calendar, false)
-    with_config(:tymeslot, :allow_private_ips_for_video, false)
+    with_config(:tymeslot, :allow_private_ips_for_video, nil)
     with_config(:tymeslot, :dns_resolver_module, NextcloudTalkSsrfPrivateResolver)
 
     ReqTest.stub(:tymeslot_http, fn _conn ->

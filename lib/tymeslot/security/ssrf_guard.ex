@@ -44,6 +44,10 @@ defmodule Tymeslot.Security.SsrfGuard do
     * video — `config :tymeslot, :allow_private_ips_for_video, true`
       (`ALLOW_PRIVATE_IPS_FOR_VIDEO=true`), read by `allow_private_for_video?/0`
 
+  The calendar switch also satisfies video, but only while the video one is
+  left unset; `ALLOW_PRIVATE_IPS_FOR_VIDEO=false` is an answer about video and
+  is not overruled by it. See `allow_private_for_video?/0`.
+
   Both bypasses are honoured at save time as well as at request time, so a URL
   the operator is allowed to reach is also a URL they are allowed to store.
 
@@ -169,15 +173,26 @@ defmodule Tymeslot.Security.SsrfGuard do
 
   Video is its own subsystem: a self-hoster running MiroTalk or their own
   meeting server on an internal network should not have to relax calendar SSRF
-  to reach it. `ALLOW_PRIVATE_IPS_FOR_CALENDAR` nevertheless still satisfies
-  video, because it shipped documented as covering both and revoking that would
-  silently break the deployments already relying on it.
+  to reach it. The key therefore carries three states rather than two.
+
+  Left unset, `ALLOW_PRIVATE_IPS_FOR_CALENDAR` still satisfies video, because it
+  shipped documented as covering both and revoking that would silently break the
+  deployments already relying on it. Set, it decides alone: an operator who
+  writes `ALLOW_PRIVATE_IPS_FOR_VIDEO=false` has answered for video, and a
+  calendar switch set for the calendar's sake must not quietly overrule them.
+
+  `config/runtime.exs` is what keeps the two apart: it leaves the key absent for
+  an unset or blank environment variable and writes the boolean for any other
+  value.
   """
   @spec allow_private_for_video?() :: boolean()
   def allow_private_for_video? do
-    Application.get_env(:tymeslot, :allow_private_ips_for_video, false) or
-      allow_private_for_calendar?()
+    video_opt_out(Application.get_env(:tymeslot, :allow_private_ips_for_video))
   end
+
+  # Only an absent key defers to calendar; any configured value is the answer.
+  defp video_opt_out(nil), do: allow_private_for_calendar?()
+  defp video_opt_out(allowed), do: allowed == true
 
   defp production? do
     Application.get_env(:tymeslot, :environment) == :prod

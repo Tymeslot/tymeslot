@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.MiroTalkInternalNameTest do
 
   setup do
     with_config(:tymeslot, :allow_private_ips_for_calendar, false)
-    with_config(:tymeslot, :allow_private_ips_for_video, false)
+    with_config(:tymeslot, :allow_private_ips_for_video, nil)
     RateLimiter.clear_all()
     :ok
   end

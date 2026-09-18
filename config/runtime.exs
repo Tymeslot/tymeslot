@@ -770,8 +770,8 @@ end
 # common self-hosting case — opt out by setting ALLOW_PRIVATE_IPS_FOR_CALENDAR=true.
 #
 # For backwards compatibility this also satisfies video, which it was originally
-# documented as covering; ALLOW_PRIVATE_IPS_FOR_VIDEO below is the switch to
-# reach for now.
+# documented as covering, unless ALLOW_PRIVATE_IPS_FOR_VIDEO below is set;
+# that is the switch to reach for now.
 #
 # This does NOT relax webhook SSRF protection (Tymeslot.Webhooks.SsrfValidator);
 # webhooks have their own switch (ALLOW_PRIVATE_IPS_FOR_WEBHOOKS below).
@@ -791,9 +791,20 @@ end
 # Video-scoped sibling of the above, covering both self-hosted MiroTalk and the
 # custom video link's reachability test. Set ALLOW_PRIVATE_IPS_FOR_VIDEO=true to
 # run a meeting server on an internal network without relaxing calendar SSRF.
-if config_env() != :test and
-     System.get_env("ALLOW_PRIVATE_IPS_FOR_VIDEO") in ["true", "1", "yes"] do
-  config :tymeslot, :allow_private_ips_for_video, true
+#
+# Unlike its siblings this key is left absent when the variable is unset or
+# blank, rather than written as false. Absent is what lets the calendar switch
+# above go on satisfying video, while an operator who writes
+# ALLOW_PRIVATE_IPS_FOR_VIDEO=false has answered for video and is not overruled
+# by it; `Tymeslot.Security.SsrfGuard.allow_private_for_video?/0` reads the
+# three states. `start-docker.sh` passes the variable through unset for the same
+# reason.
+allow_private_ips_for_video = String.trim(System.get_env("ALLOW_PRIVATE_IPS_FOR_VIDEO", ""))
+
+if config_env() != :test and allow_private_ips_for_video != "" do
+  config :tymeslot,
+         :allow_private_ips_for_video,
+         allow_private_ips_for_video in ["true", "1", "yes"]
 end
 
 # Webhook-scoped sibling of the above. In :prod, outbound webhook deliveries to
