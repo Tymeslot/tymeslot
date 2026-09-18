@@ -145,6 +145,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     {:ok, socket}
   end
 
+  @doc """
+  Resets the confirmation after a delete the provider would not take.
+
+  Reloads the events on purpose, because a refused delete can still have
+  changed what the grid should show. A delete queued for retry leaves the
+  cached row marked `locally_deleted` with no timing, so the reload drops the
+  event the moment the flash says the delete is queued rather than leaving it
+  on screen until an unrelated reload. A failure that was not queued leaves
+  the row untouched, so the event stays where it was.
+  """
   @spec handle_event_delete_failed(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   def handle_event_delete_failed(assigns, socket) do
@@ -154,6 +164,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
       |> assign(:confirm_delete_event, nil)
       |> assign(:confirm_delete_linked_to_booking, false)
       |> assign(:deleting_event, false)
+      |> Helpers.load_events()
 
     {:ok, socket}
   end

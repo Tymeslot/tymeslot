@@ -95,11 +95,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
       event = insert_event(integration)
       stub_delete({:error, :network_error})
 
-      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      {:ok, lv, html} = live(conn, ~p"/dashboard/calendar")
+      assert html =~ "Quarterly Planning"
+
       confirm_delete(lv, event)
       await_delete(lv)
 
-      assert render(lv) =~ "Delete failed - queued to retry on next sync"
+      html = render(lv)
+      assert html =~ "Delete failed - queued to retry on next sync"
+
+      # The organiser is told the delete is queued, so the event must leave the
+      # grid with the flash rather than linger until the next reload.
+      refute html =~ "Quarterly Planning"
+
+      # The queue marker has to survive: the row stays `locally_deleted` until
+      # the replay succeeds, or the next sync brings the event back.
       assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
       assert row.sync_state == "locally_deleted"
     end
