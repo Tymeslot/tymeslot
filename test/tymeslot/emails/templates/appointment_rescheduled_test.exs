@@ -134,13 +134,15 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduledTest do
       refute email.text_body =~ "Previously scheduled for"
     end
 
-    test "attaches an ICS whose SEQUENCE supersedes the invitation already sent" do
+    test "attaches an ICS carrying the revision the reschedule advanced the meeting to" do
+      # `Bookings.Reschedule` moves `ical_sequence` on before this email is
+      # built, so the stored value is already the new revision's SEQUENCE.
       details = build_reschedule_details(%{ical_sequence: 3})
       email = AppointmentRescheduled.render(:attendee, "attendee@example.com", details)
 
       assert ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
       assert ics.filename =~ details.uid
-      assert ics.data =~ "SEQUENCE:4"
+      assert ics.data =~ "SEQUENCE:3"
     end
 
     test "ICS starts at SEQUENCE 1 for a meeting that has never been updated" do
