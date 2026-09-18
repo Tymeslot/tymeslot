@@ -10,6 +10,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.MeetingTypes.FormValidation
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.MeetingTypes.Slugs
   require Logger
 
@@ -163,6 +164,15 @@ defmodule Tymeslot.MeetingTypes do
   defdelegate normalize_duration_slug(duration), to: Duration
   defdelegate find_by_duration_string(user_id, slug), to: Duration
   defdelegate validate_duration_selection(duration, available_types), to: Duration
+
+  @doc """
+  The maximum number of reminders one meeting type may carry.
+
+  The rule itself lives in `Tymeslot.MeetingTypes.ReminderValidation`; it is
+  exposed here so callers outside the domain, the form UI in particular, offer
+  exactly the number the save path enforces.
+  """
+  defdelegate max_reminders(), to: ReminderValidation
 
   @doc """
   Creates a meeting type from form parameters with validation.

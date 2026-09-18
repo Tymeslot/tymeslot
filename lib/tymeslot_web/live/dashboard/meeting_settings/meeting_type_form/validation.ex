@@ -83,8 +83,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Validation do
 
   # --- Private helpers ---
 
-  defp policy_message(:too_many),
-    do: dgettext("dashboard_meeting_form", "You can configure up to 3 reminders")
+  defp policy_message(:too_many) do
+    dngettext(
+      "dashboard_meeting_form",
+      "You can configure up to %{count} reminder",
+      "You can configure up to %{count} reminders",
+      ReminderValidation.max_reminders()
+    )
+  end
 
   defp policy_message(:duplicate),
     do: dgettext("dashboard_meeting_form", "This reminder already exists")

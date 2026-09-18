@@ -328,6 +328,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
         >
           <.reminders_section
             reminders={@reminders}
+            max_reminders={@max_reminders}
             new_reminder_value={@new_reminder_value}
             new_reminder_unit={@new_reminder_unit}
             reminder_error={@reminder_error}

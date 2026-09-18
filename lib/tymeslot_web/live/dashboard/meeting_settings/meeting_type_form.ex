@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   # Follow project rule: ALWAYS alias nested modules and organize alphabetically within groups
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.ApprovalWindow
   alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
@@ -53,6 +54,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:no_writable_calendars, false)
      |> assign(:refreshing_calendars, false)
      |> assign(:reminders, [])
+     |> assign(:max_reminders, MeetingTypes.max_reminders())
      |> assign(:new_reminder_value, "")
      |> assign(:new_reminder_unit, "minutes")
      |> assign(:reminder_error, nil)
