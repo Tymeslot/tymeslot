@@ -189,6 +189,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
         <%= case @phase do %>
           <% :credentials -> %>
             <.credentials_form
+              provider={@integration.provider}
               form_values={@form_values}
               form_errors={@form_errors}
               is_submitting={@is_submitting}
@@ -209,6 +210,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
     """
   end
 
+  attr :provider, :string, required: true
   attr :form_values, :map, required: true
   attr :form_errors, :map, required: true
   attr :is_submitting, :boolean, required: true
@@ -229,6 +231,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
           "Confirm or update the server URL and credentials for this integration. You'll be able to review and adjust the synced calendars on the next step."
         )}
       </p>
+
+      <SharedForm.nextcloud_app_password_hint :if={@provider == "nextcloud"} />
 
       <%= if @locked_url do %>
         <SharedForm.locked_url_field
@@ -264,7 +268,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
         id="reconnect_password"
         name="reconnect[password]"
         type="password"
-        label={dgettext("dashboard_calendar_providers", "Password / App Password")}
+        label={SharedForm.password_label(@provider)}
         value={@form_values["password"]}
         required
         icon="hero-lock-closed"
