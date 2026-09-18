@@ -252,7 +252,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
         {:noreply, socket}
 
       creating ->
-        rule = Shared.compose_recurrence_rule(params)
+        # The event's all-day flag and start date can still change before the
+        # form is saved, so only the timezone is fixed enough to compose with;
+        # `CreateExecution` refits the rest to the event that is saved.
+        rule =
+          Shared.compose_recurrence_rule(params, %{timezone: socket.assigns.user_timezone})
+
         {:noreply, assign(socket, :creating_event, Map.put(creating, :recurrence_rule, rule))}
     end
   end

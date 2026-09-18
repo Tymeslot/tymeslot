@@ -298,6 +298,46 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       assert row.recurrence_rule == @timed_rrule
     end
 
+    test "a toggle to timed ends the UNTIL day in the organiser's timezone", %{
+      user: user,
+      integration: integration
+    } do
+      event = insert_all_day_event(integration, %{recurrence_rule: @all_day_rrule})
+      expect_provider_update()
+
+      changes = %{
+        all_day: false,
+        start_at: ~U[2026-06-01 09:00:00Z],
+        end_at: ~U[2026-06-01 10:00:00Z]
+      }
+
+      assert {:ok, updated} =
+               CalendarGrid.update_event(user.id, event, changes, timezone: "America/Los_Angeles")
+
+      # 31 Dec 23:59:59 in Los Angeles is 1 Jan 07:59:59 UTC, so the final
+      # occurrence on 31 December local is still inside the bound.
+      assert updated.recurrence_rule == "FREQ=WEEKLY;BYDAY=MO;UNTIL=20270101T075959Z"
+    end
+
+    test "a toggle back to all-day keeps the date the organiser picked", %{
+      user: user,
+      integration: integration
+    } do
+      event =
+        insert_event(integration, %{
+          recurrence_rule: "FREQ=WEEKLY;BYDAY=MO;UNTIL=20270101T075959Z"
+        })
+
+      expect_provider_update()
+
+      changes = %{all_day: true, start_date: ~D[2026-06-01], end_date: ~D[2026-06-02]}
+
+      assert {:ok, updated} =
+               CalendarGrid.update_event(user.id, event, changes, timezone: "America/Los_Angeles")
+
+      assert updated.recurrence_rule == @all_day_rrule
+    end
+
     test "a toggle that would end the series before it starts is refused", %{
       user: user,
       integration: integration

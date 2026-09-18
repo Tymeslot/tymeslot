@@ -387,18 +387,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       <div :if={@editable} class="mb-3">
         <RecurrenceEditor.recurrence_editor
           recurrence_rule={Map.get(@selected_event, :recurrence_rule)}
+          timezone={@user_timezone}
           myself={@myself}
           change_event="update_event_recurrence"
         />
       </div>
       <div
-        :if={!@editable and recurrence_summary(@selected_event) != nil}
+        :if={!@editable and recurrence_summary(@selected_event, @user_timezone) != nil}
         class="flex items-start gap-3 mb-3"
       >
         <.icon name="hero-arrow-path" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
         <div class="flex-1">
           <p class="text-token-sm text-tymeslot-600 leading-snug">
-            {recurrence_summary(@selected_event)}
+            {recurrence_summary(@selected_event, @user_timezone)}
           </p>
         </div>
       </div>
@@ -492,10 +493,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
   # Read-only human-readable summary of an event's recurrence rule, or nil when
   # the event does not repeat.
-  defp recurrence_summary(event) do
+  defp recurrence_summary(event, timezone) do
     case Map.get(event, :recurrence_rule) do
       rule when is_binary(rule) and rule != "" ->
-        rule |> RRule.parse() |> RecurrenceEditor.summary()
+        rule |> RRule.parse(timezone: timezone) |> RecurrenceEditor.summary()
 
       _none ->
         nil

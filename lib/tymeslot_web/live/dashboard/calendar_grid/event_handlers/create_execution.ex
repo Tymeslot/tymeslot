@@ -87,11 +87,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   # The recurrence editor composes the rule as the form changes, so it can
   # predate the final all-day flag and start date. Fit it to the event being
   # saved: a date-only UNTIL for an all-day event, and no series that ends
-  # before it starts.
+  # before it starts. A timed event's UNTIL is an instant, so it ends its day
+  # in the organiser's timezone rather than in UTC.
   defp save_with_fitted_recurrence(creating, start_date, end_date, socket) do
     case RRule.retarget(Map.get(creating, :recurrence_rule),
            all_day: Map.get(creating, :all_day, false),
-           start_date: start_date
+           start_date: start_date,
+           timezone: socket.assigns.user_timezone
          ) do
       {:ok, rule} ->
         creating

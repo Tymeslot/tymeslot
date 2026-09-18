@@ -291,7 +291,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       event ->
         event_context = %{
           all_day: Map.get(event, :all_day, false),
-          start_date: AllDay.start_date(event)
+          start_date: AllDay.start_date(event),
+          timezone: socket.assigns.user_timezone
         }
 
         case Shared.compose_recurrence_rule(params, event_context) do
@@ -532,13 +533,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     end
   end
 
+  # Flipping all-day refits a recurring event's UNTIL to the value type its new
+  # DTSTART calls for, and a timed UNTIL is an instant, so the domain needs the
+  # organiser's timezone to end the chosen day in it.
   defp push_all_day_change(socket, original_event, optimistic_event) do
+    timezone = socket.assigns.user_timezone
+
     result =
       Shared.apply_optimistic_update(socket, optimistic_event, fn s ->
         EditWorkflow.update_event_async(
           s,
           original_event,
-          Map.take(optimistic_event, [:all_day, :start_at, :end_at, :start_date, :end_date])
+          Map.take(optimistic_event, [:all_day, :start_at, :end_at, :start_date, :end_date]),
+          timezone: timezone
         )
       end)
 

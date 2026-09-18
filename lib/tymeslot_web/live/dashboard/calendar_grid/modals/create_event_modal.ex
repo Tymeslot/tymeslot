@@ -225,6 +225,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       <div :if={!@meeting_mode} class="border-t border-tymeslot-200 pt-3 mt-3">
         <RecurrenceEditor.recurrence_editor
           recurrence_rule={@creating_event[:recurrence_rule]}
+          timezone={@user_timezone}
           myself={@myself}
           change_event="update_create_recurrence"
         />

@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SharedToUtcTest do
   @moduletag :unit
   @moduletag :calendar
 
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
 
   describe "to_utc/4 — normal (non-DST) times" do
@@ -113,6 +114,37 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SharedToUtcTest do
       context = %{all_day: false, start_date: ~D[2026-06-01]}
       result = Shared.compose_recurrence_rule(params, context)
       assert String.contains?(result, "UNTIL=20261231T235959Z")
+    end
+  end
+
+  describe "compose_recurrence_rule — a timed UNTIL ends the organiser's day" do
+    @params %{"freq" => "daily", "end_type" => "until", "until" => "2026-06-30"}
+
+    test "west of UTC the local day ends on the next UTC day" do
+      context = %{all_day: false, start_date: ~D[2026-06-01], timezone: "America/Los_Angeles"}
+
+      assert Shared.compose_recurrence_rule(@params, context) ==
+               "FREQ=DAILY;UNTIL=20260701T065959Z"
+    end
+
+    test "east of UTC the local day ends earlier on the same UTC day" do
+      context = %{all_day: false, start_date: ~D[2026-06-01], timezone: "Pacific/Auckland"}
+
+      assert Shared.compose_recurrence_rule(@params, context) ==
+               "FREQ=DAILY;UNTIL=20260630T115959Z"
+    end
+
+    test "an all-day series keeps its bare-date UNTIL whatever the timezone" do
+      context = %{all_day: true, start_date: ~D[2026-06-01], timezone: "America/Los_Angeles"}
+
+      assert Shared.compose_recurrence_rule(@params, context) == "FREQ=DAILY;UNTIL=20260630"
+    end
+
+    test "the composed rule reads back as the date the form supplied" do
+      context = %{all_day: false, start_date: ~D[2026-06-01], timezone: "America/Los_Angeles"}
+      rule = Shared.compose_recurrence_rule(@params, context)
+
+      assert %{until: ~D[2026-06-30]} = RRule.parse(rule, timezone: "America/Los_Angeles")
     end
   end
 end

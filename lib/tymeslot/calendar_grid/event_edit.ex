@@ -51,6 +51,10 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     * `:recurrence_scope` - which occurrences of a recurring series the edit
       is meant for (`"this_only"`, `"following"`, `"all"`). Forwarded to the
       provider payload; no provider acts on it yet.
+    * `:timezone` - the organiser's timezone. A timed event's `UNTIL` is an
+      instant (RFC 5545 §3.3.10), so refitting one has to end the organiser's
+      chosen day in their own zone; without it the day ends in UTC and the
+      series gains or loses its last occurrence.
 
   Returns `{:ok, updated_event}`, or `{:error, %{reason: reason, retry:
   :queued | :not_queued}}` where `:queued` means the edit is saved locally
@@ -61,7 +65,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   def update_event(user_id, event, changes, opts \\ []) when is_map(changes) do
     ensure_editable!(changes)
 
-    with {:ok, updated} <- apply_changes(event, changes),
+    with {:ok, updated} <- apply_changes(event, changes, opts),
          {:ok, payload} <- ProviderPayload.from_event(updated) do
       payload = maybe_put_scope(payload, Keyword.get(opts, :recurrence_scope))
       write_to_provider(user_id, event, updated, payload)
@@ -93,11 +97,11 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     end
   end
 
-  defp apply_changes(event, changes) do
+  defp apply_changes(event, changes, opts) do
     event
     |> Map.merge(changes)
     |> normalise_timing()
-    |> retarget_rule(event.all_day)
+    |> retarget_rule(event.all_day, Keyword.get(opts, :timezone))
   end
 
   defp normalise_timing(%{all_day: true} = event), do: %{event | start_at: nil, end_at: nil}
@@ -106,12 +110,13 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   # RFC 5545 §3.3.10: a rule's UNTIL carries the value type of the event's
   # DTSTART, so flipping all-day leaves a recurring event's existing rule in
   # the wrong form. Every other part of the rule is kept as it was.
-  defp retarget_rule(%{all_day: all_day} = updated, all_day), do: {:ok, updated}
+  defp retarget_rule(%{all_day: all_day} = updated, all_day, _timezone), do: {:ok, updated}
 
-  defp retarget_rule(updated, _was_all_day) do
+  defp retarget_rule(updated, _was_all_day, timezone) do
     case RRule.retarget(updated.recurrence_rule,
            all_day: updated.all_day,
-           start_date: AllDay.start_date(updated)
+           start_date: AllDay.start_date(updated),
+           timezone: timezone
          ) do
       {:ok, rule} -> {:ok, %{updated | recurrence_rule: rule}}
       {:error, :until_before_start} = error -> error
