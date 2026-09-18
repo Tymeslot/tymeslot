@@ -263,15 +263,16 @@ defmodule Tymeslot.Bookings.Reschedule do
   # `IcsGenerator.generate_ics_attachment/2`). The request email sent below
   # (`BookingRequestReceived`) carries no calendar attachment, so that entry
   # is left showing the old, no-longer-accurate confirmed time until the host
-  # answers again. Approval heals it: the reschedule notice it now sends
-  # carries an ICS for the new time stamped with the `ical_sequence` this
-  # reschedule advanced, so the client supersedes the entry it holds rather
-  # than judging two entries of equal revision by their DTSTAMP. A decline or
-  # an expiry's outcome email still does not correct it, which needs a
-  # calendar-only correction path analogous to
-  # `Tymeslot.Meetings.AttendeeNotifications`'s ICS handling, which lives
-  # outside this module's booking-email templates and is left for that work
-  # rather than bolted on here.
+  # answers again. Both outcomes heal it: the reschedule notice approval now
+  # sends carries an ICS for the new time stamped with the `ical_sequence`
+  # this reschedule advanced, so the client supersedes the entry it holds
+  # rather than judging two entries of equal revision by their DTSTAMP, and a
+  # decline or an expiry cancels the booking, whose outcome email
+  # (`BookingRequestOutcome`) carries a cancellation ICS for it. Correcting
+  # the entry while the request is still open would need a calendar-only path
+  # analogous to `Tymeslot.Meetings.AttendeeNotifications`'s ICS handling,
+  # which lives outside this module's booking-email templates and is left for
+  # that work rather than bolted on here.
   defp announce(%{status: "awaiting_approval"} = updated, original) do
     cancel_stale_reminders(updated)
     GuestNotifications.prepare_for_reapproval(updated)

@@ -2415,6 +2415,7 @@ msgid "Reminder - reschedule request: %{name} - %{date}"
 msgstr "Нагадування - запит на перенесення: %{name} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Requested New Time"
@@ -2454,3 +2455,48 @@ msgstr "Перенесення запитано: %{title} - %{date}"
 #, elixir-autogen, elixir-format
 msgid "The new time is held for you in the meantime, so nobody else can take it. You'll get an email with the updated calendar entry as soon as %{organizer} accepts."
 msgstr "Тим часом новий час зарезервовано для вас, тож ніхто інший не зможе його зайняти. Щойно %{organizer} погодиться, ви отримаєте лист з оновленим записом у календарі."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} didn't get to your reschedule request in time. Your previous time had already been given up for it, so your booking has been cancelled. The attached calendar file removes it from your calendar."
+msgstr "Відповідь від %{organizer} на ваш запит на перенесення вчасно не надійшла. Ваш попередній час уже було звільнено для нього, тому ваше бронювання скасовано. Доданий файл календаря видалить його з вашого календаря."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "%{organizer} wasn't able to accept the new time. Your previous time had already been given up for it, so your booking has been cancelled. The attached calendar file removes it from your calendar."
+msgstr "%{organizer} не може прийняти новий час. Ваш попередній час уже було звільнено для нього, тому ваше бронювання скасовано. Доданий файл календаря видалить його з вашого календаря."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Booking cancelled"
+msgstr "Бронювання скасовано"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Hi %{name}, %{organizer} can't make the new time."
+msgstr "Вітаю, %{name}! %{organizer} не може провести зустріч у новий час."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Hi %{name}, your reschedule request wasn't answered in time."
+msgstr "Вітаю, %{name}! Ваш запит на перенесення не отримав відповіді вчасно."
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule Declined"
+msgstr "Перенесення відхилено"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reschedule Request Expired"
+msgstr "Термін запиту на перенесення минув"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule declined, booking cancelled: %{title} - %{date}"
+msgstr "Перенесення відхилено, бронювання скасовано: %{title} - %{date}"
+
+#: lib/tymeslot/emails/templates/booking_request_outcome.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule request expired, booking cancelled: %{title} - %{date}"
+msgstr "Термін запиту на перенесення минув, бронювання скасовано: %{title} - %{date}"

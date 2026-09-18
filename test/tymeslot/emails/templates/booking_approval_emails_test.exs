@@ -289,6 +289,68 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
     end
   end
 
+  describe "BookingRequestOutcome for a rescheduled booking" do
+    # A booking confirmed before (`first_announced_at`) that a reschedule sent
+    # back into the gate: releasing it cancels the booking itself.
+    defp released_booking(attrs \\ %{}) do
+      meeting(Map.merge(%{first_announced_at: ~U[2026-08-20 10:00:00Z], ical_sequence: 2}, attrs))
+    end
+
+    defp calendar_file(email) do
+      Enum.find(email.attachments, &calendar_attachment?/1)
+    end
+
+    test "a decline says the booking is cancelled, not just that a time was refused" do
+      email = BookingRequestOutcome.render(:declined, released_booking())
+
+      assert email.subject =~ "Reschedule declined, booking cancelled"
+      assert email.html_body =~ "Reschedule Declined"
+      assert email.html_body =~ "your booking has been cancelled"
+      assert email.text_body =~ "your booking has been cancelled"
+    end
+
+    test "an expiry says the same without claiming the host refused" do
+      email = BookingRequestOutcome.render(:expired, released_booking())
+
+      assert email.subject =~ "Reschedule request expired, booking cancelled"
+      refute email.subject =~ "declined"
+      assert email.html_body =~ "didn&#39;t get to your reschedule request in time"
+    end
+
+    test "removes the booking from the invitee's calendar" do
+      # The original confirmation put the booking in the invitee's calendar
+      # under its UID; without a cancellation for that UID it would stay there.
+      for variant <- [:declined, :expired] do
+        ics = variant |> BookingRequestOutcome.render(released_booking()) |> calendar_file()
+
+        assert ics, "expected a calendar file for #{variant}"
+        assert ics.data =~ "STATUS:CANCELLED"
+        assert ics.data =~ "UID:abc-123@"
+        assert ics.data =~ "SEQUENCE:3"
+        refute ics.data =~ "METHOD:CANCEL"
+      end
+    end
+
+    test "still quotes the host's reason for declining" do
+      email =
+        BookingRequestOutcome.render(
+          :declined,
+          released_booking(%{decline_reason: "Fully booked"})
+        )
+
+      assert email.html_body =~ "Fully booked"
+      assert email.text_body =~ "Fully booked"
+    end
+
+    test "a first-time request keeps its wording and sends no calendar file" do
+      email = BookingRequestOutcome.render(:declined, meeting())
+
+      assert email.subject =~ "Request declined"
+      refute email.subject =~ "cancelled"
+      refute calendar_file(email)
+    end
+  end
+
   describe "held-request location classification" do
     test "a held video request shows Video Call rather than TBD" do
       # `location` and `meeting_url` are both nil on a held request — the
