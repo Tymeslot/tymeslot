@@ -121,9 +121,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     """
   end
 
-  # Builds a one-line human summary for a video integration — the account,
-  # host, or custom link plus the provider-type descriptor — dropping absent
-  # segments gracefully.
+  # Builds a one-line human summary for a video integration: the account,
+  # server, or custom link, plus any provider-type descriptor the type tag does
+  # not already carry, dropping absent segments gracefully.
   @spec video_summary(map()) :: String.t()
   defp video_summary(integration) do
     integration
@@ -132,8 +132,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     |> Enum.join(" · ")
   end
 
+  # "self-hosted" is already the type-tag chip beside the title (`type_tag/1`),
+  # so the summary carries the server alone: the line is truncated to one row
+  # and the server string is the part worth the space.
   defp summary_segments(%{provider: "mirotalk"} = integration) do
-    [host(integration.base_url), dgettext("dashboard_integrations", "self-hosted")]
+    [ConnectionRow.server_label(integration.base_url)]
   end
 
   defp summary_segments(%{provider: "custom"} = integration) do
@@ -150,7 +153,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
         dgettext("dashboard_integrations", "rooms created automatically")
       ]
     else
-      [integration.provider_account_email || host(integration.base_url)]
+      [integration.provider_account_email || ConnectionRow.server_label(integration.base_url)]
     end
   end
 
@@ -174,7 +177,4 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
       dgettext("dashboard_integrations", "OAuth")
     end
   end
-
-  defp host(nil), do: nil
-  defp host(base_url), do: URI.parse(base_url).host
 end

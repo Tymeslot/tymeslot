@@ -516,6 +516,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   Builds a one-line human summary for a calendar integration — account
   email, conflict-check coverage, booking target, and last-sync — dropping
   absent segments gracefully.
+
+  Only the OAuth providers record an account email, so a CalDAV-family row
+  names its server instead; without it the line would identify neither the
+  account nor the host it belongs to.
   """
   @spec calendar_summary(%{:provider => atom() | String.t() | nil, optional(atom()) => term()}) ::
           String.t()
@@ -523,7 +527,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     calendar_list = integration.calendar_list || []
 
     [
-      integration.provider_account_email,
+      integration.provider_account_email ||
+        ConnectionRow.server_label(Map.get(integration, :base_url)),
       conflict_segment(integration, calendar_list),
       booking_segment(integration),
       sync_segment(integration)

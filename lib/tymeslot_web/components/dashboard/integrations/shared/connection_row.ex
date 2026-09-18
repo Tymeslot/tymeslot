@@ -57,7 +57,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
                 {@type_tag}
               </span>
             </div>
-            <p class="mt-0.5 truncate text-token-sm text-tymeslot-500">{@summary}</p>
+            <p
+              title={@summary != "" && @summary}
+              class="mt-0.5 truncate text-token-sm text-tymeslot-500"
+            >
+              {@summary}
+            </p>
             <p :if={@notice} class="mt-1 text-token-sm text-amber-700">{@notice}</p>
           </div>
           <.status_badge variant={@variant} label={@status_label} class="shrink-0" />
@@ -107,6 +112,39 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
   end
 
   def reconnect_reason(_integration), do: nil
+
+  @doc """
+  The server behind a self-hosted integration, rendered for a row's `summary`
+  as the owner typed it: host, port and path, without the scheme.
+
+  The port and the path are what tell two instances on one host apart, which is
+  the ordinary shape of a staging server or of anything behind a reverse proxy,
+  so `http://localhost:8080/nextcloud` reads as `localhost:8080/nextcloud`
+  rather than collapsing to `localhost`.
+
+  `userinfo` is dropped explicitly: not every provider rejects a `base_url`
+  carrying credentials, so a password typed into the server field must never
+  ride along onto the dashboard. Anything that does not parse as an absolute
+  URL with a host yields `nil`, so a value stored before this field was
+  validated cannot raise here.
+  """
+  @spec server_label(String.t() | nil) :: String.t() | nil
+  def server_label(nil), do: nil
+
+  def server_label(base_url) when is_binary(base_url) do
+    case URI.parse(base_url) do
+      %URI{scheme: scheme, host: host} = uri when is_binary(scheme) and is_binary(host) ->
+        %{uri | userinfo: nil}
+        |> URI.to_string()
+        |> String.replace_prefix(scheme <> "://", "")
+
+      %URI{host: host} when is_binary(host) ->
+        host
+
+      %URI{} ->
+        nil
+    end
+  end
 
   defp translate_reason(reason) do
     Enum.find_value(@reason_domains, reason, fn domain ->
