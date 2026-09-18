@@ -181,6 +181,15 @@ defmodule Tymeslot.Integrations.Video.InputValidationTest do
       assert message == "Use curly brackets: {{meeting_id}} not <meeting_id>"
     end
 
+    test "refuses a placeholder wrapped in an extra brace" do
+      assert {:error, %{custom_meeting_url: message}} =
+               InputValidation.validate_video_integration_form(
+                 custom_params("https://meet.jit.si/{{{meeting_id}}}")
+               )
+
+      assert message == "Write the template variable exactly as {{meeting_id}}"
+    end
+
     test "accepts a correctly written template" do
       url = "https://meet.jit.si/{{meeting_id}}"
 
