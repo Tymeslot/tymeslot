@@ -29,7 +29,24 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
   describe "detect_provider_from_url/1 (private but tested via valid_meeting_url? and extract_room_id)" do
     test "detects mirotalk" do
       assert ProviderAdapter.valid_meeting_url?("https://mirotalk.com/room")
-      assert ProviderAdapter.valid_meeting_url?("https://talk.example.com/room")
+    end
+
+    test "detects a self-hosted mirotalk instance by the join path its URLs carry" do
+      assert ProviderAdapter.valid_meeting_url?("https://talk.example.com/join/abc-def-123")
+
+      assert ProviderAdapter.extract_room_id("https://talk.example.com/join/abc-def-123") ==
+               "abc-def-123"
+    end
+
+    test "leaves links on a host merely containing \"talk.\" to their own provider" do
+      # Nextcloud Talk and anything else on such a host used to be claimed by
+      # MiroTalk, which then parsed a room id out of a URL it knows nothing
+      # about.
+      refute ProviderAdapter.valid_meeting_url?("https://talk.example.org/call/abc123")
+      refute ProviderAdapter.valid_meeting_url?("https://cloud.mytalk.de/s/abc123")
+
+      assert ProviderAdapter.extract_room_id("https://talk.example.org/call/abc123") == nil
+      assert ProviderAdapter.extract_room_id("https://cloud.mytalk.de/s/abc123") == nil
     end
 
     test "detects google_meet" do

@@ -430,8 +430,16 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     }
   end
 
+  # A bare `"talk."` used to sit here, which claimed every host containing it:
+  # Nextcloud Talk on `talk.example.org`, and even `cloud.mytalk.de`. These
+  # patterns decide whose `extract_room_id/1` parses a stored link, and
+  # `Tymeslot.CalendarGrid.EventVideo` recovers a room id that way before
+  # deleting the room an event no longer uses, so claiming another provider's
+  # URL turns that cleanup into a delete with a room id parsed by the wrong
+  # rules. Self-hosted instances on arbitrary domains stay recognised through
+  # `/join/`, the path MiroTalk's own meeting URLs carry.
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def url_patterns, do: ["mirotalk", "talk."]
+  def url_patterns, do: ["mirotalk", "/join/"]
 
   defp domain_not_found_message,
     do: dgettext("dashboard_integrations", "Domain not found - Please check the URL")

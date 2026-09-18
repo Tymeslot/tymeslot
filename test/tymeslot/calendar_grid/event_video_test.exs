@@ -281,6 +281,40 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       assert {:ok, nil} = CalendarGrid.change_event_video(user.id, event, nil)
       assert_received {:provider_update, _uid, %{description: ""}}
     end
+
+    test "deletes nothing when no provider recognises the link it drops", %{
+      user: user,
+      integration: integration
+    } do
+      zoom = insert_zoom_integration(user)
+
+      # A Nextcloud Talk link. Its host contains "talk.", which MiroTalk's URL
+      # patterns used to claim, so the room id came back as MiroTalk's last
+      # path segment and the removal fired a delete for it against the event's
+      # own provider, leaving the real room behind.
+      link = "https://talk.example.org/call/abc123"
+
+      event =
+        insert_event(integration, %{
+          description: "Join video call: #{link}",
+          video_link: link,
+          video_integration_id: zoom.id
+        })
+
+      expect_provider_update(:ok)
+      stub(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      test_pid = self()
+
+      stub(Tymeslot.HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
+        send(test_pid, {:room_deleted, url})
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert {:ok, nil} = CalendarGrid.change_event_video(user.id, event, nil)
+      refute_received {:room_deleted, _url}
+      assert reload(event).video_link == nil
+    end
   end
 
   defp insert_event(integration, attrs \\ %{}) do
