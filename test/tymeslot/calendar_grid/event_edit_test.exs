@@ -30,6 +30,11 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
   @attendees [%{"email" => "guest@example.com", "name" => "Guest", "status" => "accepted"}]
   @reminders [%{method: :popup, minutes_before: 15}]
   @rrule "FREQ=WEEKLY;BYDAY=MO"
+  # The same series ending on the same day, in each of the two UNTIL value
+  # types RFC 5545 §3.3.10 allows: a UTC timestamp for a timed DTSTART, a bare
+  # date for an all-day one.
+  @timed_rrule "FREQ=WEEKLY;BYDAY=MO;UNTIL=20261231T235959Z"
+  @all_day_rrule "FREQ=WEEKLY;BYDAY=MO;UNTIL=20261231"
 
   setup do
     user = insert(:user)
@@ -251,6 +256,86 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
                )
 
       assert captured_payload().recurrence_scope == "all"
+    end
+  end
+
+  describe "update_event/4 on a recurring series that changes all-day" do
+    test "toggling a timed series to all-day refits its UNTIL to a bare date", %{
+      user: user,
+      integration: integration
+    } do
+      event = insert_event(integration, %{recurrence_rule: @timed_rrule})
+      expect_provider_update()
+
+      changes = %{all_day: true, start_date: ~D[2026-06-01], end_date: ~D[2026-06-02]}
+
+      assert {:ok, updated} = CalendarGrid.update_event(user.id, event, changes)
+      assert updated.recurrence_rule == @all_day_rrule
+      assert captured_payload().recurrence_rule == @all_day_rrule
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+      assert row.recurrence_rule == @all_day_rrule
+    end
+
+    test "toggling an all-day series to timed refits its UNTIL to a UTC timestamp", %{
+      user: user,
+      integration: integration
+    } do
+      event = insert_all_day_event(integration, %{recurrence_rule: @all_day_rrule})
+      expect_provider_update()
+
+      changes = %{
+        all_day: false,
+        start_at: ~U[2026-06-01 09:00:00Z],
+        end_at: ~U[2026-06-01 10:00:00Z]
+      }
+
+      assert {:ok, updated} = CalendarGrid.update_event(user.id, event, changes)
+      assert updated.recurrence_rule == @timed_rrule
+      assert captured_payload().recurrence_rule == @timed_rrule
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+      assert row.recurrence_rule == @timed_rrule
+    end
+
+    test "a toggle that would end the series before it starts is refused", %{
+      user: user,
+      integration: integration
+    } do
+      dead_rule = "FREQ=WEEKLY;BYDAY=MO;UNTIL=20260501"
+      event = insert_all_day_event(integration, %{recurrence_rule: dead_rule})
+
+      changes = %{
+        all_day: false,
+        start_at: ~U[2026-06-01 09:00:00Z],
+        end_at: ~U[2026-06-01 10:00:00Z]
+      }
+
+      assert {:error, %{reason: :until_before_start, retry: :not_queued}} =
+               CalendarGrid.update_event(user.id, event, changes)
+
+      refute_received {:provider_update, _uid, _payload, _context}
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+      assert row.recurrence_rule == dead_rule
+      assert row.all_day == true
+      assert row.sync_state == "synced"
+    end
+
+    test "an edit that leaves all-day alone does not touch the rule", %{
+      user: user,
+      integration: integration
+    } do
+      # Wrong value type for a timed event and ending before it starts: an
+      # unrelated edit still goes through, untouched, rather than being
+      # rewritten or refused.
+      odd_rule = "FREQ=WEEKLY;BYDAY=MO;UNTIL=20260501"
+      event = insert_event(integration, %{recurrence_rule: odd_rule})
+      expect_provider_update()
+
+      assert {:ok, updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+      assert updated.recurrence_rule == odd_rule
+      assert captured_payload().recurrence_rule == odd_rule
     end
   end
 

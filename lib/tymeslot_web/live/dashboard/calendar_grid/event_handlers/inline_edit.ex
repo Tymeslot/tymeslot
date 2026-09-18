@@ -291,7 +291,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       event ->
         event_context = %{
           all_day: Map.get(event, :all_day, false),
-          start_date: recurrence_start_date(event)
+          start_date: AllDay.start_date(event)
         }
 
         case Shared.compose_recurrence_rule(params, event_context) do
@@ -315,17 +315,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
             end
         end
     end
-  end
-
-  # The selected event is a schema struct (no Access behaviour), so read its
-  # fields with `Map.get/2` rather than bracket syntax. Falls back to the
-  # timed start instant's date when the event has no all-day start_date.
-  defp recurrence_start_date(event) do
-    Map.get(event, :start_date) ||
-      case Map.get(event, :start_at) do
-        %DateTime{} = start_at -> DateTime.to_date(start_at)
-        _other -> nil
-      end
   end
 
   @spec handle_update_event_colour(map(), Phoenix.LiveView.Socket.t()) ::

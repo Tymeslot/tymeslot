@@ -20,10 +20,12 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   the cache, so the grid keeps showing what the organiser saved.
   """
 
+  alias Tymeslot.CalendarGrid.AllDay
   alias Tymeslot.CalendarGrid.ProviderPayload
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
 
   require Logger
 
@@ -41,7 +43,8 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   `changes` may only carry #{Enum.map_join(@editable_fields, ", ", &"`#{&1}`")};
   any other key raises `ArgumentError`. Timing follows the event's resulting `all_day`
   flag: an all-day event keeps its dates and drops its timestamps, a timed
-  event the reverse.
+  event the reverse. A change that flips `all_day` also refits the `UNTIL` of
+  a recurring event's rule to the value type its new `DTSTART` calls for.
 
   ## Options
 
@@ -57,15 +60,13 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
           {:ok, map()} | {:error, failure()}
   def update_event(user_id, event, changes, opts \\ []) when is_map(changes) do
     ensure_editable!(changes)
-    updated = apply_changes(event, changes)
 
-    case ProviderPayload.from_event(updated) do
-      {:ok, payload} ->
-        payload = maybe_put_scope(payload, Keyword.get(opts, :recurrence_scope))
-        write_to_provider(user_id, event, updated, payload)
-
-      {:error, :invalid_timing} ->
-        {:error, %{reason: :invalid_timing, retry: :not_queued}}
+    with {:ok, updated} <- apply_changes(event, changes),
+         {:ok, payload} <- ProviderPayload.from_event(updated) do
+      payload = maybe_put_scope(payload, Keyword.get(opts, :recurrence_scope))
+      write_to_provider(user_id, event, updated, payload)
+    else
+      {:error, reason} -> {:error, %{reason: reason, retry: :not_queued}}
     end
   end
 
@@ -96,10 +97,26 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     event
     |> Map.merge(changes)
     |> normalise_timing()
+    |> retarget_rule(event.all_day)
   end
 
   defp normalise_timing(%{all_day: true} = event), do: %{event | start_at: nil, end_at: nil}
   defp normalise_timing(event), do: %{event | start_date: nil, end_date: nil}
+
+  # RFC 5545 §3.3.10: a rule's UNTIL carries the value type of the event's
+  # DTSTART, so flipping all-day leaves a recurring event's existing rule in
+  # the wrong form. Every other part of the rule is kept as it was.
+  defp retarget_rule(%{all_day: all_day} = updated, all_day), do: {:ok, updated}
+
+  defp retarget_rule(updated, _was_all_day) do
+    case RRule.retarget(updated.recurrence_rule,
+           all_day: updated.all_day,
+           start_date: AllDay.start_date(updated)
+         ) do
+      {:ok, rule} -> {:ok, %{updated | recurrence_rule: rule}}
+      {:error, :until_before_start} = error -> error
+    end
+  end
 
   defp maybe_put_scope(payload, nil), do: payload
   defp maybe_put_scope(payload, scope), do: Map.put(payload, :recurrence_scope, scope)
