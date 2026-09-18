@@ -1593,3 +1593,8 @@ msgstr "Цьому користувачеві Nextcloud не дозволено 
 #, elixir-autogen, elixir-format
 msgid "Booked through Tymeslot."
 msgstr "Заброньовано через Tymeslot."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}: new bookings get no video link."
+msgstr "%{name}: нові бронювання не отримують посилання на відеозустріч."

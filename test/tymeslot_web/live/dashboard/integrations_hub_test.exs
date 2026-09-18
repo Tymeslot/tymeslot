@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Repo
 
   setup :setup_dashboard_user
@@ -95,6 +96,34 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
 
       # The Calendars tab carries the amber warning dot.
       assert has_element?(view, "span.bg-amber-500")
+    end
+
+    # The credentials still work, so the integration classifies as healthy and
+    # nothing else in the dashboard says the provider is refusing every room.
+    test "surfaces a video server refusing to create rooms, and drops it once it stops",
+         %{conn: conn, user: user} do
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "nextcloud_talk",
+          name: "Team Talk",
+          is_active: true,
+          room_creation_error: :conversation_creation_restricted
+        )
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations")
+
+      assert html =~ "1 connection needs attention"
+      assert html =~ "Team Talk: new bookings get no video link."
+      assert has_element?(view, "a[href='/dashboard/integrations?tab=video']", "Review")
+      assert has_element?(view, "span.bg-amber-500")
+
+      VideoIntegrationQueries.clear_room_creation_error(integration.id)
+
+      {:ok, cleared_view, cleared_html} = live(conn, ~p"/dashboard/integrations")
+
+      refute cleared_html =~ "needs attention"
+      refute has_element?(cleared_view, "span.bg-amber-500")
     end
 
     test "shows the connected-calendar count on the Calendars tab",

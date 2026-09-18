@@ -1590,3 +1590,8 @@ msgstr "Cet utilisateur Nextcloud n’a pas le droit d’utiliser Talk. Dans les
 #, elixir-autogen, elixir-format
 msgid "Booked through Tymeslot."
 msgstr "Réservé via Tymeslot."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}: new bookings get no video link."
+msgstr "%{name} : les nouvelles réservations n’obtiennent pas de lien vidéo."

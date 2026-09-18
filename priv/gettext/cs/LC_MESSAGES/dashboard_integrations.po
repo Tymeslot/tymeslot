@@ -1593,3 +1593,8 @@ msgstr "Tento uživatel Nextcloudu nesmí používat Talk. V nastavení správy 
 #, elixir-autogen, elixir-format
 msgid "Booked through Tymeslot."
 msgstr "Rezervováno přes Tymeslot."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}: new bookings get no video link."
+msgstr "%{name}: nové rezervace nedostávají odkaz na video."

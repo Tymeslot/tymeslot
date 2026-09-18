@@ -1590,3 +1590,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Booked through Tymeslot."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}: new bookings get no video link."
+msgstr ""
