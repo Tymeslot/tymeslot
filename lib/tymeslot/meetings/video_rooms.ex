@@ -24,6 +24,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
   require Logger
 
   alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.EventDetails
@@ -277,6 +278,12 @@ defmodule Tymeslot.Meetings.VideoRooms do
         {:ok, existing_meeting}
 
       {:error, reason} = error ->
+        # The one place a room id is logged in the clear, deliberately. The
+        # write that would have recorded it failed, so the room exists on the
+        # provider and nothing in the database points at it: without the id and
+        # URL here there is no way to find it again and delete it. Everywhere
+        # else the row is reachable by `meeting_id` and the logs carry
+        # `room_ref` instead.
         Logger.error("Failed to persist video room attachment",
           meeting_id: meeting.id,
           reason: inspect(reason),
@@ -295,7 +302,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
       {:ok, updated_meeting} ->
         Logger.info("Video room added successfully",
           meeting_id: meeting.id,
-          room_id: video_room_attrs.video_room_id
+          room_ref: Redactor.fingerprint(video_room_attrs.video_room_id)
         )
 
         {:ok, updated_meeting}
@@ -364,10 +371,10 @@ defmodule Tymeslot.Meetings.VideoRooms do
   @spec handle_join_url_error(MeetingContext.t(), String.t(), term()) ::
           {:ok, String.t()} | {:error, :join_url_unavailable}
   defp handle_join_url_error(%{room_data: %{meeting_url: meeting_url}} = context, role, error) do
-    room_id = video_module().extract_room_id(context)
+    room_ref = Redactor.fingerprint(video_module().extract_room_id(context))
 
     Logger.error("Failed to create secure join URL",
-      room_id: room_id,
+      room_ref: room_ref,
       role: role,
       error: inspect(error)
     )
@@ -375,7 +382,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
     case UrlValidation.validate_http_url(meeting_url) do
       :ok ->
         Logger.warning("Falling back to the room URL for the join link",
-          room_id: room_id,
+          room_ref: room_ref,
           role: role
         )
 
@@ -383,7 +390,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
 
       {:error, _message} ->
         Logger.error("Video room has no usable join URL, refusing to attach it",
-          room_id: room_id,
+          room_ref: room_ref,
           role: role
         )
 

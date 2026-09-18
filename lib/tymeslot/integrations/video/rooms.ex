@@ -5,9 +5,14 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   Provides APIs to create meeting rooms, generate join URLs, handle lifecycle events,
   and generate standardized metadata. Delegates provider-specific work to the
   Providers layer via the ProviderAdapter.
+
+  Room ids never reach the logs here: for a link-based provider the id is the
+  join link itself. Lines carry `room_ref`, a fingerprint of it, instead. See
+  `Tymeslot.Integrations.Video.Providers.ProviderAdapter` for the rule.
   """
 
   require Logger
+  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.MeetingContext
@@ -58,7 +63,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
 
         Logger.info("Successfully created meeting room",
           provider: provider_type,
-          room_id: extract_room_id(updated_context)
+          room_ref: room_ref(updated_context)
         )
 
         {:ok, updated_context}
@@ -162,13 +167,13 @@ defmodule Tymeslot.Integrations.Video.Rooms do
       },
       fn ->
         # The participant's name is personal data and says nothing a join URL
-        # failure needs: the role and the room identify the link just as well,
-        # and neither follows an attendee into the log sink.
-        room_id = extract_room_id(meeting_context)
+        # failure needs: the role and the room's fingerprint identify the link
+        # just as well, and neither follows an attendee into the log sink.
+        room_ref = room_ref(meeting_context)
 
         Logger.info("Creating join URL for participant",
           role: role,
-          room_id: room_id,
+          room_ref: room_ref,
           provider: meeting_context.provider_type
         )
 
@@ -182,7 +187,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
           {:ok, _url} = result ->
             Logger.info("Successfully created join URL",
               role: role,
-              room_id: room_id,
+              room_ref: room_ref,
               provider: meeting_context.provider_type
             )
 
@@ -191,7 +196,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
           {:error, reason} = error ->
             Logger.error("Failed to create join URL",
               role: role,
-              room_id: room_id,
+              room_ref: room_ref,
               provider: meeting_context.provider_type,
               reason: inspect(reason)
             )
@@ -210,7 +215,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
     Logger.info("Handling meeting event",
       event: event,
       provider: meeting_context.provider_type,
-      room_id: extract_room_id(meeting_context)
+      room_ref: room_ref(meeting_context)
     )
 
     case ProviderAdapter.handle_meeting_event(meeting_context, event, additional_data) do
@@ -240,15 +245,18 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   def generate_meeting_metadata(meeting_context) do
     Logger.debug("Generating meeting metadata",
       provider: meeting_context.provider_type,
-      room_id: extract_room_id(meeting_context)
+      room_ref: room_ref(meeting_context)
     )
 
     ProviderAdapter.generate_meeting_metadata(meeting_context)
   end
 
   # Private helpers
-  defp extract_room_id(%{room_data: %{room_id: room_id}}), do: room_id || "unknown"
-  defp extract_room_id(_meeting_context), do: "unknown"
+  # A short fingerprint of the room id, never the id: it is the join credential
+  # for every link-based provider, and support only ever needs to tell two lines
+  # about the same room apart.
+  defp room_ref(%{room_data: %{room_id: room_id}}), do: Redactor.fingerprint(room_id)
+  defp room_ref(_meeting_context), do: Redactor.fingerprint(nil)
 
   defp get_provider_config(user_id, opts) do
     case get_integration_from_database(user_id, opts) do

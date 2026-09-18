@@ -106,7 +106,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
         }
       }
 
-      Logger.info("Successfully created Zoom meeting", room_id: room_data.room_id)
+      Logger.info("Successfully created Zoom meeting",
+        room_ref: Redactor.fingerprint(room_data.room_id)
+      )
+
       {:ok, room_data}
     else
       {:error, reason} = error ->
@@ -216,7 +219,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def handle_meeting_event(:meeting_ended, room_data, _additional_data) do
-    Logger.info("Zoom meeting ended", room_id: room_data.room_id)
+    Logger.info("Zoom meeting ended", room_ref: Redactor.fingerprint(room_data.room_id))
     :ok
   end
 
@@ -244,18 +247,18 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def update_meeting_room(room_id, config) when is_binary(room_id) do
-    Logger.info("Updating Zoom meeting room", room_id: room_id)
+    Logger.info("Updating Zoom meeting room", room_ref: Redactor.fingerprint(room_id))
 
     with {:ok, :valid} <- Reauth.validate_scope(config, :update),
          {:ok, token} <- get_access_token(config),
          {:ok, {start_time, end_time}} <- Payload.get_meeting_times(config),
          :ok <- patch_scheduled_meeting(token, room_id, start_time, end_time, config) do
-      Logger.info("Successfully updated Zoom meeting", room_id: room_id)
+      Logger.info("Successfully updated Zoom meeting", room_ref: Redactor.fingerprint(room_id))
       :ok
     else
       {:error, reason} = error ->
         Logger.error("Failed to update Zoom meeting",
-          room_id: room_id,
+          room_ref: Redactor.fingerprint(room_id),
           error: inspect(reason)
         )
 
@@ -265,17 +268,17 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def delete_meeting_room(room_id, config) when is_binary(room_id) do
-    Logger.info("Deleting Zoom meeting room", room_id: room_id)
+    Logger.info("Deleting Zoom meeting room", room_ref: Redactor.fingerprint(room_id))
 
     with {:ok, :valid} <- Reauth.validate_scope(config, :delete),
          {:ok, token} <- get_access_token(config),
          :ok <- delete_scheduled_meeting(token, room_id, config) do
-      Logger.info("Successfully deleted Zoom meeting", room_id: room_id)
+      Logger.info("Successfully deleted Zoom meeting", room_ref: Redactor.fingerprint(room_id))
       :ok
     else
       {:error, reason} = error ->
         Logger.error("Failed to delete Zoom meeting",
-          room_id: room_id,
+          room_ref: Redactor.fingerprint(room_id),
           error: inspect(reason)
         )
 
@@ -411,19 +414,19 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     case Config.http_client_module().request(:get, url, "", headers, []) do
       {:ok, %Req.Response{status: 200, body: body}} ->
         Logger.info("Verified Zoom meeting",
-          room_id: to_string(meeting_id),
+          room_ref: Redactor.fingerprint(to_string(meeting_id)),
           meeting_status: read_meeting_status(body)
         )
 
       {:ok, %Req.Response{status: status}} ->
         Logger.warning("Could not verify Zoom meeting after creation",
-          room_id: to_string(meeting_id),
+          room_ref: Redactor.fingerprint(to_string(meeting_id)),
           http_status: status
         )
 
       {:error, reason} ->
         Logger.warning("Network error verifying Zoom meeting after creation",
-          room_id: to_string(meeting_id),
+          room_ref: Redactor.fingerprint(to_string(meeting_id)),
           error: inspect(reason)
         )
     end
@@ -453,7 +456,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
       {:ok, %Req.Response{status: 404, body: response_body}} ->
         Logger.warning("Zoom meeting no longer exists on reschedule",
-          room_id: room_id,
+          room_ref: Redactor.fingerprint(room_id),
           body: Redactor.redact_and_truncate(response_body)
         )
 
@@ -526,7 +529,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
       {:ok, %Req.Response{status: 404}} ->
         Logger.warning("Zoom meeting no longer exists on reschedule retry",
-          room_id: room_id
+          room_ref: Redactor.fingerprint(room_id)
         )
 
         {:error, :meeting_not_found}
@@ -542,7 +545,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
         :ok
 
       {:ok, %Req.Response{status: 404}} ->
-        Logger.info("Zoom meeting already deleted", room_id: room_id)
+        Logger.info("Zoom meeting already deleted", room_ref: Redactor.fingerprint(room_id))
         :ok
 
       other ->

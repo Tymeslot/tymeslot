@@ -307,7 +307,7 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
       assert {:error, :invalid_parameters} = result
     end
 
-    test "logs the role and room but never the participant's name" do
+    test "logs the role and room fingerprint but never the participant's name" do
       meeting_context = %MeetingContext{
         provider_type: :mirotalk,
         provider_module: MiroTalkProvider,
@@ -327,11 +327,8 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
          }}
       end)
 
-      # The info and debug lines this asserts on sit below the level
-      # `config/test.exs` pins, hence the `:logger_level` override. It is global,
-      # which is one of the reasons this module is `async: false`.
-      events =
-        LogCapture.with_capture([logger_level: :debug], fn ->
+      logged =
+        capture_lifecycle(fn ->
           assert {:ok, _join_url} =
                    Rooms.create_join_url(
                      meeting_context,
@@ -340,22 +337,116 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
                      "participant",
                      DateTime.utc_now()
                    )
-
-          LogCapture.drain()
         end)
-
-      logged = Enum.map_join(events, "\n", &LogCapture.dump/1)
 
       # Anchor first: without these the refutes below would pass just as happily
       # on an empty capture.
       assert logged =~ "Creating join URL for participant"
       assert logged =~ "Successfully created join URL"
       assert logged =~ "role: \"participant\""
-      assert logged =~ "room_id: \"https://mirotalk.example.com/room123\""
+      # b0e92c16 is the first eight hex characters of the SHA-256 of
+      # "https://mirotalk.example.com/room123", pinned rather than recomputed so
+      # the assertion cannot move with the code it checks.
+      assert logged =~ "room_ref: \"b0e92c16\""
 
       refute logged =~ "Jonquil"
       refute logged =~ "Featherstone"
       refute logged =~ "jonquil@example.com"
+      refute logged =~ "room123"
+    end
+  end
+
+  # A room id is a join credential for every link-based provider: MiroTalk's is
+  # the meeting URL itself, so a log sink holding one hands whoever can read it
+  # a way into the call. The rule is provider-wide rather than per-provider,
+  # because the next link-based provider added here would be the one to forget
+  # it. `room_ref`, a fingerprint, is what correlates the lines instead.
+  describe "room ids in logs" do
+    test "creating a room logs a fingerprint, never the room id" do
+      user = insert(:user)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "MiroTalk",
+          provider: "mirotalk",
+          base_url: "https://mirotalk.test",
+          api_key: "test-key"
+        })
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body: Jason.encode!(%{"meeting" => "https://mirotalk.test/room123"})
+         }}
+      end)
+
+      logged =
+        capture_lifecycle(fn ->
+          assert {:ok, context} =
+                   Rooms.create_meeting_room(user.id, integration_id: integration.id)
+
+          # The id the provider handed back really is the join link, which is
+          # what makes logging it a leak rather than a nuisance.
+          assert context.room_data.room_id == "https://mirotalk.test/room123"
+        end)
+
+      assert logged =~ "Successfully created meeting room"
+      # 86bdd902 is the first eight hex characters of the SHA-256 of
+      # "https://mirotalk.test/room123".
+      assert logged =~ "room_ref: \"86bdd902\""
+      refute logged =~ "room123"
+    end
+
+    test "updating a room logs a fingerprint, never the room id" do
+      user = insert(:user)
+      integration = zoom_integration(user)
+
+      expect(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :patch, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      logged =
+        capture_lifecycle(fn ->
+          assert :ok =
+                   Rooms.update_meeting_room(user.id,
+                     integration_id: integration.id,
+                     room_id: "987654321",
+                     topic: "Rescheduled Meeting"
+                   )
+        end)
+
+      assert logged =~ "Updating meeting room"
+      # 8a9bcf1e is the first eight hex characters of the SHA-256 of "987654321".
+      assert logged =~ "room_ref: \"8a9bcf1e\""
+      refute logged =~ "987654321"
+    end
+
+    test "deleting a room logs a fingerprint, never the room id" do
+      user = insert(:user)
+      integration = zoom_integration(user)
+
+      expect(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      logged =
+        capture_lifecycle(fn ->
+          assert :ok =
+                   Rooms.delete_meeting_room(user.id,
+                     integration_id: integration.id,
+                     room_id: "987654321"
+                   )
+        end)
+
+      assert logged =~ "Deleting meeting room"
+      assert logged =~ "room_ref: \"8a9bcf1e\""
+      refute logged =~ "987654321"
     end
   end
 
@@ -456,6 +547,20 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
                  room_id: "some-room-id"
                )
     end
+  end
+
+  # The lifecycle lines are `info` and `debug`, both below the level
+  # `config/test.exs` pins, hence the override. It is global, which is one of
+  # the reasons this module is `async: false`. `dump/1` renders the metadata the
+  # console formatter would drop, so a `refute` here covers the whole record.
+  defp capture_lifecycle(fun) do
+    events =
+      LogCapture.with_capture([logger_level: :debug], fn ->
+        fun.()
+        LogCapture.drain()
+      end)
+
+    Enum.map_join(events, "\n", &LogCapture.dump/1)
   end
 
   defp zoom_integration(user, overrides \\ %{}) do

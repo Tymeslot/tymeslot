@@ -5,10 +5,21 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   This module provides a unified interface for all video providers,
   handling common concerns like error handling, logging, metrics, and
   provider lifecycle management.
+
+  ## Room ids are never logged
+
+  For every link-based provider the room id *is* the join link, so a log sink
+  holding it hands whoever can read it a way into the call. The rule is
+  provider-wide rather than per-provider, because a per-provider rule is one the
+  next provider added here forgets: log `Redactor.fingerprint(room_id)` under a
+  `room_ref` key, never the id itself. Nothing in these logs needs the real
+  value; `meeting_id` and `integration_id` correlate with the database, and the
+  fingerprint ties lines about one room together.
   """
 
   require Logger
   alias Tymeslot.Infrastructure.CircuitBreakerHelpers
+  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
   alias Tymeslot.Integrations.Video.MeetingContext
@@ -30,7 +41,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
            {:ok, room_data} <- create_room(provider_type, provider_module, config) do
         Logger.info("Successfully created meeting room",
           provider: provider_type,
-          room_id: room_data.room_id || "unknown"
+          room_ref: Redactor.fingerprint(room_data.room_id)
         )
 
         # Handle meeting created event
@@ -77,7 +88,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
       Logger.debug("Creating join URL for participant",
         provider: provider_type,
         role: role,
-        room_id: room_data.room_id
+        room_ref: Redactor.fingerprint(room_data.room_id)
       )
 
       case provider_module.create_join_url(
@@ -91,7 +102,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
           Logger.debug("Successfully created join URL",
             provider: provider_type,
             role: role,
-            room_id: room_data.room_id
+            room_ref: Redactor.fingerprint(room_data.room_id)
           )
 
           {:ok, join_url}
@@ -100,7 +111,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
           Logger.error("Failed to create join URL",
             provider: provider_type,
             role: role,
-            room_id: room_data.room_id,
+            room_ref: Redactor.fingerprint(room_data.room_id),
             reason: inspect(reason)
           )
 
@@ -189,7 +200,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   @spec update_meeting_room(atom(), String.t(), map()) :: :ok | {:error, term()}
   def update_meeting_room(provider_type, room_id, config) do
     Metrics.time_operation(:video_update_room, %{provider: provider_type}, fn ->
-      Logger.info("Updating meeting room", provider: provider_type, room_id: room_id)
+      Logger.info("Updating meeting room",
+        provider: provider_type,
+        room_ref: Redactor.fingerprint(room_id)
+      )
 
       case ProviderRegistry.get_provider(provider_type) do
         {:ok, provider_module} ->
@@ -223,7 +237,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   @spec delete_meeting_room(atom(), String.t(), map()) :: :ok | {:error, term()}
   def delete_meeting_room(provider_type, room_id, config) do
     Metrics.time_operation(:video_delete_room, %{provider: provider_type}, fn ->
-      Logger.info("Deleting meeting room", provider: provider_type, room_id: room_id)
+      Logger.info("Deleting meeting room",
+        provider: provider_type,
+        room_ref: Redactor.fingerprint(room_id)
+      )
 
       case ProviderRegistry.get_provider(provider_type) do
         {:ok, provider_module} ->
@@ -263,7 +280,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
     Logger.info("Handling meeting event",
       provider: provider_type,
       event: event,
-      room_id: room_data.room_id || "unknown"
+      room_ref: Redactor.fingerprint(room_data.room_id)
     )
 
     case provider_module.handle_meeting_event(event, room_data, additional_data) do

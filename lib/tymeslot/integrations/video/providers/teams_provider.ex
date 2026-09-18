@@ -97,7 +97,10 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
           }
         }
 
-        Logger.info("Successfully created Teams meeting", room_id: room_data.room_id)
+        Logger.info("Successfully created Teams meeting",
+          room_ref: Redactor.fingerprint(room_data.room_id)
+        )
+
         {:ok, room_data}
 
       {:error, reason} = error ->
@@ -210,7 +213,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def handle_meeting_event(:meeting_ended, room_data, _additional_data) do
-    Logger.info("Teams meeting ended", room_id: room_data.room_id)
+    Logger.info("Teams meeting ended", room_ref: Redactor.fingerprint(room_data.room_id))
     :ok
   end
 
