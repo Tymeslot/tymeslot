@@ -7,6 +7,15 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
 
   This worker runs every 30 minutes to ensure job queue health.
 
+  Discarding a stuck job is the last rung of the ladder in
+  `Tymeslot.Infrastructure.ObanRescue`, not the first: `Oban.Lifeline` returns
+  an abandoned job to `available` hours earlier, so anything still `executing`
+  by the time this sweep sees it is a row the lifeline never reached, on an
+  installation that has none configured or whose leader is unreachable. The
+  threshold comes from `ObanRescue.discard_after_hours/0` for that reason: a
+  discarded job never runs again, so this sweep must never pre-empt the rescue
+  that would have recovered the work.
+
   Terminal-job retention (completed/discarded/cancelled) is handled by
   `Oban.Plugins.Pruner`, not here: its `max_age` is a week in every
   environment, so a second sweep with a longer window would never find
@@ -22,9 +31,10 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.ObanRescue
   alias Tymeslot.Jobs
 
-  @stuck_job_threshold_hours 4
+  @stuck_job_threshold_hours ObanRescue.discard_after_hours()
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do

@@ -20,6 +20,7 @@ defmodule Tymeslot.Application do
     ObanFailureAlerter,
     ObanLogger,
     ObanQueues,
+    ObanRescue,
     ProxyConfig,
     ProxyCredentials
   }
@@ -215,11 +216,13 @@ defmodule Tymeslot.Application do
     # Log HTTP proxy configuration if enabled
     log_proxy_config()
 
-    # Validate the Oban cron service carries the critical workers (skip in test)
+    # Validate the Oban configuration: the critical cron workers are scheduled,
+    # and an abandoned job can still be rescued (skip in test)
     if Application.get_env(:tymeslot, :environment) != :test do
-      :tymeslot
-      |> Application.get_env(Oban, [])
-      |> ObanCron.warn_on_missing_workers()
+      oban_config = Application.get_env(:tymeslot, Oban, [])
+
+      ObanCron.warn_on_missing_workers(oban_config)
+      ObanRescue.warn_on_unsafe_lifeline(oban_config)
     end
 
     # Validate database connection pool configuration

@@ -247,8 +247,17 @@ if config_env() == :prod do
   # This allows SaaS to extend Core queues via :oban_additional_queues config
   config :tymeslot, Oban,
     repo: Tymeslot.Repo,
-    # Allow in-flight jobs 15 seconds to finish on shutdown before being rescheduled
+    # Allow in-flight jobs 15 seconds to finish on shutdown. Whatever is still
+    # running when that expires is killed with its row left `executing`: the
+    # grace period reschedules nothing, which is what the lifeline is for.
     shutdown_grace_period: :timer.seconds(15),
+    # Return a job that has been `executing` for six hours to `available`, so a
+    # deploy that kills a node mid-job does not strand the job and everything
+    # it owed. Rescuing goes on elapsed time alone and cannot tell a dead node
+    # from a slow job, so the window has to clear the longest legitimate run:
+    # see `Tymeslot.Infrastructure.ObanRescue`, which holds the reasoning and
+    # warns at boot when this drifts out of the safe band.
+    lifeline: [rescue_after: {6, :hours}],
     pruner: [max_age: {7, :days}],
     cron: [
       crontab: [

@@ -121,6 +121,7 @@ config :tymeslot, Oban,
   pruner: [max_age: {7, :days}],
   # Matches production: a shorter window here would exercise a rescue the
   # deployed system never performs. See `Tymeslot.Infrastructure.ObanRescue`.
+  lifeline: [rescue_after: {6, :hours}],
   cron: [
     crontab: [
       # Run every 30 minutes

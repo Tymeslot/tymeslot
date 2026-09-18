@@ -10,8 +10,9 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
 
   describe "perform/1 - stuck job cleanup" do
     test "cleans up stuck executing jobs" do
-      # Create a job that is stuck in "executing" state for 5 hours
-      stuck_time = DateTime.add(DateTime.utc_now(), -5, :hour)
+      # Stuck in "executing" past the 12 hour discard threshold that sits
+      # behind the lifeline's rescue window (see ObanRescue)
+      stuck_time = DateTime.add(DateTime.utc_now(), -13, :hour)
 
       {:ok, job} =
         Repo.insert(%Oban.Job{
@@ -33,19 +34,21 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
       assert Enum.at(updated_job.errors, 0)["kind"] == "stuck_job_cleanup"
     end
 
-    test "does not clean up recent executing jobs" do
-      # Job that's only been executing for 1 hour (threshold is 4 hours)
-      recent_time = DateTime.add(DateTime.utc_now(), -1, :hour)
+    # Past the lifeline's six hour rescue window but inside the discard
+    # threshold: the job belongs to the rescue, which returns it to `available`
+    # to be run again, and discarding it here would take that away.
+    test "leaves an executing job the lifeline has yet to rescue" do
+      rescuable_time = DateTime.add(DateTime.utc_now(), -7, :hour)
 
       {:ok, job} =
         Repo.insert(%Oban.Job{
           state: "executing",
-          attempted_at: recent_time,
+          attempted_at: rescuable_time,
           worker: "SomeWorker",
           queue: "default",
           args: %{},
           errors: [],
-          inserted_at: recent_time
+          inserted_at: rescuable_time
         })
 
       assert {:ok, result} = perform_job(ObanMaintenanceWorker, %{})
@@ -57,7 +60,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
     end
 
     test "cleans up multiple stuck jobs" do
-      stuck_time = DateTime.add(DateTime.utc_now(), -6, :hour)
+      stuck_time = DateTime.add(DateTime.utc_now(), -14, :hour)
 
       # Create 3 stuck jobs
       for worker_num <- 1..3 do
