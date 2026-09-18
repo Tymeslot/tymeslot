@@ -6,7 +6,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
   import Swoosh.Email
 
-  alias Tymeslot.Locales
+  alias Tymeslot.Emails.RecipientLocale
 
   alias Tymeslot.Emails.Shared.{
     MeetingComponents,
@@ -219,5 +219,6 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
     """
   end
 
-  defp organizer_locale(_appointment_details), do: Locales.admin_default_locale()
+  defp organizer_locale(appointment_details),
+    do: RecipientLocale.organizer_locale(appointment_details)
 end

@@ -36,6 +36,7 @@ defmodule Tymeslot.Emails.EmailService do
           required(:location_type) => atom(),
           required(:meeting_type) => String.t(),
           optional(:attendee_locale) => String.t(),
+          optional(:organizer_locale) => String.t(),
           optional(:start_time_attendee_tz) => DateTime.t(),
           optional(:start_time_owner_tz) => DateTime.t(),
           optional(:attendee_video_url) => String.t() | nil,

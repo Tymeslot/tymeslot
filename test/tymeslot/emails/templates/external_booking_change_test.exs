@@ -28,6 +28,15 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
   end
 
   describe "ExternalBookingChange.render/4" do
+    test "is written in the organizer's own language" do
+      host = insert(:user, locale: "de")
+      meeting = build_meeting(%{organizer_user_id: host.id})
+
+      email = ExternalBookingChange.render(meeting, "john@example.com", :deleted, "Europe/Berlin")
+
+      assert email.subject =~ "Aktion erforderlich"
+    end
+
     test "builds email for deleted discrepancy" do
       meeting = build_meeting()
 

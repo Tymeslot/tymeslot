@@ -10,8 +10,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
     reference, and a link to the Stripe-hosted receipt. Rendered in the
     booker's locale.
   - the **organiser summary** — gross, platform fee, and net payout. Rendered
-    in the instance's default locale: `AppointmentConfirmation.organizer_locale/1`
-    returns it unconditionally rather than reading anything off the organiser.
+    in the organiser's locale (`RecipientLocale.organizer_locale/1`).
 
   Both are built from the `:booking_payment` snapshot embedded in
   `appointment_details`, and both builders return `nil` for a free booking or a
