@@ -246,16 +246,16 @@ defmodule Tymeslot.Bookings.Reschedule do
   # `IcsGenerator.generate_ics_attachment/2`). The request email sent below
   # (`BookingRequestReceived`) carries no calendar attachment, so that entry
   # is left showing the old, no-longer-accurate confirmed time until the host
-  # answers again — approval re-sends a fresh confirmation ICS for the new
-  # time (self-healing), but a decline or expiry's outcome email does not
-  # correct it either. Fixing this needs a calendar-only correction path
+  # answers again — approval sends the reschedule notice with an updated ICS
+  # for the new time (self-healing), but a decline or expiry's outcome email
+  # does not correct it either. Fixing this needs a calendar-only correction path
   # analogous to `Tymeslot.Meetings.AttendeeNotifications`'s ICS handling,
   # which lives outside this module's booking-email templates and is left
   # for that work rather than bolted on here.
-  defp announce(%{status: "awaiting_approval"} = updated, _original) do
+  defp announce(%{status: "awaiting_approval"} = updated, original) do
     cancel_stale_reminders(updated)
 
-    case Events.meeting_requested(updated) do
+    case Events.meeting_requested(updated, previous_start_opts(updated, original)) do
       {:ok, _result} ->
         Logger.info("Reschedule returned the booking to the approval gate",
           meeting_id: updated.id
@@ -298,6 +298,14 @@ defmodule Tymeslot.Bookings.Reschedule do
   end
 
   defp announce(updated, original), do: send_reschedule_notifications(updated, original)
+
+  # A booking confirmed before (`first_announced_at`) is being moved, and its
+  # request emails say so; showing the time it was moved from needs the
+  # original, which nothing else keeps once the new time is saved.
+  defp previous_start_opts(%{first_announced_at: %DateTime{}}, %{start_time: %DateTime{} = start}),
+       do: [previous_start_time: start]
+
+  defp previous_start_opts(_updated, _original), do: []
 
   # A booking re-entering the gate must not carry reminders pinned to the
   # time it was confirmed for before: left alone, they would fire and remind

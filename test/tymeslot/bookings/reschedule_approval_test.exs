@@ -200,6 +200,63 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       )
     end
 
+    test "passes the time the booking was moved from on to the request emails" do
+      announced_at = DateTime.utc_now(:second)
+
+      %{meeting: meeting, params: params} =
+        gated_booking(true, %{announced_at: announced_at, first_announced_at: announced_at})
+
+      Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_booking_request_emails",
+          "meeting_id" => meeting.id,
+          "previous_start_time" => DateTime.to_iso8601(meeting.start_time)
+        }
+      )
+    end
+
+    test "approving the new time tells both sides the booking moved" do
+      # The booking was confirmed and announced before; the confirmation it
+      # already had is not sent again, so without this nobody would hear
+      # that the host accepted the new time.
+      announced_at = DateTime.utc_now(:second)
+      test_pid = self()
+
+      %{meeting: meeting, params: params} =
+        gated_booking(true, %{announced_at: announced_at, first_announced_at: announced_at})
+
+      {:ok, rescheduled} = Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      expect(Tymeslot.EmailServiceMock, :send_reschedule_emails, fn details ->
+        send(test_pid, {:reschedule_emails, details})
+        {{:ok, :sent}, {:ok, :sent}}
+      end)
+
+      assert {:ok, _confirmed} = Approval.approve(reload(meeting))
+
+      assert_received {:reschedule_emails, details}
+      assert details.is_rescheduled
+      assert DateTime.compare(details.start_time, rescheduled.start_time) == :eq
+    end
+
+    test "approving a first-time request sends no reschedule notice" do
+      %{meeting: meeting} =
+        gated_booking(true, %{
+          status: "awaiting_approval",
+          approval_requested_at: DateTime.add(DateTime.utc_now(:second), -1, :hour),
+          approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 11, :hour)
+        })
+
+      expect(Tymeslot.EmailServiceMock, :send_reschedule_emails, 0, fn _details ->
+        {{:ok, :sent}, {:ok, :sent}}
+      end)
+
+      assert {:ok, _confirmed} = Approval.approve(reload(meeting))
+    end
+
     test "the record that the booking was once a live meeting survives the re-gate" do
       # Clearing `announced_at` frees the fan-out claim, and would otherwise
       # erase the only fact saying this booking had already happened. That

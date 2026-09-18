@@ -69,12 +69,15 @@ defmodule Tymeslot.Notifications.Events do
   read `meeting.created` as "a confirmed booking exists", and a held request
   is not one; it fires later, when the host approves. Meeting types without
   approval are unaffected and keep firing `meeting.created` on submission.
+
+  `opts[:previous_start_time]` is passed on to the request emails by a
+  reschedule that sent a confirmed booking back into the gate.
   """
-  @spec meeting_requested(term()) :: {:ok, term()} | {:error, term()}
-  def meeting_requested(meeting) do
+  @spec meeting_requested(term(), keyword()) :: {:ok, term()} | {:error, term()}
+  def meeting_requested(meeting, opts \\ []) do
     result =
       send_notifications(:meeting_requested, meeting, fn ->
-        Orchestrator.schedule_request_notifications(meeting)
+        Orchestrator.schedule_request_notifications(meeting, opts)
       end)
 
     dispatch_request_channels(:meeting_requested, meeting)
