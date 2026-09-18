@@ -17,6 +17,8 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               {:ok, any()} | {:error, any()}
 
   @callback send_booking_request_outcome(atom(), struct()) :: {:ok, any()} | {:error, any()}
+  @callback send_reschedule_request_expired(struct(), String.t()) ::
+              {:ok, any()} | {:error, any()}
 
   @callback send_appointment_confirmation_to_attendee(String.t(), appointment_details()) ::
               {:ok, any()} | {:error, any()}

@@ -10,6 +10,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.BookingApprovalEmails do
   alias Tymeslot.Auth
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.ApprovalToken
@@ -199,6 +200,38 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.BookingApprovalEmails do
       {:ok, _sent} -> :ok
       {:error, reason} -> {:error, reason}
     end
+  end
+
+  @doc """
+  Tells the host a confirmed booking was cancelled because the invitee's
+  request to move it lapsed unanswered.
+  """
+  @spec handle_reschedule_request_expired(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_reschedule_request_expired(%{"meeting_id" => meeting_id}) do
+    MeetingEmails.with_meeting(meeting_id, "reschedule request expired", fn meeting ->
+      send_reschedule_request_expired(meeting)
+    end)
+  end
+
+  defp send_reschedule_request_expired(
+         %{status: "expired", first_announced_at: %DateTime{}} = meeting
+       ) do
+    locale = RecipientLocale.locale_for_user_id(meeting.organizer_user_id)
+
+    case Config.email_service_module().send_reschedule_request_expired(meeting, locale) do
+      {:ok, _sent} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp send_reschedule_request_expired(meeting) do
+    Logger.info("Skipping reschedule request expired - not a lapsed reschedule",
+      meeting_id: meeting.id,
+      status: meeting.status
+    )
+
+    {:discard, "Meeting #{meeting.status}"}
   end
 
   defp send_nudge(meeting) do

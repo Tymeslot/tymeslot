@@ -136,6 +136,22 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
   end
 
   @doc """
+  Schedules the host's email for a confirmed booking cancelled because the
+  invitee's request to move it lapsed. Sent immediately, and unique per
+  meeting like the invitee's outcome email.
+  """
+  @spec schedule_reschedule_request_expired(term()) :: :ok | {:error, String.t()}
+  def schedule_reschedule_request_expired(meeting_id) do
+    %{"action" => "send_reschedule_request_expired", "meeting_id" => meeting_id}
+    |> EmailWorker.new(
+      queue: :emails,
+      priority: 0,
+      unique: [period: 300, fields: [:args, :queue], keys: [:action, :meeting_id]]
+    )
+    |> insert_job("Reschedule request expired", meeting_id)
+  end
+
+  @doc """
   Deletes any pending nudge for a meeting.
 
   Called on every exit from the approval gate. A nudge that fires after the
