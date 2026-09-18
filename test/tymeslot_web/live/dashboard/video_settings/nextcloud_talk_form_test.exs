@@ -44,7 +44,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
 
       view = open_talk_form(conn)
       html = render(view)
-      assert html =~ "Join from a browser signed in to Nextcloud as this login name"
+      assert html =~ "sign in to Nextcloud in your browser as this login name first"
+      assert html =~ "the app password works only for Tymeslot"
       assert html =~ "about a week after the meeting ends"
 
       # A password manager must not take the pair for a sign-in to Tymeslot.
