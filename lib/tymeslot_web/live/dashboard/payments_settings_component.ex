@@ -48,6 +48,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
      |> assign(:connect_account, nil)
      |> assign(:payments, [])
      |> assign(:outstanding_refunds, [])
+     |> assign(:outstanding_refunds_summary, %{count: 0, totals: []})
      |> assign(:stats, %{received: 0, refunded: 0, platform_fee: 0})
      |> assign(:pending_payments_count, 0)}
   end
@@ -66,6 +67,19 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     <div id="payments-settings" class="space-y-10 pb-20">
       <.section_header icon="hero-credit-card" title={dgettext("dashboard_payments", "Payments")} />
 
+      <%!--
+        Outside the connect-account branch on purpose. These are obligations
+        the host has already incurred, and they do not stop existing when the
+        account goes away: a disconnect is precisely when the host most needs
+        to see them, so the debt renders above the reconnect prompt.
+      --%>
+      <.outstanding_refunds
+        payments={@outstanding_refunds}
+        total_count={@outstanding_refunds_summary.count}
+        account={@connect_account}
+        myself={@myself}
+      />
+
       <div :if={is_nil(@connect_account)}>
         <.connect_cta />
       </div>
@@ -81,11 +95,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
         --%>
         <div :if={not needs_onboarding?(@connect_account)} class="space-y-8">
           <.currency_selector account={@connect_account} myself={@myself} />
-          <.outstanding_refunds
-            payments={@outstanding_refunds}
-            account={@connect_account}
-            myself={@myself}
-          />
           <.payments_table payments={@payments} account={@connect_account} myself={@myself} />
           <.lifetime_stats stats={@stats} account={@connect_account} />
           <.disconnect_zone myself={@myself} />
@@ -101,6 +110,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
       <.disconnect_modal
         open={@disconnect_modal_open}
         pending_count={@pending_payments_count}
+        outstanding_refunds={@outstanding_refunds_summary}
         myself={@myself}
       />
     </div>
@@ -143,20 +153,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     socket = assign(socket, :disconnect_modal_open, false)
 
     case MeetingPayments.disconnect(user) do
-      {:ok, %{cancelled_count: 0}} ->
-        Flash.info(dgettext("dashboard_payments", "Stripe account disconnected."))
-        {:noreply, assign_payments_state(socket, user)}
-
-      {:ok, %{cancelled_count: n}} ->
-        Flash.info(
-          dngettext(
-            "dashboard_payments",
-            "Stripe account disconnected. %{count} pending booking cancelled.",
-            "Stripe account disconnected. %{count} pending bookings cancelled.",
-            n
-          )
-        )
-
+      {:ok, result} ->
+        Flash.info(disconnect_message(result))
         {:noreply, assign_payments_state(socket, user)}
 
       {:error, _reason} ->
@@ -219,6 +217,42 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   end
 
   # ── Private orchestration ─────────────────────────────────────────
+
+  # Two independent facts, either of which may be absent: what the disconnect
+  # cancelled, and what it left the host still owing. Composed from whole
+  # sentences rather than a clause per combination, so naming a third
+  # consequence later does not double the message table.
+  defp disconnect_message(%{cancelled_count: cancelled, outstanding_refunds_count: outstanding}) do
+    [
+      dgettext("dashboard_payments", "Stripe account disconnected."),
+      cancelled_sentence(cancelled),
+      outstanding_refunds_sentence(outstanding)
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" ")
+  end
+
+  defp cancelled_sentence(0), do: nil
+
+  defp cancelled_sentence(count) do
+    dngettext(
+      "dashboard_payments",
+      "%{count} pending booking cancelled.",
+      "%{count} pending bookings cancelled.",
+      count
+    )
+  end
+
+  defp outstanding_refunds_sentence(0), do: nil
+
+  defp outstanding_refunds_sentence(count) do
+    dngettext(
+      "dashboard_payments",
+      "%{count} refund is still outstanding and must now be issued from your Stripe dashboard.",
+      "%{count} refunds are still outstanding and must now be issued from your Stripe dashboard.",
+      count
+    )
+  end
 
   defp open_refund_modal(socket, payment) do
     if MeetingPayments.refundable?(payment) do
@@ -336,6 +370,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     |> assign(:connect_account, connect_account)
     |> assign(:payments, MeetingPayments.list_payments_for_host(user.id))
     |> assign(:outstanding_refunds, MeetingPayments.list_outstanding_refunds_for_host(user.id))
+    |> assign(
+      :outstanding_refunds_summary,
+      MeetingPayments.outstanding_refunds_summary_for_host(user.id)
+    )
     |> assign(:stats, MeetingPayments.lifetime_stats_for_host(user.id))
     |> assign(:pending_payments_count, MeetingPayments.count_pending_payments_for_host(user.id))
   end

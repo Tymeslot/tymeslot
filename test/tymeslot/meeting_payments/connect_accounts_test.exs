@@ -130,6 +130,37 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       reloaded = BookingPaymentQueries.get(payment.id)
       assert reloaded.status == "paid"
     end
+
+    # Disconnecting neither settles nor cancels a refund the host already owes;
+    # it only takes away their ability to issue it from Tymeslot. The count is
+    # reported so the caller can say so, rather than let the obligation drop
+    # off the screen along with the account.
+    test "reports the refunds the host is still holding" do
+      user = insert(:user)
+      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+
+      meeting = insert(:meeting, status: "cancelled", cancelled_at: DateTime.utc_now(:second))
+      payment = insert(:paid_booking_payment, host_user_id: user.id, meeting: meeting)
+
+      assert {:ok, %{outstanding_refunds_count: 1}} = ConnectAccounts.disconnect(user)
+
+      # Untouched: still owed, still unrefunded, just no longer refundable here.
+      reloaded = BookingPaymentQueries.get(payment.id)
+      assert reloaded.status == "paid"
+      assert reloaded.refunded_amount_cents == 0
+    end
+
+    test "reports no outstanding refunds when the host owes nothing" do
+      user = insert(:user)
+      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+
+      insert(:paid_booking_payment,
+        host_user_id: user.id,
+        meeting: insert(:meeting, status: "confirmed")
+      )
+
+      assert {:ok, %{outstanding_refunds_count: 0}} = ConnectAccounts.disconnect(user)
+    end
   end
 
   describe "apply_account_event/2" do

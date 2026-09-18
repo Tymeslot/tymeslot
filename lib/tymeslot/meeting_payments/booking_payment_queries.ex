@@ -9,6 +9,8 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Repo
 
+  @outstanding_refunds_limit 50
+
   @doc """
   Fetches a `booking_payment` by id and acquires a `SELECT … FOR UPDATE` row
   lock for the duration of the current transaction.
@@ -166,24 +168,75 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
 
   Deliberately not bounded by `for_host/2`'s recent-payments window, which is
   what let an older unrefunded cancellation drop off the dashboard entirely.
+  It is still bounded, at `#{@outstanding_refunds_limit}` rows, so pair it with
+  `outstanding_refunds_summary_for_host/1` and say how many rows the window is
+  hiding rather than truncating in silence.
   """
   @spec outstanding_refunds_for_host(integer(), keyword()) :: [BookingPaymentSchema.t()]
   def outstanding_refunds_for_host(host_user_id, opts \\ []) do
-    limit = Keyword.get(opts, :limit, 50)
+    limit = Keyword.get(opts, :limit, @outstanding_refunds_limit)
 
     query =
-      from b in BookingPaymentSchema,
-        join: m in assoc(b, :meeting),
-        where:
-          b.host_user_id == ^host_user_id and
-            b.status in ^BookingPaymentSchema.refundable_statuses() and
-            b.refunded_amount_cents < b.amount_cents and
-            m.status == "cancelled",
+      from [_b, m] in outstanding_refunds_query(host_user_id),
         order_by: [asc: m.cancelled_at],
         limit: ^limit,
         preload: [meeting: m]
 
     Repo.all(query)
+  end
+
+  @doc """
+  Summarises every outstanding refund a host owes: how many rows there are,
+  and how much is still owed in each currency.
+
+  Unbounded on purpose, and sharing its `where` with
+  `outstanding_refunds_for_host/2` so the two cannot drift: the card needs the
+  true count to report its own truncation, and the disconnect confirmation
+  needs the total before the host walks away from it.
+
+  Totals are per currency rather than one sum, because a host who changed
+  their default currency can be holding money in more than one.
+  """
+  @spec outstanding_refunds_summary_for_host(integer()) :: %{
+          count: non_neg_integer(),
+          totals: [%{currency: String.t(), amount_cents: non_neg_integer()}]
+        }
+  def outstanding_refunds_summary_for_host(host_user_id) do
+    # `amount_cents - refunded_amount_cents` is the SQL twin of
+    # `Refunds.refundable_remaining_cents/1`; the `where` above guarantees it
+    # is positive, so the `max(_, 0)` clamp has nothing to do here. The sum is
+    # typed because Ecto cannot infer a type through the subtraction and would
+    # otherwise hand back a `Decimal` where every other amount in the codebase
+    # is an integer count of cents.
+    query =
+      from b in outstanding_refunds_query(host_user_id),
+        group_by: b.currency,
+        order_by: [asc: b.currency],
+        select: %{
+          currency: b.currency,
+          count: count(b.id),
+          amount_cents: type(sum(b.amount_cents - b.refunded_amount_cents), :integer)
+        }
+
+    rows = Repo.all(query)
+
+    %{
+      count: Enum.sum(Enum.map(rows, & &1.count)),
+      totals: Enum.map(rows, &Map.take(&1, [:currency, :amount_cents]))
+    }
+  end
+
+  # Cancelled bookings whose money the host still holds. Derived from the
+  # meeting's status and the payment's own balance rather than from a stored
+  # "refund owed" flag, so it cannot drift out of step with either side.
+  defp outstanding_refunds_query(host_user_id) do
+    from b in BookingPaymentSchema,
+      join: m in assoc(b, :meeting),
+      where:
+        b.host_user_id == ^host_user_id and
+          b.status in ^BookingPaymentSchema.refundable_statuses() and
+          b.refunded_amount_cents < b.amount_cents and
+          m.status == "cancelled"
   end
 
   @doc """

@@ -54,8 +54,17 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
        `paid` is not overwritten), transition the linked `awaiting_payment`
        meeting to `expired`, then soft-delete the connect_account row.
 
-  Returns `{:ok, %{cancelled_count: n}}` on success, `{:error, reason}` if the
-  transaction fails.
+  Returns `{:ok, %{cancelled_count: n, outstanding_refunds_count: m}}` on
+  success, `{:error, reason}` if the transaction fails.
+
+  ## Outstanding refunds
+
+  `outstanding_refunds_count` is measured before the soft delete and is not
+  acted on: these are cancelled bookings whose money the host still holds, and
+  disconnecting neither settles nor cancels them. It is reported because the
+  disconnect is the moment the host loses the ability to issue them from
+  Tymeslot (from here on only their Stripe dashboard can settle them), so the
+  caller can say so rather than let the obligation disappear quietly.
 
   ## Race with checkout.session.completed
 
@@ -76,9 +85,12 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   even if the Stripe session is still technically open.
   """
   @spec disconnect(user :: %{id: integer()}) ::
-          {:ok, %{cancelled_count: non_neg_integer()}} | {:error, term()}
+          {:ok,
+           %{cancelled_count: non_neg_integer(), outstanding_refunds_count: non_neg_integer()}}
+          | {:error, term()}
   def disconnect(user) do
     pending = BookingPaymentQueries.list_pending_for_host(user.id)
+    outstanding = BookingPaymentQueries.outstanding_refunds_summary_for_host(user.id)
     account = ConnectAccountQueries.live_for_user(user.id)
 
     expire_stripe_sessions(pending, account)
@@ -96,7 +108,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
       ConnectAccountQueries.soft_delete_for_user(user.id, now)
 
-      %{cancelled_count: cancelled_count}
+      %{cancelled_count: cancelled_count, outstanding_refunds_count: outstanding.count}
     end)
   end
 

@@ -50,6 +50,23 @@ defmodule Tymeslot.MeetingPayments do
   @type account :: ConnectAccountSchema.t()
   @type booking_payment :: BookingPaymentSchema.t()
 
+  @typedoc """
+  How many refunds a host still owes, and how much of each currency.
+  """
+  @type outstanding_refunds_summary :: %{
+          count: non_neg_integer(),
+          totals: [%{currency: String.t(), amount_cents: non_neg_integer()}]
+        }
+
+  @typedoc """
+  What a disconnect walked away from: the pending bookings it cancelled, and
+  the refunds the host is still holding and can no longer issue from Tymeslot.
+  """
+  @type disconnect_result :: %{
+          cancelled_count: non_neg_integer(),
+          outstanding_refunds_count: non_neg_integer()
+        }
+
   # ---------------------------------------------------------------------------
   # Connect account lifecycle
   # ---------------------------------------------------------------------------
@@ -68,7 +85,7 @@ defmodule Tymeslot.MeetingPayments do
   Soft-deletes the host's Stripe Connect account row.
   """
   @spec disconnect(user :: %{id: integer()}) ::
-          {:ok, %{cancelled_count: non_neg_integer()}} | {:error, term()}
+          {:ok, disconnect_result()} | {:error, term()}
   defdelegate disconnect(user), to: ConnectAccounts
 
   @doc """
@@ -187,6 +204,18 @@ defmodule Tymeslot.MeetingPayments do
   @spec list_outstanding_refunds_for_host(integer(), keyword()) :: [booking_payment()]
   def list_outstanding_refunds_for_host(host_user_id, opts \\ []),
     do: BookingPaymentQueries.outstanding_refunds_for_host(host_user_id, opts)
+
+  @doc """
+  Summarises the host's outstanding refunds: how many there are, and how much
+  is owed in each currency.
+
+  Unbounded, unlike `list_outstanding_refunds_for_host/2`, so a caller can say
+  "showing 50 of 63" instead of truncating in silence, and so the disconnect
+  confirmation can name what the host is about to walk away from.
+  """
+  @spec outstanding_refunds_summary_for_host(integer()) :: outstanding_refunds_summary()
+  def outstanding_refunds_summary_for_host(host_user_id),
+    do: BookingPaymentQueries.outstanding_refunds_summary_for_host(host_user_id)
 
   @doc """
   Returns the total count of pending booking payments for a host.
