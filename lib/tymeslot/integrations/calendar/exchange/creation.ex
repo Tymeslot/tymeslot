@@ -30,6 +30,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Creation do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Connection
+  alias Tymeslot.Integrations.Calendar.Creation
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
   alias Tymeslot.Integrations.CalendarManagement
@@ -67,8 +68,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Creation do
     # user, so the choice stays theirs to make explicitly.
     with {:ok, sanitized} <-
            CalendarInputValidation.validate_exchange_form(params, metadata: metadata),
+         :ok <- Creation.check_write_budget(user_id),
          :ok <- check_no_duplicate(user_id, sanitized),
          attrs <- attrs(user_id, sanitized, params),
+         # Ahead of the probe, which reaches an endpoint the organiser typed and
+         # is metered as such: a submission the changeset rejects never leaves
+         # the machine and must not cost a token.
+         :ok <- CalendarIntegrationSchema.validate_new(attrs),
          {:ok, attrs} <- probe(attrs, user_id),
          {:ok, integration} <- CalendarManagement.create_calendar_integration(attrs) do
       enqueue_initial_sync(integration)

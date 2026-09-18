@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Connection
   alias Tymeslot.Integrations.Calendar.Ics.Feed
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
@@ -16,6 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.SanitizeMerge
   alias Tymeslot.Workers.SyncIcsCalendarWorker
 
@@ -51,6 +53,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
 
     with {:ok, sanitized} <-
            CalendarInputValidation.validate_calendar_integration_form(params, metadata: metadata),
+         :ok <- check_write_budget(user_id),
          validated <- SanitizeMerge.merge(params, sanitized),
          :ok <- check_no_duplicate_calendar(user_id, validated),
          count_before <- length(CalendarManagement.list_calendar_integrations(user_id)),
@@ -101,8 +104,13 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
 
     with {:ok, sanitized} <-
            CalendarInputValidation.validate_ics_subscription_form(params, metadata: metadata),
+         :ok <- check_write_budget(user_id),
          :ok <- check_no_duplicate_subscription(user_id, sanitized["url"]),
          attrs <- subscription_attrs(user_id, sanitized),
+         # Ahead of the probe, which fetches a feed from an address the
+         # organiser typed and is metered as such: a submission the changeset
+         # rejects never leaves the machine and must not cost a token.
+         :ok <- CalendarIntegrationSchema.validate_new(attrs),
          {:ok, attrs} <- probe_subscription(attrs, user_id),
          # Deliberately no `ensure_primary_on_first/3`: a subscription can never
          # receive a booking, so promoting one to primary would leave a user whose
@@ -126,6 +134,27 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
 
       {:error, validation_errors} when is_map(validation_errors) ->
         {:error, {:form_errors, validation_errors}}
+    end
+  end
+
+  @doc """
+  Charges one token from the integration-write budget, for a submission that has
+  already passed form validation.
+
+  Lives here, and is called by every calendar creation entry point (including
+  `Exchange.Creation`'s), because the charge has to sit *after* the validation
+  step and validation happens in this layer, not in the LiveComponent. Charging
+  in the handler instead spent a token on every mistyped field: a form refused
+  by validation writes nothing, and the budget meters writes.
+
+  The refusal comes back tagged the way a `ConnectionProbe` refusal does, so the
+  web layer has one refusal shape to render rather than two.
+  """
+  @spec check_write_budget(user_id()) :: :ok | {:error, {:rate_limited, String.t()}}
+  def check_write_budget(user_id) when is_integer(user_id) and user_id > 0 do
+    case RateLimiter.check_integration_write_rate_limit(user_id) do
+      :ok -> :ok
+      {:error, :rate_limited, message} -> {:error, {:rate_limited, message}}
     end
   end
 

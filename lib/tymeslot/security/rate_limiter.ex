@@ -140,6 +140,11 @@ defmodule Tymeslot.Security.RateLimiter do
   (and its moduledoc) for why background probing is unmetered by
   construction rather than charged to some other bucket.
 
+  `action` says what the person did to get here; see
+  `t:Tymeslot.Security.RateLimiter.Integrations.connection_action/0`. It shapes
+  the refusal they read, and defaults to `:connection_test`, the action the
+  buckets are named after.
+
   Only `Tymeslot.Integrations.Shared.ConnectionProbe` calls this directly —
   `CredoChecks.RateLimiterBoundary` enforces that boundary mechanically.
 
@@ -147,10 +152,11 @@ defmodule Tymeslot.Security.RateLimiter do
   """
   @spec check_connection_test_rate_limit(
           Integrations.connection_bucket(),
-          Integrations.connection_scope() | nil
+          Integrations.connection_scope() | nil,
+          Integrations.connection_action()
         ) :: :ok | {:error, :rate_limited, String.t()} | {:error, :unattributable}
-  def check_connection_test_rate_limit(bucket, scope),
-    do: Integrations.check_connection_test(bucket, scope)
+  def check_connection_test_rate_limit(bucket, scope, action \\ :connection_test),
+    do: Integrations.check_connection_test(bucket, scope, action)
 
   # Bookings
 

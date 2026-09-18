@@ -126,44 +126,27 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     {:noreply, assign(socket, form_values: form_values, form_errors: form_errors)}
   end
 
+  # The write budget is charged only once the form is known to be worth
+  # submitting. Charging first meant an organiser correcting a typo paid a token
+  # per correction, for attempts that were refused here and never reached a
+  # provider, which is what the bucket meters.
   def handle_event("add_integration", %{"integration" => params}, socket) do
-    user_id = socket.assigns.current_user.id
+    metadata = DashboardHelpers.get_security_metadata(socket)
 
-    with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
-      socket = assign(socket, :saving, true)
-      metadata = DashboardHelpers.get_security_metadata(socket)
+    case VideoInputValidation.validate_video_integration_form(params, metadata: metadata) do
+      {:ok, sanitized_params} ->
+        validated_params = SanitizeMerge.merge(params, sanitized_params)
+        provider = validated_params["provider"] || socket.assigns.config_provider
 
-      case VideoInputValidation.validate_video_integration_form(params, metadata: metadata) do
-        {:ok, sanitized_params} ->
-          validated_params = SanitizeMerge.merge(params, sanitized_params)
-          provider = validated_params["provider"] || socket.assigns.config_provider
+        add_validated_integration(provider, validated_params, socket)
 
-          if is_nil(provider) do
-            {:noreply,
-             socket
-             |> assign(:form_errors, %{
-               base: dgettext("dashboard_integrations", "Please select a provider")
-             })
-             |> assign(:saving, false)}
-          else
-            handle_create_result(
-              Video.create_integration(
-                user_id,
-                provider,
-                FormInput.to_atom_keys(validated_params)
-              ),
-              socket
-            )
-          end
-
-        {:error, validation_errors} ->
-          {:noreply,
-           socket
-           |> assign(:form_errors, validation_errors)
-           |> assign(:form_values, params)
-           |> assign(:saving, false)}
-      end
-    end)
+      {:error, validation_errors} ->
+        {:noreply,
+         socket
+         |> assign(:form_errors, validation_errors)
+         |> assign(:form_values, params)
+         |> assign(:saving, false)}
+    end
   end
 
   def handle_event("reconnect_integration", %{"id" => id}, socket) do
@@ -355,6 +338,26 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      socket
      |> assign(:saving, false)
      |> assign(:form_errors, IntegrationProviders.reason_to_form_errors(reason))}
+  end
+
+  defp add_validated_integration(nil, _validated_params, socket) do
+    {:noreply,
+     socket
+     |> assign(:form_errors, %{
+       base: dgettext("dashboard_integrations", "Please select a provider")
+     })
+     |> assign(:saving, false)}
+  end
+
+  defp add_validated_integration(provider, validated_params, socket) do
+    user_id = socket.assigns.current_user.id
+
+    with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
+      handle_create_result(
+        Video.create_integration(user_id, provider, FormInput.to_atom_keys(validated_params)),
+        assign(socket, :saving, true)
+      )
+    end)
   end
 
   defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do

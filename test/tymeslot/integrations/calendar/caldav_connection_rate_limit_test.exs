@@ -95,6 +95,59 @@ defmodule Tymeslot.Integrations.Calendar.CaldavConnectionRateLimitTest do
       assert {:error, :rate_limited, _message} =
                RateLimiter.check_connection_test_rate_limit(:caldav, {:user, user.id})
     end
+
+    # The changeset is the other locally decidable refusal, and it used to run
+    # after the probe: a name too long for the column cost a token for an
+    # outbound request that could never have produced a row.
+    test "a submission the changeset rejects is refused without ever touching the rate limiter" do
+      user = insert(:user)
+
+      attrs = %{
+        "name" => String.duplicate("a", 300),
+        "provider" => "caldav",
+        "url" => "https://caldav.example.com",
+        "username" => "user",
+        "password" => "pass",
+        "calendar_paths" => ""
+      }
+
+      for _i <- 1..(@limit + 5) do
+        assert {:error, %Ecto.Changeset{}} = Calendar.create_integration(attrs, user.id)
+      end
+
+      for _i <- 1..@limit do
+        assert :ok = RateLimiter.check_connection_test_rate_limit(:caldav, {:user, user.id})
+      end
+
+      assert {:error, :rate_limited, _message} =
+               RateLimiter.check_connection_test_rate_limit(:caldav, {:user, user.id})
+    end
+
+    # The organiser pressed "Add". The bucket is shared with the "Test
+    # connection" button, but the refusal must describe what they did, not what
+    # the bucket is named after.
+    test "the refusal a save gets names the save, not a connection test" do
+      user = insert(:user)
+
+      for _i <- 1..@limit do
+        assert :ok = RateLimiter.check_connection_test_rate_limit(:caldav, {:user, user.id})
+      end
+
+      attrs = %{
+        "name" => "Work CalDAV",
+        "provider" => "caldav",
+        "url" => "https://caldav.example.com",
+        "username" => "user",
+        "password" => "pass",
+        "calendar_paths" => ""
+      }
+
+      assert {:error, {:rate_limited, message}} = Calendar.create_integration(attrs, user.id)
+
+      refute message =~ "connection test"
+      assert message =~ "calendar server checks"
+      assert message =~ ~r/Please try again in (a moment|1 minute|\d+ minutes)\./
+    end
   end
 
   defp caldav_integration do

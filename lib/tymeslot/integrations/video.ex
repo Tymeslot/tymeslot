@@ -188,8 +188,16 @@ defmodule Tymeslot.Integrations.Video do
       base_url: base_url
     }
 
-    with {:ok, _msg} <- probe_mirotalk_connection(config, attrs[:user_id]),
-         :ok <- check_no_duplicate(attrs) do
+    # Order matters, and the probe goes last. Everything above it is decided
+    # in-process, while the probe is an outbound request to an address the
+    # organiser typed, which is the thing the connection-test bucket exists to
+    # meter. Probing first meant a re-added server, or a submission the
+    # changeset was always going to reject, spent a token on a refusal that
+    # never left the machine, and the organiser was then told they had run too
+    # many connection tests after pressing "Add".
+    with :ok <- check_no_duplicate(attrs),
+         :ok <- VideoIntegrationSchema.validate_new(attrs),
+         {:ok, _msg} <- probe_mirotalk_connection(config, attrs[:user_id]) do
       VideoIntegrationQueries.create(attrs)
     end
   end

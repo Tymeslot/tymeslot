@@ -112,7 +112,13 @@ defmodule Tymeslot.Integrations.Calendar do
   @spec create_integration(%{String.t() => term()}, user_id()) ::
           {:ok, integration()} | {:error, Ecto.Changeset.t() | any()}
   def create_integration(params, user_id) when is_map(params) and is_integer(user_id) do
+    # The changeset runs before the pre-validation probe, not after it. A
+    # submission it rejects is decided entirely in-process, while the probe is
+    # an outbound request to an address the organiser typed and is metered as
+    # one; charging their connection budget for a local rejection is what made a
+    # save report itself as too many connection tests.
     with {:ok, attrs} <- Creation.prepare_attrs(params, user_id),
+         :ok <- CalendarIntegrationSchema.validate_new(attrs),
          {:ok, attrs} <- Creation.prevalidate_config(attrs) do
       CalendarManagement.create_calendar_integration(attrs)
     end

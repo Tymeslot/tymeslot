@@ -201,6 +201,9 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
           provider_module: provider_module,
           scope: :interactive,
           actor: actor,
+          # Every caller here is a creation pre-check, not the "Test connection"
+          # button, and a refusal has to say so: the organiser pressed "Add".
+          action: :calendar_setup,
           # Deliberately nothing to validate here — see this function's doc.
           validate: fn -> :ok end,
           run: fn -> provider_module.perform_connection_test(config) end

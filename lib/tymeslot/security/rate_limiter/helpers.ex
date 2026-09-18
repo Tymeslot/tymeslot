@@ -1,6 +1,8 @@
 defmodule Tymeslot.Security.RateLimiter.Helpers do
   @moduledoc false
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Security.RateLimit
@@ -35,14 +37,36 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
     end
   end
 
-  @spec check_with_logging(bucket_key(), pos_integer(), pos_integer(), String.t(), String.t()) ::
+  @doc """
+  Charges one token and, on a refusal, logs it and builds the copy the person
+  reads.
+
+  `operation` names the *bucket*, and is for the log line only. `action` names
+  what the person actually did, already localised by the caller, and is what
+  the refusal says out loud. The two are not the same thing: several actions
+  share one bucket, so deriving the sentence from the bucket tells someone who
+  pressed "Add" that they ran too many connection tests. A caller with only one
+  action per bucket passes `nil` and gets the operation label back.
+
+  The wait comes from the limiter rather than the window: the window is how
+  long the budget spans, which is an upper bound on the wait and usually a wild
+  overestimate of it.
+  """
+  @spec check_with_logging(
+          bucket_key(),
+          pos_integer(),
+          pos_integer(),
+          String.t(),
+          String.t(),
+          String.t() | nil
+        ) ::
           :ok | {:error, :rate_limited, String.t()}
-  def check_with_logging(bucket_key, limit, window_ms, operation, identifier) do
-    case check_rate_limit(bucket_key, limit, window_ms) do
-      :ok ->
+  def check_with_logging(bucket_key, limit, window_ms, operation, identifier, action \\ nil) do
+    case check_rate(bucket_key, window_ms, limit) do
+      {:allow, _count} ->
         :ok
 
-      {:error, :rate_limited} ->
+      {:deny, retry_after_ms} ->
         window_minutes = div(window_ms, 60_000)
 
         # Neither the identifier nor the bucket key reaches the log line raw:
@@ -54,14 +78,35 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
           operation: operation,
           identifier_masked: mask_identifier(identifier),
           limit: limit,
-          window_minutes: window_minutes
+          window_minutes: window_minutes,
+          retry_after_ms: retry_after_ms
         )
 
         {:error, :rate_limited,
-         "You've reached the limit of #{limit} #{operation} actions per #{window_minutes} minutes. " <>
-           "Please wait a few minutes before trying again."}
+         refusal_message(limit, window_minutes, retry_after_ms, action || "#{operation} actions")}
     end
   end
+
+  defp refusal_message(limit, window_minutes, retry_after_ms, action) do
+    dgettext(
+      "errors",
+      "You've reached the limit of %{limit} %{action} per %{window_minutes} minutes. Please try again in %{wait}.",
+      limit: limit,
+      action: action,
+      window_minutes: window_minutes,
+      wait: retry_after_wait(retry_after_ms)
+    )
+  end
+
+  # Hammer answers in milliseconds, and rounds up rather than down: telling
+  # someone to come back in "0 minutes" would send them straight into a second
+  # refusal.
+  defp retry_after_wait(retry_after_ms) when is_integer(retry_after_ms) and retry_after_ms > 0 do
+    minutes = max(1, ceil(retry_after_ms / 60_000))
+    dngettext("errors", "1 minute", "%{count} minutes", minutes)
+  end
+
+  defp retry_after_wait(_retry_after_ms), do: dgettext("errors", "a moment")
 
   # Callers pass an email on the account-keyed buckets and an IP address or a
   # user id on the rest. Anything address-shaped is masked; an address that

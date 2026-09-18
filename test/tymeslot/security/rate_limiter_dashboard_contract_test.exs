@@ -95,8 +95,10 @@ defmodule Tymeslot.Security.RateLimiterDashboardContractTest do
         assert message =~ ~r/limit of \d+ .+ actions per \d+ minutes/,
                "#{bucket_prefix} message format: #{message}"
 
-        assert message =~ "wait",
-               "#{bucket_prefix} message should suggest waiting: #{message}"
+        # The wait is the limiter's own `retry_after`, not the window: "try
+        # again in 30 minutes" would be the window restated, and useless.
+        assert message =~ ~r/Please try again in (a moment|1 minute|\d+ minutes)\./,
+               "#{bucket_prefix} message should say how long to wait: #{message}"
       end
     end
   end
