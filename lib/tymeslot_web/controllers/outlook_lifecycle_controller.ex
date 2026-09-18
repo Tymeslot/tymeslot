@@ -22,8 +22,7 @@ defmodule TymeslotWeb.OutlookLifecycleController do
   use TymeslotWeb, :controller
 
   alias Tymeslot.Integrations.Calendar.Webhooks, as: CalendarWebhooks
-  alias Tymeslot.Security.RateLimiter
-  alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Helpers.GraphWebhook
 
   @doc """
   Receives a Microsoft Graph lifecycle notification or validation challenge.
@@ -34,33 +33,16 @@ defmodule TymeslotWeb.OutlookLifecycleController do
     # Graph validates the lifecycleNotificationUrl with the same synchronous
     # handshake it uses for the notificationUrl: echo the token as plain text
     # with 200, or the whole subscription is rejected.
-    case RateLimiter.check_webhook_rate_limit(ClientIP.get(conn)) do
-      :ok ->
-        if String.printable?(token) do
-          conn
-          |> put_resp_content_type("text/plain")
-          |> send_resp(200, token)
-          |> halt()
-        else
-          conn |> send_resp(400, "") |> halt()
-        end
-
-      {:error, :rate_limited} ->
-        conn |> send_resp(429, "") |> halt()
-    end
+    GraphWebhook.answer_validation_challenge(conn, token)
   end
 
   def webhook(conn, _params) do
-    case RateLimiter.check_webhook_rate_limit(ClientIP.get(conn)) do
-      :ok ->
-        CalendarWebhooks.handle_outlook_lifecycle_notifications(
-          get_in(conn.body_params, ["value"]) || []
-        )
+    GraphWebhook.with_rate_limit(conn, fn ->
+      conn.body_params
+      |> get_in(["value"])
+      |> CalendarWebhooks.handle_outlook_lifecycle_notifications()
 
-        conn |> send_resp(202, "") |> halt()
-
-      {:error, :rate_limited} ->
-        conn |> send_resp(429, "") |> halt()
-    end
+      conn |> send_resp(202, "") |> halt()
+    end)
   end
 end

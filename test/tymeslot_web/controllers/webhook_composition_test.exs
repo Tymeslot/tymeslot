@@ -34,16 +34,14 @@ defmodule TymeslotWeb.WebhookCompositionTest do
       activation fails — the correct security outcome, just not a 400.
 
     * Outlook notification with `Oban.insert` failure →
-      `touch_notification_timestamp` NOT called — the premise is
-      contradicted by production code. `handle_valid_notification/2`
-      at `outlook_calendar_webhook_controller.ex:131-134` calls
-      `enqueue_sync/2` and then unconditionally calls
-      `touch_notification_timestamp/1`. The Oban error is swallowed
-      inside `enqueue_sync/2` and the timestamp still advances.
-      Whether this is the desired behaviour is a product question
-      (timestamp = "heard from Graph" vs. "successfully queued a
-      sync"); either way, the current behaviour is "always touch" and
-      pinning the opposite would lock in a fiction.
+      `last_outlook_notification_at` NOT advanced — the product
+      question this was once dropped over ("heard from Graph" vs
+      "successfully queued a sync") has since been settled in favour
+      of the latter, matching Google, so that a run of failed inserts
+      cannot read as a healthy channel. Pinned where the decision
+      lives, in `webhooks_test.exs`, rather than through the
+      controller: the enqueue failure is faked with `:meck` on `Oban`,
+      which needs `async: false` around the module that does it.
 
     * Outlook lifecycle missing `subscriptionId` / `lifecycleEvent` →
       202, no enqueue — covered at

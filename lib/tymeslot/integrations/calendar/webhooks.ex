@@ -68,11 +68,12 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
   Each notification whose subscription and `clientState` match an integration
   enqueues a `SyncOutlookCalendarWorker` job for the event in its
   `resourceData` and records the notification time. Only the first
-  #{@max_notifications_per_batch} notifications are considered.
+  #{@max_notifications_per_batch} notifications are considered, and a payload
+  that is not a list of objects is dropped rather than raised on.
   """
-  @spec handle_outlook_notifications([map()]) :: :ok
-  def handle_outlook_notifications(notifications) when is_list(notifications) do
-    notifications = Enum.take(notifications, @max_notifications_per_batch)
+  @spec handle_outlook_notifications(term()) :: :ok
+  def handle_outlook_notifications(notifications) do
+    notifications = accepted_notifications(notifications, :outlook_notifications)
 
     integrations_by_subscription_id =
       notifications
@@ -88,13 +89,14 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
   Handles the `value` list of a Microsoft Graph lifecycle notification payload.
 
   Only the first event per subscription is acted on, and only the first
-  #{@max_notifications_per_batch} events are considered. See the module
+  #{@max_notifications_per_batch} events are considered. A payload that is not
+  a list of objects is dropped rather than raised on. See the module
   documentation for what each lifecycle event enqueues.
   """
-  @spec handle_outlook_lifecycle_notifications([map()]) :: :ok
-  def handle_outlook_lifecycle_notifications(notifications) when is_list(notifications) do
+  @spec handle_outlook_lifecycle_notifications(term()) :: :ok
+  def handle_outlook_lifecycle_notifications(notifications) do
     notifications
-    |> Enum.take(@max_notifications_per_batch)
+    |> accepted_notifications(:outlook_lifecycle)
     |> Enum.uniq_by(& &1["subscriptionId"])
     |> Enum.each(&handle_lifecycle_notification/1)
   end
@@ -156,12 +158,19 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
         )
 
       graph_resource_id ->
-        %{"calendar_integration_id" => integration.id, "graph_resource_id" => graph_resource_id}
-        |> SyncOutlookCalendarWorker.new()
-        |> insert_job(integration, "Failed to enqueue SyncOutlookCalendarWorker")
-
-        touch_notification_at(integration, :last_outlook_notification_at)
+        # Only a queued sync counts as a notification received: the timestamp
+        # is what `DeadChannelAlertWorker` reads to tell a silent channel from
+        # a working one, so a run of failed inserts must not look healthy.
+        with :ok <- enqueue_outlook_sync(integration, graph_resource_id) do
+          touch_notification_at(integration, :last_outlook_notification_at)
+        end
     end
+  end
+
+  defp enqueue_outlook_sync(integration, graph_resource_id) do
+    %{"calendar_integration_id" => integration.id, "graph_resource_id" => graph_resource_id}
+    |> SyncOutlookCalendarWorker.new()
+    |> insert_job(integration, "Failed to enqueue SyncOutlookCalendarWorker")
   end
 
   # Outlook lifecycle notifications
@@ -222,6 +231,35 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
   end
 
   # Shared
+
+  # Graph sends a list of notification objects. The endpoints are public, so
+  # anything else can arrive too, and every payload is acknowledged either
+  # way: drop what does not fit that shape rather than raise past the
+  # `Access` reads the handlers make on each entry.
+  defp accepted_notifications(notifications, endpoint) when is_list(notifications) do
+    case notifications
+         |> Enum.take(@max_notifications_per_batch)
+         |> Enum.split_with(&is_map/1) do
+      {accepted, []} ->
+        accepted
+
+      {accepted, rejected} ->
+        Logger.debug("Calendar webhook: dropped notification entries that are not objects",
+          endpoint: endpoint,
+          dropped_count: length(rejected)
+        )
+
+        accepted
+    end
+  end
+
+  defp accepted_notifications(_value, endpoint) do
+    Logger.debug("Calendar webhook: dropped a notification value that is not a list",
+      endpoint: endpoint
+    )
+
+    []
+  end
 
   defp verify_client_state(integration, notification, failure_message) do
     if valid_secret?(notification["clientState"], integration.graph_client_state) do

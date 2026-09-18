@@ -473,4 +473,14 @@ defmodule Tymeslot.Security.RateLimiter do
   @doc "Rate limit calendar webhook notifications per integration (60/min)."
   @spec check_calendar_webhook_rate_limit(integer()) :: :ok | {:error, :rate_limited}
   def check_calendar_webhook_rate_limit(id), do: Calendar.check_webhook(id)
+
+  @doc """
+  Rate limit the calendar push endpoints per source address (1000/min).
+
+  Deliberately far looser than `check_webhook_rate_limit/1`: the address is the
+  provider's, shared by every tenant on the instance. See
+  `Tymeslot.Security.RateLimiter.Calendar.check_push_endpoint/1`.
+  """
+  @spec check_calendar_push_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
+  def check_calendar_push_rate_limit(client_ip), do: Calendar.check_push_endpoint(client_ip)
 end

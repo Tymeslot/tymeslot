@@ -14,17 +14,16 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
        `Tymeslot.Integrations.Calendar.Webhooks`, which verifies each one
        against the stored secret and enqueues the sync.
 
-  All well-formed change notification payloads receive HTTP 202; validation
-  challenges receive HTTP 200 with the token echoed back. Invalid or unknown
-  notifications are silently skipped.
+  Every change notification payload receives HTTP 202, whatever shape it
+  arrives in; validation challenges receive HTTP 200 with the token echoed
+  back. Invalid or unknown notifications are silently skipped. A source
+  address that floods the endpoint gets 429.
   """
 
   use TymeslotWeb, :controller
 
-  require Logger
-
   alias Tymeslot.Integrations.Calendar.Webhooks, as: CalendarWebhooks
-  alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Helpers.GraphWebhook
 
   @doc """
   Receives a Microsoft Graph change notification or validation challenge.
@@ -32,33 +31,16 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
   @spec webhook(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def webhook(conn, %{"validationToken" => token})
       when is_binary(token) and byte_size(token) > 0 and byte_size(token) <= 256 do
-    client_ip = to_string(:inet_parse.ntoa(conn.remote_ip))
-
-    case RateLimiter.check_webhook_rate_limit(client_ip) do
-      :ok ->
-        if String.printable?(token) do
-          conn
-          |> put_resp_content_type("text/plain")
-          |> send_resp(200, token)
-          |> halt()
-        else
-          conn |> send_resp(400, "") |> halt()
-        end
-
-      {:error, :rate_limited} ->
-        conn |> send_resp(429, "") |> halt()
-    end
+    GraphWebhook.answer_validation_challenge(conn, token)
   end
 
   def webhook(conn, _params) do
-    case get_in(conn.body_params, ["value"]) do
-      nil ->
-        Logger.warning("Outlook webhook received request with no notification value")
+    GraphWebhook.with_rate_limit(conn, fn ->
+      conn.body_params
+      |> get_in(["value"])
+      |> CalendarWebhooks.handle_outlook_notifications()
 
-      notifications when is_list(notifications) ->
-        CalendarWebhooks.handle_outlook_notifications(notifications)
-    end
-
-    conn |> send_resp(202, "") |> halt()
+      conn |> send_resp(202, "") |> halt()
+    end)
   end
 end
