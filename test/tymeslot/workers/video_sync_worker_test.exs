@@ -306,7 +306,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
   end
 
   describe "perform/1 — room bookkeeping" do
-    test "clears the room id once the provider delete succeeds" do
+    test "clears the room id and its join links once the provider delete succeeds" do
       %{user: user} = create_user_with_profile()
       integration = insert_zoom_integration(user)
 
@@ -315,7 +315,9 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
           video_integration_id: integration.id,
           video_provider: "zoom",
           video_room_id: "4242",
-          video_room_enabled: true
+          video_room_enabled: true,
+          organizer_video_url: "https://zoom.example.com/s/4242",
+          attendee_video_url: "https://zoom.example.com/j/4242"
         })
 
       stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
@@ -332,6 +334,10 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       reloaded = Repo.reload!(meeting)
       assert reloaded.video_room_id == nil
       refute reloaded.video_room_enabled
+
+      # The room is gone, so the links into it are dead and go with it.
+      assert reloaded.organizer_video_url == nil
+      assert reloaded.attendee_video_url == nil
     end
 
     test "keeps the room id after an update so reschedules stay syncable" do

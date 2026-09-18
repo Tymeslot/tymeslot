@@ -372,10 +372,17 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   defp clear_room(%{kind: :event_room, record: room}),
     do: CalendarGrid.forget_event_video_room(room)
 
+  # The room is gone on the provider, so the booking's join links are dead and
+  # go with it, as `Tymeslot.Workers.VideoIntegrationDisconnectWorker` already
+  # does for the same reason. A cancellation used to clear the room id alone and
+  # leave `organizer_video_url` and `attendee_video_url` pointing at a
+  # conversation nobody can join, for every reader that keeps showing them.
   defp clear_video_room(meeting) do
     case MeetingQueries.update_meeting(meeting, %{
            video_room_id: nil,
-           video_room_enabled: false
+           video_room_enabled: false,
+           organizer_video_url: nil,
+           attendee_video_url: nil
          }) do
       {:ok, _updated} ->
         :ok

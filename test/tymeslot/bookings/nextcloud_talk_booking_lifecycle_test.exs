@@ -146,7 +146,8 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     assert %{video_room_id: @token, meeting_url: ^join_link, attendee_video_url: ^join_link} =
              rescheduled
 
-    # Cancelling deletes the conversation and forgets the room.
+    # Cancelling deletes the conversation and forgets the room, join links and
+    # all: the conversation they point at no longer exists.
     assert {:ok, _cancelled} = Cancel.execute(booked.uid)
     assert requests() == []
     assert_enqueued(worker: VideoSyncWorker, args: sync_args(booked, "delete"))
@@ -156,8 +157,13 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
 
     assert requests() == [{:delete, server <> @room_path <> "/" <> @token, nil}]
 
-    assert %{status: "cancelled", video_room_id: nil, video_room_enabled: false} =
-             Repo.reload!(booked)
+    assert %{
+             status: "cancelled",
+             video_room_id: nil,
+             video_room_enabled: false,
+             organizer_video_url: nil,
+             attendee_video_url: nil
+           } = Repo.reload!(booked)
   end
 
   test "a room job that stopped waiting before Nextcloud answered adopts that conversation on its retry",
