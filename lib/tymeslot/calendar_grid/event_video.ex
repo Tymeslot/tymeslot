@@ -48,6 +48,10 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
     * `{:error, :not_found}` when the video integration is not the organiser's;
     * `{:error, :missing_meeting_url}` when the provider created a room but
       returned no join URL, in which case the event keeps its current link;
+    * `{:error, {:configuration_error, code}}` when the provider's own server
+      refuses to create rooms, which
+      `Tymeslot.Integrations.Video.RoomCreationError` puts into words for the
+      organiser;
     * `{:error, reason}` when the room could not be created or the calendar
       rejected the change. Nothing is changed.
   """

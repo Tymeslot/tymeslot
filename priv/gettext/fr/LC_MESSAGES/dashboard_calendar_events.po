@@ -513,8 +513,7 @@ msgstr "Non"
 msgid "No calendars to sync"
 msgstr "Aucun calendrier à synchroniser"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "None"
 msgstr "Aucune"

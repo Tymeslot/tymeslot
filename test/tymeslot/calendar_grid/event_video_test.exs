@@ -20,6 +20,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
   import Mox
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Video.Providers.LinkRoom
   alias Tymeslot.Security.Encryption
@@ -341,5 +342,55 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       oauth_scope: "meeting:write:meeting meeting:delete:meeting",
       provider_account_id: nil
     )
+  end
+
+  describe "put_join_link/3" do
+    test "names the link on an event that had none" do
+      assert EventVideo.put_join_link("Agenda", nil, "https://v.example/a") ==
+               "Agenda\n\nJoin video call: https://v.example/a"
+    end
+
+    test "is the whole description when the event had none" do
+      for empty <- [nil, ""] do
+        assert EventVideo.put_join_link(empty, nil, "https://v.example/a") ==
+                 "Join video call: https://v.example/a"
+      end
+    end
+
+    test "replaces the previous link rather than stacking a second one" do
+      description = "Agenda\n\nJoin video call: https://old.example/a"
+
+      assert EventVideo.put_join_link(
+               description,
+               "https://old.example/a",
+               "https://new.example/b"
+             ) ==
+               "Agenda\n\nJoin video call: https://new.example/b"
+    end
+
+    test "takes the line out of the middle of the organiser's own text" do
+      description = "Agenda\n\nJoin video call: https://old.example/a\n\nBring notes"
+
+      assert EventVideo.put_join_link(description, "https://old.example/a", nil) ==
+               "Agenda\n\nBring notes"
+    end
+
+    test "leaves the description alone when removing a link it never named" do
+      assert EventVideo.put_join_link("Agenda", "https://old.example/a", nil) == "Agenda"
+    end
+
+    test "leaves nothing behind when the line was the whole description" do
+      assert EventVideo.put_join_link(
+               "Join video call: https://old.example/a",
+               "https://old.example/a",
+               nil
+             ) == ""
+    end
+
+    test "does not treat a link the organiser wrote themselves as ours" do
+      description = "Agenda\n\nSee https://old.example/a for the room"
+
+      assert EventVideo.put_join_link(description, "https://old.example/a", nil) == description
+    end
   end
 end

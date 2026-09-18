@@ -236,11 +236,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
         {:ok, %Req.Response{status: 201, body: ocs(%{"token" => "swit0001"})}}
     end)
 
-    updated = Map.put(event, :video_integration_id, talk.id)
-    _socket = VideoSync.sync_video_integration_async(socket, event, updated)
+    expect(Tymeslot.CalendarMock, :update_event, fn uid, event_data, _context ->
+      assert uid == event.uid
+      # The organiser's calendar learns the link, not only Tymeslot's cache.
+      assert event_data.description =~ "Join video call: "
+      :ok
+    end)
+
+    _socket = VideoSync.change_video_async(socket, event, talk.id)
 
     event_id = event.id
-    assert_receive {:video_sync_result, ^event_id, {:ok, _url}}, @task_timeout
+    assert_receive {:video_sync_result, ^event_id, {:ok, %{video_link: _url}}}, @task_timeout
 
     assert [
              %EventVideoRoomSchema{

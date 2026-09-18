@@ -207,6 +207,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     {:ok, socket}
   end
 
+  @doc """
+  Puts an event's settled video choice on the grid and, when it is the open
+  one, on the detail modal.
+
+  Carries both the link and the integration it came from, so the same handler
+  applies a successful change and puts the previous choice back when one
+  failed.
+  """
   @spec handle_video_link_updated(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   def handle_video_link_updated(%{event_id: event_id} = assigns, socket) do

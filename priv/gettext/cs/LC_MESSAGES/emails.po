@@ -2337,10 +2337,10 @@ msgstr "Platba k vrácení"
 msgid "You still hold %{amount} for this booking."
 msgstr "Za tuto rezervaci u vás stále zůstává %{amount}."
 
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
 #, elixir-autogen, elixir-format
-msgid "New link for the new time"
-msgstr "Nový odkaz pro nový čas"
+msgid "%{provider} refused to create a video room. Whatever it was for went ahead without one: a booking is still confirmed, and a calendar event is still in your calendar. Nothing on this integration gets a video link until the setting described above changes, and links already sent keep working."
+msgstr "%{provider} odmítl vytvořit videomístnost. To, k čemu měla sloužit, proběhlo i bez ní: rezervace je stále potvrzená a událost je stále ve vašem kalendáři. Nic v této integraci nedostane odkaz na video, dokud se výše popsané nastavení nezmění, a již odeslané odkazy dál fungují."
 
 #: lib/tymeslot/emails/templates/video_room_creation_error.ex
 #, elixir-autogen, elixir-format
@@ -2357,10 +2357,20 @@ msgstr "Změňte výše popsané nastavení, nebo o to požádejte toho, kdo ser
 msgid "Integration"
 msgstr "Integrace"
 
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "New link for the new time"
+msgstr "Nový odkaz pro nový čas"
+
 #: lib/tymeslot/emails/templates/video_room_creation_error.ex
 #, elixir-autogen, elixir-format
 msgid "Open video settings"
 msgstr "Otevřít nastavení videa"
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "This is the only email you will get about this for now. If the same problem is still there in %{days} days, you will hear about it again. Your video settings show the notice for as long as it lasts."
+msgstr "Zatím je to jediný e-mail, který o tom dostanete. Pokud stejný problém bude za %{days} dní trvat dál, ozveme se znovu. Nastavení videa zobrazuje upozornění, dokud platí."
 
 #: lib/tymeslot/emails/templates/video_room_creation_error.ex
 #, elixir-autogen, elixir-format
@@ -2376,13 +2386,3 @@ msgstr "Co mám udělat?"
 #, elixir-autogen, elixir-format
 msgid "What's happening?"
 msgstr "Co se děje?"
-
-#: lib/tymeslot/emails/templates/video_room_creation_error.ex
-#, elixir-autogen, elixir-format
-msgid "%{provider} refused to create a video room. Whatever it was for went ahead without one: a booking is still confirmed, and a calendar event is still in your calendar. Nothing on this integration gets a video link until the setting described above changes, and links already sent keep working."
-msgstr "%{provider} odmítl vytvořit videomístnost. To, k čemu měla sloužit, proběhlo i bez ní: rezervace je stále potvrzená a událost je stále ve vašem kalendáři. Nic v této integraci nedostane odkaz na video, dokud se výše popsané nastavení nezmění, a již odeslané odkazy dál fungují."
-
-#: lib/tymeslot/emails/templates/video_room_creation_error.ex
-#, elixir-autogen, elixir-format
-msgid "This is the only email you will get about this for now. If the same problem is still there in %{days} days, you will hear about it again. Your video settings show the notice for as long as it lasts."
-msgstr "Zatím je to jediný e-mail, který o tom dostanete. Pokud stejný problém bude za %{days} dní trvat dál, ozveme se znovu. Nastavení videa zobrazuje upozornění, dokud platí."

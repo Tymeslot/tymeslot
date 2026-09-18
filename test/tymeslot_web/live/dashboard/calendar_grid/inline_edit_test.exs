@@ -519,6 +519,40 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
     end
   end
 
+  # Picking or clearing a provider is an edit of its own and is covered
+  # end-to-end in `InlineEditVideoTest`; this only proves the picker is
+  # offered for an editable event.
+  describe "video integration selector on edit" do
+    setup %{user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      video_integration = insert(:video_integration, user: user, is_active: true)
+
+      event =
+        insert_event(integration, %{
+          summary: "Video Event",
+          start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
+          all_day: false,
+          video_integration_id: nil
+        })
+
+      {:ok, event: event, video_integration: video_integration}
+    end
+
+    test "shows video selector in edit modal", %{
+      conn: conn,
+      event: event,
+      video_integration: video_integration
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      assert html =~ "update_edit_video"
+      assert html =~ video_integration.name
+      assert html =~ "None"
+    end
+  end
+
   defp input_value(html, id) do
     html
     |> Floki.parse_fragment!()

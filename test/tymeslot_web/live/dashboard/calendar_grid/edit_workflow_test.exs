@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
   @moduletag :calendar
   @moduletag :integration
 
+  import Mox
   import Tymeslot.Factory
 
   alias Phoenix.Component
