@@ -27,13 +27,23 @@ defmodule Tymeslot.Notifications.IntegrationQueries do
   alias Tymeslot.Repo
 
   @doc """
+  Query selecting every integration row owned by `user_id`, newest first.
+  Providers compose their own filters onto it; `list_for_user/2` runs it as is.
+  """
+  @spec for_user(module(), integer()) :: Ecto.Query.t()
+  def for_user(schema, user_id) do
+    schema
+    |> where([i], i.user_id == ^user_id)
+    |> order_by([i], desc: i.inserted_at)
+  end
+
+  @doc """
   Returns all integration rows owned by `user_id`, newest first.
   """
   @spec list_for_user(module(), integer()) :: [Ecto.Schema.t()]
   def list_for_user(schema, user_id) do
     schema
-    |> where([i], i.user_id == ^user_id)
-    |> order_by([i], desc: i.inserted_at)
+    |> for_user(user_id)
     |> Repo.all()
   end
 
@@ -139,21 +149,6 @@ defmodule Tymeslot.Notifications.IntegrationQueries do
       failure_count: 0
     })
     |> Repo.update()
-  end
-
-  @doc """
-  Deletes integration rows older than `ttl_minutes` from the given query.
-  The query should already include any provider-specific filters that
-  identify a "stub" (an integration that never completed setup).
-  """
-  @spec delete_stubs_older_than(Ecto.Queryable.t(), pos_integer()) ::
-          {non_neg_integer(), nil | [term()]}
-  def delete_stubs_older_than(query, ttl_minutes) do
-    cutoff = DateTime.add(DateTime.utc_now(), -ttl_minutes * 60, :second)
-
-    query
-    |> where([i], i.inserted_at < ^cutoff)
-    |> Repo.delete_all()
   end
 
   @doc """

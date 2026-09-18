@@ -29,7 +29,6 @@ defmodule Tymeslot.Telegram do
 
   @spec list_integrations(integer()) :: [TelegramIntegrationSchema.t()]
   def list_integrations(user_id) do
-    TelegramQueries.cleanup_orphaned_stubs(user_id)
     TelegramQueries.list_integrations(user_id)
   end
 
@@ -374,6 +373,18 @@ defmodule Tymeslot.Telegram do
   @spec prune_deliveries(integer()) :: {non_neg_integer(), nil}
   def prune_deliveries(days) do
     TelegramQueries.cleanup_old_deliveries(days)
+  end
+
+  @doc """
+  Deletes abandoned setup stubs: integrations a user created by starting the
+  link flow and never finished linking. Called by the shared
+  `DataRetentionWorker` rather than by any read path; listings hide expired
+  stubs on their own. Returns the `{deleted_count, nil}` tuple from
+  `delete_all`.
+  """
+  @spec prune_orphaned_stubs() :: {non_neg_integer(), nil | [term()]}
+  def prune_orphaned_stubs do
+    TelegramQueries.cleanup_orphaned_stubs()
   end
 
   # ============================================================================
