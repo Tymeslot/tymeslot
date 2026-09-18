@@ -75,6 +75,10 @@ defmodule Tymeslot.Emails.EmailService do
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_booking_request_outcome(variant, meeting), to: AppointmentEmails
 
+  @doc "Tells the host a booking was cancelled because a reschedule request lapsed."
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_reschedule_request_expired(meeting, locale), to: AppointmentEmails
+
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_guest_confirmation(guest_email, appointment_details), to: AppointmentEmails
 

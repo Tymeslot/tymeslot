@@ -12,7 +12,8 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     AppointmentRescheduled,
     BookingApprovalRequest,
     BookingRequestOutcome,
-    BookingRequestReceived
+    BookingRequestReceived,
+    RescheduleRequestExpired
   }
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -67,6 +68,16 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
           {:ok, any()} | {:error, any()}
   def send_booking_request_outcome(variant, %Meeting{} = meeting) do
     Delivery.deliver(BookingRequestOutcome.render(variant, meeting))
+  end
+
+  @doc """
+  Tells the host a confirmed booking was cancelled because the invitee's
+  request to move it lapsed unanswered.
+  """
+  @spec send_reschedule_request_expired(Meeting.t(), String.t()) ::
+          {:ok, any()} | {:error, any()}
+  def send_reschedule_request_expired(%Meeting{} = meeting, locale) do
+    Delivery.deliver(RescheduleRequestExpired.render(meeting, locale))
   end
 
   @doc """
