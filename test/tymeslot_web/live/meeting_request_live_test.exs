@@ -25,11 +25,17 @@ defmodule TymeslotWeb.MeetingRequestLiveTest do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.TestMocks
 
   setup do
     # Every mount in this file resolves the same loopback client_ip, so a
     # test that saturates the approval bucket must not bleed into the next.
     RateLimiter.clear_all()
+
+    # The reschedule submit re-reads the host's connected calendars
+    # (`Tymeslot.Bookings.CalendarCheck`); these hosts have nothing in theirs.
+    TestMocks.stub_no_calendar_events()
+
     :ok
   end
 

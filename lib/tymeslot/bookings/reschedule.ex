@@ -30,7 +30,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   require Logger
 
   alias Tymeslot.Availability.Offer
-  alias Tymeslot.Bookings.{CalendarJobs, Errors, Policy, ScheduleCheck, Validation}
+  alias Tymeslot.Bookings.{CalendarCheck, CalendarJobs, Errors, Policy, ScheduleCheck, Validation}
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.Approval
@@ -60,7 +60,8 @@ defmodule Tymeslot.Bookings.Reschedule do
   Reschedules an existing meeting.
 
   This includes:
-  1. Validating the new time
+  1. Validating the new time, against the organiser's schedule and their
+     connected calendars
   2. Cancelling the original calendar event
   3. Updating meeting times with conflict checking
   4. Creating new calendar event
@@ -72,8 +73,9 @@ defmodule Tymeslot.Bookings.Reschedule do
   Returns `{:ok, meeting}` or `{:error, reason}`, where `reason` is either a
   semantic atom (`Tymeslot.Bookings.Errors.classified_error/0` — currently
   `:meeting_not_found` when the lookup fails, `:slot_taken` when a concurrent
-  booking claims the new time first or the requested time is one the
-  organiser's schedule never offers, or `:failed_to_update_meeting` when
+  booking claims the new time first, when the requested time is one the
+  organiser's schedule never offers, or when their connected calendar has
+  since been blocked over it, or `:failed_to_update_meeting` when
   persisting the new time fails for any other reason) or an arbitrary
   policy/validation string from `Tymeslot.Bookings.Policy` or
   `Tymeslot.Bookings.Validation`.
@@ -91,7 +93,10 @@ defmodule Tymeslot.Bookings.Reschedule do
              organizer_user_id,
              original_meeting.duration
            ),
-         {:ok, new_times} <- prepare_new_times(new_params, original_meeting, meeting_type),
+         config <- Policy.scheduling_config(original_meeting.organizer_user_id, meeting_type),
+         {:ok, new_times} <-
+           prepare_new_times(new_params, original_meeting, meeting_type, config),
+         :ok <- verify_calendar_free(original_meeting, new_times, config),
          {:ok, updated_meeting} <-
            apply_time_update_and_schedule_job(original_meeting, new_times, meeting_type) do
       AvailabilityCache.invalidate_for_user(updated_meeting.organizer_user_id)
@@ -336,17 +341,17 @@ defmodule Tymeslot.Bookings.Reschedule do
   # slots the page just offered. Only the check's step size changes; the
   # meeting's own duration, computed below via `duration_minutes`, never does.
   #
-  # `meeting_type` is resolved once by the caller and threaded through here
-  # rather than re-fetched: two reads of the same row leave a window in which
-  # a host edit between them could be answered differently by each call.
-  defp prepare_new_times(params, meeting, meeting_type) do
+  # `meeting_type` and `config` are resolved once by the caller and threaded
+  # through here rather than re-fetched: two reads of the same rows leave a
+  # window in which a host edit between them could be answered differently by
+  # each call, and `verify_calendar_free/3` needs the same buffer and notice
+  # rules this check was made against.
+  defp prepare_new_times(params, meeting, meeting_type, config) do
     organizer_user_id = meeting.organizer_user_id
 
     duration_minutes = meeting.duration
 
     schedule_check_duration_minutes = Offer.duration_minutes(meeting_type, duration_minutes)
-
-    config = Policy.scheduling_config(organizer_user_id, meeting_type)
 
     with {:ok, {start_datetime, end_datetime}} <-
            Validation.parse_meeting_times(
@@ -378,6 +383,37 @@ defmodule Tymeslot.Bookings.Reschedule do
 
       {:error, _reason} = error ->
         error
+    end
+  end
+
+  # The schedule check above re-derives the organiser's windows and breaks, but
+  # it computes them against an empty event list by design
+  # (`Calculate.offers_slot/6`), and the write below only looks at Tymeslot's
+  # own meetings. Without this, nothing on the reschedule path ever consults the
+  # host's connected calendar: a time the host blocked in Google, Outlook or
+  # CalDAV after the reschedule page rendered, or one the page's cached event
+  # list never knew about, could still be moved onto. The booking submit has
+  # re-read the calendar at this point for as long as it has existed; this is
+  # the same check, through the same module.
+  #
+  # The meeting being moved is excluded, because its own event is sitting in
+  # that calendar: counting it would refuse every move onto a time overlapping
+  # or (through the buffer) adjacent to the slot it already occupies, so a
+  # booking could not be nudged by fifteen minutes.
+  #
+  # Both refusals collapse to `:slot_taken`, exactly as `Create` classifies
+  # them, so the invitee is returned to the grid to pick another time rather
+  # than shown a distinction they cannot act on.
+  defp verify_calendar_free(meeting, %{start_time: start_time, end_time: end_time}, config) do
+    slot = %{
+      organizer_user_id: meeting.organizer_user_id,
+      start_datetime: start_time,
+      end_datetime: end_time
+    }
+
+    case CalendarCheck.enforce(slot, config, exclude: meeting) do
+      :ok -> :ok
+      {:error, _reason} -> {:error, :slot_taken}
     end
   end
 

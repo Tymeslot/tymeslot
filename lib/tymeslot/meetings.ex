@@ -414,6 +414,15 @@ defmodule Tymeslot.Meetings do
     to: CalendarEventLink,
     as: :linked?
 
+  @doc """
+  Drops from `records` every calendar event that mirrors `meeting`, so a
+  meeting's own provider event never counts as a conflict with itself. `nil`
+  leaves `records` untouched.
+  """
+  defdelegate reject_calendar_event_mirrors(records, meeting),
+    to: CalendarEventLink,
+    as: :reject_mirrors
+
   # =====================================
   # Analytics Query Functions
   # =====================================

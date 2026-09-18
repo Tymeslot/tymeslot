@@ -57,6 +57,14 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
 
     TestMocks.setup_email_mocks()
 
+    # The reschedule submit re-reads the host's connected calendars
+
+    # (`Tymeslot.Bookings.CalendarCheck`); these tests are about a host with
+
+    # nothing else in their diary.
+
+    TestMocks.stub_no_calendar_events()
+
     # The real service, so the templates actually render. Restored afterwards
     # for the rest of the suite.
     original_service = Application.get_env(:tymeslot, :email_service_module)

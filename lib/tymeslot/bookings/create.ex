@@ -4,13 +4,12 @@ defmodule Tymeslot.Bookings.Create do
   Combines validation, policy enforcement, and side effects.
   """
 
-  require Logger
-
   alias Tymeslot.Availability.Offer
 
   alias Tymeslot.Bookings.{
     Activation,
     BuildParams,
+    CalendarCheck,
     CalendarJobs,
     Errors,
     Policy,
@@ -21,7 +20,6 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Bookings.Create.PaidBooking
   alias Tymeslot.CustomFields
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.Meetings.Guests
@@ -100,7 +98,7 @@ defmodule Tymeslot.Bookings.Create do
       config = scheduling_config(booking_data)
 
       # Try calendar pre-check for better UX
-      case fresh_calendar_check(booking_data, config) do
+      case CalendarCheck.probe(booking_data, config) do
         :ok ->
           # Calendar shows available, proceed normally
           execute_internal(booking_data, form_data, opts)
@@ -274,82 +272,14 @@ defmodule Tymeslot.Bookings.Create do
     )
   end
 
+  # The refusal policy lives in `CalendarCheck.enforce/3`, shared with the
+  # reschedule submit: a clash and an unreadable busy set both refuse (and
+  # `classify_error/1` collapses either to `:slot_taken`, returning the booker
+  # to the schedule step), while a transport failure proceeds.
   defp validate_calendar_availability(booking_data, config) do
-    case fresh_calendar_check(booking_data, config) do
-      :ok ->
-        {:ok, :validated}
-
-      {:error, :slot_unavailable} ->
-        # Actual conflict detected - fail fast to prevent double booking
-        {:error, :slot_unavailable}
-
-      {:error, reason} when reason in [:some_calendars_unavailable, :all_calendars_unavailable] ->
-        # Distinct from the transport errors below: here the fetch SUCCEEDED in
-        # reaching the calendar layer, which reported that it could not read
-        # every selected calendar. The busy set is therefore incomplete, and
-        # falling through to "proceed anyway" would skip the conflict check
-        # entirely — strictly worse than checking against a partial set, because
-        # a conflict sitting in a calendar that did respond would also be missed.
-        # Refuse instead; `classify_error/1` maps this to `:slot_taken`, so the
-        # booker is returned to the schedule step and can retry.
-        Logger.warning(
-          "Calendar availability could not be verified, refusing booking",
-          reason: inspect(reason),
-          organizer_user_id: booking_data.organizer_user_id
-        )
-
-        {:error, :availability_unverifiable}
-
-      {:error, reason} ->
-        # Calendar transport/timeout errors - log but don't block booking
-        # The booking will succeed and calendar sync will be retried in background
-        Logger.warning(
-          "Calendar availability check failed, proceeding with booking",
-          reason: inspect(reason),
-          organizer_user_id: booking_data.organizer_user_id
-        )
-
-        {:ok, :validated}
-    end
-  end
-
-  defp fresh_calendar_check(booking_data, config) do
-    %{start_datetime: start_datetime, end_datetime: end_datetime, date: date} = booking_data
-
-    case Map.get(booking_data, :organizer_user_id) do
-      nil ->
-        {:error, :organizer_required}
-
-      organizer_user_id ->
-        # Use a short timeout for booking-time calendar checks (5 seconds)
-        # Availability was already validated when slots were displayed, so we don't
-        # want to block the user if calendar is slow. If it times out, we proceed anyway.
-        check_task =
-          Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
-            CalendarEvents.get_events_for_range_fresh(organizer_user_id, date, date)
-          end)
-
-        case Task.yield(check_task, 5_000) || Task.shutdown(check_task) do
-          {:ok, {:ok, events}} ->
-            Validation.validate_no_conflicts(
-              start_datetime,
-              end_datetime,
-              events,
-              config
-            )
-
-          {:ok, {:error, reason}} ->
-            {:error, reason}
-
-          nil ->
-            # Task timed out - log and return timeout error
-            Logger.warning(
-              "Calendar availability check timed out after 5s, proceeding with booking",
-              organizer_user_id: organizer_user_id
-            )
-
-            {:error, :timeout}
-        end
+    case CalendarCheck.enforce(booking_data, config) do
+      :ok -> {:ok, :validated}
+      {:error, reason} -> {:error, reason}
     end
   end
 
