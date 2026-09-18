@@ -21,10 +21,13 @@ defmodule Tymeslot.Availability.TimeOff do
   about the person and cannot be contradicted by one schedule's exception.
   """
 
+  alias Ecto.Changeset
   alias Tymeslot.Availability.TimeOffPeriodQueries
   alias Tymeslot.Availability.TimeOffPeriodSchema
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Utils.DateTimeUtils
 
@@ -170,6 +173,58 @@ defmodule Tymeslot.Availability.TimeOff do
 
   def validate(profile_id, attrs, opts) when is_integer(profile_id),
     do: validate(%TimeOffPeriodSchema{profile_id: profile_id}, attrs, opts)
+
+  @doc """
+  The owner's live bookings that fall inside `period`, soonest first.
+
+  A period only takes days out of *future* availability: bookings already in
+  the diary keep their times, stay in the attendees' calendars and keep
+  sending reminders. Nothing here refuses or cancels anything, because a host
+  entering a holiday over a booking usually means to move that booking
+  themselves; the point is that they are told, rather than left to find out.
+
+  Accepts a changeset as well as a stored row, so the form can ask about the
+  period as it will be: on an edit that is the submitted attrs merged onto the
+  stored row, which is the shape most likely to swallow a booking. A period
+  that is incomplete, or that the changeset has already rejected, names no
+  interval to ask about and counts nothing.
+
+  The interval is the one `busy_intervals/4` publishes, DST resolution
+  included, rather than a comparison of the period's dates against stored UTC
+  start times: the dates are wall-clock in the owner's timezone, so comparing
+  them directly is a day out for hosts away from UTC, in whichever direction
+  their offset runs.
+  """
+  @spec conflicting_meetings(period() | Changeset.t()) :: [MeetingSchema.t()]
+  def conflicting_meetings(%Changeset{valid?: true} = changeset),
+    do: changeset |> Changeset.apply_changes() |> conflicting_meetings()
+
+  def conflicting_meetings(%Changeset{}), do: []
+
+  def conflicting_meetings(
+        %TimeOffPeriodSchema{starts_on: %Date{}, ends_on: %Date{}, profile_id: profile_id} =
+          period
+      )
+      when is_integer(profile_id),
+      do: meetings_within(period, owner(profile_id))
+
+  def conflicting_meetings(%TimeOffPeriodSchema{}), do: []
+
+  defp meetings_within(period, %{user_id: user_id, timezone: timezone})
+       when is_integer(user_id) do
+    {from, to} = interval(period, timezone || "Etc/UTC")
+
+    # A period whose end lands at or before its start covers no time at all,
+    # and a half-open window read backwards would match on the meetings that
+    # straddle it rather than the ones inside it.
+    if DateTime.before?(from, to) do
+      Meetings.list_meetings_in_range_for_organizer(user_id, from, to)
+    else
+      []
+    end
+  end
+
+  defp meetings_within(_period, _no_owner), do: []
 
   @doc """
   The current date in `timezone`, the earliest day a period may be placed on.

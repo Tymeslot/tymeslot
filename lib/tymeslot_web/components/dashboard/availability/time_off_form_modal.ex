@@ -14,30 +14,48 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
   """
 
   use Phoenix.Component
+  use TymeslotWeb, :verified_routes
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.Shared.TimeOptions
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+
+  # How many of the bookings inside the period the panel names before it
+  # counts the rest. A fortnight away can hold dozens, and a list that long
+  # pushes the form's own fields off the screen.
+  @bookings_listed 5
 
   @doc """
   Renders the add/edit time-off form.
 
   `period_data` carries `:mode` (`:create` or `:edit`), the current field
   values as strings, `:errors`, a map of field to message rendered under the
-  field it belongs to, and `:min_starts_on`/`:min_ends_on`, the earliest date
-  each picker offers.
+  field it belongs to, `:min_starts_on`/`:min_ends_on`, the earliest date each
+  picker offers, and `:conflicts`, the bookings that already sit inside the
+  dates as they currently stand.
   """
   attr :id, :string, required: true
   attr :show, :boolean, required: true
   attr :period_data, :map, default: nil
   attr :time_format, :string, default: "24h"
+  attr :timezone, :string, default: nil
   attr :on_cancel, JS, required: true
   attr :myself, :any, required: true
 
   @spec time_off_form_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def time_off_form_modal(assigns) do
+    conflicts = conflicts(assigns.period_data)
+
+    assigns =
+      assign(assigns,
+        conflict_count: length(conflicts),
+        listed_conflicts: Enum.take(conflicts, @bookings_listed),
+        unlisted_conflicts: max(length(conflicts) - @bookings_listed, 0)
+      )
+
     ~H"""
     <CoreComponents.modal id={@id} show={@show} on_cancel={@on_cancel} size={:medium}>
       <:header>
@@ -104,6 +122,68 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
             )}
           </p>
 
+          <%!-- Time off closes the days to new bookings and leaves the ones
+          already taken exactly where they are, so the host has to be told what
+          they are about to leave behind. Saving is never in the way of it. --%>
+          <div
+            :if={@conflict_count > 0}
+            class="flex items-start gap-3 rounded-token-xl border-2 border-amber-200 bg-amber-50 px-4 py-4"
+            data-testid="time-off-conflicts"
+          >
+            <CoreComponents.icon
+              name="hero-exclamation-triangle"
+              class="w-5 h-5 shrink-0 text-amber-600"
+            />
+
+            <div class="min-w-0">
+              <p class="font-bold text-amber-800">
+                {dngettext(
+                  "dashboard_availability",
+                  "1 booking already sits inside these dates",
+                  "%{count} bookings already sit inside these dates",
+                  @conflict_count,
+                  count: @conflict_count
+                )}
+              </p>
+              <p class="mt-1 text-token-sm font-medium text-amber-700">
+                {dgettext(
+                  "dashboard_availability",
+                  "Time off only stops new bookings. These keep their times until you move or cancel them."
+                )}
+              </p>
+
+              <ul class="mt-3 space-y-1 text-token-sm text-amber-800">
+                <li :for={meeting <- @listed_conflicts} class="truncate">
+                  <span class="font-bold">
+                    {LocalizationHelpers.format_meeting_datetime_compact(
+                      meeting.start_time,
+                      @timezone
+                    )}
+                  </span>
+                  <span class="font-medium">{meeting.title}</span>
+                </li>
+                <li :if={@unlisted_conflicts > 0} class="font-medium">
+                  {dngettext(
+                    "dashboard_availability",
+                    "and 1 more",
+                    "and %{count} more",
+                    @unlisted_conflicts,
+                    count: @unlisted_conflicts
+                  )}
+                </li>
+              </ul>
+
+              <.link
+                href={~p"/dashboard/meetings"}
+                target="_blank"
+                rel="noopener"
+                class="inline-block mt-3 text-token-sm font-bold text-amber-800 underline underline-offset-2 hover:text-amber-900"
+              >
+                {dgettext("dashboard_availability", "Open your bookings in a new tab")}
+              </.link>
+            </div>
+          </div>
+
           <CoreComponents.input
             type="text"
             id={"#{@id}-label"}
@@ -132,6 +212,10 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.TimeOffFormModal do
 
   defp header_title(%{mode: :edit}), do: dgettext("dashboard_availability", "Edit time off")
   defp header_title(_create), do: dgettext("dashboard_availability", "Add time off")
+
+  # The modal renders with no data at all before it has first been opened.
+  defp conflicts(nil), do: []
+  defp conflicts(period_data), do: Map.get(period_data, :conflicts, [])
 
   defp field_errors(period_data, field) do
     case period_data |> Map.get(:errors, %{}) |> Map.get(field) do

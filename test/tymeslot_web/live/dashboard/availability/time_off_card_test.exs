@@ -402,6 +402,103 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
     end
   end
 
+  describe "bookings inside the dates" do
+    test "names them while the dates are being chosen, and saves anyway", %{
+      conn: conn,
+      profile: profile,
+      user: user
+    } do
+      booking(user, ~U[2027-07-06 12:00:00Z], "Design review")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      view |> element("[data-testid='add-time-off']") |> render_click()
+
+      html =
+        view
+        |> form("#time-off-form-modal-form", %{
+          "starts_on" => "2027-07-05",
+          "ends_on" => "2027-07-12"
+        })
+        |> render_change()
+
+      assert html =~ "1 booking already sits inside these dates"
+      assert html =~ "Design review"
+
+      # Warned, never blocked: the host is the one who decides what happens to
+      # a booking they have already made.
+      view
+      |> form("#time-off-form-modal-form", %{
+        "starts_on" => "2027-07-05",
+        "ends_on" => "2027-07-12",
+        "start_time" => "",
+        "end_time" => "",
+        "label" => "Portugal"
+      })
+      |> render_submit()
+
+      assert [%{label: "Portugal"}] = TimeOff.list(profile.id)
+
+      html = render(view)
+      assert html =~ "Time off added"
+      assert html =~ "1 booking sits inside this time off"
+    end
+
+    test "says nothing when the dates are clear", %{conn: conn, user: user} do
+      booking(user, ~U[2027-08-20 12:00:00Z], "Design review")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      view |> element("[data-testid='add-time-off']") |> render_click()
+
+      html =
+        view
+        |> form("#time-off-form-modal-form", %{
+          "starts_on" => "2027-07-05",
+          "ends_on" => "2027-07-12"
+        })
+        |> render_change()
+
+      refute html =~ ~s(data-testid="time-off-conflicts")
+      refute html =~ "Design review"
+    end
+
+    test "warns as an existing period's last day is pushed out", %{
+      conn: conn,
+      profile: profile,
+      user: user
+    } do
+      period =
+        insert(:time_off_period,
+          profile: profile,
+          starts_on: ~D[2027-07-05],
+          ends_on: ~D[2027-07-12]
+        )
+
+      booking(user, ~U[2027-07-15 12:00:00Z], "Client call")
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      html =
+        view
+        |> element("button[phx-click='show_time_off_form'][phx-value-id='#{period.id}']")
+        |> render_click()
+
+      refute html =~ "Client call"
+
+      html =
+        view
+        |> form("#time-off-form-modal-form", %{
+          "starts_on" => "2027-07-05",
+          "ends_on" => "2027-07-19"
+        })
+        |> render_change()
+
+      assert html =~ "1 booking already sits inside these dates"
+      assert html =~ "Client call"
+    end
+  end
+
   describe "removing" do
     test "deletes the period after confirmation", %{conn: conn, profile: profile} do
       period = insert(:time_off_period, profile: profile, label: "Portugal")
@@ -417,5 +514,14 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
       assert TimeOff.list(profile.id) == []
       assert render(view) =~ "No time off booked"
     end
+  end
+
+  defp booking(user, start_time, title) do
+    insert(:meeting,
+      organizer_user_id: user.id,
+      title: title,
+      start_time: start_time,
+      end_time: DateTime.add(start_time, 30, :minute)
+    )
   end
 end

@@ -27,6 +27,10 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   # can complain about has no home in the form and becomes a flash instead.
   @form_fields [:starts_on, :ends_on, :start_time, :end_time, :label]
 
+  # The fields that decide which bookings the period swallows. The note does
+  # not, so typing one must not send the overlap query off again.
+  @schedule_fields [:starts_on, :ends_on, :start_time, :end_time]
+
   @impl Phoenix.LiveComponent
   @spec mount(Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def mount(socket) do
@@ -149,8 +153,8 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
 
   defp save(socket, %{mode: :edit, id: id} = data, attrs) do
     with {:ok, period} <- TimeOff.fetch(profile_id(socket), id),
-         {:ok, _updated} <- TimeOff.update(period, attrs) do
-      saved(socket, dgettext("dashboard_availability", "Time off updated"))
+         {:ok, updated} <- TimeOff.update(period, attrs) do
+      saved(socket, updated, dgettext("dashboard_availability", "Time off updated"))
     else
       {:error, reason} -> save_failed(socket, reason, data, attrs)
     end
@@ -158,17 +162,41 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
 
   defp save(socket, data, attrs) do
     case TimeOff.create(profile_id(socket), attrs) do
-      {:ok, _period} -> saved(socket, dgettext("dashboard_availability", "Time off added"))
-      {:error, reason} -> save_failed(socket, reason, data, attrs)
+      {:ok, period} ->
+        saved(socket, period, dgettext("dashboard_availability", "Time off added"))
+
+      {:error, reason} ->
+        save_failed(socket, reason, data, attrs)
     end
   end
 
-  defp saved(socket, message) do
+  defp saved(socket, period, message) do
     Flash.info(message)
+    warn_about_bookings(TimeOff.conflicting_meetings(period))
 
     socket
     |> ModalHook.hide_modal(:time_off_form)
     |> load_periods()
+  end
+
+  # Said again on the way out, as a warning beside the confirmation, for the
+  # host who saved without reading the panel in the form. The period is saved
+  # either way: what is in the way is theirs to move, and a save that cancelled
+  # meetings on their behalf would be far worse than one that said nothing.
+  defp warn_about_bookings([]), do: :ok
+
+  defp warn_about_bookings(meetings) do
+    count = length(meetings)
+
+    Flash.warning(
+      dngettext(
+        "dashboard_availability",
+        "1 booking sits inside this time off. It stays in your diary until you move or cancel it.",
+        "%{count} bookings sit inside this time off. They stay in your diary until you move or cancel them.",
+        count,
+        count: count
+      )
+    )
   end
 
   # The form stays open carrying what was typed, with the changeset's messages
@@ -223,20 +251,37 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   # Only fields that hold a value report while the form is being filled in: a
   # last day not chosen yet is not an error until the form is submitted.
   #
-  # Validation runs on every change, so it reads nothing from the database: the
-  # period being edited was loaded when the form opened, and today comes from
-  # the profile already assigned. Saving re-reads both.
+  # The rules themselves read nothing from the database: the period being
+  # edited was loaded when the form opened, and today comes from the profile
+  # already assigned. Saving re-reads both. Only the overlap panel below costs
+  # a query, and only when a date or a time has moved.
   defp validated_data(socket, data, attrs) do
-    errors =
+    changeset =
       data
       |> validation_target(socket)
       |> TimeOff.validate(attrs, today: TimeOff.today(socket.assigns.profile.timezone))
+
+    errors =
+      changeset
       |> form_errors()
       |> Map.reject(fn {field, _message} -> Map.fetch!(attrs, field) == "" end)
 
     data
     |> Map.merge(attrs)
     |> Map.put(:errors, errors)
+    |> Map.put(:conflicts, conflicts(data, attrs, changeset))
+  end
+
+  # The bookings already inside the period, so the modal can name them while
+  # the dates are still being chosen rather than only once the row is written.
+  # Reading them is a query, so it runs only when a date or a time actually
+  # moved: every other change leaves the answer as it was.
+  defp conflicts(data, attrs, changeset) do
+    if Map.take(data, @schedule_fields) == Map.take(attrs, @schedule_fields) do
+      Map.get(data, :conflicts, [])
+    else
+      TimeOff.conflicting_meetings(changeset)
+    end
   end
 
   defp validation_target(%{mode: :edit, period: period}, _socket), do: period
@@ -281,17 +326,22 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
       mode: :create,
       id: nil,
       errors: %{},
+      conflicts: [],
       min_starts_on: Date.to_iso8601(today),
       min_ends_on: Date.to_iso8601(today)
     })
   end
 
+  # A stored period is read for overlaps as the form opens: an edit is the
+  # likelier way to swallow a booking, because the row is one the host already
+  # trusts, and the panel has to be there before anything is changed.
   defp edit_data(period, today) do
     %{
       mode: :edit,
       id: period.id,
       period: period,
       errors: %{},
+      conflicts: TimeOff.conflicting_meetings(period),
       min_starts_on: earliest_iso8601(period.starts_on, today),
       min_ends_on: earliest_iso8601(period.ends_on, today),
       starts_on: Date.to_iso8601(period.starts_on),
@@ -424,6 +474,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
         show={@show_time_off_form_modal}
         period_data={@time_off_form_modal_data}
         time_format={@time_format}
+        timezone={@profile.timezone}
         on_cancel={JS.push("hide_time_off_form", target: @myself)}
         myself={@myself}
       />
