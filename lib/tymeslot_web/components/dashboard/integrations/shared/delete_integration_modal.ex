@@ -28,21 +28,27 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
 
   @impl Phoenix.LiveComponent
   def handle_event("show", %{"id" => id}, socket) do
-    case parse_integration_id(id) do
-      {:ok, integration_id} ->
-        {:noreply,
-         socket
-         |> assign(:show, true)
-         |> assign(:integration_id, integration_id)
-         |> assign(:delete_rooms, false)
-         |> assign(
-           :affected_bookings,
-           count_affected(
-             socket.assigns.integration_type,
-             socket.assigns.current_user.id,
-             integration_id
-           )
-         )}
+    type = socket.assigns.integration_type
+    user_id = socket.assigns.current_user.id
+
+    with {:ok, integration_id} <- parse_integration_id(id),
+         :ok <- authorise(type, user_id, integration_id) do
+      {:noreply,
+       socket
+       |> assign(:show, true)
+       |> assign(:integration_id, integration_id)
+       |> assign(:delete_rooms, false)
+       |> assign(:affected_bookings, count_affected(type, user_id, integration_id))}
+    else
+      {:error, :not_found} ->
+        Flash.error(
+          dgettext(
+            "dashboard_integrations",
+            "Integration not found. It may have already been deleted."
+          )
+        )
+
+        {:noreply, socket}
 
       {:error, _reason} ->
         Flash.error(dgettext("dashboard_integrations", "Invalid integration ID"))
@@ -233,10 +239,39 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
 
   # Private helper functions
 
+  # The id arrives on a client-pushed event, so the dialog only opens for an
+  # integration the current user actually owns: a forged or stale id is
+  # reported as missing rather than confirming the removal of a ghost.
+  #
+  # The two contexts take their arguments in opposite orders, and both guard on
+  # `is_integer/1` for each, so a swap would compile and silently look up the
+  # wrong row. They are spelled out here rather than piped for that reason.
+  defp authorise(:calendar, user_id, integration_id) do
+    case Calendar.get_integration(integration_id, user_id) do
+      {:ok, _integration} -> :ok
+      {:error, :not_found} -> {:error, :not_found}
+    end
+  end
+
+  defp authorise(:video, user_id, integration_id) do
+    case Video.get_integration(user_id, integration_id) do
+      {:ok, _integration} ->
+        :ok
+
+      # Credentials that no longer decrypt still belong to this user, and
+      # deleting the integration is how they recover, so the dialog opens.
+      {:error, :requires_reencryption, _integration} ->
+        :ok
+
+      {:error, :not_found} ->
+        {:error, :not_found}
+    end
+  end
+
   # Only video integrations own provider-side rooms; calendar disconnect has no
   # equivalent cleanup, so it never asks the question.
-  # The id comes from the client, so the count is scoped to the current user's
-  # own integrations: a forged id reads as 0.
+  # The count is scoped to the current user's own integrations, which by this
+  # point `authorise/3` has already confirmed the id belongs to.
   defp count_affected(:video, user_id, integration_id),
     do: Video.count_upcoming_rooms(user_id, integration_id)
 

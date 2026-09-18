@@ -46,9 +46,16 @@ defmodule Tymeslot.Integrations.Video do
 
   @doc """
   Gets a single video integration by ID for a specific user.
+
+  Returns `{:error, :requires_reencryption, integration}` for an owned
+  integration whose credentials no longer decrypt; the row is real and the
+  caller decides what to do with it. Callers that only want the two-outcome
+  shape should use `fetch_integration_for_user/2` instead.
   """
   @spec get_integration(pos_integer(), pos_integer()) ::
-          {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
+          {:ok, VideoIntegrationSchema.t()}
+          | {:error, :not_found}
+          | {:error, :requires_reencryption, VideoIntegrationSchema.t()}
   def get_integration(user_id, id) when is_integer(user_id) and is_integer(id) do
     VideoIntegrationQueries.get_for_user(id, user_id)
   end
