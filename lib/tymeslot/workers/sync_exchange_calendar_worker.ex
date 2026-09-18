@@ -407,22 +407,16 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   # whole window. It is not a general "this sync succeeded" marker here:
   # `ItemCache.full_sync_stale?/1` reads it back to decide when the next full
   # read is due, so an incremental cycle that stamped it would keep resetting
-  # the very clock it is measured against. `last_sync_at` and
-  # `last_external_sync_at` are the per-cycle markers, and the sweep's own
-  # Exchange cadence reads the latter.
+  # the very clock it is measured against. `last_external_sync_at` is the
+  # per-cycle marker, and the sweep's own Exchange cadence reads it.
+  #
+  # Clearing `sync_error` and `needs_reauth` is not done here: it belongs to
+  # every provider's successful cycle alike, so `SyncHealth.record_outcome/2`
+  # owns it at the job boundary.
   defp mark_synced(integration, count, item_read) do
     now = DateTime.utc_now(:second)
 
-    attrs =
-      Map.merge(
-        %{
-          last_sync_at: now,
-          last_external_sync_at: now,
-          sync_error: nil,
-          needs_reauth: false
-        },
-        full_read_stamp(item_read, now)
-      )
+    attrs = Map.merge(%{last_external_sync_at: now}, full_read_stamp(item_read, now))
 
     case CalendarIntegrationQueries.update_sync_state(integration, attrs) do
       {:ok, _updated} ->

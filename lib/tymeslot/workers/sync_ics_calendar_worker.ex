@@ -158,19 +158,16 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
     error -> record_failure(integration, error)
   end
 
-  # Stamps its own timestamps rather than going through
-  # `CalendarIntegrationQueries.mark_sync_success/1`: every real sync worker
-  # does the same, and a feed refresh is always a full one, so
-  # `last_full_sync_at` moves with the rest.
+  # A feed refresh is always a full one, so `last_full_sync_at` moves with the
+  # per-cycle marker rather than lagging behind it. Clearing `sync_error` and
+  # `needs_reauth` belongs to every provider's successful cycle alike, so
+  # `SyncHealth.record_outcome/2` owns that at the job boundary.
   defp mark_synced(integration, count) do
     now = DateTime.utc_now(:second)
 
     attrs = %{
-      last_sync_at: now,
       last_external_sync_at: now,
-      last_full_sync_at: now,
-      sync_error: nil,
-      needs_reauth: false
+      last_full_sync_at: now
     }
 
     case CalendarIntegrationQueries.update_sync_state(integration, attrs) do

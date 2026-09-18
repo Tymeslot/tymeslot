@@ -598,9 +598,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   defp feed_segment,
     do: dgettext("dashboard_calendar_settings", "read-only, blocks time but takes no bookings")
 
-  # `last_external_sync_at` is what every sync worker actually stamps, and what
-  # the staleness banner reads. `last_sync_at` is written by nothing, so reading
-  # it here silently dropped this segment for every integration.
+  # `last_external_sync_at` is what every sync worker stamps and what the
+  # staleness banner reads. This used to read a second, never-written column
+  # instead, which silently dropped the segment for every integration; that
+  # column has since been dropped so the mistake cannot be made again.
   defp sync_segment(%{last_external_sync_at: %DateTime{} = synced_at}),
     do:
       dgettext("dashboard_calendar_settings", "synced %{time}",

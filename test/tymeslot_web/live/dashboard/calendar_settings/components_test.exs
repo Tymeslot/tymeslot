@@ -510,7 +510,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
         provider: "caldav",
         provider_account_email: nil,
         is_active: false,
-        last_sync_at: nil,
         default_booking_calendar_id: nil,
         calendar_list: []
       },
