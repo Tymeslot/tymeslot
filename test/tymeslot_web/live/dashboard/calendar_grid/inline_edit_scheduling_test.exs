@@ -87,7 +87,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditSchedulingTest do
       all_day_event: event
     } do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#allday-event-#{event.id}") |> render_click()
+      lv |> element("[id^='allday-event-#{event.id}-']") |> render_click()
 
       html =
         lv

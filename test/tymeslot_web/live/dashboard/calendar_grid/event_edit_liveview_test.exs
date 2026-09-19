@@ -150,7 +150,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventEditLiveViewTest do
       expect_provider_update(:ok)
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#allday-event-#{event.id}") |> render_click()
+      lv |> element("[id^='allday-event-#{event.id}-']") |> render_click()
 
       lv
       |> element("form[phx-submit=add_event_attendee]")
