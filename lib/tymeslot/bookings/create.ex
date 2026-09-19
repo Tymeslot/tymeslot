@@ -21,6 +21,7 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.CustomFields
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Locales
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.Scheduling
@@ -209,7 +210,8 @@ defmodule Tymeslot.Bookings.Create do
 
       user_id ->
         # Meeting type active check
-        with :ok <- validate_meeting_type_active(booking_data) do
+        with :ok <- validate_meeting_type_active(booking_data),
+             :ok <- validate_payments_available(booking_data, user_id) do
           config = scheduling_config(booking_data)
 
           # Time window validation
@@ -257,6 +259,21 @@ defmodule Tymeslot.Bookings.Create do
       config,
       booking_data.organizer_user_id
     )
+  end
+
+  # A paid meeting type outlives its host's Stripe connection: the price is
+  # kept so it resumes when they reconnect, rather than being cleared behind
+  # their back. Refusing here is what stops the booking being taken anyway:
+  # without it the meeting was created in `awaiting_payment`, `CheckoutSessions`
+  # then refused for want of a charges-enabled account, and the booker was left
+  # with the same message on top of a half-made booking that had to expire.
+  defp validate_payments_available(booking_data, user_id) do
+    if paid_meeting_type?(booking_data) and
+         not MeetingPayments.charges_enabled_for_user?(user_id) do
+      {:error, :payments_unavailable}
+    else
+      :ok
+    end
   end
 
   # Fast pre-check with a friendly error before any side-effect setup. The

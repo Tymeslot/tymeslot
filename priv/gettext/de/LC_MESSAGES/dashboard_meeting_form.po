@@ -878,3 +878,8 @@ msgid "You can configure up to %{count} reminder"
 msgid_plural "You can configure up to %{count} reminders"
 msgstr[0] "Sie können bis zu %{count} Erinnerung konfigurieren"
 msgstr[1] "Sie können bis zu %{count} Erinnerungen konfigurieren"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
+#, elixir-autogen, elixir-format
+msgid "The price of %{amount} is kept and applies again once Stripe is connected."
+msgstr "Der Preis von %{amount} bleibt erhalten und gilt wieder, sobald Stripe verbunden ist."

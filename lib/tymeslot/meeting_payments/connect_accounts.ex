@@ -83,6 +83,19 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   already expired/completed) we log and continue — the meeting and booking_payment
   are cancelled locally regardless, so the attendee cannot complete the booking
   even if the Stripe session is still technically open.
+
+  ## Paid meeting types are left alone
+
+  Deliberately: `payment_required` and `price_cents` survive a disconnect so a
+  host who reconnects gets their prices back instead of re-entering every one.
+  The form no longer clears them by omission
+  (`Tymeslot.MeetingTypes.FormMapper.build_attrs/2`), the changeset no longer
+  fails unrelated saves over the stored flag
+  (`MeetingTypeSchema.validate_payment_fields/2`), and `Bookings.Create`
+  refuses a paid booking outright while charges are off, so nothing is taken
+  in the meantime. Clearing them here, as `MeetingPayments.change_default_currency/2`
+  does for a currency change, would destroy that state for the far more common
+  case of a temporary disconnect.
   """
   @spec disconnect(user :: %{id: integer()}) ::
           {:ok,
