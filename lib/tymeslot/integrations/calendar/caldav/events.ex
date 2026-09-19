@@ -468,10 +468,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   # server path and is required when the event lives on a calendar other than
   # the one supplied in `calendar_path`. Fall back to UID-based URL
   # construction for Tymeslot-created events that have not yet been synced.
+  #
+  # `resolve_href/2` is the same resolution the fallback below uses, which is
+  # the point: an href is server-root-relative, so it resolves against the
+  # origin of `base_url` rather than against a `base_url` that may already
+  # carry the CalDAV path.
   defp resolve_event_url(client, _calendar_path, _uid, href)
        when is_binary(href) and href != "" do
-    base = String.trim_trailing(client.base_url, "/")
-    if String.starts_with?(href, "http"), do: href, else: "#{base}#{href}"
+    UrlBuilder.resolve_href(client.base_url, href)
   end
 
   defp resolve_event_url(client, calendar_path, uid, _missing),

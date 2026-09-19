@@ -127,4 +127,47 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.UrlBuilderTest do
              ) == "https://caldav.icloud.com/"
     end
   end
+
+  describe "resolve_href/2 — server-supplied hrefs" do
+    # A CalDAV href is server-root-relative, so it resolves against the origin
+    # of `base_url`, never against the whole of it. `base_url` may already
+    # carry the CalDAV path — a Nextcloud subpath install, or a DAV URL pasted
+    # from Nextcloud's own settings — and concatenating the two doubled that
+    # path into a URL the server answers with 404. Because a CalDAV DELETE
+    # counts 404 as success, the delete of a just-created event reported
+    # success without deleting anything.
+    @href "/remote.php/dav/calendars/alice/personal/abc-123.ics"
+
+    test "a base_url carrying a path does not double it" do
+      assert UrlBuilder.resolve_href("https://cloud.example.com/remote.php/dav", @href) ==
+               "https://cloud.example.com#{@href}"
+    end
+
+    test "resolves identically whether or not base_url carries the path" do
+      assert UrlBuilder.resolve_href("https://cloud.example.com/remote.php/dav", @href) ==
+               UrlBuilder.resolve_href("https://cloud.example.com", @href)
+    end
+
+    test "a deeper subpath install does not double either" do
+      assert UrlBuilder.resolve_href("https://host.example.com/nextcloud/remote.php/dav", @href) ==
+               "https://host.example.com#{@href}"
+    end
+
+    test "keeps a non-default port" do
+      assert UrlBuilder.resolve_href("https://cloud.example.com:8443/dav", @href) ==
+               "https://cloud.example.com:8443#{@href}"
+    end
+
+    test "pins an absolute href to the validated host" do
+      assert UrlBuilder.resolve_href(
+               "https://cloud.example.com/remote.php/dav",
+               "https://p110-caldav.icloud.com/123/calendars/home/x.ics"
+             ) == "https://cloud.example.com/123/calendars/home/x.ics"
+    end
+
+    test "appends a relative href to base_url" do
+      assert UrlBuilder.resolve_href("https://cloud.example.com/remote.php/dav", "personal/x.ics") ==
+               "https://cloud.example.com/remote.php/dav/personal/x.ics"
+    end
+  end
 end
