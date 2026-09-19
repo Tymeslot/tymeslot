@@ -232,6 +232,28 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
                Repo.all(VideoIntegrationSchema)
     end
 
+    test "stores a custom video link exactly as the organiser typed it", %{conn: conn} do
+      # Every segment here used to be rewritten on the way to the database:
+      # `team--sync` was truncated at the double hyphen, `0xdeadbeef` was
+      # dropped as a hex literal, and `%23` was decoded into a fragment. Each
+      # save still succeeded, so every booking got a link to a different room.
+      url = "https://meet.jit.si/team--sync/0xdeadbeef/room%23a"
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='custom']")
+      |> render_click()
+
+      view
+      |> form("#custom-video-config-modal form", %{
+        "integration" => %{"name" => "Team Room", "custom_meeting_url" => url}
+      })
+      |> render_submit()
+
+      assert [%{custom_meeting_url: ^url}] = Repo.all(VideoIntegrationSchema)
+    end
+
     test "initiates google meet oauth", %{conn: conn} do
       expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _uid, _uri, _scopes, _opts ->
         "https://accounts.google.com/o/oauth2/v2/auth"

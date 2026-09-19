@@ -172,7 +172,19 @@ defmodule Tymeslot.Integrations.Video.InputValidationTest do
       assert message == "Use double curly brackets: {{meeting_id}} not {meeting_id}"
     end
 
-    test "refuses an angle-bracket placeholder before sanitising strips it" do
+    test "refuses a percent-encoded placeholder that is otherwise written correctly" do
+      # Room creation substitutes the literal {{meeting_id}}, so the escaped
+      # form would never be replaced and every booking would share one room.
+      assert {:error, %{custom_meeting_url: message}} =
+               InputValidation.validate_video_integration_form(
+                 custom_params("https://meet.jit.si/%7B%7Bmeeting_id%7D%7D")
+               )
+
+      assert message ==
+               "Write {{meeting_id}} with plain brackets: percent-encoded ones are never replaced"
+    end
+
+    test "refuses an angle-bracket placeholder" do
       assert {:error, %{custom_meeting_url: message}} =
                InputValidation.validate_video_integration_form(
                  custom_params("https://meet.jit.si/<meeting_id>")
@@ -204,14 +216,12 @@ defmodule Tymeslot.Integrations.Video.InputValidationTest do
                InputValidation.validate_video_integration_form(custom_params(url))
     end
 
-    test "accepts a permanent Teams link whose context decodes to braces" do
+    test "accepts a permanent Teams link and stores it exactly as typed" do
       url =
         "https://teams.microsoft.com/l/meetup-join/19%3ameeting_NjU4YTQ%40thread.v2/0?context=%7b%22Tid%22%3a%2272f988bf%22%2c%22Oid%22%3a%22a1b2c3d4%22%7d"
 
-      assert {:ok, %{"custom_meeting_url" => sanitized}} =
+      assert {:ok, %{"custom_meeting_url" => ^url}} =
                InputValidation.validate_video_integration_form(custom_params(url))
-
-      assert sanitized =~ ~s(context={"Tid":"72f988bf","Oid":"a1b2c3d4"})
     end
 
     test "validate_single_field/3 refuses the same malformed placeholder" do
@@ -219,6 +229,61 @@ defmodule Tymeslot.Integrations.Video.InputValidationTest do
                :custom_meeting_url,
                "https://meet.jit.si/{meeting_id}"
              ) == {:error, "Use double curly brackets: {{meeting_id}} not {meeting_id}"}
+    end
+  end
+
+  describe "validate_video_integration_form/2 - URLs are stored as typed" do
+    defp custom_url(url),
+      do: %{"provider" => "custom", "name" => "My Video Tool", "custom_meeting_url" => url}
+
+    defp mirotalk_url(url),
+      do: %{
+        "provider" => "mirotalk",
+        "name" => "Team Meetings",
+        "api_key" => "a-very-long-api-key-12345",
+        "base_url" => url
+      }
+
+    test "keeps a double hyphen in a custom meeting URL" do
+      url = "https://meet.example.com/team--sync"
+
+      assert {:ok, %{"custom_meeting_url" => ^url}} =
+               InputValidation.validate_video_integration_form(custom_url(url))
+    end
+
+    test "keeps a percent-encoded hash in a custom meeting URL" do
+      url = "https://meet.example.com/room%23a"
+
+      assert {:ok, %{"custom_meeting_url" => ^url}} =
+               InputValidation.validate_video_integration_form(custom_url(url))
+    end
+
+    test "keeps a hex-looking path segment in a custom meeting URL" do
+      url = "https://meet.example.com/0xdeadbeef-room"
+
+      assert {:ok, %{"custom_meeting_url" => ^url}} =
+               InputValidation.validate_video_integration_form(custom_url(url))
+    end
+
+    test "keeps a template URL whose room name also contains a double hyphen" do
+      url = "https://meet.example.com/team--sync/{{meeting_id}}"
+
+      assert {:ok, %{"custom_meeting_url" => ^url}} =
+               InputValidation.validate_video_integration_form(custom_url(url))
+    end
+
+    test "keeps a double hyphen in a MiroTalk base URL" do
+      url = "https://meet--eu.example.com/api"
+
+      assert {:ok, %{"base_url" => ^url}} =
+               InputValidation.validate_video_integration_form(mirotalk_url(url))
+    end
+
+    test "keeps a hex-looking path segment in a MiroTalk base URL" do
+      url = "https://meet.example.com/0xdeadbeef"
+
+      assert {:ok, %{"base_url" => ^url}} =
+               InputValidation.validate_video_integration_form(mirotalk_url(url))
     end
   end
 

@@ -45,6 +45,39 @@ defmodule Tymeslot.Integrations.Calendar.InputValidationTest do
     end
   end
 
+  describe "validate_calendar_integration_form/1 - server URL stored as typed" do
+    test "preserves a path segment containing a double hyphen" do
+      url = "https://p01-caldav.icloud.com/published/2/abc--def--123"
+      params = Map.put(@valid_params, "url", url)
+
+      assert {:ok, result} = InputValidation.validate_calendar_integration_form(params)
+      assert result["url"] == url
+    end
+
+    test "preserves a percent-encoded address in the path" do
+      url = "https://caldav.example.com/dav/user%40example.com/calendar/"
+      params = Map.put(@valid_params, "url", url)
+
+      assert {:ok, result} = InputValidation.validate_calendar_integration_form(params)
+      assert result["url"] == url
+    end
+
+    test "preserves a hex-looking path segment" do
+      url = "https://caldav.example.com/dav/0xdeadbeef/"
+      params = Map.put(@valid_params, "url", url)
+
+      assert {:ok, result} = InputValidation.validate_calendar_integration_form(params)
+      assert result["url"] == url
+    end
+
+    test "rejects rather than rewrites a server URL containing a newline" do
+      params = Map.put(@valid_params, "url", "https://caldav.example.com/dav\nHost: elsewhere")
+
+      assert {:error, %{url: _error}} =
+               InputValidation.validate_calendar_integration_form(params)
+    end
+  end
+
   describe "validate_calendar_integration_form/1 - password validation" do
     test "rejects nil password" do
       params = Map.put(@valid_params, "password", nil)

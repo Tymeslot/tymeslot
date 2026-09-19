@@ -96,5 +96,64 @@ defmodule Tymeslot.Integrations.Shared.InputValidatorsTest do
                  validate_url_fn: always_fail
                )
     end
+
+    test "falls back to the HTTP/HTTPS allow-list when no validate_url_fn is given" do
+      # 2000 characters is `UrlValidation`'s own limit, so a longer URL only
+      # fails if the default really does run that check.
+      long_url = "https://example.com/" <> String.duplicate("a", 2_000)
+
+      assert {:error, message} = InputValidators.validate_server_url(long_url, %{})
+      assert message =~ "2000 characters"
+    end
+  end
+
+  describe "validate_server_url/3 stores the URL as typed" do
+    test "keeps a path segment containing a double hyphen" do
+      url = "https://meet.example.com/team--sync"
+      assert {:ok, ^url} = InputValidators.validate_server_url(url, %{})
+    end
+
+    test "keeps a percent-encoded hash rather than decoding it into a fragment" do
+      url = "https://meet.example.com/room%23a"
+      assert {:ok, ^url} = InputValidators.validate_server_url(url, %{})
+    end
+
+    test "keeps a path segment that reads as a hex literal" do
+      url = "https://meet.example.com/0xdeadbeef-room"
+      assert {:ok, ^url} = InputValidators.validate_server_url(url, %{})
+    end
+
+    test "keeps percent-encoded slashes, question marks and percent signs" do
+      url = "https://meet.example.com/a%2Fb%3Fc?token=100%25"
+      assert {:ok, ^url} = InputValidators.validate_server_url(url, %{})
+    end
+
+    test "keeps a relative-looking path segment" do
+      url = "https://meet.example.com/../rooms/standup"
+      assert {:ok, ^url} = InputValidators.validate_server_url(url, %{})
+    end
+
+    test "refuses rather than rewrites a URL containing a newline" do
+      assert {:error, _msg} =
+               InputValidators.validate_server_url(
+                 "https://meet.example.com/room\nHost: elsewhere.example",
+                 %{}
+               )
+    end
+
+    test "refuses a URL containing an inner space" do
+      assert {:error, _msg} =
+               InputValidators.validate_server_url("https://meet.example.com/my room", %{})
+    end
+
+    test "refuses a URL containing an invisible character" do
+      assert {:error, _msg} =
+               InputValidators.validate_server_url("https://meet.exa​mple.com/room", %{})
+    end
+
+    test "still strips null bytes, which PostgreSQL rejects" do
+      assert {:ok, "https://meet.example.com/room"} =
+               InputValidators.validate_server_url("https://meet.example.com/ro\x00om", %{})
+    end
   end
 end
