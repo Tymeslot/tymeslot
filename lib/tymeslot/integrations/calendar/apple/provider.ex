@@ -188,15 +188,18 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
   # Private helpers
 
   defp validate_apple_url(url) do
+    invalid_message =
+      dgettext(
+        "dashboard_calendar_providers",
+        "Invalid Apple iCloud URL. The server must be https://caldav.icloud.com."
+      )
+
     UrlValidation.validate_http_url(url,
       enforce_https_for_public: true,
       https_error_message:
         dgettext("dashboard_calendar_providers", "Apple iCloud requires HTTPS"),
-      invalid_message:
-        dgettext(
-          "dashboard_calendar_providers",
-          "Invalid Apple iCloud URL. The server must be https://caldav.icloud.com."
-        )
+      invalid_message: invalid_message,
+      disallowed_protocol_error: invalid_message
     )
   end
 

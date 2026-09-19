@@ -176,15 +176,18 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
   # Private helper functions
 
   defp validate_zimbra_url(url) do
+    invalid_message =
+      dgettext(
+        "dashboard_calendar_providers",
+        "Invalid Zimbra URL. Should be your Zimbra server URL (e.g., https://mail.example.com) or full CalDAV URL (e.g., https://mail.example.com/dav/user@example.com)"
+      )
+
     case UrlValidation.validate_http_url(url,
            enforce_https_for_public: true,
            https_error_message:
              dgettext("dashboard_calendar_providers", "Use HTTPS for non-local Zimbra servers"),
-           invalid_message:
-             dgettext(
-               "dashboard_calendar_providers",
-               "Invalid Zimbra URL. Should be your Zimbra server URL (e.g., https://mail.example.com) or full CalDAV URL (e.g., https://mail.example.com/dav/user@example.com)"
-             )
+           invalid_message: invalid_message,
+           disallowed_protocol_error: invalid_message
          ) do
       :ok -> :ok
       {:error, message} -> {:error, message}
