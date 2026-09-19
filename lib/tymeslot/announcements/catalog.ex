@@ -50,6 +50,9 @@ defmodule Tymeslot.Announcements.Catalog do
   @booking_page_text_published_at ~U[2026-09-02 00:00:00Z]
   @booking_page_text_expires_at ~U[2026-10-02 00:00:00Z]
 
+  @time_off_published_at ~U[2026-09-19 00:00:00Z]
+  @time_off_expires_at ~U[2026-10-19 00:00:00Z]
+
   @spec list() :: [Announcement.t()]
   def list do
     # One builder per announcement keeps this ordered list trivial and each
@@ -57,6 +60,7 @@ defmodule Tymeslot.Announcements.Catalog do
     # last — add smaller improvements to its bullets rather than spawning new
     # entries.
     [
+      time_off(),
       booking_approval(),
       booking_page_text(),
       availability_schedules(),
@@ -71,6 +75,26 @@ defmodule Tymeslot.Announcements.Catalog do
       zoom_integration(),
       more_features()
     ]
+  end
+
+  defp time_off do
+    %Announcement{
+      key: "time_off",
+      title: dgettext("onboarding", "Close the days you are away"),
+      body:
+        dgettext(
+          "onboarding",
+          "Add a holiday on the availability page and those days stop being offered, across " <>
+            "every schedule and every meeting type, without a blocking event in any calendar " <>
+            "you have connected. Give the first and last day a time when you leave mid-" <>
+            "afternoon or come back mid-morning. Bookings already in your diary keep their " <>
+            "times, and you are shown which ones before you save. Nobody booking you sees why " <>
+            "the days are closed."
+        ),
+      image_path: "/images/announcements/time-off.svg",
+      published_at: @time_off_published_at,
+      expires_at: @time_off_expires_at
+    }
   end
 
   defp booking_approval do
