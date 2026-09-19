@@ -165,6 +165,7 @@ msgstr "REJOINDRE LA VISIOCONFÉRENCE :"
 #: lib/tymeslot/emails/shared/meeting/video_section.ex
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Join Meeting"
 msgstr "Rejoindre la réunion"
@@ -1541,16 +1542,20 @@ msgid "%{booker} has invited you as a guest to this meeting with %{organizer}."
 msgstr "%{booker} vous convie en tant qu’invité(e) à cette réunion avec %{organizer}."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Can't make it"
 msgstr "Je ne pourrai pas venir"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Can't make it: %{url}"
 msgstr "Je ne pourrai pas venir : %{url}"
 
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{guest},"
 msgstr "Bonjour %{guest},"
@@ -1566,11 +1571,13 @@ msgid "Will you be there?"
 msgstr "Serez-vous présent(e) ?"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Yes, I'll attend"
 msgstr "Oui, je serai présent(e)"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Yes, I'll attend: %{url}"
 msgstr "Oui, je serai présent(e) : %{url}"
@@ -2329,3 +2336,48 @@ msgstr "Remboursement en attente"
 #, elixir-autogen, elixir-format
 msgid "You still hold %{amount} for this booking."
 msgstr "Vous détenez encore %{amount} pour cette réservation."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to has been cancelled."
+msgstr "Bonjour %{guest} - le rendez-vous avec %{organizer} auquel %{booker} vous a invité(e) a été annulé."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to has been moved to a new time."
+msgstr "Bonjour %{guest} - le rendez-vous avec %{organizer} auquel %{booker} vous a invité(e) a été déplacé à un nouvel horaire."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting has moved."
+msgstr "Le rendez-vous a été déplacé."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting with %{organizer} that %{booker} invited you to has been cancelled."
+msgstr "Le rendez-vous avec %{organizer} auquel %{booker} vous a invité(e) a été annulé."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting with %{organizer} that %{booker} invited you to has been moved to a new time."
+msgstr "Le rendez-vous avec %{organizer} auquel %{booker} vous a invité(e) a été déplacé à un nouvel horaire."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "WILL YOU BE THERE AT THE NEW TIME?"
+msgstr "SEREZ-VOUS PRÉSENT(E) AU NOUVEL HORAIRE ?"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Will you be there at the new time?"
+msgstr "Serez-vous présent(e) au nouvel horaire ?"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "You don't need to do anything. If you added the meeting to your calendar, the attached file marks it as cancelled there."
+msgstr "Vous n’avez rien à faire. Si vous avez ajouté le rendez-vous à votre calendrier, le fichier joint le marque comme annulé."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Your earlier response applied to the previous time, so please let us know again."
+msgstr "Votre réponse précédente concernait l’ancien horaire, merci de nous répondre à nouveau."

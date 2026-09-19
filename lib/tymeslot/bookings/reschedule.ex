@@ -37,7 +37,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.Notifications.{Events, Orchestrator}
+  alias Tymeslot.Notifications.{Events, GuestNotifications, Orchestrator}
   alias Tymeslot.Repo
   alias Tymeslot.Utils.DateTimeUtils.Duration, as: UrlDuration
   alias Tymeslot.Workers.VideoSyncWorker
@@ -254,6 +254,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   # for that work rather than bolted on here.
   defp announce(%{status: "awaiting_approval"} = updated, _original) do
     cancel_stale_reminders(updated)
+    GuestNotifications.prepare_for_reapproval(updated)
 
     case Events.meeting_requested(updated) do
       {:ok, _result} ->

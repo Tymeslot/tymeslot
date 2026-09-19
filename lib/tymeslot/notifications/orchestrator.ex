@@ -10,7 +10,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Meetings.ApprovalJobs
-  alias Tymeslot.Notifications.{ContentBuilder, Recipients, SchedulingRules}
+  alias Tymeslot.Notifications.{ContentBuilder, GuestNotifications, Recipients, SchedulingRules}
   alias Tymeslot.Utils.ReminderUtils
 
   @doc """
@@ -213,7 +213,8 @@ defmodule Tymeslot.Notifications.Orchestrator do
   end
 
   @doc """
-  Sends reschedule notifications immediately.
+  Sends reschedule notifications immediately, to the host and the booker and
+  then to the booking's guests (`GuestNotifications.notify_rescheduled/2`).
   """
   @spec send_reschedule_notifications(%{atom() => term()}, %{atom() => term()}) ::
           {:ok, atom()} | {:error, term()}
@@ -224,7 +225,9 @@ defmodule Tymeslot.Notifications.Orchestrator do
     with :ok <- Recipients.validate_recipients(recipients),
          :ok <- ContentBuilder.validate_content(content) do
       # Send immediately via EmailService
-      send_reschedule_emails(content)
+      result = send_reschedule_emails(content)
+      GuestNotifications.notify_rescheduled(updated_meeting, content)
+      result
     end
   end
 
