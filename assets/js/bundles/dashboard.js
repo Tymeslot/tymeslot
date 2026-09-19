@@ -7,9 +7,16 @@
 
 import { initializeBundle } from "./bundle_utils"
 import { lazyHook } from "../dynamic_hooks"
+import { ServerUrlField } from "../hooks/server_url_field"
 
-// Define dashboard-specific hooks (all lazy-loaded to minimize initial bundle size)
+// Define dashboard-specific hooks (lazy-loaded to minimize initial bundle size,
+// except where a hook is too small for a separate request to pay for itself)
 const DashboardHooks = {
+  // Registered eagerly: it is a few lines, and it has to be in place before
+  // the first submit of an integration form rather than one request later.
+  // `lazyHook` also shares one hook object across every element carrying the
+  // hook, and the integration edit dialog renders two server URL fields.
+  ServerUrlField,
   AutoUpload: lazyHook("AutoUpload", () => import("../hooks/auto_upload")),
   EmbedPreview: lazyHook("EmbedPreview", () => import("../hooks/embed_preview")),
   MeetingTypeSortable: lazyHook("MeetingTypeSortable", () => import("../hooks/meeting_type_sortable")),

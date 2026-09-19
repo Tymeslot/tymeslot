@@ -148,6 +148,34 @@ defmodule Tymeslot.Integrations.Video.InputValidationTest do
       assert {:error, errors} = InputValidation.validate_video_integration_form(params)
       assert Map.has_key?(errors, :custom_meeting_url)
     end
+
+    test "tells someone who left the scheme off how to write the address" do
+      params = %{
+        "provider" => "custom",
+        "name" => "My Video Tool",
+        "custom_meeting_url" => "room"
+      }
+
+      assert {:error, %{custom_meeting_url: message}} =
+               InputValidation.validate_video_integration_form(params)
+
+      assert message ==
+               "Enter a full address starting with https://, for example https://meet.example.com"
+    end
+
+    test "points at the URL itself when the scheme is already there" do
+      params = %{
+        "provider" => "custom",
+        "name" => "My Video Tool",
+        "custom_meeting_url" => "https://room"
+      }
+
+      assert {:error, %{custom_meeting_url: message}} =
+               InputValidation.validate_video_integration_form(params)
+
+      assert message ==
+               "Please enter a valid meeting URL (e.g., https://meet.google.com/abc-defg-hij)"
+    end
   end
 
   describe "validate_video_integration_form/2 - custom meeting URL template syntax" do

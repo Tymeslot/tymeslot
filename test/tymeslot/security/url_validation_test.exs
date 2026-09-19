@@ -5,6 +5,7 @@ defmodule Tymeslot.Security.UrlValidationTest do
   alias Tymeslot.Security.UrlValidation
 
   @invalid_url_message "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)"
+  @missing_scheme_message "Enter a full address starting with https://, for example https://example.com"
 
   describe "validate_http_url/2" do
     test "accepts valid http and https URLs" do
@@ -21,12 +22,24 @@ defmodule Tymeslot.Security.UrlValidationTest do
       assert UrlValidation.validate_http_url("https:///path") == {:error, @invalid_url_message}
     end
 
-    test "rejects unsupported schemes with a scheme-specific error" do
-      assert {:error, "Only HTTP and HTTPS URLs are allowed"} =
+    test "rejects unsupported schemes by naming the correction" do
+      assert {:error, @missing_scheme_message} =
                UrlValidation.validate_http_url("ftp://example.com")
 
-      assert {:error, "Only HTTP and HTTPS URLs are allowed"} =
+      assert {:error, @missing_scheme_message} =
                UrlValidation.validate_http_url("javascript:alert(1)")
+    end
+
+    test "tells someone who typed a bare host how to write the address" do
+      assert {:error, @missing_scheme_message} =
+               UrlValidation.validate_http_url("cloud.example.com")
+    end
+
+    test "keeps the scheme rule for a disallowed protocol nested in an https URL" do
+      # "Start the address with https://" would be nonsense here: it already
+      # does. What is wrong is the `javascript:` inside it.
+      assert {:error, "Only HTTP and HTTPS URLs are allowed"} =
+               UrlValidation.validate_http_url("https://example.com/?next=javascript:alert(1)")
     end
 
     test "enforces max length when configured" do

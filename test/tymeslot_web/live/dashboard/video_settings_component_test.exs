@@ -111,6 +111,26 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       assert has_element?(view, "input[name='integration[base_url]']")
     end
 
+    test "the server URL field can accept an address typed without its scheme", %{conn: conn} do
+      # `type="url"` stays on the field, so the browser still blocks a submit
+      # and every other `required` in the form keeps its native check. The
+      # hook is what lets a bare `cloud.example.com` through, and what
+      # replaces "Please enter a URL" when the address is still wrong.
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='mirotalk']")
+      |> render_click()
+
+      assert has_element?(
+               view,
+               "input[name='integration[base_url]'][type='url'][phx-hook='ServerUrlField']"
+             )
+
+      assert render(view) =~
+               "Enter a full address starting with https://, for example https://cloud.example.com"
+    end
+
     test "adds a new mirotalk integration", %{conn: conn} do
       # Mock connection test for creation
       stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->

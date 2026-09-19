@@ -193,6 +193,33 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
       assert html =~ "alice"
       refute html =~ ~s(name="reconnect[password]" value="oldpass")
     end
+
+    test "the server URL field accepts an address typed without its scheme, as the video one does",
+         %{conn: conn, user: user} do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          name: "My CalDAV",
+          provider: "caldav",
+          base_url: "https://caldav.example.com",
+          username_encrypted: Encryption.encrypt("alice"),
+          password_encrypted: Encryption.encrypt("oldpass"),
+          is_active: true,
+          needs_reauth: true
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      html =
+        view
+        |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
+        |> render_click()
+
+      assert has_element?(view, "input#reconnect_url[type='url'][phx-hook='ServerUrlField']")
+
+      assert html =~
+               "Enter a full address starting with https://, for example https://cloud.example.com"
+    end
   end
 
   describe "CalDAV reconnect modal (Nextcloud app password guidance)" do

@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @doc """
@@ -111,6 +112,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
             )
           ]}
           placeholder={@placeholder}
+          {UIComponents.server_url_attrs()}
         />
       </div>
       <%= if FormValidationHelpers.field_errors(@form_errors, @error_key) != [] do %>

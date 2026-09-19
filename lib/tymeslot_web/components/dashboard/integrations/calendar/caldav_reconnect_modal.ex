@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents,
     as: SharedForm
 
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -250,6 +251,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
           required
           icon="hero-globe-alt"
           errors={FormValidationHelpers.field_errors(@form_errors, :url)}
+          {UIComponents.server_url_attrs()}
         />
       <% end %>
 

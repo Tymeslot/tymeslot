@@ -227,23 +227,12 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
 
   defp validate_meeting_url(meeting_url, metadata) when is_binary(meeting_url) do
     trimmed_url = String.trim(meeting_url)
-    has_protocol = String.starts_with?(trimmed_url, ["http://", "https://"])
-
-    invalid_meeting_url_error =
-      if has_protocol do
-        dgettext(
-          "dashboard_integrations",
-          "Please enter a valid meeting URL (e.g., https://meet.google.com/abc-defg-hij)"
-        )
-      else
-        http_https_only_message()
-      end
 
     # The template syntax is checked on the URL as typed, which is what gets
     # stored, and again on its percent-decoded reading.
     with {:ok, validated_url} <-
            InputValidators.validate_server_url(trimmed_url, metadata,
-             error_message: invalid_meeting_url_error,
+             error_message: invalid_meeting_url_error(trimmed_url),
              validate_url_fn: &validate_video_url/1
            ),
          :ok <- TemplateSyntax.validate(validated_url),
@@ -257,6 +246,28 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   defp validate_meeting_url(_other, _metadata) do
     {:error,
      %{custom_meeting_url: dgettext("dashboard_integrations", "Meeting URL must be text")}}
+  end
+
+  # A URL that already names http or https and is still refused failed on its
+  # own terms, so the message points at the URL. Anything else was given
+  # `https://` before it was checked (`InputValidators.normalize_url_protocol/1`),
+  # so what it was missing was the scheme: name the correction instead of the
+  # rule, which is all "Only HTTP and HTTPS URLs are allowed" ever did.
+  defp invalid_meeting_url_error("http://" <> _rest), do: malformed_meeting_url_message()
+  defp invalid_meeting_url_error("https://" <> _rest), do: malformed_meeting_url_message()
+
+  defp invalid_meeting_url_error(_scheme_less),
+    do:
+      dgettext(
+        "dashboard_integrations",
+        "Enter a full address starting with https://, for example https://meet.example.com"
+      )
+
+  defp malformed_meeting_url_message do
+    dgettext(
+      "dashboard_integrations",
+      "Please enter a valid meeting URL (e.g., https://meet.google.com/abc-defg-hij)"
+    )
   end
 
   # The URL is stored exactly as typed, and room creation substitutes the
