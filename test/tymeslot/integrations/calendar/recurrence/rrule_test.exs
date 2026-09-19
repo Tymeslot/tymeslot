@@ -341,4 +341,59 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRuleTest do
     )
     |> Enum.map(&(&1.start_time |> DateTime.shift_zone!(zone) |> DateTime.to_date()))
   end
+
+  describe "parse/2 — legacy UTC-stamped UNTIL" do
+    # Rules written before UNTIL carried the event's timezone stamped the
+    # organiser's local date with a literal end-of-day UTC. Read back through a
+    # timezone, that instant lands on the next local day everywhere east of
+    # UTC, silently extending the series — and an all-day toggle then rewrote
+    # the rule with the extension baked in.
+    for timezone <- [
+          "Europe/Tallinn",
+          "Asia/Kolkata",
+          "Pacific/Auckland",
+          "America/Los_Angeles",
+          "Europe/London",
+          "Etc/UTC"
+        ] do
+      test "reads as the date it spells in #{timezone}" do
+        parsed = RRule.parse("FREQ=DAILY;UNTIL=20261231T235959Z", timezone: unquote(timezone))
+
+        assert parsed[:until] == ~D[2026-12-31]
+      end
+
+      test "an all-day toggle in #{timezone} does not move the end date" do
+        assert {:ok, rule} =
+                 RRule.retarget("FREQ=DAILY;UNTIL=20261231T235959Z",
+                   all_day: true,
+                   timezone: unquote(timezone)
+                 )
+
+        assert rule == "FREQ=DAILY;UNTIL=20261231"
+      end
+    end
+
+    test "a rule this module writes still round-trips to the date it was built from" do
+      for timezone <- [
+            "America/Los_Angeles",
+            "Europe/Tallinn",
+            "Pacific/Auckland",
+            "Europe/London",
+            "Etc/UTC"
+          ] do
+        rule = RRule.build(%{freq: :daily, until: ~D[2026-12-31]}, timezone: timezone)
+
+        assert RRule.parse(rule, timezone: timezone)[:until] == ~D[2026-12-31],
+               "#{timezone} did not round-trip (#{rule})"
+      end
+    end
+
+    test "retarget is idempotent for a rule built in its own zone" do
+      rule = RRule.build(%{freq: :daily, until: ~D[2026-12-31]}, timezone: "Pacific/Auckland")
+
+      assert {:ok, once} = RRule.retarget(rule, all_day: false, timezone: "Pacific/Auckland")
+      assert {:ok, twice} = RRule.retarget(once, all_day: false, timezone: "Pacific/Auckland")
+      assert once == twice
+    end
+  end
 end

@@ -79,6 +79,10 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
   @end_of_day ~T[23:59:59]
   @utc "Etc/UTC"
 
+  # See `until_date/2`: an UNTIL ending in this is a local date stamped with
+  # end-of-day UTC, not an instant to be shifted into the event's timezone.
+  @legacy_utc_end_of_day "T235959Z"
+
   @doc """
   Builds an RFC-5545 RRULE string from the canonical option map.
 
@@ -337,10 +341,27 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
   # A DATE-TIME UNTIL is a UTC instant, so the date the organiser picked is the
   # one it falls on in the event's timezone. Anything else — a bare DATE, a
   # form this parser does not recognise — is read as the date it spells.
+  #
+  # `T235959Z` is the exception, and it is a legacy marker rather than an
+  # instant. Rules written before UNTIL carried the event's timezone stamped
+  # the organiser's local date with a literal end-of-day *UTC*, so reading one
+  # back through a timezone shifts it onto the next local day everywhere east
+  # of UTC — silently extending the series, and baking that extension in as
+  # soon as anything rewrites the rule. `Outlook.RecurrenceConverter` also
+  # builds this form from a Graph `endDate`, which is likewise a local date.
+  #
+  # The form is safe to special-case because it is never ambiguous: end-of-day
+  # in a zero-offset zone is the only case this module itself writes as
+  # `T235959Z`, and there the instant and the date it spells are the same day.
+  # Every other zone produces some other wall-clock time.
   defp until_date(value, timezone) do
-    case local_date_of_instant(value, timezone) do
-      {:ok, date} -> {:ok, date}
-      :error -> basic_date(value)
+    if String.ends_with?(value, @legacy_utc_end_of_day) do
+      basic_date(value)
+    else
+      case local_date_of_instant(value, timezone) do
+        {:ok, date} -> {:ok, date}
+        :error -> basic_date(value)
+      end
     end
   end
 
