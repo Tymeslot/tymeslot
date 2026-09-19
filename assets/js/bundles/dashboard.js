@@ -14,8 +14,6 @@ import { ServerUrlField } from "../hooks/server_url_field"
 const DashboardHooks = {
   // Registered eagerly: it is a few lines, and it has to be in place before
   // the first submit of an integration form rather than one request later.
-  // `lazyHook` also shares one hook object across every element carrying the
-  // hook, and the integration edit dialog renders two server URL fields.
   ServerUrlField,
   AutoUpload: lazyHook("AutoUpload", () => import("../hooks/auto_upload")),
   EmbedPreview: lazyHook("EmbedPreview", () => import("../hooks/embed_preview")),
