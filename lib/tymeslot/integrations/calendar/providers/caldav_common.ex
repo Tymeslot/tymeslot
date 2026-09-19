@@ -248,10 +248,14 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
       )
     end)
 
+    # De-duplicated on the pair that identifies a VEVENT, not on the UID alone:
+    # a recurring event's overrides share the master's UID by RFC 5545, so
+    # keying on the UID collapsed a whole series back to one event and undid
+    # the parser keeping them.
     events =
       successes
       |> Enum.flat_map(fn {_path, {:ok, evs}} -> evs end)
-      |> Enum.uniq_by(& &1.uid)
+      |> Enum.uniq_by(&{&1.uid, &1[:recurrence_id]})
 
     {:ok, events}
   end

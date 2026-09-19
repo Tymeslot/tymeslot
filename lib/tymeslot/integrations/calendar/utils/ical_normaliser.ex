@@ -39,10 +39,11 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
     now = DateTime.utc_now()
     range_start = DateTime.add(now, -@expansion_past_days, :day)
     range_end = DateTime.add(now, @expansion_future_days, :day)
+    overrides = index_overrides(raw_events)
 
     events =
       raw_events
-      |> Enum.flat_map(&expand_event(&1, range_start, range_end))
+      |> Enum.flat_map(&expand_event(&1, range_start, range_end, overrides))
       |> Enum.reduce([], fn raw, acc ->
         case build_calendar_event(raw, context, provider) do
           {:ok, event} ->
@@ -78,32 +79,78 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   # Recurrence expansion
   # ---------------------------------------------------------------------------
 
-  defp expand_event(raw, range_start, range_end) do
+  # A recurring event's CalDAV resource holds the master VEVENT plus one VEVENT
+  # per occurrence that has been edited on its own, each carrying a
+  # `RECURRENCE-ID` and no `RRULE`. They share the master's UID by RFC 5545, so
+  # the pair `{uid, occurrence}` is what tells them apart. Indexed here once so
+  # that expanding a master can skip the slots its overrides take over, rather
+  # than generating an occurrence at the original time beside the edited one.
+  defp index_overrides(raw_events) do
+    for raw <- raw_events,
+        override?(raw),
+        key = override_key(raw),
+        is_binary(key),
+        into: MapSet.new(),
+        do: {raw[:uid], key}
+  end
+
+  # A `RECURRENCE-ID` is what makes a VEVENT an override, whatever else it
+  # carries. An override is never expanded: even one written with
+  # `RANGE=THISANDFUTURE`, which replaces its occurrence and every later one,
+  # is applied to its own slot only — the wider reading needs the master's rule
+  # truncated as well and is not attempted here.
+  defp override?(raw), do: is_binary(raw[:recurrence_id]) and raw[:recurrence_id] != ""
+
+  defp override_key(raw), do: recurrence_id_suffix(raw[:recurrence_id], raw[:timezone])
+
+  defp expand_event(raw, range_start, range_end, overrides) do
     rrule = raw[:rrule] || raw[:recurrence_rule]
 
-    if rrule && rrule != "" do
-      timezone = raw[:timezone]
+    cond do
+      override?(raw) ->
+        # The override replaces the occurrence its `RECURRENCE-ID` names, so it
+        # is identified by that slot and not by its own `DTSTART`: an override
+        # that was itself rescheduled has a start that no longer matches the
+        # occurrence it stands in for, and suffixing from it would file the row
+        # beside that occurrence instead of over it. Its timing, summary and
+        # the rest still come from its own properties.
+        [Map.put(raw, :_uid_suffix, override_key(raw) || own_suffix(raw))]
 
-      expander_event = %{
-        start_time: in_event_zone(raw[:dtstart] || raw[:start_time], timezone),
-        end_time: in_event_zone(raw[:dtend] || raw[:end_time], timezone),
-        recurrence_rule: rrule
-      }
+      rrule && rrule != "" ->
+        expand_series(raw, rrule, range_start, range_end, overrides)
 
-      exdates = parse_exdates(raw[:exdate] || raw[:exdates] || [])
-
-      expander_event
-      |> RecurrenceExpander.expand(range_start, range_end, exdates: exdates)
-      |> Enum.map(fn occurrence ->
-        raw
-        |> Map.put(:_occ_start, occurrence.start_time)
-        |> Map.put(:_occ_end, occurrence.end_time)
-        |> Map.put(:_recurring, true)
-      end)
-    else
-      [raw]
+      true ->
+        [raw]
     end
   end
+
+  defp expand_series(raw, rrule, range_start, range_end, overrides) do
+    timezone = raw[:timezone]
+
+    expander_event = %{
+      start_time: in_event_zone(raw[:dtstart] || raw[:start_time], timezone),
+      end_time: in_event_zone(raw[:dtend] || raw[:end_time], timezone),
+      recurrence_rule: rrule
+    }
+
+    exdates = parse_exdates(raw[:exdate] || raw[:exdates] || [])
+
+    expander_event
+    |> RecurrenceExpander.expand(range_start, range_end, exdates: exdates)
+    |> Enum.map(&{&1, occurrence_suffix(&1.start_time)})
+    |> Enum.reject(fn {_occurrence, suffix} ->
+      MapSet.member?(overrides, {raw[:uid], suffix})
+    end)
+    |> Enum.map(fn {occurrence, suffix} ->
+      raw
+      |> Map.put(:_occ_start, occurrence.start_time)
+      |> Map.put(:_occ_end, occurrence.end_time)
+      |> Map.put(:_recurring, true)
+      |> Map.put(:_uid_suffix, suffix)
+    end)
+  end
+
+  defp own_suffix(raw), do: occurrence_suffix(raw[:dtstart] || raw[:start_time])
 
   defp parse_exdates(exdates) when is_list(exdates), do: exdates
   defp parse_exdates(_other), do: []
@@ -166,7 +213,15 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
         recurrence_id_range: raw[:recurrence_id_range],
         etag: raw[:etag],
         colour: EventColour.nearest_key(raw[:colour]),
-        provider_metadata: Map.drop(raw, [:raw_ical, :href, :_occ_start, :_occ_end, :_recurring]),
+        provider_metadata:
+          Map.drop(raw, [
+            :raw_ical,
+            :href,
+            :_occ_start,
+            :_occ_end,
+            :_recurring,
+            :_uid_suffix
+          ]),
         raw_ical: raw[:raw_ical],
         created_by_tymeslot: tymeslot_origin?(raw)
       }
@@ -297,37 +352,61 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
 
   # --- UID generation ---
 
-  defp build_uid(%{_recurring: true} = raw) do
-    base_uid = raw[:uid]
-    occ_start = raw[:_occ_start]
-
-    suffix =
-      case occ_start do
-        %Date{} = d ->
-          Calendar.strftime(d, "%Y%m%d")
-
-        # Local wall-clock time, deliberately not UTC. `_occ_start` has already
-        # been shifted into the event's own zone, so a `Z` here would label a
-        # local time as UTC. The wall clock is also the more stable of the two:
-        # it does not move across a DST transition, so an occurrence keeps one
-        # identity all year and the cache updates its row instead of growing a
-        # second one. Rows are keyed on `(calendar_integration_id, uid)`, so
-        # changing this format changes identity for every occurrence already
-        # cached and needs a migration to rewrite them, in
-        # `event_colour_overrides.provider_uid` as well as in the cache itself.
-        # `20260904094944_strip_utc_label_from_occurrence_uids` is the one that
-        # accompanied the last such change, and the pattern to follow.
-        %DateTime{} = dt ->
-          Calendar.strftime(dt, "%Y%m%dT%H%M%S")
-
-        _other ->
-          "unknown"
-      end
-
-    "#{base_uid}_#{suffix}"
-  end
+  defp build_uid(%{_uid_suffix: suffix} = raw) when is_binary(suffix),
+    do: "#{raw[:uid]}_#{suffix}"
 
   defp build_uid(raw), do: raw[:uid]
+
+  # Local wall-clock time, deliberately not UTC. `_occ_start` has already been
+  # shifted into the event's own zone, so a `Z` here would label a local time as
+  # UTC. The wall clock is also the more stable of the two: it does not move
+  # across a DST transition, so an occurrence keeps one identity all year and
+  # the cache updates its row instead of growing a second one. Rows are keyed on
+  # `(calendar_integration_id, uid)`, so changing this format changes identity
+  # for every occurrence already cached and needs a migration to rewrite them,
+  # in `event_colour_overrides.provider_uid` as well as in the cache itself.
+  # `20260904094944_strip_utc_label_from_occurrence_uids` is the one that
+  # accompanied the last such change, and the pattern to follow.
+  defp occurrence_suffix(%Date{} = date), do: Calendar.strftime(date, "%Y%m%d")
+  defp occurrence_suffix(%DateTime{} = dt), do: Calendar.strftime(dt, "%Y%m%dT%H%M%S")
+  defp occurrence_suffix(_other), do: "unknown"
+
+  # `RECURRENCE-ID` reaches here as the raw property value: `20260501T100000`
+  # when its TZID parameter named a zone (the event's own), `20260501T080000Z`
+  # for a UTC instant, `20260501` for an all-day series. Each is reduced to the
+  # same wall-clock stamp `occurrence_suffix/1` builds from an expanded
+  # occurrence, so an override lines up with the occurrence it replaces
+  # whichever of the three forms the server wrote.
+  @recurrence_id ~r/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z?))?$/
+
+  defp recurrence_id_suffix(value, timezone) when is_binary(value) do
+    case Regex.run(@recurrence_id, String.trim(value)) do
+      [_all, y, m, d] -> y <> m <> d
+      [_all, y, m, d, hh, mm, ss] -> "#{y}#{m}#{d}T#{hh}#{mm}#{ss}"
+      [_all, y, m, d, hh, mm, ss, "Z"] -> utc_suffix_in_zone([y, m, d, hh, mm, ss], timezone)
+      _unrecognised -> nil
+    end
+  end
+
+  defp recurrence_id_suffix(_value, _timezone), do: nil
+
+  defp utc_suffix_in_zone([y, m, d, hh, mm, ss], timezone) do
+    with {:ok, date} <- Date.new(to_int(y), to_int(m), to_int(d)),
+         {:ok, time} <- Time.new(to_int(hh), to_int(mm), to_int(ss)),
+         {:ok, utc} <- DateTime.new(date, time, "Etc/UTC"),
+         {:ok, local} <- to_event_zone(utc, timezone) do
+      occurrence_suffix(local)
+    else
+      _unresolvable -> nil
+    end
+  end
+
+  defp to_event_zone(datetime, timezone) when is_binary(timezone) and timezone != "",
+    do: DateTime.shift_zone(datetime, timezone)
+
+  defp to_event_zone(datetime, _no_zone), do: {:ok, datetime}
+
+  defp to_int(value), do: String.to_integer(value)
 
   # --- Field mappers ---
 

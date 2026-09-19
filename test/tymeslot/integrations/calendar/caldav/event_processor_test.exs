@@ -31,7 +31,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
     end
   end
 
-  describe "parse_ical_from_string/1" do
+  describe "parse_ical_events/1" do
     @valid_ical """
     BEGIN:VCALENDAR
     VERSION:2.0
@@ -45,22 +45,22 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
     END:VCALENDAR
     """
 
-    test "parses a valid iCalendar string and returns the first event" do
-      assert {:ok, event} = EventProcessor.parse_ical_from_string(@valid_ical)
+    test "parses a valid iCalendar string" do
+      assert {:ok, [event]} = EventProcessor.parse_ical_events(@valid_ical)
       assert Map.get(event, :uid) == "test-uid-001@example.com"
       assert Map.get(event, :summary) == "Team Meeting"
     end
 
     test "returns {:error, :empty_data} for nil" do
-      assert EventProcessor.parse_ical_from_string(nil) == {:error, :empty_data}
+      assert EventProcessor.parse_ical_events(nil) == {:error, :empty_data}
     end
 
     test "returns {:error, :empty_data} for empty string" do
-      assert EventProcessor.parse_ical_from_string("") == {:error, :empty_data}
+      assert EventProcessor.parse_ical_events("") == {:error, :empty_data}
     end
 
     test "returns {:error, :empty_data} for non-binary input" do
-      assert EventProcessor.parse_ical_from_string(42) == {:error, :empty_data}
+      assert EventProcessor.parse_ical_events(42) == {:error, :empty_data}
     end
 
     test "parses attendees from an iCalendar string" do
@@ -79,7 +79,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       END:VCALENDAR
       """
 
-      assert {:ok, event} = EventProcessor.parse_ical_from_string(ical)
+      assert {:ok, [event]} = EventProcessor.parse_ical_events(ical)
       assert [alice, bob] = Map.get(event, :attendees)
       assert alice["email"] == "alice@example.com"
       assert alice["name"] == "Alice"
@@ -103,7 +103,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       END:VCALENDAR
       """
 
-      assert {:ok, event} = EventProcessor.parse_ical_from_string(ical)
+      assert {:ok, [event]} = EventProcessor.parse_ical_events(ical)
       assert Map.get(event, :recurrence_rule) == "FREQ=WEEKLY;INTERVAL=1"
     end
 
@@ -122,7 +122,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       END:VCALENDAR
       """
 
-      assert {:ok, event} = EventProcessor.parse_ical_from_string(ical)
+      assert {:ok, [event]} = EventProcessor.parse_ical_events(ical)
       assert Map.get(event, :transparency) == "transparent"
     end
   end
@@ -498,7 +498,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       END:VCALENDAR
       """
 
-      assert {:ok, raw} = EventProcessor.parse_ical_from_string(ical)
+      assert {:ok, [raw]} = EventProcessor.parse_ical_events(ical)
 
       assert {:ok, [%CalendarEvent{} = event]} =
                EventProcessor.normalise_events([raw], @roundtrip_context)
@@ -520,7 +520,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       END:VCALENDAR
       """
 
-      assert {:ok, raw} = EventProcessor.parse_ical_from_string(ical)
+      assert {:ok, [raw]} = EventProcessor.parse_ical_events(ical)
 
       assert {:ok, [%CalendarEvent{} = event]} =
                EventProcessor.normalise_events([raw], @roundtrip_context)
@@ -566,7 +566,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       END:VCALENDAR
       """
 
-      assert {:ok, raw} = EventProcessor.parse_ical_from_string(ical)
+      assert {:ok, [raw]} = EventProcessor.parse_ical_events(ical)
       assert {:ok, events} = EventProcessor.normalise_events([raw], @dst_context)
 
       assert length(events) == 3
