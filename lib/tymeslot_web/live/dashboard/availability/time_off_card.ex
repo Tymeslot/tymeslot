@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
+  alias Tymeslot.Validation.Constraints
 
   alias TymeslotWeb.Components.Dashboard.Availability.{DeleteTimeOffModal, TimeOffFormModal}
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -316,10 +317,14 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
     end)
   end
 
-  # The `min_*` dates keep the date pickers from offering days already gone. On
-  # an edit they reach back to the stored date when that is earlier, or the
-  # browser would refuse to submit a period already under way at all.
+  # The `min_*` dates keep the date pickers from offering days already gone,
+  # and the `max_*` ones the years a mistyped date lands in. On an edit both
+  # reach out to the stored date when it falls outside them, or the browser
+  # would refuse to submit a period already under way, or one already reaching
+  # further ahead than the bound allows, at all.
   defp blank_data(today) do
+    last_day = today |> Constraints.time_off_last_end_date() |> Date.to_iso8601()
+
     @form_fields
     |> Map.new(&{&1, ""})
     |> Map.merge(%{
@@ -328,7 +333,9 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
       errors: %{},
       conflicts: [],
       min_starts_on: Date.to_iso8601(today),
-      min_ends_on: Date.to_iso8601(today)
+      min_ends_on: Date.to_iso8601(today),
+      max_starts_on: last_day,
+      max_ends_on: last_day
     })
   end
 
@@ -336,6 +343,8 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   # likelier way to swallow a booking, because the row is one the host already
   # trusts, and the panel has to be there before anything is changed.
   defp edit_data(period, today) do
+    last_end_date = Constraints.time_off_last_end_date(today)
+
     %{
       mode: :edit,
       id: period.id,
@@ -344,6 +353,8 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
       conflicts: TimeOff.conflicting_meetings(period),
       min_starts_on: earliest_iso8601(period.starts_on, today),
       min_ends_on: earliest_iso8601(period.ends_on, today),
+      max_starts_on: latest_iso8601(period.starts_on, last_end_date),
+      max_ends_on: latest_iso8601(period.ends_on, last_end_date),
       starts_on: Date.to_iso8601(period.starts_on),
       ends_on: Date.to_iso8601(period.ends_on),
       start_time: wire_time(period.start_time),
@@ -353,6 +364,8 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCard do
   end
 
   defp earliest_iso8601(date, today), do: [date, today] |> Enum.min(Date) |> Date.to_iso8601()
+
+  defp latest_iso8601(date, bound), do: [date, bound] |> Enum.max(Date) |> Date.to_iso8601()
 
   # Kept as `{message, opts}` rather than flattened to a string: the form input
   # translates that shape through the `errors` domain, interpolating counts, in

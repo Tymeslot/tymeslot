@@ -344,6 +344,67 @@ defmodule TymeslotWeb.Dashboard.Availability.TimeOffCardTest do
     end
   end
 
+  describe "dates far in the future" do
+    test "refuses a last day past the bound and keeps the form open", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      view |> element("[data-testid='add-time-off']") |> render_click()
+
+      html =
+        view
+        |> form("#time-off-form-modal-form", %{
+          "starts_on" => Date.to_iso8601(TimeOff.today(profile.timezone)),
+          "ends_on" => "2226-01-06",
+          "start_time" => "",
+          "end_time" => "",
+          "label" => "Portugal"
+        })
+        |> render_submit()
+
+      assert TimeOff.list(profile.id) == []
+      assert html =~ "must be within 2 years"
+      assert html =~ "2226-01-06"
+    end
+
+    test "stops the picker offering a year past the bound", %{conn: conn, profile: profile} do
+      last_day =
+        profile.timezone |> TimeOff.today() |> Date.shift(year: 2) |> Date.to_iso8601()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      html = view |> element("[data-testid='add-time-off']") |> render_click()
+
+      assert html =~ ~s(max="#{last_day}")
+    end
+
+    test "the picker reaches out to a stored last day already past the bound", %{
+      conn: conn,
+      profile: profile
+    } do
+      # As with a period already under way, the browser would otherwise refuse
+      # to submit the form at all, leaving the row uneditable.
+      period =
+        insert(:time_off_period,
+          profile: profile,
+          starts_on: Date.add(TimeOff.today(profile.timezone), 1),
+          ends_on: ~D[2099-01-10],
+          label: "Sabbatical"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability")
+
+      html =
+        view
+        |> element("button[phx-click='show_time_off_form'][phx-value-id='#{period.id}']")
+        |> render_click()
+
+      assert html =~ ~s(max="2099-01-10")
+    end
+  end
+
   describe "editing" do
     test "loads the period into the form and saves the change", %{conn: conn, profile: profile} do
       period =

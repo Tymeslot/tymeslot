@@ -75,14 +75,8 @@ defmodule Tymeslot.Availability.BusinessHours do
   # override below: a period is profile-wide, so one schedule's `available`
   # exception must not reopen a day the owner is away for.
   defp hours_from_schedule(date, schedule_id, owner_timezone, user_timezone, config) do
-    override = lookup_override(date, schedule_id, config)
-
-    case override do
-      %{override_type: "unavailable"} ->
-        {:ok, %{start_datetime: nil, end_datetime: nil, selected_date: date}}
-
-      %{override_type: type, start_time: start_time, end_time: end_time}
-      when type in ["custom_hours", "available"] and start_time != nil and end_time != nil ->
+    case day_opening(date, schedule_id, config) do
+      {start_time, end_time} ->
         convert_business_hours_to_user_timezone(
           date,
           start_time,
@@ -91,24 +85,54 @@ defmodule Tymeslot.Availability.BusinessHours do
           user_timezone
         )
 
+      _closed_or_without_hours ->
+        {:ok, %{start_datetime: nil, end_datetime: nil, selected_date: date}}
+    end
+  end
+
+  @typedoc """
+  What the schedule alone says about a date, before time off is taken out of
+  it: the `{start_time, end_time}` window it opens in the owner's own clock,
+  `:closed`, or `:no_hours` for a day marked available that names no window
+  to offer.
+  """
+  @type day_opening :: {Time.t(), Time.t()} | :closed | :no_hours
+
+  # The single reading of the schedule for one date, so the hours a day offers
+  # and the answer to whether it is a business day cannot drift apart. An
+  # override outranks the weekly pattern, but only where it names hours of its
+  # own: `available` without them means "open, on the usual hours".
+  @spec day_opening(Date.t(), integer(), Calculate.availability_config()) :: day_opening()
+  defp day_opening(date, schedule_id, config) do
+    case lookup_override(date, schedule_id, config) do
+      %{override_type: "unavailable"} ->
+        :closed
+
+      %{override_type: type, start_time: %Time{} = start_time, end_time: %Time{} = end_time}
+      when type in ["custom_hours", "available"] ->
+        {start_time, end_time}
+
+      %{override_type: type} when type in ["custom_hours", "available"] ->
+        weekly_opening(date, schedule_id, config, :no_hours)
+
       _no_override ->
-        day_of_week = Date.day_of_week(date)
-        day_availability = lookup_day_availability(day_of_week, schedule_id, config)
+        weekly_opening(date, schedule_id, config, :closed)
+    end
+  end
 
-        case day_availability do
-          %{is_available: true, start_time: start_time, end_time: end_time}
-          when start_time != nil and end_time != nil ->
-            convert_business_hours_to_user_timezone(
-              date,
-              start_time,
-              end_time,
-              owner_timezone,
-              user_timezone
-            )
+  # `closed_when_absent` is what a day the weekly pattern does not offer falls
+  # back to: closed on its own, but still open where an override has already
+  # said the owner is available that day.
+  defp weekly_opening(date, schedule_id, config, closed_when_absent) do
+    case lookup_day_availability(Date.day_of_week(date), schedule_id, config) do
+      %{is_available: true, start_time: %Time{} = start_time, end_time: %Time{} = end_time} ->
+        {start_time, end_time}
 
-          _other ->
-            {:ok, %{start_datetime: nil, end_datetime: nil, selected_date: date}}
-        end
+      %{is_available: true} ->
+        :no_hours
+
+      _unavailable_or_missing ->
+        closed_when_absent
     end
   end
 
@@ -275,6 +299,12 @@ defmodule Tymeslot.Availability.BusinessHours do
   @doc """
   Checks if a given date is a business day within a schedule.
 
+  The question asked is whether anything is left of the day, not whether one
+  period swallowed it whole: part-day periods that between them cover the
+  schedule's whole window leave nothing to book, and a day offering nothing
+  must not be drawn as one that does. A day blocked in full is the degenerate
+  case of the same reading.
+
   Accepts preloaded data via `config` to avoid per-date DB queries.
   """
   @spec business_day?(Date.t(), integer() | nil, Calculate.availability_config()) :: boolean()
@@ -285,29 +315,36 @@ defmodule Tymeslot.Availability.BusinessHours do
   end
 
   def business_day?(date, schedule_id, config) do
-    if TimeOff.all_day?(lookup_time_off(date, schedule_id, config), date) do
-      false
-    else
-      business_day_from_schedule?(date, schedule_id, config)
-    end
+    # Read once and passed on: this runs per rendered day on the week strip's
+    # fallback path, which exists precisely to avoid a query per date.
+    periods = lookup_time_off(date, schedule_id, config)
+
+    not TimeOff.all_day?(periods, date) and
+      date |> day_opening(schedule_id, config) |> open_after_time_off?(periods, date)
   end
 
-  defp business_day_from_schedule?(date, schedule_id, config) do
-    override = lookup_override(date, schedule_id, config)
+  defp open_after_time_off?(:closed, _periods, _date), do: false
+  defp open_after_time_off?(:no_hours, _periods, _date), do: true
 
-    case override do
-      %{override_type: "unavailable"} ->
-        false
+  defp open_after_time_off?({_start_time, _end_time} = window, periods, date) do
+    bookable_time_left?(window, TimeOff.windows_for_day(periods, date))
+  end
 
-      %{override_type: type} when type in ["custom_hours", "available"] ->
-        true
+  # Whether any of `window` survives `blocked`. The blocked windows are walked
+  # in order behind a cursor: one that reaches the cursor pushes it to its own
+  # end, one that starts later leaves a gap and the cursor stays in it. Time is
+  # left over exactly when the cursor never reaches the window's end.
+  defp bookable_time_left?({window_start, window_end}, blocked) do
+    cursor =
+      blocked
+      |> Enum.sort_by(fn {from, _to} -> from end, Time)
+      |> Enum.reduce(window_start, fn {from, to}, cursor ->
+        if Time.compare(from, cursor) != :gt and Time.compare(to, cursor) == :gt,
+          do: to,
+          else: cursor
+      end)
 
-      _no_override ->
-        day_of_week = Date.day_of_week(date)
-        day_availability = lookup_day_availability(day_of_week, schedule_id, config)
-
-        match?(%{is_available: true}, day_availability)
-    end
+    Time.compare(cursor, window_end) == :lt
   end
 
   # Data lookup — uses preloaded collections when available, falls back to DB queries
