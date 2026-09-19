@@ -74,10 +74,23 @@ defmodule Tymeslot.Emails.Templates.GuestChangeEmailsTest do
     end
 
     test "attaches a calendar update that supersedes the invitation" do
-      email = AppointmentRescheduled.render(:guest, "greg@example.com", guest_details())
+      # The guest's entry must be replaced exactly like the attendee's, so both
+      # carry the same SEQUENCE for the same booking revision. Compared rather
+      # than pinned to a number, because how the value is derived from the
+      # stored `ical_sequence` is the attendee template's business.
+      details = guest_details()
 
-      assert ics = calendar_attachment(email)
-      assert ics.data =~ "SEQUENCE:3"
+      guest_ics =
+        calendar_attachment(AppointmentRescheduled.render(:guest, "greg@example.com", details))
+
+      attendee_ics =
+        calendar_attachment(
+          AppointmentRescheduled.render(:attendee, details.attendee_email, details)
+        )
+
+      assert guest_ics.data =~ "METHOD:PUBLISH"
+      assert sequence(guest_ics) == sequence(attendee_ics)
+      assert sequence(guest_ics) > 0
     end
 
     test "renders in the booking's locale" do
@@ -123,5 +136,10 @@ defmodule Tymeslot.Emails.Templates.GuestChangeEmailsTest do
       assert ics.data =~ "STATUS:CANCELLED"
       assert ics.data =~ "SEQUENCE:3"
     end
+  end
+
+  defp sequence(ics) do
+    [_match, value] = Regex.run(~r/^SEQUENCE:(\d+)/m, ics.data)
+    String.to_integer(value)
   end
 end
