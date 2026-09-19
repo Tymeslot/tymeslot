@@ -179,3 +179,23 @@ msgstr "Par mois"
 #, elixir-autogen, elixir-format
 msgid "Per week"
 msgstr "Par semaine"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar gone"
+msgstr "Calendrier absent"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Read-only"
+msgstr "Lecture seule"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar this meeting type books into is no longer on the connected account. Edit it and choose another calendar."
+msgstr "Le calendrier dans lequel ce type de réunion réserve n’est plus présent sur le compte connecté. Modifiez le type de réunion et choisissez un autre calendrier."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type books into a calendar you can no longer write to. Edit it and choose another calendar."
+msgstr "Ce type de réunion réserve dans un calendrier sur lequel vous ne pouvez plus écrire. Modifiez-le et choisissez un autre calendrier."

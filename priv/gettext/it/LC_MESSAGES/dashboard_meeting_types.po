@@ -179,3 +179,23 @@ msgstr "Al mese"
 #, elixir-autogen, elixir-format
 msgid "Per week"
 msgstr "Alla settimana"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar gone"
+msgstr "Calendario assente"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Read-only"
+msgstr "Sola lettura"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar this meeting type books into is no longer on the connected account. Edit it and choose another calendar."
+msgstr "Il calendario in cui questo tipo di riunione salva le prenotazioni non è più presente sull'account collegato. Modifica il tipo di riunione e scegli un altro calendario."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type books into a calendar you can no longer write to. Edit it and choose another calendar."
+msgstr "Questo tipo di riunione salva le prenotazioni in un calendario su cui non puoi più scrivere. Modificalo e scegli un altro calendario."

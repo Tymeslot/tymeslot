@@ -794,3 +794,37 @@ msgstr "(kopie)"
 #, elixir-autogen, elixir-format
 msgid "(copy) %{number}"
 msgstr "(kopie) %{number}"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "1 booking already sits inside these dates"
+msgid_plural "%{count} bookings already sit inside these dates"
+msgstr[0] "V tomto období již máte 1 rezervaci"
+msgstr[1] "V tomto období již máte %{count} rezervace"
+msgstr[2] "V tomto období již máte %{count} rezervací"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 booking sits inside this time off. It stays in your diary until you move or cancel it."
+msgid_plural "%{count} bookings sit inside this time off. They stay in your diary until you move or cancel them."
+msgstr[0] "Do této nepřítomnosti spadá 1 rezervace. Ve vašem diáři zůstává, dokud ji nepřesunete nebo nezrušíte."
+msgstr[1] "Do této nepřítomnosti spadají %{count} rezervace. Ve vašem diáři zůstávají, dokud je nepřesunete nebo nezrušíte."
+msgstr[2] "Do této nepřítomnosti spadá %{count} rezervací. Ve vašem diáři zůstávají, dokud je nepřesunete nebo nezrušíte."
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Open your bookings in a new tab"
+msgstr "Otevřít rezervace na nové kartě"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Time off only stops new bookings. These keep their times until you move or cancel them."
+msgstr "Nepřítomnost brání pouze novým rezervacím. Ty stávající si svůj čas ponechávají, dokud je nepřesunete nebo nezrušíte."
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "and 1 more"
+msgid_plural "and %{count} more"
+msgstr[0] "a 1 další"
+msgstr[1] "a %{count} další"
+msgstr[2] "a %{count} dalších"

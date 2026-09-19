@@ -62,11 +62,6 @@ msgstr "Přidat možnost"
 msgid "Add question"
 msgstr "Přidat otázku"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Add up to three reminder emails for this meeting type. We recommend using only one."
-msgstr "Pro tento typ schůzky můžete přidat až tři e-maily s připomínkou. Doporučujeme používat jen jeden."
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
 #, elixir-autogen, elixir-format
 msgid "Added %{label} before"
@@ -314,11 +309,6 @@ msgstr "Nejnižší hodnota, kterou lze zadat."
 #, elixir-autogen, elixir-format
 msgid "Max"
 msgstr "Max."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Maximum of 3 reminders allowed"
-msgstr "Nastavit lze nejvýše 3 připomínky"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/helpers.ex
 #, elixir-autogen, elixir-format
@@ -590,11 +580,6 @@ msgstr "Ano / Ne"
 msgid "Yes, change type"
 msgstr "Ano, změnit typ"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
-#, elixir-autogen, elixir-format
-msgid "You can configure up to 3 reminders"
-msgstr "Nastavit lze nejvýše 3 připomínky"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "e.g., Company name"
@@ -863,3 +848,37 @@ msgstr "Časy začátku budou nabízeny každých %{minutes} min: %{examples}…
 #, elixir-autogen, elixir-format
 msgid "Reminders cannot be set for more than 1 year in advance"
 msgstr "Připomínky nelze nastavit více než 1 rok předem"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
+#, elixir-autogen, elixir-format
+msgid "Add up to %{count} reminder email for this meeting type. We recommend using only one."
+msgid_plural "Add up to %{count} reminder emails for this meeting type. We recommend using only one."
+msgstr[0] "Pro tento typ schůzky můžete přidat až %{count} e-mail s připomínkou. Doporučujeme používat jen jeden."
+msgstr[1] "Pro tento typ schůzky můžete přidat až %{count} e-maily s připomínkou. Doporučujeme používat jen jeden."
+msgstr[2] "Pro tento typ schůzky můžete přidat až %{count} e-mailů s připomínkou. Doporučujeme používat jen jeden."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
+#, elixir-autogen, elixir-format
+msgid "Maximum of %{count} reminder allowed"
+msgid_plural "Maximum of %{count} reminders allowed"
+msgstr[0] "Nastavit lze nejvýše %{count} připomínku"
+msgstr[1] "Nastavit lze nejvýše %{count} připomínky"
+msgstr[2] "Nastavit lze nejvýše %{count} připomínek"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar this meeting type books into is no longer on this account. Choose another calendar."
+msgstr "Kalendář, do kterého tento typ schůzky rezervuje, už v tomto účtu není. Zvolte jiný kalendář."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar this meeting type books into is now read-only. Choose another calendar."
+msgstr "Kalendář, do kterého tento typ schůzky rezervuje, je nyní jen pro čtení. Zvolte jiný kalendář."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
+#, elixir-autogen, elixir-format
+msgid "You can configure up to %{count} reminder"
+msgid_plural "You can configure up to %{count} reminders"
+msgstr[0] "Můžete nastavit až %{count} připomínku"
+msgstr[1] "Můžete nastavit až %{count} připomínky"
+msgstr[2] "Můžete nastavit až %{count} připomínek"

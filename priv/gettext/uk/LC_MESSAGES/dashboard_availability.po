@@ -793,3 +793,37 @@ msgstr "(копія)"
 #, elixir-autogen, elixir-format
 msgid "(copy) %{number}"
 msgstr "(копія) %{number}"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "1 booking already sits inside these dates"
+msgid_plural "%{count} bookings already sit inside these dates"
+msgstr[0] "%{count} бронювання вже припадає на ці дати"
+msgstr[1] "%{count} бронювання вже припадають на ці дати"
+msgstr[2] "%{count} бронювань вже припадають на ці дати"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 booking sits inside this time off. It stays in your diary until you move or cancel it."
+msgid_plural "%{count} bookings sit inside this time off. They stay in your diary until you move or cancel them."
+msgstr[0] "%{count} бронювання припадає на цю відсутність. Воно залишається у вашому розкладі, доки ви його не перенесете або не скасуєте."
+msgstr[1] "%{count} бронювання припадають на цю відсутність. Вони залишаються у вашому розкладі, доки ви їх не перенесете або не скасуєте."
+msgstr[2] "%{count} бронювань припадають на цю відсутність. Вони залишаються у вашому розкладі, доки ви їх не перенесете або не скасуєте."
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Open your bookings in a new tab"
+msgstr "Відкрити бронювання в новій вкладці"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Time off only stops new bookings. These keep their times until you move or cancel them."
+msgstr "Відсутність зупиняє лише нові бронювання. Наявні зберігають свій час, доки ви їх не перенесете або не скасуєте."
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "and 1 more"
+msgid_plural "and %{count} more"
+msgstr[0] "і ще %{count}"
+msgstr[1] "і ще %{count}"
+msgstr[2] "і ще %{count}"

@@ -172,6 +172,7 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
@@ -179,7 +180,7 @@ msgstr ""
 msgid "Changes saved."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
 #, elixir-autogen, elixir-format
 msgid "Changes saved. Attendees will be notified shortly."
@@ -1027,12 +1028,12 @@ msgstr ""
 msgid "The video provider did not return a meeting link, so the video link was not changed."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #, elixir-autogen, elixir-format
 msgid "Video link removed."
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #, elixir-autogen, elixir-format
 msgid "Video room created."
 msgstr ""

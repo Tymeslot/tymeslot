@@ -172,6 +172,7 @@ msgstr "Calendari aggiornati"
 msgid "Cancel"
 msgstr "Annulla"
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
@@ -179,7 +180,7 @@ msgstr "Annulla"
 msgid "Changes saved."
 msgstr "Modifiche salvate."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
 #, elixir-autogen, elixir-format
 msgid "Changes saved. Attendees will be notified shortly."
@@ -1027,12 +1028,12 @@ msgstr "Gli eventi ricorrenti non possono ancora essere spostati in un altro cal
 msgid "The video provider did not return a meeting link, so the video link was not changed."
 msgstr "Il provider video non ha restituito un link alla riunione, quindi il link video non è stato modificato."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #, elixir-autogen, elixir-format
 msgid "Video link removed."
 msgstr "Link video rimosso."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #, elixir-autogen, elixir-format
 msgid "Video room created."
 msgstr "Stanza della riunione creata."

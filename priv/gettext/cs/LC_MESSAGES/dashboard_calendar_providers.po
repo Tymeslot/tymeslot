@@ -168,7 +168,6 @@ msgstr "Nepodařilo se najít žádné kalendáře. Zkontrolujte přihlašovac�
 msgid "PHP-based CalDAV/CardDAV server"
 msgstr "Server CalDAV/CardDAV založený na PHP"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Password / App Password"
@@ -490,31 +489,6 @@ msgstr "Apple iCloud vyžaduje HTTPS"
 msgid "Authentication failed for %{provider}. Please check your username and password"
 msgstr "%{provider}: ověření se nezdařilo. Zkontrolujte prosím uživatelské jméno a heslo"
 
-#: lib/tymeslot/integrations/calendar/baikal/provider.ex
-#, elixir-autogen, elixir-format
-msgid "Authentication failed. Check your Baikal username and password."
-msgstr "Ověření se nezdařilo. Zkontrolujte uživatelské jméno a heslo pro Baikal."
-
-#: lib/tymeslot/integrations/calendar/nextcloud/provider.ex
-#, elixir-autogen, elixir-format
-msgid "Authentication failed. Check your Nextcloud username and password. Consider using an app password."
-msgstr "Ověření se nezdařilo. Zkontrolujte uživatelské jméno a heslo pro Nextcloud. Zvažte použití hesla pro aplikaci."
-
-#: lib/tymeslot/integrations/calendar/radicale/provider.ex
-#, elixir-autogen, elixir-format
-msgid "Authentication failed. Check your Radicale username and password."
-msgstr "Ověření se nezdařilo. Zkontrolujte uživatelské jméno a heslo pro Radicale."
-
-#: lib/tymeslot/integrations/calendar/zimbra/provider.ex
-#, elixir-autogen, elixir-format
-msgid "Authentication failed. Check your Zimbra username and password."
-msgstr "Ověření se nezdařilo. Zkontrolujte uživatelské jméno a heslo pro Zimbra."
-
-#: lib/tymeslot/integrations/calendar/mailbox_org/provider.ex
-#, elixir-autogen, elixir-format
-msgid "Authentication failed. If 2FA is enabled, generate an application-specific password in mailbox.org Settings → Security."
-msgstr "Ověření se nezdařilo. Pokud je zapnuté dvoufázové ověření, vygenerujte na mailbox.org v části Settings → Security (Nastavení → Zabezpečení) heslo pro konkrétní aplikaci."
-
 #: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. Please check your credentials."
@@ -529,11 +503,6 @@ msgstr "Ověření se nezdařilo. Připojte prosím kalendář znovu."
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. iCloud requires an app-specific password — generate one at appleid.apple.com under Sign-In and Security → App-Specific Passwords, and use it instead of your Apple ID password."
 msgstr "Ověření se nezdařilo. iCloud vyžaduje heslo pro konkrétní aplikaci – vygenerujte je na appleid.apple.com v části „Přihlášení a zabezpečení → Hesla pro konkrétní aplikace“ a použijte je místo hesla k účtu Apple."
-
-#: lib/tymeslot/integrations/calendar/apple/provider.ex
-#, elixir-autogen, elixir-format
-msgid "Authentication failed. iCloud requires an app-specific password — generate one at appleid.apple.com under Sign-In and Security, and use it instead of your Apple ID password."
-msgstr "Ověření se nezdařilo. iCloud vyžaduje heslo pro konkrétní aplikaci – vygenerujte je na appleid.apple.com v části „Přihlášení a zabezpečení“ a použijte je místo hesla k účtu Apple."
 
 #: lib/tymeslot/integrations/calendar/baikal/provider.ex
 #, elixir-autogen, elixir-format
@@ -1304,3 +1273,28 @@ msgstr "Google odmítl uložené přihlašovací údaje. Připojte prosím integ
 #, elixir-autogen, elixir-format
 msgid "Microsoft rejected the stored credentials. Please reconnect the integration."
 msgstr "Microsoft odmítl uložené přihlašovací údaje. Připojte prosím integraci znovu."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "App password"
+msgstr "Heslo pro aplikaci"
+
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Authentication failed. Check your Nextcloud username and password, or generate an app password under Settings → Security."
+msgstr "Ověření se nezdařilo. Zkontrolujte své uživatelské jméno a heslo pro Nextcloud, nebo si v části „Nastavení → Zabezpečení“ vytvořte heslo pro aplikaci."
+
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Authentication failed. If two-factor authentication is enabled on your mailbox.org account, generate an application-specific password under Settings → Security and use that instead."
+msgstr "Ověření se nezdařilo. Pokud máte u účtu mailbox.org zapnuté dvoufázové ověření, vygenerujte v části Settings → Security (Nastavení → Zabezpečení) heslo pro konkrétní aplikaci a použijte je místo běžného hesla."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "Create an app password in Nextcloud under %{location} and enter it below together with your login name. A login password stops working here once two-factor authentication is switched on."
+msgstr "Ve službě Nextcloud si v části %{location} vytvořte heslo pro aplikaci a zadejte je níže spolu se svým přihlašovacím jménem. Heslo pro přihlášení zde přestane fungovat, jakmile zapnete dvoufázové ověření."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "Personal settings → Security"
+msgstr "Osobní nastavení → Zabezpečení"

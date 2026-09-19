@@ -176,6 +176,7 @@ msgstr "Kalendáře byly obnoveny"
 msgid "Cancel"
 msgstr "Zrušit"
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
@@ -183,7 +184,7 @@ msgstr "Zrušit"
 msgid "Changes saved."
 msgstr "Změny byly uloženy."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
 #, elixir-autogen, elixir-format
 msgid "Changes saved. Attendees will be notified shortly."
@@ -1040,12 +1041,12 @@ msgstr "Opakující se události zatím nelze přesunout do jiného kalendáře.
 msgid "The video provider did not return a meeting link, so the video link was not changed."
 msgstr "Poskytovatel videa nevrátil odkaz na schůzku, takže odkaz na videoschůzku nebyl změněn."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #, elixir-autogen, elixir-format
 msgid "Video link removed."
 msgstr "Odkaz na videoschůzku byl odebrán."
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #, elixir-autogen, elixir-format
 msgid "Video room created."
 msgstr "Místnost pro videoschůzku byla vytvořena."

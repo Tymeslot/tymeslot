@@ -179,3 +179,23 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Per week"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar gone"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Read-only"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar this meeting type books into is no longer on the connected account. Edit it and choose another calendar."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type books into a calendar you can no longer write to. Edit it and choose another calendar."
+msgstr ""

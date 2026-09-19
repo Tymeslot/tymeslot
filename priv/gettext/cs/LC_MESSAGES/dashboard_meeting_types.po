@@ -180,3 +180,23 @@ msgstr "Za měsíc"
 #, elixir-autogen, elixir-format
 msgid "Per week"
 msgstr "Za týden"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar gone"
+msgstr "Kalendář chybí"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Read-only"
+msgstr "Jen pro čtení"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar this meeting type books into is no longer on the connected account. Edit it and choose another calendar."
+msgstr "Kalendář, do kterého tento typ schůzky rezervuje, už v připojeném účtu není. Upravte jej a zvolte jiný kalendář."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type books into a calendar you can no longer write to. Edit it and choose another calendar."
+msgstr "Tento typ schůzky rezervuje do kalendáře, do kterého už nemůžete zapisovat. Upravte jej a zvolte jiný kalendář."

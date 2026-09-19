@@ -325,13 +325,6 @@ msgstr "Compte Stripe déconnecté."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
-msgid "Stripe account disconnected. %{count} pending booking cancelled."
-msgid_plural "Stripe account disconnected. %{count} pending bookings cancelled."
-msgstr[0] "Compte Stripe déconnecté. %{count} réservation en attente annulée."
-msgstr[1] "Compte Stripe déconnecté. %{count} réservations en attente annulées."
-
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
-#, elixir-autogen, elixir-format
 msgid "Stripe has not yet captured a charge for this booking. Try again in a moment."
 msgstr "Stripe n’a pas encore capturé de paiement pour cette réservation. Réessayez dans un instant."
 
@@ -421,3 +414,34 @@ msgstr "Remboursements en attente"
 #, elixir-autogen, elixir-format
 msgid "These bookings were cancelled while you still held the attendee's money. Cancelling never refunds on its own."
 msgstr "Ces réservations ont été annulées alors que vous déteniez encore l'argent du participant. Une annulation ne rembourse jamais d'elle-même."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} pending booking cancelled."
+msgid_plural "%{count} pending bookings cancelled."
+msgstr[0] "%{count} réservation en attente annulée."
+msgstr[1] "%{count} réservations en attente annulées."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} refund is still outstanding and must now be issued from your Stripe dashboard."
+msgid_plural "%{count} refunds are still outstanding and must now be issued from your Stripe dashboard."
+msgstr[0] "%{count} remboursement est toujours dû et doit désormais être effectué depuis votre tableau de bord Stripe."
+msgstr[1] "%{count} remboursements sont toujours dus et doivent désormais être effectués depuis votre tableau de bord Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Showing the %{shown} oldest of %{total} outstanding refunds."
+msgstr "Affichage des %{shown} remboursements dus les plus anciens sur %{total}."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
+#, elixir-autogen, elixir-format
+msgid "You still owe %{count} refund totalling %{total}. Disconnecting does not issue it, and afterwards you will have to refund it from your Stripe dashboard."
+msgid_plural "You still owe %{count} refunds totalling %{total}. Disconnecting does not issue them, and afterwards you will have to refund them from your Stripe dashboard."
+msgstr[0] "Vous devez encore %{count} remboursement pour un total de %{total}. La déconnexion ne l’effectue pas, et vous devrez ensuite le rembourser depuis votre tableau de bord Stripe."
+msgstr[1] "Vous devez encore %{count} remboursements pour un total de %{total}. La déconnexion ne les effectue pas, et vous devrez ensuite les rembourser depuis votre tableau de bord Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is not connected, so these refunds have to be issued from your Stripe dashboard. The money is still owed."
+msgstr "Votre compte Stripe n’est pas connecté ; ces remboursements doivent donc être effectués depuis votre tableau de bord Stripe. L’argent reste dû."
