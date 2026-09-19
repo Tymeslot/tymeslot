@@ -160,19 +160,15 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
         integration_id ->
           case Video.get_integration(user_id, integration_id) do
             {:ok, integration} ->
-              case Video.oauth_reconnect_url(user_id, integration) do
-                {:ok, url} ->
-                  {:noreply, redirect(socket, external: url)}
+              reconnect(socket, user_id, integration)
 
-                {:error, _reason} ->
-                  notify_parent(
-                    {:flash,
-                     {:error,
-                      dgettext("dashboard_integrations", "Failed to reconnect. Please try again.")}}
-                  )
-
-                  {:noreply, socket}
-              end
+            # Credentials that no longer decrypt are precisely what re-running
+            # OAuth repairs, so this state reconnects like any other rather
+            # than being treated as an error. `oauth_reconnect_url/2` reads
+            # only the provider, the row id and the account email, none of
+            # which are encrypted, so it works on an undecryptable row.
+            {:error, :requires_reencryption, integration} ->
+              reconnect(socket, user_id, integration)
 
             {:error, :not_found} ->
               {:noreply, socket}
@@ -296,6 +292,21 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   def render(assigns), do: ComponentView.settings(assigns)
 
   # Private functions
+
+  defp reconnect(socket, user_id, integration) do
+    case Video.oauth_reconnect_url(user_id, integration) do
+      {:ok, url} ->
+        {:noreply, redirect(socket, external: url)}
+
+      {:error, _reason} ->
+        notify_parent(
+          {:flash,
+           {:error, dgettext("dashboard_integrations", "Failed to reconnect. Please try again.")}}
+        )
+
+        {:noreply, socket}
+    end
+  end
 
   defp handle_create_result({:ok, _integration}, socket) do
     notify_parent(

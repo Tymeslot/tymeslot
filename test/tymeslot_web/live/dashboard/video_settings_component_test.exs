@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
   import Tymeslot.Factory
   import Tymeslot.AuthTestHelpers
 
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
 
@@ -360,6 +361,40 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       refute html =~ "Timed out talking to the server."
+    end
+
+    # The state Reconnect exists to resolve: credentials encrypted under a key
+    # that is no longer on the keyring. `Video.get_integration/2` answers with a
+    # third tuple shape for it, which the handler used to leave unmatched.
+    test "reconnects an integration whose stored credentials no longer decrypt", %{
+      conn: conn,
+      user: user
+    } do
+      expect(Tymeslot.ZoomOAuthHelperMock, :authorization_url, fn _uid, _uri, _opts ->
+        "https://zoom.us/oauth/authorize"
+      end)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "zoom",
+          is_active: true,
+          needs_reauth: true,
+          access_token_encrypted: :crypto.strong_rand_bytes(40)
+        )
+
+      # Anchors the fixture: undecryptable bytes, not a flag, are what put the
+      # row in this state, so the handler is driven with the real thing.
+      assert {:error, :requires_reencryption, _stale} =
+               Video.get_integration(user.id, integration.id)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
+      assert_redirect(view, "https://zoom.us/oauth/authorize")
     end
 
     # NOTE: the end-to-end click → OAuth-redirect for a *reconnect* is not
