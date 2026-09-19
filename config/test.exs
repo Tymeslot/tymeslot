@@ -195,6 +195,7 @@ config :tymeslot, :async_availability_fetch, false
 # Enable all providers for testing
 config :tymeslot, :video_providers, %{
   mirotalk: [enabled: true],
+  nextcloud_talk: [enabled: true],
   google_meet: [enabled: true],
   teams: [enabled: true],
   custom: [enabled: true]

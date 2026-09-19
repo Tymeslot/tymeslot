@@ -419,6 +419,18 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
     Code.ensure_loaded?(module) and function_exported?(module, fun, arity)
   end
 
+  @doc """
+  The provider whose meeting links look like `meeting_url`, or `:error` when
+  none claims it.
+  """
+  @spec provider_for_url(String.t()) :: {:ok, atom()} | :error
+  def provider_for_url(meeting_url) do
+    case detect_provider_from_url(meeting_url) do
+      {:ok, provider_type} -> {:ok, provider_type}
+      {:error, _reason} -> :error
+    end
+  end
+
   defp detect_provider_from_url(meeting_url) when is_binary(meeting_url) do
     case find_matching_provider(meeting_url) do
       {:ok, provider} -> {:ok, provider}

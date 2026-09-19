@@ -99,6 +99,59 @@ defmodule Tymeslot.Integrations.VideoTest do
                Video.create_integration(user.id, :mirotalk, attrs)
     end
 
+    test "creates a nextcloud_talk integration after testing the connection" do
+      user = insert(:user)
+
+      attrs = %{
+        "name" => "My Nextcloud Talk",
+        "base_url" => "https://cloud.example.com",
+        "username" => "alice",
+        "api_key" => "abcde-fghij-klmno-pqrst-uvwxy"
+      }
+
+      expect(Tymeslot.HTTPClientMock, :get, fn url, _headers, _opts ->
+        assert url == "https://cloud.example.com/ocs/v2.php/cloud/user"
+        {:ok, %Req.Response{status: 200, body: ~s({"ocs":{"data":{"id":"alice"}}})}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :get, fn url, _headers, _opts ->
+        assert url == "https://cloud.example.com/ocs/v2.php/cloud/capabilities"
+
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body: ~s({"ocs":{"data":{"capabilities":{"spreed":{"version":"24.0.5"}}}}})
+         }}
+      end)
+
+      assert {:ok, integration} = Video.create_integration(user.id, :nextcloud_talk, attrs)
+      assert integration.provider == "nextcloud_talk"
+      assert integration.provider_account_id == "https://cloud.example.com||alice"
+
+      [listed] = Video.list_integrations(user.id)
+      assert listed.username == "alice"
+    end
+
+    test "returns the tagged error if the nextcloud_talk credentials are rejected" do
+      user = insert(:user)
+
+      attrs = %{
+        "name" => "My Nextcloud Talk",
+        "base_url" => "https://cloud.example.com",
+        "username" => "alice",
+        "api_key" => "wrong-app-password"
+      }
+
+      expect(Tymeslot.HTTPClientMock, :get, fn _url, _headers, _opts ->
+        {:ok, %Req.Response{status: 401, body: ""}}
+      end)
+
+      assert {:error, {:invalid_api_key, _message}} =
+               Video.create_integration(user.id, :nextcloud_talk, attrs)
+
+      assert Video.list_integrations(user.id) == []
+    end
+
     test "safely handles non-existing atom keys in attrs" do
       user = insert(:user)
 

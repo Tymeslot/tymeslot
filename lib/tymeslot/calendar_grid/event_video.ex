@@ -189,9 +189,25 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
 
   defp discard_room(user_id, video_integration_id, url)
        when is_integer(video_integration_id) and is_binary(url),
-       do: delete_room(user_id, video_integration_id, Video.extract_room_id(url))
+       do:
+         delete_room(
+           user_id,
+           video_integration_id,
+           own_room_id(user_id, video_integration_id, url)
+         )
 
   defp discard_room(_user_id, _video_integration_id, _url), do: :ok
+
+  # Only a link the event's own provider recognises is one of its rooms. Another
+  # provider's link, such as a Nextcloud Talk link on an event whose video
+  # integration is Zoom, has no room there, and deleting its id through the
+  # event's provider would hit the wrong room or none.
+  defp own_room_id(user_id, video_integration_id, url) do
+    case Video.fetch_integration_for_user(video_integration_id, user_id) do
+      {:ok, %{provider: provider}} -> Video.extract_room_id(url, provider)
+      _not_found -> nil
+    end
+  end
 
   defp delete_room(user_id, video_integration_id, room_id) when is_binary(room_id) do
     case Video.delete_meeting_room(user_id,

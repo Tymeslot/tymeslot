@@ -129,6 +129,73 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   end
 
   @doc """
+  Renders a username field with user icon.
+  """
+  attr :id, :string, required: true
+  attr :name, :string, required: true
+  attr :label, :string, default: nil
+  attr :value, :string, default: ""
+  attr :placeholder, :string, default: nil
+  attr :form_errors, :map, required: true
+  attr :error_key, :atom, default: :username
+  attr :target, :any, required: true
+  attr :helper_text, :string, default: nil
+
+  @spec username_field(map()) :: Phoenix.LiveView.Rendered.t()
+  def username_field(assigns) do
+    ~H"""
+    <div>
+      <label for={@id} class="label">
+        {@label || dgettext("dashboard_integrations", "Username")}
+      </label>
+      <div class="relative">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg class="w-5 h-5 text-tymeslot-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+            />
+          </svg>
+        </div>
+        <input
+          type="text"
+          id={@id}
+          name={@name}
+          value={@value}
+          autocomplete="username"
+          phx-blur={
+            JS.push("validate_field",
+              value: %{"field" => Atom.to_string(@error_key)},
+              target: @target
+            )
+          }
+          required
+          class={[
+            "input input-with-icon w-full",
+            if(FormValidationHelpers.field_errors(@form_errors, @error_key) != [],
+              do: "input-error",
+              else: ""
+            )
+          ]}
+          placeholder={@placeholder}
+        />
+      </div>
+      <%= if FormValidationHelpers.field_errors(@form_errors, @error_key) != [] do %>
+        <%= for error <- FormValidationHelpers.field_errors(@form_errors, @error_key) do %>
+          <p class="form-error">{error}</p>
+        <% end %>
+      <% else %>
+        <%= if @helper_text do %>
+          <p class="mt-2 text-xs text-tymeslot-500">{@helper_text}</p>
+        <% end %>
+      <% end %>
+    </div>
+    """
+  end
+
+  @doc """
   Renders an API key field with key icon (password-masked).
   """
   attr :id, :string, required: true
@@ -140,6 +207,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   attr :error_key, :atom, default: :api_key
   attr :target, :any, required: true
   attr :helper_text, :string, default: nil
+  attr :required, :boolean, default: true
 
   @spec api_key_field(map()) :: Phoenix.LiveView.Rendered.t()
   def api_key_field(assigns) do
@@ -170,7 +238,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
               target: @target
             )
           }
-          required
+          required={@required}
           class={[
             "input input-with-icon w-full",
             if(FormValidationHelpers.field_errors(@form_errors, @error_key) != [],

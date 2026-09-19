@@ -359,6 +359,7 @@ config :tymeslot, :transcoder, Tymeslot.Media.Transcoder
 # Provider enable/disable switches
 config :tymeslot, :video_providers, %{
   mirotalk: [enabled: true],
+  nextcloud_talk: [enabled: true],
   google_meet: [enabled: true],
   teams: [enabled: true],
   custom: [enabled: true]

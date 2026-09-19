@@ -40,6 +40,11 @@ defmodule TymeslotWeb.Helpers.IntegrationProviders do
           message: message
         )
 
+      "nextcloud_talk" ->
+        dgettext("dashboard_integrations", "✓ Nextcloud Talk connection verified - %{message}",
+          message: message
+        )
+
       "google_meet" ->
         dgettext("dashboard_integrations", "✓ Google Meet connection verified - %{message}",
           message: message
