@@ -73,7 +73,8 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
       assert_received {:deleted, uid, context, opts}
 
       assert {uid, context, opts} ==
-               {event.uid, {caldav.id, user.id}, [provider_event_id: "/cal/design-review.ics"]}
+               {event.uid, {caldav.id, user.id},
+                [provider_event_id: "/cal/design-review.ics", calendar_id: "/cal/"]}
 
       assert {:error, :not_found} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
     end
@@ -94,7 +95,9 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
       expect_delete(:ok)
 
       assert {:ok, _result} = CalendarGrid.delete_event(user.id, event)
-      assert_received {:deleted, _uid, _context, []}
+      # No href to address the event by, but the calendar it is on is still
+      # known and still narrows the delete.
+      assert_received {:deleted, _uid, _context, [calendar_id: "/cal/"]}
     end
 
     test "cancels the meeting the event was booked as", %{user: user, caldav: caldav} do

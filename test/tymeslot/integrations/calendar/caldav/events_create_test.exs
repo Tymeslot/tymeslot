@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsCreateTest do
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Events
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
 
   @caldav_client %{
     base_url: "https://caldav.example.com",
@@ -20,6 +21,72 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsCreateTest do
     verify_ssl: true,
     provider: :caldav
   }
+
+  describe "CaldavCommon.create_event/2 — which calendar the write lands on" do
+    @booking_client %{
+      base_url: "https://caldav.example.com",
+      username: "user",
+      password: "pass",
+      calendar_paths: ["/calendars/user/bookings/"],
+      writable_calendar_paths: [
+        "/calendars/user/bookings/",
+        "/calendars/user/team/"
+      ],
+      verify_ssl: true,
+      provider: :caldav
+    }
+
+    defp event_data do
+      %{
+        uid: "chosen-calendar-uid",
+        summary: "Design review",
+        start_time: ~U[2026-05-01 10:00:00Z],
+        end_time: ~U[2026-05-01 11:00:00Z]
+      }
+    end
+
+    # The booking flow chooses no calendar, so the client's own collection is
+    # still where a booking lands.
+    test "writes to the client's own collection when the payload names none" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert conn.request_path == "/calendars/user/bookings/chosen-calendar-uid.ics"
+        Conn.send_resp(conn, 201, "")
+      end)
+
+      assert {:ok, %CreatedEvent{calendar_id: "/calendars/user/bookings/"}} =
+               CaldavCommon.create_event(@booking_client, event_data())
+    end
+
+    # `event_data[:calendar_id]` was never read on this path, so an event
+    # created on any other collection silently went to the booking one.
+    test "writes to the calendar the payload asks for" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert conn.request_path == "/calendars/user/team/chosen-calendar-uid.ics"
+        Conn.send_resp(conn, 201, "")
+      end)
+
+      assert {:ok, %CreatedEvent{calendar_id: "/calendars/user/team/"}} =
+               CaldavCommon.create_event(
+                 @booking_client,
+                 Map.put(event_data(), :calendar_id, "/calendars/user/team/")
+               )
+    end
+
+    # `event_data` is caller-supplied; a path taken from it unchecked is a URL
+    # taken from a payload.
+    test "ignores a calendar the integration does not list as writable" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert conn.request_path == "/calendars/user/bookings/chosen-calendar-uid.ics"
+        Conn.send_resp(conn, 201, "")
+      end)
+
+      assert {:ok, %CreatedEvent{calendar_id: "/calendars/user/bookings/"}} =
+               CaldavCommon.create_event(
+                 @booking_client,
+                 Map.put(event_data(), :calendar_id, "/calendars/someone-else/private/")
+               )
+    end
+  end
 
   describe "create_calendar_event/4" do
     test "sends PUT to a server-root-relative URL and returns the UID" do

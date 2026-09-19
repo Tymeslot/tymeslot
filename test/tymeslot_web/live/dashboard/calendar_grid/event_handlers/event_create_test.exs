@@ -329,6 +329,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateTest do
       provider: integration.provider,
       provider_event_id: Keyword.get(opts, :provider_event_id),
       etag: Keyword.get(opts, :etag),
+      written_calendar_id: nil,
       default_booking_calendar_id: nil,
       reauth_required: reauth_required,
       attendees: attendees,

@@ -159,17 +159,19 @@ defmodule Tymeslot.CalendarGrid.EventMove do
     }
   end
 
-  # The CalDAV family writes every new event to the integration's booking
-  # collection whatever calendar was asked for, so the row is filed under the
-  # path actually written to. `booking_calendar_path/1` resolves nothing when
-  # the stored booking calendar id matches no discovered collection, which is
-  # the state a rediscovery leaves behind; the create falls back to the first
-  # discovered collection, so the row follows it rather than being filed under
-  # a null the column rejects. The "primary" placeholder is only meaningful to
-  # the OAuth providers, where it names the account's own calendar.
+  # The chosen calendar first, for every provider: CalDAV writes now honour
+  # `event_data[:calendar_id]` when it names a writable collection, so filing
+  # the row under the booking collection regardless is no longer the truth.
+  # `booking_calendar_path/1` resolves nothing when the stored booking calendar
+  # id matches no discovered collection, which is the state a rediscovery
+  # leaves behind; the create falls back to the first discovered collection, so
+  # the row follows it rather than being filed under a null the column rejects.
+  # The "primary" placeholder is only meaningful to the OAuth providers, where
+  # it names the account's own calendar.
   defp destination_calendar_id(integration, calendar_id) do
     if integration.provider in Calendar.caldav_based_provider_strings() do
-      Calendar.booking_calendar_path(integration) || List.first(integration.calendar_paths)
+      calendar_id || Calendar.booking_calendar_path(integration) ||
+        List.first(integration.calendar_paths)
     else
       calendar_id || integration.default_booking_calendar_id || "primary"
     end
@@ -207,7 +209,12 @@ defmodule Tymeslot.CalendarGrid.EventMove do
         uid: moved.uid,
         calendar_integration_id: moved.calendar_integration_id,
         provider: moved.provider,
-        provider_calendar_id: moved.provider_calendar_id,
+        # What the destination actually wrote, before what was asked for: a
+        # CalDAV create falls back to the booking collection when the chosen
+        # calendar is not one the integration lists as writable, and filing
+        # the row under the request would put the moved event on a calendar it
+        # is not on.
+        provider_calendar_id: created.calendar_id || moved.provider_calendar_id,
         provider_event_id: created.provider_event_id,
         etag: created.etag,
         synced_at: DateTime.utc_now(:microsecond)
@@ -218,7 +225,15 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   end
 
   defp remove_source(user_id, event) do
-    opts = if event.provider_event_id, do: [provider_event_id: event.provider_event_id], else: []
+    # The source's own calendar, not the integration's default: a move away
+    # from a secondary Google or Outlook calendar used to address the default
+    # one and 404, leaving the original behind beside the copy.
+    opts =
+      Enum.reject(
+        [provider_event_id: event.provider_event_id, calendar_id: event.provider_calendar_id],
+        fn {_key, value} -> is_nil(value) end
+      )
+
     context = {event.calendar_integration_id, user_id}
 
     case CalendarEvents.delete_event(event.uid, context, opts) do

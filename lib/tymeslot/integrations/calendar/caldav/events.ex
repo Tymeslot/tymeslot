@@ -133,7 +133,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
       case Http.put_event(url, client.username, client.password, ical_data, put_opts) do
         {:ok, %Req.Response{status: status, headers: headers}} when status in [200, 201, 204] ->
-          {:ok, created_event(uid, url, headers)}
+          {:ok, created_event(uid, calendar_path, url, headers)}
 
         {:error, reason} ->
           {:error, reason}
@@ -149,9 +149,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   # return one, and a server that normalised the submitted document must not,
   # so its absence is an ordinary create: the update path still falls back to
   # a HEAD probe and then to `If-Match: *` exactly as it did before.
-  defp created_event(uid, url, headers) do
+  defp created_event(uid, calendar_path, url, headers) do
     CreatedEvent.new(uid,
       provider_event_id: href_path(url),
+      calendar_id: calendar_path,
       etag: EventProcessor.clean_etag(etag_from_headers(headers))
     )
   end

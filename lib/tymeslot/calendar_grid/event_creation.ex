@@ -298,6 +298,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
        end_at: end_at,
        provider: provider,
        provider_event_id: created.provider_event_id,
+       written_calendar_id: created.calendar_id,
        etag: created.etag,
        default_booking_calendar_id: default_booking_calendar_id,
        reauth_required: reauth_required?,

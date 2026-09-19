@@ -168,7 +168,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       assert uid != event.uid
       assert create_context == {destination.id, user.id}
       assert {deleted_uid, delete_context} == {event.uid, {source.id, user.id}}
-      assert opts == [provider_event_id: "/src/design-review.ics"]
+      assert opts == [provider_event_id: "/src/design-review.ics", calendar_id: "/src/"]
     end
 
     test "sends the whole event to the destination", %{
@@ -545,7 +545,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
                provider_calls()
 
       assert delete_context == {exchange.id, user.id}
-      assert opts == [provider_event_id: "series-item"]
+      assert opts == [provider_event_id: "series-item", calendar_id: "calendar-folder"]
       assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(destination.id, uid)
     end
 

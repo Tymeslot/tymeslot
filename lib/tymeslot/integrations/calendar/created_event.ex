@@ -23,6 +23,13 @@ defmodule Tymeslot.Integrations.Calendar.CreatedEvent do
       the cached grid row's column of the same name holds. A server-root-
       relative CalDAV href, or a Google, Outlook or Exchange event id. `nil`
       when the provider's answer does not carry one.
+    * `:calendar_id`: the collection the event was actually written to, as the
+      cached row's `provider_calendar_id` spells it. The caller's request is
+      not the answer: a CalDAV write falls back to the booking collection when
+      the requested calendar is not one the integration lists as writable, and
+      caching the request rather than the outcome files the row under a
+      calendar the event is not on, which is where the next edit then looks for
+      it. `nil` when the provider does not report one.
     * `:etag`: the entity tag the server assigned, stored the way sync stores
       one, with its surrounding quotes stripped (`EventProcessor.clean_etag/1`)
       so the same tag compares equal however a server spells it. `nil`
@@ -48,11 +55,12 @@ defmodule Tymeslot.Integrations.Calendar.CreatedEvent do
   until a read fills it.
   """
 
-  defstruct [:uid, :provider_event_id, :etag, :raw]
+  defstruct [:uid, :provider_event_id, :calendar_id, :etag, :raw]
 
   @type t :: %__MODULE__{
           uid: String.t() | nil,
           provider_event_id: String.t() | nil,
+          calendar_id: String.t() | nil,
           etag: String.t() | nil,
           raw: map() | nil
         }
@@ -65,6 +73,7 @@ defmodule Tymeslot.Integrations.Calendar.CreatedEvent do
     %__MODULE__{
       uid: uid,
       provider_event_id: Keyword.get(opts, :provider_event_id),
+      calendar_id: Keyword.get(opts, :calendar_id),
       etag: Keyword.get(opts, :etag),
       raw: Keyword.get(opts, :raw)
     }

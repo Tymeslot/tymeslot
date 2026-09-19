@@ -21,6 +21,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Client do
     :password,
     :provider,
     calendar_paths: [],
+    # Every collection on the integration a write is allowed to target, which
+    # is not the same as the one this client defaults to. A booking client
+    # addresses one collection, but the calendar grid lets the organiser pick
+    # another, and `CaldavCommon.create_event/2` needs a list to check that
+    # choice against: a `calendar_id` off the event payload is caller-supplied
+    # and must never be able to send a write to an arbitrary path.
+    writable_calendar_paths: [],
     # Carried on the client but never applied: nothing below this module
     # builds a TLS option from it, so CalDAV always verifies. See the field
     # comment on `CalendarIntegrationSchema` before changing it.
@@ -33,6 +40,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Client do
           password: String.t() | nil,
           provider: atom(),
           calendar_paths: [String.t()],
+          writable_calendar_paths: [String.t()],
           verify_ssl: boolean()
         }
 end

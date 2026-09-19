@@ -213,6 +213,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       end_at: end_at,
       provider: provider,
       provider_event_id: provider_event_id,
+      written_calendar_id: written_calendar_id,
       etag: etag,
       default_booking_calendar_id: default_booking_calendar_id,
       attendees: attendees,
@@ -220,8 +221,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       description: description
     } = result
 
+    # What the provider actually wrote, before what was asked for. A CalDAV
+    # write falls back to the booking collection when the chosen calendar is
+    # not one the integration lists as writable, and filing the row under the
+    # request instead showed the event on a calendar it is not on until the
+    # next sync corrected it, with every edit addressed by that row aimed at
+    # the wrong collection in the meantime.
     provider_calendar_id =
-      creating[:calendar_id] || default_booking_calendar_id || "primary"
+      written_calendar_id || creating[:calendar_id] || default_booking_calendar_id || "primary"
 
     all_day = Map.get(creating, :all_day, false)
 

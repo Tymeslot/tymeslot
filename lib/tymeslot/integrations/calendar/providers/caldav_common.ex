@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Client, Discovery, Events, Http, UrlBuilder}
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Utils.UriUtils
 
   require Logger
 
@@ -43,6 +44,9 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
       username: Map.get(config, :username) || Map.get(config, "username"),
       password: Map.get(config, :password) || Map.get(config, "password"),
       calendar_paths: Map.get(config, :calendar_paths) || [],
+      writable_calendar_paths:
+        Map.get(config, :writable_calendar_paths) ||
+          Map.get(config, "writable_calendar_paths") || [],
       verify_ssl: Map.get(config, :verify_ssl, true),
       provider: provider
     }
@@ -261,19 +265,41 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   end
 
   @doc """
-  Create an event in the first configured calendar.
+  Create an event in the calendar the payload asks for, or in the client's own
+  calendar when it asks for none.
 
-  Answers a `CreatedEvent` carrying the uid, the href the resource was written
-  to and the ETag the server assigned it, so the caller can cache the event's
-  identity without waiting for a sync to supply it.
+  Answers a `CreatedEvent` carrying the uid, the collection and href the
+  resource was written to and the ETag the server assigned it, so the caller
+  can cache the event's identity without waiting for a sync to supply it.
   """
   @spec create_event(caldav_client(), map()) :: {:ok, CreatedEvent.t()} | {:error, term()}
   def create_event(client, event_data) do
-    case primary_calendar_path(client) do
+    case create_path(client, event_data) do
       nil -> {:error, "No calendar configured for creating events"}
       path -> Events.create_calendar_event(client, path, event_data)
     end
   end
+
+  # The booking flow chooses no calendar, so the client's own collection is the
+  # default and bookings keep landing where they always have. The calendar grid
+  # does choose one, and used to be ignored: `event_data[:calendar_id]` was
+  # never read on this path, so an event created on, or moved to, any other
+  # collection silently went to the booking one instead.
+  #
+  # The choice is honoured only when it names a collection the integration
+  # lists as writable. `event_data` is caller-supplied, and a path taken from
+  # it unchecked is a URL taken from a payload.
+  defp create_path(client, event_data) do
+    chosen = Map.get(event_data, :calendar_id) || Map.get(event_data, "calendar_id")
+
+    client
+    |> writable_calendar_paths()
+    |> Enum.find(&UriUtils.uri_safe_match?(&1, chosen))
+    |> Kernel.||(primary_calendar_path(client))
+  end
+
+  defp writable_calendar_paths(%{writable_calendar_paths: paths}) when is_list(paths), do: paths
+  defp writable_calendar_paths(_client), do: []
 
   @doc """
   Diagnostic-only: PUT a hand-crafted iCalendar payload into the primary

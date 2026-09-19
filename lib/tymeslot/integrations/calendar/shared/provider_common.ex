@@ -245,8 +245,13 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   @spec caldav_build_booking_client_config(map()) :: map() | nil
   def caldav_build_booking_client_config(integration) do
     case CalendarPathResolver.resolve(integration) do
-      nil -> nil
-      path -> caldav_path_config(integration, path)
+      nil ->
+        nil
+
+      path ->
+        integration
+        |> caldav_path_config(path)
+        |> Map.put(:writable_calendar_paths, caldav_selected_paths(integration))
     end
   end
 

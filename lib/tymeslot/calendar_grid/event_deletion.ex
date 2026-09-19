@@ -105,7 +105,19 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
 
   defp delete_single_event(user_id, %{uid: uid, calendar_integration_id: integration_id} = event) do
     provider_event_id = Map.get(event, :provider_event_id)
-    opts = if provider_event_id, do: [provider_event_id: provider_event_id], else: []
+
+    # Both halves of the event's address: its own id, and the calendar it is
+    # on. Without the calendar a Google or Outlook delete could only address
+    # the integration's default booking calendar, so deleting an event on any
+    # other one 404'd.
+    opts =
+      Enum.reject(
+        [
+          provider_event_id: provider_event_id,
+          calendar_id: Map.get(event, :provider_calendar_id)
+        ],
+        fn {_key, value} -> is_nil(value) end
+      )
 
     case CalendarEvents.delete_event_and_reconcile(
            uid,

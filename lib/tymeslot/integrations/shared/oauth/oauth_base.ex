@@ -195,9 +195,14 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
         )
       end
 
+      # `opts` reaches the provider rather than being dropped here. It carries
+      # the calendar the event is actually on, which create and update already
+      # read off `event_attrs[:calendar_id]`; with no channel for it, a delete
+      # could only ever address the default booking calendar, so deleting an
+      # event on any other calendar aimed at a resource that is not there.
       @impl Tymeslot.Integrations.Calendar.Provider
-      def delete_event(integration, event_id, _opts) do
-        OAuthBase.handle_api_call(fn -> call_delete_event(integration, event_id) end)
+      def delete_event(integration, event_id, opts) do
+        OAuthBase.handle_api_call(fn -> call_delete_event(integration, event_id, opts) end)
       end
 
       @impl Tymeslot.Integrations.Calendar.Provider
@@ -236,7 +241,11 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
                   event_id :: String.t(),
                   event_attrs :: map()
                 ) :: term()
-      @callback call_delete_event(integration :: term(), event_id :: String.t()) :: term()
+      @callback call_delete_event(
+                  integration :: term(),
+                  event_id :: String.t(),
+                  opts :: keyword()
+                ) :: term()
 
       # Helper functions for providers
       defp default_start_time, do: OAuthBase.default_start_time()
