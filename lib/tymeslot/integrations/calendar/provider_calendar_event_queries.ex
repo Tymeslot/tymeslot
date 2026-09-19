@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   # a rename cannot leave a stale literal behind in a `where` clause that would
   # then silently match nothing.
   @role_busy_only EventRole.busy_only()
+  @sync_state_locally_deleted "locally_deleted"
 
   # The columns a dashboard edit may change on a cached row: what a user can
   # edit on an event, plus the video room an edit can attach to it.
@@ -40,6 +41,14 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   the other side. Every provider but Exchange writes only `both` rows, so
   neither filter changes what they return.
 
+  A row the organiser has deleted is also excluded, even while the delete is
+  still queued for the server: the flash says the event is gone and will be
+  retried, so leaving it drawn contradicts it. Availability deliberately keeps
+  counting the row until the delete lands, because the event is still on the
+  server and the slot is not free yet. This used to happen by accident — the
+  queue tag blanked the timing columns the overlap test reads — and stopped
+  the moment that blanking was fixed.
+
   ## Options
 
   - `:limit` — maximum number of rows to return (default: unbounded). Since
@@ -59,6 +68,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
     ProviderCalendarEventSchema
     |> where([e], e.calendar_integration_id in ^integration_ids)
     |> where([e], e.role != ^@role_busy_only)
+    |> where([e], e.sync_state != ^@sync_state_locally_deleted)
     |> where_overlapping_range(range_start, range_end)
     |> order_by([e], asc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)))
     |> maybe_limit(limit)

@@ -160,9 +160,11 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
     with true <- CalendarEvents.queueable_error?(reason),
          :ok <- CalendarEvents.queue_for_offline_retry(target, :update, payload) do
-      # The queue marker is an upsert of the queue's own narrower columns, so
-      # the edit is written again on top of it to keep attendees, reminders
-      # and all-day dates on the row the grid reads.
+      # The queue tag writes the edit's own fields, so this is no longer
+      # repairing what the tag blanked. It stays for the other half of the
+      # job: applying the canonical editable-field set to the cached row and
+      # invalidating the organiser's availability, which a queued edit has
+      # changed locally whether or not it has reached the server yet.
       record_local_edit(user_id, event)
       :queued
     else
