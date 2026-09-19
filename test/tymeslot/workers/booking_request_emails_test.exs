@@ -271,6 +271,49 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
     end
   end
 
+  describe "send_reschedule_request_expired" do
+    defp expired_job(meeting),
+      do:
+        perform_job(EmailWorker, %{
+          "action" => "send_reschedule_request_expired",
+          "meeting_id" => meeting.id
+        })
+
+    test "tells the host in their own language" do
+      host = insert(:user, locale: "de")
+
+      meeting =
+        held_meeting(%{
+          organizer_user: host,
+          organizer_user_id: host.id,
+          status: "expired",
+          attendee_locale: "fr",
+          first_announced_at: DateTime.utc_now(:second)
+        })
+
+      expect(Tymeslot.EmailServiceMock, :send_reschedule_request_expired, fn sent, locale ->
+        assert sent.id == meeting.id
+        assert locale == "de"
+        {:ok, :sent}
+      end)
+
+      assert :ok = expired_job(meeting)
+    end
+
+    test "sends nothing for a request that never was a confirmed booking" do
+      meeting = held_meeting(%{status: "expired", first_announced_at: nil})
+
+      assert {:discard, _reason} = expired_job(meeting)
+    end
+
+    test "sends nothing once the booking is no longer the lapsed request" do
+      meeting =
+        held_meeting(%{status: "confirmed", first_announced_at: DateTime.utc_now(:second)})
+
+      assert {:discard, _reason} = expired_job(meeting)
+    end
+  end
+
   describe "the outcome email" do
     test "sends the declined variant for a request the host refused" do
       meeting = held_meeting(%{status: "cancelled", decline_reason: "Away that week"})

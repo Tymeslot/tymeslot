@@ -200,6 +200,58 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       )
     end
 
+    test "tells the host when the request to move a confirmed booking lapses" do
+      # Letting the request lapse cancels the booking; nobody declined it, so
+      # without this the host would only find a meeting missing.
+      announced_at = DateTime.utc_now(:second)
+
+      %{meeting: meeting, params: params} =
+        gated_booking(true, %{announced_at: announced_at, first_announced_at: announced_at})
+
+      {:ok, _rescheduled} =
+        Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      assert {:ok, _expired} = Approval.expire(reload(meeting))
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_reschedule_request_expired", "meeting_id" => meeting.id}
+      )
+    end
+
+    test "a lapsed first-time request costs the host no booking and sends them nothing" do
+      %{meeting: meeting} =
+        gated_booking(true, %{
+          status: "awaiting_approval",
+          approval_requested_at: DateTime.add(DateTime.utc_now(:second), -1, :hour),
+          approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 11, :hour)
+        })
+
+      assert {:ok, _expired} = Approval.expire(reload(meeting))
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_reschedule_request_expired", "meeting_id" => meeting.id}
+      )
+    end
+
+    test "a declined reschedule sends the host nothing extra: they made the decision" do
+      announced_at = DateTime.utc_now(:second)
+
+      %{meeting: meeting, params: params} =
+        gated_booking(true, %{announced_at: announced_at, first_announced_at: announced_at})
+
+      {:ok, _rescheduled} =
+        Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      assert {:ok, _declined} = Approval.decline(reload(meeting))
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_reschedule_request_expired", "meeting_id" => meeting.id}
+      )
+    end
+
     test "the record that the booking was once a live meeting survives the re-gate" do
       # Clearing `announced_at` frees the fan-out claim, and would otherwise
       # erase the only fact saying this booking had already happened. That

@@ -86,6 +86,7 @@ msgstr "DETAILS:"
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
+#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Date:"
 msgstr "Datum:"
@@ -101,6 +102,7 @@ msgstr "Dauer"
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
+#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Duration:"
 msgstr "Dauer:"
@@ -189,6 +191,7 @@ msgstr "Ort"
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
+#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Location:"
 msgstr "Ort:"
@@ -219,6 +222,7 @@ msgstr "NACHRICHT DES TEILNEHMERS:"
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/external_booking_change.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
+#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting"
@@ -374,6 +378,7 @@ msgstr "Uhrzeit:"
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
+#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Timezone:"
 msgstr "Zeitzone:"
@@ -382,6 +387,7 @@ msgstr "Zeitzone:"
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/reschedule_request.ex
+#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Type:"
 msgstr "Art:"
@@ -2137,6 +2143,7 @@ msgid "Decline:"
 msgstr "Ablehnen:"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
+#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "From:"
 msgstr "Von:"
@@ -2169,6 +2176,7 @@ msgstr "Neue Buchungsanfrage"
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
+#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "REQUESTED TIME:"
 msgstr "GEWÜNSCHTE ZEIT:"
@@ -2329,3 +2337,33 @@ msgstr "Offene Rückerstattung"
 #, elixir-autogen, elixir-format
 msgid "You still hold %{amount} for this booking."
 msgstr "Sie halten für diese Buchung noch %{amount}."
+
+#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} asked to move their confirmed booking to this time, and the request wasn't answered before its deadline. The previous time had already been given up for it, so the booking has been cancelled. %{name} has been told and can book a new time."
+msgstr "%{name} hat gebeten, die bestätigte Buchung auf diese Zeit zu verschieben, und die Anfrage wurde nicht vor Ablauf der Frist beantwortet. Die bisherige Zeit war dafür bereits freigegeben, daher wurde die Buchung storniert. %{name} wurde informiert und kann eine neue Zeit buchen."
+
+#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
+#, elixir-autogen, elixir-format
+msgid "Booking cancelled"
+msgstr "Buchung storniert"
+
+#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
+#, elixir-autogen, elixir-format
+msgid "Requested New Time"
+msgstr "Gewünschte neue Zeit"
+
+#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule Request Expired"
+msgstr "Verschiebungsanfrage abgelaufen"
+
+#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule request expired, booking cancelled: %{name} - %{date}"
+msgstr "Verschiebungsanfrage abgelaufen, Buchung storniert: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
+#, elixir-autogen, elixir-format
+msgid "Your booking with %{name} has been cancelled."
+msgstr "Ihre Buchung mit %{name} wurde storniert."
