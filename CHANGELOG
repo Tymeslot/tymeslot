@@ -1,4 +1,78 @@
 
+[1.16.0]
+* [BREAKING] Move Zoom meetings when a booking is rescheduled by default: Add meeting:update:meeting to your Zoom app's scopes before upgrading. If your app cannot have it, set ZOOM_UPDATE_SCOPE_ENABLED=false, or users will be asked to reconnect Zoom for a permission the app cannot grant.
+* Keep a paid meeting type's price when Stripe is unavailable
+* Write grid events to the calendar they were placed on
+* Keep every occurrence of a recurring CalDAV event
+* Allow reconnecting a video integration with unreadable credentials
+* Keep the whole event when an offline CalDAV change replays
+* Delete calendar events on servers whose address carries a path
+* Stop an all-day toggle moving a recurring event's end date
+* End an Outlook recurring event on the date it was set to end
+* Stop lazy-loaded hooks sharing one object across elements
+* Show provider-specific server URL help for CalDAV connections
+* Accept a server URL typed without https://
+* Keep a new calendar event's identity from the create
+* Bound time off dates and close days its windows fully cover
+* Store integration server URLs exactly as typed
+* Stop charging refused integration saves to the connection-test limit
+* Let a calendar that recovers on its own take bookings again
+* Check the host's calendar when a booking is rescheduled
+* Keep outstanding refunds visible after Stripe is disconnected
+* Show a booking page with no calendar as a notice, not a crash
+* Keep attendee replies when a Google event is edited from the grid
+* Ask Nextcloud users for an app password when connecting a calendar
+* Stop MiroTalk claiming every meeting link on a "talk." host
+* Keep a calendar event's attendees when it is edited from the grid
+* End a recurrence UNTIL in the event's own timezone
+* Report a Telegram disconnect on a deleted integration cleanly
+* Identify a self-hosted integration by its full server address
+* Flag a username taken in another case while it is typed
+* Refuse a custom video link whose placeholder has an extra brace
+* Rescue background jobs abandoned by a stopped node
+* Classify a refused CalDAV password as a permanent failure
+* Warn when a meeting type's target calendar goes read-only
+* Only open the remove-integration dialog for the owner's integration
+* Stop the provider picker subtitle inheriting the modal heading styles
+* Refit a series' UNTIL when an event toggles all-day
+* Notify attendees of calendar grid video changes
+* Report a calendar-grid delete that succeeded as done
+* Align the calendar webhook endpoints on failures and limits
+* Drop cached availability when an event is created on the grid
+* Fall back to the video room URL when a join link cannot be minted
+* Remove a queued event delete from the calendar grid at once
+* Keep reminders saved before the one-year limit editable
+* Stop offering to delete one occurrence of a recurring event
+* Report the refund correctly in the cancellation email
+* Show the host when a cancelled booking still owes a refund
+* Free the booking slot as soon as a calendar event is deleted
+* Stop queueing calendar deletes and creates that can never sync
+* Create the video room when picking a provider in the event editor
+* Stop moving a calendar event from deleting it
+* Say an edit will sync when the calendar could not be reached
+* Keep attendees, reminders and repeats when editing calendar events
+* Explain why a username can't be used before asking to confirm the change
+* Reserve two offensive phrases that were never blocked as usernames
+* Stop showing another account's booking count when removing a video integration
+* Keep Telegram integrations when they are disconnected
+* Keep setup checklist ticks made in another browser tab
+* Reject malformed meeting ID placeholders in custom video links
+* Offer the rest of the day when rescheduling at a booking limit
+* Show password and email change errors next to the right field
+* Save a real timezone when onboarding detects an unknown one
+* Show the right outcome after paying for a booking
+* Stop re-inviting an attendee whose address differs only in case
+* Highlight the calendar an event is actually on when editing it
+* End new all-day recurring events on the date picked
+* Open hours that start inside a DST jump when the clocks land
+* Warn when the calendar bookings go to has turned read-only
+* Stop attendees from refunding bookings when cancelling
+* Stop duplicating a long-named schedule from freezing the page
+* Reject reminders more than a year ahead when adding them
+* Warn when time off covers existing bookings
+* Add time off so days away close without touching a calendar
+
+
 [1.15.8]
 * Keep the video link on calendar events when booking jobs overlap
 * Only ask for a calendar reconnect when the provider refused it
