@@ -37,6 +37,7 @@ defmodule Tymeslot.Dev.Calendar do
   @behaviour Tymeslot.Integrations.Calendar.CalendarBehaviour
 
   alias Tymeslot.Integrations.Calendar.CalendarBehaviour
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.DebugSchedule
   alias Tymeslot.Integrations.Calendar.DebugStore
   alias Tymeslot.Profiles.ProfileQueries
@@ -90,8 +91,8 @@ defmodule Tymeslot.Dev.Calendar do
   @impl CalendarBehaviour
   def create_event(event_data, _context) do
     case record_event(event_data) do
-      {:ok, uid} -> {:ok, %{uid: uid}}
-      :ignore -> {:ok, %{uid: "dev-stub-event"}}
+      {:ok, uid} -> {:ok, CreatedEvent.new(uid)}
+      :ignore -> {:ok, CreatedEvent.new("dev-stub-event")}
     end
   end
 

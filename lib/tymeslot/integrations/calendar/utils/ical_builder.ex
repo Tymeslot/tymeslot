@@ -130,7 +130,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   it. `ATTENDEE` blocks, `CATEGORIES`, `SEQUENCE`, `X-` properties and
   anything else Tymeslot does not model survive the write, which
   `build_simple_event/2` cannot promise: it serialises the payload and
-  nothing else. See `#{inspect(Patcher)}` for the full contract, including
+  nothing else. See `Tymeslot.Integrations.Calendar.ICalBuilder.Patcher` for the full contract, including
   which components are deliberately left untouched.
   """
   @spec patch_event_properties(String.t(), map()) :: String.t()
