@@ -172,10 +172,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
   defp add_recurrence(base, event_data) do
     rrule = extract_field(event_data, :recurrence_rule, "recurrence_rule")
 
+    timezone = extract_field(event_data, :timezone, "timezone")
+
     with rrule when is_binary(rrule) and rrule != "" <- rrule,
          %Date{} = start_date <- recurrence_start_date(event_data),
          recurrence when is_map(recurrence) <-
-           RecurrenceConverter.rrule_to_outlook(rrule, start_date) do
+           RecurrenceConverter.rrule_to_outlook(rrule, start_date, timezone) do
       Map.put(base, "recurrence", recurrence)
     else
       _none -> base

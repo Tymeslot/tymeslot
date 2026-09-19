@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverterTest do
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
 
   @start_date ~D[2026-06-15]
 
@@ -157,6 +158,55 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverterTest do
         rrule = unquote(rrule)
         outlook = RecurrenceConverter.rrule_to_outlook(rrule, ~D[2026-06-16])
         assert RecurrenceConverter.outlook_to_rrule(outlook) == rrule
+      end
+    end
+  end
+
+  describe "rrule_to_outlook/3 — endDate is the organiser's local date" do
+    # Graph reads `endDate` as a local date in the event's own timezone (its
+    # default when no `recurrenceTimeZone` is sent, which this converter never
+    # sends), while a timed rule's UNTIL is an instant in UTC. Parsing the rule
+    # without the zone read that instant as a UTC date, so an organiser west of
+    # UTC had the series written one day late and Graph generated an extra
+    # occurrence.
+    for {timezone, until} <- [
+          {"America/Los_Angeles", "20270101T075959Z"},
+          {"America/New_York", "20270101T045959Z"},
+          {"Europe/Tallinn", "20261231T215959Z"},
+          {"Pacific/Auckland", "20261231T105959Z"},
+          {"Etc/UTC", "20261231T235959Z"}
+        ] do
+      test "#{timezone} ends on the date the organiser picked" do
+        rrule = "FREQ=DAILY;UNTIL=#{unquote(until)}"
+
+        %{"range" => range} =
+          RecurrenceConverter.rrule_to_outlook(rrule, @start_date, unquote(timezone))
+
+        assert range["endDate"] == "2026-12-31"
+      end
+    end
+
+    test "a rule built for a zone converts back to the date that built it" do
+      for timezone <- ["America/Los_Angeles", "Europe/Tallinn", "Pacific/Auckland"] do
+        rrule = RRule.build(%{freq: :daily, until: ~D[2026-12-31]}, timezone: timezone)
+
+        %{"range" => range} =
+          RecurrenceConverter.rrule_to_outlook(rrule, @start_date, timezone)
+
+        assert range["endDate"] == "2026-12-31", "wrong endDate for #{timezone}"
+      end
+    end
+
+    test "a legacy UTC-stamped rule keeps its date in every zone" do
+      for timezone <- ["America/Los_Angeles", "Europe/Tallinn", "Pacific/Auckland", nil] do
+        %{"range" => range} =
+          RecurrenceConverter.rrule_to_outlook(
+            "FREQ=DAILY;UNTIL=20261231T235959Z",
+            @start_date,
+            timezone
+          )
+
+        assert range["endDate"] == "2026-12-31", "wrong endDate for #{inspect(timezone)}"
       end
     end
   end
