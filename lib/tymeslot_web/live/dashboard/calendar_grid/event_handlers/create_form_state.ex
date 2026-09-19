@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.Clock
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -36,21 +37,44 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   # No time params (e.g. the `c` keyboard shortcut): open the create modal at the
   # next whole hour from "now" in the user's timezone, for a one-hour slot.
   def handle_show_create_form(_params, socket) do
-    now = DateTime.shift_zone!(DateTime.utc_now(), socket.assigns.user_timezone)
-    start_hour = if now.minute == 0, do: now.hour, else: rem(now.hour + 1, 24)
-    today = Date.to_iso8601(DateTime.to_date(now))
+    now = DateTime.shift_zone!(Clock.utc_now(), socket.assigns.user_timezone)
 
-    creating =
-      base_creating(socket, %{
+    creating = base_creating(socket, default_slot(now))
+
+    {:noreply, assign(socket, :creating_event, creating)}
+  end
+
+  # The next whole hour, for an hour, as long as that slot ends today. It is
+  # expressed as hours on one date, so a slot reaching midnight would open with
+  # its end before its start (23:00-00:00), and after 23:00 the next hour is
+  # already tomorrow; either way the save is refused. From then on the modal
+  # opens tomorrow at 09:00-10:00, the default for a day picked without a time.
+  defp default_slot(now) do
+    start_hour = if now.minute == 0, do: now.hour, else: now.hour + 1
+
+    if start_hour <= 22 do
+      today = Date.to_iso8601(DateTime.to_date(now))
+
+      %{
         date: today,
         end_date: today,
         start_hour: start_hour,
         start_minute: 0,
-        end_hour: rem(start_hour + 1, 24),
+        end_hour: start_hour + 1,
         end_minute: 0
-      })
+      }
+    else
+      tomorrow = now |> DateTime.to_date() |> Date.add(1) |> Date.to_iso8601()
 
-    {:noreply, assign(socket, :creating_event, creating)}
+      %{
+        date: tomorrow,
+        end_date: tomorrow,
+        start_hour: 9,
+        start_minute: 0,
+        end_hour: 10,
+        end_minute: 0
+      }
+    end
   end
 
   # Builds a `creating_event` map, filling defaults for any field the caller omits.
