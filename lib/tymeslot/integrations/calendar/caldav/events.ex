@@ -28,11 +28,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   alias Tymeslot.Integrations.Calendar.CalDAV.{
     Base,
     ConflictResolution,
+    EventProcessor,
     Http,
     UrlBuilder,
     XmlHandler
   }
 
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ICalBuilder
 
   require Logger
@@ -96,12 +98,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   @doc """
   Creates a new event in the calendar.
 
-  Generates a UID if not supplied in `event_data`. Returns `{:ok, uid}` on
-  success, where `uid` is the stable identifier for future updates and deletes.
-  Uses `If-None-Match: *` to prevent accidental overwrites.
+  Generates a UID if not supplied in `event_data`. Returns
+  `{:ok, %CreatedEvent{}}` on success, carrying the uid future updates and
+  deletes address the event by, the href the resource was written to, and the
+  ETag the server assigned it. Uses `If-None-Match: *` to prevent accidental
+  overwrites.
   """
   @spec create_calendar_event(Base.client(), String.t(), map(), keyword()) ::
-          {:ok, String.t()} | {:error, Base.error_reason()}
+          {:ok, CreatedEvent.t()} | {:error, Base.error_reason()}
   def create_calendar_event(client, calendar_path, event_data, opts \\ []) do
     uid = event_data[:uid] || ICalBuilder.generate_uid()
     ical_data = ICalBuilder.build_simple_event(uid, event_data)
@@ -117,7 +121,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   that Tymeslot's own writer never produces.
   """
   @spec put_raw_event(Base.client(), String.t(), String.t(), String.t(), keyword()) ::
-          {:ok, String.t()} | {:error, Base.error_reason()}
+          {:ok, CreatedEvent.t()} | {:error, Base.error_reason()}
   def put_raw_event(client, calendar_path, uid, ical_data, opts \\ []) do
     put_ical(client, calendar_path, uid, ical_data, opts)
   end
@@ -128,10 +132,35 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
       put_opts = Keyword.merge([operation: :create], Keyword.take(opts, [:timeout]))
 
       case Http.put_event(url, client.username, client.password, ical_data, put_opts) do
-        {:ok, %Req.Response{status: status}} when status in [200, 201, 204] -> {:ok, uid}
-        {:error, reason} -> {:error, reason}
+        {:ok, %Req.Response{status: status, headers: headers}} when status in [200, 201, 204] ->
+          {:ok, created_event(uid, url, headers)}
+
+        {:error, reason} ->
+          {:error, reason}
       end
     end)
+  end
+
+  # The PUT just addressed the resource, so its href is known without asking:
+  # it is the URL reduced to a path, which is how sync spells a CalDAV
+  # `provider_event_id` and what `resolve_event_url/4` expects back.
+  #
+  # The ETag is genuinely optional. RFC 4791 §5.3.4 only says a server SHOULD
+  # return one, and a server that normalised the submitted document must not,
+  # so its absence is an ordinary create: the update path still falls back to
+  # a HEAD probe and then to `If-Match: *` exactly as it did before.
+  defp created_event(uid, url, headers) do
+    CreatedEvent.new(uid,
+      provider_event_id: href_path(url),
+      etag: EventProcessor.clean_etag(etag_from_headers(headers))
+    )
+  end
+
+  defp href_path(url) do
+    case URI.parse(url) do
+      %URI{path: path} when is_binary(path) and path != "" -> path
+      _no_path -> url
+    end
   end
 
   @doc """

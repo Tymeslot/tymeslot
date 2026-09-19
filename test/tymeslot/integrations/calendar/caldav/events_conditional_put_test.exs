@@ -20,6 +20,52 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsConditionalPutTest do
     provider: :caldav
   }
 
+  # `If-Match` takes a quoted entity-tag (RFC 9110 section 8.8.3), but a cached
+  # ETag is stored unquoted so that the same tag compares equal however a server
+  # spells it. A create now caches one of those the moment the event is written,
+  # so the requoting is what stands between the next conditional write and a
+  # malformed precondition the server can only answer 412 to, which reads
+  # exactly like a genuine conflict.
+  describe "update_calendar_event/5: the precondition's wire form" do
+    test "quotes a cached ETag that reached us with its quotes stripped" do
+      assert capture_if_match(etag: "abc123") == [~s("abc123")]
+    end
+
+    test "leaves a tag that is already in wire form alone" do
+      assert capture_if_match(etag: ~s("abc123")) == [~s("abc123")]
+    end
+
+    test "keeps a weak tag's prefix outside the quotes" do
+      assert capture_if_match(etag: "W/abc123") == [~s(W/"abc123")]
+    end
+
+    defp capture_if_match(opts) do
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert conn.method == "PUT"
+        send(test_pid, {:if_match, Conn.get_req_header(conn, "if-match")})
+        Conn.send_resp(conn, 204, "")
+      end)
+
+      assert :ok =
+               Events.update_calendar_event(
+                 @caldav_client,
+                 "/calendars/user/personal/",
+                 "wire-form-uid",
+                 %{
+                   summary: "Precondition",
+                   start_time: ~U[2026-02-24 10:00:00Z],
+                   end_time: ~U[2026-02-24 11:00:00Z]
+                 },
+                 Keyword.merge([skip_breaker: true], opts)
+               )
+
+      assert_received {:if_match, if_match}
+      if_match
+    end
+  end
+
   describe "update_calendar_event/5 — rejected preconditions" do
     test "returns :precondition_failed on 412 with default :fail policy" do
       ReqTest.stub(:tymeslot_http, fn conn ->

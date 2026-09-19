@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Client, Discovery, Events, Http, UrlBuilder}
   alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
 
   require Logger
 
@@ -257,8 +258,12 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   @doc """
   Create an event in the first configured calendar.
+
+  Answers a `CreatedEvent` carrying the uid, the href the resource was written
+  to and the ETag the server assigned it, so the caller can cache the event's
+  identity without waiting for a sync to supply it.
   """
-  @spec create_event(caldav_client(), map()) :: {:ok, any()} | {:error, term()}
+  @spec create_event(caldav_client(), map()) :: {:ok, CreatedEvent.t()} | {:error, term()}
   def create_event(client, event_data) do
     case primary_calendar_path(client) do
       nil -> {:error, "No calendar configured for creating events"}
@@ -277,7 +282,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   fresh UID per attempt.
   """
   @spec put_raw_event(caldav_client(), String.t(), String.t()) ::
-          {:ok, String.t()} | {:error, term()}
+          {:ok, CreatedEvent.t()} | {:error, term()}
   def put_raw_event(client, uid, ical_data) do
     case primary_calendar_path(client) do
       nil -> {:error, "No calendar configured for creating events"}

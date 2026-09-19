@@ -29,6 +29,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Meetings.CalendarEventLink
@@ -294,8 +295,8 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
     # Use the organizer_user_id to create in the correct calendar
     case calendar_module().create_event(event_data, meeting.organizer_user_id) do
-      {:ok, result} ->
-        persist_or_compensate(meeting, result, result)
+      {:ok, created} ->
+        persist_or_compensate(meeting, created)
 
       # The create's `If-None-Match: *` found an event at this UID after all:
       # between the update reporting it missing and this create, a concurrent
@@ -343,10 +344,10 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
     # Use the meeting context to create in the correct calendar
     case calendar_module().create_event(event_data, meeting) do
-      {:ok, returned_value} ->
+      {:ok, created} ->
         Logger.info("Calendar event created successfully", meeting_id: meeting_id)
 
-        persist_or_compensate(meeting, returned_value, returned_value)
+        persist_or_compensate(meeting, created)
 
       # `If-None-Match: *` found an event already at this meeting's own UID, so
       # it is this booking's event, written by a concurrent update job (see
@@ -374,13 +375,13 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   # just-created event before surfacing the error, leaving the retry a clean
   # slate. CalDAV PUTs are idempotent on the caller-supplied UID, so a failed
   # delete there is harmless; the compensation primarily guards Google/Outlook.
-  defp persist_or_compensate(meeting, returned_value, created_event) do
-    case persist_calendar_mapping(meeting, returned_value) do
+  defp persist_or_compensate(meeting, %CreatedEvent{} = created) do
+    case persist_calendar_mapping(meeting, created) do
       :ok ->
         :ok
 
       {:error, reason} ->
-        compensate_orphaned_event(meeting, created_event)
+        compensate_orphaned_event(meeting, created)
         {:error, reason}
     end
   end
@@ -389,8 +390,8 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   # mapping could not be persisted. Uses the provider identifier returned by the
   # create call so the delete targets the exact orphan, independent of whatever
   # (stale, unpersisted) UID the meeting still carries.
-  defp compensate_orphaned_event(meeting, created_event) do
-    case orphan_identifier(created_event) do
+  defp compensate_orphaned_event(meeting, %CreatedEvent{} = created) do
+    case CreatedEvent.local_uid(created) do
       nil ->
         :ok
 
@@ -424,13 +425,6 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
         :ok
     end
   end
-
-  defp orphan_identifier(uid) when is_binary(uid), do: uid
-
-  defp orphan_identifier(created_event) when is_map(created_event),
-    do: provider_identifier(created_event)
-
-  defp orphan_identifier(_other), do: nil
 
   defp handle_create_event_error(error_type, meeting, meeting_id, attempt) do
     case error_type do
@@ -482,7 +476,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     end
   end
 
-  defp persist_calendar_mapping(meeting, returned_value) do
+  defp persist_calendar_mapping(meeting, created) do
     # Persist which integration and calendar path were used for creation
     case calendar_module().get_booking_integration_info(meeting) do
       {:ok, %{integration_id: integration_id, calendar_path: calendar_path}} ->
@@ -491,7 +485,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
           calendar_path: calendar_path
         }
 
-        attrs = put_provider_mapping(attrs, returned_value)
+        attrs = put_provider_mapping(attrs, created)
 
         case MeetingQueries.update_meeting(meeting, attrs) do
           {:ok, _updated} ->
@@ -511,28 +505,22 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     end
   end
 
-  # CalDAV create returns its caller-supplied UID as a plain binary. Preserve
-  # that existing behaviour; unlike OAuth provider IDs, it remains the event UID.
-  defp put_provider_mapping(attrs, uid) when is_binary(uid),
+  # A provider that reported an iCalendar UID (the CalDAV family) has confirmed
+  # the value the meeting is keyed by. Every other provider answers with an
+  # identifier it minted, which belongs in `provider_event_id`: writing it to
+  # `uid` would key the meeting by a value no sync ever produces.
+  #
+  # A CalDAV create now also reports the resource's href, and that is
+  # deliberately not persisted here. `calendar_event_identifier/1` hands
+  # `provider_event_id` back as the uid of the next write, and an href is not
+  # one. It belongs on the cached grid row, which addresses events by URL.
+  defp put_provider_mapping(attrs, %CreatedEvent{uid: uid}) when is_binary(uid),
     do: Map.put(attrs, :uid, uid)
 
-  # Google and Outlook raw adapter responses expose the provider-native event
-  # identifier as `id`; their normalised public create responses expose that
-  # same identifier as `uid`. If both are present, prefer the unambiguous `id`.
-  defp put_provider_mapping(attrs, returned_event) when is_map(returned_event) do
-    case provider_identifier(returned_event) do
-      nil -> attrs
-      provider_id -> Map.put(attrs, :provider_event_id, provider_id)
-    end
-  end
+  defp put_provider_mapping(attrs, %CreatedEvent{provider_event_id: id}) when is_binary(id),
+    do: Map.put(attrs, :provider_event_id, id)
 
-  defp put_provider_mapping(attrs, _other), do: attrs
-
-  defp provider_identifier(%{"id" => id}) when is_binary(id) and byte_size(id) > 0, do: id
-  defp provider_identifier(%{id: id}) when is_binary(id) and byte_size(id) > 0, do: id
-  defp provider_identifier(%{"uid" => uid}) when is_binary(uid) and byte_size(uid) > 0, do: uid
-  defp provider_identifier(%{uid: uid}) when is_binary(uid) and byte_size(uid) > 0, do: uid
-  defp provider_identifier(_event), do: nil
+  defp put_provider_mapping(attrs, %CreatedEvent{}), do: attrs
 
   defp calendar_module do
     Application.get_env(:tymeslot, :calendar_module) ||

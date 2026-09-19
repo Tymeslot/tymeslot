@@ -21,6 +21,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
   alias Tymeslot.ExchangeFixtures
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Exchange.EventNormaliser
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -118,7 +119,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
     end)
   end
 
-  defp created(payload), do: {:ok, payload.uid}
+  defp created(payload), do: {:ok, CreatedEvent.new(payload.uid)}
 
   defp expect_delete(result) do
     test_pid = self()
@@ -302,7 +303,11 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
     } do
       google = insert(:calendar_integration, user: user, provider: "google")
       event = insert_event(source)
-      expect_create(fn _payload -> {:ok, %{uid: "google-event-id"}} end)
+
+      expect_create(fn _payload ->
+        {:ok, CreatedEvent.from_provider_event(%{uid: "google-event-id"})}
+      end)
+
       expect_delete(:ok)
 
       assert {:ok, %{uid: "google-event-id"}} = move(user, event, google, "team@group.calendar")
@@ -417,7 +422,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
         event = insert_event(source, unquote(attrs))
 
         expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context ->
-          {:ok, "never"}
+          {:ok, CreatedEvent.new("never")}
         end)
 
         refute_delete()
@@ -476,7 +481,10 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       assert {event.recurrence_rule, event.recurring_event_id, event.provider_event_id} ==
                {nil, nil, "/src/standup.ics"}
 
-      expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context -> {:ok, "never"} end)
+      expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context ->
+        {:ok, CreatedEvent.new("never")}
+      end)
+
       refute_delete()
 
       assert {:error, :recurring_event} = move(user, event, destination)
@@ -500,7 +508,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
                  {nil, nil, "series-item"}
 
         expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context ->
-          {:ok, "never"}
+          {:ok, CreatedEvent.new("never")}
         end)
 
         refute_delete()
@@ -534,7 +542,11 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       destination: destination
     } do
       event = insert_event(source, %{all_day: true, start_at: nil, end_at: nil})
-      expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context -> {:ok, "never"} end)
+
+      expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context ->
+        {:ok, CreatedEvent.new("never")}
+      end)
+
       refute_delete()
 
       assert {:error, :invalid_timing} = move(user, event, destination)

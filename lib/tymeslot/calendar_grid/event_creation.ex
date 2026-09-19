@@ -30,6 +30,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.CalendarManagement
@@ -37,7 +38,6 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.Rooms, as: VideoRooms
   alias Tymeslot.Meetings.AttendeeNotifications
-  alias Tymeslot.Utils.MapKeys
 
   @doc """
   Returns the flash message surfaced to the user when an integration's
@@ -242,8 +242,15 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     provision_video_room(video_id, user_id, event_details)
   end
 
-  defp build_create_success(created, creating, user_id, start_at, end_at, video_context) do
-    uid = if is_binary(created), do: created, else: MapKeys.get_binary(created, :uid)
+  defp build_create_success(
+         %CreatedEvent{} = created,
+         creating,
+         user_id,
+         start_at,
+         end_at,
+         video_context
+       ) do
+    uid = CreatedEvent.local_uid(created)
 
     {provider, default_booking_calendar_id, reauth_required?} =
       lookup_integration_metadata(creating.integration_id)
@@ -278,6 +285,11 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
     {:ok, _status} = AttendeeNotifications.event_created(notify_event, attendees)
 
+    # The provider's answer to the create is the only place the event's
+    # server-side identity is free: after this it costs a sync. Both fields are
+    # optional (a CalDAV server need not answer a PUT with an ETag, and no
+    # provider is obliged to name the resource), so they travel as whatever the
+    # provider reported, including nil.
     {:ok,
      %{
        uid: uid,
@@ -285,6 +297,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
        start_at: start_at,
        end_at: end_at,
        provider: provider,
+       provider_event_id: created.provider_event_id,
+       etag: created.etag,
        default_booking_calendar_id: default_booking_calendar_id,
        reauth_required: reauth_required?,
        attendees: attendees,

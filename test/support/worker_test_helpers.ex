@@ -9,6 +9,7 @@ defmodule Tymeslot.WorkerTestHelpers do
   alias Ecto.UUID
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings.MeetingSchema
@@ -144,7 +145,7 @@ defmodule Tymeslot.WorkerTestHelpers do
   def expect_calendar_create_success(integration_id, returned_uid \\ "remote-uid-123") do
     # Mock the event creation
     expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
-      {:ok, returned_uid}
+      {:ok, CreatedEvent.new(returned_uid)}
     end)
 
     # Mock the post-creation integration info fetch (called by persist_calendar_mapping)

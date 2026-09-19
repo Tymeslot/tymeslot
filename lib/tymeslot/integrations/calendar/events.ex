@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Meetings.MeetingSchema
@@ -132,7 +133,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   Falls back to the user's primary calendar if not specified.
   """
   @spec create_event(calendar_event_data(), create_context()) ::
-          {:ok, map() | String.t()} | {:error, term()}
+          {:ok, CreatedEvent.t()} | {:error, term()}
   def create_event(event_data, context) do
     case context do
       id when is_integer(id) and id > 0 ->

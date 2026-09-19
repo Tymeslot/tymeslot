@@ -380,7 +380,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
       :update ->
         case Keyword.get(opts, :if_match) do
           nil -> headers ++ [{"If-Match", "*"}]
-          etag -> headers ++ [{"If-Match", etag}]
+          etag -> headers ++ [{"If-Match", if_match_value(etag)}]
         end
 
       # Unconditional overwrite: no If-Match at all. Used by the :keep_local
@@ -396,6 +396,27 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
         headers
     end
   end
+
+  # `If-Match` takes a *quoted* entity-tag (RFC 9110 section 8.8.3). Cached
+  # ETags reach us with the quotes already stripped, since
+  # `EventProcessor.clean_etag/1` removes them so the same tag compares equal
+  # however a server spells it, so they have to be re-quoted here. Sending the
+  # bare token instead is a malformed precondition the server can only reject,
+  # and the rejection arrives as a 412: indistinguishable from a genuine
+  # conflict, so the write is dropped and the organiser is told their change
+  # was reverted. Idempotent, so a caller holding a tag still in wire form (the
+  # HEAD probe and the read-back both return the raw header) is unaffected, and
+  # a weak tag keeps its prefix.
+  defp if_match_value("*"), do: "*"
+
+  defp if_match_value(etag) when is_binary(etag) do
+    case String.trim(etag) do
+      "W/" <> tag -> "W/" <> quote_entity_tag(tag)
+      tag -> quote_entity_tag(tag)
+    end
+  end
+
+  defp quote_entity_tag(tag), do: ~s("#{String.trim(tag, ~s("))}")
 
   defp handle_read_transport_error(%Mint.TransportError{reason: :timeout}, _method),
     do: {:error, :timeout}

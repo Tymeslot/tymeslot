@@ -27,6 +27,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationAvailabilityTest do
   alias Tymeslot.Availability.Offer
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
@@ -76,7 +77,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationAvailabilityTest do
     # which is what the invalidation has to make the page notice.
     expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
       Agent.update(blocked, fn _none -> [provider_event(event_data)] end)
-      {:ok, "uid-grid-block-1"}
+      {:ok, CreatedEvent.new("uid-grid-block-1")}
     end)
 
     assert offered?(profile, date), "expected the free hour to be offered before the block"

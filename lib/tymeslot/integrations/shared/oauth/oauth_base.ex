@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   that are common across different OAuth-based calendar providers like Google and Outlook.
   """
 
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
+
   require Logger
 
   # Type definitions
@@ -105,6 +107,23 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
     end
   end
 
+  @doc """
+  Runs a create through `handle_api_call/2` and reports the provider's answer
+  as a `CreatedEvent`.
+
+  The OAuth providers mint their own event id, so the result carries it as the
+  `provider_event_id` and no iCalendar uid, and keeps the converted response
+  for the caller that reads a conference link out of it.
+  """
+  @spec handle_create((-> any()), (any() -> map())) ::
+          {:ok, CreatedEvent.t()} | {:error, any()} | :ok
+  def handle_create(api_call_fn, conversion_fn)
+      when is_function(api_call_fn, 0) and is_function(conversion_fn, 1) do
+    handle_api_call(api_call_fn, fn raw ->
+      raw |> conversion_fn.() |> CreatedEvent.from_provider_event()
+    end)
+  end
+
   defp log_typed_error(type, message) do
     Logger.warning("Calendar provider API call failed",
       error_type: type,
@@ -162,7 +181,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
 
       @impl Tymeslot.Integrations.Calendar.Provider
       def create_event(integration, event_attrs) do
-        OAuthBase.handle_api_call(
+        OAuthBase.handle_create(
           fn -> call_create_event(integration, event_attrs) end,
           &convert_event/1
         )

@@ -212,6 +212,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       start_at: start_at,
       end_at: end_at,
       provider: provider,
+      provider_event_id: provider_event_id,
+      etag: etag,
       default_booking_calendar_id: default_booking_calendar_id,
       attendees: attendees,
       meeting_url: meeting_url,
@@ -231,6 +233,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
         calendar_integration_id: creating.integration_id,
         provider: provider,
         provider_calendar_id: provider_calendar_id,
+        # What the provider said about the event it just wrote. Without these
+        # the row carried no identity until a full sync repaired it: every
+        # conditional update spent a HEAD probe first and then fell back to the
+        # weaker `If-Match: *`, and a write could only be addressed by
+        # rebuilding the URL from whichever calendar the client is scoped to.
+        # Either may be nil (a CalDAV server is not obliged to answer a PUT
+        # with an ETag), and a nil leaves the column as it was.
+        provider_event_id: provider_event_id,
+        etag: etag,
         summary: creating.title,
         description: description,
         all_day: all_day,

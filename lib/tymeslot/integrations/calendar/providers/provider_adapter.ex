@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
@@ -182,7 +183,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   Creates a new event in the calendar.
   """
   @spec create_event(adapter_client(), map()) ::
-          {:ok, term()} | {:error, atom(), term()} | {:error, term()}
+          {:ok, CreatedEvent.t()} | {:error, atom(), term()} | {:error, term()}
   def create_event(adapter_client, event_data) do
     Metrics.time_operation(
       :calendar_create_event,

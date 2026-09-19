@@ -48,6 +48,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   alias Tymeslot.CalendarGrid.ProviderPayload
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -131,7 +132,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
          {:ok, payload} <- ProviderPayload.from_event(moved),
          {:ok, created} <- create_on_destination(user_id, moved, payload) do
       moved = %{moved | uid: created_uid(created, moved.uid)}
-      cache_destination(moved)
+      cache_destination(moved, created)
       result = %{uid: moved.uid, integration_id: integration.id}
 
       result =
@@ -190,14 +191,15 @@ defmodule Tymeslot.CalendarGrid.EventMove do
     CalendarEvents.create_event(payload, {moved.calendar_integration_id, user_id})
   end
 
-  # CalDAV answers with the uid it was given; the OAuth providers with the
-  # event they created, whose id is the one they will know it by.
-  defp created_uid(created, _uid) when is_binary(created), do: created
+  # CalDAV answers with the uid it was given; the OAuth providers with an id of
+  # their own, which is the one they will know the event by.
+  defp created_uid(%CreatedEvent{} = created, fallback_uid),
+    do: CreatedEvent.local_uid(created) || fallback_uid
 
-  defp created_uid(created, uid) when is_map(created),
-    do: MapKeys.get_binary(created, :uid) || uid
-
-  defp cache_destination(moved) do
+  # The destination's answer carries the event's identity there, which is the
+  # one thing the moved row cannot inherit from the source: the href and ETag
+  # it held belonged to the resource that is about to be deleted.
+  defp cache_destination(moved, %CreatedEvent{} = created) do
     row =
       moved
       |> Map.take(@carried_fields)
@@ -206,6 +208,8 @@ defmodule Tymeslot.CalendarGrid.EventMove do
         calendar_integration_id: moved.calendar_integration_id,
         provider: moved.provider,
         provider_calendar_id: moved.provider_calendar_id,
+        provider_event_id: created.provider_event_id,
+        etag: created.etag,
         synced_at: DateTime.utc_now(:microsecond)
       })
 

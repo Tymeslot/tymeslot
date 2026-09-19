@@ -78,8 +78,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
     with {:ok, path} <- primary_path(integration),
          {:ok, event_data} <- sendable_event_data(row) do
       case Events.create_calendar_event(client, path, event_data, events_opts()) do
-        {:ok, _uid} ->
-          QueueQueries.mark_synced(integration.id, row.uid, nil)
+        {:ok, created} ->
+          QueueQueries.mark_synced(integration.id, row.uid, created.etag)
           log_success(row, :created)
 
         {:error, reason} ->
@@ -200,8 +200,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
 
       expects_calendar_event?(row, integration) ->
         case Events.create_calendar_event(client, path, event_data, events_opts()) do
-          {:ok, _uid} ->
-            QueueQueries.mark_synced(integration.id, row.uid, nil)
+          {:ok, created} ->
+            QueueQueries.mark_synced(integration.id, row.uid, created.etag)
             log_success(row, :recreated)
 
           {:error, reason} ->

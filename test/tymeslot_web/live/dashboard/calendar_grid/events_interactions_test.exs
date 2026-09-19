@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
@@ -245,7 +246,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
         send(test_pid, {:provider_call, self(), {:create, payload, context}})
 
         case payload do
-          %{start_time: %Date{}, end_time: %Date{}} -> {:ok, payload.uid}
+          %{start_time: %Date{}, end_time: %Date{}} -> {:ok, CreatedEvent.new(payload.uid)}
           _undated -> {:error, :invalid_event_data}
         end
       end)
