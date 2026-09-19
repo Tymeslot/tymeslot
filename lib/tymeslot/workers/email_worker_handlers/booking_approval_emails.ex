@@ -7,11 +7,10 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.BookingApprovalEmails do
 
   require Logger
 
-  alias Tymeslot.Auth
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Locales
   alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
@@ -206,15 +205,10 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.BookingApprovalEmails do
     service.send_booking_approval_request(variant, meeting, urls, host_locale(meeting))
   end
 
-  # The host reads their mail in their own language, not the invitee's.
-  defp host_locale(%{organizer_user_id: nil}), do: Locales.default_locale()
-
-  defp host_locale(meeting) do
-    case Auth.get_user(meeting.organizer_user_id) do
-      {:ok, %{locale: locale}} when is_binary(locale) -> locale
-      _no_explicit_choice -> Locales.default_locale()
-    end
-  end
+  # The host reads their mail in their own language, not the invitee's, and
+  # without an explicit choice in the same default as their other booking
+  # mail — not the instance-wide `default_locale/0`, which is English.
+  defp host_locale(meeting), do: RecipientLocale.locale_for_user_id(meeting.organizer_user_id)
 
   # Every approval email is only meaningful while the request is still open.
   defp with_held_request(meeting_id, action, fun) do

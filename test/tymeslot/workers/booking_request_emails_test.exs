@@ -16,7 +16,6 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
   @moduletag :bookings
 
   alias Tymeslot.Emails.EmailScheduler
-  alias Tymeslot.Locales
   alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.EmailWorker
@@ -251,7 +250,19 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
       assert :ok = request_job(meeting)
     end
 
-    test "the default when they have chosen none" do
+    test "the dashboard fallback language when they have chosen none" do
+      # Every other email to the host falls back to the admin-configured
+      # "Dashboard fallback language", so this one must too, rather than to
+      # the instance-wide default.
+      previous = Application.get_env(:tymeslot, :admin_default_locale)
+      Application.put_env(:tymeslot, :admin_default_locale, "de")
+
+      on_exit(fn ->
+        if previous,
+          do: Application.put_env(:tymeslot, :admin_default_locale, previous),
+          else: Application.delete_env(:tymeslot, :admin_default_locale)
+      end)
+
       host = insert(:user, locale: nil)
       meeting = held_meeting(%{organizer_user: host, organizer_user_id: host.id})
 
@@ -263,7 +274,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
                                                                            _meeting,
                                                                            _urls,
                                                                            locale ->
-        assert locale == Locales.default_locale()
+        assert locale == "de"
         {:ok, :sent}
       end)
 

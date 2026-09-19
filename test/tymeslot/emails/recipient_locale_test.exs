@@ -25,6 +25,16 @@ defmodule Tymeslot.Emails.RecipientLocaleTest do
     end
   end
 
+  describe "organizer_locale/1" do
+    test "uses the locale the payload was built with" do
+      assert RecipientLocale.organizer_locale(%{organizer_locale: "de"}) == "de"
+    end
+
+    test "falls back to the default for a payload built without one" do
+      assert RecipientLocale.organizer_locale(%{organizer_name: "Sam"}) == "en"
+    end
+  end
+
   describe "locale_for_user_id/1" do
     test "loads the locale from the user row" do
       user = create_user_fixture()
