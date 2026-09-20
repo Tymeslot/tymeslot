@@ -44,38 +44,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
     {:noreply, assign(socket, :creating_event, creating)}
   end
 
-  # The next whole hour, for an hour, as long as that slot ends today. It is
-  # expressed as hours on one date, so a slot reaching midnight would open with
-  # its end before its start (23:00-00:00), and after 23:00 the next hour is
-  # already tomorrow; either way the save is refused. From then on the modal
-  # opens tomorrow at 09:00-10:00, the default for a day picked without a time.
+  # The next whole hour, for an hour. Both ends carry their own date, so a slot
+  # that runs into midnight simply ends on the following one. Deriving the end
+  # by adding an hour to the start, rather than to the start's hour number, is
+  # what keeps it on the right date and on the right side of a DST transition.
   defp default_slot(now) do
-    start_hour = if now.minute == 0, do: now.hour, else: now.hour + 1
+    start_at = next_whole_hour(now)
+    end_at = DateTime.add(start_at, 1, :hour)
 
-    if start_hour <= 22 do
-      today = Date.to_iso8601(DateTime.to_date(now))
-
-      %{
-        date: today,
-        end_date: today,
-        start_hour: start_hour,
-        start_minute: 0,
-        end_hour: start_hour + 1,
-        end_minute: 0
-      }
-    else
-      tomorrow = now |> DateTime.to_date() |> Date.add(1) |> Date.to_iso8601()
-
-      %{
-        date: tomorrow,
-        end_date: tomorrow,
-        start_hour: 9,
-        start_minute: 0,
-        end_hour: 10,
-        end_minute: 0
-      }
-    end
+    %{
+      date: iso_date(start_at),
+      end_date: iso_date(end_at),
+      start_hour: start_at.hour,
+      start_minute: 0,
+      end_hour: end_at.hour,
+      end_minute: 0
+    }
   end
+
+  defp next_whole_hour(%DateTime{minute: 0} = now), do: now
+
+  defp next_whole_hour(%DateTime{minute: minute} = now),
+    do: DateTime.add(now, 60 - minute, :minute)
+
+  defp iso_date(at), do: at |> DateTime.to_date() |> Date.to_iso8601()
 
   # Builds a `creating_event` map, filling defaults for any field the caller omits.
   defp base_creating(socket, overrides) do
