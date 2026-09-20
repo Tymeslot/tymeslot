@@ -5,8 +5,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
 
   A reschedule is a change to a booking both sides already have on file, so the
   email leads with the new slot and states the one it replaces, and its ICS
-  attachment carries the next SEQUENCE so calendar clients supersede the entry
-  they already hold rather than adding a second one.
+  attachment carries the revision `Tymeslot.Bookings.Reschedule` advanced the
+  meeting to, so calendar clients supersede the entry they already hold rather
+  than adding a second one.
 
   The reschedule context (`:original_start_time` and friends) is supplied by
   `Tymeslot.Notifications.ContentBuilder.build_reschedule_details/2`. Every key

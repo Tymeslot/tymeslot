@@ -255,8 +255,6 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
 
   # ----- helpers -----
 
-  # The two emails a reschedule sends, keyed by recipient address, so a test
-  # names the one it means instead of depending on delivery order.
   defp attendee_ics(delivered, meeting) do
     Enum.find(
       delivered[meeting.attendee_email].attachments,
@@ -264,6 +262,8 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
     )
   end
 
+  # The two emails a reschedule sends, keyed by recipient address, so a test
+  # names the one it means instead of depending on delivery order.
   defp delivered_emails do
     assert_received {:email, first}
     assert_received {:email, second}

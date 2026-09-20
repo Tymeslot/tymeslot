@@ -200,6 +200,25 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       )
     end
 
+    test "reserves the calendar revision the approval's confirmation announces" do
+      %{meeting: meeting, params: params} = gated_booking(true)
+
+      assert meeting.ical_sequence == 0
+
+      assert {:ok, rescheduled} =
+               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      # The request email carries no calendar attachment, so this revision is
+      # reserved rather than announced: the confirmation the host's approval
+      # sends is what spends it, and it has to sit above the invitation the
+      # attendee's calendar already holds.
+      assert rescheduled.ical_sequence == 1
+
+      assert {:ok, confirmed} = Approval.approve(reload(meeting))
+
+      assert confirmed.ical_sequence == 1
+    end
+
     test "the record that the booking was once a live meeting survives the re-gate" do
       # Clearing `announced_at` frees the fan-out claim, and would otherwise
       # erase the only fact saying this booking had already happened. That

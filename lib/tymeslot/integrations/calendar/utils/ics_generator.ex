@@ -22,10 +22,21 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
   @doc """
   Generates a Swoosh email attachment with ICS content.
+
+  The SEQUENCE comes from the payload's `:ical_sequence`, which every detail
+  map built by `Tymeslot.Emails.AppointmentBuilder` carries and which records
+  the revision of the last calendar entry sent for the meeting. A first
+  invitation therefore sends `SEQUENCE:0`, identical in meaning to the omitted
+  property it replaces. An invitation re-sent for a revision already announced
+  once (a booking approved after it was rescheduled back into the gate) sends
+  the higher value, so the recipient's calendar supersedes the entry it holds
+  instead of weighing two entries of equal revision against their DTSTAMP.
   """
   @spec generate_ics_attachment(map(), String.t(), String.t()) :: Swoosh.Attachment.t()
   def generate_ics_attachment(meeting_details, locale \\ "en", filename \\ "meeting.ics") do
-    build_attachment(meeting_details, :request, nil, locale, filename)
+    sequence = Map.get(meeting_details, :ical_sequence) || 0
+
+    build_attachment(meeting_details, :request, sequence, locale, filename)
   end
 
   @doc """
