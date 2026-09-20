@@ -7,6 +7,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
 
   alias Ecto.Changeset
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias TymeslotWeb.Components.CoreComponents.Heroicons
 
   describe "changeset/2 with custom_fields" do
     test "defaults to empty list" do
@@ -384,6 +385,27 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
 
       refute changeset.valid?
       assert "must be less than or equal to 480" in errors_on(changeset).slot_interval_minutes
+    end
+  end
+
+  describe "icon catalogue" do
+    # The picker renders `valid_icons_with_names/0` while the changeset gates on
+    # `@valid_icons`; a name added to one list only is offered but unsaveable
+    # (or saveable but never offered), and nothing else catches the drift.
+    test "every offered icon is accepted by the changeset" do
+      for {icon, _label} <- MeetingTypeSchema.valid_icons_with_names(), icon != "none" do
+        changeset =
+          MeetingTypeSchema.changeset(%MeetingTypeSchema{}, Map.put(valid_attrs(), :icon, icon))
+
+        assert changeset.valid?, "the picker offers #{icon} but the changeset rejects it"
+      end
+    end
+
+    test "every offered icon resolves to a vendored heroicon" do
+      for {icon, _label} <- MeetingTypeSchema.valid_icons_with_names(), icon != "none" do
+        assert Heroicons.known?(icon),
+               "the picker offers #{icon} but no such heroicon is vendored"
+      end
     end
   end
 
