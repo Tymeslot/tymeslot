@@ -246,11 +246,7 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
       [first_day] =
         view |> document() |> Floki.attribute("button.calendar-day.selected", "phx-value-date")
 
-      other_day =
-        view
-        |> document()
-        |> Floki.attribute("button.calendar-day:not([disabled])", "phx-value-date")
-        |> Enum.find(&(&1 != first_day))
+      other_day = another_bookable_day(view, first_day)
 
       assert is_binary(other_day) and other_day != first_day
 
@@ -289,6 +285,29 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
     wait_until(fn -> has_element?(view, "button.time-slot") end)
 
     view
+  end
+
+  # A bookable day other than `day`, from the rendered week or else the next.
+  # The selected day is tomorrow, which on a Saturday is the last day of the
+  # strip; late on a Saturday today has nothing left either, so the only other
+  # bookable days are in the following week.
+  defp another_bookable_day(view, day) do
+    in_view = fn ->
+      view
+      |> document()
+      |> Floki.attribute("button.calendar-day:not([disabled])", "phx-value-date")
+      |> Enum.find(&(&1 != day))
+    end
+
+    case in_view.() do
+      nil ->
+        view |> element("button[phx-click='next_week']") |> render_click()
+        wait_until(fn -> in_view.() != nil end)
+        in_view.()
+
+      other ->
+        other
+    end
   end
 
   # Hour buttons carry no `data-time`, so this is exactly the minute slots.
