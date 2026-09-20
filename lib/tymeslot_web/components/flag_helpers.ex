@@ -120,7 +120,8 @@ defmodule TymeslotWeb.Components.FlagHelpers do
     "uk" => :ukr,
     "fr" => :fra,
     "it" => :ita,
-    "cs" => :cze
+    "cs" => :cze,
+    "pl" => :pol
   }
 
   defp locale_to_country_code(locale), do: Map.get(@locale_countries, locale)

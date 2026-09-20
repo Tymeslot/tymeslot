@@ -26,13 +26,13 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   zero-pad the day; `de`/`cs`/`uk`/`fr`/`it` do not.
   - en: April 05, 2026
   - de/cs: 5. April 2026 / 5. dubna 2026
-  - uk/fr/it: 5 квітня 2026 (day before month, no period)
+  - uk/fr/it/pl: 5 квітня 2026 (day before month, no period)
   """
   @spec order_date_parts(String.t() | integer(), String.t(), integer(), String.t()) :: String.t()
   def order_date_parts(day, month_name, year, locale) do
     case locale do
       loc when loc in ["de", "cs"] -> "#{day}. #{month_name} #{year}"
-      loc when loc in ["uk", "fr", "it"] -> "#{day} #{month_name} #{year}"
+      loc when loc in ["uk", "fr", "it", "pl"] -> "#{day} #{month_name} #{year}"
       _other_locale -> "#{month_name} #{pad_day(day)}, #{year}"
     end
   end
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   naturally with bare day numbers, e.g. "April 10 – 12, 2026").
   - en: April 10 – 12, 2026 / April 30 – May 2, 2026
   - de/cs: 10.–12. April 2026 / 30. April – 2. Mai 2026
-  - uk/fr/it: 10–12 квітня 2026 / 30 квітня – 2 травня 2026 (day before month, no period)
+  - uk/fr/it/pl: 10–12 квітня 2026 / 30 квітня – 2 травня 2026 (day before month, no period)
   """
   @spec format_date_range(Calendar.date(), Calendar.date(), String.t()) :: String.t()
   def format_date_range(start_date, end_date, locale) do
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       loc when loc in ["de", "cs"] ->
         day_first_range(start_date, start_month, end_date, end_month, ".")
 
-      loc when loc in ["uk", "fr", "it"] ->
+      loc when loc in ["uk", "fr", "it", "pl"] ->
         day_first_range(start_date, start_month, end_date, end_month, "")
 
       _other ->
@@ -126,6 +126,13 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       full:
         ~w(ledna února března dubna května června července srpna září října listopadu prosince),
       short: ~w(led úno bře dub kvě čvn čvc srp zář říj lis pro)
+    },
+    # Polish, like Czech, names a month inside a date in the genitive
+    # ("5 kwietnia 2026"), which is the only place these are used.
+    "pl" => %{
+      full:
+        ~w(stycznia lutego marca kwietnia maja czerwca lipca sierpnia września października listopada grudnia),
+      short: ~w(sty lut mar kwi maj cze lip sie wrz paź lis gru)
     }
   }
 
@@ -170,6 +177,11 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       full: ["neděle", "pondělí", "úterý", "středa", "čtvrtek", "pátek", "sobota"],
       short: ["ne", "po", "út", "st", "čt", "pá", "so"],
       narrow: ["N", "P", "Ú", "S", "Č", "P", "S"]
+    },
+    "pl" => %{
+      full: ["niedziela", "poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota"],
+      short: ["niedz", "pon", "wt", "śr", "czw", "pt", "sob"],
+      narrow: ["N", "P", "W", "Ś", "C", "P", "S"]
     }
   }
 
@@ -309,6 +321,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   defp thousand_separator("uk"), do: @group_space
   defp thousand_separator("fr"), do: @group_space
   defp thousand_separator("cs"), do: @group_space
+  defp thousand_separator("pl"), do: @group_space
   defp thousand_separator(_other_locale), do: ","
 
   defp decimal_separator("de"), do: ","
@@ -316,5 +329,6 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   defp decimal_separator("uk"), do: ","
   defp decimal_separator("fr"), do: ","
   defp decimal_separator("cs"), do: ","
+  defp decimal_separator("pl"), do: ","
   defp decimal_separator(_other_locale), do: "."
 end
