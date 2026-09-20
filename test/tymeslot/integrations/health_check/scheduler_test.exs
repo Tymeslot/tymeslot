@@ -2,6 +2,8 @@ defmodule Tymeslot.Integrations.HealthCheck.SchedulerTest do
   use ExUnit.Case, async: true
   @moduletag :integrations
 
+  import Tymeslot.Test.ClockHelpers
+
   alias Tymeslot.Integrations.HealthCheck.Scheduler
 
   describe "due_for_check?/2" do
@@ -45,36 +47,36 @@ defmodule Tymeslot.Integrations.HealthCheck.SchedulerTest do
     end
   end
 
+  # Reading "now" through the clock is what makes the window exact: measured
+  # against a separate `DateTime.utc_now()` in the test, whatever elapsed
+  # between the two reads counted as jitter, so a slow run could exceed the
+  # cap the assertion is there to enforce.
   describe "scheduled_at_with_jitter/0" do
-    test "returns a DateTime in the future" do
-      now = DateTime.utc_now()
-      scheduled = Scheduler.scheduled_at_with_jitter()
-
-      assert DateTime.compare(scheduled, now) in [:gt, :eq]
+    setup do
+      now = ~U[2026-09-20 12:00:00Z]
+      freeze_clock(now)
+      {:ok, now: now}
     end
 
-    test "adds jitter within expected range (0-30 seconds)" do
-      now = DateTime.utc_now()
-      scheduled = Scheduler.scheduled_at_with_jitter()
+    test "returns a DateTime in the future", %{now: now} do
+      assert DateTime.compare(Scheduler.scheduled_at_with_jitter(), now) in [:gt, :eq]
+    end
 
-      diff_ms = DateTime.diff(scheduled, now, :millisecond)
+    test "adds jitter within expected range (0-30 seconds)", %{now: now} do
+      diff_ms = DateTime.diff(Scheduler.scheduled_at_with_jitter(), now, :millisecond)
 
-      # Should be between 0 and 30 seconds
       assert diff_ms >= 0
       assert diff_ms <= 30_000
     end
 
-    test "produces varying jitter values across multiple calls" do
+    test "produces varying jitter values across multiple calls", %{now: now} do
       results =
         for _iteration <- 1..10 do
-          now = DateTime.utc_now()
-          scheduled = Scheduler.scheduled_at_with_jitter()
-          DateTime.diff(scheduled, now, :millisecond)
+          DateTime.diff(Scheduler.scheduled_at_with_jitter(), now, :millisecond)
         end
 
       # Should have at least some variation (not all the same)
-      unique_values = Enum.uniq(results)
-      assert length(unique_values) > 1
+      assert results |> Enum.uniq() |> length() > 1
     end
   end
 end

@@ -119,6 +119,10 @@
                "/tymeslot/availability/",
                "/tymeslot/security/",
                "/tymeslot/integrations/shared/oauth/",
+               # No trailing slash: also covers the top-level context module
+               # beside the directory, which `String.contains?` would miss.
+               "/tymeslot/analytics",
+               "/tymeslot/integrations/health_check",
                "/tymeslot_web/live/dashboard/calendar_grid/event_handlers/"
              ]
            ]},

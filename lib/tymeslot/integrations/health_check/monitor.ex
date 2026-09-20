@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
 
   require Logger
 
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
 
   alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
@@ -195,7 +196,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       %{
         health_state
         | status: :unhealthy,
-          became_unhealthy_at: health_state.became_unhealthy_at || DateTime.utc_now()
+          became_unhealthy_at: health_state.became_unhealthy_at || Clock.utc_now()
       }
     else
       health_state
@@ -208,7 +209,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       | failures: 0,
         consecutive_hard_failures: 0,
         successes: health_state.successes + 1,
-        last_check_at: DateTime.utc_now(),
+        last_check_at: Clock.utc_now(),
         status: determine_status(0, health_state.successes + 1, health_state.status),
         backoff_ms: @check_interval,
         last_error_class: nil
@@ -228,7 +229,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
 
       became_unhealthy_at =
         if new_status == :unhealthy and is_nil(health_state.became_unhealthy_at),
-          do: DateTime.utc_now(),
+          do: Clock.utc_now(),
           else: health_state.became_unhealthy_at
 
       %{
@@ -236,7 +237,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
         | failures: failures,
           consecutive_hard_failures: 0,
           successes: 0,
-          last_check_at: DateTime.utc_now(),
+          last_check_at: Clock.utc_now(),
           status: new_status,
           backoff_ms: new_backoff,
           last_error_class: :transient,
@@ -246,7 +247,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       %{
         health_state
         | consecutive_hard_failures: 0,
-          last_check_at: DateTime.utc_now(),
+          last_check_at: Clock.utc_now(),
           backoff_ms: new_backoff,
           last_error_class: :transient
       }
@@ -268,7 +269,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
 
     became_unhealthy_at =
       if new_status == :unhealthy and is_nil(health_state.became_unhealthy_at),
-        do: DateTime.utc_now(),
+        do: Clock.utc_now(),
         else: health_state.became_unhealthy_at
 
     %{
@@ -276,7 +277,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       | failures: failures,
         consecutive_hard_failures: consecutive_hard_failures,
         successes: 0,
-        last_check_at: DateTime.utc_now(),
+        last_check_at: Clock.utc_now(),
         status: new_status,
         backoff_ms: new_backoff,
         last_error_class: :hard,
