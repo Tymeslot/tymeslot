@@ -112,7 +112,16 @@
           {CredoChecks.RateLimiterBoundary, [priority: :normal]},
           {CredoChecks.ConnectionProbeBoundary, [priority: :normal]},
           {CredoChecks.ClockUsage,
-           [priority: :normal, paths: ["/tymeslot/bookings/", "/tymeslot/availability/"]]},
+           [
+             priority: :normal,
+             paths: [
+               "/tymeslot/bookings/",
+               "/tymeslot/availability/",
+               "/tymeslot/security/",
+               "/tymeslot/integrations/shared/oauth/",
+               "/tymeslot_web/live/dashboard/calendar_grid/event_handlers/"
+             ]
+           ]},
           {CredoChecks.GettextDomainBoundary, [priority: :high]},
           {CredoChecks.NoUnsafeSanitizeMerge, [priority: :normal]},
           # The three below mechanise rules that CLAUDE.md's prefer/avoid table
