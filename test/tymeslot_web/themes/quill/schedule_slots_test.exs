@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Themes.Quill.ScheduleSlotsTest do
   import Tymeslot.SlotPickerTestHelpers
 
   alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.BookingTestHelpers
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
@@ -230,7 +231,9 @@ defmodule TymeslotWeb.Themes.Quill.ScheduleSlotsTest do
     today = timezone |> DateTime.now!() |> DateTime.to_date()
     target = Date.add(today, 1)
 
-    if target.month != today.month do
+    # Ask the grid which month it is on, never arithmetic: it opens on the first
+    # bookable day, so it may already have moved itself past today's month.
+    unless BookingTestHelpers.showing_month?(view, target) do
       view |> element("button[phx-click='next_month']") |> render_click()
     end
 

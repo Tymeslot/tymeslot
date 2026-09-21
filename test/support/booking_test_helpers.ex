@@ -117,22 +117,31 @@ defmodule Tymeslot.BookingTestHelpers do
     end
   end
 
-  # Quill's month grid pads with the neighbouring month's days and disables
-  # them, so a rendered cell is no proof the date is bookable here: the month
-  # itself is what has to move.
-  #
-  # Read the month the calendar is actually showing rather than assuming it
-  # opened on today's. The schedule step opens on the next available day, which
-  # is not always in today's month -- on the last day of a month it is already
-  # showing the next one, and advancing again would leave the target behind and
-  # land on a month the booking window forbids.
+  # The month itself is what has to move, and only if it has not moved already:
+  # see `showing_month?/2` for why the calendar is asked rather than computed.
   defp advance_month(view, _today, target_date) do
     unless showing_month?(view, target_date) do
       view |> element(@next_month) |> render_click()
     end
   end
 
-  defp showing_month?(view, %Date{} = date) do
+  @doc """
+  Whether the month grid is currently displaying `date`'s month.
+
+  Public because every booking walk needs this question answered, and answering
+  it by arithmetic is wrong. The schedule step opens on the first bookable day,
+  so on the last day of a month, once today's cutoff has passed, the grid is
+  already showing the next month before any navigation happens. A guard written
+  as `if target.month != today.month` then advances a calendar that has moved
+  itself: either the arrow is disabled at the far edge of the booking window and
+  the click raises, or it succeeds and overshoots, leaving the target behind.
+
+  Quill's grid pads with the neighbouring month's days and disables them, so a
+  rendered day cell proves nothing about which month is on screen. The month
+  label does, which is what this reads.
+  """
+  @spec showing_month?(Phoenix.LiveViewTest.View.t(), Date.t()) :: boolean()
+  def showing_month?(view, %Date{} = date) do
     has_element?(
       view,
       @month_label,

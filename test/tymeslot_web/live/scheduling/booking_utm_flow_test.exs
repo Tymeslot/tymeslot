@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.BookingTestHelpers
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.Slugs
@@ -192,7 +193,9 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
     target_date = Date.add(today, 1)
     date_str = Date.to_string(target_date)
 
-    if target_date.month != today.month || target_date.year != today.year do
+    # Ask the grid which month it is on, never arithmetic: it opens on the first
+    # bookable day, so it may already have moved itself past today's month.
+    unless BookingTestHelpers.showing_month?(view, target_date) do
       view |> element("button[phx-click='next_month']") |> render_click()
     end
 

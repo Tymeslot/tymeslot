@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
   import Tymeslot.Factory
 
   alias Ecto.Adapters.SQL.Sandbox
+  alias Tymeslot.BookingTestHelpers
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Repo
@@ -102,8 +103,9 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
       {:ok, view, _html} =
         live(conn, ~p"/#{profile.username}/#{slug}?timezone=#{timezone}")
 
-      # If target_date is in the next month, we might need to navigate
-      if target_date.month != today.month do
+      # Ask the grid which month it is on, never arithmetic: it opens on the
+      # first bookable day, so it may already have moved itself past today's.
+      unless BookingTestHelpers.showing_month?(view, target_date) do
         view |> element("button[phx-click='next_month']") |> render_click()
       end
 
@@ -172,6 +174,15 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
         conn
         |> put_connect_params(%{"timezone" => timezone})
         |> live(~p"/#{profile.username}/30-minutes?timezone=#{timezone}")
+
+      # Today is unbookable by construction here, so the step lands the booker
+      # on the first day that is not: on the last day of a month that is in the
+      # next one, and a month grid anchored on Sunday then drops today's cell
+      # altogether rather than drawing it as leading padding. Step back to the
+      # month that contains today before asking anything about its cell.
+      unless BookingTestHelpers.showing_month?(view, today_in_tz) do
+        view |> element("button[phx-click='prev_month']") |> render_click()
+      end
 
       # Business hours are 00:00-01:00 and min_advance_hours defaults to 3,
       # so the earliest bookable time is now+3h which always exceeds the 01:00

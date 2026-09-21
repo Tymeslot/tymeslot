@@ -591,7 +591,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
   # `normalise_events/2` expands within ±365 days of now, so a hard-coded
   # transition date would quietly fall out of that window as time passes. Every
   # observing zone has one within a few months, so the next one is found rather
-  # than named.
+  # than named. The search range is sized on the longer of a zone's two gaps:
+  # northern-hemisphere zones run roughly 210 days from the spring transition to
+  # the autumn one, so anything narrower finds nothing for the months after each
+  # spring change. The consumer only expands to `transition + 7`, well inside the
+  # expander's window, so searching further costs nothing.
   defp next_dst_transition(zone) do
     today = Date.utc_today()
 
@@ -601,7 +605,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
     end
 
     days =
-      Enum.find(1..200, fn day ->
+      Enum.find(1..300, fn day ->
         date = Date.add(today, day)
         offset.(date) != offset.(Date.add(date, -1))
       end)
