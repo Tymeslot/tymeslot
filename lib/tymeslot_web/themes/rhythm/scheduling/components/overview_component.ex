@@ -24,12 +24,18 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("select_duration", %{"duration" => duration}, socket) do
-    # duration is already a string like "30min" from the button
+    # duration is already a string like "30min" from the button.
+    #
+    # Clicking the selected card clears the selection, which is how a booker
+    # changes their mind here — except on a reschedule, where the type is
+    # pinned to the meeting being moved and its card is selected on arrival.
+    # Clearing it there would disable "next" over a choice that was never the
+    # booker's to make, and leave them stuck on the step.
     new_duration =
-      if socket.assigns[:selected_duration] == duration do
-        nil
-      else
-        duration
+      cond do
+        socket.assigns[:meeting_type_pinned] -> duration
+        socket.assigns[:selected_duration] == duration -> nil
+        true -> duration
       end
 
     send(self(), {:step_event, :overview, :select_duration, new_duration})

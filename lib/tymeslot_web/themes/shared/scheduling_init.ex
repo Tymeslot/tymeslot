@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:theme_id, theme_id)
     |> assign(:duration, nil)
     |> assign(:meeting_type, nil)
+    |> assign(:meeting_type_pinned, false)
     |> assign(:current_year, today.year)
     |> assign(:current_month, today.month)
     |> assign(:current_week_start, week_start)
