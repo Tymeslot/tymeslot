@@ -58,6 +58,22 @@ defmodule Tymeslot.Meetings.GuestQueries do
     |> Repo.all()
   end
 
+  @doc """
+  Resets every guest of a meeting to an unanswered RSVP, for when the meeting
+  moves to a new time and earlier answers no longer apply.
+  """
+  @spec reset_responses(binary()) :: non_neg_integer()
+  def reset_responses(meeting_id) do
+    {count, _rows} =
+      Guest
+      |> where([g], g.meeting_id == ^meeting_id)
+      |> Repo.update_all(
+        set: [status: "pending", responded_at: nil, updated_at: DateTime.utc_now(:second)]
+      )
+
+    count
+  end
+
   @doc "Stamps `confirmation_sent_at` on the given guest."
   @spec mark_confirmation_sent(Guest.t(), DateTime.t()) ::
           {:ok, Guest.t()} | {:error, Changeset.t()}
