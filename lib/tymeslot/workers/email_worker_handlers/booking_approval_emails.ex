@@ -45,19 +45,37 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.BookingApprovalEmails do
 
   defp send_both_legs(meeting_id, meeting, args) do
     service = Config.email_service_module()
+    email_opts = previous_start_opts(args)
 
     attendee_status =
       leg_status(Map.get(args, "skip_attendee_ack", false), fn ->
-        service.send_booking_request_received(meeting)
+        send_request_received(meeting, service, email_opts)
       end)
 
     host_status =
       leg_status(Map.get(args, "skip_host_request", false), fn ->
-        send_approval_request(:request, meeting, service)
+        send_approval_request(:request, meeting, service, email_opts)
       end)
 
-    combine_leg_results(meeting_id, attendee_status, host_status)
+    combine_leg_results(meeting_id, attendee_status, host_status, email_opts)
   end
+
+  # Set by a reschedule that sent a confirmed booking back into the gate:
+  # the time it was moved from, for the emails to show.
+  defp previous_start_opts(%{"previous_start_time" => iso}) when is_binary(iso) do
+    case DateTime.from_iso8601(iso) do
+      {:ok, previous, _offset} -> [previous_start_time: previous]
+      {:error, _reason} -> []
+    end
+  end
+
+  defp previous_start_opts(_args), do: []
+
+  defp send_request_received(meeting, service, []),
+    do: service.send_booking_request_received(meeting)
+
+  defp send_request_received(meeting, service, email_opts),
+    do: service.send_booking_request_received(meeting, email_opts)
 
   # `:skipped` means this leg already succeeded on a prior attempt and this
   # execution deliberately did not re-send it — it must never be treated the
@@ -71,26 +89,34 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.BookingApprovalEmails do
     end
   end
 
-  defp combine_leg_results(_meeting_id, attendee, host)
+  defp combine_leg_results(_meeting_id, attendee, host, _email_opts)
        when attendee in [:sent, :skipped] and host in [:sent, :skipped],
        do: :ok
 
-  defp combine_leg_results(meeting_id, :sent, {:failed, reason}) do
+  defp combine_leg_results(meeting_id, :sent, {:failed, reason}, email_opts) do
     # The invitee's copy just went; a plain whole-job retry would resend it,
     # so requeue a host-only follow-up instead.
-    retry_failed_leg(meeting_id, [skip_attendee_ack: true], reason)
+    retry_failed_leg(meeting_id, [skip_attendee_ack: true] ++ email_opts, reason)
   end
 
-  defp combine_leg_results(meeting_id, {:failed, reason}, :sent) do
+  defp combine_leg_results(meeting_id, {:failed, reason}, :sent, email_opts) do
     # Symmetric case: the host's request just went, only the invitee's
     # acknowledgement failed.
-    retry_failed_leg(meeting_id, [skip_host_request: true], reason)
+    retry_failed_leg(meeting_id, [skip_host_request: true] ++ email_opts, reason)
   end
 
-  defp combine_leg_results(_meeting_id, {:failed, reason}, :skipped), do: {:error, reason}
-  defp combine_leg_results(_meeting_id, :skipped, {:failed, reason}), do: {:error, reason}
+  defp combine_leg_results(_meeting_id, {:failed, reason}, :skipped, _email_opts),
+    do: {:error, reason}
 
-  defp combine_leg_results(_meeting_id, {:failed, attendee_reason}, {:failed, _host_reason}) do
+  defp combine_leg_results(_meeting_id, :skipped, {:failed, reason}, _email_opts),
+    do: {:error, reason}
+
+  defp combine_leg_results(
+         _meeting_id,
+         {:failed, attendee_reason},
+         {:failed, _host_reason},
+         _email_opts
+       ) do
     # Neither leg went out — nothing to protect from duplication, so an
     # ordinary whole-job Oban retry (which reattempts both) is safe.
     {:error, attendee_reason}
@@ -174,6 +200,38 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.BookingApprovalEmails do
     end
   end
 
+  @doc """
+  Tells the host a confirmed booking was cancelled because the invitee's
+  request to move it lapsed unanswered.
+  """
+  @spec handle_reschedule_request_expired(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_reschedule_request_expired(%{"meeting_id" => meeting_id}) do
+    MeetingEmails.with_meeting(meeting_id, "reschedule request expired", fn meeting ->
+      send_reschedule_request_expired(meeting)
+    end)
+  end
+
+  defp send_reschedule_request_expired(
+         %{status: "expired", first_announced_at: %DateTime{}} = meeting
+       ) do
+    locale = RecipientLocale.locale_for_user_id(meeting.organizer_user_id)
+
+    case Config.email_service_module().send_reschedule_request_expired(meeting, locale) do
+      {:ok, _sent} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp send_reschedule_request_expired(meeting) do
+    Logger.info("Skipping reschedule request expired - not a lapsed reschedule",
+      meeting_id: meeting.id,
+      status: meeting.status
+    )
+
+    {:discard, "Meeting #{meeting.status}"}
+  end
+
   defp send_nudge(meeting) do
     case send_approval_request(:nudge, meeting, Config.email_service_module()) do
       {:ok, _sent} -> stamp_nudge_sent(meeting)
@@ -200,9 +258,23 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.BookingApprovalEmails do
     end
   end
 
-  defp send_approval_request(variant, meeting, service) do
+  defp send_approval_request(variant, meeting, service, email_opts \\ [])
+
+  defp send_approval_request(variant, meeting, service, []) do
     urls = Policy.approval_urls(ApprovalToken.sign(meeting))
     service.send_booking_approval_request(variant, meeting, urls, host_locale(meeting))
+  end
+
+  defp send_approval_request(variant, meeting, service, email_opts) do
+    urls = Policy.approval_urls(ApprovalToken.sign(meeting))
+
+    service.send_booking_approval_request(
+      variant,
+      meeting,
+      urls,
+      host_locale(meeting),
+      email_opts
+    )
   end
 
   # The host reads their mail in their own language, not the invitee's, and

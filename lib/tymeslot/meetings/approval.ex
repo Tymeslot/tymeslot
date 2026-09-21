@@ -88,6 +88,7 @@ defmodule Tymeslot.Meetings.Approval do
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.MeetingTypes.MeetingTypeSchema, as: MeetingType
   alias Tymeslot.Notifications.Events
+  alias Tymeslot.Notifications.GuestNotifications
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Validation.Constraints
   alias Tymeslot.Workers.VideoSyncWorker
@@ -231,6 +232,10 @@ defmodule Tymeslot.Meetings.Approval do
         AvailabilityCache.invalidate_for_user(confirmed.organizer_user_id)
         activate_confirmed(confirmed)
 
+        best_effort(confirmed, "notify guests", fn ->
+          GuestNotifications.notify_reapproved(confirmed)
+        end)
+
         {:ok, confirmed}
 
       {:error, :not_awaiting_approval} = error ->
@@ -275,7 +280,9 @@ defmodule Tymeslot.Meetings.Approval do
   tentative calendar hold to a real event, then hand the meeting to
   `Bookings.Activation`, which creates the video room before composing the
   confirmation so the join link is in the invitee's first email rather than a
-  later correction.
+  later correction. A booking confirmed before a reschedule sent it back into
+  the gate is announced as rescheduled instead
+  (`Orchestrator.send_reapproval_notifications/1`).
 
   Each step is best-effort. The row is committed before this runs, so no
   failure here may turn a real confirmation into an error the caller has to
@@ -293,6 +300,10 @@ defmodule Tymeslot.Meetings.Approval do
 
     best_effort(confirmed, "activate booking", fn ->
       Activation.activate(confirmed, with_video_room: true)
+    end)
+
+    best_effort(confirmed, "send reschedule notifications", fn ->
+      Orchestrator.send_reapproval_notifications(confirmed)
     end)
 
     :ok
@@ -462,6 +473,8 @@ defmodule Tymeslot.Meetings.Approval do
     best_effort(meeting, "refund unapproved request", fn -> refund_unapproved_request(meeting) end)
 
     best_effort(meeting, "announce release", fn -> announce_release(meeting, status) end)
+    best_effort(meeting, "notify guests", fn -> GuestNotifications.notify_released(meeting) end)
+
     :ok
   end
 

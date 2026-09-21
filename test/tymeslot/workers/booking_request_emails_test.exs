@@ -143,6 +143,71 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
       )
     end
 
+    test "hands a reschedule's previous time to both emails" do
+      # A reschedule that sent a confirmed booking back into the gate knows
+      # the time it was moved from; nothing else keeps it, so the job does.
+      meeting = held_meeting()
+      previous = ~U[2026-09-01 13:00:00Z]
+      test_pid = self()
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_request_received, fn _sent, opts ->
+        send(test_pid, {:invitee_opts, opts})
+        {:ok, :sent}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_approval_request, fn :request,
+                                                                           _sent,
+                                                                           _urls,
+                                                                           _locale,
+                                                                           opts ->
+        send(test_pid, {:host_opts, opts})
+        {:ok, :sent}
+      end)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_booking_request_emails",
+                 "meeting_id" => meeting.id,
+                 "previous_start_time" => DateTime.to_iso8601(previous)
+               })
+
+      assert_received {:invitee_opts, [previous_start_time: ^previous]}
+      assert_received {:host_opts, [previous_start_time: ^previous]}
+    end
+
+    test "a single-leg follow-up keeps the reschedule's previous time" do
+      meeting = held_meeting()
+      previous_iso = "2026-09-01T13:00:00Z"
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_request_received, fn _sent, _opts ->
+        {:ok, :sent}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_approval_request, fn _variant,
+                                                                           _sent,
+                                                                           _urls,
+                                                                           _locale,
+                                                                           _opts ->
+        {:error, "recipient_rejected"}
+      end)
+
+      perform_job(EmailWorker, %{
+        "action" => "send_booking_request_emails",
+        "meeting_id" => meeting.id,
+        "previous_start_time" => previous_iso
+      })
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_booking_request_emails",
+          "meeting_id" => meeting.id,
+          "skip_attendee_ack" => true,
+          "previous_start_time" => previous_iso
+        }
+      )
+    end
+
     test "the single-leg follow-up can insert while its parent job is still executing" do
       # Regression coverage for the self-conflict bug: the follow-up used to
       # be inserted with a uniqueness scope that included Oban's :executing
@@ -279,6 +344,49 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
       end)
 
       assert :ok = request_job(meeting)
+    end
+  end
+
+  describe "send_reschedule_request_expired" do
+    defp expired_job(meeting),
+      do:
+        perform_job(EmailWorker, %{
+          "action" => "send_reschedule_request_expired",
+          "meeting_id" => meeting.id
+        })
+
+    test "tells the host in their own language" do
+      host = insert(:user, locale: "de")
+
+      meeting =
+        held_meeting(%{
+          organizer_user: host,
+          organizer_user_id: host.id,
+          status: "expired",
+          attendee_locale: "fr",
+          first_announced_at: DateTime.utc_now(:second)
+        })
+
+      expect(Tymeslot.EmailServiceMock, :send_reschedule_request_expired, fn sent, locale ->
+        assert sent.id == meeting.id
+        assert locale == "de"
+        {:ok, :sent}
+      end)
+
+      assert :ok = expired_job(meeting)
+    end
+
+    test "sends nothing for a request that never was a confirmed booking" do
+      meeting = held_meeting(%{status: "expired", first_announced_at: nil})
+
+      assert {:discard, _reason} = expired_job(meeting)
+    end
+
+    test "sends nothing once the booking is no longer the lapsed request" do
+      meeting =
+        held_meeting(%{status: "confirmed", first_announced_at: DateTime.utc_now(:second)})
+
+      assert {:discard, _reason} = expired_job(meeting)
     end
   end
 

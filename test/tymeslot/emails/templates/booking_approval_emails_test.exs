@@ -153,6 +153,65 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
     end
   end
 
+  describe "a request raised by rescheduling a confirmed booking" do
+    # `first_announced_at` is what says the booking was confirmed and
+    # announced before the reschedule sent it back into the gate.
+    defp moved_meeting, do: meeting(%{first_announced_at: ~U[2026-08-20 10:00:00Z]})
+
+    @previous ~U[2026-08-28 08:00:00Z]
+
+    test "the host is asked about moving a booking, not about a new one" do
+      email =
+        BookingApprovalRequest.render(:request, moved_meeting(), @urls, "en",
+          previous_start_time: @previous
+        )
+
+      assert email.subject =~ "Reschedule request"
+      refute email.subject =~ "Booking request"
+      assert email.html_body =~ "would like to move their confirmed booking"
+      assert email.html_body =~ "Requested New Time"
+      assert email.html_body =~ "Previously scheduled for"
+      assert email.text_body =~ "Previously scheduled for"
+      assert email.html_body =~ @urls.approve_url
+    end
+
+    test "the host's nudge keeps the reschedule framing" do
+      nudge = BookingApprovalRequest.render(:nudge, moved_meeting(), @urls, "en")
+
+      assert nudge.subject =~ "Reminder"
+      assert nudge.subject =~ "reschedule request"
+      assert nudge.html_body =~ "Reschedule request still waiting"
+    end
+
+    test "the invitee is told their change is pending, not that a booking was made" do
+      email = BookingRequestReceived.render(moved_meeting(), previous_start_time: @previous)
+
+      assert email.subject =~ "Reschedule requested"
+      assert email.html_body =~ "Reschedule Request Received"
+      assert email.html_body =~ "the new time isn&#39;t final yet"
+      assert email.html_body =~ "Previously scheduled for"
+      assert email.text_body =~ "Previously scheduled for"
+    end
+
+    test "without the previous time the wording still reads as a reschedule" do
+      # The nudge and a retried job may not know the old time; the email must
+      # still say what it is about rather than invent or drop the context.
+      email = BookingRequestReceived.render(moved_meeting())
+
+      assert email.subject =~ "Reschedule requested"
+      refute email.html_body =~ "Previously scheduled for"
+    end
+
+    test "a first-time request keeps the booking wording" do
+      assert BookingRequestReceived.render(meeting(), previous_start_time: @previous).subject =~
+               "Request received"
+
+      host = BookingApprovalRequest.render(:request, meeting(), @urls, "en")
+      assert host.subject =~ "Booking request"
+      refute host.html_body =~ "Previously scheduled for"
+    end
+  end
+
   describe "BookingRequestOutcome" do
     test "a decline quotes the host's reason back" do
       email =
@@ -227,6 +286,68 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
       # mrml re-serialises the self-closing tag as `<br />`.
       assert email.html_body =~ "Line one<br />Line two"
       assert email.text_body =~ "Line one\nLine two"
+    end
+  end
+
+  describe "BookingRequestOutcome for a rescheduled booking" do
+    # A booking confirmed before (`first_announced_at`) that a reschedule sent
+    # back into the gate: releasing it cancels the booking itself.
+    defp released_booking(attrs \\ %{}) do
+      meeting(Map.merge(%{first_announced_at: ~U[2026-08-20 10:00:00Z], ical_sequence: 2}, attrs))
+    end
+
+    defp calendar_file(email) do
+      Enum.find(email.attachments, &calendar_attachment?/1)
+    end
+
+    test "a decline says the booking is cancelled, not just that a time was refused" do
+      email = BookingRequestOutcome.render(:declined, released_booking())
+
+      assert email.subject =~ "Reschedule declined, booking cancelled"
+      assert email.html_body =~ "Reschedule Declined"
+      assert email.html_body =~ "your booking has been cancelled"
+      assert email.text_body =~ "your booking has been cancelled"
+    end
+
+    test "an expiry says the same without claiming the host refused" do
+      email = BookingRequestOutcome.render(:expired, released_booking())
+
+      assert email.subject =~ "Reschedule request expired, booking cancelled"
+      refute email.subject =~ "declined"
+      assert email.html_body =~ "didn&#39;t get to your reschedule request in time"
+    end
+
+    test "removes the booking from the invitee's calendar" do
+      # The original confirmation put the booking in the invitee's calendar
+      # under its UID; without a cancellation for that UID it would stay there.
+      for variant <- [:declined, :expired] do
+        ics = variant |> BookingRequestOutcome.render(released_booking()) |> calendar_file()
+
+        assert ics, "expected a calendar file for #{variant}"
+        assert ics.data =~ "STATUS:CANCELLED"
+        assert ics.data =~ "UID:abc-123@"
+        assert ics.data =~ "SEQUENCE:3"
+        refute ics.data =~ "METHOD:CANCEL"
+      end
+    end
+
+    test "still quotes the host's reason for declining" do
+      email =
+        BookingRequestOutcome.render(
+          :declined,
+          released_booking(%{decline_reason: "Fully booked"})
+        )
+
+      assert email.html_body =~ "Fully booked"
+      assert email.text_body =~ "Fully booked"
+    end
+
+    test "a first-time request keeps its wording and sends no calendar file" do
+      email = BookingRequestOutcome.render(:declined, meeting())
+
+      assert email.subject =~ "Request declined"
+      refute email.subject =~ "cancelled"
+      refute calendar_file(email)
     end
   end
 

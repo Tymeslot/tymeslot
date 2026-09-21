@@ -37,7 +37,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.Notifications.{Events, Orchestrator}
+  alias Tymeslot.Notifications.{Events, GuestNotifications, Orchestrator}
   alias Tymeslot.Repo
   alias Tymeslot.Utils.DateTimeUtils.Duration, as: UrlDuration
   alias Tymeslot.Workers.VideoSyncWorker
@@ -263,18 +263,21 @@ defmodule Tymeslot.Bookings.Reschedule do
   # `IcsGenerator.generate_ics_attachment/2`). The request email sent below
   # (`BookingRequestReceived`) carries no calendar attachment, so that entry
   # is left showing the old, no-longer-accurate confirmed time until the host
-  # answers again. Approval heals it: the confirmation ICS it re-sends carries
-  # the `ical_sequence` this reschedule advanced, so the client supersedes the
-  # entry it holds rather than judging two entries of equal revision by their
-  # DTSTAMP. A decline or an expiry's outcome email still does not correct it,
-  # which needs a calendar-only correction path analogous to
-  # `Tymeslot.Meetings.AttendeeNotifications`'s ICS handling, which lives
-  # outside this module's booking-email templates and is left for that work
-  # rather than bolted on here.
-  defp announce(%{status: "awaiting_approval"} = updated, _original) do
+  # answers again. Both outcomes heal it: the reschedule notice approval now
+  # sends carries an ICS for the new time stamped with the `ical_sequence`
+  # this reschedule advanced, so the client supersedes the entry it holds
+  # rather than judging two entries of equal revision by their DTSTAMP, and a
+  # decline or an expiry cancels the booking, whose outcome email
+  # (`BookingRequestOutcome`) carries a cancellation ICS for it. Correcting
+  # the entry while the request is still open would need a calendar-only path
+  # analogous to `Tymeslot.Meetings.AttendeeNotifications`'s ICS handling,
+  # which lives outside this module's booking-email templates and is left for
+  # that work rather than bolted on here.
+  defp announce(%{status: "awaiting_approval"} = updated, original) do
     cancel_stale_reminders(updated)
+    GuestNotifications.prepare_for_reapproval(updated)
 
-    case Events.meeting_requested(updated) do
+    case Events.meeting_requested(updated, previous_start_opts(updated, original)) do
       {:ok, _result} ->
         Logger.info("Reschedule returned the booking to the approval gate",
           meeting_id: updated.id
@@ -317,6 +320,14 @@ defmodule Tymeslot.Bookings.Reschedule do
   end
 
   defp announce(updated, original), do: send_reschedule_notifications(updated, original)
+
+  # A booking confirmed before (`first_announced_at`) is being moved, and its
+  # request emails say so; showing the time it was moved from needs the
+  # original, which nothing else keeps once the new time is saved.
+  defp previous_start_opts(%{first_announced_at: %DateTime{}}, %{start_time: %DateTime{} = start}),
+       do: [previous_start_time: start]
+
+  defp previous_start_opts(_updated, _original), do: []
 
   # A booking re-entering the gate must not carry reminders pinned to the
   # time it was confirmed for before: left alone, they would fire and remind

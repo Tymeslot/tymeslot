@@ -12,7 +12,8 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     AppointmentRescheduled,
     BookingApprovalRequest,
     BookingRequestOutcome,
-    BookingRequestReceived
+    BookingRequestReceived,
+    RescheduleRequestExpired
   }
 
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -51,9 +52,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   request emails are about a booking that has not happened, so the confirmation
   vocabulary (video links, calendar files, payment receipts) does not apply.
   """
-  @spec send_booking_request_received(Meeting.t()) :: {:ok, any()} | {:error, any()}
-  def send_booking_request_received(%Meeting{} = meeting) do
-    Delivery.deliver(BookingRequestReceived.render(meeting))
+  @spec send_booking_request_received(Meeting.t(), keyword()) :: {:ok, any()} | {:error, any()}
+  def send_booking_request_received(%Meeting{} = meeting, opts \\ []) do
+    Delivery.deliver(BookingRequestReceived.render(meeting, opts))
   end
 
   @doc """
@@ -70,6 +71,16 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   end
 
   @doc """
+  Tells the host a confirmed booking was cancelled because the invitee's
+  request to move it lapsed unanswered.
+  """
+  @spec send_reschedule_request_expired(Meeting.t(), String.t()) ::
+          {:ok, any()} | {:error, any()}
+  def send_reschedule_request_expired(%Meeting{} = meeting, locale) do
+    Delivery.deliver(RescheduleRequestExpired.render(meeting, locale))
+  end
+
+  @doc """
   Asks the host to approve or decline a booking request, or reminds them.
 
   `locale` is the host's, not the invitee's: this is the one meeting email
@@ -79,10 +90,11 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
           BookingApprovalRequest.variant(),
           Meeting.t(),
           map(),
-          String.t()
+          String.t(),
+          keyword()
         ) :: {:ok, any()} | {:error, any()}
-  def send_booking_approval_request(variant, %Meeting{} = meeting, urls, locale) do
-    Delivery.deliver(BookingApprovalRequest.render(variant, meeting, urls, locale))
+  def send_booking_approval_request(variant, %Meeting{} = meeting, urls, locale, opts \\ []) do
+    Delivery.deliver(BookingApprovalRequest.render(variant, meeting, urls, locale, opts))
   end
 
   @doc """
@@ -127,6 +139,28 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     )
 
     {organizer_result, attendee_result}
+  end
+
+  @doc """
+  Sends a reschedule notice to a meeting guest, asking again whether they can
+  attend. `appointment_details` must carry `:guest_name`, `:guest_accept_url`
+  and `:guest_decline_url`, plus the reschedule context of
+  `Tymeslot.Notifications.ContentBuilder.build_reschedule_details/2`.
+  """
+  @spec send_guest_reschedule(String.t(), Tymeslot.Emails.EmailService.appointment_details()) ::
+          {:ok, any()} | {:error, any()}
+  def send_guest_reschedule(guest_email, appointment_details) do
+    Delivery.deliver(AppointmentRescheduled.render(:guest, guest_email, appointment_details))
+  end
+
+  @doc """
+  Sends a cancellation notice to a meeting guest. `appointment_details` must
+  carry `:guest_name`.
+  """
+  @spec send_guest_cancellation(String.t(), Tymeslot.Emails.EmailService.appointment_details()) ::
+          {:ok, any()} | {:error, any()}
+  def send_guest_cancellation(guest_email, appointment_details) do
+    Delivery.deliver(AppointmentCancellation.render(:guest, guest_email, appointment_details))
   end
 
   @doc """
@@ -213,6 +247,16 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
           {:ok, any()} | {:error, any()}
   def send_appointment_reminder_to_attendee(attendee_email, appointment_details) do
     Delivery.deliver(AppointmentReminder.render(:attendee, attendee_email, appointment_details))
+  end
+
+  @doc """
+  Sends the reminder for an upcoming meeting to a guest. `appointment_details`
+  must carry `:guest_name` and the guest's own RSVP links.
+  """
+  @spec send_guest_reminder(String.t(), Tymeslot.Emails.EmailService.appointment_details()) ::
+          {:ok, any()} | {:error, any()}
+  def send_guest_reminder(guest_email, appointment_details) do
+    Delivery.deliver(AppointmentReminder.render(:guest, guest_email, appointment_details))
   end
 
   @doc """

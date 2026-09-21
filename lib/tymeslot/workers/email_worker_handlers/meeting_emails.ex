@@ -6,12 +6,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
   require Logger
 
-  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Notifications.GuestNotifications
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
@@ -131,6 +131,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     case Config.email_service_module().send_cancellation_emails(appointment_details) do
       {{:ok, _organizer}, {:ok, _attendee}} ->
         Logger.info("Cancellation emails sent successfully", meeting_id: meeting.id)
+        GuestNotifications.notify_cancelled(meeting, appointment_details)
         :ok
 
       {organizer_result, attendee_result} ->
@@ -141,6 +142,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
         )
 
         if match?({:ok, _}, organizer_result) or match?({:ok, _}, attendee_result) do
+          # Discarded rather than retried, so the guests are told now or never.
+          GuestNotifications.notify_cancelled(meeting, appointment_details)
+
           {:discard,
            "Partial cancellation email failure: one email succeeded, retry would duplicate"}
         else
@@ -160,6 +164,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
         organizer_sent: meeting.organizer_email_sent,
         attendee_sent: meeting.attendee_email_sent
       )
+
+      # The participants' flags say nothing about the guests: each guest is
+      # stamped on its own, so a retry that finds both participants already
+      # stamped still has to invite whoever the previous attempt missed.
+      invite_missed_guests(meeting)
 
       :ok
     else
@@ -224,13 +233,31 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           {:ok, :skipped}
         end
 
-      # Guest confirmations are sent alongside the attendee email. Each guest is
-      # stamped with `confirmation_sent_at` after a successful send, so Oban
-      # retries only re-attempt unsent guests. Failures are logged but never
-      # block the organiser/attendee confirmation result.
-      if need_attendee?, do: send_guest_confirmations(meeting, appointment_details, email_service)
+      # Guest confirmations are sent alongside the attendee email, but not
+      # gated on it: a retry whose previous attempt stamped the attendee and
+      # then failed part-way through the guests must still reach the rest.
+      # Each guest is stamped with `confirmation_sent_at` after a successful
+      # send, so only unsent guests are ever re-attempted. Failures are logged
+      # but never block the organiser/attendee confirmation result.
+      send_guest_confirmations(meeting, appointment_details, email_service)
 
       process_email_results(meeting, organizer_result, attendee_result, :confirmation)
+    end
+  end
+
+  # Builds the payload only when there is somebody to send to, so the
+  # already-sent path stays one cheap query.
+  defp invite_missed_guests(meeting) do
+    case GuestQueries.list_unsent_for_meeting(meeting.id) do
+      [] ->
+        :ok
+
+      _unsent ->
+        send_guest_confirmations(
+          meeting,
+          AppointmentBuilder.from_meeting(meeting),
+          Config.email_service_module()
+        )
     end
   end
 
@@ -238,7 +265,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     meeting.id
     |> GuestQueries.list_unsent_for_meeting()
     |> Enum.each(fn guest ->
-      details = guest_appointment_details(appointment_details, guest)
+      details = GuestNotifications.guest_details(appointment_details, guest)
 
       case email_service.send_guest_confirmation(guest.email, details) do
         {:ok, _result} ->
@@ -252,15 +279,6 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           )
       end
     end)
-  end
-
-  defp guest_appointment_details(appointment_details, guest) do
-    urls = Policy.guest_rsvp_urls(guest.rsvp_token)
-
-    appointment_details
-    |> Map.put(:guest_name, guest.name || guest.email)
-    |> Map.put(:guest_accept_url, urls.accept_url)
-    |> Map.put(:guest_decline_url, urls.decline_url)
   end
 
   # Sends only to the recipient(s) not yet recorded as sent for this specific
@@ -299,12 +317,44 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
         {:ok, :skipped}
       end
 
+    # Guests are reminded from inside this function, so they inherit its
+    # guards: a reminder for a meeting that has already started, or whose slot
+    # was voided, never reaches a guest either. Each guest is stamped for this
+    # specific offset, so a retry after a partial send re-emails only the
+    # guests it has not reached. Failures are logged but never change the
+    # organiser/attendee result.
+    send_guest_reminders(meeting, appointment_details, reminder_value, reminder_unit)
+
     process_email_results(
       meeting,
       organizer_result,
       attendee_result,
       {:reminder, reminder_value, reminder_unit}
     )
+  end
+
+  defp send_guest_reminders(meeting, appointment_details, reminder_value, reminder_unit) do
+    value = ReminderUtils.parse_reminder_value(reminder_value)
+    unit = ReminderUtils.normalize_reminder_unit(reminder_unit)
+    email_service = Config.email_service_module()
+
+    meeting.id
+    |> GuestQueries.list_for_reminder(value, unit)
+    |> Enum.each(fn guest ->
+      details = GuestNotifications.guest_details(appointment_details, guest)
+
+      case email_service.send_guest_reminder(guest.email, details) do
+        {:ok, _result} ->
+          GuestQueries.mark_reminder_sent(guest, value, unit)
+
+        other ->
+          Logger.error("Guest reminder email failed",
+            meeting_id: meeting.id,
+            guest_id: guest.id,
+            result: inspect(other)
+          )
+      end
+    end)
   end
 
   defp send_reschedule_request_email(meeting) do
