@@ -24,6 +24,14 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
       assert email.subject =~ format_date_short(details.date)
     end
 
+    test "renders in the organizer's locale, not the attendee's" do
+      details = build_appointment_details(%{organizer_locale: "de", attendee_locale: "en"})
+
+      email = AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
+
+      assert email.subject =~ "Neuer Termin"
+    end
+
     test "sets correct recipient" do
       details = build_appointment_details()
 

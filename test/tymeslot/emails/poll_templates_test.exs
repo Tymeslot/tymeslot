@@ -103,6 +103,15 @@ defmodule Tymeslot.Emails.PollTemplatesTest do
       %{poll: poll, results_url: "https://tymeslot.app/dashboard/polls/#{poll.id}"}
     end
 
+    test "is written in the host's own language" do
+      host = insert(:user, locale: "de")
+      poll = insert(:poll, title: "Quarterly Review", user: host)
+
+      email = PollHostNudge.render(poll, :all_voted, "https://tymeslot.app/dashboard/polls/1")
+
+      assert email.html_body =~ "Alle haben zu Quarterly Review abgestimmt"
+    end
+
     test "all_voted renders a complete email containing the poll title and results URL", %{
       poll: poll,
       results_url: url

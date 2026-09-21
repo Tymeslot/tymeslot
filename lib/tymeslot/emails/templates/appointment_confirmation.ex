@@ -10,9 +10,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
   import Swoosh.Email
 
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks
   alias Tymeslot.Integrations.Calendar.IcsGenerator
-  alias Tymeslot.Locales
 
   alias Tymeslot.Emails.Shared.{
     Callouts,
@@ -435,5 +435,6 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
   defp join_url(:guest, details), do: Map.get(details, :meeting_url)
 
-  defp organizer_locale(_appointment_details), do: Locales.admin_default_locale()
+  defp organizer_locale(appointment_details),
+    do: RecipientLocale.organizer_locale(appointment_details)
 end
