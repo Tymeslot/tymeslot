@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   that are common across different OAuth-based calendar providers like Google and Outlook.
   """
 
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CreatedEvent
 
   require Logger
@@ -68,7 +69,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   """
   @spec default_start_time() :: DateTime.t()
   def default_start_time do
-    DateTime.utc_now()
+    Clock.utc_now()
     |> DateTime.add(-30, :day)
     |> DateTime.truncate(:second)
   end
@@ -78,7 +79,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   """
   @spec default_end_time() :: DateTime.t()
   def default_end_time do
-    DateTime.utc_now()
+    Clock.utc_now()
     |> DateTime.add(365, :day)
     |> DateTime.truncate(:second)
   end

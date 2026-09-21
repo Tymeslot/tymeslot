@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   state management, and provides flexible scope configuration.
   """
 
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Common.OAuth.{ErrorParser, IdToken, State, TokenExchange}
   alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
@@ -189,7 +190,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   # Private functions
 
   defp build_token_map(response) do
-    expires_at = DateTime.add(DateTime.utc_now(), response["expires_in"], :second)
+    expires_at = DateTime.add(Clock.utc_now(), response["expires_in"], :second)
 
     {provider_account_id, provider_account_email} =
       case IdToken.decode(response["id_token"]) do

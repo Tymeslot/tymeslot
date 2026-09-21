@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.Clock
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -36,22 +37,37 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   # No time params (e.g. the `c` keyboard shortcut): open the create modal at the
   # next whole hour from "now" in the user's timezone, for a one-hour slot.
   def handle_show_create_form(_params, socket) do
-    now = DateTime.shift_zone!(DateTime.utc_now(), socket.assigns.user_timezone)
-    start_hour = if now.minute == 0, do: now.hour, else: rem(now.hour + 1, 24)
-    today = Date.to_iso8601(DateTime.to_date(now))
+    now = DateTime.shift_zone!(Clock.utc_now(), socket.assigns.user_timezone)
 
-    creating =
-      base_creating(socket, %{
-        date: today,
-        end_date: today,
-        start_hour: start_hour,
-        start_minute: 0,
-        end_hour: rem(start_hour + 1, 24),
-        end_minute: 0
-      })
+    creating = base_creating(socket, default_slot(now))
 
     {:noreply, assign(socket, :creating_event, creating)}
   end
+
+  # The next whole hour, for an hour. Both ends carry their own date, so a slot
+  # that runs into midnight simply ends on the following one. Deriving the end
+  # by adding an hour to the start, rather than to the start's hour number, is
+  # what keeps it on the right date and on the right side of a DST transition.
+  defp default_slot(now) do
+    start_at = next_whole_hour(now)
+    end_at = DateTime.add(start_at, 1, :hour)
+
+    %{
+      date: iso_date(start_at),
+      end_date: iso_date(end_at),
+      start_hour: start_at.hour,
+      start_minute: 0,
+      end_hour: end_at.hour,
+      end_minute: 0
+    }
+  end
+
+  defp next_whole_hour(%DateTime{minute: 0} = now), do: now
+
+  defp next_whole_hour(%DateTime{minute: minute} = now),
+    do: DateTime.add(now, 60 - minute, :minute)
+
+  defp iso_date(at), do: at |> DateTime.to_date() |> Date.to_iso8601()
 
   # Builds a `creating_event` map, filling defaults for any field the caller omits.
   defp base_creating(socket, overrides) do

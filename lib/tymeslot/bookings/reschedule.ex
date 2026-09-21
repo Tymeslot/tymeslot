@@ -122,6 +122,22 @@ defmodule Tymeslot.Bookings.Reschedule do
     # Reminder sent-tracking is reset too: the reminder(s) already sent were
     # pinned to the old time, so they must not suppress the re-pinned
     # reminder jobs scheduled for the new time.
+    #
+    # The new time is a new revision of the calendar entry, so `ical_sequence`
+    # moves on. It records the revision of the last calendar entry sent out,
+    # the same meaning `AttendeeNotifications.Worker` gives it when the host
+    # moves the event in their own calendar: the reschedule email carries this
+    # value, and anything sent later (another reschedule, a cancellation, a
+    # host-side change) goes past it. Left at 0, every reschedule sent
+    # SEQUENCE 1 again and calendar clients had only DTSTAMP to tell the
+    # entries apart.
+    #
+    # A reschedule that re-enters the approval gate sends no calendar entry at
+    # all (see `announce/2`), so the bump reserves the revision rather than
+    # announcing it: the confirmation ICS the host's approval sends carries
+    # this value, and nothing else has used it in the meantime. A request that
+    # is declined or expires simply leaves the revision unspent, which costs
+    # nothing: SEQUENCE has to rise, not to run consecutively.
     attrs =
       Map.merge(
         %{
@@ -129,7 +145,8 @@ defmodule Tymeslot.Bookings.Reschedule do
           end_time: end_dt,
           reschedule_requested_at: nil,
           reminders_sent: [],
-          reminder_email_sent: false
+          reminder_email_sent: false,
+          ical_sequence: meeting.ical_sequence + 1
         },
         gate_attributes(meeting_type, start_dt, meeting)
       )
@@ -246,12 +263,14 @@ defmodule Tymeslot.Bookings.Reschedule do
   # `IcsGenerator.generate_ics_attachment/2`). The request email sent below
   # (`BookingRequestReceived`) carries no calendar attachment, so that entry
   # is left showing the old, no-longer-accurate confirmed time until the host
-  # answers again — approval re-sends a fresh confirmation ICS for the new
-  # time (self-healing), but a decline or expiry's outcome email does not
-  # correct it either. Fixing this needs a calendar-only correction path
-  # analogous to `Tymeslot.Meetings.AttendeeNotifications`'s ICS handling,
-  # which lives outside this module's booking-email templates and is left
-  # for that work rather than bolted on here.
+  # answers again. Approval heals it: the confirmation ICS it re-sends carries
+  # the `ical_sequence` this reschedule advanced, so the client supersedes the
+  # entry it holds rather than judging two entries of equal revision by their
+  # DTSTAMP. A decline or an expiry's outcome email still does not correct it,
+  # which needs a calendar-only correction path analogous to
+  # `Tymeslot.Meetings.AttendeeNotifications`'s ICS handling, which lives
+  # outside this module's booking-email templates and is left for that work
+  # rather than bolted on here.
   defp announce(%{status: "awaiting_approval"} = updated, _original) do
     cancel_stale_reminders(updated)
 

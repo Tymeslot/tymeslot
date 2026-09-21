@@ -267,6 +267,35 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
       assert attachment.filename == "custom-invite.ics"
     end
 
+    test "carries the revision the payload records as already announced" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "meeting-123",
+        organizer_email: "john@example.com",
+        ical_sequence: 2
+      }
+
+      attachment = IcsGenerator.generate_ics_attachment(meeting_details)
+
+      assert attachment.data =~ "SEQUENCE:2"
+    end
+
+    test "falls back to SEQUENCE:0 for a payload carrying no revision" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "meeting-123",
+        organizer_email: "john@example.com"
+      }
+
+      attachment = IcsGenerator.generate_ics_attachment(meeting_details)
+
+      assert attachment.data =~ "SEQUENCE:0"
+    end
+
     test "advertises METHOD:PUBLISH (not REQUEST) to suppress recipient-side iMIP auto-import" do
       meeting_details = %{
         title: "Meeting",

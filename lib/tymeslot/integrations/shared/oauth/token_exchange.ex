@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
   against OAuth token endpoints (Google, Microsoft, etc.).
   """
 
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.Redactor
 
@@ -180,7 +181,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
     case Jason.decode(response_body) do
       {:ok, response} ->
         expires_in = if is_integer(response["expires_in"]), do: response["expires_in"], else: 3600
-        expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
+        expires_at = DateTime.add(Clock.utc_now(), expires_in, :second)
 
         {:ok,
          %{

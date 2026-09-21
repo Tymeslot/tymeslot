@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
 
   require Logger
 
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.CalendarManagement
@@ -30,7 +31,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
   def valid?(%{token_expires_at: nil}, _buffer_seconds), do: false
 
   def valid?(%{token_expires_at: expires_at}, buffer_seconds) do
-    DateTime.compare(expires_at, DateTime.add(DateTime.utc_now(), buffer_seconds, :second)) == :gt
+    DateTime.compare(expires_at, DateTime.add(Clock.utc_now(), buffer_seconds, :second)) == :gt
   end
 
   @doc """

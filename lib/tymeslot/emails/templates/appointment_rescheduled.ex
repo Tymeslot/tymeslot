@@ -5,8 +5,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
 
   A reschedule is a change to a booking both sides already have on file, so the
   email leads with the new slot and states the one it replaces, and its ICS
-  attachment carries the next SEQUENCE so calendar clients supersede the entry
-  they already hold rather than adding a second one.
+  attachment carries the revision `Tymeslot.Bookings.Reschedule` advanced the
+  meeting to, so calendar clients supersede the entry they already hold rather
+  than adding a second one.
 
   The reschedule context (`:original_start_time` and friends) is supplied by
   `Tymeslot.Notifications.ContentBuilder.build_reschedule_details/2`. Every key
@@ -223,14 +224,17 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
   end
 
   # A reschedule supersedes an invitation the attendee's calendar already
-  # holds, so the SEQUENCE moves past the last one sent. Same reasoning, and
-  # the same METHOD:PUBLISH-not-REQUEST caution, as the cancellation ICS.
+  # holds, so its SEQUENCE must be higher than any sent before. The reschedule
+  # itself advances the meeting's `ical_sequence` to the revision this email
+  # announces (`Bookings.Reschedule`), so the value is sent as it is; the
+  # floor of 1 keeps a payload without one past the original invitation.
+  # Same METHOD:PUBLISH-not-REQUEST caution as the cancellation ICS.
   defp update_ics_attachment(appointment_details, locale) do
-    current_sequence = Map.get(appointment_details, :ical_sequence) || 0
+    sequence = max(Map.get(appointment_details, :ical_sequence) || 0, 1)
 
     IcsGenerator.generate_ics_update_attachment(
       appointment_details,
-      current_sequence + 1,
+      sequence,
       locale,
       "appointment-#{appointment_details.uid}.ics"
     )
