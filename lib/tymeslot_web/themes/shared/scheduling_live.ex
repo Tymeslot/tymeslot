@@ -468,7 +468,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
         engine =
           if defs != socket.assigns.engine.definitions,
-            do: QEngine.init(defs),
+            do: LiveHelpers.init_questions_engine(socket, defs),
             else: socket.assigns.engine
 
         assign(socket, :engine, engine)

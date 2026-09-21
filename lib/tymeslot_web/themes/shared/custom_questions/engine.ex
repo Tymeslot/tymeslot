@@ -34,6 +34,27 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Engine do
     %__MODULE__{definitions: Enum.sort_by(definitions, &position/1)}
   end
 
+  @doc """
+  Seeds answers the booker has not given in this session — the ones a
+  reschedule carries over from the booking being moved.
+
+  Deliberately not `answer/3`: these are answers to be *shown*, not answers
+  the booker has just made, so they leave `touched` alone. The theme gates
+  inline errors on that set, and marking a carried-over answer as touched
+  would put an error under a question the booker has not looked at yet.
+
+  Answers already in the state win, so re-entering the step cannot overwrite
+  an edit with the value it replaced, and ids the definitions do not carry
+  are ignored.
+  """
+  @spec prefill(t(), %{String.t() => any()}) :: t()
+  def prefill(%__MODULE__{} = s, answers) when is_map(answers) do
+    known = MapSet.new(s.definitions, & &1["id"])
+    carried = Map.filter(answers, fn {id, _value} -> MapSet.member?(known, id) end)
+
+    %{s | answers: Map.merge(carried, s.answers)}
+  end
+
   @spec skipped?(t()) :: boolean()
   def skipped?(%__MODULE__{definitions: []}), do: true
   def skipped?(%__MODULE__{}), do: false

@@ -360,8 +360,33 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
     case socket.assigns[:engine] do
       %QEngine{definitions: ^defs} = engine -> engine
-      _changed -> QEngine.init(defs)
+      _changed -> init_questions_engine(socket, defs)
     end
+  end
+
+  @doc """
+  A fresh questions engine for `definitions`, carrying over the answers of the
+  booking a reschedule is moving.
+
+  A reschedule re-enters the flow as an ordinary booking, so without this the
+  booker is asked the organiser's questions again from blank, having already
+  answered them — while their name, email and message are prefilled right
+  beside. `Tymeslot.Scheduling.ThemeFlow.reschedule_answers/3` decides which
+  answers may be carried; the step itself is still shown, so the booker sees
+  what will be sent and can change it.
+  """
+  @spec init_questions_engine(Phoenix.LiveView.Socket.t(), [map()]) :: QEngine.t()
+  def init_questions_engine(socket, definitions) do
+    carried =
+      ThemeFlow.reschedule_answers(
+        socket.assigns[:reschedule_meeting_uid],
+        socket.assigns[:organizer_user_id],
+        definitions
+      )
+
+    definitions
+    |> QEngine.init()
+    |> QEngine.prefill(carried)
   end
 
   defp do_handle_schedule_entry(socket, params) do
