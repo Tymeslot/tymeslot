@@ -102,6 +102,77 @@ defmodule Tymeslot.Integrations.Video.InputValidationTest do
     end
   end
 
+  describe "validate_video_integration_form/2 - nextcloud_talk" do
+    defp nextcloud_talk_params(overrides \\ %{}) do
+      Map.merge(
+        %{
+          "provider" => "nextcloud_talk",
+          "name" => "My Nextcloud Talk",
+          "base_url" => "https://cloud.example.com",
+          "username" => "  alice  ",
+          "api_key" => "abcde-fghij-klmno-pqrst-uvwxy"
+        },
+        overrides
+      )
+    end
+
+    test "accepts valid nextcloud_talk input and trims the username" do
+      assert {:ok, sanitized} =
+               InputValidation.validate_video_integration_form(nextcloud_talk_params())
+
+      assert sanitized["name"] == "My Nextcloud Talk"
+      assert sanitized["base_url"] == "https://cloud.example.com"
+      assert sanitized["username"] == "alice"
+      assert sanitized["api_key"] == "abcde-fghij-klmno-pqrst-uvwxy"
+    end
+
+    test "rejects a missing username" do
+      assert {:error, errors} =
+               InputValidation.validate_video_integration_form(
+                 nextcloud_talk_params(%{"username" => "   "})
+               )
+
+      assert Map.has_key?(errors, :username)
+    end
+
+    test "rejects a missing app password against the api_key field" do
+      assert {:error, errors} =
+               InputValidation.validate_video_integration_form(
+                 nextcloud_talk_params(%{"api_key" => ""})
+               )
+
+      assert errors.api_key == "App password is required"
+    end
+
+    test "keeps the stored app password when editing with the field left blank" do
+      assert {:ok, sanitized} =
+               InputValidation.validate_video_integration_form(
+                 nextcloud_talk_params(%{"api_key" => ""}),
+                 existing_credentials: true
+               )
+
+      refute Map.has_key?(sanitized, "api_key")
+      assert sanitized["username"] == "alice"
+    end
+
+    test "still validates a new app password entered while editing" do
+      assert {:error, %{api_key: _message}} =
+               InputValidation.validate_video_integration_form(
+                 nextcloud_talk_params(%{"api_key" => "short"}),
+                 existing_credentials: true
+               )
+    end
+
+    test "rejects a localhost server URL" do
+      assert {:error, errors} =
+               InputValidation.validate_video_integration_form(
+                 nextcloud_talk_params(%{"base_url" => "http://localhost:8080"})
+               )
+
+      assert Map.has_key?(errors, :base_url)
+    end
+  end
+
   describe "validate_video_integration_form/2 - custom provider" do
     test "accepts valid custom video input" do
       params = %{
@@ -349,6 +420,11 @@ defmodule Tymeslot.Integrations.Video.InputValidationTest do
                InputValidation.validate_single_field(:base_url, "https://meet.example.com")
 
       assert {:error, _msg} = InputValidation.validate_single_field(:base_url, "")
+    end
+
+    test "validates :username field" do
+      assert {:ok, "alice"} = InputValidation.validate_single_field(:username, " alice ")
+      assert {:error, _msg} = InputValidation.validate_single_field(:username, "")
     end
 
     test "returns ok for unknown fields" do

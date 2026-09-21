@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrationModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig
+  alias TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfig
   alias TymeslotWeb.Dashboard.VideoSettings.Components
 
   @spec settings(map()) :: Phoenix.LiveView.Rendered.t()
@@ -131,6 +132,15 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
               :if={@config_provider == "mirotalk"}
               module={MirotalkConfig}
               id="mirotalk-config"
+              target={@myself}
+              form_errors={@form_errors}
+              form_values={@form_values}
+              saving={@saving}
+            />
+            <.live_component
+              :if={@config_provider == "nextcloud_talk"}
+              module={NextcloudTalkConfig}
+              id="nextcloud-talk-config"
               target={@myself}
               form_errors={@form_errors}
               form_values={@form_values}

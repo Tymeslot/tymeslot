@@ -13,7 +13,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   alias Tymeslot.Integrations.Providers.Families
   alias Tymeslot.Integrations.Shared.{ProviderConfigHelper, ProviderToggle}
 
-  @providers [:mirotalk, :google_meet, :teams, :zoom, :custom]
+  @providers [:mirotalk, :nextcloud_talk, :google_meet, :teams, :zoom, :custom]
   @dev_only_providers []
 
   # The single declaration site for "how does this provider connect?", in the
@@ -22,7 +22,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   # here; a provider missing from this table fails the build.
   @provider_families %{
     oauth: [:google_meet, :teams, :zoom],
-    other: [:mirotalk, :custom]
+    other: [:mirotalk, :nextcloud_talk, :custom]
   }
 
   # Keyed by both the atom and the string form of every provider, so the two
@@ -45,6 +45,17 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
         dgettext_noop("dashboard_integrations", "Self-hosted peer-to-peer video meetings"),
       button_text: "Connect MiroTalk",
       click_event: "connect_mirotalk",
+      circuit_breaker_enabled: true
+    },
+    nextcloud_talk: %{
+      icon: "nextcloud_talk",
+      description:
+        dgettext_noop(
+          "dashboard_integrations",
+          "Public Talk conversation on your Nextcloud for every booking"
+        ),
+      button_text: "Connect Nextcloud Talk",
+      click_event: "connect_nextcloud_talk",
       circuit_breaker_enabled: true
     },
     google_meet: %{
@@ -306,6 +317,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
 
   @display_names %{
     mirotalk: "MiroTalk P2P",
+    nextcloud_talk: "Nextcloud Talk",
     google_meet: "Google Meet",
     teams: "Microsoft Teams",
     zoom: "Zoom",
@@ -323,6 +335,9 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   """
   @spec get_provider_module(atom()) :: module() | nil
   def get_provider_module(:mirotalk), do: Tymeslot.Integrations.Video.Providers.MiroTalkProvider
+
+  def get_provider_module(:nextcloud_talk),
+    do: Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
 
   def get_provider_module(:google_meet),
     do: Tymeslot.Integrations.Video.Providers.GoogleMeetProvider

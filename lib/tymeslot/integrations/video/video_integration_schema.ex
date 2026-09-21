@@ -1,6 +1,6 @@
 defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   @moduledoc """
-  Schema for video conferencing integrations (MiroTalk).
+  Schema for video conferencing integrations.
   """
   use Ecto.Schema
   use Gettext, backend: TymeslotWeb.Gettext
@@ -24,6 +24,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
           client_secret_encrypted: binary() | nil,
           tenant_id_encrypted: binary() | nil,
           teams_user_id_encrypted: binary() | nil,
+          username_encrypted: binary() | nil,
           custom_meeting_url: String.t() | nil,
           token_expires_at: DateTime.t() | nil,
           oauth_scope: String.t() | nil,
@@ -51,6 +52,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     field(:client_secret_encrypted, :binary)
     field(:tenant_id_encrypted, :binary)
     field(:teams_user_id_encrypted, :binary)
+    field(:username_encrypted, :binary)
     field(:custom_meeting_url, :string)
     field(:token_expires_at, :utc_datetime)
     field(:oauth_scope, :string)
@@ -74,6 +76,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     field(:client_secret, :string, virtual: true, redact: true)
     field(:tenant_id, :string, virtual: true, redact: true)
     field(:teams_user_id, :string, virtual: true, redact: true)
+    field(:username, :string, virtual: true, redact: true)
 
     belongs_to(:user, Tymeslot.Auth.UserSchema)
 
@@ -116,6 +119,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
       :client_secret,
       :tenant_id,
       :teams_user_id,
+      :username,
       :custom_meeting_url,
       :token_expires_at,
       :oauth_scope,
@@ -206,7 +210,8 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
           safe_decrypt(integration.client_secret_encrypted, "client_secret", integration.id),
         tenant_id: safe_decrypt(integration.tenant_id_encrypted, "tenant_id", integration.id),
         teams_user_id:
-          safe_decrypt(integration.teams_user_id_encrypted, "teams_user_id", integration.id)
+          safe_decrypt(integration.teams_user_id_encrypted, "teams_user_id", integration.id),
+        username: safe_decrypt(integration.username_encrypted, "username", integration.id)
     }
   end
 
@@ -234,7 +239,8 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     :client_id_encrypted,
     :client_secret_encrypted,
     :tenant_id_encrypted,
-    :teams_user_id_encrypted
+    :teams_user_id_encrypted,
+    :username_encrypted
   ]
 
   # The virtual counterparts callers actually write. Derived from the encrypted
@@ -341,6 +347,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     |> encrypt_field(:client_secret, :client_secret_encrypted)
     |> encrypt_field(:tenant_id, :tenant_id_encrypted)
     |> encrypt_field(:teams_user_id, :teams_user_id_encrypted)
+    |> encrypt_field(:username, :username_encrypted)
   end
 
   defp encrypt_field(changeset, field, encrypted_field) do

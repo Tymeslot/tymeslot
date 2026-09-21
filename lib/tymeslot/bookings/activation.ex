@@ -36,7 +36,7 @@ defmodule Tymeslot.Bookings.Activation do
   # `ProviderConfig.all_providers/0` because that list is toggle-filtered: an
   # integration a host already connected before its provider was disabled
   # must still get its room created, not silently skip straight to `notify/1`.
-  @api_created_providers [:mirotalk, :google_meet, :teams, :zoom, :custom]
+  @api_created_providers [:mirotalk, :nextcloud_talk, :google_meet, :teams, :zoom, :custom]
 
   @doc """
   Runs the side effects a newly created or newly confirmed meeting needs.

@@ -353,4 +353,75 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
       assert render(view) =~ "Failed to update integration"
     end
   end
+
+  describe "edit modal — nextcloud_talk app password" do
+    defp insert_nextcloud_talk(user) do
+      insert(:video_integration,
+        user: user,
+        provider: "nextcloud_talk",
+        name: "Talk",
+        base_url: "https://cloud.example.org",
+        provider_account_id: "https://cloud.example.org||alice",
+        username_encrypted: Encryption.encrypt("alice"),
+        api_key_encrypted: Encryption.encrypt("stored-app-password-12345")
+      )
+    end
+
+    defp open_edit_modal(view, integration) do
+      view
+      |> element(
+        "button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#edit-video-modal']"
+      )
+      |> render_click()
+    end
+
+    @tag :capture_log
+    test "a blank app password keeps the stored one while other fields are saved", %{
+      conn: conn,
+      user: user
+    } do
+      integration = insert_nextcloud_talk(user)
+      original_ciphertext = integration.api_key_encrypted
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+      open_edit_modal(view, integration)
+
+      view
+      |> form("#edit-video-integration-form", %{
+        "integration" => %{
+          "name" => "Renamed Talk",
+          "base_url" => "https://cloud.example.org",
+          "username" => "alice",
+          "api_key" => ""
+        }
+      })
+      |> render_submit()
+
+      fresh = Repo.get!(VideoIntegrationSchema, integration.id)
+      assert fresh.name == "Renamed Talk"
+      assert fresh.api_key_encrypted == original_ciphertext
+    end
+
+    @tag :capture_log
+    test "a new app password replaces the stored one", %{conn: conn, user: user} do
+      integration = insert_nextcloud_talk(user)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+      open_edit_modal(view, integration)
+
+      view
+      |> form("#edit-video-integration-form", %{
+        "integration" => %{
+          "name" => "Talk",
+          "base_url" => "https://cloud.example.org",
+          "username" => "alice",
+          "api_key" => "new-app-password-67890"
+        }
+      })
+      |> render_submit()
+
+      fresh = Repo.get!(VideoIntegrationSchema, integration.id)
+      assert Encryption.decrypt(fresh.api_key_encrypted) == "new-app-password-67890"
+    end
+  end
 end

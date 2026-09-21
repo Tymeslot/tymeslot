@@ -42,11 +42,13 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
       # Nextcloud Talk and anything else on such a host used to be claimed by
       # MiroTalk, which then parsed a room id out of a URL it knows nothing
       # about.
-      refute ProviderAdapter.valid_meeting_url?("https://talk.example.org/call/abc123")
       refute ProviderAdapter.valid_meeting_url?("https://cloud.mytalk.de/s/abc123")
-
-      assert ProviderAdapter.extract_room_id("https://talk.example.org/call/abc123") == nil
       assert ProviderAdapter.extract_room_id("https://cloud.mytalk.de/s/abc123") == nil
+
+      # A Nextcloud Talk conversation link on such a host belongs to Nextcloud
+      # Talk, whose room id is the conversation token.
+      assert ProviderAdapter.valid_meeting_url?("https://talk.example.org/call/abc123")
+      assert ProviderAdapter.extract_room_id("https://talk.example.org/call/abc123") == "abc123"
     end
 
     test "detects google_meet" do

@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   Video integration input validation and sanitization.
 
   Provides specialized validation for video integration forms including
-  MiroTalk and Custom Video configuration forms.
+  MiroTalk, Nextcloud Talk and Custom Video configuration forms.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -19,7 +19,10 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
 
   ## Parameters
   - `params` - Map containing video integration form parameters
-  - `opts` - Options including metadata for logging
+  - `opts` - Options including metadata for logging, and `existing_credentials:
+    true` when the form edits an integration whose secret is already stored.
+    For Nextcloud Talk a blank app password then means "keep the stored one"
+    and is left out of the result instead of being rejected.
 
   ## Returns
   - `{:ok, sanitized_params}` | `{:error, validation_errors}`
@@ -28,11 +31,15 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
           {:ok, %{String.t() => term()}} | {:error, %{atom() => String.t()}}
   def validate_video_integration_form(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
+    existing_credentials? = Keyword.get(opts, :existing_credentials, false)
     provider = params["provider"]
 
     case provider do
       "mirotalk" ->
         validate_mirotalk_form(params, metadata)
+
+      "nextcloud_talk" ->
+        validate_nextcloud_talk_form(params, metadata, existing_credentials?)
 
       "custom" ->
         validate_custom_video_form(params, metadata)
@@ -53,7 +60,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   Validates a single field for video integration form.
 
   ## Parameters
-  - `field` - The field name as atom (:name, :api_key, :base_url, :custom_meeting_url)
+  - `field` - The field name as atom (:name, :api_key, :base_url, :username, :custom_meeting_url)
   - `value` - The field value to validate
   - `opts` - Options including metadata for logging
 
@@ -90,6 +97,15 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
     end
   end
 
+  def validate_single_field(:username, value, opts) do
+    metadata = Keyword.get(opts, :metadata, %{})
+
+    case validate_username(value, metadata) do
+      {:ok, sanitized} -> {:ok, sanitized}
+      {:error, %{username: error}} -> {:error, error}
+    end
+  end
+
   def validate_single_field(:custom_meeting_url, value, opts) do
     metadata = Keyword.get(opts, :metadata, %{})
 
@@ -123,6 +139,50 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
     else
       {:error, errors} when is_map(errors) ->
         SecurityLogger.log_security_event("mirotalk_integration_validation_failure", %{
+          ip_address: metadata[:ip],
+          user_agent: metadata[:user_agent],
+          user_id: metadata[:user_id],
+          errors: Map.keys(errors)
+        })
+
+        {:error, errors}
+    end
+  end
+
+  # The app password travels in the `api_key` field: it is the secret the
+  # integration authenticates with, and `api_key_encrypted` is where every
+  # self-hosted provider keeps that secret.
+  defp validate_nextcloud_talk_form(params, metadata, existing_credentials?) do
+    with {:ok, sanitized_name} <-
+           InputValidators.validate_integration_name(params["name"], metadata),
+         {:ok, sanitized_base_url} <-
+           validate_base_url(
+             params["base_url"],
+             metadata,
+             dgettext(
+               "dashboard_integrations",
+               "Please enter a valid server URL (e.g., https://cloud.example.com)"
+             )
+           ),
+         {:ok, sanitized_username} <- validate_username(params["username"], metadata),
+         {:ok, app_password} <-
+           validate_app_password(params["api_key"], metadata, existing_credentials?) do
+      SecurityLogger.log_security_event("nextcloud_talk_integration_validation_success", %{
+        ip_address: metadata[:ip],
+        user_agent: metadata[:user_agent],
+        user_id: metadata[:user_id]
+      })
+
+      sanitized = %{
+        "name" => sanitized_name,
+        "base_url" => sanitized_base_url,
+        "username" => sanitized_username
+      }
+
+      {:ok, put_app_password(sanitized, app_password)}
+    else
+      {:error, errors} when is_map(errors) ->
+        SecurityLogger.log_security_event("nextcloud_talk_integration_validation_failure", %{
           ip_address: metadata[:ip],
           user_agent: metadata[:user_agent],
           user_id: metadata[:user_id],
@@ -198,16 +258,77 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
     {:error, %{api_key: dgettext("dashboard_integrations", "API key must be text")}}
   end
 
-  defp validate_base_url(nil, _metadata), do: {:error, %{base_url: base_url_required_message()}}
-  defp validate_base_url("", _metadata), do: {:error, %{base_url: base_url_required_message()}}
+  defp validate_username(value, _metadata) when value in [nil, ""],
+    do: {:error, %{username: dgettext("dashboard_integrations", "Username is required")}}
 
-  defp validate_base_url(base_url, metadata) when is_binary(base_url) do
+  defp validate_username(username, metadata) when is_binary(username) do
+    case UniversalSanitizer.sanitize_and_validate(username, allow_html: false, metadata: metadata) do
+      {:ok, sanitized} ->
+        trimmed = String.trim(sanitized)
+
+        cond do
+          trimmed == "" ->
+            {:error, %{username: dgettext("dashboard_integrations", "Username is required")}}
+
+          String.length(trimmed) > 255 ->
+            {:error,
+             %{
+               username:
+                 dgettext("dashboard_integrations", "Username must be 255 characters or less")
+             }}
+
+          true ->
+            {:ok, trimmed}
+        end
+
+      {:error, error} ->
+        {:error, %{username: error}}
+    end
+  end
+
+  defp validate_username(_other, _metadata) do
+    {:error, %{username: dgettext("dashboard_integrations", "Username must be text")}}
+  end
+
+  # Nextcloud app passwords are generated, never typed, so the API key rules
+  # (trimmed, 8 to 500 characters) fit them; only the wording differs. When
+  # editing, a blank field keeps the stored password: re-entering a generated
+  # secret just to rename the integration would push hosts towards creating a
+  # new app password for every edit.
+  defp validate_app_password(value, _metadata, true = _existing_credentials?)
+       when value in [nil, ""],
+       do: {:ok, :keep_stored}
+
+  defp validate_app_password(value, _metadata, _existing_credentials?)
+       when value in [nil, ""],
+       do: {:error, %{api_key: dgettext("dashboard_integrations", "App password is required")}}
+
+  defp validate_app_password(value, metadata, _existing_credentials?),
+    do: validate_api_key(value, metadata)
+
+  defp put_app_password(sanitized, :keep_stored), do: sanitized
+  defp put_app_password(sanitized, app_password), do: Map.put(sanitized, "api_key", app_password)
+
+  defp validate_base_url(base_url, metadata) do
+    validate_base_url(
+      base_url,
+      metadata,
+      dgettext(
+        "dashboard_integrations",
+        "Please enter a valid server URL (e.g., https://mirotalk.example.com)"
+      )
+    )
+  end
+
+  defp validate_base_url(nil, _metadata, _invalid_message),
+    do: {:error, %{base_url: base_url_required_message()}}
+
+  defp validate_base_url("", _metadata, _invalid_message),
+    do: {:error, %{base_url: base_url_required_message()}}
+
+  defp validate_base_url(base_url, metadata, invalid_message) when is_binary(base_url) do
     case InputValidators.validate_server_url(base_url, metadata,
-           error_message:
-             dgettext(
-               "dashboard_integrations",
-               "Please enter a valid server URL (e.g., https://mirotalk.example.com)"
-             ),
+           error_message: invalid_message,
            validate_url_fn: &validate_video_url/1
          ) do
       {:ok, sanitized_url} -> {:ok, sanitized_url}
@@ -215,7 +336,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
     end
   end
 
-  defp validate_base_url(_other, _metadata) do
+  defp validate_base_url(_other, _metadata, _invalid_message) do
     {:error, %{base_url: dgettext("dashboard_integrations", "Base URL must be text")}}
   end
 

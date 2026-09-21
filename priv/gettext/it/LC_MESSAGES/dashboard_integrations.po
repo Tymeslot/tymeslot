@@ -163,6 +163,7 @@ msgstr "Calendari"
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Annulla"
@@ -555,7 +556,9 @@ msgstr "Salvataggio in corso..."
 msgid "Self-hosted video conferencing"
 msgstr "Videoconferenza self-hosted"
 
+#: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
 #, elixir-autogen, elixir-format
 msgid "Server URL"
 msgstr "URL del server"
@@ -899,6 +902,7 @@ msgstr "Autenticazione non riuscita: controlla la tua chiave API"
 
 #: lib/tymeslot/integrations/video/input_validation.ex
 #: lib/tymeslot/integrations/video/providers/mirotalk_provider.ex
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Base URL is required"
 msgstr "L'URL di base è obbligatorio"
@@ -909,6 +913,7 @@ msgid "Base URL must be text"
 msgstr "L'URL di base deve essere testo"
 
 #: lib/tymeslot/integrations/video/providers/mirotalk_provider.ex
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Connection failed: %{reason}"
 msgstr "Connessione non riuscita: %{reason}"
@@ -938,6 +943,7 @@ msgstr "Connessione scaduta: il server ha impiegato troppo tempo a rispondere"
 msgid "Connection timeout while reaching the URL"
 msgstr "Connessione scaduta nel tentativo di raggiungere l'URL"
 
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format
 msgid "Connection validation failed"
@@ -1094,6 +1100,7 @@ msgid "URL responded with HTTP %{status}"
 msgstr "L'URL ha risposto con HTTP %{status}"
 
 #: lib/tymeslot/integrations/video/providers/mirotalk_provider.ex
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Unexpected response (status %{status}) - Please verify your configuration"
 msgstr "Risposta imprevista (stato %{status}): verifica la tua configurazione"
@@ -1185,12 +1192,160 @@ msgstr "Scrivi la variabile di template esattamente come {{meeting_id}}"
 msgid "Enter a full address starting with https://, for example https://cloud.example.com"
 msgstr "Inserisci l'indirizzo completo iniziando con https://, per esempio https://cloud.example.com"
 
+#: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "App Password"
+msgstr "Password per app"
+
 #: lib/tymeslot/integrations/video/input_validation.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a full address starting with https://, for example https://meet.example.com"
 msgstr "Inserisci l'indirizzo completo iniziando con https://, per esempio https://meet.example.com"
 
 #: lib/tymeslot/integrations/video/input_validation.ex
+#, elixir-autogen
+msgid "App password is required"
+msgstr "La password per app è obbligatoria"
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Authentication failed - Please check your username and app password"
+msgstr "Autenticazione non riuscita: controlla nome utente e password per app"
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Connected to Nextcloud Talk"
+msgstr "Connesso a Nextcloud Talk"
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Connected to Nextcloud Talk %{version}"
+msgstr "Connesso a Nextcloud Talk %{version}"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "Create one in Nextcloud under Personal settings → Security → Devices & sessions"
+msgstr "Creane una in Nextcloud in Impostazioni personali → Sicurezza → Dispositivi e sessioni"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "Each booking gets its own public Talk conversation. Guests can chat and join calls, but only you can start a call."
+msgstr "Ogni prenotazione ha la propria conversazione Talk pubblica. Gli ospiti possono chattare e partecipare alle chiamate, ma solo tu puoi avviare una chiamata."
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Enter new app password"
+msgstr "Inserisci una nuova password per app"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "My Nextcloud Talk"
+msgstr "Il mio Nextcloud Talk"
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud API not found - Please verify the server URL is correct"
+msgstr "API di Nextcloud non trovata: verifica che l'URL del server sia corretto"
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud Talk is not enabled for this account"
+msgstr "Nextcloud Talk non è abilitato per questo account"
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud is throttling requests - Please wait a moment and try again"
+msgstr "Nextcloud sta limitando le richieste: attendi un momento e riprova"
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud server error (status %{status}) - Please try again later"
+msgstr "Errore del server Nextcloud (stato %{status}): riprova più tardi"
+
+#: lib/tymeslot/integrations/video/input_validation.ex
 #, elixir-autogen, elixir-format
 msgid "Write {{meeting_id}} with plain brackets: percent-encoded ones are never replaced"
 msgstr "Scrivi {{meeting_id}} con parentesi semplici: quelle codificate in percentuale non vengono mai sostituite"
+
+#: lib/tymeslot/integrations/video/input_validation.ex
+#, elixir-autogen
+msgid "Please enter a valid server URL (e.g., https://cloud.example.com)"
+msgstr "Inserisci un URL del server valido (ad es. https://cloud.example.com)"
+
+#: lib/tymeslot/integrations/video/provider_config.ex
+#, elixir-autogen, elixir-format
+msgid "Public Talk conversation on your Nextcloud for every booking"
+msgstr "Una conversazione Talk pubblica sul tuo Nextcloud per ogni prenotazione"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "The address you open Nextcloud at, including any subpath"
+msgstr "L'indirizzo con cui apri Nextcloud, incluso un eventuale sottopercorso"
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "The server did not answer like a Nextcloud server - Please verify the server URL"
+msgstr "Il server non ha risposto come un server Nextcloud: verifica l'URL del server"
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "This server address is not allowed - Private network addresses are blocked"
+msgstr "Questo indirizzo del server non è consentito: gli indirizzi di rete privata sono bloccati"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "Username"
+msgstr "Nome utente"
+
+#: lib/tymeslot/integrations/video/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Username is required"
+msgstr "Il nome utente è obbligatorio"
+
+#: lib/tymeslot/integrations/video/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be 255 characters or less"
+msgstr "Il nome utente deve contenere al massimo 255 caratteri"
+
+#: lib/tymeslot/integrations/video/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be text"
+msgstr "Il nome utente deve essere testo"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "Video meetings on your own Nextcloud"
+msgstr "Riunioni video sul tuo Nextcloud"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Your Nextcloud server URL"
+msgstr "L'URL del tuo server Nextcloud"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "Your Nextcloud username"
+msgstr "Il tuo nome utente Nextcloud"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "https://cloud.yourdomain.com"
+msgstr "https://cloud.yourdomain.com"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"
+msgstr "xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"
+
+#: lib/tymeslot_web/helpers/integration_providers.ex
+#, elixir-autogen, elixir-format
+msgid "✓ Nextcloud Talk connection verified - %{message}"
+msgstr "✓ Connessione a Nextcloud Talk verificata: %{message}"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Leave empty to keep the current app password"
+msgstr "Lascia vuoto per mantenere la password per app attuale"

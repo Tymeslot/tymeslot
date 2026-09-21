@@ -28,7 +28,15 @@ defmodule Tymeslot.Integrations.Video do
 
   require Logger
 
-  @type provider :: :google_meet | :teams | :zoom | :mirotalk | :custom | :none | String.t()
+  @type provider ::
+          :google_meet
+          | :teams
+          | :zoom
+          | :mirotalk
+          | :nextcloud_talk
+          | :custom
+          | :none
+          | String.t()
 
   @impl Tymeslot.Security.EncryptedStorage
   def encrypted_storage,
@@ -198,6 +206,25 @@ defmodule Tymeslot.Integrations.Video do
     with :ok <- check_no_duplicate(attrs),
          :ok <- VideoIntegrationSchema.validate_new(attrs),
          {:ok, _msg} <- probe_mirotalk_connection(config, attrs[:user_id]) do
+      VideoIntegrationQueries.create(attrs)
+    end
+  end
+
+  defp do_create_integration(:nextcloud_talk, attrs) do
+    # Dedup on server and account, in the `base_url||username` form the CalDAV
+    # providers use: the same Nextcloud user connected twice would create every
+    # booking's conversation in the same place anyway.
+    base_url = attrs[:base_url]
+    attrs = Map.put(attrs, :provider_account_id, "#{base_url}||#{attrs[:username]}")
+
+    config = %{
+      base_url: base_url,
+      username: attrs[:username],
+      app_password: attrs[:api_key]
+    }
+
+    with {:ok, _msg} <- Connection.probe(:nextcloud_talk, config, {:user, attrs[:user_id]}),
+         :ok <- check_no_duplicate(attrs) do
       VideoIntegrationQueries.create(attrs)
     end
   end
