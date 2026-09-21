@@ -63,10 +63,11 @@ defmodule Tymeslot.Emails.RecipientLocale do
 
   `Tymeslot.Emails.AppointmentBuilder` resolves it once per payload, from the
   organiser's `users.locale`, as `:organizer_locale`. A payload built without
-  it falls back to the default locale, as a user without a choice does.
+  it, or carrying one the instance no longer supports, falls back to the
+  default locale, as a user without a choice does.
   """
   @spec organizer_locale(map()) :: String.t()
-  def organizer_locale(%{organizer_locale: locale}) when is_binary(locale), do: locale
+  def organizer_locale(%{organizer_locale: locale}), do: locale_for(%{locale: locale})
   def organizer_locale(_details), do: Locales.admin_default_locale()
 
   @doc "The locale to render for the user identified by `user_id`."

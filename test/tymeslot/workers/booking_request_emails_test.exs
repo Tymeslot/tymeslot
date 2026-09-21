@@ -11,6 +11,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
   use Oban.Testing, repo: Tymeslot.Repo
 
   import Mox
+  import Tymeslot.ConfigTestHelpers
 
   @moduletag :emails
   @moduletag :bookings
@@ -319,14 +320,7 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
       # Every other email to the host falls back to the admin-configured
       # "Dashboard fallback language", so this one must too, rather than to
       # the instance-wide default.
-      previous = Application.get_env(:tymeslot, :admin_default_locale)
-      Application.put_env(:tymeslot, :admin_default_locale, "de")
-
-      on_exit(fn ->
-        if previous,
-          do: Application.put_env(:tymeslot, :admin_default_locale, previous),
-          else: Application.delete_env(:tymeslot, :admin_default_locale)
-      end)
+      with_config(:tymeslot, :admin_default_locale, "de")
 
       host = insert(:user, locale: nil)
       meeting = held_meeting(%{organizer_user: host, organizer_user_id: host.id})

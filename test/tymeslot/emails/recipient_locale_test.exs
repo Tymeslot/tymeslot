@@ -33,6 +33,13 @@ defmodule Tymeslot.Emails.RecipientLocaleTest do
     test "falls back to the default for a payload built without one" do
       assert RecipientLocale.organizer_locale(%{organizer_name: "Sam"}) == "en"
     end
+
+    test "falls back to the default for a locale the instance does not support" do
+      # A payload can outlive the locale it names: a reminder built before a
+      # language was dropped must still render, not fall through to the msgid.
+      assert RecipientLocale.organizer_locale(%{organizer_locale: "kl"}) == "en"
+      assert RecipientLocale.organizer_locale(%{organizer_locale: nil}) == "en"
+    end
   end
 
   describe "locale_for_user_id/1" do
