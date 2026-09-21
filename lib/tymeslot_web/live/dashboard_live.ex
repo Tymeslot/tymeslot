@@ -207,8 +207,6 @@ defmodule TymeslotWeb.DashboardLive do
         step_index={@tour_step_index}
         total_steps={@tour_total_steps}
       />
-      <.flash_group flash={@flash} id="dashboard-flash-group" />
-
       <%!-- Content --%>
       <div class={if @live_action == :calendar, do: "flex-1 flex flex-col min-h-0", else: ""}>
         <%= if @live_action == :calendar do %>
