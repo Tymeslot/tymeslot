@@ -165,6 +165,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
         attendee_sent: meeting.attendee_email_sent
       )
 
+      # The participants' flags say nothing about the guests: each guest is
+      # stamped on its own, so a retry that finds both participants already
+      # stamped still has to invite whoever the previous attempt missed.
+      invite_missed_guests(meeting)
+
       :ok
     else
       Logger.info("Sending confirmation emails", meeting_id: meeting.id, uid: meeting.uid)
@@ -228,13 +233,31 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           {:ok, :skipped}
         end
 
-      # Guest confirmations are sent alongside the attendee email. Each guest is
-      # stamped with `confirmation_sent_at` after a successful send, so Oban
-      # retries only re-attempt unsent guests. Failures are logged but never
-      # block the organiser/attendee confirmation result.
-      if need_attendee?, do: send_guest_confirmations(meeting, appointment_details, email_service)
+      # Guest confirmations are sent alongside the attendee email, but not
+      # gated on it: a retry whose previous attempt stamped the attendee and
+      # then failed part-way through the guests must still reach the rest.
+      # Each guest is stamped with `confirmation_sent_at` after a successful
+      # send, so only unsent guests are ever re-attempted. Failures are logged
+      # but never block the organiser/attendee confirmation result.
+      send_guest_confirmations(meeting, appointment_details, email_service)
 
       process_email_results(meeting, organizer_result, attendee_result, :confirmation)
+    end
+  end
+
+  # Builds the payload only when there is somebody to send to, so the
+  # already-sent path stays one cheap query.
+  defp invite_missed_guests(meeting) do
+    case GuestQueries.list_unsent_for_meeting(meeting.id) do
+      [] ->
+        :ok
+
+      _unsent ->
+        send_guest_confirmations(
+          meeting,
+          AppointmentBuilder.from_meeting(meeting),
+          Config.email_service_module()
+        )
     end
   end
 

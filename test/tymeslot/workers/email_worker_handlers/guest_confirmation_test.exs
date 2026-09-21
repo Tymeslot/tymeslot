@@ -155,5 +155,53 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GuestConfirmationTest do
                  "meeting_id" => meeting.id
                })
     end
+
+    test "a retry invites the guests a previous attempt stamped no-one for" do
+      # The shape an Oban retry leaves behind: both participants were emailed
+      # and stamped, then the run failed before it reached the guests.
+      meeting = insert(:meeting, organizer_email_sent: true, attendee_email_sent: true)
+
+      {:ok, [_g1, _g2]} =
+        Guests.create_for_meeting(meeting.id, ["a@example.com", "b@example.com"])
+
+      expect(EmailServiceMock, :send_guest_confirmation, fn "a@example.com", _details ->
+        {:ok, "sent"}
+      end)
+
+      expect(EmailServiceMock, :send_guest_confirmation, fn "b@example.com", _details ->
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+                 "meeting_id" => meeting.id
+               })
+
+      assert GuestQueries.list_unsent_for_meeting(meeting.id) == []
+    end
+
+    test "a retry that stamped the attendee still reaches the unsent guests" do
+      meeting = insert(:meeting, organizer_email_sent: false, attendee_email_sent: true)
+      {:ok, [g1, _g2]} = Guests.create_for_meeting(meeting.id, ["a@example.com", "b@example.com"])
+
+      {:ok, _stamped} = GuestQueries.mark_confirmation_sent(g1, DateTime.utc_now(:second))
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, _details ->
+        {:ok, "sent"}
+      end)
+
+      # Only the guest the previous attempt missed; verify_on_exit! fails the
+      # test if the already-stamped one is emailed a second time.
+      expect(EmailServiceMock, :send_guest_confirmation, fn "b@example.com", _details ->
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+                 "meeting_id" => meeting.id
+               })
+
+      assert GuestQueries.list_unsent_for_meeting(meeting.id) == []
+    end
   end
 end
