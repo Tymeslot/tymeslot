@@ -30,12 +30,16 @@ defmodule Tymeslot.Meetings.GuestQueries do
     end
   end
 
+  # `inserted_at` is second-precision, and a booking's guests are all inserted
+  # inside the same second, so ordering on it alone is not a total order and
+  # Postgres may hand the rows back either way round. Email breaks the tie:
+  # it is unique per meeting, so the order is stable across calls.
   @doc "Lists the guests for a meeting, oldest first."
   @spec list_for_meeting(binary()) :: [Guest.t()]
   def list_for_meeting(meeting_id) do
     Guest
     |> where([g], g.meeting_id == ^meeting_id)
-    |> order_by([g], asc: g.inserted_at)
+    |> order_by([g], asc: g.inserted_at, asc: g.email)
     |> Repo.all()
   end
 
@@ -54,7 +58,7 @@ defmodule Tymeslot.Meetings.GuestQueries do
   def list_unsent_for_meeting(meeting_id) do
     Guest
     |> where([g], g.meeting_id == ^meeting_id and is_nil(g.confirmation_sent_at))
-    |> order_by([g], asc: g.inserted_at)
+    |> order_by([g], asc: g.inserted_at, asc: g.email)
     |> Repo.all()
   end
 
@@ -98,7 +102,7 @@ defmodule Tymeslot.Meetings.GuestQueries do
     |> where([g], g.meeting_id == ^meeting_id)
     |> where([g], not is_nil(g.confirmation_sent_at))
     |> where([g], g.status != "declined")
-    |> order_by([g], asc: g.inserted_at)
+    |> order_by([g], asc: g.inserted_at, asc: g.email)
     |> Repo.all()
     |> Enum.reject(&reminder_sent?(&1, value, unit))
   end
