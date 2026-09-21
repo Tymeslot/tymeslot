@@ -8,16 +8,17 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   guest heard nothing more: not when the booking moved, and not when it was
   cancelled. Here:
 
-    * **Rescheduled** (`notify_rescheduled/2`): every guest's answer is reset,
-      since it applied to the previous time, and every guest, including those
-      who declined, gets a reschedule email with their RSVP links and an
-      updated calendar entry.
+    * **Rescheduled** (`notify_rescheduled/2`): every guest's answer and
+      reminder history is reset, since both applied to the previous time, and
+      every guest, including those who declined, gets a reschedule email with
+      their RSVP links and an updated calendar entry.
     * **Rescheduled into the approval gate** (`prepare_for_reapproval/1`): no
-      email yet, since nobody has agreed to the new time; the answers are
-      reset. Once the host approves the new time (`notify_reapproved/1`), the
-      guests who had been invited get the reschedule email. A request that
-      was never approved has guests who were never invited; the confirmation
-      that follows its approval invites them as usual.
+      email yet, since nobody has agreed to the new time; the answers and
+      reminder history are reset. Once the host approves the new time
+      (`notify_reapproved/1`), the guests who had been invited get the
+      reschedule email. A request that was never approved has guests who were
+      never invited; the confirmation that follows its approval invites them
+      as usual.
     * **Cancelled, declined or expired** (`notify_cancelled/2`): every guest gets
       a cancellation email, but only for a booking that was ever confirmed. A
       request that was never approved never invited anyone.
@@ -34,7 +35,8 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   alias Tymeslot.Meetings.GuestQueries
 
   @doc """
-  Resets the guests' answers and sends each guest the reschedule email.
+  Resets the guests' answers and reminder history, and sends each guest the
+  reschedule email.
 
   `content` is the reschedule payload built by
   `Tymeslot.Notifications.ContentBuilder.build_reschedule_details/2`.
@@ -46,7 +48,7 @@ defmodule Tymeslot.Notifications.GuestNotifications do
         :ok
 
       guests ->
-        GuestQueries.reset_responses(meeting_id)
+        GuestQueries.reset_for_new_time(meeting_id)
 
         send_to_guests(guests, content, meeting_id, "reschedule", fn email, details ->
           Config.email_service_module().send_guest_reschedule(email, details)
@@ -56,12 +58,12 @@ defmodule Tymeslot.Notifications.GuestNotifications do
 
   @doc """
   Prepares the guests of a booking that a reschedule sent back into the
-  approval gate: their answers applied to the previous time and are reset.
-  Nobody is emailed until the host approves the new time.
+  approval gate: their answers and reminder history applied to the previous
+  time and are reset. Nobody is emailed until the host approves the new time.
   """
   @spec prepare_for_reapproval(map()) :: :ok
   def prepare_for_reapproval(%{id: meeting_id}) do
-    GuestQueries.reset_responses(meeting_id)
+    GuestQueries.reset_for_new_time(meeting_id)
     :ok
   end
 
