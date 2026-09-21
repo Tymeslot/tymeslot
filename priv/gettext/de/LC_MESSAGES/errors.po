@@ -327,13 +327,6 @@ msgstr[1] "muss innerhalb von %{count} Jahren liegen"
 msgid "video server checks"
 msgstr "Videoserver-Prüfungen"
 
-#: lib/tymeslot/security/rate_limiter/helpers.ex
-#, elixir-autogen, elixir-format
-msgid "You've reached the limit of %{limit} %{action} per minute. Please try again in %{wait}."
-msgid_plural "You've reached the limit of %{limit} %{action} per %{count} minutes. Please try again in %{wait}."
-msgstr[0] "Sie haben das Limit von %{limit} %{action} pro Minute erreicht. Bitte versuchen Sie es in %{wait} erneut."
-msgstr[1] "Sie haben das Limit von %{limit} %{action} pro %{count} Minuten erreicht. Bitte versuchen Sie es in %{wait} erneut."
-
 #: lib/tymeslot/security/rate_limiter/bookings.ex
 #, elixir-autogen, elixir-format
 msgid "bookings"
@@ -358,3 +351,43 @@ msgstr "Registrierungsversuchen"
 #, elixir-autogen, elixir-format
 msgid "verification emails"
 msgstr "Bestätigungs-E-Mails"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgid_plural "%{count} days"
+msgstr[0] "1 Tag"
+msgstr[1] "%{count} Tagen"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgid_plural "%{count} hours"
+msgstr[0] "1 Stunde"
+msgstr[1] "%{count} Stunden"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "You've reached the limit of %{limit} %{action} per %{window}. Please try again in %{wait}."
+msgstr "Sie haben das Limit von %{limit} %{action} pro %{window} erreicht. Bitte versuchen Sie es in %{wait} erneut."
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "day"
+msgid_plural "%{count} days"
+msgstr[0] "Tag"
+msgstr[1] "%{count} Tage"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "hour"
+msgid_plural "%{count} hours"
+msgstr[0] "Stunde"
+msgstr[1] "%{count} Stunden"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "Minute"
+msgstr[1] "%{count} Minuten"

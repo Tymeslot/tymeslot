@@ -114,7 +114,7 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
                RateLimiter.check_avatar_upload_rate_limit(user_id)
 
       assert message =~ "20"
-      assert message =~ "60 minutes"
+      assert message =~ "per hour"
       assert message =~ "avatar upload"
     end
 
@@ -160,7 +160,7 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
                RateLimiter.check_embed_domain_update_rate_limit(user_id)
 
       assert message =~ "10"
-      assert message =~ "60 minutes"
+      assert message =~ "per hour"
       assert message =~ "embed domain update"
     end
 

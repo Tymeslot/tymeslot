@@ -328,13 +328,6 @@ msgstr[1] "deve rientrare entro %{count} anni"
 msgid "video server checks"
 msgstr "verifiche del server video"
 
-#: lib/tymeslot/security/rate_limiter/helpers.ex
-#, elixir-autogen, elixir-format
-msgid "You've reached the limit of %{limit} %{action} per minute. Please try again in %{wait}."
-msgid_plural "You've reached the limit of %{limit} %{action} per %{count} minutes. Please try again in %{wait}."
-msgstr[0] "Hai raggiunto il limite di %{limit} %{action} ogni minuto. Riprova tra %{wait}."
-msgstr[1] "Hai raggiunto il limite di %{limit} %{action} ogni %{count} minuti. Riprova tra %{wait}."
-
 #: lib/tymeslot/security/rate_limiter/bookings.ex
 #, elixir-autogen, elixir-format
 msgid "bookings"
@@ -359,3 +352,43 @@ msgstr "tentativi di registrazione"
 #, elixir-autogen, elixir-format
 msgid "verification emails"
 msgstr "email di verifica"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgid_plural "%{count} days"
+msgstr[0] "1 giorno"
+msgstr[1] "%{count} giorni"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgid_plural "%{count} hours"
+msgstr[0] "1 ora"
+msgstr[1] "%{count} ore"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "You've reached the limit of %{limit} %{action} per %{window}. Please try again in %{wait}."
+msgstr "Hai raggiunto il limite di %{limit} %{action} ogni %{window}. Riprova tra %{wait}."
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "day"
+msgid_plural "%{count} days"
+msgstr[0] "giorno"
+msgstr[1] "%{count} giorni"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "hour"
+msgid_plural "%{count} hours"
+msgstr[0] "ora"
+msgstr[1] "%{count} ore"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "minuto"
+msgstr[1] "%{count} minuti"

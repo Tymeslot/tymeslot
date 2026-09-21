@@ -8,6 +8,10 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
   alias Tymeslot.Security.RateLimit
   alias Tymeslot.Security.SecurityLogger
 
+  @minute_ms 60_000
+  @hour_minutes 60
+  @day_minutes 24 * @hour_minutes
+
   @type bucket_key :: String.t()
   @type rate_check_result :: {:allow, pos_integer()} | {:deny, pos_integer()}
 
@@ -94,7 +98,7 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
   # `log_metadata` carries the English, searchable half; `action` carries the
   # localised half.
   defp refuse(limit, window_ms, retry_after_ms, action, log_metadata) do
-    window_minutes = div(window_ms, 60_000)
+    window_minutes = div(window_ms, @minute_ms)
 
     Logger.warning(
       "Rate limit exceeded",
@@ -102,33 +106,65 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
         [limit: limit, window_minutes: window_minutes, retry_after_ms: retry_after_ms]
     )
 
-    {:error, :rate_limited, refusal_message(limit, window_minutes, retry_after_ms, action)}
+    {:error, :rate_limited, refusal_message(limit, window_ms, retry_after_ms, action)}
   end
 
-  # The window is a plural pair rather than one string with a number in it:
-  # the tightest tier of a burst limit is a single minute, and "per 1 minutes"
-  # is the kind of copy people notice.
-  defp refusal_message(limit, window_minutes, retry_after_ms, action) do
-    dngettext(
+  defp refusal_message(limit, window_ms, retry_after_ms, action) do
+    dgettext(
       "errors",
-      "You've reached the limit of %{limit} %{action} per minute. Please try again in %{wait}.",
-      "You've reached the limit of %{limit} %{action} per %{count} minutes. Please try again in %{wait}.",
-      window_minutes,
+      "You've reached the limit of %{limit} %{action} per %{window}. Please try again in %{wait}.",
       limit: limit,
       action: action,
+      window: window_phrase(scale(window_ms)),
       wait: retry_after_wait(retry_after_ms)
     )
   end
 
-  # Hammer answers in milliseconds, and rounds up rather than down: telling
-  # someone to come back in "0 minutes" would send them straight into a second
-  # refusal.
+  # The window is a phrase rather than a number of minutes in the sentence:
+  # the multi-bucket tiers run from a single minute to a year, and "per 525600
+  # minutes" is the kind of copy people notice. Each unit keeps its own plural
+  # pair, whose singular omits the number, so the tightest tier reads "per
+  # minute" rather than "per 1 minute".
+  defp window_phrase({count, :minute}),
+    do: dngettext("errors", "minute", "%{count} minutes", count)
+
+  defp window_phrase({count, :hour}), do: dngettext("errors", "hour", "%{count} hours", count)
+  defp window_phrase({count, :day}), do: dngettext("errors", "day", "%{count} days", count)
+
+  # Hammer answers in milliseconds, and the wait rounds up rather than down:
+  # telling someone to come back in "0 minutes" would send them straight into
+  # a second refusal. Unlike the window, the singular carries its number,
+  # since "try again in minute" is not a sentence.
   defp retry_after_wait(retry_after_ms) when is_integer(retry_after_ms) and retry_after_ms > 0 do
-    minutes = max(1, ceil(retry_after_ms / 60_000))
-    dngettext("errors", "1 minute", "%{count} minutes", minutes)
+    wait_phrase(scale(retry_after_ms))
   end
 
   defp retry_after_wait(_retry_after_ms), do: dgettext("errors", "a moment")
+
+  defp wait_phrase({count, :minute}),
+    do: dngettext("errors", "1 minute", "%{count} minutes", count)
+
+  defp wait_phrase({count, :hour}), do: dngettext("errors", "1 hour", "%{count} hours", count)
+  defp wait_phrase({count, :day}), do: dngettext("errors", "1 day", "%{count} days", count)
+
+  # The largest whole unit that spans the duration, rounding up within it so a
+  # wait never reads shorter than it is and a second refusal cannot follow the
+  # first. Days are the widest unit on purpose: a 30-day window is not a
+  # calendar month and a 365-day one is not a year, and saying so would
+  # misstate the limit.
+  #
+  # The unit is chosen from the rounded-up minutes rather than from the
+  # milliseconds, so a wait Hammer reports a few milliseconds under the hour
+  # still reads "1 hour" rather than "60 minutes".
+  defp scale(ms), do: from_minutes(max(1, ceil(ms / @minute_ms)))
+
+  defp from_minutes(minutes) when minutes >= @day_minutes,
+    do: {ceil(minutes / @day_minutes), :day}
+
+  defp from_minutes(minutes) when minutes >= @hour_minutes,
+    do: {ceil(minutes / @hour_minutes), :hour}
+
+  defp from_minutes(minutes), do: {minutes, :minute}
 
   # Callers pass an email on the account-keyed buckets and an IP address or a
   # user id on the rest. Anything address-shaped is masked; an address that

@@ -347,14 +347,6 @@ msgstr[2] "musí být nejvýše %{count} let dopředu"
 msgid "video server checks"
 msgstr "kontroly videoserveru"
 
-#: lib/tymeslot/security/rate_limiter/helpers.ex
-#, elixir-autogen, elixir-format
-msgid "You've reached the limit of %{limit} %{action} per minute. Please try again in %{wait}."
-msgid_plural "You've reached the limit of %{limit} %{action} per %{count} minutes. Please try again in %{wait}."
-msgstr[0] "Byl překročen limit pro %{action}: %{limit} za minutu. Zkuste to prosím znovu za %{wait}."
-msgstr[1] "Byl překročen limit pro %{action}: %{limit} za %{count} minuty. Zkuste to prosím znovu za %{wait}."
-msgstr[2] "Byl překročen limit pro %{action}: %{limit} za %{count} minut. Zkuste to prosím znovu za %{wait}."
-
 #: lib/tymeslot/security/rate_limiter/bookings.ex
 #, elixir-autogen, elixir-format
 msgid "bookings"
@@ -379,3 +371,48 @@ msgstr "pokusy o registraci"
 #, elixir-autogen, elixir-format
 msgid "verification emails"
 msgstr "ověřovací e-maily"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgid_plural "%{count} days"
+msgstr[0] "1 den"
+msgstr[1] "%{count} dny"
+msgstr[2] "%{count} dní"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgid_plural "%{count} hours"
+msgstr[0] "1 hodinu"
+msgstr[1] "%{count} hodiny"
+msgstr[2] "%{count} hodin"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "You've reached the limit of %{limit} %{action} per %{window}. Please try again in %{wait}."
+msgstr "Byl překročen limit pro %{action}: %{limit} za %{window}. Zkuste to prosím znovu za %{wait}."
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "day"
+msgid_plural "%{count} days"
+msgstr[0] "den"
+msgstr[1] "%{count} dny"
+msgstr[2] "%{count} dní"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "hour"
+msgid_plural "%{count} hours"
+msgstr[0] "hodinu"
+msgstr[1] "%{count} hodiny"
+msgstr[2] "%{count} hodin"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "minutu"
+msgstr[1] "%{count} minuty"
+msgstr[2] "%{count} minut"

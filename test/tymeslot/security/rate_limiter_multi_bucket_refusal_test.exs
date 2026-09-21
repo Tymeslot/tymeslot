@@ -49,8 +49,8 @@ defmodule Tymeslot.Security.RateLimiterMultiBucketRefusalTest do
                RateLimiter.check_verification_rate_limit(user_id, ip)
 
       assert message ==
-               "You've reached the limit of 5 verification emails per 60 minutes. " <>
-                 "Please try again in 60 minutes."
+               "You've reached the limit of 5 verification emails per hour. " <>
+                 "Please try again in 1 hour."
     end
 
     test "password reset names its hourly tier" do
@@ -63,8 +63,8 @@ defmodule Tymeslot.Security.RateLimiterMultiBucketRefusalTest do
                RateLimiter.check_password_reset_rate_limit(email, ip)
 
       assert message ==
-               "You've reached the limit of 5 password reset requests per 60 minutes. " <>
-                 "Please try again in 60 minutes."
+               "You've reached the limit of 5 password reset requests per hour. " <>
+                 "Please try again in 1 hour."
     end
 
     test "the booking recipient cap names its hourly tier" do
@@ -76,8 +76,8 @@ defmodule Tymeslot.Security.RateLimiterMultiBucketRefusalTest do
                RateLimiter.check_booking_recipient_limit(email)
 
       assert message ==
-               "You've reached the limit of 5 bookings per 60 minutes. " <>
-                 "Please try again in 60 minutes."
+               "You've reached the limit of 5 bookings per hour. " <>
+                 "Please try again in 1 hour."
     end
 
     # This is also the plural-form test. `@event_move_limits` is the only live
@@ -154,7 +154,7 @@ defmodule Tymeslot.Security.RateLimiterMultiBucketRefusalTest do
       assert {:error, :rate_limited, message} = charge(bucket, @same_budget_tiers)
 
       assert message =~ "per minute"
-      refute message =~ "per 1440 minutes"
+      refute message =~ "per day"
     end
 
     test "list order, not window length, is what decides that" do
@@ -167,8 +167,55 @@ defmodule Tymeslot.Security.RateLimiterMultiBucketRefusalTest do
 
       assert {:error, :rate_limited, message} = charge(bucket, reversed)
 
-      assert message =~ "per 1440 minutes"
+      assert message =~ "per day"
     end
+  end
+
+  describe "windows wider than an hour" do
+    # The signup, verification and password-reset ladders all run to a year,
+    # and the walk reaches those tiers whenever the attempts are spread out
+    # rather than burst. Rendered in minutes they read "per 1440 minutes" and
+    # "per 525600 minutes", which is the copy this pins out of existence.
+    test "a day-long tier is named in days, not in minutes" do
+      message = refuse_with([{"1d", 1, 24 * 60 * 60_000}])
+
+      assert message ==
+               "You've reached the limit of 1 widgets per day. Please try again in 1 day."
+    end
+
+    test "a year-long tier is named in days rather than six figures of minutes" do
+      message = refuse_with([{"1y", 1, 365 * 24 * 60 * 60_000}])
+
+      assert message ==
+               "You've reached the limit of 1 widgets per 365 days. " <>
+                 "Please try again in 365 days."
+    end
+
+    test "an hours-wide tier is named in hours" do
+      message = refuse_with([{"3h", 1, 3 * 60 * 60_000}])
+
+      assert message ==
+               "You've reached the limit of 1 widgets per 3 hours. " <>
+                 "Please try again in 3 hours."
+    end
+
+    # Days are the widest unit: a 30-day window is not a calendar month, and
+    # rendering it as one would overstate how long the door stays shut.
+    test "a month-long tier stays in days rather than becoming a month" do
+      message = refuse_with([{"1mo", 1, 30 * 24 * 60 * 60_000}])
+
+      assert message =~ "per 30 days"
+      refute message =~ "month"
+    end
+  end
+
+  defp refuse_with(tiers) do
+    bucket = fresh_bucket()
+
+    assert :ok = charge(bucket, tiers)
+    assert {:error, :rate_limited, message} = charge(bucket, tiers)
+
+    message
   end
 
   defp fresh_bucket, do: "tier_order_test:#{System.unique_integer([:positive])}"
