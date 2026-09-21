@@ -9,15 +9,11 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Common.OAuth.LogContext
 
   require Logger
 
   @default_headers [{"Content-Type", "application/x-www-form-urlencoded"}]
-
-  # The only keys a caller may add to a token log line. Deliberately narrow:
-  # enough to attribute a failure to an integration, and nothing that could
-  # carry a credential. See `refresh_access_token/3`.
-  @log_context_keys [:integration_id, :user_id, :provider, :correlation_id]
 
   @doc """
   Exchanges an authorization code for access and refresh tokens.
@@ -114,11 +110,15 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
       lines. This is the shared refresh helper for every provider, so without
       it a failure line says only which status came back.
 
-  Only `:integration_id`, `:user_id`, `:provider` and `:correlation_id` are
-  kept; anything else is dropped rather than widening the line. Pass ids, never
-  the integration struct: it carries the encrypted OAuth credentials, and the
-  response body is redacted at this call site precisely so they stay out of the
-  logs.
+  Only `:integration_id`, `:user_id` and `:provider` are kept; anything else is
+  dropped rather than widening the line. Pass ids, never the integration
+  struct: it carries the encrypted OAuth credentials, and the response body is
+  redacted at this call site precisely so they stay out of the logs.
+
+  The correlation id is deliberately not on that list. It is process metadata
+  that `ObanLogger` and the request plug already set, and the JSON formatter
+  emits all process metadata, so on a path that has one it is on the line
+  already and on a path that does not the caller has nothing to pass.
   """
   @spec refresh_access_token(String.t(), map(), keyword()) ::
           {:ok, map()} | {:error, {:http_error, integer(), String.t()} | {:network_error, any()}}
@@ -126,7 +126,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
     fallback_refresh_token = Keyword.get(opts, :fallback_refresh_token)
     fallback_scope = Keyword.get(opts, :fallback_scope)
     headers = Keyword.get(opts, :headers, @default_headers)
-    log_context = log_context(opts)
+    log_context = LogContext.from_opts(opts)
 
     case Config.http_client_module().request(
            :post,
@@ -166,16 +166,6 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
   end
 
   # Private helpers
-
-  # The allowed-key list is the contract, not a formality: a caller cannot
-  # widen the log line, and cannot leak a credential by naming a key that is
-  # not on it. Nils are dropped so a caller with only part of the context does
-  # not emit `integration_id: nil`.
-  defp log_context(opts) do
-    opts
-    |> Keyword.get(:log_context, [])
-    |> Enum.filter(fn {key, value} -> key in @log_context_keys and not is_nil(value) end)
-  end
 
   defp parse_token_response(response_body, fallback_refresh_token, fallback_scope) do
     case Jason.decode(response_body) do

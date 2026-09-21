@@ -359,7 +359,15 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     current_scope = Map.get(config, :oauth_scope)
 
     try do
-      case google_oauth_helper().refresh_access_token(refresh_token, current_scope) do
+      # The ids matter more here than anywhere else: the calendar refresh logs
+      # `provider: :google` too, so the integration id is the only thing that
+      # tells a Meet failure apart from a Calendar one.
+      case google_oauth_helper().refresh_access_token(refresh_token, current_scope,
+             log_context: [
+               integration_id: Map.get(config, :integration_id),
+               user_id: Map.get(config, :user_id)
+             ]
+           ) do
         {:ok, new_tokens} ->
           updated_config =
             Map.merge(config, %{

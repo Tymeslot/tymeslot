@@ -318,7 +318,12 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   defp do_actual_refresh(config) do
     refresh_token = Map.get(config, :refresh_token)
 
-    case zoom_oauth_helper().refresh_access_token(refresh_token, nil) do
+    case zoom_oauth_helper().refresh_access_token(refresh_token, nil,
+           log_context: [
+             integration_id: Map.get(config, :integration_id),
+             user_id: Map.get(config, :user_id)
+           ]
+         ) do
       {:ok, refreshed} ->
         Logger.info("Successfully refreshed Zoom OAuth token")
         persist_refreshed_tokens(config, refreshed)

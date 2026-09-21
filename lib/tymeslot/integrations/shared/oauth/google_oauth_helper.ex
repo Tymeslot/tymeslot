@@ -8,7 +8,6 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   """
 
   alias Tymeslot.Clock
-  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Common.OAuth.{ErrorParser, IdToken, State, TokenExchange}
   alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
   alias Tymeslot.Integrations.Shared.OAuth.TokenFlow
@@ -97,7 +96,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
       grant_type: "authorization_code"
     }
 
-    case TokenFlow.exchange_code(@token_url, body, provider: :google) do
+    case TokenFlow.exchange_code(@token_url, body, log_context: [provider: :google]) do
       {:ok, response} ->
         tokens = build_token_map(response)
 
@@ -115,16 +114,12 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
             {:error, reason}
         end
 
+      # No second log line here: `TokenFlow` already logs the status and the
+      # redacted body, and names the provider too.
       {:error, {:http_error, status, body}} ->
-        Logger.error("OAuth token exchange failed",
-          status: status,
-          response_body: Redactor.redact_and_truncate(body)
-        )
-
         {:error, ErrorParser.build_message("OAuth token exchange failed", status, body)}
 
       {:error, {:network_error, reason}} ->
-        Logger.error("Network error during token exchange", reason: inspect(reason))
         {:error, "Network error during token exchange: #{inspect(reason)}"}
     end
   end
@@ -132,14 +127,21 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   @doc """
   Refreshes an access token using a refresh token.
 
+  This is the Google Meet **video** refresh as well as the calendar one, and
+  both log `provider: :google`, so a caller that can name the integration
+  should: pass `log_context: [integration_id: id, user_id: user_id]` and the
+  two stop being indistinguishable on the line.
+
   ## Parameters
     - refresh_token: The refresh token
     - current_scope: Current token scope (optional)
+    - opts: `:log_context`, forwarded to `TokenExchange.refresh_access_token/3`
 
   Returns {:ok, tokens} or {:error, reason}
   """
-  @spec refresh_access_token(String.t(), String.t() | nil) :: {:ok, map()} | {:error, String.t()}
-  def refresh_access_token(refresh_token, current_scope \\ nil) do
+  @spec refresh_access_token(String.t(), String.t() | nil, keyword()) ::
+          {:ok, map()} | {:error, String.t()}
+  def refresh_access_token(refresh_token, current_scope \\ nil, opts \\ []) do
     body = %{
       refresh_token: refresh_token,
       client_id: google_client_id(),
@@ -155,7 +157,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
     case TokenExchange.refresh_access_token(@token_url, body,
            fallback_refresh_token: refresh_token,
            fallback_scope: current_scope,
-           log_context: [provider: :google]
+           log_context: Keyword.merge(Keyword.get(opts, :log_context, []), provider: :google)
          ) do
       {:ok, tokens} ->
         {:ok, tokens}

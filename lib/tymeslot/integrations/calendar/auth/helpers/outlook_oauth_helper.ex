@@ -110,10 +110,19 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
 
   @doc """
   Refreshes an access token using a refresh token.
+
+  Kept to satisfy `OAuthHelperBehaviour` and the mock built from it; nothing in
+  `lib/` calls it. The live Outlook calendar refresh is
+  `OutlookCalendarAPI.refresh_token/1`, which holds the integration and is
+  instrumented through `TokenFlow`.
+
+  `opts` takes a `:log_context`, forwarded to
+  `TokenExchange.refresh_access_token/3`.
   """
   @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
-  @spec refresh_access_token(String.t(), String.t() | nil) :: {:ok, map()} | {:error, String.t()}
-  def refresh_access_token(refresh_token, current_scope \\ nil) do
+  @spec refresh_access_token(String.t(), String.t() | nil, keyword()) ::
+          {:ok, map()} | {:error, String.t()}
+  def refresh_access_token(refresh_token, current_scope \\ nil, opts \\ []) do
     body = %{
       refresh_token: refresh_token,
       client_id: outlook_client_id(),
@@ -127,7 +136,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
     case TokenExchange.refresh_access_token(@token_url, body,
            fallback_refresh_token: refresh_token,
            fallback_scope: current_scope || @calendar_scope,
-           log_context: [provider: :outlook]
+           log_context: Keyword.merge(Keyword.get(opts, :log_context, []), provider: :outlook)
          ) do
       {:ok, tokens} ->
         {:ok, tokens}

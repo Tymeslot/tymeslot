@@ -57,7 +57,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeLoggingTest do
       LogCapture.attach()
 
       TokenExchange.refresh_access_token("http://oauth", %{refresh_token: "ref-123"},
-        log_context: [integration_id: 42, user_id: 7, provider: :google, correlation_id: "abc-1"]
+        log_context: [integration_id: 42, user_id: 7, provider: :google]
       )
 
       meta = LogCapture.user_metadata(LogCapture.await_log("OAuth token refresh failed"))
@@ -65,8 +65,28 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeLoggingTest do
       assert meta[:integration_id] == 42
       assert meta[:user_id] == 7
       assert meta[:provider] == :google
-      assert meta[:correlation_id] == "abc-1"
       assert meta[:status] == 400
+    end
+
+    # The correlation id is process metadata that `ObanLogger` and the request
+    # plug set, and the JSON formatter emits all of it, so threading it through
+    # here would duplicate it where it works and change nothing where it does
+    # not. It is off the allowed list, and a caller passing one is ignored.
+    test "does not take a caller-supplied correlation id" do
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 400, body: ~s({"error":"invalid_grant"})}}
+      end)
+
+      LogCapture.attach()
+
+      TokenExchange.refresh_access_token("http://oauth", %{refresh_token: "ref-123"},
+        log_context: [integration_id: 42, correlation_id: "abc-1"]
+      )
+
+      meta = LogCapture.user_metadata(LogCapture.await_log("OAuth token refresh failed"))
+
+      assert meta[:integration_id] == 42
+      refute Map.has_key?(meta, :correlation_id)
     end
 
     test "names the integration behind a network error during refresh" do

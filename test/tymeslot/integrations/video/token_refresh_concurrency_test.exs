@@ -40,7 +40,7 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
         })
 
       # CRITICAL: We expect exactly ONE call to refresh_access_token
-      expect(Tymeslot.GoogleOAuthHelperMock, :refresh_access_token, 1, fn _token, _scope ->
+      expect(Tymeslot.GoogleOAuthHelperMock, :refresh_access_token, 1, fn _token, _scope, _opts ->
         # Intentional sleep: Simulate slow OAuth provider response to create
         # a timing window where concurrent requests can overlap, testing that
         # the locking mechanism prevents duplicate refreshes
@@ -127,7 +127,7 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
       end)
 
       # CRITICAL: We expect exactly ONE call to refresh_access_token
-      expect(Tymeslot.TeamsOAuthHelperMock, :refresh_access_token, 1, fn _token, _scope ->
+      expect(Tymeslot.TeamsOAuthHelperMock, :refresh_access_token, 1, fn _token, _scope, _opts ->
         Process.sleep(100)
 
         {:ok,

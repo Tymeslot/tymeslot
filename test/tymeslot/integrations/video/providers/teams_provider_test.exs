@@ -182,7 +182,10 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :needs_refresh} end)
 
-      expect(TeamsOAuthHelperMock, :refresh_access_token, fn "refresh", _scope ->
+      expect(TeamsOAuthHelperMock, :refresh_access_token, fn "refresh", _scope, opts ->
+        assert opts[:log_context][:integration_id] == integration.id
+        assert opts[:log_context][:user_id] == user.id
+
         {:ok,
          %{
            access_token: "new_token",
@@ -222,7 +225,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :needs_refresh} end)
 
-      expect(TeamsOAuthHelperMock, :refresh_access_token, fn "refresh", _scope ->
+      expect(TeamsOAuthHelperMock, :refresh_access_token, fn "refresh", _scope, _opts ->
         {:ok,
          %{
            access_token: "fresh_token",
@@ -561,7 +564,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :needs_refresh} end)
 
-      expect(TeamsOAuthHelperMock, :refresh_access_token, fn "refresh_token", _scope ->
+      expect(TeamsOAuthHelperMock, :refresh_access_token, fn "refresh_token", _scope, _opts ->
         {:error, "Token refresh failed: invalid_grant"}
       end)
 
@@ -574,7 +577,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :needs_refresh} end)
 
-      expect(TeamsOAuthHelperMock, :refresh_access_token, fn "refresh_token", _scope ->
+      expect(TeamsOAuthHelperMock, :refresh_access_token, fn "refresh_token", _scope, _opts ->
         {:error, "Network error during token refresh: timeout"}
       end)
 
