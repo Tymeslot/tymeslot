@@ -2396,18 +2396,18 @@ msgid "%{name} would like to move their confirmed booking to a new time."
 msgstr "%{name} souhaite déplacer sa réservation confirmée vers un nouveau créneau."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "%{organizer} confirms each change personally, so the new time isn't final yet."
 msgstr "%{organizer} confirme personnellement chaque modification : le nouveau créneau n'est donc pas encore définitif."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{organizer} confirms each change personally, so the new time isn't final yet."
 msgstr "Bonjour %{name}, %{organizer} confirme personnellement chaque modification : le nouveau créneau n'est donc pas encore définitif."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Previously scheduled for %{time}."
 msgstr "Initialement prévu le %{time}."
 
@@ -2420,37 +2420,37 @@ msgstr "Rappel - demande de report : %{name} - %{date}"
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Requested New Time"
 msgstr "Nouveau créneau demandé"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule Request Received"
 msgstr "Demande de report reçue"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule request"
 msgstr "Demande de report"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule request still waiting"
 msgstr "Demande de report toujours en attente"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule request: %{name} - %{date}"
 msgstr "Demande de report : %{name} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule requested"
 msgstr "Report demandé"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule requested: %{title} - %{date}"
 msgstr "Report demandé : %{title} - %{date}"
 
@@ -2471,28 +2471,28 @@ msgstr "%{organizer} n'a pas pu accepter le nouveau créneau. Votre créneau pr�
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Booking cancelled"
 msgstr "Réservation annulée"
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{organizer} can't make the new time."
 msgstr "Bonjour %{name}, %{organizer} n'est pas disponible au nouveau créneau."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Hi %{name}, your reschedule request wasn't answered in time."
 msgstr "Bonjour %{name}, votre demande de report n'a pas reçu de réponse à temps."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule Declined"
 msgstr "Report refusé"
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule Request Expired"
 msgstr "Demande de report expirée"
 
@@ -2512,7 +2512,7 @@ msgid "%{name} asked to move their confirmed booking to this time, and the reque
 msgstr "%{name} a demandé à déplacer sa réservation confirmée à ce créneau, et la demande n'a pas reçu de réponse avant l'échéance. Le créneau précédent avait déjà été libéré pour cela, la réservation a donc été annulée. %{name} a été prévenu(e) et peut réserver un nouveau créneau."
 
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule request expired, booking cancelled: %{name} - %{date}"
 msgstr "Demande de report expirée, réservation annulée : %{name} - %{date}"
 

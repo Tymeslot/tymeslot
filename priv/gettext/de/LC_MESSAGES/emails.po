@@ -2396,18 +2396,18 @@ msgid "%{name} would like to move their confirmed booking to a new time."
 msgstr "%{name} möchte die bestätigte Buchung auf eine neue Zeit verschieben."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "%{organizer} confirms each change personally, so the new time isn't final yet."
 msgstr "%{organizer} bestätigt jede Änderung persönlich, daher ist die neue Zeit noch nicht endgültig."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{organizer} confirms each change personally, so the new time isn't final yet."
 msgstr "Hallo %{name}, %{organizer} bestätigt jede Änderung persönlich, daher ist die neue Zeit noch nicht endgültig."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Previously scheduled for %{time}."
 msgstr "Ursprünglich geplant für %{time}."
 
@@ -2420,37 +2420,37 @@ msgstr "Erinnerung - Verschiebungsanfrage: %{name} - %{date}"
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Requested New Time"
 msgstr "Gewünschte neue Zeit"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule Request Received"
 msgstr "Verschiebungsanfrage eingegangen"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule request"
 msgstr "Verschiebungsanfrage"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule request still waiting"
 msgstr "Verschiebungsanfrage wartet weiterhin"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule request: %{name} - %{date}"
 msgstr "Verschiebungsanfrage: %{name} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule requested"
 msgstr "Verschiebung angefragt"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule requested: %{title} - %{date}"
 msgstr "Verschiebung angefragt: %{title} - %{date}"
 
@@ -2471,28 +2471,28 @@ msgstr "%{organizer} konnte die neue Zeit nicht annehmen. Ihre bisherige Zeit wa
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Booking cancelled"
 msgstr "Buchung storniert"
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{organizer} can't make the new time."
 msgstr "Hallo %{name}, %{organizer} kann die neue Zeit nicht wahrnehmen."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Hi %{name}, your reschedule request wasn't answered in time."
 msgstr "Hallo %{name}, Ihre Verschiebungsanfrage wurde nicht rechtzeitig beantwortet."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule Declined"
 msgstr "Verschiebung abgelehnt"
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule Request Expired"
 msgstr "Verschiebungsanfrage abgelaufen"
 
@@ -2512,7 +2512,7 @@ msgid "%{name} asked to move their confirmed booking to this time, and the reque
 msgstr "%{name} hat gebeten, die bestätigte Buchung auf diese Zeit zu verschieben, und die Anfrage wurde nicht vor Ablauf der Frist beantwortet. Die bisherige Zeit war dafür bereits freigegeben, daher wurde die Buchung storniert. %{name} wurde informiert und kann eine neue Zeit buchen."
 
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule request expired, booking cancelled: %{name} - %{date}"
 msgstr "Verschiebungsanfrage abgelaufen, Buchung storniert: %{name} - %{date}"
 

@@ -2402,18 +2402,18 @@ msgid "%{name} would like to move their confirmed booking to a new time."
 msgstr "%{name} chce přesunout svou potvrzenou rezervaci na nový termín."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "%{organizer} confirms each change personally, so the new time isn't final yet."
 msgstr "%{organizer} potvrzuje každou změnu osobně, takže nový termín zatím není definitivní."
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{organizer} confirms each change personally, so the new time isn't final yet."
 msgstr "Dobrý den %{name}, %{organizer} potvrzuje každou změnu osobně, takže nový termín zatím není definitivní."
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Previously scheduled for %{time}."
 msgstr "Původně naplánováno na %{time}."
 
@@ -2426,37 +2426,37 @@ msgstr "Připomínka - žádost o přesunutí: %{name} - %{date}"
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/booking_request_received.ex
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Requested New Time"
 msgstr "Požadovaný nový termín"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule Request Received"
 msgstr "Žádost o přesunutí přijata"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule request"
 msgstr "Žádost o přesunutí"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule request still waiting"
 msgstr "Žádost o přesunutí stále čeká"
 
 #: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule request: %{name} - %{date}"
 msgstr "Žádost o přesunutí: %{name} - %{date}"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule requested"
 msgstr "Přesunutí vyžádáno"
 
 #: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule requested: %{title} - %{date}"
 msgstr "Přesunutí vyžádáno: %{title} - %{date}"
 
@@ -2477,28 +2477,28 @@ msgstr "%{organizer} nemůže nový termín přijmout. Váš předchozí termín
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Booking cancelled"
 msgstr "Rezervace zrušena"
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{organizer} can't make the new time."
 msgstr "Dobrý den, %{name}, %{organizer} nemá v novém termínu čas."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Hi %{name}, your reschedule request wasn't answered in time."
 msgstr "Dobrý den, %{name}, vaše žádost o přesunutí nebyla včas zodpovězena."
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule Declined"
 msgstr "Přesunutí zamítnuto"
 
 #: lib/tymeslot/emails/templates/booking_request_outcome.ex
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule Request Expired"
 msgstr "Žádost o přesunutí vypršela"
 
@@ -2518,7 +2518,7 @@ msgid "%{name} asked to move their confirmed booking to this time, and the reque
 msgstr "%{name} požádal(a) o přesunutí potvrzené rezervace na tento termín a žádost nebyla zodpovězena do termínu. Předchozí termín byl kvůli ní již uvolněn, proto byla rezervace zrušena. %{name} byl(a) informován(a) a může si rezervovat nový termín."
 
 #: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reschedule request expired, booking cancelled: %{name} - %{date}"
 msgstr "Žádost o přesunutí vypršela, rezervace zrušena: %{name} - %{date}"
 
