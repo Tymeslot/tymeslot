@@ -212,16 +212,67 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
       {:ok, view, _html} =
         live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
 
-      # Picking the *other* type's card: even that must not move the reschedule
-      # off the type it is committed to.
+      # The other type is not offered at all any more: a reschedule shows the
+      # meeting's own type and nothing else.
+      refute has_element?(
+               view,
+               "button[data-testid='duration-option'][phx-value-duration='quick-chat']"
+             )
+
+      # The event can still be pushed without the card, so the server-side
+      # pinning is what actually holds: sending another type's slug directly
+      # must not move the reschedule off the type it is committed to.
       view
-      |> element("button[data-testid='duration-option'][phx-value-duration='quick-chat']")
-      |> render_click()
+      |> with_target("#overview-step")
+      |> render_click("select_duration", %{"duration" => "quick-chat"})
 
       assigns = :sys.get_state(view.pid).socket.assigns
 
       assert assigns.meeting_type.id == pinned_type.id
       assert assigns.booking_window_days == 180
+    end
+
+    @tag :capture_log
+    test "offers the meeting's own type, already selected", %{
+      conn: conn,
+      profile: profile,
+      meeting: meeting
+    } do
+      {:ok, view, _html} =
+        live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
+
+      # One card, and it is the meeting's own: a reschedule is not a choice of
+      # meeting type, so the step confirms what is being moved rather than
+      # asking for something that cannot be changed.
+      assert view
+             |> render()
+             |> Floki.parse_document!()
+             |> Floki.find("[data-testid='duration-option']")
+             |> length() == 1
+
+      # Already selected, so "next" is one click rather than a forced pick.
+      assert has_element?(view, "[data-testid='duration-option'].duration-card--selected")
+      refute has_element?(view, "[data-testid='next-step'][disabled]")
+    end
+
+    @tag :capture_log
+    test "clicking the pinned card in Rhythm does not deselect it", %{
+      conn: conn,
+      profile: profile,
+      meeting: meeting
+    } do
+      # Rhythm deselects the selected card when it is clicked again, which is
+      # how a booker changes their mind there. On a pinned reschedule that
+      # would disable "next" over a choice that was never theirs and leave
+      # them stuck on the step, so the selection has to survive the click.
+      {:ok, profile} = profile |> Changeset.change(%{booking_theme: "2"}) |> Repo.update()
+
+      {:ok, view, _html} =
+        live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
+
+      view |> element("[data-testid='duration-option']") |> render_click()
+
+      refute has_element?(view, "[data-testid='next-step'][disabled]")
     end
   end
 
