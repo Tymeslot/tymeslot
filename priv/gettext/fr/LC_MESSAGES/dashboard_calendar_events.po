@@ -1058,3 +1058,8 @@ msgstr "Cet événement fait partie d'une série. Votre modification s'applique 
 #, elixir-autogen, elixir-format
 msgid "Update this event"
 msgstr "Mettre à jour cet événement"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring events cannot be edited here yet. Please change this one in your calendar app."
+msgstr "Les événements récurrents ne peuvent pas encore être modifiés ici. Veuillez modifier celui-ci dans votre application de calendrier."

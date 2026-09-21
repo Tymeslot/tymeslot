@@ -1071,3 +1071,8 @@ msgstr "Ця подія є частиною серії. Ваша зміна ст
 #, elixir-autogen, elixir-format
 msgid "Update this event"
 msgstr "Оновити цю подію"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring events cannot be edited here yet. Please change this one in your calendar app."
+msgstr "Повторювані події поки що не можна редагувати тут. Змініть цю подію у своєму календарному застосунку."

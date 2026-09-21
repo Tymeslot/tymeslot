@@ -21,6 +21,30 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   Outlook have no equivalent: their updates replace the event with the
   payload, and what the cache does not model is still lost there.
 
+  ## Recurring events on the CalDAV family
+
+  A CalDAV series lives in one resource: the master VEVENT carrying the
+  `RRULE`, plus a VEVENT per occurrence that has been edited on its own. The
+  sync never stores that master — it expands it into one cached row per
+  occurrence, all sharing the series' href — and
+  `ICalBuilder.Patcher.patch/2` applies the payload to the master and skips
+  every `RECURRENCE-ID` override. So the write for any one occurrence lands
+  on the whole series.
+
+  Nor is that limited to a reschedule. The payload is always the complete
+  event, so it always carries the occurrence's own `DTSTART` and `DTEND`:
+  renaming "this Tuesday" rewrites the master's start to that Tuesday and
+  drops every earlier occurrence, exactly as dragging it would. There is no
+  edit of a CalDAV occurrence that stays inside the occurrence, so
+  `ensure_editable/1` refuses all of them, the way
+  `Tymeslot.CalendarGrid.EventDeletion.ensure_deletable/1` refuses the delete
+  and `Tymeslot.CalendarGrid.EventMove.ensure_movable/1` refuses the move.
+
+  They come back when the writer can author a `RECURRENCE-ID` override into
+  the series' document. Google and Outlook address an occurrence by its own
+  id and are unaffected, which is why the refusal is scoped to the provider
+  rather than to recurrence alone.
+
   ## Failure
 
   A failed provider write is queued for replay when the error is one a retry
@@ -30,10 +54,12 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   """
 
   alias Tymeslot.CalendarGrid.AllDay
+  alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.CalendarGrid.ProviderPayload
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
 
   require Logger
@@ -67,23 +93,62 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   Returns `{:ok, updated_event}`, or `{:error, %{reason: reason, retry:
   :queued | :not_queued}}` where `:queued` means the edit is saved locally
-  and will be replayed on the next sync.
+  and will be replayed on the next sync. An edit of a CalDAV series
+  occurrence is refused with `:recurring_event` before anything is written;
+  see `ensure_editable/1`.
   """
   @spec update_event(pos_integer(), map(), changes(), keyword()) ::
           {:ok, map()} | {:error, failure()}
   def update_event(user_id, event, changes, opts \\ []) when is_map(changes) do
-    ensure_editable!(changes)
+    ensure_known_fields!(changes)
 
-    with {:ok, updated} <- apply_changes(event, changes, opts),
+    # The cache row, read once and used twice: it is what the guard below is
+    # asked about, since the caller's copy may be an optimistic one built from
+    # a form, and it carries the document the CalDAV adapters patch.
+    stored = stored_row(event)
+
+    with :ok <- ensure_editable(stored || event),
+         {:ok, updated} <- apply_changes(event, changes, opts),
          {:ok, payload} <- ProviderPayload.from_event(updated) do
       payload =
         payload
         |> maybe_put_scope(Keyword.get(opts, :recurrence_scope))
-        |> put_stored_document(event)
+        |> put_stored_document(stored)
 
       write_to_provider(user_id, event, updated, payload)
     else
       {:error, reason} -> {:error, %{reason: reason, retry: :not_queued}}
+    end
+  end
+
+  @doc """
+  Whether `event` may be edited from the grid: a CalDAV-family event that
+  belongs to a series may not, anything else may.
+
+  Every write for such an event is patched onto the series' master VEVENT,
+  and the payload always carries the occurrence's own timing, so no edit of
+  one occurrence can stay inside it (see the moduledoc). The series test is
+  the one a move uses, `Tymeslot.CalendarGrid.EventMove.part_of_series?/1`;
+  the provider test is what keeps Google and Outlook, which address an
+  occurrence by its own id, editable.
+
+  Takes a cached row or a normalised event: the provider is read in either
+  its string or atom form, and the series markers in either key shape.
+  """
+  @spec ensure_editable(map()) :: :ok | {:error, :recurring_event}
+  def ensure_editable(event) do
+    if written_as_whole_series?(event), do: {:error, :recurring_event}, else: :ok
+  end
+
+  defp written_as_whole_series?(event) do
+    ProviderConfig.caldav_based?(Map.get(event, :provider)) and
+      EventMove.part_of_series?(event)
+  end
+
+  defp stored_row(event) do
+    case ProviderCalendarEventQueries.get_by_uid(event.calendar_integration_id, event.uid) do
+      {:ok, row} -> row
+      {:error, :not_found} -> nil
     end
   end
 
@@ -93,15 +158,11 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   # assigned and may be an optimistic copy built from a form: a payload that
   # quietly arrived without a document would be rebuilt, which is the loss
   # this exists to prevent.
-  defp put_stored_document(payload, event) do
-    case ProviderCalendarEventQueries.get_by_uid(event.calendar_integration_id, event.uid) do
-      {:ok, %{raw_ical: raw_ical} = row} when is_binary(raw_ical) and raw_ical != "" ->
-        Map.merge(payload, %{raw_ical: raw_ical, etag: row.etag})
+  defp put_stored_document(payload, %{raw_ical: raw_ical} = row)
+       when is_binary(raw_ical) and raw_ical != "",
+       do: Map.merge(payload, %{raw_ical: raw_ical, etag: row.etag})
 
-      _never_synced ->
-        payload
-    end
-  end
+  defp put_stored_document(payload, _never_synced), do: payload
 
   defp write_to_provider(user_id, event, updated, payload) do
     case CalendarEvents.update_event(event.uid, payload, {event.calendar_integration_id, user_id}) do
@@ -114,7 +175,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     end
   end
 
-  defp ensure_editable!(changes) do
+  defp ensure_known_fields!(changes) do
     case Map.keys(changes) -- @editable_fields do
       [] ->
         :ok

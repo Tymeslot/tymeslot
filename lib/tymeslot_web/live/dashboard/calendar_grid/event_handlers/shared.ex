@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.DateTimeUtils
+  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @weekday_atoms %{
@@ -280,6 +281,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
 
     * `{:error, :unauthorized}` — "You don't have permission to modify this event"
     * `{:error, :read_only}` — "This calendar is read-only..."
+    * `{:error, :recurring_event}` — "Recurring events cannot be edited here yet..."
     * `{:error, :rate_limited, _message}` — "Too many edits. Please wait a moment."
 
   Flash messages are sent via `send(self(), {:flash, ...})` (the LiveComponent
@@ -311,6 +313,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
 
     {:noreply, socket}
   end
+
+  def flash_guard_error(socket, {:error, :recurring_event}),
+    do: {:noreply, EditWorkflow.refuse_recurring_edit(socket)}
 
   def flash_guard_error(socket, {:error, :rate_limited, _message}) do
     send(

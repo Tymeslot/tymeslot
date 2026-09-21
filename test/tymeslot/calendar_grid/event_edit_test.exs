@@ -40,8 +40,12 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
   setup do
     user = insert(:user)
 
-    integration =
-      insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
+    # Google, so that the repeating fixture below stays editable: a CalDAV
+    # series is written through its master VEVENT and every edit of one
+    # occurrence is refused (`CalendarGrid.ensure_editable/1`, pinned in its
+    # own describe below). The tests that need CalDAV's offline queue bring
+    # their own integration.
+    integration = insert(:calendar_integration, user: user, provider: "google")
 
     %{user: user, integration: integration}
   end
@@ -53,7 +57,7 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       summary: "Weekly sync",
       description: "Agenda",
       location: "Room 4",
-      provider: "caldav",
+      provider: "google",
       provider_calendar_id: "team-calendar",
       provider_event_id: "/cal/weekly-sync.ics",
       start_at: ~U[2026-06-01 09:00:00.000000Z],
@@ -531,11 +535,19 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
   end
 
   describe "update_event/4 when the provider write fails" do
-    test "a recoverable CalDAV failure is queued and the edit kept locally", %{
-      user: user,
-      integration: integration
-    } do
-      event = insert_event(integration, %{})
+    test "a recoverable CalDAV failure is queued and the edit kept locally", %{user: user} do
+      # A one-off CalDAV event: the offline queue is this family's, and a
+      # series would be refused before the provider was reached at all.
+      integration =
+        insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
+
+      event =
+        insert_event(integration, %{
+          provider: "caldav",
+          recurrence_rule: nil,
+          recurring_event_id: nil
+        })
+
       expect_provider_update({:error, :server_error})
 
       changes = %{

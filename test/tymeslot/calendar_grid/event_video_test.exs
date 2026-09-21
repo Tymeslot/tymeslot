@@ -33,8 +33,11 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
   setup do
     user = insert(:user)
 
-    integration =
-      insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
+    # Google, so that the repeating fixture below stays editable: a CalDAV
+    # series is written through its master VEVENT and every edit of one
+    # occurrence is refused (`CalendarGrid.ensure_editable/1`). The one test
+    # that needs CalDAV's offline queue brings its own integration.
+    integration = insert(:calendar_integration, user: user, provider: "google")
 
     video_integration = insert(:video_integration, user: user, provider: "mirotalk")
 
@@ -105,10 +108,20 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
 
     test "keeps the change when the calendar write is queued for retry", %{
       user: user,
-      integration: integration,
       video_integration: video_integration
     } do
-      event = insert_event(integration)
+      # The offline queue is the CalDAV family's, and a one-off event so the
+      # series guard does not refuse the write before it can be queued.
+      caldav =
+        insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
+
+      event =
+        insert_event(caldav, %{
+          provider: "caldav",
+          recurrence_rule: nil,
+          recurring_event_id: nil
+        })
+
       stub_room_created()
       expect_provider_update({:error, :server_error})
 
@@ -322,7 +335,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       calendar_integration: integration,
       summary: "Weekly sync",
       description: "Agenda",
-      provider: "caldav",
+      provider: "google",
       provider_calendar_id: "team-calendar",
       provider_event_id: "/cal/weekly-sync.ics",
       start_at: ~U[2026-06-01 09:00:00.000000Z],

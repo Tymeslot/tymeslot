@@ -176,7 +176,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventEditLiveViewTest do
           calendar_paths: ["/cal/"]
         )
 
-      event = insert_timed_event(integration, %{provider: "caldav"})
+      event =
+        insert_timed_event(integration, %{
+          provider: "caldav",
+          recurrence_rule: nil,
+          recurring_event_id: nil
+        })
+
       expect_provider_update({:error, :server_error})
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
@@ -210,7 +216,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventEditLiveViewTest do
           calendar_paths: ["/cal/"]
         )
 
-      event = insert_timed_event(integration, %{provider: "caldav"})
+      event =
+        insert_timed_event(integration, %{
+          provider: "caldav",
+          recurrence_rule: nil,
+          recurring_event_id: nil
+        })
+
       expect_provider_update({:error, :unauthorized})
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")

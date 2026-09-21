@@ -6,6 +6,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal do
   Outlook address it by its own id), so the prompt offers that and nothing
   else. "This and following" and "All events" come back once a provider
   write honours a scope.
+
+  The copy below promises per-occurrence behaviour, so the prompt must never
+  be shown for a provider that cannot deliver it. Two things keep that true:
+  it is gated on `recurring_event_id`, which only the Google and Outlook
+  normalisers set, and an edit the CalDAV writer could only apply to a
+  whole series is refused before it reaches here, by
+  `Tymeslot.CalendarGrid.EventEdit.ensure_editable/1`. Setting
+  `recurring_event_id` on a CalDAV occurrence would make this text a lie; the
+  provider write has to learn `RECURRENCE-ID` first.
   """
 
   use TymeslotWeb, :html
