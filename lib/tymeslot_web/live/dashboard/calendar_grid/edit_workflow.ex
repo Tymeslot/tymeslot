@@ -355,7 +355,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
         {:ok, :no_changes}
 
       {:needs_confirmation, summary} ->
-        if AttendeeNotifications.pending?(updated_event.id) do
+        if AttendeeNotifications.pending?(updated_event) do
           {:ok, :sent} =
             AttendeeNotifications.event_updated_confirm(updated_event, summary, attendees)
 

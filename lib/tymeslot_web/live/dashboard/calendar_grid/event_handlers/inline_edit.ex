@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     case Shared.parse_int(id_str) do
       {:ok, event_id} ->
         event = Enum.find(socket.assigns.events, &(&1.id == event_id))
-        pending? = event != nil and AttendeeNotifications.pending?(event.id)
+        pending? = event != nil and AttendeeNotifications.pending?(event)
 
         {:noreply,
          socket

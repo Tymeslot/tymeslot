@@ -201,10 +201,10 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
   describe "pending?/1 and cancel_pending/1" do
     test "pending?/1 is false before scheduling, true after" do
       event = insert(:provider_calendar_event)
-      refute AttendeeNotifications.pending?(event.id)
+      refute AttendeeNotifications.pending?(event)
 
       {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
-      assert AttendeeNotifications.pending?(event.id)
+      assert AttendeeNotifications.pending?(event)
     end
 
     test "cancel_pending/1 removes scheduled jobs for the event" do
@@ -214,7 +214,19 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
 
       :ok = AttendeeNotifications.cancel_pending(event)
 
-      refute AttendeeNotifications.pending?(event.id)
+      refute AttendeeNotifications.pending?(event)
+    end
+
+    test "pending?/1 ignores a job of the other kind that happens to share the id" do
+      event = insert(:provider_calendar_event)
+
+      # `meetings` and `provider_calendar_events` number their rows
+      # independently, so the same integer names a different event in each.
+      # A meeting job must not make this provider event look pending.
+      {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :meeting)
+
+      refute AttendeeNotifications.pending?(event)
+      assert Dispatcher.pending?(event.id, :meeting)
     end
   end
 end
