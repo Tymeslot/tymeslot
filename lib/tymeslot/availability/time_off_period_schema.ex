@@ -21,6 +21,19 @@ defmodule Tymeslot.Availability.TimeOffPeriodSchema do
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Validation.Constraints
 
+  # Registered in both forms so the extractor writes a plural entry into the
+  # `errors` domain. `Forms.translate_error/1` sends any message carrying a
+  # `:count` through `dngettext/5`, which reads every form off the one msgid,
+  # the way Ecto's own counted messages are read.
+  @horizon_message elem(
+                     dngettext_noop(
+                       "errors",
+                       "must be within %{count} years",
+                       "must be within %{count} years"
+                     ),
+                     0
+                   )
+
   @type t :: %__MODULE__{
           id: integer() | nil,
           profile_id: integer() | nil,
@@ -50,7 +63,8 @@ defmodule Tymeslot.Availability.TimeOffPeriodSchema do
   Builds the changeset for a period.
 
   `opts` must carry `:today`, the owner's current date: a period may not be
-  placed on days that have already gone. The caller supplies it because only
+  placed on days that have already gone, nor end further ahead than
+  `Constraints.time_off_last_end_date/1`. The caller supplies it because only
   the caller knows whose timezone "today" is read in.
 
   `profile_id` is not cast: it is set on the struct by whoever creates the
@@ -72,6 +86,7 @@ defmodule Tymeslot.Availability.TimeOffPeriodSchema do
     |> validate_required([:profile_id, :starts_on, :ends_on])
     |> validate_not_in_past(:starts_on, today)
     |> validate_not_in_past(:ends_on, today)
+    |> validate_within_horizon(:ends_on, today)
     |> validate_date_order()
     |> validate_time_order_on_single_day()
     |> validate_label()
@@ -108,6 +123,27 @@ defmodule Tymeslot.Availability.TimeOffPeriodSchema do
     validate_change(changeset, field, fn ^field, date ->
       if Date.compare(date, today) == :lt,
         do: [{field, dgettext_noop("errors", "must not be in the past")}],
+        else: []
+    end)
+  end
+
+  # A mistyped year is the only way a date this far out gets entered, and it
+  # has no symptom: the row is valid, so every reader honours it and the
+  # booking page simply offers nothing, for ever, without naming a cause.
+  #
+  # Only the last day is bounded. The first cannot outrun it without failing
+  # `validate_date_order/1`, and one message on the field that was mistyped
+  # reads better than two saying the same thing.
+  #
+  # Checked with `validate_change/3` for the reason `validate_not_in_past/3`
+  # is: a stored period must stay editable, including its note alone, however
+  # far out it already reaches.
+  defp validate_within_horizon(changeset, field, today) do
+    last_end_date = Constraints.time_off_last_end_date(today)
+
+    validate_change(changeset, field, fn ^field, date ->
+      if Date.after?(date, last_end_date),
+        do: [{field, {@horizon_message, count: Constraints.time_off_max_years_ahead()}}],
         else: []
     end)
   end

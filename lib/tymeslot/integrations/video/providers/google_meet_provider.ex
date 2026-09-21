@@ -133,7 +133,10 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   def finish_create_meeting_room(valid_token, _config) do
     with {:ok, space} <- create_meet_space(valid_token),
          {:ok, room_data} <- extract_space_data(space) do
-      Logger.info("Successfully created Google Meet space", room_id: room_data.room_id)
+      Logger.info("Successfully created Google Meet space",
+        room_ref: Redactor.fingerprint(room_data.room_id)
+      )
+
       {:ok, room_data}
     else
       {:error, reason} = error ->
@@ -171,7 +174,9 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def delete_meeting_room(space_id, config) when is_binary(space_id) and space_id != "" do
-    Logger.info("Ending active Google Meet conference on cancellation", room_id: space_id)
+    Logger.info("Ending active Google Meet conference on cancellation",
+      room_ref: Redactor.fingerprint(space_id)
+    )
 
     case ensure_valid_token(config) do
       {:ok, valid_token} -> end_active_conference(valid_token, space_id)
@@ -256,7 +261,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   def handle_meeting_event(event, room_data, additional_data) do
     Logger.info("Handling Google Meet event",
       event: event,
-      room_id: room_data.room_id,
+      room_ref: Redactor.fingerprint(room_data.room_id),
       additional_data: additional_data
     )
 
@@ -502,7 +507,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
         # 400: no active conference. 403/404: space not addressable (e.g. a
         # legacy meeting-code id) or already gone. Nothing to tear down.
         Logger.debug("No active Google Meet conference to end; treating as success",
-          room_id: space_id,
+          room_ref: Redactor.fingerprint(space_id),
           status: status
         )
 
@@ -510,7 +515,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
       {:ok, %Req.Response{status: status, body: body}} ->
         Logger.warning("Google Meet endActiveConference failed",
-          room_id: space_id,
+          room_ref: Redactor.fingerprint(space_id),
           status: status,
           body: Redactor.redact_and_truncate(body)
         )

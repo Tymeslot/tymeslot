@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
@@ -86,6 +87,29 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       refute html =~ "Edit recurring event"
       # Event is still rendered after revert
       assert html =~ "Recurring Meeting"
+    end
+
+    # No provider write honours a scope, so the prompt must not offer one: the
+    # edit lands on the occurrence that was dragged and nowhere else.
+    test "offers the edit for this event only", %{conn: conn, event: event} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      tomorrow_iso = Date.to_iso8601(Date.add(Date.utc_today(), 1))
+
+      lv
+      |> element("#calendar-drag-zone")
+      |> render_hook("event_dropped", %{
+        "event-id" => to_string(event.id),
+        "new-date" => tomorrow_iso,
+        "new-hour" => "10",
+        "new-minute" => "0",
+        "new-end-hour" => "11",
+        "new-end-minute" => "0"
+      })
+
+      assert has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='this_only']")
+      refute has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='all']")
+      refute has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='this_and_following']")
+      assert render(lv) =~ "Your change applies to this event only"
     end
 
     test "confirm 'this_only' scope dismisses the prompt", %{conn: conn, event: event} do
@@ -222,7 +246,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
         send(test_pid, {:provider_call, self(), {:create, payload, context}})
 
         case payload do
-          %{start_time: %Date{}, end_time: %Date{}} -> {:ok, payload.uid}
+          %{start_time: %Date{}, end_time: %Date{}} -> {:ok, CreatedEvent.new(payload.uid)}
           _undated -> {:error, :invalid_event_data}
         end
       end)

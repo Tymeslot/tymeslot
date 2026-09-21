@@ -145,6 +145,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
     - `:all_day` — a boolean that controls UNTIL value-type: all-day recurring
       events must emit `UNTIL=YYYYMMDD` (RFC 5545 §3.3.10) rather than the
       default UTC date-time form.
+    - `:timezone` — the organiser's timezone. A timed event's UNTIL is an
+      instant, so the date the form supplies has to end its day in that zone
+      rather than in UTC, or the series ends a day early west of UTC and a day
+      late east of it.
 
   Returns `{:error, :until_before_start}` when `until` precedes `:start_date`.
   """
@@ -155,16 +159,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
         nil
 
       freq ->
-        all_day = Map.get(event_context, :all_day, false)
-        start_date = Map.get(event_context, :start_date)
-
         opts =
           %{freq: freq}
           |> put_interval(params["interval"])
           |> put_by_day(freq, params["by_day"])
           |> put_end_condition(params["end_type"], params)
 
-        case RRule.retarget(RRule.build(opts), all_day: all_day, start_date: start_date) do
+        # `build/2` and `retarget/2` are handed the same value-type options, so
+        # the rule composed here and the rule read back agree on how UNTIL is
+        # written; retarget/2 is what rejects a series ending before it starts.
+        fit_opts = [
+          all_day: Map.get(event_context, :all_day, false),
+          timezone: Map.get(event_context, :timezone),
+          start_date: Map.get(event_context, :start_date)
+        ]
+
+        case RRule.retarget(RRule.build(opts, fit_opts), fit_opts) do
           {:ok, rule} -> rule
           {:error, :until_before_start} = error -> error
         end

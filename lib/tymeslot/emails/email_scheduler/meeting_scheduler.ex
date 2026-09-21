@@ -56,6 +56,7 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
       args
       |> maybe_put_flag("skip_attendee_ack", Keyword.get(opts, :skip_attendee_ack, false))
       |> maybe_put_flag("skip_host_request", Keyword.get(opts, :skip_host_request, false))
+      |> maybe_put_previous_start(Keyword.get(opts, :previous_start_time))
 
     args
     |> EmailWorker.new(
@@ -70,6 +71,13 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
     )
     |> insert_job("Booking request emails", meeting_id)
   end
+
+  # A reschedule back into the approval gate knows the time the booking was
+  # moved from; nothing persists it, so the job carries it to the emails.
+  defp maybe_put_previous_start(args, %DateTime{} = previous),
+    do: Map.put(args, "previous_start_time", DateTime.to_iso8601(previous))
+
+  defp maybe_put_previous_start(args, _previous), do: args
 
   defp maybe_put_flag(args, _key, false), do: args
   defp maybe_put_flag(args, key, true), do: Map.put(args, key, true)
@@ -125,6 +133,22 @@ defmodule Tymeslot.Emails.EmailScheduler.MeetingScheduler do
       unique: [period: 300, fields: [:args, :queue], keys: [:action, :meeting_id]]
     )
     |> insert_job("Booking request outcome", meeting_id)
+  end
+
+  @doc """
+  Schedules the host's email for a confirmed booking cancelled because the
+  invitee's request to move it lapsed. Sent immediately, and unique per
+  meeting like the invitee's outcome email.
+  """
+  @spec schedule_reschedule_request_expired(term()) :: :ok | {:error, String.t()}
+  def schedule_reschedule_request_expired(meeting_id) do
+    %{"action" => "send_reschedule_request_expired", "meeting_id" => meeting_id}
+    |> EmailWorker.new(
+      queue: :emails,
+      priority: 0,
+      unique: [period: 300, fields: [:args, :queue], keys: [:action, :meeting_id]]
+    )
+    |> insert_job("Reschedule request expired", meeting_id)
   end
 
   @doc """

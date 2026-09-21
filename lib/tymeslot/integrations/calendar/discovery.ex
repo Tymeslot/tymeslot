@@ -424,6 +424,8 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
       scope: :interactive,
       actor: actor,
       bucket: :discovery,
+      # What the organiser pressed was "Find calendars", not "Test connection".
+      action: :discovery,
       # Deliberately nothing to validate here — the discovery config's own
       # shape is checked by the provider module before `new/1` is called.
       validate: fn -> :ok end,

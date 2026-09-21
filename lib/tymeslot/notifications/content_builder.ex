@@ -156,6 +156,20 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   end
 
   @doc """
+  Builds reschedule details for a booking whose new time was approved after a
+  reschedule sent it back into the approval gate.
+
+  Unlike `build_reschedule_details/2` there is no original meeting to compare
+  with, so the templates leave out their "previously scheduled" line.
+  """
+  @spec build_reapproval_details(%{atom() => term()}) :: %{atom() => term()}
+  def build_reapproval_details(meeting) do
+    meeting
+    |> AppointmentBuilder.from_meeting()
+    |> Map.merge(%{is_rescheduled: true, rescheduled_at: DateTime.utc_now()})
+  end
+
+  @doc """
   Builds reminder notification details.
   """
   @spec build_reminder_details(%{atom() => term()}) :: %{atom() => term()}

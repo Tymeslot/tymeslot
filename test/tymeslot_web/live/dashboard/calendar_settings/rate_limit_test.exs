@@ -122,8 +122,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.RateLimitTest do
       conn: conn,
       user: user
     } do
-      # Exhaust the per-user integration write limit (30 per 30 minutes)
-      # `add_subscription` checks up front, before the feed probe ever runs.
+      # Exhaust the per-user integration write limit (30 per 30 minutes).
+      # `create_subscription_with_validation/3` charges it once the form has
+      # validated and before the feed probe runs, so the refusal arrives with
+      # no outbound request made.
       for _i <- 1..30 do
         assert :ok = RateLimiter.check_integration_write_rate_limit(user.id)
       end
@@ -143,12 +145,46 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.RateLimitTest do
       })
       |> render_submit()
 
-      # `add_subscription`'s rate-limit refusal is forwarded to the parent
-      # LiveView via `Flash.error/1` (a `send/2`, handled in `handle_info/2`),
-      # so it only shows up on a render taken after `render_submit/1` settles.
-      assert render(view) =~ "reached the limit"
+      # The submission runs off-socket via `start_async/3`, so the refusal only
+      # reaches the form once that task has settled.
+      assert render_async(view) =~ "reached the limit"
 
       refute Repo.get_by(CalendarIntegrationSchema, user_id: user.id, provider: "ics_url")
+    end
+
+    test "a feed URL the validator rejects leaves the write budget untouched", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      view
+      |> element("button[phx-click='connect_provider'][phx-value-provider='ics_url']")
+      |> render_click()
+
+      # More submissions than the write budget holds (30 per 30 minutes), each
+      # refused by the validator before anything is written or fetched.
+      for _i <- 1..35 do
+        view
+        |> form("#calendar-subscription-form", %{
+          "integration" => %{"name" => "Work calendar", "url" => "javascript:alert(1)"}
+        })
+        |> render_submit()
+
+        render_async(view)
+      end
+
+      refute Repo.get_by(CalendarIntegrationSchema, user_id: user.id, provider: "ics_url")
+
+      # The budget meters writes, and nothing above wrote anything: an organiser
+      # correcting a mistyped feed URL must not be locked out by their
+      # corrections.
+      for _i <- 1..30 do
+        assert :ok = RateLimiter.check_integration_write_rate_limit(user.id)
+      end
+
+      assert {:error, :rate_limited, _message} =
+               RateLimiter.check_integration_write_rate_limit(user.id)
     end
   end
 end

@@ -16,7 +16,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
   through its state — keeping this component stateless and free of RRULE logic.
 
   `recurrence_rule` is the current canonical RRULE string (or nil); it is parsed
-  only to seed the control values for display.
+  only to seed the control values for display. Parsing takes `timezone` because
+  a timed rule's `UNTIL` is a UTC instant, and the date to put back in the date
+  input is the one that instant falls on where the organiser is.
   """
 
   use TymeslotWeb, :html
@@ -25,12 +27,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor do
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
 
   attr :recurrence_rule, :string, default: nil
+  attr :timezone, :string, default: nil
   attr :myself, :any, required: true
   attr :change_event, :string, required: true
 
   @spec recurrence_editor(map()) :: Phoenix.LiveView.Rendered.t()
   def recurrence_editor(assigns) do
-    parsed = RRule.parse(assigns.recurrence_rule || "")
+    parsed = RRule.parse(assigns.recurrence_rule || "", timezone: assigns.timezone)
 
     assigns =
       assigns

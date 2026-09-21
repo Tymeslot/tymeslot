@@ -21,12 +21,22 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
     - `__MODULE__.Properties` — canonical VEVENT property-line serialisers
     - `__MODULE__.Alarms` — VALARM (reminder) serialisation
     - `__MODULE__.LineFolder` — RFC 5545 §3.1 content-line folding
+    - `__MODULE__.Patcher` — property-level patching of a stored document
+
+  ## Building versus patching
+
+  `build_simple_event/2` serialises a whole event from Tymeslot's payload and
+  is the writer for an event Tymeslot authors. `patch_event_properties/2`
+  rewrites named properties of a document the provider already holds and is
+  the writer for an event that arrived by sync, where everything the payload
+  does not model has to survive the write.
   """
 
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Alarms
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Patcher
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Properties
 
   @type simple_event_data :: %{
@@ -111,7 +121,23 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   end
 
   @doc """
-  Replaces (or inserts) the RFC 7986 `COLOR` property on every `VEVENT`
+  Applies the property changes `event_data` describes to an existing raw
+  iCalendar document, leaving every other line exactly as the provider sent
+  it.
+
+  Each payload key owns one property, so a key the payload does not carry
+  leaves its property alone and a key it carries with an empty value deletes
+  it. `ATTENDEE` blocks, `CATEGORIES`, `SEQUENCE`, `X-` properties and
+  anything else Tymeslot does not model survive the write, which
+  `build_simple_event/2` cannot promise: it serialises the payload and
+  nothing else. See `Tymeslot.Integrations.Calendar.ICalBuilder.Patcher` for the full contract, including
+  which components are deliberately left untouched.
+  """
+  @spec patch_event_properties(String.t(), map()) :: String.t()
+  defdelegate patch_event_properties(raw_ical, event_data), to: Patcher, as: :patch
+
+  @doc """
+  Replaces (or inserts) the RFC 7986 `COLOR` property on the `VEVENT`
   component of an existing raw iCalendar document, leaving every other
   property (RRULE, ATTENDEE, VALARM, ORGANIZER, ...) untouched.
 
@@ -127,22 +153,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   @spec replace_colour_property(String.t(), String.t() | nil) :: String.t()
   def replace_colour_property(raw_ical, colour) when is_binary(raw_ical) do
     case EventColour.css_colour(colour) do
-      nil ->
-        raw_ical
-
-      css_name ->
-        raw_ical
-        |> LineFolder.unfold_lines()
-        |> Enum.reject(&(&1 == "" or String.starts_with?(&1, "COLOR:")))
-        |> Enum.flat_map(&inject_colour_after_vevent_begin(&1, css_name))
-        |> Enum.join("\r\n")
-        |> Kernel.<>("\r\n")
-        |> LineFolder.fold_lines()
+      nil -> raw_ical
+      _css_name -> Patcher.patch(raw_ical, %{colour: colour})
     end
   end
-
-  defp inject_colour_after_vevent_begin("BEGIN:VEVENT" = line, css_name),
-    do: [line, "COLOR:#{css_name}"]
-
-  defp inject_colour_after_vevent_begin(line, _css_name), do: [line]
 end

@@ -212,10 +212,16 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
       synced_at: DateTime.utc_now()
     }
 
-  @spec call_delete_event(CalendarIntegrationSchema.t(), String.t()) ::
+  @spec call_delete_event(CalendarIntegrationSchema.t(), String.t(), keyword()) ::
           {:ok, term()} | {:error, atom(), String.t()}
-  def call_delete_event(integration, event_id) do
-    calendar_id = integration.default_booking_calendar_id || "primary"
+  def call_delete_event(integration, event_id, opts) do
+    # The calendar the event is on, exactly as create and update already read
+    # it. Falling straight to the default booking calendar addressed the wrong
+    # resource for every event on a secondary calendar, which Google answers
+    # with a 404.
+    calendar_id =
+      opts[:calendar_id] || integration.default_booking_calendar_id || "primary"
+
     api_module().delete_event(integration, calendar_id, event_id)
   end
 

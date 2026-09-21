@@ -22,19 +22,21 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ProviderWritesTest do
   alias Plug.Conn
   alias Req.Test, as: ReqTest
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Exchange.Provider
   alias Tymeslot.Security.Encryption
 
   describe "write callbacks" do
     @created_item_id "AAAAAHWP+wXiGGhNkiDQ+d65ZYgHAAEAAAM="
 
-    test "create_event/2 answers the item id under an :id key, which is what gets persisted" do
+    test "create_event/2 answers the item id as a provider id, which is what gets persisted" do
       respond_with(200, create_response())
 
-      # `%{id: _}` and not a bare binary: `CalendarEventSync.put_provider_mapping/2`
-      # reads a binary as a *uid* and files it in the wrong column, so the next
-      # update would address the item by something EWS never issued.
-      assert {:ok, %{id: @created_item_id}} = Provider.create_event(config(), event_data())
+      # `provider_event_id` and not `uid`: `CalendarEventSync.put_provider_mapping/2`
+      # files a reported uid in the meeting's own uid column, so the next update
+      # would address the item by something EWS never issued.
+      assert {:ok, %CreatedEvent{uid: nil, provider_event_id: @created_item_id}} =
+               Provider.create_event(config(), event_data())
     end
 
     test "create_event/2 writes to the folder the integration nominates" do

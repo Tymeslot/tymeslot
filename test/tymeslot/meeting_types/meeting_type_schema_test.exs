@@ -159,6 +159,33 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
 
       assert "cannot be set for more than 1 year in advance" in errors_on(changeset).reminder_config
     end
+
+    # The stored shape is string-keyed JSON and the form resubmits atom keys,
+    # so the reminders count as changed on every save, including this one.
+    test "saves an unrelated edit to a meeting type holding a reminder from before the limit" do
+      meeting_type =
+        insert(:meeting_type, reminder_config: [%{"value" => 400, "unit" => "days"}])
+
+      changeset =
+        MeetingTypeSchema.changeset(meeting_type, %{
+          name: "Renamed",
+          reminder_config: [%{value: 400, unit: "days"}]
+        })
+
+      assert changeset.valid?
+    end
+
+    test "still prevents adding a reminder over a year to such a meeting type" do
+      meeting_type =
+        insert(:meeting_type, reminder_config: [%{"value" => 400, "unit" => "days"}])
+
+      changeset =
+        MeetingTypeSchema.changeset(meeting_type, %{
+          reminder_config: [%{value: 400, unit: "days"}, %{value: 500, unit: "days"}]
+        })
+
+      assert "cannot be set for more than 1 year in advance" in errors_on(changeset).reminder_config
+    end
   end
 
   describe "payment_required validation" do

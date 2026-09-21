@@ -238,7 +238,7 @@ defmodule TymeslotWeb.SessionControllerTest do
       # IP Hammer bucket triggers, naming the per-IP budget rather than the account.
       assert Flash.get(conn.assigns.flash, :error) ==
                "You've reached the limit of 50 authentication (ip) actions per 30 minutes. " <>
-                 "Please wait a few minutes before trying again."
+                 "Please try again in 30 minutes."
     end
   end
 

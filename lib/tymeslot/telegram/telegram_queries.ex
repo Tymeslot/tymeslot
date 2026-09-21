@@ -21,10 +21,19 @@ defmodule Tymeslot.Telegram.TelegramQueries do
 
   @stub_ttl_minutes 30
 
+  @doc """
+  Returns the user's integrations, newest first, with their status derived.
+
+  Expired setup stubs are filtered out rather than deleted: a listing is a
+  pure read, and the rows are reclaimed later by the scheduled cleanup in
+  `cleanup_orphaned_stubs/0`.
+  """
   @spec list_integrations(integer()) :: [TelegramIntegrationSchema.t()]
   def list_integrations(user_id) do
     TelegramIntegrationSchema
-    |> IntegrationQueries.list_for_user(user_id)
+    |> IntegrationQueries.for_user(user_id)
+    |> where(^excluding_expired_stubs())
+    |> Repo.all()
     |> Enum.map(&TelegramIntegrationSchema.derive_status/1)
   end
 
@@ -36,7 +45,7 @@ defmodule Tymeslot.Telegram.TelegramQueries do
   def delete_pending_stubs(user_id) do
     TelegramIntegrationSchema
     |> where([i], i.user_id == ^user_id)
-    |> never_linked()
+    |> where(^never_linked())
     |> Repo.delete_all()
   end
 
@@ -48,24 +57,24 @@ defmodule Tymeslot.Telegram.TelegramQueries do
   def delete_pending_stub(id, user_id) do
     TelegramIntegrationSchema
     |> where([i], i.id == ^id and i.user_id == ^user_id)
-    |> never_linked()
+    |> where(^never_linked())
     |> Repo.delete_all()
   end
 
   @doc """
-  Deletes the user's abandoned setup stubs: never linked, created more than
+  Deletes every user's abandoned setup stubs: never linked, created more than
   #{@stub_ttl_minutes} minutes ago, and not holding a link token issued within
   that window.
-  """
-  @spec cleanup_orphaned_stubs(integer()) :: {non_neg_integer(), nil | [term()]}
-  def cleanup_orphaned_stubs(user_id) do
-    cutoff = DateTime.add(DateTime.utc_now(), -@stub_ttl_minutes * 60, :second)
 
+  Runs on a schedule from `Tymeslot.Workers.DataRetentionWorker`, never from a
+  read path. `list_integrations/1` hides expired stubs on its own, so the
+  cadence of this job only governs when the rows are reclaimed.
+  """
+  @spec cleanup_orphaned_stubs() :: {non_neg_integer(), nil | [term()]}
+  def cleanup_orphaned_stubs do
     TelegramIntegrationSchema
-    |> where([i], i.user_id == ^user_id)
-    |> never_linked()
-    |> where([i], is_nil(i.link_token_issued_at) or i.link_token_issued_at < ^cutoff)
-    |> IntegrationQueries.delete_stubs_older_than(@stub_ttl_minutes)
+    |> where(^expired_stub(stub_cutoff()))
+    |> Repo.delete_all()
   end
 
   @spec list_active_integrations_for_event(integer(), String.t()) :: [
@@ -231,7 +240,24 @@ defmodule Tymeslot.Telegram.TelegramQueries do
 
   def cleanup_old_deliveries(_days), do: {0, nil}
 
-  defp never_linked(query), do: where(query, [i], is_nil(i.chat_id) and is_nil(i.linked_at))
+  defp excluding_expired_stubs, do: dynamic(not (^expired_stub(stub_cutoff())))
+
+  defp stub_cutoff, do: DateTime.add(DateTime.utc_now(), -@stub_ttl_minutes * 60, :second)
+
+  # A setup stub the user never completed: no chat was ever linked to it. An
+  # integration that was linked and later lost its chat is not a stub.
+  defp never_linked, do: dynamic([i], is_nil(i.chat_id) and is_nil(i.linked_at))
+
+  # A stub whose setup window has passed: never linked, created before the
+  # cutoff, and without a link token issued since. Deleting and hiding share
+  # this one definition so the two can never drift apart.
+  defp expired_stub(cutoff) do
+    dynamic(
+      [i],
+      ^never_linked() and i.inserted_at < ^cutoff and
+        (is_nil(i.link_token_issued_at) or i.link_token_issued_at < ^cutoff)
+    )
+  end
 
   defp maybe_derive_status({:ok, integration}),
     do: {:ok, TelegramIntegrationSchema.derive_status(integration)}

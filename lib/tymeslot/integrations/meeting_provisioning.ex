@@ -24,6 +24,7 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   require Logger
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Google.ConferenceData
   alias Tymeslot.Integrations.Video
 
@@ -71,8 +72,8 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   @doc """
   Finalises the video context after the calendar create call completes.
 
-  For the `:inline` plan: extracts the Meet URL from the created-event
-  response and builds the `video_context` map.
+  For the `:inline` plan: extracts the Meet URL from the provider's own answer
+  to the create (`CreatedEvent.raw`) and builds the `video_context` map.
 
   Returns `{:ok, video_context}` on success. Returns
   `{:error, :no_meet_url, video_context}` when Google did not return a Meet URL
@@ -82,10 +83,10 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   For `:separate` and `:none`: returns `{:ok, video_context}` unchanged.
   """
-  @spec finalise(map(), map() | String.t(), plan()) ::
+  @spec finalise(map(), CreatedEvent.t(), plan()) ::
           {:ok, map()} | {:error, :no_meet_url, map()}
-  def finalise(video_context, created, {:inline, video_id}) do
-    case ConferenceData.meet_url_from_event(created) do
+  def finalise(video_context, %CreatedEvent{raw: raw}, {:inline, video_id}) do
+    case ConferenceData.meet_url_from_event(raw) do
       nil ->
         Logger.warning(
           "Google Calendar create succeeded but did not return a Meet URL; " <>

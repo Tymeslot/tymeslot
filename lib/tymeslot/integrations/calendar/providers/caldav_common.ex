@@ -10,7 +10,9 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Client, Discovery, Events, Http, UrlBuilder}
   alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
+  alias Tymeslot.Utils.UriUtils
 
   require Logger
 
@@ -43,6 +45,9 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
       username: Map.get(config, :username) || Map.get(config, "username"),
       password: Map.get(config, :password) || Map.get(config, "password"),
       calendar_paths: Map.get(config, :calendar_paths) || [],
+      writable_calendar_paths:
+        Map.get(config, :writable_calendar_paths) ||
+          Map.get(config, "writable_calendar_paths") || [],
       verify_ssl: Map.get(config, :verify_ssl, true),
       provider: provider
     }
@@ -248,24 +253,54 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
       )
     end)
 
+    # De-duplicated on the pair that identifies a VEVENT, not on the UID alone:
+    # a recurring event's overrides share the master's UID by RFC 5545, so
+    # keying on the UID collapsed a whole series back to one event and undid
+    # the parser keeping them.
     events =
       successes
       |> Enum.flat_map(fn {_path, {:ok, evs}} -> evs end)
-      |> Enum.uniq_by(& &1.uid)
+      |> Enum.uniq_by(&{&1.uid, &1[:recurrence_id]})
 
     {:ok, events}
   end
 
   @doc """
-  Create an event in the first configured calendar.
+  Create an event in the calendar the payload asks for, or in the client's own
+  calendar when it asks for none.
+
+  Answers a `CreatedEvent` carrying the uid, the collection and href the
+  resource was written to and the ETag the server assigned it, so the caller
+  can cache the event's identity without waiting for a sync to supply it.
   """
-  @spec create_event(caldav_client(), map()) :: {:ok, any()} | {:error, term()}
+  @spec create_event(caldav_client(), map()) :: {:ok, CreatedEvent.t()} | {:error, term()}
   def create_event(client, event_data) do
-    case primary_calendar_path(client) do
+    case create_path(client, event_data) do
       nil -> {:error, "No calendar configured for creating events"}
       path -> Events.create_calendar_event(client, path, event_data)
     end
   end
+
+  # The booking flow chooses no calendar, so the client's own collection is the
+  # default and bookings keep landing where they always have. The calendar grid
+  # does choose one, and used to be ignored: `event_data[:calendar_id]` was
+  # never read on this path, so an event created on, or moved to, any other
+  # collection silently went to the booking one instead.
+  #
+  # The choice is honoured only when it names a collection the integration
+  # lists as writable. `event_data` is caller-supplied, and a path taken from
+  # it unchecked is a URL taken from a payload.
+  defp create_path(client, event_data) do
+    chosen = Map.get(event_data, :calendar_id) || Map.get(event_data, "calendar_id")
+
+    client
+    |> writable_calendar_paths()
+    |> Enum.find(&UriUtils.uri_safe_match?(&1, chosen))
+    |> Kernel.||(primary_calendar_path(client))
+  end
+
+  defp writable_calendar_paths(%{writable_calendar_paths: paths}) when is_list(paths), do: paths
+  defp writable_calendar_paths(_client), do: []
 
   @doc """
   Diagnostic-only: PUT a hand-crafted iCalendar payload into the primary
@@ -278,7 +313,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   fresh UID per attempt.
   """
   @spec put_raw_event(caldav_client(), String.t(), String.t()) ::
-          {:ok, String.t()} | {:error, term()}
+          {:ok, CreatedEvent.t()} | {:error, term()}
   def put_raw_event(client, uid, ical_data) do
     case primary_calendar_path(client) do
       nil -> {:error, "No calendar configured for creating events"}
@@ -292,6 +327,11 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   `opts` may carry `:etag` (the caller's cached ETag for the event, used
   directly as `If-Match` without a HEAD probe) and any options accepted by
   `Events.update_calendar_event/5`.
+
+  When `event_data` carries the event's last-synced `:raw_ical` (and the
+  `:etag` it came with), that document is patched property by property rather
+  than rebuilt from the payload, so everything Tymeslot does not model — the
+  `ATTENDEE` block above all — survives the write.
 
   When `event_data` carries `colour_only: true` (the colour write-back
   path), dispatches to `Events.update_event_colour/5` instead — patching only
@@ -355,7 +395,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     # identifier (a Google or Outlook id) does not address a resource here.
     href = if is_binary(href) and String.starts_with?(href, ["/", "http"]), do: href
 
-    with {:ok, raw} <-
+    with {:ok, raw_events} <-
            Events.fetch_calendar_event(
              client,
              primary_calendar_path(client),
@@ -365,7 +405,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
       provider = Map.get(client, :provider, :caldav)
 
       ICalNormaliser.normalise_events(
-        [raw],
+        raw_events,
         %{
           calendar_integration_id: Map.get(event_ref, :calendar_integration_id),
           provider_calendar_id: primary_calendar_path(client) || "",

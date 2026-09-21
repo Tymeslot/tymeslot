@@ -164,18 +164,14 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   def handle_event("add_integration", %{"integration" => submitted}, socket) do
     user_id = socket.assigns.current_user.id
 
-    with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
-      socket = assign(socket, :saving, true)
+    case with_copied_app_password(submitted, socket.assigns.copied_nextcloud_login, user_id) do
+      {:ok, params} ->
+        create_from_form(socket, submitted, params)
 
-      case with_copied_app_password(submitted, socket.assigns.copied_nextcloud_login, user_id) do
-        {:ok, params} ->
-          create_from_form(socket, submitted, params)
-
-        {:error, :copied_login_unavailable} ->
-          {:noreply,
-           socket |> copied_login_unavailable() |> assign(form_values: submitted, saving: false)}
-      end
-    end)
+      {:error, :copied_login_unavailable} ->
+        {:noreply,
+         socket |> copied_login_unavailable() |> assign(form_values: submitted, saving: false)}
+    end
   end
 
   def handle_event("reconnect_integration", %{"id" => id}, socket) do
@@ -189,19 +185,15 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
         integration_id ->
           case Video.get_integration(user_id, integration_id) do
             {:ok, integration} ->
-              case Video.oauth_reconnect_url(user_id, integration) do
-                {:ok, url} ->
-                  {:noreply, redirect(socket, external: url)}
+              reconnect(socket, user_id, integration)
 
-                {:error, _reason} ->
-                  notify_parent(
-                    {:flash,
-                     {:error,
-                      dgettext("dashboard_integrations", "Failed to reconnect. Please try again.")}}
-                  )
-
-                  {:noreply, socket}
-              end
+            # Credentials that no longer decrypt are precisely what re-running
+            # OAuth repairs, so this state reconnects like any other rather
+            # than being treated as an error. `oauth_reconnect_url/2` reads
+            # only the provider, the row id and the account email, none of
+            # which are encrypted, so it works on an undecryptable row.
+            {:error, :requires_reencryption, integration} ->
+              reconnect(socket, user_id, integration)
 
             {:error, :not_found} ->
               {:noreply, socket}
@@ -333,6 +325,21 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   def render(assigns), do: ComponentView.settings(assigns)
 
   # Private functions
+
+  defp reconnect(socket, user_id, integration) do
+    case Video.oauth_reconnect_url(user_id, integration) do
+      {:ok, url} ->
+        {:noreply, redirect(socket, external: url)}
+
+      {:error, _reason} ->
+        notify_parent(
+          {:flash,
+           {:error, dgettext("dashboard_integrations", "Failed to reconnect. Please try again.")}}
+        )
+
+        {:noreply, socket}
+    end
+  end
 
   defp handle_create_result({:ok, integration}, _provider, socket) do
     notify_parent({:integration_added, :video})
@@ -471,7 +478,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   # password read from a copied calendar connection, so only `submitted` is ever
   # kept in the socket.
   defp create_from_form(socket, submitted, params) do
-    user_id = socket.assigns.current_user.id
     metadata = DashboardHelpers.get_security_metadata(socket)
 
     case VideoInputValidation.validate_video_integration_form(params, metadata: metadata) do
@@ -480,24 +486,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
       {:ok, sanitized_params} ->
         provider = params["provider"] || socket.assigns.config_provider
 
-        if is_nil(provider) do
-          {:noreply,
-           socket
-           |> assign(:form_errors, %{
-             base: dgettext("dashboard_integrations", "Please select a provider")
-           })
-           |> assign(:saving, false)}
-        else
-          handle_create_result(
-            Video.create_integration(
-              user_id,
-              provider,
-              FormInput.to_atom_keys(sanitized_params)
-            ),
-            provider,
-            socket
-          )
-        end
+        add_validated_integration(provider, sanitized_params, socket)
 
       {:error, validation_errors} ->
         {:noreply,
@@ -506,6 +495,31 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
          |> assign(:form_values, submitted)
          |> assign(:saving, false)}
     end
+  end
+
+  defp add_validated_integration(nil, _validated_params, socket) do
+    {:noreply,
+     socket
+     |> assign(:form_errors, %{
+       base: dgettext("dashboard_integrations", "Please select a provider")
+     })
+     |> assign(:saving, false)}
+  end
+
+  # The write budget is charged only once the form is known to be worth
+  # submitting. Charging first meant an organiser correcting a typo paid a token
+  # per correction, for attempts that were refused before this point and never
+  # reached a provider, which is what the bucket meters.
+  defp add_validated_integration(provider, validated_params, socket) do
+    user_id = socket.assigns.current_user.id
+
+    with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
+      handle_create_result(
+        Video.create_integration(user_id, provider, FormInput.to_atom_keys(validated_params)),
+        provider,
+        assign(socket, :saving, true)
+      )
+    end)
   end
 
   defp copied_login_unavailable(socket) do

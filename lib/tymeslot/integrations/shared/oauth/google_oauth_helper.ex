@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   state management, and provides flexible scope configuration.
   """
 
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Common.OAuth.{ErrorParser, IdToken, State, TokenExchange}
   alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
@@ -149,23 +150,20 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
     # Add scope if provided to maintain same scope
     body = if current_scope, do: Map.put(body, :scope, current_scope), else: body
 
+    # No second log line here: `TokenExchange` already logs the status and the
+    # redacted body, and now names the provider too.
     case TokenExchange.refresh_access_token(@token_url, body,
            fallback_refresh_token: refresh_token,
-           fallback_scope: current_scope
+           fallback_scope: current_scope,
+           log_context: [provider: :google]
          ) do
       {:ok, tokens} ->
         {:ok, tokens}
 
       {:error, {:http_error, status, body}} ->
-        Logger.error("Token refresh failed",
-          status: status,
-          response_body: Redactor.redact_and_truncate(body)
-        )
-
         {:error, ErrorParser.build_message("Token refresh failed", status, body)}
 
       {:error, {:network_error, reason}} ->
-        Logger.error("Network error during token refresh", reason: inspect(reason))
         {:error, "Network error during token refresh: #{inspect(reason)}"}
     end
   end
@@ -192,7 +190,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   # Private functions
 
   defp build_token_map(response) do
-    expires_at = DateTime.add(DateTime.utc_now(), response["expires_in"], :second)
+    expires_at = DateTime.add(Clock.utc_now(), response["expires_in"], :second)
 
     {provider_account_id, provider_account_email} =
       case IdToken.decode(response["id_token"]) do

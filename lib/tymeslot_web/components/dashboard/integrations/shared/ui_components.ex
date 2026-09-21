@@ -106,4 +106,34 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
   def dot_classes(:error), do: "bg-red-500"
   def dot_classes(:info), do: "bg-sky-500"
   def dot_classes(:paused), do: "bg-tymeslot-400"
+
+  @doc """
+  Attributes that make a `type="url"` input forgiving about the scheme.
+
+  Spread onto every server URL input, calendar and video alike, so all of them
+  behave the same way: `{UIComponents.server_url_attrs()}` on the element that
+  carries `type="url"`, whether that is a `CoreComponents.input/1` call or the
+  markup inside a form component.
+
+  The element keeps its `type="url"`, and the `ServerUrlField` hook adds two
+  things to the browser's check: a scheme-less address gains `https://` in the
+  field itself when the value is committed, and a value the browser still
+  refuses gets the message below rather than "Please enter a URL". Both are
+  scoped to the one input, which is why this is not `novalidate` on the form:
+  that would also stop the browser blocking an empty `required` name or API
+  key, neither of which has an inline error to fall back on.
+
+  The input needs an `id` for the hook to attach to.
+  """
+  @spec server_url_attrs() :: map()
+  def server_url_attrs do
+    %{
+      "phx-hook" => "ServerUrlField",
+      "data-scheme-hint" =>
+        dgettext(
+          "dashboard_integrations",
+          "Enter a full address starting with https://, for example https://cloud.example.com"
+        )
+    }
+  end
 end

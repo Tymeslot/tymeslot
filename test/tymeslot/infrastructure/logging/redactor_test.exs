@@ -4,6 +4,8 @@ defmodule Tymeslot.Infrastructure.Logging.RedactorTest do
 
   alias Tymeslot.Infrastructure.Logging.Redactor
 
+  doctest Redactor
+
   describe "redact/1" do
     test "redacts Bearer tokens" do
       text = "Authorization: Bearer abcd-1234-efgh-5678"
@@ -113,6 +115,26 @@ defmodule Tymeslot.Infrastructure.Logging.RedactorTest do
       assert String.valid?(result)
       assert result =~ "ABC🚀"
       assert result =~ "[TRUNCATED]"
+    end
+  end
+
+  describe "fingerprint/1" do
+    test "reduces a value to eight hex characters that do not spell it out" do
+      # A video room id is the join link for a link-based provider, so what goes
+      # into the logs must not be reversible to it. The expected value is pinned
+      # rather than recomputed: derived from `fingerprint/1` itself it could
+      # never fail.
+      assert Redactor.fingerprint("https://mirotalk.example.com/room123") == "b0e92c16"
+    end
+
+    test "tells two different values apart" do
+      refute Redactor.fingerprint("987654321") == Redactor.fingerprint("987654322")
+    end
+
+    test "has nothing to fingerprint for an absent or empty value" do
+      assert Redactor.fingerprint(nil) == "none"
+      assert Redactor.fingerprint("") == "none"
+      assert Redactor.fingerprint(%{room_id: "secret"}) == "none"
     end
   end
 end

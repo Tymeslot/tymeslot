@@ -52,7 +52,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
           verify_ssl: boolean(),
           is_active: boolean(),
           needs_reauth: boolean(),
-          last_sync_at: DateTime.t() | nil,
           provider_account_id: String.t() | nil,
           provider_account_email: String.t() | nil,
           sync_error: String.t() | nil,
@@ -105,7 +104,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     field(:verify_ssl, :boolean, default: true)
     field(:is_active, :boolean, default: true)
     field(:needs_reauth, :boolean, default: false)
-    field(:last_sync_at, :utc_datetime)
     field(:provider_account_id, :string)
     field(:provider_account_email, :string)
     field(:sync_error, :string)
@@ -170,6 +168,26 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
   """
   @spec account_index() :: String.t()
   def account_index, do: Atom.to_string(@account_index)
+
+  @doc """
+  Answers whether `attrs` would build a valid row, without writing one.
+
+  The creation paths that probe a user-supplied server run this before the
+  probe. That probe is an outbound request to an address someone typed, and is
+  metered as such, so a submission the changeset was always going to reject has
+  to be refused ahead of it rather than after: the alternative charges an
+  organiser's connection budget for a mistake decided entirely in-process.
+
+  The changeset handed back is the one the insert would have returned, so
+  callers render it unchanged.
+  """
+  @spec validate_new(map()) :: :ok | {:error, Ecto.Changeset.t()}
+  def validate_new(attrs) do
+    case %__MODULE__{} |> changeset(attrs) |> apply_action(:insert) do
+      {:ok, _integration} -> :ok
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
 
   @doc false
   @spec changeset(t(), map()) :: Ecto.Changeset.t()

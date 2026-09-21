@@ -176,11 +176,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
 
   def fetch_event(_integration, _ref), do: {:error, :unaddressable}
 
-  @spec call_delete_event(CalendarIntegrationSchema.t(), String.t()) ::
+  @spec call_delete_event(CalendarIntegrationSchema.t(), String.t(), keyword()) ::
           :ok | {:error, atom(), String.t()}
-  def call_delete_event(integration, event_id) do
-    # Use the default booking calendar if set
-    calendar_id = integration.default_booking_calendar_id
+  def call_delete_event(integration, event_id, opts) do
+    # The calendar the event is on, exactly as create and update already read
+    # it; the integration's default booking calendar is only the fallback for
+    # a caller that names none.
+    calendar_id = opts[:calendar_id] || integration.default_booking_calendar_id
 
     if calendar_id do
       api_module().delete_event(integration, calendar_id, event_id)

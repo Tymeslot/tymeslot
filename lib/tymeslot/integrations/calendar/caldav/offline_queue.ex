@@ -47,6 +47,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingState
 
@@ -75,11 +76,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
          integration,
          client
        ) do
-    with {:ok, path} <- primary_path(integration),
+    with {:ok, path} <- collection_path(row, integration),
          {:ok, event_data} <- sendable_event_data(row) do
       case Events.create_calendar_event(client, path, event_data, events_opts()) do
-        {:ok, _uid} ->
-          QueueQueries.mark_synced(integration.id, row.uid, nil)
+        {:ok, created} ->
+          QueueQueries.mark_synced(integration.id, row.uid, created.etag)
           log_success(row, :created)
 
         {:error, reason} ->
@@ -95,7 +96,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
          integration,
          client
        ) do
-    with {:ok, path} <- primary_path(integration),
+    with {:ok, path} <- collection_path(row, integration),
          {:ok, event_data} <- sendable_event_data(row) do
       opts =
         events_opts() ++
@@ -125,20 +126,18 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
          integration,
          client
        ) do
-    case primary_path(integration) do
+    case collection_path(row, integration) do
       {:error, reason} ->
         record_skip(integration, row, reason)
 
       {:ok, path} ->
-        case Events.delete_calendar_event(client, path, row.uid, events_opts()) do
+        case Events.delete_calendar_event(client, path, row.uid, delete_opts(row)) do
           :ok ->
             ProviderCalendarEventQueries.delete_by_uid(integration.id, row.uid)
             log_success(row, :deleted)
 
-          # Already gone on the server — finish the local delete regardless.
           {:error, :not_found} ->
-            ProviderCalendarEventQueries.delete_by_uid(integration.id, row.uid)
-            log_success(row, :deleted)
+            handle_missing_on_delete(row, integration)
 
           {:error, reason} ->
             record_failure(integration, row, :deleted, reason)
@@ -161,6 +160,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
       row.uid,
       unsendable_change_message()
     )
+  end
+
+  # The event's own href addresses it wherever it lives; without one the URL is
+  # reconstructed from the uid against the first configured collection, which
+  # is the wrong address for an event on any other calendar.
+  defp delete_opts(%ProviderCalendarEventSchema{provider_event_id: nil}), do: events_opts()
+
+  defp delete_opts(%ProviderCalendarEventSchema{provider_event_id: href}),
+    do: events_opts() ++ [provider_event_id: href]
+
+  # Already gone on the server — finish the local delete regardless. This is
+  # only a safe reading because `collection_path/2` addresses the collection
+  # the event was actually written to and an href, when the row has one,
+  # overrides it: the same 404 against a URL guessed from the wrong collection
+  # would report a delete that never happened.
+  defp handle_missing_on_delete(row, integration) do
+    ProviderCalendarEventQueries.delete_by_uid(integration.id, row.uid)
+    log_success(row, :deleted)
   end
 
   # ---------------------------------------------------------------------------
@@ -200,8 +217,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
 
       expects_calendar_event?(row, integration) ->
         case Events.create_calendar_event(client, path, event_data, events_opts()) do
-          {:ok, _uid} ->
-            QueueQueries.mark_synced(integration.id, row.uid, nil)
+          {:ok, created} ->
+            QueueQueries.mark_synced(integration.id, row.uid, created.etag)
             log_success(row, :recreated)
 
           {:error, reason} ->
@@ -241,7 +258,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
       # so the VEVENT went back out with no STATUS line and the host's calendar
       # showed a confirmed booking for a request nobody had answered.
       status: event.status,
-      transparency: event.transparency
+      transparency: event.transparency,
+      # The row holds the whole event, so the replay sends the whole event. A
+      # rebuild from the narrower set used to replace a recurring series on the
+      # server with a single VEVENT carrying no attendees and no alarms, which
+      # is destructive on the organiser's real calendar for what began as a
+      # transient write failure.
+      attendees: event.attendees,
+      reminders: event.reminders,
+      recurrence_rule: event.recurrence_rule,
+      recurrence_exceptions: event.recurrence_exceptions,
+      visibility: event.visibility,
+      colour: event.colour,
+      # `Events.update_calendar_event/5` patches the stored document when it
+      # has one, so unmodelled properties (PARTSTAT, CATEGORIES, X-) survive
+      # the replay instead of being serialised away.
+      raw_ical: event.raw_ical,
+      etag: event.etag
     }
   end
 
@@ -268,10 +301,18 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   # process, breaking Req.Test stub visibility in unit tests.
   defp events_opts, do: [skip_breaker: true]
 
-  defp primary_path(integration) do
-    case integration.calendar_paths do
-      [path | _rest] when is_binary(path) -> {:ok, path}
-      _other -> {:error, :no_primary_path}
+  # The collection to address the row in, in descending order of authority: the
+  # one the row is filed under, then the integration's booking collection,
+  # which is where `ClientManager.booking_client/1` writes and so where a
+  # Tymeslot-created event with no href yet actually lives, and only then the
+  # first configured path. Taking the first path unconditionally is what built
+  # the wrong URL for every integration whose booking calendar is not its
+  # first, and a CalDAV DELETE counts 404 as success, so that wrong URL
+  # reported the event deleted while it stayed on the server.
+  defp collection_path(row, integration) do
+    case row.provider_calendar_id || CalendarPathResolver.resolve(integration) do
+      path when is_binary(path) and path != "" -> {:ok, path}
+      _none -> {:error, :no_primary_path}
     end
   end
 

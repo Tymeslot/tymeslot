@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
 
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.LogCapture
   alias TymeslotWeb.Endpoint
 
   setup :verify_on_exit!
@@ -428,6 +429,25 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
 
       assert {:error, :unauthorized, "Token refresh failed: invalid_client"} =
                CalendarAPI.refresh_token(integration)
+    end
+
+    # A Google `invalid_grant` outage produces one of these lines per probe, all
+    # identical, so the failure has to name its own integration: the health
+    # check sweeps in a batch and several land in the same second.
+    test "logs the integration and user behind a failed refresh", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 400, body: ~s({"error":"invalid_grant"})}}
+      end)
+
+      LogCapture.attach()
+
+      assert {:error, :unauthorized, _message} = CalendarAPI.refresh_token(integration)
+
+      meta = LogCapture.user_metadata(LogCapture.await_log("OAuth token refresh failed"))
+
+      assert meta[:integration_id] == integration.id
+      assert meta[:user_id] == integration.user_id
+      assert meta[:provider] == :google
     end
   end
 end

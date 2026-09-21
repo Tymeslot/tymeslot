@@ -350,6 +350,21 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       refute Repo.get(ProviderCalendarEventSchema, row.id)
     end
 
+    test "addresses the event's own href rather than rebuilding the URL from the uid",
+         %{integration: integration} do
+      insert_pending_row(integration,
+        sync_state: "locally_deleted",
+        provider_event_id: "/cal/other-collection/queue-event-uid.ics"
+      )
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert conn.request_path == "/cal/other-collection/queue-event-uid.ics"
+        Conn.send_resp(conn, 204, "")
+      end)
+
+      assert :ok = OfflineQueue.flush(integration, @client)
+    end
+
     test "treats 404 as already-deleted and drops the cache row",
          %{integration: integration} do
       row = insert_pending_row(integration, sync_state: "locally_deleted")
@@ -361,6 +376,54 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       assert :ok = OfflineQueue.flush(integration, @client)
 
       refute Repo.get(ProviderCalendarEventSchema, row.id)
+    end
+
+    # Without an href the URL is built from the uid against a collection, and
+    # taking the integration's first configured path guesses wrong whenever the
+    # event lives anywhere else. A CalDAV DELETE counts 404 as success, so that
+    # guess reported the event deleted while it stayed on the server.
+    test "builds the URL against the collection the row is filed under",
+         %{integration: integration} do
+      insert_pending_row(integration,
+        sync_state: "locally_deleted",
+        provider_calendar_id: "/work/",
+        provider_event_id: nil
+      )
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert conn.request_path == "/work/queue-event-uid.ics"
+        Conn.send_resp(conn, 204, "")
+      end)
+
+      assert :ok = OfflineQueue.flush(integration, @client)
+    end
+  end
+
+  describe "flush/2 — how much of the event the replay sends" do
+    # The rebuilt payload used to carry a narrow subset of the row, so a
+    # replayed update of a recurring event replaced the whole series on the
+    # server with one non-recurring VEVENT carrying no attendees and no alarms.
+    test "a replayed update still carries the RRULE, attendees and alarms",
+         %{integration: integration} do
+      insert_pending_row(integration,
+        sync_state: "locally_modified",
+        raw_ical: nil,
+        recurrence_rule: "FREQ=WEEKLY;BYDAY=MO",
+        attendees: [%{"email" => "sam@example.com", "display_name" => "Sam"}],
+        reminders: [%{"method" => "popup", "minutes_before" => 15}]
+      )
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        {:ok, body, conn} = Conn.read_body(conn)
+
+        assert body =~ "RRULE:FREQ=WEEKLY;BYDAY=MO"
+        assert body =~ "sam@example.com"
+        assert body =~ "BEGIN:VALARM"
+
+        Conn.send_resp(conn, 204, "")
+      end)
+
+      assert :ok = OfflineQueue.flush(integration, @client)
     end
   end
 

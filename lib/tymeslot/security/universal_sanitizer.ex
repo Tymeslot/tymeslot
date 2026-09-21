@@ -27,7 +27,11 @@ defmodule Tymeslot.Security.UniversalSanitizer do
     `<email@x.com>` round-trip unchanged. It still validates UTF-8, strips
     null bytes, normalises to NFC, enforces length/byte limits, and trims
     whitespace. Do NOT use `:plain_text` for values that get interpolated
-    into raw HTML strings, URLs, file paths, or shell commands.
+    into raw HTML strings, URLs, file paths, or shell commands. A value that
+    *is* a whole URL is the exception: `:strict` rewrites one without saying
+    so, percent-decoding it and stripping `--` and `0x` runs, so URL fields
+    sanitise in `:plain_text` and take their safety from an explicit scheme
+    and host allow-list instead.
   - `:allow_html` - Allow basic HTML tags (default: false). Ignored when `:mode` is `:plain_text`.
   - `:log_events` - Log security events (default: true)
   - `:metadata` - Additional metadata for logging

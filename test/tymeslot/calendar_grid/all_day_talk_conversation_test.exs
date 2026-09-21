@@ -19,6 +19,7 @@ defmodule Tymeslot.CalendarGrid.AllDayTalkConversationTest do
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Security.Encryption
 
   @server "https://allday.talk.example.com"
@@ -56,7 +57,7 @@ defmodule Tymeslot.CalendarGrid.AllDayTalkConversationTest do
     end)
 
     expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
-      {:ok, "allday-uid"}
+      {:ok, CreatedEvent.new("allday-uid")}
     end)
 
     # As the create form sends an all-day event from 1 to 2 October: Dates,

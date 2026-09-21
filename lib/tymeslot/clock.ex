@@ -11,9 +11,14 @@ defmodule Tymeslot.Clock do
   In production `utc_now/0` is exactly `DateTime.utc_now/0`. Tests freeze it with
   `Tymeslot.Test.ClockHelpers` — the override is stored in the calling process's
   dictionary, so it is test-local and safe under `async: true` for any code that
-  runs in the test process. Code that reads the clock in a spawned process (an
-  Oban job, a Task) will not see a frozen value; freeze such flows at their own
-  boundary instead.
+  runs in the test process.
+
+  That includes Oban workers as this suite tests them: `Oban.Testing.perform_job/2`
+  and `Oban.drain_queue/1` both run `perform/1` in the calling process, so a job
+  sees a clock the test froze. What does defeat a freeze is a genuinely spawned
+  process: `Task.Supervisor.async`, which a few workers use as a timeout guard,
+  or a job picked up by a live queue. Freeze those flows at the plain module the
+  spawned code calls into rather than at the worker.
 
   Adoption is incremental: a namespace is "clock-managed" once all of its
   `utc_now`/`utc_today` reads go through here, at which point

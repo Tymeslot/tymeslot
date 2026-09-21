@@ -54,8 +54,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Validation do
   `{:ok, reminder}` or `{:error, message}`.
 
   The input checks are this form's own; whether the resulting list is allowed
-  is `ReminderValidation.check_policy/1`, the same rule the save path applies,
+  is `ReminderValidation.check_policy/2`, the same rule the save path applies,
   so a reminder accepted here cannot later block the meeting type from saving.
+  The reminders already in the list are passed as held, so the year limit
+  judges the one being added and not a longer one saved before the limit.
   """
   @spec validate_new_reminder(list(), any(), any()) :: {:ok, map()} | {:error, String.t()}
   def validate_new_reminder(reminders, value, unit) do
@@ -72,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Validation do
       true ->
         reminder = %{value: ReminderUtils.parse_reminder_value(value), unit: unit}
 
-        case ReminderValidation.check_policy(reminders ++ [reminder]) do
+        case ReminderValidation.check_policy(reminders ++ [reminder], reminders) do
           :ok -> {:ok, reminder}
           {:error, reason} -> {:error, policy_message(reason)}
         end
@@ -81,8 +83,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Validation do
 
   # --- Private helpers ---
 
-  defp policy_message(:too_many),
-    do: dgettext("dashboard_meeting_form", "You can configure up to 3 reminders")
+  defp policy_message(:too_many) do
+    dngettext(
+      "dashboard_meeting_form",
+      "You can configure up to %{count} reminder",
+      "You can configure up to %{count} reminders",
+      ReminderValidation.max_reminders()
+    )
+  end
 
   defp policy_message(:duplicate),
     do: dgettext("dashboard_meeting_form", "This reminder already exists")

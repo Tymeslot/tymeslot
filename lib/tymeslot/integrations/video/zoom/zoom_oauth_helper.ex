@@ -109,24 +109,21 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
     }
 
     with {:ok, headers} <- basic_auth_headers() do
+      # No second log line here: `TokenExchange` already logs the status and
+      # the redacted body, and now names the provider too.
       case TokenExchange.refresh_access_token(@token_url, body,
              fallback_refresh_token: refresh_token,
              fallback_scope: scope,
-             headers: headers
+             headers: headers,
+             log_context: [provider: :zoom]
            ) do
         {:ok, tokens} ->
           {:ok, tokens}
 
         {:error, {:http_error, status, resp_body}} ->
-          Logger.error("Zoom OAuth token refresh failed",
-            status: status,
-            response_body: Redactor.redact_and_truncate(resp_body)
-          )
-
           {:error, ErrorParser.build_message("Token refresh failed", status, resp_body)}
 
         {:error, {:network_error, reason}} ->
-          Logger.error("Network error during Zoom token refresh", reason: inspect(reason))
           {:error, "Network error during token refresh: #{inspect(reason)}"}
       end
     end

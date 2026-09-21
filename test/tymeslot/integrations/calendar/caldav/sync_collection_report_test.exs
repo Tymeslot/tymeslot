@@ -49,6 +49,59 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReportTest do
     end
   end
 
+  describe "parse_response/1 — a resource holding more than one VEVENT" do
+    # The incremental sync dropped everything after the first VEVENT, exactly
+    # as the full fetch did, so a changed series arrived as one event.
+    test "returns every VEVENT of a changed resource" do
+      ical = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:standup@example.com
+      DTSTART:20261005T090000Z
+      DTEND:20261005T093000Z
+      RRULE:FREQ=WEEKLY;COUNT=3
+      SUMMARY:Weekly standup
+      END:VEVENT
+      BEGIN:VEVENT
+      UID:standup@example.com
+      RECURRENCE-ID:20261012T090000Z
+      DTSTART:20261012T140000Z
+      DTEND:20261012T143000Z
+      SUMMARY:Weekly standup (moved)
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      body = """
+      <?xml version="1.0" encoding="utf-8"?>
+      <d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+        <d:response>
+          <d:href>/calendars/alice/cal/standup.ics</d:href>
+          <d:propstat>
+            <d:prop>
+              <d:getetag>"etag-standup"</d:getetag>
+              <c:calendar-data>#{ical}</c:calendar-data>
+            </d:prop>
+            <d:status>HTTP/1.1 200 OK</d:status>
+          </d:propstat>
+        </d:response>
+        <d:sync-token>https://example.com/sync/new-token</d:sync-token>
+      </d:multistatus>
+      """
+
+      assert {:ok, {[master, override], [], _token}} = SyncCollectionReport.parse_response(body)
+
+      assert master.recurrence_id == nil
+      assert override.recurrence_id == "20261012T090000Z"
+
+      # Both name the resource they came from.
+      assert master.href == "/calendars/alice/cal/standup.ics"
+      assert override.href == "/calendars/alice/cal/standup.ics"
+      assert override.etag == "etag-standup"
+    end
+  end
+
   describe "parse_response/1" do
     test "separates changed events from deleted hrefs and extracts the new sync token" do
       ical = """

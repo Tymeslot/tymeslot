@@ -104,6 +104,28 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventEditLiveViewTest do
       assert payload.attendees == @attendees
       assert payload.recurrence_rule == @rrule
     end
+
+    test "rewrites the series' UNTIL to the bare date an all-day DTSTART needs", %{
+      conn: conn,
+      integration: integration
+    } do
+      event =
+        insert_timed_event(integration, %{
+          recurrence_rule: "FREQ=WEEKLY;BYDAY=MO;UNTIL=20261231T235959Z"
+        })
+
+      expect_provider_update(:ok)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+      lv |> element("#calendar-grid") |> render_hook("toggle_event_all_day", %{})
+
+      payload = await_provider_update(lv)
+      assert payload.recurrence_rule == "FREQ=WEEKLY;BYDAY=MO;UNTIL=20261231"
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+      assert row.recurrence_rule == "FREQ=WEEKLY;BYDAY=MO;UNTIL=20261231"
+    end
   end
 
   describe "adding an attendee to an all-day event" do
@@ -128,7 +150,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventEditLiveViewTest do
       expect_provider_update(:ok)
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#allday-event-#{event.id}") |> render_click()
+      lv |> element("[id^='allday-event-#{event.id}-']") |> render_click()
 
       lv
       |> element("form[phx-submit=add_event_attendee]")

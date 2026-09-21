@@ -10,6 +10,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
 
   alias Ecto.UUID
   alias Tymeslot.Bookings.Orchestrator
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Meetings.CalendarEventSync
   alias Tymeslot.Meetings.MeetingQueries
@@ -128,7 +129,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       original_uid = meeting.uid
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
-        {:ok, %{uid: provider_event_id}}
+        {:ok, CreatedEvent.provider_minted(provider_event_id)}
       end)
 
       expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
@@ -154,7 +155,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       # Recovery path creates against the organizer's user id.
       expect(Tymeslot.CalendarMock, :create_event, fn _data, id ->
         assert id == user.id
-        {:ok, %{"uid" => "new-google-event-id"}}
+        {:ok, CreatedEvent.from_provider_event(%{"uid" => "new-google-event-id"})}
       end)
 
       expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
@@ -282,7 +283,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       %{meeting: meeting} = setup_calendar_scenario(uid: UUID.generate())
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
-        {:ok, %{"id" => "google-event-id-abc"}}
+        {:ok, CreatedEvent.from_provider_event(%{"id" => "google-event-id-abc"})}
       end)
 
       expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
@@ -299,7 +300,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       %{meeting: meeting} = setup_calendar_scenario(uid: UUID.generate())
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
-        {:ok, %{id: "outlook-event-id-xyz"}}
+        {:ok, CreatedEvent.from_provider_event(%{id: "outlook-event-id-xyz"})}
       end)
 
       expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
@@ -329,7 +330,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       original_uid = meeting.uid
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
-        {:ok, %{"uid" => "google-uid-abc"}}
+        {:ok, CreatedEvent.from_provider_event(%{"uid" => "google-uid-abc"})}
       end)
 
       expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
@@ -363,7 +364,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       original_uid = meeting.uid
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
-        {:ok, %{uid: "google-uid-atom"}}
+        {:ok, CreatedEvent.from_provider_event(%{uid: "google-uid-atom"})}
       end)
 
       expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
@@ -390,7 +391,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       %{meeting: meeting} = setup_calendar_scenario(uid: UUID.generate())
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
-        {:ok, %{id: "provider-id", uid: "ambiguous-uid"}}
+        {:ok, CreatedEvent.from_provider_event(%{id: "provider-id", uid: "ambiguous-uid"})}
       end)
 
       expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
@@ -405,7 +406,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       %{meeting: meeting} = setup_calendar_scenario(uid: UUID.generate())
 
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
-        {:ok, %{id: "exact-provider-id", uid: "ambiguous-uid"}}
+        {:ok, CreatedEvent.from_provider_event(%{id: "exact-provider-id", uid: "ambiguous-uid"})}
       end)
 
       expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->

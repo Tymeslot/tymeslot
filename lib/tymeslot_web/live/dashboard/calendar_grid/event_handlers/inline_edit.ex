@@ -239,7 +239,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       event ->
         event_context = %{
           all_day: Map.get(event, :all_day, false),
-          start_date: recurrence_start_date(event)
+          start_date: AllDay.start_date(event),
+          timezone: socket.assigns.user_timezone
         }
 
         case Shared.compose_recurrence_rule(params, event_context) do
@@ -263,17 +264,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
             end
         end
     end
-  end
-
-  # The selected event is a schema struct (no Access behaviour), so read its
-  # fields with `Map.get/2` rather than bracket syntax. Falls back to the
-  # timed start instant's date when the event has no all-day start_date.
-  defp recurrence_start_date(event) do
-    Map.get(event, :start_date) ||
-      case Map.get(event, :start_at) do
-        %DateTime{} = start_at -> DateTime.to_date(start_at)
-        _other -> nil
-      end
   end
 
   @spec handle_update_event_colour(map(), Phoenix.LiveView.Socket.t()) ::
@@ -402,7 +392,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
             |> Helpers.precompute_derived()
             |> EditWorkflow.update_event_async(event, %{field => trimmed})
 
-          {:noreply, apply_notify_result(socket, event, updated_event)}
+          {:noreply, EditWorkflow.apply_notify_result(socket, event, updated_event)}
         else
           true ->
             {:noreply, socket}
@@ -491,13 +481,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     end
   end
 
+  # Flipping all-day refits a recurring event's UNTIL to the value type its new
+  # DTSTART calls for, and a timed UNTIL is an instant, so the domain needs the
+  # organiser's timezone to end the chosen day in it.
   defp push_all_day_change(socket, original_event, optimistic_event) do
+    timezone = socket.assigns.user_timezone
+
     result =
       Shared.apply_optimistic_update(socket, optimistic_event, fn s ->
         EditWorkflow.update_event_async(
           s,
           original_event,
-          Map.take(optimistic_event, [:all_day, :start_at, :end_at, :start_date, :end_date])
+          Map.take(optimistic_event, [:all_day, :start_at, :end_at, :start_date, :end_date]),
+          timezone: timezone
         )
       end)
 
@@ -551,38 +547,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         |> assign(:selected_event, optimistic_event)
         |> EditWorkflow.apply_event_change(event, optimistic_event, new_start, new_end)
 
-      {:noreply, apply_notify_result(socket, event, optimistic_event)}
-    end
-  end
-
-  defp apply_notify_result(socket, original_event, updated_event) do
-    attendees = updated_event.attendees || original_event.attendees || []
-
-    case EditWorkflow.notify_event_updated(original_event, updated_event, attendees) do
-      {:ok, :no_changes} ->
-        send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
-        socket
-
-      {:ok, :already_pending} ->
-        send(
-          self(),
-          {:flash,
-           {:info,
-            dgettext(
-              "dashboard_calendar_events",
-              "Changes saved. Attendees will be notified shortly."
-            )}}
-        )
-
-        assign(socket, :pending_notification, true)
-
-      {:needs_confirmation, summary} ->
-        assign(socket, :notify_prompt, %{
-          kind: :update,
-          summary: summary,
-          event: updated_event,
-          attendees: attendees
-        })
+      {:noreply, EditWorkflow.apply_notify_result(socket, event, optimistic_event)}
     end
   end
 end

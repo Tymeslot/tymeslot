@@ -4,9 +4,16 @@ defmodule TymeslotWeb.ParameterFilteringTest do
   this application posts whose value is a credential.
 
   Each test drives a real request through the endpoint and asserts on what the
-  request logger wrote. Phoenix and LiveView render their `Parameters:` line
-  through the same filter, so a name that survives here is a name that reaches
-  the log verbatim from a connect form too.
+  request logger wrote. Phoenix and LiveView both redact through
+  `Phoenix.Logger.filter_values/1`, so a key proven here is redacted on the
+  websocket path too; what this file cannot prove is that the list is complete,
+  because that depends on which keys the forms actually send.
+
+  Two of those keys are not field names at all. A `phx-blur` push carries the
+  focused element's value under the fixed key "value", so a secret input that
+  validates on blur sends its plaintext under that key rather than under its
+  own name; and "custom_meeting_url" is a field name whose value routinely
+  carries a room key in a "?pwd=" parameter. Both are covered below.
 
   Production pins the level to `:info`, where the line is not emitted at all,
   but dev runs at `:debug` and nothing stops a deployment from raising the
@@ -30,6 +37,11 @@ defmodule TymeslotWeb.ParameterFilteringTest do
     {"the Nextcloud Talk and Jitsi connect forms",
      %{"integration" => %{"client_secret" => @secret}}},
     {"the MiroTalk connect form", %{"integration" => %{"api_key" => @secret}}},
+    {"the custom video link form", %{"integration" => %{"custom_meeting_url" => @secret}}},
+    {"a phx-blur push from the CalDAV password field",
+     %{"field" => "password", "value" => @secret}},
+    {"a phx-blur push from the MiroTalk API key field",
+     %{"field" => "api_key", "value" => @secret}},
     {"the CalDAV connect form", %{"integration" => %{"password" => @secret}}},
     {"the CalDAV reconnect dialog", %{"reconnect" => %{"password" => @secret}}},
     {"the Slack connect form", %{"slack" => %{"webhook_url" => @secret}}},

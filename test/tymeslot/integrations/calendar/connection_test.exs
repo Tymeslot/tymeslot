@@ -166,6 +166,31 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
       assert match?({:error, _reason}, result)
     end
 
+    test "gives an interactive caller copy for refused credentials" do
+      user = insert(:user)
+
+      stub(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 401, body: ""}}
+      end)
+
+      assert {:error, message} = Connection.test_connection(apple_integration(user))
+      assert message =~ "app-specific password"
+    end
+
+    test "gives a background probe the reason the health check classifies" do
+      user = insert(:user)
+
+      stub(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 401, body: ""}}
+      end)
+
+      # Prose reaches `ErrorAnalysis.classify_error/1` as an unfamiliar string
+      # and is recorded as transient, so a scheduled probe must be handed the
+      # reason itself.
+      assert {:error, :unauthorized} =
+               Connection.test_connection(apple_integration(user), scope: :background)
+    end
+
     test "returns error for provider with invalid atom" do
       integration = %{
         provider: "nonexistent_provider"
@@ -185,5 +210,16 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
 
       assert {:error, :unsupported_provider} = result
     end
+  end
+
+  defp apple_integration(user) do
+    %{
+      provider: "apple",
+      base_url: "https://caldav.icloud.com",
+      username: "alice",
+      password: "wrong",
+      calendar_paths: [],
+      user_id: user.id
+    }
   end
 end

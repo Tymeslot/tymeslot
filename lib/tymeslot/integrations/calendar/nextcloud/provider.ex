@@ -175,12 +175,11 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
       {:ok, _message} ->
         {:ok, dgettext("dashboard_calendar_providers", "Nextcloud connection successful")}
 
-      {:error, :unauthorized} ->
-        {:error,
-         dgettext(
-           "dashboard_calendar_providers",
-           "Authentication failed. Check your Nextcloud username and password. Consider using an app password."
-         )}
+      # Reported as a reason, not as copy: see
+      # `ProviderCommon.test_caldav_provider_connection/2`, which every other
+      # CalDAV-family provider reaches this same decision through.
+      {:error, :unauthorized} = refused ->
+        refused
 
       {:error, :not_found} ->
         {:error,

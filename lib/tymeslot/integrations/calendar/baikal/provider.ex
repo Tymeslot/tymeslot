@@ -113,15 +113,10 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.Provider do
   Tests connection to the Baikal server with Baikal-specific messaging.
   """
   @impl Tymeslot.Integrations.Calendar.Provider
-  @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, String.t()}
+  @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, term()}
   def perform_connection_test(integration) do
     ProviderCommon.test_caldav_provider_connection(integration,
       success_message: dgettext("dashboard_calendar_providers", "Baikal connection successful"),
-      unauthorized_message:
-        dgettext(
-          "dashboard_calendar_providers",
-          "Authentication failed. Check your Baikal username and password."
-        ),
       not_found_message:
         dgettext(
           "dashboard_calendar_providers",

@@ -35,6 +35,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     priority: 2
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.IntegrationResolver
@@ -261,13 +262,17 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   # `meetings.video_provider`. Retrying cannot help — only the user reconnecting
   # can — so the job is discarded, but loudly. A silent :ok here is exactly what
   # let orphaned Zoom meetings accumulate unnoticed.
+  #
+  # Only a fingerprint of the room id goes into the line: the id is the join
+  # link for every link-based provider, and `meeting_id` already leads to the
+  # row that holds the real one.
   defp discard_unreachable(meeting, action, reason) do
     Logger.warning(
       "Meeting holds a provider video room but no video integration can reach it",
       meeting_id: meeting.id,
       action: action,
       provider: meeting.video_provider,
-      video_room_id: meeting.video_room_id,
+      room_ref: Redactor.fingerprint(meeting.video_room_id),
       reason: reason
     )
 

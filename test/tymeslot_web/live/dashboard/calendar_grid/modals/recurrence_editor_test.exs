@@ -59,6 +59,36 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditorTest do
     assert html =~ "Repeats weekly on Mon, Wed"
   end
 
+  describe "the end date the organiser picked comes back unchanged" do
+    # A timed rule's UNTIL is a UTC instant, and end of day on 30 June in Los
+    # Angeles is 1 July in UTC. Reading it back without the timezone would put
+    # 1 July in the date input the organiser set to 30 June.
+    test "a timed UNTIL is shown as the local date it ends" do
+      assigns =
+        base_assigns(%{
+          recurrence_rule: "FREQ=DAILY;UNTIL=20260701T065959Z",
+          timezone: "America/Los_Angeles"
+        })
+
+      html = render_component(&RecurrenceEditor.recurrence_editor/1, assigns)
+
+      assert html =~ ~s(name="until" value="2026-06-30")
+      assert html =~ "Repeats daily until 2026-06-30"
+    end
+
+    test "an all-day UNTIL is zone-free and shown as it is written" do
+      assigns =
+        base_assigns(%{
+          recurrence_rule: "FREQ=DAILY;UNTIL=20260630",
+          timezone: "America/Los_Angeles"
+        })
+
+      html = render_component(&RecurrenceEditor.recurrence_editor/1, assigns)
+
+      assert html =~ ~s(name="until" value="2026-06-30")
+    end
+  end
+
   describe "summary/1" do
     test "summarises a simple weekly rule" do
       parsed = %{freq: :weekly, by_day: [:mo, :we]}

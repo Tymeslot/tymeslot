@@ -174,7 +174,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
     )
 
     Sync.reconcile_deletions(integration, [%{provider_event_id: graph_resource_id, uid: nil}])
-    update_last_sync_at(integration)
+    stamp_external_sync(integration)
     :ok
   end
 
@@ -188,7 +188,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
     case OutlookProvider.normalise_events([event], context) do
       {:ok, [_cal_event | _rest] = calendar_events} ->
         Sync.persist_normalised_events(integration, calendar_events)
-        update_last_sync_at(integration)
+        stamp_external_sync(integration)
         :ok
 
       {:ok, []} ->
@@ -197,12 +197,12 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
           graph_resource_id: graph_resource_id
         )
 
-        update_last_sync_at(integration)
+        stamp_external_sync(integration)
         :ok
     end
   end
 
-  defp update_last_sync_at(integration) do
+  defp stamp_external_sync(integration) do
     case CalendarIntegrationQueries.update_sync_state(integration, %{
            last_external_sync_at: DateTime.utc_now(:second)
          }) do

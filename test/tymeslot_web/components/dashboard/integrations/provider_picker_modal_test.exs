@@ -34,11 +34,34 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.ProviderPickerModalTest 
     }
   end
 
+  defp classes_of(doc, selector) do
+    doc
+    |> Floki.find(selector)
+    |> Floki.attribute("class")
+    |> Enum.flat_map(&String.split/1)
+  end
+
   test "renders the title and subtitle" do
     html = render_picker(%{})
 
     assert html =~ "Connect a calendar"
     assert html =~ "Sync your availability."
+  end
+
+  test "renders the subtitle as secondary text rather than inheriting the modal heading styles" do
+    doc = Floki.parse_document!(render_picker(%{}))
+
+    heading_classes = classes_of(doc, ".modal-title")
+    subtitle_classes = classes_of(doc, ".modal-title p")
+
+    # The modal renders its :header slot inside .modal-title, so the heading's
+    # weight and tracking cascade onto the subtitle unless it resets them. The
+    # heading keeps them: every modal title in the app shares those styles.
+    assert "font-black" in heading_classes
+    assert "tracking-tight" in heading_classes
+
+    assert "font-normal" in subtitle_classes
+    assert "tracking-normal" in subtitle_classes
   end
 
   test "renders each provider as a selectable button dispatching its click event" do

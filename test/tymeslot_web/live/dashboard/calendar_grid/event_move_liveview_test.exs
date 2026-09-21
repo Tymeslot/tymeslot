@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventMoveLiveViewTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
 
   setup :verify_on_exit!
@@ -192,7 +193,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventMoveLiveViewTest do
 
   # Stands in for the adapters' own validation: a provider refuses to create
   # an event with no start, which is what an all-day move used to send.
-  defp created_when_dated(%{uid: uid, start_time: %Date{}, end_time: %Date{}}), do: {:ok, uid}
+  defp created_when_dated(%{uid: uid, start_time: %Date{}, end_time: %Date{}}),
+    do: {:ok, CreatedEvent.new(uid)}
+
   defp created_when_dated(_payload), do: {:error, :invalid_event_data}
 
   defp stub_create(answer) do

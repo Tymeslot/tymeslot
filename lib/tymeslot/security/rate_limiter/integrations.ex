@@ -1,6 +1,8 @@
 defmodule Tymeslot.Security.RateLimiter.Integrations do
   @moduledoc false
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Security.RateLimiter.Helpers
@@ -53,14 +55,29 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
           | :oauth
           | :discovery
 
+  @typedoc """
+  What the person did to reach a connection-test bucket, which is not the same
+  question as which bucket they reached.
+
+  One bucket meters several actions: the `:custom` bucket is drawn on by the
+  "Test connection" button *and* by saving a self-hosted server's address, and
+  an organiser who pressed "Add" never knowingly ran a connection test. The
+  caller says which action it is, so the refusal can name the thing they did
+  rather than the bucket it happened to land in.
+  """
+  @type connection_action :: :connection_test | :video_setup | :calendar_setup | :discovery
+
   @doc """
   Rate limit a provider's connection-test attempts, in the bucket it draws
   its budget from. The bucket key string and operation label for each
   bucket are resolved here, in the one place that has to know them.
+
+  `action` names what the person did (see `t:connection_action/0`); the bucket's
+  own label stays in the log line, where naming the bucket is the point.
   """
-  @spec check_connection_test(connection_bucket(), connection_scope() | nil) ::
+  @spec check_connection_test(connection_bucket(), connection_scope() | nil, connection_action()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :unattributable}
-  def check_connection_test(bucket, scope) do
+  def check_connection_test(bucket, scope, action) do
     {bucket_key, operation} = bucket_info(bucket)
 
     case scope_key(scope) do
@@ -70,7 +87,8 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
           bucket_limit(bucket),
           @connection_test_window_ms,
           operation,
-          key
+          key,
+          action_label(action)
         )
 
       :error ->
@@ -85,6 +103,13 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
         {:error, :unattributable}
     end
   end
+
+  # Plural noun phrases: they are read inside "the limit of 5 …". Each names an
+  # action an organiser would recognise having performed, never the bucket.
+  defp action_label(:connection_test), do: dgettext("errors", "connection tests")
+  defp action_label(:video_setup), do: dgettext("errors", "video server checks")
+  defp action_label(:calendar_setup), do: dgettext("errors", "calendar server checks")
+  defp action_label(:discovery), do: dgettext("errors", "calendar lookups")
 
   defp bucket_info(:caldav), do: {"caldav_connection", "CalDAV connection test"}
   defp bucket_info(:nextcloud), do: {"nextcloud_connection", "Nextcloud connection test"}

@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   CalDAV transport layer.
 
   Provides credential-aware wrappers for the WebDAV/CalDAV HTTP methods
-  (PROPFIND, REPORT, PUT, DELETE, HEAD). Encodes Basic Auth credentials,
+  (PROPFIND, REPORT, GET, PUT, DELETE, HEAD). Encodes Basic Auth credentials,
   constructs method-specific headers, and maps raw HTTP status codes and
   transport exceptions into the typed `error_reason()` vocabulary.
 
@@ -221,7 +221,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   end
 
   @doc """
-  Performs a GET request for one event resource.
+  Performs a GET request for a single calendar object resource.
+
+  Answers with the server's current iCalendar document and, in the response
+  headers, the ETag that identifies it — the pair a property-level patch has
+  to be applied to, since patching anything older would revert whatever
+  changed on the server in between.
 
   Unlike DELETE, a 404 is an error here (`:not_found`), and so is a 410
   (`:gone`): the caller is asking whether the event exists.
@@ -243,8 +248,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
       {:ok, response} ->
         classify(response, :get, url, success: [200], status_overrides: %{410 => :gone})
 
-      {:error, _error_reason} ->
-        {:error, :network_error}
+      {:error, reason} ->
+        handle_read_transport_error(reason, :get)
     end
   end
 
@@ -398,14 +403,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     end
   end
 
-  # `If-Match` takes a *quoted* entity-tag (RFC 9110 §8.8.3). Cached ETags reach
-  # us with the quotes already stripped — `EventProcessor.clean_etag/1` removes
-  # them so the same tag compares equal however a server spells it — so they
-  # must be re-quoted here. Sending the bare token instead is a malformed
-  # precondition that the server can only reject, and the 412 comes back as a
-  # conflict: the write is dropped and the user is told their changes were
-  # reverted. Idempotent, so a caller that already holds a quoted tag (the HEAD
-  # probe returns the raw header) is unaffected.
+  # `If-Match` takes a *quoted* entity-tag (RFC 9110 section 8.8.3). Cached
+  # ETags reach us with the quotes already stripped, since
+  # `EventProcessor.clean_etag/1` removes them so the same tag compares equal
+  # however a server spells it, so they have to be re-quoted here. Sending the
+  # bare token instead is a malformed precondition the server can only reject,
+  # and the rejection arrives as a 412: indistinguishable from a genuine
+  # conflict, so the write is dropped and the organiser is told their change
+  # was reverted. Idempotent, so a caller holding a tag still in wire form (the
+  # HEAD probe and the read-back both return the raw header) is unaffected, and
+  # a weak tag keeps its prefix.
   defp if_match_value("*"), do: "*"
 
   defp if_match_value(etag) when is_binary(etag) do

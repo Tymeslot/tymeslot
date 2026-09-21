@@ -62,8 +62,26 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder do
   for relative paths during initial discovery construction).
   """
   @spec build_calendar_url(String.t(), String.t()) :: String.t()
-  def build_calendar_url(base_url, calendar_path) do
-    path = origin_relative_path(calendar_path)
+  def build_calendar_url(base_url, calendar_path), do: resolve_href(base_url, calendar_path)
+
+  @doc """
+  Resolves any server-supplied href against `base_url`.
+
+  Every href a CalDAV server hands back — a calendar collection from PROPFIND,
+  an event resource from a REPORT or the `Location` of a create — resolves the
+  same way, so they share one function. A root-relative href resolves against
+  the *origin* of `base_url` and not against the whole of it: `base_url` may
+  itself carry a CalDAV path (`https://host/remote.php/dav`, which is what a
+  Nextcloud subpath install and a pasted DAV URL both look like), and
+  concatenating the two doubles that path into a URL the server answers with
+  404. Resolving an event href against the whole `base_url` is what
+  `Events.resolve_event_url/4` used to do, and because a CalDAV DELETE counts
+  404 as success, the resulting delete reported success without deleting
+  anything.
+  """
+  @spec resolve_href(String.t(), String.t()) :: String.t()
+  def resolve_href(base_url, href) do
+    path = origin_relative_path(href)
 
     if String.starts_with?(path, "/") do
       %URI{scheme: scheme, host: host, port: port} = URI.parse(base_url)

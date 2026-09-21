@@ -220,12 +220,19 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
 
   @doc """
   Reduces a URL to its scheme and host for logging, dropping the room path.
+
+  Callers reach this on a failure path, where the URL may be whatever they
+  were handed rather than a parsed one, so anything that is not a string
+  masks to `"none"` instead of raising. A log line must not be able to turn
+  a warning into a crash.
   """
-  @spec mask_url(String.t()) :: String.t()
+  @spec mask_url(any()) :: String.t()
   def mask_url(url) when is_binary(url) do
     uri = URI.parse(url)
     "#{uri.scheme}://#{uri.host}/..."
   end
+
+  def mask_url(_url), do: "none"
 
   @doc """
   Checks that a URL answers, following redirects and classifying every hop

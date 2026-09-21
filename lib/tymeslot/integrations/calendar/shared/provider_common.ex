@@ -121,9 +121,19 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   This helper encapsulates the common pattern used by CalDAV-based providers
   (Radicale, Zimbra, Nextcloud, etc.) for testing connections.
 
+  Refused credentials are the one failure reported as a reason rather than as
+  copy: `{:error, :unauthorized}`, exactly as the generic CalDAV provider
+  reports it. The scheduled health probe classifies what comes back
+  (`HealthCheck.ErrorAnalysis.classify_error/1`), and it recognises the atom as
+  a permanent failure but not a sentence about app-specific passwords, which
+  falls through its string branch and is recorded as transient. That leaves
+  `consecutive_hard_failures` at zero for ever and puts the auto-pause fast
+  trigger out of reach, so the distinction has to survive this far as an atom.
+  The sentence the account owner reads is written once in
+  `Shared.ErrorHandler.sanitize_error_message/2`, on the paths that show one.
+
   ## Options
     * `:success_message` - Message to return on successful connection
-    * `:unauthorized_message` - Message to return on authentication failure
     * `:not_found_message` - Message to return when server not found
     * `:error_formatter` - Function to format other errors (receives reason, returns string)
   """
@@ -137,10 +147,9 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
           },
           keyword()
         ) ::
-          {:ok, String.t()} | {:error, String.t()}
+          {:ok, String.t()} | {:error, term()}
   def test_caldav_provider_connection(integration, opts) do
     success_msg = Keyword.fetch!(opts, :success_message)
-    unauthorized_msg = Keyword.fetch!(opts, :unauthorized_message)
     not_found_msg = Keyword.fetch!(opts, :not_found_message)
     error_formatter = Keyword.fetch!(opts, :error_formatter)
 
@@ -159,8 +168,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       {:ok, _response} ->
         {:ok, success_msg}
 
-      {:error, :unauthorized} ->
-        {:error, unauthorized_msg}
+      {:error, :unauthorized} = refused ->
+        refused
 
       {:error, :forbidden} ->
         {:error, error_formatter.(:forbidden)}
@@ -239,8 +248,13 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   @spec caldav_build_booking_client_config(map()) :: map() | nil
   def caldav_build_booking_client_config(integration) do
     case CalendarPathResolver.resolve(integration) do
-      nil -> nil
-      path -> caldav_path_config(integration, path)
+      nil ->
+        nil
+
+      path ->
+        integration
+        |> caldav_path_config(path)
+        |> Map.put(:writable_calendar_paths, caldav_selected_paths(integration))
     end
   end
 

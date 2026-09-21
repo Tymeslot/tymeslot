@@ -11,6 +11,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
   alias Ecto.UUID
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
@@ -219,7 +220,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
 
       # When not found, it tries to create
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _user_id ->
-        {:ok, "new-uid"}
+        {:ok, CreatedEvent.new("new-uid")}
       end)
 
       # persist_calendar_mapping is called after create — no integration so it returns error
@@ -262,7 +263,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
       # Falls back to creating new event
       expect(Tymeslot.CalendarMock, :create_event, fn _data, id ->
         assert id == user.id
-        {:ok, "new-uid"}
+        {:ok, CreatedEvent.new("new-uid")}
       end)
 
       # persist_calendar_mapping is called after create to save the new UID
@@ -333,7 +334,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
 
       # First call: switches from UUID to external ID
       expect(Tymeslot.CalendarMock, :create_event, 1, fn _event_data, _user_id ->
-        {:ok, "remote-uid-123"}
+        {:ok, CreatedEvent.new("remote-uid-123")}
       end)
 
       expect(Tymeslot.CalendarMock, :get_booking_integration_info, 1, fn _user_id ->
@@ -372,7 +373,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
 
       # Initial creation
       expect(Tymeslot.CalendarMock, :create_event, 1, fn _event_data, _user_id ->
-        {:ok, "remote-uid-future"}
+        {:ok, CreatedEvent.new("remote-uid-future")}
       end)
 
       expect(Tymeslot.CalendarMock, :get_booking_integration_info, 1, fn _user_id ->

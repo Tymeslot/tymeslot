@@ -10,6 +10,16 @@ defmodule Tymeslot.Workers.SyncHealth do
   gap, and this module is the single place deciding which verdict earns it, so
   the five calendar sync workers cannot drift apart on the question.
 
+  A completed cycle is evidence in the other direction, and it settles two
+  things rather than one: the failure streak, and the `needs_reauth` flag that
+  keeps a flagged integration out of booking. Only two of the five workers used
+  to clear that flag, so a Google, Outlook or CalDAV-family integration that
+  started working again on its own — a CalDAV password fixed on the server, a
+  provider outage that resolved — stayed flagged for as long as its owner did
+  not reconnect it by hand, and every booking went on refusing it. Both halves
+  live here for the same reason: five copies of the rule is how three of them
+  came to be missing.
+
   ## Call it once, at the job boundary
 
   Both halves belong on the verdict a worker is about to hand Oban, so that
@@ -25,6 +35,10 @@ defmodule Tymeslot.Workers.SyncHealth do
   once.
   """
 
+  require Logger
+
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.HealthCheck
 
   @typedoc "The verdict a sync worker's `perform/1` returns to Oban."
@@ -36,11 +50,13 @@ defmodule Tymeslot.Workers.SyncHealth do
   Returns `:ok` whatever the verdict, so it can be dropped into a pipeline
   with `tap/2` without altering what the worker returns.
   """
-  @spec record_outcome(map(), verdict()) :: :ok
+  @spec record_outcome(CalendarIntegrationSchema.t(), verdict()) :: :ok
   def record_outcome(integration, verdict)
 
-  def record_outcome(integration, :ok),
-    do: HealthCheck.mark_synced_successfully(:calendar, integration.id)
+  def record_outcome(integration, :ok) do
+    clear_reauth_flag(integration)
+    HealthCheck.mark_synced_successfully(:calendar, integration.id)
+  end
 
   # A snooze is the host's circuit breaker declining to place the call, not the
   # remote declining to answer it — nothing was sent and nothing about this
@@ -60,4 +76,29 @@ defmodule Tymeslot.Workers.SyncHealth do
   # `record_sync_failure/2` documents as safe.
   def record_outcome(integration, _failure),
     do: HealthCheck.record_sync_failure(:calendar, integration)
+
+  # Best-effort, like every other bookkeeping write on the sync path: the
+  # events are already reconciled, so failing the job over the flag would throw
+  # that work away and re-fetch it on the retry.
+  #
+  # Re-flagging is possible for an integration the probe keeps refusing while
+  # its syncs succeed, and that is the intended reading: the owner really does
+  # have a half-working calendar. Each re-flag is a false-to-true transition
+  # (`CalendarManagement.flag_and_notify/2`), so the reauth email is capped at
+  # one per integration per 30 days by the notification job's uniqueness
+  # window, not sent per cycle.
+  defp clear_reauth_flag(integration) do
+    case CalendarIntegrationQueries.clear_reauth_flag(integration) do
+      {:ok, _updated} ->
+        :ok
+
+      {:error, changeset} ->
+        Logger.warning("Failed to clear calendar reconnection flag after a successful sync",
+          calendar_integration_id: integration.id,
+          error: inspect(changeset)
+        )
+
+        :ok
+    end
+  end
 end

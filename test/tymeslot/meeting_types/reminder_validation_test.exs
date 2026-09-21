@@ -200,6 +200,27 @@ defmodule Tymeslot.MeetingTypes.ReminderValidationTest do
       assert ReminderValidation.check_policy([%{value: 366, unit: "days"}]) ==
                {:error, :exceeds_max}
     end
+
+    # The year limit is newer than some stored reminders, so it judges what a
+    # change adds and leaves alone what the meeting type already held.
+    test "accepts a reminder over a year that the meeting type already held" do
+      held = [%{value: 400, unit: "days"}]
+
+      assert ReminderValidation.check_policy(held ++ [%{value: 1, unit: "hours"}], held) == :ok
+    end
+
+    test "still rejects a new reminder over a year beside a held one" do
+      held = [%{value: 400, unit: "days"}]
+
+      assert ReminderValidation.check_policy(held ++ [%{value: 500, unit: "days"}], held) ==
+               {:error, :exceeds_max}
+    end
+
+    test "holds the other rules against held reminders too" do
+      held = [%{value: 400, unit: "days"}]
+
+      assert ReminderValidation.check_policy(held ++ held, held) == {:error, :duplicate}
+    end
   end
 
   # ---------------------------------------------------------------------------

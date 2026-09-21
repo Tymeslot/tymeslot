@@ -315,6 +315,37 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntaxTest do
     end
   end
 
+  describe "analyze/1 with a brace hugging the variable" do
+    test "an extra opening brace" do
+      url = "https://jitsi.org/{{{meeting_id}}"
+
+      assert {:warning, :invalid_template_syntax, ^url, message} = TemplateSyntax.analyze(url)
+      assert message == "Write the template variable exactly as {{meeting_id}}"
+    end
+
+    test "an extra closing brace" do
+      url = "https://jitsi.org/{{meeting_id}}}"
+
+      assert {:warning, :invalid_template_syntax, ^url, message} = TemplateSyntax.analyze(url)
+      assert message == "Write the template variable exactly as {{meeting_id}}"
+    end
+
+    test "an extra brace on both sides" do
+      url = "https://jitsi.org/{{{meeting_id}}}"
+
+      assert {:warning, :invalid_template_syntax, ^url, message} = TemplateSyntax.analyze(url)
+      assert message == "Write the template variable exactly as {{meeting_id}}"
+    end
+
+    test "a brace elsewhere in the URL leaves a valid template alone" do
+      url = ~s(https://teams.microsoft.com/l/0?context={"Tid":"72f988bf"}&room={{meeting_id}})
+
+      assert {:ok, :valid_template, preview, _message} = TemplateSyntax.analyze(url)
+      assert preview =~ ~r|&room=[a-f0-9]{16}$|
+      assert preview =~ ~s({"Tid":"72f988bf"})
+    end
+  end
+
   @accepted_urls [
     {"a static URL", "https://meet.example.com/my-permanent-room"},
     {"a template in the path", "https://jitsi.example.org/{{meeting_id}}"},
@@ -324,7 +355,9 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntaxTest do
     {"a bare meeting_id query parameter", "https://meet.example.com/room?meeting_id=1"},
     {"a static fragment", "https://jitsi.org/room#section"},
     {"a template in the path with a static fragment", "https://jitsi.org/{{meeting_id}}#config"},
-    {"single curly brackets around another word", "https://jitsi.org/{room_id}"}
+    {"single curly brackets around another word", "https://jitsi.org/{room_id}"},
+    {"a template beside a decoded Teams JSON context",
+     ~s(https://teams.microsoft.com/l/0?context={"Tid":"72f988bf"}&room={{meeting_id}})}
   ]
 
   @refused_urls [
@@ -349,7 +382,13 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntaxTest do
     {"a template in the fragment", ~S"https://meet.jit.si/room#{{meeting_id}}",
      "Template in fragment (#) won't work - fragments aren't sent to servers. Use path instead: https://example.com/{{meeting_id}}"},
     {"a stray token next to a valid template", "https://meet.jit.si/{{meeting_id}}/{meeting_id}",
-     "Use double curly brackets: {{meeting_id}} not {meeting_id}"}
+     "Use double curly brackets: {{meeting_id}} not {meeting_id}"},
+    {"an extra opening brace on the variable", "https://meet.jit.si/{{{meeting_id}}",
+     "Write the template variable exactly as {{meeting_id}}"},
+    {"an extra closing brace on the variable", "https://meet.jit.si/{{meeting_id}}}",
+     "Write the template variable exactly as {{meeting_id}}"},
+    {"an extra brace on both sides of the variable", "https://meet.jit.si/{{{meeting_id}}}",
+     "Write the template variable exactly as {{meeting_id}}"}
   ]
 
   @other_malformed_urls [

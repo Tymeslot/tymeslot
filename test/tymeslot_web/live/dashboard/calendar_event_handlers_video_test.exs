@@ -20,13 +20,11 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlersVideoTest do
 
   describe "handle_event_video_result/2 on a change" do
     test "confirms a room was created" do
-      assert info_for({:ok, event_id: 1, video_integration_id: 1, video_link: "https://v.ex/x"}) ==
-               "Video room created."
+      assert info_for(change(1, "https://v.ex/x")) == "Video room created."
     end
 
     test "confirms the link was removed" do
-      assert info_for({:ok, event_id: 1, video_integration_id: nil, video_link: nil}) ==
-               "Video link removed."
+      assert info_for(change(nil, nil)) == "Video link removed."
     end
   end
 
@@ -56,6 +54,14 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlersVideoTest do
                  "Could not change the video link - changes reverted"
       end
     end
+  end
+
+  # A successful change carries both events, so the grid can diff them for the
+  # attendee-notification prompt; the wording follows the updated link alone.
+  defp change(video_integration_id, video_link) do
+    {:ok,
+     original_event: %{id: 1, video_integration_id: nil, video_link: nil},
+     updated_event: %{id: 1, video_integration_id: video_integration_id, video_link: video_link}}
   end
 
   # A refusal carries the event as it was, so the grid can put the previous

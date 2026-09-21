@@ -330,7 +330,9 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
         true ->
           normalized
           |> Enum.map(fn {:ok, reminder} -> reminder end)
-          |> ReminderValidation.check_policy()
+          |> ReminderValidation.check_policy(
+            ReminderUtils.normalize_reminders(changeset.data.reminder_config)
+          )
       end
 
     case result do
@@ -365,11 +367,17 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     end
   end
 
+  # Asked when the host asks for payment, not every time they touch a meeting
+  # type that already has one. A paid type keeps its price while Stripe is
+  # disconnected, so that it resumes on reconnect (see
+  # `Tymeslot.MeetingTypes.FormMapper.build_attrs/2`); reading the stored
+  # `true` with `get_field` would then fail every unrelated save with "Stripe
+  # must be connected", on a field the form cannot render in that state.
   defp validate_charges_enabled(changeset, opts) do
-    if Keyword.get(opts, :host_charges_enabled, false) do
-      changeset
-    else
-      add_error(changeset, :payment_required, "Stripe must be connected")
+    cond do
+      Keyword.get(opts, :host_charges_enabled, false) -> changeset
+      get_change(changeset, :payment_required) != true -> changeset
+      true -> add_error(changeset, :payment_required, "Stripe must be connected")
     end
   end
 

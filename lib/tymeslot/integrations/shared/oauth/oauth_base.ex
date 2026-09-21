@@ -6,6 +6,9 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   that are common across different OAuth-based calendar providers like Google and Outlook.
   """
 
+  alias Tymeslot.Clock
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
+
   require Logger
 
   # Type definitions
@@ -66,7 +69,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   """
   @spec default_start_time() :: DateTime.t()
   def default_start_time do
-    DateTime.utc_now()
+    Clock.utc_now()
     |> DateTime.add(-30, :day)
     |> DateTime.truncate(:second)
   end
@@ -76,7 +79,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   """
   @spec default_end_time() :: DateTime.t()
   def default_end_time do
-    DateTime.utc_now()
+    Clock.utc_now()
     |> DateTime.add(365, :day)
     |> DateTime.truncate(:second)
   end
@@ -103,6 +106,23 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
       {:error, type, message} -> log_typed_error(type, message)
       {:error, reason} -> {:error, reason}
     end
+  end
+
+  @doc """
+  Runs a create through `handle_api_call/2` and reports the provider's answer
+  as a `CreatedEvent`.
+
+  The OAuth providers mint their own event id, so the result carries it as the
+  `provider_event_id` and no iCalendar uid, and keeps the converted response
+  for the caller that reads a conference link out of it.
+  """
+  @spec handle_create((-> any()), (any() -> map())) ::
+          {:ok, CreatedEvent.t()} | {:error, any()} | :ok
+  def handle_create(api_call_fn, conversion_fn)
+      when is_function(api_call_fn, 0) and is_function(conversion_fn, 1) do
+    handle_api_call(api_call_fn, fn raw ->
+      raw |> conversion_fn.() |> CreatedEvent.from_provider_event()
+    end)
   end
 
   defp log_typed_error(type, message) do
@@ -162,7 +182,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
 
       @impl Tymeslot.Integrations.Calendar.Provider
       def create_event(integration, event_attrs) do
-        OAuthBase.handle_api_call(
+        OAuthBase.handle_create(
           fn -> call_create_event(integration, event_attrs) end,
           &convert_event/1
         )
@@ -176,9 +196,14 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
         )
       end
 
+      # `opts` reaches the provider rather than being dropped here. It carries
+      # the calendar the event is actually on, which create and update already
+      # read off `event_attrs[:calendar_id]`; with no channel for it, a delete
+      # could only ever address the default booking calendar, so deleting an
+      # event on any other calendar aimed at a resource that is not there.
       @impl Tymeslot.Integrations.Calendar.Provider
-      def delete_event(integration, event_id, _opts) do
-        OAuthBase.handle_api_call(fn -> call_delete_event(integration, event_id) end)
+      def delete_event(integration, event_id, opts) do
+        OAuthBase.handle_api_call(fn -> call_delete_event(integration, event_id, opts) end)
       end
 
       @impl Tymeslot.Integrations.Calendar.Provider
@@ -217,7 +242,11 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
                   event_id :: String.t(),
                   event_attrs :: map()
                 ) :: term()
-      @callback call_delete_event(integration :: term(), event_id :: String.t()) :: term()
+      @callback call_delete_event(
+                  integration :: term(),
+                  event_id :: String.t(),
+                  opts :: keyword()
+                ) :: term()
 
       # Helper functions for providers
       defp default_start_time, do: OAuthBase.default_start_time()

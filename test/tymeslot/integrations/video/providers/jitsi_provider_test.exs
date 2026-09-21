@@ -335,6 +335,70 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProviderTest do
     end
   end
 
+  describe "shared_join_url/2" do
+    test "mints a token naming nobody, scoped to this room and not a moderator" do
+      {:ok, room} = create_room_with_credentials("m-1")
+      meeting_time = ~U[2027-03-01 10:00:00Z]
+
+      assert {:ok, url} = JitsiProvider.shared_join_url(room, meeting_time)
+      assert String.starts_with?(url, room.meeting_url <> "?jwt=")
+
+      claims = verified_claims(url)
+
+      # No `name` and no `email`: whoever follows this link enters unnamed
+      # rather than as the booker whose personal link they were never sent.
+      assert claims["context"]["user"] == %{"moderator" => false}
+      assert claims["room"] == room.room_id
+      assert claims["exp"] == DateTime.to_unix(meeting_time) + @grace_seconds
+    end
+
+    test "admits nobody to a second room" do
+      {:ok, first} = create_room_with_credentials("m-1")
+      {:ok, second} = create_room_with_credentials("m-2")
+
+      {:ok, first_url} = JitsiProvider.shared_join_url(first, nil)
+
+      refute first.room_id == second.room_id
+      assert verified_claims(first_url)["room"] == first.room_id
+    end
+
+    test "dates the token from now when the meeting has no time" do
+      {:ok, room} = create_room_with_credentials("m-1")
+
+      before = DateTime.to_unix(DateTime.utc_now())
+      assert {:ok, url} = JitsiProvider.shared_join_url(room, nil)
+      after_mint = DateTime.to_unix(DateTime.utc_now())
+
+      exp = verified_claims(url)["exp"]
+      assert exp >= before + @grace_seconds
+      assert exp <= after_mint + @grace_seconds
+    end
+
+    test "hands out the bare room URL on a server with no credentials" do
+      {:ok, room} = JitsiProvider.create_meeting_room(%{base_url: @base_url, meeting_id: "m-1"})
+
+      assert JitsiProvider.shared_join_url(room, DateTime.utc_now()) == {:ok, room.meeting_url}
+      refute room.meeting_url =~ "jwt"
+    end
+
+    test "hands out the bare room URL when minting fails, as the personal links do" do
+      LogCapture.attach()
+
+      room = %RoomData{
+        room_id: nil,
+        meeting_url: @base_url <> "/unminted-room",
+        provider_data: %{},
+        provider_config: credential_config()
+      }
+
+      assert JitsiProvider.shared_join_url(room, nil) == {:ok, @base_url <> "/unminted-room"}
+
+      dump = "Failed to mint Jitsi access token" |> LogCapture.await_log() |> LogCapture.dump()
+      refute dump =~ @secret
+      refute dump =~ "eyJ"
+    end
+  end
+
   describe "time_bound_join_urls?/1" do
     test "is true with a complete credential pair, whose tokens expire after the meeting" do
       assert JitsiProvider.time_bound_join_urls?(credential_config())

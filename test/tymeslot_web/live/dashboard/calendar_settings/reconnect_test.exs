@@ -193,6 +193,91 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
       assert html =~ "alice"
       refute html =~ ~s(name="reconnect[password]" value="oldpass")
     end
+
+    test "the server URL field accepts an address typed without its scheme, as the video one does",
+         %{conn: conn, user: user} do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          name: "My CalDAV",
+          provider: "caldav",
+          base_url: "https://caldav.example.com",
+          username_encrypted: Encryption.encrypt("alice"),
+          password_encrypted: Encryption.encrypt("oldpass"),
+          is_active: true,
+          needs_reauth: true
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      html =
+        view
+        |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
+        |> render_click()
+
+      assert has_element?(view, "input#reconnect_url[type='url'][phx-hook='ServerUrlField']")
+
+      assert html =~
+               "Enter a full address starting with https://, for example https://cloud.example.com"
+    end
+  end
+
+  describe "CalDAV reconnect modal (Nextcloud app password guidance)" do
+    test "the Nextcloud modal asks for an app password and says where to create one",
+         %{conn: conn, user: user} do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          name: "My Nextcloud",
+          provider: "nextcloud",
+          base_url: "https://cloud.example.com",
+          username_encrypted: Encryption.encrypt("alice"),
+          password_encrypted: Encryption.encrypt("oldpass"),
+          calendar_paths: ["/remote.php/dav/calendars/alice/personal/"],
+          provider_account_id: "https://cloud.example.com||alice",
+          is_active: true,
+          needs_reauth: true
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      html =
+        view
+        |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
+        |> render_click()
+
+      assert html =~ "Create an app password in Nextcloud under"
+      assert html =~ "Personal settings → Security"
+      assert html =~ "App password"
+      refute html =~ "Password / App Password"
+    end
+
+    test "a generic CalDAV modal keeps the neutral password label and shows no guidance",
+         %{conn: conn, user: user} do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          name: "My Radicale",
+          provider: "radicale",
+          base_url: "https://radicale.example.com",
+          username_encrypted: Encryption.encrypt("alice"),
+          password_encrypted: Encryption.encrypt("oldpass"),
+          calendar_paths: ["/alice/default/"],
+          provider_account_id: "https://radicale.example.com||alice",
+          is_active: true,
+          needs_reauth: true
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=calendars")
+
+      html =
+        view
+        |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
+        |> render_click()
+
+      assert html =~ "Password / App Password"
+      refute html =~ "Create an app password in Nextcloud under"
+    end
   end
 
   describe "CalDAV reconnect modal (mailbox.org URL is locked)" do

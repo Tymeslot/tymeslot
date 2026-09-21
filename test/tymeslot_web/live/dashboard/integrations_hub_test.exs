@@ -190,15 +190,17 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
           provider: "mirotalk",
           name: "Team Room",
           is_active: true,
-          base_url: "https://meet.myserver.com"
+          base_url: "https://meet.myserver.com:8443/talk"
         )
 
       {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
-      # The nested video settings component renders the integration title
-      # and its one-line summary (the self-hosted host and type tag).
+      # The nested video settings component renders the integration title, the
+      # self-hosted type tag, and a one-line summary naming the server down to
+      # its port and path — two instances behind one host are different
+      # accounts, so the row has to tell them apart.
       assert html =~ "Team Room"
-      assert html =~ "meet.myserver.com"
+      assert html =~ "meet.myserver.com:8443/talk"
       assert html =~ "self-hosted"
 
       # The row is flat: the edit and delete controls are visible immediately,

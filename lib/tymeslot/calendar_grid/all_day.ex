@@ -35,6 +35,23 @@ defmodule Tymeslot.CalendarGrid.AllDay do
   @default_end_time ~T[10:00:00.000000]
 
   @doc """
+  The calendar date an event begins on, whichever representation it carries:
+  an all-day event's `start_date`, or the UTC date of a timed event's
+  `start_at`. `nil` when it carries neither.
+
+  Reads the fields with `Map.get/2` so it also works on a schema struct, which
+  has no Access behaviour.
+  """
+  @spec start_date(event()) :: Date.t() | nil
+  def start_date(event) do
+    case {Map.get(event, :start_date), Map.get(event, :start_at)} do
+      {%Date{} = date, _start_at} -> date
+      {_no_date, %DateTime{} = start_at} -> DateTime.to_date(start_at)
+      _neither -> nil
+    end
+  end
+
+  @doc """
   Toggles an event between all-day and timed, deriving the new representation.
   """
   @spec toggle(event(), String.t()) :: event()

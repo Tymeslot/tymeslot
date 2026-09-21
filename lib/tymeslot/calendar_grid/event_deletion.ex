@@ -13,6 +13,15 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   and the result says whether that cancellation went through. Nothing is
   reconciled when the delete fails.
 
+  ## Recurring events
+
+  An event that belongs to a series is refused with `:recurring_event`. For
+  the CalDAV family every occurrence is addressed by the one resource that
+  holds the whole series, so deleting "this Tuesday" would delete every
+  occurrence on the organiser's calendar, and no provider has a scoped delete
+  yet. The check reads the cached row rather than the event it was handed,
+  because callers pass only the fields that address the event.
+
   ## Failure
 
   A failed delete is queued for replay on the next sync when the error is one
@@ -20,8 +29,19 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   integration has an offline queue (the CalDAV family). The queue marks the
   cached row `locally_deleted`, and the replay removes it once the server has
   deleted the event.
+
+  Only a delete the calendar refused is reported as a failure. Once the
+  provider has removed the event there is nothing left to retry, so the
+  local tidying that follows (the linked meeting, the cached row, the
+  organiser's cached availability) can fail without changing the answer: the
+  failure is logged, and the delete still returns `{:ok, deleted}`. The
+  linked meeting is the one such step the organiser is told about, as
+  `:cancel_failed`.
   """
 
+  require Logger
+
+  alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
@@ -62,9 +82,43 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   next sync.
   """
   @spec delete_event(pos_integer(), event()) :: {:ok, deleted()} | {:error, failure()}
-  def delete_event(user_id, %{uid: uid, calendar_integration_id: integration_id} = event) do
+  def delete_event(user_id, event) do
+    case ensure_deletable(stored_event(event)) do
+      :ok -> delete_single_event(user_id, event)
+      {:error, reason} -> {:error, %{reason: reason, retry: :not_queued}}
+    end
+  end
+
+  @doc """
+  Whether `event` may be deleted from the grid: a single event may, anything
+  that belongs to a series may not. The series test is the one a move uses,
+  see `Tymeslot.CalendarGrid.EventMove.ensure_movable/1`.
+  """
+  @spec ensure_deletable(map()) :: :ok | {:error, :recurring_event}
+  defdelegate ensure_deletable(event), to: EventMove, as: :ensure_movable
+
+  defp stored_event(%{uid: uid, calendar_integration_id: integration_id} = event) do
+    case ProviderCalendarEventQueries.get_by_uid(integration_id, uid) do
+      {:ok, record} -> record
+      {:error, :not_found} -> event
+    end
+  end
+
+  defp delete_single_event(user_id, %{uid: uid, calendar_integration_id: integration_id} = event) do
     provider_event_id = Map.get(event, :provider_event_id)
-    opts = if provider_event_id, do: [provider_event_id: provider_event_id], else: []
+
+    # Both halves of the event's address: its own id, and the calendar it is
+    # on. Without the calendar a Google or Outlook delete could only address
+    # the integration's default booking calendar, so deleting an event on any
+    # other one 404'd.
+    opts =
+      Enum.reject(
+        [
+          provider_event_id: provider_event_id,
+          calendar_id: Map.get(event, :provider_calendar_id)
+        ],
+        fn {_key, value} -> is_nil(value) end
+      )
 
     case CalendarEvents.delete_event_and_reconcile(
            uid,
@@ -73,17 +127,49 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
            opts
          ) do
       {:ok, result} ->
-        :ok = EventVideoRooms.event_deleted(event)
-
-        {:ok, _deleted_or_missing} =
-          ProviderCalendarEventQueries.delete_by_uid(integration_id, uid)
-
-        AvailabilityCache.invalidate_for_user(user_id)
+        purge_local_traces(user_id, event)
         {:ok, %{uid: uid, integration_id: integration_id, linked_meeting: linked_meeting(result)}}
 
       {:error, reason} ->
         {:error, %{reason: reason, retry: queue_retry(event, reason)}}
     end
+  end
+
+  # Every step runs after the event has already gone from the calendar, so none
+  # of them may turn a delete that happened into one the organiser is told to
+  # retry. A cached row that outlives its event is removed by the next sync
+  # anyway, a video room left behind falls due to the nightly expiry scan, and
+  # a stale availability entry expires on its own; a message telling the
+  # organiser to delete an event that no longer exists does not recover. They
+  # are rescued one by one so a failing room clean-up still leaves the cached
+  # row deleted and the availability invalidated.
+  defp purge_local_traces(user_id, %{uid: uid, calendar_integration_id: integration_id} = event) do
+    context = [user_id: user_id, calendar_integration_id: integration_id, uid: uid]
+
+    after_delete("delete the event's video rooms", context, fn ->
+      :ok = EventVideoRooms.event_deleted(event)
+    end)
+
+    after_delete("delete the cached event row", context, fn ->
+      {:ok, _deleted_or_missing} = ProviderCalendarEventQueries.delete_by_uid(integration_id, uid)
+    end)
+
+    after_delete("invalidate cached availability", context, fn ->
+      AvailabilityCache.invalidate_for_user(user_id)
+    end)
+  end
+
+  defp after_delete(step, context, fun) do
+    fun.()
+    :ok
+  rescue
+    error ->
+      Logger.error(
+        "Calendar grid delete: local cleanup failed after the event was deleted",
+        [step: step, error: Exception.format(:error, error, __STACKTRACE__)] ++ context
+      )
+
+      :ok
   end
 
   defp linked_meeting(%{meeting_attendee_email: _email, reconcile_result: :ok}), do: :cancelled

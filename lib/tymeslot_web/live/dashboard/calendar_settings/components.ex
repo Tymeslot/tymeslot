@@ -516,6 +516,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   Builds a one-line human summary for a calendar integration — account
   email, conflict-check coverage, booking target, and last-sync — dropping
   absent segments gracefully.
+
+  Only the OAuth providers record an account email, so a CalDAV-family row
+  names its server instead; without it the line would identify neither the
+  account nor the host it belongs to.
   """
   @spec calendar_summary(%{:provider => atom() | String.t() | nil, optional(atom()) => term()}) ::
           String.t()
@@ -523,7 +527,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
     calendar_list = integration.calendar_list || []
 
     [
-      integration.provider_account_email,
+      integration.provider_account_email ||
+        ConnectionRow.server_label(Map.get(integration, :base_url)),
       conflict_segment(integration, calendar_list),
       booking_segment(integration),
       sync_segment(integration)
@@ -593,9 +598,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   defp feed_segment,
     do: dgettext("dashboard_calendar_settings", "read-only, blocks time but takes no bookings")
 
-  # `last_external_sync_at` is what every sync worker actually stamps, and what
-  # the staleness banner reads. `last_sync_at` is written by nothing, so reading
-  # it here silently dropped this segment for every integration.
+  # `last_external_sync_at` is what every sync worker stamps and what the
+  # staleness banner reads. This used to read a second, never-written column
+  # instead, which silently dropped the segment for every integration; that
+  # column has since been dropped so the mistake cannot be made again.
   defp sync_segment(%{last_external_sync_at: %DateTime{} = synced_at}),
     do:
       dgettext("dashboard_calendar_settings", "synced %{time}",

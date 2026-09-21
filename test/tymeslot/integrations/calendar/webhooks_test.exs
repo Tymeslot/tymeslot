@@ -222,6 +222,41 @@ defmodule Tymeslot.Integrations.Calendar.WebhooksTest do
 
       assert length(all_enqueued(worker: SyncOutlookCalendarWorker)) == 50
     end
+
+    @tag capture_log: true
+    test "does not record the notification when the sync cannot be enqueued",
+         %{integration: integration} do
+      :meck.new(Oban, [:passthrough])
+      :meck.expect(Oban, :insert, fn _job -> {:error, :queue_not_available} end)
+
+      try do
+        Webhooks.handle_outlook_notifications([change_notification(integration)])
+      after
+        :meck.unload(Oban)
+      end
+
+      # The timestamp is what `DeadChannelAlertWorker` reads to spot a silent
+      # channel, so a run of failed inserts must not read as a healthy one.
+      assert reload(integration).last_outlook_notification_at == nil
+    end
+
+    test "acts on the notifications in a payload that also carries junk entries",
+         %{integration: integration} do
+      notification = change_notification(integration, %{"resourceData" => %{"id" => "event-1"}})
+
+      assert :ok =
+               Webhooks.handle_outlook_notifications([7, "not-a-notification", notification])
+
+      assert [job] = all_enqueued(worker: SyncOutlookCalendarWorker)
+      assert job.args["graph_resource_id"] == "event-1"
+    end
+
+    test "ignores a notification value that is not a list", %{integration: integration} do
+      assert :ok = Webhooks.handle_outlook_notifications("not-a-list")
+
+      refute_enqueued(worker: SyncOutlookCalendarWorker)
+      assert reload(integration).last_outlook_notification_at == nil
+    end
   end
 
   describe "handle_outlook_lifecycle_notifications/1" do
@@ -307,6 +342,31 @@ defmodule Tymeslot.Integrations.Calendar.WebhooksTest do
       Webhooks.handle_outlook_lifecycle_notifications([
         lifecycle_event(integration, "subscriptionRemoved")
       ])
+
+      refute_enqueued(worker: ReregisterOutlookSubscriptionWorker)
+    end
+
+    @tag capture_log: true
+    test "acts on the events in a payload that also carries junk entries",
+         %{integration: integration} do
+      assert :ok =
+               Webhooks.handle_outlook_lifecycle_notifications([
+                 7,
+                 "not-an-event",
+                 lifecycle_event(integration, "subscriptionRemoved")
+               ])
+
+      assert_enqueued(
+        worker: ReregisterOutlookSubscriptionWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
+
+    test "ignores a lifecycle value that is not a list" do
+      assert :ok =
+               Webhooks.handle_outlook_lifecycle_notifications(%{
+                 "lifecycleEvent" => "subscriptionRemoved"
+               })
 
       refute_enqueued(worker: ReregisterOutlookSubscriptionWorker)
     end

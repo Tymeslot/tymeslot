@@ -5,8 +5,13 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
 
   ## Where the link lives
 
-  The link is written in two places, as when an event is created from the
-  grid (`Tymeslot.CalendarGrid.EventCreation`):
+  One link is published, since a calendar event's description is one piece of
+  text everybody it reaches shares. `join_link/2` is what that link is: the
+  room's own URL on every provider whose links are plain addresses, and on
+  one whose links carry a credential the room URL with a token naming nobody.
+
+  It is written in two places, as when an event is created from the grid
+  (`Tymeslot.CalendarGrid.EventCreation`):
 
     * on the provider event, as a "Join video call" line in the description,
       so the organiser's calendar and its attendees see it. The line for the
@@ -41,10 +46,12 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   Gives `event` a room on the video integration `video_integration_id`, or
   removes its video link when that is `nil`.
 
-  Choosing the integration the event already has a link from changes nothing.
-
   Returns `{:ok, url}` with the new join URL (`nil` after a removal), or:
 
+    * `{:ok, :unchanged}` when the choice is the one the event already has:
+      the integration it already holds a link from, or "None" on an event
+      with no video. An integration with no link is not a no-op, since that
+      is how an organiser provisions a room after a failed earlier attempt;
     * `{:error, :not_found}` when the video integration is not the organiser's;
     * `{:error, :missing_meeting_url}` when the provider created a room but
       returned no join URL, in which case the event keeps its current link;
@@ -56,13 +63,14 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
       rejected the change. Nothing is changed.
   """
   @spec change_event_video(pos_integer(), map(), pos_integer() | nil) ::
-          {:ok, String.t() | nil} | {:error, :missing_meeting_url | :not_found | term()}
+          {:ok, String.t() | nil | :unchanged}
+          | {:error, :missing_meeting_url | :not_found | term()}
   def change_event_video(_user_id, %{video_integration_id: id, video_link: link}, id)
       when is_integer(id) and is_binary(link),
-      do: {:ok, link}
+      do: {:ok, :unchanged}
 
   def change_event_video(_user_id, %{video_integration_id: nil, video_link: nil}, nil),
-    do: {:ok, nil}
+    do: {:ok, :unchanged}
 
   def change_event_video(user_id, event, nil) do
     with :ok <- write_description(user_id, event, nil),
@@ -82,6 +90,42 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
       {:ok, url}
     end
   end
+
+  @doc """
+  The link to publish for a room just created for a grid event: the one that
+  goes in the event's description, the cached `video_link`, and the invitees'
+  notification.
+
+  Unlike a booking, a grid event mints no per-participant link at all — the
+  description is one piece of text every reader of the event shares — so the
+  link asked for here is the identity-free one,
+  `Tymeslot.Integrations.Video.Providers.ProviderBehaviour.shared_join_url/2`.
+  On every provider whose join links are plain room addresses that is the
+  room URL, unchanged. On one whose links carry a credential it is the room
+  URL with a token that names nobody and confers no moderator rights, which
+  is the only link a server enforcing tokens admits: the bare URL it refuses,
+  organiser included.
+
+  `start_at` dates the token, and anything that is not a `DateTime` (an
+  all-day event's `Date`, or nothing at all) leaves the provider to date it
+  from now. A recurring event's token is dated from the series' first
+  occurrence, and an event moved later is not relinked, so on a token
+  provider both outlive their link; on such a server the bare URL they would
+  otherwise carry works no better.
+
+  Falls back to the room's own URL whenever no link comes back, which is what
+  the provider itself does when minting fails.
+  """
+  @spec join_link(map(), term()) :: String.t() | nil
+  def join_link(%{room_data: %{meeting_url: room_url}} = meeting_context, start_at) do
+    case Video.shared_join_url(meeting_context, token_time(start_at)) do
+      {:ok, url} when is_binary(url) and url != "" -> url
+      _unavailable -> room_url
+    end
+  end
+
+  defp token_time(%DateTime{} = start_at), do: start_at
+  defp token_time(_undated), do: nil
 
   @doc """
   Returns `description` with the "Join video call" line for `previous_url`
@@ -132,7 +176,7 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
       {:ok, %{room_data: %{meeting_url: url}} = meeting_context}
       when is_binary(url) and url != "" ->
         :ok = record_room(meeting_context, event, video_integration_id, user_id)
-        {:ok, url}
+        {:ok, join_link(meeting_context, Map.get(event, :start_at))}
 
       # A 2xx whose body lacks the URL still passes `RoomData`'s key check.
       # Saving `nil` would read as a deliberate removal and wipe the link the

@@ -56,6 +56,16 @@ defmodule Tymeslot.Profiles.UsernameStatusTest do
       assert Profiles.username_status(profile, "taken-name") == :taken
       assert Profiles.username_status(profile, " taken-name  ") == :taken
     end
+
+    test "is :taken for another profile's username in a different case", %{profile: profile} do
+      # Inserted past the changeset, the only way a non-lowercase handle can
+      # exist. The unique index is on lower(username), so this handle is taken
+      # in every case and the save would be refused; the check has to say so
+      # while the user is still typing, not a round trip later.
+      insert(:profile, username: "Taken-Name")
+
+      assert Profiles.username_status(profile, "taken-name") == :taken
+    end
   end
 
   describe "username_error/1" do

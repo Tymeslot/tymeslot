@@ -7,6 +7,10 @@ defmodule Tymeslot.Infrastructure.ResponseTooLargeError do
 
   alias Tymeslot.Infrastructure.HTTPClient
 
+  # `message/1` reduces the URL to an origin, but a caller logging this struct
+  # with `inspect/1` bypasses `message/1` entirely and would print the whole
+  # URL, secrets in the path included.
+  @derive {Inspect, except: [:url]}
   defexception [:url, :max_bytes]
 
   @impl Exception

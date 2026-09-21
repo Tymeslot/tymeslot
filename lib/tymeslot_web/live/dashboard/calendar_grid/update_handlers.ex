@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
 
   alias Tymeslot.CalendarGrid
   alias TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed
+  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @spec handle_revert_event(map(), Phoenix.LiveView.Socket.t()) ::
@@ -145,6 +146,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     {:ok, socket}
   end
 
+  @doc """
+  Resets the confirmation after a delete the provider would not take.
+
+  Reloads the events on purpose, because a refused delete can still have
+  changed what the grid should show. A delete queued for retry leaves the
+  cached row marked `locally_deleted` with no timing, so the reload drops the
+  event the moment the flash says the delete is queued rather than leaving it
+  on screen until an unrelated reload. A failure that was not queued leaves
+  the row untouched, so the event stays where it was.
+  """
   @spec handle_event_delete_failed(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   def handle_event_delete_failed(assigns, socket) do
@@ -154,6 +165,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
       |> assign(:confirm_delete_event, nil)
       |> assign(:confirm_delete_linked_to_booking, false)
       |> assign(:deleting_event, false)
+      |> Helpers.load_events()
 
     {:ok, socket}
   end
@@ -208,21 +220,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
   end
 
   @doc """
-  Puts an event's settled video choice on the grid and, when it is the open
-  one, on the detail modal.
+  Applies a finished video-room change to the loaded events and, when it is
+  the open one, to the detail modal, then runs the same attendee-notification
+  decision every other inline edit ends in.
 
-  Carries both the link and the integration it came from, so the same handler
-  applies a successful change and puts the previous choice back when one
-  failed.
+  Only the three columns the change wrote are merged, rather than the updated
+  event replacing what is on screen, so a sync that landed while the room was
+  being provisioned is not rolled back. The description is one of them: the
+  join link is written into it, and leaving it behind would show the previous
+  link in the detail modal.
   """
   @spec handle_video_link_updated(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
-  def handle_video_link_updated(%{event_id: event_id} = assigns, socket) do
-    video = Map.take(assigns, [:video_link, :video_integration_id])
+  def handle_video_link_updated(%{original_event: original, updated_event: updated}, socket) do
+    video = Map.take(updated, [:video_link, :video_integration_id, :description])
 
     updated_events =
       Enum.map(socket.assigns.events, fn e ->
-        if e.id == event_id, do: Map.merge(e, video), else: e
+        if e.id == updated.id, do: Map.merge(e, video), else: e
       end)
 
     selected = socket.assigns.selected_event
@@ -231,12 +246,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
       socket
       |> assign(:events, updated_events)
       |> then(fn s ->
-        if selected && selected.id == event_id,
+        if selected && selected.id == updated.id,
           do: assign(s, :selected_event, Map.merge(selected, video)),
           else: s
       end)
 
-    {:ok, socket}
+    {:ok,
+     EditWorkflow.apply_notify_result(
+       socket,
+       original,
+       updated,
+       EditWorkflow.video_changed_message(updated.video_link)
+     )}
   end
 
   @spec handle_initial(map(), Phoenix.LiveView.Socket.t()) ::

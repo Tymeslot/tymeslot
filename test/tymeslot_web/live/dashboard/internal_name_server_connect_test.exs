@@ -19,7 +19,6 @@ defmodule TymeslotWeb.Dashboard.InternalNameServerConnectTest do
   import Mox
   import Tymeslot.ConfigTestHelpers, only: [with_config: 3]
   import Tymeslot.DashboardTestHelpers
-  import Tymeslot.Factory
 
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema

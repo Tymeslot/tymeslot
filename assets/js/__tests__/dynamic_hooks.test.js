@@ -162,6 +162,50 @@ describe('lazyHook', () => {
     expect(telemetryEvents.some(e => e.hook === uniqueName && e.success === true)).toBe(true);
   });
 
+  test('gives each mounting element its own hook object', async () => {
+    // The loader caches the module export, so two elements carrying the same
+    // hook receive the same object from `loadHook`. Each mount must adopt its
+    // own copy, or the second element's context overwrites the first's and
+    // per-instance state parked on `this` is shared.
+    const moduleExport = {
+      mounted() {
+        this._state = this.el.id;
+      }
+    };
+    const loader = () => Promise.resolve({ default: moduleExport });
+
+    const uniqueName = 'TestHookPerElement' + Date.now();
+
+    const firstElement = document.createElement('div');
+    firstElement.id = 'first';
+    const secondElement = document.createElement('div');
+    secondElement.id = 'second';
+
+    const mountAgainst = async (element) => {
+      const lazy = lazyHook(uniqueName, loader);
+      lazy.el = element;
+      lazy.pushEvent = vi.fn();
+      lazy.pushEventTo = vi.fn();
+      lazy.handleEvent = vi.fn();
+      await lazy.mounted();
+      return lazy;
+    };
+
+    const first = await mountAgainst(firstElement);
+    const second = await mountAgainst(secondElement);
+
+    expect(first.__actualHook).not.toBe(second.__actualHook);
+    expect(first.__actualHook).not.toBe(moduleExport);
+    expect(first.__actualHook.el).toBe(firstElement);
+    expect(second.__actualHook.el).toBe(secondElement);
+    expect(first.__actualHook._state).toBe('first');
+    expect(second.__actualHook._state).toBe('second');
+
+    // The shared export must not be written to at all.
+    expect(moduleExport.el).toBeUndefined();
+    expect(moduleExport._state).toBeUndefined();
+  });
+
   test('prevents duplicate initialization if mounted multiple times during load', async () => {
     let resolveLoader;
     const loaderPromise = new Promise(resolve => { resolveLoader = resolve; });
@@ -230,10 +274,13 @@ describe('lazyHook', () => {
 
     await lazy.mounted();
 
-    expect(mockHook.el).toBe(mockElement);
-    expect(typeof mockHook.pushEvent).toBe('function');
-    expect(typeof mockHook.upload).toBe('function');
-    expect(typeof mockHook.uploadTo).toBe('function');
+    // The context lands on this element's own copy, never on the cached
+    // module export, which every element carrying the hook shares.
+    expect(lazy.__actualHook.el).toBe(mockElement);
+    expect(typeof lazy.__actualHook.pushEvent).toBe('function');
+    expect(typeof lazy.__actualHook.upload).toBe('function');
+    expect(typeof lazy.__actualHook.uploadTo).toBe('function');
+    expect(mockHook.el).toBeUndefined();
   });
 
   test('handles loading errors and emits telemetry', async () => {

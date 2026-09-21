@@ -97,7 +97,8 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
 
   A written item is addressed afterwards by the **item id the server assigned**,
   never by a uid Tymeslot chose: EWS ignores a `t:UID` sent on create. So
-  `create_event/2` answers `%{id: item_id}`, which
+  `create_event/2` answers a `CreatedEvent` carrying that id as its
+  `provider_event_id` and no iCalendar uid at all, which
   `Meetings.CalendarEventSync` persists as the meeting's `provider_event_id`
   and hands back to `update_event/3` and `delete_event/3`.
 
@@ -113,6 +114,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
 
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Exchange.Client
   alias Tymeslot.Integrations.Calendar.Exchange.ClientConfig
   alias Tymeslot.Integrations.Calendar.Exchange.EventNormaliser
@@ -447,11 +449,10 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
   @doc """
   Writes one booking into the mailbox and answers the id the server gave it.
 
-  `%{id: item_id}` rather than a bare id, because that is the shape
-  `Meetings.CalendarEventSync.put_provider_mapping/2` reads a
-  `provider_event_id` out of. Answering the id alone would be read as a uid
-  instead and persisted in the wrong column, which the next update would then
-  address the item by and fail.
+  The item id lands in `provider_event_id`, which is the column the next
+  update addresses the item by; Exchange has no iCalendar uid to answer with,
+  so `uid` carries the same id rather than a value nothing on the server
+  would recognise.
   """
   @impl Tymeslot.Integrations.Calendar.Provider
   def create_event(client, event_data) do
@@ -460,7 +461,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Provider do
 
     with {:ok, item_id} <-
            Writes.create_item(config, Writes.from_event_data(event_data), folder) do
-      {:ok, %{id: item_id}}
+      {:ok, CreatedEvent.provider_minted(item_id)}
     end
   end
 

@@ -153,10 +153,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
     {changed, withheld} = Enum.split_with(present, &(&1.calendar_data != ""))
 
     if withheld == [] do
-      events =
-        changed
-        |> Enum.map(&parse_event/1)
-        |> Enum.reject(&is_nil/1)
+      events = Enum.flat_map(changed, &parse_event/1)
 
       {:ok, {events, Enum.map(removed, & &1.href), new_sync_token}}
     else
@@ -188,16 +185,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
   # An event whose iCalendar body fails to parse is dropped rather than
   # failing the batch: it is malformed at the source, so re-fetching it in
   # full would produce the same result every cycle.
+  #
+  # One resource yields one event per `VEVENT` in it, not one event: a
+  # recurring event's resource carries the master and one `VEVENT` per
+  # occurrence edited on its own. They share the resource's href and ETag,
+  # because that is what those identify.
   defp parse_event(response) do
-    case EventProcessor.parse_ical_from_string(response.calendar_data) do
-      {:ok, event} ->
-        Map.merge(event, %{
-          href: response.href,
-          etag: EventProcessor.clean_etag(response.etag)
-        })
+    case EventProcessor.parse_ical_events(response.calendar_data) do
+      {:ok, events} ->
+        Enum.map(
+          events,
+          &Map.merge(&1, %{
+            href: response.href,
+            etag: EventProcessor.clean_etag(response.etag)
+          })
+        )
 
       {:error, _reason} ->
-        nil
+        []
     end
   end
 

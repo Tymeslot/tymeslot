@@ -9,8 +9,10 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Shared.InputValidators
-  alias Tymeslot.Integrations.Video.TemplateSyntax
+  alias Tymeslot.Integrations.Video.{TemplateConfig, TemplateSyntax}
   alias Tymeslot.Security.{SecurityLogger, SsrfGuard, UniversalSanitizer, UrlValidation}
+
+  @malformed_escape ~r/%(?![0-9A-Fa-f]{2})/
 
   @doc """
   Validates video integration form input based on provider type.
@@ -335,29 +337,17 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
 
   defp validate_meeting_url(meeting_url, metadata) when is_binary(meeting_url) do
     trimmed_url = String.trim(meeting_url)
-    has_protocol = String.starts_with?(trimmed_url, ["http://", "https://"])
 
-    invalid_meeting_url_error =
-      if has_protocol do
-        dgettext(
-          "dashboard_integrations",
-          "Please enter a valid meeting URL (e.g., https://meet.google.com/abc-defg-hij)"
-        )
-      else
-        http_https_only_message()
-      end
-
-    # The template syntax is checked on the sanitised URL, which is what gets
-    # stored, and on the input as typed, because sanitising strips tag-like
-    # tokens such as <meeting_id> before they could be recognised.
-    with {:ok, sanitized_url} <-
+    # The template syntax is checked on the URL as typed, which is what gets
+    # stored, and again on its percent-decoded reading.
+    with {:ok, validated_url} <-
            InputValidators.validate_server_url(trimmed_url, metadata,
-             error_message: invalid_meeting_url_error,
+             error_message: invalid_meeting_url_error(trimmed_url),
              validate_url_fn: &validate_video_url/1
            ),
-         :ok <- TemplateSyntax.validate(trimmed_url),
-         :ok <- TemplateSyntax.validate(sanitized_url) do
-      {:ok, sanitized_url}
+         :ok <- TemplateSyntax.validate(validated_url),
+         :ok <- validate_decoded_template(validated_url) do
+      {:ok, validated_url}
     else
       {:error, error} -> {:error, %{custom_meeting_url: error}}
     end
@@ -366,6 +356,58 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   defp validate_meeting_url(_other, _metadata) do
     {:error,
      %{custom_meeting_url: dgettext("dashboard_integrations", "Meeting URL must be text")}}
+  end
+
+  # A URL that already names http or https and is still refused failed on its
+  # own terms, so the message points at the URL. Anything else was given
+  # `https://` before it was checked (`InputValidators.normalize_url_protocol/1`),
+  # so what it was missing was the scheme: name the correction instead of the
+  # rule, which is all "Only HTTP and HTTPS URLs are allowed" ever did.
+  defp invalid_meeting_url_error("http://" <> _rest), do: malformed_meeting_url_message()
+  defp invalid_meeting_url_error("https://" <> _rest), do: malformed_meeting_url_message()
+
+  defp invalid_meeting_url_error(_scheme_less),
+    do:
+      dgettext(
+        "dashboard_integrations",
+        "Enter a full address starting with https://, for example https://meet.example.com"
+      )
+
+  defp malformed_meeting_url_message do
+    dgettext(
+      "dashboard_integrations",
+      "Please enter a valid meeting URL (e.g., https://meet.google.com/abc-defg-hij)"
+    )
+  end
+
+  # The URL is stored exactly as typed, and room creation substitutes the
+  # literal `{{meeting_id}}`, so a placeholder hidden behind percent escapes is
+  # never replaced and every booking silently lands in the same room. Both
+  # shapes are refused: escaped and malformed (`%7Bmeeting_id%7D`), and escaped
+  # but otherwise correct (`%7B%7Bmeeting_id%7D%7D`).
+  defp validate_decoded_template(url) do
+    decoded = decode_percent_escapes(url)
+
+    cond do
+      decoded == url -> :ok
+      escaped_template?(url, decoded) -> {:error, escaped_template_message()}
+      true -> TemplateSyntax.validate(decoded)
+    end
+  end
+
+  defp escaped_template?(url, decoded) do
+    match?({:ok, :valid_template, _preview, _message}, TemplateSyntax.analyze(decoded)) and
+      not String.contains?(url, TemplateConfig.template_variable())
+  end
+
+  # A `%` that does not introduce a well-formed escape has nothing to decode
+  # (and makes `URI.decode/1` raise), and a decode that does not land on valid
+  # text is not a reading anyone could have meant. Either way the URL as typed
+  # stands on its own.
+  defp decode_percent_escapes(url) do
+    decoded = if Regex.match?(@malformed_escape, url), do: url, else: URI.decode(url)
+
+    if String.valid?(decoded), do: decoded, else: url
   end
 
   defp validate_video_url(url) do
@@ -414,4 +456,11 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
 
   defp http_https_only_message,
     do: dgettext("dashboard_integrations", "Only HTTP and HTTPS URLs are allowed")
+
+  defp escaped_template_message,
+    do:
+      dgettext(
+        "dashboard_integrations",
+        "Write {{meeting_id}} with plain brackets: percent-encoded ones are never replaced"
+      )
 end

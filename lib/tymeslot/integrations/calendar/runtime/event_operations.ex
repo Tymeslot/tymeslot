@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
 
   require Logger
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
   alias Tymeslot.Integrations.Calendar.Utils.EventValidator
@@ -39,11 +40,12 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   @doc """
   Creates a new event using the user's booking calendar.
 
-  The success value is whatever the provider answers with: the CalDAV family
-  returns the event's uid, the OAuth providers the event they created.
+  The success value is a `CreatedEvent`: the identifier the event is addressed
+  by, plus whatever identity the provider gave away with it, namely its own id
+  for the resource and, on CalDAV, the ETag the server assigned.
   """
   @spec create_event(event_data(), context()) ::
-          {:ok, map() | String.t()} | {:error, term()}
+          {:ok, CreatedEvent.t()} | {:error, term()}
   def create_event(event_data, context) do
     Metrics.time_operation(:create_event, %{}, fn ->
       Logger.info("Creating new calendar event")

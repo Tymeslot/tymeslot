@@ -407,7 +407,12 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
       }
 
       case TokenExchange.refresh_access_token(@token_url, body,
-             fallback_refresh_token: integration.refresh_token
+             fallback_refresh_token: integration.refresh_token,
+             log_context: [
+               integration_id: integration.id,
+               user_id: integration.user_id,
+               provider: :google
+             ]
            ) do
         {:ok, %{access_token: access_token, refresh_token: new_refresh, expires_at: expires_at}} ->
           {:ok, {access_token, new_refresh, expires_at}}

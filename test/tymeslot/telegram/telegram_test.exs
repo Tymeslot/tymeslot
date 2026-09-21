@@ -288,6 +288,13 @@ defmodule Tymeslot.TelegramTest do
       assert {:error, :own_bot_mode} = Telegram.disconnect_integration(integration)
     end
 
+    test "disconnect_integration/1 returns not_found when the integration is gone" do
+      integration = insert(:telegram_integration, bot_mode: "shared", chat_id: "123456")
+      Repo.delete!(integration)
+
+      assert {:error, :not_found} = Telegram.disconnect_integration(integration)
+    end
+
     test "reconnect_integration/1 clears chat_id and returns deep link for shared-bot" do
       setup_config(:tymeslot,
         telegram_bot_token: "shared_token",
@@ -426,7 +433,7 @@ defmodule Tymeslot.TelegramTest do
     end
   end
 
-  describe "list_integrations/1 stub cleanup" do
+  describe "list_integrations/1 stub visibility" do
     test "keeps a disconnected integration older than the stub TTL" do
       user = insert(:user)
       disconnected = disconnected_integration(user)
@@ -435,11 +442,20 @@ defmodule Tymeslot.TelegramTest do
       assert id == disconnected.id
     end
 
-    test "removes a never-linked stub older than the stub TTL" do
+    test "hides a never-linked stub older than the stub TTL without deleting it" do
       user = insert(:user)
-      pending_stub(user, inserted_at: an_hour_ago())
+      stub = pending_stub(user, inserted_at: an_hour_ago())
 
       assert Telegram.list_integrations(user.id) == []
+      assert Repo.get(TelegramIntegrationSchema, stub.id)
+    end
+
+    test "shows a never-linked stub created within the stub TTL" do
+      user = insert(:user)
+      stub = pending_stub(user)
+
+      assert [%{id: id, status: :pending_link}] = Telegram.list_integrations(user.id)
+      assert id == stub.id
     end
 
     test "keeps an old stub whose link token was issued within the TTL" do

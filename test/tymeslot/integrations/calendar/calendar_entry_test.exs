@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.EntryTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
@@ -17,7 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.EntryTest do
 
     expect(Tymeslot.CalendarMock, :create_event, fn ^event_data, %MeetingSchema{} = meeting_arg ->
       assert meeting_arg.id == meeting.id
-      {:ok, %{uid: "calendar-uid"}}
+      {:ok, CreatedEvent.new("calendar-uid")}
     end)
 
     assert {:ok, %{uid: "calendar-uid"}} = CalendarEvents.create_event(event_data, meeting)
@@ -30,7 +31,7 @@ defmodule Tymeslot.Integrations.Calendar.EntryTest do
     expect(Tymeslot.CalendarMock, :create_event, fn ^event_data,
                                                     %MeetingTypeSchema{} = meeting_type_arg ->
       assert meeting_type_arg.id == meeting_type.id
-      {:ok, %{uid: "calendar-uid"}}
+      {:ok, CreatedEvent.new("calendar-uid")}
     end)
 
     assert {:ok, %{uid: "calendar-uid"}} = CalendarEvents.create_event(event_data, meeting_type)
@@ -40,7 +41,9 @@ defmodule Tymeslot.Integrations.Calendar.EntryTest do
     event_data = %{summary: "Test"}
 
     # Should not call the mock for invalid context
-    expect(Tymeslot.CalendarMock, :create_event, 0, fn _arg1, _arg2 -> {:ok, %{}} end)
+    expect(Tymeslot.CalendarMock, :create_event, 0, fn _arg1, _arg2 ->
+      {:ok, CreatedEvent.new("never")}
+    end)
 
     assert {:error, :invalid_context} = CalendarEvents.create_event(event_data, "invalid_string")
     assert {:error, :invalid_context} = CalendarEvents.create_event(event_data, %{some: "map"})
@@ -52,7 +55,7 @@ defmodule Tymeslot.Integrations.Calendar.EntryTest do
     event_data = %{summary: "Test"}
 
     expect(Tymeslot.CalendarMock, :create_event, fn ^event_data, nil ->
-      {:ok, %{uid: "calendar-uid-nil"}}
+      {:ok, CreatedEvent.new("calendar-uid-nil")}
     end)
 
     assert {:ok, %{uid: "calendar-uid-nil"}} = CalendarEvents.create_event(event_data, nil)
@@ -63,7 +66,7 @@ defmodule Tymeslot.Integrations.Calendar.EntryTest do
     user_id = 123
 
     expect(Tymeslot.CalendarMock, :create_event, fn ^event_data, ^user_id ->
-      {:ok, %{uid: "calendar-uid-user"}}
+      {:ok, CreatedEvent.new("calendar-uid-user")}
     end)
 
     assert {:ok, %{uid: "calendar-uid-user"}} = CalendarEvents.create_event(event_data, user_id)

@@ -172,22 +172,32 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
         etag: ~x".//*[local-name()='getetag']/text()"s,
         calendar_data: ~x".//*[local-name()='calendar-data']/text()"s
       )
-      |> Enum.map(fn event ->
+      # One response, one calendar resource, but not one event: a recurring
+      # event's resource holds the master VEVENT plus one per occurrence edited
+      # on its own. Keeping only the first dropped whichever of those the
+      # server happened to list second, and RFC 5545 fixes no order — so either
+      # an edited occurrence vanished, or it became the only cached row for the
+      # series and the master and its siblings vanished instead.
+      |> Enum.flat_map(fn event ->
         case parse_ical_data(event.calendar_data) do
-          {:ok, event_data} ->
-            Map.merge(event_data, %{
-              href: event.href,
-              etag: clean_etag(event.etag),
-              # Preserve the raw VCALENDAR body so it can be stored alongside
-              # the parsed fields and re-parsed in place after a parser fix.
-              raw_ical: event.calendar_data
-            })
+          {:ok, events} ->
+            Enum.map(
+              events,
+              &Map.merge(&1, %{
+                href: event.href,
+                etag: clean_etag(event.etag),
+                # Preserve the raw VCALENDAR body so it can be stored alongside
+                # the parsed fields and re-parsed in place after a parser fix.
+                # It is the whole resource, so every VEVENT in it carries the
+                # same document.
+                raw_ical: event.calendar_data
+              })
+            )
 
           {:error, _reason} ->
-            nil
+            []
         end
       end)
-      |> Enum.reject(&is_nil/1)
 
     {:ok, events}
   rescue
@@ -368,17 +378,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   end
 
   defp parse_ical_data(ical_string) when is_binary(ical_string) do
-    # Use the comprehensive ICalParser instead of basic parsing
     case ICalParser.parse(ical_string) do
-      {:ok, [_first | _rest] = events} ->
-        # Return the first event (single iCal string should contain one event)
-        {:ok, List.first(events)}
-
-      {:ok, []} ->
-        {:error, "No events found in iCal data"}
-
-      {:error, reason} ->
-        {:error, reason}
+      {:ok, [_first | _rest] = events} -> {:ok, events}
+      {:ok, []} -> {:error, "No events found in iCal data"}
+      {:error, reason} -> {:error, reason}
     end
   end
 

@@ -159,3 +159,9 @@ data/
 uploads/
 
 # Coverage reports
+
+# Ecto schema dump. Nothing produces or consumes it: `mix ecto.setup` builds
+# from priv/repo/migrations/, and no test, workflow, script or Dockerfile
+# reads it. A committed copy only goes stale and misleads whoever opens it to
+# learn the schema.
+priv/repo/structure.sql

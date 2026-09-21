@@ -172,10 +172,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   removes its video link when that is `nil`, in the background through
   `Tymeslot.CalendarGrid.change_event_video/3`.
 
-  Reports back with `{:event_video_result, {:ok, event_id: id,
-  video_integration_id: id, video_link: url}}`, or with
-  `{:event_video_result, {:error, original_event: event, reason: reason}}`
-  when nothing was changed.
+  Reports back with `{:event_video_result, {:ok, original_event: event,
+  updated_event: event}}`, where the updated event carries the new link, its
+  integration and the description the calendar was given, so the result
+  handler can diff the two for the attendee-notification decision. A choice
+  that changed nothing reports `{:event_video_result, {:ok, :unchanged}}`, and
+  a failure `{:event_video_result, {:error, original_event: event, reason:
+  reason}}`.
   """
   @spec change_event_video_async(Phoenix.LiveView.Socket.t(), map(), pos_integer() | nil) ::
           Phoenix.LiveView.Socket.t()
@@ -187,8 +190,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       :event_video_result,
       fn ->
         case CalendarGrid.change_event_video(user_id, event, video_integration_id) do
+          {:ok, :unchanged} ->
+            {:ok, :unchanged}
+
           {:ok, url} ->
-            {:ok, event_id: event.id, video_integration_id: video_integration_id, video_link: url}
+            {:ok,
+             original_event: event,
+             updated_event: video_changed_event(event, video_integration_id, url)}
 
           {:error, reason} ->
             video_failure(event, reason)
@@ -198,7 +206,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     )
   end
 
+  # The event as `EventVideo` has just written it: the same description
+  # rewrite it sent to the calendar, so the notification diff sees exactly
+  # what the attendees' invitation will carry.
+  defp video_changed_event(event, video_integration_id, url) do
+    %{
+      event
+      | video_integration_id: video_integration_id,
+        video_link: url,
+        description: CalendarGrid.put_join_link(event.description, event.video_link, url)
+    }
+  end
+
   defp video_failure(event, reason), do: {:error, original_event: event, reason: reason}
+
+  @doc "The message shown once an event's video room has been changed."
+  @spec video_changed_message(String.t() | nil) :: String.t()
+  def video_changed_message(nil),
+    do: dgettext("dashboard_calendar_events", "Video link removed.")
+
+  def video_changed_message(_url),
+    do: dgettext("dashboard_calendar_events", "Video room created.")
 
   @doc """
   Moves `event` to `integration` (on `calendar_id`, or its default calendar
@@ -337,4 +365,49 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
         end
     end
   end
+
+  @doc """
+  Acts on the `notify_event_updated/3` decision for an edit that has already
+  been applied: flashes `saved_message`, joins a pending notification, or
+  stashes the summary so the component renders the "notify attendees?" prompt.
+
+  Every inline edit ends here, so the prompt cannot be skipped for one field
+  and offered for another. `saved_message` is what the organiser is told when
+  there is nobody to notify; the video path passes its own wording rather
+  than the generic one.
+  """
+  @spec apply_notify_result(Phoenix.LiveView.Socket.t(), map(), map(), String.t()) ::
+          Phoenix.LiveView.Socket.t()
+  def apply_notify_result(socket, original_event, updated_event, saved_message \\ changes_saved()) do
+    attendees = updated_event.attendees || original_event.attendees || []
+
+    case notify_event_updated(original_event, updated_event, attendees) do
+      {:ok, :no_changes} ->
+        send(self(), {:flash, {:info, saved_message}})
+        socket
+
+      {:ok, :already_pending} ->
+        send(
+          self(),
+          {:flash,
+           {:info,
+            dgettext(
+              "dashboard_calendar_events",
+              "Changes saved. Attendees will be notified shortly."
+            )}}
+        )
+
+        assign(socket, :pending_notification, true)
+
+      {:needs_confirmation, summary} ->
+        assign(socket, :notify_prompt, %{
+          kind: :update,
+          summary: summary,
+          event: updated_event,
+          attendees: attendees
+        })
+    end
+  end
+
+  defp changes_saved, do: dgettext("dashboard_calendar_events", "Changes saved.")
 end

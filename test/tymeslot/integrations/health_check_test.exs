@@ -211,6 +211,24 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       assert status.failures == 0
       assert status.last_error_class == :transient
     end
+
+    test "treats a refused CalDAV password as hard" do
+      # The CalDAV-family providers used to answer a 401 with a sentence about
+      # app-specific passwords, which the classifier read as an unfamiliar
+      # string and recorded as transient. That left `consecutive_hard_failures`
+      # pinned at zero, so the fast auto-pause trigger could never fire and the
+      # server was probed for days after the credentials had stopped working.
+      user = insert(:user)
+      integration = apple_integration_refusing_credentials(user)
+
+      run_health_checks()
+      sync_with_server()
+
+      status = HealthCheck.get_health_status(:calendar, integration.id)
+      assert status.last_error_class == :hard
+      assert status.consecutive_hard_failures == 1
+      assert status.failures == 1
+    end
   end
 
   describe "attention_status/2" do
@@ -381,6 +399,27 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       )
     end
 
+    test "a refused CalDAV password flags needs_reauth and enqueues the email" do
+      user = insert(:user)
+      integration = apple_integration_refusing_credentials(user)
+
+      run_health_checks()
+      sync_with_server()
+
+      {:ok, updated} = CalendarIntegrationQueries.get(integration.id)
+      assert updated.needs_reauth == true
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_reauth_notification",
+          "user_id" => user.id,
+          "integration_id" => integration.id,
+          "integration_type" => "calendar"
+        }
+      )
+    end
+
     test "an integration past the 48-hour threshold still gets the unhealthy email for a transient failure" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, is_active: true, provider: "google")
@@ -520,6 +559,24 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       result = HealthCheck.perform_single_check(:video, -1)
       assert result == :ok
     end
+  end
+
+  # An Apple integration whose stored app-specific password no longer works:
+  # every CalDAV request it makes is answered with a 401.
+  defp apple_integration_refusing_credentials(user) do
+    integration =
+      insert(:calendar_integration,
+        user: user,
+        is_active: true,
+        provider: "apple",
+        base_url: "https://caldav.icloud.com"
+      )
+
+    stub(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+      {:ok, %Req.Response{status: 401, body: ""}}
+    end)
+
+    integration
   end
 
   defp run_health_checks do

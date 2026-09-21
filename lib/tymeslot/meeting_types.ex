@@ -4,13 +4,16 @@ defmodule Tymeslot.MeetingTypes do
   """
   alias Tymeslot.BookingPage.Publication
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.MeetingTypes.Duration
   alias Tymeslot.MeetingTypes.FormMapper
   alias Tymeslot.MeetingTypes.FormValidation
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.MeetingTypes.Slugs
+  alias Tymeslot.Utils.UriUtils
   require Logger
 
   @doc """
@@ -149,6 +152,66 @@ defmodule Tymeslot.MeetingTypes do
     MeetingTypeQueries.reorder_meeting_types(user_id, meeting_type_ids)
   end
 
+  @typedoc """
+  The health of a meeting type's stored booking target, as of the last
+  calendar list refresh.
+  """
+  @type target_calendar_status :: :ok | :read_only | :missing
+
+  @doc """
+  Reports whether the calendar a meeting type books into can still take a
+  booking.
+
+  A meeting type may override where its bookings land
+  (`calendar_integration_id` plus `target_calendar_id`), and the override is
+  chosen once and then used for every booking of that type. The provider can
+  withdraw write access at any point afterwards: a shared Google calendar
+  downgraded to "see all event details", a CalDAV collection made read-only,
+  a calendar deleted outright. Saving the meeting type again would be
+  rejected (`Tymeslot.MeetingTypes.FormValidation`), but nothing forces the
+  host to save it again, so the dashboard uses this to say so unprompted.
+
+  Returns:
+
+    * `:ok` — the target is still writable, or there is nothing to check:
+      no override, or an integration whose `calendar_list` has never been
+      populated, which `FormValidation` likewise treats as unverifiable
+    * `:read_only` — the calendar is still on the account but the host can no
+      longer write to it
+    * `:missing` — the calendar is gone from the account altogether
+
+  The answer is only as fresh as the last calendar list refresh, so it is a
+  warning for the host, never a booking-time gate: see
+  `Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver`.
+  """
+  @spec target_calendar_status(MeetingTypeSchema.t() | map()) :: target_calendar_status()
+  def target_calendar_status(%{calendar_integration: %{calendar_list: calendar_list}} = type),
+    do: target_calendar_status(calendar_list, type.target_calendar_id)
+
+  def target_calendar_status(_meeting_type), do: :ok
+
+  @doc """
+  The same check against a raw calendar list and target id, for callers
+  holding the two apart from a persisted meeting type (the meeting type
+  editor, whose selection changes before anything is saved).
+
+  Ids are compared with `Tymeslot.Utils.UriUtils.uri_safe_match?/2`, as
+  `FormValidation` does: CalDAV ids are URLs whose percent-encoding varies
+  between listings, and `==` would report healthy calendars as `:missing`.
+  """
+  @spec target_calendar_status([CalendarEntry.t()] | nil, String.t() | nil) ::
+          target_calendar_status()
+  def target_calendar_status([_entry | _rest] = calendar_list, target_calendar_id)
+      when is_binary(target_calendar_id) and target_calendar_id != "" do
+    case Enum.find(calendar_list, &UriUtils.uri_safe_match?(&1.id, target_calendar_id)) do
+      nil -> :missing
+      %{read_only: true} -> :read_only
+      _writable -> :ok
+    end
+  end
+
+  def target_calendar_status(_calendar_list, _target_calendar_id), do: :ok
+
   # Slug resolution and custom-slug management live in the focused sibling
   # module Tymeslot.MeetingTypes.Slugs; these delegations keep the context's
   # public API stable.
@@ -163,6 +226,15 @@ defmodule Tymeslot.MeetingTypes do
   defdelegate normalize_duration_slug(duration), to: Duration
   defdelegate find_by_duration_string(user_id, slug), to: Duration
   defdelegate validate_duration_selection(duration, available_types), to: Duration
+
+  @doc """
+  The maximum number of reminders one meeting type may carry.
+
+  The rule itself lives in `Tymeslot.MeetingTypes.ReminderValidation`; it is
+  exposed here so callers outside the domain, the form UI in particular, offer
+  exactly the number the save path enforces.
+  """
+  defdelegate max_reminders(), to: ReminderValidation
 
   @doc """
   Creates a meeting type from form parameters with validation.

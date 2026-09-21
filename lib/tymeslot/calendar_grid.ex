@@ -351,11 +351,21 @@ defmodule Tymeslot.CalendarGrid do
   @doc """
   Gives an event a room on the organiser's video integration, or removes its
   video link when the integration is `nil`, on both the provider event and the
-  cached row. See `Tymeslot.CalendarGrid.EventVideo.change_event_video/3`.
+  cached row, or answers `{:ok, :unchanged}` when the choice is the one the
+  event already has. See `Tymeslot.CalendarGrid.EventVideo.change_event_video/3`.
   """
   @spec change_event_video(pos_integer(), map(), pos_integer() | nil) ::
-          {:ok, String.t() | nil} | {:error, :missing_meeting_url | :not_found | term()}
+          {:ok, String.t() | nil | :unchanged}
+          | {:error, :missing_meeting_url | :not_found | term()}
   defdelegate change_event_video(user_id, event, video_integration_id), to: EventVideo
+
+  @doc """
+  Returns `description` with the "Join video call" line for the previous URL
+  taken out and one for the new URL appended. See
+  `Tymeslot.CalendarGrid.EventVideo.put_join_link/3`.
+  """
+  @spec put_join_link(String.t() | nil, String.t() | nil, String.t() | nil) :: String.t() | nil
+  defdelegate put_join_link(description, previous_url, url), to: EventVideo
 
   @doc """
   Deletes an event from its calendar, cancels the Tymeslot meeting it was
@@ -365,6 +375,13 @@ defmodule Tymeslot.CalendarGrid do
   @spec delete_event(pos_integer(), EventDeletion.event()) ::
           {:ok, EventDeletion.deleted()} | {:error, EventDeletion.failure()}
   defdelegate delete_event(user_id, event), to: EventDeletion
+
+  @doc """
+  Whether an event may be deleted from the grid. See
+  `Tymeslot.CalendarGrid.EventDeletion.ensure_deletable/1`.
+  """
+  @spec ensure_deletable(map()) :: :ok | {:error, :recurring_event}
+  defdelegate ensure_deletable(event), to: EventDeletion
 
   @doc """
   Whether an event may be moved to another calendar. See

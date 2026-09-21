@@ -100,6 +100,39 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       assert html =~ "calendar-allday-row"
     end
 
+    test "gives a multi-day all-day event its own id in each day's cell", %{
+      conn: conn,
+      user: user
+    } do
+      # The banner row renders a cell per visible day, and an all-day event
+      # covering several days appears in each of them. With the event id alone
+      # as the DOM id those cells collided, which LiveView forbids (and
+      # LiveViewTest refuses to render at all).
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      today = Date.utc_today()
+      tomorrow = Date.add(today, 1)
+
+      event =
+        insert_event(integration, %{
+          summary: "Company Offsite",
+          start_date: today,
+          # end_date is exclusive, so this covers today and tomorrow.
+          end_date: Date.add(today, 2),
+          start_at: DateTime.new!(today, ~T[00:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.add(today, 2), ~T[00:00:00], "Etc/UTC"),
+          all_day: true
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      # The 3-day view always spans today..today+2, whatever the week-start and
+      # weekend preferences are.
+      lv |> element("#calendar-grid") |> render_hook("set_view", %{"view" => "three_day"})
+
+      assert has_element?(lv, "#allday-event-#{event.id}-#{Date.to_iso8601(today)}")
+      assert has_element?(lv, "#allday-event-#{event.id}-#{Date.to_iso8601(tomorrow)}")
+    end
+
     test "renders 3+ overlapping all-day events without crashing (issue #50)",
          %{conn: conn, user: user} do
       # Regression: grid_views.ex's all-day disclosure branch referenced

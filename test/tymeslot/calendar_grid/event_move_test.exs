@@ -21,6 +21,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
   alias Tymeslot.ExchangeFixtures
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Exchange.EventNormaliser
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -118,7 +119,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
     end)
   end
 
-  defp created(payload), do: {:ok, payload.uid}
+  defp created(payload), do: {:ok, CreatedEvent.new(payload.uid)}
 
   defp expect_delete(result) do
     test_pid = self()
@@ -167,7 +168,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       assert uid != event.uid
       assert create_context == {destination.id, user.id}
       assert {deleted_uid, delete_context} == {event.uid, {source.id, user.id}}
-      assert opts == [provider_event_id: "/src/design-review.ics"]
+      assert opts == [provider_event_id: "/src/design-review.ics", calendar_id: "/src/"]
     end
 
     test "sends the whole event to the destination", %{
@@ -302,7 +303,11 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
     } do
       google = insert(:calendar_integration, user: user, provider: "google")
       event = insert_event(source)
-      expect_create(fn _payload -> {:ok, %{uid: "google-event-id"}} end)
+
+      expect_create(fn _payload ->
+        {:ok, CreatedEvent.from_provider_event(%{uid: "google-event-id"})}
+      end)
+
       expect_delete(:ok)
 
       assert {:ok, %{uid: "google-event-id"}} = move(user, event, google, "team@group.calendar")
@@ -417,7 +422,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
         event = insert_event(source, unquote(attrs))
 
         expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context ->
-          {:ok, "never"}
+          {:ok, CreatedEvent.new("never")}
         end)
 
         refute_delete()
@@ -428,12 +433,12 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
     end
 
     # One CalDAV resource holds a series' master and every occurrence edited on
-    # its own, and the sync caches the first VEVENT it finds there. When that is
-    # the edited occurrence, its row carries no repeat rule and names no series,
-    # yet its href is the whole series' resource: deleting the "original" after
-    # the copy would delete every occurrence. The row is built by the sync's own
-    # parse, normalise and cache steps, so a change to any of them that loses
-    # the occurrence's marker turns this red.
+    # its own, and the sync now caches a row for each. An override's row carries
+    # no repeat rule and names no series, yet its href is the whole series'
+    # resource: deleting the "original" after the copy would delete every
+    # occurrence. The row is built by the sync's own parse, normalise and cache
+    # steps, so a change to any of them that loses the occurrence's marker turns
+    # this red.
     test "an occurrence edited on its own is refused before anything is written", %{
       user: user,
       source: source,
@@ -459,8 +464,13 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       END:VCALENDAR
       """
 
-      {:ok, parsed} = EventProcessor.parse_ical_from_string(resource)
-      raw = Map.merge(parsed, %{href: "/src/standup.ics", etag: "etag-1", raw_ical: resource})
+      {:ok, parsed} = EventProcessor.parse_ical_events(resource)
+
+      raws =
+        Enum.map(
+          parsed,
+          &Map.merge(&1, %{href: "/src/standup.ics", etag: "etag-1", raw_ical: resource})
+        )
 
       context = %{
         calendar_integration_id: source.id,
@@ -469,14 +479,25 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
         synced_at: DateTime.utc_now()
       }
 
-      {:ok, normalised} = EventProcessor.normalise_events([raw], context)
-      {:ok, 1} = Sync.upsert_cache(source, normalised)
-      {:ok, event} = ProviderCalendarEventQueries.get_by_uid(source.id, "standup@example.com")
+      {:ok, normalised} = EventProcessor.normalise_events(raws, context)
+
+      # The override stands in place of the occurrence it names, so the series
+      # caches one row per occurrence and not one more.
+      {:ok, 3} = Sync.upsert_cache(source, normalised)
+
+      {:ok, event} =
+        ProviderCalendarEventQueries.get_by_uid(
+          source.id,
+          "standup@example.com_20261012T090000"
+        )
 
       assert {event.recurrence_rule, event.recurring_event_id, event.provider_event_id} ==
                {nil, nil, "/src/standup.ics"}
 
-      expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context -> {:ok, "never"} end)
+      expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context ->
+        {:ok, CreatedEvent.new("never")}
+      end)
+
       refute_delete()
 
       assert {:error, :recurring_event} = move(user, event, destination)
@@ -500,7 +521,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
                  {nil, nil, "series-item"}
 
         expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context ->
-          {:ok, "never"}
+          {:ok, CreatedEvent.new("never")}
         end)
 
         refute_delete()
@@ -524,7 +545,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
                provider_calls()
 
       assert delete_context == {exchange.id, user.id}
-      assert opts == [provider_event_id: "series-item"]
+      assert opts == [provider_event_id: "series-item", calendar_id: "calendar-folder"]
       assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(destination.id, uid)
     end
 
@@ -534,7 +555,11 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       destination: destination
     } do
       event = insert_event(source, %{all_day: true, start_at: nil, end_at: nil})
-      expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context -> {:ok, "never"} end)
+
+      expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context ->
+        {:ok, CreatedEvent.new("never")}
+      end)
+
       refute_delete()
 
       assert {:error, :invalid_timing} = move(user, event, destination)

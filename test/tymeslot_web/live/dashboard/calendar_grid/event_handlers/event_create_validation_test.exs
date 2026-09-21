@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
 
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution
 
   defp build_socket(opts \\ []) do
@@ -194,6 +195,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
     # The editor composes the rule as the form changes, before the event's
     # all-day flag and start date are final, so the rule is fitted to the
     # event at save time.
+    #
+    # A timed UNTIL is an instant, so every value here is read and written in
+    # the socket's Europe/Tallinn: end of day there is 20:59:59Z in summer,
+    # and the date the organiser picked is the one that instant falls on
+    # locally, not the UTC one.
     test "an all-day series ending on a date is saved with a date-only UNTIL" do
       socket =
         build_socket(
@@ -201,7 +207,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
             all_day: true,
             date: "2026-04-18",
             end_date: "2026-04-18",
-            recurrence_rule: "FREQ=WEEKLY;UNTIL=20260530T235959Z"
+            recurrence_rule: "FREQ=WEEKLY;UNTIL=20260530T205959Z"
           }
         )
 
@@ -211,14 +217,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
       assert payload.creating.recurrence_rule == "FREQ=WEEKLY;UNTIL=20260530"
     end
 
-    test "a timed series ending on a date is saved with an end-of-day UNTIL" do
+    test "a timed series ending on a date is saved with an UNTIL ending the local day" do
       socket =
         build_socket(creating_overrides: %{recurrence_rule: "FREQ=DAILY;UNTIL=20260530"})
 
       {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
 
       assert_received {:execute_create_event, payload}
-      assert payload.creating.recurrence_rule == "FREQ=DAILY;UNTIL=20260530T235959Z"
+      assert payload.creating.recurrence_rule == "FREQ=DAILY;UNTIL=20260530T205959Z"
     end
 
     test "a series ending before the event starts is refused without writing" do
@@ -228,7 +234,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
             all_day: true,
             date: "2026-04-18",
             end_date: "2026-04-18",
-            recurrence_rule: "FREQ=WEEKLY;UNTIL=20260417T235959Z"
+            recurrence_rule: "FREQ=WEEKLY;UNTIL=20260417T205959Z"
           }
         )
 
@@ -243,7 +249,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
 
     test "a timed series ending before the event starts is refused without writing" do
       socket =
-        build_socket(creating_overrides: %{recurrence_rule: "FREQ=DAILY;UNTIL=20260409T235959Z"})
+        build_socket(creating_overrides: %{recurrence_rule: "FREQ=DAILY;UNTIL=20260409T205959Z"})
 
       {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
 
@@ -251,6 +257,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreateValidation
                        {:error, "The recurrence end date must be on or after the event start."}}
 
       refute_received {:execute_create_event, _payload}
+    end
+
+    # The bug this guards: "ends on 30 May" used to become 30 May 23:59:59
+    # *UTC*, which in Tallinn is 31 May 02:59 local, so the series ran a day
+    # past the date the organiser picked.
+    test "a timed series does not run a day past the date the organiser picked" do
+      socket =
+        build_socket(
+          creating_overrides: %{
+            date: "2026-05-25",
+            end_date: "2026-05-25",
+            recurrence_rule: "FREQ=DAILY;UNTIL=20260530"
+          }
+        )
+
+      {:noreply, _socket} = CreateExecution.handle_save_event(%{}, socket)
+
+      assert_received {:execute_create_event, payload}
+
+      assert %{until: ~D[2026-05-30]} =
+               RRule.parse(payload.creating.recurrence_rule, timezone: "Europe/Tallinn")
+
+      # Read in UTC — the way the pre-fix code wrote and read it — the same
+      # instant still falls on 30 May, so no 31 May occurrence is generated.
+      assert %{until: ~D[2026-05-30]} = RRule.parse(payload.creating.recurrence_rule)
     end
   end
 

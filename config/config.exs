@@ -314,10 +314,19 @@ config :phoenix, :json_library, Jason
 # "access_token", "refresh_token" and "bot_token".
 #
 # Setting this replaces Phoenix's own default of ["password", "token"], so both
-# have to be repeated here. The two additions are the credential names this
-# app posts that neither of those words reaches: "api_key" (MiroTalk and the
-# other key-authenticated video providers) and "webhook_url" (a Slack incoming
-# webhook URL is itself the credential).
+# have to be repeated here. The additions are the credential names this app
+# posts that neither of those words reaches: "api_key" (MiroTalk and the
+# other key-authenticated video providers), "webhook_url" (a Slack incoming
+# webhook URL is itself the credential), and "custom_meeting_url" (a personal
+# meeting link routinely carries its own room key in a "?pwd=" parameter, so
+# the webhook reasoning applies to it unchanged).
+#
+# "value" is here for a different reason. A LiveView `phx-blur` push carries
+# the focused element's own value under that fixed key, whatever the field is
+# called, so a secret input that validates on blur sends its plaintext under
+# "value" rather than under its own name. The key is generic by construction
+# and cannot be narrowed, so it is filtered wholesale; nothing this app logs
+# needs to read it.
 #
 # This lives in compile-time config rather than runtime.exs so it holds at every
 # log level and in every environment. Production pins the level to :info, where
@@ -329,7 +338,9 @@ config :phoenix, :filter_parameters, [
   "secret",
   "token",
   "api_key",
-  "webhook_url"
+  "webhook_url",
+  "custom_meeting_url",
+  "value"
 ]
 
 # Precompressed siblings written by `mix phx.digest`, replacing the stock

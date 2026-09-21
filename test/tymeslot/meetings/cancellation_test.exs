@@ -25,6 +25,7 @@ defmodule Tymeslot.Meetings.CancellationTest do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.TestMocks
+  alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SendBookingPaymentRefunded
 
   setup :verify_on_exit!
@@ -71,6 +72,37 @@ defmodule Tymeslot.Meetings.CancellationTest do
       assert reloaded.status == "partially_refunded"
 
       assert_enqueued(worker: SendBookingPaymentRefunded, args: %{booking_payment_id: payment.id})
+    end
+  end
+
+  # The host's cancellation email reports what they still hold for the
+  # booking, read from the payment when the email is built. Announced before
+  # the refund, it tells the host they owe money they have just paid back.
+  describe "cancel_meeting_with_refund/3 and the cancellation email" do
+    @cancellation_email [worker: EmailWorker, args: %{action: "send_cancellation_emails"}]
+
+    test "is only queued once the refund has gone through", %{host: host, meeting: meeting} do
+      expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
+        refute_enqueued(@cancellation_email)
+        {:ok, %{id: "re_before_email"}}
+      end)
+
+      assert {:ok, _cancelled} =
+               Meetings.cancel_meeting_with_refund(meeting, host.id, {:refund, 5000})
+
+      assert_enqueued(@cancellation_email ++ [args: %{meeting_id: meeting.id}])
+    end
+
+    test "is still queued when the refund fails", %{host: host, meeting: meeting} do
+      expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
+        {:error, %{message: "card_declined"}}
+      end)
+
+      assert {:error, {:refund_failed, _reason}} =
+               Meetings.cancel_meeting_with_refund(meeting, host.id, {:refund, 5000})
+
+      assert {:ok, %{status: "cancelled"}} = MeetingQueries.get_meeting(meeting.id)
+      assert_enqueued(@cancellation_email)
     end
   end
 

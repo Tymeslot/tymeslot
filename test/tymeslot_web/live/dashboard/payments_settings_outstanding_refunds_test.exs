@@ -181,4 +181,43 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsOutstandingRefundsTest do
       refute has_element?(view, refund_button(payment))
     end
   end
+
+  # The card used to live inside the "has a connect account" branch, so the one
+  # record inside Tymeslot that the host was still holding an attendee's money
+  # vanished at exactly the moment it mattered most. The soft delete detaches
+  # the account row from the user, so there is nothing to resurrect: the card
+  # has to work with no account at all.
+  describe "disconnecting Stripe" do
+    test "warns about the outstanding refunds before the host confirms", %{conn: conn} do
+      host = connected_host()
+      cancelled_payment_for(host)
+
+      {view, _html} = open_payments(conn, host)
+
+      html =
+        view |> element("button[phx-click='open_disconnect_modal']") |> render_click()
+
+      assert html =~ "You still owe 1 refund totalling €50.00"
+      assert html =~ "refund it from your Stripe dashboard"
+    end
+
+    test "leaves the debt on screen, pointing at Stripe", %{conn: conn} do
+      host = connected_host()
+      payment = cancelled_payment_for(host)
+
+      {view, _html} = open_payments(conn, host)
+      assert has_element?(view, refund_button(payment))
+
+      view |> element("button[phx-click='open_disconnect_modal']") |> render_click()
+      html = view |> element("#disconnect-modal button[phx-click='disconnect']") |> render_click()
+
+      # The Connect call-to-action is back, and the debt is still above it.
+      assert html =~ "Refunds outstanding"
+      assert html =~ "outofpocket@example.com"
+      assert html =~ "€50.00"
+      assert html =~ "Refund in Stripe"
+      assert html =~ "Your Stripe account is not connected"
+      refute has_element?(view, refund_button(payment))
+    end
+  end
 end

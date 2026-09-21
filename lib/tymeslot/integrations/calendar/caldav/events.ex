@@ -34,6 +34,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     XmlHandler
   }
 
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ICalBuilder
 
   require Logger
@@ -97,12 +98,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   @doc """
   Creates a new event in the calendar.
 
-  Generates a UID if not supplied in `event_data`. Returns `{:ok, uid}` on
-  success, where `uid` is the stable identifier for future updates and deletes.
-  Uses `If-None-Match: *` to prevent accidental overwrites.
+  Generates a UID if not supplied in `event_data`. Returns
+  `{:ok, %CreatedEvent{}}` on success, carrying the uid future updates and
+  deletes address the event by, the href the resource was written to, and the
+  ETag the server assigned it. Uses `If-None-Match: *` to prevent accidental
+  overwrites.
   """
   @spec create_calendar_event(Base.client(), String.t(), map(), keyword()) ::
-          {:ok, String.t()} | {:error, Base.error_reason()}
+          {:ok, CreatedEvent.t()} | {:error, Base.error_reason()}
   def create_calendar_event(client, calendar_path, event_data, opts \\ []) do
     uid = event_data[:uid] || ICalBuilder.generate_uid()
     ical_data = ICalBuilder.build_simple_event(uid, event_data)
@@ -118,7 +121,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   that Tymeslot's own writer never produces.
   """
   @spec put_raw_event(Base.client(), String.t(), String.t(), String.t(), keyword()) ::
-          {:ok, String.t()} | {:error, Base.error_reason()}
+          {:ok, CreatedEvent.t()} | {:error, Base.error_reason()}
   def put_raw_event(client, calendar_path, uid, ical_data, opts \\ []) do
     put_ical(client, calendar_path, uid, ical_data, opts)
   end
@@ -129,10 +132,36 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
       put_opts = Keyword.merge([operation: :create], Keyword.take(opts, [:timeout]))
 
       case Http.put_event(url, client.username, client.password, ical_data, put_opts) do
-        {:ok, %Req.Response{status: status}} when status in [200, 201, 204] -> {:ok, uid}
-        {:error, reason} -> {:error, reason}
+        {:ok, %Req.Response{status: status, headers: headers}} when status in [200, 201, 204] ->
+          {:ok, created_event(uid, calendar_path, url, headers)}
+
+        {:error, reason} ->
+          {:error, reason}
       end
     end)
+  end
+
+  # The PUT just addressed the resource, so its href is known without asking:
+  # it is the URL reduced to a path, which is how sync spells a CalDAV
+  # `provider_event_id` and what `event_url/4` expects back.
+  #
+  # The ETag is genuinely optional. RFC 4791 §5.3.4 only says a server SHOULD
+  # return one, and a server that normalised the submitted document must not,
+  # so its absence is an ordinary create: the update path still falls back to
+  # a HEAD probe and then to `If-Match: *` exactly as it did before.
+  defp created_event(uid, calendar_path, url, headers) do
+    CreatedEvent.new(uid,
+      provider_event_id: href_path(url),
+      calendar_id: calendar_path,
+      etag: EventProcessor.clean_etag(etag_from_headers(headers))
+    )
+  end
+
+  defp href_path(url) do
+    case URI.parse(url) do
+      %URI{path: path} when is_binary(path) and path != "" -> path
+      _no_path -> url
+    end
   end
 
   @doc """
@@ -142,6 +171,26 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   parties edit the same event concurrently. The caller should supply the
   cached ETag via `opts[:etag]`; when absent, the function falls back to a
   HEAD probe, and finally to `If-Match: *` if HEAD also fails.
+
+  ## Patched versus rebuilt
+
+  An event that arrived by sync is **patched**: `event_data[:raw_ical]` is the
+  document the provider last gave us, `ICalBuilder.patch_event_properties/2`
+  rewrites the properties the payload carries, and the rest of the document —
+  the `ATTENDEE` block with its `PARTSTAT`, `CATEGORIES`, `X-` properties —
+  goes back untouched. Rebuilding it from the payload instead would erase all
+  of that, since `build_simple_event/2` serialises what Tymeslot models and
+  nothing else.
+
+  An event with no `:raw_ical` is **rebuilt**, which is the right writer for a
+  booking Tymeslot authored and the only one available before the first sync.
+
+  A patched write is only ever applied to a document whose ETag we hold: the
+  cached pair when the caller supplies both, otherwise the server's current
+  copy, read first. A rejected precondition re-reads the event and patches
+  that copy rather than forcing a stale document through, so the organiser's
+  change lands on top of whatever else happened to the event instead of
+  reverting it.
   """
   @spec update_calendar_event(Base.client(), String.t(), String.t(), map(), keyword()) ::
           :ok | {:error, Base.error_reason()}
@@ -151,14 +200,109 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     if ConflictResolution.valid?(policy) do
       with_events_breaker(client, opts, fn ->
         with {:ok, url} <- event_url(client, calendar_path, uid, event_data[:provider_event_id]) do
-          ical_data = ICalBuilder.build_simple_event(uid, Map.put(event_data, :uid, uid))
-          etag = resolve_etag(url, client, opts)
-
-          do_conditional_put(client, url, ical_data, etag, policy, opts)
+          write_update(client, url, uid, event_data, policy, opts)
         end
       end)
     else
       {:error, :invalid_conflict_resolution_policy}
+    end
+  end
+
+  defp write_update(client, url, uid, event_data, policy, opts) do
+    case cached_document(event_data) do
+      {raw_ical, etag} when is_binary(etag) and etag != "" ->
+        patch_and_put(client, url, uid, raw_ical, etag, event_data, policy, opts)
+
+      # A cached document with no ETag carries no precondition, and
+      # `If-Match: *` is not one: it would let a document older than the
+      # server's through. The server's own copy comes with the ETag that makes
+      # the write conditional, so it is read first.
+      {_raw_ical, _no_etag} ->
+        refresh_and_put(client, url, uid, event_data, policy, opts)
+
+      :none ->
+        rebuild_and_put(client, url, uid, event_data, policy, opts)
+    end
+  end
+
+  defp patch_and_put(client, url, uid, raw_ical, etag, event_data, policy, opts) do
+    ical_data = document_to_put(raw_ical, uid, event_data)
+
+    case do_conditional_put(client, url, ical_data, etag, :fail, opts) do
+      {:error, reason} when reason in [:precondition_failed, :conditional_not_supported] ->
+        resolve_stale_patch(client, url, uid, event_data, policy, opts)
+
+      result ->
+        result
+    end
+  end
+
+  # The cached document lost the race. `:keep_server` asks for the server's
+  # copy to stand, so there is nothing left to write; the other two policies
+  # want the organiser's change, and it belongs on the copy that won rather
+  # than on the one that lost.
+  defp resolve_stale_patch(_client, _url, _uid, _event_data, :keep_server, _opts), do: :ok
+
+  defp resolve_stale_patch(client, url, uid, event_data, policy, opts),
+    do: refresh_and_put(client, url, uid, event_data, policy, opts)
+
+  # The cached document is only as fresh as the last sync, and an edit of our
+  # own leaves it a version behind, so this is the ordinary second write of an
+  # event rather than an exceptional path.
+  defp refresh_and_put(client, url, uid, event_data, policy, opts) do
+    case fetch_event_document(client, url, opts) do
+      {:ok, raw_ical, etag} ->
+        ical_data = document_to_put(raw_ical, uid, event_data)
+        do_conditional_put(client, url, ical_data, etag, policy, opts)
+
+      {:error, :not_found} ->
+        rebuild_and_put(client, url, uid, event_data, policy, opts)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp rebuild_and_put(client, url, uid, event_data, policy, opts) do
+    ical_data = ICalBuilder.build_simple_event(uid, Map.put(event_data, :uid, uid))
+    do_conditional_put(client, url, ical_data, resolve_etag(url, client, opts), policy, opts)
+  end
+
+  defp cached_document(event_data) do
+    case Map.get(event_data, :raw_ical) do
+      raw_ical when is_binary(raw_ical) and raw_ical != "" ->
+        {raw_ical, Map.get(event_data, :etag)}
+
+      _missing ->
+        :none
+    end
+  end
+
+  # A document with no VEVENT is nothing to patch — patching it would answer
+  # `:ok` to a write that changed nothing — so the payload is serialised in
+  # full instead.
+  defp document_to_put(raw_ical, uid, event_data) do
+    if String.contains?(raw_ical, "BEGIN:VEVENT") do
+      ICalBuilder.patch_event_properties(raw_ical, event_data)
+    else
+      ICalBuilder.build_simple_event(uid, Map.put(event_data, :uid, uid))
+    end
+  end
+
+  defp fetch_event_document(client, url, opts) do
+    get_opts = Keyword.put(opts, :timeout, Keyword.get(opts, :read_timeout, 30_000))
+
+    case Http.get_event(url, client.username, client.password, get_opts) do
+      {:ok, %Req.Response{body: body, headers: headers}} when is_binary(body) and body != "" ->
+        {:ok, body, etag_from_headers(headers)}
+
+      # A 200 with nothing in it describes no event, so there is nothing to
+      # preserve: treat it as the absent resource it looks like.
+      {:ok, %Req.Response{}} ->
+        {:error, :not_found}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -320,12 +464,17 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
   @doc """
   Fetches one event resource: `href` when known, otherwise the resource
-  Tymeslot writes for `uid` in `calendar_path`. Returns the parsed event as a
+  Tymeslot writes for `uid` in `calendar_path`. Returns the parsed events as a
   calendar-query would, or `{:error, :not_found}` when the server answers 404
   or 410.
+
+  One resource holds one event, but a recurring one is a master VEVENT plus a
+  VEVENT per modified occurrence, so this answers with a list. A caller asking
+  "is this event over" has to see every occurrence to answer it; taking only
+  the first would judge a whole series by its master.
   """
   @spec fetch_calendar_event(Base.client(), String.t() | nil, String.t() | nil, String.t() | nil) ::
-          {:ok, map()} | {:error, :not_found} | {:error, term()}
+          {:ok, [map()]} | {:error, :not_found} | {:error, term()}
   def fetch_calendar_event(client, calendar_path, uid, href) do
     with {:ok, url} <- event_url(client, calendar_path, uid, href) do
       # A missing resource is a per-event answer, not a host outage, so it
@@ -355,12 +504,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   end
 
   defp parse_fetched_event(body, href, headers) do
-    case EventProcessor.parse_ical_from_string(body) do
-      {:ok, event} ->
+    case EventProcessor.parse_ical_events(body) do
+      {:ok, events} ->
         etag = headers |> Map.new() |> Map.get("etag") |> List.wrap() |> List.first()
+        stamp = %{href: href, etag: EventProcessor.clean_etag(etag), raw_ical: body}
 
-        {:ok,
-         Map.merge(event, %{href: href, etag: EventProcessor.clean_etag(etag), raw_ical: body})}
+        # The href, ETag and document belong to the resource, so every VEVENT
+        # parsed out of it carries the same three.
+        {:ok, Enum.map(events, &Map.merge(&1, stamp))}
 
       {:error, reason} ->
         {:error, {:unparseable_event, reason}}
@@ -391,14 +542,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     head_opts = Keyword.put(opts, :timeout, head_timeout)
 
     case Http.head_event(url, client.username, client.password, head_opts) do
-      {:ok, %{headers: headers}} ->
-        case Map.get(headers, "etag") do
-          [etag | _rest] -> etag
-          _other -> nil
-        end
+      {:ok, %{headers: headers}} -> etag_from_headers(headers)
+      _error -> nil
+    end
+  end
 
-      _error ->
-        nil
+  defp etag_from_headers(headers) do
+    case Map.get(headers, "etag") do
+      [etag | _rest] -> etag
+      _other -> nil
     end
   end
 

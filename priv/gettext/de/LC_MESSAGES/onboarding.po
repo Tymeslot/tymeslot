@@ -321,3 +321,13 @@ msgstr "Aktivieren Sie die Bestätigung für einen Termintyp, und dessen Buchung
 #, elixir-autogen
 msgid "Write your own booking page welcome"
 msgstr "Schreiben Sie Ihre eigene Begrüßung"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Add a holiday on the availability page and those days stop being offered, across every schedule and every meeting type, without a blocking event in any calendar you have connected. Give the first and last day a time when you leave mid-afternoon or come back mid-morning. Bookings already in your diary keep their times, and you are shown which ones before you save. Nobody booking you sees why the days are closed."
+msgstr "Tragen Sie auf der Seite Verfügbarkeit eine Abwesenheit ein, und diese Tage werden nicht mehr angeboten, in jedem Wochenplan und für jeden Termintyp, ohne blockierenden Eintrag in einem Ihrer verbundenen Kalender. Geben Sie dem ersten und letzten Tag eine Uhrzeit, wenn Sie mittags aufbrechen oder vormittags zurückkommen. Bereits bestehende Buchungen behalten ihre Zeiten, und Sie sehen vor dem Speichern, welche das sind. Wer Sie bucht, erfährt nicht, warum die Tage geschlossen sind."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Close the days you are away"
+msgstr "Schließen Sie die Tage Ihrer Abwesenheit"

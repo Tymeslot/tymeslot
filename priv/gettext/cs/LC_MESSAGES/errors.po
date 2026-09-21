@@ -269,3 +269,85 @@ msgstr "nesmí být před datem začátku"
 #, elixir-autogen, elixir-format
 msgid "must not be in the past"
 msgstr "nesmí být v minulosti"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "1 minutu"
+msgstr[1] "%{count} minuty"
+msgstr[2] "%{count} minut"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "This username is reserved"
+msgstr "Toto uživatelské jméno je vyhrazené"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username is required"
+msgstr "Uživatelské jméno je povinné"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be a text value"
+msgstr "Uživatelské jméno musí být textová hodnota"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be at least %{count} character long"
+msgid_plural "Username must be at least %{count} characters long"
+msgstr[0] "Uživatelské jméno musí mít alespoň %{count} znak"
+msgstr[1] "Uživatelské jméno musí mít alespoň %{count} znaky"
+msgstr[2] "Uživatelské jméno musí mít alespoň %{count} znaků"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be at most %{count} character long"
+msgid_plural "Username must be at most %{count} characters long"
+msgstr[0] "Uživatelské jméno smí mít nejvýše %{count} znak"
+msgstr[1] "Uživatelské jméno smí mít nejvýše %{count} znaky"
+msgstr[2] "Uživatelské jméno smí mít nejvýše %{count} znaků"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"
+msgstr "Uživatelské jméno musí začínat písmenem nebo číslicí a smí obsahovat pouze malá písmena, číslice, podtržítka a pomlčky"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "You've reached the limit of %{limit} %{action} per %{window_minutes} minutes. Please try again in %{wait}."
+msgstr "Byl překročen limit pro %{action}: %{limit} za %{window_minutes} min. Zkuste to prosím znovu za %{wait}."
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "a moment"
+msgstr "okamžik"
+
+#: lib/tymeslot/security/rate_limiter/integrations.ex
+#, elixir-autogen, elixir-format
+msgid "calendar lookups"
+msgstr "dotazy na kalendáře"
+
+#: lib/tymeslot/security/rate_limiter/integrations.ex
+#, elixir-autogen, elixir-format
+msgid "calendar server checks"
+msgstr "kontroly kalendářového serveru"
+
+#: lib/tymeslot/security/rate_limiter/integrations.ex
+#, elixir-autogen, elixir-format
+msgid "connection tests"
+msgstr "testy připojení"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be within %{count} years"
+msgid_plural "must be within %{count} years"
+msgstr[0] "musí být nejvýše %{count} rok dopředu"
+msgstr[1] "musí být nejvýše %{count} roky dopředu"
+msgstr[2] "musí být nejvýše %{count} let dopředu"
+
+#: lib/tymeslot/security/rate_limiter/integrations.ex
+#, elixir-autogen, elixir-format
+msgid "video server checks"
+msgstr "kontroly videoserveru"

@@ -112,15 +112,10 @@ defmodule Tymeslot.Integrations.Calendar.Radicale.Provider do
   Tests connection to Radicale server with Radicale-specific messaging.
   """
   @impl Tymeslot.Integrations.Calendar.Provider
-  @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, String.t()}
+  @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, term()}
   def perform_connection_test(integration) do
     ProviderCommon.test_caldav_provider_connection(integration,
       success_message: dgettext("dashboard_calendar_providers", "Radicale connection successful"),
-      unauthorized_message:
-        dgettext(
-          "dashboard_calendar_providers",
-          "Authentication failed. Check your Radicale username and password."
-        ),
       not_found_message:
         dgettext(
           "dashboard_calendar_providers",

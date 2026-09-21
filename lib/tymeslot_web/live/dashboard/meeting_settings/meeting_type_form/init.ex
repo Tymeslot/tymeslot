@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   alias Tymeslot.Features
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.CustomInputModeHelper
@@ -43,24 +44,32 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     )
     |> assign_availability_schedules(Map.get(assigns, :current_user))
     |> assign_payment_state(type, Map.get(assigns, :current_user))
-    |> then(fn socket ->
-      if id = socket.assigns.selected_calendar_integration_id do
-        socket
-        |> Component.assign(
-          :available_calendars,
-          fetch_available_calendars(id, socket.assigns.calendar_integrations)
-        )
-        |> Component.assign(
-          :no_writable_calendars,
-          all_selected_read_only?(id, socket.assigns.calendar_integrations)
-        )
-      else
-        socket
-      end
-    end)
+    |> assign_calendar_state()
     |> Component.assign(:form_data, build_form_data(type))
     |> Component.assign(:custom_input_mode, initial_custom_input_mode(type))
     |> Component.assign(:__initialized__, true)
+  end
+
+  # Everything the booking-destination picker needs about the integration the
+  # meeting type already points at: which calendars it may offer, whether it
+  # has none to offer, and whether the target already stored has since stopped
+  # accepting bookings. All three are left at their mount defaults while no
+  # integration is selected.
+  @spec assign_calendar_state(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  defp assign_calendar_state(%{assigns: %{selected_calendar_integration_id: nil}} = socket),
+    do: socket
+
+  defp assign_calendar_state(%{assigns: assigns} = socket) do
+    id = assigns.selected_calendar_integration_id
+    integrations = assigns.calendar_integrations
+
+    socket
+    |> Component.assign(:available_calendars, fetch_available_calendars(id, integrations))
+    |> Component.assign(:no_writable_calendars, all_selected_read_only?(id, integrations))
+    |> Component.assign(
+      :target_calendar_status,
+      target_calendar_status(id, assigns.selected_target_calendar_id, integrations)
+    )
   end
 
   @spec assign_availability_schedules(Phoenix.LiveView.Socket.t(), map() | nil) ::
@@ -273,7 +282,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   """
   @spec fetch_available_calendars(integer(), list()) :: list()
   def fetch_available_calendars(integration_id, integrations) do
-    case Enum.find(integrations, &(&1.id == integration_id)) do
+    case find_integration(integrations, integration_id) do
       nil -> []
       integration -> Calendar.writable_calendars(integration.calendar_list)
     end
@@ -287,10 +296,32 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   """
   @spec all_selected_read_only?(integer(), list()) :: boolean()
   def all_selected_read_only?(integration_id, integrations) do
-    case Enum.find(integrations, &(&1.id == integration_id)) do
+    case find_integration(integrations, integration_id) do
       nil -> false
       integration -> Calendar.all_selected_read_only?(integration.calendar_list)
     end
+  end
+
+  @doc """
+  Reports whether the target calendar already on the meeting type can still
+  take a booking, so the editor can say so above a picker that would
+  otherwise just show nothing selected. See
+  `Tymeslot.MeetingTypes.target_calendar_status/2`.
+  """
+  @spec target_calendar_status(integer(), String.t() | nil, list()) ::
+          MeetingTypes.target_calendar_status()
+  def target_calendar_status(integration_id, target_calendar_id, integrations) do
+    case find_integration(integrations, integration_id) do
+      nil ->
+        :ok
+
+      integration ->
+        MeetingTypes.target_calendar_status(integration.calendar_list, target_calendar_id)
+    end
+  end
+
+  defp find_integration(integrations, integration_id) do
+    Enum.find(integrations, &(&1.id == integration_id))
   end
 
   @doc "Returns the normalised reminders list for a meeting type."

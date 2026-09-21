@@ -37,7 +37,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Live do
           module={ErrorComponent}
           id="scheduling-error"
           message={@scheduling_error_message}
-          reason={assigns[:scheduling_error_reason]}
         />
       <% else %>
         <%= case assigns[:current_state] || :overview do %>

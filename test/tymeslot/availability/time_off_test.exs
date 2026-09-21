@@ -193,6 +193,43 @@ defmodule Tymeslot.Availability.TimeOffTest do
       assert TimeOff.list(profile.id) == []
     end
 
+    test "rejects an end date far enough out to be a mistyped year" do
+      # 2226 instead of 2026 saves a period two centuries long, which is a
+      # perfectly valid row: every reader honours it and the booking page
+      # offers nothing, for ever, without naming a cause.
+      profile = insert(:profile)
+
+      assert {:error, changeset} =
+               TimeOff.create(profile.id, %{starts_on: ~D[2026-09-10], ends_on: ~D[2226-09-10]})
+
+      assert "must be within 2 years" in errors_on(changeset).ends_on
+      assert TimeOff.list(profile.id) == []
+    end
+
+    test "places the bound two years from today, to the day" do
+      profile = insert(:profile)
+
+      assert {:ok, _period} =
+               TimeOff.create(profile.id, %{starts_on: ~D[2026-09-10], ends_on: ~D[2028-09-01]})
+
+      assert {:error, changeset} =
+               TimeOff.create(profile.id, %{starts_on: ~D[2026-09-10], ends_on: ~D[2028-09-02]})
+
+      assert "must be within 2 years" in errors_on(changeset).ends_on
+    end
+
+    test "measures the bound from the owner's today rather than from UTC" do
+      # 23:30 UTC on the 1st is already the 2nd in Tallinn, so the bound the
+      # host's own picker offers is a day past the one UTC would compute.
+      freeze_clock(~U[2026-09-01 23:30:00Z])
+      profile = insert(:profile, timezone: "Europe/Tallinn")
+
+      assert {:ok, period} =
+               TimeOff.create(profile.id, %{starts_on: ~D[2026-09-10], ends_on: ~D[2028-09-02]})
+
+      assert period.ends_on == ~D[2028-09-02]
+    end
+
     test "rejects an end time at or before the start time on a single day" do
       profile = insert(:profile)
 
@@ -420,6 +457,25 @@ defmodule Tymeslot.Availability.TimeOffTest do
 
       assert {:error, changeset} = TimeOff.update(period, %{ends_on: ~D[2026-08-30]})
       assert "must not be in the past" in errors_on(changeset).ends_on
+    end
+
+    test "a stored period reaching past the bound keeps its note editable" do
+      # Rows written before the bound existed, and rows written under a looser
+      # one, must not become unsaveable: the check only judges a last day the
+      # submission actually moves.
+      period =
+        insert(:time_off_period,
+          profile: build(:profile, timezone: "Etc/UTC"),
+          starts_on: ~D[2026-09-10],
+          ends_on: ~D[2099-01-10]
+        )
+
+      assert {:ok, updated} = TimeOff.update(period, %{"label" => "Sabbatical"})
+      assert updated.label == "Sabbatical"
+      assert updated.ends_on == ~D[2099-01-10]
+
+      assert {:error, changeset} = TimeOff.update(period, %{ends_on: ~D[2099-01-11]})
+      assert "must be within 2 years" in errors_on(changeset).ends_on
     end
 
     test "clearing the times switches a part-day period back to whole days" do

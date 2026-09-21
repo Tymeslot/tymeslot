@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Shared.ConnectionProbe
 
   @type context :: %{
@@ -38,8 +39,17 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
 
   @doc """
   Creates a new event in the calendar.
+
+  A successful create answers a `CreatedEvent`: the uid the event is addressed
+  by afterwards, plus whatever identity the provider gave away in the same
+  breath: its own id for the resource, and, on CalDAV, the ETag the server
+  assigned it. The shape is fixed rather than `any()` because the caller caches
+  that identity immediately; a provider that answered with a bare id left
+  `provider_event_id` and `etag` NULL on the cached row until the next full
+  sync repaired them. Both fields are optional: a provider fills what it knows.
   """
-  @callback create_event(client :: any(), event_data :: map()) :: {:ok, any()} | {:error, any()}
+  @callback create_event(client :: any(), event_data :: map()) ::
+              {:ok, CreatedEvent.t()} | {:error, any()}
 
   @doc """
   Updates an existing event in the calendar.

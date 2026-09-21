@@ -22,6 +22,7 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.ExpiredVideoRoomCleanupWorker
@@ -193,7 +194,7 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorkerTest do
 
       # A CalDAV server keeps the uid the event was written under.
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
-        {:ok, event_data.uid}
+        {:ok, CreatedEvent.new(event_data.uid)}
       end)
 
       start_at = DateTime.add(DateTime.utc_now(:second), -8 * @day - 3600, :second)

@@ -10,6 +10,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
       separately-provisioned room),
     * call the calendar provider via `Calendar.Events`, queueing a failed
       create for offline retry,
+    * drop the organiser's cached availability so the newly blocked time
+      stops being offered on the booking page,
     * fire attendee notifications, and
     * look up integration metadata for the cache row.
 
@@ -27,7 +29,9 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.CalendarGrid.EventVideoRooms
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.CalendarManagement
@@ -35,7 +39,6 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.Rooms, as: VideoRooms
   alias Tymeslot.Meetings.AttendeeNotifications
-  alias Tymeslot.Utils.MapKeys
 
   @doc """
   Returns the flash message surfaced to the user when an integration's
@@ -181,18 +184,20 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     if attendees != [], do: Map.put(base_data, :attendees, attendees), else: base_data
   end
 
-  defp finalise_create_result({:ok, created}, ctx) do
+  defp finalise_create_result({:ok, %CreatedEvent{} = created}, ctx) do
     # Google and Outlook address the event by the id they returned, not by the
     # uid it was written under, so a room recorded under that uid learns it,
-    # and Google only within the calendar it was written to.
+    # and Google only within the calendar it was written to. The provider's
+    # own answer names that calendar where it reports one; the form's choice
+    # is the fallback for the providers that do not.
     if ctx.video_context[:room_id],
       do:
         :ok =
           EventVideoRooms.identified(
             ctx.creating.integration_id,
             ctx.uid,
-            created_uid(created),
-            written_calendar_id(ctx.creating)
+            CreatedEvent.local_uid(created),
+            created.calendar_id || written_calendar_id(ctx.creating)
           )
 
     case MeetingProvisioning.finalise(ctx.video_context, created, ctx.plan) do
@@ -233,6 +238,12 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
   # The queued row carries the pre-generated UID, so the replayed create
   # addresses the same event the failed one tried to write.
+  #
+  # Deliberately no availability invalidation: a queued create exists on no
+  # server yet, and availability is fetched from the providers rather than
+  # read out of this table, so the slot is genuinely still free and dropping
+  # the organiser's entries would only make the next booking page slower. The
+  # sync that flushes the queue invalidates when the create actually lands.
   defp queue_retry(ctx, reason) do
     target = %{uid: ctx.uid, calendar_integration_id: ctx.creating.integration_id}
 
@@ -261,8 +272,15 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     provision_video_room(video_id, event_details, grid_event)
   end
 
-  defp build_create_success(created, creating, user_id, start_at, end_at, video_context) do
-    uid = created_uid(created)
+  defp build_create_success(
+         %CreatedEvent{} = created,
+         creating,
+         user_id,
+         start_at,
+         end_at,
+         video_context
+       ) do
+    uid = CreatedEvent.local_uid(created)
 
     {provider, default_booking_calendar_id, reauth_required?} =
       lookup_integration_metadata(creating.integration_id)
@@ -286,8 +304,22 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     attendees =
       Enum.map(creating[:attendees] || [], fn email -> %{email: email} end)
 
+    # The provider write has landed, so the organiser is now busy for this
+    # slot. Availability is memoised per user, so without this the booking
+    # page keeps offering the hour the host has just blocked until the entries
+    # expire. Drawing an event on the grid is the ordinary way to make oneself
+    # unavailable, so it is the write path that most needs the drop. Both
+    # `finalise_create_result/2` success clauses funnel through here, and the
+    # failure clause does not, so a queued create is left alone.
+    AvailabilityCache.invalidate_for_user(user_id)
+
     {:ok, _status} = AttendeeNotifications.event_created(notify_event, attendees)
 
+    # The provider's answer to the create is the only place the event's
+    # server-side identity is free: after this it costs a sync. Both fields are
+    # optional (a CalDAV server need not answer a PUT with an ETag, and no
+    # provider is obliged to name the resource), so they travel as whatever the
+    # provider reported, including nil.
     {:ok,
      %{
        uid: uid,
@@ -295,6 +327,9 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
        start_at: start_at,
        end_at: end_at,
        provider: provider,
+       provider_event_id: created.provider_event_id,
+       written_calendar_id: created.calendar_id,
+       etag: created.etag,
        default_booking_calendar_id: default_booking_calendar_id,
        reauth_required: reauth_required?,
        attendees: attendees,
@@ -320,9 +355,6 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     end
   end
 
-  defp created_uid(created) when is_binary(created), do: created
-  defp created_uid(created), do: MapKeys.get_binary(created, :uid)
-
   defp provision_video_room(integration_id, event_details, %{user_id: user_id} = grid_event)
        when is_integer(integration_id) do
     opts = [
@@ -342,7 +374,11 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
           )
 
         %{
-          meeting_url: room_data.meeting_url,
+          # The description, the cached link and the invitees' notification
+          # all publish one link that names nobody, so it is the shared one
+          # rather than the bare room URL a token-enforcing server refuses.
+          # See `EventVideo.join_link/2`.
+          meeting_url: EventVideo.join_link(meeting_context, Map.get(grid_event, :start)),
           room_id: room_data.room_id,
           video_integration_id: integration_id
         }

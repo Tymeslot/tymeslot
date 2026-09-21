@@ -332,19 +332,29 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
-  Updates the last sync timestamp and clears any error. Also clears the
-  `needs_reauth` flag — a successful sync proves the credentials are readable
-  and valid, so the flag would otherwise become stale.
+  Clears the reconnection flag and the error that accompanied it, for a sync
+  cycle that read from the provider.
+
+  A cycle that completed disproves every condition that sets the flag: rejected
+  credentials, a booking calendar deleted at the provider, a CalDAV integration
+  with no calendar selected. Left set, the flag keeps the integration out of
+  booking indefinitely (`BookingIntegrationResolver.booking_target?/1` requires
+  `needs_reauth: false`) however well it is syncing, and nothing but the owner
+  reconnecting by hand ever clears it.
+
+  This is deliberately narrower than it looks: a *successful token refresh*
+  must not clear it, because a fresh token says nothing about a deleted
+  calendar — see `Calendar.Auth.Tokens.maybe_clear_sync_error/2`. Only a sync
+  that actually read the calendar carries the proof.
+
+  Ecto skips the statement entirely when neither field has changed, so the
+  overwhelming majority of cycles cost nothing here.
   """
-  @spec mark_sync_success(CalendarIntegrationSchema.t()) ::
+  @spec clear_reauth_flag(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def mark_sync_success(%CalendarIntegrationSchema{} = integration) do
+  def clear_reauth_flag(%CalendarIntegrationSchema{} = integration) do
     integration
-    |> Changeset.change(%{
-      last_sync_at: DateTime.utc_now(:second),
-      sync_error: nil,
-      needs_reauth: false
-    })
+    |> Changeset.change(%{sync_error: nil, needs_reauth: false})
     |> Repo.update()
   end
 

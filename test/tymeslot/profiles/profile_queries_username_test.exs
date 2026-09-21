@@ -37,6 +37,17 @@ defmodule Tymeslot.Profiles.ProfileQueriesUsernameTest do
       refute ProfileQueries.username_available?(username)
     end
 
+    test "username_available?/1 folds case, the way the unique index does" do
+      # Inserted past the changeset, which is the only way a non-lowercase
+      # handle can exist, and exactly what the lower(username) unique index
+      # was added to catch.
+      username = "Mixed_#{System.unique_integer([:positive])}"
+      insert(:profile, username: username)
+
+      refute ProfileQueries.username_available?(String.downcase(username))
+      refute ProfileQueries.username_available?(String.upcase(username))
+    end
+
     test "update_username/2 updates the username" do
       user = insert(:user)
       {:ok, profile} = ProfileQueries.insert_profile(user.id)

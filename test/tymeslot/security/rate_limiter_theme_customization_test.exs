@@ -215,9 +215,9 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
       assert theme_message =~ "theme customization"
       assert filter_message =~ "meeting filter"
 
-      # Both should advise waiting
-      assert theme_message =~ "wait"
-      assert filter_message =~ "wait"
+      # Both should say how long to wait, rather than only that one should
+      assert theme_message =~ ~r/Please try again in (a moment|1 minute|\d+ minutes)\./
+      assert filter_message =~ ~r/Please try again in (a moment|1 minute|\d+ minutes)\./
     end
   end
 end

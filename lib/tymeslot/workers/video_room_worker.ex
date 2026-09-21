@@ -29,6 +29,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     priority: 0
 
   alias Ecto.Changeset
+  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
@@ -234,7 +235,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   defp handle_success(meeting, announce) do
     Logger.info("Video room created successfully",
       meeting_id: Map.get(meeting, :id),
-      room_id: Map.get(meeting, :video_room_id)
+      room_ref: Redactor.fingerprint(Map.get(meeting, :video_room_id))
     )
 
     # A room that arrives after recovery has already announced the booking

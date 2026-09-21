@@ -13,6 +13,14 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
   # See IntegrationNameValidator for the rationale behind this character set.
   @invisible_chars ~r/[\x{200B}-\x{200F}\x{2028}-\x{202F}\x{205F}-\x{206F}\x{FEFF}\x{00AD}]/u
 
+  # A server URL is stored exactly as typed and later requested, so it may not
+  # carry characters that have no place in one: whitespace (`\p{Z}`) and the
+  # control, format and other invisible characters (`\p{C}`) that split a
+  # request line or make one hostname read as another. These are refused
+  # rather than stripped: quietly editing a URL is what this validator exists
+  # not to do.
+  @forbidden_url_chars ~r/[\p{Z}\p{C}]/u
+
   @doc """
   Strict, centralized validator for integration names with universal sanitization.
 
@@ -66,6 +74,22 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
   is accepted too; callers pass it exactly when the operator has allowed
   private addresses for the integration, the same opt-in that lets the https
   rule accept such a name.
+
+  The URL is sanitised in `:plain_text` mode, not the default `:strict`.
+  Strict mode is built for free text and rewrites a URL without saying so: it
+  percent-decodes repeatedly and then strips SQL-comment-shaped (`--…`) and
+  hex-shaped (`0x…`) runs, so `https://meet.example.com/team--sync` would be
+  stored as `https://meet.example.com/team` and `…/room%23a` would become a
+  fragment the server never sees. The result still parses, so the save
+  succeeds and every booking points at a different room. Calendar feed URLs
+  already bypass this function for exactly that reason
+  (`Tymeslot.Integrations.Calendar.InputValidation`).
+
+  Plain-text mode still validates UTF-8, strips null bytes, normalises to NFC
+  and enforces the length limits. Safety comes from `validate_url_fn`, which
+  defaults to the HTTP/HTTPS allow-list in `Tymeslot.Security.UrlValidation`:
+  a URL is bound to queries as a parameter and escaped on render, so there is
+  nothing here for strict mode to protect that it does not break first.
   """
   @spec validate_server_url(any(), map(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
   def validate_server_url(url, metadata, opts \\ []) do
@@ -76,35 +100,41 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
         dgettext("dashboard_integrations", "Please enter a valid server URL")
       )
 
-    validate_url_fn = Keyword.get(opts, :validate_url_fn, fn _url -> :ok end)
+    validate_url_fn = Keyword.get(opts, :validate_url_fn, &UrlValidation.validate_http_url/1)
     internal_names_local = Keyword.get(opts, :internal_names_local, false)
 
-    case UniversalSanitizer.sanitize_and_validate(normalize_url_protocol(url),
-           allow_html: false,
-           metadata: metadata
-         ) do
-      {:ok, sanitized_url} ->
-        uri = URI.parse(sanitized_url)
-
-        cond do
-          is_nil(uri.host) or uri.host == "" ->
-            {:error, error_msg}
-
-          not host_shape_allowed?(uri.host, internal_names_local) ->
-            {:error, error_msg}
-
-          true ->
-            case validate_url_fn.(sanitized_url) do
-              :ok -> {:ok, sanitized_url}
-              {:error, error} -> {:error, error}
-            end
-        end
-
-      {:error, error} ->
-        {:error, error}
+    with {:ok, candidate} <-
+           UniversalSanitizer.sanitize_and_validate(normalize_url_protocol(url),
+             mode: :plain_text,
+             metadata: metadata
+           ),
+         :ok <- validate_url_shape(candidate, error_msg, internal_names_local),
+         :ok <- validate_url_fn.(candidate) do
+      {:ok, candidate}
     end
   end
 
+  defp validate_url_shape(url, error_msg, internal_names_local) do
+    uri = URI.parse(url)
+
+    cond do
+      Regex.match?(@forbidden_url_chars, url) ->
+        {:error, error_msg}
+
+      is_nil(uri.host) or uri.host == "" ->
+        {:error, error_msg}
+
+      not host_shape_allowed?(uri.host, internal_names_local) ->
+        {:error, error_msg}
+
+      true ->
+        :ok
+    end
+  end
+
+  # A public domain has a dot; `localhost` is the one bare name always allowed.
+  # A single-label internal name is admitted only under the operator's
+  # private-address opt-in.
   defp host_shape_allowed?("localhost", _internal_names_local), do: true
 
   defp host_shape_allowed?(host, internal_names_local) do

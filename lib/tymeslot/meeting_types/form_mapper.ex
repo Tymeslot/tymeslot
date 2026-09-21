@@ -37,11 +37,9 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   """
   @spec build_attrs(map(), map()) :: {:ok, map()} | {:error, error()}
   def build_attrs(params, ui_state) do
-    payment_required = params["payment_required"] == "true"
-
     with {:ok, duration_minutes} <- parse_duration(params["duration"]),
          {:ok, reminder_config} <- normalize_reminder_config(params["reminder_config"]),
-         {:ok, price_cents} <- parse_price_cents(payment_required, params["price"]),
+         {:ok, payment} <- payment_attrs(params),
          {:ok, approval_window_hours} <- ApprovalWindow.parse(params["approval_window_hours"]) do
       attrs = %{
         name: params["name"],
@@ -58,14 +56,39 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         calendar_integration_id: blank_to_nil(params["calendar_integration_id"]),
         availability_schedule_id: blank_to_nil(params["availability_schedule_id"]),
         target_calendar_id: blank_to_nil(params["target_calendar_id"]),
-        reminder_config: reminder_config,
-        payment_required: payment_required,
-        price_cents: price_cents
+        reminder_config: reminder_config
       }
 
-      attrs = Map.merge(attrs, booking_limits(params))
+      attrs =
+        attrs
+        |> Map.merge(booking_limits(params))
+        |> Map.merge(payment)
 
       {:ok, maybe_put_custom_fields(attrs, params)}
+    end
+  end
+
+  # A form that cannot render the payment controls does not post them, and an
+  # absent key is not a request to make the meeting type free. Both
+  # `MeetingTypeForm.Submission` and its hidden inputs omit the pair whenever
+  # the host cannot accept charges, so reading the absence as `false` cleared
+  # the stored price on the next unrelated save — a rename, a new duration —
+  # with nothing said to the host, who then had to re-enter every price after
+  # reconnecting Stripe. Same shape, and the same reason, as
+  # `maybe_put_custom_fields/2` below.
+  defp payment_attrs(params) do
+    if Map.has_key?(params, "payment_required") do
+      payment_required = params["payment_required"] == "true"
+
+      case parse_price_cents(payment_required, params["price"]) do
+        {:ok, price_cents} ->
+          {:ok, %{payment_required: payment_required, price_cents: price_cents}}
+
+        {:error, _reason} = error ->
+          error
+      end
+    else
+      {:ok, %{}}
     end
   end
 

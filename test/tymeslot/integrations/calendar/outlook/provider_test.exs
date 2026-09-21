@@ -465,7 +465,27 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
         {:ok, :deleted}
       end)
 
-      assert {:ok, :deleted} = Provider.call_delete_event(integration, "event123")
+      assert {:ok, :deleted} = Provider.call_delete_event(integration, "event123", [])
+    end
+
+    # Deletes used to have no channel for the calendar at all, so an event on
+    # any calendar but the default was addressed under the default.
+    test "call_delete_event addresses the calendar the event is actually on" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "outlook",
+          default_booking_calendar_id: "calendar123"
+        )
+
+      expect(OutlookCalendarAPIMock, :delete_event, fn _int, "calendar999", "event123" ->
+        {:ok, :deleted}
+      end)
+
+      assert {:ok, :deleted} =
+               Provider.call_delete_event(integration, "event123", calendar_id: "calendar999")
     end
   end
 

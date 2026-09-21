@@ -30,7 +30,9 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
   alias Oban.Job
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Bookings.Reschedule
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Notifications.Orchestrator
+  alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.TelegramWorker
@@ -56,6 +58,14 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
     )
 
     TestMocks.setup_email_mocks()
+
+    # The reschedule submit re-reads the host's connected calendars
+
+    # (`Tymeslot.Bookings.CalendarCheck`); these tests are about a host with
+
+    # nothing else in their diary.
+
+    TestMocks.stub_no_calendar_events()
 
     # The real service, so the templates actually render. Restored afterwards
     # for the rest of the suite.
@@ -142,6 +152,36 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
       assert ics.data =~ "SEQUENCE:1"
     end
 
+    test "each reschedule sends a higher SEQUENCE than the one before",
+         %{user: user, meeting: meeting} do
+      assert {:ok, _first} =
+               Reschedule.execute(
+                 meeting.uid,
+                 reschedule_params_for(future_datetime(10, :day)),
+                 %{},
+                 user.id
+               )
+
+      first_ics = attendee_ics(delivered_emails(), meeting)
+
+      assert {:ok, second} =
+               Reschedule.execute(
+                 meeting.uid,
+                 reschedule_params_for(future_datetime(12, :day)),
+                 %{},
+                 user.id
+               )
+
+      second_ics = attendee_ics(delivered_emails(), meeting)
+
+      assert first_ics.data =~ "SEQUENCE:1"
+      assert second_ics.data =~ "SEQUENCE:2"
+      # Stored as the last SEQUENCE sent, so a later cancellation or a change
+      # the host makes in their own calendar goes past it.
+      assert second.ical_sequence == 2
+      assert Repo.get!(MeetingSchema, meeting.id).ical_sequence == 2
+    end
+
     test "dispatches the meeting.rescheduled webhook alongside the emails", %{
       user: user,
       meeting: meeting
@@ -214,6 +254,13 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
   end
 
   # ----- helpers -----
+
+  defp attendee_ics(delivered, meeting) do
+    Enum.find(
+      delivered[meeting.attendee_email].attachments,
+      &(&1.content_type =~ "text/calendar")
+    )
+  end
 
   # The two emails a reschedule sends, keyed by recipient address, so a test
   # names the one it means instead of depending on delivery order.

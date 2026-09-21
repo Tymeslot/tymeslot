@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.VideoSyncWorker
@@ -186,8 +187,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
 
     expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts -> :ok end)
 
-    expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
-      {:ok, "relocated-uid"}
+    # Google mints an id of its own and answers with the event it made.
+    expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+      {:ok,
+       CreatedEvent.from_provider_event(%{uid: "relocated-uid", summary: event_data.summary})}
     end)
 
     assert {:ok, %{integration_id: _id}} =
@@ -256,7 +259,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       play_nextcloud(host, "goog0001")
 
       expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
-        {:ok, %{uid: "googlehex0001", summary: "Planning"}}
+        {:ok, CreatedEvent.from_provider_event(%{uid: "googlehex0001", summary: "Planning"})}
       end)
 
       assert {:ok, %{video_room_id: "goog0001"}} = create_grid_event(user, calendar, talk)
@@ -314,7 +317,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
       play_nextcloud(host, "cald0001")
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
-        {:ok, event_data.uid}
+        {:ok, CreatedEvent.new(event_data.uid)}
       end)
 
       assert {:ok, %{uid: uid, video_room_id: "cald0001"}} =

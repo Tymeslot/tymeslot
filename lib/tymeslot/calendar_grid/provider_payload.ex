@@ -13,7 +13,9 @@ defmodule Tymeslot.CalendarGrid.ProviderPayload do
 
   Complete means complete with respect to what the cache models. Properties
   Tymeslot never reads (categories, custom `X-` properties, alarm repeats)
-  are still lost on a CalDAV or Google write.
+  are still lost on a Google write. CalDAV keeps them: the caller sends the
+  event's cached `raw_ical` alongside the payload and the adapter patches
+  that document rather than rebuilding it.
 
   ## Vocabularies
 

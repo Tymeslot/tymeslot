@@ -29,7 +29,17 @@ defmodule Tymeslot.Security.UrlValidation do
 
   @default_invalid_message "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)"
   @default_max_length 2_000
-  @default_scheme_error "Only HTTP and HTTPS URLs are allowed"
+
+  # Two refusals, two messages. The scheme check fires on what someone typed
+  # into an address field: a bare `cloud.example.com` (no scheme at all lands
+  # here too), or `ftp://…`. Naming the correction is what helps there. The
+  # substring check below fires on a nested `javascript:` or `data:` inside an
+  # otherwise well-formed https URL, where telling the reader to start with
+  # https:// would be nonsense, so it keeps the rule as its wording. Callers
+  # that want one message for both still get it: `:disallowed_protocol_error`
+  # overrides the pair.
+  @default_scheme_error "Enter a full address starting with https://, for example https://example.com"
+  @default_blocked_protocol_error "Only HTTP and HTTPS URLs are allowed"
   @default_https_error "Use HTTPS for non-local servers"
   @default_private_ip_error "Private or local network addresses are not allowed"
   @disallowed_protocols ["javascript:", "data:", "file:", "ftp:"]
@@ -50,10 +60,7 @@ defmodule Tymeslot.Security.UrlValidation do
         end
 
       %URI{scheme: scheme} when scheme not in ["http", "https"] ->
-        disallowed_protocol_error =
-          Keyword.get(opts, :disallowed_protocol_error, @default_scheme_error)
-
-        {:error, disallowed_protocol_error}
+        {:error, Keyword.get(opts, :disallowed_protocol_error, @default_scheme_error)}
 
       _invalid_url ->
         {:error, invalid_message}
@@ -106,8 +113,8 @@ defmodule Tymeslot.Security.UrlValidation do
     length_error =
       Keyword.get(opts, :length_error_message, default_length_error(max_length))
 
-    disallowed_protocol_error =
-      Keyword.get(opts, :disallowed_protocol_error, @default_scheme_error)
+    blocked_protocol_error =
+      Keyword.get(opts, :disallowed_protocol_error, @default_blocked_protocol_error)
 
     https_error_message = Keyword.get(opts, :https_error_message, @default_https_error)
     private_ip_error = Keyword.get(opts, :private_ip_error_message, @default_private_ip_error)
@@ -125,7 +132,7 @@ defmodule Tymeslot.Security.UrlValidation do
         {:error, length_error}
 
       contains_disallowed_substring?(url, disallowed_protocols) ->
-        {:error, disallowed_protocol_error}
+        {:error, blocked_protocol_error}
 
       block_private_ips and local_or_private_host?(host) ->
         {:error, private_ip_error}

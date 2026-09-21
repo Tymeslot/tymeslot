@@ -13,7 +13,6 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
   use Oban.Testing, repo: Tymeslot.Repo
   @moduletag :workers
 
-  import ExUnit.CaptureLog
   import Mox
   import Tymeslot.MeetingTestHelpers
 
@@ -24,6 +23,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.VideoSyncWorker
   alias Tymeslot.ZoomOAuthHelperMock
 
@@ -286,22 +286,32 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
           video_room_id: "86360699337"
         })
 
-      log =
-        capture_log(fn ->
+      events =
+        LogCapture.with_capture(fn ->
           assert {:discard, _reason} =
                    perform_job(VideoSyncWorker, %{
                      "meeting_id" => meeting.id,
                      "action" => "delete"
                    })
+
+          LogCapture.drain()
         end)
 
+      logged = Enum.map_join(events, "\n", &LogCapture.dump/1)
+
       # Silence here is the original defect: an unreachable room must be visible.
-      # The meeting id, provider and room id ride along as Logger metadata and
-      # reach production logs via the JSON formatter's :all_except setting; the
-      # test formatter whitelists only a few keys, so :reason is what is
-      # assertable here.
-      assert log =~ "no video integration can reach it"
-      assert log =~ "reason=no_active_integration"
+      # `LogCapture` sees the metadata the JSON formatter ships in production
+      # and the test formatter's whitelist would drop.
+      assert logged =~ "no video integration can reach it"
+      assert logged =~ "reason: :no_active_integration"
+      assert logged =~ "meeting_id: \"#{meeting.id}\""
+
+      # The room the job could not reach is still identified, but by a
+      # fingerprint: the id itself is the join link for a link-based provider,
+      # and the meeting id already leads to the row that holds it. fdfa5bf3 is
+      # the first eight hex characters of the SHA-256 of "86360699337".
+      assert logged =~ "room_ref: \"fdfa5bf3\""
+      refute logged =~ "86360699337"
     end
   end
 

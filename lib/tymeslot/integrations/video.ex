@@ -60,9 +60,16 @@ defmodule Tymeslot.Integrations.Video do
 
   @doc """
   Gets a single video integration by ID for a specific user.
+
+  Returns `{:error, :requires_reencryption, integration}` for an owned
+  integration whose credentials no longer decrypt; the row is real and the
+  caller decides what to do with it. Callers that only want the two-outcome
+  shape should use `fetch_integration_for_user/2` instead.
   """
   @spec get_integration(pos_integer(), pos_integer()) ::
-          {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
+          {:ok, VideoIntegrationSchema.t()}
+          | {:error, :not_found}
+          | {:error, :requires_reencryption, VideoIntegrationSchema.t()}
   def get_integration(user_id, id) when is_integer(user_id) and is_integer(id) do
     VideoIntegrationQueries.get_for_user(id, user_id)
   end
@@ -196,8 +203,16 @@ defmodule Tymeslot.Integrations.Video do
       base_url: base_url
     }
 
-    with {:ok, _msg} <- probe_mirotalk_connection(config, attrs[:user_id]),
-         :ok <- check_no_duplicate(attrs) do
+    # Order matters, and the probe goes last. Everything above it is decided
+    # in-process, while the probe is an outbound request to an address the
+    # organiser typed, which is the thing the connection-test bucket exists to
+    # meter. Probing first meant a re-added server, or a submission the
+    # changeset was always going to reject, spent a token on a refusal that
+    # never left the machine, and the organiser was then told they had run too
+    # many connection tests after pressing "Add".
+    with :ok <- check_no_duplicate(attrs),
+         :ok <- VideoIntegrationSchema.validate_new(attrs),
+         {:ok, _msg} <- probe_mirotalk_connection(config, attrs[:user_id]) do
       VideoIntegrationQueries.create(attrs)
     end
   end
@@ -422,6 +437,9 @@ defmodule Tymeslot.Integrations.Video do
                 meeting_time
               ),
               to: Rooms
+
+  @spec shared_join_url(map(), DateTime.t() | nil) :: {:ok, String.t() | nil} | {:error, any()}
+  defdelegate shared_join_url(meeting_context, meeting_time), to: Rooms
 
   @spec existing_room_context(pos_integer() | nil, keyword()) ::
           {:ok, map()} | {:error, any()}

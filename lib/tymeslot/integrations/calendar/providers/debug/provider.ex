@@ -21,6 +21,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.DebugSchedule
   alias Tymeslot.Integrations.Calendar.DebugStore
 
@@ -45,7 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
     |> stored_event_from(uid)
     |> DebugStore.put_event()
 
-    {:ok, %{uid: uid}}
+    {:ok, CreatedEvent.new(uid)}
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider

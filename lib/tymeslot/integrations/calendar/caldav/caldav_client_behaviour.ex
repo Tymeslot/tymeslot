@@ -21,7 +21,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ClientBehaviour do
 
   @callback get_events(client(), DateTime.t(), DateTime.t()) ::
               {:ok, [event()]} | {:error, term()}
-  @callback create_event(client(), map()) :: {:ok, String.t()} | {:error, term()}
+  @callback create_event(client(), map()) ::
+              {:ok, Tymeslot.Integrations.Calendar.CreatedEvent.t()} | {:error, term()}
   @callback update_event(client(), String.t(), map()) :: :ok | {:error, term()}
   @callback delete_event(client(), String.t()) :: :ok | {:error, term()}
 end

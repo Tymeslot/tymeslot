@@ -4,12 +4,31 @@ defmodule Tymeslot.Security.SsrfBlockedError do
   user-supplied host is refused by `Tymeslot.Security.SsrfGuard`.
   """
 
+  # The refused URL can carry a secret in its path — a Nextcloud Talk room
+  # token is both the conversation's id and its join link — and this struct
+  # travels to callers that log it with `inspect/1`, which does not go through
+  # `message/1`. Dropping the field from the inspect output is what keeps the
+  # two paths consistent; `message/1` reduces it to an origin for the same
+  # reason.
+  @derive {Inspect, except: [:url]}
   defexception [:url, :reason]
 
   @impl Exception
   def message(%__MODULE__{url: url, reason: reason}) do
-    "outbound request to #{inspect(url)} blocked by SSRF protection: #{inspect(reason)}"
+    "outbound request to #{origin(url)} blocked by SSRF protection: #{inspect(reason)}"
   end
+
+  defp origin(url) when is_binary(url) do
+    case URI.parse(url) do
+      %URI{scheme: scheme, host: host} when is_binary(scheme) and is_binary(host) ->
+        "#{scheme}://#{host}"
+
+      _other ->
+        "unknown"
+    end
+  end
+
+  defp origin(_url), do: "unknown"
 end
 
 defmodule Tymeslot.Security.SsrfGuard do

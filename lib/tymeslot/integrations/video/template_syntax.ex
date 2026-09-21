@@ -8,8 +8,9 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntax do
   shares, which is a legitimate choice.
 
   Anything that looks like an attempt at the variable but is not written exactly
-  (`{meeting_id}`, `{{Meeting_ID}}`, `{{ meeting_id }}`, `[[meeting_id]]`), any
-  other double-brace variable, and the variable inside the fragment are refused:
+  (`{meeting_id}`, `{{Meeting_ID}}`, `{{ meeting_id }}`, `[[meeting_id]]`,
+  `{{{meeting_id}}}`), any other double-brace variable, and the variable inside
+  the fragment are refused:
   room creation only recognises the exact form, so each of these would silently
   give every booking the same room.
 
@@ -112,7 +113,7 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntax do
            "Template in fragment (#) won't work - fragments aren't sent to servers. Use path instead: https://example.com/{{meeting_id}}"
          )}
 
-      malformed_template?(remainder) ->
+      malformed_template?(url, remainder) ->
         describe_malformed_template(remainder)
 
       remainder != url ->
@@ -140,12 +141,22 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntax do
     end
   end
 
-  # The blocking rule: any double-brace token, or a meeting-id token touching
-  # a bracket of any kind. Deliberately independent of the descriptive checks
-  # below, which only choose the message.
-  defp malformed_template?(remainder) do
+  # The blocking rule: any double-brace token, a meeting-id token touching a
+  # bracket of any kind, or a brace hugging a correctly written variable.
+  # Deliberately independent of the descriptive checks below, which only choose
+  # the message.
+  defp malformed_template?(url, remainder) do
     Regex.match?(~r/\{\{[^{}]*\}\}/, remainder) or
-      Regex.match?(~r/[{\[(<]\s*meeting[\s_-]*id|meeting[\s_-]*id\s*[}\])>]/i, remainder)
+      Regex.match?(~r/[{\[(<]\s*meeting[\s_-]*id|meeting[\s_-]*id\s*[}\])>]/i, remainder) or
+      brace_hugging_variable?(url)
+  end
+
+  # `{{{meeting_id}}}` leaves only `{}` once the exact variable is removed, so
+  # the remainder carries no trace of it. It is caught on the URL as typed, and
+  # only where a brace touches the variable's own brackets: braces elsewhere
+  # stay legal, since a permanent Teams link carries a JSON context.
+  defp brace_hugging_variable?(url) do
+    Regex.match?(~r/\{\{\{meeting_id\}\}|\{\{meeting_id\}\}\}/, url)
   end
 
   defp describe_malformed_template(remainder) do

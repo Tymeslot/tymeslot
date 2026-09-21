@@ -6,6 +6,19 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
   alias Tymeslot.Emails.Templates.AppointmentReminder
   import Tymeslot.EmailTestHelpers
 
+  defp guest_details(overrides \\ %{}) do
+    build_appointment_details(
+      Map.merge(
+        %{
+          guest_name: "Greg Guest",
+          guest_accept_url: "https://tymeslot.example.com/guest/tok/accept",
+          guest_decline_url: "https://tymeslot.example.com/guest/tok/decline"
+        },
+        overrides
+      )
+    )
+  end
+
   describe "render/3 as organizer" do
     test "creates email with correct subject line" do
       details = build_appointment_details(%{time_until: "30 minutes"})
@@ -264,6 +277,30 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
              "Expected raw UTC time #{formatted_utc} to be absent from HTML body"
 
       assert email.html_body =~ "America/Los_Angeles"
+    end
+  end
+
+  describe "render/3 as guest" do
+    test "points the guest at the room, not at the booker's own join link" do
+      details = guest_details()
+      email = AppointmentReminder.render(:guest, "greg@example.com", details)
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ details.meeting_url
+        refute body =~ details.attendee_video_url
+      end
+    end
+
+    # A reminder is where a guest goes to join, so a server that admits only a
+    # link carrying a token has to be reachable from here too.
+    test "prefers the guests' own link over the bare room URL" do
+      details = guest_details(%{guest_video_url: "https://meet.example.com/room?jwt=GUEST-TOKEN"})
+      email = AppointmentReminder.render(:guest, "greg@example.com", details)
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "jwt=GUEST-TOKEN"
+        refute body =~ details.attendee_video_url
+      end
     end
   end
 

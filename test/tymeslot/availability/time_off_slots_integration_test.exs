@@ -246,6 +246,60 @@ defmodule Tymeslot.Availability.TimeOffSlotsIntegrationTest do
 
       assert availability[Date.to_string(monday)]
     end
+
+    test "takes the day off the grid when part-day periods cover all of it between them" do
+      # Neither period swallows the day whole, so a reading that asks only
+      # whether one did still calls this a business day: the grid offers a day
+      # the picker then shows nothing for.
+      {profile, schedule, monday} = weekday_schedule()
+
+      insert(:time_off_period,
+        profile: profile,
+        starts_on: monday,
+        ends_on: monday,
+        start_time: ~T[08:00:00],
+        end_time: ~T[13:00:00]
+      )
+
+      insert(:time_off_period,
+        profile: profile,
+        starts_on: monday,
+        ends_on: monday,
+        start_time: ~T[13:00:00],
+        end_time: ~T[18:00:00]
+      )
+
+      refute BusinessHours.business_day?(monday, schedule.id, %{})
+      assert {:ok, []} = slots(monday, schedule)
+    end
+
+    test "keeps a day whose periods leave a gap, reading the ones it was handed" do
+      # The periods are passed in and never written, so a reading that queried
+      # per date would find none of them and answer on the bare schedule. The
+      # week strip's fallback runs this per rendered day and exists to be
+      # cheap.
+      {_profile, schedule, monday} = weekday_schedule()
+
+      morning = %{
+        starts_on: monday,
+        ends_on: monday,
+        start_time: ~T[08:00:00],
+        end_time: ~T[11:00:00]
+      }
+
+      afternoon = %{
+        starts_on: monday,
+        ends_on: monday,
+        start_time: ~T[13:00:00],
+        end_time: ~T[18:00:00]
+      }
+
+      assert BusinessHours.business_day?(monday, schedule.id, %{time_off: [morning, afternoon]})
+
+      refute BusinessHours.business_day?(monday, schedule.id, %{
+               time_off: [%{afternoon | start_time: ~T[11:00:00]}, morning]
+             })
+    end
   end
 
   # --- Helpers ---

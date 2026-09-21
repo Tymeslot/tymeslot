@@ -27,6 +27,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
 
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.Encryption
@@ -72,11 +73,11 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
         # Return the converted event with :meet_url populated, matching what
         # Google.Provider.convert_event/1 produces from a real API response.
         {:ok,
-         %{
+         CreatedEvent.from_provider_event(%{
            uid: "uid-inline-123",
            summary: event_data.summary,
            meet_url: captured_url
-         }}
+         })}
       end)
 
       start_at = ~U[2026-04-06 09:00:00Z]
@@ -140,7 +141,12 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
         assert %{conference_data: _conference_data} = event_data
 
         # Google returns a response with no entryPoints (Meet URL missing)
-        {:ok, %{uid: "uid-no-url-456", summary: event_data.summary, meet_url: nil}}
+        {:ok,
+         CreatedEvent.from_provider_event(%{
+           uid: "uid-no-url-456",
+           summary: event_data.summary,
+           meet_url: nil
+         })}
       end)
 
       start_at = ~U[2026-04-07 10:00:00Z]
@@ -193,7 +199,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
         # Sanity check: the description reaching the provider now carries
         # the video link, so CalDAV servers propagate it to the ICS body.
         assert event_data.description =~ "https://video.example.com/join/room-123"
-        {:ok, "new-uid-123"}
+        {:ok, CreatedEvent.new("new-uid-123")}
       end)
 
       start_at = ~U[2026-04-06 09:00:00Z]
@@ -245,7 +251,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
 
       expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
         assert event_data.description =~ "https://meet.example.com/"
-        {:ok, "custom-template-uid-1"}
+        {:ok, CreatedEvent.new("custom-template-uid-1")}
       end)
 
       start_at = ~U[2026-04-10 09:00:00Z]
@@ -288,7 +294,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
         )
 
       expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
-        {:ok, "reauth-uid-1"}
+        {:ok, CreatedEvent.new("reauth-uid-1")}
       end)
 
       payload = %{
@@ -335,7 +341,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
         )
 
       expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
-        {:ok, "flagged-uid-1"}
+        {:ok, CreatedEvent.new("flagged-uid-1")}
       end)
 
       payload = %{
@@ -363,7 +369,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
-        {:ok, "ok-uid-1"}
+        {:ok, CreatedEvent.new("ok-uid-1")}
       end)
 
       payload = %{
@@ -464,7 +470,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
       end_at = ~U[2026-04-09 13:30:00Z]
 
       stub(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
-        {:ok, "ad-hoc-uid-1"}
+        {:ok, CreatedEvent.new("ad-hoc-uid-1")}
       end)
 
       params = %{

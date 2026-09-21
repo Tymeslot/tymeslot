@@ -1,5 +1,12 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal do
-  @moduledoc "Recurrence scope selection modal for editing recurring calendar events."
+  @moduledoc """
+  Confirmation shown before an edit to one occurrence of a repeating event.
+
+  The edit is written to the occurrence the organiser clicked (Google and
+  Outlook address it by its own id), so the prompt offers that and nothing
+  else. "This and following" and "All events" come back once a provider
+  write honours a scope.
+  """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
@@ -21,35 +28,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal do
       <:header>{dgettext("dashboard_calendar_events", "Edit recurring event")}</:header>
 
       <p class="text-token-sm text-tymeslot-500 mb-4">
-        {dgettext("dashboard_calendar_events", "Which events do you want to update?")}
+        {dgettext(
+          "dashboard_calendar_events",
+          "This event is part of a repeating series. Your change applies to this event only, and the rest of the series stays as it is. To change the whole series, use your calendar app."
+        )}
       </p>
-
-      <div class="flex flex-col gap-2 mb-4">
-        <button
-          phx-click="confirm_recurrence_scope"
-          phx-value-scope="this_only"
-          phx-target={@myself}
-          class="w-full text-left px-4 py-2.5 rounded-lg border border-tymeslot-200 hover:bg-tymeslot-50 text-token-sm text-tymeslot-700"
-        >
-          {dgettext("dashboard_calendar_events", "This event only")}
-        </button>
-        <button
-          phx-click="confirm_recurrence_scope"
-          phx-value-scope="this_and_following"
-          phx-target={@myself}
-          class="w-full text-left px-4 py-2.5 rounded-lg border border-tymeslot-200 hover:bg-tymeslot-50 text-token-sm text-tymeslot-700"
-        >
-          {dgettext("dashboard_calendar_events", "This and following events")}
-        </button>
-        <button
-          phx-click="confirm_recurrence_scope"
-          phx-value-scope="all"
-          phx-target={@myself}
-          class="w-full text-left px-4 py-2.5 rounded-lg border border-tymeslot-200 hover:bg-tymeslot-50 text-token-sm text-tymeslot-700"
-        >
-          {dgettext("dashboard_calendar_events", "All events in series")}
-        </button>
-      </div>
 
       <:footer>
         <.action_button
@@ -57,6 +40,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal do
           phx-click={JS.push("cancel_recurrence_prompt", target: @myself)}
         >
           {dgettext("dashboard_calendar_events", "Cancel")}
+        </.action_button>
+        <.action_button
+          phx-click="confirm_recurrence_scope"
+          phx-value-scope="this_only"
+          phx-target={@myself}
+        >
+          {dgettext("dashboard_calendar_events", "Update this event")}
         </.action_button>
       </:footer>
     </.modal>

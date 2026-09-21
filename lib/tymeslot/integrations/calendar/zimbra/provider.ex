@@ -112,15 +112,10 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
   Tests connection to Zimbra server with Zimbra-specific messaging.
   """
   @impl Tymeslot.Integrations.Calendar.Provider
-  @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, String.t()}
+  @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, term()}
   def perform_connection_test(integration) do
     ProviderCommon.test_caldav_provider_connection(integration,
       success_message: dgettext("dashboard_calendar_providers", "Zimbra connection successful"),
-      unauthorized_message:
-        dgettext(
-          "dashboard_calendar_providers",
-          "Authentication failed. Check your Zimbra username and password."
-        ),
       not_found_message:
         dgettext(
           "dashboard_calendar_providers",
@@ -185,16 +180,19 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
   # Private helper functions
 
   defp validate_zimbra_url(url) do
+    invalid_message =
+      dgettext(
+        "dashboard_calendar_providers",
+        "Invalid Zimbra URL. Should be your Zimbra server URL (e.g., https://mail.example.com) or full CalDAV URL (e.g., https://mail.example.com/dav/user@example.com)"
+      )
+
     case UrlValidation.validate_http_url(url,
            enforce_https_for_public: true,
            internal_names_local: SsrfGuard.allow_private_for_calendar?(),
            https_error_message:
              dgettext("dashboard_calendar_providers", "Use HTTPS for non-local Zimbra servers"),
-           invalid_message:
-             dgettext(
-               "dashboard_calendar_providers",
-               "Invalid Zimbra URL. Should be your Zimbra server URL (e.g., https://mail.example.com) or full CalDAV URL (e.g., https://mail.example.com/dav/user@example.com)"
-             )
+           invalid_message: invalid_message,
+           disallowed_protocol_error: invalid_message
          ) do
       :ok -> :ok
       {:error, message} -> {:error, message}

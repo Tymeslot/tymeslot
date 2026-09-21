@@ -455,9 +455,11 @@ The managed cloud offering (tymeslot.app) is built in a separate, private reposi
 3. **Repository Pattern**: All database access through dedicated `*_queries.ex` modules.
 4. **No queries in `mount/3`**: Defer data loading to `handle_params/3` to avoid double-loading.
 5. **The web layer calls contexts only**: Everything under `lib/tymeslot_web/` (LiveViews, LiveComponents, controllers, handler and helper modules, function components, themes) is the presentation layer. It calls context functions, never `*_queries.ex` modules, Oban workers or `Oban.insert`, or runtime adapter modules. `CredoChecks.WebLayerBoundary` enforces this.
-6. **Contexts enforce ownership**: A context function that acts on a user-owned resource checks ownership itself: it takes the acting user or is scoped by them, and returns `{:error, :not_found}` for an id the user does not own. A check in a LiveView is never the only guard.
-7. **Async work stays in the domain**: Write it as a synchronous context function; the LiveView runs it asynchronously with `start_async/3` or a task.
-8. **UI pre-validation reuses the domain rule**: When the UI validates before submitting, it calls the context's predicate rather than restating the rule.
+6. **Contexts enforce ownership** (convention; reviewed by hand, no check): A context function that acts on a user-owned resource checks ownership itself: it takes the acting user or is scoped by them, and returns `{:error, :not_found}` for an id the user does not own. A check in a LiveView is never the only guard. The scoping belongs in the query, so that an id from another account simply misses; a function that loads by id and only then compares owners has already read someone else's row, and the error tuple it returns afterwards is no proof the rule was kept. This is the rule cross-tenant leaks are made of, so a pull request adding a context function that takes a resource id should say how that resource is scoped to the acting user.
+7. **Async work stays in the domain** (convention; reviewed by hand, no check): Write it as a synchronous context function; the LiveView runs it asynchronously with `start_async/3` or a task.
+8. **UI pre-validation reuses the domain rule** (convention; reviewed by hand, no check): When the UI validates before submitting, it calls the context's predicate rather than restating the rule.
+
+Two of these rules have a build-failing check behind them: `CredoChecks.RepoCallBoundary` for rule 3 and `CredoChecks.WebLayerBoundary` for rule 5. The rest are caught by review, and rule 6 is the one worth slowing down for, since it is an authorisation rule and nothing will fail the build when it is broken.
 
 ### Security First
 

@@ -794,3 +794,34 @@ msgstr "(copia)"
 #, elixir-autogen, elixir-format
 msgid "(copy) %{number}"
 msgstr "(copia) %{number}"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "1 booking already sits inside these dates"
+msgid_plural "%{count} bookings already sit inside these dates"
+msgstr[0] "1 prenotazione ricade già in queste date"
+msgstr[1] "%{count} prenotazioni ricadono già in queste date"
+
+#: lib/tymeslot_web/live/dashboard/availability/time_off_card.ex
+#, elixir-autogen, elixir-format
+msgid "1 booking sits inside this time off. It stays in your diary until you move or cancel it."
+msgid_plural "%{count} bookings sit inside this time off. They stay in your diary until you move or cancel them."
+msgstr[0] "1 prenotazione ricade in questa assenza. Resta nella tua agenda finché non la sposti o la annulli."
+msgstr[1] "%{count} prenotazioni ricadono in questa assenza. Restano nella tua agenda finché non le sposti o le annulli."
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Open your bookings in a new tab"
+msgstr "Apri le tue prenotazioni in una nuova scheda"
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Time off only stops new bookings. These keep their times until you move or cancel them."
+msgstr "Un'assenza blocca solo le nuove prenotazioni. Queste mantengono i loro orari finché non le sposti o le annulli."
+
+#: lib/tymeslot_web/components/dashboard/availability/time_off_form_modal.ex
+#, elixir-autogen, elixir-format
+msgid "and 1 more"
+msgid_plural "and %{count} more"
+msgstr[0] "e 1 altra"
+msgstr[1] "e altre %{count}"

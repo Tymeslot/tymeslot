@@ -152,6 +152,85 @@ defmodule Tymeslot.Integrations.Video.MiroTalkConnectionRateLimitTest do
     end
   end
 
+  describe "refusals that never reach the network" do
+    # The connection-test bucket meters outbound requests to an address the
+    # organiser typed. A refusal decided in-process makes no such request, so it
+    # must cost nothing: otherwise correcting a mistyped server a few times
+    # locks the form, and the lockout is reported as too many connection tests.
+    test "re-adding a server that is already connected never draws from the budget" do
+      user = insert(:user)
+
+      attrs = %{
+        "name" => "MiroTalk",
+        "base_url" => "https://mirotalk-duplicate.test",
+        "api_key" => "test-key"
+      }
+
+      assert {:ok, _integration} = Video.create_integration(user.id, :mirotalk, attrs)
+
+      for _i <- 1..(@limit + 5) do
+        assert {:error, :duplicate_integration} =
+                 Video.create_integration(user.id, :mirotalk, attrs)
+      end
+
+      # Only the successful create above spent a token, so the budget is short
+      # by exactly one: the duplicates cost nothing.
+      for _i <- 1..(@limit - 1) do
+        assert :ok = RateLimiter.check_connection_test_rate_limit(:mirotalk, {:user, user.id})
+      end
+
+      assert {:error, :rate_limited, _message} =
+               RateLimiter.check_connection_test_rate_limit(:mirotalk, {:user, user.id})
+    end
+
+    test "a submission the changeset rejects never draws from the budget" do
+      user = insert(:user)
+
+      # No name: the config is structurally fine and would probe happily, but
+      # the row can never be written.
+      attrs = %{"base_url" => "https://mirotalk-nameless.test", "api_key" => "test-key"}
+
+      for _i <- 1..(@limit + 5) do
+        assert {:error, %Ecto.Changeset{}} = Video.create_integration(user.id, :mirotalk, attrs)
+      end
+
+      for _i <- 1..@limit do
+        assert :ok = RateLimiter.check_connection_test_rate_limit(:mirotalk, {:user, user.id})
+      end
+
+      assert {:error, :rate_limited, _message} =
+               RateLimiter.check_connection_test_rate_limit(:mirotalk, {:user, user.id})
+    end
+
+    test "the refusal a save gets names the save, not a connection test" do
+      user = insert(:user)
+
+      for i <- 1..@limit do
+        assert {:ok, _integration} =
+                 Video.create_integration(user.id, :mirotalk, %{
+                   "name" => "MiroTalk #{i}",
+                   "base_url" => "https://mirotalk-refusal-#{i}.test",
+                   "api_key" => "test-key"
+                 })
+      end
+
+      assert {:error, {:rate_limited, message}} =
+               Video.create_integration(user.id, :mirotalk, %{
+                 "name" => "MiroTalk over budget",
+                 "base_url" => "https://mirotalk-refusal-over.test",
+                 "api_key" => "test-key"
+               })
+
+      # The organiser pressed "Add". Telling them they ran too many connection
+      # tests names an action they never knowingly performed.
+      refute message =~ "connection test"
+      assert message =~ "video server checks"
+
+      # And the wait is the real one, not the bucket's window restated.
+      assert message =~ ~r/Please try again in (a moment|1 minute|\d+ minutes)\./
+    end
+  end
+
   defp mirotalk_integration do
     user = insert(:user)
     {user, insert(:video_integration, user: user, provider: "mirotalk")}

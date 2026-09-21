@@ -225,6 +225,24 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
       assert conn.status == 202
       refute_enqueued(worker: TokenRefreshJob)
     end
+
+    # The endpoint is public, so anyone can post these. They must be
+    # acknowledged like any other payload rather than raising into a 500.
+    test "returns 202 for a value that is not a list", %{conn: conn} do
+      conn = post_lifecycle(conn, %{"value" => "x"})
+
+      assert conn.status == 202
+      refute_enqueued(worker: TokenRefreshJob)
+      refute_enqueued(worker: ReregisterOutlookSubscriptionWorker)
+    end
+
+    test "returns 202 for lifecycle entries that are not objects", %{conn: conn} do
+      conn = post_lifecycle(conn, %{"value" => [1, "a"]})
+
+      assert conn.status == 202
+      refute_enqueued(worker: TokenRefreshJob)
+      refute_enqueued(worker: ReregisterOutlookSubscriptionWorker)
+    end
   end
 
   describe "webhook/2 - batch deduplication" do

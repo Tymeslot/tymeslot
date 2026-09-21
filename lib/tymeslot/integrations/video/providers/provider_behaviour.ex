@@ -40,6 +40,28 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
             ) :: {:ok, String.t()} | {:error, any()}
 
   @doc """
+  A join URL for a recipient the room cannot name: a booking's guests, whom
+  the host's booker invited and Tymeslot mints no personal link for, and the
+  "Join video call" line written into a calendar event's description, which
+  every reader of that event shares.
+
+  Unlike `create_join_url/5` it asserts no participant identity, so nobody
+  holding it enters the room as somebody else, and it never confers moderator
+  rights. It is otherwise the attendee's link: scoped to this room alone and
+  valid for the same window.
+
+  Optional, and the default is the point: a provider whose join URLs are
+  plain room addresses has nothing to add to one, so by not implementing this
+  it keeps handing out `meeting_url` unchanged. Only a provider that puts a
+  per-participant credential in its links has to say what a link for an
+  unnamed recipient looks like.
+  """
+  @callback shared_join_url(
+              room_data :: RoomData.t(),
+              meeting_time :: DateTime.t() | nil
+            ) :: {:ok, String.t()} | {:error, any()}
+
+  @doc """
   Whether the join URLs `create_join_url/5` builds for this config stop
   working some time after the meeting time they were built for.
 
@@ -293,7 +315,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   """
   @callback room_creation_budget_ms() :: pos_integer()
 
-  @optional_callbacks time_bound_join_urls?: 1,
+  @optional_callbacks shared_join_url: 2,
+                      time_bound_join_urls?: 1,
                       update_meeting_room: 2,
                       delete_meeting_room: 2,
                       url_patterns: 0,

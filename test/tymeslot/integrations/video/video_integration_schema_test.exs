@@ -137,7 +137,10 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchemaTest do
 
       changeset = VideoIntegrationSchema.changeset(%VideoIntegrationSchema{}, attrs)
       refute changeset.valid?
-      assert Enum.any?(errors_on(changeset).base_url, &String.contains?(&1, "URL"))
+
+      assert "Enter a full address starting with https://, for example https://example.com" in errors_on(
+               changeset
+             ).base_url
     end
   end
 
@@ -231,7 +234,10 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchemaTest do
 
       changeset = VideoIntegrationSchema.changeset(%VideoIntegrationSchema{}, attrs)
       refute changeset.valid?
-      assert Enum.any?(errors_on(changeset).custom_meeting_url, &String.contains?(&1, "URL"))
+
+      assert "Enter a full address starting with https://, for example https://example.com" in errors_on(
+               changeset
+             ).custom_meeting_url
     end
   end
 

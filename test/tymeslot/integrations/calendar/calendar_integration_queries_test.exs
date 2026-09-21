@@ -90,7 +90,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueriesTest do
       }
 
       {:error, changeset} = CalendarIntegrationQueries.create(attrs)
-      assert "Only HTTP and HTTPS URLs are allowed" in errors_on(changeset).base_url
+
+      assert "Enter a full address starting with https://, for example https://example.com" in errors_on(
+               changeset
+             ).base_url
     end
   end
 

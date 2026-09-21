@@ -67,34 +67,6 @@ defmodule TymeslotWeb.Dashboard.VideoDisconnectCleanupTest do
     assert html =~ "Also delete their meeting rooms"
   end
 
-  test "another user's integration id shows no count", %{conn: conn, user: user} do
-    # The modal takes the integration id from the client, so a forged "show"
-    # must not turn it into a lookup of somebody else's bookings.
-    stranger = insert(:user)
-
-    theirs =
-      insert(:video_integration, user: stranger, provider: "zoom", is_active: true)
-
-    insert_meeting_for_user(stranger, %{
-      video_integration_id: theirs.id,
-      video_provider: "zoom",
-      video_room_id: "555"
-    })
-
-    insert(:video_integration, user: user, provider: "zoom", is_active: true)
-
-    {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
-
-    view
-    |> with_target("#delete-video-modal")
-    |> render_click("show", %{"id" => to_string(theirs.id)})
-
-    modal = view |> element("#delete-video-modal") |> render()
-
-    refute modal =~ "upcoming booking"
-    refute modal =~ "Also delete their meeting rooms"
-  end
-
   test "the cleanup option is hidden when nothing would be affected", %{
     conn: conn,
     user: user

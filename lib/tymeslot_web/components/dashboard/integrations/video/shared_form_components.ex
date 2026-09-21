@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.CoreComponents.Icons
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @doc """
@@ -126,6 +127,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
           aria-invalid={@errors != [] && "true"}
           class={["input input-with-icon w-full", @errors != [] && "input-error"]}
           placeholder={@placeholder}
+          {UIComponents.server_url_attrs()}
         />
       </div>
       <div :if={@errors != []} id={"#{@id}-error"}>

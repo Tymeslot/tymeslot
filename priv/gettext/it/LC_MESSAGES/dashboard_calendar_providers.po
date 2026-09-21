@@ -168,7 +168,6 @@ msgstr "Nessun calendario rilevato. Ricontrolla le credenziali o riprova."
 msgid "PHP-based CalDAV/CardDAV server"
 msgstr "Server CalDAV/CardDAV basato su PHP"
 
-#: lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_reconnect_modal.ex
 #: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Password / App Password"
@@ -489,31 +488,6 @@ msgstr "Apple iCloud richiede HTTPS"
 msgid "Authentication failed for %{provider}. Please check your username and password"
 msgstr "Autenticazione con %{provider} non riuscita. Controlla il nome utente e la password"
 
-#: lib/tymeslot/integrations/calendar/baikal/provider.ex
-#, elixir-autogen, elixir-format
-msgid "Authentication failed. Check your Baikal username and password."
-msgstr "Autenticazione non riuscita. Controlla il nome utente e la password di Baikal."
-
-#: lib/tymeslot/integrations/calendar/nextcloud/provider.ex
-#, elixir-autogen, elixir-format
-msgid "Authentication failed. Check your Nextcloud username and password. Consider using an app password."
-msgstr "Autenticazione non riuscita. Controlla il nome utente e la password di Nextcloud. Valuta l'uso di una password specifica per app."
-
-#: lib/tymeslot/integrations/calendar/radicale/provider.ex
-#, elixir-autogen, elixir-format
-msgid "Authentication failed. Check your Radicale username and password."
-msgstr "Autenticazione non riuscita. Controlla il nome utente e la password di Radicale."
-
-#: lib/tymeslot/integrations/calendar/zimbra/provider.ex
-#, elixir-autogen, elixir-format
-msgid "Authentication failed. Check your Zimbra username and password."
-msgstr "Autenticazione non riuscita. Controlla il nome utente e la password di Zimbra."
-
-#: lib/tymeslot/integrations/calendar/mailbox_org/provider.ex
-#, elixir-autogen, elixir-format
-msgid "Authentication failed. If 2FA is enabled, generate an application-specific password in mailbox.org Settings → Security."
-msgstr "Autenticazione non riuscita. Se l'autenticazione a due fattori è attiva, genera una password specifica per l'applicazione in Impostazioni → Sicurezza su mailbox.org."
-
 #: lib/tymeslot/integrations/calendar/shared/error_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. Please check your credentials."
@@ -528,11 +502,6 @@ msgstr "Autenticazione non riuscita. Ricollega il tuo calendario."
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. iCloud requires an app-specific password — generate one at appleid.apple.com under Sign-In and Security → App-Specific Passwords, and use it instead of your Apple ID password."
 msgstr "Autenticazione non riuscita. iCloud richiede una password specifica per app: generane una su appleid.apple.com in Accesso e sicurezza → Password specifiche per le app e usala al posto della password del tuo ID Apple."
-
-#: lib/tymeslot/integrations/calendar/apple/provider.ex
-#, elixir-autogen, elixir-format
-msgid "Authentication failed. iCloud requires an app-specific password — generate one at appleid.apple.com under Sign-In and Security, and use it instead of your Apple ID password."
-msgstr "Autenticazione non riuscita. iCloud richiede una password specifica per app: generane una su appleid.apple.com in Accesso e sicurezza e usala al posto della password del tuo ID Apple."
 
 #: lib/tymeslot/integrations/calendar/baikal/provider.ex
 #, elixir-autogen, elixir-format
@@ -1303,3 +1272,28 @@ msgstr "Google ha rifiutato le credenziali salvate. Ricollega l'integrazione."
 #, elixir-autogen, elixir-format
 msgid "Microsoft rejected the stored credentials. Please reconnect the integration."
 msgstr "Microsoft ha rifiutato le credenziali salvate. Ricollega l'integrazione."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "App password"
+msgstr "Password per app"
+
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Authentication failed. Check your Nextcloud username and password, or generate an app password under Settings → Security."
+msgstr "Autenticazione non riuscita. Controlla nome utente e password di Nextcloud, oppure genera una password per app in Impostazioni → Sicurezza."
+
+#: lib/tymeslot/integrations/calendar/shared/error_handler.ex
+#, elixir-autogen, elixir-format
+msgid "Authentication failed. If two-factor authentication is enabled on your mailbox.org account, generate an application-specific password under Settings → Security and use that instead."
+msgstr "Autenticazione non riuscita. Se sul tuo account mailbox.org è attiva l'autenticazione a due fattori, genera una password specifica per l'applicazione in Impostazioni → Sicurezza e usa quella."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "Create an app password in Nextcloud under %{location} and enter it below together with your login name. A login password stops working here once two-factor authentication is switched on."
+msgstr "Crea una password per app in Nextcloud in %{location} e inseriscila qui sotto insieme al tuo nome di accesso. Una password di accesso smette di funzionare qui quando l'autenticazione a due fattori è attiva."
+
+#: lib/tymeslot_web/components/dashboard/integrations/calendar/shared_form_components.ex
+#, elixir-autogen, elixir-format
+msgid "Personal settings → Security"
+msgstr "Impostazioni personali → Sicurezza"

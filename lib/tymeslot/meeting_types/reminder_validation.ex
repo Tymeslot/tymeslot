@@ -74,15 +74,21 @@ defmodule Tymeslot.MeetingTypes.ReminderValidation do
   `max_reminders/0` reminders, no two for the same interval, and none more
   than a year ahead.
 
+  `already_held` is the normalised list the meeting type had before this
+  change. The year limit is newer than some stored reminders, so it judges
+  only what the change adds: a reminder the meeting type already held stays
+  acceptable, or an unrelated edit to that meeting type could never be saved.
+
   Returns the first rule broken as an atom, so each caller can word it for
   its own surface.
   """
-  @spec check_policy([map()]) :: :ok | {:error, :too_many | :duplicate | :exceeds_max}
-  def check_policy(reminders) when is_list(reminders) do
+  @spec check_policy([map()], [map()]) :: :ok | {:error, :too_many | :duplicate | :exceeds_max}
+  def check_policy(reminders, already_held \\ [])
+      when is_list(reminders) and is_list(already_held) do
     cond do
       length(reminders) > @max_reminders -> {:error, :too_many}
       ReminderUtils.duplicate_reminders?(reminders) -> {:error, :duplicate}
-      Enum.any?(reminders, &reminder_exceeds_max?/1) -> {:error, :exceeds_max}
+      Enum.any?(reminders -- already_held, &reminder_exceeds_max?/1) -> {:error, :exceeds_max}
       true -> :ok
     end
   end

@@ -315,3 +315,13 @@ msgstr "Увімкніть підтвердження для типу зустр
 #, elixir-autogen
 msgid "Write your own booking page welcome"
 msgstr "Напишіть власне привітання"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Add a holiday on the availability page and those days stop being offered, across every schedule and every meeting type, without a blocking event in any calendar you have connected. Give the first and last day a time when you leave mid-afternoon or come back mid-morning. Bookings already in your diary keep their times, and you are shown which ones before you save. Nobody booking you sees why the days are closed."
+msgstr "Додайте відсутність на сторінці «Доступність», і ці дні більше не пропонуватимуться, у кожному розкладі та для кожного типу зустрічі, без блокувальної події в жодному під'єднаному календарі. Задайте час для першого та останнього дня, якщо ви їдете по обіді або повертаєтеся зранку. Наявні бронювання зберігають свій час, і ви побачите їх перелік перед збереженням. Той, хто вас бронює, не бачить, чому ці дні закриті."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Close the days you are away"
+msgstr "Закрийте дні вашої відсутності"

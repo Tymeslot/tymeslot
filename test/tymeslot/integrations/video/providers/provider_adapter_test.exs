@@ -8,8 +8,11 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
   import Mox
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
+  alias Tymeslot.Integrations.Video.MeetingContext
+  alias Tymeslot.Integrations.Video.Providers.JitsiProvider
   alias Tymeslot.Integrations.Video.Providers.MiroTalkProvider
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.ZoomOAuthHelperMock
 
   setup :verify_on_exit!
@@ -29,7 +32,24 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
   describe "detect_provider_from_url/1 (private but tested via valid_meeting_url? and extract_room_id)" do
     test "detects mirotalk" do
       assert ProviderAdapter.valid_meeting_url?("https://mirotalk.com/room")
-      assert ProviderAdapter.valid_meeting_url?("https://talk.example.com/room")
+    end
+
+    test "detects a self-hosted mirotalk instance by the join path its URLs carry" do
+      assert ProviderAdapter.valid_meeting_url?("https://talk.example.com/join/abc-def-123")
+
+      assert ProviderAdapter.extract_room_id("https://talk.example.com/join/abc-def-123") ==
+               "abc-def-123"
+    end
+
+    test "leaves links on a host merely containing \"talk.\" to their own provider" do
+      # Nextcloud Talk and anything else on such a host used to be claimed by
+      # MiroTalk, which then parsed a room id out of a URL it knows nothing
+      # about.
+      refute ProviderAdapter.valid_meeting_url?("https://talk.example.org/call/abc123")
+      refute ProviderAdapter.valid_meeting_url?("https://cloud.mytalk.de/s/abc123")
+
+      assert ProviderAdapter.extract_room_id("https://talk.example.org/call/abc123") == nil
+      assert ProviderAdapter.extract_room_id("https://cloud.mytalk.de/s/abc123") == nil
     end
 
     test "detects google_meet" do
@@ -143,6 +163,52 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
 
     test "returns error for unknown provider" do
       assert {:error, _reason} = ProviderAdapter.delete_meeting_room(:unknown, "room123", %{})
+    end
+  end
+
+  describe "shared_join_url/2" do
+    # The point of the default: a provider whose join links are plain room
+    # addresses keeps handing out the room URL for a guest without having to
+    # opt out of anything, so adding the callback changed nobody but Jitsi.
+    test "answers with the room's own URL for a provider that does not implement it" do
+      Code.ensure_loaded!(MiroTalkProvider)
+      refute function_exported?(MiroTalkProvider, :shared_join_url, 2)
+
+      context = %MeetingContext{
+        provider_type: :mirotalk,
+        provider_module: MiroTalkProvider,
+        room_data: %RoomData{
+          room_id: "r1",
+          meeting_url: "https://video.example.com/join/r1",
+          provider_data: %{},
+          provider_config: %{}
+        }
+      }
+
+      assert ProviderAdapter.shared_join_url(context, DateTime.utc_now()) ==
+               {:ok, "https://video.example.com/join/r1"}
+    end
+
+    test "dispatches to a provider that does implement it" do
+      secret = "adapter-shared-secret-of-at-least-32-bytes"
+
+      context = %MeetingContext{
+        provider_type: :jitsi,
+        provider_module: JitsiProvider,
+        room_data: %RoomData{
+          room_id: "0123456789abcdef",
+          meeting_url: "https://meet.example.com/0123456789abcdef",
+          provider_data: %{},
+          provider_config: %{
+            base_url: "https://meet.example.com",
+            client_id: "tymeslot",
+            client_secret: secret
+          }
+        }
+      }
+
+      assert {:ok, url} = ProviderAdapter.shared_join_url(context, DateTime.utc_now())
+      assert url =~ "jwt="
     end
   end
 

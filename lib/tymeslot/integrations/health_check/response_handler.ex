@@ -41,6 +41,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   require Logger
 
   alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Integrations.CalendarManagement
@@ -65,7 +66,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
           Monitor.health_state(),
           DateTime.t()
         ) :: :ok
-  def handle_transition(type, integration, transition, health_state, now \\ DateTime.utc_now())
+  def handle_transition(type, integration, transition, health_state, now \\ Clock.utc_now())
 
   def handle_transition(type, integration, {:no_change, _old, :unhealthy}, health_state, now) do
     # Still unhealthy — check if the 48h email should fire

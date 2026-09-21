@@ -121,16 +121,11 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
   Tests connection to a mailbox.org account with provider-specific messaging.
   """
   @impl Tymeslot.Integrations.Calendar.Provider
-  @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, String.t()}
+  @spec perform_connection_test(map()) :: {:ok, String.t()} | {:error, term()}
   def perform_connection_test(integration) do
     ProviderCommon.test_caldav_provider_connection(integration,
       success_message:
         dgettext("dashboard_calendar_providers", "mailbox.org connection successful"),
-      unauthorized_message:
-        dgettext(
-          "dashboard_calendar_providers",
-          "Authentication failed. If 2FA is enabled, generate an application-specific password in mailbox.org Settings → Security."
-        ),
       not_found_message:
         dgettext(
           "dashboard_calendar_providers",
@@ -193,14 +188,17 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
   # Private helpers
 
   defp validate_mailbox_url(url) do
+    invalid_message =
+      dgettext(
+        "dashboard_calendar_providers",
+        "Invalid mailbox.org URL. Use https://dav.mailbox.org (or your custom mailbox.org-compatible CalDAV endpoint)."
+      )
+
     UrlValidation.validate_http_url(url,
       enforce_https_for_public: true,
       https_error_message: dgettext("dashboard_calendar_providers", "mailbox.org requires HTTPS"),
-      invalid_message:
-        dgettext(
-          "dashboard_calendar_providers",
-          "Invalid mailbox.org URL. Use https://dav.mailbox.org (or your custom mailbox.org-compatible CalDAV endpoint)."
-        )
+      invalid_message: invalid_message,
+      disallowed_protocol_error: invalid_message
     )
   end
 

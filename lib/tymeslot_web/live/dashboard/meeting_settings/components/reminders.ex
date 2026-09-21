@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
   Section for configuring meeting reminders.
   """
   attr :reminders, :list, required: true
+  attr :max_reminders, :integer, required: true
   attr :new_reminder_value, :string, required: true
   attr :new_reminder_unit, :string, required: true
   attr :reminder_error, :string, required: true
@@ -24,6 +25,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
 
   @spec reminders_section(map()) :: Phoenix.LiveView.Rendered.t()
   def reminders_section(assigns) do
+    assigns =
+      assign(assigns, :limit_reached?, length(assigns.reminders) >= assigns.max_reminders)
+
     ~H"""
     <section class="space-y-2">
       <div class="flex items-center gap-2">
@@ -33,9 +37,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
         </h3>
       </div>
       <p class="text-token-sm text-tymeslot-600">
-        {dgettext(
+        {dngettext(
           "dashboard_meeting_form",
-          "Add up to three reminder emails for this meeting type. We recommend using only one."
+          "Add up to %{count} reminder email for this meeting type. We recommend using only one.",
+          "Add up to %{count} reminder emails for this meeting type. We recommend using only one.",
+          @max_reminders
         )}
       </p>
 
@@ -77,12 +83,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
               phx-click={
                 JS.push("add_quick_reminder", value: %{amount: 30, unit: "minutes"}, target: @myself)
               }
-              disabled={length(@reminders) >= 3}
-              title={
-                if length(@reminders) >= 3,
-                  do: dgettext("dashboard_meeting_form", "Maximum of 3 reminders allowed"),
-                  else: nil
-              }
+              disabled={@limit_reached?}
+              title={limit_title(@limit_reached?, @max_reminders)}
               class="btn-tag-selector btn-tag-selector-turquoise"
             >
               + {dgettext("dashboard_meeting_form", "30 min. before")}
@@ -95,12 +97,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
               phx-click={
                 JS.push("add_quick_reminder", value: %{amount: 60, unit: "minutes"}, target: @myself)
               }
-              disabled={length(@reminders) >= 3}
-              title={
-                if length(@reminders) >= 3,
-                  do: dgettext("dashboard_meeting_form", "Maximum of 3 reminders allowed"),
-                  else: nil
-              }
+              disabled={@limit_reached?}
+              title={limit_title(@limit_reached?, @max_reminders)}
               class="btn-tag-selector btn-tag-selector-turquoise"
             >
               + {dgettext("dashboard_meeting_form", "1 hour before")}
@@ -111,12 +109,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
             type="button"
             phx-click="toggle_custom_reminder"
             phx-target={@myself}
-            disabled={length(@reminders) >= 3}
-            title={
-              if length(@reminders) >= 3,
-                do: dgettext("dashboard_meeting_form", "Maximum of 3 reminders allowed"),
-                else: nil
-            }
+            disabled={@limit_reached?}
+            title={limit_title(@limit_reached?, @max_reminders)}
             class={[
               "btn-tag-selector btn-tag-selector-turquoise",
               if(@show_custom_reminder, do: "btn-tag-selector-turquoise--active")
@@ -134,7 +128,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
           <% end %>
         </div>
 
-        <%= if @show_custom_reminder && length(@reminders) < 3 do %>
+        <%= if @show_custom_reminder && !@limit_reached? do %>
           <div class="flex items-center gap-2 p-3 bg-turquoise-50/50 rounded-token-2xl border-2 border-turquoise-100/50 max-w-sm animate-in slide-in-from-top-2 duration-300">
             <div class="flex-1 flex items-center gap-2">
               <input
@@ -180,5 +174,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
       <% end %>
     </section>
     """
+  end
+
+  # The tooltip explaining why an add button is disabled. Nil while more
+  # reminders can still be added, so an enabled button carries no title.
+  @spec limit_title(boolean(), pos_integer()) :: String.t() | nil
+  defp limit_title(false, _max_reminders), do: nil
+
+  defp limit_title(true, max_reminders) do
+    dngettext(
+      "dashboard_meeting_form",
+      "Maximum of %{count} reminder allowed",
+      "Maximum of %{count} reminders allowed",
+      max_reminders
+    )
   end
 end

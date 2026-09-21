@@ -138,6 +138,38 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
       assert Components.calendar_summary(integration) ==
                "read-only, blocks time but takes no bookings"
     end
+
+    # Only the OAuth providers record an account email, so before this the line
+    # for a CalDAV row started at the conflict-check segment and named neither
+    # the account nor the server it belonged to.
+    test "names the server when the provider records no account email" do
+      integration =
+        summary_integration(base_url: "https://cloud.example.com:8443/nextcloud")
+
+      assert Components.calendar_summary(integration) == "cloud.example.com:8443/nextcloud"
+    end
+
+    # The server URL field takes free text, so a password typed into it must
+    # not reach the dashboard.
+    test "never renders credentials embedded in the server URL" do
+      integration = summary_integration(base_url: "https://admin:hunter2@cloud.example.com")
+
+      summary = Components.calendar_summary(integration)
+
+      assert summary == "cloud.example.com"
+      refute summary =~ "hunter2"
+    end
+
+    test "prefers the account email over the server when the provider records one" do
+      integration =
+        summary_integration(
+          provider: "google",
+          provider_account_email: "organiser@example.com",
+          base_url: "https://www.googleapis.com"
+        )
+
+      assert Components.calendar_summary(integration) == "organiser@example.com"
+    end
   end
 
   describe "connected_calendars_section" do
@@ -478,7 +510,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
         provider: "caldav",
         provider_account_email: nil,
         is_active: false,
-        last_sync_at: nil,
         default_booking_calendar_id: nil,
         calendar_list: []
       },

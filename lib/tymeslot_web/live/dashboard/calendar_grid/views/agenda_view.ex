@@ -102,9 +102,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AgendaView do
             {"#{LocaleFormat.format_weekday_name(Date.day_of_week(group.date), @locale, :short)} #{group.date.day} #{LocaleFormat.format_month_name(group.date.month, @locale)}"}
           </h3>
           <ul class="flex flex-col gap-1">
+            <%!-- An event spanning midnight or several days is listed under
+                  each of its days, so the id names the day as well. --%>
             <li
               :for={event <- group.events}
-              id={"agenda-event-#{event.id}"}
+              id={"agenda-event-#{event.id}-#{Date.to_iso8601(group.date)}"}
               class="flex items-start gap-3 rounded-token-md px-2 py-2 cursor-pointer hover:bg-tymeslot-50 focus:outline-hidden focus:ring-2 focus:ring-turquoise-400"
               {Helpers.open_event_attrs(event)}
               phx-target={@myself}

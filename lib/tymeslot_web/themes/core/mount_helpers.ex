@@ -88,21 +88,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
         end
 
       {:error, reason} ->
-        case prepare_theme_context(profile, params, socket) do
-          {:ok, _context, socket} ->
-            {:ok,
-             socket
-             |> LiveView.clear_flash()
-             |> LiveView.put_flash(:error, LinkAccessPolicy.reason_to_message(reason))
-             |> assign(:scheduling_error_reason, reason)
-             |> assign(
-               :scheduling_error_message,
-               LinkAccessPolicy.reason_to_message(reason)
-             )}
-
-          {:error, error_socket} ->
-            {:ok, error_socket}
-        end
+        mount_readiness_error(profile, params, socket, reason)
     end
   end
 
@@ -151,7 +137,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
         load_and_mount_poll(profile, params, socket)
 
       {:error, reason} ->
-        mount_poll_readiness_error(profile, params, socket, reason)
+        mount_readiness_error(profile, params, socket, reason)
     end
   end
 
@@ -213,17 +199,20 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
     end
   end
 
-  defp mount_poll_readiness_error(profile, params, socket, reason) do
+  # An organiser who is not ready for public bookings is an ordinary product
+  # state, not a failure: the theme still renders, and its own `ErrorComponent`
+  # shows the explanation in place of the booking flow.
+  #
+  # The message is assigned, deliberately not flashed. The scheduling layout
+  # renders a flash group of its own on top of the root layout's, so a flash
+  # here surfaced the same sentence twice above a card already carrying it.
+  defp mount_readiness_error(profile, params, socket, reason) do
     case prepare_theme_context(profile, params, socket) do
       {:ok, _context, socket} ->
-        message = LinkAccessPolicy.reason_to_message(reason)
-
         {:ok,
          socket
          |> LiveView.clear_flash()
-         |> LiveView.put_flash(:error, message)
-         |> assign(:scheduling_error_reason, reason)
-         |> assign(:scheduling_error_message, message)}
+         |> assign(:scheduling_error_message, LinkAccessPolicy.reason_to_message(reason))}
 
       {:error, error_socket} ->
         {:ok, error_socket}

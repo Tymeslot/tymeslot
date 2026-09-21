@@ -24,12 +24,21 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
   participants' tokens again for the new time.
 
   Should minting ever fail, the bare room URL is handed out instead and the
-  failure is logged (room id and reason only). A room link that may ask for
+  failure is logged, carrying a fingerprint of the room rather than the room
+  id, which for this provider is the join link. A room link that may ask for
   a login is strictly better than no usable link at all.
 
   The organiser's token flags them as a moderator and the attendee's does
   not. That flag grants nothing by itself: it takes effect only on a server
   configured to honour it.
+
+  `shared_join_url/2` mints the third kind: a token for a recipient there is
+  no personal link for, which is the booking's guests and the "Join video
+  call" line in a calendar event's description. It is the attendee's token
+  without the `name` and `email` claims, so a holder enters unnamed rather
+  than as the booker, and never as a moderator. Before it existed those
+  recipients were handed the bare room URL, which a server enforcing tokens
+  simply refuses.
 
   The credentials are optional, but all or nothing: `validate_config/1`
   refuses half a pair, and a secret shorter than 32 bytes, since every guest
@@ -45,6 +54,7 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.Jitsi.Token
   alias Tymeslot.Integrations.Video.Providers.LinkRoom
@@ -92,16 +102,32 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
 
   @impl ProviderBehaviour
   def create_join_url(room_data, participant_name, participant_email, role, meeting_time) do
+    join_url(room_data, meeting_time,
+      name: participant_name,
+      email: participant_email,
+      moderator: role == @organizer_role
+    )
+  end
+
+  # No `name` or `email` claim, so the token says only "the holder may enter
+  # this room, without moderator rights". A guest of a booking types their own
+  # name on the way in, exactly as they did when the bare room URL was all
+  # they were given.
+  @impl ProviderBehaviour
+  def shared_join_url(room_data, meeting_time),
+    do: join_url(room_data, meeting_time, moderator: false)
+
+  defp join_url(room_data, meeting_time, claims) do
     case credentials(room_data.provider_config) do
       nil ->
         {:ok, room_data.meeting_url}
 
       {app_id, secret} ->
-        mint_join_url(room_data, app_id, secret,
-          name: participant_name,
-          email: participant_email,
-          moderator: role == @organizer_role,
-          expires_at: expiry(meeting_time)
+        mint_join_url(
+          room_data,
+          app_id,
+          secret,
+          Keyword.put(claims, :expires_at, expiry(meeting_time))
         )
     end
   end
@@ -282,8 +308,11 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
         {:ok, join_url}
 
       {:error, reason} ->
+        # The room id is the last path segment of the join URL, so logging it
+        # alongside the server address hands a log reader the meeting. Only a
+        # fingerprint goes out, which is enough to correlate two lines.
         Logger.error("Failed to mint Jitsi access token, handing out the bare room URL",
-          room_id: room_data.room_id,
+          room_ref: Redactor.fingerprint(room_data.room_id),
           reason: inspect(reason)
         )
 

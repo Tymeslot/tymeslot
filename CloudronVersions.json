@@ -3646,6 +3646,53 @@
       },
       "publishState": "published",
       "ts": "Thu, 17 Sep 2026 08:18:33 GMT"
+    },
+    "1.16.0": {
+      "creationDate": "Sat, 19 Sep 2026 14:10:37 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* [BREAKING] Move Zoom meetings when a booking is rescheduled by default: Add meeting:update:meeting to your Zoom app's scopes before upgrading. If your app cannot have it, set ZOOM_UPDATE_SCOPE_ENABLED=false, or users will be asked to reconnect Zoom for a permission the app cannot grant.\nTime off arrives, events edited on the dashboard calendar keep everything attached to them, and self-hosted calendars and recurring events sync more faithfully.\n* Time off closes the days you are away without touching a calendar\n* Calendar events edited from the dashboard keep attendees, reminders and repeats\n* Zoom meetings move when a booking is rescheduled\n* Nextcloud and other CalDAV calendars connect with per-provider guidance",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.16.0",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.16.0",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Sat, 19 Sep 2026 14:10:37 GMT"
     }
   }
 }

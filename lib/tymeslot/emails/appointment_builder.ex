@@ -9,6 +9,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   alias Tymeslot.Emails.Shared.BookingRequestLocation
   alias Tymeslot.Locales
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.Meetings.VideoRooms
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.ReminderUtils
@@ -165,7 +166,12 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       booking_url: UrlBuilder.booking_url(organizer_profile && organizer_profile.username),
       meeting_url: meeting.meeting_url,
       organizer_video_url: meeting.organizer_video_url,
-      attendee_video_url: meeting.attendee_video_url
+      attendee_video_url: meeting.attendee_video_url,
+      # The guests' link is the one this payload has to build rather than
+      # read: it is not a column on the meeting, because a booking has any
+      # number of guests. It names nobody, so one link serves them all and
+      # the payload carries it once however many guests it is sent to.
+      guest_video_url: VideoRooms.guest_join_url(meeting)
     }
   end
 

@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CardTest do
   import Phoenix.LiveViewTest
 
   alias Tymeslot.CustomFields.FieldDefinition
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias TymeslotWeb.Dashboard.MeetingSettings.Card
 
   defp build_type(overrides) do
@@ -120,6 +121,64 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CardTest do
       html = render_card(build_type(%{custom_fields: []}))
 
       refute html =~ "custom question"
+    end
+  end
+
+  describe "target calendar warning" do
+    defp calendar_type(target_calendar_id, calendars) do
+      build_type(%{
+        target_calendar_id: target_calendar_id,
+        calendar_integration: %{
+          provider: "caldav",
+          name: "Work account",
+          calendar_list: Enum.map(calendars, &CalendarEntry.normalize/1)
+        }
+      })
+    end
+
+    test "flags a target calendar the host can no longer write to" do
+      html =
+        render_card(
+          calendar_type("cal-2", [
+            %{id: "cal-1", name: "Primary", selected: true, read_only: false},
+            %{id: "cal-2", name: "Shared", selected: true, read_only: true}
+          ])
+        )
+
+      assert html =~ "Read-only"
+      assert html =~ "can no longer write to"
+    end
+
+    test "flags a target calendar that has left the account" do
+      html =
+        render_card(
+          calendar_type("cal-gone", [
+            %{id: "cal-1", name: "Primary", selected: true, read_only: false}
+          ])
+        )
+
+      assert html =~ "Calendar gone"
+      refute html =~ "Read-only"
+    end
+
+    test "is silent while the target calendar is still writable" do
+      html =
+        render_card(
+          calendar_type("cal-1", [
+            %{id: "cal-1", name: "Primary", selected: true, read_only: false},
+            %{id: "cal-2", name: "Shared", selected: true, read_only: true}
+          ])
+        )
+
+      refute html =~ "Read-only"
+      refute html =~ "Calendar gone"
+    end
+
+    test "is silent when the integration's calendar list has never been populated" do
+      html = render_card(calendar_type("cal-1", []))
+
+      refute html =~ "Read-only"
+      refute html =~ "Calendar gone"
     end
   end
 end

@@ -18,6 +18,7 @@ defmodule Tymeslot.Availability.Offer do
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Meetings
   alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.Profiles
 
@@ -35,8 +36,9 @@ defmodule Tymeslot.Availability.Offer do
     * `:user_timezone` - the booker's timezone.
     * `:meeting_type` - the resolved meeting type, or nil before one is chosen.
     * `:reschedule_uid` - the meeting a reschedule page is moving, as the link
-      named it. The meeting does not count against the host's booking limits,
-      as `Tymeslot.Bookings.Reschedule` does not count it when the move is
+      named it. The meeting counts neither against the host's booking limits
+      nor as a calendar conflict with itself, exactly as
+      `Tymeslot.Bookings.Reschedule` leaves it out of both when the move is
       submitted, but only once it is proven to be a movable meeting of this
       organiser; any other value is ignored.
     * `:demo_mode?` - whether the page is running as a demo.
@@ -144,6 +146,8 @@ defmodule Tymeslot.Availability.Offer do
   end
 
   defp free_slots(%{profile: %{user_id: user_id} = profile} = request, date, duration) do
+    moving = moving_meeting(request)
+
     with {:ok, events} <-
            CalendarEvents.get_calendar_events_from_context(
              date,
@@ -153,7 +157,7 @@ defmodule Tymeslot.Availability.Offer do
       duration_minutes = bounded_duration(duration)
       meeting_type = request[:meeting_type]
 
-      limit_checker = limit_checker(request, moving_uid(request), date, date)
+      limit_checker = limit_checker(request, moving_uid(moving), date, date)
 
       config =
         meeting_type
@@ -165,7 +169,7 @@ defmodule Tymeslot.Availability.Offer do
         duration_minutes,
         request.user_timezone,
         owner_timezone(profile),
-        events,
+        Meetings.reject_calendar_event_mirrors(events, moving),
         config
       )
     end
@@ -178,7 +182,8 @@ defmodule Tymeslot.Availability.Offer do
          duration_minutes
        ) do
     meeting_type = request[:meeting_type]
-    moving_uid = moving_uid(request)
+    moving = moving_meeting(request)
+    moving_uid = moving_uid(moving)
 
     # Keyed on the proven uid only, so a mover's view is never served to
     # anyone else and an arbitrary link value cannot mint an entry of its own.
@@ -209,7 +214,7 @@ defmodule Tymeslot.Availability.Offer do
           end_date,
           owner_timezone(profile),
           request.user_timezone,
-          events,
+          Meetings.reject_calendar_event_mirrors(events, moving),
           config
         )
       end
@@ -267,20 +272,29 @@ defmodule Tymeslot.Availability.Offer do
     )
   end
 
-  # The uid of the meeting a reschedule page is moving, once
+  # The meeting a reschedule page is moving, once
   # `Orchestrator.get_meeting_for_reschedule/2` proves it is this organiser's
   # and still movable (the lookup the submit's own flow relies on); nil for
   # anything else. The link parameter is visitor input, so it is never used
   # unverified.
-  defp moving_uid(%{reschedule_uid: uid, profile: %{user_id: user_id}})
+  #
+  # The whole record, not just its uid, because the page has to leave the
+  # meeting out of two different counts: the host's booking limits, keyed on
+  # the uid, and the events read back from their connected calendar, where the
+  # meeting appears as the provider event Tymeslot wrote and is matched by
+  # whichever identifier that provider family preserves.
+  defp moving_meeting(%{reschedule_uid: uid, profile: %{user_id: user_id}})
        when is_binary(uid) and is_integer(user_id) do
     case Orchestrator.get_meeting_for_reschedule(uid, user_id) do
-      {:ok, %{uid: verified_uid}} -> verified_uid
+      {:ok, meeting} -> meeting
       {:error, _not_movable} -> nil
     end
   end
 
-  defp moving_uid(_request), do: nil
+  defp moving_meeting(_request), do: nil
+
+  defp moving_uid(nil), do: nil
+  defp moving_uid(%{uid: uid}), do: uid
 
   defp demo?(%{profile: profile} = request) do
     Demo.demo_profile?(profile) || request[:demo_mode?] == true

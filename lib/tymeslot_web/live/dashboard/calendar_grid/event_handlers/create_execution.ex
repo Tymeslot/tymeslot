@@ -87,11 +87,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   # The recurrence editor composes the rule as the form changes, so it can
   # predate the final all-day flag and start date. Fit it to the event being
   # saved: a date-only UNTIL for an all-day event, and no series that ends
-  # before it starts.
+  # before it starts. A timed event's UNTIL is an instant, so it ends its day
+  # in the organiser's timezone rather than in UTC.
   defp save_with_fitted_recurrence(creating, start_date, end_date, socket) do
     case RRule.retarget(Map.get(creating, :recurrence_rule),
            all_day: Map.get(creating, :all_day, false),
-           start_date: start_date
+           start_date: start_date,
+           timezone: socket.assigns.user_timezone
          ) do
       {:ok, rule} ->
         creating
@@ -210,14 +212,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       start_at: start_at,
       end_at: end_at,
       provider: provider,
+      provider_event_id: provider_event_id,
+      written_calendar_id: written_calendar_id,
+      etag: etag,
       default_booking_calendar_id: default_booking_calendar_id,
       attendees: attendees,
       meeting_url: meeting_url,
       description: description
     } = result
 
+    # What the provider actually wrote, before what was asked for. A CalDAV
+    # write falls back to the booking collection when the chosen calendar is
+    # not one the integration lists as writable, and filing the row under the
+    # request instead showed the event on a calendar it is not on until the
+    # next sync corrected it, with every edit addressed by that row aimed at
+    # the wrong collection in the meantime.
     provider_calendar_id =
-      creating[:calendar_id] || default_booking_calendar_id || "primary"
+      written_calendar_id || creating[:calendar_id] || default_booking_calendar_id || "primary"
 
     all_day = Map.get(creating, :all_day, false)
 
@@ -229,6 +240,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
         calendar_integration_id: creating.integration_id,
         provider: provider,
         provider_calendar_id: provider_calendar_id,
+        # What the provider said about the event it just wrote. Without these
+        # the row carried no identity until a full sync repaired it: every
+        # conditional update spent a HEAD probe first and then fell back to the
+        # weaker `If-Match: *`, and a write could only be addressed by
+        # rebuilding the URL from whichever calendar the client is scoped to.
+        # Either may be nil (a CalDAV server is not obliged to answer a PUT
+        # with an ETag), and a nil leaves the column as it was.
+        provider_event_id: provider_event_id,
+        etag: etag,
         summary: creating.title,
         description: description,
         all_day: all_day,

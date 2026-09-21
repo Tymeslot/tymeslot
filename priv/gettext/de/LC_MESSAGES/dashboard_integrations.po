@@ -1191,6 +1191,21 @@ msgstr "Zoom fehlt die für das Verschieben von Meetings erforderliche Berechtig
 msgid "Write the template variable exactly as {{meeting_id}}"
 msgstr "Schreiben Sie die Vorlagenvariable genau als {{meeting_id}}"
 
+#: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a full address starting with https://, for example https://cloud.example.com"
+msgstr "Geben Sie die vollständige Adresse mit https:// am Anfang ein, zum Beispiel https://cloud.example.com"
+
+#: lib/tymeslot/integrations/video/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a full address starting with https://, for example https://meet.example.com"
+msgstr "Geben Sie die vollständige Adresse mit https:// am Anfang ein, zum Beispiel https://meet.example.com"
+
+#: lib/tymeslot/integrations/video/input_validation.ex
+#, elixir-autogen, elixir-format
+msgid "Write {{meeting_id}} with plain brackets: percent-encoded ones are never replaced"
+msgstr "Schreiben Sie {{meeting_id}} mit einfachen Klammern: prozentkodierte werden nie ersetzt"
+
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} conversation from this integration is still on your Nextcloud server, even if its meeting is over. It stays there unless you delete it here."

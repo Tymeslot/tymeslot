@@ -94,6 +94,10 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.StateHandlers do
             )
 
             {:noreply, socket}
+
+          {:error, :not_found} ->
+            Flash.error(dgettext("dashboard_automation_chat", "Integration not found"))
+            {:noreply, AutomationHelpers.maybe_load_telegram(socket)}
         end
 
       {:error, _reason} ->

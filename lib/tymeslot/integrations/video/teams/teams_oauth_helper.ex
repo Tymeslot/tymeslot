@@ -163,23 +163,20 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
       scope: scope
     }
 
+    # No second log line here: `TokenExchange` already logs the status and the
+    # redacted body, and now names the provider too.
     case TokenExchange.refresh_access_token(@token_url, body,
            fallback_refresh_token: refresh_token,
-           fallback_scope: scope
+           fallback_scope: scope,
+           log_context: [provider: :teams]
          ) do
       {:ok, tokens} ->
         {:ok, tokens}
 
       {:error, {:http_error, status, body}} ->
-        Logger.error("Teams OAuth token refresh failed",
-          status: status,
-          response_body: Redactor.redact_and_truncate(body)
-        )
-
         {:error, ErrorParser.build_message("Token refresh failed", status, body)}
 
       {:error, {:network_error, reason}} ->
-        Logger.error("Network error during Teams token refresh", reason: inspect(reason))
         {:error, "Network error during token refresh: #{inspect(reason)}"}
     end
   end

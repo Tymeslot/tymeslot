@@ -146,6 +146,26 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       assert has_element?(view, "input[name='integration[base_url]']")
     end
 
+    test "the server URL field can accept an address typed without its scheme", %{conn: conn} do
+      # `type="url"` stays on the field, so the browser still blocks a submit
+      # and every other `required` in the form keeps its native check. The
+      # hook is what lets a bare `cloud.example.com` through, and what
+      # replaces "Please enter a URL" when the address is still wrong.
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='mirotalk']")
+      |> render_click()
+
+      assert has_element?(
+               view,
+               "input[name='integration[base_url]'][type='url'][phx-hook='ServerUrlField']"
+             )
+
+      assert render(view) =~
+               "Enter a full address starting with https://, for example https://cloud.example.com"
+    end
+
     test "adds a new mirotalk integration", %{conn: conn} do
       # Mock connection test for creation
       stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
@@ -420,6 +440,28 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       assert Repo.get!(VideoIntegrationSchema, integration.id).name == "Team kMeet"
     end
 
+    test "stores a custom video link exactly as the organiser typed it", %{conn: conn} do
+      # Every segment here used to be rewritten on the way to the database:
+      # `team--sync` was truncated at the double hyphen, `0xdeadbeef` was
+      # dropped as a hex literal, and `%23` was decoded into a fragment. Each
+      # save still succeeded, so every booking got a link to a different room.
+      url = "https://meet.jit.si/team--sync/0xdeadbeef/room%23a"
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='custom']")
+      |> render_click()
+
+      view
+      |> form("#custom-video-config-modal form", %{
+        "integration" => %{"name" => "Team Room", "custom_meeting_url" => url}
+      })
+      |> render_submit()
+
+      assert [%{custom_meeting_url: ^url}] = Repo.all(VideoIntegrationSchema)
+    end
+
     test "initiates google meet oauth", %{conn: conn} do
       expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _uid, _uri, _scopes, _opts ->
         "https://accounts.google.com/o/oauth2/v2/auth"
@@ -506,6 +548,40 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
       refute html =~ "Timed out talking to the server."
+    end
+
+    # The state Reconnect exists to resolve: credentials encrypted under a key
+    # that is no longer on the keyring. `Video.get_integration/2` answers with a
+    # third tuple shape for it, which the handler used to leave unmatched.
+    test "reconnects an integration whose stored credentials no longer decrypt", %{
+      conn: conn,
+      user: user
+    } do
+      expect(Tymeslot.ZoomOAuthHelperMock, :authorization_url, fn _uid, _uri, _opts ->
+        "https://zoom.us/oauth/authorize"
+      end)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "zoom",
+          is_active: true,
+          needs_reauth: true,
+          access_token_encrypted: :crypto.strong_rand_bytes(40)
+        )
+
+      # Anchors the fixture: undecryptable bytes, not a flag, are what put the
+      # row in this state, so the handler is driven with the real thing.
+      assert {:error, :requires_reencryption, _stale} =
+               Video.get_integration(user.id, integration.id)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
+      assert_redirect(view, "https://zoom.us/oauth/authorize")
     end
 
     # NOTE: the end-to-end click → OAuth-redirect for a *reconnect* is not

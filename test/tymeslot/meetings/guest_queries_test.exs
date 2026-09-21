@@ -111,4 +111,37 @@ defmodule Tymeslot.Meetings.GuestQueriesTest do
       assert %{^uid => %{total: 2, accepted: 0, declined: 0, pending: 2}} = summaries
     end
   end
+
+  describe "guest ordering" do
+    # A booking's guests are all inserted inside one second, and `inserted_at`
+    # holds seconds, so before the email tiebreaker these lists came back in
+    # whichever order Postgres felt like. That reached the recipients as a
+    # non-deterministic send order, and the suite as an intermittent failure.
+    setup do
+      meeting = insert(:meeting)
+      {:ok, _guests} = Guests.create_for_meeting(meeting.id, ~w(c@x.com a@x.com b@x.com))
+      %{meeting: meeting}
+    end
+
+    test "list_for_meeting/1 orders same-second guests deterministically", %{meeting: meeting} do
+      assert Enum.map(GuestQueries.list_for_meeting(meeting.id), & &1.email) ==
+               ~w(a@x.com b@x.com c@x.com)
+    end
+
+    test "list_unsent_for_meeting/1 orders same-second guests deterministically", %{
+      meeting: meeting
+    } do
+      assert Enum.map(GuestQueries.list_unsent_for_meeting(meeting.id), & &1.email) ==
+               ~w(a@x.com b@x.com c@x.com)
+    end
+
+    test "list_for_reminder/3 orders same-second guests deterministically", %{meeting: meeting} do
+      for guest <- GuestQueries.list_for_meeting(meeting.id) do
+        {:ok, _stamped} = GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
+      end
+
+      assert Enum.map(GuestQueries.list_for_reminder(meeting.id, 24, "hours"), & &1.email) ==
+               ~w(a@x.com b@x.com c@x.com)
+    end
+  end
 end
