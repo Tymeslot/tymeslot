@@ -250,6 +250,16 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
   end
 
   @doc """
+  Sends the reminder for an upcoming meeting to a guest. `appointment_details`
+  must carry `:guest_name` and the guest's own RSVP links.
+  """
+  @spec send_guest_reminder(String.t(), Tymeslot.Emails.EmailService.appointment_details()) ::
+          {:ok, any()} | {:error, any()}
+  def send_guest_reminder(guest_email, appointment_details) do
+    Delivery.deliver(AppointmentReminder.render(:guest, guest_email, appointment_details))
+  end
+
+  @doc """
   Sends appointment reminders to both organizer and attendee.
   """
   @spec send_appointment_reminders(Tymeslot.Emails.EmailService.appointment_details()) ::

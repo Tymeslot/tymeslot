@@ -1,7 +1,7 @@
 defmodule Tymeslot.Emails.Templates.AppointmentReminder do
   @moduledoc """
-  Email template for appointment reminders sent to attendees and organisers.
-  Role-dispatched via `render/3`.
+  Email template for appointment reminders sent to attendees, guests and
+  organisers. Role-dispatched via `render/3`.
   """
 
   import Swoosh.Email
@@ -23,7 +23,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
   @intent :confirmed
 
   @spec render(
-          :attendee | :organizer,
+          :attendee | :guest | :organizer,
           String.t(),
           Tymeslot.Emails.EmailService.appointment_details()
         ) :: Swoosh.Email.t()
@@ -85,6 +85,78 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
       )
       |> html_body(html_body)
       |> text_body(build_attendee_text_body(appointment_details, locale))
+    end)
+  end
+
+  def render(:guest, guest_email, appointment_details) do
+    # Guests inherit the booker's locale, as their invitation does.
+    locale = Map.get(appointment_details, :attendee_locale, "en")
+
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      guest_name = Map.get(appointment_details, :guest_name) || guest_email
+
+      meeting_details = %{
+        date: appointment_details.date,
+        start_time: appointment_details.start_time_attendee_tz,
+        duration: appointment_details.duration,
+        location: appointment_details.location,
+        location_type: Map.get(appointment_details, :location_type),
+        meeting_type: appointment_details.meeting_type,
+        timezone: Map.get(appointment_details, :attendee_timezone)
+      }
+
+      intro_copy =
+        dgettext(
+          "emails",
+          "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to is coming up.",
+          guest: guest_name,
+          organizer: appointment_details.organizer_name,
+          booker: appointment_details.attendee_name
+        )
+
+      mjml_content = """
+      #{MeetingComponents.time_alert_badge(@intent, appointment_details.time_until)}
+
+      #{Text.centered_text(intro_copy, padding: "8px 0 16px 0")}
+
+      #{MeetingComponents.meeting_details_table(meeting_details, locale)}
+
+      #{if Map.get(appointment_details, :meeting_url) do
+        MeetingComponents.video_meeting_section(@intent, appointment_details.meeting_url,
+        title: dgettext("emails", "Join when you're ready"),
+        button_text: dgettext("emails", "Join Meeting"))
+      end}
+
+      #{Text.section_title(dgettext("emails", "Can you still make it?"))}
+
+      #{MeetingComponents.meeting_actions_bar(@intent, [%{text: dgettext("emails", "Yes, I'll attend"), url: Map.get(appointment_details, :guest_accept_url, "#"), style: :secondary}, %{text: dgettext("emails", "Can't make it"), url: Map.get(appointment_details, :guest_decline_url, "#"), style: :danger}])}
+
+      #{Text.centered_text(dgettext("emails", "Only %{booker} can move or cancel the meeting itself.", booker: appointment_details.attendee_name), font_size: "14px", padding: "16px 0 0 0")}
+      """
+
+      organizer_details =
+        TemplateHelper.build_organizer_details(appointment_details,
+          intent: @intent,
+          eyebrow: dgettext("emails", "Reminder"),
+          stage_title: dgettext("emails", "The meeting is coming up"),
+          stage_subtitle:
+            dgettext("emails", "Meeting with %{name}", name: appointment_details.organizer_name)
+        )
+
+      html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
+
+      MjmlEmail.base_email()
+      |> to({guest_name, guest_email})
+      |> subject(
+        Sanitise.sanitize_for_header(
+          dgettext("emails", "Reminder: the meeting with %{name} is in %{time_until}",
+            name: appointment_details.organizer_name,
+            time_until: appointment_details.time_until
+          )
+        )
+      )
+      |> html_body(html_body)
+      |> text_body(build_guest_text_body(appointment_details, guest_name, locale))
     end)
   end
 
@@ -165,6 +237,30 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
     #{dgettext("emails", "Best,")}
     #{appointment_details.organizer_name}
+    """
+  end
+
+  defp build_guest_text_body(appointment_details, guest_name, locale) do
+    meeting_details = TextBodyHelper.format_meeting_details(appointment_details, locale)
+
+    video_section =
+      TextBodyHelper.format_video_section(Map.get(appointment_details, :meeting_url), locale)
+
+    """
+    #{dgettext("emails", "REMINDER: the meeting is in %{time_until}", time_until: appointment_details.time_until)}
+
+    #{dgettext("emails", "Hi %{guest},", guest: guest_name)}
+
+    #{dgettext("emails", "The meeting with %{organizer} that %{booker} invited you to is coming up.", organizer: appointment_details.organizer_name, booker: appointment_details.attendee_name)}
+
+    #{dgettext("emails", "DETAILS:")}
+    #{meeting_details}#{video_section}
+
+    #{dgettext("emails", "CAN YOU STILL MAKE IT?")}
+    #{dgettext("emails", "Yes, I'll attend: %{url}", url: Map.get(appointment_details, :guest_accept_url, "#"))}
+    #{dgettext("emails", "Can't make it: %{url}", url: Map.get(appointment_details, :guest_decline_url, "#"))}
+
+    #{dgettext("emails", "Only %{booker} can move or cancel the meeting itself.", booker: appointment_details.attendee_name)}
     """
   end
 

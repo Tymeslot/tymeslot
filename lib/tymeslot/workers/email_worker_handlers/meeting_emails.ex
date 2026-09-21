@@ -294,12 +294,44 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
         {:ok, :skipped}
       end
 
+    # Guests are reminded from inside this function, so they inherit its
+    # guards: a reminder for a meeting that has already started, or whose slot
+    # was voided, never reaches a guest either. Each guest is stamped for this
+    # specific offset, so a retry after a partial send re-emails only the
+    # guests it has not reached. Failures are logged but never change the
+    # organiser/attendee result.
+    send_guest_reminders(meeting, appointment_details, reminder_value, reminder_unit)
+
     process_email_results(
       meeting,
       organizer_result,
       attendee_result,
       {:reminder, reminder_value, reminder_unit}
     )
+  end
+
+  defp send_guest_reminders(meeting, appointment_details, reminder_value, reminder_unit) do
+    value = ReminderUtils.parse_reminder_value(reminder_value)
+    unit = ReminderUtils.normalize_reminder_unit(reminder_unit)
+    email_service = Config.email_service_module()
+
+    meeting.id
+    |> GuestQueries.list_for_reminder(value, unit)
+    |> Enum.each(fn guest ->
+      details = GuestNotifications.guest_details(appointment_details, guest)
+
+      case email_service.send_guest_reminder(guest.email, details) do
+        {:ok, _result} ->
+          GuestQueries.mark_reminder_sent(guest, value, unit)
+
+        other ->
+          Logger.error("Guest reminder email failed",
+            meeting_id: meeting.id,
+            guest_id: guest.id,
+            result: inspect(other)
+          )
+      end
+    end)
   end
 
   defp send_reschedule_request_email(meeting) do

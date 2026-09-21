@@ -23,6 +23,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
           rsvp_token: String.t() | nil,
           responded_at: DateTime.t() | nil,
           confirmation_sent_at: DateTime.t() | nil,
+          reminders_sent: [map()] | nil,
           meeting: MeetingSchema.t() | Ecto.Association.NotLoaded.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -38,6 +39,7 @@ defmodule Tymeslot.Meetings.GuestSchema do
     field(:rsvp_token, :string)
     field(:responded_at, :utc_datetime)
     field(:confirmation_sent_at, :utc_datetime)
+    field(:reminders_sent, {:array, :map}, default: nil)
 
     belongs_to(:meeting, MeetingSchema, type: :binary_id)
 
@@ -89,6 +91,16 @@ defmodule Tymeslot.Meetings.GuestSchema do
   @spec confirmation_sent_changeset(t(), DateTime.t()) :: Ecto.Changeset.t()
   def confirmation_sent_changeset(guest, sent_at) do
     cast(guest, %{confirmation_sent_at: sent_at}, [:confirmation_sent_at])
+  end
+
+  @doc """
+  Changeset recording that this guest has been emailed the reminder for one
+  configured offset. A meeting can carry several offsets, so the record is a
+  list rather than a single stamp.
+  """
+  @spec reminders_sent_changeset(t(), [map()]) :: Ecto.Changeset.t()
+  def reminders_sent_changeset(guest, reminders_sent) do
+    cast(guest, %{reminders_sent: reminders_sent}, [:reminders_sent])
   end
 
   @typedoc "Aggregate RSVP counts for a list of guests."

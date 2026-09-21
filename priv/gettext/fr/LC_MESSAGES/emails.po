@@ -1548,12 +1548,14 @@ msgid "%{booker} has invited you as a guest to this meeting with %{organizer}."
 msgstr "%{booker} vous convie en tant qu’invité(e) à cette réunion avec %{organizer}."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Can't make it"
 msgstr "Je ne pourrai pas venir"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Can't make it: %{url}"
@@ -1561,6 +1563,7 @@ msgstr "Je ne pourrai pas venir : %{url}"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{guest},"
@@ -1577,12 +1580,14 @@ msgid "Will you be there?"
 msgstr "Serez-vous présent(e) ?"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Yes, I'll attend"
 msgstr "Oui, je serai présent(e)"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Yes, I'll attend: %{url}"
@@ -2520,3 +2525,35 @@ msgstr "Demande de report expirée, réservation annulée : %{name} - %{date}"
 #, elixir-autogen, elixir-format
 msgid "Your booking with %{name} has been cancelled."
 msgstr "Votre réservation avec %{name} a été annulée."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+msgid "CAN YOU STILL MAKE IT?"
+msgstr "POUVEZ-VOUS TOUJOURS Y ASSISTER ?"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+msgid "Can you still make it?"
+msgstr "Pouvez-vous toujours y assister ?"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+msgid "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to is coming up."
+msgstr "Bonjour %{guest}, la réunion avec %{organizer} à laquelle %{booker} vous a invité approche."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+msgid "Only %{booker} can move or cancel the meeting itself."
+msgstr "Seul %{booker} peut déplacer ou annuler la réunion elle-même."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+msgid "REMINDER: the meeting is in %{time_until}"
+msgstr "RAPPEL : la réunion commence dans %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+msgid "Reminder: the meeting with %{name} is in %{time_until}"
+msgstr "Rappel : la réunion avec %{name} commence dans %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+msgid "The meeting is coming up"
+msgstr "La réunion approche"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+msgid "The meeting with %{organizer} that %{booker} invited you to is coming up."
+msgstr "La réunion avec %{organizer} à laquelle %{booker} vous a invité approche."

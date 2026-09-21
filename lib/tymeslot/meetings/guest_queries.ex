@@ -84,6 +84,56 @@ defmodule Tymeslot.Meetings.GuestQueries do
   end
 
   @doc """
+  Guests to send the reminder for one configured offset to.
+
+  Excludes guests who were never invited (no confirmation), guests who have
+  declined (the time has not changed, so their answer still stands), and
+  guests already stamped for this very offset. The last is what makes an Oban
+  retry safe: a meeting is reminded once per configured offset, so a partial
+  send must not re-email the guests it already reached.
+  """
+  @spec list_for_reminder(binary(), integer(), String.t()) :: [Guest.t()]
+  def list_for_reminder(meeting_id, value, unit) do
+    Guest
+    |> where([g], g.meeting_id == ^meeting_id)
+    |> where([g], not is_nil(g.confirmation_sent_at))
+    |> where([g], g.status != "declined")
+    |> order_by([g], asc: g.inserted_at)
+    |> Repo.all()
+    |> Enum.reject(&reminder_sent?(&1, value, unit))
+  end
+
+  @doc """
+  Records that this guest has been emailed the reminder for one offset,
+  preserving the offsets already recorded.
+  """
+  @spec mark_reminder_sent(Guest.t(), integer(), String.t()) ::
+          {:ok, Guest.t()} | {:error, Changeset.t()}
+  def mark_reminder_sent(%Guest{} = guest, value, unit) do
+    if reminder_sent?(guest, value, unit) do
+      {:ok, guest}
+    else
+      entry = %{"value" => value, "unit" => unit}
+
+      guest
+      |> Guest.reminders_sent_changeset(List.wrap(guest.reminders_sent) ++ [entry])
+      |> Repo.update()
+    end
+  end
+
+  # Entries are written as string-keyed maps and read back from jsonb the same
+  # way, but a struct built in memory can still carry atom keys.
+  defp reminder_sent?(%Guest{reminders_sent: reminders_sent}, value, unit) do
+    reminders_sent
+    |> List.wrap()
+    |> Enum.any?(fn
+      %{"value" => v, "unit" => u} -> v == value and u == unit
+      %{value: v, unit: u} -> v == value and u == unit
+      _other -> false
+    end)
+  end
+
+  @doc """
   Returns a map of `meeting_uid => RSVP summary` for every meeting the given
   user organises that has at least one guest. One grouped query for the whole
   dashboard, keyed by `uid` so both the bookings list and the calendar grid

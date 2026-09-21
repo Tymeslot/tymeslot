@@ -95,6 +95,10 @@ defmodule Tymeslot.Emails.EmailService do
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_guest_cancellation(guest_email, appointment_details), to: AppointmentEmails
 
+  @doc "Sends the reminder for an upcoming meeting to one of its guests."
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_guest_reminder(guest_email, appointment_details), to: AppointmentEmails
+
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_appointment_confirmations(appointment_details), to: AppointmentEmails
 
