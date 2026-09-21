@@ -150,7 +150,7 @@ defmodule TymeslotWeb.AuthLive.RateLimitingTest do
 
       render_hook(view, "resend_verification", %{})
 
-      assert render(view) =~ "Too many email verification attempts. Please try again later."
+      assert render(view) =~ "reached the limit of 5 verification emails per 60 minutes"
     end
 
     test "resend_verification disables the button with a live cooldown countdown",

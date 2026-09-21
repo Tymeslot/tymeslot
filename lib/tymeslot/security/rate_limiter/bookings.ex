@@ -1,6 +1,8 @@
 defmodule Tymeslot.Security.RateLimiter.Bookings do
   @moduledoc false
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Security.RateLimiter.Helpers
 
   # Per-recipient limits keyed on the attendee email address. The per-IP
@@ -32,7 +34,8 @@ defmodule Tymeslot.Security.RateLimiter.Bookings do
     normalised = email |> String.trim() |> String.downcase()
 
     Helpers.check_multi_bucket_limits([
-      {"booking_recipient:#{normalised}", @recipient_limits, "booking"}
+      {"booking_recipient:#{normalised}", @recipient_limits, "booking",
+       dgettext("errors", "bookings")}
     ])
   end
 

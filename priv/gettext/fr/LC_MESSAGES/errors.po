@@ -297,11 +297,6 @@ msgstr "Le nom d’utilisateur doit commencer par une lettre ou un chiffre et ne
 
 #: lib/tymeslot/security/rate_limiter/helpers.ex
 #, elixir-autogen, elixir-format
-msgid "You've reached the limit of %{limit} %{action} per %{window_minutes} minutes. Please try again in %{wait}."
-msgstr "Vous avez atteint la limite de %{limit} %{action} sur %{window_minutes} minutes. Veuillez réessayer dans %{wait}."
-
-#: lib/tymeslot/security/rate_limiter/helpers.ex
-#, elixir-autogen, elixir-format
 msgid "a moment"
 msgstr "un instant"
 
@@ -331,3 +326,35 @@ msgstr[1] "doit être dans %{count} ans au maximum"
 #, elixir-autogen, elixir-format
 msgid "video server checks"
 msgstr "vérifications du serveur vidéo"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "You've reached the limit of %{limit} %{action} per minute. Please try again in %{wait}."
+msgid_plural "You've reached the limit of %{limit} %{action} per %{count} minutes. Please try again in %{wait}."
+msgstr[0] "Vous avez atteint la limite de %{limit} %{action} sur une minute. Veuillez réessayer dans %{wait}."
+msgstr[1] "Vous avez atteint la limite de %{limit} %{action} sur %{count} minutes. Veuillez réessayer dans %{wait}."
+
+#: lib/tymeslot/security/rate_limiter/bookings.ex
+#, elixir-autogen, elixir-format
+msgid "bookings"
+msgstr "réservations"
+
+#: lib/tymeslot/security/rate_limiter/calendar.ex
+#, elixir-autogen, elixir-format
+msgid "calendar event moves"
+msgstr "déplacements d’événements de calendrier"
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "password reset requests"
+msgstr "demandes de réinitialisation de mot de passe"
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "signup attempts"
+msgstr "tentatives d’inscription"
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "verification emails"
+msgstr "e-mails de vérification"
