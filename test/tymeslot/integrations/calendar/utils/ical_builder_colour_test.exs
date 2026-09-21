@@ -5,10 +5,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderColourTest do
   alias Tymeslot.Integrations.Calendar.ICalBuilder
 
   # The per-event colour override is synced to CalDAV as the RFC 7986 COLOR
-  # property. The CalDAV write path goes through build_simple_event/2, so the
+  # property. The CalDAV write path goes through build_simple_event/3, so the
   # COLOR line must be wired in there. The canonical `:colour` is a Tymeslot
   # palette key mapped to a CSS3 colour name at the boundary.
-  describe "build_simple_event/2 — colour" do
+  describe "build_simple_event/3 — colour" do
     test "emits a COLOR line from a palette colour key" do
       event_data = %{
         summary: "Meeting",

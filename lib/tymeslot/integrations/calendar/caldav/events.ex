@@ -30,6 +30,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     ConflictResolution,
     EventProcessor,
     Http,
+    Scheduling,
     UrlBuilder,
     XmlHandler
   }
@@ -108,7 +109,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
           {:ok, CreatedEvent.t()} | {:error, Base.error_reason()}
   def create_calendar_event(client, calendar_path, event_data, opts \\ []) do
     uid = event_data[:uid] || ICalBuilder.generate_uid()
-    ical_data = ICalBuilder.build_simple_event(uid, event_data)
+    ical_data = ICalBuilder.build_simple_event(uid, event_data, Scheduling.attendee_mode(client))
     put_ical(client, calendar_path, uid, ical_data, opts)
   end
 
@@ -175,11 +176,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   ## Patched versus rebuilt
 
   An event that arrived by sync is **patched**: `event_data[:raw_ical]` is the
-  document the provider last gave us, `ICalBuilder.patch_event_properties/2`
+  document the provider last gave us, `ICalBuilder.patch_event_properties/3`
   rewrites the properties the payload carries, and the rest of the document —
   the `ATTENDEE` block with its `PARTSTAT`, `CATEGORIES`, `X-` properties —
   goes back untouched. Rebuilding it from the payload instead would erase all
-  of that, since `build_simple_event/2` serialises what Tymeslot models and
+  of that, since `build_simple_event/3` serialises what Tymeslot models and
   nothing else.
 
   An event with no `:raw_ical` is **rebuilt**, which is the right writer for a
@@ -225,7 +226,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   end
 
   defp patch_and_put(client, url, uid, raw_ical, etag, event_data, policy, opts) do
-    ical_data = document_to_put(raw_ical, uid, event_data)
+    ical_data = document_to_put(client, raw_ical, uid, event_data)
 
     case do_conditional_put(client, url, ical_data, etag, :fail, opts) do
       {:error, reason} when reason in [:precondition_failed, :conditional_not_supported] ->
@@ -251,7 +252,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   defp refresh_and_put(client, url, uid, event_data, policy, opts) do
     case fetch_event_document(client, url, opts) do
       {:ok, raw_ical, etag} ->
-        ical_data = document_to_put(raw_ical, uid, event_data)
+        ical_data = document_to_put(client, raw_ical, uid, event_data)
         do_conditional_put(client, url, ical_data, etag, policy, opts)
 
       {:error, :not_found} ->
@@ -263,7 +264,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   end
 
   defp rebuild_and_put(client, url, uid, event_data, policy, opts) do
-    ical_data = ICalBuilder.build_simple_event(uid, Map.put(event_data, :uid, uid))
+    ical_data = rebuild_document(client, uid, event_data)
     do_conditional_put(client, url, ical_data, resolve_etag(url, client, opts), policy, opts)
   end
 
@@ -280,12 +281,20 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   # A document with no VEVENT is nothing to patch — patching it would answer
   # `:ok` to a write that changed nothing — so the payload is serialised in
   # full instead.
-  defp document_to_put(raw_ical, uid, event_data) do
+  defp document_to_put(client, raw_ical, uid, event_data) do
     if String.contains?(raw_ical, "BEGIN:VEVENT") do
-      ICalBuilder.patch_event_properties(raw_ical, event_data)
+      ICalBuilder.patch_event_properties(raw_ical, event_data, Scheduling.attendee_mode(client))
     else
-      ICalBuilder.build_simple_event(uid, Map.put(event_data, :uid, uid))
+      rebuild_document(client, uid, event_data)
     end
+  end
+
+  defp rebuild_document(client, uid, event_data) do
+    ICalBuilder.build_simple_event(
+      uid,
+      Map.put(event_data, :uid, uid),
+      Scheduling.attendee_mode(client)
+    )
   end
 
   defp fetch_event_document(client, url, opts) do
