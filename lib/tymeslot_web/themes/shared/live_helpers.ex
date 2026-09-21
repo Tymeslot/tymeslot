@@ -75,6 +75,14 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     # Subscribe to calendar event updates for the organiser so availability refreshes on sync
     socket = maybe_subscribe_to_calendar_events(socket)
 
+    # The reschedule uid must reach the socket before the first entry handler
+    # runs: it builds the questions engine and then memoises it on the
+    # definitions, so one built without the uid is the one `handle_params`
+    # finds and keeps. `handle_param_updates/2` is too late, running only once
+    # `handle_params` does.
+    socket =
+      maybe_assign_from_params(socket, :reschedule_meeting_uid, params["reschedule_meeting_uid"])
+
     # Finally setup initial state. Only on the connected mount — handle_params
     # (which always runs immediately after mount, on both the static and
     # connected passes) calls the same entry handler, so doing it here too on
@@ -450,7 +458,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
         {:ok, socket} ->
           socket
-          |> route_past_unanswered_questions()
+          |> maybe_route_to_questions()
           |> do_handle_booking_entry(params)
       end
     else
@@ -497,22 +505,26 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   # required custom fields would otherwise seed the engine with definitions
   # but no answers and render the booking step, which has no UI for them —
   # every submit then fails validation with no way to correct it. Route to
-  # `:questions` instead whenever the freshly-resolved engine still has
-  # unanswered required fields; forward navigation from there already lands
-  # back on `:booking` once answered.
-  defp route_past_unanswered_questions(socket) do
-    if unanswered_required_questions?(socket.assigns[:engine]) do
+  # `:questions` instead whenever the freshly-resolved engine still needs it;
+  # forward navigation from there already lands back on `:booking`.
+  defp maybe_route_to_questions(socket) do
+    if needs_questions_step?(socket.assigns[:engine]) do
       assign(socket, :current_state, :questions)
     else
       socket
     end
   end
 
-  defp unanswered_required_questions?(%QEngine{} = engine) do
-    not QEngine.skipped?(engine) && match?({:error, _errors}, QEngine.validate_all(engine))
+  # Answers a reschedule carried over are shown, never submitted unseen.
+  # They validate, so the unanswered-required arm alone would skip the one
+  # screen that displays them.
+  defp needs_questions_step?(%QEngine{} = engine) do
+    not QEngine.skipped?(engine) &&
+      (QEngine.pending_review?(engine) ||
+         match?({:error, _errors}, QEngine.validate_all(engine)))
   end
 
-  defp unanswered_required_questions?(_engine), do: false
+  defp needs_questions_step?(_engine), do: false
 
   defp do_handle_booking_entry(socket, _params) do
     # Set up form and rate limiting

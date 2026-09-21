@@ -401,6 +401,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
             engine.current_index == last_index ->
               case QEngine.validate_all(engine) do
                 {:ok, _answers} ->
+                  socket = assign(socket, :engine, QEngine.mark_reviewed(engine))
                   {:noreply, transition_to(socket, :booking, %{})}
 
                 {:error, _errors} ->

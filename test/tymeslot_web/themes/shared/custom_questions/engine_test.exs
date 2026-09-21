@@ -137,7 +137,25 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.EngineTest do
       assert s.current_index == 0
     end
 
-    test "an answer given in this session wins over the one carried over" do
+    test "seeding anything raises pending_review, which mark_reviewed/1 lowers" do
+      d = build_def("short_text")
+
+      s = Engine.prefill(Engine.init([d]), %{d["id"] => "Contract renewal"})
+
+      # The booking step routes on this: a carried answer validates, so nothing
+      # else would stop it being submitted without ever being shown.
+      assert Engine.pending_review?(s)
+      refute Engine.pending_review?(Engine.mark_reviewed(s))
+    end
+
+    test "carrying nothing leaves pending_review down" do
+      d = build_def("short_text")
+
+      refute Engine.pending_review?(Engine.prefill(Engine.init([d]), %{}))
+      refute Engine.pending_review?(Engine.prefill(Engine.init([]), %{"x" => "y"}))
+    end
+
+    test "merges under the answers already held" do
       d = build_def("short_text")
 
       s =

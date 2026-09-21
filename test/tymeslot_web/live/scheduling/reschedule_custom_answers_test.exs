@@ -13,6 +13,8 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCustomAnswersTest do
 
   use TymeslotWeb.LiveCase, async: false
 
+  @moduletag :integration
+  @moduletag :live
   @moduletag :custom_fields
   @moduletag :scheduling
 
@@ -82,7 +84,7 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCustomAnswersTest do
 
     {:ok, meeting_type} =
       MeetingTypes.update_meeting_type(
-        insert(:meeting_type, user: user, duration_minutes: 30, is_active: true),
+        insert(:meeting_type, user: user, duration_minutes: 30, is_active: true, slug: "consult"),
         %{"custom_fields" => [question()]}
       )
 
@@ -106,6 +108,16 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCustomAnswersTest do
       custom_fields_snapshot: snapshot,
       custom_field_answers: %{@question_id => "Contract renewal"}
     )
+  end
+
+  defp deep_link_to_booking(ctx, reschedule_uid) do
+    query =
+      URI.encode_query(%{"timezone" => "Etc/UTC", "reschedule_meeting_uid" => reschedule_uid})
+
+    {:ok, view, _html} =
+      live(ctx.conn, "/#{ctx.profile.username}/#{ctx.meeting_type.slug}/book?#{query}")
+
+    view
   end
 
   @tag :capture_log
@@ -144,6 +156,42 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCustomAnswersTest do
 
     assert html =~ "Anything I should know?"
     refute html =~ "Contract renewal"
+  end
+
+  # `/:username/:slug/book` is directly enterable, and is where both a
+  # reschedule deep-link and a mid-flow locale switch land. The engine is
+  # built during `mount`, before `handle_params` has read the uid out of the
+  # query string, and is then memoised on its definitions — so an engine built
+  # blank here stays blank for the life of the LiveView.
+  @tag :capture_log
+  test "a reschedule deep-link carries the answer too", ctx do
+    meeting =
+      booking_answered(ctx.user, ctx.meeting_type, CustomFields.snapshot_for(ctx.meeting_type))
+
+    html = render(deep_link_to_booking(ctx, meeting.uid))
+
+    assert html =~ "What is it about?"
+    assert html =~ "Contract renewal"
+  end
+
+  # The carried answers validate, so nothing in the required-field gate would
+  # stop the deep-link entry handing them straight to the booking step and
+  # submitting them in the booker's name without ever showing them.
+  @tag :capture_log
+  test "the questions step is shown even when every carried answer validates", ctx do
+    {:ok, meeting_type} =
+      MeetingTypes.update_meeting_type(ctx.meeting_type, %{
+        "custom_fields" => [question(%{"required" => false})]
+      })
+
+    meeting = booking_answered(ctx.user, meeting_type, CustomFields.snapshot_for(meeting_type))
+
+    html = render(deep_link_to_booking(ctx, meeting.uid))
+
+    assert html =~ "What is it about?",
+           "an optional question whose answer was carried must still be shown"
+
+    assert html =~ "Contract renewal"
   end
 
   @tag :capture_log
