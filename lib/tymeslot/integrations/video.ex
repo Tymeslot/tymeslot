@@ -410,8 +410,21 @@ defmodule Tymeslot.Integrations.Video do
   # ---------------
   # URL helpers
   # ---------------
+  @doc """
+  Reads the room id out of a meeting context, or guesses it from a bare URL.
+
+  The URL form is a best-effort guess at which provider issued the link, so a
+  caller that holds an integration must use `extract_room_id/2` instead. See
+  `Tymeslot.Integrations.Video.Urls.extract_room_id/1`.
+  """
   @spec extract_room_id(String.t() | map()) :: String.t() | nil
   defdelegate extract_room_id(input), to: Urls
+
+  @doc """
+  Extracts the room id from a meeting URL using the named provider's own rules.
+  """
+  @spec extract_room_id(String.t(), atom() | String.t()) :: String.t() | nil
+  defdelegate extract_room_id(meeting_url, provider), to: Urls
 
   # ---------------
   # OAuth create-or-update

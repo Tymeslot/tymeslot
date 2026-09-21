@@ -121,30 +121,56 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   end
 
   @doc """
-  Extracts room ID from a meeting URL.
+  Extracts the room id from a meeting URL, guessing which provider the link
+  belongs to.
+
+  **Best-effort only.** The provider is guessed by testing the URL against each
+  provider's `url_patterns/0` substrings in `ProviderConfig.all_providers_with_dev/0`
+  order, and the first provider to claim the link wins. Two providers whose URLs
+  share a substring therefore resolve to the earlier one, silently, and the room
+  id comes back parsed by the wrong provider's rules.
+
+  Use this only where a bare link is genuinely all there is, for instance
+  naming the service behind a URL a user has just pasted. **A caller holding an
+  integration must not use it**: it already knows the provider, so it should
+  call `extract_room_id/2` and get an answer that cannot be mis-attributed.
   """
   @spec extract_room_id(String.t()) :: String.t() | nil
   def extract_room_id(meeting_url) do
-    # Try to detect provider from URL and extract room ID
     case detect_provider_from_url(meeting_url) do
       {:ok, provider_type} ->
-        case ProviderRegistry.get_provider(provider_type) do
-          {:ok, provider_module} ->
-            provider_module.extract_room_id(meeting_url)
-
-          {:error, _reason} ->
-            Logger.warning("Failed to get provider for room ID extraction",
-              provider_type: provider_type
-            )
-
-            nil
-        end
+        extract_room_id(meeting_url, provider_type)
 
       {:error, _reason} ->
         Logger.warning("Could not detect provider from URL", url: meeting_url)
         nil
     end
   end
+
+  @doc """
+  Extracts the room id from a meeting URL using `provider_type`'s own rules.
+
+  Dispatches straight to the named provider, so a URL another provider would
+  have claimed by substring is still parsed by the one that actually issued it.
+  Accepts the atom or the string form, since persisted integrations carry the
+  string. Returns `nil` for an unknown provider or a non-binary URL.
+  """
+  @spec extract_room_id(String.t(), atom() | String.t()) :: String.t() | nil
+  def extract_room_id(meeting_url, provider_type) when is_binary(meeting_url) do
+    with {:ok, type} <- ProviderConfig.parse_known(provider_type),
+         {:ok, provider_module} <- ProviderRegistry.get_provider(type) do
+      provider_module.extract_room_id(meeting_url)
+    else
+      {:error, _reason} ->
+        Logger.warning("Failed to get provider for room ID extraction",
+          provider_type: provider_type
+        )
+
+        nil
+    end
+  end
+
+  def extract_room_id(_meeting_url, _provider_type), do: nil
 
   @doc """
   Validates if a URL is a valid meeting URL.
