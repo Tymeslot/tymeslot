@@ -2527,33 +2527,41 @@ msgid "Your booking with %{name} has been cancelled."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
 msgid "CAN YOU STILL MAKE IT?"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
 msgid "Can you still make it?"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
 msgid "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to is coming up."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
 msgid "Only %{booker} can move or cancel the meeting itself."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
 msgid "REMINDER: the meeting is in %{time_until}"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
 msgid "Reminder: the meeting with %{name} is in %{time_until}"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
 msgid "The meeting is coming up"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
 msgid "The meeting with %{organizer} that %{booker} invited you to is coming up."
 msgstr ""
