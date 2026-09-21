@@ -35,6 +35,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     reconciliation_discrepancies: %{category: "Payment", severity: :warning},
     subscription_not_in_database: %{category: "Payment", severity: :warning},
     payment_event_enqueue_failed: %{category: "Payment", severity: :error},
+    dunning_stalled: %{category: "Payment", severity: :error},
     analytics_tracking_anomaly: %{category: "Analytics", severity: :warning},
     recipient_email_rejected: %{category: "Email", severity: :warning}
   }
@@ -218,6 +219,17 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     event = Map.get(metadata, :event, "unknown")
     detail = Map.get(metadata, :summary) || Map.get(metadata, :reason_message, "unknown")
     "Payment event enqueue failed for #{event}: #{detail}"
+  end
+
+  # The message embeds the subscription id, so the default message-based dedup
+  # key already collapses repeat runs over the same stuck row into one alert
+  # per window while a second stuck subscription still raises its own.
+  def format_message(:dunning_stalled, metadata) do
+    stripe_id = Map.get(metadata, :stripe_subscription_id, "unknown")
+    days = Map.get(metadata, :days_past_due, "unknown")
+
+    "Dunning stalled for subscription #{stripe_id}: #{days} days past due is beyond the " <>
+      "auto-cancel guard, so it is never cancelled and still grants Pro; manual review required"
   end
 
   def format_message(:invalid_calendar_event, metadata) do

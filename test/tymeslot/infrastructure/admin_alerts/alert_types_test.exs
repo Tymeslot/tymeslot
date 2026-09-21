@@ -137,6 +137,24 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
       assert msg =~ "discrepancies"
     end
 
+    # The subscription id has to be in the message, because the default
+    # dedup key is the message: without it a second stalled subscription in
+    # the same 24h window would be silently folded into the first one's alert.
+    test ":dunning_stalled includes the subscription ID and the days past due" do
+      metadata = %{stripe_subscription_id: "sub_stalled_1", days_past_due: 312}
+      msg = AlertTypes.format_message(:dunning_stalled, metadata)
+
+      assert msg =~ "sub_stalled_1"
+      assert msg =~ "312"
+      assert AlertTypes.dedup_key(:dunning_stalled, metadata) =~ "sub_stalled_1"
+
+      refute AlertTypes.dedup_key(:dunning_stalled, metadata) ==
+               AlertTypes.dedup_key(:dunning_stalled, %{
+                 metadata
+                 | stripe_subscription_id: "sub_stalled_2"
+               })
+    end
+
     test ":subscription_not_in_database includes stripe subscription ID" do
       msg =
         AlertTypes.format_message(:subscription_not_in_database, %{
