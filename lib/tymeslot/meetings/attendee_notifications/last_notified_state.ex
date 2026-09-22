@@ -4,7 +4,16 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState do
   Stored as a jsonb column (`last_notified_state`) on `meetings` and `provider_calendar_events`.
   """
 
-  @fields [:title, :starts_at, :ends_at, :location, :description, :video_link]
+  @fields [
+    :title,
+    :starts_at,
+    :ends_at,
+    :start_date,
+    :end_date,
+    :location,
+    :description,
+    :video_link
+  ]
 
   @spec serialise(map, [map]) :: map
   def serialise(event, attendees) when is_map(event) and is_list(attendees) do
@@ -13,11 +22,21 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState do
       field when field in [:starts_at, :ends_at] ->
         {Atom.to_string(field), format_datetime(Map.get(event, field))}
 
+      field when field in [:start_date, :end_date] ->
+        {Atom.to_string(field), format_date(Map.get(event, field))}
+
       field ->
         {Atom.to_string(field), normalise_text(Map.get(event, field))}
     end)
     |> Map.put("attendees", normalise_emails(attendees))
   end
+
+  @doc """
+  Whether nothing has ever been recorded for the event, so that whatever it
+  was before is unknown rather than empty. See `to_event/2`.
+  """
+  @spec empty?(map) :: boolean
+  def empty?(state) when is_map(state), do: map_size(state) == 0
 
   @spec to_event(map) :: map
   def to_event(state) when is_map(state) do
@@ -25,6 +44,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState do
       title: Map.get(state, "title", ""),
       starts_at: parse_datetime(Map.get(state, "starts_at")),
       ends_at: parse_datetime(Map.get(state, "ends_at")),
+      start_date: parse_date(Map.get(state, "start_date")),
+      end_date: parse_date(Map.get(state, "end_date")),
       location: Map.get(state, "location", ""),
       description: Map.get(state, "description", ""),
       video_link: empty_to_nil(Map.get(state, "video_link", "")),
@@ -47,7 +68,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState do
   Only the attendee list is carried over. The fields stay empty, so every
   populated one still reads as changed and the diff stays non-empty, which is
   what makes the notification go out at all; the update email simply has no
-  "before" value to show for them.
+  "before" value to show for them, which is why the worker flags such a
+  dispatch as a first notification (see `empty?/1`).
   """
   @spec to_event(map, map) :: map
   def to_event(state, current) when is_map(state) and map_size(state) == 0 and is_map(current) do
@@ -66,6 +88,18 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState do
 
   defp format_datetime(%NaiveDateTime{} = ndt),
     do: ndt |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_iso8601()
+
+  defp format_date(nil), do: nil
+  defp format_date(%Date{} = date), do: Date.to_iso8601(date)
+
+  defp parse_date(iso) when is_binary(iso) do
+    case Date.from_iso8601(iso) do
+      {:ok, date} -> date
+      _error -> nil
+    end
+  end
+
+  defp parse_date(_missing), do: nil
 
   defp parse_datetime(nil), do: nil
 

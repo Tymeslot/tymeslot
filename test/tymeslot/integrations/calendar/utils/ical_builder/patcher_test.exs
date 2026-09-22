@@ -329,26 +329,160 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherTest do
       assert Enum.count(lines(patched), &(&1 == "X-TYMESLOT-ATTENDEES:1")) == 1
     end
 
-    # The guard is the marker, not the absence of an ATTENDEE block: an
-    # unmarked block belongs to the organiser's own client, and rewriting it
-    # would reset the PARTSTAT that client is tracking.
-    test "an unmarked ATTENDEE block is still left alone in :attendee mode" do
+    test "a guest who stays keeps the line Tymeslot wrote for them" do
       patched =
         ICalBuilder.patch_event_properties(
-          @foreign_event,
+          @marked_event,
           %{
-            summary: "Renamed",
-            attendees: [%{"email" => "bob@example.com", "name" => "Bob"}]
+            attendees: [
+              %{"email" => "ada@example.com", "name" => "Ada"},
+              %{"email" => "bob@example.com", "name" => "Bob"}
+            ]
           },
           :attendee
         )
 
-      assert "ATTENDEE;PARTSTAT=ACCEPTED;ROLE=REQ-PARTICIPANT;CN=Ada:mailto:ada@example.com" in lines(
-               patched
-             )
+      attendee_lines = Enum.filter(lines(patched), &String.starts_with?(&1, "ATTENDEE"))
 
-      assert "SUMMARY:Renamed" in lines(patched)
-      refute patched =~ "bob@example.com"
+      assert attendee_lines == [
+               "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE;CN=Ada:mailto:ada@example.com",
+               "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE;CN=Bob:mailto:bob@example.com"
+             ]
+    end
+  end
+
+  # The grid removes a guest by sending the shortened list, so a payload that
+  # carries `:attendees` is the complete new list. Written over the stored
+  # lines it would reset every reply; ignored, the removed guest comes back on
+  # the next sync after being told the meeting is off.
+  describe "patch_event_properties/3 when the payload states the attendee list" do
+    @ada_line "ATTENDEE;PARTSTAT=ACCEPTED;ROLE=REQ-PARTICIPANT;CN=Ada:mailto:ada@example.com"
+    @bob_line "ATTENDEE;PARTSTAT=TENTATIVE;RSVP=TRUE;CUTYPE=INDIVIDUAL:mailto:bob@example.com"
+
+    defp attendee_lines(ical),
+      do: Enum.filter(lines(ical), &String.starts_with?(&1, "ATTENDEE"))
+
+    test "a removed guest's ATTENDEE line goes and the other guest's stays verbatim" do
+      patched =
+        ICalBuilder.patch_event_properties(
+          @foreign_event,
+          %{
+            attendees: [%{"email" => "ada@example.com", "name" => "Ada", "status" => "accepted"}]
+          },
+          :attendee
+        )
+
+      assert attendee_lines(patched) == [@ada_line]
+    end
+
+    test "a removal reaches a :contact mode server too, without adding a CONTACT" do
+      patched =
+        ICalBuilder.patch_event_properties(
+          @foreign_event,
+          %{attendees: [%{"email" => "bob@example.com"}]},
+          :contact
+        )
+
+      assert attendee_lines(patched) == [@bob_line]
+      refute patched =~ "CONTACT"
+    end
+
+    test "an empty list removes every guest" do
+      patched = ICalBuilder.patch_event_properties(@foreign_event, %{attendees: []}, :attendee)
+
+      assert attendee_lines(patched) == []
+      assert "ORGANIZER;CN=Dana:mailto:dana@example.com" in lines(patched)
+    end
+
+    test "a guest is matched whatever the case of their address" do
+      patched =
+        ICalBuilder.patch_event_properties(
+          @foreign_event,
+          %{attendees: [%{"email" => "ADA@Example.com"}, %{"email" => "bob@example.com"}]},
+          :attendee
+        )
+
+      assert attendee_lines(patched) == [@ada_line, @bob_line]
+    end
+
+    test "a new guest is added as a client-scheduled ATTENDEE beside the stored lines" do
+      patched =
+        ICalBuilder.patch_event_properties(
+          @foreign_event,
+          %{
+            attendees: [
+              %{"email" => "ada@example.com"},
+              %{"email" => "bob@example.com"},
+              %{"email" => "cleo@example.com", "name" => nil, "status" => "needs_action"}
+            ]
+          },
+          :attendee
+        )
+
+      assert attendee_lines(patched) == [
+               @ada_line,
+               @bob_line,
+               "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE:mailto:cleo@example.com"
+             ]
+
+      # The block is no longer only Tymeslot's, so it is not marked as such.
+      refute patched =~ "X-TYMESLOT-ATTENDEES"
+    end
+
+    # A CONTACT on a document whose CONTACT lines Tymeslot does not own could
+    # never be taken off it again, so a :contact server is not given one.
+    test "a new guest is not written to another client's block in :contact mode" do
+      patched =
+        ICalBuilder.patch_event_properties(
+          @foreign_event,
+          %{
+            attendees: [
+              %{"email" => "ada@example.com"},
+              %{"email" => "bob@example.com"},
+              %{"email" => "cleo@example.com"}
+            ]
+          },
+          :contact
+        )
+
+      assert attendee_lines(patched) == [@ada_line, @bob_line]
+      refute patched =~ "cleo@example.com"
+    end
+
+    test "an attendee with no mailto address, which the list cannot name, is kept" do
+      room = "ATTENDEE;CUTYPE=ROOM;CN=Room 4:urn:uuid:5b0a4e8e-room-4"
+      document = String.replace(@foreign_event, @bob_line, room)
+
+      patched =
+        ICalBuilder.patch_event_properties(
+          document,
+          %{attendees: [%{"email" => "ada@example.com"}]},
+          :attendee
+        )
+
+      assert attendee_lines(patched) == [@ada_line, room]
+    end
+
+    test "a payload without the key leaves every ATTENDEE line where it was" do
+      patched =
+        ICalBuilder.patch_event_properties(@foreign_event, %{summary: "Renamed"}, :attendee)
+
+      document_lines = lines(@foreign_event)
+      patched_lines = lines(patched)
+
+      assert Enum.filter(document_lines, &String.starts_with?(&1, "ATTENDEE")) ==
+               attendee_lines(patched)
+
+      # Unmoved, not just present: nothing about the block was rewritten.
+      assert Enum.find_index(patched_lines, &(&1 == @ada_line)) <
+               Enum.find_index(patched_lines, &(&1 == "X-MOZ-GENERATION:7"))
+    end
+
+    test "a guest removed from Tymeslot's own block loses their line" do
+      patched =
+        ICalBuilder.patch_event_properties(@marked_event, %{attendees: []}, :attendee)
+
+      refute patched =~ "ada@example.com"
       refute patched =~ "X-TYMESLOT-ATTENDEES"
     end
   end

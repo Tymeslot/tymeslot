@@ -139,6 +139,65 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
     end
   end
 
+  # The grid removes a guest by writing the shortened list
+  # (`AttendeeManagement.apply_remove_attendee/3`). The guest has already been
+  # emailed a cancellation by then, so a document that kept her line would put
+  # her back in the grid on the next sync.
+  describe "changing the guests of a synced CalDAV event from the grid" do
+    defp expect_put do
+      test_pid = self()
+
+      expect(Tymeslot.HTTPClientMock, :put, fn _url, body, _headers, _opts ->
+        send(test_pid, {:put, body})
+        {:ok, %Req.Response{status: 204, body: "", headers: %{}}}
+      end)
+    end
+
+    defp sent_attendee_lines do
+      assert_received {:put, body}
+      body |> LineFolder.unfold_lines() |> Enum.filter(&String.starts_with?(&1, "ATTENDEE"))
+    end
+
+    test "removing a guest takes her ATTENDEE line off the server's document", %{
+      user: user,
+      event: event
+    } do
+      expect_put()
+
+      # The list the grid sends once Bob is removed from a cache that held both.
+      remaining = [%{"email" => "ada@example.com", "name" => "Ada", "status" => "accepted"}]
+      assert {:ok, updated} = CalendarGrid.update_event(user.id, event, %{attendees: remaining})
+      assert updated.attendees == remaining
+
+      # Ada's reply travels with her, verbatim, rather than being rebuilt from
+      # the cache, which holds no ROLE for her.
+      assert sent_attendee_lines() == [@attendee_ada]
+    end
+
+    test "adding a guest writes a client-scheduled ATTENDEE and keeps the others' replies", %{
+      user: user,
+      event: event
+    } do
+      expect_put()
+
+      attendees = [
+        %{"email" => "ada@example.com", "name" => "Ada", "status" => "accepted"},
+        %{"email" => "bob@example.com", "name" => nil, "status" => "accepted"},
+        %{"email" => "cleo@example.com", "name" => nil, "status" => "needs_action"}
+      ]
+
+      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{attendees: attendees})
+
+      # SCHEDULE-AGENT=CLIENT: stored, but not mailed by the server, because
+      # Tymeslot has already sent the invitation itself.
+      assert sent_attendee_lines() == [
+               @attendee_ada,
+               @attendee_bob,
+               "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE:mailto:cleo@example.com"
+             ]
+    end
+  end
+
   describe "rescheduling one occurrence of a synced CalDAV series" do
     # The occurrence the sync expanded out of the series below: it carries the
     # master's RRULE, and its href is the series' resource, because on CalDAV

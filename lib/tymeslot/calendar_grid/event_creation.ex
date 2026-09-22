@@ -264,6 +264,14 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     end
   end
 
+  # An all-day create carries its dates in `start_at`/`end_at` (see
+  # `build_event_data/7`); the invitation reads an all-day event by the same
+  # fields a cached one has, so they are renamed to match.
+  defp notify_timing(%{all_day: true}, %Date{} = start_date, %Date{} = end_date),
+    do: %{all_day: true, start_date: start_date, end_date: end_date}
+
+  defp notify_timing(_creating, start_at, end_at), do: %{start_at: start_at, end_at: end_at}
+
   defp provision_video_room_for_plan(:none, _event_details, _grid_event), do: %{}
 
   defp provision_video_room_for_plan({:inline, _video_id}, _event_details, _grid_event),
@@ -289,18 +297,19 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     meeting_url = video_context[:meeting_url]
     video_room_id = video_context[:room_id]
 
-    notify_event = %{
-      uid: uid,
-      summary: creating.title,
-      start_at: start_at,
-      end_at: end_at,
-      location: creating[:location],
-      description: build_description(creating[:description], video_context),
-      video_link: meeting_url,
-      attendee_video_url: meeting_url,
-      ical_sequence: 0,
-      calendar_integration: %{user_id: user_id}
-    }
+    notify_event =
+      creating
+      |> notify_timing(start_at, end_at)
+      |> Map.merge(%{
+        uid: uid,
+        summary: creating.title,
+        location: creating[:location],
+        description: build_description(creating[:description], video_context),
+        video_link: meeting_url,
+        attendee_video_url: meeting_url,
+        ical_sequence: 0,
+        calendar_integration: %{user_id: user_id}
+      })
 
     attendees =
       Enum.map(creating[:attendees] || [], fn email -> %{email: email} end)

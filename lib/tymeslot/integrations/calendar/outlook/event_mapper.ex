@@ -51,43 +51,52 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
 
   # Private helpers
 
+  # Graph's `PATCH` replaces the event's whole `attendees` collection with the
+  # one it is sent, and an attendee's `status` cannot be written: Graph fills
+  # it from the replies the organiser received and ignores it on a request
+  # body. Every attendee in a PATCH therefore comes back with no reply, so the
+  # collection is sent only when the caller supplied one, which the grid does
+  # only for an edit that changes the guest list (see
+  # `Tymeslot.CalendarGrid.EventEdit`). A supplied empty list is still sent,
+  # because it is the removal of the last guest; a payload that says nothing
+  # about attendees leaves Graph's list, and its replies, alone.
   defp build_attendees(event_data) do
-    attendees = extract_field(event_data, :attendees, "attendees")
+    case extract_field(event_data, :attendees, "attendees") do
+      [_first | _rest] = attendees ->
+        attendees
+        |> Enum.map(&Attendee.normalise/1)
+        |> Enum.map(&graph_attendee(&1.email, &1.display_name))
+        |> Enum.reject(&is_nil/1)
 
-    if is_list(attendees) and attendees != [] do
-      attendees
-      |> Enum.map(&Attendee.normalise/1)
-      |> Enum.map(fn
-        %{email: nil} ->
-          nil
-
-        attendee ->
-          %{
-            "emailAddress" => %{
-              "address" => attendee.email,
-              "name" => attendee.display_name || attendee.email
-            },
-            "type" => "required"
-          }
-      end)
-      |> Enum.reject(&is_nil/1)
-    else
-      # Legacy single-attendee path (ad-hoc meetings)
-      email = extract_field(event_data, :attendee_email, "attendee_email")
-      name = extract_field(event_data, :attendee_name, "attendee_name")
-
-      if email do
-        [
-          %{
-            "emailAddress" => %{"address" => email, "name" => name || email},
-            "type" => "required"
-          }
-        ]
-      else
-        []
-      end
+      _none ->
+        legacy_attendees(event_data)
     end
   end
+
+  # Legacy single-attendee path (ad-hoc meetings), which names the invitee on
+  # the event itself rather than in an attendee list.
+  defp legacy_attendees(event_data) do
+    case extract_field(event_data, :attendee_email, "attendee_email") do
+      email when is_binary(email) ->
+        [graph_attendee(email, extract_field(event_data, :attendee_name, "attendee_name"))]
+
+      _none ->
+        supplied_empty_list(event_data)
+    end
+  end
+
+  defp supplied_empty_list(event_data) do
+    case extract_field(event_data, :attendees, "attendees") do
+      [] -> []
+      _no_opinion -> nil
+    end
+  end
+
+  defp graph_attendee(email, name) when is_binary(email) do
+    %{"emailAddress" => %{"address" => email, "name" => name || email}, "type" => "required"}
+  end
+
+  defp graph_attendee(_no_email, _name), do: nil
 
   defp extract_field(event_data, atom_key, string_key) do
     Map.get(event_data, atom_key) || Map.get(event_data, string_key)

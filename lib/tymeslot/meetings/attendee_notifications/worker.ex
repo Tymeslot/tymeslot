@@ -11,6 +11,12 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   the baseline is written only *after* a successful dispatch, never before
   the diff that decides who to notify.
 
+  An empty baseline is fine for *deciding* to notify and useless for
+  *describing* the change, since every `before_*` value comes out nil. The
+  dispatch therefore flags it as a first notification, so the email states
+  the event's current details instead of announcing, say, a title changed
+  from nothing.
+
   On successful dispatch, the event's `last_notified_state` is updated to the
   current serialised snapshot and `ical_sequence` is bumped via
   `ChangeSummary.next_sequence`. The whole read/dispatch/persist path runs
@@ -112,6 +118,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
 
   # Normalises both single-attendee meetings and multi-attendee provider events
   # into the shape ChangeDetector expects: `:title`, `:starts_at`, `:ends_at`,
+  # `:start_date`, `:end_date` (an all-day event's timing; meetings have none),
   # `:location`, `:description`, `:video_link`, and an `:attendees` list of
   # `%{email: ...}` maps.
   defp current_event_map(event) do
@@ -119,6 +126,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
       title: Map.get(event, :summary) || Map.get(event, :title),
       starts_at: Map.get(event, :start_at) || Map.get(event, :start_time),
       ends_at: Map.get(event, :end_at) || Map.get(event, :end_time),
+      start_date: Map.get(event, :start_date),
+      end_date: Map.get(event, :end_date),
       location: Map.get(event, :location),
       description: Map.get(event, :description),
       video_link: Map.get(event, :video_link) || Map.get(event, :attendee_video_url),
@@ -174,6 +183,9 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
       before_description: last_state_string(event, "description"),
       before_start_at: last_state_datetime(event, "starts_at"),
       before_end_at: last_state_datetime(event, "ends_at"),
+      before_start_date: last_state_string(event, "start_date"),
+      before_end_date: last_state_string(event, "end_date"),
+      first_notification: LastNotifiedState.empty?(event.last_notified_state),
       method: method,
       sequence: sequence
     })
