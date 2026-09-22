@@ -394,6 +394,7 @@ msgstr "Tipo:"
 msgid "Video Call"
 msgstr "Videochiamata"
 
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format
 msgid "Video meeting:"
@@ -2611,3 +2612,23 @@ msgstr "Cosa devo fare?"
 #, elixir-autogen, elixir-format
 msgid "What's happening?"
 msgstr "Cosa sta succedendo?"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Additional details:"
+msgstr "Dettagli aggiuntivi:"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Attachments:"
+msgstr "Allegati:"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee: %{attendee}"
+msgstr "Partecipante: %{attendee}"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Message from attendee:"
+msgstr "Messaggio dal partecipante:"
