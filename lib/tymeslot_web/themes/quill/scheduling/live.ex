@@ -79,7 +79,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
           message={@scheduling_error_message}
         />
       <% else %>
-        <%= case assigns[:current_state] || :overview do %>
+        <%= case (if assigns[:shared_availability_error], do: :overview, else: assigns[:current_state] || :overview) do %>
           <% :overview -> %>
             <.live_component module={OverviewComponent} id="overview-step" {assigns} />
           <% :schedule -> %>

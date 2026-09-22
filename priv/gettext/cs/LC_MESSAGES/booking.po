@@ -1883,3 +1883,24 @@ msgstr "Tato rezervace byla zrušena, a proto se neuskuteční."
 #, elixir-autogen, elixir-format
 msgid "This booking wasn't accepted, so it won't be going ahead."
 msgstr "Tato rezervace nebyla přijata, a proto se neuskuteční."
+
+#: lib/tymeslot_web/themes/shared/booking_text.ex
+#, elixir-autogen, elixir-format
+msgid "Additional participants: %{names}"
+msgstr "Další účastníci: %{names}"
+
+#: lib/tymeslot_web/live/scheduling/shared_availability_guests.ex
+#, elixir-autogen, elixir-format
+msgid "One of the participants named in this link isn’t available for booking. Please check the link."
+msgstr "Jeden z účastníků uvedených v tomto odkazu není dostupný pro rezervaci. Zkontrolujte prosím odkaz."
+
+#: lib/tymeslot_web/live/scheduling/shared_availability_guests.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type can’t be booked together with other participants."
+msgstr "Tento typ schůzky nelze rezervovat společně s dalšími účastníky."
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#, elixir-autogen, elixir-format
+msgid "This booking link can’t be used"
+msgstr "Tento rezervační odkaz nelze použít"
