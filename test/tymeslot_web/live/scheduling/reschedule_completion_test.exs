@@ -172,19 +172,22 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
   end
 
   describe "the schedule a reschedule is offered against" do
-    @tag :capture_log
-    test "comes from the meeting's own type, not a duration match", %{
-      conn: conn,
-      user: user,
-      profile: profile,
-      meeting: meeting
-    } do
-      # A reschedule link carries only the meeting uid, and the type used to be
-      # re-picked from the duration in the URL — which resolves against slugs,
-      # so it matched nothing and the page fell back to the profile's default
-      # schedule. Slots were then offered from the default while the submit was
-      # validated against the meeting's own type, which is the one way left to
-      # break "if it is offered, it can be booked".
+    # A second, unrelated type the organiser also offers publicly. Without one
+    # the "exactly one card" assertions below pass on an empty catalogue and
+    # prove nothing, since `setup` inserts a single meeting type.
+    defp second_public_type(user) do
+      insert(:meeting_type,
+        user: user,
+        duration_minutes: 45,
+        name: "Deep Dive",
+        is_active: true
+      )
+    end
+
+    # Moves the meeting onto a type of its own, on a schedule with a window
+    # nothing else uses, so "which type is this page on?" is answerable from
+    # `booking_window_days` alone.
+    defp pin_meeting_to_its_own_type(user, profile, meeting) do
       long_schedule =
         insert(:availability_schedule,
           profile: profile,
@@ -209,6 +212,24 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
         |> Changeset.change(%{meeting_type_id: pinned_type.id})
         |> Repo.update()
 
+      pinned_type
+    end
+
+    @tag :capture_log
+    test "comes from the meeting's own type, not a duration match", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      meeting: meeting
+    } do
+      # A reschedule link carries only the meeting uid, and the type used to be
+      # re-picked from the duration in the URL — which resolves against slugs,
+      # so it matched nothing and the page fell back to the profile's default
+      # schedule. Slots were then offered from the default while the submit was
+      # validated against the meeting's own type, which is the one way left to
+      # break "if it is offered, it can be booked".
+      pinned_type = pin_meeting_to_its_own_type(user, profile, meeting)
+
       {:ok, view, _html} =
         live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
 
@@ -219,39 +240,111 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
                "button[data-testid='duration-option'][phx-value-duration='quick-chat']"
              )
 
-      # The event can still be pushed without the card, so the server-side
-      # pinning is what actually holds: sending another type's slug directly
-      # must not move the reschedule off the type it is committed to.
+      # The card is gone, but the event behind it is still the client's to
+      # push, so the server is what has to hold. The only card on the page is
+      # clicked with another type's slug overriding its value — the closest a
+      # test gets to a crafted client without bypassing the component.
       view
-      |> with_target("#overview-step")
-      |> render_click("select_duration", %{"duration" => "quick-chat"})
+      |> element("button[data-testid='duration-option']")
+      |> render_click(%{"duration" => "quick-chat"})
+
+      render(view)
+      assigns = :sys.get_state(view.pid).socket.assigns
+
+      assert assigns.meeting_type.id == pinned_type.id
+      assert assigns.booking_window_days == 180
+
+      # The slug is discarded rather than kept alongside the pinned type: left
+      # on "quick-chat" it is no longer one of `:meeting_types`, and the step's
+      # own validation then refuses to advance with no card showing why.
+      assert assigns.selected_duration == "pinned-chat"
+      assert assigns.duration == "pinned-chat"
+    end
+
+    @tag :capture_log
+    test "a stale slug in the URL does not move the reschedule off its type", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      meeting: meeting
+    } do
+      # `/:username/:slug` resolves the type from the slug, and a reschedule
+      # reaches it through a mid-flow locale switch or an old direct booking
+      # link with the uid appended. Resolved by slug, the page offered slots
+      # against "Quick Chat"'s 30-day window while the submit validated against
+      # the meeting's own 180-day one.
+      pinned_type = pin_meeting_to_its_own_type(user, profile, meeting)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          "/#{profile.username}/quick-chat?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}"
+        )
 
       assigns = :sys.get_state(view.pid).socket.assigns
 
       assert assigns.meeting_type.id == pinned_type.id
       assert assigns.booking_window_days == 180
+      assert assigns.selected_duration == "pinned-chat"
+      assert assigns.duration == "pinned-chat"
     end
 
     @tag :capture_log
     test "offers the meeting's own type, already selected", %{
       conn: conn,
+      user: user,
       profile: profile,
       meeting: meeting
     } do
+      second_public_type(user)
+
       {:ok, view, _html} =
         live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
 
-      # One card, and it is the meeting's own: a reschedule is not a choice of
-      # meeting type, so the step confirms what is being moved rather than
-      # asking for something that cannot be changed.
-      assert view
-             |> render()
-             |> Floki.parse_document!()
-             |> Floki.find("[data-testid='duration-option']")
-             |> length() == 1
+      # One card out of the two the organiser offers, and it is the meeting's
+      # own: a reschedule is not a choice of meeting type, so the step confirms
+      # what is being moved rather than asking for something that cannot be
+      # changed.
+      cards =
+        view
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.find("[data-testid='duration-option']")
+
+      assert length(cards) == 1
+      assert Floki.attribute(cards, "phx-value-duration") == ["quick-chat"]
 
       # Already selected, so "next" is one click rather than a forced pick.
       assert has_element?(view, "[data-testid='duration-option'].duration-card--selected")
+      refute has_element?(view, "[data-testid='next-step'][disabled]")
+    end
+
+    @tag :capture_log
+    test "offers the meeting's own type already selected in Rhythm too", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      meeting: meeting
+    } do
+      # Rhythm marks the selection on the card's wrapper rather than on the
+      # button carrying the testid, so the Quill assertion above matches
+      # nothing here and would pass on a page that pinned nothing.
+      second_public_type(user)
+      {:ok, profile} = profile |> Changeset.change(%{booking_theme: "2"}) |> Repo.update()
+
+      {:ok, view, _html} =
+        live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
+
+      cards =
+        view
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.find("[data-testid='duration-option']")
+
+      assert length(cards) == 1
+      assert Floki.attribute(cards, "phx-value-duration") == ["quick-chat"]
+
+      assert has_element?(view, ".duration-card.selected [data-testid='duration-option']")
       refute has_element?(view, "[data-testid='next-step'][disabled]")
     end
 
@@ -270,8 +363,14 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
       {:ok, view, _html} =
         live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
 
-      view |> element("[data-testid='duration-option']") |> render_click()
+      # Anchored first: without this the refute below passes just as well on a
+      # page that never pinned anything, where the click selects a card.
+      assert has_element?(view, ".duration-card.selected [data-testid='duration-option']")
 
+      view |> element("[data-testid='duration-option']") |> render_click()
+      render(view)
+
+      assert has_element?(view, ".duration-card.selected [data-testid='duration-option']")
       refute has_element?(view, "[data-testid='next-step'][disabled]")
     end
   end
