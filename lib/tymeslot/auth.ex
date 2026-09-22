@@ -38,7 +38,9 @@ defmodule Tymeslot.Auth do
       {:error, :invalid_credentials, "Invalid email or password"}
   """
   @spec authenticate_user(String.t(), String.t(), keyword()) ::
-          {:ok, term(), String.t()} | {:error, atom(), String.t()}
+          {:ok, term(), String.t()}
+          | {:unverified, term(), String.t()}
+          | {:error, atom(), String.t()}
   def authenticate_user(email, password, opts \\ []) do
     Authentication.authenticate_user(email, password, opts)
   end
@@ -145,6 +147,15 @@ defmodule Tymeslot.Auth do
   def verify_user_email(token) do
     Verification.verify_user(token)
   end
+
+  @doc """
+  Completes an emailed verification link, reporting whether the person who
+  opened it may be signed straight in (`:auto_login`) or must log in
+  (`:manual`). See `Tymeslot.Auth.Verification.verify_email_and_maybe_login/2`.
+  """
+  @spec verify_email_and_maybe_login(String.t(), String.t() | nil) ::
+          {:ok, Ecto.Schema.t(), :auto_login | :manual} | {:error, atom()}
+  defdelegate verify_email_and_maybe_login(token, request_ip), to: Verification
 
   @doc """
   Subscribes the calling process to user-registration events.

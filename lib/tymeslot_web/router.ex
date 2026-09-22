@@ -165,8 +165,11 @@ defmodule TymeslotWeb.Router do
     get "/sign-up", AuthAliasController, :signup
     get "/register", AuthAliasController, :signup
 
-    # Email change verification route
-    get "/email-change/:token", EmailChangeController, :verify
+    # Emailed one-time links (email change here, verification below): GET only
+    # renders a confirmation page, so link prefetchers cannot consume the
+    # token; POST performs the change (CSRF-protected via :browser).
+    get "/email-change/:token", EmailChangeController, :confirm
+    post "/email-change/:token", EmailChangeController, :verify
 
     # Public guest RSVP (accept/decline) from the tokenised email link.
     # GET renders a confirmation landing page (no mutation — safe for link prefetchers).
@@ -191,7 +194,8 @@ defmodule TymeslotWeb.Router do
     # Session management routes
     post "/auth/session", SessionController, :create
     delete "/auth/logout", SessionController, :delete
-    get "/auth/verify-complete/:token", SessionController, :verify_and_login
+    get "/auth/verify-complete/:token", SessionController, :confirm_verification
+    post "/auth/verify-complete/:token", SessionController, :verify_and_login
   end
 
   # =============================================================================

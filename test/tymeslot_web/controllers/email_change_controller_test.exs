@@ -2,6 +2,7 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
   # Uses global ETS rate limiter state; must not run concurrently.
   use TymeslotWeb.ConnCase, async: false
   @moduletag :utils
+  @moduletag :auth
 
   alias Ecto.Changeset
   alias Phoenix.Flash
@@ -17,6 +18,21 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
   end
 
   describe "GET /email-change/:token" do
+    test "renders a confirmation page without changing the email", %{conn: conn} do
+      user = Factory.insert(:user, email: "old@example.com")
+      token = Token.generate_token()
+      {:ok, _user} = UserTokenQueries.request_email_change(user, "new@example.com", token)
+
+      conn = get(conn, ~p"/email-change/#{token}")
+
+      html = html_response(conn, 200)
+      assert html =~ ~s(action="/email-change/#{token}")
+      assert html =~ ~s(method="post")
+      assert Repo.reload!(user).email == "old@example.com"
+    end
+  end
+
+  describe "POST /email-change/:token" do
     test "verifies email change with valid token", %{conn: conn} do
       user = Factory.insert(:user, email: "old@example.com")
       new_email = "new@example.com"
@@ -24,7 +40,7 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
 
       {:ok, _user} = UserTokenQueries.request_email_change(user, new_email, token)
 
-      conn = get(conn, ~p"/email-change/#{token}")
+      conn = post(conn, ~p"/email-change/#{token}")
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :info) =~ "Email changed successfully"
@@ -35,7 +51,7 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
     end
 
     test "fails with invalid token", %{conn: conn} do
-      conn = get(conn, ~p"/email-change/invalid-token")
+      conn = post(conn, ~p"/email-change/invalid-token")
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "Invalid or expired"
@@ -56,7 +72,7 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
       |> Changeset.change(email_change_sent_at: expired_at)
       |> Repo.update!()
 
-      conn = get(conn, ~p"/email-change/#{token}")
+      conn = post(conn, ~p"/email-change/#{token}")
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "has expired"
@@ -66,12 +82,12 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
       # 30 requests allowed per minute per IP
       conn =
         Enum.reduce(1..30, conn, fn _attempt, acc ->
-          get(acc, ~p"/email-change/some-token")
+          post(acc, ~p"/email-change/some-token")
         end)
 
-      conn = get(conn, ~p"/email-change/some-token")
+      conn = post(conn, ~p"/email-change/some-token")
       assert redirected_to(conn) == "/auth/login"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Too many attempts"
+      assert Flash.get(conn.assigns.flash, :error) =~ "reached the limit of 30"
     end
   end
 end
