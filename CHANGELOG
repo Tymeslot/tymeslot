@@ -1,4 +1,30 @@
 
+[1.17.0]
+* booking: Ask for a policy acknowledgement again when rescheduling
+* booking: Stop offering times the host has already booked
+* Stop "Schedule Another Meeting" moving a just-rescheduled booking
+* Deliver email to SMTP relays that negotiate TLS 1.3
+* scheduling: Keep a reschedule on the meeting type it booked
+* scheduling: Carry a booking's answers into its reschedule
+* Save the booker as an attendee on CalDAV calendars
+* Create the video room when a calendar event's provider is chosen
+* Stop CalDAV colour and offline changes being rejected
+* Save edits to synced CalDAV events instead of reverting them
+* Remove the dead join links left on a cancelled booking
+* Apply booking changes made while a video account needed reconnecting
+* Wait for the meeting's own video provider, not the slowest one
+* Accept a MiroTalk server on a Docker service name
+* Let an edited video server address be added again
+* Accept http to servers on internal names once private addresses are allowed
+* Stop slow video providers leaving duplicate meetings behind
+* Attach the video link to calendar events using a templated custom link
+* mailer: Let SMTP reach relays behind a middlebox that blocks TLS 1.3
+* Offer in-person and online icons in the meeting type picker
+* Connect Nextcloud Talk as a video provider
+* Add Jitsi Meet as a video provider
+* Add kMeet as a video provider
+
+
 [1.16.1]
 * themes: Drop the stray emoji from Quill's submit button (#125)
 * Say the limit and the wait in hours or days when they run that long
