@@ -22,6 +22,16 @@ defmodule Tymeslot.Security.RateLimiter.Bookings do
     Helpers.check_rate_limit("webhook:#{client_ip}", 100, :timer.minutes(10))
   end
 
+  # Stripe delivers every platform and Connect event from a small published
+  # pool of addresses, so a per-IP bucket as tight as `check_webhook_endpoint/1`
+  # would 429 a burst (renewals, `account.updated`) and delay the
+  # `checkout.session.completed` a paid booking is waiting on. Signatures are
+  # verified after this, so the bucket only bounds unsigned floods.
+  @spec check_stripe_webhook_endpoint(String.t()) :: :ok | {:error, :rate_limited}
+  def check_stripe_webhook_endpoint(client_ip) do
+    Helpers.check_rate_limit("stripe_webhook:#{client_ip}", 1_000, :timer.minutes(1))
+  end
+
   @spec check_booking_submission(String.t()) ::
           {:allow, pos_integer()} | {:deny, pos_integer()}
   def check_booking_submission(client_ip) do

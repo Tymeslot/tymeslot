@@ -184,6 +184,18 @@ defmodule Tymeslot.Security.RateLimiter do
   def check_webhook_rate_limit(client_ip), do: Bookings.check_webhook_endpoint(client_ip)
 
   @doc """
+  Rate limit the Stripe platform and Connect webhook endpoints per source
+  address (1000/min, one bucket shared by both).
+
+  Deliberately far looser than `check_webhook_rate_limit/1`: Stripe sends from
+  a small pool of addresses, and a delayed event can leave a paid booking
+  waiting. See `Tymeslot.Security.RateLimiter.Bookings.check_stripe_webhook_endpoint/1`.
+  """
+  @spec check_stripe_webhook_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
+  def check_stripe_webhook_rate_limit(client_ip),
+    do: Bookings.check_stripe_webhook_endpoint(client_ip)
+
+  @doc """
   Rate limit booking submission attempts.
   Returns {:allow, count} if allowed, {:deny, limit} if exceeded.
   """

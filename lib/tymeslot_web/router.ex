@@ -27,16 +27,16 @@ defmodule TymeslotWeb.Router do
   # Webhook Routes
   # =============================================================================
 
+  # A webhook whose signature covers the request body declares
+  # `metadata: %{raw_body: true}`: `TymeslotWeb.Plugs.WebhookBodyCachePlug`
+  # keeps the raw body of exactly those routes, since `Plug.Parsers` consumes
+  # it before the controller can verify it.
+
   scope "/webhooks", TymeslotWeb do
     pipe_through :webhook
 
-    post "/stripe", StripeWebhookController, :webhook
-  end
-
-  scope "/webhooks", TymeslotWeb do
-    pipe_through :api
-
-    post "/stripe/connect", StripeConnectWebhookController, :handle
+    post "/stripe", StripeWebhookController, :webhook, metadata: %{raw_body: true}
+    post "/stripe/connect", StripeWebhookController, :connect, metadata: %{raw_body: true}
   end
 
   # Calendar provider webhooks negotiate `text/plain` for their subscription
