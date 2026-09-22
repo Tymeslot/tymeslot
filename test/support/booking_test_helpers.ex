@@ -69,8 +69,25 @@ defmodule Tymeslot.BookingTestHelpers do
     query = URI.encode_query([{"timezone", timezone} | Enum.to_list(query_params)])
     {:ok, view, _html} = live(conn, "/#{profile.username}?#{query}")
 
-    # Select the first meeting type
-    view |> element(@duration_option) |> render_click()
+    walk_to_booking_form(view, timezone)
+  end
+
+  @doc """
+  Walks an already-mounted scheduling view from the overview step through to
+  the booking form, which is what `navigate_to_booking_form/4` does once it has
+  mounted one of its own.
+
+  Public because the flow can restart without a mount to hang off: "Schedule
+  Another Meeting" returns the same LiveView to the overview step in place, and
+  the walk that follows has to start from the view already on screen.
+
+  `duration_slug` names the card to book, defaulting to whichever the overview
+  lists first.
+  """
+  @spec walk_to_booking_form(Phoenix.LiveViewTest.View.t(), String.t(), String.t() | nil) ::
+          Phoenix.LiveViewTest.View.t()
+  def walk_to_booking_form(view, timezone, duration_slug \\ nil) do
+    select_meeting_type(view, duration_slug)
 
     # Navigate to date/time selection
     view |> element(@next_step) |> render_click()
@@ -103,6 +120,27 @@ defmodule Tymeslot.BookingTestHelpers do
     view |> element(@next_step) |> render_click()
 
     view
+  end
+
+  # Picking by slug rather than by `element(@duration_option)`: an organiser
+  # offering more than one type renders more than one card, and an ambiguous
+  # selector is refused outright rather than resolved to the first match.
+  defp select_meeting_type(view, nil) do
+    slug =
+      view
+      |> render()
+      |> Floki.parse_document!()
+      |> Floki.attribute(@duration_option, "phx-value-duration")
+      |> List.first() ||
+        flunk("Expected at least one meeting type card on the overview step")
+
+    select_meeting_type(view, slug)
+  end
+
+  defp select_meeting_type(view, duration_slug) do
+    view
+    |> element("#{@duration_option}[phx-value-duration='#{duration_slug}']")
+    |> render_click()
   end
 
   # Bring `target_date` into the displayed range, driving whichever control the

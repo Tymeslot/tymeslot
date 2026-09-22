@@ -53,6 +53,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
         InfoHandlers,
         LiveHelpers,
         PathHandlers,
+        ReschedulePin,
         SchedulingInit,
         SlotGrouping
       }
@@ -431,7 +432,15 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       defp handle_confirmation_events(socket, event, _data) do
         case event do
           :schedule_another ->
-            {:noreply, transition_to(GuestBooking.assign_defaults(socket), :overview, %{})}
+            # The flow restarts here without navigating, so the reschedule
+            # context has to be dropped explicitly or the next submit moves the
+            # meeting that was just moved. See `ReschedulePin.abandon/1`.
+            socket =
+              socket
+              |> GuestBooking.assign_defaults()
+              |> ReschedulePin.abandon()
+
+            {:noreply, transition_to(socket, :overview, %{})}
 
           _other ->
             {:noreply, socket}

@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Themes.Shared.ReschedulePin do
 
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Scheduling.ThemeFlow
+  alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
 
   @doc """
   The meeting type a reschedule is committed to, or `nil` when this is not a
@@ -67,6 +68,30 @@ defmodule TymeslotWeb.Themes.Shared.ReschedulePin do
   @doc "Marks the page as offering a real choice of meeting type."
   @spec clear(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def clear(socket), do: assign(socket, :meeting_type_pinned, false)
+
+  @doc """
+  Leaves the reschedule behind: the page is booking afresh again.
+
+  "Schedule Another Meeting" restarts the flow in place, without navigating, so
+  `handle_params/3` never runs a second time and nothing else drops the
+  reschedule context. Left on the socket, `:reschedule_meeting_uid` is what the
+  next submit still dispatches on, and the booker moves the meeting they have
+  just moved rather than getting the new one they asked for.
+
+  Clearing `:is_rescheduling` is not enough on its own: the uid is what the
+  orchestrator receives, and the pin has replaced `:meeting_types` with the one
+  type being moved. The organiser's catalogue is re-resolved the way the mount
+  resolves it, which is also what keeps a demo organiser whole: its types are
+  synthesised by the overlay rather than stored, so no query could rebuild them.
+  """
+  @spec abandon(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def abandon(socket) do
+    socket
+    |> assign(:reschedule_meeting_uid, nil)
+    |> assign(:is_rescheduling, false)
+    |> clear()
+    |> OrganizerHelpers.handle_username_resolution(socket.assigns[:username_context])
+  end
 
   @doc "Whether the page is pinned to a single meeting type."
   @spec pinned?(Phoenix.LiveView.Socket.t()) :: boolean()
