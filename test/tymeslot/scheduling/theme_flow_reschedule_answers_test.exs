@@ -50,6 +50,19 @@ defmodule Tymeslot.Scheduling.ThemeFlowRescheduleAnswersTest do
     )
   end
 
+  @policy_id "33333333-3333-3333-3333-333333333333"
+
+  defp policy_note do
+    %{
+      "id" => @policy_id,
+      "type" => "note",
+      "label" => "Cancellation policy",
+      "body" => "Cancellations within 24 hours are charged in full.",
+      "required" => true,
+      "position" => 2
+    }
+  end
+
   defp booking_with(snapshot, answers) do
     user = insert(:user)
 
@@ -70,6 +83,20 @@ defmodule Tymeslot.Scheduling.ThemeFlowRescheduleAnswersTest do
     %{user: user, meeting: meeting} = booking_with(snapshot, answers)
 
     assert ThemeFlow.reschedule_answers(meeting.uid, user.id, snapshot) == answers
+  end
+
+  test "never carries a note's acknowledgement, even when the note is unchanged" do
+    snapshot = [topic_question(), policy_note()]
+
+    answers = %{
+      @topic_id => "Contract renewal",
+      @policy_id => %{"confirmed" => true, "confirmed_at" => "2026-09-01T10:00:00Z"}
+    }
+
+    %{user: user, meeting: meeting} = booking_with(snapshot, answers)
+
+    assert ThemeFlow.reschedule_answers(meeting.uid, user.id, snapshot) ==
+             %{@topic_id => "Contract renewal"}
   end
 
   test "drops the answer to a question whose wording changed" do

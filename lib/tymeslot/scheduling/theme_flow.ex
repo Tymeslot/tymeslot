@@ -83,7 +83,10 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   form does not change what any one question asks.
 
   Answers whose question has been removed are dropped, and questions added
-  since simply have nothing to carry over.
+  since simply have nothing to carry over. A note's acknowledgement is never
+  carried: it records that the booker actively confirmed the text, and the
+  submit stamps the confirmation time afresh, so a pre-ticked card would
+  record consent the booker never gave for the moved booking.
   """
   @spec reschedule_answers(String.t() | nil, integer() | nil, [map()]) :: %{
           String.t() => any()
@@ -112,7 +115,7 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   defp carry_over_answers(definitions, booked_snapshot, booked_answers) do
     booked_by_id = Map.new(booked_snapshot, &{&1["id"], comparable(&1)})
 
-    for definition <- definitions,
+    for %{"type" => type} = definition when type != "note" <- definitions,
         id = definition["id"],
         Map.has_key?(booked_answers, id),
         Map.get(booked_by_id, id) == comparable(definition),
