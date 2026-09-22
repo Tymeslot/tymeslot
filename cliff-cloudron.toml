@@ -1,8 +1,11 @@
 [changelog]
 header = ""
-# With `saas`-scoped commits skipped below, `core` is the scope on all but a
-# handful of the entries that remain, so printing it would repeat the same
-# prefix down the whole list. Narrower scopes still say something and are kept.
+# `core` and `saas` are retired scopes, refused at commit time, but they run
+# throughout the history before that change. `saas`-scoped commits are skipped
+# below, and with them gone `core` is the scope on all but a handful of the
+# entries that remain, so printing it would repeat the same prefix down the
+# whole list. A narrower scope names a domain and still says something, so it
+# is kept.
 #
 # A breaking change carries its `BREAKING CHANGE:` footer on the same line,
 # because the subject says what changed but only the footer says what an

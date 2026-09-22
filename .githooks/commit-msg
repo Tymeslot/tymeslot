@@ -10,3 +10,16 @@ if grep -qiE '^(Co-[Aa]uthored-[Bb]y:.*(Claude|Cursor|<noreply@anthropic\.com>|<
   echo "Remove it before committing to the public Core repository." >&2
   exit 1
 fi
+
+# Reject the retired `core` / `saas` commit scopes. They named a repository
+# rather than anything about the change, so they told a changelog reader
+# nothing and repeated one prefix down the whole list. A scope now names the
+# domain the change is about (`calendar`, `booking`, `auth`), as Conventional
+# Commits intends and as CONTRIBUTING.md describes, and is always optional.
+if head -n 1 "$msg_file" | grep -qE '^[a-z]+\((core|saas)\)!?:'; then
+  echo "Error: '(core)' and '(saas)' are retired commit scopes." >&2
+  echo "Drop the scope, or name the domain the change is about:" >&2
+  echo "  feat: add Baikal CalDAV calendar integration" >&2
+  echo "  fix(calendar): prevent a crash on an invalid user timezone" >&2
+  exit 1
+fi
