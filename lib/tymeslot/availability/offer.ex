@@ -9,6 +9,12 @@ defmodule Tymeslot.Availability.Offer do
   submit re-checks against (`Tymeslot.Bookings.Policy.scheduling_config/2`).
   A time offered here is therefore a time the submit accepts.
 
+  Both questions are answered against the same busy set: the host's connected
+  calendars, merged with the host's own live bookings. The bookings are what
+  stop the two paths disagreeing, because the submit refuses from the meetings
+  table and would otherwise reject a slot this module had just offered; see
+  `Tymeslot.Meetings.BusyPeriods`.
+
   Works on a plain request map rather than a socket, so a fetch task can
   capture it whole and nothing here depends on the web layer.
   """
@@ -26,6 +32,14 @@ defmodule Tymeslot.Availability.Offer do
   # unbounded parse would let `/:username/99999/book` hold a multi-day slot.
   @max_duration_minutes 1440
   @default_duration_minutes 30
+
+  # How far outside the dates being rendered the booking fetch reaches. A
+  # booking ending shortly before the window can still block its first slot
+  # through the host's buffer (two hours at most), and the window's own bounds
+  # are UTC while the days are the host's, so either edge can sit up to a
+  # timezone offset away. A day either side covers both; nothing further out
+  # can touch a slot inside.
+  @busy_window_padding_days 1
 
   @typedoc """
   What a booking page is showing, and to whom.
@@ -169,7 +183,7 @@ defmodule Tymeslot.Availability.Offer do
         duration_minutes,
         request.user_timezone,
         owner_timezone(profile),
-        Meetings.reject_calendar_event_mirrors(events, moving),
+        busy_periods(events, user_id, date, date, moving),
         config
       )
     end
@@ -214,7 +228,7 @@ defmodule Tymeslot.Availability.Offer do
           end_date,
           owner_timezone(profile),
           request.user_timezone,
-          Meetings.reject_calendar_event_mirrors(events, moving),
+          busy_periods(events, user_id, start_date, end_date, moving),
           config
         )
       end
@@ -252,6 +266,24 @@ defmodule Tymeslot.Availability.Offer do
       end
     )
   end
+
+  # Everything that occupies the host's time across `first_date..last_date`:
+  # their connected calendars, plus their own live bookings, which reach the
+  # page this way rather than waiting to be mirrored onto a provider calendar
+  # (see `Tymeslot.Meetings.BusyPeriods`). `moving` is then excluded from the
+  # merged set, dropping the rescheduling meeting along with its mirror so that
+  # a booking is never a conflict with itself.
+  defp busy_periods(events, user_id, first_date, last_date, moving) do
+    events
+    |> Meetings.merge_busy_periods(
+      user_id,
+      utc_day_start(Date.add(first_date, -@busy_window_padding_days)),
+      utc_day_start(Date.add(last_date, 1 + @busy_window_padding_days))
+    )
+    |> Meetings.reject_calendar_event_mirrors(moving)
+  end
+
+  defp utc_day_start(date), do: DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
 
   # Nil when the host has no booking limits configured, keeping the common path
   # free of extra queries. The meeting being moved is left out of the counts,

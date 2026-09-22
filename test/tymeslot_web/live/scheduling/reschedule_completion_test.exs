@@ -213,35 +213,16 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
   end
 
   describe "\"Schedule Another Meeting\" after a reschedule" do
-    # The organiser's other public type, on a schedule that opens after the
-    # morning the setup meeting is moved into.
-    defp afternoon_type(user, profile) do
-      afternoon =
-        insert(:availability_schedule,
-          profile: profile,
-          is_default: false,
-          name: "Afternoons",
-          advance_booking_days: 30,
-          min_advance_hours: 0,
-          buffer_minutes: 0
-        )
-
-      Enum.each(1..7, fn day_of_week ->
-        insert(:weekly_availability,
-          schedule: afternoon,
-          day_of_week: day_of_week,
-          is_available: true,
-          start_time: ~T[13:00:00],
-          end_time: ~T[17:00:00]
-        )
-      end)
-
+    # The organiser's other public type, on the same default schedule as the
+    # first. It needs no window of its own: the reschedule has taken one of
+    # that schedule's slots, the page no longer offers it, and the walk below
+    # simply lands on the next one.
+    defp second_type(user) do
       insert(:meeting_type,
         user: user,
         duration_minutes: 45,
         name: "Deep Dive",
-        is_active: true,
-        availability_schedule_id: afternoon.id
+        is_active: true
       )
     end
 
@@ -262,13 +243,8 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
       # they had just confirmed, and was told it had been rescheduled.
       #
       # A second public type, so that the pin lifting is observable: a
-      # reschedule replaces `:meeting_types` with the one type being moved. Its
-      # afternoon-only schedule keeps the second booking clear of the slot the
-      # reschedule has just taken, which nothing on the page would otherwise
-      # know about: the slot grid is built from the organiser's calendar, and
-      # the provider is mocked here, so a meeting in the database blocks
-      # nothing until its calendar event is synced.
-      afternoon_type(user, profile)
+      # reschedule replaces `:meeting_types` with the one type being moved.
+      second_type(user)
 
       view =
         navigate_to_booking_form(conn, profile, meeting_type, reschedule_meeting_uid: meeting.uid)

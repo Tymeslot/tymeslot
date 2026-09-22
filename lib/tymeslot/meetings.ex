@@ -10,6 +10,7 @@ defmodule Tymeslot.Meetings do
   alias Tymeslot.Bookings.{Cancel, Reschedule, RescheduleRequest}
 
   alias Tymeslot.Meetings.{
+    BusyPeriods,
     CalendarEventLink,
     CalendarEvents,
     Cancellation,
@@ -422,6 +423,15 @@ defmodule Tymeslot.Meetings do
   defdelegate reject_calendar_event_mirrors(records, meeting),
     to: CalendarEventLink,
     as: :reject_mirrors
+
+  @doc """
+  Merges the organiser's live bookings in `[from, to)` into `calendar_events`
+  as busy periods, so a booking blocks its own slot whether or not it has
+  reached the host's calendar. See `Tymeslot.Meetings.BusyPeriods`.
+  """
+  defdelegate merge_busy_periods(calendar_events, organizer_user_id, from, to),
+    to: BusyPeriods,
+    as: :merge
 
   # =====================================
   # Analytics Query Functions
