@@ -78,7 +78,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationGuestTest do
 
     # The participant URL is minted with the booker's name and email baked in;
     # it identifies that one person, so a third-party guest must not be handed
-    # it. Guests get the identity-free room URL, matching the ICS attachment
+    # it. Guests get an identity-free link instead, and where the payload
+    # carries none they fall back to the room URL, matching the ICS attachment
     # this same email already carries.
     test "join link uses the room URL, not the booker's or host's personal URL" do
       details =
@@ -95,6 +96,27 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationGuestTest do
       refute email.html_body =~ "HOST-TOKEN"
       refute email.text_body =~ "HOST-TOKEN"
       refute email.html_body =~ "PARTICIPANT-TOKEN"
+      refute email.text_body =~ "PARTICIPANT-TOKEN"
+    end
+
+    # On a Jitsi server enforcing token authentication the bare room URL opens
+    # nothing, so the payload carries a link of the guests' own: room-scoped,
+    # naming nobody and not a moderator. It is preferred over the room URL
+    # wherever it is present.
+    test "join link prefers the guests' own link over the bare room URL" do
+      details =
+        guest_details(%{
+          meeting_url: "https://meet.example.com/PLAIN-ROOM",
+          guest_video_url: "https://meet.example.com/PLAIN-ROOM?jwt=GUEST-TOKEN",
+          organizer_video_url: "https://meet.example.com/HOST-TOKEN",
+          attendee_video_url: "https://meet.example.com/PARTICIPANT-TOKEN"
+        })
+
+      email = AppointmentConfirmation.render(:guest, "greg@example.com", details)
+
+      assert email.html_body =~ "jwt=GUEST-TOKEN"
+      assert email.text_body =~ "jwt=GUEST-TOKEN"
+      refute email.html_body =~ "HOST-TOKEN"
       refute email.text_body =~ "PARTICIPANT-TOKEN"
     end
 
@@ -122,6 +144,25 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationGuestTest do
 
       assert filename =~ details.uid
       assert filename =~ ".ics"
+    end
+
+    # The invitation lands in the guest's calendar, and that entry is where
+    # they are most likely to click from when the meeting starts.
+    test "the calendar attachment carries the guests' own link, not the bare room URL" do
+      details =
+        guest_details(%{
+          meeting_url: "https://meet.example.com/PLAIN-ROOM",
+          guest_video_url: "https://meet.example.com/PLAIN-ROOM?jwt=GUEST-TOKEN"
+        })
+
+      email = AppointmentConfirmation.render(:guest, "greg@example.com", details)
+
+      assert %Swoosh.Attachment{data: ics} =
+               Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
+
+      # RFC 5545 folds content lines at 75 octets, so the fold is undone
+      # before matching rather than hoping the link lands inside one.
+      assert String.replace(ics, "\r\n ", "") =~ "jwt=GUEST-TOKEN"
     end
 
     test "subject is free of CR/LF when the organiser name carries a header payload" do

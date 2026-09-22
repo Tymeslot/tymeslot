@@ -7,13 +7,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias TymeslotWeb.Components.Dashboard.ColourSwatches
-  alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
+  alias TymeslotWeb.Dashboard.CalendarGrid.VideoPicker
   alias TymeslotWeb.Helpers.LocaleFormat
 
   attr :selected_event, :map, required: true
@@ -374,7 +374,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
             {dgettext("dashboard_calendar_events", "Video")}
           </p>
-          <.video_integration_selector
+          <VideoPicker.video_picker
             video_integrations={@video_integrations}
             selected_id={Map.get(@selected_event, :video_integration_id)}
             target={@myself}
@@ -501,38 +501,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       _none ->
         nil
     end
-  end
-
-  attr :video_integrations, :list, required: true
-  attr :selected_id, :any, default: nil
-  attr :target, :any, required: true
-  attr :phx_event, :string, required: true
-
-  defp video_integration_selector(assigns) do
-    ~H"""
-    <div class="flex flex-wrap gap-1.5">
-      <button
-        type="button"
-        phx-click={@phx_event}
-        phx-value-video_integration_id=""
-        phx-target={@target}
-        class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if is_nil(@selected_id), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
-      >
-        {dgettext("dashboard_calendar_events", "None")}
-      </button>
-      <button
-        :for={vi <- @video_integrations}
-        type="button"
-        phx-click={@phx_event}
-        phx-value-video_integration_id={vi.id}
-        phx-target={@target}
-        class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if to_string(vi.id) == to_string(@selected_id), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
-      >
-        <ProviderIcon.provider_icon provider={vi.provider} type="video" size="mini" />
-        <span class="truncate max-w-[10rem]">{vi.name}</span>
-      </button>
-    </div>
-    """
   end
 
   # Localised "Weekday, Month Day" label for the event's display date.

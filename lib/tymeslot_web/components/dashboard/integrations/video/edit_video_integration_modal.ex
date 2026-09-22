@@ -8,16 +8,20 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Integrations.Video
-  alias Tymeslot.Integrations.Video.AttrsCasting
   alias Tymeslot.Integrations.Video.InputValidation, as: VideoInputValidation
   alias Tymeslot.Integrations.Video.TemplateSyntax
-  alias Tymeslot.Utils.SanitizeMerge
+  alias Tymeslot.Utils.ChangesetUtils
+  alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplatePreviewBox
+  alias TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig
+  alias TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig
+  alias TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfig
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponents,
     as: SharedForm
 
   alias TymeslotWeb.Dashboard.VideoSettingsComponent
+  alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -117,9 +121,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
            metadata: DashboardHelpers.get_security_metadata(socket)
          ) do
       {:ok, sanitized} ->
-        attrs = AttrsCasting.atomize_known_attrs(SanitizeMerge.merge(params, sanitized))
-
-        case Video.update_integration(user_id, integration.id, attrs) do
+        # The validated map is the whole set of fields the provider's form
+        # accepts, so anything else the browser sent never reaches the context.
+        case Video.update_integration(user_id, integration.id, sanitized) do
           {:ok, _updated} ->
             send(
               self(),
@@ -135,14 +139,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
              |> assign(:integration, nil)
              |> assign(:saving, false)}
 
-          {:error, _reason} ->
-            send(
-              self(),
-              {:flash,
-               {:error, dgettext("dashboard_integrations", "Failed to update integration")}}
-            )
-
-            {:noreply, assign(socket, :saving, false)}
+          {:error, reason} ->
+            {:noreply,
+             socket
+             |> assign(:saving, false)
+             |> show_update_error(reason, integration.provider)}
         end
 
       {:error, validation_errors} ->
@@ -240,9 +241,44 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                       target={@myself}
                     />
                   </div>
+                <% "kmeet" -> %>
+                  <KmeetConfig.host_field id="edit_kmeet_host" />
+                <% "jitsi" -> %>
+                  <JitsiConfig.server_url_field
+                    id="edit_jitsi_base_url"
+                    value={Map.get(@form_values, "base_url", @integration.base_url || "")}
+                    form_errors={@form_errors}
+                    target={@myself}
+                  />
+
+                  <JitsiConfig.credential_fields
+                    id_prefix="edit_jitsi"
+                    form_values={@form_values}
+                    form_errors={@form_errors}
+                    stored_credentials={stored_credentials?(@integration)}
+                    stored_client_id={@integration.client_id || ""}
+                  />
+                <% "nextcloud_talk" -> %>
+                  <NextcloudTalkConfig.server_url_field
+                    id="edit_nextcloud_talk_base_url"
+                    value={Map.get(@form_values, "base_url", @integration.base_url || "")}
+                    form_errors={@form_errors}
+                    target={@myself}
+                  />
+
+                  <NextcloudTalkConfig.credential_fields
+                    id_prefix="edit_nextcloud_talk"
+                    form_values={@form_values}
+                    form_errors={@form_errors}
+                    stored_credentials={true}
+                  />
                 <% _ -> %>
               <% end %>
             </div>
+
+            <%= if error = SharedForm.form_level_error(@form_errors) do %>
+              <SharedForm.error_banner error={error} />
+            <% end %>
 
             <%= if @integration.provider == "custom" do %>
               <% url_value =
@@ -310,6 +346,76 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
 
   # Private helpers
 
+  # A refusal that concerns one of this dialog's fields, or the form as a
+  # whole, is shown there rather than flashed, so the organiser sees what to
+  # correct without the dialog losing what was typed. A tagged refusal from
+  # the server check (Nextcloud Talk's refused login or throttled address, for
+  # one) and the connection-test limiter's refusals are placed exactly as the
+  # connect form places them, and so is a Nextcloud Talk validation message,
+  # which the connect form shows for the whole form. Anything else is flashed.
+  defp show_update_error(socket, :duplicate_integration, provider),
+    do: assign(socket, :form_errors, %{base: duplicate_message(provider)})
+
+  defp show_update_error(socket, message, "nextcloud_talk") when is_binary(message),
+    do: assign(socket, :form_errors, %{base: message})
+
+  defp show_update_error(socket, {tag, message} = reason, _provider)
+       when is_atom(tag) and is_binary(message),
+       do: assign(socket, :form_errors, IntegrationProviders.reason_to_form_errors(reason))
+
+  defp show_update_error(socket, :unattributable, _provider),
+    do: assign(socket, :form_errors, IntegrationProviders.reason_to_form_errors(:unattributable))
+
+  defp show_update_error(socket, reason, provider) do
+    send(self(), {:flash, {:error, update_error_message(reason, provider)}})
+    assign(socket, :form_errors, %{})
+  end
+
+  # A Nextcloud Talk integration is keyed on its server and login name, so an
+  # edit can move it onto an account that is already connected.
+  defp duplicate_message("nextcloud_talk"),
+    do:
+      dgettext(
+        "dashboard_integrations",
+        "This Nextcloud account is already connected. Edit or remove the existing integration instead."
+      )
+
+  defp duplicate_message(_provider),
+    do:
+      dgettext(
+        "dashboard_integrations",
+        "A video integration with this configuration already exists"
+      )
+
+  # A provider's own validation (Jitsi's credential checks, for one) returns
+  # a message written for the organiser; anything else is not fit to show.
+  defp update_error_message(message, _provider) when is_binary(message), do: message
+
+  # The schema calls the server address `base_url`, which reads as "Base url"
+  # in `ChangesetUtils.get_first_error/1`; a URL error is instead named the way
+  # this dialog labels the field. Any other error keeps the generic wording.
+  defp update_error_message(%Ecto.Changeset{errors: errors} = changeset, provider) do
+    case {url_field_label(provider), Keyword.get(errors, :base_url)} do
+      {label, {_message, _opts} = error} when is_binary(label) ->
+        "#{label} #{Forms.translate_error(error)}"
+
+      _other ->
+        ChangesetUtils.get_first_error(changeset) || update_error_message(:unknown, provider)
+    end
+  end
+
+  defp update_error_message(_reason, _provider),
+    do: dgettext("dashboard_integrations", "Failed to update integration")
+
+  defp url_field_label(provider) when provider in ["jitsi", "nextcloud_talk"],
+    do: dgettext("dashboard_integrations", "Server URL")
+
+  defp url_field_label("mirotalk"), do: dgettext("dashboard_integrations", "Base URL")
+  defp url_field_label(_provider), do: nil
+
+  defp stored_credentials?(%{client_id_encrypted: nil, client_secret_encrypted: nil}), do: false
+  defp stored_credentials?(_integration), do: true
+
   defp find_integration(integrations, id) do
     Enum.find(integrations, &(&1.id == id))
   end
@@ -325,6 +431,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
         base
         |> Map.put("base_url", integration.base_url || "")
         |> Map.put("api_key", "")
+
+      # The App ID or login name is shown so the organiser can see which
+      # account is in use; the secret never leaves the server.
+      provider when provider in ["jitsi", "nextcloud_talk"] ->
+        Map.merge(base, %{
+          "base_url" => integration.base_url || "",
+          "client_id" => integration.client_id || ""
+        })
 
       _oauth ->
         base

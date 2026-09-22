@@ -79,7 +79,8 @@ defmodule Tymeslot.Bookings.RescheduleZoomSyncTest do
         insert_meeting_for_user(user, %{
           video_integration_id: integration.id,
           video_room_id: "123456789",
-          title: "Customer call"
+          title: "Intro call",
+          summary: "Customer call"
         })
 
       new_params = %{
@@ -107,6 +108,7 @@ defmodule Tymeslot.Bookings.RescheduleZoomSyncTest do
         assert {"Authorization", "Bearer access-token"} in headers
 
         decoded = Jason.decode!(body)
+        # The summary, not the title: the topic the meeting was created with.
         assert decoded["topic"] == "Customer call"
         # The job re-reads the meeting, so the PATCH carries the *new* duration.
         assert decoded["duration"] == 60

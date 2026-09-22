@@ -33,6 +33,21 @@ defmodule TymeslotWeb.Helpers.IntegrationProvidersTest do
                IntegrationProviders.reason_to_form_errors({:unreachable, "Domain nicht gefunden"})
     end
 
+    test "blames :client_secret on an :unauthorized tag" do
+      assert IntegrationProviders.reason_to_form_errors({:unauthorized, "Refused"}) ==
+               %{client_secret: "Refused"}
+    end
+
+    test "puts a :secret_required refusal on the secret field" do
+      assert IntegrationProviders.reason_to_form_errors({:secret_required, "Enter it again"}) ==
+               %{client_secret: "Enter it again"}
+    end
+
+    # A server throttling Tymeslot is no fault of any one field.
+    test "puts a :throttled refusal on the form as a whole" do
+      assert IntegrationProviders.reason_to_form_errors({:throttled, "Wait"}) == %{base: "Wait"}
+    end
+
     test "falls back to base_url for an untagged message" do
       assert %{base_url: "Some weird error"} =
                IntegrationProviders.reason_to_form_errors("Some weird error")

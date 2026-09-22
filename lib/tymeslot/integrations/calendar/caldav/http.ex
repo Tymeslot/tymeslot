@@ -227,6 +227,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   headers, the ETag that identifies it — the pair a property-level patch has
   to be applied to, since patching anything older would revert whatever
   changed on the server in between.
+
+  Unlike DELETE, a 404 is an error here (`:not_found`), and so is a 410
+  (`:gone`): the caller is asking whether the event exists.
   """
   @spec get_event(String.t(), String.t(), String.t(), keyword()) ::
           {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
@@ -242,8 +245,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
       end)
 
     case result do
-      {:ok, response} -> classify(response, :get, url, success: [200])
-      {:error, reason} -> handle_read_transport_error(reason, :get)
+      {:ok, response} ->
+        classify(response, :get, url, success: [200], status_overrides: %{410 => :gone})
+
+      {:error, reason} ->
+        handle_read_transport_error(reason, :get)
     end
   end
 

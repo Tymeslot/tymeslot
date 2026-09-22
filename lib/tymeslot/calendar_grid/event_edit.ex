@@ -55,6 +55,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   alias Tymeslot.CalendarGrid.AllDay
   alias Tymeslot.CalendarGrid.EventMove
+  alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.ProviderPayload
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
@@ -168,6 +169,9 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     case CalendarEvents.update_event(event.uid, payload, {event.calendar_integration_id, user_id}) do
       :ok ->
         record_local_edit(user_id, updated)
+        # A no-op unless the event holds a recorded video room whose times the
+        # change moved.
+        EventVideoRooms.rescheduled(updated)
         {:ok, updated}
 
       {:error, reason} ->

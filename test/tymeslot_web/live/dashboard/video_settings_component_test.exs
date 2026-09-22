@@ -36,6 +36,40 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       end
     end
 
+    test "groups the provider picker by hosting model", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      document = Floki.parse_document!(html)
+
+      headings =
+        document |> Floki.find("h3") |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+
+      assert "Hosted services" in headings
+      assert "Self-hosted" in headings
+      assert "Other" in headings
+
+      groups =
+        document
+        # Each picker group renders as its own "space-y-3" div holding the
+        # heading and the provider grid as siblings.
+        |> Floki.find("div.space-y-3")
+        |> Enum.filter(&(Floki.find(&1, "h3") != []))
+        |> Map.new(fn group ->
+          label = group |> Floki.find("h3") |> Floki.text() |> String.trim()
+
+          providers =
+            group
+            |> Floki.find("[phx-value-provider]")
+            |> Enum.map(&(&1 |> Floki.attribute("phx-value-provider") |> List.first()))
+
+          {label, providers}
+        end)
+
+      assert groups["Hosted services"] == ~w(google_meet teams zoom kmeet)
+      assert groups["Self-hosted"] == ~w(mirotalk jitsi nextcloud_talk)
+      assert groups["Other"] == ~w(custom)
+    end
+
     test "renders the Zoom option in the provider picker", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
@@ -178,6 +212,32 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       assert render(view) =~ "Integration name is required"
     end
 
+    test "ties a URL field's error to its input", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='mirotalk']")
+      |> render_click()
+
+      view
+      |> form("#mirotalk-config-modal form", %{
+        "integration" => %{
+          "name" => "New MiroTalk",
+          "base_url" => "not-a-url",
+          "api_key" => "secret-key-long-enough"
+        }
+      })
+      |> render_submit()
+
+      assert has_element?(
+               view,
+               "#mirotalk_base_url[aria-invalid='true'][aria-describedby='mirotalk_base_url-error']"
+             )
+
+      assert has_element?(view, "#mirotalk_base_url-error p.form-error")
+      refute has_element?(view, "#mirotalk_base_url-help")
+    end
+
     test "shows a message when adding a duplicate custom video integration", %{
       conn: conn,
       user: user
@@ -251,6 +311,133 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
 
       assert [%{custom_meeting_url: "https://meet.jit.si/my-room"}] =
                Repo.all(VideoIntegrationSchema)
+    end
+
+    test "connects kMeet without asking for a URL", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='kmeet']")
+      |> render_click()
+
+      assert has_element?(view, "#kmeet-video-integration-form")
+
+      refute has_element?(
+               view,
+               "#kmeet-video-integration-form input[name^='integration[']:not([name='integration[name]']):not([type='hidden'])"
+             )
+
+      assert has_element?(view, "#kmeet_host[readonly][value='https://kmeet.infomaniak.com']")
+
+      assert has_element?(
+               view,
+               "#kmeet_host[aria-describedby='kmeet_host-tooltip kmeet_host-help']"
+             )
+
+      assert has_element?(view, "#kmeet_host-help")
+      refute has_element?(view, "#kmeet-video-integration-form [tabindex]")
+
+      view
+      |> form("#kmeet-video-integration-form", integration: %{name: "My kMeet"})
+      |> render_submit()
+
+      assert render(view) =~ "Video integration added successfully"
+      assert render(view) =~ "My kMeet"
+      assert render(view) =~ "kmeet.infomaniak.com · rooms created automatically"
+      assert [%{provider: "kmeet", name: "My kMeet"}] = Video.list_integrations(user.id)
+    end
+
+    test "stores only the kMeet form's own fields when the browser sends more", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='kmeet']")
+      |> render_click()
+
+      view
+      |> element("#kmeet-video-integration-form")
+      |> render_submit(%{
+        integration: %{name: "My kMeet", base_url: "https://elsewhere.example.com"}
+      })
+
+      assert [%{provider: "kmeet", base_url: nil}] = Video.list_integrations(user.id)
+    end
+
+    test "renames kMeet without storing extra fields sent from the edit dialog", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, integration} = Video.create_integration(user.id, :kmeet, %{name: "My kMeet"})
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element(
+        "button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#edit-video-modal']"
+      )
+      |> render_click()
+
+      view
+      |> element("#edit-video-integration-form")
+      |> render_submit(%{
+        integration: %{name: "Team kMeet", custom_meeting_url: "https://elsewhere.example.com"}
+      })
+
+      row = Repo.get!(VideoIntegrationSchema, integration.id)
+      assert row.name == "Team kMeet"
+      assert is_nil(row.custom_meeting_url)
+    end
+
+    test "marks kMeet as connected and refuses a second kMeet with a clear message", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, _first} = Video.create_integration(user.id, :kmeet, %{name: "My kMeet"})
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      assert view
+             |> element("button[phx-value-provider='kmeet']")
+             |> render() =~ "Connected"
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='kmeet']")
+      |> render_click()
+
+      html =
+        view
+        |> form("#kmeet-video-integration-form", integration: %{name: "Second kMeet"})
+        |> render_submit()
+
+      assert html =~ "This provider is already connected"
+      assert [%{name: "My kMeet"}] = Video.list_integrations(user.id)
+    end
+
+    test "renames a kMeet integration through the edit dialog", %{conn: conn, user: user} do
+      {:ok, integration} = Video.create_integration(user.id, :kmeet, %{name: "My kMeet"})
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element(
+        "button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#edit-video-modal']"
+      )
+      |> render_click()
+
+      assert has_element?(
+               view,
+               "#edit-video-integration-form #edit_kmeet_host[readonly][value='https://kmeet.infomaniak.com']"
+             )
+
+      view
+      |> form("#edit-video-integration-form", integration: %{name: "Team kMeet"})
+      |> render_submit()
+
+      assert render(view) =~ "Integration updated successfully"
+      assert Repo.get!(VideoIntegrationSchema, integration.id).name == "Team kMeet"
     end
 
     test "stores a custom video link exactly as the organiser typed it", %{conn: conn} do

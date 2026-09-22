@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "1.16.1",
+      version: "1.17.0",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -114,6 +114,7 @@ defmodule Tymeslot.MixProject do
       {:telemetry_poller, "~> 1.3"},
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
+      {:joken, "~> 2.6"},
       {:dns_cluster, "~> 0.3"},
       {:bandit, "~> 1.8"},
       {:tz, "~> 0.28"},

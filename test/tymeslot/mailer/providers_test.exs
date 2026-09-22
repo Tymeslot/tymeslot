@@ -207,6 +207,52 @@ defmodule Tymeslot.Mailer.ProvidersTest do
       )
     end
 
+    test "SMTP_TLS_MIDDLEBOX_COMPAT=true restores the TLS 1.3 compatibility mode" do
+      with_env(
+        [
+          {"SMTP_HOST", "smtp.example.com"},
+          {"SMTP_USERNAME", "user@example.com"},
+          {"SMTP_PASSWORD", "secret"},
+          {"SMTP_TLS_MIDDLEBOX_COMPAT", "true"}
+        ],
+        fn ->
+          assert {:ok, config} = Providers.build("smtp")
+          assert config[:tls_options][:middlebox_comp_mode] == true
+        end
+      )
+    end
+
+    test "the compatibility mode stays off when SMTP_TLS_MIDDLEBOX_COMPAT is unset" do
+      with_env(
+        [
+          {"SMTP_HOST", "smtp.example.com"},
+          {"SMTP_USERNAME", "user@example.com"},
+          {"SMTP_PASSWORD", "secret"},
+          {"SMTP_TLS_MIDDLEBOX_COMPAT", nil}
+        ],
+        fn ->
+          assert {:ok, config} = Providers.build("smtp")
+          assert config[:tls_options][:middlebox_comp_mode] == false
+        end
+      )
+    end
+
+    test "raises on an unrecognised SMTP_TLS_MIDDLEBOX_COMPAT" do
+      with_env(
+        [
+          {"SMTP_HOST", "smtp.example.com"},
+          {"SMTP_USERNAME", "user@example.com"},
+          {"SMTP_PASSWORD", "secret"},
+          {"SMTP_TLS_MIDDLEBOX_COMPAT", "sometimes"}
+        ],
+        fn ->
+          assert_raise ArgumentError, ~r/Invalid SMTP_TLS_MIDDLEBOX_COMPAT/, fn ->
+            Providers.build("smtp")
+          end
+        end
+      )
+    end
+
     test "raises on an unrecognised SMTP_TLS_VERIFY" do
       with_env(
         [

@@ -73,6 +73,19 @@ defmodule Tymeslot.Emails.Templates.GuestChangeEmailsTest do
       refute email.html_body =~ details.attendee_video_url
     end
 
+    # On a server that admits only a link carrying a token, the bare room URL
+    # opens nothing, so the payload carries a link of the guests' own. It is
+    # preferred over the room URL wherever it is present.
+    test "prefers the guests' own link over the bare room URL" do
+      details = guest_details(%{guest_video_url: "https://meet.example.com/room?jwt=GUEST-TOKEN"})
+      email = AppointmentRescheduled.render(:guest, "greg@example.com", details)
+
+      for body <- [email.html_body, email.text_body] do
+        assert body =~ "jwt=GUEST-TOKEN"
+        refute body =~ details.attendee_video_url
+      end
+    end
+
     test "attaches a calendar update that supersedes the invitation" do
       # The guest's entry must be replaced exactly like the attendee's, so both
       # carry the same SEQUENCE for the same booking revision. Compared rather

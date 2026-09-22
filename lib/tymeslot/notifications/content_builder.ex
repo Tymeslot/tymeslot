@@ -147,6 +147,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       original_start_time_attendee_tz:
         convert_to_timezone(original_meeting.start_time, attendee_timezone),
       original_end_time: original_meeting.end_time,
+      original_attendee_video_url: Map.get(original_meeting, :attendee_video_url),
 
       # Reschedule context
       is_rescheduled: true,

@@ -270,6 +270,8 @@ if config_env() == :prod do
         # Run daily at 03:45 UTC to re-attempt provider deletion for cancelled
         # meetings whose video room was never cleaned up
         {"45 3 * * *", Tymeslot.Workers.OrphanedVideoRoomScanWorker},
+        # Run daily at 04:15 UTC to delete video rooms that outlived their meeting
+        {"15 4 * * *", Tymeslot.Workers.ExpiredVideoRoomCleanupWorker},
         # Run daily at 03:15 UTC
         {"15 3 * * *", Tymeslot.Workers.ExpiredSessionCleanupWorker},
         # Run daily at 02:00 UTC to renew expiring webhook channels
@@ -523,6 +525,26 @@ case System.get_env("MEETING_PAYMENTS_APPLICATION_FEE_BP") do
     end
 end
 
+case System.get_env("VIDEO_ROOM_RETENTION_DAYS") do
+  nil ->
+    :ok
+
+  "" ->
+    :ok
+
+  raw ->
+    case Integer.parse(raw) do
+      {days, ""} when days >= 1 ->
+        config :tymeslot, :video_room_retention_days, days
+
+      _other ->
+        raise """
+        VIDEO_ROOM_RETENTION_DAYS must be a whole number of days, 1 or more.
+        Got: #{inspect(raw)}
+        """
+    end
+end
+
 # Development/test environment Stripe configuration
 if config_env() in [:dev, :test] do
   config :stripity_stripe,
@@ -757,11 +779,16 @@ end
 # common self-hosting case — opt out by setting ALLOW_PRIVATE_IPS_FOR_CALENDAR=true.
 #
 # For backwards compatibility this also satisfies video, which it was originally
-# documented as covering; ALLOW_PRIVATE_IPS_FOR_VIDEO below is the switch to
-# reach for now.
+# documented as covering, unless ALLOW_PRIVATE_IPS_FOR_VIDEO below is set;
+# that is the switch to reach for now.
 #
 # This does NOT relax webhook SSRF protection (Tymeslot.Webhooks.SsrfValidator);
 # webhooks have their own switch (ALLOW_PRIVATE_IPS_FOR_WEBHOOKS below).
+#
+# With this (or ALLOW_PRIVATE_IPS_FOR_VIDEO) set, a server on an internal name
+# (http://nextcloud, http://talk.lan) may be saved with plain http. Each such
+# request is still resolved first and refused unless the name resolves only to
+# private addresses, since it carries credentials in clear text.
 #
 # Seeded from env in non-test environments only, so an exported shell var can't
 # flip the default for the test suite (tests set the flag explicitly).
@@ -773,9 +800,20 @@ end
 # Video-scoped sibling of the above, covering both self-hosted MiroTalk and the
 # custom video link's reachability test. Set ALLOW_PRIVATE_IPS_FOR_VIDEO=true to
 # run a meeting server on an internal network without relaxing calendar SSRF.
-if config_env() != :test and
-     System.get_env("ALLOW_PRIVATE_IPS_FOR_VIDEO") in ["true", "1", "yes"] do
-  config :tymeslot, :allow_private_ips_for_video, true
+#
+# Unlike its siblings this key is left absent when the variable is unset or
+# blank, rather than written as false. Absent is what lets the calendar switch
+# above go on satisfying video, while an operator who writes
+# ALLOW_PRIVATE_IPS_FOR_VIDEO=false has answered for video and is not overruled
+# by it; `Tymeslot.Security.SsrfGuard.allow_private_for_video?/0` reads the
+# three states. `start-docker.sh` passes the variable through unset for the same
+# reason.
+allow_private_ips_for_video = String.trim(System.get_env("ALLOW_PRIVATE_IPS_FOR_VIDEO", ""))
+
+if config_env() != :test and allow_private_ips_for_video != "" do
+  config :tymeslot,
+         :allow_private_ips_for_video,
+         allow_private_ips_for_video in ["true", "1", "yes"]
 end
 
 # Webhook-scoped sibling of the above. In :prod, outbound webhook deliveries to

@@ -60,58 +60,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   def handle_update_event_title(%{"value" => new_value}, socket),
     do: handle_update_event_field(:summary, 500, new_value, socket)
 
-  @spec handle_update_edit_video(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_update_edit_video(params, socket) do
-    case socket.assigns.selected_event do
-      nil ->
-        {:noreply, socket}
-
-      event ->
-        with {:ok, new_id} <- parse_video_choice(params["video_integration_id"]),
-             false <- video_unchanged?(event, new_id),
-             :ok <- EditWorkflow.assert_event_editable(socket, event),
-             :ok <- Shared.check_edit_rate_limit(socket) do
-          optimistic_event = Map.put(event, :video_integration_id, new_id)
-
-          Shared.apply_optimistic_update(socket, optimistic_event, fn s ->
-            EditWorkflow.change_event_video_async(s, event, new_id)
-          end)
-        else
-          true ->
-            {:noreply, socket}
-
-          {:error, reason} = error when reason in [:unauthorized, :read_only, :recurring_event] ->
-            Shared.flash_guard_error(socket, error)
-
-          {:error, :rate_limited, _message} = error ->
-            Shared.flash_guard_error(socket, error)
-
-          :error ->
-            {:noreply, socket}
-        end
-    end
-  end
-
-  # "None" arrives as an empty value; anything else must be an integration id,
-  # so a malformed value is ignored rather than read as a removal.
-  defp parse_video_choice(value) when value in [nil, ""], do: {:ok, nil}
-  defp parse_video_choice(value), do: Shared.parse_int(value)
-
-  # The active button stays clickable, so re-picking the current choice has to
-  # stop here: before the rate limit charges a token and before the result
-  # handler reports a room that was never created. Mirrors the short-circuit
-  # clauses of `Tymeslot.CalendarGrid.EventVideo.change_event_video/3`, which
-  # keep the same contract for its other callers. An integration whose link is
-  # `nil` is deliberately not a no-op: clicking its active button is how an
-  # organiser provisions the room a failed earlier attempt left missing.
-  defp video_unchanged?(%{video_integration_id: id, video_link: link}, id)
-       when is_integer(id) and is_binary(link),
-       do: true
-
-  defp video_unchanged?(%{video_integration_id: nil, video_link: nil}, nil), do: true
-  defp video_unchanged?(_event, _new_id), do: false
-
   @spec handle_update_event_location(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_event_location(%{"value" => new_value}, socket),

@@ -37,6 +37,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
       {IntegrationEmails, :handle_integration_reauth_notification},
     "send_integration_paused_notification" =>
       {IntegrationEmails, :handle_integration_paused_notification},
+    "send_video_room_creation_error_notification" =>
+      {IntegrationEmails, :handle_video_room_creation_error_notification},
     "send_calendar_invitation" => {IntegrationEmails, :handle_calendar_invitation},
     "send_event_update_notification" => {IntegrationEmails, :handle_event_update_notification}
   }

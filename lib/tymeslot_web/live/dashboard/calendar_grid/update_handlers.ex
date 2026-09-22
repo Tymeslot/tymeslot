@@ -220,8 +220,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
   end
 
   @doc """
-  Applies a finished video-room change to the loaded events, then runs the
-  same attendee-notification decision every other inline edit ends in.
+  Applies a finished video-room change to the loaded events and, when it is
+  the open one, to the detail modal, then runs the same attendee-notification
+  decision every other inline edit ends in.
 
   Only the three columns the change wrote are merged, rather than the updated
   event replacing what is on screen, so a sync that landed while the room was

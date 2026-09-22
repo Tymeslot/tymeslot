@@ -101,7 +101,11 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     "hero-wrench-screwdriver",
     "hero-book-open",
     "hero-rocket-launch",
-    "hero-beaker"
+    "hero-beaker",
+    "hero-building-office-2",
+    "hero-map-pin",
+    "hero-video-camera",
+    "hero-globe-alt"
   ]
 
   # A custom booking slug: lowercase letters, digits and single hyphens.
@@ -421,7 +425,11 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       {"hero-wrench-screwdriver", "Wrench - Technical meetings"},
       {"hero-book-open", "Book - Learning meetings"},
       {"hero-rocket-launch", "Rocket - Project meetings"},
-      {"hero-beaker", "Beaker - Casual meetings"}
+      {"hero-beaker", "Beaker - Casual meetings"},
+      {"hero-building-office-2", "Building - In-person meetings"},
+      {"hero-map-pin", "Map pin - On-location meetings"},
+      {"hero-video-camera", "Video camera - Online meetings"},
+      {"hero-globe-alt", "Globe - Remote meetings"}
     ]
   end
 end

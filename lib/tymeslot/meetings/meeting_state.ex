@@ -28,6 +28,10 @@ defmodule Tymeslot.Meetings.MeetingState do
 
   @awaiting_approval "awaiting_approval"
 
+  # Statuses a booking is released in without taking place: cancelled, or a
+  # request that expired unanswered. Releasing one deletes its video room.
+  @released_statuses ["cancelled", "expired"]
+
   @doc """
   Whether the meeting still represents a live booking a user should be able
   to interact with (view, cancel, reschedule). Excludes cancelled,
@@ -144,6 +148,13 @@ defmodule Tymeslot.Meetings.MeetingState do
   @spec awaiting_approval_status?(String.t() | nil) :: boolean()
   def awaiting_approval_status?(@awaiting_approval), do: true
   def awaiting_approval_status?(_status), do: false
+
+  @doc """
+  Whether a meeting with `status` was released without taking place, so its
+  video room is to be deleted rather than kept in step with the booking.
+  """
+  @spec released_status?(String.t() | nil) :: boolean()
+  def released_status?(status), do: status in @released_statuses
 
   @doc """
   Query-side counterpart of `awaiting_approval?/1`.

@@ -144,7 +144,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
   # The PUT just addressed the resource, so its href is known without asking:
   # it is the URL reduced to a path, which is how sync spells a CalDAV
-  # `provider_event_id` and what `resolve_event_url/4` expects back.
+  # `provider_event_id` and what `event_url/4` expects back.
   #
   # The ETag is genuinely optional. RFC 4791 §5.3.4 only says a server SHOULD
   # return one, and a server that normalised the submitted document must not,
@@ -200,8 +200,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
     if ConflictResolution.valid?(policy) do
       with_events_breaker(client, opts, fn ->
-        url = event_url_from_data(client, calendar_path, uid, event_data)
-        write_update(client, url, uid, event_data, policy, opts)
+        with {:ok, url} <- event_url(client, calendar_path, uid, event_data[:provider_event_id]) do
+          write_update(client, url, uid, event_data, policy, opts)
+        end
       end)
     else
       {:error, :invalid_conflict_resolution_policy}
@@ -346,11 +347,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
     if ConflictResolution.valid?(policy) do
       with_events_breaker(client, opts, fn ->
-        url = resolve_event_url(client, calendar_path, uid, opts[:provider_event_id])
-        ical_data = ICalBuilder.replace_colour_property(raw_ical, colour)
-        etag = resolve_etag(url, client, opts)
+        with {:ok, url} <- event_url(client, calendar_path, uid, opts[:provider_event_id]) do
+          ical_data = ICalBuilder.replace_colour_property(raw_ical, colour)
+          etag = resolve_etag(url, client, opts)
 
-        do_conditional_put(client, url, ical_data, etag, policy, opts)
+          do_conditional_put(client, url, ical_data, etag, policy, opts)
+        end
       end)
     else
       {:error, :invalid_conflict_resolution_policy}
@@ -458,38 +460,79 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
           :ok | {:error, Base.error_reason()}
   def delete_calendar_event(client, calendar_path, uid, opts) do
     with_events_breaker(client, opts, fn ->
-      url = delete_url_from_opts(client, calendar_path, uid, opts)
-      delete_opts = Keyword.take(opts, [:timeout])
+      with {:ok, url} <- event_url(client, calendar_path, uid, opts[:provider_event_id]) do
+        delete_opts = Keyword.take(opts, [:timeout])
 
-      case Http.delete_event(url, client.username, client.password, delete_opts) do
-        {:ok, %Req.Response{}} -> :ok
-        {:error, reason} -> {:error, reason}
+        case Http.delete_event(url, client.username, client.password, delete_opts) do
+          {:ok, %Req.Response{}} -> :ok
+          {:error, reason} -> {:error, reason}
+        end
       end
     end)
   end
 
-  defp delete_url_from_opts(client, calendar_path, uid, opts),
-    do: resolve_event_url(client, calendar_path, uid, Keyword.get(opts, :provider_event_id))
+  @doc """
+  Fetches one event resource: `href` when known, otherwise the resource
+  Tymeslot writes for `uid` in `calendar_path`. Returns the parsed events as a
+  calendar-query would, or `{:error, :not_found}` when the server answers 404
+  or 410.
 
-  defp event_url_from_data(client, calendar_path, uid, event_data),
-    do: resolve_event_url(client, calendar_path, uid, Map.get(event_data, :provider_event_id))
+  One resource holds one event, but a recurring one is a master VEVENT plus a
+  VEVENT per modified occurrence, so this answers with a list. A caller asking
+  "is this event over" has to see every occurrence to answer it; taking only
+  the first would judge a whole series by its master.
+  """
+  @spec fetch_calendar_event(Base.client(), String.t() | nil, String.t() | nil, String.t() | nil) ::
+          {:ok, [map()]} | {:error, :not_found} | {:error, term()}
+  def fetch_calendar_event(client, calendar_path, uid, href) do
+    with {:ok, url} <- event_url(client, calendar_path, uid, href) do
+      # A missing resource is a per-event answer, not a host outage, so it
+      # travels back through the breaker as a success and becomes an error
+      # again out here.
+      result =
+        with_events_breaker(client, [], fn -> get_event_resource(client, url, href) end)
 
-  # Use the event's href (provider_event_id) when available — it's the actual
-  # server path and is required when the event lives on a calendar other than
-  # the one supplied in `calendar_path`. Fall back to UID-based URL
-  # construction for Tymeslot-created events that have not yet been synced.
-  #
-  # `resolve_href/2` is the same resolution the fallback below uses, which is
-  # the point: an href is server-root-relative, so it resolves against the
-  # origin of `base_url` rather than against a `base_url` that may already
-  # carry the CalDAV path.
-  defp resolve_event_url(client, _calendar_path, _uid, href)
-       when is_binary(href) and href != "" do
-    UrlBuilder.resolve_href(client.base_url, href)
+      case result do
+        {:ok, :not_found} -> {:error, :not_found}
+        other -> other
+      end
+    end
   end
 
-  defp resolve_event_url(client, calendar_path, uid, _missing),
-    do: UrlBuilder.build_event_url(client.base_url, calendar_path, uid)
+  defp get_event_resource(client, url, href) do
+    case Http.get_event(url, client.username, client.password) do
+      {:ok, %Req.Response{body: body, headers: headers}} ->
+        parse_fetched_event(body, href || url, headers)
+
+      {:error, reason} when reason in [:not_found, :gone] ->
+        {:ok, :not_found}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp parse_fetched_event(body, href, headers) do
+    case EventProcessor.parse_ical_events(body) do
+      {:ok, events} ->
+        etag = headers |> Map.new() |> Map.get("etag") |> List.wrap() |> List.first()
+        stamp = %{href: href, etag: EventProcessor.clean_etag(etag), raw_ical: body}
+
+        # The href, ETag and document belong to the resource, so every VEVENT
+        # parsed out of it carries the same three.
+        {:ok, Enum.map(events, &Map.merge(&1, stamp))}
+
+      {:error, reason} ->
+        {:error, {:unparseable_event, reason}}
+    end
+  end
+
+  # Every event URL in this module resolves through `UrlBuilder`, which knows
+  # that a server-supplied href is server-root-relative and must therefore be
+  # joined to the base *origin*, never appended to a `base_url` that already
+  # carries the same DAV path.
+  defp event_url(client, calendar_path, uid, href),
+    do: UrlBuilder.resolve_event_url(client.base_url, calendar_path, uid, href)
 
   # Prefer the caller-supplied ETag (cached on provider_calendar_events.etag).
   # Fall back to a HEAD probe only when the caller does not know the current

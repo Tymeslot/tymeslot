@@ -260,6 +260,162 @@ defmodule Tymeslot.Integrations.Video.InputValidationTest do
     end
   end
 
+  describe "validate_video_integration_form/2 - kmeet" do
+    test "accepts a name and returns only the name" do
+      params = %{
+        "provider" => "kmeet",
+        "name" => "  Team kMeet  ",
+        "base_url" => "https://elsewhere.example.com"
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_video_integration_form(params)
+      assert sanitized == %{"name" => "Team kMeet"}
+    end
+
+    test "rejects a missing name" do
+      params = %{"provider" => "kmeet", "name" => ""}
+      assert {:error, errors} = InputValidation.validate_video_integration_form(params)
+      assert Map.has_key?(errors, :name)
+    end
+  end
+
+  describe "validate_video_integration_form/2 - jitsi" do
+    test "trims the server URL and credentials and leaves their checks to the provider" do
+      params = %{
+        "provider" => "jitsi",
+        "name" => "  Our Jitsi  ",
+        "base_url" => " https://meet.example.com ",
+        "client_id" => " tymeslot ",
+        "client_secret" => " <secret&with?symbols> "
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_video_integration_form(params)
+
+      assert sanitized == %{
+               "name" => "Our Jitsi",
+               "base_url" => "https://meet.example.com",
+               "client_id" => "tymeslot",
+               "client_secret" => "<secret&with?symbols>",
+               "remove_token_authentication" => false
+             }
+    end
+
+    test "turns the removal checkbox into a boolean" do
+      params = %{
+        "provider" => "jitsi",
+        "name" => "Our Jitsi",
+        "remove_token_authentication" => "true"
+      }
+
+      assert {:ok, %{"remove_token_authentication" => true} = sanitized} =
+               InputValidation.validate_video_integration_form(params)
+
+      refute Map.has_key?(sanitized, "client_secret")
+    end
+
+    # A credential key in the result means "supplied", which clears
+    # `needs_reauth` on update; a blank field must not claim that.
+    test "leaves blank credentials out" do
+      params = %{
+        "provider" => "jitsi",
+        "name" => "Our Jitsi",
+        "base_url" => "https://meet.example.com",
+        "client_id" => "",
+        "client_secret" => "   "
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_video_integration_form(params)
+      refute Map.has_key?(sanitized, "client_id")
+      refute Map.has_key?(sanitized, "client_secret")
+    end
+
+    test "strips a null byte from the server URL" do
+      params = %{
+        "provider" => "jitsi",
+        "name" => "Our Jitsi",
+        "base_url" => "https://meet.example.com/a\0b"
+      }
+
+      assert {:ok, %{"base_url" => "https://meet.example.com/ab"}} =
+               InputValidation.validate_video_integration_form(params)
+    end
+
+    test "strips a null byte from the App ID and App secret and leaves the rest of the secret alone" do
+      params = %{
+        "provider" => "jitsi",
+        "name" => "Our Jitsi",
+        "base_url" => "https://meet.example.com",
+        "client_id" => "tyme\0slot",
+        "client_secret" => "<secret\0&symbols>"
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_video_integration_form(params)
+      assert sanitized["client_id"] == "tymeslot"
+      assert sanitized["client_secret"] == "<secret&symbols>"
+    end
+
+    test "rejects a missing name" do
+      params = %{"provider" => "jitsi", "name" => "", "base_url" => "https://meet.example.com"}
+      assert {:error, errors} = InputValidation.validate_video_integration_form(params)
+      assert Map.has_key?(errors, :name)
+    end
+  end
+
+  describe "validate_video_integration_form/2 - nextcloud_talk" do
+    @talk_params %{
+      "provider" => "nextcloud_talk",
+      "name" => "Team Talk",
+      "base_url" => " https://cloud.example.com ",
+      "client_id" => " organiser ",
+      "client_secret" => " Abcde-Fghij-Klmno-Pqrst-Uvwxy "
+    }
+
+    test "trims the server, login name and app password and passes nothing else on" do
+      assert {:ok, sanitized} =
+               InputValidation.validate_video_integration_form(
+                 Map.put(@talk_params, "remove_token_authentication", "true")
+               )
+
+      assert sanitized == %{
+               "name" => "Team Talk",
+               "base_url" => "https://cloud.example.com",
+               "client_id" => "organiser",
+               "client_secret" => "Abcde-Fghij-Klmno-Pqrst-Uvwxy"
+             }
+    end
+
+    # A credential key in the result means "supplied"; the edit dialog's blank
+    # app password field must keep the stored one instead.
+    test "leaves a blank app password out" do
+      assert {:ok, sanitized} =
+               InputValidation.validate_video_integration_form(%{
+                 @talk_params
+                 | "client_secret" => "   "
+               })
+
+      refute Map.has_key?(sanitized, "client_secret")
+    end
+
+    test "strips a null byte from the server, login name and app password" do
+      assert {:ok, sanitized} =
+               InputValidation.validate_video_integration_form(%{
+                 @talk_params
+                 | "base_url" => "https://cloud.example.com/nc\0",
+                   "client_id" => "organ\0iser",
+                   "client_secret" => "Abcde\0-Fghij"
+               })
+
+      assert sanitized["base_url"] == "https://cloud.example.com/nc"
+      assert sanitized["client_id"] == "organiser"
+      assert sanitized["client_secret"] == "Abcde-Fghij"
+    end
+
+    test "still requires a name" do
+      assert {:error, %{name: _message}} =
+               InputValidation.validate_video_integration_form(%{@talk_params | "name" => ""})
+    end
+  end
+
   describe "validate_video_integration_form/2 - URLs are stored as typed" do
     defp custom_url(url),
       do: %{"provider" => "custom", "name" => "My Video Tool", "custom_meeting_url" => url}

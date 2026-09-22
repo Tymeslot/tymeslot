@@ -12,23 +12,37 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video.AccessToken
+  alias Tymeslot.Integrations.Video.AccountKey
   alias Tymeslot.Integrations.Video.AttrsCasting
   alias Tymeslot.Integrations.Video.Connection
   alias Tymeslot.Integrations.Video.Disconnect
   alias Tymeslot.Integrations.Video.Discovery
   alias Tymeslot.Integrations.Video.OAuth
   alias Tymeslot.Integrations.Video.ProviderConfig
+  alias Tymeslot.Integrations.Video.Providers.JitsiProvider
+  alias Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
+  alias Tymeslot.Integrations.Video.Reconnect
   alias Tymeslot.Integrations.Video.Rooms
+  alias Tymeslot.Integrations.Video.Update
   alias Tymeslot.Integrations.Video.Urls
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
-  alias Tymeslot.Meetings.MeetingQueries
 
   @behaviour Tymeslot.Security.EncryptedStorage
 
   require Logger
 
-  @type provider :: :google_meet | :teams | :zoom | :mirotalk | :custom | :none | String.t()
+  @type provider ::
+          :google_meet
+          | :teams
+          | :zoom
+          | :mirotalk
+          | :custom
+          | :kmeet
+          | :jitsi
+          | :nextcloud_talk
+          | :none
+          | String.t()
 
   @impl Tymeslot.Security.EncryptedStorage
   def encrypted_storage,
@@ -172,15 +186,16 @@ defmodule Tymeslot.Integrations.Video do
     # Enforce provider in attrs consistently as string for DB layer
     attrs = Map.put(Map.put(attrs, :user_id, user_id), :provider, to_string(provider))
 
-    do_create_integration(provider, attrs)
+    provider
+    |> do_create_integration(attrs)
+    |> AccountKey.refuse_taken_key()
   end
 
   # `create_integration/3` has already atomised every key by the time these
   # clauses run, so the attrs are read one way here.
   defp do_create_integration(:mirotalk, attrs) do
-    # Set provider_account_id for dedup
     base_url = attrs[:base_url]
-    attrs = Map.put(attrs, :provider_account_id, base_url)
+    attrs = Map.put(attrs, :provider_account_id, AccountKey.from_url(base_url))
 
     # Pre-test the connection prior to creation for better UX
     config = %{
@@ -203,11 +218,61 @@ defmodule Tymeslot.Integrations.Video do
   end
 
   defp do_create_integration(:custom, attrs) do
-    # Set provider_account_id from custom_meeting_url for dedup
-    custom_url = attrs[:custom_meeting_url]
-    attrs = Map.put(attrs, :provider_account_id, custom_url)
+    attrs = Map.put(attrs, :provider_account_id, AccountKey.from_url(attrs[:custom_meeting_url]))
 
     with :ok <- check_no_duplicate(attrs) do
+      VideoIntegrationQueries.create(attrs)
+    end
+  end
+
+  # kMeet has exactly one host, so there is no account to key on. Leaving
+  # `provider_account_id` nil files the row under
+  # `unique_active_video_null_account_per_user`, which is precisely the
+  # "one active kMeet per user" rule we want. Like every provider without an
+  # account id, the rule covers active rows only, so an inactive kMeet row does
+  # not block a new one. The index refusal is translated here, so callers learn
+  # the provider is already connected without knowing the index exists.
+  defp do_create_integration(:kmeet, attrs) do
+    case VideoIntegrationQueries.create(attrs) do
+      {:error, %Ecto.Changeset{} = changeset} = error ->
+        if provider_already_connected?(changeset),
+          do: {:error, :provider_already_connected},
+          else: error
+
+      result ->
+        result
+    end
+  end
+
+  # The server URL is the dedup key (`AccountKey`), so one user can connect
+  # several Jitsi servers but not the same one twice. The config is validated before
+  # anything is saved: a half-filled credential pair or a short secret would
+  # otherwise only surface when a later booking fails to get its video link.
+  defp do_create_integration(:jitsi, attrs) do
+    attrs = Map.put(attrs, :provider_account_id, AccountKey.from_url(attrs[:base_url]))
+
+    with :ok <- JitsiProvider.validate_config(attrs),
+         :ok <- check_no_duplicate(attrs) do
+      VideoIntegrationQueries.create(attrs)
+    end
+  end
+
+  # Keyed on server and login together, as the CalDAV integrations are, so one
+  # person can connect two accounts on the same Nextcloud but not one account
+  # twice. The duplicate check comes first, so a repeat never spends a login
+  # attempt against the server; the connection probe then validates the config
+  # and proves the app password and a recent enough Talk before anything is
+  # saved.
+  defp do_create_integration(:nextcloud_talk, attrs) do
+    attrs = NextcloudTalkProvider.account_attrs(attrs)
+
+    with :ok <- check_no_duplicate(attrs),
+         {:ok, _message} <-
+           Connection.probe(
+             :nextcloud_talk,
+             Map.take(attrs, [:base_url, :client_id, :client_secret]),
+             {:user, attrs[:user_id]}
+           ) do
       VideoIntegrationQueries.create(attrs)
     end
   end
@@ -229,62 +294,27 @@ defmodule Tymeslot.Integrations.Video do
     Connection.probe(:mirotalk, config, {:user, user_id})
   end
 
-  defp check_no_duplicate(%{
-         user_id: user_id,
-         provider: provider,
-         provider_account_id: account_id
-       })
-       when is_binary(account_id) and account_id != "" do
-    # Check both active and inactive integrations to prevent duplicate rows
-    case VideoIntegrationQueries.get_any_by_account_for_user(
-           user_id,
-           to_string(provider),
-           account_id
-         ) do
-      {:ok, _existing} -> {:error, :duplicate_integration}
-      {:error, :not_found} -> :ok
-    end
-  end
+  # Active and inactive integrations alike, so no two rows share an account.
+  defp check_no_duplicate(%{user_id: user_id, provider: provider} = attrs),
+    do: AccountKey.check_free(user_id, provider, attrs[:provider_account_id], nil)
 
-  defp check_no_duplicate(_attrs), do: :ok
+  defp provider_already_connected?(%Ecto.Changeset{errors: errors}) do
+    Enum.any?(Keyword.get_values(errors, :provider), fn {_message, opts} ->
+      opts[:constraint] == :unique
+    end)
+  end
 
   # ---------------
   # Update
   # ---------------
-  @spec update_integration(pos_integer(), pos_integer(), %{atom() => term()}) ::
+  @doc """
+  Updates a video integration owned by `user_id`. See
+  `Tymeslot.Integrations.Video.Update` for how credentials are kept, replaced
+  and removed.
+  """
+  @spec update_integration(pos_integer(), pos_integer(), %{(String.t() | atom()) => term()}) ::
           {:ok, any()} | {:error, any()}
-  def update_integration(user_id, id, attrs) when is_integer(user_id) and is_integer(id) do
-    case VideoIntegrationQueries.get_for_user(id, user_id) do
-      {:ok, integration} ->
-        if credentials_in_attrs?(attrs) do
-          update_with_credentials(integration, attrs)
-        else
-          VideoIntegrationQueries.update(integration, attrs)
-        end
-
-      {:error, :not_found} = err ->
-        err
-
-      {:error, :requires_reencryption, _integration} ->
-        {:error, :requires_reencryption}
-    end
-  end
-
-  defp update_with_credentials(integration, attrs) do
-    with {:ok, updated} = ok <- VideoIntegrationQueries.update_credentials(integration, attrs) do
-      HealthCheck.mark_user_recovered(:video, updated.id)
-      ok
-    end
-  end
-
-  # Callers supply the virtual field names (`:api_key`), never the encrypted
-  # ones — those only exist after `encrypt_credentials/1` runs inside the
-  # changeset, by which point the attrs have already been consumed.
-  defp credentials_in_attrs?(attrs) when is_map(attrs) do
-    fields = VideoIntegrationSchema.credential_fields()
-
-    Enum.any?(fields, fn f -> Map.has_key?(attrs, f) or Map.has_key?(attrs, Atom.to_string(f)) end)
-  end
+  defdelegate update_integration(user_id, id, attrs), to: Update, as: :run
 
   # ---------------
   # Delete
@@ -293,8 +323,8 @@ defmodule Tymeslot.Integrations.Video do
   Disconnects a video integration.
 
   With `delete_rooms: true` the integration is soft-deleted and a background job
-  deletes the provider-side rooms of the user's upcoming bookings before purging
-  the row. Without it the row goes immediately and existing rooms are left
+  deletes the provider-side rooms covered by `disconnect_room_scope/1` before
+  purging the row. Without it the row goes immediately and existing rooms are left
   running, so join URLs already sitting in attendees' calendar invites keep
   working.
   """
@@ -303,19 +333,23 @@ defmodule Tymeslot.Integrations.Video do
   defdelegate delete_integration(user_id, id, opts \\ []), to: Disconnect, as: :run
 
   @doc """
-  Counts the user's upcoming bookings whose provider room belongs to the given
-  integration: the rooms `delete_integration/3` with `delete_rooms: true` would
-  remove. Returns 0 for an integration the user does not own.
+  Which of an integration's rooms disconnecting with `delete_rooms: true`
+  deletes, for the given provider: `:upcoming` bookings' rooms only, or `:all`
+  the rooms it still holds for a provider whose rooms never expire.
   """
-  @spec count_upcoming_rooms(pos_integer(), pos_integer()) :: non_neg_integer()
-  def count_upcoming_rooms(user_id, integration_id)
-      when is_integer(user_id) and is_integer(integration_id) do
-    MeetingQueries.count_upcoming_with_video_room_for_user_integration(
-      user_id,
-      integration_id,
-      DateTime.utc_now()
-    )
-  end
+  @spec disconnect_room_scope(String.t()) :: :upcoming | :all
+  defdelegate disconnect_room_scope(provider), to: Disconnect, as: :room_scope
+
+  @doc """
+  The scope and number of rooms disconnecting the user's integration with
+  `delete_rooms: true` would delete. The count is zero when there is nothing
+  such a disconnect could delete.
+  """
+  @spec rooms_deleted_on_disconnect(pos_integer(), pos_integer()) :: %{
+          scope: :upcoming | :all,
+          count: non_neg_integer()
+        }
+  defdelegate rooms_deleted_on_disconnect(user_id, id), to: Disconnect, as: :rooms_to_delete
 
   @doc """
   Removes every video integration matching `(provider, provider_account_id)`,
@@ -390,6 +424,9 @@ defmodule Tymeslot.Integrations.Video do
   @spec create_meeting_room(pos_integer() | nil, keyword()) :: {:ok, map()} | {:error, any()}
   defdelegate create_meeting_room(user_id, opts), to: Rooms
 
+  @spec room_creation_budget_ms(pos_integer() | nil, pos_integer() | nil) :: non_neg_integer()
+  defdelegate room_creation_budget_ms(user_id, integration_id), to: Rooms
+
   @spec create_join_url(map(), String.t(), String.t(), String.t(), DateTime.t()) ::
           {:ok, String.t()} | {:error, any()}
   defdelegate create_join_url(
@@ -400,6 +437,16 @@ defmodule Tymeslot.Integrations.Video do
                 meeting_time
               ),
               to: Rooms
+
+  @spec shared_join_url(map(), DateTime.t() | nil) :: {:ok, String.t() | nil} | {:error, any()}
+  defdelegate shared_join_url(meeting_context, meeting_time), to: Rooms
+
+  @spec existing_room_context(pos_integer() | nil, keyword()) ::
+          {:ok, map()} | {:error, any()}
+  defdelegate existing_room_context(user_id, opts), to: Rooms
+
+  @spec time_bound_join_urls?(map()) :: boolean()
+  defdelegate time_bound_join_urls?(meeting_context), to: Rooms
 
   @spec update_meeting_room(pos_integer() | nil, keyword()) :: :ok | {:error, any()}
   defdelegate update_meeting_room(user_id, opts), to: Rooms
@@ -437,6 +484,10 @@ defmodule Tymeslot.Integrations.Video do
   1. Re-authorization of a specific integration (integration_id present)
   2. New connection with a known account (provider_account_id present)
   3. Legacy fallback — match by user + provider
+
+  An OAuth callback proves the grant, so every update of an existing row goes
+  through `Tymeslot.Integrations.Video.Reconnect`, which catches the rooms up
+  on what they missed while the integration needed reconnecting.
   """
   @spec match_or_create_oauth_integration(
           pos_integer(),
@@ -470,7 +521,7 @@ defmodule Tymeslot.Integrations.Video do
     case VideoIntegrationQueries.get_for_user(integration_id, user_id) do
       {:ok, existing} ->
         AccountMatch.verify_account_match(existing, provider_account_id, fn ->
-          VideoIntegrationQueries.update_credentials(existing, token_attrs)
+          Reconnect.save(existing, token_attrs)
         end)
 
       {:error, :not_found} ->
@@ -480,7 +531,7 @@ defmodule Tymeslot.Integrations.Video do
         # Credentials are stale but the user is reconnecting — allow the update
         # so fresh credentials replace the undecryptable ones.
         AccountMatch.verify_account_match(existing, provider_account_id, fn ->
-          VideoIntegrationQueries.update_credentials(existing, token_attrs)
+          Reconnect.save(existing, token_attrs)
         end)
     end
   end
@@ -488,7 +539,7 @@ defmodule Tymeslot.Integrations.Video do
   defp match_or_create_by_account(user_id, provider, name, provider_account_id, token_attrs) do
     case VideoIntegrationQueries.get_by_account_for_user(user_id, provider, provider_account_id) do
       {:ok, existing} ->
-        VideoIntegrationQueries.update_credentials(existing, token_attrs)
+        Reconnect.save(existing, token_attrs)
 
       {:error, :not_found} ->
         reactivate_or_create_video(user_id, provider, name, provider_account_id, token_attrs)
@@ -507,7 +558,7 @@ defmodule Tymeslot.Integrations.Video do
           provider_account_id
         )
       end,
-      fn existing -> VideoIntegrationQueries.update_credentials(existing, reactivation_attrs) end,
+      fn existing -> Reconnect.save(existing, reactivation_attrs) end,
       fn ->
         AccountMatch.create_with_race_protection(
           fn -> VideoIntegrationQueries.create(create_attrs) end,
@@ -518,7 +569,7 @@ defmodule Tymeslot.Integrations.Video do
               provider_account_id
             )
           end,
-          fn existing -> VideoIntegrationQueries.update_credentials(existing, token_attrs) end
+          fn existing -> Reconnect.save(existing, token_attrs) end
         )
       end
     )

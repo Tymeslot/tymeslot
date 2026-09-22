@@ -12,7 +12,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
 
   alias Ecto.Changeset
   alias Ecto.UUID
-  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Repo
@@ -439,33 +439,22 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
-  Counts upcoming live bookings holding a provider room created by the given
-  integration, provided `user_id` owns that integration; otherwise 0.
+  Counts the meetings holding a provider room created by the given integration,
+  within `scope`.
 
-  Drives the "N upcoming bookings use this" line in the disconnect modal, so the
-  user knows what the optional room cleanup would affect before choosing it.
-  The integration id arrives from the client, so ownership is part of the
-  query rather than left to the caller. For the owner it counts the same set
-  `MeetingListQueries.list_upcoming_with_video_room_for_integration/3` drains.
+  Drives the room cleanup line in the disconnect modal, so the user knows what
+  the optional cleanup would affect before choosing it. Built on the same query
+  the disconnect drains (`MeetingListQueries.with_video_room_for_integration/3`),
+  so the two cannot disagree.
   """
-  @spec count_upcoming_with_video_room_for_user_integration(
+  @spec count_with_video_room_for_integration(
           pos_integer(),
-          pos_integer(),
+          MeetingListQueries.room_scope(),
           DateTime.t()
         ) :: non_neg_integer()
-  def count_upcoming_with_video_room_for_user_integration(
-        user_id,
-        integration_id,
-        %DateTime{} = now
-      ) do
-    Meeting
-    |> join(:inner, [m], v in VideoIntegrationSchema,
-      on: v.id == m.video_integration_id and v.user_id == ^user_id
-    )
-    |> MeetingState.where_live_booking()
-    |> where([m], m.end_time > ^now)
-    |> where([m], m.video_integration_id == ^integration_id)
-    |> where([m], not is_nil(m.video_room_id))
+  def count_with_video_room_for_integration(integration_id, scope, %DateTime{} = now) do
+    integration_id
+    |> MeetingListQueries.with_video_room_for_integration(scope, now)
     |> Repo.aggregate(:count, :id)
   end
 

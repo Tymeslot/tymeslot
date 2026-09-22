@@ -3,8 +3,10 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
   use Oban.Testing, repo: Tymeslot.Repo
   @moduletag :integrations
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Integrations.HealthCheck.ResponseHandler
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -71,7 +73,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
       )
     end
 
-    test "stamps notification_sent_at on the reauth fast-path without sending an unhealthy email" do
+    test "leaves notification_sent_at unstamped on the reauth fast-path and sends no unhealthy email" do
       user = insert(:user)
       integration = insert(:video_integration, user: user, is_active: true, needs_reauth: false)
 
@@ -84,11 +86,54 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerPermanentAuthTest do
              ) == :ok
 
       {:ok, state} = IntegrationHealthStateQueries.get(:video, integration.id)
-      assert %DateTime{} = state.notification_sent_at
+      assert state.notification_sent_at == nil
 
       refute_enqueued(
         worker: EmailWorker,
         args: %{"action" => "send_integration_unhealthy_notification"}
+      )
+    end
+
+    test "an integration still unhealthy after it is reconnected gets the unhealthy email" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, is_active: true, needs_reauth: false)
+
+      {:ok, _state} = IntegrationHealthStateQueries.get_or_init(:video, integration.id, user.id)
+
+      {1, nil} =
+        IntegrationHealthStateQueries.update_fields(:video, integration.id,
+          status: "unhealthy",
+          became_unhealthy_at: DateTime.add(DateTime.utc_now(), -49, :hour)
+        )
+
+      assert ResponseHandler.handle_permanent_auth_failure(
+               :video,
+               integration,
+               {:error, :unauthorized}
+             ) == :ok
+
+      {:ok, flagged} = VideoIntegrationQueries.get(integration.id)
+      assert flagged.needs_reauth
+
+      # The owner reconnects, but the integration keeps failing for another reason.
+      reconnected = flagged |> Changeset.change(needs_reauth: false) |> Repo.update!()
+      health_state = Monitor.get_state(:video, integration.id, user.id)
+
+      assert ResponseHandler.handle_transition(
+               :video,
+               reconnected,
+               {:no_change, :unhealthy, :unhealthy},
+               health_state
+             ) == :ok
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_unhealthy_notification",
+          "user_id" => user.id,
+          "integration_id" => integration.id,
+          "integration_type" => "video"
+        }
       )
     end
 

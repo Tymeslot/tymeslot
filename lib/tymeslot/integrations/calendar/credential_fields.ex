@@ -81,6 +81,9 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
   defp validate_server_url(nil, _metadata), do: {:ok, ""}
   defp validate_server_url("", _metadata), do: {:ok, ""}
 
+  # The private-address opt-out also admits a single-label host (a Docker
+  # service name), which the shape check would otherwise refuse before
+  # `do_validate_calendar_url/1` could apply the same opt-out to the https rule.
   defp validate_server_url(url, metadata) when is_binary(url) do
     case InputValidators.validate_server_url(url, metadata,
            error_message:
@@ -88,6 +91,7 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
                "dashboard_calendar_providers",
                "Please enter a valid server URL (e.g., https://cloud.example.com)"
              ),
+           internal_names_local: SsrfGuard.allow_private_for_calendar?(),
            validate_url_fn: &do_validate_calendar_url/1
          ) do
       {:ok, sanitized_url} -> {:ok, sanitized_url}
@@ -300,10 +304,16 @@ defmodule Tymeslot.Integrations.Calendar.CredentialFields do
   # guard honours. Reading it here is what makes that switch usable at all: a
   # URL the guard would permit still has to survive this form and the changeset
   # before it can be saved.
+  #
+  # The same opt-out lets plain http reach a server on an internal name (a
+  # Docker service name, `.lan`, `.home.arpa`), which never leaves the network.
   defp do_validate_calendar_url(url) do
+    allow_private = SsrfGuard.allow_private_for_calendar?()
+
     UrlValidation.validate_http_url(url,
       enforce_https_for_public: true,
-      block_private_ips: not SsrfGuard.allow_private_for_calendar?(),
+      internal_names_local: allow_private,
+      block_private_ips: not allow_private,
       https_error_message:
         dgettext("dashboard_calendar_providers", "Use HTTPS for non-local calendar servers"),
       private_ip_error_message:

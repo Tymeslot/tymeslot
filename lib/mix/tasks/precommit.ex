@@ -29,6 +29,14 @@ defmodule Mix.Tasks.Precommit do
   to load this task at all, so it aborts first and prints the error on its own.
   Same information, one step earlier.
 
+  ## Why the gate re-execs itself
+
+  The run's memory and CPU limits live in the workspace `mix.sh`, and a plain
+  `mix precommit` typed in a checkout reaches none of them. `Tymeslot.Precommit.Guard`
+  therefore puts the run inside them before any step starts, so the limits hold
+  however the gate was invoked. A run already wrapped, or one with no wrapper
+  above it, proceeds here unchanged.
+
   ## Why dialyzer runs incrementally
 
   The step runs `dialyzer.incremental`, not `dialyzer`. A classic PLT is
@@ -67,6 +75,7 @@ defmodule Mix.Tasks.Precommit do
   use Mix.Task
 
   alias Tymeslot.Precommit.CpuBudget
+  alias Tymeslot.Precommit.Guard
   alias Tymeslot.Precommit.Runner
 
   @steps [
@@ -92,13 +101,22 @@ defmodule Mix.Tasks.Precommit do
     {"deps.audit", ~w[deps.audit], :dev},
     {"migrations", ~w[excellent_migrations.check_safety], :dev},
     {"workflows", ~w[actionlint], :dev},
-    {"xref", ~w[xref graph --label compile-connected --fail-above 25], :dev},
+    # A ratchet against compile coupling creeping in, not a ban on it. Raised
+    # from 25 to 27 for the two video-provider registries that are read at
+    # compile time on purpose: `Bookings.Activation` needs its provider list
+    # as a literal because it appears in a guard, and the video provider
+    # picker fails the build when a provider has no group, mirroring the
+    # calendar picker. Both exist because a newly registered provider was
+    # once missed. Lower it again if either goes away.
+    {"xref", ~w[xref graph --label compile-connected --fail-above 27], :dev},
     {"test", ~w[test], :test},
     {"dialyzer", ~w[dialyzer.incremental --list-unused-filters], :dev}
   ]
 
   @impl Mix.Task
   def run(argv) do
+    Guard.ensure_wrapped("--core", argv: argv)
+
     {opts, _rest} = OptionParser.parse!(argv, strict: [fail_fast: :boolean])
     fail_fast? = Keyword.get(opts, :fail_fast, false)
 

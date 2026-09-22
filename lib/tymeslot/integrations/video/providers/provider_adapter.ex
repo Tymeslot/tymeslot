@@ -24,6 +24,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
   alias Tymeslot.Integrations.Video.MeetingContext
   alias Tymeslot.Integrations.Video.ProviderConfig
+  alias Tymeslot.Integrations.Video.Providers.LinkRoom
   alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
 
   @doc """
@@ -121,6 +122,54 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   end
 
   @doc """
+  The context's join URL for a recipient it cannot name — a booking's guests,
+  and a calendar event's description — as
+  `ProviderBehaviour.shared_join_url/2` describes it.
+
+  Providers that do not implement the optional callback answer with the
+  room's own URL, which is what they handed out before it existed, so a
+  provider whose links carry no credential is unaffected by construction
+  rather than by the caller remembering to ask first.
+  """
+  @spec shared_join_url(MeetingContext.t(), DateTime.t() | nil) ::
+          {:ok, String.t() | nil} | {:error, term()}
+  def shared_join_url(
+        %MeetingContext{provider_module: provider_module, room_data: room_data},
+        meeting_time
+      ) do
+    if callback_exported?(provider_module, :shared_join_url, 2) do
+      # Optional callback resolved at runtime via the guard above; apply/3
+      # keeps the static type checker from flagging providers that omit it.
+      # credo:disable-for-next-line Credo.Check.Refactor.Apply
+      apply(provider_module, :shared_join_url, [room_data, meeting_time])
+    else
+      {:ok, room_data.meeting_url}
+    end
+  end
+
+  @doc """
+  Whether the context's join URLs stop working some time after the meeting
+  time they were built for, so a reschedule has to build them again.
+
+  Providers that do not implement the optional `time_bound_join_urls?/1`
+  callback answer `false`.
+  """
+  @spec time_bound_join_urls?(MeetingContext.t()) :: boolean()
+  def time_bound_join_urls?(%MeetingContext{
+        provider_module: provider_module,
+        room_data: room_data
+      }) do
+    if callback_exported?(provider_module, :time_bound_join_urls?, 1) do
+      # Optional callback resolved at runtime via the guard above; apply/3
+      # keeps the static type checker from flagging providers that omit it.
+      # credo:disable-for-next-line Credo.Check.Refactor.Apply
+      apply(provider_module, :time_bound_join_urls?, [room_data.provider_config || %{}])
+    else
+      false
+    end
+  end
+
+  @doc """
   Extracts the room id from a meeting URL, guessing which provider the link
   belongs to.
 
@@ -142,7 +191,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
         extract_room_id(meeting_url, provider_type)
 
       {:error, _reason} ->
-        Logger.warning("Could not detect provider from URL", url: meeting_url)
+        # For kMeet, Jitsi and custom links the meeting URL is the join link,
+        # so only its scheme and host go to the log; that is also the part
+        # worth seeing when provider detection has failed.
+        Logger.warning("Could not detect provider from URL", url: LinkRoom.mask_url(meeting_url))
         nil
     end
   end

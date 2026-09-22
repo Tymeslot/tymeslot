@@ -53,6 +53,9 @@ defmodule Tymeslot.Announcements.Catalog do
   @time_off_published_at ~U[2026-09-19 00:00:00Z]
   @time_off_expires_at ~U[2026-10-19 00:00:00Z]
 
+  @video_providers_published_at ~U[2026-09-22 00:00:00Z]
+  @video_providers_expires_at ~U[2026-10-22 00:00:00Z]
+
   @spec list() :: [Announcement.t()]
   def list do
     # One builder per announcement keeps this ordered list trivial and each
@@ -60,6 +63,7 @@ defmodule Tymeslot.Announcements.Catalog do
     # last — add smaller improvements to its bullets rather than spawning new
     # entries.
     [
+      video_providers(),
       time_off(),
       booking_approval(),
       booking_page_text(),
@@ -75,6 +79,27 @@ defmodule Tymeslot.Announcements.Catalog do
       zoom_integration(),
       more_features()
     ]
+  end
+
+  defp video_providers do
+    %Announcement{
+      key: "video_providers_2026_09",
+      title: dgettext("onboarding", "Meet on Jitsi, kMeet or Nextcloud Talk"),
+      body:
+        dgettext(
+          "onboarding",
+          "Three more video providers join Zoom, Google Meet, Teams and MiroTalk in the " <>
+            "integrations picker. Point Tymeslot at your own Jitsi or Nextcloud and every " <>
+            "booking gets a room of its own: a Talk conversation keeps its lobby shut until " <>
+            "the meeting starts, moves when you reschedule and is deleted when you cancel. " <>
+            "kMeet needs no setup at all."
+        ),
+      image_path: "/images/announcements/video-providers.svg",
+      cta_label: dgettext("onboarding", "Read the docs"),
+      cta_docs_slug: "nextcloud-talk",
+      published_at: @video_providers_published_at,
+      expires_at: @video_providers_expires_at
+    }
   end
 
   defp time_off do

@@ -342,6 +342,8 @@ SMTP_CACERTFILE=/app/data/smtp-ca.pem
 SMTP_TLS_VERIFY=none
 ```
 
+Rarely, a firewall or proxy between the container and the relay drops a TLS 1.3 handshake because it does not look like TLS 1.2. The symptom is a connection that times out or closes during the handshake while the same relay works from other mail clients; `SMTP_TLS_MIDDLEBOX_COMPAT=true` restores the TLS 1.2 shape. Leave it off otherwise: relays that do not expect it abort every handshake, and the health check at boot says so explicitly when they do.
+
 **Option 2: a provider API (clearer delivery errors, no SMTP port needed)**
 ```bash
 EMAIL_ADAPTER=postmark
@@ -410,7 +412,8 @@ All outbound HTTP/HTTPS requests including:
 - CalDAV calendar integrations (Nextcloud, Radicale, etc.)
 - Google Calendar API
 - Microsoft Outlook/Office 365 API
-- Video provider APIs (Google Meet, Microsoft Teams)
+- Video provider APIs (Google Meet, Microsoft Teams, Zoom, Nextcloud Talk)
+- Reachability tests for self-hosted meeting servers (MiroTalk, Jitsi Meet, kMeet, custom links)
 - OAuth token exchanges
 - All other external API calls
 
@@ -419,6 +422,8 @@ All outbound HTTP/HTTPS requests including:
 - `graph.microsoft.com` (Outlook Calendar, Microsoft Teams)
 - `oauth2.googleapis.com` (OAuth)
 - Your CalDAV server domains
+- `kmeet.infomaniak.com` (kMeet)
+- Your own meeting server domains (MiroTalk, Jitsi Meet, Nextcloud Talk)
 - Any custom video provider endpoints
 
 ### Using an External Database
@@ -795,6 +800,7 @@ Tymeslot supports multiple OAuth providers for authentication and calendar/video
 - [Microsoft OAuth](https://tymeslot.app/docs/microsoft-oauth) · [Outlook Calendar](https://tymeslot.app/docs/outlook-calendar) · [Teams](https://tymeslot.app/docs/teams)
 - [GitHub login](https://tymeslot.app/docs/github-login) · [Generic OIDC / SSO](https://tymeslot.app/docs/oidc-sso)
 - [CalDAV](https://tymeslot.app/docs/caldav) (Nextcloud, Radicale, Zimbra, mailbox.org)
+- [MiroTalk](https://tymeslot.app/docs/mirotalk) · [Jitsi Meet](https://tymeslot.app/docs/jitsi) · [Nextcloud Talk](https://tymeslot.app/docs/nextcloud-talk) · [kMeet](https://tymeslot.app/docs/kmeet) · [Custom video link](https://tymeslot.app/docs/custom-video-link) (no OAuth app needed)
 
 ### Google OAuth Setup
 
@@ -942,6 +948,7 @@ The online docs at **<https://tymeslot.app/docs>** stay in lock-step with each r
 - [Backup & Restore](https://tymeslot.app/docs/backup-restore) — protecting your data volumes
 - [Upgrading](https://tymeslot.app/docs/upgrading) — moving between versions safely
 - [SMTP](https://tymeslot.app/docs/email-smtp) / [Postmark](https://tymeslot.app/docs/email-postmark) — email delivery
+- [MiroTalk](https://tymeslot.app/docs/mirotalk) · [Jitsi Meet](https://tymeslot.app/docs/jitsi) · [Nextcloud Talk](https://tymeslot.app/docs/nextcloud-talk) · [kMeet](https://tymeslot.app/docs/kmeet) · [Custom video link](https://tymeslot.app/docs/custom-video-link)
 - [Generic OIDC / SSO](https://tymeslot.app/docs/oidc-sso) · [reCAPTCHA](https://tymeslot.app/docs/recaptcha) · [Telegram](https://tymeslot.app/docs/telegram)
 
 ---
