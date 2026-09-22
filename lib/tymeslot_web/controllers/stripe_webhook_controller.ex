@@ -82,15 +82,22 @@ defmodule TymeslotWeb.StripeWebhookController do
 
   # Normalize result to a single error shape and ok atom for controller handling
   @type webhook_error :: atom() | Exception.t()
-  @spec normalize_result(
-          {:ok, webhook_status()}
-          | {:error, webhook_error, String.t() | nil}
-        ) ::
+  @spec normalize_result(term()) ::
           {:ok, webhook_status()} | {:error, webhook_error, String.t() | nil}
   defp normalize_result({:ok, status}) when is_atom(status), do: {:ok, status}
 
   defp normalize_result({:error, reason, message}) when is_binary(message) or is_nil(message),
     do: {:error, reason, message}
+
+  # A handler returned a result shape that doesn't match the
+  # `WebhookHandler` behaviour's contract. Treat it as a non-retryable
+  # error rather than crashing: crashing here leaves the idempotency lock
+  # held and Stripe retrying (and re-crashing) the same malformed event
+  # until it gives up, days later.
+  defp normalize_result(other) do
+    Logger.error("Webhook handler returned an unexpected result shape", result: inspect(other))
+    {:error, :invalid_handler_result, "Unexpected handler result: #{inspect(other)}"}
+  end
 
   @spec log_processing_result(
           {:ok, webhook_status()} | {:error, term()},
