@@ -16,5 +16,14 @@
   # `:test` build `mix test.affected` runs in (see `preferred_envs` in mix.exs)
   # and not in the `:dev` build Dialyzer analyses. Same reasoning as the
   # `@compile {:no_warn_undefined, TagTaxonomy}` on the task itself.
-  {"lib/mix/tasks/test.affected.ex", :unknown_function}
+  {"lib/mix/tasks/test.affected.ex", :unknown_function},
+
+  # gen_smtp types a `:network_failure` reason as `{:error, atom()}`, but its
+  # implicit-TLS path hands back the TLS alert whole,
+  # `{:error, {:tls_alert, {:unexpected_message, _}}}`, which
+  # `test/tymeslot/mailer/smtp_tls_transport_test.exs` asserts against a real
+  # relay. Matching on that shape is what lets the adapter retry a handshake
+  # refused for the missing middlebox record, so the clause stays and the
+  # contract is what is wrong.
+  {"lib/tymeslot/mailer/smtp_adapter.ex", :pattern_match}
 ]

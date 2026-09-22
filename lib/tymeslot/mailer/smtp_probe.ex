@@ -17,6 +17,8 @@ defmodule Tymeslot.Mailer.SmtpProbe do
 
   require Logger
 
+  alias Tymeslot.Mailer.SMTPConfig
+
   @dns_timeout_ms 3_000
   @connection_timeout_ms 5_000
 
@@ -33,7 +35,7 @@ defmodule Tymeslot.Mailer.SmtpProbe do
     Logger.info("Testing SMTP connection", host: host_string, port: port)
 
     with :ok <- test_dns_resolution(host, @dns_timeout_ms),
-         :ok <- test_smtp_connectivity(host, port, @connection_timeout_ms, config) do
+         :ok <- probe_connectivity(host, port, config) do
       Logger.info("✓ SMTP connection test passed")
       :ok
     else
@@ -45,6 +47,32 @@ defmodule Tymeslot.Mailer.SmtpProbe do
         )
 
         {:error, format_connection_error(reason, host_string, port)}
+    end
+  end
+
+  # Mirrors the one retry `Tymeslot.Mailer.SMTPAdapter` makes on a failed
+  # handshake, so the probe keeps answering the question it is asked — whether
+  # a send would get through. See `SMTPConfig.disable_middlebox_comp_mode/1`.
+  defp probe_connectivity(host, port, config) do
+    case test_smtp_connectivity(host, port, @connection_timeout_ms, config) do
+      {:error, {:tls_alert, {:unexpected_message, _detail}} = reason} ->
+        retry_without_middlebox_comp_mode(host, port, config, reason)
+
+      result ->
+        result
+    end
+  end
+
+  defp retry_without_middlebox_comp_mode(host, port, config, reason) do
+    tls_options = config[:tls_options] || []
+
+    if SMTPConfig.middlebox_comp_mode?(tls_options) do
+      retry_config =
+        Keyword.put(config, :tls_options, SMTPConfig.disable_middlebox_comp_mode(tls_options))
+
+      test_smtp_connectivity(host, port, @connection_timeout_ms, retry_config)
+    else
+      {:error, reason}
     end
   end
 

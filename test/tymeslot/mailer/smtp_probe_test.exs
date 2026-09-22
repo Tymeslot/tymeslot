@@ -129,16 +129,11 @@ defmodule Tymeslot.Mailer.SmtpProbeTest do
       end)
     end
 
-    # The probe restated the sender's TLS options instead of taking them, and
-    # so kept requiring the middlebox ChangeCipherSpec after the sender had
-    # stopped: on a relay that omits that record the probe failed with
-    # `:tls_failed` while every send went through, reporting a working mailer
-    # broken at every boot.
-    #
-    # A relay that actually omits the record cannot be built out of `:ssl` —
-    # an OTP server sends it precisely when the client's session id says the
-    # client is in middlebox mode — so the assertion is on that session id,
-    # which is what the option controls and what the relay decides from.
+    # The probe restated the sender's TLS options instead of taking them, so an
+    # option the sender gained went missing here and the probe handshook
+    # differently from the send it is meant to predict. The session id is what
+    # the compatibility mode controls and what a relay decides from, so it is
+    # the observable for both.
     test "handshakes with the middlebox compatibility mode the sender uses",
          %{certs: certs} do
       relay = FakeSmtpRelay.start(starttls: certs)
@@ -149,6 +144,20 @@ defmodule Tymeslot.Mailer.SmtpProbeTest do
 
       assert_receive {:smtp_relay, {:tls_up, info}}
       assert info.protocol == :"tlsv1.3"
+      assert info.session_id != ""
+    end
+
+    # Without the same retry the sender makes, the probe would report a relay
+    # broken at every boot while every email it sends goes through.
+    test "passes on a relay whose middlebox record never arrives", %{certs: certs} do
+      relay =
+        [starttls: certs] |> FakeSmtpRelay.start() |> FakeSmtpRelay.without_middlebox_record()
+
+      capture_log(fn ->
+        assert :ok = SmtpProbe.test_connection(relay_config(relay, cacertfile: certs.cacertfile))
+      end)
+
+      assert_receive {:smtp_relay, {:tls_up, info}}
       assert info.session_id == ""
     end
   end

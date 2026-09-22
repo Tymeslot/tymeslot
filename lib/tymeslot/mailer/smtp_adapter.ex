@@ -33,12 +33,18 @@ defmodule Tymeslot.Mailer.SMTPAdapter do
   alias Swoosh.Adapters.SMTP
   alias Swoosh.Adapters.SMTP.Helpers
   alias Swoosh.Email
+  alias Tymeslot.Mailer.SMTPConfig
 
   # Mirrors gen_smtp_client's `#smtp_client_socket{}` record, so the socket and
   # host are read by field name rather than by tuple position.
   Record.defrecordp(:smtp_client_socket, [:socket, :host, :extensions, :options])
 
   @default_session_timeout_ms 15_000
+
+  # gen_smtp reads the STARTTLS options from `:tls_options` and the
+  # implicit-TLS ones from `:sockopts`; a configuration carries whichever
+  # applies to it, and port 465 carries both.
+  @tls_option_keys [:tls_options, :sockopts]
 
   @impl Swoosh.Adapter
   def deliver(%Email{} = email, config) do
@@ -107,9 +113,51 @@ defmodule Tymeslot.Mailer.SMTPAdapter do
 
         options |> Keyword.put(:auth, :never) |> open_owned_by(owner)
 
+      # A TLS 1.3 relay that skips the optional middlebox compatibility
+      # ChangeCipherSpec aborts OTP's handshake before any message is sent.
+      # gen_smtp collapses the alert to `:tls_failed` on the STARTTLS path and
+      # keeps it on the implicit-TLS one; neither says which relay this is, so
+      # the one retry that can tell them apart is made here. See
+      # `SMTPConfig.disable_middlebox_comp_mode/1` for why neither setting
+      # works for every relay.
+      {:error, :retries_exceeded, {:temporary_failure, host, :tls_failed}} = error ->
+        retry_without_middlebox_comp_mode(options, owner, host, error)
+
+      {:error, :retries_exceeded,
+       {:network_failure, host, {:error, {:tls_alert, {:unexpected_message, _detail}}}}} = error ->
+        retry_without_middlebox_comp_mode(options, owner, host, error)
+
       error ->
         error
     end
+  end
+
+  defp retry_without_middlebox_comp_mode(options, owner, host, error) do
+    if Enum.any?(@tls_option_keys, &SMTPConfig.middlebox_comp_mode?(options[&1])) do
+      Logger.warning(
+        "TLS handshake with the relay failed; retrying without TLS 1.3 middlebox " <>
+          "compatibility mode, which relays that omit the dummy ChangeCipherSpec require.",
+        relay: to_string(host)
+      )
+
+      options
+      |> disable_middlebox_comp_mode()
+      |> open_owned_by(owner)
+    else
+      error
+    end
+  end
+
+  defp disable_middlebox_comp_mode(options) do
+    Enum.reduce(@tls_option_keys, options, fn key, acc ->
+      case Keyword.fetch(acc, key) do
+        {:ok, tls_options} ->
+          Keyword.put(acc, key, SMTPConfig.disable_middlebox_comp_mode(tls_options))
+
+        :error ->
+          acc
+      end
+    end)
   end
 
   defp recipients(email) do

@@ -13,7 +13,9 @@ defmodule Tymeslot.Mailer.SMTPTlsTransportTest do
   @moduletag :mailer
   @moduletag :integration
 
-  alias Tymeslot.Mailer.SMTPConfig
+  alias Swoosh.Email
+  alias Tymeslot.Mailer.{SMTPAdapter, SMTPConfig}
+  alias Tymeslot.Test.FakeSmtpRelay
 
   # Generous on purpose. A tight budget here does not test anything: the
   # relay is an ordinary Erlang process, and if the suite is busy enough that
@@ -71,18 +73,10 @@ defmodule Tymeslot.Mailer.SMTPTlsTransportTest do
                open(relay, cacertfile: relay.cacertfile)
     end
 
-    # OTP's TLS 1.3 client defaults to the middlebox compatibility mode and
-    # then requires the server to send a ChangeCipherSpec record that RFC 8446
-    # appendix D.4 makes optional; a relay that omits it aborts the handshake
-    # and every email fails with `:tls_failed`.
-    #
-    # A relay that omits the record cannot be built out of `:ssl` — an OTP
-    # server sends it precisely when the client's session id says the client is
-    # in middlebox mode — so the assertion is on that session id, which is what
-    # the option controls and what a relay decides from. An invented 32-byte id
-    # here means the mode is back on and the handshake would abort against the
-    # relays this guards.
-    test "negotiates TLS 1.3 without the middlebox compatibility handshake", %{
+    # With the record in place — what an OTP relay always sends a client in
+    # middlebox mode — nothing is retried and the session id says the mode was
+    # on for the handshake that carried the mail.
+    test "negotiates TLS 1.3 in the middlebox compatibility mode by default", %{
       trusted: certs
     } do
       relay = start_tls_relay(certs)
@@ -90,6 +84,34 @@ defmodule Tymeslot.Mailer.SMTPTlsTransportTest do
       assert {:ok, socket} = open(relay, cacertfile: relay.cacertfile)
       :gen_smtp_client.close(socket)
 
+      assert_receive {:tls_up, info}, @timeout
+      assert info.protocol == :"tlsv1.3"
+      assert info.session_id != ""
+    end
+  end
+
+  describe "a relay whose middlebox ChangeCipherSpec never arrives" do
+    setup %{trusted: certs} do
+      %{relay: certs |> start_tls_relay() |> FakeSmtpRelay.without_middlebox_record()}
+    end
+
+    test "aborts the handshake under the configuration a send starts from", %{relay: relay} do
+      # OTP's client asserts a record RFC 8446 appendix D.4 leaves optional, so
+      # the session fails before any message is sent — and on the STARTTLS path
+      # gen_smtp collapses the alert to `:tls_failed`, which is indistinguishable
+      # from a rejected certificate. Hence a retry rather than a diagnosis.
+      assert {:error, :retries_exceeded,
+              {:network_failure, _host, {:error, {:tls_alert, {:unexpected_message, _detail}}}}} =
+               open(relay, cacertfile: relay.cacertfile)
+    end
+
+    @tag :capture_log
+    test "delivers once the adapter retries without the compatibility mode", %{relay: relay} do
+      assert {:ok, _receipt} =
+               SMTPAdapter.deliver(email(), config(relay, cacertfile: relay.cacertfile))
+
+      # Only the retry completes a handshake, and it completes it with the mode
+      # off: an empty session id is the observable that says so.
       assert_receive {:tls_up, info}, @timeout
       assert info.protocol == :"tlsv1.3"
       assert info.session_id == ""
@@ -101,12 +123,32 @@ defmodule Tymeslot.Mailer.SMTPTlsTransportTest do
   # dialogue are test scaffolding; every TLS option under test is the one
   # `SMTPConfig` produced.
   defp open(relay, extra) do
+    relay
+    |> config(extra)
+    |> Keyword.drop([:adapter])
+    |> :gen_smtp_client.open()
+  end
+
+  defp config(relay, extra) do
     [host: "localhost", port: 465, username: "user", password: "pass"]
     |> Keyword.merge(extra)
     |> SMTPConfig.build()
-    |> Keyword.drop([:adapter])
-    |> Keyword.merge(port: relay.port, auth: :never, retries: 0, timeout: @timeout)
-    |> :gen_smtp_client.open()
+    |> Keyword.merge(
+      port: relay.port,
+      auth: :never,
+      retries: 0,
+      timeout: @timeout,
+      session_timeout: @timeout
+    )
+  end
+
+  defp email do
+    Email.new(
+      from: {"Tymeslot", "no-reply@example.com"},
+      to: {"Booker", "booker@example.com"},
+      subject: "Reminder",
+      text_body: "See you tomorrow."
+    )
   end
 
   defp relay_certificates(dns_name) do
@@ -136,13 +178,24 @@ defmodule Tymeslot.Mailer.SMTPTlsTransportTest do
     %{port: port, cacertfile: cacertfile}
   end
 
+  # Serves one connection at a time until the listener closes, rather than
+  # exiting after the first: a client whose handshake is refused reconnects to
+  # try something else, and a relay that has already gone would fail that
+  # second attempt for the wrong reason.
   defp serve(listen, owner) do
-    with {:ok, socket} <- :ssl.transport_accept(listen, @timeout),
-         {:ok, connection} <- :ssl.handshake(socket, @timeout) do
-      {:ok, info} = :ssl.connection_information(connection)
-      send(owner, {:tls_up, %{protocol: info[:protocol], session_id: info[:session_id]}})
-      :ssl.send(connection, "220 localhost ESMTP test\r\n")
-      dialogue(connection)
+    with {:ok, socket} <- :ssl.transport_accept(listen, @timeout) do
+      case :ssl.handshake(socket, @timeout) do
+        {:ok, connection} ->
+          {:ok, info} = :ssl.connection_information(connection)
+          send(owner, {:tls_up, %{protocol: info[:protocol], session_id: info[:session_id]}})
+          :ssl.send(connection, "220 localhost ESMTP test\r\n")
+          dialogue(connection)
+
+        {:error, _refused} ->
+          :ok
+      end
+
+      serve(listen, owner)
     end
   end
 
@@ -150,6 +203,12 @@ defmodule Tymeslot.Mailer.SMTPTlsTransportTest do
     case :ssl.recv(connection, 0, @timeout) do
       {:ok, "EHLO" <> _rest} ->
         :ssl.send(connection, "250-localhost\r\n250 SIZE 10240000\r\n")
+        dialogue(connection)
+
+      {:ok, "DATA" <> _rest} ->
+        :ssl.send(connection, "354 End data with <CR><LF>.<CR><LF>\r\n")
+        read_message(connection)
+        :ssl.send(connection, "250 OK: queued as test\r\n")
         dialogue(connection)
 
       {:ok, "QUIT" <> _rest} ->
@@ -162,6 +221,15 @@ defmodule Tymeslot.Mailer.SMTPTlsTransportTest do
 
       {:error, _reason} ->
         :ok
+    end
+  end
+
+  # Swallows the message body, which ends on the lone dot of RFC 5321 §4.1.1.4.
+  defp read_message(connection) do
+    case :ssl.recv(connection, 0, @timeout) do
+      {:ok, ".\r\n"} -> :ok
+      {:ok, _line} -> read_message(connection)
+      {:error, _reason} -> :ok
     end
   end
 
