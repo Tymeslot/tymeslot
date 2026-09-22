@@ -147,4 +147,55 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SharedToUtcTest do
       assert %{until: ~D[2026-06-30]} = RRule.parse(rule, timezone: "America/Los_Angeles")
     end
   end
+
+  describe "recurrence_timezone/2" do
+    test "an event's own timezone wins over the organiser's profile zone" do
+      assert Shared.recurrence_timezone(
+               %{timezone: "America/Los_Angeles"},
+               "Europe/Tallinn"
+             ) == "America/Los_Angeles"
+    end
+
+    test "an event carrying no timezone falls back to the organiser's" do
+      assert Shared.recurrence_timezone(%{timezone: nil}, "Europe/Tallinn") == "Europe/Tallinn"
+      assert Shared.recurrence_timezone(%{timezone: ""}, "Europe/Tallinn") == "Europe/Tallinn"
+      assert Shared.recurrence_timezone(%{}, "Europe/Tallinn") == "Europe/Tallinn"
+    end
+
+    test "no event at all falls back to the organiser's" do
+      assert Shared.recurrence_timezone(nil, "Europe/Tallinn") == "Europe/Tallinn"
+    end
+  end
+
+  describe "a series ends its day on the calendar it sits on" do
+    @cross_zone_params %{"freq" => "daily", "end_type" => "until", "until" => "2026-12-31"}
+
+    # A Tallinn organiser editing a Los Angeles series. Ending the day in the
+    # profile zone puts UNTIL at 21:59:59Z, which is 13:59 in Los Angeles and
+    # cuts that day's afternoon occurrences; the event's own zone ends it at
+    # 23:59:59 local, 07:59:59Z the next day.
+    test "the event's zone ends the day, not the organiser's" do
+      event = %{timezone: "America/Los_Angeles"}
+
+      context = %{
+        all_day: false,
+        start_date: ~D[2026-06-01],
+        timezone: Shared.recurrence_timezone(event, "Europe/Tallinn")
+      }
+
+      assert Shared.compose_recurrence_rule(@cross_zone_params, context) ==
+               "FREQ=DAILY;UNTIL=20270101T075959Z"
+    end
+
+    test "the organiser's zone still ends the day for an event that has none" do
+      context = %{
+        all_day: false,
+        start_date: ~D[2026-06-01],
+        timezone: Shared.recurrence_timezone(%{timezone: nil}, "Europe/Tallinn")
+      }
+
+      assert Shared.compose_recurrence_rule(@cross_zone_params, context) ==
+               "FREQ=DAILY;UNTIL=20261231T215959Z"
+    end
+  end
 end
