@@ -20,7 +20,9 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
 
   alias Plug.Test, as: PlugTest
   alias Tymeslot.Auth.OAuth.{Client, FlowHandler, State, URLs, UserProcessor, UserRegistration}
-  alias Tymeslot.Auth.Session
+  alias Tymeslot.Auth.{Session, UserSchema}
+  alias Tymeslot.Factory
+  alias Tymeslot.Repo
   alias Tymeslot.Test.LogCapture
 
   setup do
@@ -283,6 +285,32 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
       assert event.event_type == "social_auth_failure"
       assert event.provider == "github"
       assert event.email_masked == "u***@example.com"
+    end
+
+    test "refuses and logs a login whose email belongs to an account from another provider" do
+      setup_existing_user_flow_mocks()
+
+      # Real lookup, so the refusal is decided against the database
+      :meck.expect(UserRegistration, :find_existing_user, fn provider, user ->
+        :meck.passthrough([provider, user])
+      end)
+
+      google_account =
+        Factory.insert(:user,
+          email: "user@example.com",
+          provider: "google",
+          google_user_id: "google-id"
+        )
+
+      capture_at_info(fn ->
+        assert {:error, :email_already_taken, :github, _conn} = invoke_github_callback()
+      end)
+
+      assert [event] = social_auth_events()
+      assert event.event_type == "social_auth_failure"
+      assert event.provider == "github"
+      assert event.email_masked == "u***@example.com"
+      assert Repo.get!(UserSchema, google_account.id).github_user_id == nil
     end
 
     test "does not log a failure when a new user is routed to registration" do

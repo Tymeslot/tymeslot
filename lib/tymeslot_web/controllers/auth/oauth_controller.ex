@@ -513,6 +513,14 @@ defmodule TymeslotWeb.OAuthController do
     |> redirect(to: paths[:login_path])
   end
 
+  defp respond_to_oauth_result({:error, :email_already_taken, _provider, flow_conn}, paths) do
+    AuthControllerHelpers.oauth_error_response(
+      flow_conn,
+      :email_already_taken,
+      paths[:login_path]
+    )
+  end
+
   defp provider_name(:github), do: "GitHub"
   defp provider_name(:google), do: "Google"
   defp provider_name(:oauth), do: "SSO"

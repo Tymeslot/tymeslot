@@ -23,52 +23,47 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   @type oauth_profile_params :: TransactionalUserCreation.oauth_profile_params()
 
   @doc """
-  Finds an existing user in the database by OAuth provider information.
+  Finds the account an OAuth login belongs to, by the provider's own user ID.
+
+  Never matches by email: each account belongs to the sign-in method that
+  created it. When no account carries this provider ID but the login's email
+  is already registered, returns `{:error, :email_already_taken}` so the
+  caller can point the user at their original sign-in method rather than
+  routing them into a registration that cannot succeed.
   """
   @spec find_existing_user(provider(), oauth_registration_data()) ::
-          {:ok, map()} | {:error, :not_found}
-  def find_existing_user(:github, %{email: email, github_user_id: github_id} = user) do
+          {:ok, map()} | {:error, :not_found | :email_already_taken}
+  def find_existing_user(:github, %{github_user_id: github_id} = user) do
     user_queries = Config.user_queries_module()
-    github_id_int = normalize_github_id(github_id)
 
-    find_user_by_id_or_email(
+    find_user_by_provider_id(
       user_queries,
       &user_queries.get_user_by_github_id/1,
-      github_id_int,
-      email,
-      is_verified: Map.get(user, :is_verified, false)
+      normalize_github_id(github_id),
+      Map.get(user, :email)
     )
   end
 
-  def find_existing_user(:google, %{email: email, google_user_id: google_id} = user) do
+  def find_existing_user(:google, %{google_user_id: google_id} = user) do
     user_queries = Config.user_queries_module()
 
-    find_user_by_id_or_email(
+    find_user_by_provider_id(
       user_queries,
       &user_queries.get_user_by_google_id/1,
       google_id,
-      email,
-      is_verified: Map.get(user, :is_verified, false)
+      Map.get(user, :email)
     )
   end
 
   def find_existing_user(:oauth, %{provider_uid: uid} = user) do
     user_queries = Config.user_queries_module()
 
-    case user_queries.get_user_by_provider("oauth", uid) do
-      {:ok, found_user} ->
-        {:ok, found_user}
-
-      {:error, :not_found} ->
-        # Only fall back to email lookup when the IdP has verified the email.
-        # Trusting an unverified email would let a rogue IdP claim any address
-        # and gain access to an existing account.
-        if Map.get(user, :is_verified, false) do
-          find_user_by_email(user_queries, Map.get(user, :email))
-        else
-          {:error, :not_found}
-        end
-    end
+    find_user_by_provider_id(
+      user_queries,
+      &user_queries.get_user_by_provider("oauth", &1),
+      uid,
+      Map.get(user, :email)
+    )
   end
 
   @doc """
@@ -180,34 +175,27 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
     end
   end
 
-  defp find_user_by_id_or_email(user_queries, id_lookup_fn, user_id, email, opts) do
-    is_verified = Keyword.get(opts, :is_verified, false)
-
-    if is_integer(user_id) or is_binary(user_id) do
-      case id_lookup_fn.(user_id) do
-        {:error, :not_found} -> find_user_by_verified_email(user_queries, email, is_verified)
-        {:ok, user} -> {:ok, user}
-      end
-    else
-      find_user_by_verified_email(user_queries, email, is_verified)
+  defp find_user_by_provider_id(user_queries, id_lookup_fn, user_id, email) do
+    case lookup_by_provider_id(id_lookup_fn, user_id) do
+      {:ok, user} -> {:ok, user}
+      {:error, :not_found} -> check_email_unregistered(user_queries, email)
     end
   end
 
-  defp find_user_by_verified_email(user_queries, email, true = _is_verified) do
-    find_user_by_email(user_queries, email)
-  end
+  defp lookup_by_provider_id(id_lookup_fn, user_id)
+       when is_integer(user_id) or is_binary(user_id),
+       do: id_lookup_fn.(user_id)
 
-  defp find_user_by_verified_email(_user_queries, _email, _is_verified) do
-    {:error, :not_found}
-  end
+  defp lookup_by_provider_id(_id_lookup_fn, _user_id), do: {:error, :not_found}
 
-  defp find_user_by_email(user_queries, email) do
-    if email && String.trim(email) != "" do
-      user_queries.get_user_by_email(email)
-    else
-      {:error, :not_found}
+  defp check_email_unregistered(user_queries, email) when is_binary(email) and email != "" do
+    case user_queries.get_user_by_email(email) do
+      {:ok, _user} -> {:error, :email_already_taken}
+      {:error, :not_found} -> {:error, :not_found}
     end
   end
+
+  defp check_email_unregistered(_user_queries, _email), do: {:error, :not_found}
 
   defp determine_email_verification_status(%{email_from_provider: true}), do: true
   defp determine_email_verification_status(%{email_from_provider: false}), do: false
