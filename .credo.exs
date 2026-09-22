@@ -145,6 +145,24 @@
           {CredoChecks.NoSwallowedException, [priority: :normal]},
           {CredoChecks.NoInlineCaldavList, [priority: :normal]},
           {CredoChecks.AttendeeNotificationsBoundary, []},
+          # The block below mechanises rules that were previously enforced by
+          # review alone. All but MoxExpectRequiresVerify start at zero
+          # findings: they are regression guards for failure modes this
+          # codebase has either already paid for once or cannot detect at
+          # runtime, since every one of them fails silently rather than
+          # raising.
+          {CredoChecks.PhantomLiveCallback, [priority: :high]},
+          {CredoChecks.PutFlashInLiveComponent, [priority: :normal]},
+          {CredoChecks.HttpClientBoundary, [priority: :normal]},
+          {CredoChecks.NoSaasReferenceInCore, [priority: :high]},
+          {CredoChecks.NoMixEnvInCoreLib, [priority: :high]},
+          {CredoChecks.PreloadOrderThroughAssociation, [priority: :normal]},
+          {CredoChecks.ObanQueueDeclared, [priority: :high]},
+          {CredoChecks.TestGlobalStateRequiresSync, [priority: :high]},
+          # The only one of the block with a backlog: eight test files set a
+          # Mox expectation that nothing ever verifies. Reporting only
+          # (exit_status: 0) until they are worked through, then gate it.
+          {CredoChecks.MoxExpectRequiresVerify, [priority: :low, exit_status: 0]},
 
           #
           ## Test Quality Checks (jump_credo_checks)
