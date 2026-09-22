@@ -1613,3 +1613,8 @@ msgstr "kMeet je služba provozovaná společností Infomaniak a vždy použív
 #, elixir-autogen, elixir-format
 msgid "Each booking gets its own public Talk conversation, and guests join from its link without a Nextcloud account. To skip the lobby and moderate, sign in to Nextcloud in your browser as this login name first, with your usual password and any second factor; the app password works only for Tymeslot. Anyone else, other Nextcloud users included, waits in the lobby until the meeting starts. A conversation is deleted when its booking is cancelled, and about a week after the meeting ends."
 msgstr "Každá rezervace dostane vlastní veřejnou konverzaci Talk a hosté se připojují přes její odkaz bez účtu Nextcloud. Chcete-li přeskočit čekárnu a moderovat, přihlaste se nejprve v prohlížeči ke službě Nextcloud pod tímto přihlašovacím jménem, a to svým běžným heslem a případným druhým faktorem; heslo pro aplikaci funguje jen pro Tymeslot. Všichni ostatní, včetně dalších uživatelů Nextcloud, čekají v čekárně, dokud schůzka nezačne. Konverzace se smaže, když je její rezervace zrušena, a také přibližně týden po skončení schůzky."
+
+#: lib/tymeslot/integrations/shared/input_validators.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the address on its own and put the username and password in their own fields."
+msgstr "Zadejte pouze adresu a uživatelské jméno s heslem vyplňte do jejich vlastních polí."

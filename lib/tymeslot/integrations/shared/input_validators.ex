@@ -21,6 +21,18 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
   # not to do.
   @forbidden_url_chars ~r/[\p{Z}\p{C}]/u
 
+  # Whether a typed URL already carries a scheme. The RFC 3986 §3.1 production
+  # allows a dot in a scheme, so it alone cannot tell `ftp://files.example.com`
+  # from a typed `cloud.example.com:8443`, which is a host and a port and needs
+  # its `https://` as much as a bare hostname does. Two narrower shapes settle
+  # it between them: any scheme followed by `//`, which is every hierarchical
+  # URL someone could paste into a server field, or a dot-free scheme, which is
+  # what the opaque ones (`mailto:`, `javascript:`, `data:`) look like.
+  #
+  # Both are anchored and both require a leading letter, which is load-bearing:
+  # without it `8443:something` would read as carrying a scheme.
+  @scheme_prefix ~r{\A(?:[a-zA-Z][a-zA-Z0-9+.-]*://|[a-zA-Z][a-zA-Z0-9+-]*:)}
+
   @doc """
   Strict, centralized validator for integration names with universal sanitization.
 
@@ -45,28 +57,33 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
 
   @doc """
   Normalizes a URL by adding https:// if no protocol is present.
+
+  A URL that already carries a scheme is left exactly as typed, whatever that
+  scheme is, so the scheme allow-list downstream can refuse it in its own words.
+  Prefix-matching `http://` and `https://` instead glued a second scheme onto
+  the front of `ftp://…` and `HTTPS://…` alike, which made every one of them
+  fail the *host* check with a message about the host, and rejected a correctly
+  typed URL whose scheme a mobile keyboard had autocapitalised.
   """
   @spec normalize_url_protocol(String.t()) :: String.t()
   def normalize_url_protocol(url) do
     trimmed_url = String.trim(url)
 
     cond do
-      # Already has a protocol
-      String.starts_with?(trimmed_url, ["http://", "https://"]) ->
-        trimmed_url
-
-      # No protocol - add https://
-      trimmed_url != "" ->
-        "https://" <> trimmed_url
-
-      # Empty string
-      true ->
-        trimmed_url
+      trimmed_url == "" -> trimmed_url
+      Regex.match?(@scheme_prefix, trimmed_url) -> trimmed_url
+      true -> "https://" <> trimmed_url
     end
   end
 
   @doc """
   Shared server URL validation logic.
+
+  Credentials in the URL itself are refused: `https://user:pass@cloud.example.com`
+  parses to a perfectly good host and would be stored verbatim, while every
+  screen that renders a connection shows the host alone, so the password would
+  sit in a field nothing displays. The username and password fields already
+  exist for it.
 
   A host needs a dot, as a public domain has, unless it is `localhost`. With
   `internal_names_local: true` a single-label internal name (a Docker service
@@ -123,6 +140,13 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
 
       is_nil(uri.host) or uri.host == "" ->
         {:error, error_msg}
+
+      not is_nil(uri.userinfo) ->
+        {:error,
+         dgettext(
+           "dashboard_integrations",
+           "Enter the address on its own and put the username and password in their own fields."
+         )}
 
       not host_shape_allowed?(uri.host, internal_names_local) ->
         {:error, error_msg}

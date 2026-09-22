@@ -324,7 +324,13 @@ defmodule Tymeslot.Availability.BusinessHours do
   end
 
   defp open_after_time_off?(:closed, _periods, _date), do: false
-  defp open_after_time_off?(:no_hours, _periods, _date), do: true
+
+  # An override that opens a day without naming hours, where the weekly pattern
+  # has none either, has nothing to offer, so the day is closed. This is what
+  # `get_business_hours_in_timezone/5` already answers for the same day; the two
+  # readings of the schedule have to agree or the day draws as bookable and then
+  # holds no slots.
+  defp open_after_time_off?(:no_hours, _periods, _date), do: false
 
   defp open_after_time_off?({_start_time, _end_time} = window, periods, date) do
     bookable_time_left?(window, TimeOff.windows_for_day(periods, date))
