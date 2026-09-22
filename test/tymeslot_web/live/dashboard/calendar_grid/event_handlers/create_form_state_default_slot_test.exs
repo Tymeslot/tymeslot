@@ -78,6 +78,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormStateDefaul
     assert saveable?(slot, "Europe/Berlin")
   end
 
+  test "steps past the hour a fall-back DST transition repeats" do
+    # 01:30 CEST in Berlin on the night the clocks go back: 02:00 plus an hour
+    # is 02:00 again, so both ends of the slot used to read as hour 2 and the
+    # save refused a proposal of no length.
+    slot = open_at(~U[2026-10-24 23:30:00Z], "Europe/Berlin")
+
+    assert %{date: "2026-10-25", end_date: "2026-10-25", start_hour: 2, end_hour: 3} = slot
+    assert saveable?(slot, "Europe/Berlin")
+  end
+
   test "skips the hour a spring-forward DST transition removes" do
     # 01:20 CET in Berlin: 02:00 does not exist that night, so both ends of a
     # 02:00-03:00 slot would resolve to 03:00 and the save would be refused.
