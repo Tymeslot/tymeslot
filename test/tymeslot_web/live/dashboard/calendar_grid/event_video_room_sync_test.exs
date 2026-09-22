@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
+  alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Calendar.CreatedEvent
@@ -346,18 +347,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoRoomSyncTest do
           )
         end
 
-      # Dragging the second occurrence to before the first opens the lobby
-      # earlier, and never brings the room's deletion forward.
+      # The grid refuses to edit one occurrence of a CalDAV series, since every
+      # write lands on the master VEVENT, so the move arrives at the room from
+      # the sync instead.
       new_start = ~U[2026-10-04 09:00:00Z]
-      expect(Tymeslot.CalendarMock, :update_event, fn _uid, _event_data, _context -> :ok end)
 
-      assert {:ok, _updated} =
+      assert {:error, %{reason: :recurring_event}} =
                CalendarGrid.update_event(
                  user.id,
                  second,
-                 %{start_at: new_start, end_at: ~U[2026-10-04 10:00:00Z]},
-                 recurrence_scope: "this"
+                 %{start_at: new_start, end_at: ~U[2026-10-04 10:00:00Z]}
                )
+
+      # Moving the second occurrence to before the first opens the lobby
+      # earlier, and never brings the room's deletion forward.
+      :ok =
+        EventVideoRooms.rescheduled(%{
+          second
+          | start_at: new_start,
+            end_at: ~U[2026-10-04 10:00:00Z]
+        })
 
       moved = Repo.reload!(room)
       assert moved.lobby_opens_at == new_start
