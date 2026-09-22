@@ -166,13 +166,11 @@ defmodule TymeslotWeb.Integration.SlackOAuthJourneyTest do
       # Create a pending OAuth integration directly (simulating stage 2 outcome)
       {:ok, pending} =
         Slack.complete_oauth(user.id, %{
-          name: "Test Workspace",
           bot_token: "xoxb-pending-token",
           team_id: "TTEST01",
           team_name: "Test Workspace",
           authed_user_id: "UTEST01",
-          scope: "chat:write",
-          events: ["meeting.created"]
+          scope: "chat:write"
         })
 
       assert SlackIntegrationSchema.status(pending) == :pending_oauth
@@ -192,13 +190,11 @@ defmodule TymeslotWeb.Integration.SlackOAuthJourneyTest do
          %{conn: conn, user: user} do
       {:ok, pending} =
         Slack.complete_oauth(user.id, %{
-          name: "Test Workspace",
           bot_token: "xoxb-pending-token",
           team_id: "TTEST01",
           team_name: "Test Workspace",
           authed_user_id: "UTEST01",
-          scope: "chat:write",
-          events: ["meeting.created"]
+          scope: "chat:write"
         })
 
       assert SlackIntegrationSchema.status(pending) == :pending_oauth
