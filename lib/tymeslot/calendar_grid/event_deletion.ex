@@ -42,6 +42,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   require Logger
 
   alias Tymeslot.CalendarGrid.EventMove
+  alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -126,7 +127,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
            opts
          ) do
       {:ok, result} ->
-        purge_local_traces(integration_id, uid, user_id)
+        purge_local_traces(user_id, event)
         {:ok, %{uid: uid, integration_id: integration_id, linked_meeting: linked_meeting(result)}}
 
       {:error, reason} ->
@@ -134,15 +135,20 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
     end
   end
 
-  # Both steps run after the event has already gone from the calendar, so
-  # neither may turn a delete that happened into one the organiser is told to
+  # Every step runs after the event has already gone from the calendar, so none
+  # of them may turn a delete that happened into one the organiser is told to
   # retry. A cached row that outlives its event is removed by the next sync
-  # anyway, and a stale availability entry expires on its own; a message
-  # telling the organiser to delete an event that no longer exists does not
-  # recover. They are rescued one by one so a failing cache delete still
-  # leaves the availability invalidated.
-  defp purge_local_traces(integration_id, uid, user_id) do
+  # anyway, a video room left behind falls due to the nightly expiry scan, and
+  # a stale availability entry expires on its own; a message telling the
+  # organiser to delete an event that no longer exists does not recover. They
+  # are rescued one by one so a failing room clean-up still leaves the cached
+  # row deleted and the availability invalidated.
+  defp purge_local_traces(user_id, %{uid: uid, calendar_integration_id: integration_id} = event) do
     context = [user_id: user_id, calendar_integration_id: integration_id, uid: uid]
+
+    after_delete("delete the event's video rooms", context, fn ->
+      :ok = EventVideoRooms.event_deleted(event)
+    end)
 
     after_delete("delete the cached event row", context, fn ->
       {:ok, _deleted_or_missing} = ProviderCalendarEventQueries.delete_by_uid(integration_id, uid)

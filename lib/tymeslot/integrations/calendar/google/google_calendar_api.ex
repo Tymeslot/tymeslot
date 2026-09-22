@@ -227,6 +227,22 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   end
 
   @doc """
+  Fetches one event of the specified calendar by its Google event id.
+
+  A deleted event answers 404, or 410 once Google has purged it; one deleted
+  recently can still come back with `"status" => "cancelled"`.
+  """
+  @impl CalendarAPIBehaviour
+  @spec get_event(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
+          {:ok, calendar_event()} | api_error()
+  def get_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_id) do
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      google_event_id = EventMapper.uuid_to_google_event_id(event_id)
+      make_request(:get, "/calendars/#{URI.encode(calendar_id)}/events/#{google_event_id}", token)
+    end)
+  end
+
+  @doc """
   Deletes an event from the specified calendar.
   """
   @impl CalendarAPIBehaviour

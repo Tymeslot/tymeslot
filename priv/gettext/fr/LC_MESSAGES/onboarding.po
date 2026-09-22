@@ -333,3 +333,13 @@ msgstr "Ajoutez une absence depuis la page Disponibilités et ces jours cessent 
 #, elixir-autogen, elixir-format
 msgid "Close the days you are away"
 msgstr "Fermez les jours de votre absence"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Meet on Jitsi, kMeet or Nextcloud Talk"
+msgstr "Se retrouver sur Jitsi, kMeet ou Nextcloud Talk"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Three more video providers join Zoom, Google Meet, Teams and MiroTalk in the integrations picker. Point Tymeslot at your own Jitsi or Nextcloud and every booking gets a room of its own: a Talk conversation keeps its lobby shut until the meeting starts, moves when you reschedule and is deleted when you cancel. kMeet needs no setup at all."
+msgstr "Trois fournisseurs vidéo de plus rejoignent Zoom, Google Meet, Teams et MiroTalk dans le sélecteur d'intégrations. Indiquez à Tymeslot votre propre Jitsi ou Nextcloud et chaque réservation obtient sa propre salle : une conversation Talk garde son salon d'attente fermé jusqu'au début du rendez-vous, se déplace quand vous reportez et est supprimée quand vous annulez. kMeet ne demande aucune configuration."

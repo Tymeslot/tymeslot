@@ -92,7 +92,14 @@ defmodule Mix.Tasks.Precommit do
     {"deps.audit", ~w[deps.audit], :dev},
     {"migrations", ~w[excellent_migrations.check_safety], :dev},
     {"workflows", ~w[actionlint], :dev},
-    {"xref", ~w[xref graph --label compile-connected --fail-above 25], :dev},
+    # A ratchet against compile coupling creeping in, not a ban on it. Raised
+    # from 25 to 27 for the two video-provider registries that are read at
+    # compile time on purpose: `Bookings.Activation` needs its provider list
+    # as a literal because it appears in a guard, and the video provider
+    # picker fails the build when a provider has no group, mirroring the
+    # calendar picker. Both exist because a newly registered provider was
+    # once missed. Lower it again if either goes away.
+    {"xref", ~w[xref graph --label compile-connected --fail-above 27], :dev},
     {"test", ~w[test], :test},
     {"dialyzer", ~w[dialyzer.incremental --list-unused-filters], :dev}
   ]

@@ -13,6 +13,9 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.CalendarGrid.EventVideo
+  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
+  alias Tymeslot.CalendarGrid.EventVideoRooms
+  alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
@@ -403,6 +406,82 @@ defmodule Tymeslot.CalendarGrid do
       {:error, :not_found} -> {:error, :not_found}
     end
   end
+
+  # --- Video rooms of grid events (see `EventVideoRooms`) ---
+
+  @doc "Records a video room made for a grid event. See `EventVideoRooms.record/2`."
+  @spec record_event_video_room(map(), map()) :: :ok
+  defdelegate record_event_video_room(meeting_context, event), to: EventVideoRooms, as: :record
+
+  @doc "Brings a grid event's video rooms in step with its timing. See `EventVideoRooms.rescheduled/1`."
+  @spec reschedule_event_video_rooms(map()) :: :ok
+  defdelegate reschedule_event_video_rooms(event), to: EventVideoRooms, as: :rescheduled
+
+  @doc "Follows a grid event moved to another integration. See `EventVideoRooms.moved/4`."
+  @spec move_event_video_rooms(
+          map(),
+          pos_integer(),
+          String.t(),
+          String.t() | nil,
+          String.t() | nil
+        ) :: :ok
+  defdelegate move_event_video_rooms(
+                event,
+                to_integration_id,
+                new_uid,
+                provider_uid,
+                provider_calendar_id
+              ),
+              to: EventVideoRooms,
+              as: :moved
+
+  @doc "Deletes a deleted grid event's video rooms. See `EventVideoRooms.event_deleted/1`."
+  @spec delete_event_video_rooms(map()) :: :ok
+  defdelegate delete_event_video_rooms(event), to: EventVideoRooms, as: :event_deleted
+
+  @doc "Whether an ended grid event's room may be deleted. See `EventVideoRooms.check_expired/1`."
+  @spec check_event_video_room_expired(EventVideoRoomSchema.t()) :: :expired | :kept
+  defdelegate check_event_video_room_expired(room), to: EventVideoRooms, as: :check_expired
+
+  @doc "Whether an ended grid event's room may be deleted now. See `EventVideoRooms.confirm_expired/1`."
+  @spec confirm_event_video_room_expired(EventVideoRoomSchema.t()) :: :expired | :kept
+  defdelegate confirm_event_video_room_expired(room),
+    to: EventVideoRooms,
+    as: :confirm_expired
+
+  @doc "A grid event's video room with its integrations loaded."
+  @spec get_event_video_room(pos_integer()) ::
+          {:ok, EventVideoRoomSchema.t()} | {:error, :not_found}
+  defdelegate get_event_video_room(id), to: EventVideoRoomQueries, as: :get_with_integrations
+
+  @doc "Removes the record of a grid event's video room once the room is gone."
+  @spec forget_event_video_room(EventVideoRoomSchema.t()) :: :ok
+  defdelegate forget_event_video_room(room), to: EventVideoRoomQueries, as: :delete
+
+  @doc "Grid event video rooms whose event ended in a window. See `EventVideoRoomQueries.list_ended/4`."
+  @spec list_ended_event_video_rooms([String.t()], DateTime.t(), DateTime.t()) ::
+          [EventVideoRoomSchema.t()]
+  defdelegate list_ended_event_video_rooms(providers, ended_before, ended_after),
+    to: EventVideoRoomQueries,
+    as: :list_ended
+
+  @doc "A video integration's grid event rooms. See `EventVideoRoomQueries.list_for_integration/4`."
+  @spec list_event_video_rooms_for_integration(
+          pos_integer(),
+          :upcoming | :all,
+          DateTime.t(),
+          pos_integer()
+        ) :: [EventVideoRoomSchema.t()]
+  defdelegate list_event_video_rooms_for_integration(integration_id, scope, now, limit),
+    to: EventVideoRoomQueries,
+    as: :list_for_integration
+
+  @doc "How many grid event rooms a video integration holds. See `EventVideoRoomQueries.count_for_integration/3`."
+  @spec count_event_video_rooms_for_integration(pos_integer(), :upcoming | :all, DateTime.t()) ::
+          non_neg_integer()
+  defdelegate count_event_video_rooms_for_integration(integration_id, scope, now),
+    to: EventVideoRoomQueries,
+    as: :count_for_integration
 
   @doc """
   Returns active calendar integrations for the given user.

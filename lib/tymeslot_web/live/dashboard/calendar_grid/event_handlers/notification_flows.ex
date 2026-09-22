@@ -133,6 +133,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
       uid: event.uid,
       provider_event_id: event.provider_event_id,
       calendar_integration_id: event.calendar_integration_id,
+      # Whether the event is one of a series, which keeps its video room.
+      recurring_event_id: Map.get(event, :recurring_event_id),
+      recurrence_rule: Map.get(event, :recurrence_rule),
       user_id: user_id,
       notify_on_delete: notify_on_delete
     }

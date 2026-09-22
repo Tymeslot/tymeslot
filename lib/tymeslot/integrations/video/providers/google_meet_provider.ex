@@ -25,13 +25,22 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
+  alias Tymeslot.Integrations.Video.NeedsReauth
   alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.OAuthCredentials
   alias Tymeslot.Integrations.Video.RoomData
+
+  # Room creation's requests to the provider's API. `request_timeout` caps each
+  # whole response, so the budget below is a real bound; a create answers with
+  # one small JSON body, so the cap waits no less than the receive timeout
+  # alone did in practice. The API never redirects these requests, and one
+  # that did would get a fresh budget, so redirects are refused.
+  @create_request_options [receive_timeout: 45_000, request_timeout: 45_000, redirect: false]
 
   @capabilities Capabilities.new!(
                   recording: true,
@@ -154,6 +163,14 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
       do: error,
       else: {:provider_error, reason}
   end
+
+  # The slowest creation refreshes the token (through the shared OAuth client,
+  # at the HTTP client's default timeouts) and creates the space.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def room_creation_budget_ms,
+    do:
+      HTTPClient.request_budget_ms(:post) +
+        HTTPClient.request_budget_ms(:post, @create_request_options)
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def delete_meeting_room(space_id, config) when is_binary(space_id) and space_id != "" do
@@ -422,7 +439,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
     url = "https://meet.googleapis.com/v2/spaces"
 
-    case Config.http_client_module().request(:post, url, "{}", headers, []) do
+    case Config.http_client_module().request(:post, url, "{}", headers, @create_request_options) do
       {:ok, %Req.Response{status: 200, body: response_body}} ->
         case Jason.decode(response_body) do
           {:ok, space} -> {:ok, space}
@@ -528,7 +545,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   # surfaces this via the "Reconnect required" badge on the video row. Purely
   # additive: it does not touch token validation or the OAuthTokenManager flow.
   defp flag_revoked_token(config) do
-    OAuthTokenManager.flag_needs_reauth(config,
+    NeedsReauth.flag(config,
       label: "Google Meet",
       event: "google_meet_token_revoked",
       message:

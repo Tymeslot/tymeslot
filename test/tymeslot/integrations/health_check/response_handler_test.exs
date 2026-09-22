@@ -32,6 +32,18 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
     }
   end
 
+  # Unhealthy for longer than the 48-hour threshold, with no email sent yet:
+  # the state in which an unflagged integration gets the unhealthy email.
+  defp long_unhealthy_health_state do
+    %{
+      became_unhealthy_at: DateTime.add(DateTime.utc_now(), -49, :hour),
+      notification_sent_at: nil,
+      status: :unhealthy,
+      failures: 3,
+      successes: 0
+    }
+  end
+
   describe "handle_transition/4 with no change" do
     test "does nothing for no_change transitions" do
       user = insert(:user)
@@ -278,6 +290,48 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
                integration,
                {:no_change, :unhealthy, :unhealthy},
                unhealthy_health_state()
+             ) == :ok
+
+      refute_enqueued(worker: EmailWorker)
+    end
+
+    test "does not send the unhealthy email for a video integration already flagged for reconnection" do
+      user = insert(:user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "nextcloud_talk",
+          is_active: true,
+          needs_reauth: true
+        )
+
+      assert ResponseHandler.handle_transition(
+               :video,
+               integration,
+               {:no_change, :unhealthy, :unhealthy},
+               long_unhealthy_health_state()
+             ) == :ok
+
+      refute_enqueued(worker: EmailWorker)
+    end
+
+    test "does not send the unhealthy email for an OAuth calendar already flagged for reconnection" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          is_active: true,
+          needs_reauth: true
+        )
+
+      assert ResponseHandler.handle_transition(
+               :calendar,
+               integration,
+               {:became_unhealthy, :degraded, :unhealthy},
+               long_unhealthy_health_state()
              ) == :ok
 
       refute_enqueued(worker: EmailWorker)

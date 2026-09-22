@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
+  alias Tymeslot.Security.SsrfGuard
   alias Tymeslot.Security.UrlValidation
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -161,6 +162,9 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
   def delete_event(client, uid, opts), do: CaldavCommon.delete_event(client, uid, opts)
 
   @impl Tymeslot.Integrations.Calendar.Provider
+  def fetch_event(client, event_ref), do: CaldavCommon.fetch_event(client, event_ref)
+
+  @impl Tymeslot.Integrations.Calendar.Provider
   def list_events(client, opts), do: CaldavCommon.list_events(client, opts)
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -184,6 +188,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
 
     case UrlValidation.validate_http_url(url,
            enforce_https_for_public: true,
+           internal_names_local: SsrfGuard.allow_private_for_calendar?(),
            https_error_message:
              dgettext("dashboard_calendar_providers", "Use HTTPS for non-local Zimbra servers"),
            invalid_message: invalid_message,

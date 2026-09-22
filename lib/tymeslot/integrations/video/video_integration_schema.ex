@@ -10,6 +10,21 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.SsrfGuard
 
+  # Why a provider refuses to create rooms for an integration, where its answer
+  # says so. `Tymeslot.Integrations.Video.RoomCreationError` describes each one.
+  @room_creation_errors [
+    :conversation_creation_restricted,
+    :talk_not_allowed,
+    :password_required,
+    :talk_not_found,
+    :redirected,
+    :conversation_refused
+  ]
+
+  # The partial unique index allowing one active integration per user,
+  # provider and account key.
+  @account_index :unique_active_video_account_per_user
+
   @type t :: %__MODULE__{
           id: integer() | nil,
           user_id: integer() | nil,
@@ -32,6 +47,9 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
           is_active: boolean(),
           needs_reauth: boolean(),
           sync_error: String.t() | nil,
+          room_creation_error: atom() | nil,
+          room_creation_error_since: DateTime.t() | nil,
+          room_creation_error_notices: %{optional(String.t()) => String.t()},
           deleted_at: DateTime.t() | nil,
           settings: map(),
           user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
@@ -59,6 +77,16 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     field(:is_active, :boolean, default: true)
     field(:needs_reauth, :boolean, default: false)
     field(:sync_error, :string)
+    # Written only by `VideoIntegrationQueries`' room creation error queries,
+    # never cast from attrs.
+    field(:room_creation_error, Ecto.Enum, values: @room_creation_errors)
+    field(:room_creation_error_since, :utc_datetime)
+    # Code to the time the owner was last emailed about it, as
+    # `Tymeslot.Integrations.Video.RoomCreationError` describes. A map rather
+    # than a list of codes, so an entry can be given back when its email never
+    # went out, and a code nothing reads any more is an entry nothing looks up.
+    field(:room_creation_error_notices, :map, default: %{})
+
     # Set when the user disconnects and asked for the provider-side rooms to be
     # deleted: the row survives, hidden, only long enough for the cleanup job to
     # use its credentials.
@@ -79,6 +107,13 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
 
     timestamps(type: :utc_datetime)
   end
+
+  @doc """
+  The name of the unique index on active integrations' account keys, as a
+  refused write reports it.
+  """
+  @spec account_index() :: String.t()
+  def account_index, do: Atom.to_string(@account_index)
 
   @doc """
   Answers whether `attrs` would build a valid row, without writing one.
@@ -159,7 +194,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   defp apply_active_uniqueness_constraints(changeset) do
     changeset
     |> unique_constraint([:user_id, :provider, :provider_account_id],
-      name: :unique_active_video_account_per_user,
+      name: @account_index,
       # `TymeslotWeb.Components.CoreComponents.Forms.translate_error/1` runs the stored msgid
       # through the "errors" domain at render time, so the changeset must
       # carry the untranslated msgid — hence `dgettext_noop/2`, not
@@ -168,6 +203,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     )
     |> unique_constraint([:user_id, :provider],
       name: :unique_active_video_null_account_per_user,
+      error_key: :provider,
       message: dgettext_noop("errors", "an integration for this provider already exists")
     )
   end
@@ -247,6 +283,10 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
                        |> String.to_atom()
                      end)
 
+  @encrypted_field_by_credential Map.new(
+                                   Enum.zip(@credential_fields, @encrypted_credential_fields)
+                                 )
+
   @doc """
   Returns the list of encrypted credential field atoms on this schema. Used by
   `decryption_status/1` so the authoritative list lives in one place.
@@ -262,6 +302,24 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   """
   @spec credential_fields() :: [atom()]
   def credential_fields, do: @credential_fields
+
+  @doc """
+  Removes stored credentials, named by their virtual fields, as part of
+  `changeset`.
+
+  An empty value in `changeset/2`'s attrs keeps a stored credential, so that
+  a form left blank cannot wipe one; removing a credential is therefore an
+  explicit step. Both the ciphertext and the decrypted virtual field are
+  cleared, so the struct an update returns does not still carry the value.
+  """
+  @spec remove_credentials(Ecto.Changeset.t(), [atom()]) :: Ecto.Changeset.t()
+  def remove_credentials(%Ecto.Changeset{} = changeset, fields) do
+    Enum.reduce(fields, changeset, fn field, acc ->
+      acc
+      |> put_change(field, nil)
+      |> put_change(Map.fetch!(@encrypted_field_by_credential, field), nil)
+    end)
+  end
 
   @doc """
   Reports whether any encrypted credential on the integration fails to decrypt

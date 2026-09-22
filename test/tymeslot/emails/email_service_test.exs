@@ -416,6 +416,25 @@ defmodule Tymeslot.Emails.EmailServiceTest do
     end
   end
 
+  describe "send_integration_reauth_notification/3" do
+    test "names a video provider in the subject by its display name" do
+      user = build_user_data(%{email: "owner@example.com"})
+
+      integration = %{
+        id: System.unique_integer([:positive]),
+        provider: "nextcloud_talk",
+        sync_error: "Nextcloud refused the app password."
+      }
+
+      assert {:ok, _response} =
+               EmailService.send_integration_reauth_notification(user, integration, :video)
+
+      email = next_email()
+      assert email.subject == "Reconnect your Nextcloud Talk integration"
+      assert_no_more_emails()
+    end
+  end
+
   describe "send_reschedule_request/1" do
     test "asks the attendee, not the organizer, to pick a new time" do
       user = insert(:user)

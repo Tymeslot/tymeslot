@@ -50,6 +50,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.DragDrop
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEditVideo
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.MiniMonth
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
@@ -73,7 +74,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     "update_event_description" => :handle_update_event_description,
     "update_event_calendar" => :handle_update_event_calendar,
     "update_event_colour" => :handle_update_event_colour,
-    "update_edit_video" => :handle_update_edit_video,
     "update_event_time" => :handle_update_event_time,
     "toggle_event_all_day" => :handle_toggle_event_all_day,
     "update_event_all_day_range" => :handle_update_event_all_day_range,
@@ -184,6 +184,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event(event, params, socket) when is_map_key(@inline_edit_events, event),
     do: apply(InlineEdit, Map.fetch!(@inline_edit_events, event), [params, socket])
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_edit_video", params, socket),
+    do: InlineEditVideo.handle_update_edit_video(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("show_booking", params, socket),

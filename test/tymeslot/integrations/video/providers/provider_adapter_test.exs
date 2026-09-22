@@ -8,8 +8,11 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
   import Mox
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
+  alias Tymeslot.Integrations.Video.MeetingContext
+  alias Tymeslot.Integrations.Video.Providers.JitsiProvider
   alias Tymeslot.Integrations.Video.Providers.MiroTalkProvider
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.ZoomOAuthHelperMock
 
   setup :verify_on_exit!
@@ -185,6 +188,52 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
 
     test "returns error for unknown provider" do
       assert {:error, _reason} = ProviderAdapter.delete_meeting_room(:unknown, "room123", %{})
+    end
+  end
+
+  describe "shared_join_url/2" do
+    # The point of the default: a provider whose join links are plain room
+    # addresses keeps handing out the room URL for a guest without having to
+    # opt out of anything, so adding the callback changed nobody but Jitsi.
+    test "answers with the room's own URL for a provider that does not implement it" do
+      Code.ensure_loaded!(MiroTalkProvider)
+      refute function_exported?(MiroTalkProvider, :shared_join_url, 2)
+
+      context = %MeetingContext{
+        provider_type: :mirotalk,
+        provider_module: MiroTalkProvider,
+        room_data: %RoomData{
+          room_id: "r1",
+          meeting_url: "https://video.example.com/join/r1",
+          provider_data: %{},
+          provider_config: %{}
+        }
+      }
+
+      assert ProviderAdapter.shared_join_url(context, DateTime.utc_now()) ==
+               {:ok, "https://video.example.com/join/r1"}
+    end
+
+    test "dispatches to a provider that does implement it" do
+      secret = "adapter-shared-secret-of-at-least-32-bytes"
+
+      context = %MeetingContext{
+        provider_type: :jitsi,
+        provider_module: JitsiProvider,
+        room_data: %RoomData{
+          room_id: "0123456789abcdef",
+          meeting_url: "https://meet.example.com/0123456789abcdef",
+          provider_data: %{},
+          provider_config: %{
+            base_url: "https://meet.example.com",
+            client_id: "tymeslot",
+            client_secret: secret
+          }
+        }
+      }
+
+      assert {:ok, url} = ProviderAdapter.shared_join_url(context, DateTime.utc_now())
+      assert url =~ "jwt="
     end
   end
 

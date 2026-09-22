@@ -473,7 +473,10 @@ export GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-}"
 export GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET:-}"
 export WEBHOOK_BASE_URL="${WEBHOOK_BASE_URL:-}"
 export ALLOW_PRIVATE_IPS_FOR_CALENDAR="${ALLOW_PRIVATE_IPS_FOR_CALENDAR:-false}"
-export ALLOW_PRIVATE_IPS_FOR_VIDEO="${ALLOW_PRIVATE_IPS_FOR_VIDEO:-false}"
+# Passed through only when the operator set it. Defaulting it to false here
+# would make every Docker deployment look like an explicit answer about video,
+# which revokes the calendar switch's long-standing cover for it.
+export ALLOW_PRIVATE_IPS_FOR_VIDEO
 export ALLOW_PRIVATE_IPS_FOR_WEBHOOKS="${ALLOW_PRIVATE_IPS_FOR_WEBHOOKS:-false}"
 export ENABLE_GOOGLE_AUTH="${ENABLE_GOOGLE_AUTH:-false}"
 export ENABLE_GITHUB_AUTH="${ENABLE_GITHUB_AUTH:-false}"

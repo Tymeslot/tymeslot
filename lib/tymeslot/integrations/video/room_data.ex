@@ -8,13 +8,28 @@ defmodule Tymeslot.Integrations.Video.RoomData do
   calls via `MeetingContext`.
   """
 
+  # `provider_config` carries the decrypted credentials the room was created
+  # with, so it is kept out of every inspected form: a log line, a crash
+  # report or an error tuple that happens to include the struct.
+  @derive {Inspect, except: [:provider_config]}
   @enforce_keys [:room_id, :meeting_url, :provider_data]
-  defstruct room_id: nil, meeting_url: nil, provider_data: nil, provider_config: nil
+  defstruct room_id: nil,
+            meeting_url: nil,
+            provider_data: nil,
+            provider_config: nil,
+            adopted: false
 
+  @typedoc """
+  `adopted` says the provider handed back a room it had already made for this
+  booking rather than making one now (Nextcloud Talk does this when an earlier
+  attempt's answer never arrived). Such a call proves nothing about what the
+  server would do with a new room.
+  """
   @type t :: %__MODULE__{
           room_id: String.t() | nil,
           meeting_url: String.t() | nil,
           provider_data: map(),
-          provider_config: map() | nil
+          provider_config: map() | nil,
+          adopted: boolean()
         }
 end

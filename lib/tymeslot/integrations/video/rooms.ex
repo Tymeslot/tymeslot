@@ -18,6 +18,9 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   alias Tymeslot.Integrations.Video.MeetingContext
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
+  alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
+  alias Tymeslot.Integrations.Video.RoomCreationError
+  alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   @doc """
@@ -35,11 +38,15 @@ defmodule Tymeslot.Integrations.Video.Rooms do
     end)
   end
 
+  # The outcome is kept on the integration: a refusal its server will repeat
+  # for every booking is recorded for the owner, and a created room clears one.
   defp do_create_meeting_room(user_id, opts) do
-    case get_provider_config(user_id, opts) do
-      {:ok, provider_type, config} ->
+    case resolve_integration(user_id, opts) do
+      {:ok, integration, provider_type, config} ->
         config = maybe_attach_event_details(config, opts)
-        create_room_with_provider(provider_type, config)
+        result = create_room_with_provider(provider_type, config)
+        RoomCreationError.track(integration, result)
+        result
 
       {:error, reason} = error ->
         Logger.error("Failed to get provider configuration", reason: inspect(reason))
@@ -83,6 +90,82 @@ defmodule Tymeslot.Integrations.Video.Rooms do
       %{room_data | provider_config: config}
     end)
   end
+
+  @doc """
+  How long creating a room on the integration `integration_id` of `user_id`
+  can wait on the provider's network, in milliseconds (see
+  `ProviderRegistry.room_creation_budget_ms/1`).
+
+  When the integration cannot be resolved, creation fails before any request,
+  but the budget answered is still the largest any provider declares, so a
+  caller never waits less than a creation could take.
+  """
+  @spec room_creation_budget_ms(pos_integer() | nil, pos_integer() | nil) :: non_neg_integer()
+  def room_creation_budget_ms(user_id, integration_id)
+      when is_integer(user_id) and is_integer(integration_id) do
+    with {:ok, integration} <- Video.fetch_integration_for_user(integration_id, user_id),
+         {:ok, provider_type} when provider_type != :none <-
+           ProviderConfig.parse_known(integration.provider) do
+      ProviderRegistry.room_creation_budget_ms(provider_type)
+    else
+      _unresolved -> ProviderRegistry.room_creation_budget_ms()
+    end
+  end
+
+  def room_creation_budget_ms(_user_id, _integration_id),
+    do: ProviderRegistry.room_creation_budget_ms()
+
+  @doc """
+  Rebuilds the context of a room that already exists, so its join URLs can be
+  built again without asking the provider for a new room.
+
+  The room keeps its stored identity (`:room_id`, `:meeting_url`); only the
+  provider config is resolved afresh from the integration, which is what
+  carries the credentials a join URL may be signed with.
+
+  ## Required opts
+    - `:integration_id` - the video integration that owns the room
+    - `:room_id` - provider-specific room identifier
+
+  ## Optional opts
+    - `:meeting_url` - the room's stored URL
+    - `:meeting_id` - the meeting the room belongs to
+  """
+  @spec existing_room_context(pos_integer() | nil, keyword()) ::
+          {:ok, MeetingContext.t()} | {:error, any()}
+  def existing_room_context(user_id, opts) do
+    with {:ok, room_id} <- fetch_required_opt(opts, :room_id),
+         {:ok, provider_type, config} <- get_provider_config(user_id, opts),
+         {:ok, provider_module} <- ProviderRegistry.get_provider(provider_type) do
+      {:ok,
+       %MeetingContext{
+         provider_type: provider_type,
+         provider_module: provider_module,
+         room_data: %RoomData{
+           room_id: room_id,
+           meeting_url: Keyword.get(opts, :meeting_url),
+           provider_data: %{},
+           provider_config: config
+         }
+       }}
+    end
+  end
+
+  @doc """
+  A room's join URL for a recipient it has no name for: a booking's guests,
+  and the link written into a calendar event's description. See
+  `ProviderAdapter.shared_join_url/2`.
+  """
+  @spec shared_join_url(MeetingContext.t(), DateTime.t() | nil) ::
+          {:ok, String.t() | nil} | {:error, term()}
+  defdelegate shared_join_url(meeting_context, meeting_time), to: ProviderAdapter
+
+  @doc """
+  Whether a room's join URLs stop working some time after the meeting time
+  they were built for. See `ProviderAdapter.time_bound_join_urls?/1`.
+  """
+  @spec time_bound_join_urls?(MeetingContext.t()) :: boolean()
+  defdelegate time_bound_join_urls?(meeting_context), to: ProviderAdapter
 
   @doc """
   Updates a meeting room on the provider's side after the underlying
@@ -259,10 +342,16 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   defp room_ref(_meeting_context), do: Redactor.fingerprint(nil)
 
   defp get_provider_config(user_id, opts) do
+    with {:ok, _integration, provider_type, config} <- resolve_integration(user_id, opts) do
+      {:ok, provider_type, config}
+    end
+  end
+
+  defp resolve_integration(user_id, opts) do
     case get_integration_from_database(user_id, opts) do
       {:ok, integration} ->
         {provider_type, config} = build_provider_config(integration, opts)
-        {:ok, provider_type, config}
+        {:ok, integration, provider_type, config}
 
       :not_found ->
         {:error,

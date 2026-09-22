@@ -19,7 +19,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Reauth do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Integrations.Video.OAuthTokenManager
+  alias Tymeslot.Integrations.Video.NeedsReauth
   alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes
 
   require Logger
@@ -94,6 +94,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Reauth do
   end
 
   defp flag_for_reauth(config, event, message) do
-    OAuthTokenManager.flag_needs_reauth(config, label: "Zoom", event: event, message: message)
+    NeedsReauth.flag(config, label: "Zoom", event: event, message: message)
   end
 end

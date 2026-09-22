@@ -76,6 +76,7 @@ msgstr "%{name} muss erneut verbunden werden."
 msgid "%{name} stopped syncing."
 msgstr "%{name} synchronisiert nicht mehr."
 
+#: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "A video integration with this configuration already exists"
@@ -162,7 +163,10 @@ msgstr "Kalender"
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #: lib/tymeslot_web/components/dashboard/integrations/video/custom_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
+#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Abbrechen"
@@ -555,7 +559,11 @@ msgstr "Wird gespeichert…"
 msgid "Self-hosted video conferencing"
 msgstr "Selbst gehostete Videokonferenzen"
 
+#: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
+#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/video/shared_form_components.ex
 #, elixir-autogen, elixir-format
 msgid "Server URL"
 msgstr "Server-URL"
@@ -898,7 +906,9 @@ msgid "Authentication failed - Please check your API key"
 msgstr "Authentifizierung fehlgeschlagen - bitte überprüfen Sie Ihren API-Schlüssel"
 
 #: lib/tymeslot/integrations/video/input_validation.ex
+#: lib/tymeslot/integrations/video/providers/jitsi_provider.ex
 #: lib/tymeslot/integrations/video/providers/mirotalk_provider.ex
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Base URL is required"
 msgstr "Basis-URL ist erforderlich"
@@ -933,7 +943,7 @@ msgstr "Der Verbindungstest konnte Ihrem Konto nicht zugeordnet werden. Bitte ve
 msgid "Connection timeout - Server took too long to respond"
 msgstr "Zeitüberschreitung der Verbindung - der Server hat zu lange für eine Antwort gebraucht"
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "Connection timeout while reaching the URL"
 msgstr "Zeitüberschreitung beim Aufruf der URL"
@@ -973,7 +983,7 @@ msgstr "Authentifizierung bei Microsoft Teams fehlgeschlagen: %{reason}"
 msgid "Failed to authenticate with Zoom: %{reason}"
 msgstr "Authentifizierung bei Zoom fehlgeschlagen: %{reason}"
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to reach URL: %{reason}"
 msgstr "URL konnte nicht erreicht werden: %{reason}"
@@ -999,11 +1009,12 @@ msgid "Invalid JSON response from Google Calendar API"
 msgstr "Ungültige JSON-Antwort von der Google Calendar API"
 
 #: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#: lib/tymeslot/integrations/video/providers/jitsi_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid URL format. Please provide a valid HTTP/HTTPS URL."
 msgstr "Ungültiges URL-Format. Bitte geben Sie eine gültige HTTP/HTTPS-URL an."
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid URL scheme. Only http and https are supported"
 msgstr "Ungültiges URL-Schema. Es werden nur http und https unterstützt"
@@ -1063,7 +1074,7 @@ msgstr "Bitte geben Sie eine gültige Server-URL ein"
 msgid "Please enter a valid server URL (e.g., https://mirotalk.example.com)"
 msgstr "Bitte geben Sie eine gültige Server-URL ein (z. B. https://mirotalk.example.com)"
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "Processed URL exceeds maximum length of %{max_length} characters (got %{url_length})"
 msgstr "Die verarbeitete URL überschreitet die maximale Länge von %{max_length} Zeichen (erhalten: %{url_length})"
@@ -1083,12 +1094,12 @@ msgstr "Die Vorlagenvariable kann nicht im URL-Fragment (#) verwendet werden. Fr
 msgid "The provider rejected the stored credentials for this integration. Please reconnect the integration."
 msgstr "Der Anbieter hat die gespeicherten Anmeldedaten für diese Integration abgelehnt. Bitte verbinden Sie die Integration erneut."
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "URL resolves to a private or loopback address"
 msgstr "Die URL verweist auf eine private oder Loopback-Adresse"
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "URL responded with HTTP %{status}"
 msgstr "Die URL hat mit HTTP %{status} geantwortet"
@@ -1155,7 +1166,7 @@ msgstr[1] "%{count} anstehende Buchungen nutzen diese Integration noch. Deren Me
 msgid "Also delete their meeting rooms. Attendees who already have the join link will find it no longer works."
 msgstr "Auch deren Meetingräume löschen. Teilnehmende, die den Beitrittslink bereits haben, können ihn dann nicht mehr verwenden."
 
-#: lib/tymeslot/integrations/video/providers/custom_provider.ex
+#: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "URL redirects too many times"
 msgstr "Die URL leitet zu oft weiter"
@@ -1194,3 +1205,408 @@ msgstr "Geben Sie die vollständige Adresse mit https:// am Anfang ein, zum Beis
 #, elixir-autogen, elixir-format
 msgid "Write {{meeting_id}} with plain brackets: percent-encoded ones are never replaced"
 msgstr "Schreiben Sie {{meeting_id}} mit einfachen Klammern: prozentkodierte werden nie ersetzt"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} conversation from this integration is still on your Nextcloud server, even if its meeting is over. It stays there unless you delete it here."
+msgid_plural "%{count} conversations from this integration are still on your Nextcloud server, including those of past meetings. They stay there unless you delete them here."
+msgstr[0] "%{count} Unterhaltung aus dieser Integration liegt noch auf Ihrem Nextcloud-Server, auch wenn ihr Termin vorbei ist. Sie bleibt dort, sofern Sie sie nicht hier löschen."
+msgstr[1] "%{count} Unterhaltungen aus dieser Integration liegen noch auf Ihrem Nextcloud-Server, auch die vergangener Termine. Sie bleiben dort, sofern Sie sie nicht hier löschen."
+
+#: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{name}: new bookings get no video link."
+msgstr "%{name}: Neue Buchungen erhalten keinen Videolink."
+
+#: lib/tymeslot/integrations/video/provider_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "A Talk conversation on your own Nextcloud for every booking"
+msgstr "Eine Talk-Unterhaltung auf Ihrem eigenen Nextcloud für jede Buchung"
+
+#: lib/tymeslot/integrations/video/providers/link_room.ex
+#, elixir-autogen, elixir-format
+msgid "A meeting ID is required to create a video room"
+msgstr "Zum Erstellen eines Videoraums ist eine Meeting-ID erforderlich"
+
+#: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Also delete these conversations from your Nextcloud server. Attendees of upcoming meetings will find their join link no longer works."
+msgstr "Diese Unterhaltungen auch von Ihrem Nextcloud-Server löschen. Teilnehmer anstehender Termine können ihren Beitrittslink dann nicht mehr verwenden."
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
+#, elixir-autogen, elixir-format
+msgid "App ID (optional)"
+msgstr "App ID (optional)"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "App password"
+msgstr "App-Passwort"
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "App password is required"
+msgstr "App-Passwort ist erforderlich"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
+#, elixir-autogen, elixir-format
+msgid "App secret (optional)"
+msgstr "App secret (optional)"
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk/booking_conversation.ex
+#, elixir-autogen, elixir-format
+msgid "Booked through Tymeslot."
+msgstr "Über Tymeslot gebucht."
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Connected to Nextcloud Talk %{version}"
+msgstr "Mit Nextcloud Talk %{version} verbunden"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "Copy from %{name}"
+msgstr "Aus %{name} übernehmen"
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Could not reach the server: %{reason}"
+msgstr "Server konnte nicht erreicht werden: %{reason}"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "Create one in Nextcloud under Personal settings, Security. Your login password stops working here once two-factor authentication is on."
+msgstr "Erstellen Sie eines in Nextcloud unter „Persönliche Einstellungen“, „Sicherheit“. Ihr Anmeldepasswort funktioniert hier nicht mehr, sobald die Zwei-Faktor-Authentifizierung aktiviert ist."
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
+#, elixir-autogen, elixir-format
+msgid "Deletes the stored App ID and App secret. Links then open the room without a token, which only works on a server that lets anyone in."
+msgstr "Löscht die gespeicherte App ID und das App secret. Links öffnen den Raum dann ohne Token, was nur auf einem Server funktioniert, der alle hereinlässt."
+
+#: lib/tymeslot/integrations/video/providers/jitsi_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the App ID that belongs to this App secret"
+msgstr "Geben Sie die App ID ein, die zu diesem App secret gehört"
+
+#: lib/tymeslot/integrations/video/providers/jitsi_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the App secret that belongs to this App ID"
+msgstr "Geben Sie das App secret ein, das zu dieser App ID gehört"
+
+#: lib/tymeslot/integrations/video/update.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the app password again to connect to a different server."
+msgstr "Geben Sie das App-Passwort erneut ein, um eine Verbindung zu einem anderen Server herzustellen."
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
+#, elixir-autogen, elixir-format
+msgid "Every booking gets its own room, generated automatically."
+msgstr "Jede Buchung erhält automatisch einen eigenen Raum."
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "Fills in the server and login name, and uses the same app password unless you enter a different one."
+msgstr "Übernimmt Server und Anmeldenamen und verwendet dasselbe App-Passwort, sofern Sie kein anderes eingeben."
+
+#: lib/tymeslot_web/live/dashboard/video_settings/provider_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Hosted services"
+msgstr "Gehostete Dienste"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
+#, elixir-autogen, elixir-format
+msgid "Infomaniak's hosted video meetings"
+msgstr "Gehostete Video-Meetings von Infomaniak"
+
+#: lib/tymeslot/integrations/video/provider_config.ex
+#, elixir-autogen, elixir-format
+msgid "Infomaniak's hosted video meetings, Swiss-based"
+msgstr "Gehostete Video-Meetings von Infomaniak, mit Sitz in der Schweiz"
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Jitsi"
+msgstr "Jitsi"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
+#, elixir-autogen, elixir-format
+msgid "Jitsi Meet"
+msgstr "Jitsi Meet"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "Leave blank to keep the current app password."
+msgstr "Leer lassen, um das aktuelle App-Passwort beizubehalten."
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
+#, elixir-autogen, elixir-format
+msgid "Leave blank to keep the current secret."
+msgstr "Leer lassen, um das aktuelle App secret beizubehalten."
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "Leave blank to use the app password of your calendar connection."
+msgstr "Leer lassen, um das App-Passwort Ihrer Kalenderverbindung zu verwenden."
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "Login name"
+msgstr "Anmeldename"
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Login name is required"
+msgstr "Anmeldename ist erforderlich"
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk/booking_conversation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting"
+msgstr "Meeting"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
+#, elixir-autogen, elixir-format
+msgid "My Jitsi"
+msgstr "Mein Jitsi"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "My Nextcloud Talk"
+msgstr "Mein Nextcloud Talk"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
+#, elixir-autogen, elixir-format
+msgid "My kMeet"
+msgstr "Mein kMeet"
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "New bookings get no video link. %{reason}"
+msgstr "Neue Buchungen erhalten keinen Videolink. %{reason}"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud Talk"
+msgstr "Nextcloud Talk"
+
+#: lib/tymeslot/integrations/video/room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud Talk does not allow this user to create conversations. In the Talk administration settings on Nextcloud, allow the user's group to create conversations, or connect a user who may."
+msgstr "Nextcloud Talk erlaubt diesem Nutzer nicht, Unterhaltungen zu erstellen. Erlauben Sie in den Talk-Verwaltungseinstellungen von Nextcloud der Gruppe des Nutzers, Unterhaltungen zu erstellen, oder verbinden Sie einen Nutzer, der das darf."
+
+#: lib/tymeslot/integrations/video/room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud Talk refused to create a conversation. Check the Talk administration settings on Nextcloud; the next booking tries again."
+msgstr "Nextcloud Talk hat das Erstellen einer Unterhaltung abgelehnt. Prüfen Sie die Talk-Verwaltungseinstellungen von Nextcloud; die nächste Buchung versucht es erneut."
+
+#: lib/tymeslot/integrations/video/room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud Talk requires a password on public conversations, so guests could not join from the booking's link. In the Talk administration settings on Nextcloud, turn off the password requirement for public conversations."
+msgstr "Nextcloud Talk verlangt ein Passwort für öffentliche Unterhaltungen, sodass Gäste über den Link der Buchung nicht beitreten könnten. Schalten Sie in den Talk-Verwaltungseinstellungen von Nextcloud die Passwortpflicht für öffentliche Unterhaltungen aus."
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud answered with status %{status}. Check the address, or try again later."
+msgstr "Nextcloud hat mit Status %{status} geantwortet. Überprüfen Sie die Adresse oder versuchen Sie es später erneut."
+
+#: lib/tymeslot/integrations/video/room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud did not find Talk at this address. Check that the Talk app is installed and enabled, and that the server address is the one you open Nextcloud at."
+msgstr "Nextcloud hat Talk unter dieser Adresse nicht gefunden. Prüfen Sie, ob die Talk-App installiert und aktiviert ist und ob die Serveradresse die ist, unter der Sie Nextcloud öffnen."
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud is refusing requests from Tymeslot for now, usually after too many failed logins. Wait a few minutes before trying again."
+msgstr "Nextcloud lehnt Anfragen von Tymeslot vorübergehend ab, meist nach zu vielen fehlgeschlagenen Anmeldungen. Warten Sie einige Minuten, bevor Sie es erneut versuchen."
+
+#: lib/tymeslot/integrations/video/room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud redirected the request to create a conversation. Edit the integration and enter the address your browser ends up on when you open Nextcloud."
+msgstr "Nextcloud hat die Anfrage zum Erstellen einer Unterhaltung umgeleitet. Bearbeiten Sie die Integration und geben Sie die Adresse ein, bei der Ihr Browser landet, wenn Sie Nextcloud öffnen."
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud refused the app password. Edit this integration and enter a new app password."
+msgstr "Nextcloud hat das App-Passwort abgelehnt. Bearbeiten Sie diese Integration und geben Sie ein neues App-Passwort ein."
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud refused the login name or app password. Create an app password in Nextcloud under Personal settings, Security, and enter it with your login name."
+msgstr "Nextcloud hat den Anmeldenamen oder das App-Passwort abgelehnt. Erstellen Sie in Nextcloud unter „Persönliche Einstellungen“, „Sicherheit“ ein App-Passwort und geben Sie es zusammen mit Ihrem Anmeldenamen ein."
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Nextcloud refused this integration's app password earlier. Edit the integration and enter a new app password."
+msgstr "Nextcloud hat das App-Passwort dieser Integration zuvor abgelehnt. Bearbeiten Sie die Integration und geben Sie ein neues App-Passwort ein."
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "No Nextcloud answered at this address. Enter the address you open Nextcloud at, including any subfolder."
+msgstr "Unter dieser Adresse hat kein Nextcloud geantwortet. Geben Sie die Adresse ein, unter der Sie Nextcloud öffnen, einschließlich eines etwaigen Unterordners."
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "No video links"
+msgstr "Keine Videolinks"
+
+#: lib/tymeslot_web/live/dashboard/video_settings/provider_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Other"
+msgstr "Sonstige"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
+#, elixir-autogen, elixir-format
+msgid "Remove token authentication"
+msgstr "Token-Authentifizierung entfernen"
+
+#: lib/tymeslot_web/live/dashboard/video_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "Saved, but the server did not answer as expected. Check the URL, or use Test connection once it is reachable."
+msgstr "Gespeichert, aber der Server hat nicht wie erwartet geantwortet. Überprüfen Sie die URL oder verwenden Sie „Verbindung testen“, sobald er erreichbar ist."
+
+#: lib/tymeslot_web/live/dashboard/video_settings/provider_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Self-hosted"
+msgstr "Selbst gehostet"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
+#, elixir-autogen, elixir-format
+msgid "Set both if your server requires token authentication; the secret must be at least 32 characters. Each person then gets a link to this meeting's room only, and only yours is marked as moderator. Jitsi honours that marking only when the server has the token_affiliation module enabled and automatic moderator assignment switched off; otherwise a standard install makes whoever joins first the moderator, and a Docker install makes everyone with a link a moderator. Leave both blank for a server that lets anyone in."
+msgstr "Füllen Sie beide Felder aus, wenn Ihr Server Token-Authentifizierung verlangt; das App secret muss mindestens 32 Zeichen lang sein. Jede Person erhält dann einen Link nur für den Raum dieses Meetings, und nur Ihrer ist als Moderator gekennzeichnet. Jitsi beachtet diese Kennzeichnung nur, wenn auf dem Server das Modul token_affiliation aktiviert und die automatische Moderatorzuweisung ausgeschaltet ist; andernfalls macht eine Standardinstallation die Person zum Moderator, die zuerst beitritt, und eine Docker-Installation macht alle mit einem Link zu Moderatoren. Lassen Sie beide Felder leer, wenn Ihr Server alle hereinlässt."
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Talk is not available to this account. Check that the Talk app is installed and enabled for your user."
+msgstr "Talk ist für dieses Konto nicht verfügbar. Prüfen Sie, ob die Talk-App installiert und für Ihren Nutzer aktiviert ist."
+
+#: lib/tymeslot_web/live/dashboard/video_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "That calendar connection is no longer available."
+msgstr "Diese Kalenderverbindung ist nicht mehr verfügbar."
+
+#: lib/tymeslot/integrations/video/providers/jitsi_provider.ex
+#, elixir-autogen, elixir-format
+msgid "The App secret must be at least %{bytes} bytes long. Every guest receives a token signed with it, so a short secret can be recovered from any booking link."
+msgstr "Das App secret muss mindestens %{bytes} Byte lang sein. Jeder Gast erhält ein damit signiertes Token, daher lässt sich ein kurzes App secret aus jedem Buchungslink ermitteln."
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
+#, elixir-autogen, elixir-format
+msgid "The address of your Jitsi server. The public meet.jit.si requires whoever hosts the meeting to sign in before it starts, so a server you run works better for scheduled bookings."
+msgstr "Die Adresse Ihres Jitsi-Servers. Beim öffentlichen meet.jit.si muss sich der Gastgeber vor Beginn des Meetings anmelden, daher eignet sich ein eigener Server besser für gebuchte Termine."
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "The address you open Nextcloud at, including any subfolder, such as https://example.com/nextcloud."
+msgstr "Die Adresse, unter der Sie Nextcloud öffnen, einschließlich eines etwaigen Unterordners, z. B. https://example.com/nextcloud."
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "The name you sign in to Nextcloud with."
+msgstr "Der Name, mit dem Sie sich bei Nextcloud anmelden."
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "The server URL and login name are too long to store together. Use a shorter server address."
+msgstr "Server-URL und Anmeldename sind zusammen zu lang zum Speichern. Verwenden Sie eine kürzere Serveradresse."
+
+#: lib/tymeslot/integrations/video/providers/link_room.ex
+#, elixir-autogen, elixir-format
+msgid "The server URL cannot contain a login name or password. Enter only the address of the server."
+msgstr "Die Server-URL darf keinen Anmeldenamen und kein Passwort enthalten. Geben Sie nur die Adresse des Servers ein."
+
+#: lib/tymeslot/integrations/video/providers/link_room.ex
+#, elixir-autogen, elixir-format
+msgid "The server URL cannot contain a query string (?) or a fragment (#). Enter only the address of the server."
+msgstr "Die Server-URL darf keinen Query-String (?) und kein Fragment (#) enthalten. Geben Sie nur die Adresse des Servers ein."
+
+#: lib/tymeslot/integrations/video/providers/link_room.ex
+#, elixir-autogen, elixir-format
+msgid "The server URL cannot contain spaces. Enter only the address of the server."
+msgstr "Die Server-URL darf keine Leerzeichen enthalten. Geben Sie nur die Adresse des Servers ein."
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "The server did not answer like a Nextcloud server. Check the address."
+msgstr "Der Server hat nicht wie ein Nextcloud-Server geantwortet. Überprüfen Sie die Adresse."
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "The server redirected the request. Enter the address your browser ends up on when you open Nextcloud, starting with https://."
+msgstr "Der Server hat die Anfrage weitergeleitet. Geben Sie die Adresse ein, bei der Ihr Browser landet, wenn Sie Nextcloud öffnen, beginnend mit https://."
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "This Nextcloud Talk is too old. Tymeslot needs Talk 21.1 or later."
+msgstr "Diese Version von Nextcloud Talk ist zu alt. Tymeslot benötigt Talk 21.1 oder neuer."
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
+#: lib/tymeslot_web/live/dashboard/video_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This Nextcloud account is already connected. Edit or remove the existing integration instead."
+msgstr "Dieses Nextcloud-Konto ist bereits verbunden. Bearbeiten oder entfernen Sie stattdessen die bestehende Integration."
+
+#: lib/tymeslot/integrations/video/room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "This Nextcloud user may not use Talk. In the Talk administration settings on Nextcloud, add the user to a group that may use Talk, or connect a user who may."
+msgstr "Dieser Nextcloud-Nutzer darf Talk nicht verwenden. Fügen Sie den Nutzer in den Talk-Verwaltungseinstellungen von Nextcloud einer Gruppe hinzu, die Talk verwenden darf, oder verbinden Sie einen Nutzer, der das darf."
+
+#: lib/tymeslot_web/live/dashboard/video_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This provider is already connected. Deactivate or remove the existing integration before adding another."
+msgstr "Dieser Anbieter ist bereits verbunden. Deaktivieren oder entfernen Sie die bestehende Integration, bevor Sie eine weitere hinzufügen."
+
+#: lib/tymeslot_web/live/dashboard/video_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "This server is already connected. Edit or remove the existing integration instead."
+msgstr "Dieser Server ist bereits verbunden. Bearbeiten oder entfernen Sie stattdessen die bestehende Integration."
+
+#: lib/tymeslot/integrations/video/providers/jitsi_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Use an https:// server URL when token authentication is configured, so the tokens in meeting links are not sent unencrypted."
+msgstr "Verwenden Sie eine https://-Server-URL, wenn Token-Authentifizierung eingerichtet ist, damit die Tokens in Meeting-Links nicht unverschlüsselt übertragen werden."
+
+#: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
+#, elixir-autogen, elixir-format
+msgid "Use an https:// server URL. Nextcloud receives your app password with every request."
+msgstr "Verwenden Sie eine https://-Server-URL. Nextcloud erhält Ihr App-Passwort mit jeder Anfrage."
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "Use your Nextcloud calendar connection"
+msgstr "Ihre Nextcloud-Kalenderverbindung verwenden"
+
+#: lib/tymeslot/integrations/video/provider_config.ex
+#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
+#, elixir-autogen, elixir-format
+msgid "Your own Jitsi Meet server"
+msgstr "Ihr eigener Jitsi-Meet-Server"
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "hosted"
+msgstr "gehostet"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "https://cloud.example.com"
+msgstr "https://cloud.example.com"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
+#, elixir-autogen, elixir-format
+msgid "https://meet.example.com"
+msgstr "https://meet.example.com"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
+#, elixir-autogen, elixir-format
+msgid "kMeet"
+msgstr "kMeet"
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/kmeet_config.ex
+#, elixir-autogen, elixir-format
+msgid "kMeet is Infomaniak's hosted service and always uses this address, which cannot be changed."
+msgstr "kMeet ist der gehostete Dienst von Infomaniak und verwendet immer diese Adresse, die sich nicht ändern lässt."
+
+#: lib/tymeslot_web/components/dashboard/integrations/video/nextcloud_talk_config.ex
+#, elixir-autogen, elixir-format
+msgid "Each booking gets its own public Talk conversation, and guests join from its link without a Nextcloud account. To skip the lobby and moderate, sign in to Nextcloud in your browser as this login name first, with your usual password and any second factor; the app password works only for Tymeslot. Anyone else, other Nextcloud users included, waits in the lobby until the meeting starts. A conversation is deleted when its booking is cancelled, and about a week after the meeting ends."
+msgstr "Jede Buchung erhält eine eigene öffentliche Talk-Unterhaltung, und Gäste treten über deren Link ohne Nextcloud-Konto bei. Um die Lobby zu überspringen und zu moderieren, melden Sie sich zuerst im Browser mit diesem Anmeldenamen bei Nextcloud an, mit Ihrem üblichen Passwort und einem etwaigen zweiten Faktor; das App-Passwort funktioniert nur für Tymeslot. Alle anderen, auch andere Nextcloud-Nutzer, warten in der Lobby, bis das Meeting beginnt. Eine Unterhaltung wird gelöscht, wenn ihre Buchung abgesagt wird, und etwa eine Woche nach dem Ende des Meetings."

@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
+  alias Tymeslot.Integrations.Video.Providers.SsrfOptions
 
   @type config :: %{required(:api_key) => String.t(), required(:base_url) => String.t()}
 
@@ -49,7 +50,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
 
     handle_join_api_response(
       HttpHelpers.try_https_then_http(base_url, "/api/v1/join", fn url ->
-        Config.http_client_module().post(url, body, headers, HttpHelpers.ssrf_options())
+        Config.http_client_module().post(url, body, headers, SsrfOptions.request_options())
       end)
     )
   end

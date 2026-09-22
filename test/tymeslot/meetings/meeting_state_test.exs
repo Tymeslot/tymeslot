@@ -32,6 +32,21 @@ defmodule Tymeslot.Meetings.MeetingStateTest do
     end
   end
 
+  describe "released_status?/1" do
+    test "true for a cancelled booking and an expired request" do
+      assert MeetingState.released_status?("cancelled")
+      assert MeetingState.released_status?("expired")
+    end
+
+    test "false for every status that may still take place, and for none" do
+      for status <- ["pending", "awaiting_payment", "awaiting_approval", "confirmed", "completed"] do
+        refute MeetingState.released_status?(status), status
+      end
+
+      refute MeetingState.released_status?(nil)
+    end
+  end
+
   describe "awaiting_approval?/1" do
     test "true only for the held status" do
       assert MeetingState.awaiting_approval?(%{status: "awaiting_approval"})

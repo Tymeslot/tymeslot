@@ -15,8 +15,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrationModal
+  alias TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig
+  alias TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig
+  alias TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfig
   alias TymeslotWeb.Dashboard.VideoSettings.Components
+  alias TymeslotWeb.Live.Dashboard.VideoSettings.ProviderPicker
 
   @spec settings(map()) :: Phoenix.LiveView.Rendered.t()
   def settings(assigns) do
@@ -122,7 +126,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
           }
           target={@myself}
           on_cancel={JS.push("hide_picker", target: @myself)}
-          groups={picker_groups(@available_video_providers, @integrations)}
+          groups={ProviderPicker.groups(@available_video_providers, @integrations)}
           config_active={@config_provider != nil}
           back_event="back_to_providers"
         >
@@ -145,6 +149,35 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
               form_values={@form_values}
               saving={@saving}
             />
+            <.live_component
+              :if={@config_provider == "kmeet"}
+              module={KmeetConfig}
+              id="kmeet-config"
+              target={@myself}
+              form_errors={@form_errors}
+              form_values={@form_values}
+              saving={@saving}
+            />
+            <.live_component
+              :if={@config_provider == "jitsi"}
+              module={JitsiConfig}
+              id="jitsi-config"
+              target={@myself}
+              form_errors={@form_errors}
+              form_values={@form_values}
+              saving={@saving}
+            />
+            <.live_component
+              :if={@config_provider == "nextcloud_talk"}
+              module={NextcloudTalkConfig}
+              id="nextcloud-talk-config"
+              target={@myself}
+              form_errors={@form_errors}
+              form_values={@form_values}
+              saving={@saving}
+              nextcloud_calendars={@nextcloud_calendars}
+              copied_login={@copied_nextcloud_login}
+            />
           </:config>
         </ProviderPickerModal.provider_picker_modal>
       </div>
@@ -166,23 +199,5 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
       />
     </div>
     """
-  end
-
-  # Builds the single-group provider list for the picker modal.
-  defp picker_groups(available, integrations) do
-    entries = Enum.map(available, &provider_entry(&1, integrations))
-    [%{label: nil, providers: entries}]
-  end
-
-  defp provider_entry(descriptor, integrations) do
-    provider = Atom.to_string(descriptor.type)
-
-    %{
-      provider: provider,
-      title: descriptor.display_name,
-      description: descriptor.description,
-      click_event: "setup_provider",
-      connected?: Enum.any?(integrations, &(&1.provider == provider))
-    }
   end
 end

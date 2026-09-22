@@ -470,7 +470,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchemaTest do
         |> VideoIntegrationSchema.changeset(attrs)
         |> Repo.insert()
 
-      assert "an integration for this provider already exists" in errors_on(changeset).user_id
+      assert "an integration for this provider already exists" in errors_on(changeset).provider
     end
 
     test "allows nil provider_account_id for different providers" do

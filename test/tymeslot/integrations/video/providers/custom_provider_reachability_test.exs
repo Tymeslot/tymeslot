@@ -14,7 +14,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderReachabilityTest d
 
   alias Tymeslot.Integrations.Video.Providers.CustomProvider
 
-  # Must match @max_redirects in CustomProvider.
+  # Must match @max_redirects in LinkRoom.
   @max_hops 3
 
   setup :verify_on_exit!

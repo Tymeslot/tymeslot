@@ -68,6 +68,13 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
   @doc """
   Shared server URL validation logic.
 
+  A host needs a dot, as a public domain has, unless it is `localhost`. With
+  `internal_names_local: true` a single-label internal name (a Docker service
+  name such as `nextcloud`, see `Tymeslot.Security.UrlValidation.internal_name?/1`)
+  is accepted too; callers pass it exactly when the operator has allowed
+  private addresses for the integration, the same opt-in that lets the https
+  rule accept such a name.
+
   The URL is sanitised in `:plain_text` mode, not the default `:strict`.
   Strict mode is built for free text and rewrites a URL without saying so: it
   percent-decodes repeatedly and then strips SQL-comment-shaped (`--…`) and
@@ -94,19 +101,20 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
       )
 
     validate_url_fn = Keyword.get(opts, :validate_url_fn, &UrlValidation.validate_http_url/1)
+    internal_names_local = Keyword.get(opts, :internal_names_local, false)
 
     with {:ok, candidate} <-
            UniversalSanitizer.sanitize_and_validate(normalize_url_protocol(url),
              mode: :plain_text,
              metadata: metadata
            ),
-         :ok <- validate_url_shape(candidate, error_msg),
+         :ok <- validate_url_shape(candidate, error_msg, internal_names_local),
          :ok <- validate_url_fn.(candidate) do
       {:ok, candidate}
     end
   end
 
-  defp validate_url_shape(url, error_msg) do
+  defp validate_url_shape(url, error_msg, internal_names_local) do
     uri = URI.parse(url)
 
     cond do
@@ -116,12 +124,20 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
       is_nil(uri.host) or uri.host == "" ->
         {:error, error_msg}
 
-      # Require at least one dot for public domains, or allow 'localhost'
-      not String.contains?(uri.host, ".") and uri.host != "localhost" ->
+      not host_shape_allowed?(uri.host, internal_names_local) ->
         {:error, error_msg}
 
       true ->
         :ok
     end
+  end
+
+  # A public domain has a dot; `localhost` is the one bare name always allowed.
+  # A single-label internal name is admitted only under the operator's
+  # private-address opt-in.
+  defp host_shape_allowed?("localhost", _internal_names_local), do: true
+
+  defp host_shape_allowed?(host, internal_names_local) do
+    String.contains?(host, ".") or (internal_names_local and UrlValidation.internal_name?(host))
   end
 end

@@ -131,6 +131,11 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   Accepts a user_id, Meeting, or MeetingType to determine the target calendar.
   If a Meeting or MeetingType is provided, uses their configured calendar integration.
   Falls back to the user's primary calendar if not specified.
+
+  `{:ok, created}` carries a `CreatedEvent` struct whatever the provider is:
+  the UID the event was written under, plus whichever of the provider's own
+  event id, ETag and calendar id that provider answered with. A caller reads
+  the field it needs rather than matching on the provider.
   """
   @spec create_event(calendar_event_data(), create_context()) ::
           {:ok, CreatedEvent.t()} | {:error, term()}

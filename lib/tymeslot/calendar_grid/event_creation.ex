@@ -28,6 +28,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.CalendarGrid.EventVideo
+  alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CreatedEvent
@@ -93,7 +94,19 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     plan =
       MeetingProvisioning.plan(creating.integration_id, creating[:video_integration_id], user_id)
 
-    video_context = provision_video_room_for_plan(plan, event_details, user_id)
+    # What recording a room made for this event needs: the event's identity in
+    # the calendar and its timing (see `EventVideoRooms.record/2`).
+    grid_event = %{
+      user_id: user_id,
+      calendar_integration_id: creating.integration_id,
+      uid: uid,
+      all_day: Map.get(creating, :all_day, false),
+      start: start_at,
+      end: end_at,
+      recurrence_rule: Map.get(creating, :recurrence_rule)
+    }
+
+    video_context = provision_video_room_for_plan(plan, event_details, grid_event)
 
     event_data =
       build_event_data(uid, creating, start_at, end_at, event_details, video_context, plan)
@@ -171,7 +184,22 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     if attendees != [], do: Map.put(base_data, :attendees, attendees), else: base_data
   end
 
-  defp finalise_create_result({:ok, created}, ctx) do
+  defp finalise_create_result({:ok, %CreatedEvent{} = created}, ctx) do
+    # Google and Outlook address the event by the id they returned, not by the
+    # uid it was written under, so a room recorded under that uid learns it,
+    # and Google only within the calendar it was written to. The provider's
+    # own answer names that calendar where it reports one; the form's choice
+    # is the fallback for the providers that do not.
+    if ctx.video_context[:room_id],
+      do:
+        :ok =
+          EventVideoRooms.identified(
+            ctx.creating.integration_id,
+            ctx.uid,
+            CreatedEvent.local_uid(created),
+            created.calendar_id || written_calendar_id(ctx.creating)
+          )
+
     case MeetingProvisioning.finalise(ctx.video_context, created, ctx.plan) do
       {:ok, video_context} ->
         build_create_success(
@@ -235,11 +263,13 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     end
   end
 
-  defp provision_video_room_for_plan(:none, _event_details, _user_id), do: %{}
-  defp provision_video_room_for_plan({:inline, _video_id}, _event_details, _user_id), do: %{}
+  defp provision_video_room_for_plan(:none, _event_details, _grid_event), do: %{}
 
-  defp provision_video_room_for_plan({:separate, video_id}, event_details, user_id) do
-    provision_video_room(video_id, user_id, event_details)
+  defp provision_video_room_for_plan({:inline, _video_id}, _event_details, _grid_event),
+    do: %{}
+
+  defp provision_video_room_for_plan({:separate, video_id}, event_details, grid_event) do
+    provision_video_room(video_id, event_details, grid_event)
   end
 
   defp build_create_success(
@@ -309,14 +339,46 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
      }}
   end
 
-  defp provision_video_room(integration_id, user_id, event_details)
+  # The calendar the provider wrote the event to: the one picked in the form,
+  # else the integration's booking calendar, as the provider resolves it.
+  defp written_calendar_id(%{calendar_id: calendar_id})
+       when is_binary(calendar_id) and calendar_id != "",
+       do: calendar_id
+
+  defp written_calendar_id(creating) do
+    case CalendarIntegrationQueries.get(creating.integration_id) do
+      {:ok, %{default_booking_calendar_id: calendar_id}} when is_binary(calendar_id) ->
+        calendar_id
+
+      _no_booking_calendar ->
+        "primary"
+    end
+  end
+
+  defp provision_video_room(integration_id, event_details, %{user_id: user_id} = grid_event)
        when is_integer(integration_id) do
-    opts = [integration_id: integration_id, event_details: event_details]
+    opts = [
+      integration_id: integration_id,
+      event_details: event_details,
+      meeting_id: grid_event.uid
+    ]
 
     case VideoRooms.create_meeting_room(user_id, opts) do
-      {:ok, %{room_data: room_data}} ->
+      {:ok, %{room_data: room_data} = meeting_context} ->
+        # Recorded as soon as the room exists, before the calendar write: a
+        # room whose event never reaches the calendar still falls due.
+        :ok =
+          EventVideoRooms.record(
+            meeting_context,
+            Map.put(grid_event, :video_integration_id, integration_id)
+          )
+
         %{
-          meeting_url: room_data.meeting_url,
+          # The description, the cached link and the invitees' notification
+          # all publish one link that names nobody, so it is the shared one
+          # rather than the bare room URL a token-enforcing server refuses.
+          # See `EventVideo.join_link/2`.
+          meeting_url: EventVideo.join_link(meeting_context, Map.get(grid_event, :start)),
           room_id: room_data.room_id,
           video_integration_id: integration_id
         }

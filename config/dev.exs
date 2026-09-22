@@ -132,6 +132,8 @@ config :tymeslot, Oban,
       {"45 2 * * *", Tymeslot.Workers.VideoRoomRecoveryScanWorker},
       # Run daily at 03:45 UTC to clean up cancelled meetings' orphaned rooms
       {"45 3 * * *", Tymeslot.Workers.OrphanedVideoRoomScanWorker},
+      # Run daily at 04:15 UTC to delete video rooms that outlived their meeting
+      {"15 4 * * *", Tymeslot.Workers.ExpiredVideoRoomCleanupWorker},
       # Run daily at 02:00 UTC to renew expiring webhook channels
       {"0 2 * * *", Tymeslot.Workers.RenewWebhookChannelsWorker},
       # Run daily at 04:00 UTC

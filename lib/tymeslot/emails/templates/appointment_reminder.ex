@@ -94,6 +94,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       guest_name = Map.get(appointment_details, :guest_name) || guest_email
+      guest_video_url = guest_join_url(appointment_details)
 
       meeting_details = %{
         date: appointment_details.date,
@@ -121,8 +122,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
-      #{if Map.get(appointment_details, :meeting_url) do
-        MeetingComponents.video_meeting_section(@intent, appointment_details.meeting_url,
+      #{if guest_video_url do
+        MeetingComponents.video_meeting_section(@intent, guest_video_url,
         title: dgettext("emails", "Join when you're ready"),
         button_text: dgettext("emails", "Join Meeting"))
       end}
@@ -244,7 +245,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
     meeting_details = TextBodyHelper.format_meeting_details(appointment_details, locale)
 
     video_section =
-      TextBodyHelper.format_video_section(Map.get(appointment_details, :meeting_url), locale)
+      TextBodyHelper.format_video_section(guest_join_url(appointment_details), locale)
 
     """
     #{dgettext("emails", "REMINDER: the meeting is in %{time_until}", time_until: appointment_details.time_until)}
@@ -313,6 +314,20 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
     #{dgettext("emails", "Best,")}
     #{appointment_details.organizer_name}
     """
+  end
+
+  # A guest has no per-role join URL of their own, so they get the link
+  # `Meetings.VideoRooms.guest_join_url/1` builds for a recipient the room
+  # cannot name: the room URL on most providers, and on one whose links carry
+  # a credential that same URL with a token naming nobody, which is the only
+  # link a server enforcing tokens will admit. A payload built before that key
+  # existed still has the room URL to fall back on.
+  #
+  # The organiser and attendee bodies above deliberately keep reading
+  # `meeting_url`; giving them their own per-role link is a separate change.
+  defp guest_join_url(appointment_details) do
+    Map.get(appointment_details, :guest_video_url) ||
+      Map.get(appointment_details, :meeting_url)
   end
 
   defp organizer_locale(appointment_details),

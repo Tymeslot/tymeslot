@@ -6,6 +6,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
   @moduletag :database
   @moduletag :queries
 
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
 
@@ -362,6 +363,106 @@ defmodule Tymeslot.Meetings.MeetingQueriesTest do
       assert length(result) == 1
       assert hd(result).utm_source == "linkedin"
     end
+  end
+
+  describe "count_with_video_room_for_integration/3" do
+    setup do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "nextcloud_talk")
+      now = DateTime.utc_now()
+
+      insert_room(user, integration, 1, "upcoming")
+      insert_room(user, integration, -2, "ended")
+      insert_room(user, integration, 2, "cancelled", status: "cancelled")
+
+      # Neither of these holds a room this integration could delete.
+      insert_room(user, integration, 3, nil)
+      other = insert(:video_integration, user: user, provider: "nextcloud_talk")
+      insert_room(user, other, 4, "elsewhere")
+
+      %{integration: integration, now: now}
+    end
+
+    test "counts only upcoming live bookings for the upcoming scope", ctx do
+      assert MeetingQueries.count_with_video_room_for_integration(
+               ctx.integration.id,
+               :upcoming,
+               ctx.now
+             ) == 1
+    end
+
+    test "counts every room still held, ended and cancelled included, for the all scope",
+         ctx do
+      assert MeetingQueries.count_with_video_room_for_integration(
+               ctx.integration.id,
+               :all,
+               ctx.now
+             ) == 3
+    end
+  end
+
+  describe "list_upcoming_video_rooms_for_integration/3" do
+    setup do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "nextcloud_talk")
+      now = DateTime.utc_now(:second)
+
+      later = insert_room(user, integration, 2, "later")
+      sooner = insert_room(user, integration, 1, "sooner", status: "pending")
+
+      # Started an hour ago and still running: it has not ended, so it counts.
+      running =
+        insert_meeting_at(user.id, DateTime.add(now, -1, :hour),
+          end_time: DateTime.add(now, 1, :hour),
+          video_integration_id: integration.id,
+          video_room_id: "running"
+        )
+
+      cancelled = insert_room(user, integration, 3, "cancelled", status: "cancelled")
+      expired = insert_room(user, integration, 4, "expired", status: "expired")
+
+      insert_room(user, integration, -2, "ended")
+      insert_room(user, integration, 5, nil)
+      other = insert(:video_integration, user: user, provider: "nextcloud_talk")
+      insert_room(user, other, 6, "elsewhere")
+
+      expected = [
+        %{id: running.id, status: "confirmed"},
+        %{id: sooner.id, status: "pending"},
+        %{id: later.id, status: "confirmed"},
+        %{id: cancelled.id, status: "cancelled"},
+        %{id: expired.id, status: "expired"}
+      ]
+
+      %{integration: integration, now: now, expected: expected}
+    end
+
+    test "lists the meetings with a room that have not ended, soonest first, with their status",
+         ctx do
+      assert MeetingListQueries.list_upcoming_video_rooms_for_integration(
+               ctx.integration.id,
+               ctx.now,
+               10
+             ) == ctx.expected
+    end
+
+    test "returns no more than the limit, keeping the soonest", ctx do
+      assert MeetingListQueries.list_upcoming_video_rooms_for_integration(
+               ctx.integration.id,
+               ctx.now,
+               2
+             ) == Enum.take(ctx.expected, 2)
+    end
+  end
+
+  defp insert_room(user, integration, offset_days, room_id, extra \\ []) do
+    start_time = build_base_start_time(offset_days)
+
+    insert_meeting_at(
+      user.id,
+      start_time,
+      [video_integration_id: integration.id, video_room_id: room_id] ++ extra
+    )
   end
 
   defp insert_meeting_at(organizer_id, start_time, extra \\ []) do

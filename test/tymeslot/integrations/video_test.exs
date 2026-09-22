@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.VideoTest do
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.IntegrationHealthWorker
   alias Tymeslot.Workers.VideoIntegrationDisconnectWorker
+  alias Tymeslot.Workers.VideoSyncWorker
 
   setup :verify_on_exit!
 
@@ -155,7 +156,7 @@ defmodule Tymeslot.Integrations.VideoTest do
     end
   end
 
-  describe "count_upcoming_rooms/2" do
+  describe "rooms_deleted_on_disconnect/2" do
     setup do
       user = insert(:user)
       integration = insert(:video_integration, user: user, provider: "zoom")
@@ -184,7 +185,8 @@ defmodule Tymeslot.Integrations.VideoTest do
       room_booking(user, integration, 24)
       room_booking(user, integration, 48)
 
-      assert Video.count_upcoming_rooms(user.id, integration.id) == 2
+      assert %{scope: :upcoming, count: 2} =
+               Video.rooms_deleted_on_disconnect(user.id, integration.id)
     end
 
     test "counts exactly the bookings the room cleanup drains",
@@ -194,14 +196,17 @@ defmodule Tymeslot.Integrations.VideoTest do
       room_booking(user, integration, 72, %{status: "cancelled"})
 
       drained =
-        MeetingListQueries.list_upcoming_with_video_room_for_integration(
+        MeetingListQueries.list_with_video_room_for_integration(
           integration.id,
+          :upcoming,
           DateTime.utc_now(),
           500
         )
 
       assert length(drained) == 1
-      assert Video.count_upcoming_rooms(user.id, integration.id) == length(drained)
+
+      assert %{count: count} = Video.rooms_deleted_on_disconnect(user.id, integration.id)
+      assert count == length(drained)
     end
 
     test "is 0 for an integration the user does not own", %{integration: integration} do
@@ -209,7 +214,7 @@ defmodule Tymeslot.Integrations.VideoTest do
       room_booking(owner, integration, 24)
       stranger = insert(:user)
 
-      assert Video.count_upcoming_rooms(stranger.id, integration.id) == 0
+      assert %{count: 0} = Video.rooms_deleted_on_disconnect(stranger.id, integration.id)
     end
 
     test "leaves out past, cancelled, room-less and voided bookings, and other integrations",
@@ -223,7 +228,17 @@ defmodule Tymeslot.Integrations.VideoTest do
       room_booking(user, other, 96)
       room_booking(user, integration, 120)
 
-      assert Video.count_upcoming_rooms(user.id, integration.id) == 1
+      assert %{count: 1} = Video.rooms_deleted_on_disconnect(user.id, integration.id)
+    end
+
+    test "counts a Talk integration's past rooms too, which stay on the organiser's server",
+         %{user: user} do
+      talk = insert(:video_integration, user: user, provider: "nextcloud_talk")
+
+      room_booking(user, talk, -24, %{video_provider: "nextcloud_talk"})
+      room_booking(user, talk, 24, %{video_provider: "nextcloud_talk"})
+
+      assert %{scope: :all, count: 2} = Video.rooms_deleted_on_disconnect(user.id, talk.id)
     end
   end
 
@@ -323,6 +338,28 @@ defmodule Tymeslot.Integrations.VideoTest do
         worker: IntegrationHealthWorker,
         args: %{"type" => "video", "integration_id" => integration.id}
       )
+    end
+
+    # Only a reconnect proven against the provider re-sends reschedules: a
+    # credential that merely replaces the stored one may still be refused.
+    test "an unproven credential that clears the reconnect flag queues no room update" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "zoom", needs_reauth: true)
+      start_time = DateTime.add(DateTime.utc_now(:second), 2, :day)
+
+      insert(:meeting,
+        organizer_user_id: user.id,
+        video_integration_id: integration.id,
+        video_room_id: "zoom-room",
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 30, :minute)
+      )
+
+      assert {:ok, updated} =
+               Video.update_integration(user.id, integration.id, %{api_key: "replaced-key"})
+
+      refute updated.needs_reauth
+      refute_enqueued(worker: VideoSyncWorker)
     end
 
     test "returns {:error, :not_found} for an integration belonging to another user" do

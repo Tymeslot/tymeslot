@@ -72,6 +72,9 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_integration_paused_notification(user, integration, type, cutoff_days),
     to: IntegrationScheduler
 
+  defdelegate schedule_video_room_creation_error_notification(user_id, integration_id, code),
+    to: IntegrationScheduler
+
   defdelegate schedule_admin_alert(recipient, category, severity, message, metadata, opts \\ []),
     to: IntegrationScheduler
 
@@ -102,6 +105,11 @@ defmodule Tymeslot.Emails.EmailScheduler do
       "user_id",
       "integration_id",
       "integration_type"
+    ],
+    "send_video_room_creation_error_notification" => [
+      "user_id",
+      "integration_id",
+      "error_code"
     ],
     "send_calendar_invitation" => [
       "user_id",

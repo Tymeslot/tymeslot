@@ -15,25 +15,27 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   - Recovery is silent — no email is sent.
   - The in-app badge shows immediately on `:unhealthy` status, regardless
     of the 48-hour email threshold.
+  - An integration already flagged `needs_reauth` never gets the unhealthy
+    email: the reauth email has told its owner, and nothing recovers until
+    they reconnect. Once they have, an integration still unhealthy for
+    another reason gets the unhealthy email as usual, since the reauth path
+    leaves `notification_sent_at` untouched.
   - Permanent auth failures (e.g. Google `invalid_grant`) bypass the 48-hour
-    threshold via `handle_permanent_auth_failure/4`: the integration is
+    threshold via `handle_permanent_auth_failure/3`: the integration is
     flagged `needs_reauth: true`, which itself owns the notification (the
     reauth email, not the unhealthy one; see `CalendarManagement.flag_and_notify/2`
     and `Video.flag_and_notify/2`) on the false to true transition. This
-    fast-path only stamps `notification_sent_at` so the 48-hour threshold
-    does not also fire an unhealthy email for the same failure; it sends
-    nothing itself. Oban's 30-day uniqueness window prevents duplicate reauth
-    emails while the user has not reconnected.
+    fast-path sends nothing itself. Oban's 30-day uniqueness window prevents
+    duplicate reauth emails while the user has not reconnected.
 
   ## Atomicity Notes
 
   `became_unhealthy_at` is set by `Monitor.update_health/2` and persisted
   atomically with the rest of the health state via `Monitor.put_state/3`.
 
-  `notification_sent_at` is stamped by the email worker handler after
-  confirmed delivery for the 48-hour threshold path, and directly by
-  `maybe_notify_on_reauth/2` for the permanent-auth fast-path, which sends
-  no email of its own to stamp for.
+  `notification_sent_at` is stamped only by the email worker handler, after
+  confirmed delivery of the unhealthy email. The permanent-auth fast-path
+  never writes it.
   """
 
   require Logger
@@ -139,28 +141,62 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   end
 
   @doc """
+  Responds to one completed health check: the permanent-auth fast-path, then
+  the status transition.
+
+  The order is the point. A check whose result is a permanent auth failure
+  flags the integration, which sends the reauth email, and the transition then
+  sees the flagged integration, so `maybe_notify_user/4` withholds the
+  unhealthy email. Run the other way round, an integration already past the
+  48-hour threshold would get both emails from the same check. For any other
+  result the fast-path changes nothing, so the transition behaves exactly as
+  it would on its own.
+  """
+  @spec handle_check_result(
+          integration_type(),
+          map(),
+          Monitor.transition(),
+          Monitor.health_state(),
+          {:ok, any()} | {:error, any()}
+        ) :: :ok
+  def handle_check_result(type, integration, transition, health_state, check_result) do
+    integration = apply_permanent_auth_failure(type, integration, check_result)
+    handle_transition(type, integration, transition, health_state)
+  end
+
+  @doc """
   Fast-path handler for permanent OAuth auth failures (e.g. Google
   `invalid_grant`, Outlook `invalid_client`, atomic `:unauthorized`).
 
   When the assessor's `check_result` carries a permanent auth marker, the
   integration is flagged `needs_reauth: true` so the dashboard reconnect
-  banner shows immediately, and the unhealthy-notification email is enqueued
-  on the same health check rather than waiting 48 hours.
+  banner shows immediately, and flagging enqueues the reauth email on the same
+  health check rather than leaving the owner to wait 48 hours for the
+  unhealthy one.
 
   Non-auth failures and successes are passed through untouched. Safe to call
-  on every check — Oban's 30-day uniqueness window on the email job prevents
-  duplicate sends until the user reconnects.
+  on every check: Oban's 30-day uniqueness window on the email job prevents
+  duplicate sends until the user reconnects. A health check goes through
+  `handle_check_result/5`, which also runs the transition in the right order.
   """
   @spec handle_permanent_auth_failure(
           integration_type(),
           map(),
           {:ok, any()} | {:error, any()}
         ) :: :ok
-  def handle_permanent_auth_failure(type, integration, check_result)
+  def handle_permanent_auth_failure(type, integration, check_result) do
+    _integration = apply_permanent_auth_failure(type, integration, check_result)
+    :ok
+  end
 
-  def handle_permanent_auth_failure(type, integration, {:error, reason}) do
+  # Private Functions
+
+  # Returns the integration as the rest of the check should see it: flagged
+  # when the flag was written, untouched otherwise (including when the write
+  # failed, since nothing was flagged and no reauth email went out).
+  defp apply_permanent_auth_failure(type, integration, {:error, reason}) do
     if BreakerOutcome.permanent_credential_error?(reason) do
-      Logger.warning("Permanent auth failure detected — flagging for reauth",
+      Logger.warning("Permanent auth failure detected, flagging for reauth",
         type: type,
         integration_id: integration.id,
         provider: integration.provider,
@@ -169,24 +205,24 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
 
       case flag_for_reauth(type, integration, ReauthHandling.rejection_cause(reason)) do
         :ok ->
-          maybe_notify_on_reauth(type, integration)
+          %{integration | needs_reauth: true}
 
         {:error, _reason} ->
           Logger.error(
-            "Failed to set needs_reauth flag — skipping notification until next successful flag write",
+            "Failed to set needs_reauth flag, so no reauth email is sent until a flag write succeeds",
             type: type,
             integration_id: integration.id,
             provider: integration.provider
           )
-      end
-    end
 
-    :ok
+          integration
+      end
+    else
+      integration
+    end
   end
 
-  def handle_permanent_auth_failure(_type, _integration, _check_result), do: :ok
-
-  # Private Functions
+  defp apply_permanent_auth_failure(_type, integration, _check_result), do: integration
 
   # Re-uses the worker entry points on each domain. Their return values are
   # Oban-shaped (`{:discard, _} | {:error, _}`). We normalise to `:ok | {:error, _}`
@@ -207,33 +243,20 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
     end
   end
 
-  # A permanent auth failure is already announced by the reauth email that
-  # `flag_for_reauth/3` triggers on the false to true transition (see
-  # `CalendarManagement.flag_and_notify/2` / `Video.flag_and_notify/2`), so
-  # this fast-path sends nothing itself. It still stamps `notification_sent_at`
-  # when the cooldown window allows it, purely as bookkeeping: without that
-  # stamp the 48-hour unhealthy threshold would fire its own email on top of
-  # the reauth one for the same underlying failure.
-  defp maybe_notify_on_reauth(type, integration) do
-    now = Clock.utc_now()
-
-    notification_sent_at =
-      case IntegrationHealthStateQueries.get(type, integration.id) do
-        {:ok, record} -> record.notification_sent_at
-        {:error, :not_found} -> nil
-      end
-
-    if outside_cooldown?(notification_sent_at, now) do
-      IntegrationHealthStateQueries.update_fields(type, integration.id, notification_sent_at: now)
-    end
-  end
-
   defp clear_notification_state(type, integration_id) do
     IntegrationHealthStateQueries.update_fields(type, integration_id,
       became_unhealthy_at: nil,
       notification_sent_at: nil
     )
   end
+
+  # An integration flagged `needs_reauth` already told its owner to reconnect,
+  # through the reauth email sent when the flag was set, and cannot recover
+  # until they do. Its probes keep failing, however they are classified (a
+  # provider that refuses to spend flagged credentials reports the refusal
+  # locally), so without this guard the 48-hour threshold would send the
+  # unhealthy email about the same failure as well.
+  defp maybe_notify_user(_type, %{needs_reauth: true}, _health_state, _now), do: :ok
 
   defp maybe_notify_user(type, integration, health_state, now) do
     with %{became_unhealthy_at: at} when at != nil <- health_state,

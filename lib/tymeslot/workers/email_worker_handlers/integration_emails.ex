@@ -14,6 +14,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Integrations.Video.RoomCreationError
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
@@ -175,6 +176,96 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
         {:discard, "User or integration not found"}
     end
   end
+
+  @spec handle_video_room_creation_error_notification(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_video_room_creation_error_notification(%{
+        "user_id" => user_id,
+        "integration_id" => integration_id,
+        "error_code" => error_code
+      }) do
+    with {:ok, code} <- RoomCreationError.parse(error_code),
+         {:ok, user} <- UserQueries.get_user(user_id),
+         {:ok, integration} <- fetch_integration("video", integration_id),
+         :ok <- still_worth_sending(integration, code) do
+      deliver_room_creation_error_notification(user, integration, code)
+    else
+      :error ->
+        Logger.warning("Unknown video room creation error code, discarding notification",
+          integration_id: integration_id,
+          code: error_code
+        )
+
+        {:discard, "Unknown room creation error code"}
+
+      {:error, :not_found} ->
+        Logger.warning("User or integration not found for room creation error notification",
+          user_id: user_id,
+          integration_id: integration_id
+        )
+
+        {:discard, "User or integration not found"}
+
+      {:discard, _reason} = discard ->
+        discard
+    end
+  end
+
+  # The integration is re-read at send time, so an owner whose server was fixed
+  # (and whose next booking got its room) between the refusal and the send is
+  # not told about something that already works, and an integration switched
+  # off or disconnected meanwhile is not told about bookings it no longer
+  # takes. Each of these gives the claim on the email back, so the one notice
+  # the owner gets is not spent on an email nobody receives.
+  defp still_worth_sending(%{room_creation_error: code, is_active: true, deleted_at: nil}, code),
+    do: :ok
+
+  defp still_worth_sending(integration, code) do
+    RoomCreationError.release(integration.id, code)
+
+    Logger.info("Video room creation refusal no longer worth an email, discarding notification",
+      integration_id: integration.id,
+      code: code
+    )
+
+    {:discard, "Room creation error no longer recorded"}
+  end
+
+  defp deliver_room_creation_error_notification(user, integration, code) do
+    case Config.email_service_module().send_video_room_creation_error_notification(
+           user,
+           integration
+         ) do
+      {:ok, _result} ->
+        Logger.info("Video room creation error notification sent",
+          user_id: user.id,
+          integration_id: integration.id
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to send video room creation error notification",
+          user_id: user.id,
+          integration_id: integration.id,
+          error: inspect(reason)
+        )
+
+        delivery_failure(reason, integration, code)
+    end
+  end
+
+  # A rejected recipient is the one failure no retry mends, so the claim goes
+  # back: the owner was never told, and the next refusal may reach an address
+  # that works. Anything else is retried with the claim still held, since the
+  # email may yet go out.
+  defp delivery_failure({:recipient_rejected, _reason} = rejection, integration, code) do
+    RoomCreationError.release(integration.id, code)
+    DeliveryOutcome.from_error(rejection, "Failed to send notification")
+  end
+
+  defp delivery_failure(reason, _integration, _code),
+    do: DeliveryOutcome.from_error(reason, "Failed to send notification")
 
   @spec handle_calendar_invitation(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}

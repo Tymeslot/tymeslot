@@ -459,6 +459,51 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
     end)
   end
 
+  describe "test_connection/2 over plain http to an internal name" do
+    @internal_client %{@caldav_client | base_url: "http://nextcloud/remote.php/dav"}
+
+    test "reaches a Docker service name once private addresses are allowed" do
+      test = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        send(test, {:propfind, conn.scheme, conn.host})
+
+        conn
+        |> Conn.put_resp_header("content-type", "application/xml")
+        |> Conn.send_resp(207, "<D:multistatus xmlns:D=\"DAV:\"/>")
+      end)
+
+      assert {:ok, _message} =
+               Discovery.test_connection(@internal_client,
+                 ip_address: "127.0.0.1",
+                 allow_private_ips: true
+               )
+
+      assert_received {:propfind, :http, "nextcloud"}
+    end
+
+    test "refuses, before sending the credentials, a name that resolves to a public address" do
+      with_config(:tymeslot, :environment, :prod)
+      with_config(:tymeslot, :allow_private_ips_for_calendar, true)
+      with_config(:tymeslot, :dns_resolver_module, DiscoveryPublicInternalNameResolver)
+
+      ReqTest.stub(:tymeslot_http, fn _conn ->
+        flunk("the app password went over plain http to a public address")
+      end)
+
+      assert {:error, _reason} =
+               Discovery.test_connection(@internal_client, ip_address: "127.0.0.1")
+    end
+
+    test "asks for https, without contacting the server, while private addresses are not allowed" do
+      assert {:error, "Use HTTPS for non-local servers"} =
+               Discovery.test_connection(@internal_client,
+                 ip_address: "127.0.0.1",
+                 allow_private_ips: false
+               )
+    end
+  end
+
   describe "test_connection/2 URL validation (SSRF protection)" do
     test "rejects loopback IP before any network contact" do
       client = %{@caldav_client | base_url: "https://127.0.0.1:5232"}
@@ -478,4 +523,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryTest do
       assert {:error, _reason} = Discovery.test_connection(client, ip_address: "127.0.0.1")
     end
   end
+end
+
+defmodule DiscoveryPublicInternalNameResolver do
+  @moduledoc false
+  @behaviour Tymeslot.Security.DnsResolutionBehaviour
+
+  @impl Tymeslot.Security.DnsResolutionBehaviour
+  def check_private_ip(_url, _opts), do: :ok
+
+  @impl Tymeslot.Security.DnsResolutionBehaviour
+  def resolve_internal(_url, _opts),
+    do: {:error, "Plain http to an internal name must resolve to a private network address"}
 end

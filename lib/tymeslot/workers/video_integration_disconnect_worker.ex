@@ -10,7 +10,17 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
   credentials away before they had been used.
 
   Only *upcoming* bookings are touched. Past bookings are history, and their
-  provider rooms have usually expired on their own.
+  provider rooms have usually expired on their own. The exception is a provider
+  whose rooms stay on the organiser's server until something deletes them
+  (`ProviderConfig.rooms_deleted_after_meeting/0`): every room such an
+  integration still holds is deleted, ended and cancelled meetings included,
+  because once the row is purged nothing has the credentials to reach them.
+  `Tymeslot.Integrations.Video.disconnect_room_scope/1` makes that choice, for
+  the disconnect modal's count as much as for this drain.
+
+  The rooms drained are those of bookings and those made for events on the
+  dashboard calendar grid, whose records (`Tymeslot.CalendarGrid.EventVideoRooms`)
+  are removed as their rooms go.
 
   This runs only when the user explicitly asked for the rooms to be deleted.
   Disconnecting on its own leaves them alone, because their join URLs are
@@ -23,6 +33,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
     max_attempts: 5,
     priority: 2
 
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -35,10 +46,8 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
 
   @max_attempts 5
 
-  # Matches `MeetingListQueries.list_upcoming_with_video_room_for_integration/3`'s
-  # own default. Overridable at runtime (rather than a plain module attribute)
-  # so tests can drive the full-page retry path without inserting hundreds of
-  # meetings.
+  # Overridable at runtime (rather than a plain module attribute) so tests can
+  # drive the full-page retry path without inserting hundreds of meetings.
   @default_drain_page_limit 500
 
   @doc """
@@ -126,15 +135,14 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
   defp drain(integration, executions) do
     limit = drain_page_limit()
 
-    meetings =
-      MeetingListQueries.list_upcoming_with_video_room_for_integration(
-        integration.id,
-        DateTime.utc_now(),
-        limit
-      )
+    {meetings, event_rooms} = rooms_to_drain(integration, limit)
 
-    results = Enum.map(meetings, &delete_room(integration, &1))
+    results =
+      Enum.map(meetings, &delete_meeting_room(integration, &1)) ++
+        Enum.map(event_rooms, &delete_event_room(integration, &1))
+
     failures = Enum.count(results, &(&1 in [:error, :circuit_open]))
+    total = length(results)
 
     cond do
       :circuit_open in results and executions < @max_attempts ->
@@ -146,21 +154,29 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
         # forever the way an unconditional snooze would.
         ErrorPolicy.to_result(:circuit_open, executions, integration.provider)
 
-      length(meetings) == limit ->
-        # A full page: more upcoming meetings on this integration than one
-        # pass covers. `clear_room/1` removed every drained meeting from the
-        # result set, so retrying re-queries the next page rather than
-        # purging with the rest silently orphaned.
+      length(meetings) == limit or length(event_rooms) == limit ->
+        # A full page: more rooms on this integration than one pass covers.
+        # `clear_room/1` removed every drained meeting from the result set, so
+        # retrying re-queries the next page rather than purging with the rest
+        # silently orphaned.
         Logger.warning("Video room drain page full, more meetings likely remain",
           integration_id: integration.id,
-          drained_this_pass: length(meetings) - failures
+          drained_this_pass: total - failures
         )
 
         {:error, :more_rooms_to_drain}
 
       true ->
-        finish(integration, executions, length(meetings), failures)
+        finish(integration, executions, total, failures)
     end
+  end
+
+  defp rooms_to_drain(integration, limit) do
+    scope = Video.disconnect_room_scope(integration.provider)
+    now = DateTime.utc_now()
+
+    {MeetingListQueries.list_with_video_room_for_integration(integration.id, scope, now, limit),
+     CalendarGrid.list_event_video_rooms_for_integration(integration.id, scope, now, limit)}
   end
 
   defp drain_page_limit,
@@ -224,27 +240,39 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
     end
   end
 
-  defp delete_room(integration, meeting) do
-    result =
-      Video.delete_meeting_room(meeting.organizer_user_id,
-        integration_id: integration.id,
-        room_id: meeting.video_room_id
+  defp delete_meeting_room(integration, meeting),
+    do:
+      delete_room(integration, meeting.organizer_user_id, meeting.video_room_id,
+        log: [meeting_id: meeting.id],
+        on_deleted: fn -> clear_room(meeting) end
       )
+
+  # A grid event's room exists only as its record, so the record goes with it.
+  defp delete_event_room(integration, room),
+    do:
+      delete_room(integration, room.user_id, room.room_id,
+        log: [calendar_event_video_room_id: room.id],
+        on_deleted: fn -> CalendarGrid.forget_event_video_room(room) end
+      )
+
+  defp delete_room(integration, user_id, room_id, opts) do
+    result =
+      Video.delete_meeting_room(user_id, integration_id: integration.id, room_id: room_id)
 
     case result do
       :ok ->
-        clear_room(meeting)
+        opts[:on_deleted].()
 
       {:error, :meeting_not_found} ->
-        clear_room(meeting)
+        opts[:on_deleted].()
 
       {:error, :circuit_open} ->
         :circuit_open
 
       {:error, reason} ->
-        Logger.warning("Failed to delete provider room during disconnect",
-          meeting_id: meeting.id,
-          reason: inspect(reason)
+        Logger.warning(
+          "Failed to delete provider room during disconnect",
+          opts[:log] ++ [reason: inspect(reason)]
         )
 
         :error

@@ -40,6 +40,7 @@ defmodule Tymeslot.Emails.EmailService do
           optional(:start_time_attendee_tz) => DateTime.t(),
           optional(:start_time_owner_tz) => DateTime.t(),
           optional(:attendee_video_url) => String.t() | nil,
+          optional(:guest_video_url) => String.t() | nil,
           optional(:reschedule_url) => String.t(),
           optional(:cancel_url) => String.t(),
           optional(:booking_url) => String.t(),
@@ -190,6 +191,10 @@ defmodule Tymeslot.Emails.EmailService do
 
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_integration_paused_notification(user, integration, type, cutoff_days),
+    to: IntegrationEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_video_room_creation_error_notification(user, integration),
     to: IntegrationEmails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour
