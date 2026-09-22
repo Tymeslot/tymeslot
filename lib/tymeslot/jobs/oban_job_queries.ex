@@ -241,6 +241,30 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   # normalises a module into that form so a match against `j.worker` can't
   # silently miss every job. Callers that already hold the stored name (e.g. a
   # worker's own `to_string(__MODULE__)`-shaped literal) pass it straight through.
+  @doc """
+  Whether an older job of `worker` for `meeting_id` is executing right now.
+
+  "Older" means a lower id, which is the order the jobs were enqueued in. A
+  worker that waits on this therefore has exactly one waiter per pair, and the
+  queue cannot wedge with both sides waiting for each other.
+
+  Oban's `unique` cannot express this: it decides whether a job is inserted at
+  all, whereas this is about when an inserted job may run.
+  """
+  @spec earlier_job_executing?(module() | String.t(), term(), integer()) :: boolean()
+  def earlier_job_executing?(worker, meeting_id, before_id) when is_integer(before_id) do
+    worker_name = normalize_worker_name(worker)
+
+    Repo.exists?(
+      from(j in Job,
+        where: j.id < ^before_id,
+        where: j.state == "executing",
+        where: j.worker == ^worker_name,
+        where: fragment("?->>'meeting_id' = ?", j.args, ^to_string(meeting_id))
+      )
+    )
+  end
+
   defp normalize_worker_name(worker) when is_atom(worker), do: Worker.to_string(worker)
   defp normalize_worker_name(worker) when is_binary(worker), do: worker
 end
