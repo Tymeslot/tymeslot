@@ -1,165 +1,246 @@
 defmodule TymeslotWeb.OAuthCallbackHandler do
   @moduledoc """
-  Generic OAuth callback handler that reduces duplication across OAuth controllers.
+  The one callback path for every calendar and video OAuth provider.
 
-  This module provides a standardized way to handle OAuth callbacks for different
-  providers, ensuring consistent error handling, rate limiting, and response formatting.
+  A provider sends the browser back with either a `code` and `state`, an
+  `error`, or something malformed. The success path checks the state belongs to
+  the signed-in user, rate limits by IP, and hands the code to the owning
+  context (`Calendar.complete_oauth/3` or `Video.complete_oauth/3`), which
+  connects the integration and refreshes the dashboard's cached status. The
+  error path turns the provider's error into a flash.
+
+  What differs per provider lives in `@providers`: the name shown to the user,
+  which context and provider the code belongs to, which secret signed the
+  state, and whether the provider is Microsoft, whose errors can carry an
+  admin-consent code worth explaining.
   """
 
-  require Logger
+  use TymeslotWeb, :verified_routes
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Phoenix.Controller
-  alias Tymeslot.Auth.ErrorFormatter
-  alias Tymeslot.Dashboard.DashboardContext
-  alias Tymeslot.Security.RateLimiter
-  alias TymeslotWeb.AuthControllerHelpers
-  alias TymeslotWeb.Helpers.ClientIP
+  require Logger
 
-  @type callback_opts :: [
-          service_name: String.t(),
-          exchange_fun: (map() -> {:ok, map()} | {:error, any()}),
-          create_fun: (map() -> {:ok, any()} | {:error, any()}),
-          redirect_path: String.t(),
-          rate_limit_key: String.t(),
-          rate_limit_max: integer(),
-          rate_limit_window: integer()
-        ]
+  alias Phoenix.Controller
+  alias Plug.Conn
+  alias Tymeslot.Auth.ErrorFormatter
+  alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Video
+  alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Helpers.MicrosoftOAuth
+  alias TymeslotWeb.Helpers.OAuthStateGuard
+
+  @type provider_key :: :google_calendar | :outlook_calendar | :google_meet | :teams | :zoom
+
+  # `domain` and `provider` name the context function and the provider it
+  # takes; `state_provider` names the secret the state was signed with, which
+  # Teams shares with Outlook and Google Meet with Google Calendar.
+  @providers %{
+    google_calendar: %{
+      name: "Google Calendar",
+      domain: :calendar,
+      provider: :google,
+      state_provider: :google,
+      microsoft?: false
+    },
+    outlook_calendar: %{
+      name: "Outlook Calendar",
+      domain: :calendar,
+      provider: :outlook,
+      state_provider: :outlook,
+      microsoft?: true
+    },
+    google_meet: %{
+      name: "Google Meet",
+      domain: :video,
+      provider: :google_meet,
+      state_provider: :google,
+      microsoft?: false
+    },
+    teams: %{
+      name: "Microsoft Teams",
+      domain: :video,
+      provider: :teams,
+      state_provider: :outlook,
+      microsoft?: true
+    },
+    zoom: %{
+      name: "Zoom",
+      domain: :video,
+      provider: :zoom,
+      state_provider: :zoom,
+      microsoft?: false
+    }
+  }
+
+  # Reasons the user can act on get their own message; anything else is a
+  # generic failure worth an error-level log.
+  @actionable_reasons [:calendar_scope_missing, :missing_teams_fields, :missing_zoom_account_id]
 
   @doc """
-  Handles OAuth callback with standardized error handling and rate limiting.
-
-  ## Options
-  - `:service_name` - The name of the OAuth service (e.g., "GitHub", "Google")
-  - `:exchange_fun` - Function to exchange code for tokens
-  - `:create_fun` - Function to create/update the integration
-  - `:redirect_path` - Path to redirect to after success/failure
-  - `:success_redirect_path` - Optional override for the success redirect only
-    (defaults to `:redirect_path`)
-  - `:rate_limit_key` - Key for rate limiting (default: "oauth_callback")
-  - `:rate_limit_max` - Maximum attempts allowed (default: 10)
-  - `:rate_limit_window` - Rate limit window in ms (default: 60_000)
-
-  ## Examples
-
-      handle_callback(conn, params, 
-        service_name: "GitHub",
-        exchange_fun: &GitHub.exchange_code/1,
-        create_fun: &create_github_integration/1,
-        redirect_path: "/dashboard/integrations"
-      )
+  Handles a provider's OAuth callback request and returns the redirected conn.
   """
-  @spec handle_callback(Plug.Conn.t(), map(), callback_opts()) :: Plug.Conn.t()
-  def handle_callback(conn, params, opts) do
-    service_name = Keyword.fetch!(opts, :service_name)
-    exchange_fun = Keyword.fetch!(opts, :exchange_fun)
-    create_fun = Keyword.fetch!(opts, :create_fun)
-    redirect_path = Keyword.fetch!(opts, :redirect_path)
-    success_redirect_path = Keyword.get(opts, :success_redirect_path, redirect_path)
+  @spec handle(Conn.t(), map(), provider_key()) :: Conn.t()
+  def handle(conn, params, provider_key) do
+    handle_params(conn, params, Map.fetch!(@providers, provider_key))
+  end
+
+  defp handle_params(conn, %{"code" => code, "state" => state}, config) do
+    case OAuthStateGuard.enforce_user_match(conn, state, config.state_provider) do
+      {:ok, validated} -> rate_limited_connect(conn, code, state, validated[:return_to], config)
+      {:error, _reason} -> reject(conn, config)
+    end
+  end
+
+  defp handle_params(conn, %{"error" => error} = params, config) do
+    description = Map.get(params, "error_description", "")
+
+    Logger.warning("OAuth provider returned an error",
+      provider: config.name,
+      error: error,
+      description: description
+    )
+
+    flash_and_redirect(
+      conn,
+      :error,
+      provider_error_message(error, description, config),
+      integrations_path(config)
+    )
+  end
+
+  defp handle_params(conn, params, config) do
+    Logger.warning("Invalid OAuth callback params",
+      provider: config.name,
+      params: inspect(OAuthStateGuard.redact_callback_params(params))
+    )
+
+    flash_and_redirect(
+      conn,
+      :error,
+      dgettext("dashboard_integrations", "Invalid authentication response. Please try again."),
+      integrations_path(config)
+    )
+  end
+
+  defp rate_limited_connect(conn, code, state, return_to, config) do
+    failure_path = return_to || integrations_path(config)
 
     case RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)) do
       :ok ->
-        process_oauth_callback(
-          conn,
-          params,
-          service_name,
-          exchange_fun,
-          create_fun,
-          {redirect_path, success_redirect_path}
-        )
+        connect(conn, code, state, {return_to, failure_path}, config)
 
       {:error, :rate_limited, _message} ->
-        AuthControllerHelpers.handle_rate_limited(
+        Logger.warning("Rate limit exceeded for OAuth callback", provider: config.name)
+
+        flash_and_redirect(
           conn,
+          :error,
           ErrorFormatter.format_rate_limit_error("authentication"),
-          redirect_path
+          failure_path
         )
     end
   end
 
-  # Private functions
-
-  defp process_oauth_callback(
-         conn,
-         params,
-         service_name,
-         exchange_fun,
-         create_fun,
-         {redirect_path, success_redirect_path}
-       ) do
-    with {:ok, tokens} <- exchange_fun.(params),
-         {:ok, result} <- create_fun.(tokens) do
-      # Invalidate dashboard cache to reflect the new integration
-      # Try to get user_id from either the result or tokens
-      user_id = get_user_id(result, tokens)
-      if user_id, do: DashboardContext.invalidate_integration_status(user_id)
-
-      conn
-      |> Controller.put_flash(
-        :info,
-        dgettext("dashboard_integrations", "%{service} connected successfully!",
-          service: service_name
+  defp connect(conn, code, state, {return_to, failure_path}, config) do
+    case complete(config, code, state) do
+      {:ok, _integration} ->
+        flash_and_redirect(
+          conn,
+          :info,
+          dgettext("dashboard_integrations", "%{service} connected successfully!",
+            service: config.name
+          ),
+          return_to || success_path(config)
         )
-      )
-      |> Controller.redirect(to: success_redirect_path)
-    else
-      {:error, "access_denied"} ->
-        service_atom =
-          case String.downcase(service_name) do
-            "github" -> :github
-            "google" -> :google
-            _other_service -> :unknown
-          end
-
-        conn
-        |> Controller.put_flash(
-          :error,
-          ErrorFormatter.format_oauth_error(
-            service_atom,
-            "access_denied"
-          )
-        )
-        |> Controller.redirect(to: redirect_path)
-
-      {:error, :calendar_scope_missing} ->
-        Logger.info("OAuth callback rejected: calendar write scope not granted",
-          service: service_name
-        )
-
-        conn
-        |> Controller.put_flash(
-          :error,
-          dgettext(
-            "dashboard_integrations",
-            "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" - Tymeslot needs this to create meetings and Google Meet links.",
-            service: service_name
-          )
-        )
-        |> Controller.redirect(to: redirect_path)
 
       {:error, reason} ->
-        Logger.error("OAuth callback failed", service: service_name, reason: inspect(reason))
-
-        conn
-        |> Controller.put_flash(
-          :error,
-          dgettext("dashboard_integrations", "Failed to connect %{service}. Please try again.",
-            service: service_name
-          )
-        )
-        |> Controller.redirect(to: redirect_path)
+        log_failure(reason, config)
+        flash_and_redirect(conn, :error, failure_message(reason, config), failure_path)
     end
   end
 
-  # Helper function to extract user_id from result or tokens
-  defp get_user_id(result, tokens) do
+  defp complete(%{domain: :calendar, provider: provider}, code, state),
+    do: Calendar.complete_oauth(provider, code, state)
+
+  defp complete(%{domain: :video, provider: provider}, code, state),
+    do: Video.complete_oauth(provider, code, state)
+
+  defp log_failure(reason, config) when reason in @actionable_reasons do
+    Logger.warning("OAuth callback rejected", provider: config.name, reason: reason)
+  end
+
+  defp log_failure(reason, config) do
+    Logger.error("OAuth callback failed", provider: config.name, reason: inspect(reason))
+  end
+
+  defp failure_message(:calendar_scope_missing, config) do
+    dgettext(
+      "dashboard_integrations",
+      "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" - Tymeslot needs this to create meetings and Google Meet links.",
+      service: config.name
+    )
+  end
+
+  defp failure_message(:missing_teams_fields, _config) do
+    dgettext(
+      "dashboard_integrations",
+      "Missing required Microsoft Teams information. Please try again."
+    )
+  end
+
+  defp failure_message(:missing_zoom_account_id, _config) do
+    dgettext("dashboard_integrations", "Could not identify your Zoom account. Please try again.")
+  end
+
+  defp failure_message(_reason, config) do
+    dgettext("dashboard_integrations", "Failed to connect %{service}. Please try again.",
+      service: config.name
+    )
+  end
+
+  defp provider_error_message(error, description, config) do
     cond do
-      # Check if result is a struct with user_id field
-      is_map(result) && Map.has_key?(result, :user_id) -> result.user_id
-      # Check if tokens has user_id
-      is_map(tokens) && Map.has_key?(tokens, :user_id) -> tokens.user_id
-      # Default case
-      true -> nil
+      config.microsoft? and MicrosoftOAuth.microsoft_admin_consent_error?(description) ->
+        dgettext(
+          "dashboard_integrations",
+          "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
+        )
+
+      error == "access_denied" ->
+        dgettext("dashboard_integrations", "Authorization was denied. Please try again.")
+
+      true ->
+        dgettext("dashboard_integrations", "Authentication failed. Please try again.")
     end
+  end
+
+  defp reject(conn, config) do
+    conn
+    |> flash_and_redirect(
+      :error,
+      dgettext(
+        "dashboard_integrations",
+        "Authentication session mismatch. Please sign in and try again."
+      ),
+      integrations_path(config)
+    )
+    |> Conn.halt()
+  end
+
+  # A successful calendar connect lands on the calendar (unless the flow asked
+  # to return somewhere specific, e.g. onboarding): the reward for connecting
+  # is seeing the week fill in. Failures, and every video outcome, return to
+  # the integrations tab, where retrying makes sense.
+  defp success_path(%{domain: :calendar}), do: ~p"/dashboard"
+  defp success_path(config), do: integrations_path(config)
+
+  defp integrations_path(%{domain: :calendar}), do: ~p"/dashboard/integrations?tab=calendars"
+  defp integrations_path(%{domain: :video}), do: ~p"/dashboard/integrations?tab=video"
+
+  defp flash_and_redirect(conn, kind, message, path) do
+    conn
+    |> Controller.put_flash(kind, message)
+    |> Controller.redirect(to: path)
   end
 end

@@ -38,12 +38,19 @@ defmodule TymeslotWeb.Helpers.OAuthStateGuard do
 
   def redact_callback_params(other), do: other
 
-  @spec enforce_user_match(Plug.Conn.t(), any(), provider()) :: :ok | {:error, failure_reason()}
+  @doc """
+  Validates `state` and checks it was issued to the signed-in user.
+
+  Returns the validated state, so callers read anything embedded in it (such as
+  `return_to`) only once it is known to be authentic.
+  """
+  @spec enforce_user_match(Plug.Conn.t(), any(), provider()) ::
+          {:ok, State.validated()} | {:error, failure_reason()}
   def enforce_user_match(conn, state, provider)
       when is_binary(state) and provider in [:google, :outlook, :zoom] do
     case State.validate(state, provider_secret(provider)) do
-      {:ok, %{user_id: state_user_id}} ->
-        check_current_user(conn, state_user_id, provider)
+      {:ok, %{user_id: state_user_id} = validated} ->
+        with :ok <- check_current_user(conn, state_user_id, provider), do: {:ok, validated}
 
       {:error, reason} ->
         Logger.warning("OAuth callback rejected: invalid or tampered state",

@@ -80,25 +80,6 @@ defmodule Tymeslot.Integrations.Common.OAuth.State do
     end
   end
 
-  @doc """
-  Extracts the `return_to` path from a state string without full validation.
-
-  Only use this after `validate/3` has already confirmed the state is authentic.
-  Returns `nil` when no `return_to` was embedded.
-  """
-  @spec peek_return_to(state()) :: String.t() | nil
-  def peek_return_to(state) when is_binary(state) do
-    with [encoded_data, _sig] <- String.split(state, ".", parts: 2),
-         {:ok, data} <- Base.url_decode64(encoded_data),
-         [_core, return_to] <- String.split(data, "|", parts: 2) do
-      if valid_return_to?(return_to), do: return_to
-    else
-      _other -> nil
-    end
-  end
-
-  def peek_return_to(_other), do: nil
-
   # Private helpers
 
   defp secure_equals(a, b) when byte_size(a) == byte_size(b), do: :crypto.hash_equals(a, b)

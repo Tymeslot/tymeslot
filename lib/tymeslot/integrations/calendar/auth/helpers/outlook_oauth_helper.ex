@@ -20,6 +20,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   alias Tymeslot.Integrations.Common.OAuth.IdToken
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
+  alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
 
@@ -36,7 +37,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
     integration_id = Keyword.get(options, :integration_id)
     login_hint = Keyword.get(options, :login_hint)
     return_to = Keyword.get(options, :return_to)
-    state = State.generate(user_id, state_secret(), integration_id, return_to: return_to)
+
+    state =
+      State.generate(user_id, MicrosoftConfig.state_secret(), integration_id,
+        return_to: return_to
+      )
 
     params = %{
       client_id: outlook_client_id(),
@@ -152,7 +157,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   # Private functions
 
   defp verify_state(state) when is_binary(state) do
-    State.validate(state, state_secret())
+    State.validate(state, MicrosoftConfig.state_secret())
   end
 
   defp verify_state(_invalid), do: {:error, "Invalid state parameter"}
@@ -300,11 +305,5 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
     Application.get_env(:tymeslot, :outlook_oauth)[:client_secret] ||
       System.get_env("OUTLOOK_CLIENT_SECRET") ||
       raise "Outlook Client Secret not configured — set :outlook_oauth :client_secret or OUTLOOK_CLIENT_SECRET"
-  end
-
-  defp state_secret do
-    Application.get_env(:tymeslot, :outlook_oauth)[:state_secret] ||
-      System.get_env("OUTLOOK_STATE_SECRET") ||
-      raise "Outlook State Secret not configured — set :outlook_oauth :state_secret or OUTLOOK_STATE_SECRET"
   end
 end
