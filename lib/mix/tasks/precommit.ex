@@ -29,6 +29,14 @@ defmodule Mix.Tasks.Precommit do
   to load this task at all, so it aborts first and prints the error on its own.
   Same information, one step earlier.
 
+  ## Why the gate re-execs itself
+
+  The run's memory and CPU limits live in the workspace `mix.sh`, and a plain
+  `mix precommit` typed in a checkout reaches none of them. `Tymeslot.Precommit.Guard`
+  therefore puts the run inside them before any step starts, so the limits hold
+  however the gate was invoked. A run already wrapped, or one with no wrapper
+  above it, proceeds here unchanged.
+
   ## Why dialyzer runs incrementally
 
   The step runs `dialyzer.incremental`, not `dialyzer`. A classic PLT is
@@ -67,6 +75,7 @@ defmodule Mix.Tasks.Precommit do
   use Mix.Task
 
   alias Tymeslot.Precommit.CpuBudget
+  alias Tymeslot.Precommit.Guard
   alias Tymeslot.Precommit.Runner
 
   @steps [
@@ -106,6 +115,8 @@ defmodule Mix.Tasks.Precommit do
 
   @impl Mix.Task
   def run(argv) do
+    Guard.ensure_wrapped("--core", argv: argv)
+
     {opts, _rest} = OptionParser.parse!(argv, strict: [fail_fast: :boolean])
     fail_fast? = Keyword.get(opts, :fail_fast, false)
 
