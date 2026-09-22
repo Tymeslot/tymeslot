@@ -179,9 +179,10 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
     base_data = MeetingProvisioning.attach_conference_data(raw_base, plan)
 
-    attendees = Enum.map(event_details.attendees, fn a -> %{"email" => a.email} end)
-
-    if attendees != [], do: Map.put(base_data, :attendees, attendees), else: base_data
+    case event_details.attendees do
+      [] -> base_data
+      attendees -> Map.put(base_data, :attendees, attendees)
+    end
   end
 
   defp finalise_create_result({:ok, %CreatedEvent{} = created}, ctx) do

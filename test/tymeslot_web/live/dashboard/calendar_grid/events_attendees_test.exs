@@ -190,6 +190,36 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
       assert html =~ ~s(id="edit-attendee-email")
     end
 
+    test "shows a synced attendee by the name their calendar gave them", %{
+      conn: conn,
+      user: user
+    } do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      event =
+        insert_event(integration, %{
+          summary: "Team Sync",
+          start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
+          all_day: false,
+          attendees: [
+            %{
+              "email" => "ada@example.com",
+              "display_name" => "Ada Lovelace",
+              "response_status" => "accepted",
+              "optional" => false
+            }
+          ]
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      assert lv
+             |> element("#event-detail-modal span", "Ada Lovelace")
+             |> has_element?()
+    end
+
     test "adding a duplicate attendee is a no-op", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
 

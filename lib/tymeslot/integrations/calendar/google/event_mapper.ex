@@ -4,28 +4,22 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   API event format. Pure data transformations with no side effects.
   """
 
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.EventTimeFormatter
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Integrations.Calendar.Reminder
   alias Tymeslot.Utils.UrlBuilder
 
-  # Google's attendee `responseStatus` vocabulary, keyed by every spelling a
-  # canonical status reaches this module in: the atom the normalisers produce,
-  # and the string the JSONB cache column hands back for the same value. The
-  # lookup is total on purpose: Google rejects a `responseStatus` it does not
-  # recognise, and the inbound normaliser has already folded anything unknown
-  # to `needs_action`, so an unrecognised value writes back as `needsAction`
-  # rather than travelling to the API unchanged.
+  # Google's attendee `responseStatus` vocabulary, keyed by the canonical reply
+  # `Attendee.normalise/1` reads every cached spelling into. That read folds
+  # anything unrecognised to `:needs_action`, so Google is never sent a
+  # `responseStatus` it would reject.
   @google_response_statuses %{
-    :accepted => "accepted",
-    "accepted" => "accepted",
-    :declined => "declined",
-    "declined" => "declined",
-    :tentative => "tentative",
-    "tentative" => "tentative",
-    :needs_action => "needsAction",
-    "needs_action" => "needsAction"
+    accepted: "accepted",
+    declined: "declined",
+    tentative: "tentative",
+    needs_action: "needsAction"
   }
 
   @doc """
@@ -150,9 +144,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   # write suppresses notifications. The cached status is therefore carried
   # across whenever the event has one. An attendee the edit just added has
   # none, and the key is left out for them: Google's own default for a new
-  # invitee is `needsAction`, which is exactly right.
+  # invitee is `needsAction`, which is exactly right. `Attendee.normalise/1`
+  # settles the shape first, since cached attendees come back from JSONB
+  # string-keyed and older rows spell the label `name`.
   defp google_attendee(attendee) do
-    attendee = normalise_attendee(attendee)
+    attendee = Attendee.normalise(attendee)
 
     remove_nil_values(%{
       "email" => attendee.email,
@@ -162,29 +158,13 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
     })
   end
 
-  # Cached attendees come back from the JSONB column string-keyed, freshly
-  # added ones arrive atom-keyed from the edit flow, and the ad-hoc booking
-  # payloads spell the label `name` where the cache spells it `display_name`.
-  # The shape is settled once here so nothing below reads two spellings.
-  defp normalise_attendee(attendee) do
-    %{
-      email: get_field_value(attendee, :email),
-      display_name: get_field_value(attendee, :display_name) || get_field_value(attendee, :name),
-      response_status: get_field_value(attendee, :response_status),
-      optional: get_field_value(attendee, :optional)
-    }
-  end
-
   defp google_response_status(nil), do: nil
-
-  defp google_response_status(status),
-    do: Map.get(@google_response_statuses, status, "needsAction")
+  defp google_response_status(status), do: Map.fetch!(@google_response_statuses, status)
 
   # Google reads a missing `optional` as a required attendee, so only the
   # optional case needs writing.
   defp optional_flag(true), do: true
-  defp optional_flag("true"), do: true
-  defp optional_flag(_required), do: nil
+  defp optional_flag(false), do: nil
 
   # Legacy single-attendee path (ad-hoc meetings), which names the invitee on
   # the event itself rather than in an attendee list. Such an event is always

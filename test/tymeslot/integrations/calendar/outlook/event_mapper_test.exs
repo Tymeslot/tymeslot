@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
 
   @moduletag :integrations
 
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Outlook.EventMapper
 
   describe "format_event_data/1 — all-day events" do
@@ -312,6 +313,46 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
 
       assert [%{"emailAddress" => %{"address" => "ada@example.com", "name" => "Ada"}}] =
                result["attendees"]
+    end
+
+    test "keeps a cached attendee's label rather than replacing it with the address" do
+      result =
+        EventMapper.format_event_data(
+          timed_event(%{
+            attendees: [
+              %{
+                "email" => "ada@example.com",
+                "display_name" => "Ada Lovelace",
+                "response_status" => "accepted",
+                "optional" => false
+              }
+            ]
+          })
+        )
+
+      assert [%{"emailAddress" => %{"address" => "ada@example.com", "name" => "Ada Lovelace"}}] =
+               result["attendees"]
+    end
+
+    test "labels an attendee with no name by their address" do
+      result =
+        EventMapper.format_event_data(
+          timed_event(%{attendees: [Attendee.new(email: "ada@example.com")]})
+        )
+
+      assert [%{"emailAddress" => %{"address" => "ada@example.com", "name" => "ada@example.com"}}] =
+               result["attendees"]
+    end
+
+    test "drops an attendee with no address" do
+      result =
+        EventMapper.format_event_data(
+          timed_event(%{
+            attendees: [Attendee.new(email: "ada@example.com"), %{"display_name" => "Nobody"}]
+          })
+        )
+
+      assert [%{"emailAddress" => %{"address" => "ada@example.com"}}] = result["attendees"]
     end
   end
 end

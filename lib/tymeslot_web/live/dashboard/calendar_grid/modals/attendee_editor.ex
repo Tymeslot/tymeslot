@@ -54,17 +54,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
               :for={attendee <- @attendees}
               class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
             >
-              {attendee["name"] || attendee["email"] || attendee[:email]}
+              {attendee.display_name || attendee.email}
               <button
                 type="button"
                 phx-click="request_remove_attendee"
-                phx-value-email={attendee["email"] || attendee[:email]}
+                phx-value-email={attendee.email}
                 phx-target={@myself}
                 class="w-4 h-4 rounded-full hover:bg-red-100 flex items-center justify-center transition-colors"
                 aria-label={
-                  dgettext("dashboard_calendar_events", "Remove %{email}",
-                    email: attendee["email"] || attendee[:email]
-                  )
+                  dgettext("dashboard_calendar_events", "Remove %{email}", email: attendee.email)
                 }
               >
                 <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -138,11 +136,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor do
             :for={attendee <- Enum.take(@attendees, 5)}
             class="text-token-sm text-tymeslot-700 leading-snug"
           >
-            {attendee["name"] || attendee["email"]}
+            {attendee.display_name || attendee.email}
             <span
-              :if={attendee["name"] && attendee["email"] && attendee["name"] != attendee["email"]}
+              :if={attendee.display_name && attendee.email && attendee.display_name != attendee.email}
               class="text-token-xs text-tymeslot-400 ml-1"
-            >{attendee["email"]}</span>
+            >{attendee.email}</span>
           </div>
           <p :if={length(@attendees) > 5} class="text-token-xs text-tymeslot-400 mt-1">
             {dngettext(
