@@ -16,6 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
       sanitize_ical_value: 1
     ]
 
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.CalDAV.Scheduling
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
@@ -243,16 +244,22 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
   end
 
   def build_attendee_lines(%{attendee_email: email} = event, mode) when is_binary(email) do
-    format_attendee(%{email: email, name: Map.get(event, :attendee_name)}, mode)
+    format_attendee(
+      Attendee.new(email: email, display_name: Map.get(event, :attendee_name)),
+      mode
+    )
   end
 
   def build_attendee_lines(_event, _mode), do: nil
 
-  defp format_attendee(%{"email" => email} = a, mode),
-    do: format_attendee(%{email: email, name: a["name"]}, mode)
+  defp format_attendee(%{} = attendee, mode) do
+    case Attendee.normalise(attendee) do
+      %{email: email, display_name: name} when is_binary(email) and email != "" ->
+        attendee_property(sanitize_ical_value(email), name, mode)
 
-  defp format_attendee(%{email: email} = a, mode) when is_binary(email) and email != "" do
-    attendee_property(sanitize_ical_value(email), a[:name], mode)
+      _no_address ->
+        nil
+    end
   end
 
   defp format_attendee(email, mode) when is_binary(email) and email != "" do

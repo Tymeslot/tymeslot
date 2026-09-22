@@ -294,6 +294,30 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherTest do
       refute patched =~ "ada@example.com"
     end
 
+    test "a cached attendee's display name becomes its CN" do
+      # The cache spells the label `display_name`, the shape every sync
+      # normaliser writes and the JSONB column hands back.
+      patched =
+        ICalBuilder.patch_event_properties(
+          @marked_event,
+          %{
+            attendees: [
+              %{
+                "email" => "bob@example.com",
+                "display_name" => "Bob",
+                "response_status" => "accepted",
+                "optional" => false
+              }
+            ]
+          },
+          :attendee
+        )
+
+      assert "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE;CN=Bob:mailto:bob@example.com" in lines(
+               patched
+             )
+    end
+
     test "the marker is written once, not accumulated on every edit" do
       patched =
         ICalBuilder.patch_event_properties(

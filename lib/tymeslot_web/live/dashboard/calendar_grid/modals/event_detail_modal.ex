@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias TymeslotWeb.Components.Dashboard.ColourSwatches
   alias TymeslotWeb.Components.UI.StatusSwitch
@@ -33,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   def event_detail_modal(assigns) do
     assigns =
       assigns
-      |> assign(:attendees, List.wrap(Map.get(assigns.selected_event, :attendees)))
+      |> assign(:attendees, attendees(assigns.selected_event))
       |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
 
     ~H"""
@@ -507,5 +508,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   defp full_date_label(date, locale) do
     "#{LocaleFormat.format_weekday_name(Date.day_of_week(date), locale, :full)}, " <>
       "#{LocaleFormat.format_month_name(date.month, locale)} #{date.day}"
+  end
+
+  # Cached attendees come back from JSONB string-keyed, while one the organiser
+  # has just added is still atom-keyed in memory, so the editor reads them all
+  # in the one canonical shape.
+  defp attendees(event) do
+    event
+    |> Map.get(:attendees)
+    |> List.wrap()
+    |> Enum.map(&Attendee.normalise/1)
   end
 end

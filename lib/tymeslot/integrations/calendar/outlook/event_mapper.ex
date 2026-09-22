@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
   Microsoft Graph API format for Outlook Calendar operations.
   """
 
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.EventTimeFormatter
   alias Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter
   alias Tymeslot.Integrations.Calendar.Outlook.TymeslotFingerprint
@@ -55,16 +56,19 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
 
     if is_list(attendees) and attendees != [] do
       attendees
-      |> Enum.map(fn attendee ->
-        email = extract_field(attendee, :email, "email")
-        name = extract_field(attendee, :name, "name")
+      |> Enum.map(&Attendee.normalise/1)
+      |> Enum.map(fn
+        %{email: nil} ->
+          nil
 
-        if email do
+        attendee ->
           %{
-            "emailAddress" => %{"address" => email, "name" => name || email},
+            "emailAddress" => %{
+              "address" => attendee.email,
+              "name" => attendee.display_name || attendee.email
+            },
             "type" => "required"
           }
-        end
       end)
       |> Enum.reject(&is_nil/1)
     else

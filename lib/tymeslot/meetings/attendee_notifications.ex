@@ -33,6 +33,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   """
 
   alias Tymeslot.Emails.EmailScheduler.CalendarScheduler
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeDetector
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
@@ -41,7 +42,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   alias Tymeslot.Meetings.MeetingSchema
 
   @type event :: map
-  @type attendee :: %{optional(:email) => String.t(), optional(:name) => String.t() | nil}
+  @type attendee ::
+          Attendee.t() | %{optional(:email) => String.t(), optional(:name) => String.t() | nil}
 
   @spec event_created(event, [attendee]) :: {:ok, :sent | :noop}
   def event_created(_event, []), do: {:ok, :noop}

@@ -30,6 +30,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
@@ -179,7 +180,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
     base_data = MeetingProvisioning.attach_conference_data(raw_base, plan)
 
-    attendees = Enum.map(event_details.attendees, fn a -> %{"email" => a.email} end)
+    attendees = Enum.map(event_details.attendees, &Attendee.new(email: &1.email))
 
     if attendees != [], do: Map.put(base_data, :attendees, attendees), else: base_data
   end

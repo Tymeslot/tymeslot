@@ -22,6 +22,7 @@ defmodule Tymeslot.CalendarGrid.EventEditGoogleWriteTest do
   import Mox
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Security.Encryption
@@ -143,9 +144,7 @@ defmodule Tymeslot.CalendarGrid.EventEditGoogleWriteTest do
 
       # The shape the grid builds for a newly typed address: no cached row, so
       # nothing to inherit from the attendee that preceded it.
-      new_attendees =
-        event.attendees ++
-          [%{"email" => "alan@example.com", "name" => nil, "status" => "needs_action"}]
+      new_attendees = event.attendees ++ [Attendee.new(email: "alan@example.com")]
 
       assert {:ok, _updated} =
                CalendarGrid.update_event(user.id, event, %{attendees: new_attendees})

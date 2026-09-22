@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings.AttendeeNotifications
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
@@ -119,12 +120,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
 
   defp normalise_attendees(event) do
     (Map.get(event, :attendees) || [])
-    |> Enum.map(fn attendee ->
-      %{
-        email: Map.get(attendee, "email") || Map.get(attendee, :email),
-        name: Map.get(attendee, "name") || Map.get(attendee, :name)
-      }
-    end)
+    |> Enum.map(&Attendee.normalise/1)
     |> Enum.reject(&(is_nil(&1.email) or &1.email == ""))
   end
 
