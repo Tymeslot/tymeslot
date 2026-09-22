@@ -103,11 +103,7 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
       {:ok, view, _html} =
         live(conn, ~p"/#{profile.username}/#{slug}?timezone=#{timezone}")
 
-      # Ask the grid which month it is on, never arithmetic: it opens on the
-      # first bookable day, so it may already have moved itself past today's.
-      unless BookingTestHelpers.showing_month?(view, target_date) do
-        view |> element("button[phx-click='next_month']") |> render_click()
-      end
+      BookingTestHelpers.show_month(view, target_date)
 
       wait_until(fn ->
         html = render(view)
@@ -180,9 +176,7 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
       # next one, and a month grid anchored on Sunday then drops today's cell
       # altogether rather than drawing it as leading padding. Step back to the
       # month that contains today before asking anything about its cell.
-      unless BookingTestHelpers.showing_month?(view, today_in_tz) do
-        view |> element("button[phx-click='prev_month']") |> render_click()
-      end
+      BookingTestHelpers.show_month(view, today_in_tz, :prev)
 
       # Business hours are 00:00-01:00 and min_advance_hours defaults to 3,
       # so the earliest bookable time is now+3h which always exceeds the 01:00

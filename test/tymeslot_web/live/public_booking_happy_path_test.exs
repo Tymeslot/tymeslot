@@ -80,7 +80,7 @@ defmodule TymeslotWeb.PublicBookingHappyPathTest do
 
     today = timezone |> DateTime.now!() |> DateTime.to_date()
     target_date = Date.add(today, 1)
-    target_date = maybe_advance_calendar_to_month(view, target_date)
+    BookingTestHelpers.show_month(view, target_date)
     date_str = Date.to_string(target_date)
 
     wait_until(fn ->
@@ -189,7 +189,7 @@ defmodule TymeslotWeb.PublicBookingHappyPathTest do
 
     today = timezone |> DateTime.now!() |> DateTime.to_date()
     target_date = Date.add(today, 1)
-    target_date = maybe_advance_calendar_to_month(view, target_date)
+    BookingTestHelpers.show_month(view, target_date)
     date_str = Date.to_string(target_date)
 
     wait_until(fn ->
@@ -237,20 +237,5 @@ defmodule TymeslotWeb.PublicBookingHappyPathTest do
 
     assert meeting.status == "confirmed"
     assert meeting.duration == 60, "Expected 60-minute duration but got #{meeting.duration}"
-  end
-
-  # The schedule step opens on the first bookable day, so the grid may already
-  # have moved itself into the next month before this runs. Ask it which month
-  # it is showing rather than computing which one it ought to show: advancing a
-  # calendar that has moved itself either clicks a disabled arrow at the edge of
-  # the booking window or overshoots past the target.
-  defp maybe_advance_calendar_to_month(view, target_date) do
-    unless BookingTestHelpers.showing_month?(view, target_date) do
-      view
-      |> element("button[phx-click='next_month']")
-      |> render_click()
-    end
-
-    target_date
   end
 end
