@@ -10,7 +10,9 @@ defmodule Tymeslot.Test.FakeSmtpRelay do
   them and reports what the client did to the process that started it:
 
     * `{:smtp_relay, :ehlo}` on each EHLO
-    * `{:smtp_relay, :tls_up}` after a completed STARTTLS or implicit-TLS handshake
+    * `{:smtp_relay, {:tls_up, info}}` after a completed STARTTLS or
+      implicit-TLS handshake, where `info` is `:ssl.connection_information/1`
+      for the server side of it
     * `{:smtp_relay, {:auth, mechanism}}` on each AUTH attempt
     * `{:smtp_relay, {:mail_from, line}}` on MAIL FROM
     * `{:smtp_relay, {:message, data}}` once DATA is complete
@@ -120,7 +122,7 @@ defmodule Tymeslot.Test.FakeSmtpRelay do
 
     case :ssl.handshake(socket, tls_server_options(certs), @timeout) do
       {:ok, tls} ->
-        send(owner, {:smtp_relay, :tls_up})
+        send(owner, {:smtp_relay, {:tls_up, connection_information(tls)}})
         greet(%{socket: tls, mod: :ssl, tls?: true, authed?: false}, owner, opts)
 
       {:error, _reason} ->
@@ -170,7 +172,7 @@ defmodule Tymeslot.Test.FakeSmtpRelay do
 
     case :ssl.handshake(conn.socket, tls_server_options(certs), @timeout) do
       {:ok, tls} ->
-        send(owner, {:smtp_relay, :tls_up})
+        send(owner, {:smtp_relay, {:tls_up, connection_information(tls)}})
         dialogue(%{conn | socket: tls, mod: :ssl, tls?: true}, owner, opts)
 
       {:error, _reason} ->
@@ -253,5 +255,15 @@ defmodule Tymeslot.Test.FakeSmtpRelay do
 
   defp tls_server_options(%{cert: cert, key: key}) do
     [cert: cert, key: key, active: false, packet: :line, mode: :binary]
+  end
+
+  # The negotiated protocol and the session id the client offered. Under TLS
+  # 1.3 the latter is the middlebox compatibility mode made observable: a
+  # client in that mode invents a 32-byte id purely so the exchange resembles
+  # a TLS 1.2 one, and a client with it switched off sends none at all.
+  defp connection_information(socket) do
+    {:ok, info} = :ssl.connection_information(socket)
+
+    %{protocol: info[:protocol], session_id: info[:session_id]}
   end
 end
