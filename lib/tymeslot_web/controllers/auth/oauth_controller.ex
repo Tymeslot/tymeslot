@@ -8,6 +8,7 @@ defmodule TymeslotWeb.OAuthController do
   use Gettext, backend: TymeslotWeb.Gettext
   require Logger
 
+  alias Tymeslot.AppSettings
   alias Tymeslot.Auth.{AuthActions, Session, Verification}
   alias Tymeslot.Auth.OAuth.{FlowHandler, GenericOAuth, GitHub, Google}
   alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
@@ -17,27 +18,27 @@ defmodule TymeslotWeb.OAuthController do
   alias TymeslotWeb.AuthControllerHelpers
   alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
 
+  # The single source of truth for the social login providers: the URL
+  # segment, the strategy module, the display name, and the admin setting that
+  # enables it. The enabled flag itself is read at request time through
+  # `AppSettings`, because an admin can toggle it without a restart.
+  @provider_ids %{"github" => :github, "google" => :google, "oauth" => :oauth}
+
+  @type provider :: :github | :google | :oauth
+
   @doc """
   Generic OAuth request handler that dispatches to provider-specific functions.
   Checks if social authentication is enabled for the provider when used for auth.
   """
   @spec request(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def request(conn, %{"provider" => "github"} = params),
-    do: dispatch_request(conn, :github, params)
-
-  def request(conn, %{"provider" => "google"} = params),
-    do: dispatch_request(conn, :google, params)
-
-  def request(conn, %{"provider" => "oauth"} = params),
-    do: dispatch_request(conn, :oauth, params)
-
   def request(conn, %{"provider" => provider}) do
-    conn
-    |> put_flash(
-      :error,
-      dgettext("auth", "Unsupported OAuth provider: %{provider}", provider: provider)
-    )
-    |> redirect(to: ~p"/auth/login")
+    case validate_oauth_provider(provider) do
+      {:ok, provider_atom} ->
+        dispatch_request(conn, provider_atom)
+
+      {:error, :unsupported_oauth_provider} ->
+        unsupported_provider(conn, provider, ~p"/auth/login")
+    end
   end
 
   def request(conn, _params) do
@@ -46,54 +47,70 @@ defmodule TymeslotWeb.OAuthController do
     |> redirect(to: ~p"/auth/login")
   end
 
-  defp dispatch_request(conn, provider_atom, params) do
-    if social_auth_enabled?(provider_atom) do
-      do_provider_auth(conn, provider_atom, params)
+  defp dispatch_request(conn, provider) do
+    if social_auth_enabled?(provider) do
+      with_rate_limit(conn, :initiation, fn -> do_provider_auth(conn, provider) end)
     else
-      disabled_redirect(conn, provider_atom)
+      disabled_redirect(conn, provider)
     end
   end
 
-  defp social_auth_enabled?(provider_atom) do
-    social_auth_config = Application.get_env(:tymeslot, :social_auth, [])
+  defp social_auth_enabled?(provider),
+    do: AppSettings.get(providers()[provider].setting) == true
 
-    case provider_atom do
-      :github -> Keyword.get(social_auth_config, :github_enabled, false)
-      :google -> Keyword.get(social_auth_config, :google_enabled, false)
-      :oauth -> Keyword.get(social_auth_config, :oauth_enabled, false)
-    end
-  end
-
-  defp do_provider_auth(conn, provider, _params) do
-    case RateLimiter.check_oauth_initiation_rate_limit(ClientIP.get(conn)) do
-      :ok ->
-        redirect_uri = URLs.callback_url(conn, URLs.callback_path(provider))
-
-        {updated_conn, authorize_url} =
-          provider_module(provider).authorize_url(conn, redirect_uri)
-
-        redirect(updated_conn, external: authorize_url)
-
-      {:error, :rate_limited, _message} ->
-        SecurityLogger.log_rate_limit_violation(ClientIP.get(conn), "oauth_initiation", %{
-          ip_address: ClientIP.get(conn),
-          user_agent: ClientIP.get_user_agent(conn)
-        })
-
-        AuthControllerHelpers.handle_rate_limited(
-          conn,
-          dgettext("auth", "Too many OAuth attempts. Please try again later."),
-          ~p"/auth/login"
-        )
-    end
+  defp do_provider_auth(conn, provider) do
+    redirect_uri = URLs.callback_url(conn, URLs.callback_path(provider))
+    {updated_conn, authorize_url} = providers()[provider].module.authorize_url(conn, redirect_uri)
+    redirect(updated_conn, external: authorize_url)
   end
 
   defp oauth_callback_module,
     do: Application.get_env(:tymeslot, :oauth_callback_module, OAuthHelper)
 
-  defp provider_module(:github), do: GitHub
-  defp provider_module(:google), do: Google
-  defp provider_module(:oauth), do: GenericOAuth
+  defp unsupported_provider(conn, provider, redirect_path) do
+    conn
+    |> put_flash(
+      :error,
+      dgettext("auth", "Unsupported OAuth provider: %{provider}", provider: provider)
+    )
+    |> redirect(to: redirect_path)
+  end
+
+  # Every public entry point is rate limited by IP; the violation is logged
+  # and answered the same way, so a new action cannot apply half the gate.
+  defp with_rate_limit(conn, action, on_allowed) do
+    ip = ClientIP.get(conn)
+    {check, event, message, redirect_path} = rate_limit(action, conn)
+
+    case check.(ip) do
+      :ok ->
+        on_allowed.()
+
+      {:error, :rate_limited, _message} ->
+        SecurityLogger.log_rate_limit_violation(ip, event, %{
+          ip_address: ip,
+          user_agent: ClientIP.get_user_agent(conn)
+        })
+
+        AuthControllerHelpers.handle_rate_limited(conn, message, redirect_path)
+    end
+  end
+
+  defp rate_limit(:initiation, _conn) do
+    {&RateLimiter.check_oauth_initiation_rate_limit/1, "oauth_initiation",
+     dgettext("auth", "Too many OAuth attempts. Please try again later."), ~p"/auth/login"}
+  end
+
+  defp rate_limit(:callback, conn) do
+    {&RateLimiter.check_oauth_callback_rate_limit/1, "oauth_callback",
+     dgettext("auth", "Too many authentication attempts. Please try again later."),
+     get_login_path(conn)}
+  end
+
+  defp rate_limit(:completion, _conn) do
+    {&RateLimiter.check_oauth_completion_rate_limit/1, "oauth_completion",
+     dgettext("auth", "Too many registration attempts. Please try again later."), ~p"/auth/login"}
+  end
 
   defp disabled_redirect(conn, provider_atom) do
     conn
@@ -114,15 +131,12 @@ defmodule TymeslotWeb.OAuthController do
   def callback(conn, %{"provider" => provider, "code" => code, "state" => state}) do
     case validate_oauth_provider(provider) do
       {:ok, provider_atom} ->
-        handle_provider_callback(conn, provider_atom, code, state)
+        with_rate_limit(conn, :callback, fn ->
+          handle_provider_callback(conn, provider_atom, code, state)
+        end)
 
       {:error, :unsupported_oauth_provider} ->
-        conn
-        |> put_flash(
-          :error,
-          dgettext("auth", "Unsupported OAuth provider: %{provider}", provider: provider)
-        )
-        |> redirect(to: get_login_path(conn))
+        unsupported_provider(conn, provider, get_login_path(conn))
     end
   end
 
@@ -141,12 +155,7 @@ defmodule TymeslotWeb.OAuthController do
         |> redirect(to: ~p"/?auth=login")
 
       {:error, :unsupported_oauth_provider} ->
-        conn
-        |> put_flash(
-          :error,
-          dgettext("auth", "Unsupported OAuth provider: %{provider}", provider: provider)
-        )
-        |> redirect(to: get_login_path(conn))
+        unsupported_provider(conn, provider, get_login_path(conn))
     end
   end
 
@@ -161,52 +170,22 @@ defmodule TymeslotWeb.OAuthController do
   """
   @spec complete(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def complete(conn, params) do
-    case RateLimiter.check_oauth_completion_rate_limit(ClientIP.get(conn)) do
-      :ok ->
-        process_oauth_completion(conn, params)
-
-      {:error, :rate_limited, _message} ->
-        SecurityLogger.log_rate_limit_violation(ClientIP.get(conn), "oauth_completion", %{
-          ip_address: ClientIP.get(conn),
-          user_agent: ClientIP.get_user_agent(conn)
-        })
-
-        AuthControllerHelpers.handle_rate_limited(
-          conn,
-          dgettext("auth", "Too many registration attempts. Please try again later."),
-          ~p"/auth/login"
-        )
-    end
+    with_rate_limit(conn, :completion, fn -> process_oauth_completion(conn, params) end)
   end
 
   # Private helper functions
 
   defp handle_provider_callback(conn, provider, code, state) do
-    case RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)) do
-      :ok ->
-        paths = get_redirect_paths(conn)
+    paths = get_redirect_paths(conn)
 
-        conn
-        |> delete_session(:oauth_intent)
-        |> oauth_callback_module().handle_oauth_callback(%{
-          code: code,
-          state: state,
-          provider: provider
-        })
-        |> respond_to_oauth_result(paths)
-
-      {:error, :rate_limited, _message} ->
-        SecurityLogger.log_rate_limit_violation(ClientIP.get(conn), "oauth_callback", %{
-          ip_address: ClientIP.get(conn),
-          user_agent: ClientIP.get_user_agent(conn)
-        })
-
-        AuthControllerHelpers.handle_rate_limited(
-          conn,
-          dgettext("auth", "Too many authentication attempts. Please try again later."),
-          get_login_path(conn)
-        )
-    end
+    conn
+    |> delete_session(:oauth_intent)
+    |> oauth_callback_module().handle_oauth_callback(%{
+      code: code,
+      state: state,
+      provider: provider
+    })
+    |> respond_to_oauth_result(paths)
   end
 
   defp process_oauth_completion(conn, params) do
@@ -345,7 +324,7 @@ defmodule TymeslotWeb.OAuthController do
           dgettext(
             "auth",
             "Welcome! You've successfully signed up with %{provider}. Please check your email to verify your account.",
-            provider: String.capitalize(oauth_data.provider)
+            provider: provider_name(oauth_data.provider)
           )
 
         create_session_and_redirect(conn, user, oauth_data.provider, message)
@@ -363,7 +342,7 @@ defmodule TymeslotWeb.OAuthController do
           dgettext(
             "auth",
             "Welcome! You've successfully signed up with %{provider}. Verification email could not be sent - please contact support if needed.",
-            provider: String.capitalize(oauth_data.provider)
+            provider: provider_name(oauth_data.provider)
           )
 
         create_session_and_redirect(conn, user, oauth_data.provider, message)
@@ -441,7 +420,7 @@ defmodule TymeslotWeb.OAuthController do
   @spec get_welcome_message(String.t()) :: String.t()
   defp get_welcome_message(provider) do
     dgettext("auth", "Welcome! You've successfully signed up with %{provider}.",
-      provider: String.capitalize(provider)
+      provider: provider_name(provider)
     )
   end
 
@@ -513,9 +492,11 @@ defmodule TymeslotWeb.OAuthController do
     |> redirect(to: paths[:login_path])
   end
 
-  defp provider_name(:github), do: "GitHub"
-  defp provider_name(:google), do: "Google"
-  defp provider_name(:oauth), do: "SSO"
+  @spec provider_name(provider() | String.t()) :: String.t()
+  defp provider_name(provider) when is_binary(provider),
+    do: provider_name(Map.fetch!(@provider_ids, provider))
+
+  defp provider_name(provider), do: providers()[provider].name
 
   @spec get_redirect_paths(Plug.Conn.t()) :: keyword()
   defp get_redirect_paths(conn) do
@@ -534,14 +515,12 @@ defmodule TymeslotWeb.OAuthController do
     RedirectSanitizer.sanitize(conn.params["login_path"], ~p"/auth/login")
   end
 
-  @spec validate_oauth_provider(String.t() | nil) ::
-          {:ok, :github | :google | :oauth} | {:error, :unsupported_oauth_provider}
+  @spec validate_oauth_provider(term()) ::
+          {:ok, provider()} | {:error, :unsupported_oauth_provider}
   defp validate_oauth_provider(provider) do
-    case provider do
-      "github" -> {:ok, :github}
-      "google" -> {:ok, :google}
-      "oauth" -> {:ok, :oauth}
-      _unsupported -> {:error, :unsupported_oauth_provider}
+    case Map.fetch(@provider_ids, provider) do
+      {:ok, provider_atom} -> {:ok, provider_atom}
+      :error -> {:error, :unsupported_oauth_provider}
     end
   end
 
@@ -552,5 +531,15 @@ defmodule TymeslotWeb.OAuthController do
       "on" -> true
       _not_accepted -> false
     end
+  end
+
+  # A function rather than a module attribute: provider modules held in an
+  # attribute become compile-time dependencies of this controller.
+  defp providers do
+    %{
+      github: %{module: GitHub, name: "GitHub", setting: :github_auth_enabled},
+      google: %{module: Google, name: "Google", setting: :google_auth_enabled},
+      oauth: %{module: GenericOAuth, name: "SSO", setting: :oauth_auth_enabled}
+    }
   end
 end

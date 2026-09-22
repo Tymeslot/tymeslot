@@ -197,6 +197,33 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
       assert Flash.get(conn.assigns.flash, :error) =~ "Failed to create user account"
     end
 
+    test "reports a taken email as email_taken in a non-English locale", %{conn: conn} do
+      Factory.insert(:user, email: "taken@example.com")
+
+      session_data = %{
+        provider: "github",
+        email: nil,
+        is_verified: false,
+        email_from_provider: false,
+        github_user_id: 12_345
+      }
+
+      conn =
+        conn
+        |> Test.init_test_session(%{pending_oauth_registration: session_data, locale: "de"})
+        |> post(~p"/auth/complete", %{
+          "auth" => %{"email" => "taken@example.com"},
+          "terms_accepted" => "on"
+        })
+
+      # The reason travels as an atom, so the query parameter does not depend
+      # on the language the flash is rendered in.
+      assert redirected_to(conn) == "/auth/complete-registration?error=email_taken"
+
+      assert Flash.get(conn.assigns.flash, :error) ==
+               "Diese E-Mail-Adresse ist bereits registriert. Bitte verwenden Sie eine andere Adresse."
+    end
+
     test "redirects to login when no session data present", %{conn: conn} do
       conn = post(conn, ~p"/auth/complete", %{"terms_accepted" => "on"})
 
@@ -241,7 +268,11 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
         |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) == "/dashboard"
-      assert Flash.get(conn.assigns.flash, :info) =~ "successfully signed up"
+
+      # The generic provider is named by its display name, not a capitalised
+      # URL segment ("Oauth").
+      assert Flash.get(conn.assigns.flash, :info) ==
+               "Welcome! You've successfully signed up with SSO."
     end
 
     test "clears session data after successful completion", %{conn: conn} do

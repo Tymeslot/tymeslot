@@ -13,11 +13,17 @@ defmodule TymeslotWeb.Helpers.OAuthStateGuard do
   require Logger
 
   alias Tymeslot.Integrations.Common.OAuth.State
+  alias Tymeslot.Integrations.Google.GoogleOAuthHelper
+  alias Tymeslot.Integrations.Shared.{MicrosoftConfig, ZoomConfig}
 
   @type provider :: :google | :outlook | :zoom
   @type failure_reason :: :invalid_state | :unauthenticated | :state_user_mismatch
 
   @sensitive_callback_keys ~w(code state id_token)
+
+  # The domain modules that own each provider's state secret; the guard must
+  # verify against exactly the secret the provider's helper signed with.
+  @secret_sources %{google: GoogleOAuthHelper, outlook: MicrosoftConfig, zoom: ZoomConfig}
 
   @doc """
   Drops sensitive OAuth callback parameters from a map before logging.
@@ -81,21 +87,5 @@ defmodule TymeslotWeb.Helpers.OAuthStateGuard do
     end
   end
 
-  defp provider_secret(:google) do
-    Application.get_env(:tymeslot, :google_oauth)[:state_secret] ||
-      System.get_env("GOOGLE_STATE_SECRET") ||
-      raise "Google OAuth state secret not configured"
-  end
-
-  defp provider_secret(:outlook) do
-    Application.get_env(:tymeslot, :outlook_oauth)[:state_secret] ||
-      System.get_env("OUTLOOK_STATE_SECRET") ||
-      raise "Outlook OAuth state secret not configured"
-  end
-
-  defp provider_secret(:zoom) do
-    Application.get_env(:tymeslot, :zoom_oauth)[:state_secret] ||
-      System.get_env("ZOOM_STATE_SECRET") ||
-      raise "Zoom OAuth state secret not configured"
-  end
+  defp provider_secret(provider), do: Map.fetch!(@secret_sources, provider).state_secret()
 end

@@ -63,7 +63,12 @@ defmodule TymeslotWeb.AuthControllerHelpers do
   def format_oauth_error_for_flash(:terms_not_accepted),
     do: dgettext("auth", "You must accept the terms to continue.")
 
-  def format_oauth_error_for_flash(error_message) when is_binary(error_message), do: error_message
+  def format_oauth_error_for_flash(:email_already_taken),
+    do:
+      dgettext("auth", "This email is already registered. Please use a different email address.")
+
+  def format_oauth_error_for_flash(_unknown_error),
+    do: dgettext("auth", "Authentication failed. Please try again.")
 
   # The changeset's email error carries an internal English diagnostic — either Ecto's
   # constraint message, or one of `EmailValidator`'s strings, which already begin with
@@ -91,14 +96,8 @@ defmodule TymeslotWeb.AuthControllerHelpers do
   def format_oauth_error_for_params(:email_required), do: "email_required"
   def format_oauth_error_for_params(:invalid_email), do: "invalid_email"
   def format_oauth_error_for_params(:terms_not_accepted), do: "terms_not_accepted"
-
-  def format_oauth_error_for_params(error_message) when is_binary(error_message) do
-    cond do
-      error_message =~ "already registered" -> "email_taken"
-      error_message =~ "Invalid email" -> "invalid_email"
-      true -> "unknown_error"
-    end
-  end
+  def format_oauth_error_for_params(:email_already_taken), do: "email_taken"
+  def format_oauth_error_for_params(_unknown_error), do: "unknown_error"
 
   @doc """
   Renders a flash error and redirects for a generic OAuth failure reason.

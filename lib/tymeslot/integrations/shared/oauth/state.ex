@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Common.OAuth.State do
   Optionally embeds an integration_id for re-authorization flows.
   """
 
+  alias Tymeslot.Security.RedirectPath
+
   @type user_id :: pos_integer()
   @type state :: String.t()
   @type secret :: iodata()
@@ -22,8 +24,9 @@ defmodule Tymeslot.Integrations.Common.OAuth.State do
   and optionally an integration_id for re-authorization and a return_to path.
 
   ## Options
-    - `:return_to` — a relative path (starting with `/`) to redirect to after
-      the OAuth callback. Embedded after a `|` separator in the signed data.
+    - `:return_to`: a relative path to redirect to after the OAuth callback,
+      embedded after a `|` separator in the signed data. Dropped unless
+      `Tymeslot.Security.RedirectPath.safe?/1` accepts it.
   """
   @spec generate(user_id(), secret(), pos_integer() | nil, keyword()) :: state()
   def generate(user_id, secret, integration_id \\ nil, opts \\ [])
@@ -143,11 +146,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.State do
     end
   end
 
-  defp valid_return_to?(path) when is_binary(path) do
-    String.starts_with?(path, "/") and not String.starts_with?(path, "//")
-  end
-
-  defp valid_return_to?(_other), do: false
+  defp valid_return_to?(path), do: RedirectPath.safe?(path)
 
   defp within_ttl?(timestamp, ttl_seconds) do
     now = System.system_time(:second)

@@ -214,9 +214,9 @@ defmodule Tymeslot.Auth do
 
   @doc """
   Checks if an email is available for registration.
-  Returns :ok if available, {:error, reason} otherwise.
+  Returns :ok if available, {:error, :email_already_taken | :invalid_email} otherwise.
   """
-  @spec check_email_availability(String.t()) :: :ok | {:error, String.t()}
+  @spec check_email_availability(term()) :: :ok | {:error, :email_already_taken | :invalid_email}
   def check_email_availability(email) do
     SocialAuthentication.check_email_availability(email)
   end
