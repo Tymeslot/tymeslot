@@ -12,6 +12,7 @@ defmodule Tymeslot.Security.RateLimiter do
   alias Tymeslot.Security.RateLimiter.Integrations
   alias Tymeslot.Security.RateLimiter.OAuth
   alias Tymeslot.Security.RateLimiter.Profile
+  alias Tymeslot.Security.RateLimiter.PublicEndpoints
 
   @type bucket_key :: String.t()
   @type rate_check_result :: {:allow, pos_integer()} | {:deny, pos_integer()}
@@ -517,4 +518,20 @@ defmodule Tymeslot.Security.RateLimiter do
   """
   @spec check_calendar_push_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
   def check_calendar_push_rate_limit(client_ip), do: Calendar.check_push_endpoint(client_ip)
+
+  # Public endpoints
+
+  @doc "Rate limit the public free/busy feed per client IP (60/min)."
+  @spec check_freebusy_feed_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
+  def check_freebusy_feed_rate_limit(client_ip),
+    do: PublicEndpoints.check_freebusy_feed(client_ip)
+
+  @doc "Rate limit the per-meeting `.ics` download per client IP (60/min)."
+  @spec check_meeting_calendar_feed_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
+  def check_meeting_calendar_feed_rate_limit(client_ip),
+    do: PublicEndpoints.check_meeting_calendar_feed(client_ip)
+
+  @doc "Rate limit the healthcheck endpoint per client IP (30/min)."
+  @spec check_healthcheck_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
+  def check_healthcheck_rate_limit(client_ip), do: PublicEndpoints.check_healthcheck(client_ip)
 end

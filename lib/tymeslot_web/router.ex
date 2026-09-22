@@ -46,8 +46,8 @@ defmodule TymeslotWeb.Router do
     pipe_through :calendar_webhook
 
     post "/google-calendar", GoogleCalendarWebhookController, :webhook
-    post "/outlook-calendar", OutlookCalendarWebhookController, :webhook
-    post "/outlook-lifecycle", OutlookLifecycleController, :webhook
+    post "/outlook-calendar", OutlookCalendarWebhookController, :notification
+    post "/outlook-lifecycle", OutlookCalendarWebhookController, :lifecycle
   end
 
   # Zoom app deauthorization endpoint — POSTed by Zoom when a user uninstalls
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Router do
   scope "/", TymeslotWeb do
     pipe_through :api
 
-    post "/auth/zoom/deauthorize", ZoomDeauthController, :deauthorize
+    post "/auth/zoom/deauthorize", ZoomDeauthController, :deauthorize, metadata: %{raw_body: true}
   end
 
   # Telegram bot webhook (unauthenticated, outside :browser pipeline)

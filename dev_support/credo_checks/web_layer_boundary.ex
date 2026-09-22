@@ -58,7 +58,7 @@ defmodule CredoChecks.WebLayerBoundary do
     enqueued.
   - **Not flagged:** schema modules (the web layer legitimately uses them for
     structs, pattern matching and types), context and sibling feature modules,
-    other `Oban` functions (the healthcheck probes queue state), `Repo` calls
+    other `Oban` functions (read-only queue introspection), `Repo` calls
     (already reported by `CredoChecks.RepoCallBoundary`, and not reported
     twice here), modules in the `TymeslotWeb`/`TymeslotSaasWeb` namespaces
     (a web helper that happens to end in `Queries` or `Job` is not a context
