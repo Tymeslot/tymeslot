@@ -350,6 +350,39 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
       assert message =~ "redirected"
     end
 
+    test "tags a server that answers nothing like Nextcloud as unreachable, not as a bad password" do
+      expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 200, body: "<html><body>Sign in</body></html>"}}
+      end)
+
+      assert {:error, {:unreachable, message}} =
+               NextcloudTalkProvider.perform_connection_test(@config)
+
+      assert message =~ "did not answer like a Nextcloud server"
+    end
+
+    test "tags a server that never answers as unreachable, not as a bad password" do
+      expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:error, %Req.TransportError{reason: :econnrefused}}
+      end)
+
+      assert {:error, {:unreachable, message}} =
+               NextcloudTalkProvider.perform_connection_test(@config)
+
+      assert message =~ "connection refused"
+    end
+
+    test "tags a server failing on its own side as unreachable, not as a bad password" do
+      expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 502, body: "<html>Bad Gateway</html>"}}
+      end)
+
+      assert {:error, {:unreachable, message}} =
+               NextcloudTalkProvider.perform_connection_test(@config)
+
+      assert message =~ "502"
+    end
+
     test "an integration flagged for reconnection is not tested against the server" do
       assert {:error, {:unauthorized, _message}} =
                NextcloudTalkProvider.perform_connection_test(%{@config | needs_reauth: true})
