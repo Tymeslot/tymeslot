@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.TierDemotionTest do
   import Req.Test, only: [set_req_test_to_shared: 1]
   import Tymeslot.ConfigTestHelpers
 
+  alias Ecto.Changeset
   alias Plug.Conn
   alias Req.Test, as: ReqTest
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -52,8 +53,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.TierDemotionTest do
         is_active: true,
         needs_reauth: false,
         # Detection has already run and believed the server's advertisement.
-        caldav_sync_tier: 1,
-        caldav_sync_token: nil
+        caldav_sync_tier: 1
       )
 
     %{integration: integration}
@@ -144,6 +144,40 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.TierDemotionTest do
 
       refute_received :asked_for_sync_collection
       assert stored_tier(integration) == 3
+    end
+  end
+
+  describe "a server that refuses sync-collection on one calendar only" do
+    test "demotes the whole integration and still syncs every calendar this cycle",
+         %{integration: integration} do
+      primary = "/calendars/alice/default/"
+      extra = "/calendars/alice/shared/"
+      test_pid = self()
+
+      integration =
+        integration
+        |> Changeset.change(calendar_paths: [primary, extra])
+        |> Repo.update!()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        {:ok, body, conn} = Conn.read_body(conn)
+        sync_collection? = String.contains?(body, "sync-collection")
+        send(test_pid, {:request, conn.request_path, sync_collection?})
+
+        if sync_collection? and conn.request_path == extra do
+          Conn.send_resp(conn, 500, "Internal Server Error")
+        else
+          respond(conn, @empty_multistatus)
+        end
+      end)
+
+      assert :ok = run_sync(integration)
+      assert stored_tier(integration) == 3
+
+      # The refusal on the second calendar neither failed the job nor left it
+      # unsynced: the demoted tier's full fetch reached both calendars.
+      assert_received {:request, ^primary, false}
+      assert_received {:request, ^extra, false}
     end
   end
 

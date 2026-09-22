@@ -67,7 +67,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
           graph_delta_link: String.t() | nil,
           last_outlook_notification_at: DateTime.t() | nil,
           caldav_sync_tier: integer() | nil,
-          caldav_sync_token: String.t() | nil,
+          caldav_sync_tokens: %{optional(String.t()) => String.t()} | nil,
           exchange_sync_states: %{optional(String.t()) => String.t()},
           last_external_sync_at: DateTime.t() | nil,
           last_full_sync_at: DateTime.t() | nil,
@@ -133,7 +133,11 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
 
     # CalDAV sync fields
     field(:caldav_sync_tier, :integer)
-    field(:caldav_sync_token, :string)
+    # Keyed by calendar path, because a `DAV:sync-token` (Tier 1) and a
+    # `getctag` (Tier 2) both describe one collection: a multi-calendar
+    # integration keeps one per path, or every calendar but one would be
+    # fetched in full every cycle.
+    field(:caldav_sync_tokens, :map, default: %{})
 
     # Exchange (EWS) sync fields. A map rather than a single token because
     # `SyncFolderItems` is folder-scoped: an Exchange mailbox syncs each
@@ -216,6 +220,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
       :sync_error
     ])
     |> update_change(:base_url, &PathUtils.normalize_base_url/1)
+    |> prune_caldav_sync_tokens()
     |> validate_required([:name, :provider, :user_id])
     # The column is a varchar(255); provider-supplied names (an Outlook mailbox,
     # a CalDAV collection title) are not length-checked anywhere upstream, so
@@ -253,6 +258,18 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
       name: :unique_active_calendar_null_account_per_user,
       message: dgettext_noop("errors", "an integration for this provider already exists")
     )
+  end
+
+  # A path's sync token only describes that path while it is synced. Kept after
+  # the owner deselects a calendar, it would resume a later reselection from a
+  # delta that assumes the cache already holds everything before it.
+  defp prune_caldav_sync_tokens(changeset) do
+    with {:ok, paths} <- fetch_change(changeset, :calendar_paths),
+         %{} = tokens when map_size(tokens) > 0 <- get_field(changeset, :caldav_sync_tokens) do
+      put_change(changeset, :caldav_sync_tokens, Map.take(tokens, paths || []))
+    else
+      _unchanged -> changeset
+    end
   end
 
   @doc """

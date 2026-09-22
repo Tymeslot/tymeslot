@@ -135,7 +135,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
           is_active: true,
           caldav_sync_tier: 1,
           calendar_paths: [path1()],
-          caldav_sync_token: "valid-sync-token"
+          caldav_sync_tokens: %{path1() => "valid-sync-token"}
         )
 
       ReqTest.stub(:tymeslot_http, fn conn ->
@@ -289,7 +289,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
           is_active: true,
           caldav_sync_tier: 1,
           calendar_paths: [path1()],
-          caldav_sync_token: "stale-sync-token"
+          caldav_sync_tokens: %{path1() => "stale-sync-token"}
         )
 
       # The server no longer recognises the stored token, so it answers the
@@ -315,7 +315,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
       updated =
         Repo.get!(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
 
-      assert updated.caldav_sync_token == nil
+      assert updated.caldav_sync_tokens == %{}
 
       assert {:ok, _event} =
                ProviderCalendarEventQueries.get_by_uid(integration.id, "event-from-path1@test")
@@ -328,7 +328,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
           is_active: true,
           caldav_sync_tier: 1,
           calendar_paths: [path1()],
-          caldav_sync_token: "known-token"
+          caldav_sync_tokens: %{path1() => "known-token"}
         )
 
       test_pid = self()
@@ -412,7 +412,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
           is_active: true,
           caldav_sync_tier: 1,
           calendar_paths: [path1()],
-          caldav_sync_token: "known-token"
+          caldav_sync_tokens: %{path1() => "known-token"}
         )
 
       href = "#{path1()}event1.ics"
@@ -462,7 +462,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
       updated =
         Repo.get!(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
 
-      assert updated.caldav_sync_token == "known-token"
+      assert updated.caldav_sync_tokens == %{path1() => "known-token"}
     end
   end
 end
