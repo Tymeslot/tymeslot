@@ -114,13 +114,16 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       original_event: payload[:original_event]
     )
 
-    {:noreply,
-     put_flash(
-       socket,
-       :error,
-       dgettext("dashboard_calendar_events", "Failed to update event - changes reverted")
-     )}
+    {:noreply, put_flash(socket, :error, update_failed_message(payload[:reason]))}
   end
+
+  # A refusal the domain made names its own reason; everything else is a
+  # provider failure the organiser can do nothing about.
+  defp update_failed_message(:recurring_event),
+    do: EditWorkflow.recurring_edit_refused_message()
+
+  defp update_failed_message(_reason),
+    do: dgettext("dashboard_calendar_events", "Failed to update event - changes reverted")
 
   @doc """
   Handles the result of an event move: shows the moved event and says where

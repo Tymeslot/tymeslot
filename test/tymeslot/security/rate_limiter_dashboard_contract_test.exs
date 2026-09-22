@@ -92,12 +92,13 @@ defmodule Tymeslot.Security.RateLimiterDashboardContractTest do
         assert {:error, :rate_limited, message} = fun.(user_id),
                "#{bucket_prefix} should be rate limited after #{limit} requests"
 
-        assert message =~ ~r/limit of \d+ .+ actions per \d+ minutes/,
+        assert message =~ ~r/limit of \d+ .+ actions per (\d+ )?(minute|hour|day)s?/,
                "#{bucket_prefix} message format: #{message}"
 
         # The wait is the limiter's own `retry_after`, not the window: "try
         # again in 30 minutes" would be the window restated, and useless.
-        assert message =~ ~r/Please try again in (a moment|1 minute|\d+ minutes)\./,
+        assert message =~
+                 ~r/Please try again in (a moment|1 (minute|hour|day)|\d+ (minutes|hours|days))\./,
                "#{bucket_prefix} message should say how long to wait: #{message}"
       end
     end

@@ -7,14 +7,14 @@ defmodule Tymeslot.Emails.Templates.PollHostNudge do
     * `:all_voted`: every participant has voted, so the host can decide now.
     * `:deadline_passed`: voting has closed and it is time to decide.
 
-  Sent to the host in the instance's default locale, mirroring how the other
-  organiser-facing templates resolve the sender's language.
+  Sent to the host in their own language (`users.locale`), falling back to the
+  default locale like the other organiser-facing templates.
   """
 
   import Swoosh.Email
 
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.{Buttons, MjmlEmail, Sanitise, TemplateHelper, Text}
-  alias Tymeslot.Locales
   alias Tymeslot.Polls.PollSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
@@ -26,7 +26,7 @@ defmodule Tymeslot.Emails.Templates.PollHostNudge do
   @spec render(PollSchema.t(), variant(), String.t()) :: Swoosh.Email.t()
   def render(%PollSchema{} = poll, variant, results_url)
       when variant in [:all_voted, :deadline_passed] and is_binary(results_url) do
-    locale = Locales.admin_default_locale()
+    locale = host_locale(poll)
     host_name = host_display_name(poll)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
@@ -113,4 +113,9 @@ defmodule Tymeslot.Emails.Templates.PollHostNudge do
     do: name
 
   defp host_display_name(_poll), do: MjmlEmail.fetch_from_name()
+
+  defp host_locale(%PollSchema{user: %{locale: _locale} = user}),
+    do: RecipientLocale.locale_for(user)
+
+  defp host_locale(%PollSchema{user_id: user_id}), do: RecipientLocale.locale_for_user_id(user_id)
 end

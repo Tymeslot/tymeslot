@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     case Shared.parse_int(id_str) do
       {:ok, event_id} ->
         event = Enum.find(socket.assigns.events, &(&1.id == event_id))
-        pending? = event != nil and AttendeeNotifications.pending?(event.id)
+        pending? = event != nil and AttendeeNotifications.pending?(event)
 
         {:noreply,
          socket
@@ -81,13 +81,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         tz = socket.assigns.user_timezone
 
         with {:ok, {start_date, start_time, end_date, end_time}} <- parse_time_inputs(params),
-             :ok <- EditWorkflow.assert_event_writable(socket, event),
+             :ok <- EditWorkflow.assert_event_editable(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket),
              {:ok, new_start} <- Shared.to_utc(start_date, start_time.hour, start_time.minute, tz),
              {:ok, raw_end} <- Shared.to_utc(end_date, end_time.hour, end_time.minute, tz) do
           apply_time_change(socket, event, new_start, raw_end)
         else
-          {:error, reason} = error when reason in [:unauthorized, :read_only] ->
+          {:error, reason} = error when reason in [:unauthorized, :read_only, :recurring_event] ->
             Shared.flash_guard_error(socket, error)
 
           {:error, :rate_limited, _message} = error ->
@@ -118,13 +118,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         {:noreply, socket}
 
       event ->
-        with :ok <- EditWorkflow.assert_event_writable(socket, event),
+        with :ok <- EditWorkflow.assert_event_editable(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           optimistic_event = AllDay.toggle(event, socket.assigns.user_timezone)
 
           push_all_day_change(socket, event, optimistic_event)
         else
-          {:error, reason} = error when reason in [:unauthorized, :read_only] ->
+          {:error, reason} = error when reason in [:unauthorized, :read_only, :recurring_event] ->
             Shared.flash_guard_error(socket, error)
 
           {:error, :rate_limited, _message} = error ->
@@ -143,7 +143,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       %{all_day: true} = event ->
         with {:ok, start_date} <- Date.from_iso8601(params["start-date"]),
              {:ok, end_date} <- parse_end_date(params["end-date"], start_date),
-             :ok <- EditWorkflow.assert_event_writable(socket, event),
+             :ok <- EditWorkflow.assert_event_editable(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           # The form presents inclusive dates; storage keeps `end_date`
           # exclusive, so a single-day range (start == end) is stored as +1.
@@ -157,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
             push_all_day_change(socket, event, optimistic_event)
           end
         else
-          {:error, reason} = error when reason in [:unauthorized, :read_only] ->
+          {:error, reason} = error when reason in [:unauthorized, :read_only, :recurring_event] ->
             Shared.flash_guard_error(socket, error)
 
           {:error, :rate_limited, _message} = error ->
@@ -184,14 +184,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
              existing = event.reminders || [],
              new_reminders = Shared.add_reminder(existing, reminder),
              true <- new_reminders != existing,
-             :ok <- EditWorkflow.assert_event_writable(socket, event),
+             :ok <- EditWorkflow.assert_event_editable(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           push_reminders_change(socket, event, new_reminders)
         else
           false ->
             {:noreply, socket}
 
-          {:error, reason} = error when reason in [:unauthorized, :read_only] ->
+          {:error, reason} = error when reason in [:unauthorized, :read_only, :recurring_event] ->
             Shared.flash_guard_error(socket, error)
 
           {:error, :rate_limited, _message} = error ->
@@ -212,12 +212,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
       event ->
         with {:ok, index} <- Shared.parse_int(params["index"]),
-             :ok <- EditWorkflow.assert_event_writable(socket, event),
+             :ok <- EditWorkflow.assert_event_editable(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           new_reminders = List.delete_at(event.reminders || [], index)
           push_reminders_change(socket, event, new_reminders)
         else
-          {:error, reason} = error when reason in [:unauthorized, :read_only] ->
+          {:error, reason} = error when reason in [:unauthorized, :read_only, :recurring_event] ->
             Shared.flash_guard_error(socket, error)
 
           {:error, :rate_limited, _message} = error ->
@@ -251,11 +251,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
             if new_rule == event.recurrence_rule do
               {:noreply, socket}
             else
-              with :ok <- EditWorkflow.assert_event_writable(socket, event),
+              with :ok <- EditWorkflow.assert_event_editable(socket, event),
                    :ok <- Shared.check_edit_rate_limit(socket) do
                 push_recurrence_change(socket, event, new_rule)
               else
-                {:error, reason} = error when reason in [:unauthorized, :read_only] ->
+                {:error, reason} = error
+                when reason in [:unauthorized, :read_only, :recurring_event] ->
                   Shared.flash_guard_error(socket, error)
 
                 {:error, :rate_limited, _message} = error ->
@@ -279,11 +280,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         if new_colour == Map.get(event, :colour) do
           {:noreply, socket}
         else
-          with :ok <- EditWorkflow.assert_event_writable(socket, event),
+          with :ok <- EditWorkflow.assert_event_editable(socket, event),
                :ok <- Shared.check_edit_rate_limit(socket) do
             push_colour_change(socket, event, new_colour)
           else
-            {:error, reason} = error when reason in [:unauthorized, :read_only] ->
+            {:error, reason} = error
+            when reason in [:unauthorized, :read_only, :recurring_event] ->
               Shared.flash_guard_error(socket, error)
 
             {:error, :rate_limited, _message} = error ->
@@ -380,7 +382,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
                ),
              trimmed = String.trim(sanitised),
              false <- trimmed == (Map.get(event, field) || ""),
-             :ok <- EditWorkflow.assert_event_writable(socket, event),
+             :ok <- EditWorkflow.assert_event_editable(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           updated_event = Map.put(event, field, trimmed)
           updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
@@ -397,7 +399,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
           true ->
             {:noreply, socket}
 
-          {:error, reason} = error when reason in [:unauthorized, :read_only] ->
+          {:error, reason} = error when reason in [:unauthorized, :read_only, :recurring_event] ->
             Shared.flash_guard_error(socket, error)
 
           {:error, :rate_limited, _message} = error ->

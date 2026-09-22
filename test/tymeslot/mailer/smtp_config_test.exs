@@ -150,6 +150,21 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
       refute :tlsv1 in versions
     end
 
+    test "TLS 1.3 middlebox compatibility mode is disabled" do
+      # OTP's client defaults to middlebox_comp_mode: true and then requires the
+      # server to send a ChangeCipherSpec record that RFC 8446 appendix D.4 makes
+      # optional. Servers that skip it abort the handshake and every email fails
+      # with :tls_failed.
+      config =
+        SMTPConfig.build(
+          host: "smtp.example.com",
+          username: "user",
+          password: "pass"
+        )
+
+      assert config[:tls_options][:middlebox_comp_mode] == false
+    end
+
     test "TLS options use verify_peer for security" do
       config =
         SMTPConfig.build(

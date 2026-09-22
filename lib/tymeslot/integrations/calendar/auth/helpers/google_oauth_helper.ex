@@ -140,9 +140,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   Refreshes an access token using a refresh token.
   """
   @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
-  @spec refresh_access_token(String.t(), String.t() | nil) :: {:ok, map()} | {:error, term()}
-  def refresh_access_token(refresh_token, current_scope \\ nil) do
-    GoogleOAuthHelper.refresh_access_token(refresh_token, current_scope)
+  @spec refresh_access_token(String.t(), String.t() | nil, keyword()) ::
+          {:ok, map()} | {:error, term()}
+  def refresh_access_token(refresh_token, current_scope \\ nil, opts \\ []) do
+    GoogleOAuthHelper.refresh_access_token(refresh_token, current_scope, opts)
   end
 
   # Private functions

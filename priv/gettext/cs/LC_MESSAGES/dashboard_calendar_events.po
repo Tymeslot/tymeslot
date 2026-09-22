@@ -1069,3 +1069,8 @@ msgstr "Tato událost je součástí opakované série. Vaše změna se týká p
 #, elixir-autogen, elixir-format
 msgid "Update this event"
 msgstr "Aktualizovat tuto událost"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring events cannot be edited here yet. Please change this one in your calendar app."
+msgstr "Opakované události zde zatím nelze upravovat. Upravte prosím tuto událost ve své kalendářové aplikaci."

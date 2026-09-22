@@ -390,6 +390,13 @@ defmodule Tymeslot.CalendarGrid do
   @spec ensure_movable(map()) :: :ok | {:error, :recurring_event}
   defdelegate ensure_movable(event), to: EventMove
 
+  @doc """
+  Whether an event may be edited from the grid. See
+  `Tymeslot.CalendarGrid.EventEdit.ensure_editable/1`.
+  """
+  @spec ensure_editable(map()) :: :ok | {:error, :recurring_event}
+  defdelegate ensure_editable(event), to: EventEdit
+
   @doc "Fetches a single cached event by integration ID and UID."
   @spec get_cached_event(integer(), String.t()) ::
           {:ok, CalendarEvent.t()} | {:error, :not_found}

@@ -81,7 +81,7 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
         })
 
       # Mock token refresh
-      expect(Tymeslot.GoogleOAuthHelperMock, :refresh_access_token, fn "refresh", _scope ->
+      expect(Tymeslot.GoogleOAuthHelperMock, :refresh_access_token, fn "refresh", _scope, _opts ->
         {:ok,
          %{
            access_token: "new_token",
@@ -166,7 +166,9 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
         {:ok, :needs_refresh}
       end)
 
-      expect(Tymeslot.ZoomOAuthHelperMock, :refresh_access_token, fn "refresh_token", nil ->
+      expect(Tymeslot.ZoomOAuthHelperMock, :refresh_access_token, fn "refresh_token",
+                                                                     nil,
+                                                                     _opts ->
         {:ok,
          %{
            access_token: "new_zoom_token",
@@ -226,7 +228,7 @@ defmodule Tymeslot.Integrations.Video.RoomsLifecycleTest do
         })
 
       # Allow the mock helper to be called from other processes
-      stub(Tymeslot.GoogleOAuthHelperMock, :refresh_access_token, fn _token, _scope ->
+      stub(Tymeslot.GoogleOAuthHelperMock, :refresh_access_token, fn _token, _scope, _opts ->
         {:ok,
          %{
            access_token: "new_token_#{System.unique_integer()}",

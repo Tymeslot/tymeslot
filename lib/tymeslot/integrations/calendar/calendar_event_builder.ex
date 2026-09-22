@@ -101,11 +101,12 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   @doc """
   Assembles a calendar event description from a meeting's fields.
 
-  The attendee identity is prepended because `ICalBuilder` deliberately
-  does not emit an `ATTENDEE` line on the CalDAV-write path (issue #41) —
-  if the description didn't carry the attendee's name and email the
-  organiser would have no way to see who the meeting is with from inside
-  their calendar app.
+  The attendee identity is prepended because no provider renders it the same
+  way: Google and Outlook show a real attendee list, CalDAV usually does too,
+  and Zimbra gets only a `CONTACT` line, which most clients ignore (see
+  `CalDAV.Scheduling`). The description is the one field every client shows,
+  so the organiser can always see who the meeting is with from inside their
+  calendar app.
 
   Custom question answers are appended directly after the attendee message
   so the organiser sees what was asked at booking time alongside the rest

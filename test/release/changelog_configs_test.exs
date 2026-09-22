@@ -14,7 +14,9 @@ defmodule Tymeslot.Release.ChangelogConfigsTest do
   @moduletag :utils
   @moduletag :git_cliff
 
-  # One commit per rendering decision the configs make.
+  # One commit per rendering decision the configs make. The `core` and `saas`
+  # scopes are retired and refused at commit time, but they run throughout the
+  # history before that change, so both configs still have to render them.
   @commits [
     "fix(core): keep the reconnect prompt until the owner reconnects",
     {"fix(core)!: read config files strictly",
@@ -67,7 +69,7 @@ defmodule Tymeslot.Release.ChangelogConfigsTest do
   end
 
   describe "cliff.toml (the GitHub release notes)" do
-    test "writes Core entries without a scope, keeping narrower ones", %{repo: repo} do
+    test "writes entries without a retired scope, keeping narrower ones", %{repo: repo} do
       changelog = render(repo, "cliff.toml")
 
       assert changelog =~ "- Keep the reconnect prompt until the owner reconnects"
@@ -75,13 +77,15 @@ defmodule Tymeslot.Release.ChangelogConfigsTest do
       refute changelog =~ "core:"
     end
 
-    # Unlike the Cloudron config, this one does not filter by scope, so the
-    # handful of `saas`-scoped commits in this history still reach the release
-    # notes — and there the prefix earns its place.
-    test "keeps a `saas` scope, which still distinguishes something", %{repo: repo} do
+    # Unlike the Cloudron config, this one does not filter by scope, so a
+    # `saas`-scoped commit from before the retirement still reaches the release
+    # notes. The entry is kept; only the prefix, which named a repository
+    # rather than anything about the change, is dropped.
+    test "suppresses a retired `saas` scope without dropping the entry", %{repo: repo} do
       changelog = render(repo, "cliff.toml")
 
-      assert changelog =~ "- **saas:** Add a pricing page"
+      assert changelog =~ "- Add a pricing page"
+      refute changelog =~ "saas:"
     end
 
     test "follows a breaking change with its migration note", %{repo: repo} do

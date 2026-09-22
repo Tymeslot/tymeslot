@@ -6,8 +6,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
 
   require Logger
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.BookingRequestLocation
-  alias Tymeslot.Locales
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.VideoRooms
   alias Tymeslot.Profiles
@@ -28,6 +28,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       attendee_timezone = attendee_timezone(meeting, owner_timezone)
 
       organizer_profile = organizer_profile(meeting)
+      organizer_locale = RecipientLocale.locale_for_user_id(Map.get(meeting, :organizer_user_id))
 
       base_details = base_details(meeting)
       timezone_details = timezone_details(meeting, owner_timezone, attendee_timezone)
@@ -43,7 +44,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       |> Map.merge(url_details)
       |> Map.merge(reminder_details)
       |> Map.put(:attendee_locale, attendee_locale)
-      |> Map.put(:organizer_time_format, organizer_time_format(meeting))
+      |> Map.put(:organizer_locale, organizer_locale)
+      |> Map.put(:organizer_time_format, organizer_time_format(meeting, organizer_locale))
       |> Map.put(:booking_payment, booking_payment_for(meeting))
     end)
   end
@@ -52,11 +54,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   # template. Deliberately namespaced away from the plain `:time_format` key the
   # hero and text bodies read, so an attendee-addressed branch cannot pick it up
   # by accident: only the organiser branches copy it across.
-  defp organizer_time_format(meeting) do
-    CalendarGrid.get_user_time_format(
-      Map.get(meeting, :organizer_user_id),
-      Locales.admin_default_locale()
-    )
+  defp organizer_time_format(meeting, organizer_locale) do
+    CalendarGrid.get_user_time_format(Map.get(meeting, :organizer_user_id), organizer_locale)
   end
 
   # Look up the booking payment row attached to this meeting, if any.

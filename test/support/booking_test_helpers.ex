@@ -69,8 +69,25 @@ defmodule Tymeslot.BookingTestHelpers do
     query = URI.encode_query([{"timezone", timezone} | Enum.to_list(query_params)])
     {:ok, view, _html} = live(conn, "/#{profile.username}?#{query}")
 
-    # Select the first meeting type
-    view |> element(@duration_option) |> render_click()
+    walk_to_booking_form(view, timezone)
+  end
+
+  @doc """
+  Walks an already-mounted scheduling view from the overview step through to
+  the booking form, which is what `navigate_to_booking_form/4` does once it has
+  mounted one of its own.
+
+  Public because the flow can restart without a mount to hang off: "Schedule
+  Another Meeting" returns the same LiveView to the overview step in place, and
+  the walk that follows has to start from the view already on screen.
+
+  `duration_slug` names the card to book, defaulting to whichever the overview
+  lists first.
+  """
+  @spec walk_to_booking_form(Phoenix.LiveViewTest.View.t(), String.t(), String.t() | nil) ::
+          Phoenix.LiveViewTest.View.t()
+  def walk_to_booking_form(view, timezone, duration_slug \\ nil) do
+    select_meeting_type(view, duration_slug)
 
     # Navigate to date/time selection
     view |> element(@next_step) |> render_click()
@@ -105,6 +122,27 @@ defmodule Tymeslot.BookingTestHelpers do
     view
   end
 
+  # Picking by slug rather than by `element(@duration_option)`: an organiser
+  # offering more than one type renders more than one card, and an ambiguous
+  # selector is refused outright rather than resolved to the first match.
+  defp select_meeting_type(view, nil) do
+    slug =
+      view
+      |> render()
+      |> Floki.parse_document!()
+      |> Floki.attribute(@duration_option, "phx-value-duration")
+      |> List.first() ||
+        flunk("Expected at least one meeting type card on the overview step")
+
+    select_meeting_type(view, slug)
+  end
+
+  defp select_meeting_type(view, duration_slug) do
+    view
+    |> element("#{@duration_option}[phx-value-duration='#{duration_slug}']")
+    |> render_click()
+  end
+
   # Bring `target_date` into the displayed range, driving whichever control the
   # rendered theme actually offers.
   defp advance_calendar_to(view, today, target_date) do
@@ -117,22 +155,31 @@ defmodule Tymeslot.BookingTestHelpers do
     end
   end
 
-  # Quill's month grid pads with the neighbouring month's days and disables
-  # them, so a rendered cell is no proof the date is bookable here: the month
-  # itself is what has to move.
-  #
-  # Read the month the calendar is actually showing rather than assuming it
-  # opened on today's. The schedule step opens on the next available day, which
-  # is not always in today's month -- on the last day of a month it is already
-  # showing the next one, and advancing again would leave the target behind and
-  # land on a month the booking window forbids.
+  # The month itself is what has to move, and only if it has not moved already:
+  # see `showing_month?/2` for why the calendar is asked rather than computed.
   defp advance_month(view, _today, target_date) do
     unless showing_month?(view, target_date) do
       view |> element(@next_month) |> render_click()
     end
   end
 
-  defp showing_month?(view, %Date{} = date) do
+  @doc """
+  Whether the month grid is currently displaying `date`'s month.
+
+  Public because every booking walk needs this question answered, and answering
+  it by arithmetic is wrong. The schedule step opens on the first bookable day,
+  so on the last day of a month, once today's cutoff has passed, the grid is
+  already showing the next month before any navigation happens. A guard written
+  as `if target.month != today.month` then advances a calendar that has moved
+  itself: either the arrow is disabled at the far edge of the booking window and
+  the click raises, or it succeeds and overshoots, leaving the target behind.
+
+  Quill's grid pads with the neighbouring month's days and disables them, so a
+  rendered day cell proves nothing about which month is on screen. The month
+  label does, which is what this reads.
+  """
+  @spec showing_month?(Phoenix.LiveViewTest.View.t(), Date.t()) :: boolean()
+  def showing_month?(view, %Date{} = date) do
     has_element?(
       view,
       @month_label,

@@ -341,12 +341,18 @@ test(bookings): add integration tests for meeting creation
 refactor(themes): extract common theme utilities
 ```
 
+The scope is optional and names the **domain** the change is about, as in the examples above. Leave it off when no single domain fits:
+
+```
+feat: add Baikal CalDAV calendar integration
+```
+
 Sign off every commit with the `-s` flag (`git commit -s`); see [Signing off your commits](#signing-off-your-commits).
 
 The changelog is auto-generated from `feat` and `fix` commits. To exclude a `feat` or `fix` commit from the changelog (e.g. internal test fixes, Dialyzer suppressions), add a `Changelog: skip` footer:
 
 ```
-fix(core): unwrap tuple in OAuth session test
+fix(auth): unwrap tuple in OAuth session test
 
 Changelog: skip
 ```

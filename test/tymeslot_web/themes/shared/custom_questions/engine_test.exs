@@ -122,4 +122,57 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.EngineTest do
     s = Engine.init([])
     assert {:error, ^s} = Engine.next(s)
   end
+
+  describe "prefill/2" do
+    test "shows carried-over answers without marking them touched" do
+      [d1, d2] = [build_def("short_text"), build_def("short_text")]
+
+      s = Engine.prefill(Engine.init([d1, d2]), %{d1["id"] => "Contract renewal"})
+
+      assert s.answers == %{d1["id"] => "Contract renewal"}
+      # The theme gates inline errors on `touched`, so a question the booker has
+      # not looked at must not be reported as answered by them.
+      assert MapSet.size(s.touched) == 0
+      assert s.errors == %{}
+      assert s.current_index == 0
+    end
+
+    test "seeding anything raises pending_review, which mark_reviewed/1 lowers" do
+      d = build_def("short_text")
+
+      s = Engine.prefill(Engine.init([d]), %{d["id"] => "Contract renewal"})
+
+      # The booking step routes on this: a carried answer validates, so nothing
+      # else would stop it being submitted without ever being shown.
+      assert Engine.pending_review?(s)
+      refute Engine.pending_review?(Engine.mark_reviewed(s))
+    end
+
+    test "carrying nothing leaves pending_review down" do
+      d = build_def("short_text")
+
+      refute Engine.pending_review?(Engine.prefill(Engine.init([d]), %{}))
+      refute Engine.pending_review?(Engine.prefill(Engine.init([]), %{"x" => "y"}))
+    end
+
+    test "merges under the answers already held" do
+      d = build_def("short_text")
+
+      s =
+        [d]
+        |> Engine.init()
+        |> Engine.answer(d["id"], "Something else")
+        |> Engine.prefill(%{d["id"] => "Contract renewal"})
+
+      assert s.answers == %{d["id"] => "Something else"}
+    end
+
+    test "ignores answers to questions the engine does not carry" do
+      d = build_def("short_text")
+
+      s = Engine.prefill(Engine.init([d]), %{"a-question-that-was-removed" => "x"})
+
+      assert s.answers == %{}
+    end
+  end
 end

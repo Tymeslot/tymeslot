@@ -246,7 +246,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
         "scope" => current_scope
       }
 
-      case TokenFlow.refresh_token(@token_url, body, provider: :outlook) do
+      case TokenFlow.refresh_token(@token_url, body,
+             log_context: [
+               integration_id: integration.id,
+               user_id: integration.user_id,
+               provider: :outlook
+             ]
+           ) do
         {:ok, response} ->
           expires_in = response["expires_in"] || 3600
           expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)

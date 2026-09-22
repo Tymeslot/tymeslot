@@ -20,19 +20,59 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Engine do
           current_index: non_neg_integer(),
           answers: %{String.t() => any()},
           errors: %{String.t() => String.t()},
-          touched: term()
+          touched: term(),
+          pending_review: boolean()
         }
 
   defstruct definitions: [],
             current_index: 0,
             answers: %{},
             errors: %{},
-            touched: MapSet.new()
+            touched: MapSet.new(),
+            pending_review: false
 
   @spec init([map()]) :: t()
   def init(definitions) when is_list(definitions) do
     %__MODULE__{definitions: Enum.sort_by(definitions, &position/1)}
   end
+
+  @doc """
+  Seeds answers the booker has not given in this session — the ones a
+  reschedule carries over from the booking being moved.
+
+  Deliberately not `answer/3`: these are answers to be *shown*, not answers
+  the booker has just made, so they leave `touched` alone. The theme gates
+  inline errors on that set, and marking a carried-over answer as touched
+  would put an error under a question the booker has not looked at yet.
+
+  Seeding anything raises `pending_review`. Carried answers validate, so
+  without it the booking step would wave the booker straight past the only
+  screen that shows them and submit them unseen. `mark_reviewed/1` lowers it
+  once the wizard has been walked.
+
+  Carried answers merge *under* whatever the state already holds, and ids the
+  definitions do not carry are ignored.
+  """
+  @spec prefill(t(), %{String.t() => any()}) :: t()
+  def prefill(%__MODULE__{} = s, answers) when is_map(answers) do
+    carried = Map.take(answers, Enum.map(s.definitions, & &1["id"]))
+
+    %{
+      s
+      | answers: Map.merge(carried, s.answers),
+        pending_review: s.pending_review or map_size(carried) > 0
+    }
+  end
+
+  @doc """
+  Records that the booker has walked the questions step, so the carried-over
+  answers no longer need to be routed to.
+  """
+  @spec mark_reviewed(t()) :: t()
+  def mark_reviewed(%__MODULE__{} = s), do: %{s | pending_review: false}
+
+  @spec pending_review?(t()) :: boolean()
+  def pending_review?(%__MODULE__{pending_review: pending}), do: pending
 
   @spec skipped?(t()) :: boolean()
   def skipped?(%__MODULE__{definitions: []}), do: true

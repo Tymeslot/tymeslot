@@ -88,10 +88,22 @@ defmodule Tymeslot.CalendarGrid.EventMove do
     if part_of_series?(event), do: {:error, :recurring_event}, else: :ok
   end
 
-  # The recurrence id and the Exchange item type have no columns of their own:
-  # the sync keeps them in `provider_metadata`, atom-keyed when freshly
-  # normalised and string-keyed once it has been through the database.
-  defp part_of_series?(event) do
+  @doc """
+  Whether `event` belongs to a repeating series, as a series, as one of its
+  expanded occurrences, or as an occurrence edited on its own.
+
+  The recurrence id and the Exchange item type have no columns of their own:
+  the sync keeps them in `provider_metadata`, atom-keyed when freshly
+  normalised and string-keyed once it has been through the database. Both
+  shapes are read here, so a caller may pass a cached row or a normalised
+  event.
+
+  `Tymeslot.CalendarGrid.EventEdit.ensure_editable/1` asks the same
+  question of an edit, which is why this is public rather than folded into
+  `ensure_movable/1`.
+  """
+  @spec part_of_series?(map()) :: boolean()
+  def part_of_series?(event) do
     metadata = Map.get(event, :provider_metadata)
 
     Enum.any?(

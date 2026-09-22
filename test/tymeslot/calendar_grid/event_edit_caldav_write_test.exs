@@ -138,4 +138,117 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
       assert row.summary == "Renamed"
     end
   end
+
+  describe "rescheduling one occurrence of a synced CalDAV series" do
+    # The occurrence the sync expanded out of the series below: it carries the
+    # master's RRULE, and its href is the series' resource, because on CalDAV
+    # there is only ever the one document.
+    @series_ical """
+    BEGIN:VCALENDAR\r
+    VERSION:2.0\r
+    BEGIN:VEVENT\r
+    UID:weekly-standup\r
+    DTSTAMP:20260901T090000Z\r
+    DTSTART:20260908T090000Z\r
+    DTEND:20260908T091500Z\r
+    RRULE:FREQ=WEEKLY;BYDAY=TU\r
+    SUMMARY:Weekly standup\r
+    END:VEVENT\r
+    END:VCALENDAR\r
+    """
+
+    setup %{integration: integration} do
+      occurrence =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: "weekly-standup_20260915T090000",
+          provider: "caldav",
+          provider_calendar_id: "/cal/",
+          provider_event_id: "/cal/weekly-standup.ics",
+          summary: "Weekly standup",
+          start_at: ~U[2026-09-15 09:00:00.000000Z],
+          end_at: ~U[2026-09-15 09:15:00.000000Z],
+          all_day: false,
+          recurrence_rule: "FREQ=WEEKLY;BYDAY=TU",
+          etag: "\"etag-1\"",
+          raw_ical: @series_ical,
+          sync_state: "synced"
+        )
+
+      %{occurrence: occurrence}
+    end
+
+    # No `expect`: under `verify_on_exit!` a PUT that reached the server would
+    # fail the test as an unexpected call. That is the assertion — the patcher
+    # would have rewritten the master's DTSTART and moved every Tuesday.
+    test "is refused before anything is written", %{user: user, occurrence: occurrence} do
+      assert {:error, %{reason: :recurring_event, retry: :not_queued}} =
+               CalendarGrid.update_event(user.id, occurrence, %{
+                 start_at: ~U[2026-09-15 11:00:00.000000Z],
+                 end_at: ~U[2026-09-15 11:15:00.000000Z]
+               })
+    end
+
+    test "leaves the cached occurrence at the time it was synced at", %{
+      user: user,
+      integration: integration,
+      occurrence: occurrence
+    } do
+      assert {:error, _failure} =
+               CalendarGrid.update_event(user.id, occurrence, %{
+                 start_at: ~U[2026-09-15 11:00:00.000000Z],
+                 end_at: ~U[2026-09-15 11:15:00.000000Z]
+               })
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, occurrence.uid)
+      assert row.start_at == ~U[2026-09-15 09:00:00.000000Z]
+      assert row.end_at == ~U[2026-09-15 09:15:00.000000Z]
+    end
+
+    test "is refused for an optimistic copy whose own timing already moved", %{
+      user: user,
+      occurrence: occurrence
+    } do
+      # What the grid assigns while the drag is still in flight. The guard reads
+      # the cached row rather than this, so a caller cannot edit its way past it.
+      optimistic = %{occurrence | start_at: ~U[2026-09-15 11:00:00.000000Z]}
+
+      assert {:error, %{reason: :recurring_event}} =
+               CalendarGrid.update_event(user.id, optimistic, %{
+                 start_at: ~U[2026-09-15 11:00:00.000000Z],
+                 end_at: ~U[2026-09-15 11:15:00.000000Z]
+               })
+    end
+
+    # The payload is always the complete event, so a rename carries the
+    # occurrence's own DTSTART too: the patcher would write 15 September onto
+    # a series that starts on the 8th, dropping the first occurrence. No edit
+    # of an occurrence stays inside it, which is why the refusal is not
+    # limited to a reschedule.
+    test "a rename is refused for the same reason", %{user: user, occurrence: occurrence} do
+      assert {:error, %{reason: :recurring_event, retry: :not_queued}} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Daily standup"})
+    end
+
+    test "the one-off event on the same calendar is still editable", %{
+      user: user,
+      event: event
+    } do
+      test_pid = self()
+
+      expect(Tymeslot.HTTPClientMock, :put, fn _url, body, _headers, _opts ->
+        send(test_pid, {:put, body})
+        {:ok, %Req.Response{status: 204, body: "", headers: %{}}}
+      end)
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, event, %{
+                 start_at: ~U[2026-09-10 11:00:00.000000Z],
+                 end_at: ~U[2026-09-10 12:00:00.000000Z]
+               })
+
+      assert_received {:put, body}
+      assert "DTSTART:20260910T110000Z" in LineFolder.unfold_lines(body)
+    end
+  end
 end

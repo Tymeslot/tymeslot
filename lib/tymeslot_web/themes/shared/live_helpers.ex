@@ -32,6 +32,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: CustomizationHelpers
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
+  alias TymeslotWeb.Themes.Shared.ReschedulePin
 
   @doc """
   Shared mounting logic for scheduling themes.
@@ -74,6 +75,14 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
     # Subscribe to calendar event updates for the organiser so availability refreshes on sync
     socket = maybe_subscribe_to_calendar_events(socket)
+
+    # The reschedule uid must reach the socket before the first entry handler
+    # runs: it builds the questions engine and then memoises it on the
+    # definitions, so one built without the uid is the one `handle_params`
+    # finds and keeps. `handle_param_updates/2` is too late, running only once
+    # `handle_params` does.
+    socket =
+      maybe_assign_from_params(socket, :reschedule_meeting_uid, params["reschedule_meeting_uid"])
 
     # Finally setup initial state. Only on the connected mount — handle_params
     # (which always runs immediately after mount, on both the static and
@@ -219,7 +228,19 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     |> maybe_assign_from_params(:selected_time, params["time"])
     |> maybe_assign_from_params(:reschedule_meeting_uid, params["reschedule_meeting_uid"])
     |> assign(:is_rescheduling, is_binary(params["reschedule_meeting_uid"]))
+    |> pin_reschedule_meeting_type()
     |> handle_confirmation_params(params)
+  end
+
+  # A reschedule is pinned to the type it booked; `ReschedulePin` says why.
+  defp pin_reschedule_meeting_type(socket) do
+    case ReschedulePin.meeting_type(socket) do
+      nil ->
+        ReschedulePin.clear(socket)
+
+      meeting_type ->
+        socket |> assign_meeting_type(meeting_type) |> ReschedulePin.pin(meeting_type)
+    end
   end
 
   defp handle_confirmation_params(socket, params) do
@@ -295,9 +316,23 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   """
   @spec handle_schedule_entry(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def handle_schedule_entry(socket, params) do
-    case resolve_slug_meeting_type(socket, normalize_duration_param(params)) do
+    case resolve_entry_meeting_type(socket, params) do
       {:unresolvable, socket} -> socket
       {:ok, socket} -> do_handle_schedule_entry(socket, params)
+    end
+  end
+
+  # Every entry into the flow has to resolve `:meeting_type`, and a reschedule
+  # resolves it exactly once, in `ReschedulePin`. The slug in the URL is not
+  # consulted for one: two types can share a duration, and a stale reschedule
+  # link can name a different type outright. Only when the pin comes back empty
+  # — not a reschedule, or its type has since been deleted — does the slug
+  # decide, which is what a fresh booking uses.
+  defp resolve_entry_meeting_type(socket, params) do
+    if ReschedulePin.pinned?(socket) do
+      {:ok, socket}
+    else
+      resolve_slug_meeting_type(socket, normalize_duration_param(params))
     end
   end
 
@@ -360,8 +395,33 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
     case socket.assigns[:engine] do
       %QEngine{definitions: ^defs} = engine -> engine
-      _changed -> QEngine.init(defs)
+      _changed -> init_questions_engine(socket, defs)
     end
+  end
+
+  @doc """
+  A fresh questions engine for `definitions`, carrying over the answers of the
+  booking a reschedule is moving.
+
+  A reschedule re-enters the flow as an ordinary booking, so without this the
+  booker is asked the organiser's questions again from blank, having already
+  answered them — while their name, email and message are prefilled right
+  beside. `Tymeslot.Scheduling.ThemeFlow.reschedule_answers/3` decides which
+  answers may be carried; the step itself is still shown, so the booker sees
+  what will be sent and can change it.
+  """
+  @spec init_questions_engine(Phoenix.LiveView.Socket.t(), [map()]) :: QEngine.t()
+  def init_questions_engine(socket, definitions) do
+    carried =
+      ThemeFlow.reschedule_answers(
+        socket.assigns[:reschedule_meeting_uid],
+        socket.assigns[:organizer_user_id],
+        definitions
+      )
+
+    definitions
+    |> QEngine.init()
+    |> QEngine.prefill(carried)
   end
 
   defp do_handle_schedule_entry(socket, params) do
@@ -375,7 +435,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       end
 
     normalized_duration =
-      normalize_duration_param(params) || socket.assigns[:selected_duration]
+      ReschedulePin.selected_duration(
+        socket,
+        normalize_duration_param(params) || socket.assigns[:selected_duration]
+      )
 
     socket =
       socket
@@ -419,13 +482,13 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
         is_binary(params["reschedule_meeting_uid"])
 
     if has_selection || is_reschedule do
-      case resolve_booking_meeting_type(socket, params, is_reschedule) do
+      case resolve_entry_meeting_type(socket, params) do
         {:unresolvable, socket} ->
           socket
 
         {:ok, socket} ->
           socket
-          |> route_past_unanswered_questions()
+          |> maybe_route_to_questions()
           |> do_handle_booking_entry(params)
       end
     else
@@ -440,54 +503,32 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     end
   end
 
-  # `/:username/:slug/book` is directly enterable, so the booking step cannot
-  # assume an earlier step already resolved the type.
-  #
-  # A reschedule is committed to the original meeting's type (see
-  # `ThemeFlow.resolve_meeting_type_for_reschedule/2`), which is preferred over
-  # the slug even when the slug still names a live type, because two types can
-  # share a duration. Only when that resolution itself comes back nil — not a
-  # reschedule, meeting not the organiser's, or it predates meeting types —
-  # does it fall back to the same slug match a fresh booking would use, so the
-  # flow never lands on `meeting_type_id: nil`.
-  defp resolve_booking_meeting_type(socket, params, false = _is_reschedule) do
-    resolve_slug_meeting_type(socket, normalize_duration_param(params))
-  end
-
-  defp resolve_booking_meeting_type(socket, params, true = _is_reschedule) do
-    reschedule_uid = socket.assigns[:reschedule_meeting_uid] || params["reschedule_meeting_uid"]
-
-    case ThemeFlow.resolve_meeting_type_for_reschedule(
-           reschedule_uid,
-           socket.assigns[:organizer_user_id]
-         ) do
-      nil -> resolve_slug_meeting_type(socket, normalize_duration_param(params))
-      meeting_type -> {:ok, assign_meeting_type(socket, meeting_type)}
-    end
-  end
-
   # `/:username/:slug/book` can be entered directly (a reschedule deep-link,
   # or a locale switch mid-flow, both of which redirect straight back to this
   # URL). Neither passes through the `:questions` step, so a meeting type with
   # required custom fields would otherwise seed the engine with definitions
   # but no answers and render the booking step, which has no UI for them —
   # every submit then fails validation with no way to correct it. Route to
-  # `:questions` instead whenever the freshly-resolved engine still has
-  # unanswered required fields; forward navigation from there already lands
-  # back on `:booking` once answered.
-  defp route_past_unanswered_questions(socket) do
-    if unanswered_required_questions?(socket.assigns[:engine]) do
+  # `:questions` instead whenever the freshly-resolved engine still needs it;
+  # forward navigation from there already lands back on `:booking`.
+  defp maybe_route_to_questions(socket) do
+    if needs_questions_step?(socket.assigns[:engine]) do
       assign(socket, :current_state, :questions)
     else
       socket
     end
   end
 
-  defp unanswered_required_questions?(%QEngine{} = engine) do
-    not QEngine.skipped?(engine) && match?({:error, _errors}, QEngine.validate_all(engine))
+  # Answers a reschedule carried over are shown, never submitted unseen.
+  # They validate, so the unanswered-required arm alone would skip the one
+  # screen that displays them.
+  defp needs_questions_step?(%QEngine{} = engine) do
+    not QEngine.skipped?(engine) &&
+      (QEngine.pending_review?(engine) ||
+         match?({:error, _errors}, QEngine.validate_all(engine)))
   end
 
-  defp unanswered_required_questions?(_engine), do: false
+  defp needs_questions_step?(_engine), do: false
 
   defp do_handle_booking_entry(socket, _params) do
     # Set up form and rate limiting

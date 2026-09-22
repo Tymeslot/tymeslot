@@ -31,6 +31,7 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
 
   alias Ecto.Changeset
   alias Ecto.UUID
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Bookings.Create
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -209,6 +210,37 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
 
       # No emails should be sent on retry (idempotency check)
       assert_no_email_sent()
+    end
+
+    test "writes to the host in their language and to the booker in theirs", %{
+      user: user,
+      meeting_params: meeting_params,
+      form_data: form_data
+    } do
+      # The host's choice has to survive the whole journey — booking, Oban job,
+      # payload build, render — and must not follow the booker's language. Only
+      # an end-to-end run covers the payload key the templates read.
+      {:ok, _user} = UserQueries.update_user_locale(user, "de")
+
+      assert {:ok, meeting} = Create.execute(meeting_params, form_data)
+      assert meeting.attendee_locale == "en"
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_confirmation_emails",
+                 "meeting_id" => meeting.id
+               })
+
+      assert_received {:email, one}
+      assert_received {:email, other}
+
+      subjects =
+        Map.new([one, other], fn email ->
+          {email.to |> hd() |> elem(1), email.subject}
+        end)
+
+      assert subjects["organizer@example.com"] =~ "Neuer Termin"
+      assert subjects["attendee@example.com"] =~ "Appointment Confirmed"
     end
 
     test "shows the host's uploaded avatar by absolute URL, which Gmail can fetch", %{

@@ -5,6 +5,12 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   single batched notification email reflecting the aggregated delta or no-ops
   if the effective diff is empty.
 
+  Nothing seeds `last_notified_state` when an event is created or synced, so
+  the first run for any event diffs against an empty baseline.
+  `LastNotifiedState.to_event/2` owns what that means (see its docs), and
+  the baseline is written only *after* a successful dispatch, never before
+  the diff that decides who to notify.
+
   On successful dispatch, the event's `last_notified_state` is updated to the
   current serialised snapshot and `ical_sequence` is bumped via
   `ChangeSummary.next_sequence`. The whole read/dispatch/persist path runs
@@ -67,7 +73,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
     with {:ok, event} <- load_event(id, kind) do
       action_atom = String.to_existing_atom(action)
       current = current_event_map(event)
-      baseline = LastNotifiedState.to_event(event.last_notified_state)
+      baseline = LastNotifiedState.to_event(event.last_notified_state, current)
       summary = ChangeDetector.diff(baseline, current, current_sequence: event.ical_sequence)
 
       if ChangeSummary.any_changes?(summary) do
@@ -139,26 +145,37 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
 
     declined = declined_emails(event)
 
-    recipients =
+    recipient_emails =
       summary
       |> recipients_for(action_atom)
       |> Enum.reject(fn attendee -> recipient_email(attendee) in declined end)
+      |> Enum.map(&Map.get(&1, :email))
+      |> Enum.reject(&is_nil/1)
 
-    Enum.each(recipients, fn attendee ->
-      CalendarScheduler.schedule_event_update_notification(%{
-        user_id: user_id_for(event),
-        event_uid: event.uid,
-        integration_id: integration_id_for(event),
-        attendee_emails: [Map.get(attendee, :email)],
-        before_title: last_state_string(event, "title"),
-        before_location: last_state_string(event, "location"),
-        before_description: last_state_string(event, "description"),
-        before_start_at: last_state_datetime(event, "starts_at"),
-        before_end_at: last_state_datetime(event, "ends_at"),
-        method: method,
-        sequence: sequence
-      })
-    end)
+    dispatch_to(recipient_emails, event, method, sequence)
+  end
+
+  # One job for the whole recipient list, which is what the handler on the
+  # other end expects (`attendee_emails` is a list it maps over) and what the
+  # scheduler's uniqueness key requires: it is keyed on action + event_uid +
+  # method and deliberately not on the recipients, so a job per attendee
+  # collapses into the first one and everybody else is silently dropped.
+  defp dispatch_to([], _event, _method, _sequence), do: :ok
+
+  defp dispatch_to(recipient_emails, event, method, sequence) do
+    CalendarScheduler.schedule_event_update_notification(%{
+      user_id: user_id_for(event),
+      event_uid: event.uid,
+      integration_id: integration_id_for(event),
+      attendee_emails: recipient_emails,
+      before_title: last_state_string(event, "title"),
+      before_location: last_state_string(event, "location"),
+      before_description: last_state_string(event, "description"),
+      before_start_at: last_state_datetime(event, "starts_at"),
+      before_end_at: last_state_datetime(event, "ends_at"),
+      method: method,
+      sequence: sequence
+    })
 
     :ok
   end

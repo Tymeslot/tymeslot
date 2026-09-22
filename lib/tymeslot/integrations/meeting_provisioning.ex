@@ -100,7 +100,9 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
         {:ok,
          Map.merge(video_context, %{
            meeting_url: url,
-           room_id: Video.extract_room_id(url),
+           # The `:inline` plan only exists for a Google Calendar and Google
+           # Meet pair, so the link is a Meet link and Meet's rules parse it.
+           room_id: Video.extract_room_id(url, :google_meet),
            video_integration_id: video_id
          })}
     end

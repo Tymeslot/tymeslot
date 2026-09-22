@@ -2,7 +2,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   @moduledoc """
   Property-level patching of a stored iCalendar document.
 
-  `ICalBuilder.build_simple_event/2` serialises the whole event from
+  `ICalBuilder.build_simple_event/3` serialises the whole event from
   Tymeslot's payload, which is right for an event Tymeslot authored and wrong
   for one it merely synced: everything the payload does not model (`ATTENDEE`
   and its `PARTSTAT`/`ROLE`/`RSVP` parameters, `CATEGORIES`, `SEQUENCE`,
@@ -29,15 +29,18 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     * `VEVENT`s carrying a `RECURRENCE-ID`. Those are overrides of single
       occurrences with their own timing; only the master event of the series
       is patched.
-    * Attendees, unless the document has none. `ATTENDEE` is deliberately
-      never emitted (see `Properties.build_attendee_lines/1`: a CalDAV server
-      that runs iTIP scheduling would email every attendee a second
-      invitation), so an event that already advertises attendees keeps the
-      block the server gave it, untouched. An event with no `ATTENDEE` block
-      is one Tymeslot wrote, and its `CONTACT` lines are rewritten from the
-      payload as usual.
+    * An `ATTENDEE` block the organiser's own calendar client wrote. Rewriting
+      it would reset each `PARTSTAT` that client is tracking, and on a
+      scheduling server that re-invites everyone. Tymeslot's own block is
+      rewritten, and is told apart by the `X-TYMESLOT-ATTENDEES` marker
+      `build_simple_event/3` emits beside it; a document with no `ATTENDEE` at
+      all is Tymeslot's too, whether it carries `CONTACT` lines or nothing.
+      Which property the rewrite uses is the caller's `mode`, not this
+      module's decision — see `CalDAV.Scheduling`.
   """
 
+  alias Tymeslot.Integrations.Calendar.CalDAV.Scheduling
+  alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Alarms
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
@@ -48,11 +51,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
 
   Returns the patched document, folded per RFC 5545 §3.1. A document with no
   `VEVENT` comes back unchanged; callers that need a document in that case
-  build one with `ICalBuilder.build_simple_event/2` instead.
+  build one with `ICalBuilder.build_simple_event/3` instead.
   """
-  @spec patch(String.t(), map()) :: String.t()
-  def patch(raw_ical, event_data) when is_binary(raw_ical) and is_map(event_data) do
-    patch_set = build_patch_set(event_data)
+  @spec patch(String.t(), map(), Scheduling.mode()) :: String.t()
+  def patch(raw_ical, event_data, mode \\ :contact)
+      when is_binary(raw_ical) and is_map(event_data) do
+    patch_set = build_patch_set(event_data, mode)
 
     raw_ical
     |> LineFolder.unfold_lines()
@@ -66,7 +70,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   # A patch set is the list of {properties it replaces, replacement lines} the
   # payload asks for, plus the reminders decision, computed once for the whole
   # document.
-  defp build_patch_set(event_data) do
+  defp build_patch_set(event_data, mode) do
     entries =
       Enum.reject(
         [
@@ -89,7 +93,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
         &is_nil/1
       )
 
-    %{entries: entries, event_data: event_data}
+    %{entries: entries, event_data: event_data, mode: mode}
   end
 
   defp entry(event_data, key, properties, builder) do
@@ -136,7 +140,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     if override?(properties) do
       body
     else
-      entries = patch_set.entries ++ contact_entries(properties, patch_set.event_data)
+      entries = patch_set.entries ++ attendee_entries(properties, patch_set)
       replaced = MapSet.new(Enum.flat_map(entries, fn {names, _lines} -> names end))
 
       kept = Enum.reject(properties, &MapSet.member?(replaced, property_name(&1)))
@@ -151,16 +155,39 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   # exception onto the master's start.
   defp override?(properties), do: Enum.any?(properties, &(property_name(&1) == "RECURRENCE-ID"))
 
-  defp contact_entries(properties, event_data) do
-    if Map.has_key?(event_data, :attendees) and not advertises_attendees?(properties) do
-      [{["CONTACT"], Properties.build_attendee_lines(event_data)}]
+  # Both spellings are always replaced, never just the one being written, so a
+  # document Tymeslot wrote under the other mode — or before this project
+  # emitted `ATTENDEE` at all — converges on the current one instead of
+  # carrying the attendee twice.
+  @rewritten_attendee_properties ["CONTACT", "ATTENDEE", "X-TYMESLOT-ATTENDEES"]
+
+  defp attendee_entries(properties, patch_set) do
+    if Map.has_key?(patch_set.event_data, :attendees) and ours_to_rewrite?(properties) do
+      [{@rewritten_attendee_properties, attendee_block(patch_set)}]
     else
       []
     end
   end
 
+  defp attendee_block(%{event_data: event_data, mode: :attendee}) do
+    case Properties.build_attendee_lines(event_data, :attendee) do
+      nil -> nil
+      lines -> lines <> "\r\n" <> ICalBuilder.attendee_marker()
+    end
+  end
+
+  defp attendee_block(%{event_data: event_data, mode: :contact}),
+    do: Properties.build_attendee_lines(event_data, :contact)
+
+  defp ours_to_rewrite?(properties) do
+    not advertises_attendees?(properties) or marked_ours?(properties)
+  end
+
   defp advertises_attendees?(properties),
     do: Enum.any?(properties, &(property_name(&1) == "ATTENDEE"))
+
+  defp marked_ours?(properties),
+    do: Enum.any?(properties, &(property_name(&1) == "X-TYMESLOT-ATTENDEES"))
 
   defp patched_alarms(alarms, event_data) do
     if Map.has_key?(event_data, :reminders) do

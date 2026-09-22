@@ -70,7 +70,10 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
       for _i <- 1..5, do: SignupSecurity.gate(params, @meta)
 
       assert {:error, :rate_limited, message} = SignupSecurity.gate(params, @meta)
-      assert message == "Too many signup attempts. Please try again later."
+
+      assert message ==
+               "You've reached the limit of 5 signup attempts per 10 minutes. " <>
+                 "Please try again in 10 minutes."
     end
 
     test "records a signup rate-limit audit entry naming the account and origin" do

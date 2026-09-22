@@ -140,6 +140,78 @@ defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
     end
   end
 
+  # The invariant's sharpest case, and the one it missed for as long as the
+  # display path read the host's calendar and nothing else: the booking the
+  # page itself has just taken. The submit refuses a second attempt from the
+  # meetings table, so a host with no calendar connected — an ordinary
+  # self-hosted setup — kept the slot on offer and told every later booker it
+  # had gone only after they had filled in the form.
+  describe "the invariant holds for a booking of the page's own making" do
+    test "a booked slot is withdrawn from the display and refused by the booking API" do
+      timezone = "Etc/UTC"
+      %{user: user, profile: profile} = create_bookable_profile(timezone: timezone)
+      target_date = next_bookable_weekday()
+
+      TestMocks.stub_no_calendar_events()
+
+      offered_before = offered(profile, target_date, "30min")
+
+      assert offered_before != [], "expected a weekday with no bookings to offer slots"
+
+      chosen_slot = List.first(offered_before)
+
+      assert {:ok, %MeetingSchema{}} = book_slot(user, target_date, chosen_slot, timezone)
+
+      # No calendar event exists for that booking and none ever will, so the
+      # meetings table is the only thing that can withdraw the slot.
+      offered_after = offered(profile, target_date, "30min")
+
+      refute chosen_slot in offered_after
+      assert offered_after != [], "expected the rest of the day to stay on offer"
+
+      assert {:error, :slot_taken} = book_slot(user, target_date, chosen_slot, timezone)
+    end
+
+    test "every slot still offered after a booking can itself be booked" do
+      timezone = "Etc/UTC"
+      %{user: user, profile: profile} = create_bookable_profile(timezone: timezone)
+      target_date = next_bookable_weekday()
+
+      TestMocks.stub_no_calendar_events()
+
+      [first_slot | _rest] = offered(profile, target_date, "30min")
+
+      assert {:ok, %MeetingSchema{}} = book_slot(user, target_date, first_slot, timezone)
+
+      still_offered = offered(profile, target_date, "30min")
+
+      assert still_offered != [], "expected the rest of the day to stay on offer"
+
+      # Booking one of them moves the others, so only the first survivor is
+      # asserted; the point is that the display's answer is still honoured
+      # once a booking rather than a calendar event is what shaped it.
+      assert {:ok, %MeetingSchema{}} =
+               book_slot(user, target_date, List.first(still_offered), timezone)
+    end
+
+    defp book_slot(user, date, time, timezone) do
+      Create.execute(
+        %{
+          date: date,
+          time: time,
+          duration: "30min",
+          user_timezone: timezone,
+          organizer_user_id: user.id
+        },
+        %{
+          "name" => "Invariant Attendee",
+          "email" => "invariant-attendee@example.com",
+          "message" => "Booking against the host's own bookings"
+        }
+      )
+    end
+  end
+
   # A slot_interval_minutes narrower than the meeting's duration puts starts on
   # the offered grid that the duration-locked grid alone would never produce.
   # The invariant above only ever exercised the duration-locked grid; this

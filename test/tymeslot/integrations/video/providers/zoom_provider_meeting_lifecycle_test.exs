@@ -71,7 +71,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
       end)
 
       # Refresh succeeds but Zoom still rejects the second attempt.
-      expect(ZoomOAuthHelperMock, :refresh_access_token, fn _refresh, nil ->
+      expect(ZoomOAuthHelperMock, :refresh_access_token, fn _refresh, nil, _opts ->
         {:ok,
          %{
            access_token: "refreshed_token",
@@ -142,7 +142,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
       end)
 
       # The forced refresh MUST call OAuth despite the DB token looking valid.
-      expect(ZoomOAuthHelperMock, :refresh_access_token, fn "valid_refresh", nil ->
+      expect(ZoomOAuthHelperMock, :refresh_access_token, fn "valid_refresh", nil, _opts ->
         {:ok,
          %{
            access_token: "genuinely_new_token",
@@ -179,7 +179,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
       end)
 
       # Token refresh succeeds.
-      expect(ZoomOAuthHelperMock, :refresh_access_token, fn _refresh, nil ->
+      expect(ZoomOAuthHelperMock, :refresh_access_token, fn _refresh, nil, _opts ->
         {:ok,
          %{
            access_token: "refreshed_token",
@@ -252,7 +252,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
 
       expect(ZoomOAuthHelperMock, :validate_token, fn ^config -> {:ok, :needs_refresh} end)
 
-      expect(ZoomOAuthHelperMock, :refresh_access_token, fn "valid_refresh", nil ->
+      expect(ZoomOAuthHelperMock, :refresh_access_token, fn "valid_refresh", nil, _opts ->
         {:ok,
          %{
            access_token: "new_token",
@@ -479,7 +479,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
       end)
 
       # Refresh succeeds but Zoom still rejects the second attempt.
-      expect(ZoomOAuthHelperMock, :refresh_access_token, fn _refresh, nil ->
+      expect(ZoomOAuthHelperMock, :refresh_access_token, fn _refresh, nil, _opts ->
         {:ok,
          %{
            access_token: "refreshed_token",
@@ -544,7 +544,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderMeetingLifecycleTest
 
       expect(ZoomOAuthHelperMock, :validate_token, fn ^config -> {:ok, :needs_refresh} end)
 
-      expect(ZoomOAuthHelperMock, :refresh_access_token, fn "valid_refresh", nil ->
+      expect(ZoomOAuthHelperMock, :refresh_access_token, fn "valid_refresh", nil, _opts ->
         {:ok,
          %{
            access_token: "new_token",

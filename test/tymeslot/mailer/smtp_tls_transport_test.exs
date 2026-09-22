@@ -70,6 +70,30 @@ defmodule Tymeslot.Mailer.SMTPTlsTransportTest do
               {:network_failure, _host, {:error, {:tls_alert, _alert}}}} =
                open(relay, cacertfile: relay.cacertfile)
     end
+
+    # OTP's TLS 1.3 client defaults to the middlebox compatibility mode and
+    # then requires the server to send a ChangeCipherSpec record that RFC 8446
+    # appendix D.4 makes optional; a relay that omits it aborts the handshake
+    # and every email fails with `:tls_failed`.
+    #
+    # A relay that omits the record cannot be built out of `:ssl` — an OTP
+    # server sends it precisely when the client's session id says the client is
+    # in middlebox mode — so the assertion is on that session id, which is what
+    # the option controls and what a relay decides from. An invented 32-byte id
+    # here means the mode is back on and the handshake would abort against the
+    # relays this guards.
+    test "negotiates TLS 1.3 without the middlebox compatibility handshake", %{
+      trusted: certs
+    } do
+      relay = start_tls_relay(certs)
+
+      assert {:ok, socket} = open(relay, cacertfile: relay.cacertfile)
+      :gen_smtp_client.close(socket)
+
+      assert_receive {:tls_up, info}, @timeout
+      assert info.protocol == :"tlsv1.3"
+      assert info.session_id == ""
+    end
   end
 
   # Builds the real production configuration for a port-465 relay, then points
@@ -103,17 +127,20 @@ defmodule Tymeslot.Mailer.SMTPTlsTransportTest do
       ])
 
     {:ok, {_address, port}} = :ssl.sockname(listen)
+    owner = self()
     # Unlinked: a relay that dies mid-handshake must fail the assertion under
     # test, not take the test process down with it.
-    spawn(fn -> serve(listen) end)
+    spawn(fn -> serve(listen, owner) end)
     on_exit(fn -> :ssl.close(listen) end)
 
     %{port: port, cacertfile: cacertfile}
   end
 
-  defp serve(listen) do
+  defp serve(listen, owner) do
     with {:ok, socket} <- :ssl.transport_accept(listen, @timeout),
          {:ok, connection} <- :ssl.handshake(socket, @timeout) do
+      {:ok, info} = :ssl.connection_information(connection)
+      send(owner, {:tls_up, %{protocol: info[:protocol], session_id: info[:session_id]}})
       :ssl.send(connection, "220 localhost ESMTP test\r\n")
       dialogue(connection)
     end

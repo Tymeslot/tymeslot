@@ -67,6 +67,61 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
     end
   end
 
+  @doc """
+  The custom field answers a reschedule carries over from the booking being
+  moved, for the definitions the meeting type offers *now*.
+
+  The booking stores both the answers and `custom_fields_snapshot`, the
+  definitions as the booker saw them. An answer is carried over only where the
+  two definitions still match, because a question that has been edited since is
+  a different question: the same id may now ask something else, offer different
+  options, or expect a different type, and an answer to the old wording would
+  be put in the booker's mouth. Such a question is left blank, to be answered
+  again.
+
+  A question's `position` is excluded from that comparison — reordering the
+  form does not change what any one question asks.
+
+  Answers whose question has been removed are dropped, and questions added
+  since simply have nothing to carry over.
+  """
+  @spec reschedule_answers(String.t() | nil, integer() | nil, [map()]) :: %{
+          String.t() => any()
+        }
+  def reschedule_answers(reschedule_uid, organizer_user_id, definitions)
+
+  def reschedule_answers(_reschedule_uid, _organizer_user_id, []), do: %{}
+  def reschedule_answers(nil, _organizer_user_id, _definitions), do: %{}
+  def reschedule_answers(_reschedule_uid, nil, _definitions), do: %{}
+
+  def reschedule_answers(reschedule_uid, organizer_user_id, definitions)
+      when is_binary(reschedule_uid) and is_integer(organizer_user_id) and is_list(definitions) do
+    case Orchestrator.get_meeting_for_reschedule(reschedule_uid, organizer_user_id) do
+      {:ok, meeting} ->
+        carry_over_answers(
+          definitions,
+          meeting.custom_fields_snapshot || [],
+          meeting.custom_field_answers || %{}
+        )
+
+      _error ->
+        %{}
+    end
+  end
+
+  defp carry_over_answers(definitions, booked_snapshot, booked_answers) do
+    booked_by_id = Map.new(booked_snapshot, &{&1["id"], comparable(&1)})
+
+    for definition <- definitions,
+        id = definition["id"],
+        Map.has_key?(booked_answers, id),
+        Map.get(booked_by_id, id) == comparable(definition),
+        into: %{},
+        do: {id, Map.fetch!(booked_answers, id)}
+  end
+
+  defp comparable(definition), do: Map.delete(definition, "position")
+
   defp default_booking_form_data do
     %{"name" => "", "email" => "", "message" => ""}
   end

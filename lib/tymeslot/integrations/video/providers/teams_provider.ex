@@ -341,7 +341,12 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     # Pass nil to use default Teams scope from TeamsOAuthHelper
     teams_scope = nil
 
-    case teams_oauth_helper().refresh_access_token(refresh_token, teams_scope) do
+    case teams_oauth_helper().refresh_access_token(refresh_token, teams_scope,
+           log_context: [
+             integration_id: Map.get(config, :integration_id),
+             user_id: Map.get(config, :user_id)
+           ]
+         ) do
       {:ok, refreshed_tokens} ->
         Logger.info("Successfully refreshed Teams OAuth token")
 

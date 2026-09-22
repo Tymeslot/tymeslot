@@ -21,8 +21,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
 
   import Swoosh.Email
 
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Integrations.Calendar.IcsGenerator
-  alias Tymeslot.Locales
 
   alias Tymeslot.Emails.Shared.{
     Callouts,
@@ -427,5 +427,6 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduled do
     Map.get(details, :guest_video_url) || Map.get(details, :meeting_url)
   end
 
-  defp organizer_locale(_appointment_details), do: Locales.admin_default_locale()
+  defp organizer_locale(appointment_details),
+    do: RecipientLocale.organizer_locale(appointment_details)
 end

@@ -84,6 +84,31 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
     end
   end
 
+  describe "extract_room_id/2" do
+    # A custom video link is whatever the organiser pasted, and "/join/" is a
+    # path common enough (Whereby, Jitsi, Daily) for MiroTalk's URL patterns to
+    # claim links belonging to other services. MiroTalk is listed first in
+    # `ProviderConfig`, so the URL-only function hands back its last path
+    # segment; the id the custom provider actually minted for that link is the
+    # digest it derives from the whole URL.
+    @colliding_url "https://whereby.com/join/team-standup"
+    @custom_room_id "176c39fdfe37cdea"
+
+    test "parses by the named provider's rules, not by the first provider to claim the URL" do
+      assert ProviderAdapter.extract_room_id(@colliding_url) == "team-standup"
+      assert ProviderAdapter.extract_room_id(@colliding_url, :custom) == @custom_room_id
+    end
+
+    test "accepts the string form a persisted integration carries" do
+      assert ProviderAdapter.extract_room_id(@colliding_url, "custom") == @custom_room_id
+    end
+
+    test "returns nil for an unknown provider and for a non-binary URL" do
+      assert ProviderAdapter.extract_room_id(@colliding_url, :nextcloud_talk) == nil
+      assert ProviderAdapter.extract_room_id(nil, :custom) == nil
+    end
+  end
+
   describe "create_meeting_room/2" do
     test "successfully creates room and handles event" do
       config = %{api_key: "key", base_url: "https://mirotalk.test"}

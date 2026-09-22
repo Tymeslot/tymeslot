@@ -1,6 +1,8 @@
 defmodule Tymeslot.Security.RateLimiter.Calendar do
   @moduledoc false
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Security.RateLimiter.Helpers
 
   @event_move_limits [
@@ -28,7 +30,8 @@ defmodule Tymeslot.Security.RateLimiter.Calendar do
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_event_move(user_id) when is_integer(user_id) and user_id > 0 do
     Helpers.check_multi_bucket_limits([
-      {"calendar_event_move:#{user_id}", @event_move_limits, "calendar event move"}
+      {"calendar_event_move:#{user_id}", @event_move_limits, "calendar event move",
+       dgettext("errors", "calendar event moves")}
     ])
   end
 

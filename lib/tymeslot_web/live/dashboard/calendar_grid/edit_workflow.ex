@@ -72,15 +72,53 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   end
 
   defp with_editable_event_found(socket, event, fun) do
-    case assert_event_writable(socket, event) do
+    case assert_event_editable(socket, event) do
       :ok -> {:noreply, fun.(event)}
       {:error, _reason} = error -> Shared.flash_guard_error(socket, error)
     end
   end
 
+  @doc """
+  Applies a new start and end to `event`: optimistically on screen, then
+  either through the recurrence prompt or straight to the provider.
+
+  An edit the provider can only write to a whole series is refused here,
+  before the optimistic update and before the prompt. The prompt offers "this
+  event only", so putting it in front of a write that moves every occurrence
+  would be the bug with a dialog on top of it; see
+  `Tymeslot.CalendarGrid.EventEdit.ensure_editable/1`. The gate the handlers
+  call, and the domain itself, refuse the same edit again — this clause is
+  what keeps the prompt out of a path either of them somehow let through.
+  """
   @spec apply_event_change(Phoenix.LiveView.Socket.t(), map(), map(), DateTime.t(), DateTime.t()) ::
           Phoenix.LiveView.Socket.t()
   def apply_event_change(socket, event, optimistic_event, new_start, new_end) do
+    case CalendarGrid.ensure_editable(event) do
+      :ok -> reschedule(socket, event, optimistic_event, new_start, new_end)
+      {:error, :recurring_event} -> refuse_recurring_edit(socket)
+    end
+  end
+
+  @doc """
+  Flashes the refusal for an edit that would change a whole series and leaves
+  `socket` untouched, so nothing optimistic is left on screen.
+  """
+  @spec refuse_recurring_edit(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def refuse_recurring_edit(socket) do
+    send(self(), {:flash, {:error, recurring_edit_refused_message()}})
+    socket
+  end
+
+  @doc "The message shown when an organiser tries to edit a recurring event."
+  @spec recurring_edit_refused_message() :: String.t()
+  def recurring_edit_refused_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "Recurring events cannot be edited here yet. Please change this one in your calendar app."
+    )
+  end
+
+  defp reschedule(socket, event, optimistic_event, new_start, new_end) do
     new_events = Shared.replace_event(socket.assigns.events, event.id, optimistic_event)
 
     socket =
@@ -301,6 +339,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   end
 
   @doc """
+  The gate every edit of an existing grid event goes through: it must pass
+  `assert_event_writable/2`, and it must not be an occurrence of a series the
+  provider can only write as a whole.
+
+  The second half is `Tymeslot.CalendarGrid.ensure_editable/1`, and it is
+  deliberately not folded into `assert_event_writable/2`: a delete asks the
+  narrower question (see `EventHandlers.EventDelete`, which pairs that gate
+  with `ensure_deletable/1` instead), and `event_editable?/2` must keep
+  agreeing with the writability half alone.
+  """
+  @spec assert_event_editable(Phoenix.LiveView.Socket.t(), map()) ::
+          :ok | {:error, :unauthorized | :read_only | :recurring_event}
+  def assert_event_editable(socket, event) do
+    with :ok <- assert_event_writable(socket, event) do
+      CalendarGrid.ensure_editable(event)
+    end
+  end
+
+  @doc """
   Whether the detail modal should offer edit and delete controls for `event`.
 
   Takes the assigns rather than the socket so templates can call it directly.
@@ -355,7 +412,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
         {:ok, :no_changes}
 
       {:needs_confirmation, summary} ->
-        if AttendeeNotifications.pending?(updated_event.id) do
+        if AttendeeNotifications.pending?(updated_event) do
           {:ok, :sent} =
             AttendeeNotifications.event_updated_confirm(updated_event, summary, attendees)
 

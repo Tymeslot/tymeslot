@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEditVideo do
       event ->
         with {:ok, new_id} <- parse_video_choice(params["video_integration_id"]),
              false <- already_chosen?(event, new_id),
-             :ok <- EditWorkflow.assert_event_writable(socket, event),
+             :ok <- EditWorkflow.assert_event_editable(socket, event),
              :ok <- assert_owns_video_integration(socket, new_id),
              :ok <- Shared.check_edit_rate_limit(socket) do
           optimistic_event = Map.put(event, :video_integration_id, new_id)
@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEditVideo do
           :error ->
             {:noreply, socket}
 
-          {:error, reason} = error when reason in [:unauthorized, :read_only] ->
+          {:error, reason} = error when reason in [:unauthorized, :read_only, :recurring_event] ->
             Shared.flash_guard_error(socket, error)
 
           {:error, :rate_limited, _message} = error ->

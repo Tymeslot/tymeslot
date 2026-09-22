@@ -309,11 +309,6 @@ msgstr "Ім'я користувача має починатися з літер
 
 #: lib/tymeslot/security/rate_limiter/helpers.ex
 #, elixir-autogen, elixir-format
-msgid "You've reached the limit of %{limit} %{action} per %{window_minutes} minutes. Please try again in %{wait}."
-msgstr "Перевищено ліміт %{action}: %{limit} за %{window_minutes} хвилин. Спробуйте ще раз через %{wait}."
-
-#: lib/tymeslot/security/rate_limiter/helpers.ex
-#, elixir-autogen, elixir-format
 msgid "a moment"
 msgstr "мить"
 
@@ -344,3 +339,73 @@ msgstr[2] "має бути не далі ніж через %{count} років"
 #, elixir-autogen, elixir-format
 msgid "video server checks"
 msgstr "перевірок сервера відеозв'язку"
+
+#: lib/tymeslot/security/rate_limiter/bookings.ex
+#, elixir-autogen, elixir-format
+msgid "bookings"
+msgstr "бронювань"
+
+#: lib/tymeslot/security/rate_limiter/calendar.ex
+#, elixir-autogen, elixir-format
+msgid "calendar event moves"
+msgstr "переміщень подій календаря"
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "password reset requests"
+msgstr "запитів на скидання пароля"
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "signup attempts"
+msgstr "спроб реєстрації"
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "verification emails"
+msgstr "листів для підтвердження"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgid_plural "%{count} days"
+msgstr[0] "%{count} день"
+msgstr[1] "%{count} дні"
+msgstr[2] "%{count} днів"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgid_plural "%{count} hours"
+msgstr[0] "%{count} годину"
+msgstr[1] "%{count} години"
+msgstr[2] "%{count} годин"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "You've reached the limit of %{limit} %{action} per %{window}. Please try again in %{wait}."
+msgstr "Перевищено ліміт %{action}: %{limit} за %{window}. Спробуйте ще раз через %{wait}."
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "day"
+msgid_plural "%{count} days"
+msgstr[0] "%{count} день"
+msgstr[1] "%{count} дні"
+msgstr[2] "%{count} днів"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "hour"
+msgid_plural "%{count} hours"
+msgstr[0] "%{count} годину"
+msgstr[1] "%{count} години"
+msgstr[2] "%{count} годин"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "%{count} хвилину"
+msgstr[1] "%{count} хвилини"
+msgstr[2] "%{count} хвилин"

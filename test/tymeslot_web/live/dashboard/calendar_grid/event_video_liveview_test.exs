@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
   alias Plug.Test
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
+  alias Tymeslot.Workers.EmailWorker
 
   # Video room and provider writes run in a Task; allow for a busy test machine.
   @task_timeout 5_000
@@ -298,7 +299,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
   end
 
   describe "telling attendees about a video change" do
-    test "an event with attendees offers to notify them, and confirming queues the mail", %{
+    test "an event with attendees offers to notify them, and confirming emails them", %{
       conn: conn,
       user: user
     } do
@@ -340,14 +341,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
       |> element("#calendar-grid")
       |> render_hook("notify_prompt_confirm", %{})
 
-      assert_enqueued(
-        worker: Worker,
-        args: %{
-          "event_id" => event.id,
-          "kind" => "provider_calendar_event",
-          "action" => "update"
-        }
-      )
+      args = %{
+        "event_id" => event.id,
+        "kind" => "provider_calendar_event",
+        "action" => "update"
+      }
+
+      assert_enqueued(worker: Worker, args: args)
+
+      # Draining that job is the half the organiser was actually promised.
+      # The event has never been notified before: nothing seeds
+      # `last_notified_state`, so it is still `%{}` here, which is the state
+      # every event reaches its first edit in.
+      assert :ok = perform_job(Worker, args)
+
+      update_jobs =
+        [worker: EmailWorker]
+        |> all_enqueued()
+        |> Enum.filter(&(&1.args["action"] == "send_event_update_notification"))
+
+      assert [%{args: %{"attendee_emails" => ["guest@example.com"]}}] = update_jobs
     end
   end
 

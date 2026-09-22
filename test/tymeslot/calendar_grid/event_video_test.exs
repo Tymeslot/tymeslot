@@ -22,14 +22,22 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
   alias Joken.Signer
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventVideo
+  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Video.Providers.LinkRoom
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.LogCapture
 
   setup :verify_on_exit!
 
   @new_url "https://video.example.com/join/room-123"
   @old_url "https://video.example.com/join/old-room"
+  # A custom video link, and one MiroTalk's "/join/" pattern claims: MiroTalk
+  # is listed first, so guessing the provider from the URL parses the room id
+  # as its last path segment. The custom provider derives it from the whole
+  # URL instead, and that digest is the id the room was created under.
+  @custom_url "https://whereby.com/join/team-standup"
+  @custom_room_id "176c39fdfe37cdea"
   @reminders [%{"method" => "popup", "minutes_before" => 15}]
   @rrule "FREQ=WEEKLY;BYDAY=MO"
   @app_id "tymeslot"
@@ -39,8 +47,11 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
   setup do
     user = insert(:user)
 
-    integration =
-      insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
+    # Google, so that the repeating fixture below stays editable: a CalDAV
+    # series is written through its master VEVENT and every edit of one
+    # occurrence is refused (`CalendarGrid.ensure_editable/1`). The one test
+    # that needs CalDAV's offline queue brings its own integration.
+    integration = insert(:calendar_integration, user: user, provider: "google")
 
     video_integration = insert(:video_integration, user: user, provider: "mirotalk")
 
@@ -111,10 +122,20 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
 
     test "keeps the change when the calendar write is queued for retry", %{
       user: user,
-      integration: integration,
       video_integration: video_integration
     } do
-      event = insert_event(integration)
+      # The offline queue is the CalDAV family's, and a one-off event so the
+      # series guard does not refuse the write before it can be queued.
+      caldav =
+        insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
+
+      event =
+        insert_event(caldav, %{
+          provider: "caldav",
+          recurrence_rule: nil,
+          recurring_event_id: nil
+        })
+
       stub_room_created()
       expect_provider_update({:error, :server_error})
 
@@ -345,6 +366,35 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       refute_received {:room_deleted, _url}
       assert reload(event).video_link == nil
     end
+
+    test "deletes the room under the id its own provider parses, not the URL's last segment", %{
+      user: user,
+      integration: integration
+    } do
+      custom = insert_custom_integration(user)
+
+      event =
+        insert_event(integration, %{
+          description: "Join video call: #{@custom_url}",
+          video_link: @custom_url,
+          video_integration_id: custom.id
+        })
+
+      expect_provider_update(:ok)
+
+      # The custom provider has no room object to delete, so the delete is a
+      # no-op at the provider; the id it was issued with is what this pins.
+      log_event =
+        LogCapture.with_capture([logger_level: :info], fn ->
+          assert {:ok, nil} = CalendarGrid.change_event_video(user.id, event, nil)
+          LogCapture.await_log("Deleting meeting room")
+        end)
+
+      meta = LogCapture.user_metadata(log_event)
+      assert meta.provider == :custom
+      assert meta.room_ref == Redactor.fingerprint(@custom_room_id)
+      refute meta.room_ref == Redactor.fingerprint("team-standup")
+    end
   end
 
   defp insert_event(integration, attrs \\ %{}) do
@@ -352,7 +402,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       calendar_integration: integration,
       summary: "Weekly sync",
       description: "Agenda",
-      provider: "caldav",
+      provider: "google",
       provider_calendar_id: "team-calendar",
       provider_event_id: "/cal/weekly-sync.ics",
       start_at: ~U[2026-06-01 09:00:00.000000Z],
@@ -390,6 +440,16 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       send(test_pid, {:provider_update, uid, payload})
       result
     end)
+  end
+
+  defp insert_custom_integration(user) do
+    insert(:video_integration,
+      user: user,
+      name: "Custom link",
+      provider: "custom",
+      base_url: nil,
+      custom_meeting_url: @custom_url
+    )
   end
 
   defp insert_zoom_integration(user) do

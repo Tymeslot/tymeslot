@@ -191,44 +191,37 @@ defmodule Tymeslot.Mailer.SmtpProbe do
     :ok
   end
 
-  # Mirrors the send path in `SMTPConfig` so the probe accepts exactly the
-  # certificates a real send accepts. A probe that verified more strictly than
-  # the sender would refuse to boot a working relay; one that verified less
-  # strictly would report a relay healthy that cannot deliver a single email.
+  # Taken from the send path whole rather than restated option by option, so
+  # that a setting `SMTPConfig` adds reaches the probe with it. Restating them
+  # drifted exactly once, and silently: `middlebox_comp_mode: false` was set
+  # for the sender and missed here, leaving the probe demanding a TLS 1.3
+  # record the sender had stopped requiring. A probe that verified more
+  # strictly than the sender would refuse to boot a working relay; one that
+  # verified less strictly would report a relay healthy that cannot deliver a
+  # single email.
   defp ssl_options(host, config) do
-    tls = config[:tls_options] || []
+    tls = config[:tls_options] || fallback_tls_options()
 
-    base = [
-      server_name_indication: host,
-      versions: tls[:versions] || [:"tlsv1.2", :"tlsv1.3"],
-      depth: tls[:depth] || 5
+    Keyword.put(tls, :server_name_indication, host)
+  end
+
+  # Reached only by a config that never passed through `SMTPConfig`, which
+  # always supplies `:tls_options`; the one such config, Cloudron's local
+  # relay, speaks no TLS and never takes a path through here. Fail-closed
+  # regardless: a probe that skipped verification would report a relay healthy
+  # that a real send, verifying properly, cannot deliver through.
+  defp fallback_tls_options do
+    [
+      versions: [:"tlsv1.2", :"tlsv1.3"],
+      middlebox_comp_mode: false,
+      depth: 5,
+      verify: :verify_peer,
+      cacertfile: load_fallback_cacertfile(),
+      # RFC 6125 hostname matching, including wildcard certificates.
+      customize_hostname_check: [
+        match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+      ]
     ]
-
-    base ++ verify_options(tls)
-  end
-
-  defp verify_options(tls) do
-    case tls[:verify] do
-      :verify_none ->
-        [verify: :verify_none]
-
-      _peer ->
-        [
-          verify: :verify_peer,
-          # RFC 6125 hostname matching, including wildcard certificates.
-          customize_hostname_check: [
-            match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
-          ]
-        ] ++ trust_store(tls)
-    end
-  end
-
-  defp trust_store(tls) do
-    case {tls[:cacertfile], tls[:cacerts]} do
-      {nil, nil} -> [cacertfile: load_fallback_cacertfile()]
-      {nil, cacerts} -> [cacerts: cacerts]
-      {cacertfile, _cacerts} -> [cacertfile: cacertfile]
-    end
   end
 
   defp load_fallback_cacertfile do

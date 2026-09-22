@@ -184,9 +184,15 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
     |> form("#signup-form", %{"user" => params})
     |> render_submit()
 
-    # Should show rate limit message, not reCAPTCHA message
+    # Should show rate limit message, not reCAPTCHA message. The wording names
+    # the tightest signup tier, so it also pins that the refusal came from the
+    # signup limiter rather than from any other bucket.
     rendered = render(view)
-    assert rendered =~ "Too many signup attempts. Please try again later."
+
+    assert rendered =~ "reached the limit of 5 signup attempts per 10 minutes"
+
+    refute rendered =~ "Security verification failed",
+           "reCAPTCHA was verified before the rate limiter"
   end
 
   describe "Edge cases - Token and data handling" do

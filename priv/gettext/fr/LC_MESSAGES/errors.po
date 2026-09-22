@@ -297,11 +297,6 @@ msgstr "Le nom d’utilisateur doit commencer par une lettre ou un chiffre et ne
 
 #: lib/tymeslot/security/rate_limiter/helpers.ex
 #, elixir-autogen, elixir-format
-msgid "You've reached the limit of %{limit} %{action} per %{window_minutes} minutes. Please try again in %{wait}."
-msgstr "Vous avez atteint la limite de %{limit} %{action} sur %{window_minutes} minutes. Veuillez réessayer dans %{wait}."
-
-#: lib/tymeslot/security/rate_limiter/helpers.ex
-#, elixir-autogen, elixir-format
 msgid "a moment"
 msgstr "un instant"
 
@@ -331,3 +326,68 @@ msgstr[1] "doit être dans %{count} ans au maximum"
 #, elixir-autogen, elixir-format
 msgid "video server checks"
 msgstr "vérifications du serveur vidéo"
+
+#: lib/tymeslot/security/rate_limiter/bookings.ex
+#, elixir-autogen, elixir-format
+msgid "bookings"
+msgstr "réservations"
+
+#: lib/tymeslot/security/rate_limiter/calendar.ex
+#, elixir-autogen, elixir-format
+msgid "calendar event moves"
+msgstr "déplacements d’événements de calendrier"
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "password reset requests"
+msgstr "demandes de réinitialisation de mot de passe"
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "signup attempts"
+msgstr "tentatives d’inscription"
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "verification emails"
+msgstr "e-mails de vérification"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgid_plural "%{count} days"
+msgstr[0] "1 jour"
+msgstr[1] "%{count} jours"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgid_plural "%{count} hours"
+msgstr[0] "1 heure"
+msgstr[1] "%{count} heures"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "You've reached the limit of %{limit} %{action} per %{window}. Please try again in %{wait}."
+msgstr "Vous avez atteint la limite de %{limit} %{action} sur %{window}. Veuillez réessayer dans %{wait}."
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "day"
+msgid_plural "%{count} days"
+msgstr[0] "un jour"
+msgstr[1] "%{count} jours"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "hour"
+msgid_plural "%{count} hours"
+msgstr[0] "une heure"
+msgstr[1] "%{count} heures"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "une minute"
+msgstr[1] "%{count} minutes"

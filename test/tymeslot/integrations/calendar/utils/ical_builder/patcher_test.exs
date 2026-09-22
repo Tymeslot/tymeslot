@@ -2,10 +2,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherTest do
   @moduledoc """
   What survives an edit of an event Tymeslot did not write.
 
-  `build_simple_event/2` serialises Tymeslot's payload and nothing else, so
-  applying it to a synced event replaces its `ATTENDEE` block with `CONTACT`
-  lines and drops everything the cache does not model. The patcher exists so
-  the stored document goes back to the server with only the edited properties
+  `build_simple_event/3` serialises Tymeslot's payload and nothing else, so
+  applying it to a synced event replaces its `ATTENDEE` block with Tymeslot's
+  own and drops everything the cache does not model. The patcher exists so the
+  stored document goes back to the server with only the edited properties
   rewritten; these tests pin what it may touch and, more importantly, what it
   may not.
   """
@@ -52,7 +52,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherTest do
 
   defp wire_lines(ical), do: String.split(ical, "\r\n")
 
-  describe "patch_event_properties/2 on an event Tymeslot did not write" do
+  describe "patch_event_properties/3 on an event Tymeslot did not write" do
     test "renaming it keeps both ATTENDEE lines with their parameters" do
       patched = ICalBuilder.patch_event_properties(@foreign_event, %{summary: "Renamed"})
 
@@ -107,7 +107,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherTest do
     end
   end
 
-  describe "patch_event_properties/2 property replacement" do
+  describe "patch_event_properties/3 property replacement" do
     test "moving the event replaces DTSTART and DTEND" do
       patched =
         ICalBuilder.patch_event_properties(@foreign_event, %{
@@ -214,7 +214,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherTest do
     end
   end
 
-  describe "patch_event_properties/2 on an event Tymeslot wrote" do
+  describe "patch_event_properties/3 on an event Tymeslot wrote" do
     @tymeslot_event """
     BEGIN:VCALENDAR\r
     VERSION:2.0\r
@@ -241,9 +241,95 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.PatcherTest do
       refute "CONTACT:Ada <ada@example.com>" in lines(patched)
       refute patched =~ "ATTENDEE"
     end
+
+    # An event written before Tymeslot advertised attendees at all, now edited
+    # against a server that accepts them: it converges on the new property
+    # rather than carrying the attendee under both spellings.
+    test "a stored CONTACT becomes an ATTENDEE in :attendee mode" do
+      patched =
+        ICalBuilder.patch_event_properties(
+          @tymeslot_event,
+          %{attendees: [%{"email" => "bob@example.com", "name" => "Bob"}]},
+          :attendee
+        )
+
+      assert "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE;CN=Bob:mailto:bob@example.com" in lines(
+               patched
+             )
+
+      refute Enum.any?(lines(patched), &String.starts_with?(&1, "CONTACT"))
+    end
   end
 
-  describe "patch_event_properties/2 on components it must not touch" do
+  describe "patch_event_properties/3 on an ATTENDEE block Tymeslot wrote" do
+    @marked_event """
+    BEGIN:VCALENDAR\r
+    VERSION:2.0\r
+    PRODID:-//Tymeslot//CalDAV Client//EN\r
+    BEGIN:VEVENT\r
+    UID:booking-2\r
+    DTSTAMP:20260901T090000Z\r
+    DTSTART:20260910T090000Z\r
+    DTEND:20260910T100000Z\r
+    SUMMARY:Intro call\r
+    ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE;CN=Ada:mailto:ada@example.com\r
+    X-TYMESLOT-ATTENDEES:1\r
+    ORGANIZER;SCHEDULE-AGENT=CLIENT:mailto:host@example.com\r
+    END:VEVENT\r
+    END:VCALENDAR\r
+    """
+
+    test "the marker lets its own block be rewritten" do
+      patched =
+        ICalBuilder.patch_event_properties(
+          @marked_event,
+          %{attendees: [%{"email" => "bob@example.com", "name" => "Bob"}]},
+          :attendee
+        )
+
+      assert "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE;CN=Bob:mailto:bob@example.com" in lines(
+               patched
+             )
+
+      refute patched =~ "ada@example.com"
+    end
+
+    test "the marker is written once, not accumulated on every edit" do
+      patched =
+        ICalBuilder.patch_event_properties(
+          @marked_event,
+          %{attendees: [%{"email" => "bob@example.com", "name" => "Bob"}]},
+          :attendee
+        )
+
+      assert Enum.count(lines(patched), &(&1 == "X-TYMESLOT-ATTENDEES:1")) == 1
+    end
+
+    # The guard is the marker, not the absence of an ATTENDEE block: an
+    # unmarked block belongs to the organiser's own client, and rewriting it
+    # would reset the PARTSTAT that client is tracking.
+    test "an unmarked ATTENDEE block is still left alone in :attendee mode" do
+      patched =
+        ICalBuilder.patch_event_properties(
+          @foreign_event,
+          %{
+            summary: "Renamed",
+            attendees: [%{"email" => "bob@example.com", "name" => "Bob"}]
+          },
+          :attendee
+        )
+
+      assert "ATTENDEE;PARTSTAT=ACCEPTED;ROLE=REQ-PARTICIPANT;CN=Ada:mailto:ada@example.com" in lines(
+               patched
+             )
+
+      assert "SUMMARY:Renamed" in lines(patched)
+      refute patched =~ "bob@example.com"
+      refute patched =~ "X-TYMESLOT-ATTENDEES"
+    end
+  end
+
+  describe "patch_event_properties/3 on components it must not touch" do
     @with_vtimezone """
     BEGIN:VCALENDAR\r
     VERSION:2.0\r

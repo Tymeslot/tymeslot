@@ -281,16 +281,26 @@ defmodule TymeslotWeb.Live.Scheduling.NextAvailableTest do
       |> element("button[data-testid='calendar-day'][phx-value-date='#{selected}']")
       |> render_click()
 
-      html = render(view)
-      document = Floki.parse_document!(html)
+      # The click is answered before the selection is applied: the component
+      # forwards a message to the LiveView, which assigns `loading_slots` and
+      # sends itself a second message to fetch the day's slots. Rendering
+      # straight after the click therefore races the reload and catches a
+      # legitimately empty grid, so wait for the times to come back first.
+      # This is the assertion that the times survived; a regression that blanks
+      # them never satisfies it.
+      eventually(
+        fn -> has_element?(view, "button[data-testid='time-slot']") end,
+        timeout: 5000,
+        interval: 100,
+        message: "the times disappeared after clicking the selected day"
+      )
+
+      document = view |> render() |> Floki.parse_document!()
 
       assert document
              |> Floki.find("button[data-testid='calendar-day'].selected")
              |> Floki.attribute("phx-value-date") == [selected],
              "clicking the selected day deselected it"
-
-      assert Floki.find(document, "button[data-testid='time-slot']") != [],
-             "the times disappeared after clicking the selected day"
     end
 
     @tag :capture_log

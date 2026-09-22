@@ -1,4 +1,27 @@
 
+[1.16.1]
+* themes: Drop the stray emoji from Quill's submit button (#125)
+* Say the limit and the wait in hours or days when they run that long
+* Remind a booking's guests again after it moves to a new time
+* Show flash messages raised after the page has loaded
+* Name the limit and wait time when signup, verification or booking is refused
+* Stop a CalDAV series changing when one occurrence is edited
+* Email every attendee when an event changes, not nobody
+* Invite a booking's guests even when the participants were emailed
+* Tell the host when a lapsed reschedule request cancels a booking
+* Cancel the calendar entry when a rescheduled request is released
+* Present a rescheduled booking awaiting approval as a reschedule
+* Tell guests when a booking is rescheduled or cancelled
+* Keep a re-sent booking invitation ahead of the entry it replaces
+* Advance the ICS sequence when Tymeslot reschedules a booking
+* Keep each day of a multi-day all-day event in sync
+* dashboard: Open quick add at a valid slot late in the evening
+* Start the booking instruction on its own line in Quill
+* Keep every agenda day of an event that spans midnight in sync
+* Write to the host in their own language in every booking email
+* Remind guests about the meeting they were invited to
+
+
 [1.16.0]
 * [BREAKING] Move Zoom meetings when a booking is rescheduled by default: Add meeting:update:meeting to your Zoom app's scopes before upgrading. If your app cannot have it, set ZOOM_UPDATE_SCOPE_ENABLED=false, or users will be asked to reconnect Zoom for a permission the app cannot grant.
 * Keep a paid meeting type's price when Stripe is unavailable

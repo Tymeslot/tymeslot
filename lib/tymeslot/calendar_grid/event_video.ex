@@ -28,8 +28,9 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   A room that is no longer referenced (the one just replaced or removed, or a
   new one whose provider returned no join URL) is deleted on the provider on a
   best-effort basis. Cached rows do not keep the provider's room id, so it is
-  recovered from the join URL; providers with no room object to delete treat
-  the call as a no-op.
+  parsed back out of the join URL by the rules of the provider the event's
+  video integration names; providers with no room object to delete treat the
+  call as a no-op.
   """
 
   alias Tymeslot.CalendarGrid.EventEdit
@@ -266,9 +267,22 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
     end
   end
 
+  # The integration names the provider outright, so the id is parsed by that
+  # provider's rules rather than by whichever one claims the link's shape.
   defp discard_room(user_id, video_integration_id, url)
-       when is_integer(video_integration_id) and is_binary(url),
-       do: delete_room(user_id, video_integration_id, Video.extract_room_id(url))
+       when is_integer(video_integration_id) and is_binary(url) do
+    case Video.fetch_integration_for_user(video_integration_id, user_id) do
+      {:ok, integration} ->
+        delete_room(
+          user_id,
+          video_integration_id,
+          Video.extract_room_id(url, integration.provider)
+        )
+
+      {:error, :not_found} ->
+        :ok
+    end
+  end
 
   defp discard_room(_user_id, _video_integration_id, _url), do: :ok
 

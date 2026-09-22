@@ -6,9 +6,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderAttachmentTest do
 
   # RFC 5545 §3.1 — content lines must not exceed 75 octets. The newly-added
   # ATTACH and CONFERENCE properties carry production URLs that routinely
-  # exceed that limit, so build_simple_event/2 now folds its output.
+  # exceed that limit, so build_simple_event/3 now folds its output.
 
-  describe "build_simple_event/2 — RFC 5545 §3.1 line folding" do
+  describe "build_simple_event/3 — RFC 5545 §3.1 line folding" do
     test "no output line exceeds 75 octets when ATTACH URL is long" do
       # ATTACH;FMTTYPE=application/pdf: = 32 octets; total will exceed 75
       long_url =
@@ -74,7 +74,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderAttachmentTest do
   # RFC 5545 §3.8.1.1 — one ATTACH line per file, FMTTYPE carries the MIME
   # type when known.
 
-  describe "build_simple_event/2 — ATTACH lines" do
+  describe "build_simple_event/3 — ATTACH lines" do
     test "emits ATTACH;FMTTYPE line when content_type is present" do
       event_data = %{
         summary: "Meeting with Attachment",

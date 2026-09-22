@@ -5,19 +5,20 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsPatchedUpdateTest do
   Split from `EventsTest`, which covers the rebuild-from-payload write: this
   module covers the other writer, the one that takes the stored iCalendar
   document and rewrites only the properties the payload carries. The
-  distinction is not cosmetic. Rebuilding a foreign event replaces its
-  `ATTENDEE` block with `CONTACT` lines (deliberately, so CalDAV servers do
-  not run iTIP scheduling on Tymeslot's bookings), which for an event created
-  in another client destroys every participant's invitation and response.
+  distinction is not cosmetic. Rebuilding a foreign event would replace its
+  `ATTENDEE` block with Tymeslot's own single attendee, which for an event
+  created in another client destroys every participant's invitation and
+  recorded response.
   """
   use Tymeslot.HttpTransportCase, async: false
   @moduletag :integrations
   @moduletag :calendar
 
+  alias Tymeslot.Integrations.Calendar.CalDAV.Client
   alias Tymeslot.Integrations.Calendar.CalDAV.Events
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
 
-  @caldav_client %{
+  @caldav_client %Client{
     base_url: "https://caldav.example.com",
     username: "user",
     password: "pass",

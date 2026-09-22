@@ -357,6 +357,26 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     end
   end
 
+  describe "DST Sunday helpers" do
+    # The DST tests above assert exact slot lists, and TimeRange drops slots
+    # that have already elapsed whatever the notice window is set to. A helper
+    # that can return its own starting date therefore breaks those tests on the
+    # one day a year the UTC date is itself a transition Sunday, so both helpers
+    # must always look strictly forward.
+    test "next_spring_forward_sunday/2 skips a starting date that is itself a transition" do
+      assert next_spring_forward_sunday("Europe/Berlin", ~D[2026-03-29]) == ~D[2027-03-28]
+    end
+
+    test "next_fall_back_sunday/2 skips a starting date that is itself a transition" do
+      assert next_fall_back_sunday("America/New_York", ~D[2026-11-01]) == ~D[2027-11-07]
+    end
+
+    test "both helpers still find the upcoming transition from an ordinary date" do
+      assert next_spring_forward_sunday("Europe/Berlin", ~D[2026-01-01]) == ~D[2026-03-29]
+      assert next_fall_back_sunday("America/New_York", ~D[2026-01-01]) == ~D[2026-11-01]
+    end
+  end
+
   # --- Helpers ---
 
   defp insert_always_on_schedule(timezone) do
@@ -461,12 +481,16 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     schedule
   end
 
-  # Returns the next Sunday on or after `from` in `timezone` where the clock
+  # Returns the next Sunday strictly after `from` in `timezone` where the clock
   # jumps forward (DST "spring-forward"). Scans up to 53 Sundays ahead.
   # Uses DateTime.new/3 which returns {:gap, _, _} for gap times; 02:30 local
   # is chosen as the probe because it is within the standard transition hour.
+  # The scan starts the day after `from` so that a transition Sunday is never
+  # today: slots earlier than the current time are dropped by the past-slot
+  # check in TimeRange regardless of the notice window, which would break the
+  # exact slot lists these tests assert.
   defp next_spring_forward_sunday(timezone, from \\ Date.utc_today()) do
-    first_sunday = first_sunday_on_or_after(from)
+    first_sunday = first_sunday_on_or_after(Date.add(from, 1))
 
     result =
       Enum.find(0..52, fn i ->
@@ -481,13 +505,14 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     Date.add(first_sunday, result * 7)
   end
 
-  # Returns the next Sunday on or after `from` in `timezone` where the clock
+  # Returns the next Sunday strictly after `from` in `timezone` where the clock
   # falls back (DST "fall-back"). Scans up to 53 Sundays ahead.
   # Uses DateTime.new/3 which returns {:ambiguous, _, _} for repeated times;
   # 01:30 local is chosen as the probe because it is within the standard
-  # repeated hour.
+  # repeated hour. The scan starts the day after `from` for the same reason as
+  # next_spring_forward_sunday/2.
   defp next_fall_back_sunday(timezone, from \\ Date.utc_today()) do
-    first_sunday = first_sunday_on_or_after(from)
+    first_sunday = first_sunday_on_or_after(Date.add(from, 1))
 
     result =
       Enum.find(0..52, fn i ->

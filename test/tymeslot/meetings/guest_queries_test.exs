@@ -144,4 +144,47 @@ defmodule Tymeslot.Meetings.GuestQueriesTest do
                ~w(a@x.com b@x.com c@x.com)
     end
   end
+
+  describe "reset_for_new_time/1" do
+    setup do
+      meeting = insert(:meeting)
+      {:ok, [guest]} = Guests.create_for_meeting(meeting.id, ~w(guest@x.com))
+      {:ok, guest} = GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))
+
+      %{meeting: meeting, guest: guest}
+    end
+
+    # The meeting row's own `reminders_sent` is cleared by `Reschedule`, so a
+    # guest left holding the old cycle's offsets is skipped at the new time
+    # while the host and the booker are reminded — silently, and for good.
+    test "a guest already reminded is due the same reminder at the new time", %{
+      meeting: meeting,
+      guest: guest
+    } do
+      {:ok, _stamped} = GuestQueries.mark_reminder_sent(guest, 24, "hours")
+
+      assert GuestQueries.list_for_reminder(meeting.id, 24, "hours") == []
+
+      assert GuestQueries.reset_for_new_time(meeting.id) == 1
+
+      assert Enum.map(GuestQueries.list_for_reminder(meeting.id, 24, "hours"), & &1.email) ==
+               ~w(guest@x.com)
+    end
+
+    test "the RSVP goes back to pending", %{meeting: meeting, guest: guest} do
+      {:ok, _rsvp} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+
+      assert GuestQueries.reset_for_new_time(meeting.id) == 1
+
+      assert [%{status: "pending", responded_at: nil}] = GuestQueries.list_for_meeting(meeting.id)
+    end
+
+    # The invitation is what makes a guest eligible for a reminder at all, so
+    # clearing it here would leave them out of every later send instead.
+    test "the invitation itself is kept", %{meeting: meeting} do
+      assert GuestQueries.reset_for_new_time(meeting.id) == 1
+
+      assert [%{confirmation_sent_at: %DateTime{}}] = GuestQueries.list_for_meeting(meeting.id)
+    end
+  end
 end

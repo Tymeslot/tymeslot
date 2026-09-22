@@ -148,7 +148,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
         oauth_scope: "scope"
       }
 
-      expect(GoogleOAuthHelperMock, :refresh_access_token, fn "refresh_token", "scope" ->
+      expect(GoogleOAuthHelperMock, :refresh_access_token, fn "refresh_token", "scope", _opts ->
         {:ok,
          %{
            access_token: "new_token",

@@ -63,16 +63,27 @@ defmodule Tymeslot.Meetings.GuestQueries do
   end
 
   @doc """
-  Resets every guest of a meeting to an unanswered RSVP, for when the meeting
-  moves to a new time and earlier answers no longer apply.
+  Clears everything a meeting's guests were told about, or answered for, its
+  previous time: their RSVPs, and the reminder offsets already emailed.
+
+  The mirror of the `reminders_sent`/`reminder_email_sent` reset
+  `Tymeslot.Bookings.Reschedule` performs on the meeting row itself. Left
+  behind, a guest already reminded for an offset is rejected by
+  `list_for_reminder/3` at the new time and silently never reminded again,
+  while the host and the booker are.
   """
-  @spec reset_responses(binary()) :: non_neg_integer()
-  def reset_responses(meeting_id) do
+  @spec reset_for_new_time(binary()) :: non_neg_integer()
+  def reset_for_new_time(meeting_id) do
     {count, _rows} =
       Guest
       |> where([g], g.meeting_id == ^meeting_id)
       |> Repo.update_all(
-        set: [status: "pending", responded_at: nil, updated_at: DateTime.utc_now(:second)]
+        set: [
+          status: "pending",
+          responded_at: nil,
+          reminders_sent: nil,
+          updated_at: DateTime.utc_now(:second)
+        ]
       )
 
     count

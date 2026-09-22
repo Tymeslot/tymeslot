@@ -24,7 +24,9 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       nobody to notify.
     * `event_deleted_confirm/2` — delegates to Dispatcher for debounced send.
     * `pending?/1` / `cancel_pending/1` — inspection and cancellation of the
-      debounced pipeline for either event kind.
+      debounced pipeline. Both take the event, not its id: `meetings` and
+      `provider_calendar_events` number their rows independently, so an id
+      alone does not name an event.
 
   The debounced update/delete path is owned by `Dispatcher`. This module does
   not itself know anything about Oban.
@@ -117,17 +119,18 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     end
   end
 
-  @spec pending?(integer | binary) :: boolean
-  def pending?(event_id) when is_integer(event_id) do
-    Dispatcher.pending?(event_id, :meeting) or
-      Dispatcher.pending?(event_id, :provider_calendar_event)
-  end
+  @doc """
+  Whether a debounced job is already queued for this event.
 
-  def pending?(event_id) when is_binary(event_id) do
-    case Integer.parse(event_id) do
-      {int_id, ""} -> pending?(int_id)
-      _other -> false
-    end
+  Takes the event rather than its id so the kind is derived from the struct:
+  ids are only unique *within* a kind, and an id that matched a job of the
+  other kind used to answer `true` here. That sent the caller down the
+  "already pending" branch, joining a stranger's debounce window instead of
+  asking this event's host, off nothing but a numeric collision.
+  """
+  @spec pending?(event) :: boolean
+  def pending?(event) do
+    Dispatcher.pending?(event_id(event), event_kind(event))
   end
 
   @spec cancel_pending(event) :: :ok

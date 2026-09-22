@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
 
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.LogCapture
 
   setup :verify_on_exit!
 
@@ -303,6 +304,27 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
 
       assert {:error, :unauthorized, "Token refresh failed: invalid_grant"} =
                CalendarAPI.refresh_token(integration)
+    end
+
+    # This is the live Outlook refresh: `Calendar.Outlook.OAuthHelper` is not on
+    # the path, and `TokenFlow` used to log nothing at all, so a refresh failure
+    # here could not be attributed to an integration without joining against
+    # neighbouring lines.
+    test "names the integration behind a refresh failure", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 400, body: ~s({"error":"invalid_grant"})}}
+      end)
+
+      LogCapture.attach()
+
+      CalendarAPI.refresh_token(integration)
+
+      meta = LogCapture.user_metadata(LogCapture.await_log("OAuth token refresh failed"))
+
+      assert meta[:integration_id] == integration.id
+      assert meta[:user_id] == integration.user_id
+      assert meta[:provider] == :outlook
+      assert meta[:status] == 400
     end
 
     # Microsoft answers a rejected client registration with a 401, not a 400.

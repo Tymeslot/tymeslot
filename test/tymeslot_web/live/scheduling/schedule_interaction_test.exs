@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
 
   alias Ecto.Changeset
   alias Phoenix.LiveView.Socket
+  alias Tymeslot.BookingTestHelpers
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -166,7 +167,9 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       today = timezone |> DateTime.now!() |> DateTime.to_date()
       target = Date.add(today, 1)
 
-      if target.month != today.month do
+      # Ask the grid which month it is on, never arithmetic: it opens on the
+      # first bookable day, so it may already have moved itself past today's.
+      unless BookingTestHelpers.showing_month?(view, target) do
         view |> element("button[phx-click='next_month']") |> render_click()
       end
 
@@ -209,7 +212,9 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       today = timezone |> DateTime.now!() |> DateTime.to_date()
       target = Date.add(today, 1)
 
-      if target.month != today.month do
+      # Ask the grid which month it is on, never arithmetic: it opens on the
+      # first bookable day, so it may already have moved itself past today's.
+      unless BookingTestHelpers.showing_month?(view, target) do
         view |> element("button[phx-click='next_month']") |> render_click()
       end
 
@@ -270,12 +275,6 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
                &(&1 =~ ~r/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), .+ \d{4}$/)
              )
 
-      # Today's calendar day is marked as the current date for AT users.
-      assert html
-             |> Floki.parse_document!()
-             |> Floki.find("button.calendar-day[aria-current='date']")
-             |> Enum.any?()
-
       # A polite live region announces the slot-loading state. The schedule
       # step now opens on the first bookable day, so the region carries slot
       # state rather than the "pick a date" prompt. The prompt is not dead: no
@@ -284,6 +283,27 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       assert html =~ ~s(role="status")
       assert html =~ ~s(aria-live="polite")
       refute html =~ "Please select a date to see available times"
+
+      # Today's calendar day is marked as the current date for AT users. That
+      # marker is only on the page while today's month is, and the step lands
+      # on the first bookable day: after today's cutoff on the last day of a
+      # month that day is in the next month, whose Sunday-anchored grid drops
+      # today's cell rather than drawing it as leading padding. Step back to
+      # the month that holds today, which is also why this is asserted on its
+      # own render: stepping back deselects the landed day and brings the
+      # "pick a date" prompt back with it, so the region above must be read
+      # first.
+      today = profile.timezone |> DateTime.now!() |> DateTime.to_date()
+
+      unless BookingTestHelpers.showing_month?(view, today) do
+        view |> element("button[phx-click='prev_month']") |> render_click()
+      end
+
+      assert view
+             |> render()
+             |> Floki.parse_document!()
+             |> Floki.find("button.calendar-day[aria-current='date']")
+             |> Enum.any?()
     end
 
     @tag :capture_log
