@@ -292,6 +292,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
   attr :value, :string, default: nil, doc: "left unset for a secret, which is never rendered"
   attr :describedby, :string, required: true
   attr :disabled, :boolean, default: false
+  attr :placeholder, :string, default: nil
+
+  attr :required, :boolean,
+    default: false,
+    doc: "off where a blank field means 'keep what is stored'"
+
   attr :errors, :list, default: []
   slot :inner_block
 
@@ -311,6 +317,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
           value={@value}
           autocomplete={if @type == "password", do: "new-password", else: "off"}
           disabled={@disabled}
+          placeholder={@placeholder}
+          required={@required}
           aria-describedby={@describedby}
           class={["input input-with-icon w-full", @errors != [] && "input-error"]}
         />

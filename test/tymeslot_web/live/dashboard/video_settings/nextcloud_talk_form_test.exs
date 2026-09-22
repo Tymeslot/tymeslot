@@ -74,6 +74,13 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
                Video.list_integrations(user.id)
     end
 
+    test "asks the browser for both credentials before the form is submitted", %{conn: conn} do
+      view = open_talk_form(conn)
+
+      assert has_element?(view, "#nextcloud_talk_client_id[required]")
+      assert has_element?(view, "#nextcloud_talk_client_secret[required]")
+    end
+
     test "shows a refused app password on the password field and saves nothing", %{
       conn: conn,
       user: user
@@ -346,6 +353,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.NextcloudTalkFormTest do
 
       assert render(view) =~ "Leave blank to keep the current app password."
       refute render(view) =~ @app_password
+
+      # Blank means "keep what is stored" here, so the browser must not insist.
+      refute has_element?(view, "#edit_nextcloud_talk_client_secret[required]")
+      refute has_element?(view, "#edit_nextcloud_talk_client_id[required]")
 
       view
       |> form("#edit-video-integration-form", integration: %{name: "Renamed Talk"})

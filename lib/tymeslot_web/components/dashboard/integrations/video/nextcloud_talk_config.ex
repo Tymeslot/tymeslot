@@ -221,6 +221,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
       label={dgettext("dashboard_integrations", "Login name")}
       value={Map.get(@form_values, "client_id", "")}
       describedby={"#{@id_prefix}_client_id_help"}
+      required={not @stored_credentials}
       errors={FormValidationHelpers.field_errors(@form_errors, :client_id)}
     >
       <p id={"#{@id_prefix}_client_id_help"} class="mt-2 text-token-xs text-tymeslot-500">
@@ -235,6 +236,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
       icon="hero-key"
       label={dgettext("dashboard_integrations", "App password")}
       describedby={"#{@id_prefix}_client_secret_help"}
+      placeholder="xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"
+      required={not (@stored_credentials or @copying)}
       errors={FormValidationHelpers.field_errors(@form_errors, :client_secret)}
     >
       <p id={"#{@id_prefix}_client_secret_help"} class="mt-2 text-token-xs text-tymeslot-500">
