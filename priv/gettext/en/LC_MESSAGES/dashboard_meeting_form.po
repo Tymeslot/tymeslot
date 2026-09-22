@@ -194,7 +194,7 @@ msgstr ""
 msgid "Done"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
 #, elixir-autogen, elixir-format
 msgid "Duration (minutes)"
 msgstr ""
@@ -235,7 +235,7 @@ msgstr ""
 msgid "Edit question"
 msgstr ""
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a duration between %{min} and %{max} minutes"
 msgstr ""
@@ -882,4 +882,29 @@ msgstr[1] ""
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
 msgid "The price of %{amount} is kept and applies again once Stripe is connected."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
+#, elixir-autogen, elixir-format
+msgid "Additional duration (minutes)"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
+#, elixir-autogen, elixir-format
+msgid "Bookers choose one of these durations before picking a time. Each booking lasts the duration chosen; the price is the same for all."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
+#, elixir-autogen, elixir-format
+msgid "Offer another duration"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
+#, elixir-autogen, elixir-format
+msgid "Remove this duration"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Start times follow whichever length the booker picks, so each length offers a different set of times. Choose a fixed interval to offer the same start times for every length."
 msgstr ""

@@ -200,3 +200,8 @@ msgstr "Kalendář, do kterého tento typ schůzky rezervuje, už v připojené
 #, elixir-autogen, elixir-format
 msgid "This meeting type books into a calendar you can no longer write to. Edit it and choose another calendar."
 msgstr "Tento typ schůzky rezervuje do kalendáře, do kterého už nemůžete zapisovat. Upravte jej a zvolte jiný kalendář."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen
+msgid "%{min}–%{max} min"
+msgstr "%{min}–%{max} min"

@@ -148,6 +148,11 @@ defmodule Tymeslot.Polls do
 
   defp apply_meeting_type(_user_id, attrs), do: {:ok, attrs}
 
+  # A poll takes the type's *primary* duration, deliberately, even for a type
+  # that offers several lengths: a poll asks a group to agree on one slot, so
+  # the length has to be settled before the candidates go out, and the host is
+  # the one who settles it rather than each invitee. `Map.put_new/3` leaves a
+  # length the host passed in untouched, which is where another one is chosen.
   defp snapshot_meeting_type(attrs, meeting_type) do
     attrs
     |> Map.put_new(:title, meeting_type.name)

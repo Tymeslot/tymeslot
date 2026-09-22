@@ -199,3 +199,8 @@ msgstr "Der Kalender, in den dieser Termintyp bucht, ist im verbundenen Konto ni
 #, elixir-autogen, elixir-format
 msgid "This meeting type books into a calendar you can no longer write to. Edit it and choose another calendar."
 msgstr "Dieser Termintyp bucht in einen Kalender, in den Sie nicht mehr schreiben können. Bearbeiten Sie ihn und wählen Sie einen anderen Kalender."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen
+msgid "%{min}–%{max} min"
+msgstr "%{min}–%{max} Min."

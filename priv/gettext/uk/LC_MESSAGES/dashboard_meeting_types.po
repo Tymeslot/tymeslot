@@ -200,3 +200,8 @@ msgstr "Календаря, у який цей тип зустрічі дода�
 #, elixir-autogen, elixir-format
 msgid "This meeting type books into a calendar you can no longer write to. Edit it and choose another calendar."
 msgstr "Цей тип зустрічі додає записи в календар, до якого ви більше не маєте доступу на запис. Відредагуйте його та виберіть інший календар."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen
+msgid "%{min}–%{max} min"
+msgstr "%{min}–%{max} хв"

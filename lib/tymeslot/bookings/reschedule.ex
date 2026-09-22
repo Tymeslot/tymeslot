@@ -392,7 +392,21 @@ defmodule Tymeslot.Bookings.Reschedule do
 
     duration_minutes = meeting.duration
 
-    schedule_check_duration_minutes = Offer.duration_minutes(meeting_type, duration_minutes)
+    # A reschedule keeps the length that was booked: `duration_minutes` comes
+    # from the meeting, and it is what the new times are built from and written
+    # with, whatever the type offers today.
+    #
+    # Which grid the new start has to sit on is a separate question, and it is
+    # asked of the type as it stands now — as this path has always done.
+    # `Offer.duration_minutes/3` answers with the booked length while the type
+    # still offers it, so the grid matches the meeting. Once the host has
+    # removed that length it falls back to the type's primary duration: a
+    # 45-minute booking on a type that now offers only 30 is checked against
+    # the 30-minute grid and stays 45 minutes long. That is the same divergence
+    # a plain duration change has always produced, and it errs towards letting
+    # the guest move an existing booking rather than stranding it.
+    schedule_check_duration_minutes =
+      Offer.duration_minutes(meeting_type, duration_minutes, duration_minutes)
 
     with {:ok, {start_datetime, end_datetime}} <-
            Validation.parse_meeting_times(

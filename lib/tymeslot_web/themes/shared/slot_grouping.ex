@@ -36,7 +36,16 @@ defmodule TymeslotWeb.Themes.Shared.SlotGrouping do
   # A fixed interval bound rather than a slot count, because the count varies
   # with how booked up a day is: the same page would then render differently
   # from one day to the next. Slots per hour is `60 / interval`, so this rule
-  # is a property of the meeting type alone and the organiser can predict it.
+  # is a property of the meeting type and the length being booked, and the
+  # organiser can predict it.
+  #
+  # On a type that offers several lengths the picker may therefore change
+  # shape when the booker picks another one: `duration` here is the length
+  # being booked, not the type's primary. That is intended — the picker
+  # follows the grid it is picking from. Only a type left on the default
+  # interval can shift at all, because an interval the organiser has set
+  # explicitly is the same for every length; the meeting type form points
+  # that out where the interval is chosen.
   @max_two_tier_interval 20
 
   @doc """

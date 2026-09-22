@@ -553,6 +553,7 @@ msgstr "Vyplňte prosím všechna povinná pole"
 msgid "Please select a date to see available times"
 msgstr "Vyberte prosím datum, abyste viděli volné termíny"
 
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a meeting duration first"
@@ -877,9 +878,11 @@ msgstr "Doplňte podrobnosti…"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "back"
@@ -931,8 +934,10 @@ msgid "name"
 msgstr "Jméno"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
@@ -1883,3 +1888,14 @@ msgstr "Tato rezervace byla zrušena, a proto se neuskuteční."
 #, elixir-autogen, elixir-format
 msgid "This booking wasn't accepted, so it won't be going ahead."
 msgstr "Tato rezervace nebyla přijata, a proto se neuskuteční."
+
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "%{min}–%{max} min"
+msgstr "%{min}–%{max} min"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
+#, elixir-autogen, elixir-format
+msgid "How long should the meeting be?"
+msgstr "Jak dlouho má schůzka trvat?"

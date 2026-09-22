@@ -553,6 +553,7 @@ msgstr "Please fill in all required fields"
 msgid "Please select a date to see available times"
 msgstr "Please select a date to see available times"
 
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a meeting duration first"
@@ -877,9 +878,11 @@ msgstr "Add any details..."
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/schedule_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
 msgid "back"
@@ -931,8 +934,10 @@ msgid "name"
 msgstr "Name"
 
 #: lib/tymeslot_web/themes/quill/scheduling/components/custom_questions_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/custom_questions_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex
 #, elixir-autogen, elixir-format
@@ -1881,4 +1886,15 @@ msgstr ""
 #: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex
 #, elixir-autogen, elixir-format
 msgid "This booking wasn't accepted, so it won't be going ahead."
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "%{min}–%{max} min"
+msgstr ""
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
+#, elixir-autogen, elixir-format
+msgid "How long should the meeting be?"
 msgstr ""

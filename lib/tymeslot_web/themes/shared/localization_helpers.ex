@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   """
   use Gettext, backend: TymeslotWeb.Gettext
   alias Calendar
+  alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.Display
   alias TymeslotWeb.Helpers.LocaleFormat
@@ -208,6 +209,21 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   @spec format_duration(any()) :: String.t()
   def format_duration(_other), do: dgettext("booking", "Unknown duration")
+
+  @doc """
+  The badge for a meeting type on the overview: its duration, or the span of
+  lengths it offers when the booker chooses one ("15–120 min").
+  """
+  @spec format_length_badge(map()) :: String.t()
+  def format_length_badge(meeting_type) do
+    case Lengths.offered(meeting_type) do
+      [shortest, _next | _rest] = offered ->
+        dgettext("booking", "%{min}–%{max} min", min: shortest, max: List.last(offered))
+
+      _single ->
+        format_duration(Map.get(meeting_type, :duration_minutes))
+    end
+  end
 
   @spec get_month_name(integer()) :: String.t()
   defp get_month_name(month) do

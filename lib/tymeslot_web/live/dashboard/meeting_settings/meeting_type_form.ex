@@ -15,12 +15,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.ApprovalWindow
   alias Tymeslot.Utils.ReminderUtils
+  alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
     Autosave,
     FormView,
     Init,
+    LengthsField,
     Validation
   }
 
@@ -124,6 +126,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     socket = sync_slot_interval_mode(socket, params)
     params = drop_interval_mode_sentinel(params)
 
+    # An input-level change posts one further duration as `%{"<index>" => value}`;
+    # it is folded into the full list before merging, so the other entries
+    # survive.
+    params = LengthsField.fold_params(params, socket.assigns.form_data || %{})
+
     # Merge incoming params into existing form data to prevent wiping other fields
     new_data = Map.merge(socket.assigns.form_data || %{}, params)
 
@@ -148,6 +155,31 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      socket
      |> assign(form_data: updated_data, form_errors: updated_errors)
      |> Autosave.maybe_run()}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("add_length", _params, socket) do
+    form_data = socket.assigns.form_data || %{}
+    extras = Map.get(form_data, "extra_lengths", [])
+
+    if length(extras) + 1 < Constraints.max_lengths_per_meeting_type() do
+      update_extra_lengths(socket, extras ++ [LengthsField.suggest(form_data)])
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("remove_length", %{"index" => index}, socket) do
+    extras = Map.get(socket.assigns.form_data || %{}, "extra_lengths", [])
+
+    case Integer.parse(to_string(index)) do
+      {position, ""} when position >= 0 and position < length(extras) ->
+        update_extra_lengths(socket, List.delete_at(extras, position))
+
+      _other ->
+        {:noreply, socket}
+    end
   end
 
   @impl Phoenix.LiveComponent
@@ -543,4 +575,18 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   defp off_preset_interval?(_value), do: false
+
+  defp update_extra_lengths(socket, extras) do
+    {data, errors} =
+      Validation.revalidate_extra_lengths(
+        Map.put(socket.assigns.form_data || %{}, "extra_lengths", extras),
+        socket.assigns.form_errors || %{},
+        Helpers.get_security_metadata(socket)
+      )
+
+    {:noreply,
+     socket
+     |> assign(form_data: data, form_errors: errors)
+     |> Autosave.maybe_run()}
+  end
 end

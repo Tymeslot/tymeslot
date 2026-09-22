@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   }
 
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
+  alias TymeslotWeb.Themes.Shared.ChosenLength
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: CustomizationHelpers
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
   alias TymeslotWeb.Themes.Shared.ReschedulePin
@@ -228,6 +229,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     |> maybe_assign_from_params(:selected_time, params["time"])
     |> maybe_assign_from_params(:reschedule_meeting_uid, params["reschedule_meeting_uid"])
     |> assign(:is_rescheduling, is_binary(params["reschedule_meeting_uid"]))
+    |> ChosenLength.from_params(params)
     |> pin_reschedule_meeting_type()
     |> handle_confirmation_params(params)
   end
@@ -382,8 +384,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
   defp assign_meeting_type(socket, meeting_type) do
     socket
+    |> ChosenLength.keep_if_offered(meeting_type)
     |> assign(:meeting_type, meeting_type)
     |> assign(:engine, refreshed_engine(socket, meeting_type))
+    |> ChosenLength.assign_for_reschedule()
     |> OrganizerHelpers.assign_booking_window()
   end
 

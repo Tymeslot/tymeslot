@@ -306,6 +306,30 @@
   }
 }
 
+/* ===== Duration step ===== */
+/* The lengths a meeting type offers, chosen after the type. The step keeps the
+   overview's single-type footprint (--container-lg, via .overview-content-area
+   above) at any number of lengths, so it is as wide as every other step; the
+   lengths tile two across once the card is wide enough. */
+.length-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-xs);
+  align-content: start;
+}
+
+@container scheduling (min-width: 640px) {
+  .length-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container scheduling (min-width: 768px) {
+  .length-list {
+    gap: var(--space-md);
+  }
+}
+
 /* ===== Short-viewport fitting ===== */
 /* When vertical space is tight (short windows, embedded iframes), collapse the
    meeting-type descriptions so the compact card grid fits more rows without

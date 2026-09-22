@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
 
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Utils.DateTimeUtils.Duration
+  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Shared.BookingLabels
@@ -110,7 +111,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       {dgettext("booking", "You're booking a %{duration} meeting with %{name}",
                         duration:
                           if(@meeting_type,
-                            do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes),
+                            do:
+                              LocalizationHelpers.format_duration(
+                                AvailabilityHelpers.duration_minutes(assigns)
+                              ),
                             else: Duration.format(@duration)
                           ),
                         name: get_organizer_name(@organizer_profile, @username_context)
@@ -119,7 +123,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       {dgettext("booking", "You're booking a %{duration} meeting",
                         duration:
                           if(@meeting_type,
-                            do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes),
+                            do:
+                              LocalizationHelpers.format_duration(
+                                AvailabilityHelpers.duration_minutes(assigns)
+                              ),
                             else: Duration.format(@duration)
                           )
                       )}

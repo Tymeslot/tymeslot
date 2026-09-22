@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
     CustomQuestionsSection,
     GuestsSection,
     HiddenFields,
+    LengthsField,
     LimitsSection,
     PaymentsSection,
     QuestionEditorComponent,
@@ -44,6 +45,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   import ApprovalSection, only: [approval_section: 1]
   import AvailabilitySection, only: [availability_section: 1]
   import GuestsSection, only: [guests_section: 1]
+  import LengthsField, only: [lengths_field: 1]
   import LimitsSection, only: [limits_section: 1]
   import ShowAsFreeSection, only: [show_as_free_section: 1]
   import HiddenFields, only: [hidden_fields: 1]
@@ -63,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   # Which form-error fields surface an indicator on which tab. Errors on
   # fields absent here (e.g. :base) render below the panels and need no dot.
   @tab_error_fields %{
-    "details" => [:name, :duration, :slot_interval, :description, :icon],
+    "details" => [:name, :duration, :extra_lengths, :slot_interval, :description, :icon],
     "location" => [:video_integration, :calendar_integration, :target_calendar],
     "booking" => [:payment_required, :price_cents, :approval_window_hours],
     "reminders" => [:reminder_config]
@@ -112,38 +114,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               icon="hero-tag"
             />
 
-            <div>
-              <.input
-                type="number"
-                name="meeting_type[duration]"
-                label={dgettext("dashboard_meeting_form", "Duration (minutes)")}
-                value={
-                  Map.get(@form_data, "duration", if(@type, do: @type.duration_minutes, else: "30"))
-                }
-                min={Constraints.duration_minutes_opts()[:greater_than_or_equal_to]}
-                max={Constraints.duration_minutes_opts()[:less_than_or_equal_to]}
-                required
-                placeholder="30"
-                phx-change="validate_meeting_type"
-                phx-debounce="500"
-                phx-target={@myself}
-                errors={
-                  FormValidationHelpers.field_errors(@form_errors, :duration)
-                  |> Enum.map(&Helpers.format_errors/1)
-                }
-                icon="hero-clock"
-              />
-              <p class="mt-1 text-token-sm text-tymeslot-600">
-                {dgettext(
-                  "dashboard_meeting_form",
-                  "Enter a duration between %{min} and %{max} minutes",
-                  min: Constraints.duration_minutes_opts()[:greater_than_or_equal_to],
-                  max: Constraints.duration_minutes_opts()[:less_than_or_equal_to]
-                )}
-              </p>
-            </div>
+            <.lengths_field
+              form_data={@form_data}
+              form_errors={@form_errors}
+              type={@type}
+              myself={@myself}
+            />
           </div>
 
+          <% extra_lengths = Map.get(@form_data, "extra_lengths", []) %>
           <% slot_interval_value =
             Map.get(
               @form_data,
@@ -195,7 +174,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
               />
             </div>
             <p class="mt-1 text-token-sm text-tymeslot-600">
-              {slot_interval_hint(slot_interval_value, Map.get(@form_data, "duration"))}
+              {slot_interval_hint(
+                slot_interval_value,
+                Map.get(@form_data, "duration"),
+                extra_lengths
+              )}
             </p>
           </div>
 
@@ -483,8 +466,20 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   # Spells out what the current choice produces. An interval is an abstraction
   # until it is three clock times, and five minutes is a very different booking
   # page from sixty; this is where an organiser sees which one they picked.
-  defp slot_interval_hint(interval_value, duration_value) do
+  # A type that offers several lengths and leaves the interval on its default
+  # gets a grid whose *step* is whatever length the booker picked, so the same
+  # day offers different start times per length. That is defensible for a
+  # single length and surprising for several, so the host is told once the
+  # second length exists — and only while no fixed interval is set, because
+  # setting one is the fix.
+  defp slot_interval_hint(interval_value, duration_value, extra_lengths) do
     case {parse_interval(interval_value), parse_interval(duration_value)} do
+      {nil, _duration} when extra_lengths != [] ->
+        dgettext(
+          "dashboard_meeting_form",
+          "Start times follow whichever length the booker picks, so each length offers a different set of times. Choose a fixed interval to offer the same start times for every length."
+        )
+
       {nil, nil} ->
         dgettext(
           "dashboard_meeting_form",

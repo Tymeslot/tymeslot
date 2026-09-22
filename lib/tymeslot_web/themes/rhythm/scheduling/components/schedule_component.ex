@@ -8,11 +8,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
 
   alias Tymeslot.Timezones
   alias TymeslotWeb.Components.MeetingUtils
+  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SlotGrouping
+  alias TymeslotWeb.Themes.Shared.StateMachineHelpers
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -104,6 +106,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
             <div class="schedule-header">
               <OrganizerHeader.organizer_header_small
                 organizer_profile={@organizer_profile}
+                duration_minutes={AvailabilityHelpers.duration_minutes(assigns)}
                 meeting_type={@meeting_type}
                 selected_duration={@selected_duration}
               />
@@ -240,7 +243,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 </div>
 
                 <div class="calendar-grid">
-                  <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone, @meeting_type) do %>
+                  <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone, @meeting_type, AvailabilityHelpers.duration_minutes(assigns)) do %>
                     <button
                       class={[
                         "calendar-day",
@@ -409,7 +412,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
 
             <div class="slide-actions horizontal" data-testid="schedule-actions">
               <button
-                :if={@entered_via_overview}
+                :if={@entered_via_overview or StateMachineHelpers.choose_length?(assigns)}
                 class="prev-button"
                 phx-click="prev_slide"
                 phx-target={@myself}

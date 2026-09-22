@@ -7,10 +7,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Utils.DateTimeUtils.Duration
+  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.StateMachineHelpers
 
   import TymeslotWeb.Components.CoreComponents
 
@@ -194,7 +196,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                         <%= if @meeting_type do %>
                           {dgettext("booking", "Duration: %{duration}",
                             duration:
-                              LocalizationHelpers.format_duration(@meeting_type.duration_minutes)
+                              LocalizationHelpers.format_duration(
+                                AvailabilityHelpers.duration_minutes(assigns)
+                              )
                           )}
                         <% else %>
                           {dgettext("booking", "Duration: %{duration}",
@@ -257,7 +261,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                           </button>
                         </div>
                         <div class="week-day-strip">
-                          <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone, @meeting_type) do %>
+                          <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone, @meeting_type, AvailabilityHelpers.duration_minutes(assigns)) do %>
                             <button
                               class={[
                                 "week-day-cell",
@@ -363,7 +367,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                             </div>
                           </div>
                           <div class="grid grid-cols-7 gap-0.5">
-                            <%= for day <- CalendarHelpers.get_calendar_days(@user_timezone, @current_year, @current_month, @organizer_profile, @month_availability_map, @meeting_type) do %>
+                            <%= for day <- CalendarHelpers.get_calendar_days(@user_timezone, @current_year, @current_month, @organizer_profile, @month_availability_map, @meeting_type, AvailabilityHelpers.duration_minutes(assigns)) do %>
                               <.calendar_day
                                 phx-click="select_date"
                                 phx-target={@myself}
@@ -395,7 +399,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
 
                   <div class="schedule-actions shrink-0" data-testid="schedule-actions">
                     <.action_button
-                      :if={@entered_via_overview}
+                      :if={@entered_via_overview or StateMachineHelpers.choose_length?(assigns)}
                       type="button"
                       phx-click="back_step"
                       phx-target={@myself}

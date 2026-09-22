@@ -194,7 +194,7 @@ msgstr "Description (facultatif)"
 msgid "Done"
 msgstr "Terminé"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
 #, elixir-autogen, elixir-format
 msgid "Duration (minutes)"
 msgstr "Durée (minutes)"
@@ -235,7 +235,7 @@ msgstr "Modifier"
 msgid "Edit question"
 msgstr "Modifier la question"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a duration between %{min} and %{max} minutes"
 msgstr "Saisissez une durée entre %{min} et %{max} minutes"
@@ -883,3 +883,28 @@ msgstr[1] "Vous pouvez configurer jusqu’à %{count} rappels"
 #, elixir-autogen, elixir-format
 msgid "The price of %{amount} is kept and applies again once Stripe is connected."
 msgstr "Le prix de %{amount} est conservé et s'appliquera de nouveau une fois Stripe connecté."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
+#, elixir-autogen, elixir-format
+msgid "Additional duration (minutes)"
+msgstr "Durée supplémentaire (minutes)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
+#, elixir-autogen, elixir-format
+msgid "Bookers choose one of these durations before picking a time. Each booking lasts the duration chosen; the price is the same for all."
+msgstr "Les personnes qui réservent choisissent l'une de ces durées avant de choisir un horaire. Chaque réservation dure le temps choisi ; le prix est le même pour toutes."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
+#, elixir-autogen, elixir-format
+msgid "Offer another duration"
+msgstr "Proposer une autre durée"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
+#, elixir-autogen, elixir-format
+msgid "Remove this duration"
+msgstr "Supprimer cette durée"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Start times follow whichever length the booker picks, so each length offers a different set of times. Choose a fixed interval to offer the same start times for every length."
+msgstr "Les heures de début suivent la durée choisie par la personne qui réserve, chaque durée propose donc des horaires différents. Choisissez un intervalle fixe pour proposer les mêmes heures de début pour toutes les durées."
