@@ -281,7 +281,7 @@ config :esbuild,
 
 # Configure tailwind
 config :tailwind,
-  version: "4.3.1",
+  version: "4.3.3",
   tymeslot: [
     args: ~w(
       --input=css/app.css

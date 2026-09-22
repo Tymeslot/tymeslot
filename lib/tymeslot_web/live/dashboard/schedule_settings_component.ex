@@ -200,12 +200,6 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     enable_custom_policy(socket, Map.fetch!(@policy_settings, setting))
   end
 
-  @spec handle_info({:reload_schedule}, Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_info({:reload_schedule}, socket) do
-    {:noreply, load_schedules(socket)}
-  end
-
   # State Management Functions
 
   @spec load_schedules(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()

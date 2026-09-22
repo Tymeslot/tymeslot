@@ -7,6 +7,8 @@ defmodule Tymeslot.Security.SecurityLoggerTest do
 
   @moduletag :security
 
+  import Mox, only: [verify_on_exit!: 1]
+
   alias Tymeslot.Infrastructure.Logging.MetadataRedactor
   alias Tymeslot.Security.SecurityLogger
   alias Tymeslot.Test.LogCapture
@@ -374,6 +376,8 @@ defmodule Tymeslot.Security.SecurityLoggerTest do
   end
 
   describe "monitoring webhook payload" do
+    setup :verify_on_exit!
+
     setup do
       Mox.set_mox_global()
 

@@ -29,6 +29,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditVideoTest do
   @rooms_path "/ocs/v2.php/apps/spreed/api/v4/room"
   @password_required ~s({"ocs":{"meta":{"status":"failure","statuscode":400,"message":""},"data":{"error":"password","message":"Password needs to be set"}}})
 
+  setup :verify_on_exit!
+
   setup %{conn: conn} do
     stub(Tymeslot.CalendarMock, :update_event, fn _uid, _event_data, _context -> :ok end)
 
