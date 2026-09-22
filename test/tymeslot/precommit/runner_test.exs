@@ -103,6 +103,32 @@ defmodule Tymeslot.Precommit.RunnerTest do
     end
   end
 
+  describe "run/3 with steps left out on purpose" do
+    test "lists each skipped step with its reason after the steps that ran" do
+      steps = [{"credo", ["credo"], :dev}]
+      cmd_fun = stub(%{["credo"] => 0})
+
+      output =
+        capture_plain(fn ->
+          assert Runner.run(steps, false,
+                   cmd: cmd_fun,
+                   skipped: [{"sobelow", "no web code changed"}]
+                 ) == :ok
+        end)
+
+      assert output =~ ~r/ok      credo\n  not run  sobelow \(no web code changed\)/
+    end
+
+    test "an empty run with everything skipped passes" do
+      output =
+        capture_plain(fn ->
+          assert Runner.run([], false, skipped: [{"test", "no change reaches it"}]) == :ok
+        end)
+
+      assert output =~ "not run  test (no change reaches it)"
+    end
+  end
+
   describe "run/3 with the suite in the background" do
     test "the suite runs while the static checks do" do
       test_pid = self()

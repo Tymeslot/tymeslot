@@ -226,6 +226,64 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
     end
   end
 
+  describe "perform/1 excludes the user whose integration owns the event" do
+    test "notifies the guests but not the owner who made the edit" do
+      # Google and Outlook list the organiser as an attendee of events created
+      # in their own UI, so without the filter the person editing the event in
+      # the grid is emailed about their own edit, with an ICS attached.
+      owner = insert(:user, email: "owner@x.com")
+      integration = insert(:calendar_integration, user: owner)
+
+      event =
+        event_with_attendees(
+          [{"owner@x.com", "accepted"}, {"guest@x.com", "needs_action"}],
+          calendar_integration: integration
+        )
+
+      assert :ok = perform_job(Worker, update_args(event))
+
+      emails = notification_recipient_emails()
+      assert "guest@x.com" in emails
+      refute "owner@x.com" in emails
+    end
+
+    test "matches an owner whose stored address is not lower-cased" do
+      # `ChangeDetector` lower-cases every attendee address on its way into the
+      # summary, so the only side of the comparison that can still carry case
+      # is the address stored on the user.
+      owner = insert(:user, email: "Owner@X.com")
+      integration = insert(:calendar_integration, user: owner)
+
+      event =
+        event_with_attendees(
+          [{"owner@x.com", "accepted"}, {"guest@x.com", "needs_action"}],
+          calendar_integration: integration
+        )
+
+      assert :ok = perform_job(Worker, update_args(event))
+
+      assert notification_recipient_emails() == ["guest@x.com"]
+    end
+
+    test "still notifies an attendee who merely shares the event, not the integration" do
+      # The filter is the integration owner's address, never the event's
+      # `organizer` field: a user can be an attendee of someone else's event
+      # that syncs into their grid, and the real organiser must still hear.
+      owner = insert(:user, email: "owner@x.com")
+      integration = insert(:calendar_integration, user: owner)
+
+      event =
+        event_with_attendees(
+          [{"real-organiser@x.com", "accepted"}, {"owner@x.com", "accepted"}],
+          calendar_integration: integration
+        )
+
+      assert :ok = perform_job(Worker, update_args(event))
+
+      assert notification_recipient_emails() == ["real-organiser@x.com"]
+    end
+  end
+
   describe "perform/1 for an event that has never been notified" do
     test "notifies everyone currently on the event, not nobody" do
       # Nothing seeds `last_notified_state`, so every event in production
@@ -314,7 +372,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
 
   # Inserts a provider event whose title differs from its notified baseline (so
   # the diff is non-empty) and whose attendees carry the given response statuses.
-  defp event_with_attendees(attendees) do
+  defp event_with_attendees(attendees, overrides \\ []) do
     starts_at = ~U[2026-02-01 10:00:00.000000Z]
     ends_at = ~U[2026-02-01 11:00:00.000000Z]
 
@@ -331,18 +389,24 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
         Enum.map(attendees, fn {email, _status} -> %{email: email} end)
       )
 
-    insert(:provider_calendar_event,
-      summary: "after",
-      location: "",
-      description: "",
-      start_at: starts_at,
-      end_at: ends_at,
-      attendees:
-        Enum.map(attendees, fn {email, status} ->
-          %{"email" => email, "response_status" => status}
-        end),
-      ical_sequence: 0,
-      last_notified_state: baseline
+    insert(
+      :provider_calendar_event,
+      Keyword.merge(
+        [
+          summary: "after",
+          location: "",
+          description: "",
+          start_at: starts_at,
+          end_at: ends_at,
+          attendees:
+            Enum.map(attendees, fn {email, status} ->
+              %{"email" => email, "response_status" => status}
+            end),
+          ical_sequence: 0,
+          last_notified_state: baseline
+        ],
+        overrides
+      )
     )
   end
 

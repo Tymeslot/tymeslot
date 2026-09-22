@@ -37,6 +37,13 @@ defmodule Tymeslot.Precommit.Runner do
   for the first failure as soon as possible, which is incompatible with steps
   whose results are only known when they finish together.
 
+  ## Steps left out on purpose
+
+  `mix precommit --affected` drops the steps a diff cannot reach (see
+  `Tymeslot.Precommit.Affected`) and passes them as `:skipped`, each with its
+  reason. The summary lists them after the steps that ran, so a narrowed run
+  can never read as the full gate.
+
   ## Partitioning the suite
 
   Most of the suite's wall clock is its synchronous modules, which ExUnit runs
@@ -75,7 +82,7 @@ defmodule Tymeslot.Precommit.Runner do
     suite_plan_fun = Keyword.get(opts, :suite_plan, fn -> nil end)
     results = run_all(steps, fail_fast?, cmd_fun, {capture_fun, suite_plan_fun})
 
-    report(results)
+    report(results, Keyword.get(opts, :skipped, []))
 
     if Enum.any?(results, &match?({_name, :failed, _code}, &1)) do
       exit({:shutdown, 1})
@@ -340,7 +347,7 @@ defmodule Tymeslot.Precommit.Runner do
   @spec dialyzer_schedulers(pos_integer()) :: pos_integer()
   def dialyzer_schedulers(cores), do: min(@dialyzer_schedulers, cores)
 
-  defp report(results) do
+  defp report(results, skipped) do
     Mix.shell().info([:bright, "\nSummary", :reset])
 
     Enum.each(results, fn
@@ -352,6 +359,10 @@ defmodule Tymeslot.Precommit.Runner do
 
       {_name, :skipped, _code} ->
         Mix.shell().info(["  ", :faint, "skipped remaining steps: the build is broken", :reset])
+    end)
+
+    Enum.each(skipped, fn {name, reason} ->
+      Mix.shell().info(["  ", :faint, "not run  ", :reset, name, :faint, " (#{reason})", :reset])
     end)
   end
 end

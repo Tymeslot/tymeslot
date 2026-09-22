@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias TymeslotWeb.Components.Dashboard.ColourSwatches
   alias TymeslotWeb.Components.UI.StatusSwitch
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
@@ -388,7 +389,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       <div :if={@editable} class="mb-3">
         <RecurrenceEditor.recurrence_editor
           recurrence_rule={Map.get(@selected_event, :recurrence_rule)}
-          timezone={@user_timezone}
+          timezone={Shared.recurrence_timezone(@selected_event, @user_timezone)}
           myself={@myself}
           change_event="update_event_recurrence"
         />
@@ -493,11 +494,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   end
 
   # Read-only human-readable summary of an event's recurrence rule, or nil when
-  # the event does not repeat.
-  defp recurrence_summary(event, timezone) do
+  # the event does not repeat. The rule's UNTIL is an instant written in UTC, so
+  # it is read back in the zone it was written against, the event's own.
+  defp recurrence_summary(event, user_timezone) do
     case Map.get(event, :recurrence_rule) do
       rule when is_binary(rule) and rule != "" ->
-        rule |> RRule.parse(timezone: timezone) |> RecurrenceEditor.summary()
+        rule
+        |> RRule.parse(timezone: Shared.recurrence_timezone(event, user_timezone))
+        |> RecurrenceEditor.summary()
 
       _none ->
         nil

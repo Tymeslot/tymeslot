@@ -179,9 +179,10 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
       need_organizer? = !meeting.organizer_email_sent
       need_attendee? = !meeting.attendee_email_sent
 
-      # Debug logging
+      # The join link itself is a credential for link-based providers, so only
+      # whether there is one is logged; `has_meeting_url` is what the branch
+      # below turns on, and `meeting_id` on the line above correlates the two.
       Logger.debug("Appointment details for email",
-        meeting_url: appointment_details.meeting_url,
         has_meeting_url: !is_nil(appointment_details.meeting_url),
         need_organizer: need_organizer?,
         need_attendee: need_attendee?

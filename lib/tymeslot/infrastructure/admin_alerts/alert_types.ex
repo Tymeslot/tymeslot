@@ -125,6 +125,15 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     end
   end
 
+  # The message embeds `days_past_due`, which the daily dunning run increments
+  # on every pass over the same stuck row, so the default message-based key
+  # changes daily and the admin is emailed again about a condition nobody has
+  # resolved yet. Dedup on the subscription instead: one alert per stuck row
+  # per window, while a second stalled subscription still raises its own.
+  def dedup_key(:dunning_stalled, metadata) do
+    "dunning_stalled:#{Map.get(metadata, :stripe_subscription_id, "unknown")}"
+  end
+
   def dedup_key(type, metadata), do: format_message(type, metadata)
 
   @doc "Formats a human-readable message for the given alert type and metadata."
@@ -221,9 +230,9 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     "Payment event enqueue failed for #{event}: #{detail}"
   end
 
-  # The message embeds the subscription id, so the default message-based dedup
-  # key already collapses repeat runs over the same stuck row into one alert
-  # per window while a second stuck subscription still raises its own.
+  # The day count is deliberately in the message: the admin needs to see how
+  # long the row has been stalled. It is what makes the message unusable as a
+  # dedup key, which is why this type has its own `dedup_key/2` clause.
   def format_message(:dunning_stalled, metadata) do
     stripe_id = Map.get(metadata, :stripe_subscription_id, "unknown")
     days = Map.get(metadata, :days_past_due, "unknown")
