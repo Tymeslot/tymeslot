@@ -271,6 +271,13 @@ defmodule Tymeslot.Mailer.SmtpProbe do
   defp format_readable_reason({:tls_alert, {:handshake_failure, _details}}),
     do: "SSL/TLS handshake failed"
 
+  # Only reachable with SMTP_TLS_MIDDLEBOX_COMPAT on: OTP asserts a record the
+  # relay is free not to send, and the alert it raises is the one thing that
+  # names the cause. Without this clause the operator reads it as a rejected
+  # certificate, which is what every other `:tls_alert` here means.
+  defp format_readable_reason({:tls_alert, {:unexpected_message, _details}}),
+    do: "The relay does not send the TLS 1.3 middlebox compatibility record"
+
   defp format_readable_reason({:tls_alert, alert}), do: "SSL/TLS alert: #{inspect(alert)}"
   defp format_readable_reason(:closed), do: "Connection closed by server"
 
@@ -301,6 +308,9 @@ defmodule Tymeslot.Mailer.SmtpProbe do
       "  - Network connectivity issues\n" <>
       "  - The port serves implicit TLS, so the relay waits for a handshake\n" <>
       "    instead of greeting: set SMTP_SSL=true\n" <>
+      "  - A firewall or proxy on the path is dropping the TLS 1.3 handshake\n" <>
+      "    because it is not shaped like TLS 1.2: try\n" <>
+      "    SMTP_TLS_MIDDLEBOX_COMPAT=true\n" <>
       "  - SMTP server is slow to respond"
   end
 
@@ -318,12 +328,29 @@ defmodule Tymeslot.Mailer.SmtpProbe do
       "  - Try port 587 (STARTTLS) instead: SMTP_PORT=587"
   end
 
+  defp get_error_suggestion({:tls_alert, {:unexpected_message, _details}}, _port) do
+    "\n\nThe handshake aborted because the relay did not answer with the dummy\n" <>
+      "ChangeCipherSpec record that OTP demands while TLS 1.3 middlebox\n" <>
+      "compatibility mode is on. RFC 8446 appendix D.4 makes that record\n" <>
+      "optional, so the relay is within its rights:\n" <>
+      "  - Unset SMTP_TLS_MIDDLEBOX_COMPAT, or set it to false"
+  end
+
   defp get_error_suggestion({:tls_alert, _alert}, _port) do
     "\n\nThe relay's TLS certificate was not accepted. Common causes:\n" <>
       "  - A self-hosted relay with a private or self-signed certificate:\n" <>
       "    set SMTP_CACERTFILE to the CA that issued it (or, as a last resort,\n" <>
       "    SMTP_TLS_VERIFY=none)\n" <>
       "  - SMTP_HOST does not match the name on the certificate"
+  end
+
+  defp get_error_suggestion(:closed, _port) do
+    "\n\nThe relay closed the connection. Common causes:\n" <>
+      "  - The relay refused the connection before greeting (rate limit, IP\n" <>
+      "    block)\n" <>
+      "  - A firewall or proxy on the path is dropping the TLS 1.3 handshake\n" <>
+      "    because it is not shaped like TLS 1.2: try\n" <>
+      "    SMTP_TLS_MIDDLEBOX_COMPAT=true"
   end
 
   defp get_error_suggestion(:starttls_not_offered, _port) do

@@ -342,6 +342,8 @@ SMTP_CACERTFILE=/app/data/smtp-ca.pem
 SMTP_TLS_VERIFY=none
 ```
 
+Rarely, a firewall or proxy between the container and the relay drops a TLS 1.3 handshake because it does not look like TLS 1.2. The symptom is a connection that times out or closes during the handshake while the same relay works from other mail clients; `SMTP_TLS_MIDDLEBOX_COMPAT=true` restores the TLS 1.2 shape. Leave it off otherwise: relays that do not expect it abort every handshake, and the health check at boot says so explicitly when they do.
+
 **Option 2: a provider API (clearer delivery errors, no SMTP port needed)**
 ```bash
 EMAIL_ADAPTER=postmark

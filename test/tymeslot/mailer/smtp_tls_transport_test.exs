@@ -14,6 +14,7 @@ defmodule Tymeslot.Mailer.SMTPTlsTransportTest do
   @moduletag :integration
 
   alias Tymeslot.Mailer.SMTPConfig
+  alias Tymeslot.Test.FakeSmtpRelay
 
   # Generous on purpose. A tight budget here does not test anything: the
   # relay is an ordinary Erlang process, and if the suite is busy enough that
@@ -93,6 +94,37 @@ defmodule Tymeslot.Mailer.SMTPTlsTransportTest do
       assert_receive {:tls_up, info}, @timeout
       assert info.protocol == :"tlsv1.3"
       assert info.session_id == ""
+    end
+
+    # The other half of that assertion: the invented 32-byte session id is what
+    # `SMTP_TLS_MIDDLEBOX_COMPAT` buys, and without a handshake to look at, a
+    # flag that reached neither `:tls_options` nor `:sockopts` would test green
+    # on the keyword list alone.
+    test "middlebox_compat: true puts the compatibility handshake back on the wire", %{
+      trusted: certs
+    } do
+      relay = start_tls_relay(certs)
+
+      assert {:ok, socket} = open(relay, cacertfile: relay.cacertfile, middlebox_compat: true)
+      :gen_smtp_client.close(socket)
+
+      assert_receive {:tls_up, info}, @timeout
+      assert info.protocol == :"tlsv1.3"
+      assert info.session_id != ""
+    end
+
+    # What the operator who turns the flag on against the wrong relay hits, and
+    # the input `SmtpProbe` needs in order to name the cause. OTP asserts a
+    # record RFC 8446 appendix D.4 leaves optional, so the handshake dies
+    # before the certificate is ever examined.
+    test "middlebox_compat: true aborts against a relay that omits the record", %{
+      trusted: certs
+    } do
+      relay = certs |> start_tls_relay() |> FakeSmtpRelay.without_middlebox_record()
+
+      assert {:error, :retries_exceeded,
+              {:network_failure, _host, {:error, {:tls_alert, {:unexpected_message, _detail}}}}} =
+               open(relay, cacertfile: relay.cacertfile, middlebox_compat: true)
     end
   end
 

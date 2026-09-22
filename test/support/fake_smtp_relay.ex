@@ -39,6 +39,76 @@ defmodule Tymeslot.Test.FakeSmtpRelay do
   # for the wrong reason.
   @key_params [key: {:rsa, 2048, 65_537}, digest: :sha256]
 
+  # The dummy ChangeCipherSpec of RFC 8446 appendix D.4, as it goes over the
+  # wire: a plaintext record of one byte, sent right after the ServerHello.
+  @middlebox_record <<20, 3, 3, 0, 1, 1>>
+
+  @doc """
+  Puts a relay behind a proxy that drops the middlebox ChangeCipherSpec on its
+  way to the client, which is what a relay that never sends that record looks
+  like from the client's side.
+
+  An OTP server cannot stand in for one: it answers a client that asked for
+  the compatibility mode with the record whatever its own `middlebox_comp_mode`
+  says. Dropping it at the record layer is what makes the failure reproducible.
+  """
+  @spec without_middlebox_record(%{port: :inet.port_number()}) :: %{
+          port: :inet.port_number()
+        }
+  def without_middlebox_record(relay) do
+    {:ok, listen} =
+      :gen_tcp.listen(0, [
+        :binary,
+        active: false,
+        packet: :raw,
+        reuseaddr: true,
+        ip: {127, 0, 0, 1}
+      ])
+
+    {:ok, {_address, port}} = :inet.sockname(listen)
+    spawn(fn -> proxy_accept(listen, relay.port) end)
+    on_exit(fn -> :gen_tcp.close(listen) end)
+
+    %{relay | port: port}
+  end
+
+  defp proxy_accept(listen, upstream_port) do
+    with {:ok, client} <- :gen_tcp.accept(listen, @timeout),
+         {:ok, upstream} <-
+           :gen_tcp.connect(~c"localhost", upstream_port, [:binary, active: false, packet: :raw]) do
+      spawn(fn -> pump(client, upstream, :verbatim) end)
+      spawn(fn -> pump(upstream, client, :strip_middlebox_record) end)
+      proxy_accept(listen, upstream_port)
+    end
+  end
+
+  defp pump(from, to, mode) do
+    case :gen_tcp.recv(from, 0, @timeout) do
+      {:ok, data} ->
+        {payload, next} = forward(data, mode)
+        :gen_tcp.send(to, payload)
+        pump(from, to, next)
+
+      {:error, _closed} ->
+        :gen_tcp.close(to)
+    end
+  end
+
+  # Only the first occurrence is dropped, and nothing is inspected afterwards:
+  # the compatibility record is sent once, in the clear, before any encrypted
+  # traffic could coincidentally carry the same six bytes. The record is
+  # assumed to arrive whole in one `recv`, which it does on loopback, where
+  # OTP writes the ServerHello flight in one go; a split across two segments
+  # would leave it unstripped and fail the test rather than pass it quietly.
+  defp forward(data, :strip_middlebox_record) do
+    case :binary.split(data, @middlebox_record) do
+      [before, rest] -> {before <> rest, :verbatim}
+      [whole] -> {whole, :strip_middlebox_record}
+    end
+  end
+
+  defp forward(data, :verbatim), do: {data, :verbatim}
+
   @spec start(keyword()) :: %{port: :inet.port_number()}
   def start(opts \\ []) do
     owner = self()
