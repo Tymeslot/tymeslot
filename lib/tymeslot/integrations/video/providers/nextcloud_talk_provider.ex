@@ -9,6 +9,11 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider do
   lobby, but only when signed in to Nextcloud in the browser they join from.
   The lobby lifts itself at the meeting's start, so early guests wait.
 
+  A guest may join the call, speak, share video and their screen and post in
+  the chat, but only the organiser opens the call, which
+  `Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversation`
+  describes.
+
   The conversation token is the room id, which rescheduling and cancelling
   address: a reschedule moves the lobby timer and renames the conversation, a
   cancellation deletes it, and a scheduled clean-up deletes it some days after

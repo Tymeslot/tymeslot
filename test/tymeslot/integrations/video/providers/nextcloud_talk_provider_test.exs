@@ -125,6 +125,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalkProviderTest do
         assert Jason.decode!(body) == %{
                  "roomType" => 3,
                  "roomName" => "Intro call",
+                 "permissions" => 244,
                  "lobbyState" => 1,
                  "lobbyTimer" => DateTime.to_unix(@start)
                }

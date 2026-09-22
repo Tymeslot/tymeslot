@@ -109,6 +109,26 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.Client do
          do: request(:put, credentials, path <> "/webinar/lobby", params)
   end
 
+  @doc """
+  Sets the permissions every non-moderator attendee of a conversation gets.
+
+  `permissions` is Talk's attendee permission bitmask. Talk adds its "custom"
+  bit itself, so anything but 0 means the conversation stops handing out the
+  server's defaults.
+
+  Only needed for a conversation an earlier attempt created, since a new one
+  carries its permissions from the creating call.
+  """
+  @spec set_default_permissions(credentials(), String.t(), non_neg_integer()) ::
+          {:ok, term()} | {:error, error()}
+  def set_default_permissions(credentials, token, permissions) do
+    with {:ok, path} <- room_path(token),
+         do:
+           request(:put, credentials, path <> "/permissions/default", %{
+             "permissions" => permissions
+           })
+  end
+
   @doc "Renames a conversation."
   @spec rename_room(credentials(), String.t(), String.t()) :: {:ok, term()} | {:error, error()}
   def rename_room(credentials, token, name) do

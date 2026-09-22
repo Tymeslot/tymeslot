@@ -172,6 +172,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerRoomCreationErrorTest do
       "type" => 3,
       "participantType" => 1,
       "name" => "Stale name",
+      "defaultPermissions" => 244,
       "description" => "Booked through Tymeslot.\n\nReference: " <> reference(booked)
     }
 

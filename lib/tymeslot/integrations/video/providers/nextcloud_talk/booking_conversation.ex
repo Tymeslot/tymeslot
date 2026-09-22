@@ -5,6 +5,15 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
   Every booking gets a public conversation named after it, whose lobby holds
   guests until the meeting's start.
 
+  ## What a guest may do
+
+  The lobby settles when a guest gets in; the conversation's default
+  permissions settle what they may do once there. Talk's own defaults let any
+  attendee start a call, so without this a guest holding the link could open
+  one with the organiser absent, at any point until the conversation is
+  cleaned up. The creating call sets them instead, which it may from Talk
+  21.1, the same version this provider already needs for the lobby.
+
   ## One conversation per booking
 
   A room job that gave up waiting, or a server whose answer arrived too late,
@@ -58,6 +67,22 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
   # Lobby state 1 holds everyone but moderators until the timer passes.
   @lobby_for_non_moderators 1
 
+  # What a guest may do, as Talk's attendee permission bits: join a call (4),
+  # publish audio (16), video (32) and their screen (64), and post in the chat
+  # (128). Talk adds its own "custom" bit (1).
+  #
+  # Two bits are deliberately left out. "Start call" (2) belongs to the
+  # organiser, who owns the conversation: a booking's call is theirs to open,
+  # and without this a guest could hold one in it long after the meeting.
+  # "Ignore lobby" (8) would let a guest in before the lobby lifts.
+  #
+  # Reactions (256) are left out too, though a guest arguably should have
+  # them: the bit exists only from Nextcloud 34, and Talk refuses a value
+  # above the maximum it knows, so sending it would break every server between
+  # this provider's Talk 21.1 floor and that release. Before Nextcloud 34 the
+  # chat bit carried reactions anyway.
+  @guest_permissions 4 + 16 + 32 + 64 + 128
+
   @max_room_name_length 255
 
   # Never translated: it is how an earlier attempt's conversation is found.
@@ -100,12 +125,12 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
   @doc """
   The longest `find_or_create/2` can wait on the network, in milliseconds: a
   lookup, then either the creation it did not make unnecessary or the lobby
-  move and rename that bring an adopted conversation up to date.
+  move, rename and permissions that bring an adopted conversation up to date.
   """
   @spec budget_ms() :: pos_integer()
   def budget_ms do
     Client.request_budget_ms(:get) +
-      max(Client.request_budget_ms(:post), 2 * Client.request_budget_ms(:put))
+      max(Client.request_budget_ms(:post), 3 * Client.request_budget_ms(:put))
   end
 
   @doc """
@@ -161,7 +186,8 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
     )
 
     with :ok <- sync_lobby(credentials, room, wanted, config),
-         :ok <- sync_name(credentials, room, wanted, config) do
+         :ok <- sync_name(credentials, room, wanted, config),
+         :ok <- sync_permissions(credentials, room, wanted, config) do
       {:ok, room}
     end
   end
@@ -181,6 +207,24 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
 
   # A booking without a start time leaves the lobby as it is.
   defp sync_lobby(_credentials, _room, _wanted, _config), do: :ok
+
+  # A conversation this version created already carries them. One an older
+  # Tymeslot made, back when the creating call said nothing about
+  # permissions, hands out the server's defaults, which let a guest start a
+  # call.
+  defp sync_permissions(
+         _credentials,
+         %{"defaultPermissions" => permissions},
+         %{"permissions" => permissions},
+         _config
+       ),
+       do: :ok
+
+  defp sync_permissions(credentials, room, %{"permissions" => permissions}, config) do
+    credentials
+    |> Client.set_default_permissions(room["token"], permissions)
+    |> settled(:set_permissions, config)
+  end
 
   defp sync_name(_credentials, %{"name" => name}, %{"roomName" => name}, _config), do: :ok
 
@@ -217,7 +261,8 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
 
       %{
         "roomType" => @public_conversation,
-        "roomName" => room_name(Map.get(details, :summary))
+        "roomName" => room_name(Map.get(details, :summary)),
+        "permissions" => @guest_permissions
       }
       |> Map.merge(lobby_params(Map.get(details, :start_time)))
       |> Map.merge(description_params(reference))

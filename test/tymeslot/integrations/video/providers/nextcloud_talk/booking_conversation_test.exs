@@ -44,6 +44,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
     "name" => "Intro call",
     "lobbyState" => 1,
     "lobbyTimer" => 1_790_863_200,
+    "defaultPermissions" => 244,
     "description" => @description
   }
 
@@ -67,6 +68,7 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
         assert Jason.decode!(body) == %{
                  "roomType" => 3,
                  "roomName" => "Intro call",
+                 "permissions" => 244,
                  "lobbyState" => 1,
                  "lobbyTimer" => DateTime.to_unix(@start),
                  "description" => @description
@@ -77,6 +79,45 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
 
       assert {:ok, %RoomData{room_id: "abc123xy"}} =
                NextcloudTalkProvider.create_meeting_room(booking(@config))
+    end
+
+    test "lets a guest join, speak and chat, but never start the call" do
+      expect(HTTPClientMock, :request, fn :get, @room_list, _body, _headers, _opts ->
+        listed([])
+      end)
+
+      expect(HTTPClientMock, :request, fn :post, @room_api, body, _headers, _opts ->
+        permissions = Jason.decode!(body)["permissions"]
+
+        # Join a call, publish audio, video and screen, post in the chat.
+        for granted <- [4, 16, 32, 64, 128] do
+          assert Bitwise.band(permissions, granted) == granted
+        end
+
+        # Start a call, and ignore the lobby.
+        for withheld <- [2, 8] do
+          assert Bitwise.band(permissions, withheld) == 0
+        end
+
+        created(%{"token" => "abc123xy"})
+      end)
+
+      assert {:ok, %RoomData{}} = NextcloudTalkProvider.create_meeting_room(booking(@config))
+    end
+
+    test "asks for no permission bit the oldest supported Talk would refuse" do
+      expect(HTTPClientMock, :request, fn :get, @room_list, _body, _headers, _opts ->
+        listed([])
+      end)
+
+      expect(HTTPClientMock, :request, fn :post, @room_api, body, _headers, _opts ->
+        # Talk refuses a value above the maximum it knows, which before
+        # Nextcloud 34 was 255: every bit up to and including the chat one.
+        assert Jason.decode!(body)["permissions"] <= 255
+        created(%{"token" => "abc123xy"})
+      end)
+
+      assert {:ok, %RoomData{}} = NextcloudTalkProvider.create_meeting_room(booking(@config))
     end
 
     test "never shows the meeting id itself in the conversation" do
@@ -210,6 +251,23 @@ defmodule Tymeslot.Integrations.Video.Providers.NextcloudTalk.BookingConversatio
         assert {:ok, %RoomData{room_id: "abc123xy"}} =
                  NextcloudTalkProvider.create_meeting_room(booking(@config))
       end
+    end
+
+    test "takes the call away from guests of one an older Tymeslot left permissive" do
+      permissive = Map.delete(@made_earlier, "defaultPermissions")
+
+      expect(HTTPClientMock, :request, fn :get, @room_list, _body, _headers, _opts ->
+        listed([permissive])
+      end)
+
+      expect(HTTPClientMock, :request, fn :put, url, body, _headers, _opts ->
+        assert url == @room_api <> "/made1st9/permissions/default"
+        assert Jason.decode!(body) == %{"permissions" => 244}
+        {:ok, %Req.Response{status: 200, body: ocs(%{})}}
+      end)
+
+      assert {:ok, %RoomData{room_id: "made1st9"}} =
+               NextcloudTalkProvider.create_meeting_room(booking(@config))
     end
 
     test "moves its lobby and renames it when the booking changed since the earlier attempt" do

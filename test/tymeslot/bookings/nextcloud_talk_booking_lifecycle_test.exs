@@ -94,6 +94,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
               %{
                 "roomType" => 3,
                 "roomName" => "Talk consultation with Ada Lovelace",
+                "permissions" => 244,
                 "lobbyState" => 1,
                 "lobbyTimer" => DateTime.to_unix(start_time),
                 "description" => "Booked through Tymeslot.\n\nReference: " <> reference(booked)
@@ -527,6 +528,7 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
       "type" => created["roomType"],
       "participantType" => 1,
       "name" => created["roomName"],
+      "defaultPermissions" => created["permissions"],
       "lobbyState" => created["lobbyState"],
       "lobbyTimer" => created["lobbyTimer"],
       "description" => created["description"]
