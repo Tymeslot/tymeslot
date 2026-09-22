@@ -29,6 +29,7 @@ defmodule TymeslotWeb.DashboardLive do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Dashboard.DashboardContext
+  alias Tymeslot.Meetings
   alias Tymeslot.Onboarding
   alias TymeslotWeb.Components.DashboardLayout
   alias TymeslotWeb.Components.TourOverlay
@@ -129,7 +130,7 @@ defmodule TymeslotWeb.DashboardLive do
         user_id = socket.assigns.current_user.id
 
         Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{user_id}")
-        Phoenix.PubSub.subscribe(Tymeslot.PubSub, "dashboard_guests:#{user_id}")
+        Meetings.subscribe_to_guest_rsvp_updates(user_id)
 
         assign(socket, :calendar_pubsub_subscribed, true)
       else

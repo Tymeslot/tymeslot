@@ -1054,16 +1054,6 @@ msgstr "Odebrat hosta %{email}"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
-msgid "The invitation link may have expired or already been used. Please contact the meeting host."
-msgstr "Platnost odkazu z pozvánky možná vypršela nebo už byl odkaz použit. Obraťte se prosím na hostitele schůzky."
-
-#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
-#, elixir-autogen, elixir-format
-msgid "This link is no longer valid"
-msgstr "Odkaz už není platný"
-
-#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
-#, elixir-autogen, elixir-format
 msgid "Too many attempts"
 msgstr "Příliš mnoho pokusů"
 
@@ -1883,3 +1873,23 @@ msgstr "Tato rezervace byla zrušena, a proto se neuskuteční."
 #, elixir-autogen, elixir-format
 msgid "This booking wasn't accepted, so it won't be going ahead."
 msgstr "Tato rezervace nebyla přijata, a proto se neuskuteční."
+
+#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting has already taken place, or it was cancelled or not confirmed. Please contact the meeting host."
+msgstr "Schůzka už proběhla, byla zrušena nebo nebyla potvrzena. Obraťte se prosím na pořadatele schůzky."
+
+#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#, elixir-autogen, elixir-format
+msgid "This link is not valid"
+msgstr "Tento odkaz není platný"
+
+#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting is no longer taking responses"
+msgstr "Na tuto schůzku už nelze odpovídat"
+
+#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#, elixir-autogen, elixir-format
+msgid "We couldn't find an invitation for this link. Please check that you copied the whole link from your email, or contact the meeting host."
+msgstr "K tomuto odkazu jsme nenašli žádnou pozvánku. Zkontrolujte prosím, že jste z e-mailu zkopírovali celý odkaz, nebo se obraťte na pořadatele schůzky."
