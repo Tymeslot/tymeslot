@@ -54,7 +54,6 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   """
 
   alias Tymeslot.CalendarGrid.AllDay
-  alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.ProviderPayload
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -62,6 +61,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias Tymeslot.Integrations.Calendar.Recurrence.Series
 
   require Logger
 
@@ -129,7 +129,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   Every write for such an event is patched onto the series' master VEVENT,
   and the payload always carries the occurrence's own timing, so no edit of
   one occurrence can stay inside it (see the moduledoc). The series test is
-  the one a move uses, `Tymeslot.CalendarGrid.EventMove.part_of_series?/1`;
+  the one a move uses, `Tymeslot.Integrations.Calendar.Recurrence.Series.member?/1`;
   the provider test is what keeps Google and Outlook, which address an
   occurrence by its own id, editable.
 
@@ -143,7 +143,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   defp written_as_whole_series?(event) do
     ProviderConfig.caldav_based?(Map.get(event, :provider)) and
-      EventMove.part_of_series?(event)
+      Series.member?(event)
   end
 
   defp stored_row(event) do

@@ -53,7 +53,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
-  alias Tymeslot.Utils.MapKeys
+  alias Tymeslot.Integrations.Calendar.Recurrence.Series
 
   require Logger
 
@@ -85,42 +85,8 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   """
   @spec ensure_movable(map()) :: :ok | {:error, :recurring_event}
   def ensure_movable(event) do
-    if part_of_series?(event), do: {:error, :recurring_event}, else: :ok
+    if Series.member?(event), do: {:error, :recurring_event}, else: :ok
   end
-
-  @doc """
-  Whether `event` belongs to a repeating series, as a series, as one of its
-  expanded occurrences, or as an occurrence edited on its own.
-
-  The recurrence id and the Exchange item type have no columns of their own:
-  the sync keeps them in `provider_metadata`, atom-keyed when freshly
-  normalised and string-keyed once it has been through the database. Both
-  shapes are read here, so a caller may pass a cached row or a normalised
-  event.
-
-  `Tymeslot.CalendarGrid.EventEdit.ensure_editable/1` asks the same
-  question of an edit, which is why this is public rather than folded into
-  `ensure_movable/1`.
-  """
-  @spec part_of_series?(map()) :: boolean()
-  def part_of_series?(event) do
-    metadata = Map.get(event, :provider_metadata)
-
-    Enum.any?(
-      [
-        Map.get(event, :recurrence_rule),
-        Map.get(event, :recurring_event_id),
-        MapKeys.get_binary(metadata, :recurrence_id)
-      ],
-      &present?/1
-    ) or exchange_series_item?(MapKeys.get_binary(metadata, :calendar_item_type))
-  end
-
-  # `RecurringMaster`, `Occurrence` and `Exception` all belong to a series. A
-  # server that omits the element leaves no type, which reads as a single item.
-  defp exchange_series_item?(nil), do: false
-  defp exchange_series_item?("Single"), do: false
-  defp exchange_series_item?(_series_type), do: true
 
   @doc """
   Moves `event` to `destination`'s integration, on the calendar named by
@@ -297,8 +263,4 @@ defmodule Tymeslot.CalendarGrid.EventMove do
         :left_behind
     end
   end
-
-  defp present?(nil), do: false
-  defp present?(""), do: false
-  defp present?(_value), do: true
 end
