@@ -20,6 +20,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
 
   use Oban.Worker, queue: :emails, max_attempts: 5
 
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.EmailScheduler.CalendarScheduler
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
@@ -143,12 +144,12 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
     {method, sequence} =
       IcalMethod.for(ical_action(action_atom), current_sequence: event.ical_sequence)
 
-    declined = declined_emails(event)
+    excluded = MapSet.union(declined_emails(event), owner_emails(event))
 
     recipient_emails =
       summary
       |> recipients_for(action_atom)
-      |> Enum.reject(fn attendee -> recipient_email(attendee) in declined end)
+      |> Enum.reject(fn attendee -> recipient_email(attendee) in excluded end)
       |> Enum.map(&Map.get(&1, :email))
       |> Enum.reject(&is_nil/1)
 
@@ -203,6 +204,24 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   end
 
   defp declined_emails(_event), do: MapSet.new()
+
+  # The address of the user whose integration owns this event, lower-cased to
+  # match `recipient_email/1`. Google and Outlook both list the organiser as an
+  # attendee of events created in their own UI, so without this the person who
+  # made the edit is emailed about their own edit, with an ICS attached.
+  #
+  # Deliberately the *owner's* address, not the event's `organizer` field: a
+  # user can be an attendee of someone else's event that syncs into their grid,
+  # and editing that one must still notify the real organiser.
+  defp owner_emails(event) do
+    with id when is_integer(id) <- user_id_for(event),
+         {:ok, user} <- UserQueries.get_user(id),
+         email when is_binary(email) <- user.email do
+      MapSet.new([email |> String.trim() |> String.downcase()])
+    else
+      _no_owner -> MapSet.new()
+    end
+  end
 
   defp declined?(attendee) do
     status = Map.get(attendee, :response_status) || Map.get(attendee, "response_status")
