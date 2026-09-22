@@ -8,6 +8,8 @@ defmodule Tymeslot.Integrations.Calendar.Baikal.ProviderTest do
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.Baikal.Provider
 
+  setup :verify_on_exit!
+
   setup do
     CalendarCircuitBreaker.reset(:baikal)
     :ok

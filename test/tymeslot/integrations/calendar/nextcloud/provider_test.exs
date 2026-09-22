@@ -8,6 +8,8 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
   alias Tymeslot.Integrations.Calendar.Nextcloud.Provider
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
 
+  setup :verify_on_exit!
+
   setup do
     CalendarCircuitBreaker.reset(:nextcloud)
     :ok

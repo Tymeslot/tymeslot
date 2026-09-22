@@ -28,6 +28,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
   # Video room and provider writes run in a Task; allow for a busy test machine.
   @task_timeout 5_000
 
+  setup :verify_on_exit!
+
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
     _profile = insert(:profile, user: user, timezone: "Etc/UTC")
