@@ -21,6 +21,12 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   Outlook have no equivalent: their updates replace the event with the
   payload, and what the cache does not model is still lost there.
 
+  Attendees are the one exception to "always the whole event". Outlook's
+  update is a `PATCH` and a patched CalDAV document keeps what the payload
+  leaves out, so on those writes the guest list is sent only by an edit that
+  changes it: a Graph `PATCH` that carries attendees resets every reply, and
+  a CalDAV write that carries them states the new complete list.
+
   ## Recurring events on the CalDAV family
 
   A CalDAV series lives in one resource: the master VEVENT carrying the
@@ -115,6 +121,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
         payload
         |> maybe_put_scope(Keyword.get(opts, :recurrence_scope))
         |> put_stored_document(stored)
+        |> scope_attendees(event, changes)
 
       write_to_provider(user_id, event, updated, payload)
     else
@@ -164,6 +171,30 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
        do: Map.merge(payload, %{raw_ical: raw_ical, etag: row.etag})
 
   defp put_stored_document(payload, _never_synced), do: payload
+
+  # Google's `events.update` is a `PUT`, so its payload has to carry the guest
+  # list on every write or the guests are deleted. Outlook's `PATCH` and a
+  # patched CalDAV document are merges instead: a key the payload leaves out
+  # keeps its value on the server. There, sending the list with an edit that
+  # is not about attendees can only do harm. Graph replaces the collection,
+  # and every reply with it, and a stale or empty cached list would take the
+  # guests off the event. So those writes carry attendees only when the edit
+  # changes them. A CalDAV event with no stored document is rebuilt from the
+  # payload, not patched, and keeps the whole list.
+  defp scope_attendees(payload, _event, %{attendees: _attendees}), do: payload
+
+  defp scope_attendees(payload, event, _changes) do
+    if merges_attendees?(Map.get(event, :provider), payload),
+      do: Map.delete(payload, :attendees),
+      else: payload
+  end
+
+  defp merges_attendees?(provider, _payload) when provider in [:outlook, "outlook"], do: true
+
+  defp merges_attendees?(provider, %{raw_ical: _stored_document}),
+    do: ProviderConfig.caldav_based?(provider)
+
+  defp merges_attendees?(_provider, _payload), do: false
 
   defp write_to_provider(user_id, event, updated, payload) do
     case CalendarEvents.update_event(event.uid, payload, {event.calendar_integration_id, user_id}) do

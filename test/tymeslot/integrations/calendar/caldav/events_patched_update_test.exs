@@ -48,7 +48,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsPatchedUpdateTest do
   """
 
   # The payload the calendar grid sends for a rename: the whole event as the
-  # cache models it, plus the stored document and the ETag it came with.
+  # cache models it, plus the stored document and the ETag it came with. The
+  # attendee list is the one exception: a patched write carries `:attendees`
+  # only when the edit changes the guest list (`CalendarGrid.EventEdit`).
   defp rename_payload(extra \\ %{}) do
     Map.merge(
       %{
@@ -58,7 +60,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsPatchedUpdateTest do
         start_time: ~U[2026-09-10 09:00:00Z],
         end_time: ~U[2026-09-10 10:00:00Z],
         all_day: false,
-        attendees: [%{"email" => "ada@example.com", "name" => "Ada"}],
         reminders: [],
         recurrence_rule: nil,
         recurrence_exceptions: [],
