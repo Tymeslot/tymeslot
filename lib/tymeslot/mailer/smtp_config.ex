@@ -330,6 +330,13 @@ defmodule Tymeslot.Mailer.SMTPConfig do
     base = [
       # Modern TLS versions only (TLS 1.2 and 1.3)
       versions: [:"tlsv1.2", :"tlsv1.3"],
+      # Do not require the TLS 1.3 middlebox compatibility ChangeCipherSpec.
+      # OTP's client defaults to `true` and then *demands* that record, but
+      # RFC 8446 appendix D.4 makes it optional: a server that omits it is
+      # rejected with a fatal `Failed to assert middlebox server message`
+      # alert, and every email fails with `:tls_failed`. The mode only ever
+      # existed to placate legacy middleboxes, so disabling it costs nothing.
+      middlebox_comp_mode: false,
       # Server Name Indication for hostname verification (prevents MITM)
       server_name_indication: String.to_charlist(smtp_host),
       # Maximum certificate chain depth: root CA + up to 3 intermediates + server cert
