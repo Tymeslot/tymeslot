@@ -21,6 +21,18 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
+  Gets a single user and locks their row (`FOR UPDATE`) until the enclosing
+  transaction ends. Must be called inside `Repo.transaction/1`.
+  """
+  @spec get_user_for_update(integer()) :: {:ok, UserSchema.t()} | {:error, :not_found}
+  def get_user_for_update(id) do
+    case Repo.one(from(u in UserSchema, where: u.id == ^id, lock: "FOR UPDATE")) do
+      nil -> {:error, :not_found}
+      user -> {:ok, user}
+    end
+  end
+
+  @doc """
   Gets a single user with the profile preloaded.
 
   Same contract as `get_user/1`. Used by the email worker handlers, which need

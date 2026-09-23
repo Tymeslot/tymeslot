@@ -231,8 +231,7 @@ msgstr "Пароль"
 msgid "Password Reset Successfully"
 msgstr "Пароль успішно скинуто"
 
-#: lib/tymeslot/auth/email_change.ex
-#: lib/tymeslot/auth/password_update.ex
+#: lib/tymeslot/auth/validation.ex
 #: lib/tymeslot/security/field_validators/password_validator.ex
 #: lib/tymeslot_web/live/auth_live.ex
 #, elixir-autogen, elixir-format
@@ -724,8 +723,7 @@ msgstr "Обліковий запис створено, але не вдалос
 msgid "An error occurred. Please try again."
 msgstr "Сталася помилка. Спробуйте ще раз."
 
-#: lib/tymeslot/auth/email_change.ex
-#: lib/tymeslot/auth/password_update.ex
+#: lib/tymeslot/auth/validation.ex
 #, elixir-autogen, elixir-format
 msgid "Current password is incorrect"
 msgstr "Поточний пароль неправильний"

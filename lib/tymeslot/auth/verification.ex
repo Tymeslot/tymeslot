@@ -11,6 +11,7 @@ defmodule Tymeslot.Auth.Verification do
   alias Tymeslot.Auth.Helpers.AccountLogging
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Repo
   alias Tymeslot.Security.{RateLimiter, SecurityLogger, Token}
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Helpers.ClientIP
@@ -64,23 +65,33 @@ defmodule Tymeslot.Auth.Verification do
   end
 
   # Returns the user as the token found them (still carrying `signup_ip`)
-  # alongside the verified user.
+  # alongside the verified user. The token's row is locked while it is
+  # spent, so two clicks on the same link cannot both verify.
   defp verify_by_token(token) do
-    case AccountTokens.fetch(:verification, token) do
-      {:ok, user} ->
-        with {:ok, verified_user} <- verify_fetched_user(user) do
-          {:ok, user, verified_user}
+    result =
+      Repo.transaction(fn ->
+        case AccountTokens.fetch(:verification, token, lock: true) do
+          {:ok, user} ->
+            case verify_fetched_user(user) do
+              {:ok, verified_user} -> {user, verified_user}
+              {:error, reason} -> Repo.rollback(reason)
+            end
+
+          {:error, :invalid_token} ->
+            Logger.warning("Email verification failed - invalid token")
+            AccountLogging.log_operation_failure("verification", "token", :invalid_token)
+            Repo.rollback(:invalid_token)
+
+          {:error, :token_expired, user} ->
+            Logger.warning("Email verification failed - token expired")
+            AccountLogging.log_operation_failure("email_verification", user.id, :token_expired)
+            Repo.rollback(:token_expired)
         end
+      end)
 
-      {:error, :invalid_token} = error ->
-        Logger.warning("Email verification failed - invalid token")
-        AccountLogging.log_operation_failure("verification", "token", :invalid_token)
-        error
-
-      {:error, :token_expired, user} ->
-        Logger.warning("Email verification failed - token expired")
-        AccountLogging.log_operation_failure("email_verification", user.id, :token_expired)
-        {:error, :token_expired}
+    case result do
+      {:ok, {user, verified_user}} -> {:ok, user, verified_user}
+      {:error, reason} -> {:error, reason}
     end
   end
 

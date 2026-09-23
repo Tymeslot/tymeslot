@@ -231,8 +231,7 @@ msgstr "Passwort"
 msgid "Password Reset Successfully"
 msgstr "Passwort erfolgreich zurückgesetzt"
 
-#: lib/tymeslot/auth/email_change.ex
-#: lib/tymeslot/auth/password_update.ex
+#: lib/tymeslot/auth/validation.ex
 #: lib/tymeslot/security/field_validators/password_validator.ex
 #: lib/tymeslot_web/live/auth_live.ex
 #, elixir-autogen, elixir-format
@@ -723,8 +722,7 @@ msgstr "Konto erstellt, aber die Profileinrichtung ist fehlgeschlagen. Bitte wen
 msgid "An error occurred. Please try again."
 msgstr "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
 
-#: lib/tymeslot/auth/email_change.ex
-#: lib/tymeslot/auth/password_update.ex
+#: lib/tymeslot/auth/validation.ex
 #, elixir-autogen, elixir-format
 msgid "Current password is incorrect"
 msgstr "Das aktuelle Passwort ist falsch"

@@ -223,15 +223,21 @@ defmodule Tymeslot.Auth.UserSchema do
   password to lock them out. `reset_token_used_at` is left alone so the audit
   trail of a consumed reset survives.
   """
+  @credential_token_fields [
+    :reset_token_hash,
+    :reset_sent_at,
+    :pending_email,
+    :email_change_token_hash,
+    :email_change_sent_at
+  ]
+
   @spec revoke_credential_tokens(Ecto.Changeset.t()) :: Ecto.Changeset.t()
   def revoke_credential_tokens(%Ecto.Changeset{} = changeset) do
-    change(changeset,
-      reset_token_hash: nil,
-      reset_sent_at: nil,
-      pending_email: nil,
-      email_change_token_hash: nil,
-      email_change_sent_at: nil
-    )
+    # `force_change/3`, not `change/2`: `change/2` drops a change equal to the
+    # struct's current value, so a caller holding a stale user (one loaded
+    # before a token was issued, where the field still reads nil) would write
+    # nothing and leave the newer token live.
+    Enum.reduce(@credential_token_fields, changeset, &force_change(&2, &1, nil))
   end
 
   @doc """
