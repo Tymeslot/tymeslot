@@ -26,7 +26,7 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
   import Tymeslot.Factory
 
   alias Ecto.Adapters.SQL.Sandbox
-  alias Tymeslot.AppSettings.AppSettingsSchema
+  alias Tymeslot.AppSettings.{AppSettingsQueries, AppSettingsSchema}
   alias Tymeslot.Auth.{AdminBootstrap, UserSchema}
   alias Tymeslot.Repo
 
@@ -76,6 +76,43 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
     results = Enum.map(tasks, &Task.await(&1, 10_000))
 
     assert Enum.count(results, & &1.is_admin) == 1
+  end
+
+  # Every sign-up on an established install passes through here, so it must
+  # not queue on the global bootstrap lock. Another connection holds that lock
+  # for the whole test; a sign-up that tried to take it would never return.
+  test "a sign-up on a bootstrapped install does not wait for the bootstrap lock" do
+    AppSettingsQueries.mark_admin_bootstrapped()
+    user = insert(:user)
+    holder = hold_bootstrap_lock()
+
+    task = Task.async(fn -> AdminBootstrap.maybe_promote_first_user(user) end)
+
+    try do
+      assert {:ok, {:ok, returned}} = Task.yield(task, 2_000)
+      refute returned.is_admin
+    after
+      Task.shutdown(task, :brutal_kill)
+      send(holder, :release)
+    end
+  end
+
+  defp hold_bootstrap_lock do
+    parent = self()
+
+    holder =
+      spawn(fn ->
+        Sandbox.unboxed_run(Repo, fn ->
+          Repo.transaction(fn ->
+            AppSettingsQueries.lock_admin_bootstrap()
+            send(parent, :lock_held)
+            receive do: (:release -> :ok)
+          end)
+        end)
+      end)
+
+    assert_receive :lock_held, 5_000
+    holder
   end
 
   defp sign_up(parent, email) do

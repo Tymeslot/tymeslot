@@ -16,8 +16,10 @@ defmodule Tymeslot.Auth.AdminBootstrap do
   marked bootstrapped by its migration.
 
   Concurrent first sign-ups are serialised by a transaction-scoped advisory
-  lock taken before the timestamp is read: the second waits for the first to
-  commit and then finds the bootstrap closed, so exactly one becomes admin.
+  lock, with the timestamp re-read once it is held: the second waits for the
+  first to commit and then finds the bootstrap closed, so exactly one becomes
+  admin. Once the bootstrap is closed, a sign-up reads the timestamp without
+  the lock and returns at once, so an established install never queues on it.
   """
 
   require Logger
@@ -31,8 +33,8 @@ defmodule Tymeslot.Auth.AdminBootstrap do
   `user` is its only user, and closes the bootstrap either way. Once closed,
   returns the user unchanged.
 
-  Call it in the same transaction as the user insert: the advisory lock it
-  takes is held until that transaction ends, which is what serialises
+  Call it in the same transaction as the user insert: while the bootstrap is
+  still open, the advisory lock it takes is held until that transaction ends, which is what serialises
   concurrent sign-ups. Called outside a transaction it opens its own, which is
   safe but serialises nothing beyond this call. Two calling conventions are
   supported:
@@ -49,6 +51,18 @@ defmodule Tymeslot.Auth.AdminBootstrap do
   @spec maybe_promote_first_user(UserSchema.t(), module()) ::
           {:ok, UserSchema.t()} | {:error, Ecto.Changeset.t()}
   def maybe_promote_first_user(%UserSchema{} = user, repo \\ Repo) do
+    # Fast path: once closed the bootstrap never reopens, so an established
+    # install answers without queueing on the global lock.
+    if AppSettingsQueries.admin_bootstrapped?(repo) do
+      {:ok, user}
+    else
+      bootstrap_under_lock(user, repo)
+    end
+  end
+
+  # Re-checks under the lock: another sign-up may have closed the bootstrap
+  # between the unlocked read and taking the lock.
+  defp bootstrap_under_lock(user, repo) do
     repo.transaction(fn ->
       AppSettingsQueries.lock_admin_bootstrap(repo)
 

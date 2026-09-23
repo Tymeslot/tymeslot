@@ -109,10 +109,30 @@ defmodule TymeslotWeb.Plugs.AdditionalDashboardPlugsTest do
       assert AdditionalDashboardPlugs.call(conn, []).assigns[:passed_through]
     end
 
-    test "ignores a value that is neither a list nor a plug", %{conn: conn} do
+    # These plugs are deployment gates. A configuration they cannot be run
+    # from used to be skipped, which let every request through the gate.
+    test "raises on a value that is neither a list nor a plug", %{conn: conn} do
       setup_config(:tymeslot, dashboard_additional_plugs: %{not: "a plug"})
 
-      refute AdditionalDashboardPlugs.call(conn, []).halted
+      assert_raise ArgumentError, ~r/:dashboard_additional_plugs/, fn ->
+        AdditionalDashboardPlugs.call(conn, [])
+      end
+    end
+
+    test "raises on an entry that is neither a module nor a {module, opts} tuple", %{conn: conn} do
+      setup_config(:tymeslot, dashboard_additional_plugs: [PassthroughPlug, "MyApp.Plugs.Typo"])
+
+      assert_raise ArgumentError, ~r/unrecognised :dashboard_additional_plugs entry/, fn ->
+        AdditionalDashboardPlugs.call(conn, [])
+      end
+    end
+
+    test "raises before running any plug, so a gate is never half-applied", %{conn: conn} do
+      setup_config(:tymeslot,
+        dashboard_additional_plugs: [PassthroughPlug, {HaltingPlug, [], :extra}]
+      )
+
+      assert_raise ArgumentError, fn -> AdditionalDashboardPlugs.call(conn, []) end
     end
   end
 end
