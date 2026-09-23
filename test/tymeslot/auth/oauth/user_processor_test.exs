@@ -1,200 +1,169 @@
 defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
+  @moduledoc """
+  How a provider's userinfo becomes a sign-in identity: which ID is used and
+  which emails are trusted. Only the provider's HTTP endpoints are stubbed.
+  """
+
   use ExUnit.Case, async: false
+
   @moduletag :auth
 
+  import Tymeslot.Test.OAuthProviderStub
+
+  alias Plug.Conn
   alias Tymeslot.Auth.OAuth.UserProcessor
 
-  describe "process_user/2" do
-    test ":oauth with sub claim" do
-      user_info = %{
+  setup :setup_providers
+
+  describe "SSO" do
+    test "uses the sub claim and trusts an email with email_verified true" do
+      stub_sso(%{
         "sub" => "user-123",
         "email" => "sso@example.com",
         "name" => "SSO User",
         "email_verified" => true
-      }
+      })
 
-      assert {:ok, user} = UserProcessor.process_user(:oauth, user_info)
+      assert {:ok, identity} = UserProcessor.fetch_identity(:oauth, "token")
 
-      assert user.provider_uid == "user-123"
-      assert user.email == "sso@example.com"
-      assert user.name == "SSO User"
-      assert user.email_from_provider == true
+      assert identity == %{
+               provider_uid: "user-123",
+               email: "sso@example.com",
+               email_from_provider: true,
+               name: "SSO User"
+             }
     end
 
-    test ":oauth rejects id/user_id fallback when allow_id_fallback is disabled" do
-      Application.put_env(:tymeslot, :oauth_provider, allow_id_fallback: false)
+    test "sends the token as a Bearer credential" do
+      stub_sso(%{"sub" => "user-1"})
 
-      on_exit(fn -> Application.delete_env(:tymeslot, :oauth_provider) end)
+      UserProcessor.fetch_identity(:oauth, "the-token")
 
-      user_info = %{
-        "id" => "alt-456",
-        "email" => "alt@example.com",
-        "name" => "Alt User"
-      }
-
-      assert {:error, :invalid_user_info} = UserProcessor.process_user(:oauth, user_info)
+      assert_received {:provider_request, "GET", "/userinfo", _params, "Bearer the-token"}
     end
 
-    test ":oauth falls back to id when sub is missing and allow_id_fallback is enabled" do
-      Application.put_env(:tymeslot, :oauth_provider, allow_id_fallback: true)
+    test "accepts the string \"true\" for email_verified" do
+      stub_sso(%{"sub" => "4", "email" => "a@b.com", "email_verified" => "true"})
 
-      on_exit(fn -> Application.delete_env(:tymeslot, :oauth_provider) end)
-
-      user_info = %{
-        "id" => "alt-456",
-        "email" => "alt@example.com",
-        "email_verified" => true,
-        "name" => "Alt User"
-      }
-
-      assert {:ok, user} = UserProcessor.process_user(:oauth, user_info)
-
-      assert user.provider_uid == "alt-456"
-      assert user.email == "alt@example.com"
+      assert {:ok, %{email: "a@b.com", email_from_provider: true}} =
+               UserProcessor.fetch_identity(:oauth, "token")
     end
 
-    test ":oauth falls back to user_id when sub and id are missing and allow_id_fallback is enabled" do
-      Application.put_env(:tymeslot, :oauth_provider, allow_id_fallback: true)
+    for claim <- [false, "false", nil] do
+      test "drops an email whose email_verified is #{inspect(claim)}" do
+        stub_sso(%{"sub" => "2", "email" => "a@b.com", "email_verified" => unquote(claim)})
 
-      on_exit(fn -> Application.delete_env(:tymeslot, :oauth_provider) end)
-
-      user_info = %{
-        "user_id" => "uid-789",
-        "email" => "uid@example.com"
-      }
-
-      assert {:ok, user} = UserProcessor.process_user(:oauth, user_info)
-
-      assert user.provider_uid == "uid-789"
-    end
-
-    test ":oauth returns error when no identifier is available" do
-      Application.put_env(:tymeslot, :oauth_provider, allow_id_fallback: true)
-
-      on_exit(fn -> Application.delete_env(:tymeslot, :oauth_provider) end)
-
-      user_info = %{"email" => "no-id@example.com"}
-
-      assert {:error, :invalid_user_info} = UserProcessor.process_user(:oauth, user_info)
-    end
-
-    test ":oauth rejects empty string provider_uid" do
-      user_info = %{"sub" => "", "email" => "empty@example.com"}
-
-      assert {:error, :invalid_user_info} = UserProcessor.process_user(:oauth, user_info)
-    end
-
-    test ":oauth keeps the email only when email_verified is true" do
-      assert {:ok, verified} =
-               UserProcessor.process_user(:oauth, %{
-                 "sub" => "1",
-                 "email" => "a@b.com",
-                 "email_verified" => true
-               })
-
-      assert %{email: "a@b.com", email_from_provider: true} = verified
-
-      for claim <- [%{"email_verified" => false}, %{"email_verified" => "false"}, %{}] do
-        assert {:ok, unverified} =
-                 UserProcessor.process_user(
-                   :oauth,
-                   Map.merge(%{"sub" => "2", "email" => "a@b.com"}, claim)
-                 )
-
-        assert %{email: nil, email_from_provider: false} = unverified
+        assert {:ok, %{email: nil, email_from_provider: false}} =
+                 UserProcessor.fetch_identity(:oauth, "token")
       end
     end
 
-    test ":oauth accepts string \"true\" for email_verified claim" do
-      assert {:ok, user} =
-               UserProcessor.process_user(:oauth, %{
-                 "sub" => "4",
-                 "email" => "a@b.com",
-                 "email_verified" => "true"
-               })
+    for email <- [nil, "", 12_345] do
+      test "treats #{inspect(email)} as no email" do
+        stub_sso(%{"sub" => "1", "email" => unquote(email), "email_verified" => true})
 
-      assert user.email_from_provider == true
+        assert {:ok, %{email: nil, email_from_provider: false}} =
+                 UserProcessor.fetch_identity(:oauth, "token")
+      end
     end
 
-    test ":github stringifies the ID and leaves the email to /user/emails" do
-      user_info = %{"id" => 123, "email" => "gh@example.com", "name" => "GH User"}
+    test "coerces an integer sub to a string" do
+      stub_sso(%{"sub" => 12_345})
 
-      assert {:ok, user} = UserProcessor.process_user(:github, user_info)
-
-      assert user.github_user_id == "123"
-      assert user.email == nil
-      assert user.email_from_provider == false
-      assert user.name == "GH User"
+      assert {:ok, %{provider_uid: "12345"}} = UserProcessor.fetch_identity(:oauth, "token")
     end
 
-    test ":google keeps the email only when verified_email is true" do
-      user_info = %{"id" => "g-123", "email" => "g@example.com", "name" => "G User"}
+    for sub <- ["", false] do
+      test "rejects the sub #{inspect(sub)}" do
+        stub_sso(%{"sub" => unquote(sub)})
 
-      assert {:ok, verified} =
-               UserProcessor.process_user(:google, Map.put(user_info, "verified_email", true))
-
-      assert %{google_user_id: "g-123", email: "g@example.com", email_from_provider: true} =
-               verified
-
-      assert {:ok, unverified} =
-               UserProcessor.process_user(:google, Map.put(user_info, "verified_email", false))
-
-      assert %{email: nil, email_from_provider: false} = unverified
+        assert {:error, :invalid_user_info} = UserProcessor.fetch_identity(:oauth, "token")
+      end
     end
 
-    test "unknown provider returns error" do
-      assert {:error, :invalid_user_info} = UserProcessor.process_user(:unknown, %{})
+    test "ignores id and user_id unless the fallback is enabled" do
+      stub_sso(%{"id" => "alt-456", "user_id" => "uid-789"})
+
+      assert {:error, :invalid_user_info} = UserProcessor.fetch_identity(:oauth, "token")
     end
 
-    test ":oauth with integer sub claim coerces to string" do
-      user_info = %{"sub" => 12_345, "email" => "int@example.com"}
+    test "falls back to id, then user_id, when enabled" do
+      config = Application.get_env(:tymeslot, :oauth_provider)
 
-      assert {:ok, user} = UserProcessor.process_user(:oauth, user_info)
-      assert user.provider_uid == "12345"
-    end
+      Application.put_env(
+        :tymeslot,
+        :oauth_provider,
+        Keyword.put(config, :allow_id_fallback, true)
+      )
 
-    test ":oauth rejects boolean provider_uid" do
-      user_info = %{"sub" => false, "email" => "bool@example.com"}
+      stub_sso(%{"id" => "alt-456"})
+      assert {:ok, %{provider_uid: "alt-456"}} = UserProcessor.fetch_identity(:oauth, "token")
 
-      assert {:error, :invalid_user_info} = UserProcessor.process_user(:oauth, user_info)
-    end
-
-    test ":oauth rejects atom provider_uid" do
-      user_info = %{"sub" => :some_atom, "email" => "atom@example.com"}
-
-      assert {:error, :invalid_user_info} = UserProcessor.process_user(:oauth, user_info)
+      stub_sso(%{"user_id" => "uid-789"})
+      assert {:ok, %{provider_uid: "uid-789"}} = UserProcessor.fetch_identity(:oauth, "token")
     end
   end
 
-  describe "extract_email edge cases" do
-    test "nil email in user_info" do
-      assert {:ok, user} =
-               UserProcessor.process_user(:oauth, %{"sub" => "1", "email" => nil})
+  describe "Google" do
+    test "trusts the email only when verified_email is true" do
+      stub_google(%{"id" => "g-123", "email" => "g@example.com", "verified_email" => true})
 
-      assert user.email == nil
-      assert user.email_from_provider == false
+      assert {:ok, %{provider_uid: "g-123", email: "g@example.com", email_from_provider: true}} =
+               UserProcessor.fetch_identity(:google, "token")
+
+      stub_google(%{"id" => "g-123", "email" => "g@example.com", "verified_email" => false})
+
+      assert {:ok, %{email: nil, email_from_provider: false}} =
+               UserProcessor.fetch_identity(:google, "token")
+    end
+  end
+
+  describe "GitHub" do
+    test "sends the token with GitHub's token scheme" do
+      stub_github(%{"id" => 1}, [])
+
+      UserProcessor.fetch_identity(:github, "the-token")
+
+      assert_received {:provider_request, "GET", "/user", _params, "token the-token"}
+      assert_received {:provider_request, "GET", "/user/emails", _params, "token the-token"}
     end
 
-    test "empty string email" do
-      assert {:ok, user} =
-               UserProcessor.process_user(:oauth, %{
-                 "sub" => "1",
-                 "email" => "",
-                 "email_verified" => true
-               })
+    test "stringifies the numeric ID and takes the primary verified address" do
+      stub_github(%{"id" => 123, "email" => "public@example.com"}, [
+        %{"email" => "other@example.com", "primary" => false, "verified" => true},
+        %{"email" => "primary@example.com", "primary" => true, "verified" => true}
+      ])
 
-      assert user.email == nil
+      assert {:ok,
+              %{provider_uid: "123", email: "primary@example.com", email_from_provider: true}} =
+               UserProcessor.fetch_identity(:github, "token")
     end
 
-    test "non-string email value" do
-      assert {:ok, user} =
-               UserProcessor.process_user(:oauth, %{
-                 "sub" => "1",
-                 "email" => 12_345,
-                 "email_verified" => true
-               })
+    test "falls back to any verified address when the primary is unverified" do
+      stub_github(%{"id" => 1}, [
+        %{"email" => "primary@example.com", "primary" => true, "verified" => false},
+        %{"email" => "backup@example.com", "primary" => false, "verified" => true}
+      ])
 
-      assert user.email == nil
+      assert {:ok, %{email: "backup@example.com"}} =
+               UserProcessor.fetch_identity(:github, "token")
+    end
+
+    test "ignores the public profile email, which carries no verification status" do
+      stub_github(%{"id" => 1, "email" => "public@example.com"}, [])
+
+      assert {:ok, %{email: nil, email_from_provider: false}} =
+               UserProcessor.fetch_identity(:github, "token")
+    end
+
+    test "leaves the email to the user when the address list cannot be read" do
+      stub_provider(%{
+        "/user" => %{"id" => 1},
+        "/user/emails" => &Conn.send_resp(&1, 403, "{}")
+      })
+
+      assert {:ok, %{provider_uid: "1", email: nil}} =
+               UserProcessor.fetch_identity(:github, "token")
     end
   end
 end

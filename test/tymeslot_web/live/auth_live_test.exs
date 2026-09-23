@@ -401,6 +401,30 @@ defmodule TymeslotWeb.AuthLiveTest do
     %{user: user, token: token}
   end
 
+  describe "social sign-in buttons" do
+    test "offer exactly the enabled providers, by display name", %{conn: conn} do
+      social_auth = Application.get_env(:tymeslot, :social_auth, [])
+
+      Application.put_env(
+        :tymeslot,
+        :social_auth,
+        Keyword.merge(social_auth,
+          google_enabled: false,
+          github_enabled: true,
+          oauth_enabled: true
+        )
+      )
+
+      on_exit(fn -> Application.put_env(:tymeslot, :social_auth, social_auth) end)
+
+      {:ok, view, _html} = live(conn, ~p"/auth/login")
+
+      assert has_element?(view, ~s(a.btn-oauth[href="/auth/github"]), "GitHub")
+      assert has_element?(view, ~s(a.btn-oauth[href="/auth/oauth"]), "SSO")
+      refute has_element?(view, ~s(a.btn-oauth[href="/auth/google"]))
+    end
+  end
+
   describe "OAuth Completion" do
     test "renders complete registration form with session data", %{conn: conn} do
       conn =
@@ -440,7 +464,7 @@ defmodule TymeslotWeb.AuthLiveTest do
             email: "oauth_new@example.com",
             name: nil,
             email_from_provider: true,
-            github_user_id: "gh_new_123",
+            provider_uid: "gh_new_123",
             created_at: System.system_time(:second)
           }
         })

@@ -93,7 +93,7 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
     end
 
     test "names the generic provider by its display name", %{conn: conn} do
-      pending = pending(provider: "oauth", github_user_id: nil, provider_uid: "sub-12345")
+      pending = pending(provider: "oauth", provider_uid: "sub-12345")
 
       conn = complete(conn, pending, %{})
 
@@ -152,7 +152,7 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
         email: "new@example.com",
         name: "New User",
         email_from_provider: true,
-        github_user_id: "12345",
+        provider_uid: "12345",
         created_at: System.system_time(:second)
       },
       Map.new(overrides)

@@ -9,9 +9,7 @@ defmodule TymeslotWeb.OAuthController do
   require Logger
 
   alias Tymeslot.Auth.{AuthActions, SocialAuthentication}
-  alias Tymeslot.Auth.OAuth.{FlowHandler, GenericOAuth, GitHub, Google}
-  alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
-  alias Tymeslot.Auth.OAuth.URLs
+  alias Tymeslot.Auth.OAuth.{FlowHandler, Providers}
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.{RateLimiter, SecurityLogger}
   alias TymeslotWeb.AuthControllerHelpers
@@ -48,16 +46,12 @@ defmodule TymeslotWeb.OAuthController do
     end
   end
 
-  defp social_auth_enabled?(provider), do: SocialAuthentication.provider_enabled?(provider)
+  defp social_auth_enabled?(provider), do: Providers.enabled?(provider)
 
   defp do_provider_auth(conn, provider) do
-    redirect_uri = URLs.callback_url(conn, URLs.callback_path(provider))
-    {updated_conn, authorize_url} = providers()[provider].module.authorize_url(conn, redirect_uri)
+    {updated_conn, authorize_url} = FlowHandler.authorize(conn, provider)
     redirect(updated_conn, external: authorize_url)
   end
-
-  defp oauth_callback_module,
-    do: Application.get_env(:tymeslot, :oauth_callback_module, OAuthHelper)
 
   defp unsupported_provider(conn, provider, redirect_path) do
     conn
@@ -172,7 +166,7 @@ defmodule TymeslotWeb.OAuthController do
 
     conn
     |> delete_session(:oauth_intent)
-    |> oauth_callback_module().handle_oauth_callback(%{
+    |> FlowHandler.handle_oauth_callback(%{
       code: code,
       state: state,
       provider: provider
@@ -339,7 +333,7 @@ defmodule TymeslotWeb.OAuthController do
   end
 
   @spec respond_to_oauth_result(
-          Tymeslot.Auth.OAuth.HelperBehaviour.flow_result(),
+          FlowHandler.flow_result(),
           keyword()
         ) :: Plug.Conn.t()
   defp respond_to_oauth_result({:ok, authed_conn, provider}, paths) do
@@ -442,7 +436,7 @@ defmodule TymeslotWeb.OAuthController do
 
   @spec provider_name(provider() | String.t()) :: String.t()
 
-  defp provider_name(provider), do: providers()[provider].name
+  defp provider_name(provider), do: Providers.name(provider)
 
   @spec get_redirect_paths(Plug.Conn.t()) :: keyword()
   defp get_redirect_paths(conn) do
@@ -462,19 +456,9 @@ defmodule TymeslotWeb.OAuthController do
   end
 
   defp validate_oauth_provider(provider) do
-    case SocialAuthentication.parse_provider(provider) do
+    case Providers.parse(provider) do
       {:ok, provider_atom} -> {:ok, provider_atom}
       {:error, :unsupported_provider} -> {:error, :unsupported_oauth_provider}
     end
-  end
-
-  # A function rather than a module attribute: provider modules held in an
-  # attribute become compile-time dependencies of this controller.
-  defp providers do
-    %{
-      github: %{module: GitHub, name: "GitHub"},
-      google: %{module: Google, name: "Google"},
-      oauth: %{module: GenericOAuth, name: "SSO"}
-    }
   end
 end

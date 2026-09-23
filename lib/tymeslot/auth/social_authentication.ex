@@ -1,28 +1,17 @@
 defmodule Tymeslot.Auth.SocialAuthentication do
   @moduledoc """
-  Social sign-in rules that sit outside the provider handshake: which
-  providers are switched on, email availability, and completing a
-  registration from the details a provider callback left in the session.
+  Social sign-in rules that sit outside the provider handshake: email
+  availability, and completing a registration from the details a provider
+  callback left in the session.
   """
 
-  alias Tymeslot.AppSettings
-  alias Tymeslot.Auth.OAuth.UserRegistration
+  alias Tymeslot.Auth.OAuth.{Providers, UserRegistration}
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Config
 
   require Logger
 
-  @type provider :: :github | :google | :oauth
-
-  @provider_ids %{"github" => :github, "google" => :google, "oauth" => :oauth}
-
-  # The admin setting that switches each provider on. Read at request time:
-  # an admin can toggle it without a restart.
-  @enabled_settings %{
-    github: :github_auth_enabled,
-    google: :google_auth_enabled,
-    oauth: :oauth_auth_enabled
-  }
+  @type provider :: Providers.provider()
 
   # How long the complete-registration form may be left open after the
   # provider callback.
@@ -42,24 +31,6 @@ defmodule Tymeslot.Auth.SocialAuthentication do
           | term()
 
   @doc """
-  Resolves a provider URL segment (`"github"`) to its atom.
-  """
-  @spec parse_provider(term()) :: {:ok, provider()} | {:error, :unsupported_provider}
-  def parse_provider(provider) do
-    case Map.fetch(@provider_ids, provider) do
-      {:ok, provider_atom} -> {:ok, provider_atom}
-      :error -> {:error, :unsupported_provider}
-    end
-  end
-
-  @doc """
-  Whether the admin has switched sign-in with `provider` on.
-  """
-  @spec provider_enabled?(provider()) :: boolean()
-  def provider_enabled?(provider),
-    do: AppSettings.get(Map.fetch!(@enabled_settings, provider)) == true
-
-  @doc """
   Completes a social registration from the pending entry the provider
   callback stored and the complete-registration form's `params`.
 
@@ -76,7 +47,7 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   def complete_registration(pending, params, metadata) do
     with :ok <- check_registration_enabled(),
          {:ok, pending} <- check_pending(pending),
-         {:ok, provider} <- parse_provider(pending[:provider]),
+         {:ok, provider} <- Providers.parse(pending[:provider]),
          :ok <- check_provider_enabled(provider),
          :ok <- check_fresh(pending) do
       oauth_data = build_oauth_data(pending, params)
@@ -133,7 +104,7 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   defp check_pending(_missing), do: {:error, :missing_pending_registration}
 
   defp check_provider_enabled(provider) do
-    if provider_enabled?(provider), do: :ok, else: {:error, {:provider_disabled, provider}}
+    if Providers.enabled?(provider), do: :ok, else: {:error, {:provider_disabled, provider}}
   end
 
   # An entry without `created_at` predates the expiry and is treated as stale.
@@ -156,8 +127,6 @@ defmodule Tymeslot.Auth.SocialAuthentication do
       email:
         if(email_from_provider, do: pending[:email], else: get_in(params, ["auth", "email"])),
       email_from_provider: email_from_provider,
-      github_user_id: pending[:github_user_id],
-      google_user_id: pending[:google_user_id],
       provider_uid: pending[:provider_uid],
       name: pending[:name] || "",
       terms_accepted:

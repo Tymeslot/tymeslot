@@ -1,6 +1,7 @@
 defmodule Tymeslot.Auth.OAuth.FlowHandler do
   @moduledoc """
-  Orchestrates the OAuth callback flow, returning tagged result tuples.
+  Orchestrates social sign-in: starting the flow at the provider, handling
+  its callback, and signing an account in. Returns tagged result tuples.
 
   All presentation concerns (flash messages, HTTP redirects) are the
   responsibility of the calling controller.
@@ -8,14 +9,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
 
   require Logger
 
-  alias Tymeslot.Auth.OAuth.{
-    Client,
-    HelperBehaviour,
-    State,
-    URLs,
-    UserProcessor,
-    UserRegistration
-  }
+  alias Tymeslot.Auth.OAuth.{Client, Providers, State, URLs, UserProcessor, UserRegistration}
 
   alias Tymeslot.Auth.{Session, Verification}
   alias Tymeslot.Clock
@@ -23,9 +17,27 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
 
-  @type provider :: :github | :google | :oauth
-  @type flow_result :: HelperBehaviour.flow_result()
-  @type oauth_callback_params :: HelperBehaviour.oauth_callback_params()
+  @type provider :: Providers.provider()
+
+  @type oauth_callback_params :: %{code: String.t(), state: String.t(), provider: provider()}
+
+  @type flow_result ::
+          {:ok, Plug.Conn.t(), provider()}
+          | {:verification_required, Plug.Conn.t(), provider(), :sent | :rate_limited | :failed}
+          | {:registration_required, Plug.Conn.t(), provider(), map()}
+          | {:error, :invalid_state, Plug.Conn.t()}
+          | {:error, :oauth_error | :general_error | :session_failed, provider(), Plug.Conn.t()}
+          | {:error, :registration_disabled | :email_already_taken, provider(), Plug.Conn.t()}
+
+  @doc """
+  Starts a sign-in: issues the state and PKCE verifier into the session and
+  returns the provider's authorise URL.
+  """
+  @spec authorize(Plug.Conn.t(), provider()) :: {Plug.Conn.t(), String.t()}
+  def authorize(conn, provider) do
+    {conn, flow} = State.generate_and_store_state(conn)
+    {conn, Client.authorize_url(provider, callback_url(conn, provider), flow)}
+  end
 
   @doc """
   Handles the complete OAuth callback flow.
@@ -33,18 +45,19 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   Returns a tagged tuple describing the outcome. Callers are responsible for
   translating each variant into flash messages and HTTP redirects:
 
-  - `{:ok, conn, provider}` — session established; redirect to success path.
-  - `{:verification_required, conn, provider, delivery}` — the account's
+  - `{:ok, conn, provider}` - session established; redirect to success path.
+  - `{:verification_required, conn, provider, delivery}` - the account's
     email is unverified; no session, see `sign_in/3`.
-  - `{:registration_required, conn, provider, params}` — new user; redirect to
+  - `{:registration_required, conn, provider, params}` - new user; redirect to
     the registration form, passing `params` as query string.
-  - `{:error, :invalid_state, conn}` — CSRF state mismatch.
-  - `{:error, :oauth_error, provider, conn}` — OAuth2 protocol error.
-  - `{:error, :general_error, provider, conn}` — unexpected error during token
-    exchange or user processing.
-  - `{:error, :session_failed, provider, conn}` — OAuth succeeded but session
+  - `{:error, :invalid_state, conn}` - CSRF state mismatch.
+  - `{:error, :oauth_error, provider, conn}` - the provider refused the code
+    exchange or a request made with its token.
+  - `{:error, :general_error, provider, conn}` - the provider could not be
+    reached, or its response was unusable.
+  - `{:error, :session_failed, provider, conn}` - OAuth succeeded but session
     creation failed.
-  - `{:error, :email_already_taken, provider, conn}` — no account carries this
+  - `{:error, :email_already_taken, provider, conn}` - no account carries this
     provider ID, but the email belongs to an account created another way.
   """
   @spec handle_oauth_callback(Plug.Conn.t(), oauth_callback_params()) :: flow_result()
@@ -99,30 +112,27 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   end
 
   defp process_oauth_response(conn, code, code_verifier, provider) do
-    full_callback_url = URLs.callback_url(conn, URLs.callback_path(provider))
-    client = Client.build(provider, full_callback_url, "")
-
-    with {:ok, client} <- Client.exchange_code_for_token(client, code, code_verifier),
-         {:ok, user_info} <- Client.get_user_info(client, provider),
-         {:ok, user} <- UserProcessor.process_user(provider, user_info) do
-      enhanced_user = UserProcessor.enhance_user_data(provider, user, client)
-      {:ok, conn, enhanced_user}
+    with {:ok, token} <-
+           Client.exchange_code(provider, code, code_verifier, callback_url(conn, provider)),
+         {:ok, identity} <- UserProcessor.fetch_identity(provider, token) do
+      {:ok, conn, identity}
     else
-      {:error, %OAuth2.Error{} = error} ->
-        Logger.error("OAuth error", provider: to_string(provider), error: inspect(error))
-        log_social_auth(provider, false, conn, %{error_reason: "oauth_error"})
-        {:error, :oauth_error, provider, conn}
-
       {:error, reason} ->
+        error =
+          if match?({:provider_rejected, _status}, reason), do: :oauth_error, else: :general_error
+
         Logger.error("OAuth authentication error",
           provider: to_string(provider),
           reason: inspect(reason)
         )
 
-        log_social_auth(provider, false, conn, %{error_reason: "general_error"})
-        {:error, :general_error, provider, conn}
+        log_social_auth(provider, false, conn, %{error_reason: Atom.to_string(error)})
+        {:error, error, provider, conn}
     end
   end
+
+  defp callback_url(conn, provider),
+    do: URLs.callback_url(conn, Providers.callback_path(provider))
 
   defp complete_oauth_flow(conn, user, provider) do
     case UserRegistration.find_existing_user(provider, user) do
@@ -175,7 +185,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
     case Session.create_session(conn, %{id: user.id}) do
       {:ok, session_conn, _token} ->
         # Funnel: count OAuth logins alongside password logins. Categorical only
-        # (method + provider) — never any user identifier.
+        # (method + provider) - never any user identifier.
         :telemetry.execute([:tymeslot, :auth, :login_completed], %{count: 1}, %{
           method: "oauth",
           provider: to_string(provider)
@@ -206,23 +216,12 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
     end
   end
 
+  # A new identity always goes through the complete-registration form, even
+  # with every field known: the account is created on explicit confirmation,
+  # never silently.
   defp handle_new_user_registration(conn, provider, user) do
     if Config.registration_enabled?() do
-      case UserRegistration.check_oauth_requirements(provider, user) do
-        {:missing, _missing_fields} ->
-          {:registration_required, conn, provider, build_registration_data(provider, user)}
-
-        :complete ->
-          # All required fields are present but no account exists yet. Route the
-          # user through the registration form for explicit confirmation rather
-          # than silently auto-creating an account.
-          Logger.warning(
-            "OAuth user data is complete but no account found; routing to registration",
-            provider: to_string(provider)
-          )
-
-          {:registration_required, conn, provider, build_registration_data(provider, user)}
-      end
+      {:registration_required, conn, provider, build_registration_data(provider, user)}
     else
       log_social_auth(provider, false, conn, %{
         email: Map.get(user, :email),
@@ -241,9 +240,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
       email: user.email || "",
       name: user.name || "",
       email_from_provider: user.email_from_provider == true,
-      provider_uid: Map.get(user, :provider_uid),
-      github_user_id: Map.get(user, :github_user_id),
-      google_user_id: Map.get(user, :google_user_id),
+      provider_uid: user.provider_uid,
       created_at: DateTime.to_unix(Clock.utc_now())
     }
   end

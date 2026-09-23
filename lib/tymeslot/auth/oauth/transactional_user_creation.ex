@@ -14,6 +14,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   require Logger
 
   alias Tymeslot.Auth.{AdminBootstrap, UserQueries, UserSchema}
+  alias Tymeslot.Auth.OAuth.Providers
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
@@ -28,19 +29,18 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   including one a concurrent request inserted first.
 
   ## Parameters
-  - provider: The OAuth provider (:github or :google)
+  - provider: The OAuth provider (:github, :google or :oauth)
   - auth_params: Map containing user authentication parameters
 
   ## Returns
   - {:ok, %{user: user, created: boolean}} where created indicates if user was newly created
   - {:error, reason} on failure
   """
-  @spec find_or_create_oauth_user(atom(), oauth_auth_params(), oauth_profile_params(), keyword()) ::
+  @spec find_or_create_oauth_user(atom(), oauth_auth_params(), oauth_profile_params()) ::
           {:ok, %{user: UserSchema.t(), created: boolean()}}
           | {:error, any()}
-  def find_or_create_oauth_user(provider, auth_params, profile_params \\ %{}, _opts \\ []) do
-    provider_field = provider_uid_field(provider)
-    provider_uid = auth_params[provider_field]
+  def find_or_create_oauth_user(provider, auth_params, profile_params \\ %{}) do
+    provider_uid = auth_params[Atom.to_string(Providers.fetch!(provider).uid_field)]
 
     result =
       Repo.transaction(fn ->
@@ -66,14 +66,6 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
         {:error, reason}
     end
   end
-
-  @doc """
-  The auth-params key (and user column) holding a provider's stable user ID.
-  """
-  @spec provider_uid_field(atom()) :: String.t()
-  def provider_uid_field(:github), do: "github_user_id"
-  def provider_uid_field(:google), do: "google_user_id"
-  def provider_uid_field(:oauth), do: "provider_uid"
 
   # Private functions
 
@@ -155,16 +147,8 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
     end
   end
 
-  defp find_user_by_provider(_repo, _provider, nil), do: {:error, :not_found}
-
-  defp find_user_by_provider(repo, provider, provider_uid) do
-    case provider do
-      :github -> UserQueries.get_user_by_github_id(provider_uid, repo)
-      :google -> UserQueries.get_user_by_google_id(provider_uid, repo)
-      :oauth -> UserQueries.get_user_by_provider("oauth", provider_uid, repo)
-      _other -> {:error, :not_found}
-    end
-  end
+  defp find_user_by_provider(repo, provider, provider_uid),
+    do: Providers.find_user(provider, provider_uid, repo)
 
   defp create_new_user(repo, auth_params) do
     with {:ok, user} <- UserQueries.create_social_user(auth_params, repo),

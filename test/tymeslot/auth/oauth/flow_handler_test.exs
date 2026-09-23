@@ -175,7 +175,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
       assert {:registration_required, _conn, :github, data} = result
       assert data.email == "new@example.com"
       assert data.email_from_provider == true
-      assert data.github_user_id == "5150"
+      assert data.provider_uid == "5150"
       assert data.provider == "github"
       assert social_auth_events() == []
     end
@@ -211,17 +211,17 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
   end
 
   describe "provider errors" do
-    test "a transport failure on the token exchange is an OAuth error" do
+    test "a transport failure on the token exchange is a general error" do
       stub_provider(%{
         "/login/oauth/access_token" => &ReqTest.transport_error(&1, :econnrefused)
       })
 
       {conn, flow} = fresh_flow()
 
-      assert {:error, :oauth_error, :github, _conn} = callback(conn, :github, flow.state)
+      assert {:error, :general_error, :github, _conn} = callback(conn, :github, flow.state)
     end
 
-    test "a refused token exchange is an error, audited without the OAuth code" do
+    test "a refused token exchange is an OAuth error, audited without the OAuth code" do
       stub_provider(%{
         "/login/oauth/access_token" => &Conn.send_resp(&1, 401, ~s({"error":"bad_code"}))
       })
@@ -230,10 +230,17 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
 
       result = capture_at_info(fn -> callback(conn, :github, flow.state) end)
 
-      assert {:error, :general_error, :github, _conn} = result
+      assert {:error, :oauth_error, :github, _conn} = result
       assert [event] = social_auth_events()
       assert event.event_type == "social_auth_failure"
       refute inspect(event) =~ "provider-code"
+    end
+
+    test "GitHub answering a bad code with 200 and an error is an OAuth error" do
+      stub_provider(%{"/login/oauth/access_token" => %{"error" => "bad_verification_code"}})
+      {conn, flow} = fresh_flow()
+
+      assert {:error, :oauth_error, :github, _conn} = callback(conn, :github, flow.state)
     end
 
     test "userinfo without an identifier is a general error" do

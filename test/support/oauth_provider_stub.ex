@@ -4,14 +4,15 @@ defmodule Tymeslot.Test.OAuthProviderStub do
 
   `stub_provider/1` takes the JSON body each request path should answer with.
   Every request is also reported to the calling test as
-  `{:provider_request, method, path, params}`, with the form body or query
-  string decoded into `params`, so a test can assert what was sent (the PKCE
-  verifier on the token exchange, for instance) rather than only what came
-  back.
+  `{:provider_request, method, path, params, authorization}`, with the form
+  body or query string decoded into `params` and the `Authorization` header
+  (or nil), so a test can assert what was sent (the PKCE verifier on the
+  token exchange, for instance) rather than only what came back.
 
   `sign_in/3` drives the whole browser side of a login: it starts the flow at
   `/auth/:provider`, reads the state from the authorise redirect, and returns
-  the conn from the provider's callback.
+  the conn from the provider's callback, with any extra callback parameters
+  merged in.
   """
 
   import ExUnit.Callbacks, only: [on_exit: 1]
@@ -117,7 +118,8 @@ defmodule Tymeslot.Test.OAuthProviderStub do
     ReqTest.stub(:tymeslot_http, fn conn ->
       {:ok, body, conn} = read_body(conn)
       params = Map.merge(URI.decode_query(conn.query_string), URI.decode_query(body))
-      send(test_pid, {:provider_request, conn.method, conn.request_path, params})
+      authorization = conn |> get_req_header("authorization") |> List.first()
+      send(test_pid, {:provider_request, conn.method, conn.request_path, params, authorization})
 
       case Map.fetch(responses, conn.request_path) do
         {:ok, respond} when is_function(respond, 1) -> respond.(conn)
@@ -132,14 +134,17 @@ defmodule Tymeslot.Test.OAuthProviderStub do
   callback, returning the callback's conn. The state and PKCE values are the
   ones the server itself issued.
   """
-  @spec sign_in(Plug.Conn.t(), String.t(), String.t()) :: Plug.Conn.t()
-  def sign_in(conn, provider, code \\ "provider-code") do
+  @spec sign_in(Plug.Conn.t(), String.t(), map()) :: Plug.Conn.t()
+  def sign_in(conn, provider, callback_params \\ %{}) do
     start = get(conn, "/auth/#{provider}")
     %{"state" => state} = start |> redirected_to(302) |> authorise_params()
 
     start
     |> recycle()
-    |> get("/auth/#{provider}/callback", %{"code" => code, "state" => state})
+    |> get(
+      "/auth/#{provider}/callback",
+      Map.merge(%{"code" => "provider-code", "state" => state}, callback_params)
+    )
   end
 
   @doc """

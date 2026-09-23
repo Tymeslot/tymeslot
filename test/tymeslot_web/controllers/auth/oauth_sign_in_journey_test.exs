@@ -15,12 +15,9 @@ defmodule TymeslotWeb.OAuthSignInJourneyTest do
 
   use Oban.Testing, repo: Tymeslot.Repo
 
-  import Mox
   import Tymeslot.Test.OAuthProviderStub
 
   alias Phoenix.Flash
-  alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
-  alias Tymeslot.Auth.OAuth.HelperMock
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
   alias Tymeslot.Test.ClockHelpers
@@ -29,8 +26,6 @@ defmodule TymeslotWeb.OAuthSignInJourneyTest do
   setup :setup_providers
 
   setup do
-    stub_with(HelperMock, OAuthHelper)
-
     original_legal = Application.get_env(:tymeslot, :enforce_legal_agreements, false)
     Application.put_env(:tymeslot, :enforce_legal_agreements, false)
     on_exit(fn -> Application.put_env(:tymeslot, :enforce_legal_agreements, original_legal) end)
@@ -189,7 +184,9 @@ defmodule TymeslotWeb.OAuthSignInJourneyTest do
       |> recycle()
       |> get(~p"/auth/github/callback", %{"code" => "c", "state" => params["state"]})
 
-      assert_received {:provider_request, "POST", "/login/oauth/access_token", token_params}
+      assert_received {:provider_request, "POST", "/login/oauth/access_token", token_params,
+                       "Basic " <> _client_credentials}
+
       verifier = token_params["code_verifier"]
       assert verifier =~ ~r/^[A-Za-z0-9_-]{43}$/
 

@@ -10,25 +10,11 @@ defmodule TymeslotWeb.Integration.GitHubOAuthIntegrationTest do
   @moduletag :auth
   @moduletag :integrations
 
-  import Mox
-
   alias Phoenix.Flash
-  alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
-  alias Tymeslot.Auth.OAuth.HelperMock
 
   # `RateLimiter.OAuth.check_initiation/1` allows this many initiations per IP
   # per 600s window; the next one is refused.
   @initiation_limit 10
-
-  # The controller resolves its callback handler through
-  # `:oauth_callback_module`, which test config points at `HelperMock`. Without
-  # a stub the callback raises `Mox.UnexpectedCallError` before any flash is
-  # set, so stub the mock with the real implementation and let these tests
-  # exercise genuine state validation.
-  setup do
-    stub_with(HelperMock, OAuthHelper)
-    :ok
-  end
 
   describe "GitHub OAuth Security" do
     test "prevents CSRF attacks with state parameter validation" do

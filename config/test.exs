@@ -138,11 +138,6 @@ config :tymeslot, :email_service, Tymeslot.EmailServiceMock
 config :tymeslot, :transcoder, Tymeslot.Media.TranscoderMock
 config :tymeslot, :health_check_module, Tymeslot.Integrations.HealthCheckMock
 config :tymeslot, :verification_module, Tymeslot.Auth.VerificationMock
-config :tymeslot, :oauth_callback_module, Tymeslot.Auth.OAuth.HelperMock
-
-# The `oauth2` library speaks Tesla; route its requests into the same
-# `Req.Test` stub as the rest of the app so provider tests script one seam.
-config :oauth2, adapter: Tymeslot.Test.OAuth2ReqTestAdapter
 
 # MiroTalk test configuration
 config :tymeslot, :mirotalk_api,

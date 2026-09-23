@@ -1,4 +1,4 @@
-defmodule TymeslotWeb.OAuthCallbackHandlerTest do
+defmodule TymeslotWeb.Integrations.OAuthCallbackHandlerTest do
   @moduledoc """
   The error path every calendar and video OAuth callback shares. Each case runs
   against all five callback routes, so a provider cannot drift from the others

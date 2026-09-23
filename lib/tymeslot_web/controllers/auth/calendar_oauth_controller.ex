@@ -5,7 +5,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
 
   use TymeslotWeb, :controller
 
-  alias TymeslotWeb.OAuthCallbackHandler
+  alias TymeslotWeb.Integrations.OAuthCallbackHandler
 
   @doc """
   Handles Google Calendar OAuth callback.

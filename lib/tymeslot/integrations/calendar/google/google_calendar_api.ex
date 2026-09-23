@@ -21,11 +21,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   alias Tymeslot.Integrations.Common.OAuth.ErrorParser
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
+  alias Tymeslot.Integrations.Google.Endpoints
 
   import ErrorParser, only: [is_oauth_error_status: 1]
 
   @base_url "https://www.googleapis.com/calendar/v3"
-  @token_url "https://oauth2.googleapis.com/token"
 
   # Google's own maximum per page.
   @max_results "2500"
@@ -406,7 +406,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
         "client_secret" => client_secret
       }
 
-      case TokenExchange.refresh_access_token(@token_url, body,
+      case TokenExchange.refresh_access_token(Endpoints.token_url(), body,
              fallback_refresh_token: integration.refresh_token,
              log_context: [
                integration_id: integration.id,
