@@ -263,8 +263,8 @@ defmodule TymeslotWeb.AuthLive.RateLimitingTest do
 
       render_hook(view, "resend_verification", %{})
 
-      # Same words as a real resend, and no email to the address.
-      assert render(view) =~ "Verification email sent! Please check your inbox."
+      # No email to the address; the visitor is asked to sign in instead.
+      assert render(view) =~ "Sign in to receive a new verification link."
       assert [] = all_enqueued(worker: EmailWorker)
     end
 
@@ -290,17 +290,49 @@ defmodule TymeslotWeb.AuthLive.RateLimitingTest do
       assert [] = all_enqueued(worker: EmailWorker)
     end
 
-    test "the address bucket is charged even when no account is bound", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/auth/verify-email")
+    test "after a sign-up with a taken address the address bucket is still charged", %{
+      conn: conn
+    } do
+      owner = insert(:unverified_user)
+
+      {:ok, view, _html} = live(conn, ~p"/auth/signup")
+
+      view
+      |> form("#signup-form", %{
+        "user" => %{"email" => owner.email, "password" => "ValidPassword123!", "website" => ""}
+      })
+      |> render_submit()
+
+      assert_patch(view, ~p"/auth/verify-email")
 
       for _i <- 1..5 do
         render_hook(view, "resend_verification", %{})
+        assert render(view) =~ "Verification email sent! Please check your inbox."
         for _tick <- 1..60, do: send(view.pid, :resend_cooldown_tick)
       end
 
       render_hook(view, "resend_verification", %{})
 
       assert render(view) =~ "reached the limit of 5 verification emails per hour"
+
+      assert [] =
+               all_enqueued(worker: EmailWorker, args: %{"action" => "send_email_verification"})
+    end
+
+    test "with nothing bound and no sign-up here, it sends the visitor to sign in", %{
+      conn: conn
+    } do
+      # A reload loses the account a sign-up bound, and a direct visit never had
+      # one. Nothing about any account is known, so the answer says so plainly
+      # rather than claiming an email went out.
+      {:ok, view, _html} = live(conn, ~p"/auth/verify-email")
+
+      render_hook(view, "resend_verification", %{})
+
+      assert_patch(view, ~p"/auth/login")
+      assert render(view) =~ "Sign in to receive a new verification link."
+      refute render(view) =~ "Verification email sent"
+      assert [] = all_enqueued(worker: EmailWorker)
     end
   end
 

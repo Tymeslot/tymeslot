@@ -123,11 +123,15 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
     })
   end
 
+  # `signed_up_here` marks that this process answered a sign-up, whatever its
+  # outcome, so the resend knows it owes the visitor the sign-up's answer and
+  # not the reload one (see `TymeslotWeb.AuthLive.VerificationEvents`).
   defp to_verify_email(socket, new_state, message, user_params) do
     socket
     |> AuthActions.transition_state(new_state, :signup)
     |> put_flash(:info, message)
     |> assign(:form_data, %{email: user_params["email"]})
+    |> assign(:signed_up_here, true)
     |> push_patch(to: ~p"/auth/verify-email")
   end
 

@@ -1036,3 +1036,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte."
 msgstr ""
+
+#: lib/tymeslot_web/live/auth_live/verification_events.ex
+#, elixir-autogen, elixir-format
+msgid "Sign in to receive a new verification link."
+msgstr ""

@@ -1038,3 +1038,8 @@ msgstr "Potvrdit změnu e-mailu"
 #, elixir-autogen, elixir-format
 msgid "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte."
 msgstr "Heslo může mít nejvýše %{count} bajtů. Písmena s diakritikou a emoji zabírají více než jeden bajt."
+
+#: lib/tymeslot_web/live/auth_live/verification_events.ex
+#, elixir-autogen, elixir-format
+msgid "Sign in to receive a new verification link."
+msgstr "Přihlaste se a obdržíte nový ověřovací odkaz."

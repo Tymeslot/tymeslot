@@ -1036,3 +1036,8 @@ msgstr "Confirmer le changement d'adresse e-mail"
 #, elixir-autogen, elixir-format
 msgid "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte."
 msgstr "Le mot de passe ne doit pas dépasser %{count} octets. Les lettres accentuées et les emojis comptent pour plus d’un octet."
+
+#: lib/tymeslot_web/live/auth_live/verification_events.ex
+#, elixir-autogen, elixir-format
+msgid "Sign in to receive a new verification link."
+msgstr "Connectez-vous pour recevoir un nouveau lien de vérification."

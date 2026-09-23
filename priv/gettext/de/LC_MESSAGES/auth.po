@@ -1036,3 +1036,8 @@ msgstr "E-Mail-Änderung bestätigen"
 #, elixir-autogen, elixir-format
 msgid "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte."
 msgstr "Das Passwort darf höchstens %{count} Byte lang sein. Buchstaben mit Akzent und Emojis zählen als mehr als ein Byte."
+
+#: lib/tymeslot_web/live/auth_live/verification_events.ex
+#, elixir-autogen, elixir-format
+msgid "Sign in to receive a new verification link."
+msgstr "Melden Sie sich an, um einen neuen Bestätigungslink zu erhalten."

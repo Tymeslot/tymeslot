@@ -23,6 +23,13 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
   over the account's own allowance, reads "Verification email sent!", so the
   button cannot be used to learn whether an address has an account.
 
+  ## With nothing bound, the answer depends only on the session
+
+  A reload or a direct visit binds no account and follows no sign-up. The
+  resend then sends the visitor to sign in, which binds their account again
+  once the password is proved. A sign-up answered in this process (see below)
+  keeps the "sent" reply instead, since it has to match a genuine one.
+
   ## Honeypot and duplicate signups have nothing to resend
 
   A signup caught by the honeypot, or one for an address that already had an
@@ -32,9 +39,10 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
+  use TymeslotWeb, :verified_routes
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [put_flash: 3]
+  import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
 
   alias Tymeslot.Auth.{SignupSecurity, Verification}
   alias Tymeslot.Security.SecurityLogger
@@ -52,6 +60,23 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
   """
   @spec resend(Phoenix.LiveView.Socket.t()) :: reply()
   def resend(socket) do
+    if bound_email(socket) || socket.assigns[:signed_up_here] do
+      do_resend(socket)
+    else
+      {:noreply, sign_in_first(socket)}
+    end
+  end
+
+  # No account is bound and this process answered no sign-up: a reload, or a
+  # direct visit. That is all the answer depends on, so it names no account
+  # and claims no email; signing in with the password binds the account again.
+  defp sign_in_first(socket) do
+    socket
+    |> put_flash(:info, dgettext("auth", "Sign in to receive a new verification link."))
+    |> push_patch(to: ~p"/auth/login")
+  end
+
+  defp do_resend(socket) do
     socket = start_cooldown(socket)
 
     case attempt(socket) do
