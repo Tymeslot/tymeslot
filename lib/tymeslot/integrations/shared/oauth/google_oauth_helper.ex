@@ -189,6 +189,16 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
 
   def validate_state(_invalid), do: {:error, "Invalid state parameter"}
 
+  @doc """
+  Returns the secret used to sign and verify Google OAuth `state` parameters.
+  """
+  @spec state_secret() :: String.t()
+  def state_secret do
+    Application.get_env(:tymeslot, :google_oauth)[:state_secret] ||
+      System.get_env("GOOGLE_STATE_SECRET") ||
+      raise "Google State Secret not configured"
+  end
+
   # Private functions
 
   defp build_token_map(response) do
@@ -243,11 +253,5 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
     Application.get_env(:tymeslot, :google_oauth)[:client_secret] ||
       System.get_env("GOOGLE_CLIENT_SECRET") ||
       raise "Google Client Secret not configured"
-  end
-
-  defp state_secret do
-    Application.get_env(:tymeslot, :google_oauth)[:state_secret] ||
-      System.get_env("GOOGLE_STATE_SECRET") ||
-      raise "Google State Secret not configured"
   end
 end

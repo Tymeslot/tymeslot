@@ -99,6 +99,17 @@ defmodule Tymeslot.Security.RateLimiter.Auth do
     ])
   end
 
+  @spec check_email_change_verify(String.t()) :: :ok | {:error, :rate_limited, String.t()}
+  def check_email_change_verify(client_ip) do
+    Helpers.check_with_logging(
+      "email_change_verify:#{client_ip}",
+      30,
+      60_000,
+      "email change verification",
+      client_ip
+    )
+  end
+
   defp check_auth_ip_bucket(ip) when is_binary(ip) and ip != "" do
     Helpers.check_with_logging(
       "login_ip:#{ip}",

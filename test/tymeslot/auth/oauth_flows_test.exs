@@ -25,8 +25,7 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
       insert(:user, email: "taken@example.com")
 
       result = SocialAuthentication.check_email_availability("taken@example.com")
-      assert {:error, message} = result
-      assert message =~ "already registered"
+      assert result == {:error, :email_already_taken}
     end
   end
 

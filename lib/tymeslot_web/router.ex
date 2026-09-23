@@ -27,16 +27,16 @@ defmodule TymeslotWeb.Router do
   # Webhook Routes
   # =============================================================================
 
+  # A webhook whose signature covers the request body declares
+  # `metadata: %{raw_body: true}`: `TymeslotWeb.Plugs.WebhookBodyCachePlug`
+  # keeps the raw body of exactly those routes, since `Plug.Parsers` consumes
+  # it before the controller can verify it.
+
   scope "/webhooks", TymeslotWeb do
     pipe_through :webhook
 
-    post "/stripe", StripeWebhookController, :webhook
-  end
-
-  scope "/webhooks", TymeslotWeb do
-    pipe_through :api
-
-    post "/stripe/connect", StripeConnectWebhookController, :handle
+    post "/stripe", StripeWebhookController, :webhook, metadata: %{raw_body: true}
+    post "/stripe/connect", StripeWebhookController, :connect, metadata: %{raw_body: true}
   end
 
   # Calendar provider webhooks negotiate `text/plain` for their subscription
@@ -46,8 +46,8 @@ defmodule TymeslotWeb.Router do
     pipe_through :calendar_webhook
 
     post "/google-calendar", GoogleCalendarWebhookController, :webhook
-    post "/outlook-calendar", OutlookCalendarWebhookController, :webhook
-    post "/outlook-lifecycle", OutlookLifecycleController, :webhook
+    post "/outlook-calendar", OutlookCalendarWebhookController, :notification
+    post "/outlook-lifecycle", OutlookCalendarWebhookController, :lifecycle
   end
 
   # Zoom app deauthorization endpoint — POSTed by Zoom when a user uninstalls
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Router do
   scope "/", TymeslotWeb do
     pipe_through :api
 
-    post "/auth/zoom/deauthorize", ZoomDeauthController, :deauthorize
+    post "/auth/zoom/deauthorize", ZoomDeauthController, :deauthorize, metadata: %{raw_body: true}
   end
 
   # Telegram bot webhook (unauthenticated, outside :browser pipeline)
@@ -165,8 +165,11 @@ defmodule TymeslotWeb.Router do
     get "/sign-up", AuthAliasController, :signup
     get "/register", AuthAliasController, :signup
 
-    # Email change verification route
-    get "/email-change/:token", EmailChangeController, :verify
+    # Emailed one-time links (email change here, verification below): GET only
+    # renders a confirmation page, so link prefetchers cannot consume the
+    # token; POST performs the change (CSRF-protected via :browser).
+    get "/email-change/:token", EmailChangeController, :confirm
+    post "/email-change/:token", EmailChangeController, :verify
 
     # Public guest RSVP (accept/decline) from the tokenised email link.
     # GET renders a confirmation landing page (no mutation — safe for link prefetchers).
@@ -191,7 +194,8 @@ defmodule TymeslotWeb.Router do
     # Session management routes
     post "/auth/session", SessionController, :create
     delete "/auth/logout", SessionController, :delete
-    get "/auth/verify-complete/:token", SessionController, :verify_and_login
+    get "/auth/verify-complete/:token", SessionController, :confirm_verification
+    post "/auth/verify-complete/:token", SessionController, :verify_and_login
   end
 
   # =============================================================================

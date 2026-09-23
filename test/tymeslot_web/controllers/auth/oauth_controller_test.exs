@@ -433,6 +433,21 @@ defmodule TymeslotWeb.OAuthControllerTest do
       assert String.starts_with?(redirect, "/")
     end
 
+    test "rejects a callback for an unknown provider before the rate limit or callback handler",
+         %{conn: conn} do
+      :meck.expect(RateLimiter, :check_oauth_callback_rate_limit, fn _ip ->
+        flunk("an unknown provider must be rejected before rate limiting")
+      end)
+
+      conn =
+        get(conn, "/auth/unsupported/callback", %{"code" => "code", "state" => "state"})
+
+      assert redirected_to(conn) == "/auth/login"
+
+      assert Flash.get(conn.assigns.flash, :error) ==
+               "Unsupported OAuth provider: unsupported"
+    end
+
     test "generic oauth callback without code redirects with error", %{conn: conn} do
       conn = get(conn, ~p"/auth/oauth/callback", %{"state" => "some_state"})
 

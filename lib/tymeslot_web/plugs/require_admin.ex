@@ -22,6 +22,7 @@ defmodule TymeslotWeb.Plugs.RequireAdmin do
 
   alias Phoenix.Controller
   alias Tymeslot.Auth.UserSchema
+  alias TymeslotWeb.NotFound
 
   @spec init(Keyword.t()) :: Keyword.t()
   def init(opts), do: opts
@@ -40,9 +41,7 @@ defmodule TymeslotWeb.Plugs.RequireAdmin do
 
   def call(conn, _opts) do
     conn
-    |> put_status(:not_found)
-    |> Controller.put_view(html: TymeslotWeb.ErrorHTML, json: TymeslotWeb.ErrorJSON)
-    |> Controller.render(:"404")
+    |> NotFound.render()
     |> halt()
   end
 end

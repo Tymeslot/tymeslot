@@ -1,4 +1,10 @@
-defmodule TymeslotWeb.OutlookLifecycleControllerTest do
+defmodule TymeslotWeb.OutlookCalendarWebhookControllerLifecycleTest do
+  @moduledoc """
+  Covers `TymeslotWeb.OutlookCalendarWebhookController.lifecycle/2`, the
+  Microsoft Graph lifecycle endpoint. The change-notification action is
+  covered in `outlook_calendar_webhook_controller_test.exs`.
+  """
+
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :controllers
@@ -44,7 +50,7 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
     insert(:calendar_integration, Map.to_list(Map.merge(defaults, Map.new(attrs))))
   end
 
-  describe "webhook/2 - validation challenge" do
+  describe "lifecycle/2 - validation challenge" do
     test "returns 200 echoing the validationToken as plain text", %{conn: conn} do
       # Graph validates the lifecycleNotificationUrl with the same handshake as
       # the notificationUrl when creating a subscription. The endpoint must echo
@@ -74,7 +80,7 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
     end
   end
 
-  describe "webhook/2 - reauthorizationRequired" do
+  describe "lifecycle/2 - reauthorizationRequired" do
     @tag capture_log: true
     test "returns 202 and enqueues TokenRefreshJob and ReregisterOutlookSubscriptionWorker", %{
       conn: conn
@@ -106,7 +112,7 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
     end
   end
 
-  describe "webhook/2 - subscriptionRemoved" do
+  describe "lifecycle/2 - subscriptionRemoved" do
     @tag capture_log: true
     test "returns 202 and enqueues reregistration but not token refresh", %{conn: conn} do
       integration = insert_outlook_integration()
@@ -132,7 +138,7 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
     end
   end
 
-  describe "webhook/2 - invalid clientState" do
+  describe "lifecycle/2 - invalid clientState" do
     @tag capture_log: true
     test "returns 202 without enqueuing a job when clientState is wrong", %{conn: conn} do
       integration = insert_outlook_integration()
@@ -172,7 +178,7 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
     end
   end
 
-  describe "webhook/2 - unknown subscriptionId" do
+  describe "lifecycle/2 - unknown subscriptionId" do
     test "returns 202 without enqueuing a job for an unknown subscriptionId", %{conn: conn} do
       payload =
         build_lifecycle_payload([
@@ -190,7 +196,7 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
     end
   end
 
-  describe "webhook/2 - unknown lifecycleEvent type" do
+  describe "lifecycle/2 - unknown lifecycleEvent type" do
     @tag capture_log: true
     test "returns 202 for an unrecognised lifecycle event type", %{conn: conn} do
       integration = insert_outlook_integration()
@@ -211,7 +217,7 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
     end
   end
 
-  describe "webhook/2 - missing or empty value array" do
+  describe "lifecycle/2 - missing or empty value array" do
     test "returns 202 with an empty value list", %{conn: conn} do
       conn = post_lifecycle(conn, %{"value" => []})
 
@@ -236,6 +242,19 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
       refute_enqueued(worker: ReregisterOutlookSubscriptionWorker)
     end
 
+    test "returns 202 for lifecycle entries whose subscriptionId is not a string", %{conn: conn} do
+      conn =
+        post_lifecycle(conn, %{
+          "value" => [
+            %{"subscriptionId" => 1, "lifecycleEvent" => "subscriptionRemoved"},
+            %{"subscriptionId" => %{"id" => "x"}, "lifecycleEvent" => "subscriptionRemoved"}
+          ]
+        })
+
+      assert conn.status == 202
+      refute_enqueued(worker: ReregisterOutlookSubscriptionWorker)
+    end
+
     test "returns 202 for lifecycle entries that are not objects", %{conn: conn} do
       conn = post_lifecycle(conn, %{"value" => [1, "a"]})
 
@@ -245,7 +264,7 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
     end
   end
 
-  describe "webhook/2 - batch deduplication" do
+  describe "lifecycle/2 - batch deduplication" do
     @tag capture_log: true
     test "deduplicates events by subscriptionId within a single batch", %{conn: conn} do
       integration = insert_outlook_integration()
@@ -274,7 +293,7 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
     end
   end
 
-  describe "webhook/2 - multiple lifecycle events" do
+  describe "lifecycle/2 - multiple lifecycle events" do
     @tag capture_log: true
     test "processes all events in a single payload", %{conn: conn} do
       integration_a = insert_outlook_integration()

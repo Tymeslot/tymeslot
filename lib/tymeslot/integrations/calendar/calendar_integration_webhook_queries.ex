@@ -23,8 +23,11 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries do
   Finds an integration by its Google webhook channel ID.
 
   Intentionally matches inactive integrations to handle in-flight notifications gracefully.
-  Returns `{:ok, integration}` with decrypted OAuth tokens if found,
-  `{:error, :not_found}` otherwise.
+  Returns `{:ok, integration}` if found, `{:error, :not_found}` otherwise.
+
+  The OAuth tokens are left encrypted: the caller is an unauthenticated
+  webhook that has not yet verified the channel token, and it only needs the
+  integration's id and secrets.
   """
   @spec get_by_google_channel_id(String.t()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
@@ -37,7 +40,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries do
 
     case result do
       nil -> {:error, :not_found}
-      integration -> {:ok, CalendarIntegrationSchema.decrypt_oauth_tokens(integration)}
+      integration -> {:ok, integration}
     end
   end
 
@@ -45,8 +48,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries do
   Finds an integration by its Microsoft Graph subscription ID.
 
   Intentionally matches inactive integrations to handle in-flight notifications gracefully.
-  Returns `{:ok, integration}` with decrypted OAuth tokens if found,
-  `{:error, :not_found}` otherwise.
+  Returns `{:ok, integration}` if found, `{:error, :not_found}` otherwise, with
+  the OAuth tokens left encrypted for the reason given on
+  `get_by_google_channel_id/1`.
   """
   @spec get_by_graph_subscription_id(String.t()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
@@ -59,13 +63,13 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries do
 
     case result do
       nil -> {:error, :not_found}
-      integration -> {:ok, CalendarIntegrationSchema.decrypt_oauth_tokens(integration)}
+      integration -> {:ok, integration}
     end
   end
 
   @doc """
   Fetches all integrations matching the given Graph subscription IDs in a single query.
-  Returns a list of integrations with decrypted OAuth tokens.
+  The OAuth tokens are left encrypted, as for `get_by_google_channel_id/1`.
   """
   @spec get_by_graph_subscription_ids([String.t()]) :: [CalendarIntegrationSchema.t()]
   def get_by_graph_subscription_ids([]), do: []
@@ -74,7 +78,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries do
     CalendarIntegrationSchema
     |> where([c], c.graph_subscription_id in ^subscription_ids)
     |> Repo.all()
-    |> Enum.map(&CalendarIntegrationSchema.decrypt_oauth_tokens/1)
   end
 
   # ---------------------------------------------------------------------------

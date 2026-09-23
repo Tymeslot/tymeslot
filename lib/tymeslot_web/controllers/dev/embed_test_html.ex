@@ -45,6 +45,11 @@ defmodule TymeslotWeb.Dev.EmbedTestHTML do
           .card-body { padding: 20px; position: relative; }
           .embed-container { border: 2px dashed #e2e8f0; border-radius: 8px; overflow: hidden; }
           .size-label { position: absolute; top: 28px; right: 28px; background: #1e293b; color: white; font-size: 11px; padding: 2px 8px; border-radius: 4px; z-index: 10; pointer-events: none; }
+          #embed-constrained { max-height: 400px; }
+          #embed-small { height: 400px; }
+          .card-body--centred { text-align: center; padding: 40px; }
+          .btn { padding: 8px 20px; background: #14b8a6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+          .btn--large { padding: 12px 28px; border-radius: 12px; font-size: 16px; box-shadow: 0 4px 12px rgba(20,184,166,0.3); }
           @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
         </style>
       </head>
@@ -86,10 +91,7 @@ defmodule TymeslotWeb.Dev.EmbedTestHTML do
           </div>
           <div class="control-group">
             <label>&nbsp;</label>
-            <button
-              id="reload-btn"
-              style="padding: 8px 20px; background: #14b8a6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;"
-            >
+            <button id="reload-btn" class="btn">
               Reload All
             </button>
           </div>
@@ -114,12 +116,7 @@ defmodule TymeslotWeb.Dev.EmbedTestHTML do
             </div>
             <div class="card-body">
               <span class="size-label" id="constrained-label">400px max</span>
-              <div
-                class="embed-container"
-                id="embed-constrained"
-                style="max-height: 400px; overflow: hidden;"
-              >
-              </div>
+              <div class="embed-container" id="embed-constrained"></div>
             </div>
           </div>
 
@@ -130,8 +127,7 @@ defmodule TymeslotWeb.Dev.EmbedTestHTML do
             </div>
             <div class="card-body">
               <span class="size-label">400px fixed</span>
-              <div class="embed-container" id="embed-small" style="height: 400px; overflow: hidden;">
-              </div>
+              <div class="embed-container" id="embed-small"></div>
             </div>
           </div>
 
@@ -140,11 +136,8 @@ defmodule TymeslotWeb.Dev.EmbedTestHTML do
               <h2>Popup Mode</h2>
               <p>Click the button to test modal embed</p>
             </div>
-            <div class="card-body" style="text-align: center; padding: 40px;">
-              <button
-                id="popup-btn"
-                style="padding: 12px 28px; background: #14b8a6; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(20,184,166,0.3);"
-              >
+            <div class="card-body card-body--centred">
+              <button id="popup-btn" class="btn btn--large">
                 Book a Meeting
               </button>
             </div>
