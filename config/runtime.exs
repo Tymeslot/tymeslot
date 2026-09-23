@@ -648,7 +648,11 @@ config :tymeslot, :oauth_provider,
   token_url: oauth_token_url,
   userinfo_url: oauth_userinfo_url,
   scope: System.get_env("OAUTH_SCOPE", "openid email profile"),
-  allow_id_fallback: System.get_env("OAUTH_ALLOW_ID_FALLBACK", "false") == "true"
+  allow_id_fallback: System.get_env("OAUTH_ALLOW_ID_FALLBACK", "false") == "true",
+  # Trust the IdP's email when it omits the `email_verified` claim, unless the
+  # operator requires the claim. An explicit `false` is always unverified.
+  require_email_verified_claim:
+    System.get_env("OAUTH_REQUIRE_EMAIL_VERIFIED_CLAIM", "false") == "true"
 
 if oauth_enabled do
   required_oauth_vars = %{

@@ -58,6 +58,40 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
       end
     end
 
+    test "trusts an email when the IdP omits email_verified" do
+      stub_sso(%{"sub" => "3", "email" => "a@b.com"})
+
+      assert {:ok, %{email: "a@b.com", email_from_provider: true}} =
+               UserProcessor.fetch_identity(:oauth, "token")
+    end
+
+    describe_flag = "with OAUTH_REQUIRE_EMAIL_VERIFIED_CLAIM set"
+
+    for {claim, trusted} <- [{:absent, false}, {true, true}, {false, false}] do
+      test "#{describe_flag}, email_verified #{inspect(claim)} is #{if trusted, do: "trusted", else: "not trusted"}" do
+        config = Application.get_env(:tymeslot, :oauth_provider)
+
+        Application.put_env(
+          :tymeslot,
+          :oauth_provider,
+          Keyword.put(config, :require_email_verified_claim, true)
+        )
+
+        claims =
+          case unquote(claim) do
+            :absent -> %{}
+            value -> %{"email_verified" => value}
+          end
+
+        stub_sso(Map.merge(%{"sub" => "5", "email" => "a@b.com"}, claims))
+
+        assert {:ok, %{email_from_provider: from_provider}} =
+                 UserProcessor.fetch_identity(:oauth, "token")
+
+        assert from_provider == unquote(trusted)
+      end
+    end
+
     for email <- [nil, "", 12_345] do
       test "treats #{inspect(email)} as no email" do
         stub_sso(%{"sub" => "1", "email" => unquote(email), "email_verified" => true})

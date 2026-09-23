@@ -14,9 +14,15 @@ defmodule Tymeslot.Auth.OAuth.Providers do
     * `:uid_field` - the user column holding the provider's stable user ID
     * `:uid_claims` - the userinfo keys that carry that ID, in order of
       preference
-    * `:email` - where a verified email comes from: `{:claim, key}` when the
-      userinfo response carries `key: true` beside the email, or
-      `{:emails_endpoint, url}` for GitHub's list of addresses
+    * `:email` - where a verified email comes from: `{:claim, key, absent}`
+      when the userinfo response carries `key: true` beside the email, or
+      `{:emails_endpoint, url}` for GitHub's list of addresses. `absent` says
+      what a response without the claim means: `:unverified`, or
+      `:trusted_unless_required` for the generic provider, whose identity
+      provider is the operator's own and often omits the claim (Authentik,
+      Entra ID, some Keycloak setups). Setting
+      `OAUTH_REQUIRE_EMAIL_VERIFIED_CLAIM=true` makes an absent claim count as
+      unverified there too. An explicit `false` is always unverified.
     * `:auth_scheme` - the `Authorization` scheme for userinfo requests
     * `:authorize_params` - extra authorise-URL parameters
     * `:lookup` - the `UserQueries` function (and leading arguments) that
@@ -64,7 +70,7 @@ defmodule Tymeslot.Auth.OAuth.Providers do
       setting: :google_auth_enabled,
       uid_field: :google_user_id,
       uid_claims: ["id"],
-      email: {:claim, "verified_email"},
+      email: {:claim, "verified_email", :unverified},
       auth_scheme: "Bearer",
       authorize_params: %{prompt: "select_account"},
       lookup: {:get_user_by_google_id, []}
@@ -75,7 +81,7 @@ defmodule Tymeslot.Auth.OAuth.Providers do
       setting: :oauth_auth_enabled,
       uid_field: :provider_uid,
       uid_claims: ["sub"],
-      email: {:claim, "email_verified"},
+      email: {:claim, "email_verified", :trusted_unless_required},
       auth_scheme: "Bearer",
       authorize_params: %{},
       lookup: {:get_user_by_provider, ["oauth"]}

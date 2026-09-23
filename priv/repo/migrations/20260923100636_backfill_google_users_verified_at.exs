@@ -12,7 +12,8 @@ defmodule Tymeslot.Repo.Migrations.BackfillGoogleUsersVerifiedAt do
   GitHub and SSO accounts stay unverified. Their address may have been typed
   on the complete-registration form, and nothing on record tells those apart
   from a provider-supplied one (`provider_email`, which could have, was never
-  populated). Their owners verify by email at their next sign-in.
+  populated). They are verified at their next sign-in when the provider
+  vouches for the address on record, and asked to verify by email otherwise.
   """
   use Ecto.Migration
 

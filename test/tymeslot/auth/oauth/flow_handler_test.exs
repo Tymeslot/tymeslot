@@ -125,6 +125,45 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
       assert Repo.all(from s in UserSessionSchema, where: s.user_id == ^user.id) == []
     end
 
+    test "an unverified account becomes verified when the provider vouches for its email" do
+      user =
+        insert(:user,
+          provider: "github",
+          github_user_id: "4247",
+          email: "owner@example.com",
+          verified_at: nil
+        )
+
+      stub_github(%{"id" => 4247}, [
+        %{"email" => "Owner@Example.com", "primary" => true, "verified" => true}
+      ])
+
+      {conn, flow} = fresh_flow()
+
+      assert {:ok, result_conn, :github} = callback(conn, :github, flow.state)
+      assert Conn.get_session(result_conn, :user_token)
+      assert Repo.reload!(user).verified_at
+    end
+
+    test "an unverified account whose provider vouches for another address stays unverified" do
+      user =
+        insert(:user,
+          provider: "github",
+          github_user_id: "4248",
+          email: "typed@example.com",
+          verified_at: nil
+        )
+
+      stub_github(%{"id" => 4248}, [
+        %{"email" => "someone-else@example.com", "primary" => true, "verified" => true}
+      ])
+
+      {conn, flow} = fresh_flow()
+
+      assert {:verification_required, _conn, :github, :sent} = callback(conn, :github, flow.state)
+      assert Repo.reload!(user).verified_at == nil
+    end
+
     test "reports and audits a session that could not be created" do
       insert(:user, provider: "github", github_user_id: "4245", email: "s@example.com")
       stub_github(%{"id" => 4245}, [])

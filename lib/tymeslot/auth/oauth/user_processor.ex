@@ -71,10 +71,10 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
 
   defp verified_email(provider, user_info, token) do
     case Providers.fetch!(provider).email do
-      {:claim, claim} ->
+      {:claim, claim, absent} ->
         vouched(
           string_or_nil(Map.get(user_info, "email")),
-          Map.get(user_info, claim) in [true, "true"]
+          claim_verified?(Map.fetch(user_info, claim), absent)
         )
 
       {:emails_endpoint, url} ->
@@ -101,15 +101,21 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
     end
   end
 
+  defp claim_verified?({:ok, value}, _absent), do: value in [true, "true"]
+  defp claim_verified?(:error, :trusted_unless_required), do: not require_email_verified_claim?()
+  defp claim_verified?(:error, :unverified), do: false
+
   defp vouched(email, true) when is_binary(email), do: %{email: email, email_from_provider: true}
   defp vouched(_email, _verified), do: %{email: nil, email_from_provider: false}
 
   defp string_or_nil(value) when is_binary(value) and value != "", do: value
   defp string_or_nil(_value), do: nil
 
-  defp allow_id_fallback? do
-    :tymeslot
-    |> Application.get_env(:oauth_provider, [])
-    |> Keyword.get(:allow_id_fallback, false)
+  defp allow_id_fallback?, do: oauth_provider_flag(:allow_id_fallback)
+
+  defp require_email_verified_claim?, do: oauth_provider_flag(:require_email_verified_claim)
+
+  defp oauth_provider_flag(key) do
+    :tymeslot |> Application.get_env(:oauth_provider, []) |> Keyword.get(key, false)
   end
 end
