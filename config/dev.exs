@@ -128,6 +128,9 @@ config :tymeslot, Oban,
       {"*/30 * * * *", Tymeslot.Workers.ObanMaintenanceWorker},
       # Run every hour at the top of the hour
       {"0 * * * *", Tymeslot.Workers.ObanQueueMonitorWorker},
+      # Run hourly, five minutes past, so the hour it evaluates is complete:
+      # aggregate calendar integration health alerting
+      {"5 * * * *", Tymeslot.Workers.IntegrationHealthAlertWorker},
       # Run daily at 02:45 UTC
       {"45 2 * * *", Tymeslot.Workers.VideoRoomRecoveryScanWorker},
       # Run daily at 03:45 UTC to clean up cancelled meetings' orphaned rooms

@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
   alias Tymeslot.Integrations.Calendar.Sync
+  alias Tymeslot.Integrations.HealthCheck.Alerting
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles.ProfileQueries
@@ -50,9 +51,14 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   @spec list_events(user_id() | nil) :: {:ok, list()} | {:error, term()}
   def list_events(user_id \\ nil) do
     case user_id do
-      id when is_integer(id) and id > 0 -> EventFetcher.list_events(id)
-      nil -> EventFetcher.list_events(nil)
-      _other -> {:error, :invalid_user_id}
+      id when is_integer(id) and id > 0 ->
+        id |> EventFetcher.list_events() |> Alerting.track_availability(id)
+
+      nil ->
+        EventFetcher.list_events(nil)
+
+      _other ->
+        {:error, :invalid_user_id}
     end
   end
 
@@ -113,12 +119,17 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   @doc """
   Get fresh events for range with user context (preferred variant).
+
+  A result saying the user's calendars could not all be read is recorded for
+  `HealthCheck.Alerting`: every caller here is an availability decision (a
+  booking page, a booking submit, a poll check) that fails closed on it.
   """
   @spec get_events_for_range_fresh(user_id(), Date.t(), Date.t()) ::
           {:ok, list()} | {:error, term()}
   def get_events_for_range_fresh(user_id, start_date, end_date)
       when is_integer(user_id) do
-    behaviour_module().get_events_for_range_fresh(user_id, start_date, end_date)
+    result = behaviour_module().get_events_for_range_fresh(user_id, start_date, end_date)
+    Alerting.track_availability(result, user_id)
   end
 
   # ---------------------------

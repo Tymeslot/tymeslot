@@ -265,6 +265,9 @@ if config_env() == :prod do
         {"*/30 * * * *", Tymeslot.Workers.ObanMaintenanceWorker},
         # Run every hour for queue health monitoring
         {"0 * * * *", Tymeslot.Workers.ObanQueueMonitorWorker},
+        # Run hourly, five minutes past, so the hour it evaluates is complete:
+        # aggregate calendar integration health alerting
+        {"5 * * * *", Tymeslot.Workers.IntegrationHealthAlertWorker},
         # Run daily at 02:45 UTC for video room recovery scan
         {"45 2 * * *", Tymeslot.Workers.VideoRoomRecoveryScanWorker},
         # Run daily at 03:45 UTC to re-attempt provider deletion for cancelled

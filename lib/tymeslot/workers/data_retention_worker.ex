@@ -9,7 +9,8 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   3. Slack delivery logs (60 days retention)
   4. Telegram delivery logs (60 days retention)
   5. Analytics page-view events (90 days retention)
-  6. Abandoned Telegram setup stubs (own minute-scale TTL, not a day count)
+  6. Hourly calendar availability refusal counters (30 days retention)
+  7. Abandoned Telegram setup stubs (own minute-scale TTL, not a day count)
 
   Ensures the database doesn't grow indefinitely by removing
   old records based on configured retention periods.
@@ -23,6 +24,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   require Logger
 
   alias Tymeslot.Analytics
+  alias Tymeslot.Integrations.HealthCheck.AvailabilityRefusalQueries
   alias Tymeslot.Slack
   alias Tymeslot.Telegram
   alias Tymeslot.Webhooks.WebhookQueries
@@ -67,6 +69,13 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
       config_key: :analytics_event_days,
       default_days: 90,
       prune: &Analytics.prune_events/1
+    },
+    %{
+      name: "availability refusal",
+      args_key: "availability_refusal_retention_days",
+      config_key: :availability_refusal_days,
+      default_days: 30,
+      prune: &AvailabilityRefusalQueries.prune_older_than/1
     }
   ]
 
