@@ -663,11 +663,6 @@ msgstr ""
 msgid "Terms of service must be accepted"
 msgstr ""
 
-#: lib/tymeslot/auth/registration.ex
-#, elixir-autogen, elixir-format
-msgid "This email is already registered. Please use a different email or sign in."
-msgstr ""
-
 #: lib/tymeslot/auth/auth_actions.ex
 #, elixir-autogen, elixir-format
 msgid "This link has expired. Please request a new one"

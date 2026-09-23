@@ -85,6 +85,60 @@ defmodule TymeslotWeb.AuthLiveTest do
       assert Auth.get_user_by_email(email)
     end
 
+    test "a taken address sees exactly what a free one sees", %{conn: conn} do
+      password_owner = insert(:user)
+      social_owner = insert(:user, provider: "github", password_hash: nil)
+      fresh = "fresh-#{System.unique_integer([:positive])}@example.com"
+
+      outcomes =
+        for email <- [fresh, password_owner.email, social_owner.email] do
+          {:ok, view, _html} = live(conn, ~p"/auth/signup")
+          submit_signup(view, email)
+
+          assert_patch(view, ~p"/auth/verify-email")
+
+          # The screen shows the address that was typed; take that out and
+          # everything else the visitor sees must match.
+          {view |> element("#auth-live") |> render() |> String.replace(email, "EMAIL"),
+           view |> element("#app-flash-group") |> render()}
+        end
+
+      assert [same, same, same] = outcomes
+      assert Repo.aggregate(UserSchema, :count, :id) == 3
+    end
+
+    test "a genuine sign-up can resend its verification email", %{conn: conn} do
+      email = "resend-#{System.unique_integer([:positive])}@example.com"
+      {:ok, view, _html} = live(conn, ~p"/auth/signup")
+      submit_signup(view, email)
+      assert_patch(view, ~p"/auth/verify-email")
+
+      user = Repo.get_by!(UserSchema, email: email)
+      Repo.delete_all(Oban.Job)
+
+      render_hook(view, "resend_verification", %{})
+
+      assert render(view) =~ "Verification email sent! Please check your inbox."
+
+      assert [job] = Repo.all(Oban.Job)
+      assert job.args["action"] == "send_email_verification"
+      assert job.args["user_id"] == user.id
+    end
+
+    test "a sign-up with a taken address cannot resend to it, and is told the same",
+         %{conn: conn} do
+      owner = insert(:unverified_user)
+      {:ok, view, _html} = live(conn, ~p"/auth/signup")
+      submit_signup(view, owner.email)
+      assert_patch(view, ~p"/auth/verify-email")
+      Repo.delete_all(Oban.Job)
+
+      render_hook(view, "resend_verification", %{})
+
+      assert render(view) =~ "Verification email sent! Please check your inbox."
+      assert [] = Repo.all(Oban.Job)
+    end
+
     test "validation errors on registration", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/auth/signup")
 
@@ -478,5 +532,18 @@ defmodule TymeslotWeb.AuthLiveTest do
       # session, not left on the process default ("en").
       assert render(view) =~ "Willkommen zurück!"
     end
+  end
+
+  defp submit_signup(view, email) do
+    view
+    |> form("#signup-form", %{
+      "user" => %{
+        "email" => email,
+        "password" => "ValidPassword123!",
+        "terms_accepted" => "true",
+        "website" => ""
+      }
+    })
+    |> render_submit()
   end
 end

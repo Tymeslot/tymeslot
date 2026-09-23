@@ -2,6 +2,13 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
   @moduledoc """
   The signup flow's event handlers, lifted out of `TymeslotWeb.AuthLive`.
 
+  ## Why a taken address looks like a success
+
+  Signing up with an address that already has an account answers with the same
+  message, state and screen as a new account, so the form cannot be used to
+  learn who is registered. The owner is emailed instead. The only difference
+  is server-side: no account is bound for the verify-email screen's resend.
+
   ## Why a honeypot submission looks like a success
 
   A submission caught by the honeypot is answered with the same message, the
@@ -69,8 +76,13 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
 
   defp register(socket, user_params) do
     case AuthActions.register_user(user_params, socket) do
-      {:ok, new_state, message} ->
-        {:noreply, to_verify_email(socket, new_state, message, user_params)}
+      {:ok, new_state, message, pending} ->
+        socket =
+          socket
+          |> to_verify_email(new_state, message, user_params)
+          |> bind_pending_verification(pending)
+
+        {:noreply, socket}
 
       {:error, :field_errors, errors} ->
         {:noreply, SecurityHelper.set_errors(socket, errors)}
@@ -90,9 +102,25 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
     socket =
       socket
       |> to_verify_email(:verify_email, message, user_params)
+      |> bind_pending_verification(nil)
       |> assign(:honeypot_signup, true)
 
     {:noreply, socket}
+  end
+
+  # The account the verify-email screen may resend for, held in this process
+  # only: a new sign-up's own account, or none when the address was already
+  # taken (so a resend there goes nowhere, and says so in the same words).
+  # Replacing any earlier binding matters too: a sign-up must never leave the
+  # resend pointing at an account from before it.
+  defp bind_pending_verification(socket, nil), do: assign(socket, :unverified_user, nil)
+
+  defp bind_pending_verification(socket, %{id: id, email: email}) do
+    assign(socket, :unverified_user, %{
+      id: id,
+      email: email,
+      timestamp: DateTime.to_unix(DateTime.utc_now())
+    })
   end
 
   defp to_verify_email(socket, new_state, message, user_params) do

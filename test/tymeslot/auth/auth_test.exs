@@ -99,7 +99,8 @@ defmodule Tymeslot.AuthTest do
         "terms_accepted" => "true"
       }
 
-      assert {:error, :auth, _reason} = Auth.register_user(params, %Plug.Conn{})
+      # Answered exactly as a free address would be; no second account.
+      assert {:ok, :existing_account, _message} = Auth.register_user(params, %Plug.Conn{})
     end
   end
 

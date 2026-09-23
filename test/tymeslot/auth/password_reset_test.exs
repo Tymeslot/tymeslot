@@ -69,8 +69,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       end
 
       assert [reset_job] =
-               all_enqueued(worker: EmailWorker)
-               |> Enum.filter(&(&1.args["action"] == "send_password_reset"))
+               all_enqueued(worker: EmailWorker, args: %{"action" => "send_password_reset"})
 
       assert reset_job.args["user_id"] == password_user.id
 

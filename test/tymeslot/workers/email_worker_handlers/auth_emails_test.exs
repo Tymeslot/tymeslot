@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmailsTest do
   alias Tymeslot.Emails.Templates.PasswordReset
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Workers.EmailWorkerHandlers
+  alias TymeslotWeb.Endpoint
 
   setup :verify_on_exit!
 
@@ -74,7 +75,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmailsTest do
 
       assert_receive {:notice, user_id, sign_in_url}
       assert user_id == user.id
-      assert sign_in_url == TymeslotWeb.Endpoint.url() <> "/auth/login"
+      assert sign_in_url == Endpoint.url() <> "/auth/login"
     end
 
     test "the sign-up attempt notice links to sign in and to the reset form" do
@@ -93,8 +94,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmailsTest do
 
       assert_receive {:notice, user_id, sign_in, reset}
       assert user_id == user.id
-      assert sign_in == TymeslotWeb.Endpoint.url() <> "/auth/login"
-      assert reset == TymeslotWeb.Endpoint.url() <> "/auth/reset-password"
+      assert sign_in == Endpoint.url() <> "/auth/login"
+      assert reset == Endpoint.url() <> "/auth/reset-password"
     end
 
     test "a notice for an account deleted since is discarded" do

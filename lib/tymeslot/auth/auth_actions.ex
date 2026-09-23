@@ -35,9 +35,17 @@ defmodule Tymeslot.Auth.AuthActions do
 
   @doc """
   Handles user registration with email verification.
+
+  On success returns the state to move to, the flash message, and the account
+  the verify-email screen may resend for: `%{id, email}` for a new account,
+  `nil` when the address already had one. The state and message are the same
+  either way, so the screen cannot tell a visitor which case applied; the
+  pending account stays server-side.
   """
   @spec register_user(signup_params(), Phoenix.LiveView.Socket.t()) ::
-          {:ok, atom(), String.t()} | {:error, String.t()} | {:error, :field_errors, map()}
+          {:ok, atom(), String.t(), %{id: term(), email: String.t()} | nil}
+          | {:error, String.t()}
+          | {:error, :field_errors, map()}
   def register_user(user_params, socket) do
     cond do
       not Config.password_auth_enabled?() -> {:error, password_auth_disabled_message()}
@@ -65,8 +73,11 @@ defmodule Tymeslot.Auth.AuthActions do
            # for this attempt on the LiveView path; avoid double-counting it.
            rate_limit_checked: true
          ) do
-      {:ok, _user, message} ->
-        {:ok, :verify_email, message}
+      {:ok, :existing_account, message} ->
+        {:ok, :verify_email, message, nil}
+
+      {:ok, user, message} ->
+        {:ok, :verify_email, message, %{id: user.id, email: user.email}}
 
       {:error, :input, errors} when is_map(errors) ->
         {:error, :field_errors, errors}

@@ -664,11 +664,6 @@ msgstr "Registrace je momentálně vypnutá."
 msgid "Terms of service must be accepted"
 msgstr "Je nutné přijmout podmínky použití"
 
-#: lib/tymeslot/auth/registration.ex
-#, elixir-autogen, elixir-format
-msgid "This email is already registered. Please use a different email or sign in."
-msgstr "Tento e-mail je již zaregistrován. Použijte prosím jiný e-mail nebo se přihlaste."
-
 #: lib/tymeslot/auth/auth_actions.ex
 #, elixir-autogen, elixir-format
 msgid "This link has expired. Please request a new one"

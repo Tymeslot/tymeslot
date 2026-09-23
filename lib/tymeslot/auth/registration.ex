@@ -6,11 +6,12 @@ defmodule Tymeslot.Auth.Registration do
   use Gettext, backend: TymeslotWeb.Gettext
 
   require Logger
-  alias Tymeslot.Auth.{AdminBootstrap, ErrorFormatter, Helpers.AccountLogging, UserQueries}
+  alias Tymeslot.Auth.{AdminBootstrap, ErrorFormatter, Helpers.AccountLogging}
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.{Config, PubSub}
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
-  alias Tymeslot.Security.{InputProcessor, RateLimiter, SecurityLogger}
+  alias Tymeslot.Security.{InputProcessor, Password, RateLimiter, SecurityLogger}
   alias TymeslotWeb.Helpers.ClientIP
 
   @type signup_params :: Tymeslot.Auth.Validation.signup_params()
@@ -34,11 +35,19 @@ defmodule Tymeslot.Auth.Registration do
         so this function skips its own check instead of double-counting
 
   ## Returns
-    - {:ok, user, message} on success
-    - {:error, reason, message} on failure with appropriate flash message
+    - `{:ok, user, message}` when a new account was created
+    - `{:ok, :existing_account, message}` when the address already had an
+      account. `message` is the same one a new account gets, and nothing
+      user-facing may tell the two apart: the owner is emailed instead (see
+      `create_and_verify_user/3`). Only machine callers should look at the
+      second element.
+    - `{:error, reason, message}` on failure with appropriate flash message,
+      which never depends on whether the address has an account
   """
   @spec register_user(signup_params(), Phoenix.LiveView.Socket.t() | Plug.Conn.t(), Keyword.t()) ::
-          {:ok, term(), String.t()} | {:error, atom(), String.t()} | {:error, :input, map()}
+          {:ok, term() | :existing_account, String.t()}
+          | {:error, atom(), String.t()}
+          | {:error, :input, map()}
   def register_user(params, socket_or_conn, opts \\ []) do
     with {:ok, validated_params} <- validate_input(params),
          :ok <- check_rate_limit(validated_params["email"], socket_or_conn, opts),
@@ -110,45 +119,72 @@ defmodule Tymeslot.Auth.Registration do
     end
   end
 
+  # A taken address is answered exactly as a free one is: the same reply, and
+  # the same dominant cost, one bcrypt hash (the new-user branch pays it in the
+  # registration changeset). The explanation goes to the address's owner by
+  # email, which only they can read. No account is created.
   defp create_and_verify_user(validated_params, socket_or_conn, opts) do
-    # Check for case-insensitive duplicate emails before attempting creation
-    case check_email_uniqueness(validated_params["email"]) do
-      {:error, :duplicate} ->
-        AccountLogging.log_operation_failure(
-          "registration",
-          validated_params["email"],
-          :duplicate_email
-        )
+    case Config.user_queries_module().get_user_by_email(validated_params["email"]) do
+      {:ok, existing} ->
+        _discarded = Password.hash_password(validated_params["password"])
+        duplicate_attempt(existing)
 
-        {:error, :auth,
-         dgettext(
-           "auth",
-           "This email is already registered. Please use a different email or sign in."
-         )}
-
-      :ok ->
-        case create_user(validated_params) do
-          {:ok, user} ->
-            AccountLogging.log_user_created(user)
-            verify_and_notify_user(user, validated_params, socket_or_conn, opts)
-
-          {:error, :auth, reason} ->
-            AccountLogging.log_operation_failure(
-              "registration",
-              validated_params["email"],
-              reason
-            )
-
-            {:error, :auth, ErrorFormatter.format_user_friendly_error("registration", reason)}
-        end
+      {:error, :not_found} ->
+        create_new_user(validated_params, socket_or_conn, opts)
     end
   end
 
-  defp check_email_uniqueness(email) do
-    if UserQueries.email_exists_case_insensitive?(email) do
-      {:error, :duplicate}
-    else
+  defp create_new_user(validated_params, socket_or_conn, opts) do
+    case create_user(validated_params) do
+      {:ok, user} ->
+        AccountLogging.log_user_created(user)
+        verify_and_notify_user(user, validated_params, socket_or_conn, opts)
+
+      # Another sign-up for the address committed between the lookup and the
+      # insert. The changeset has already paid the bcrypt cost, so this is the
+      # duplicate branch in every respect but that.
+      {:error, :email_taken} ->
+        case Config.user_queries_module().get_user_by_email(validated_params["email"]) do
+          {:ok, existing} -> duplicate_attempt(existing)
+          # The winner is already gone again; there is no one to tell.
+          {:error, :not_found} -> {:ok, :existing_account}
+        end
+
+      {:error, :auth, reason} ->
+        AccountLogging.log_operation_failure(
+          "registration",
+          validated_params["email"],
+          reason
+        )
+
+        {:error, :auth, ErrorFormatter.format_user_friendly_error("registration", reason)}
+    end
+  end
+
+  defp duplicate_attempt(existing) do
+    AccountLogging.log_operation_failure("registration", existing.email, :duplicate_email, %{
+      user_id: existing.id
+    })
+
+    notify_owner_of_attempt(existing)
+    {:ok, :existing_account}
+  end
+
+  # Capped per recipient so the sign-up form cannot be used to flood an
+  # owner's mailbox; over the cap the note is simply not sent.
+  defp notify_owner_of_attempt(existing) do
+    with :ok <- RateLimiter.check_signup_attempt_notice_rate_limit(existing.id),
+         {:ok, _status} <- EmailScheduler.schedule_signup_attempt_notice(existing.id) do
       :ok
+    else
+      {:error, :rate_limited, _message} ->
+        SecurityLogger.log_rate_limit_violation(existing.id, "signup_attempt_notice", %{})
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule sign-up attempt notice",
+          user_id: existing.id,
+          reason: inspect(reason)
+        )
     end
   end
 
@@ -240,12 +276,25 @@ defmodule Tymeslot.Auth.Registration do
       {:ok, user} ->
         {:ok, user}
 
-      {:error, changeset} ->
-        # Log only the constraint errors without sensitive data
-        constraint_errors = extract_constraint_errors(changeset)
-        Logger.error("User creation failed with constraints", errors: inspect(constraint_errors))
-        {:error, :auth, ErrorFormatter.format_changeset_errors(changeset)}
+      {:error, %Ecto.Changeset{} = changeset} ->
+        if email_taken?(changeset),
+          do: {:error, :email_taken},
+          else: creation_failed(changeset)
     end
+  end
+
+  defp email_taken?(changeset) do
+    Enum.any?(changeset.errors, fn
+      {:email, {_message, opts}} -> opts[:constraint] == :unique
+      _other -> false
+    end)
+  end
+
+  defp creation_failed(changeset) do
+    # Log only the constraint errors without sensitive data
+    constraint_errors = extract_constraint_errors(changeset)
+    Logger.error("User creation failed with constraints", errors: inspect(constraint_errors))
+    {:error, :auth, ErrorFormatter.format_changeset_errors(changeset)}
   end
 
   # Helper function to safely extract constraint errors without sensitive data

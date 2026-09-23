@@ -664,11 +664,6 @@ msgstr "Реєстрацію наразі вимкнено."
 msgid "Terms of service must be accepted"
 msgstr "Потрібно прийняти умови надання послуг"
 
-#: lib/tymeslot/auth/registration.ex
-#, elixir-autogen, elixir-format
-msgid "This email is already registered. Please use a different email or sign in."
-msgstr "Ця електронна адреса вже зареєстрована. Скористайтеся іншою адресою або увійдіть."
-
 #: lib/tymeslot/auth/auth_actions.ex
 #, elixir-autogen, elixir-format
 msgid "This link has expired. Please request a new one"

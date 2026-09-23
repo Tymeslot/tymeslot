@@ -663,11 +663,6 @@ msgstr "Die Registrierung ist derzeit deaktiviert."
 msgid "Terms of service must be accepted"
 msgstr "Die Nutzungsbedingungen müssen akzeptiert werden"
 
-#: lib/tymeslot/auth/registration.ex
-#, elixir-autogen, elixir-format
-msgid "This email is already registered. Please use a different email or sign in."
-msgstr "Diese E-Mail-Adresse ist bereits registriert. Bitte verwenden Sie eine andere Adresse oder melden Sie sich an."
-
 #: lib/tymeslot/auth/auth_actions.ex
 #, elixir-autogen, elixir-format
 msgid "This link has expired. Please request a new one"
