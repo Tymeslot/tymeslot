@@ -88,13 +88,22 @@ defmodule Tymeslot.Meetings.GuestsTest do
       assert {:error, :invalid_response} = Guests.record_rsvp(guest.rsvp_token, "maybe")
     end
 
-    for status <- ~w(cancelled expired completed awaiting_payment awaiting_approval) do
+    for status <-
+          ~w(cancelled expired completed awaiting_payment awaiting_approval reschedule_requested) do
       test "refuses a #{status} meeting and leaves the guest pending" do
         guest = guest_for(status: unquote(status))
 
         assert {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, "accepted")
         assert {:ok, %{status: "pending"}} = GuestQueries.get_by_token(guest.rsvp_token)
       end
+    end
+
+    test "refuses a meeting whose organiser has asked to reschedule it" do
+      # The time the guest would be answering for no longer holds.
+      guest = guest_for(reschedule_requested_at: DateTime.utc_now(:second))
+
+      assert {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+      assert {:ok, %{status: "pending"}} = GuestQueries.get_by_token(guest.rsvp_token)
     end
 
     test "refuses a meeting that has already started" do

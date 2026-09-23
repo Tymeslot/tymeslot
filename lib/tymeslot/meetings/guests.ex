@@ -12,7 +12,8 @@ defmodule Tymeslot.Meetings.Guests do
 
   A guest may only respond while their invitation is open: the meeting is a
   live, agreed booking (not cancelled or declined, expired, completed, unpaid
-  or still awaiting the host's approval) and has not yet started. Recording a
+  or still awaiting the host's approval), its time still holds (no reschedule
+  is pending) and it has not yet started. Recording a
   response notifies the organiser's dashboard over PubSub; subscribe with
   `subscribe_to_rsvp_updates/1`.
   """
@@ -151,6 +152,7 @@ defmodule Tymeslot.Meetings.Guests do
   # the host has not agreed to it yet, so its guests have nothing to answer.
   defp rsvp_open?(meeting) do
     MeetingState.active?(meeting) and not MeetingState.awaiting_approval?(meeting) and
+      not MeetingState.slot_void?(meeting) and
       DateTime.after?(meeting.start_time, Clock.utc_now())
   end
 
