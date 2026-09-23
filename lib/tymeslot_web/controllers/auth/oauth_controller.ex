@@ -492,6 +492,14 @@ defmodule TymeslotWeb.OAuthController do
     |> redirect(to: paths[:login_path])
   end
 
+  defp respond_to_oauth_result({:error, :email_already_taken, _provider, flow_conn}, paths) do
+    AuthControllerHelpers.oauth_error_response(
+      flow_conn,
+      :email_already_taken,
+      paths[:login_path]
+    )
+  end
+
   @spec provider_name(provider() | String.t()) :: String.t()
   defp provider_name(provider) when is_binary(provider),
     do: provider_name(Map.fetch!(@provider_ids, provider))

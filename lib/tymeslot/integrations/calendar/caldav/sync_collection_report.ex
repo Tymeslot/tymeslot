@@ -26,9 +26,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
   @doc """
   Fetches a sync-collection REPORT from the CalDAV server.
 
-  Uses the integration's stored `caldav_sync_token` to request only
-  changes since the last sync. When the token is `nil` a full initial
-  sync is requested.
+  Sends the collection's stored `sync_token` to request only changes since
+  the last sync. When the token is `nil` a full initial sync is requested.
 
   Returns `{:ok, {events, deleted_hrefs, new_sync_token}}` on success,
   `{:error, :sync_token_expired}` when the server responds with 410 Gone,
@@ -36,11 +35,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
   without inlining their calendar data (see `parse_response/1`), or
   `{:error, reason}` for other failures.
   """
-  @spec fetch(map(), map(), String.t()) ::
+  @spec fetch(map(), String.t(), String.t() | nil) ::
           {:ok, {list(map()), list(String.t()), String.t() | nil}}
           | {:error, term()}
-  def fetch(integration, client, calendar_url) do
-    sync_token = integration.caldav_sync_token
+  def fetch(client, calendar_url, sync_token) do
     report_body = build_report(sync_token)
 
     # RFC 6578, Section 3.2: the sync-collection report is defined only for

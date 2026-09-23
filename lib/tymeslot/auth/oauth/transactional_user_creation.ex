@@ -9,7 +9,6 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   import Ecto.Query, warn: false
   require Logger
 
-  alias Ecto.Changeset
   alias Tymeslot.Auth.{AdminBootstrap, UserQueries, UserSchema}
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Profiles.ProfileQueries
@@ -110,13 +109,16 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
     end
   end
 
+  # An account is only ever matched by the provider's own stable user ID, never
+  # by email. Each account belongs to the sign-in method that created it; an
+  # email match would let anyone controlling that address at another provider
+  # (or at the same provider, after the address changes hands) sign straight
+  # into it. A new login whose email is already registered fails on the email
+  # unique constraint instead.
   defp find_or_create_by_provider(repo, provider, provider_uid, auth_params) do
     case find_user_by_provider(repo, provider, provider_uid) do
-      {:error, :not_found} ->
-        handle_user_not_found_by_provider(repo, provider, provider_uid, auth_params)
-
-      {:ok, user} ->
-        {:ok, {user, false}}
+      {:ok, user} -> {:ok, {user, false}}
+      {:error, :not_found} -> create_new_user(repo, auth_params)
     end
   end
 
@@ -129,52 +131,12 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
     end
   end
 
-  defp handle_user_not_found_by_provider(repo, provider, provider_uid, auth_params) do
-    email = auth_params["email"]
-    email_verified = auth_params["is_verified"] == true
-
-    # Only link to an existing account by email when the provider has verified the
-    # address. Trusting an unverified email could let an attacker claim any address
-    # and silently take over the matching account.
-    if email_verified do
-      case UserQueries.get_user_by_email(email, repo) do
-        {:error, :not_found} ->
-          create_new_user(repo, auth_params)
-
-        {:ok, existing_user} ->
-          link_provider_to_existing_user(repo, existing_user, provider, provider_uid)
-      end
-    else
-      create_new_user(repo, auth_params)
-    end
-  end
-
   defp create_new_user(repo, auth_params) do
     with {:ok, user} <- UserQueries.create_social_user(auth_params, repo),
          {:ok, bootstrapped} <- AdminBootstrap.maybe_promote_first_user(user, repo) do
       {:ok, {bootstrapped, true}}
     else
       {:error, %Ecto.Changeset{} = changeset} -> {:error, {:find_or_create, changeset}}
-    end
-  end
-
-  defp link_provider_to_existing_user(repo, user, provider, provider_uid) do
-    update_attrs = build_provider_update_attrs(provider, provider_uid)
-
-    changeset = Changeset.change(user, update_attrs)
-
-    case UserQueries.update_changeset(changeset, repo) do
-      {:ok, updated_user} -> {:ok, {updated_user, false}}
-      {:error, changeset} -> {:error, {:find_or_create, changeset}}
-    end
-  end
-
-  defp build_provider_update_attrs(provider, provider_uid) do
-    case provider do
-      :github -> %{github_user_id: provider_uid}
-      :google -> %{google_user_id: provider_uid}
-      :oauth -> %{provider: "oauth", provider_uid: provider_uid}
-      _other -> %{}
     end
   end
 

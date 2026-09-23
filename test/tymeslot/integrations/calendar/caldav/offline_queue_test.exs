@@ -401,12 +401,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
 
   describe "flush/2 — how much of the event the replay sends" do
     # The rebuilt payload used to carry a narrow subset of the row, so a
-    # replayed update of a recurring event replaced the whole series on the
+    # replayed write of a recurring event replaced the whole series on the
     # server with one non-recurring VEVENT carrying no attendees and no alarms.
-    test "a replayed update still carries the RRULE, attendees and alarms",
+    # A create is the replay that still sends a series; an update of one is
+    # refused, see `OfflineQueueSeriesTest`.
+    test "a replayed create still carries the RRULE, attendees and alarms",
          %{integration: integration} do
       insert_pending_row(integration,
-        sync_state: "locally_modified",
+        sync_state: "locally_created",
         raw_ical: nil,
         recurrence_rule: "FREQ=WEEKLY;BYDAY=MO",
         attendees: [%{"email" => "sam@example.com", "display_name" => "Sam"}],
@@ -420,7 +422,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
         assert body =~ "sam@example.com"
         assert body =~ "BEGIN:VALARM"
 
-        Conn.send_resp(conn, 204, "")
+        Conn.send_resp(conn, 201, "")
       end)
 
       assert :ok = OfflineQueue.flush(integration, @client)

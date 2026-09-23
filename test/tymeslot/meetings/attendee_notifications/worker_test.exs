@@ -202,6 +202,50 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
     end
   end
 
+  describe "perform/1 for an event notified before" do
+    test "does not flag the dispatch as a first notification" do
+      event = event_with_attendees([{"a@x.com", "accepted"}])
+
+      assert :ok = perform_job(Worker, update_args(event))
+
+      assert [job] = notification_jobs()
+      assert job.args["first_notification"] == false
+      assert job.args["before_title"] == "before"
+    end
+
+    test "passes an all-day baseline's dates, and notices the event moved days" do
+      baseline =
+        LastNotifiedState.serialise(
+          %{title: "Offsite", start_date: ~D[2026-10-05], end_date: ~D[2026-10-08]},
+          [%{email: "a@x.com"}]
+        )
+
+      event =
+        insert(:provider_calendar_event,
+          summary: "Offsite",
+          location: "",
+          description: "",
+          all_day: true,
+          start_date: ~D[2026-10-12],
+          end_date: ~D[2026-10-15],
+          start_at: nil,
+          end_at: nil,
+          attendees: [%{"email" => "a@x.com"}],
+          last_notified_state: baseline
+        )
+
+      assert :ok = perform_job(Worker, update_args(event))
+
+      assert [job] = notification_jobs()
+
+      assert {job.args["before_start_date"], job.args["before_end_date"]} ==
+               {"2026-10-05", "2026-10-08"}
+
+      reloaded = Repo.get!(ProviderCalendarEventSchema, event.id)
+      assert reloaded.last_notified_state["start_date"] == "2026-10-12"
+    end
+  end
+
   describe "perform/1 excludes attendees who have declined" do
     test "notifies the active attendees but skips the one who declined" do
       event =
@@ -306,6 +350,15 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
       assert reloaded.last_notified_state["title"] == "first edit"
       assert reloaded.last_notified_state["attendees"] == ["a@x.com"]
       assert reloaded.ical_sequence == 1
+    end
+
+    test "flags the dispatch as a first notification, since nothing before is known" do
+      event = event_with_empty_baseline(["a@x.com"])
+
+      assert :ok = perform_job(Worker, update_args(event))
+
+      assert [job] = notification_jobs()
+      assert job.args["first_notification"] == true
     end
 
     test "an attendee who has declined is still skipped" do
@@ -415,9 +468,12 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
   end
 
   defp notification_recipient_emails do
+    Enum.flat_map(notification_jobs(), &(&1.args["attendee_emails"] || []))
+  end
+
+  defp notification_jobs do
     [worker: Tymeslot.Workers.EmailWorker]
     |> all_enqueued()
     |> Enum.filter(&(&1.args["action"] == "send_event_update_notification"))
-    |> Enum.flat_map(&(&1.args["attendee_emails"] || []))
   end
 end

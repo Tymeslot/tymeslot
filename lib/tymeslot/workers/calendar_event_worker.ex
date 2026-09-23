@@ -25,6 +25,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Jobs.ObanJobQueries
   alias Tymeslot.Meetings.CalendarEventSync
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.RetryHelpers
@@ -41,6 +42,18 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   # `Application.get_env/3` per job is not a hot path.
   @default_calendar_timeout_ms 90_000
 
+  # How long to wait behind another write to the same event, and for how many
+  # executions. A CalDAV round trip is a second or two, so a handful of short
+  # waits covers an ordinary one; a write wedged behind a slow server stops
+  # waiting and takes its chances rather than snoozing out of sight.
+  #
+  # The budget is measured in executions, genuine attempts included, so a job
+  # on its first run gets seven waits (roughly 14 to 21 seconds) and a retry
+  # gets correspondingly fewer; from the eighth attempt on it never waits.
+  @write_wait_seconds 2
+  @write_wait_jitter_seconds 1
+  @max_write_waits 8
+
   @doc """
   Performs the calendar event operation based on the action specified.
   """
@@ -50,6 +63,13 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       ) do
     Logger.metadata(job_id: job.id, attempt: attempt)
 
+    case wait_behind_earlier_write(job, meeting_id) do
+      {:snooze, seconds} -> {:snooze, seconds}
+      :go -> run(action, meeting_id, job, attempt)
+    end
+  end
+
+  defp run(action, meeting_id, job, attempt) do
     if Application.get_env(:tymeslot, :test_mode, false) do
       # In test mode, run synchronously to avoid SQL sandbox and Mox allowance issues
       # with child processes created by Task.async
@@ -76,6 +96,60 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       _other_attempt -> 30
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # One write at a time per event
+  # ---------------------------------------------------------------------------
+
+  # Oban's `unique` keeps a queued write from repeating one that has not begun,
+  # but nothing holds back a write that arrives while another is in flight —
+  # this queue runs ten at a time. Two conditional PUTs against one event
+  # cannot both win: the loser's `If-Match` names an ETag the winner has
+  # already replaced, and the server answers 412.
+  #
+  # That costs the newer write, which is the one carrying whatever prompted it.
+  # Approving a booking with a video meeting does exactly this: the approval's
+  # update is still talking to the server when the room is created, and the
+  # update that would carry the link collides with it. The host's entry then
+  # sits without the link until the offline queue replays the write on its next
+  # sync cycle, up to fifteen minutes later.
+  #
+  # Waiting is also what makes the write correct. A job that starts after the
+  # one in flight has finished reads the meeting again, and so writes the video
+  # link, the new title, the answer that changed — whatever landed while the
+  # other write was on the wire.
+  #
+  # Only a job that *started* earlier is waited for, so of any two jobs exactly
+  # one waits and the queue always moves.
+  defp wait_behind_earlier_write(%Oban.Job{id: id, attempted_at: %DateTime{}} = job, meeting_id)
+       when is_integer(id) do
+    if ObanJobQueries.earlier_job_executing?(__MODULE__, meeting_id, job) do
+      case SnoozePolicy.snooze_or_exhaust(SnoozePolicy.executions(job),
+             max_snoozes: @max_write_waits,
+             base_seconds: @write_wait_seconds,
+             jitter_seconds: @write_wait_jitter_seconds
+           ) do
+        {:snooze, seconds} ->
+          Logger.info("Another write to this event is in flight, waiting",
+            meeting_id: meeting_id,
+            snooze_seconds: seconds
+          )
+
+          {:snooze, seconds}
+
+        # Out of patience rather than out of options: run, and let the 412 path
+        # hand the write to the offline queue if the other one is still there.
+        :exhausted ->
+          :go
+      end
+    else
+      :go
+    end
+  end
+
+  # `Oban.Testing.perform_job/3` builds a job that was never inserted, so there
+  # is no queue for it to be behind.
+  defp wait_behind_earlier_write(_job, _meeting_id), do: :go
 
   defp dispatch_action(action, meeting_id, attempt) do
     case action do

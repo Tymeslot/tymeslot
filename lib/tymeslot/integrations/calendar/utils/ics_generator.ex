@@ -103,8 +103,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     %{
       summary: Map.get(meeting_details, :title, dgettext("emails", "Meeting")),
       description: build_ics_description(meeting_details),
-      dtstart: meeting_details.start_time,
-      dtend: meeting_details.end_time,
+      dtstart: dtstart(meeting_details),
+      dtend: dtend(meeting_details),
       location: determine_location(meeting_details),
       uid:
         "#{Map.get(meeting_details, :uid, UUID.uuid4())}@#{Application.get_env(:tymeslot, :email)[:domain]}",
@@ -114,6 +114,14 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
       status: Map.get(meeting_details, :status, "CONFIRMED")
     }
   end
+
+  # An all-day event has dates and no instants: RFC 5545 §3.3.4 date-only
+  # values, with the exclusive end date the iCal convention already uses.
+  defp dtstart(%{all_day: true, start_date: %Date{} = start_date}), do: start_date
+  defp dtstart(meeting_details), do: meeting_details.start_time
+
+  defp dtend(%{all_day: true, end_date: %Date{} = end_date}), do: end_date
+  defp dtend(meeting_details), do: meeting_details.end_time
 
   defp conference_uri(meeting_details) do
     case Map.get(meeting_details, :meeting_url) do
@@ -151,8 +159,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     BEGIN:VEVENT
     UID:#{event.uid}
     DTSTAMP:#{format_datetime_utc(DateTime.utc_now())}
-    DTSTART:#{format_datetime_utc(event.dtstart)}
-    DTEND:#{format_datetime_utc(event.dtend)}
+    DTSTART#{format_ical_time(event.dtstart)}
+    DTEND#{format_ical_time(event.dtend)}
     #{sequence_line}SUMMARY#{tag_language(summary_text, lang)}:#{summary_text}
     DESCRIPTION#{tag_language(description_text, lang)}:#{description_text}
     LOCATION#{tag_language(location_text, lang)}:#{location_text}
@@ -380,6 +388,9 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   end
 
   defp escape_ical_text(nil), do: ""
+
+  defp format_ical_time(%Date{} = date), do: ";VALUE=DATE:#{Calendar.strftime(date, "%Y%m%d")}"
+  defp format_ical_time(datetime), do: ":#{format_datetime_utc(datetime)}"
 
   defp format_datetime_utc(datetime) do
     datetime

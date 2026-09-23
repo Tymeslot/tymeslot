@@ -280,11 +280,7 @@ defmodule TymeslotWeb.Live.Scheduling.EmbedPaidBookingTest do
     target_date = Date.add(today, 1)
     date_str = Date.to_string(target_date)
 
-    # Ask the grid which month it is on, never arithmetic: it opens on the first
-    # bookable day, so it may already have moved itself past today's month.
-    unless showing_month?(view, target_date) do
-      view |> element("button[phx-click='next_month']") |> render_click()
-    end
+    show_month(view, target_date)
 
     wait_until(fn ->
       has_element?(view, "button.calendar-day[phx-value-date='#{date_str}']:not([disabled])")

@@ -312,6 +312,25 @@ defmodule TymeslotWeb.OAuthControllerTest do
       assert Flash.get(conn.assigns.flash, :info) =~ "Registration is currently disabled"
     end
 
+    test "redirects to login with an error when the email belongs to another sign-in method",
+         %{conn: conn} do
+      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
+                                                      %{
+                                                        code: "code",
+                                                        state: "state",
+                                                        provider: :github
+                                                      } ->
+        {:error, :email_already_taken, :github, conn}
+      end)
+
+      conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
+
+      assert redirected_to(conn) == "/?auth=login"
+
+      assert Flash.get(conn.assigns.flash, :error) =~
+               "already associated with another account"
+    end
+
     test "successful generic oauth callback redirects to dashboard", %{conn: conn} do
       Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
                                                       %{

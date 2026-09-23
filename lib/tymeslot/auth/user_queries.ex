@@ -320,15 +320,6 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Updates a user changeset using a specific repo (for transactions).
-  """
-  @spec update_changeset(Changeset.t(), module()) ::
-          {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def update_changeset(changeset, repo) do
-    repo.update(changeset)
-  end
-
-  @doc """
   Updates user verification status and marks token as used.
   NOTE: Intentionally keeps signup_ip for audit trail and fraud detection.
   """

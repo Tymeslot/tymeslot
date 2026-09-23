@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventEditLiveViewTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.Integrations.Calendar.Google.EventMapper, as: GoogleEventMapper
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
 
   setup :verify_on_exit!
@@ -159,7 +160,84 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventEditLiveViewTest do
       payload = await_provider_update(lv)
       assert payload.start_time == today
       assert payload.end_time == Date.add(today, 1)
-      assert [%{"email" => "colleague@example.com"}] = payload.attendees
+      assert [%{email: "colleague@example.com"}] = payload.attendees
+    end
+  end
+
+  describe "adding an attendee to an event others have already answered" do
+    setup %{integration: integration} do
+      # The shape the sync stores and the JSONB column hands back.
+      event =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          provider: "google",
+          summary: "Sprint review",
+          start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
+          all_day: false,
+          attendees: [
+            %{
+              "email" => "ada@example.com",
+              "display_name" => "Ada Lovelace",
+              "response_status" => "accepted",
+              "optional" => false
+            }
+          ]
+        )
+
+      %{event: event}
+    end
+
+    test "Google keeps the existing reply and gets none for the new invitee", %{
+      conn: conn,
+      event: event
+    } do
+      expect_provider_update(:ok)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element("form[phx-submit=add_event_attendee]")
+      |> render_submit(%{"email" => "grace@example.com"})
+
+      payload = await_provider_update(lv)
+
+      # `events.update` is a full replace: the cached reply has to travel, and
+      # the new invitee has to go without one so that Google applies its own
+      # default rather than a reply nobody gave.
+      assert [ada, grace] = GoogleEventMapper.format_event_data(payload)["attendees"]
+      assert ada["responseStatus"] == "accepted"
+      assert grace["email"] == "grace@example.com"
+      refute Map.has_key?(grace, "responseStatus")
+    end
+
+    test "the cache stores the new invitee in the canonical shape, with no reply", %{
+      conn: conn,
+      integration: integration,
+      event: event
+    } do
+      expect_provider_update(:ok)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element("form[phx-submit=add_event_attendee]")
+      |> render_submit(%{"email" => "grace@example.com"})
+
+      await_provider_update(lv)
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+
+      assert [%{"response_status" => "accepted"}, grace] = row.attendees
+
+      assert grace == %{
+               "email" => "grace@example.com",
+               "display_name" => nil,
+               "response_status" => nil,
+               "optional" => false
+             }
     end
   end
 

@@ -155,5 +155,58 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
       refute email.subject =~ "\r"
       refute email.subject =~ "\n"
     end
+
+    test "a first notification states current details with no before column" do
+      details =
+        build_event_update_details(%{
+          first_notification: true,
+          start_time: ~U[2026-11-03 09:30:00Z],
+          changes: [
+            {:time, nil, ~U[2026-11-03 09:30:00Z]},
+            {:title, nil, "Standup"},
+            {:description, nil, "<p>Daily <b>sync</b></p>"}
+          ]
+        })
+
+      email = EventUpdateNotification.render("a@example.com", details)
+
+      assert email.html_body =~ "Current details"
+      assert email.html_body =~ "Daily sync"
+      refute email.html_body =~ "What changed"
+      refute email.html_body =~ "line-through"
+
+      assert email.text_body =~ "Current Details"
+      assert email.text_body =~ "Title: Standup"
+      assert email.text_body =~ "Time: 03 Nov 2026, 09:30 UTC"
+      refute email.text_body =~ "→"
+    end
+
+    test "an all-day event shows its days and gets a date-only ICS" do
+      details =
+        build_event_update_details(%{
+          all_day: true,
+          start_time: nil,
+          end_time: nil,
+          duration: nil,
+          date: ~D[2026-10-12],
+          start_date: ~D[2026-10-12],
+          end_date: ~D[2026-10-13],
+          last_date: ~D[2026-10-12],
+          changes: [
+            {:time, Date.range(~D[2026-10-05], ~D[2026-10-05]),
+             Date.range(~D[2026-10-12], ~D[2026-10-12])}
+          ]
+        })
+
+      email = EventUpdateNotification.render("a@example.com", details)
+
+      assert email.html_body =~ "All day"
+      assert email.html_body =~ "1 day"
+      assert email.text_body =~ "Time: October 05, 2026 → October 12, 2026"
+
+      [ics] = Enum.filter(email.attachments, &(&1.content_type == "text/calendar"))
+      assert ics.data =~ "DTSTART;VALUE=DATE:20261012"
+      assert ics.data =~ "DTEND;VALUE=DATE:20261013"
+    end
   end
 end

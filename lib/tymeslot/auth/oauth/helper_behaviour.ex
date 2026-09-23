@@ -27,6 +27,7 @@ defmodule Tymeslot.Auth.OAuth.HelperBehaviour do
           | {:error, :general_error, atom(), Plug.Conn.t()}
           | {:error, :session_failed, atom(), Plug.Conn.t()}
           | {:error, :registration_disabled, atom(), Plug.Conn.t()}
+          | {:error, :email_already_taken, atom(), Plug.Conn.t()}
 
   @callback handle_oauth_callback(Plug.Conn.t(), oauth_callback_params()) :: flow_result()
 end

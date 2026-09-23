@@ -269,6 +269,53 @@ defmodule TymeslotWeb.StripeWebhookControllerTest do
       assert record.payload["type"] == "checkout.session.completed"
     end
 
+    test "acknowledges and does not get stuck on a malformed trial_will_end event", %{
+      conn: conn
+    } do
+      subscription = %{
+        "id" => "sub_malformed_trial",
+        "customer" => "cus_malformed_trial",
+        "trial_end" => "not_a_timestamp"
+      }
+
+      event =
+        PaymentTestHelpers.mock_stripe_webhook_event(
+          "customer.subscription.trial_will_end",
+          subscription
+        )
+
+      event_id = event["id"]
+      payload = Jason.encode!(event)
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> assign(:raw_body, payload)
+        |> post("/webhooks/stripe", payload)
+
+      # A handler that can't process the event must not crash the controller;
+      # Stripe gets a plain 200 so it stops retrying an event that will never
+      # succeed.
+      assert response(conn, 200) == ""
+
+      # And the event is marked processed rather than left "in progress",
+      # so a genuine Stripe retry of the same event is also acknowledged
+      # immediately instead of receiving a 503.
+      conn2 =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> assign(:raw_body, payload)
+        |> post("/webhooks/stripe", payload)
+
+      assert response(conn2, 200) == ""
+
+      assert Repo.aggregate(
+               from(w in WebhookEvent, where: w.stripe_event_id == ^event_id),
+               :count,
+               :id
+             ) == 1
+    end
+
     test "handles unknown event types gracefully", %{conn: conn} do
       event =
         PaymentTestHelpers.mock_stripe_webhook_event("unknown.event.type", %{

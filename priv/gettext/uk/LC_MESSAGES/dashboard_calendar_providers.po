@@ -1298,3 +1298,8 @@ msgstr "Створіть пароль застосунку в Nextcloud у ро�
 #, elixir-autogen, elixir-format
 msgid "Personal settings → Security"
 msgstr "Особисті налаштування → Безпека"
+
+#: lib/tymeslot/integrations/calendar/caldav/offline_queue.ex
+#, elixir-autogen, elixir-format
+msgid "This change was made to one occurrence of a repeating event, and the calendar server would have applied it to every occurrence, so it was not sent."
+msgstr "Цю зміну внесено до одного повторення регулярної події, але сервер календаря застосував би її до всіх повторень, тому її не надіслано."

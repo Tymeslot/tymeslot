@@ -35,6 +35,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   reconcile against. When a meeting that still expects its calendar event
   claims the row, the queue creates the event instead; see
   `recreate_missing/5`.
+
+  ## Rows that belong to a repeating series
+
+  An update or delete of a row that belongs to a series is never sent. A
+  CalDAV series lives in one resource, so the write for any one occurrence
+  lands on all of them: an update is patched onto the master VEVENT and a
+  delete removes the resource. The grid refuses both before anything is
+  queued (`Tymeslot.CalendarGrid.EventEdit.ensure_editable/1`,
+  `Tymeslot.CalendarGrid.EventDeletion.ensure_deletable/1`), but a row queued
+  before those guards existed still reaches the queue, and replaying it would
+  change or remove a series nobody asked to touch.
+
+  Such a row is skipped like any other that no retry can make sendable: it
+  stays queued with a sentence in `sync_last_error`, and every cycle logs its
+  uid, so the local change stays inspectable and nothing reaches the server.
+  A `locally_created` row is not checked: a new series is written as one
+  resource, which is what the create means.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -47,13 +64,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.Calendar.Recurrence.Series
   alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingState
 
   # `sync_last_error` is read by the account owner, so every value written to
   # it is a sentence. Transport failures get theirs from
-  # `CalDAVErrors.describe_error/1`; the three below cover the local-state
+  # `CalDAVErrors.describe_error/1`; the four below cover the local-state
   # failures that never reach the wire. They live as functions at the bottom of
   # this module rather than as module attributes: a `dgettext/2` call in an
   # attribute would freeze the locale at compile time.
@@ -96,7 +114,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
          integration,
          client
        ) do
-    with {:ok, path} <- collection_path(row, integration),
+    with :ok <- ensure_single_event(row),
+         {:ok, path} <- collection_path(row, integration),
          {:ok, event_data} <- sendable_event_data(row) do
       opts =
         events_opts() ++
@@ -126,22 +145,21 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
          integration,
          client
        ) do
-    case collection_path(row, integration) do
-      {:error, reason} ->
-        record_skip(integration, row, reason)
+    with :ok <- ensure_single_event(row),
+         {:ok, path} <- collection_path(row, integration) do
+      case Events.delete_calendar_event(client, path, row.uid, delete_opts(row)) do
+        :ok ->
+          ProviderCalendarEventQueries.delete_by_uid(integration.id, row.uid)
+          log_success(row, :deleted)
 
-      {:ok, path} ->
-        case Events.delete_calendar_event(client, path, row.uid, delete_opts(row)) do
-          :ok ->
-            ProviderCalendarEventQueries.delete_by_uid(integration.id, row.uid)
-            log_success(row, :deleted)
+        {:error, :not_found} ->
+          handle_missing_on_delete(row, integration)
 
-          {:error, :not_found} ->
-            handle_missing_on_delete(row, integration)
-
-          {:error, reason} ->
-            record_failure(integration, row, :deleted, reason)
-        end
+        {:error, reason} ->
+          record_failure(integration, row, :deleted, reason)
+      end
+    else
+      {:error, reason} -> record_skip(integration, row, reason)
     end
   end
 
@@ -183,6 +201,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   # ---------------------------------------------------------------------------
   # Helpers
   # ---------------------------------------------------------------------------
+
+  # Asked of the stored row, which is all the queue holds and the only copy
+  # that carries the series markers: an override's recurrence id lives in
+  # `provider_metadata`, not in a column. See the moduledoc.
+  defp ensure_single_event(%ProviderCalendarEventSchema{} = row) do
+    if Series.member?(row), do: {:error, :recurring_event}, else: :ok
+  end
 
   # The server has no resource to update: the event never landed, or the
   # organiser deleted it from their own client. No conflict policy can repair
@@ -343,6 +368,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
 
   defp skip_message(:no_primary_path), do: no_primary_path_message()
   defp skip_message(:incomplete_event_data), do: incomplete_event_message()
+  defp skip_message(:recurring_event), do: recurring_event_message()
 
   # The log keeps the raw term for diagnosis; `sync_last_error` is a
   # user-facing column, so it gets the sentence from `CalDAVErrors.describe_error/1`
@@ -366,6 +392,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
     Logger.warning("CalDAV offline queue replay skipped",
       calendar_integration_id: integration.id,
       uid: row.uid,
+      sync_state: row.sync_state,
       reason: reason
     )
 
@@ -393,6 +420,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
     dgettext(
       "dashboard_calendar_providers",
       "Tymeslot could not send this change to the calendar server."
+    )
+  end
+
+  defp recurring_event_message do
+    dgettext(
+      "dashboard_calendar_providers",
+      "This change was made to one occurrence of a repeating event, and the calendar server would have applied it to every occurrence, so it was not sent."
     )
   end
 
