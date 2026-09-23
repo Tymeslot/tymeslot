@@ -212,9 +212,22 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   defp attendee_message_section(meeting) do
     case meeting.attendee_message do
       nil -> nil
-      message -> "\n\n" <> dgettext("emails", "Message from attendee:") <> "\n#{message}"
+      message -> "\n\n" <> message_heading(meeting) <> "\n#{message}"
     end
   end
+
+  # Who wrote the note decides the heading. A meeting with no type was created
+  # by the host from their own dashboard, so the note on it is theirs — heading
+  # their own words "Message from attendee" in their own calendar tells them an
+  # attendee wrote something no attendee wrote. The emails make the same
+  # distinction, from the same fact.
+  # Matched on the key being present *and* null: a meeting that carries no
+  # `meeting_type_id` field at all says nothing about who wrote the note, so it
+  # keeps the heading it always had rather than being reattributed on a guess.
+  defp message_heading(%{meeting_type_id: nil}),
+    do: dgettext("emails", "Message from the organiser:")
+
+  defp message_heading(_meeting), do: dgettext("emails", "Message from attendee:")
 
   defp video_meeting_section(meeting) do
     case meeting.meeting_url do

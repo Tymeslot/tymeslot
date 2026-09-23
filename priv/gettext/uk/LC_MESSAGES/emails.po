@@ -2676,3 +2676,8 @@ msgstr "Учасник: %{attendee}"
 #, elixir-autogen, elixir-format
 msgid "Message from attendee:"
 msgstr "Повідомлення від учасника:"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Message from the organiser:"
+msgstr "Повідомлення від організатора:"

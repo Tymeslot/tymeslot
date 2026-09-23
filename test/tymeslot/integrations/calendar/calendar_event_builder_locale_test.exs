@@ -11,6 +11,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderLocaleTest do
 
   @moduletag :calendar
 
+  import Tymeslot.Factory
+
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
 
   @meeting %{
@@ -72,6 +74,35 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderLocaleTest do
       description = CalendarEventBuilder.build_event_description(@meeting)
 
       assert description =~ "Attendee: Alice <alice@example.com>"
+    end
+  end
+
+  describe "the note's heading" do
+    test "names the organiser on a meeting they created themselves" do
+      organiser = insert(:user, locale: "de")
+
+      description =
+        @meeting
+        |> Map.merge(%{organizer_user_id: organiser.id, meeting_type_id: nil})
+        |> CalendarEventBuilder.build_event_description()
+
+      # Quick add leaves no meeting type behind, and the note on such a booking
+      # was written by the host — not by the attendee it would otherwise credit.
+      assert description =~ "Nachricht vom Veranstalter:"
+      refute description =~ "Nachricht vom Teilnehmer:"
+    end
+
+    test "names the attendee on a booking made through a booking page" do
+      organiser = insert(:user, locale: "de")
+      meeting_type = insert(:meeting_type, user: organiser)
+
+      description =
+        @meeting
+        |> Map.merge(%{organizer_user_id: organiser.id, meeting_type_id: meeting_type.id})
+        |> CalendarEventBuilder.build_event_description()
+
+      assert description =~ "Nachricht vom Teilnehmer:"
+      refute description =~ "Nachricht vom Veranstalter:"
     end
   end
 
