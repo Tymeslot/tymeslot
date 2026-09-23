@@ -142,11 +142,6 @@ msgstr "Ověření přes %{provider} se nezdařilo."
 msgid "Failed to create session. Please try again."
 msgstr "Relaci se nepodařilo vytvořit. Zkuste to prosím znovu."
 
-#: lib/tymeslot_web/live/auth_live/verification_events.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to send verification email. Please try again later."
-msgstr "Ověřovací e-mail se nepodařilo odeslat. Zkuste to prosím později."
-
 #: lib/tymeslot_web/components/auth/session/login_component.ex
 #, elixir-autogen, elixir-format
 msgid "Forgot password?"
@@ -400,11 +395,6 @@ msgstr "Příliš mnoho pokusů o ověření. Zkuste to prosím později."
 #, elixir-autogen, elixir-format
 msgid "Try again"
 msgstr "Zkusit znovu"
-
-#: lib/tymeslot_web/live/auth_live/verification_events.ex
-#, elixir-autogen, elixir-format
-msgid "Unable to resend verification email. Please try signing up again."
-msgstr "Ověřovací e-mail se nepodařilo odeslat znovu. Zkuste prosím registraci zopakovat."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format

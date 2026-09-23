@@ -11,7 +11,7 @@ defmodule Tymeslot.Auth.VerificationTest do
   alias Tymeslot.Auth.Verification
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Repo
-  alias Tymeslot.Security.Token
+  alias Tymeslot.Security.{RateLimiter, Token}
   alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.EmailWorker
 
@@ -140,11 +140,62 @@ defmodule Tymeslot.Auth.VerificationTest do
   end
 
   describe "resend_verification_email_by_email/2" do
-    test "returns error for non-existent email" do
-      result =
-        Verification.resend_verification_email_by_email("nonexistent@example.com", %Plug.Conn{})
+    test "every account state gets the same :ok, and only an unverified account is sent mail" do
+      unverified = insert(:unverified_user)
+      verified = insert(:user)
+      unknown = "nobody-#{System.unique_integer([:positive])}@example.com"
 
-      assert {:error, :user_not_found} = result
+      replies =
+        for email <- [unverified.email, verified.email, unknown, nil] do
+          Verification.resend_verification_email_by_email(email, %Plug.Conn{})
+        end
+
+      assert replies == [:ok, :ok, :ok, :ok]
+
+      assert [job] = all_enqueued(worker: EmailWorker)
+      assert job.args["user_id"] == unverified.id
+    end
+
+    test "a verified account's stored token is left alone" do
+      verified = insert(:user)
+
+      assert :ok = Verification.resend_verification_email_by_email(verified.email, %Plug.Conn{})
+
+      assert Repo.get!(UserSchema, verified.id).verification_token ==
+               verified.verification_token
+    end
+
+    test "an account at its per-user cap is answered :ok and sent nothing" do
+      user = insert(:unverified_user)
+
+      for _i <- 1..5 do
+        RateLimiter.check_verification_rate_limit(user.id, "198.51.100.77")
+      end
+
+      assert :ok = Verification.resend_verification_email_by_email(user.email, %Plug.Conn{})
+      assert [] = all_enqueued(worker: EmailWorker)
+    end
+
+    test "the address bucket is charged before the lookup, whatever the address" do
+      conn = %Plug.Conn{remote_ip: {198, 51, 100, 78}}
+
+      # Five resends for addresses with no account still use up the budget...
+      for i <- 1..5 do
+        assert :ok =
+                 Verification.resend_verification_email_by_email(
+                   "unknown-#{i}@example.com",
+                   conn
+                 )
+      end
+
+      # ...so a real unverified account is refused from that address too.
+      user = insert(:unverified_user)
+
+      assert {:error, :rate_limited, message} =
+               Verification.resend_verification_email_by_email(user.email, conn)
+
+      assert message =~ "verification emails"
+      assert [] = all_enqueued(worker: EmailWorker)
     end
 
     test "a resend within the dedup window rotates the token and updates the queued job" do
@@ -164,7 +215,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       # The user hammers "resend" while that first email is still in the dedup window.
       # The token is rotated unconditionally; the scheduler replaces the queued job's
       # args with the new URL so job payload and DB token remain in lock-step.
-      assert {:ok, _user} =
+      assert :ok =
                Verification.resend_verification_email_by_email(user.email, %Plug.Conn{})
 
       # The original token is now invalid — a fresh token was persisted.
@@ -185,7 +236,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       stale_token = Token.generate_token()
       {:ok, _user} = UserTokenQueries.set_verification_token(user, stale_token)
 
-      assert {:ok, _user} =
+      assert :ok =
                Verification.resend_verification_email_by_email(user.email, %Plug.Conn{})
 
       # A genuinely new email is sent, so the token is rotated; the stale token no

@@ -142,11 +142,6 @@ msgstr "Не вдалося пройти автентифікацію через
 msgid "Failed to create session. Please try again."
 msgstr "Не вдалося створити сеанс. Спробуйте ще раз."
 
-#: lib/tymeslot_web/live/auth_live/verification_events.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to send verification email. Please try again later."
-msgstr "Не вдалося надіслати лист для підтвердження. Спробуйте пізніше."
-
 #: lib/tymeslot_web/components/auth/session/login_component.ex
 #, elixir-autogen, elixir-format
 msgid "Forgot password?"
@@ -400,11 +395,6 @@ msgstr "Забагато спроб підтвердження. Спробуйт
 #, elixir-autogen, elixir-format
 msgid "Try again"
 msgstr "Спробувати ще раз"
-
-#: lib/tymeslot_web/live/auth_live/verification_events.ex
-#, elixir-autogen, elixir-format
-msgid "Unable to resend verification email. Please try signing up again."
-msgstr "Не вдалося повторно надіслати лист для підтвердження. Спробуйте зареєструватися ще раз."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format

@@ -96,6 +96,28 @@ defmodule Tymeslot.Security.RateLimiter do
   def check_verification_rate_limit(user_id, ip), do: Auth.check_verification(user_id, ip)
 
   @doc """
+  The per-IP half of `check_verification_rate_limit/2`, on the same bucket.
+  """
+  @spec check_verification_ip_rate_limit(String.t() | :inet.ip_address() | nil) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_verification_ip_rate_limit(ip), do: Auth.check_verification_ip(ip)
+
+  @doc """
+  The per-user half of `check_verification_rate_limit/2`, on the same bucket.
+  """
+  @spec check_verification_user_rate_limit(term()) :: :ok | {:error, :rate_limited, String.t()}
+  def check_verification_user_rate_limit(user_id), do: Auth.check_verification_user(user_id)
+
+  @doc """
+  Rate limit the note sent to an account's owner when someone tries to sign up
+  with their address, per recipient.
+  """
+  @spec check_signup_attempt_notice_rate_limit(term()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_signup_attempt_notice_rate_limit(user_id),
+    do: Auth.check_signup_attempt_notice(user_id)
+
+  @doc """
   Rate limit password reset requests per email and per IP.
   """
   @spec check_password_reset_rate_limit(

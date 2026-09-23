@@ -120,13 +120,21 @@ defmodule TymeslotWeb.AuthLive do
   def handle_event("submit_password_reset", params, socket),
     do: PasswordResetEvents.submit_new_password(params, socket)
 
-  def handle_event("resend_verification", _params, socket) do
+  # Only the verify-email screen offers a resend; anywhere else the event is
+  # a crafted one and does nothing.
+  def handle_event(
+        "resend_verification",
+        _params,
+        %{assigns: %{current_state: :verify_email}} = socket
+      ) do
     if VerificationEvents.cooling_down?(socket) do
       {:noreply, socket}
     else
       VerificationEvents.resend(socket)
     end
   end
+
+  def handle_event("resend_verification", _params, socket), do: {:noreply, socket}
 
   # Catch-all event handler
   def handle_event(_event, _params, socket), do: {:noreply, socket}

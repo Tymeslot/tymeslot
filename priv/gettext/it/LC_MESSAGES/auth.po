@@ -142,11 +142,6 @@ msgstr "Autenticazione con %{provider} non riuscita."
 msgid "Failed to create session. Please try again."
 msgstr "Creazione della sessione non riuscita. Riprova."
 
-#: lib/tymeslot_web/live/auth_live/verification_events.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to send verification email. Please try again later."
-msgstr "Invio dell'email di verifica non riuscito. Riprova più tardi."
-
 #: lib/tymeslot_web/components/auth/session/login_component.ex
 #, elixir-autogen, elixir-format
 msgid "Forgot password?"
@@ -399,11 +394,6 @@ msgstr "Troppi tentativi di verifica. Riprova più tardi."
 #, elixir-autogen, elixir-format
 msgid "Try again"
 msgstr "Riprova"
-
-#: lib/tymeslot_web/live/auth_live/verification_events.ex
-#, elixir-autogen, elixir-format
-msgid "Unable to resend verification email. Please try signing up again."
-msgstr "Impossibile inviare di nuovo l'email di verifica. Prova a registrarti di nuovo."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format

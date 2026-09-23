@@ -103,15 +103,42 @@ defmodule Tymeslot.Security.RateLimiter.Auth do
   @spec check_verification(String.t(), String.t() | :inet.ip_address() | nil) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_verification(user_id, ip) do
-    normalized_ip = Helpers.normalize_ip(ip)
-    action = dgettext("errors", "verification emails")
+    with :ok <- check_verification_user(user_id), do: check_verification_ip(ip)
+  end
 
+  # The two halves of `check_verification/2`, charging the same buckets, for a
+  # caller that must charge the address before it knows whether any account
+  # is involved (the resend, which must not answer differently for one).
+  @spec check_verification_ip(String.t() | :inet.ip_address() | nil) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_verification_ip(ip) do
     Helpers.check_multi_bucket_limits([
-      {"email_verification:user:#{user_id}", @verification_limits, "email verification", action},
-      {"email_verification:ip:#{normalized_ip}", @verification_limits, "email verification",
-       action}
+      {"email_verification:ip:#{Helpers.normalize_ip(ip)}", @verification_limits,
+       "email verification", verification_action()}
     ])
   end
+
+  @spec check_verification_user(term()) :: :ok | {:error, :rate_limited, String.t()}
+  def check_verification_user(user_id) do
+    Helpers.check_multi_bucket_limits([
+      {"email_verification:user:#{user_id}", @verification_limits, "email verification",
+       verification_action()}
+    ])
+  end
+
+  # Caps the note sent to an account's owner when someone tries to sign up
+  # with their address, so the sign-up form cannot be used to flood a mailbox.
+  # Its own bucket, at the verification budget, so that an attempt against an
+  # unverified account never spends that account's own resend allowance.
+  @spec check_signup_attempt_notice(term()) :: :ok | {:error, :rate_limited, String.t()}
+  def check_signup_attempt_notice(user_id) do
+    Helpers.check_multi_bucket_limits([
+      {"signup_attempt_notice:user:#{user_id}", @verification_limits, "signup attempt notice",
+       verification_action()}
+    ])
+  end
+
+  defp verification_action, do: dgettext("errors", "verification emails")
 
   @spec check_password_reset(String.t(), String.t() | :inet.ip_address() | nil) ::
           :ok | {:error, :rate_limited, String.t()}

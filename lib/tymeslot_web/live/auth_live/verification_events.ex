@@ -15,11 +15,20 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
   deliver a second event before the DOM patch lands, and handling it would spawn
   a second timer chain that drains the countdown at twice the rate.
 
-  ## Honeypot signups have nothing to resend
+  ## Only a session-bound account is ever sent anything
 
-  A signup caught by the honeypot never created an account, so there is no email
-  to send. It still has to *look* identical, down to the rate limiting, or the
-  difference in behaviour is itself the tell.
+  The resend goes to the unverified user bound to this session (proved by
+  password at login, or created by this process at sign-up), never to an
+  address typed into a form. Every outcome, sent, unknown, already verified or
+  over the account's own allowance, reads "Verification email sent!", so the
+  button cannot be used to learn whether an address has an account.
+
+  ## Honeypot and duplicate signups have nothing to resend
+
+  A signup caught by the honeypot, or one for an address that already had an
+  account, bound no user, so there is no email to send. It still has to *look*
+  identical, down to the rate limiting, or the difference in behaviour is
+  itself the tell.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -27,8 +36,8 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3]
 
-  alias Tymeslot.Auth.{Session, SignupSecurity, Verification}
-  alias Tymeslot.Security.{RateLimiter, SecurityLogger}
+  alias Tymeslot.Auth.{SignupSecurity, Verification}
+  alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.AuthLive.SecurityHelper
 
   @typedoc "A LiveView `handle_event/3` return value."
@@ -48,7 +57,6 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
     case attempt(socket) do
       :sent -> {:noreply, done(socket, :info, sent_message())}
       {:rate_limited, message} -> {:noreply, done(socket, :error, message)}
-      {:failed, message} -> {:noreply, done(socket, :error, message)}
     end
   end
 
@@ -76,55 +84,47 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
 
   def cooling_down?(_socket), do: false
 
-  defp attempt(%{assigns: %{honeypot_signup: true}} = socket) do
+  # The only address a resend ever goes to is the session-bound unverified
+  # user's: one that proved its password at login, or that this very process
+  # just created at sign-up. Nothing typed into a form reaches here, and with
+  # no bound user the domain still charges the address bucket and answers as
+  # if an email went out, so the reply cannot tell anyone which case applied.
+  defp attempt(socket) do
+    case Verification.resend_verification_email_by_email(bound_email(socket), socket) do
+      :ok ->
+        maybe_log_honeypot(socket)
+        :sent
+
+      {:error, :rate_limited, message} ->
+        maybe_log_honeypot_violation(socket)
+        {:rate_limited, message}
+    end
+  end
+
+  defp bound_email(%{assigns: %{unverified_user: %{email: email}}}) when is_binary(email),
+    do: email
+
+  defp bound_email(_socket), do: nil
+
+  defp maybe_log_honeypot(%{assigns: %{honeypot_signup: true}} = socket) do
+    socket |> SecurityHelper.extract_client_metadata() |> SignupSecurity.log_honeypot_resend()
+  end
+
+  defp maybe_log_honeypot(_socket), do: :ok
+
+  # This is the resend rate limit rejecting traffic the honeypot has already
+  # flagged as a bot, so it's the one worth recording separately. There is no
+  # account to identify it by, so `identifier` is `nil`.
+  defp maybe_log_honeypot_violation(%{assigns: %{honeypot_signup: true}} = socket) do
     metadata = SecurityHelper.extract_client_metadata(socket)
 
-    case RateLimiter.check_verification_rate_limit(
-           "honeypot",
-           SecurityHelper.rate_limit_ip(metadata)
-         ) do
-      :ok ->
-        SignupSecurity.log_honeypot_resend(metadata)
-        :sent
-
-      {:error, :rate_limited, message} ->
-        # This is the resend rate limit rejecting traffic the honeypot has
-        # already flagged as a bot, so it's the one worth recording. There
-        # is no account to identify it by: `identifier` is `nil` rather than
-        # the "honeypot" bucket tag, which would be filed under `:email` and
-        # dropped by masking as unparseable.
-        SecurityLogger.log_rate_limit_violation(nil, "email_verification_honeypot", %{
-          ip_address: SecurityHelper.rate_limit_ip(metadata),
-          user_agent: metadata.user_agent
-        })
-
-        {:rate_limited, message}
-    end
+    SecurityLogger.log_rate_limit_violation(nil, "email_verification_honeypot", %{
+      ip_address: SecurityHelper.rate_limit_ip(metadata),
+      user_agent: metadata.user_agent
+    })
   end
 
-  defp attempt(socket) do
-    case Session.get_verification_email(socket) do
-      nil ->
-        {:failed,
-         dgettext("auth", "Unable to resend verification email. Please try signing up again.")}
-
-      email ->
-        send_to(email, socket)
-    end
-  end
-
-  defp send_to(email, socket) do
-    case Verification.resend_verification_email_by_email(email, socket) do
-      {:ok, _user} ->
-        :sent
-
-      {:error, :rate_limited, message} ->
-        {:rate_limited, message}
-
-      {:error, _reason} ->
-        {:failed, dgettext("auth", "Failed to send verification email. Please try again later.")}
-    end
-  end
+  defp maybe_log_honeypot_violation(_socket), do: :ok
 
   defp start_cooldown(socket) do
     schedule_tick()
