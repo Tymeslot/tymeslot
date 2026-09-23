@@ -7,6 +7,7 @@ defmodule Tymeslot.Bookings.CalendarJobs do
   ensuring consistent handling across the codebase.
   """
 
+  alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Workers.CalendarEventWorker
 
   @typedoc "Any map or struct that exposes a UUID `:id` field."
@@ -40,7 +41,7 @@ defmodule Tymeslot.Bookings.CalendarJobs do
           period: 300,
           fields: [:args, :queue],
           keys: [:action, :meeting_id],
-          states: [:available, :scheduled, :executing, :retryable]
+          states: CalendarEventScheduler.unique_states(action)
         ]
       )
 
