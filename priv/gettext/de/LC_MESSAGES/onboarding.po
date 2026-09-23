@@ -321,3 +321,13 @@ msgstr "Aktivieren Sie die Bestätigung für einen Termintyp, und dessen Buchung
 #, elixir-autogen
 msgid "Write your own booking page welcome"
 msgstr "Schreiben Sie Ihre eigene Begrüßung"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "A meeting type can now offer several places to meet: in person at an address, a video call or a phone call. The person booking picks the one that suits them, and can change it when they reschedule. Offer more than one video service and they choose which one the meeting runs on."
+msgstr "Eine Terminart kann jetzt mehrere Treffpunkte anbieten: persönlich an einer Adresse, einen Videoanruf oder einen Telefonanruf. Die buchende Person wählt, was ihr am besten passt, und kann es beim Verschieben ändern. Bieten Sie mehr als einen Videodienst an, wählt sie auch, über welchen das Treffen läuft."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Let people choose where you meet"
+msgstr "Lassen Sie andere wählen, wo Sie sich treffen"

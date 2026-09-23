@@ -50,6 +50,9 @@ defmodule Tymeslot.Announcements.Catalog do
   @booking_page_text_published_at ~U[2026-09-02 00:00:00Z]
   @booking_page_text_expires_at ~U[2026-10-02 00:00:00Z]
 
+  @meeting_locations_published_at ~U[2026-09-23 00:00:00Z]
+  @meeting_locations_expires_at ~U[2026-10-23 00:00:00Z]
+
   @spec list() :: [Announcement.t()]
   def list do
     # One builder per announcement keeps this ordered list trivial and each
@@ -57,6 +60,7 @@ defmodule Tymeslot.Announcements.Catalog do
     # last — add smaller improvements to its bullets rather than spawning new
     # entries.
     [
+      meeting_locations(),
       booking_approval(),
       booking_page_text(),
       availability_schedules(),
@@ -71,6 +75,26 @@ defmodule Tymeslot.Announcements.Catalog do
       zoom_integration(),
       more_features()
     ]
+  end
+
+  defp meeting_locations do
+    %Announcement{
+      key: "meeting_locations",
+      title: dgettext("onboarding", "Let people choose where you meet"),
+      body:
+        dgettext(
+          "onboarding",
+          "A meeting type can now offer several places to meet: in person at an address, " <>
+            "a video call or a phone call. The person booking picks the one that suits " <>
+            "them, and can change it when they reschedule. Offer more than one video " <>
+            "service and they choose which one the meeting runs on."
+        ),
+      image_path: "/images/announcements/meeting-locations.svg",
+      cta_label: dgettext("onboarding", "Read the docs"),
+      cta_docs_slug: "meeting-locations",
+      published_at: @meeting_locations_published_at,
+      expires_at: @meeting_locations_expires_at
+    }
   end
 
   defp booking_approval do

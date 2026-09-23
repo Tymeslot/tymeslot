@@ -320,3 +320,13 @@ msgstr "Attiva l'approvazione per un tipo di riunione e le sue prenotazioni ti a
 #, elixir-autogen
 msgid "Write your own booking page welcome"
 msgstr "Scrivi il tuo messaggio di benvenuto"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "A meeting type can now offer several places to meet: in person at an address, a video call or a phone call. The person booking picks the one that suits them, and can change it when they reschedule. Offer more than one video service and they choose which one the meeting runs on."
+msgstr "Un tipo di riunione ora può offrire più luoghi d'incontro: di persona a un indirizzo, una videochiamata o una telefonata. Chi prenota sceglie quello più adatto e può cambiarlo quando riprogramma. Offri più di un servizio video e sceglie anche su quale si svolge la riunione."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Let people choose where you meet"
+msgstr "Lascia scegliere dove incontrarvi"

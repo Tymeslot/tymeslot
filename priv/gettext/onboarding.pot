@@ -277,3 +277,13 @@ msgstr ""
 #, elixir-autogen
 msgid "Write your own booking page welcome"
 msgstr ""
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "A meeting type can now offer several places to meet: in person at an address, a video call or a phone call. The person booking picks the one that suits them, and can change it when they reschedule. Offer more than one video service and they choose which one the meeting runs on."
+msgstr ""
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Let people choose where you meet"
+msgstr ""
