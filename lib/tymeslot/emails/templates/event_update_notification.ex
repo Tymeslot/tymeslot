@@ -8,6 +8,8 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
 
   import Swoosh.Email
 
+  alias Tymeslot.Emails.Shared.Stack
+
   alias Tymeslot.Emails.Shared.{
     Formatting,
     MeetingComponents,
@@ -191,7 +193,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
     accent = Styles.intent_accent(@intent)
     accent_ink = Styles.intent(@intent).accent_ink
 
-    """
+    Stack.spaced("""
     <mj-section
       background-color="#{tint}"
       border-radius="#{Styles.card_radius()}"
@@ -214,7 +216,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
         </mj-table>
       </mj-column>
     </mj-section>
-    """
+    """)
   end
 
   defp first_notification?(details), do: Map.get(details, :first_notification) == true
