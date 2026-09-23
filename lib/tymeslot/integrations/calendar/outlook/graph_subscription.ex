@@ -69,8 +69,25 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   end
 
   @doc """
-  Creates a Microsoft Graph push subscription for the integration and persists
-  the subscription id, expiry, and client state. Requires `:webhook_base_url`.
+  Makes sure the integration has a live Microsoft Graph push subscription and
+  persists its id, expiry and client state. Requires `:webhook_base_url`.
+
+  An integration that already stores a subscription has that subscription
+  renewed in place (`PATCH /subscriptions/{id}`), which is how Graph expects a
+  subscription to be kept alive. A new one is created only when there is none
+  stored, or Graph answers that the stored one no longer exists.
+
+  Renewing in place is what keeps this safe to repeat. Creating a fresh
+  subscription on every renewal left the previous one pushing to us until it
+  expired, up to two days later, and a job re-run after a lost
+  acknowledgement (a lifeline rescue) created yet another. A repeated renewal
+  now only extends the same subscription again.
+
+  What remains is the create path itself: if the process stops after Graph
+  accepted the new subscription and before its id was stored, the next run
+  cannot know about it and creates another. The stray one expires on its own
+  within two days, and nothing is delivered for it, since incoming
+  notifications are matched to an integration by the stored subscription id.
 
   Does **not** touch `graph_delta_link` — that's `bootstrap_sync/1`'s job.
   """
@@ -107,23 +124,93 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   # every rescued exception into a `CaseClauseError` that crashes the caller.
 
   defp do_register(integration, webhook_base_url) do
-    client_state = Base.url_encode64(:crypto.strong_rand_bytes(32))
-
-    expiration =
-      DateTime.utc_now()
-      |> DateTime.add(2 * 24 * 3600, :second)
-      |> DateTime.to_iso8601()
-
     AccessToken.with_access_token(integration, &CalendarAPI.refresh_token/1, fn token ->
-      with {:ok, subscription_attrs} <-
-             create_subscription(token, client_state, expiration, webhook_base_url) do
-        persist_subscription(
-          integration,
-          Map.put(subscription_attrs, :graph_client_state, client_state)
-        )
+      case renew_stored_subscription(token, integration, webhook_base_url) do
+        {:ok, subscription_attrs} ->
+          persist_subscription(integration, subscription_attrs)
+
+        :none ->
+          create_and_persist(token, integration, webhook_base_url)
+
+        error ->
+          error
       end
     end)
   end
+
+  # A stored subscription is only renewable together with the client state it
+  # was created with: Graph keeps sending that value, and notifications are
+  # verified against the stored copy. Without one there is nothing to renew.
+  defp renew_stored_subscription(
+         token,
+         %CalendarIntegrationSchema{
+           graph_subscription_id: subscription_id,
+           graph_client_state: client_state
+         } = integration,
+         webhook_base_url
+       )
+       when is_binary(subscription_id) and is_binary(client_state) do
+    body = %{
+      "expirationDateTime" => subscription_expiration(),
+      "notificationUrl" => notification_url(webhook_base_url)
+    }
+
+    result =
+      CalendarCircuitBreaker.call(:outlook, fn ->
+        CalendarAPI.make_request_with_body(
+          :patch,
+          "/subscriptions/#{URI.encode(subscription_id)}",
+          token,
+          body
+        )
+      end)
+
+    case unwrap_breaker_result(result) do
+      {:ok, response} when is_map(response) ->
+        {:ok, %{graph_subscription_expires_at: expires_at(response)}}
+
+      # Expired, or removed by Graph (the `subscriptionRemoved` lifecycle
+      # event): it can no longer be renewed, so a new one is needed.
+      {:error, :not_found, _message} ->
+        Logger.info("Stored Graph subscription no longer exists; creating a new one",
+          calendar_integration_id: integration.id
+        )
+
+        :none
+
+      error ->
+        error
+    end
+  end
+
+  defp renew_stored_subscription(_token, _integration, _webhook_base_url), do: :none
+
+  # An API error can arrive wrapped by the breaker (`{:ok, {:error, _, _}}`,
+  # see the note above) or as the bare 3-tuple; both mean the same here.
+  defp unwrap_breaker_result({:ok, {:error, _type, _message} = error}), do: error
+  defp unwrap_breaker_result(result), do: result
+
+  defp create_and_persist(token, integration, webhook_base_url) do
+    client_state = Base.url_encode64(:crypto.strong_rand_bytes(32))
+
+    with {:ok, subscription_attrs} <-
+           create_subscription(token, client_state, subscription_expiration(), webhook_base_url) do
+      persist_subscription(
+        integration,
+        Map.put(subscription_attrs, :graph_client_state, client_state)
+      )
+    end
+  end
+
+  defp subscription_expiration do
+    DateTime.utc_now()
+    |> DateTime.add(2 * 24 * 3600, :second)
+    |> DateTime.to_iso8601()
+  end
+
+  defp notification_url(webhook_base_url), do: "#{webhook_base_url}/webhooks/outlook-calendar"
+
+  defp expires_at(response), do: parse_iso8601_datetime(response["expirationDateTime"])
 
   defp normalise_delta_events(events, %CalendarIntegrationSchema{} = integration) do
     context = %{
@@ -138,7 +225,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   defp create_subscription(token, client_state, expiration, webhook_base_url) do
     body = %{
       "changeType" => "created,updated,deleted",
-      "notificationUrl" => "#{webhook_base_url}/webhooks/outlook-calendar",
+      "notificationUrl" => notification_url(webhook_base_url),
       "lifecycleNotificationUrl" => "#{webhook_base_url}/webhooks/outlook-lifecycle",
       "resource" => "me/events",
       "expirationDateTime" => expiration,
@@ -152,12 +239,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
 
     case result do
       {:ok, response} when is_map(response) ->
-        expires_at = parse_iso8601_datetime(response["expirationDateTime"])
-
         {:ok,
          %{
            graph_subscription_id: response["id"],
-           graph_subscription_expires_at: expires_at
+           graph_subscription_expires_at: expires_at(response)
          }}
 
       {:ok, error} ->

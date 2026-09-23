@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Outlook.GraphSubscription
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
@@ -276,5 +277,91 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
       # Untouched by register/1 — bootstrap_sync/1 owns the delta link.
       assert is_nil(updated.graph_delta_link)
     end
+
+    test "renews a stored subscription in place instead of creating another",
+         %{integration: integration} do
+      Application.put_env(:tymeslot, :webhook_base_url, "https://hook.example.com")
+      on_exit(fn -> Application.delete_env(:tymeslot, :webhook_base_url) end)
+
+      integration = with_stored_subscription(integration, "graph-sub-live")
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :patch, url, body, _headers, _opts ->
+        assert String.ends_with?(url, "/subscriptions/graph-sub-live")
+        decoded = Jason.decode!(body)
+        assert decoded["expirationDateTime"]
+        assert decoded["notificationUrl"] == "https://hook.example.com/webhooks/outlook-calendar"
+
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "id" => "graph-sub-live",
+               "expirationDateTime" => "2030-06-05T10:00:00Z"
+             })
+         }}
+      end)
+
+      assert {:ok, updated} = GraphSubscription.register(integration)
+      assert updated.graph_subscription_id == "graph-sub-live"
+      assert updated.graph_client_state == "stored-client-state"
+      assert updated.graph_subscription_expires_at == ~U[2030-06-05 10:00:00Z]
+    end
+
+    test "creates a new subscription when Graph no longer has the stored one",
+         %{integration: integration} do
+      Application.put_env(:tymeslot, :webhook_base_url, "https://hook.example.com")
+      on_exit(fn -> Application.delete_env(:tymeslot, :webhook_base_url) end)
+
+      integration = with_stored_subscription(integration, "graph-sub-removed")
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :patch, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: Jason.encode!(%{"error" => %{}})}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, url, _body, _headers, _opts ->
+        assert String.ends_with?(url, "/subscriptions")
+
+        {:ok,
+         %Req.Response{
+           status: 201,
+           body:
+             Jason.encode!(%{
+               "id" => "graph-sub-new",
+               "expirationDateTime" => "2030-06-05T10:00:00Z"
+             })
+         }}
+      end)
+
+      assert {:ok, updated} = GraphSubscription.register(integration)
+      assert updated.graph_subscription_id == "graph-sub-new"
+      refute updated.graph_client_state == "stored-client-state"
+    end
+
+    test "does not create a subscription when renewing the stored one fails transiently",
+         %{integration: integration} do
+      Application.put_env(:tymeslot, :webhook_base_url, "https://hook.example.com")
+      on_exit(fn -> Application.delete_env(:tymeslot, :webhook_base_url) end)
+
+      integration = with_stored_subscription(integration, "graph-sub-live")
+
+      # verify_on_exit! fails the test on any POST to /subscriptions.
+      expect(Tymeslot.HTTPClientMock, :request, fn :patch, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 503, body: "unavailable"}}
+      end)
+
+      assert {:error, _type, _message} = GraphSubscription.register(integration)
+    end
+  end
+
+  defp with_stored_subscription(integration, subscription_id) do
+    {:ok, integration} =
+      CalendarIntegrationWebhookQueries.update_graph_subscription(integration, %{
+        graph_subscription_id: subscription_id,
+        graph_client_state: "stored-client-state",
+        graph_subscription_expires_at: DateTime.add(DateTime.utc_now(:second), 12, :hour)
+      })
+
+    integration
   end
 end
