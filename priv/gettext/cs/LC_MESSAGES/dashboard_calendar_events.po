@@ -1074,3 +1074,8 @@ msgstr "Aktualizovat tuto událost"
 #, elixir-autogen, elixir-format
 msgid "Recurring events cannot be edited here yet. Please change this one in your calendar app."
 msgstr "Opakované události zde zatím nelze upravovat. Upravte prosím tuto událost ve své kalendářové aplikaci."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
+msgstr "Událost byla zkopírována do nového kalendáře, ale přesun se nedokončil. Zkontrolujte prosím původní kalendář a smažte původní událost, pokud tam stále je."

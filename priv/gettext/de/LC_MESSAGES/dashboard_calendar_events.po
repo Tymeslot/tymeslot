@@ -1062,3 +1062,8 @@ msgstr "Dieses Ereignis aktualisieren"
 #, elixir-autogen, elixir-format
 msgid "Recurring events cannot be edited here yet. Please change this one in your calendar app."
 msgstr "Wiederkehrende Ereignisse können hier noch nicht bearbeitet werden. Bitte ändern Sie dieses Ereignis in Ihrer Kalender-App."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
+msgstr "Ereignis in den neuen Kalender kopiert, aber das Verschieben wurde nicht abgeschlossen. Bitte prüfen Sie den ursprünglichen Kalender und löschen Sie das Original, falls es noch dort ist."

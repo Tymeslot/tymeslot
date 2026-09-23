@@ -23,6 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
 
   @typep converted_event :: %{
            required(:uid) => String.t() | nil,
+           required(:ical_uid) => String.t() | nil,
            required(:summary) => String.t() | nil,
            required(:description) => String.t() | nil,
            required(:location) => String.t() | nil,
@@ -103,6 +104,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   def convert_event(google_event) do
     %{
       uid: google_event["id"],
+      # The key sync caches the event under (`EventNormaliser`), which Google
+      # assigns itself: it is not derived from the id, even one Tymeslot chose.
+      ical_uid: google_event["iCalUID"],
       summary: google_event["summary"],
       description: google_event["description"],
       location: google_event["location"],
