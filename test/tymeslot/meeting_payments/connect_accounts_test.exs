@@ -35,7 +35,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       expect(StripeAdapterMock, :create_account, fn params, opts ->
         assert params.type == "standard"
         assert params.country == "ch"
-        assert opts[:idempotency_key] == "account:#{user.id}"
+        send(self(), {:idempotency_key, opts[:idempotency_key]})
         {:ok, %{id: "acct_TEST_123", default_currency: "chf"}}
       end)
 
@@ -52,6 +52,8 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       assert account.stripe_account_id == "acct_TEST_123"
       assert account.default_currency == "chf"
       assert account.status == "active"
+      assert_received {:idempotency_key, key}
+      assert key == "connect_account:#{account.id}"
     end
 
     test "uses the operator-configured default country" do
@@ -82,10 +84,10 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
     test "resumes onboarding when placeholder exists from a prior crashed attempt" do
       user = insert(:user)
-      {:ok, _placeholder} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+      {:ok, placeholder} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
 
       expect(StripeAdapterMock, :create_account, fn _params, opts ->
-        assert opts[:idempotency_key] == "account:#{user.id}"
+        assert opts[:idempotency_key] == "connect_account:#{placeholder.id}"
         {:ok, %{id: "acct_RESUMED", default_currency: "chf"}}
       end)
 
@@ -117,6 +119,33 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
       assert account.id == existing.id
       assert ConnectAccountQueries.live_for_user(user.id).stripe_account_id == "acct_EXISTING"
+    end
+
+    test "creates a new account after the host disconnects one that never finished onboarding" do
+      # An account Stripe has closed or rejected can never finish onboarding;
+      # disconnecting it is the host's way out. Starting again must create a
+      # new account, not reuse the old one or replay Stripe's cached answer
+      # for it within the idempotency-key window.
+      user = insert(:user)
+      old = insert(:connect_account, user: user, stripe_account_id: "acct_DEAD")
+
+      assert {:ok, _result} = ConnectAccounts.disconnect(user)
+
+      expect(StripeAdapterMock, :create_account, fn _params, opts ->
+        refute opts[:idempotency_key] == "connect_account:#{old.id}"
+        {:ok, %{id: "acct_FRESH", default_currency: "chf"}}
+      end)
+
+      expect(StripeAdapterMock, :create_account_link, fn params ->
+        assert params.account == "acct_FRESH"
+        {:ok, %{url: "https://connect.stripe.com/fresh"}}
+      end)
+
+      assert {:ok, %{url: "https://connect.stripe.com/fresh", account: account}} =
+               ConnectAccounts.start_onboarding(user)
+
+      refute account.id == old.id
+      assert ConnectAccountQueries.live_for_user(user.id).stripe_account_id == "acct_FRESH"
     end
 
     test "classifies Stripe's hold on creating connected accounts" do

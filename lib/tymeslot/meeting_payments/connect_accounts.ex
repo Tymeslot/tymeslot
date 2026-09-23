@@ -4,8 +4,8 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
   Owns the placeholder-first onboarding flow: a row is persisted before
   Stripe is ever called so that a crash mid-flight cannot orphan a real
-  Stripe account. The Stripe API call itself is idempotency-keyed by the
-  user id, which makes a retry after a crash safe.
+  Stripe account. The Stripe API call itself is idempotency-keyed by that
+  placeholder row, which makes a retry after a crash safe.
   """
 
   require Logger
@@ -56,7 +56,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   end
 
   defp onboard(%ConnectAccountSchema{} = placeholder, country) do
-    with {:ok, stripe_account} <- create_stripe_account(placeholder.user_id, country),
+    with {:ok, stripe_account} <- create_stripe_account(placeholder, country),
          {:ok, link} <- create_account_link(stripe_account.id),
          {:ok, account} <-
            ConnectAccountQueries.update(placeholder, %{
@@ -350,8 +350,11 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
   # The idempotency key only protects a retry within Stripe's 24-hour key
   # window; `onboard/2` never reaches here for a row that already has an
-  # account, which is what stops a later return creating a second one.
-  defp create_stripe_account(user_id, country) do
+  # account, which is what stops a later return creating a second one. It is
+  # keyed by the placeholder row rather than the user: a host who disconnects
+  # and starts again gets a new row, and must get a new account rather than
+  # Stripe's cached answer naming the one they just left.
+  defp create_stripe_account(%ConnectAccountSchema{id: placeholder_id}, country) do
     %{
       type: "standard",
       country: country,
@@ -360,7 +363,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
         transfers: %{requested: true}
       }
     }
-    |> StripeAdapter.create_account(idempotency_key: "account:#{user_id}")
+    |> StripeAdapter.create_account(idempotency_key: "connect_account:#{placeholder_id}")
     |> classify_account_creation_error()
   end
 
