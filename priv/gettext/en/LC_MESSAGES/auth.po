@@ -231,6 +231,8 @@ msgstr ""
 msgid "Password Reset Successfully"
 msgstr ""
 
+#: lib/tymeslot/auth/email_change.ex
+#: lib/tymeslot/auth/password_update.ex
 #: lib/tymeslot/security/field_validators/password_validator.ex
 #: lib/tymeslot_web/live/auth_live.ex
 #, elixir-autogen, elixir-format
@@ -742,11 +744,6 @@ msgstr ""
 msgid "Failed to authenticate with %{provider}. Please try again."
 msgstr ""
 
-#: lib/tymeslot/auth/email_change.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to verify email change"
-msgstr ""
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "If your email is registered, you will receive password reset instructions."
@@ -788,11 +785,6 @@ msgstr ""
 msgid "New password must be different from current password"
 msgstr ""
 
-#: lib/tymeslot/auth/password_update.ex
-#, elixir-autogen, elixir-format
-msgid "Password must be at least 8 characters long"
-msgstr ""
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Password must be at least 8 characters long."
@@ -801,11 +793,6 @@ msgstr ""
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Password reset failed. Please try again."
-msgstr ""
-
-#: lib/tymeslot/auth/password_update.ex
-#, elixir-autogen, elixir-format
-msgid "Passwords do not match"
 msgstr ""
 
 #: lib/tymeslot/auth/error_formatter.ex
@@ -1002,13 +989,6 @@ msgstr[1] ""
 
 #: lib/tymeslot/security/field_validators/password_validator.ex
 #, elixir-autogen, elixir-format
-msgid "Password must be at most %{count} character long"
-msgid_plural "Password must be at most %{count} characters long"
-msgstr[0] ""
-msgstr[1] ""
-
-#: lib/tymeslot/security/field_validators/password_validator.ex
-#, elixir-autogen, elixir-format
 msgid "Password must contain at least one lowercase letter"
 msgstr ""
 
@@ -1065,4 +1045,9 @@ msgstr ""
 #: lib/tymeslot_web/controllers/email_change_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm email change"
+msgstr ""
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte."
 msgstr ""

@@ -2,16 +2,17 @@ defmodule Tymeslot.Auth.PasswordUpdate do
   @moduledoc """
   Handles password updates for authenticated users.
 
-  Validates the current password, enforces password policies (minimum length,
-  confirmation match, not reusing the old password), persists the new hash,
-  and invalidates all existing sessions.
+  Validates the current password, enforces the shared password policy
+  (`Tymeslot.Auth.Validation.validate_new_password_input/1`, plus not reusing
+  the old password), persists the new hash, revokes any outstanding reset or
+  email change token, and invalidates all existing sessions.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.Changeset
 
-  alias Tymeslot.Auth.{Session, UserQueries}
+  alias Tymeslot.Auth.{Session, UserQueries, Validation}
   alias Tymeslot.Security.{Password, SecurityLogger}
   alias Tymeslot.Utils.ChangesetUtils
 
@@ -56,6 +57,9 @@ defmodule Tymeslot.Auth.PasswordUpdate do
       {:error, :invalid_password} ->
         {:error, {:current_password, dgettext("auth", "Current password is incorrect")}}
 
+      {:error, :missing_password} ->
+        {:error, {:current_password, dgettext("auth", "Password is required")}}
+
       # `validate_new_password/2` has already ruled out a mismatched or short
       # confirmation, so what the changeset can still refuse is the password
       # policy itself.
@@ -70,15 +74,13 @@ defmodule Tymeslot.Auth.PasswordUpdate do
   # --- Private helpers ---
 
   defp verify_current_password(user, password) do
-    if Password.verify_password(password, user.password_hash) do
-      :ok
-    else
-      {:error, :invalid_password}
-    end
+    Validation.check_current_password(user, password)
   end
 
+  # Only reached once the current password matched, so the account has a hash
+  # and `new_password` is a string (the same bytes were just verified or not).
   defp ensure_not_same_as_old(user, new_password) do
-    if Password.verify_password(new_password, user.password_hash) do
+    if is_binary(new_password) and Password.verify_password(new_password, user.password_hash) do
       {:error,
        {:new_password, dgettext("auth", "New password must be different from current password")}}
     else
@@ -87,17 +89,25 @@ defmodule Tymeslot.Auth.PasswordUpdate do
   end
 
   defp validate_new_password(password, password_confirmation) do
-    cond do
-      password != password_confirmation ->
-        {:error, {:new_password_confirmation, dgettext("auth", "Passwords do not match")}}
-
-      String.length(password) < 8 ->
-        {:error, {:new_password, dgettext("auth", "Password must be at least 8 characters long")}}
-
-      true ->
+    case Validation.validate_new_password_input(%{
+           "password" => password,
+           "password_confirmation" => password_confirmation
+         }) do
+      {:ok, _params} ->
         :ok
+
+      # A policy failure on the password itself is reported there; the
+      # confirmation only carries its own error when the password is fine.
+      {:error, %{password: message}} ->
+        {:error, {:new_password, first_message(message)}}
+
+      {:error, %{password_confirmation: message}} ->
+        {:error, {:new_password_confirmation, first_message(message)}}
     end
   end
+
+  defp first_message([message | _rest]), do: message
+  defp first_message(message) when is_binary(message), do: message
 
   defp do_update_password(user, new_password, new_password_confirmation) do
     UserQueries.update_user_password(user, new_password, new_password_confirmation)

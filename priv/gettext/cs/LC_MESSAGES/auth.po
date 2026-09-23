@@ -231,6 +231,8 @@ msgstr "Heslo"
 msgid "Password Reset Successfully"
 msgstr "Heslo bylo obnoveno"
 
+#: lib/tymeslot/auth/email_change.ex
+#: lib/tymeslot/auth/password_update.ex
 #: lib/tymeslot/security/field_validators/password_validator.ex
 #: lib/tymeslot_web/live/auth_live.ex
 #, elixir-autogen, elixir-format
@@ -743,11 +745,6 @@ msgstr "E-mail byl úspěšně změněn. Přihlaste se prosím novým e-mailem."
 msgid "Failed to authenticate with %{provider}. Please try again."
 msgstr "Ověření přes %{provider} se nezdařilo. Zkuste to prosím znovu."
 
-#: lib/tymeslot/auth/email_change.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to verify email change"
-msgstr "Změnu e-mailu se nepodařilo ověřit"
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "If your email is registered, you will receive password reset instructions."
@@ -789,11 +786,6 @@ msgstr "Nový e-mail se musí lišit od současného"
 msgid "New password must be different from current password"
 msgstr "Nové heslo se musí lišit od současného"
 
-#: lib/tymeslot/auth/password_update.ex
-#, elixir-autogen, elixir-format
-msgid "Password must be at least 8 characters long"
-msgstr "Heslo musí mít alespoň 8 znaků"
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Password must be at least 8 characters long."
@@ -803,11 +795,6 @@ msgstr "Heslo musí mít alespoň 8 znaků."
 #, elixir-autogen, elixir-format
 msgid "Password reset failed. Please try again."
 msgstr "Obnovení hesla se nezdařilo. Zkuste to prosím znovu."
-
-#: lib/tymeslot/auth/password_update.ex
-#, elixir-autogen, elixir-format
-msgid "Passwords do not match"
-msgstr "Hesla se neshodují"
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
@@ -1004,14 +991,6 @@ msgstr[2] "Heslo musí mít alespoň %{count} znaků"
 
 #: lib/tymeslot/security/field_validators/password_validator.ex
 #, elixir-autogen, elixir-format
-msgid "Password must be at most %{count} character long"
-msgid_plural "Password must be at most %{count} characters long"
-msgstr[0] "Heslo smí mít nejvýše %{count} znak"
-msgstr[1] "Heslo smí mít nejvýše %{count} znaky"
-msgstr[2] "Heslo smí mít nejvýše %{count} znaků"
-
-#: lib/tymeslot/security/field_validators/password_validator.ex
-#, elixir-autogen, elixir-format
 msgid "Password must contain at least one lowercase letter"
 msgstr "Heslo musí obsahovat alespoň jedno malé písmeno"
 
@@ -1069,3 +1048,8 @@ msgstr "Stisknutím tlačítka níže převedete svůj účet na tuto e-mailovou
 #, elixir-autogen, elixir-format
 msgid "Confirm email change"
 msgstr "Potvrdit změnu e-mailu"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte."
+msgstr "Heslo může mít nejvýše %{count} bajtů. Písmena s diakritikou a emoji zabírají více než jeden bajt."

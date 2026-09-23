@@ -21,7 +21,11 @@ defmodule Tymeslot.Security.FieldValidators.PasswordValidator do
   use Gettext, backend: TymeslotWeb.Gettext
 
   @password_min_length 8
-  @password_max_length 80
+  # bcrypt only reads the first 72 bytes of its input and silently ignores the
+  # rest, so a longer password would be accepted but only partly protected.
+  # The cap is in bytes, not characters: accented letters, most non-Latin
+  # scripts and emoji take two to four bytes each.
+  @password_max_bytes 72
 
   # Ordered as they are enforced, so the message names the first rule broken
   # and the checklist lists them in the same order it checks them. Each rule
@@ -71,9 +75,8 @@ defmodule Tymeslot.Security.FieldValidators.PasswordValidator do
 
   def validate(password, opts) when is_binary(password) do
     min_length = Keyword.get(opts, :min_length, @password_min_length)
-    max_length = Keyword.get(opts, :max_length, @password_max_length)
 
-    with :ok <- validate_length(password, min_length, max_length) do
+    with :ok <- validate_length(password, min_length) do
       validate_complexity(password)
     end
   end
@@ -120,11 +123,9 @@ defmodule Tymeslot.Security.FieldValidators.PasswordValidator do
 
   # Private helper functions
 
-  defp validate_length(password, min_length, max_length) do
-    length = String.length(password)
-
+  defp validate_length(password, min_length) do
     cond do
-      length < min_length ->
+      String.length(password) < min_length ->
         {:error,
          dngettext(
            "auth",
@@ -133,13 +134,12 @@ defmodule Tymeslot.Security.FieldValidators.PasswordValidator do
            min_length
          )}
 
-      length > max_length ->
+      byte_size(password) > @password_max_bytes ->
         {:error,
-         dngettext(
+         dgettext(
            "auth",
-           "Password must be at most %{count} character long",
-           "Password must be at most %{count} characters long",
-           max_length
+           "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte.",
+           count: @password_max_bytes
          )}
 
       true ->

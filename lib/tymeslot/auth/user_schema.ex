@@ -183,6 +183,11 @@ defmodule Tymeslot.Auth.UserSchema do
     change(user, %{is_admin: is_admin})
   end
 
+  @doc """
+  Changeset for setting a new password, whether through a reset link or from
+  the account page. A password change revokes every outstanding credential
+  token (see `revoke_credential_tokens/1`).
+  """
   @spec password_reset_changeset(t(), map()) :: Ecto.Changeset.t()
   def password_reset_changeset(user, attrs) do
     user
@@ -191,6 +196,42 @@ defmodule Tymeslot.Auth.UserSchema do
     |> validate_password()
     |> validate_confirmation(:password)
     |> put_password_hash()
+    |> revoke_credential_tokens()
+  end
+
+  @doc """
+  Blanks the virtual password fields on the user a successful password write
+  returns. `Repo.update/1` copies every change into the returned struct,
+  virtual fields included, so without this the caller would receive (and
+  might pass on) the plaintext password.
+  """
+  @spec drop_plaintext_password({:ok, t()} | {:error, Ecto.Changeset.t()}) ::
+          {:ok, t()} | {:error, Ecto.Changeset.t()}
+  def drop_plaintext_password({:ok, %__MODULE__{} = user}),
+    do: {:ok, %{user | password: nil, password_confirmation: nil}}
+
+  def drop_plaintext_password({:error, _changeset} = error), do: error
+
+  @doc """
+  Clears every outstanding token that could change the account's credentials:
+  a pending password reset and a pending email change.
+
+  Applied whenever the credentials themselves change (password reset, password
+  update, confirmed email change). Without it, a token issued before the change
+  outlives it: someone who knew the old password could request an email change
+  to their own address, and still confirm it after the owner reset the
+  password to lock them out. `reset_token_used_at` is left alone so the audit
+  trail of a consumed reset survives.
+  """
+  @spec revoke_credential_tokens(Ecto.Changeset.t()) :: Ecto.Changeset.t()
+  def revoke_credential_tokens(%Ecto.Changeset{} = changeset) do
+    change(changeset,
+      reset_token_hash: nil,
+      reset_sent_at: nil,
+      pending_email: nil,
+      email_change_token_hash: nil,
+      email_change_sent_at: nil
+    )
   end
 
   @doc """
@@ -213,18 +254,17 @@ defmodule Tymeslot.Auth.UserSchema do
 
   @doc """
   Changeset for confirming an email change.
-  Moves pending_email to email and clears temporary fields.
+  Moves pending_email to email and revokes every outstanding credential token,
+  including a reset link mailed to the old address.
   """
   @spec email_change_confirm_changeset(t()) :: Ecto.Changeset.t()
   def email_change_confirm_changeset(user) do
     user
     |> change(%{
       email: user.pending_email,
-      pending_email: nil,
-      email_change_token_hash: nil,
-      email_change_sent_at: nil,
       email_change_confirmed_at: DateTime.utc_now(:second)
     })
+    |> revoke_credential_tokens()
     |> unique_constraint(:email)
   end
 

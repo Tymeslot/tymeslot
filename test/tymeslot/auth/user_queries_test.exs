@@ -102,48 +102,6 @@ defmodule Tymeslot.Auth.UserQueriesTest do
     end
   end
 
-  describe "email verification security" do
-    test "secures account by clearing verification token after use" do
-      user = insert(:user, verified_at: nil, verification_token: "one-time-token")
-
-      {:ok, verified} = UserQueries.verify_user(user)
-
-      # Token should be cleared to prevent reuse
-      assert verified.verified_at
-      assert verified.verification_token == nil
-    end
-  end
-
-  describe "password reset security" do
-    test "secures reset process by clearing tokens after use" do
-      user =
-        insert(:user, reset_token_hash: "one-time-reset-hash", reset_sent_at: DateTime.utc_now())
-
-      reset_attrs = %{
-        password: "NewSecurePassword123!",
-        password_confirmation: "NewSecurePassword123!"
-      }
-
-      {:ok, updated} = UserQueries.reset_password(user, reset_attrs)
-
-      # Tokens should be cleared to prevent token reuse attacks
-      assert updated.reset_token_hash == nil
-      assert updated.reset_sent_at == nil
-    end
-
-    test "enforces strong password requirements" do
-      user = insert(:user)
-
-      weak_password = %{
-        password: "weak",
-        password_confirmation: "weak"
-      }
-
-      {:error, changeset} = UserQueries.reset_password(user, weak_password)
-      refute changeset.valid?
-    end
-  end
-
   describe "mark_dashboard_tour_seen/1" do
     test "sets dashboard_tour_seen_at to now for a user that hasn't seen the tour" do
       user = insert(:user, dashboard_tour_seen_at: nil)

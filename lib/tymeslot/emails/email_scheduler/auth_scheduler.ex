@@ -1,7 +1,7 @@
 defmodule Tymeslot.Emails.EmailScheduler.AuthScheduler do
   @moduledoc "Schedules authentication-related emails via Oban."
 
-  alias Tymeslot.Emails.EmailScheduler.Helpers
+  alias Tymeslot.Emails.EmailScheduler.{Helpers, LinkArg}
   alias Tymeslot.Workers.EmailWorker
 
   require Logger
@@ -16,10 +16,10 @@ defmodule Tymeslot.Emails.EmailScheduler.AuthScheduler do
       %{
         "action" => "send_email_verification",
         "user_id" => user_id,
-        "verification_url" => verification_url,
         # Lets the worker discard a job whose token has since been rotated.
         "token_hash" => token_hash
       }
+      |> LinkArg.put("verification_url", verification_url)
       |> EmailWorker.new(
         queue: :emails,
         # Highest priority for auth emails
@@ -79,10 +79,10 @@ defmodule Tymeslot.Emails.EmailScheduler.AuthScheduler do
       %{
         "action" => "send_password_reset",
         "user_id" => user_id,
-        "reset_url" => reset_url,
         # Lets the worker discard a job whose token has since been rotated.
         "token_hash" => token_hash
       }
+      |> LinkArg.put("reset_url", reset_url)
       |> EmailWorker.new(
         queue: :emails,
         # Highest priority for auth emails

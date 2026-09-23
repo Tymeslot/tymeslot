@@ -27,6 +27,7 @@ defmodule Tymeslot.Auth.PasswordResetCompositionTest do
 
   alias Tymeslot.Auth.PasswordReset
   alias Tymeslot.Auth.{UserQueries, UserSchema, UserSessionSchema}
+  alias Tymeslot.Emails.EmailScheduler.LinkArg
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, RateLimiter}
   alias Tymeslot.Workers.EmailWorker
@@ -63,7 +64,7 @@ defmodule Tymeslot.Auth.PasswordResetCompositionTest do
                  args: %{"action" => "send_password_reset", "user_id" => user.id}
                )
 
-      raw_token = extract_token_from_url(reset_job.args["reset_url"])
+      raw_token = extract_token_from_url(emailed_link(reset_job, "reset_url"))
 
       # --- reset ---
       new_password = "BrandNewPassword456!"
@@ -111,5 +112,11 @@ defmodule Tymeslot.Auth.PasswordResetCompositionTest do
 
   defp extract_token_from_url(url) do
     url |> URI.parse() |> Map.fetch!(:path) |> String.split("/") |> List.last()
+  end
+
+  # The link is stored encrypted in the job args; read it back as the worker does.
+  defp emailed_link(job, key) do
+    {:ok, url} = LinkArg.fetch(job.args, key)
+    url
   end
 end

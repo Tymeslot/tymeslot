@@ -231,6 +231,8 @@ msgstr "Mot de passe"
 msgid "Password Reset Successfully"
 msgstr "Mot de passe réinitialisé avec succès"
 
+#: lib/tymeslot/auth/email_change.ex
+#: lib/tymeslot/auth/password_update.ex
 #: lib/tymeslot/security/field_validators/password_validator.ex
 #: lib/tymeslot_web/live/auth_live.ex
 #, elixir-autogen, elixir-format
@@ -742,11 +744,6 @@ msgstr "Adresse e-mail modifiée. Veuillez vous connecter avec votre nouvelle ad
 msgid "Failed to authenticate with %{provider}. Please try again."
 msgstr "Échec de l’authentification avec %{provider}. Veuillez réessayer."
 
-#: lib/tymeslot/auth/email_change.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to verify email change"
-msgstr "Impossible de vérifier le changement d’adresse e-mail"
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "If your email is registered, you will receive password reset instructions."
@@ -788,11 +785,6 @@ msgstr "La nouvelle adresse e-mail doit être différente de l’actuelle"
 msgid "New password must be different from current password"
 msgstr "Le nouveau mot de passe doit être différent de l’actuel"
 
-#: lib/tymeslot/auth/password_update.ex
-#, elixir-autogen, elixir-format
-msgid "Password must be at least 8 characters long"
-msgstr "Le mot de passe doit contenir au moins 8 caractères"
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Password must be at least 8 characters long."
@@ -802,11 +794,6 @@ msgstr "Le mot de passe doit contenir au moins 8 caractères."
 #, elixir-autogen, elixir-format
 msgid "Password reset failed. Please try again."
 msgstr "La réinitialisation du mot de passe a échoué. Veuillez réessayer."
-
-#: lib/tymeslot/auth/password_update.ex
-#, elixir-autogen, elixir-format
-msgid "Passwords do not match"
-msgstr "Les mots de passe ne correspondent pas"
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
@@ -1002,13 +989,6 @@ msgstr[1] "Le mot de passe doit contenir au moins %{count} caractères"
 
 #: lib/tymeslot/security/field_validators/password_validator.ex
 #, elixir-autogen, elixir-format
-msgid "Password must be at most %{count} character long"
-msgid_plural "Password must be at most %{count} characters long"
-msgstr[0] "Le mot de passe doit contenir au plus %{count} caractère"
-msgstr[1] "Le mot de passe doit contenir au plus %{count} caractères"
-
-#: lib/tymeslot/security/field_validators/password_validator.ex
-#, elixir-autogen, elixir-format
 msgid "Password must contain at least one lowercase letter"
 msgstr "Le mot de passe doit contenir au moins une lettre minuscule"
 
@@ -1066,3 +1046,8 @@ msgstr "Cliquez sur le bouton ci-dessous pour associer votre compte à cette adr
 #, elixir-autogen, elixir-format
 msgid "Confirm email change"
 msgstr "Confirmer le changement d'adresse e-mail"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte."
+msgstr "Le mot de passe ne doit pas dépasser %{count} octets. Les lettres accentuées et les emojis comptent pour plus d’un octet."

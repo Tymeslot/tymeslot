@@ -231,6 +231,8 @@ msgstr "Password"
 msgid "Password Reset Successfully"
 msgstr "Password reimpostata con successo"
 
+#: lib/tymeslot/auth/email_change.ex
+#: lib/tymeslot/auth/password_update.ex
 #: lib/tymeslot/security/field_validators/password_validator.ex
 #: lib/tymeslot_web/live/auth_live.ex
 #, elixir-autogen, elixir-format
@@ -742,11 +744,6 @@ msgstr "Indirizzo email modificato. Accedi con il tuo nuovo indirizzo."
 msgid "Failed to authenticate with %{provider}. Please try again."
 msgstr "Autenticazione con %{provider} non riuscita. Riprova."
 
-#: lib/tymeslot/auth/email_change.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to verify email change"
-msgstr "Impossibile verificare la modifica dell'email"
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "If your email is registered, you will receive password reset instructions."
@@ -788,11 +785,6 @@ msgstr "Il nuovo indirizzo email deve essere diverso da quello attuale"
 msgid "New password must be different from current password"
 msgstr "La nuova password deve essere diversa da quella attuale"
 
-#: lib/tymeslot/auth/password_update.ex
-#, elixir-autogen, elixir-format
-msgid "Password must be at least 8 characters long"
-msgstr "La password deve contenere almeno 8 caratteri"
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Password must be at least 8 characters long."
@@ -802,11 +794,6 @@ msgstr "La password deve contenere almeno 8 caratteri."
 #, elixir-autogen, elixir-format
 msgid "Password reset failed. Please try again."
 msgstr "Reimpostazione della password non riuscita. Riprova."
-
-#: lib/tymeslot/auth/password_update.ex
-#, elixir-autogen, elixir-format
-msgid "Passwords do not match"
-msgstr "Le password non coincidono"
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
@@ -1002,13 +989,6 @@ msgstr[1] "La password deve contenere almeno %{count} caratteri"
 
 #: lib/tymeslot/security/field_validators/password_validator.ex
 #, elixir-autogen, elixir-format
-msgid "Password must be at most %{count} character long"
-msgid_plural "Password must be at most %{count} characters long"
-msgstr[0] "La password può contenere al massimo %{count} carattere"
-msgstr[1] "La password può contenere al massimo %{count} caratteri"
-
-#: lib/tymeslot/security/field_validators/password_validator.ex
-#, elixir-autogen, elixir-format
 msgid "Password must contain at least one lowercase letter"
 msgstr "La password deve contenere almeno una lettera minuscola"
 
@@ -1066,3 +1046,8 @@ msgstr "Premi il pulsante qui sotto per associare il tuo account a questo indiri
 #, elixir-autogen, elixir-format
 msgid "Confirm email change"
 msgstr "Conferma la modifica dell'email"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte."
+msgstr "La password deve essere lunga al massimo %{count} byte. Le lettere accentate e le emoji contano come più di un byte."

@@ -14,7 +14,7 @@ defmodule TymeslotWeb.AccountLiveTest do
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
-  alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Security.{Password, RateLimiter}
   alias Tymeslot.Test.LogCapture
   alias TymeslotWeb.AccountLive.ErrorFormatter
 
@@ -113,6 +113,27 @@ defmodule TymeslotWeb.AccountLiveTest do
       assert has_element?(view, ~s(input[name="email_form[current_password]"][aria-invalid]))
     end
 
+    test "accepts a current password set under an older, weaker policy", %{
+      conn: conn,
+      user: user
+    } do
+      set_legacy_password(user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      view |> element("button", "Change Email") |> render_click()
+
+      view
+      |> form("form[phx-submit='update_email']", %{
+        "email_form" => %{
+          "new_email" => "legacy-user@example.com",
+          "current_password" => "legacypassword1"
+        }
+      })
+      |> render_submit()
+
+      assert Repo.get(UserSchema, user.id).pending_email == "legacy-user@example.com"
+    end
+
     test "can cancel a pending email change", %{conn: conn, user: user} do
       # Setup pending email change
       {:ok, user, _email_change_token} =
@@ -181,6 +202,28 @@ defmodule TymeslotWeb.AccountLiveTest do
       assert meta.user_id == user.id
       assert meta.ip_address == "127.0.0.1"
       assert meta.user_agent == "TymeslotTestAgent/1.0"
+    end
+
+    test "accepts a current password set under an older, weaker policy", %{
+      conn: conn,
+      user: user
+    } do
+      set_legacy_password(user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      view |> element("button", "Change Password") |> render_click()
+
+      view
+      |> form("form[phx-submit='update_password']", %{
+        "password_form" => %{
+          "current_password" => "legacypassword1",
+          "new_password" => "NewPassword123!",
+          "new_password_confirmation" => "NewPassword123!"
+        }
+      })
+      |> render_submit()
+
+      assert_redirect(view, ~p"/auth/login")
     end
 
     test "shows error for password mismatch", %{conn: conn} do
@@ -544,5 +587,13 @@ defmodule TymeslotWeb.AccountLiveTest do
     view
     |> element("#user-menu button[aria-haspopup='menu']")
     |> render_click()
+  end
+
+  # A password that met the policy of its day but lacks the uppercase letter
+  # and symbol today's policy requires of a new one.
+  defp set_legacy_password(user) do
+    user
+    |> Changeset.change(%{password_hash: Password.hash_password("legacypassword1")})
+    |> Repo.update!()
   end
 end

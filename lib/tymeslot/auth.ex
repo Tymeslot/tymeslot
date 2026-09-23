@@ -24,7 +24,6 @@ defmodule Tymeslot.Auth do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.PubSub
-  alias Tymeslot.Security.Token
 
   @doc """
   Authenticates a user with email and password.
@@ -61,7 +60,7 @@ defmodule Tymeslot.Auth do
   Uses a database transaction to ensure atomicity.
   """
   @spec verify_email_change(String.t()) ::
-          {:ok, Ecto.Schema.t(), String.t()} | {:error, atom(), String.t()}
+          {:ok, Ecto.Schema.t(), String.t()} | {:error, {atom(), String.t()}}
   def verify_email_change(token) when is_binary(token) do
     EmailChange.verify_email_change(token)
   end
@@ -70,7 +69,7 @@ defmodule Tymeslot.Auth do
   Cancels a pending email change request.
   """
   @spec cancel_email_change(Ecto.Schema.t()) ::
-          {:ok, Ecto.Schema.t(), String.t()} | {:error, String.t()}
+          {:ok, Ecto.Schema.t(), String.t()} | {:error, {atom(), String.t()}}
   def cancel_email_change(user) do
     EmailChange.cancel_email_change(user)
   end
@@ -183,15 +182,14 @@ defmodule Tymeslot.Auth do
   Generates a fresh verification token for a user and persists it without sending an email.
 
   Intended for background workers that need to produce a valid verification URL before
-  delivering their own email (e.g. a 24-hour reminder). Existing tokens expire after 2 hours,
-  so callers must regenerate before building any verification link.
+  delivering their own email (e.g. a 24-hour reminder). The raw token is never stored, and
+  an existing one may have expired (see `Tymeslot.Auth.AccountTokens.ttl_seconds/1`), so
+  callers must regenerate before building any verification link.
   """
   @spec regenerate_verification_token(integer()) :: {:ok, String.t()} | {:error, atom()}
   def regenerate_verification_token(user_id) do
-    {token, expiry, _purpose} = Token.generate_email_verification_token(user_id)
-
-    case Verification.store_verification_token(user_id, token, expiry) do
-      {:ok, _user} -> {:ok, token}
+    case Verification.issue_verification_token(user_id) do
+      {:ok, _user, token} -> {:ok, token}
       {:error, reason} -> {:error, reason}
     end
   end

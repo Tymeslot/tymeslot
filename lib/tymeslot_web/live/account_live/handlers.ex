@@ -12,7 +12,6 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   alias Phoenix.LiveView
   alias Tymeslot.Auth
   alias Tymeslot.Locales
-  alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias TymeslotWeb.AccountLive.{ErrorFormatter, Helpers}
   alias TymeslotWeb.Helpers.ClientIP
@@ -106,8 +105,8 @@ defmodule TymeslotWeb.AccountLive.Handlers do
          |> LiveView.put_flash(:info, message)
          |> assign(:current_user, updated_user)}
 
-      {:error, reason} ->
-        {:noreply, LiveView.put_flash(socket, :error, reason)}
+      {:error, {_reason, message}} ->
+        {:noreply, LiveView.put_flash(socket, :error, message)}
     end
   end
 
@@ -122,10 +121,13 @@ defmodule TymeslotWeb.AccountLive.Handlers do
     metadata = build_metadata(socket)
     user = socket.assigns.current_user
 
+    # The current password is checked by the domain, under login's rules
+    # rather than the creation policy, so only the new address goes through
+    # the form validator here.
     with {:ok, sanitized_params} <-
            InputProcessor.validate_form(
-             params,
-             [{"new_email", :email}, {"current_password", :password}],
+             Map.take(params, ["new_email"]),
+             [{"new_email", :email}],
              metadata: metadata,
              universal_opts: [allow_html: false]
            ),
@@ -134,7 +136,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
            Auth.request_email_change(
              user,
              sanitized_params["new_email"],
-             sanitized_params["current_password"]
+             params["current_password"]
            ) do
       {:noreply,
        socket
@@ -154,15 +156,15 @@ defmodule TymeslotWeb.AccountLive.Handlers do
     metadata = build_metadata(socket)
     user = socket.assigns.current_user
 
-    with {:ok, sanitized_params} <-
-           validate_password_change_input(params, metadata),
-         :ok <- RateLimiter.check_auth_rate_limit(user.email, metadata[:ip]),
+    # Every rule (current password, new-password policy, confirmation) is
+    # the domain's; restating any of them here would let the two drift.
+    with :ok <- RateLimiter.check_auth_rate_limit(user.email, metadata[:ip]),
          {:ok, _updated_user} <-
            Auth.update_user_password(
              user,
-             sanitized_params["current_password"],
-             sanitized_params["new_password"],
-             sanitized_params["new_password_confirmation"],
+             params["current_password"],
+             params["new_password"],
+             params["new_password_confirmation"],
              ip_address: metadata[:ip],
              user_agent: metadata[:user_agent]
            ) do
@@ -222,33 +224,6 @@ defmodule TymeslotWeb.AccountLive.Handlers do
         dgettext("account", "Password authentication is not available for %{provider} login",
           provider: provider
         )
-    end
-  end
-
-  defp validate_password_change_input(params, metadata) do
-    with {:ok, sanitized_params} <-
-           InputProcessor.validate_form(
-             params,
-             [
-               {"current_password", :password},
-               {"new_password", :password},
-               {"new_password_confirmation", :password}
-             ],
-             metadata: metadata,
-             universal_opts: [allow_html: false]
-           ),
-         :ok <-
-           PasswordValidator.validate_confirmation(
-             sanitized_params["new_password"],
-             sanitized_params["new_password_confirmation"]
-           ) do
-      {:ok, sanitized_params}
-    else
-      {:error, errors} when is_map(errors) ->
-        {:error, errors}
-
-      {:error, confirmation_msg} when is_binary(confirmation_msg) ->
-        {:error, %{new_password_confirmation: confirmation_msg}}
     end
   end
 end

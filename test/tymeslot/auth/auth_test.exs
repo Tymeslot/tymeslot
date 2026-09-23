@@ -106,7 +106,7 @@ defmodule Tymeslot.AuthTest do
   describe "verify_user_email/1" do
     test "verifies the email without re-broadcasting :user_registered" do
       user = insert(:unverified_user)
-      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      token = Token.generate_token()
       {:ok, _updated} = UserTokenQueries.set_verification_token(user, token)
 
       assert :ok = Auth.subscribe_to_user_registrations()

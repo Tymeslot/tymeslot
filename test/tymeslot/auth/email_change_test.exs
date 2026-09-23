@@ -6,9 +6,9 @@ defmodule Tymeslot.Auth.EmailChangeTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.UserSessionSchema
-  alias Tymeslot.Auth.UserTokenQueries
-  alias Tymeslot.Security.Token
+  alias Tymeslot.Auth.{PasswordReset, UserSessionSchema, UserTokenQueries}
+  alias Tymeslot.Emails.EmailScheduler.LinkArg
+  alias Tymeslot.Security.{Password, Token}
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Endpoint
 
@@ -48,7 +48,7 @@ defmodule Tymeslot.Auth.EmailChangeTest do
 
       # The emailed link carries the raw token whose hash was persisted on the user.
       assert [_base, emailed_token] =
-               String.split(verification_job.args["verification_url"], "/email-change/")
+               String.split(emailed_link(verification_job, "verification_url"), "/email-change/")
 
       assert Token.hash_token(emailed_token) == updated_user.email_change_token_hash
 
@@ -77,6 +77,40 @@ defmodule Tymeslot.Auth.EmailChangeTest do
     test "fails with invalid email format", %{user: user} do
       assert {:error, {:new_email, _message}} =
                Auth.request_email_change(user, "not-an-email", "Password123!")
+    end
+
+    test "fails when another user already has the address pending", %{user: user} do
+      other_user = insert(:user)
+
+      {:ok, _other} =
+        UserTokenQueries.request_email_change(
+          other_user,
+          "wanted@example.com",
+          Token.generate_token()
+        )
+
+      assert {:error, {:new_email, "Email address is already in use"}} =
+               Auth.request_email_change(user, "wanted@example.com", "Password123!")
+    end
+
+    test "checks the current password as login does, not against the creation policy" do
+      # Set under an older, weaker policy: no uppercase letter, no symbol.
+      user = insert(:user, password_hash: Password.hash_password("legacypassword1"))
+
+      assert {:ok, _user, _message} =
+               Auth.request_email_change(user, "new.email@example.com", "legacypassword1")
+    end
+
+    test "reports a missing current password on its field", %{user: user} do
+      assert {:error, {:current_password, "Password is required"}} =
+               Auth.request_email_change(user, "new.email@example.com", "")
+    end
+
+    test "returns an error, not a crash, for an account with no password" do
+      user = insert(:user, provider: "google", password_hash: nil)
+
+      assert {:error, {:current_password, "Current password is incorrect"}} =
+               Auth.request_email_change(user, "new.email@example.com", "Anything123!")
     end
 
     test "fails when email is already taken", %{user: user} do
@@ -158,8 +192,30 @@ defmodule Tymeslot.Auth.EmailChangeTest do
       assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
     end
 
+    test "revokes a reset link mailed to the old address", %{user: user, token: token} do
+      reset_token = Token.generate_token()
+      {:ok, _user} = UserTokenQueries.set_reset_token(user, reset_token)
+
+      assert {:ok, updated_user, _message} = Auth.verify_email_change(token)
+
+      assert updated_user.reset_token_hash == nil
+      assert updated_user.reset_sent_at == nil
+      assert {:error, :invalid_token, _message} = PasswordReset.verify_token(reset_token)
+    end
+
+    test "a token just inside its 24-hour lifetime still confirms", %{user: user, token: token} do
+      set_email_change_sent_at(user, -(24 * 3600 - 60))
+
+      assert {:ok, _user, _message} = Auth.verify_email_change(token)
+    end
+
+    test "a confirmed link cannot be used a second time", %{token: token} do
+      assert {:ok, _user, _message} = Auth.verify_email_change(token)
+      assert {:error, {:invalid_token, _message}} = Auth.verify_email_change(token)
+    end
+
     test "fails with invalid token" do
-      assert {:error, :invalid_token, _message} =
+      assert {:error, {:invalid_token, _message}} =
                Auth.verify_email_change("invalid_token_123")
     end
 
@@ -172,7 +228,7 @@ defmodule Tymeslot.Auth.EmailChangeTest do
       |> Changeset.change(%{email_change_sent_at: expired_time})
       |> Repo.update!()
 
-      assert {:error, :token_expired, _message} = Auth.verify_email_change(token)
+      assert {:error, {:token_expired, _message}} = Auth.verify_email_change(token)
     end
   end
 
@@ -196,6 +252,17 @@ defmodule Tymeslot.Auth.EmailChangeTest do
       assert updated_user.pending_email == nil
       assert updated_user.email_change_token_hash == nil
       assert updated_user.email_change_sent_at == nil
+    end
+  end
+
+  describe "cancel_email_change/1 revokes the link" do
+    test "the cancelled link no longer confirms" do
+      user = insert(:user)
+      token = Token.generate_token()
+      {:ok, user} = UserTokenQueries.request_email_change(user, "new.email@example.com", token)
+
+      assert {:ok, _user, _message} = Auth.cancel_email_change(user)
+      assert {:error, {:invalid_token, _message}} = Auth.verify_email_change(token)
     end
   end
 
@@ -223,5 +290,19 @@ defmodule Tymeslot.Auth.EmailChangeTest do
 
       assert length(successful) == 1
     end
+  end
+
+  # The link is stored encrypted in the job args; read it back as the worker does.
+  defp emailed_link(job, key) do
+    {:ok, url} = LinkArg.fetch(job.args, key)
+    url
+  end
+
+  defp set_email_change_sent_at(user, offset_seconds) do
+    sent_at = DateTime.add(DateTime.utc_now(:second), offset_seconds, :second)
+
+    user
+    |> Changeset.change(%{email_change_sent_at: sent_at})
+    |> Repo.update!()
   end
 end

@@ -320,37 +320,6 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Updates user verification status and marks token as used.
-  NOTE: Intentionally keeps signup_ip for audit trail and fraud detection.
-  """
-  @spec verify_user(UserSchema.t()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def verify_user(%UserSchema{} = user) do
-    user
-    |> Changeset.change(
-      verified_at: DateTime.utc_now(:second),
-      verification_token_used_at: DateTime.utc_now(:second),
-      verification_token: nil
-      # NOTE: Do NOT clear signup_ip - keep for audit trail
-    )
-    |> Repo.update()
-  end
-
-  @doc """
-  Resets user password and marks token as used.
-  """
-  @spec reset_password(UserSchema.t(), map()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def reset_password(%UserSchema{} = user, attrs) do
-    user
-    |> UserSchema.password_reset_changeset(attrs)
-    |> Changeset.change(
-      reset_token_hash: nil,
-      reset_sent_at: nil,
-      reset_token_used_at: DateTime.utc_now(:second)
-    )
-    |> Repo.update()
-  end
-
-  @doc """
   Deletes the given user row.
 
   Bare single-table delete. Callers needing the anonymise-then-delete
@@ -364,7 +333,8 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Updates a user's password with confirmation.
+  Updates a user's password with confirmation. Like every password change, it
+  revokes any outstanding reset or email change token.
   """
   @spec update_user_password(UserSchema.t(), String.t(), String.t()) ::
           {:ok, UserSchema.t()} | {:error, Changeset.t()}
@@ -375,6 +345,7 @@ defmodule Tymeslot.Auth.UserQueries do
       password_confirmation: new_password_confirmation
     })
     |> Repo.update()
+    |> UserSchema.drop_plaintext_password()
   end
 
   @doc """
@@ -486,32 +457,22 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Checks if an email is already taken by another user.
-  Uses SELECT FOR UPDATE to prevent race conditions.
-  Returns {:ok, :available} if email is available, {:error, :taken} if taken.
+  Checks whether an email is free to become someone's pending email: no user
+  holds it as their address or as their own pending change.
+
+  This is a fast pre-check for a friendly error, not the guard. Two concurrent
+  requests can both pass it; the unique index on `pending_email` (and on
+  `lower(email)` at confirmation) is what settles the race.
   """
   @spec check_email_availability(String.t()) :: {:ok, :available} | {:error, :taken}
   def check_email_availability(email) when is_binary(email) do
     email = String.downcase(email)
 
-    # Use a transaction with row-level locking to prevent race conditions
-    result =
-      Repo.transaction(fn ->
-        query =
-          UserSchema
-          |> where([u], u.email == ^email or u.pending_email == ^email)
-          |> lock("FOR UPDATE")
+    taken? =
+      UserSchema
+      |> where([u], u.email == ^email or u.pending_email == ^email)
+      |> Repo.exists?()
 
-        if Repo.exists?(query) do
-          {:error, :taken}
-        else
-          {:ok, :available}
-        end
-      end)
-
-    case result do
-      {:ok, result} -> result
-      {:error, _reason} -> {:error, :taken}
-    end
+    if taken?, do: {:error, :taken}, else: {:ok, :available}
   end
 end

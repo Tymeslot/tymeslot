@@ -58,7 +58,7 @@ defmodule TymeslotWeb.EmailChangeController do
     |> redirect(to: ~p"/auth/login")
   end
 
-  defp handle_verify_result(conn, token, {:error, :invalid_token, message}) do
+  defp handle_verify_result(conn, token, {:error, {:invalid_token, message}}) do
     Logger.warning("Invalid email change token attempted", token: redact_token(token))
 
     conn
@@ -66,7 +66,7 @@ defmodule TymeslotWeb.EmailChangeController do
     |> redirect(to: ~p"/auth/login")
   end
 
-  defp handle_verify_result(conn, token, {:error, :token_expired, message}) do
+  defp handle_verify_result(conn, token, {:error, {:token_expired, message}}) do
     Logger.warning("Expired email change token attempted", token: redact_token(token))
 
     conn
@@ -74,7 +74,7 @@ defmodule TymeslotWeb.EmailChangeController do
     |> redirect(to: ~p"/auth/login")
   end
 
-  defp handle_verify_result(conn, token, {:error, _other, message}) do
+  defp handle_verify_result(conn, token, {:error, {_other, message}}) do
     Logger.error("Email change verification failed",
       token: redact_token(token),
       error: message

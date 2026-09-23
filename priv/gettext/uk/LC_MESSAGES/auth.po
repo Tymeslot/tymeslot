@@ -231,6 +231,8 @@ msgstr "Пароль"
 msgid "Password Reset Successfully"
 msgstr "Пароль успішно скинуто"
 
+#: lib/tymeslot/auth/email_change.ex
+#: lib/tymeslot/auth/password_update.ex
 #: lib/tymeslot/security/field_validators/password_validator.ex
 #: lib/tymeslot_web/live/auth_live.ex
 #, elixir-autogen, elixir-format
@@ -743,11 +745,6 @@ msgstr "Електронну адресу успішно змінено. Уві�
 msgid "Failed to authenticate with %{provider}. Please try again."
 msgstr "Не вдалося виконати автентифікацію через %{provider}. Спробуйте ще раз."
 
-#: lib/tymeslot/auth/email_change.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to verify email change"
-msgstr "Не вдалося підтвердити зміну електронної адреси"
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "If your email is registered, you will receive password reset instructions."
@@ -789,11 +786,6 @@ msgstr "Нова електронна адреса має відрізнятис
 msgid "New password must be different from current password"
 msgstr "Новий пароль має відрізнятися від поточного"
 
-#: lib/tymeslot/auth/password_update.ex
-#, elixir-autogen, elixir-format
-msgid "Password must be at least 8 characters long"
-msgstr "Пароль має містити щонайменше 8 символів"
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Password must be at least 8 characters long."
@@ -803,11 +795,6 @@ msgstr "Пароль має містити щонайменше 8 символі
 #, elixir-autogen, elixir-format
 msgid "Password reset failed. Please try again."
 msgstr "Не вдалося скинути пароль. Спробуйте ще раз."
-
-#: lib/tymeslot/auth/password_update.ex
-#, elixir-autogen, elixir-format
-msgid "Passwords do not match"
-msgstr "Паролі не збігаються"
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
@@ -1004,14 +991,6 @@ msgstr[2] "Пароль має містити щонайменше %{count} си
 
 #: lib/tymeslot/security/field_validators/password_validator.ex
 #, elixir-autogen, elixir-format
-msgid "Password must be at most %{count} character long"
-msgid_plural "Password must be at most %{count} characters long"
-msgstr[0] "Пароль має містити щонайбільше %{count} символ"
-msgstr[1] "Пароль має містити щонайбільше %{count} символи"
-msgstr[2] "Пароль має містити щонайбільше %{count} символів"
-
-#: lib/tymeslot/security/field_validators/password_validator.ex
-#, elixir-autogen, elixir-format
 msgid "Password must contain at least one lowercase letter"
 msgstr "Пароль має містити щонайменше одну малу літеру"
 
@@ -1069,3 +1048,8 @@ msgstr "Натисніть кнопку нижче, щоб перевести с
 #, elixir-autogen, elixir-format
 msgid "Confirm email change"
 msgstr "Підтвердити зміну електронної адреси"
+
+#: lib/tymeslot/security/field_validators/password_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte."
+msgstr "Пароль має бути не довшим за %{count} байтів. Літери з діакритичними знаками та емодзі займають більше одного байта."
