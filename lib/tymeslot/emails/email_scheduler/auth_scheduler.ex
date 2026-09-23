@@ -131,4 +131,60 @@ defmodule Tymeslot.Emails.EmailScheduler.AuthScheduler do
         {:error, "Failed to schedule job"}
     end
   end
+
+  @doc """
+  Schedules the note sent when a password reset is requested for an account
+  that signs in through a provider and so has no password to reset.
+  """
+  @spec schedule_no_password_to_reset(term()) ::
+          {:ok, :scheduled | :duplicate} | {:error, String.t()}
+  def schedule_no_password_to_reset(user_id),
+    do: schedule_account_notice("send_no_password_to_reset", user_id)
+
+  @doc """
+  Schedules the note sent to an account's owner when someone tries to sign up
+  with their address.
+  """
+  @spec schedule_signup_attempt_notice(term()) ::
+          {:ok, :scheduled | :duplicate} | {:error, String.t()}
+  def schedule_signup_attempt_notice(user_id),
+    do: schedule_account_notice("send_signup_attempt_notice", user_id)
+
+  # Notices that carry no token: the job needs only the recipient, and the links
+  # in them lead to public pages, so the worker builds them at send time. A
+  # second request inside the window coalesces with the first rather than
+  # sending the owner the same note twice.
+  defp schedule_account_notice(action, user_id) do
+    result =
+      %{"action" => action, "user_id" => user_id}
+      |> EmailWorker.new(
+        queue: :emails,
+        priority: 0,
+        unique: [
+          period: 120,
+          fields: [:args, :queue],
+          keys: [:action, :user_id],
+          states: [:scheduled, :available, :executing]
+        ]
+      )
+      |> Oban.insert()
+
+    case result do
+      {:ok, %Oban.Job{conflict?: true}} ->
+        {:ok, :duplicate}
+
+      {:ok, _job} ->
+        Logger.info("Account notice scheduled", action: action, user_id: user_id)
+        {:ok, :scheduled}
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule account notice",
+          action: action,
+          user_id: user_id,
+          error: Helpers.format_insert_error(reason)
+        )
+
+        {:error, "Failed to schedule job"}
+    end
+  end
 end

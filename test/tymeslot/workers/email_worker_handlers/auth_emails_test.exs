@@ -56,4 +56,65 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmailsTest do
       assert PasswordReset.render_text(recipient, reset_url) =~ "Hi Ada from GitHub,"
     end
   end
+
+  describe "account notices" do
+    test "the no-password notice goes to the account with a sign-in link" do
+      user = insert(:user, provider: "google", password_hash: nil)
+      parent = self()
+
+      expect(EmailServiceMock, :send_no_password_to_reset, fn recipient, sign_in_url ->
+        send(parent, {:notice, recipient.id, sign_in_url})
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_no_password_to_reset", %{
+                 "user_id" => user.id
+               })
+
+      assert_receive {:notice, user_id, sign_in_url}
+      assert user_id == user.id
+      assert sign_in_url == TymeslotWeb.Endpoint.url() <> "/auth/login"
+    end
+
+    test "the sign-up attempt notice links to sign in and to the reset form" do
+      user = insert(:user)
+      parent = self()
+
+      expect(EmailServiceMock, :send_signup_attempt_notice, fn recipient, sign_in, reset ->
+        send(parent, {:notice, recipient.id, sign_in, reset})
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_signup_attempt_notice", %{
+                 "user_id" => user.id
+               })
+
+      assert_receive {:notice, user_id, sign_in, reset}
+      assert user_id == user.id
+      assert sign_in == TymeslotWeb.Endpoint.url() <> "/auth/login"
+      assert reset == TymeslotWeb.Endpoint.url() <> "/auth/reset-password"
+    end
+
+    test "a notice for an account deleted since is discarded" do
+      assert {:discard, _reason} =
+               EmailWorkerHandlers.execute_email_action("send_signup_attempt_notice", %{
+                 "user_id" => -1
+               })
+    end
+
+    test "a failed send is retried" do
+      user = insert(:user)
+
+      expect(EmailServiceMock, :send_no_password_to_reset, fn _user, _url ->
+        {:error, :timeout}
+      end)
+
+      assert {:error, _reason} =
+               EmailWorkerHandlers.execute_email_action("send_no_password_to_reset", %{
+                 "user_id" => user.id
+               })
+    end
+  end
 end

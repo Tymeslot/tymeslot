@@ -129,26 +129,35 @@ defmodule TymeslotWeb.AuthLiveTest do
       assert render(view) =~ "Check Your Email"
     end
 
-    test "OAuth-only user is told to use their provider instead of crashing", %{conn: conn} do
-      oauth_user =
+    test "password, social and unknown addresses see the same confirmation", %{conn: conn} do
+      password_user = insert(:user)
+
+      social_user =
         insert(:user,
           provider: "google",
           password_hash: nil,
           email: "oauth-reset-#{System.unique_integer([:positive])}@example.com"
         )
 
-      {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
+      unknown = "nobody-#{System.unique_integer([:positive])}@example.com"
 
-      result =
-        view
-        |> form("#reset-password-form", %{"email" => oauth_user.email})
-        |> render_submit()
+      outcomes =
+        for email <- [password_user.email, social_user.email, unknown] do
+          {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
 
-      # The OAuth branch is the one deliberate exception to the identical
-      # "if an account exists" confirmation, so the specific message must
-      # survive the trip through AuthActions rather than being discarded.
-      assert result =~ "managed by an external authentication provider"
-      refute result =~ "Check Your Email"
+          view
+          |> form("#reset-password-form", %{"email" => email})
+          |> render_submit()
+
+          assert_patch(view, ~p"/auth/reset-password-sent")
+          assert render(view) =~ "Check Your Email"
+
+          # The page and the flash the visitor sees, element for element.
+          {view |> element("#auth-live") |> render(),
+           view |> element("#app-flash-group") |> render()}
+        end
+
+      assert [same, same, same] = outcomes
     end
 
     test "empty email shows an error rather than the success confirmation", %{conn: conn} do

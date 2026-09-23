@@ -45,13 +45,45 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       refute message2 =~ "user not found"
     end
 
-    test "oauth users cannot reset passwords" do
-      oauth_user = insert(:user, provider: "google", password_hash: nil)
+    test "password, social and unknown addresses get the identical reply" do
+      password_user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
+      social_user = insert(:user, provider: "google", password_hash: nil)
+      unknown = "nobody-#{System.unique_integer([:positive])}@example.com"
 
-      # OAuth users should get an error
-      result = PasswordReset.initiate_reset(oauth_user.email)
+      replies =
+        for email <- [password_user.email, social_user.email, unknown] do
+          PasswordReset.initiate_reset(email)
+        end
 
-      assert {:error, :oauth_user, _message} = result
+      assert [reply, reply, reply] = replies
+      assert {:ok, :reset_initiated, _message} = reply
+    end
+
+    test "each case enqueues the email only the address's owner can read" do
+      password_user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
+      social_user = insert(:user, provider: "github", password_hash: nil)
+      unknown = "nobody-#{System.unique_integer([:positive])}@example.com"
+
+      for email <- [password_user.email, social_user.email, unknown] do
+        PasswordReset.initiate_reset(email)
+      end
+
+      assert [reset_job] =
+               all_enqueued(worker: EmailWorker)
+               |> Enum.filter(&(&1.args["action"] == "send_password_reset"))
+
+      assert reset_job.args["user_id"] == password_user.id
+
+      assert [notice_job] =
+               all_enqueued(
+                 worker: EmailWorker,
+                 args: %{"action" => "send_no_password_to_reset"}
+               )
+
+      assert notice_job.args["user_id"] == social_user.id
+
+      # Nothing else: the unknown address produced no job at all.
+      assert length(all_enqueued(worker: EmailWorker)) == 2
     end
   end
 

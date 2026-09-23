@@ -29,6 +29,8 @@ defmodule Tymeslot.Mocks.Email do
     |> stub(:send_calendar_sync_error, fn _meeting, _error -> send_result end)
     |> stub(:send_email_verification, fn _user, _url -> send_result end)
     |> stub(:send_password_reset, fn _user, _url -> send_result end)
+    |> stub(:send_no_password_to_reset, fn _user, _url -> send_result end)
+    |> stub(:send_signup_attempt_notice, fn _user, _sign_in, _reset -> send_result end)
     |> stub(:send_email_change_verification, fn _user, _email, _url -> send_result end)
     |> stub(:send_email_change_notification, fn _user, _email -> send_result end)
     |> stub(:send_email_change_confirmations, fn _user, _old, _new ->

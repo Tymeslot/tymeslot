@@ -101,15 +101,6 @@ defmodule Tymeslot.Auth.AuthActions do
       {:error, :invalid_input, message} ->
         {:error, message}
 
-      # An account with no password of its own cannot be sent a reset link, and
-      # `PasswordReset` already builds the specific, translated explanation for
-      # that. `normalize_auth_error/1` cannot reconstruct it from the atom, so
-      # pass the message through rather than collapsing it. This is the one
-      # deliberate exception to the identical confirmation the non-OAuth
-      # branches return; see `PasswordReset.process_password_reset_secure/2`.
-      {:error, :oauth_user, message} ->
-        {:error, message}
-
       {:error, reason, _message} ->
         {:error, normalize_auth_error(reason)}
     end

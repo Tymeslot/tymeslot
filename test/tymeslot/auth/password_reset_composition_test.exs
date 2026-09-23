@@ -87,7 +87,7 @@ defmodule Tymeslot.Auth.PasswordResetCompositionTest do
                PasswordReset.reset_password(raw_token, new_password, new_password)
     end
 
-    test "OAuth user rejection short-circuits before any email is scheduled" do
+    test "a social account is told by email, never on screen, and gets no reset link" do
       oauth_user =
         insert(:user,
           provider: "google",
@@ -95,13 +95,20 @@ defmodule Tymeslot.Auth.PasswordResetCompositionTest do
           email: "oauth-#{System.unique_integer([:positive])}@example.com"
         )
 
-      assert {:error, :oauth_user, _message} = PasswordReset.initiate_reset(oauth_user.email)
+      assert {:ok, :reset_initiated, _message} = PasswordReset.initiate_reset(oauth_user.email)
 
-      # Nothing was enqueued for this user.
+      refute Repo.get!(UserSchema, oauth_user.id).reset_token_hash
+
       assert [] =
                all_enqueued(
                  worker: EmailWorker,
                  args: %{"action" => "send_password_reset", "user_id" => oauth_user.id}
+               )
+
+      assert [_notice] =
+               all_enqueued(
+                 worker: EmailWorker,
+                 args: %{"action" => "send_no_password_to_reset", "user_id" => oauth_user.id}
                )
     end
   end

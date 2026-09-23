@@ -9,6 +9,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.EmailScheduler.LinkArg
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Utils.UrlBuilder
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
   @spec handle_email_verification(%{String.t() => term()}) ::
@@ -69,6 +70,45 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
 
         DeliveryOutcome.from_error(reason, "Failed to send password reset email")
     end
+  end
+
+  @spec handle_no_password_to_reset(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_no_password_to_reset(%{"user_id" => user_id}) do
+    with {:ok, user} <- fetch_user(user_id, "no-password-to-reset notice") do
+      Config.email_service_module().send_no_password_to_reset(user, sign_in_url())
+      |> notice_outcome(user, "no-password-to-reset notice")
+    end
+  end
+
+  @spec handle_signup_attempt_notice(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_signup_attempt_notice(%{"user_id" => user_id}) do
+    with {:ok, user} <- fetch_user(user_id, "sign-up attempt notice") do
+      Config.email_service_module().send_signup_attempt_notice(
+        user,
+        sign_in_url(),
+        UrlBuilder.build_url("/auth/reset-password")
+      )
+      |> notice_outcome(user, "sign-up attempt notice")
+    end
+  end
+
+  defp sign_in_url, do: UrlBuilder.build_url("/auth/login")
+
+  defp notice_outcome({:ok, _result}, user, label) do
+    Logger.info("Queued account notice sent", notice: label, user_id: user.id)
+    :ok
+  end
+
+  defp notice_outcome({:error, reason}, user, label) do
+    Logger.error("Failed to send account notice",
+      notice: label,
+      user_id: user.id,
+      error: inspect(reason)
+    )
+
+    DeliveryOutcome.from_error(reason, "Failed to send #{label}")
   end
 
   @spec handle_email_change_verification(%{String.t() => term()}) ::

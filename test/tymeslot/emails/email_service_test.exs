@@ -169,6 +169,43 @@ defmodule Tymeslot.Emails.EmailServiceTest do
     end
   end
 
+  describe "send_no_password_to_reset/2" do
+    test "tells a social account which provider it signs in with, and links to sign in" do
+      user = build_user_data(%{email: "social@example.com", provider: "github"})
+      sign_in_url = "https://example.com/auth/login"
+
+      assert {:ok, _response} = EmailService.send_no_password_to_reset(user, sign_in_url)
+
+      email = next_email()
+      assert email.to == [{"Test User", "social@example.com"}]
+      assert email.subject == "Your Tymeslot account has no password"
+      assert email.text_body =~ "signs in with GitHub, so it has no password to reset"
+      assert email.html_body =~ sign_in_url
+      assert email.text_body =~ sign_in_url
+      assert_no_more_emails()
+    end
+  end
+
+  describe "send_signup_attempt_notice/3" do
+    test "tells the owner someone tried to sign up, with sign-in and reset links" do
+      user = build_user_data(%{email: "owner@example.com"})
+      sign_in_url = "https://example.com/auth/login"
+      reset_url = "https://example.com/auth/reset-password"
+
+      assert {:ok, _response} =
+               EmailService.send_signup_attempt_notice(user, sign_in_url, reset_url)
+
+      email = next_email()
+      assert email.to == [{"Test User", "owner@example.com"}]
+      assert email.subject == "You already have a Tymeslot account"
+      assert email.text_body =~ "tried to create a new Tymeslot account with this email address"
+      assert email.html_body =~ ~s(href="#{sign_in_url}")
+      assert email.html_body =~ ~s(href="#{reset_url}")
+      assert email.text_body =~ reset_url
+      assert_no_more_emails()
+    end
+  end
+
   describe "send_email_change_verification/3" do
     test "sends the verification to the new address, never the current one" do
       user = build_user_data(%{email: "old@example.com"})
