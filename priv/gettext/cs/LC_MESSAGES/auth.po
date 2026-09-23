@@ -1069,3 +1069,18 @@ msgstr "Stisknutím tlačítka níže převedete svůj účet na tuto e-mailovou
 #, elixir-autogen, elixir-format
 msgid "Confirm email change"
 msgstr "Potvrdit změnu e-mailu"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before signing in. We could not send a new verification link; please try again later."
+msgstr "Před přihlášením prosím ověřte svou e-mailovou adresu. Nový ověřovací odkaz se nepodařilo odeslat; zkuste to prosím později."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before signing in. We've sent you a new verification link."
+msgstr "Před přihlášením prosím ověřte svou e-mailovou adresu. Poslali jsme vám nový ověřovací odkaz."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your sign-up session has expired. Please sign in again."
+msgstr "Platnost vaší registrace vypršela. Přihlaste se prosím znovu."

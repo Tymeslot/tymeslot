@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
       # the "provider not available" and rate-limited paths are 302s too.
       uri = conn |> redirected_to(302) |> URI.parse()
       query = URI.decode_query(uri.query)
-      {stored_state, _issued_at} = get_session(conn, :_oauth_state)
+      {stored_state, _code_verifier, _issued_at} = get_session(conn, :_oauth_state)
 
       assert "#{uri.scheme}://#{uri.host}#{uri.path}" ==
                "https://accounts.google.com/o/oauth2/v2/auth"

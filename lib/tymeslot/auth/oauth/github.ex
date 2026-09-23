@@ -14,9 +14,16 @@ defmodule Tymeslot.Auth.OAuth.GitHub do
   """
   @spec authorize_url(Plug.Conn.t(), String.t()) :: {Plug.Conn.t(), String.t()}
   def authorize_url(conn, redirect_uri) do
-    {updated_conn, state} = oauth_helper().generate_and_store_state(conn)
-    client = oauth_helper().build_oauth_client(:github, redirect_uri, state)
-    authorize_url = Client.authorize_url!(client, scope: "user:email")
+    {updated_conn, flow} = oauth_helper().generate_and_store_state(conn)
+    client = oauth_helper().build_oauth_client(:github, redirect_uri, flow.state)
+
+    authorize_url =
+      Client.authorize_url!(client,
+        scope: "user:email",
+        code_challenge: flow.code_challenge,
+        code_challenge_method: "S256"
+      )
+
     {updated_conn, authorize_url}
   end
 

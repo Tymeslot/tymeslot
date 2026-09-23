@@ -17,7 +17,8 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
     UserRegistration
   }
 
-  alias Tymeslot.Auth.Session
+  alias Tymeslot.Auth.{Session, Verification}
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
@@ -33,6 +34,8 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   translating each variant into flash messages and HTTP redirects:
 
   - `{:ok, conn, provider}` — session established; redirect to success path.
+  - `{:verification_required, conn, provider, delivery}` — the account's
+    email is unverified; no session, see `sign_in/3`.
   - `{:registration_required, conn, provider, params}` — new user; redirect to
     the registration form, passing `params` as query string.
   - `{:error, :invalid_state, conn}` — CSRF state mismatch.
@@ -46,8 +49,8 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   """
   @spec handle_oauth_callback(Plug.Conn.t(), oauth_callback_params()) :: flow_result()
   def handle_oauth_callback(conn, %{code: code, state: state, provider: provider}) do
-    with {:ok, conn} <- validate_oauth_state(conn, state, provider),
-         {:ok, conn, user} <- process_oauth_response(conn, code, provider) do
+    with {:ok, conn, code_verifier} <- validate_oauth_state(conn, state, provider),
+         {:ok, conn, user} <- process_oauth_response(conn, code, code_verifier, provider) do
       complete_oauth_flow(conn, user, provider)
     end
   end
@@ -59,8 +62,8 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   # of an audit trail.
   defp validate_oauth_state(conn, state, provider) do
     case State.validate_state(conn, state) do
-      :ok ->
-        {:ok, State.clear_oauth_state(conn)}
+      {:ok, code_verifier} ->
+        {:ok, State.clear_oauth_state(conn), code_verifier}
 
       {:error, :invalid_state} ->
         Logger.warning("OAuth callback received with invalid or missing state parameter")
@@ -95,11 +98,11 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
     )
   end
 
-  defp process_oauth_response(conn, code, provider) do
+  defp process_oauth_response(conn, code, code_verifier, provider) do
     full_callback_url = URLs.callback_url(conn, URLs.callback_path(provider))
     client = Client.build(provider, full_callback_url, "")
 
-    with {:ok, client} <- Client.exchange_code_for_token(client, code),
+    with {:ok, client} <- Client.exchange_code_for_token(client, code, code_verifier),
          {:ok, user_info} <- Client.get_user_info(client, provider),
          {:ok, user} <- UserProcessor.process_user(provider, user_info) do
       enhanced_user = UserProcessor.enhance_user_data(provider, user, client)
@@ -124,7 +127,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   defp complete_oauth_flow(conn, user, provider) do
     case UserRegistration.find_existing_user(provider, user) do
       {:ok, existing_user} ->
-        create_user_session(conn, existing_user, provider)
+        sign_in(conn, existing_user, provider)
 
       {:error, :not_found} ->
         handle_new_user_registration(conn, provider, user)
@@ -138,6 +141,35 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
         {:error, :email_already_taken, provider, conn}
     end
   end
+
+  @doc """
+  Signs in the account an OAuth identity belongs to, provided its email is
+  verified.
+
+  An unverified account gets no session: its email is resent the
+  verification link (rate limited) and the conn remembers the account for the
+  verify-email screen. The last element of `:verification_required` says
+  whether the email went out (`:sent`), was refused by the rate limiter
+  (`:rate_limited`) or failed (`:failed`).
+  """
+  @spec sign_in(Plug.Conn.t(), map(), provider()) :: flow_result()
+  def sign_in(conn, %{verified_at: nil} = user, provider) do
+    delivery =
+      case Verification.resend_verification_email(conn, user) do
+        {:ok, _user} -> :sent
+        {:error, :rate_limited, _message} -> :rate_limited
+        {:error, _reason} -> :failed
+      end
+
+    log_social_auth(provider, false, conn, %{
+      email: Map.get(user, :email),
+      error_reason: "email_not_verified"
+    })
+
+    {:verification_required, Session.put_unverified_user(conn, user), provider, delivery}
+  end
+
+  def sign_in(conn, user, provider), do: create_user_session(conn, user, provider)
 
   defp create_user_session(conn, user, provider) do
     case Session.create_session(conn, %{id: user.id}) do
@@ -201,16 +233,18 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
     end
   end
 
+  # Kept in the session until the complete-registration form is submitted.
+  # `created_at` (unix seconds) lets the completion refuse a stale entry.
   defp build_registration_data(provider, user) do
     %{
       provider: to_string(provider),
       email: user.email || "",
       name: user.name || "",
-      is_verified: user.is_verified == true,
-      email_from_provider: Map.get(user, :email_from_provider, false),
-      provider_uid: to_string(Map.get(user, :provider_uid) || ""),
+      email_from_provider: user.email_from_provider == true,
+      provider_uid: Map.get(user, :provider_uid),
       github_user_id: Map.get(user, :github_user_id),
-      google_user_id: Map.get(user, :google_user_id)
+      google_user_id: Map.get(user, :google_user_id),
+      created_at: DateTime.to_unix(Clock.utc_now())
     }
   end
 end

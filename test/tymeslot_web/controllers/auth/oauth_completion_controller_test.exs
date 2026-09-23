@@ -1,220 +1,72 @@
 defmodule TymeslotWeb.OAuthCompletionControllerTest do
-  use TymeslotWeb.ConnCase, async: false
-  @moduletag :auth
+  @moduledoc """
+  `POST /auth/complete` against a real pending registration: the entry a
+  provider callback leaves in the session. The full journey through the
+  provider is in `TymeslotWeb.OAuthSignInJourneyTest`; this file covers the
+  form's own rules.
+  """
 
-  alias Ecto.Changeset
+  use TymeslotWeb.ConnCase, async: false
+
+  @moduletag :auth
+  @moduletag :controllers
+
+  import Tymeslot.Factory, only: [insert: 2]
+  import Tymeslot.Test.OAuthProviderStub, only: [setup_providers: 1]
+
   alias Phoenix.Flash
   alias Plug.Test
-  alias Tymeslot.Auth.OAuth.UserRegistration
-  alias Tymeslot.Factory
-  alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Repo
+
+  # `RateLimiter.OAuth.check_completion/1` allows this many per IP per window.
+  @completion_limit 6
+
+  setup :setup_providers
 
   setup do
-    try do
-      :meck.unload(UserRegistration)
-    rescue
-      _other -> :ok
-    end
-
-    try do
-      :meck.unload(RateLimiter)
-    rescue
-      _other -> :ok
-    end
-
-    :meck.new(UserRegistration, [:passthrough])
-    :meck.new(RateLimiter, [:passthrough])
-
-    on_exit(fn ->
-      try do
-        :meck.unload(UserRegistration)
-      rescue
-        _other -> :ok
-      end
-
-      try do
-        :meck.unload(RateLimiter)
-      rescue
-        _other -> :ok
-      end
-    end)
-
-    :ok
+    original = Application.get_env(:tymeslot, :enforce_legal_agreements, false)
+    Application.put_env(:tymeslot, :enforce_legal_agreements, false)
+    on_exit(fn -> Application.put_env(:tymeslot, :enforce_legal_agreements, original) end)
   end
 
   describe "POST /auth/complete" do
-    setup do
-      original_value = Application.get_env(:tymeslot, :enforce_legal_agreements, false)
-      Application.put_env(:tymeslot, :enforce_legal_agreements, false)
-      :meck.expect(RateLimiter, :check_oauth_completion_rate_limit, fn _ip -> :ok end)
-
-      on_exit(fn ->
-        Application.put_env(:tymeslot, :enforce_legal_agreements, original_value)
-      end)
-
-      :ok
-    end
-
-    test "creates user and logs in", %{conn: conn} do
-      session_data = %{
-        provider: "github",
-        email: "new@example.com",
-        name: "New User",
-        is_verified: true,
-        email_from_provider: true,
-        provider_uid: "",
-        github_user_id: 12_345,
-        google_user_id: nil
-      }
-
-      :meck.expect(UserRegistration, :create_oauth_user, fn :github, _data, _profile, _opts ->
-        user = Factory.insert(:user, email: "new@example.com", provider: "github")
-        {:ok, user}
-      end)
-
-      conn =
-        conn
-        |> Test.init_test_session(%{pending_oauth_registration: session_data})
-        |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
-
-      assert redirected_to(conn) == "/dashboard"
-      assert Flash.get(conn.assigns.flash, :info) =~ "successfully signed up"
-    end
-
     test "requires terms acceptance when enforced", %{conn: conn} do
       Application.put_env(:tymeslot, :enforce_legal_agreements, true)
 
-      session_data = %{
-        provider: "github",
-        email: "new@example.com",
-        is_verified: true,
-        email_from_provider: true,
-        github_user_id: 12_345
-      }
-
-      conn =
-        conn
-        |> Test.init_test_session(%{pending_oauth_registration: session_data})
-        |> post(~p"/auth/complete", %{})
+      conn = complete(conn, pending(), %{})
 
       assert redirected_to(conn) =~ "/auth/complete-registration"
       assert Flash.get(conn.assigns.flash, :error) =~ "must accept the terms"
+      refute Repo.get_by(UserSchema, github_user_id: "12345")
     end
 
-    test "fails if email missing", %{conn: conn} do
-      session_data = %{
-        provider: "github",
-        email: nil,
-        is_verified: false,
-        email_from_provider: false,
-        github_user_id: 12_345
-      }
+    test "records accepted terms and creates the account", %{conn: conn} do
+      Application.put_env(:tymeslot, :enforce_legal_agreements, true)
 
-      conn =
-        conn
-        |> Test.init_test_session(%{pending_oauth_registration: session_data})
-        |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
-
-      assert redirected_to(conn) =~ "/auth/complete-registration"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Email address is required"
-    end
-
-    test "creates user and requires email verification if needed", %{conn: conn} do
-      session_data = %{
-        provider: "github",
-        email: "unverified@example.com",
-        is_verified: false,
-        email_from_provider: false,
-        github_user_id: 12_345
-      }
-
-      :meck.expect(UserRegistration, :create_oauth_user, fn :github, _data, _profile, _opts ->
-        user =
-          Factory.insert(:user,
-            email: "unverified@example.com",
-            provider: "github",
-            verified_at: nil
-          )
-
-        user = Map.put(user, :needs_email_verification, true)
-        {:ok, user}
-      end)
-
-      conn =
-        conn
-        |> Test.init_test_session(%{pending_oauth_registration: session_data})
-        |> post(~p"/auth/complete", %{
-          "auth" => %{"email" => "unverified@example.com"},
-          "terms_accepted" => "on"
-        })
+      conn = complete(conn, pending(), %{"auth" => %{"terms_accepted" => "on"}})
 
       assert redirected_to(conn) == "/dashboard"
-      assert Flash.get(conn.assigns.flash, :info) =~ "Please check your email to verify"
+      assert Repo.get_by(UserSchema, github_user_id: "12345")
     end
 
-    test "handles user creation failure with changeset", %{conn: conn} do
-      session_data = %{
-        provider: "github",
-        email: "fail@example.com",
-        is_verified: true,
-        email_from_provider: true,
-        github_user_id: 12_345
-      }
-
-      :meck.expect(UserRegistration, :create_oauth_user, fn :github, _data, _profile, _opts ->
-        changeset = Changeset.add_error(%Changeset{}, :email, "can't be blank")
-        {:error, changeset}
-      end)
-
-      conn =
-        conn
-        |> Test.init_test_session(%{pending_oauth_registration: session_data})
-        |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
+    test "fails if no email was typed", %{conn: conn} do
+      conn = complete(conn, pending(email: "", email_from_provider: false), %{})
 
       assert redirected_to(conn) =~ "/auth/complete-registration"
       assert Flash.get(conn.assigns.flash, :error) =~ "Email address is required"
-    end
-
-    test "handles user creation failure with other errors", %{conn: conn} do
-      session_data = %{
-        provider: "github",
-        email: "error@example.com",
-        is_verified: true,
-        email_from_provider: true,
-        github_user_id: 12_345
-      }
-
-      :meck.expect(UserRegistration, :create_oauth_user, fn :github, _data, _profile, _opts ->
-        {:error, :user_creation_failed}
-      end)
-
-      conn =
-        conn
-        |> Test.init_test_session(%{pending_oauth_registration: session_data})
-        |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
-
-      assert redirected_to(conn) == "/auth/login"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Failed to create user account"
     end
 
     test "reports a taken email as email_taken in a non-English locale", %{conn: conn} do
-      Factory.insert(:user, email: "taken@example.com")
-
-      session_data = %{
-        provider: "github",
-        email: nil,
-        is_verified: false,
-        email_from_provider: false,
-        github_user_id: 12_345
-      }
+      insert(:user, email: "taken@example.com")
 
       conn =
         conn
-        |> Test.init_test_session(%{pending_oauth_registration: session_data, locale: "de"})
-        |> post(~p"/auth/complete", %{
-          "auth" => %{"email" => "taken@example.com"},
-          "terms_accepted" => "on"
+        |> Test.init_test_session(%{
+          pending_oauth_registration: pending(email: "", email_from_provider: false),
+          locale: "de"
         })
+        |> post(~p"/auth/complete", %{"auth" => %{"email" => "taken@example.com"}})
 
       # The reason travels as an atom, so the query parameter does not depend
       # on the language the flash is rendered in.
@@ -225,182 +77,91 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
     end
 
     test "redirects to login when no session data present", %{conn: conn} do
-      conn = post(conn, ~p"/auth/complete", %{"terms_accepted" => "on"})
+      conn = post(conn, ~p"/auth/complete", %{})
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "Missing OAuth provider information"
     end
 
-    test "handles rate limited completion", %{conn: conn} do
-      :meck.expect(RateLimiter, :check_oauth_completion_rate_limit, fn _ip ->
-        {:error, :rate_limited, "Too many attempts"}
-      end)
+    test "refuses completions past the per-IP allowance", %{conn: conn} do
+      for _attempt <- 1..@completion_limit, do: post(conn, ~p"/auth/complete", %{})
 
       conn = post(conn, ~p"/auth/complete", %{})
+
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "Too many registration attempts"
     end
 
-    test "creates generic oauth user and logs in", %{conn: conn} do
-      session_data = %{
-        provider: "oauth",
-        email: "sso@example.com",
-        name: "SSO User",
-        is_verified: true,
-        email_from_provider: true,
-        provider_uid: "sub-12345"
-      }
+    test "names the generic provider by its display name", %{conn: conn} do
+      pending = pending(provider: "oauth", github_user_id: nil, provider_uid: "sub-12345")
 
-      :meck.expect(UserRegistration, :create_oauth_user, fn :oauth, _data, _profile, _opts ->
-        user =
-          Factory.insert(:user,
-            email: "sso@example.com",
-            provider: "oauth",
-            provider_uid: "sub-12345"
-          )
-
-        {:ok, user}
-      end)
-
-      conn =
-        conn
-        |> Test.init_test_session(%{pending_oauth_registration: session_data})
-        |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
+      conn = complete(conn, pending, %{})
 
       assert redirected_to(conn) == "/dashboard"
+      assert Repo.get_by!(UserSchema, provider: "oauth", provider_uid: "sub-12345").verified_at
 
-      # The generic provider is named by its display name, not a capitalised
-      # URL segment ("Oauth").
       assert Flash.get(conn.assigns.flash, :info) ==
                "Welcome! You've successfully signed up with SSO."
     end
 
-    test "clears session data after successful completion", %{conn: conn} do
-      session_data = %{
-        provider: "github",
-        email: "cleanup@example.com",
-        name: "Cleanup User",
-        is_verified: true,
-        email_from_provider: true,
-        provider_uid: "",
-        github_user_id: 99_999,
-        google_user_id: nil
-      }
-
-      :meck.expect(UserRegistration, :create_oauth_user, fn :github, _data, _profile, _opts ->
-        user = Factory.insert(:user, email: "cleanup@example.com", provider: "github")
-        {:ok, user}
-      end)
-
-      conn =
-        conn
-        |> Test.init_test_session(%{pending_oauth_registration: session_data})
-        |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
+    test "clears the pending registration once the account exists", %{conn: conn} do
+      conn = complete(conn, pending(), %{})
 
       assert redirected_to(conn) == "/dashboard"
       assert get_session(conn, :pending_oauth_registration) == nil
     end
 
-    test "clears session on unsupported provider", %{conn: conn} do
-      session_data = %{
-        provider: "totally_unsupported",
-        email: "bad@example.com",
-        is_verified: true,
-        email_from_provider: true
-      }
-
-      conn =
-        conn
-        |> Test.init_test_session(%{pending_oauth_registration: session_data})
-        |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
+    test "clears the session on an unsupported provider", %{conn: conn} do
+      conn = complete(conn, pending(provider: "totally_unsupported"), %{})
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "Unsupported OAuth provider"
       assert get_session(conn, :pending_oauth_registration) == nil
     end
 
-    test "session data takes precedence over form-submitted provider", %{conn: conn} do
-      session_data = %{
-        provider: "github",
-        email: "session@example.com",
-        name: "Session User",
-        is_verified: true,
-        email_from_provider: true,
-        provider_uid: "",
-        github_user_id: 99_999,
-        google_user_id: nil
-      }
-
-      :meck.expect(UserRegistration, :create_oauth_user, fn :github,
-                                                            oauth_data,
-                                                            _profile,
-                                                            _opts ->
-        # Verify the provider from session is used, not any form-submitted value
-        assert oauth_data.provider == "github"
-        assert oauth_data.email == "session@example.com"
-        user = Factory.insert(:user, email: "session@example.com", provider: "github")
-        {:ok, user}
-      end)
-
+    test "takes a provider-vouched email from the session, never the form", %{conn: conn} do
       conn =
-        conn
-        |> Test.init_test_session(%{pending_oauth_registration: session_data})
-        |> post(~p"/auth/complete", %{
-          "auth" => %{
-            "provider" => "google",
-            "email" => "attacker@evil.com"
-          },
-          "terms_accepted" => "on"
+        complete(conn, pending(), %{
+          "auth" => %{"provider" => "google", "email" => "attacker@evil.com"}
         })
 
       assert redirected_to(conn) == "/dashboard"
+      assert Repo.get_by!(UserSchema, github_user_id: "12345").email == "new@example.com"
+      refute Repo.get_by(UserSchema, email: "attacker@evil.com")
     end
 
-    test "uses user-provided email when email_from_provider is false", %{conn: conn} do
-      session_data = %{
-        provider: "oauth",
-        email: nil,
-        name: "SSO User",
-        is_verified: false,
-        email_from_provider: false,
-        provider_uid: "sub-123"
-      }
-
-      :meck.expect(UserRegistration, :create_oauth_user, fn :oauth, oauth_data, _profile, _opts ->
-        assert oauth_data.email == "user-provided@example.com"
-        assert oauth_data.email_from_provider == false
-        user = Factory.insert(:user, email: "user-provided@example.com", provider: "oauth")
-        {:ok, user}
-      end)
-
-      conn =
-        conn
-        |> Test.init_test_session(%{pending_oauth_registration: session_data})
-        |> post(~p"/auth/complete", %{
-          "auth" => %{"email" => "user-provided@example.com"},
-          "terms_accepted" => "on"
-        })
-
-      assert redirected_to(conn) == "/dashboard"
-    end
-
-    test "redirects to login with info flash when registration is disabled", %{conn: conn} do
-      original_value = Application.get_env(:tymeslot, :registration_enabled, true)
+    test "redirects to login with an info flash when registration is disabled", %{conn: conn} do
+      original = Application.get_env(:tymeslot, :registration_enabled, true)
       Application.put_env(:tymeslot, :registration_enabled, false)
+      on_exit(fn -> Application.put_env(:tymeslot, :registration_enabled, original) end)
 
-      on_exit(fn ->
-        Application.put_env(:tymeslot, :registration_enabled, original_value)
-      end)
-
-      session_data = %{provider: "github", email: "new@example.com", github_user_id: 12_345}
-
-      conn =
-        conn
-        |> Test.init_test_session(%{pending_oauth_registration: session_data})
-        |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
+      conn = complete(conn, pending(), %{})
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :info) =~ "Registration is currently disabled"
+      refute Repo.get_by(UserSchema, github_user_id: "12345")
     end
+  end
+
+  # The entry `FlowHandler` leaves for a GitHub sign-up whose verified email
+  # GitHub supplied.
+  defp pending(overrides \\ []) do
+    Map.merge(
+      %{
+        provider: "github",
+        email: "new@example.com",
+        name: "New User",
+        email_from_provider: true,
+        github_user_id: "12345",
+        created_at: System.system_time(:second)
+      },
+      Map.new(overrides)
+    )
+  end
+
+  defp complete(conn, pending, params) do
+    conn
+    |> Test.init_test_session(%{pending_oauth_registration: pending})
+    |> post(~p"/auth/complete", Map.put_new(params, "profile", %{"full_name" => "New User"}))
   end
 end

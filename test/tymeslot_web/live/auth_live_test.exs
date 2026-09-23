@@ -221,7 +221,6 @@ defmodule TymeslotWeb.AuthLiveTest do
             provider: "github",
             email: "oauth@example.com",
             name: nil,
-            is_verified: true,
             email_from_provider: true,
             provider_uid: "12345",
             github_user_id: nil,
@@ -410,7 +409,6 @@ defmodule TymeslotWeb.AuthLiveTest do
             provider: "github",
             email: "oauth@example.com",
             name: nil,
-            is_verified: true,
             email_from_provider: true,
             provider_uid: "12345",
             github_user_id: "12345",
@@ -425,17 +423,25 @@ defmodule TymeslotWeb.AuthLiveTest do
     end
 
     test "successful OAuth completion", %{conn: conn} do
+      social_auth = Application.get_env(:tymeslot, :social_auth, [])
+
+      Application.put_env(
+        :tymeslot,
+        :social_auth,
+        Keyword.put(social_auth, :github_enabled, true)
+      )
+
+      on_exit(fn -> Application.put_env(:tymeslot, :social_auth, social_auth) end)
+
       conn =
         init_test_session(conn, %{
           "pending_oauth_registration" => %{
             provider: "github",
             email: "oauth_new@example.com",
             name: nil,
-            is_verified: true,
             email_from_provider: true,
-            provider_uid: "gh_new_123",
             github_user_id: "gh_new_123",
-            google_user_id: nil
+            created_at: System.system_time(:second)
           }
         })
 

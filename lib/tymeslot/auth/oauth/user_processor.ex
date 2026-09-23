@@ -8,45 +8,45 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
   alias Tymeslot.Auth.OAuth.Client
 
   @type provider :: :github | :google | :oauth
+  # `email` is the provider's address only when the provider vouches for it
+  # (GitHub's verified list, Google's `verified_email`, the OIDC
+  # `email_verified` claim); an address the provider has not verified is
+  # dropped, so the user types one and proves it by email instead.
+  # `email_from_provider` records which of the two happened.
   @type normalized_user :: %{
           required(:email) => String.t() | nil,
           required(:name) => String.t() | nil,
-          required(:is_verified) => boolean(),
           required(:email_from_provider) => boolean(),
-          optional(:github_user_id) => String.t() | integer(),
+          optional(:github_user_id) => String.t(),
           optional(:google_user_id) => String.t(),
           optional(:provider_uid) => String.t()
         }
 
   @doc """
   Processes the raw user info from the provider into a normalized user map.
+
+  GitHub's `/user` email is ignored here: whether it is verified is only
+  known from `/user/emails`, which `enhance_user_data/3` reads.
   """
   @spec process_user(provider(), map()) :: {:ok, normalized_user()} | {:error, :invalid_user_info}
-  def process_user(:github, %{"id" => github_user_id} = user_info) do
-    email = extract_email(user_info)
-    email_from_provider = email != nil and String.trim(email) != ""
-
-    user = %{
-      email: email,
-      github_user_id: github_user_id,
-      name: Map.get(user_info, "name"),
-      is_verified: true,
-      email_from_provider: email_from_provider
-    }
-
-    {:ok, user}
+  def process_user(:github, %{"id" => github_user_id} = user_info)
+      when is_integer(github_user_id) or is_binary(github_user_id) do
+    {:ok,
+     Map.merge(vouched_email(nil, false), %{
+       github_user_id: to_string(github_user_id),
+       name: Map.get(user_info, "name")
+     })}
   end
 
-  def process_user(:google, %{"email" => email, "id" => google_user_id} = user_info) do
-    user = %{
-      email: email,
-      google_user_id: google_user_id,
-      name: Map.get(user_info, "name"),
-      is_verified: true,
-      email_from_provider: true
-    }
+  def process_user(:google, %{"id" => google_user_id} = user_info)
+      when is_binary(google_user_id) do
+    email = extract_email(user_info)
 
-    {:ok, user}
+    {:ok,
+     Map.merge(vouched_email(email, Map.get(user_info, "verified_email") == true), %{
+       google_user_id: google_user_id,
+       name: Map.get(user_info, "name")
+     })}
   end
 
   def process_user(:oauth, %{"sub" => provider_uid} = user_info) do
@@ -83,37 +83,22 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
   def process_user(_provider, _user_info), do: {:error, :invalid_user_info}
 
   @doc """
-  Enhances user data with additional information (e.g., fetching GitHub emails).
+  Adds what the first userinfo response cannot carry: for GitHub, the
+  primary verified address from `/user/emails`.
   """
   @spec enhance_user_data(provider(), normalized_user(), OAuth2.Client.t()) :: normalized_user()
-  def enhance_user_data(:github, %{email: email} = user, client)
-      when is_nil(email) or email == "" do
+  def enhance_user_data(:github, user, client) do
     case get_github_user_emails(client) do
       {:ok, emails} when is_list(emails) ->
-        add_github_email_to_user(user, emails)
+        Map.merge(user, vouched_email(verified_github_email(emails), true))
 
-      {:error, _error_reason} ->
-        Map.put(user, :email_from_provider, false)
-    end
-  end
-
-  def enhance_user_data(_provider, user, _client) do
-    case Map.get(user, :email_from_provider) do
-      nil ->
-        email_provided =
-          case user.email do
-            nil -> false
-            "" -> false
-            email when is_binary(email) -> String.trim(email) != ""
-            _other -> false
-          end
-
-        Map.put(user, :email_from_provider, email_provided)
-
-      _existing_flag ->
+      {:error, reason} ->
+        Logger.warning("Could not read GitHub email addresses", reason: inspect(reason))
         user
     end
   end
+
+  def enhance_user_data(_provider, user, _client), do: user
 
   # Fetches the authenticated user's email addresses from the GitHub API.
   @spec get_github_user_emails(OAuth2.Client.t()) :: {:ok, list(map())} | {:error, any()}
@@ -140,18 +125,15 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
     if uid_string == "" do
       {:error, :invalid_user_info}
     else
-      email = extract_email(user_info)
-      email_from_provider = email != nil and String.trim(email) != ""
+      # A missing `email_verified` claim counts as unverified: nothing then
+      # vouches for the address.
+      verified = Map.get(user_info, "email_verified") in [true, "true"]
 
-      user = %{
-        email: email,
-        provider_uid: uid_string,
-        name: Map.get(user_info, "name"),
-        is_verified: Map.get(user_info, "email_verified", false) in [true, "true"],
-        email_from_provider: email_from_provider
-      }
-
-      {:ok, user}
+      {:ok,
+       Map.merge(vouched_email(extract_email(user_info), verified), %{
+         provider_uid: uid_string,
+         name: Map.get(user_info, "name")
+       })}
     end
   end
 
@@ -177,33 +159,19 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
   defp parse_user_emails_body(body) when is_list(body), do: {:ok, body}
   defp parse_user_emails_body(other), do: {:error, {:unexpected_body, other}}
 
-  defp add_github_email_to_user(user, emails) do
-    primary_email = find_primary_email(emails)
-    verified_email = primary_email || find_verified_email(emails)
+  defp vouched_email(email, true) when is_binary(email),
+    do: %{email: email, email_from_provider: true}
 
-    case extract_email_address(primary_email, verified_email) do
-      {:ok, email} -> %{user | email: email, email_from_provider: true}
-      :error -> Map.put(user, :email_from_provider, false)
+  defp vouched_email(_email, _verified), do: %{email: nil, email_from_provider: false}
+
+  # The primary address when GitHub has verified it, otherwise any verified one.
+  defp verified_github_email(emails) do
+    verified = Enum.filter(emails, &(Map.get(&1, "verified") == true))
+    primary = Enum.find(verified, &(Map.get(&1, "primary") == true))
+
+    case primary || List.first(verified) do
+      %{"email" => email} when is_binary(email) and email != "" -> email
+      _none -> nil
     end
   end
-
-  defp find_primary_email(emails) do
-    Enum.find(emails, fn email ->
-      Map.get(email, "primary", false) && Map.get(email, "verified", false)
-    end)
-  end
-
-  defp find_verified_email(emails) do
-    Enum.find(emails, fn email ->
-      Map.get(email, "verified", false)
-    end)
-  end
-
-  defp extract_email_address(%{"email" => email}, _fallback) when is_binary(email),
-    do: {:ok, email}
-
-  defp extract_email_address(_primary, %{"email" => email}) when is_binary(email),
-    do: {:ok, email}
-
-  defp extract_email_address(_primary, _fallback), do: :error
 end

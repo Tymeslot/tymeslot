@@ -18,7 +18,6 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
       assert user.provider_uid == "user-123"
       assert user.email == "sso@example.com"
       assert user.name == "SSO User"
-      assert user.is_verified == true
       assert user.email_from_provider == true
     end
 
@@ -44,6 +43,7 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
       user_info = %{
         "id" => "alt-456",
         "email" => "alt@example.com",
+        "email_verified" => true,
         "name" => "Alt User"
       }
 
@@ -84,7 +84,7 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
       assert {:error, :invalid_user_info} = UserProcessor.process_user(:oauth, user_info)
     end
 
-    test ":oauth respects email_verified claim" do
+    test ":oauth keeps the email only when email_verified is true" do
       assert {:ok, verified} =
                UserProcessor.process_user(:oauth, %{
                  "sub" => "1",
@@ -92,21 +92,17 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
                  "email_verified" => true
                })
 
-      assert verified.is_verified == true
+      assert %{email: "a@b.com", email_from_provider: true} = verified
 
-      assert {:ok, unverified} =
-               UserProcessor.process_user(:oauth, %{
-                 "sub" => "2",
-                 "email" => "a@b.com",
-                 "email_verified" => false
-               })
+      for claim <- [%{"email_verified" => false}, %{"email_verified" => "false"}, %{}] do
+        assert {:ok, unverified} =
+                 UserProcessor.process_user(
+                   :oauth,
+                   Map.merge(%{"sub" => "2", "email" => "a@b.com"}, claim)
+                 )
 
-      assert unverified.is_verified == false
-
-      assert {:ok, missing} =
-               UserProcessor.process_user(:oauth, %{"sub" => "3", "email" => "a@b.com"})
-
-      assert missing.is_verified == false
+        assert %{email: nil, email_from_provider: false} = unverified
+      end
     end
 
     test ":oauth accepts string \"true\" for email_verified claim" do
@@ -117,31 +113,33 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
                  "email_verified" => "true"
                })
 
-      assert user.is_verified == true
+      assert user.email_from_provider == true
     end
 
-    test ":github with valid user info" do
+    test ":github stringifies the ID and leaves the email to /user/emails" do
       user_info = %{"id" => 123, "email" => "gh@example.com", "name" => "GH User"}
 
       assert {:ok, user} = UserProcessor.process_user(:github, user_info)
 
-      assert user.github_user_id == 123
-      assert user.email == "gh@example.com"
+      assert user.github_user_id == "123"
+      assert user.email == nil
+      assert user.email_from_provider == false
       assert user.name == "GH User"
-      assert user.is_verified == true
-      assert user.email_from_provider == true
     end
 
-    test ":google with valid user info" do
+    test ":google keeps the email only when verified_email is true" do
       user_info = %{"id" => "g-123", "email" => "g@example.com", "name" => "G User"}
 
-      assert {:ok, user} = UserProcessor.process_user(:google, user_info)
+      assert {:ok, verified} =
+               UserProcessor.process_user(:google, Map.put(user_info, "verified_email", true))
 
-      assert user.google_user_id == "g-123"
-      assert user.email == "g@example.com"
-      assert user.name == "G User"
-      assert user.is_verified == true
-      assert user.email_from_provider == true
+      assert %{google_user_id: "g-123", email: "g@example.com", email_from_provider: true} =
+               verified
+
+      assert {:ok, unverified} =
+               UserProcessor.process_user(:google, Map.put(user_info, "verified_email", false))
+
+      assert %{email: nil, email_from_provider: false} = unverified
     end
 
     test "unknown provider returns error" do
@@ -166,17 +164,6 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
 
       assert {:error, :invalid_user_info} = UserProcessor.process_user(:oauth, user_info)
     end
-
-    test ":oauth with string \"false\" for email_verified" do
-      assert {:ok, user} =
-               UserProcessor.process_user(:oauth, %{
-                 "sub" => "5",
-                 "email" => "a@b.com",
-                 "email_verified" => "false"
-               })
-
-      assert user.is_verified == false
-    end
   end
 
   describe "extract_email edge cases" do
@@ -190,14 +177,22 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
 
     test "empty string email" do
       assert {:ok, user} =
-               UserProcessor.process_user(:oauth, %{"sub" => "1", "email" => ""})
+               UserProcessor.process_user(:oauth, %{
+                 "sub" => "1",
+                 "email" => "",
+                 "email_verified" => true
+               })
 
       assert user.email == nil
     end
 
     test "non-string email value" do
       assert {:ok, user} =
-               UserProcessor.process_user(:oauth, %{"sub" => "1", "email" => 12_345})
+               UserProcessor.process_user(:oauth, %{
+                 "sub" => "1",
+                 "email" => 12_345,
+                 "email_verified" => true
+               })
 
       assert user.email == nil
     end

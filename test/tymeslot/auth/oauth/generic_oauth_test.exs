@@ -55,6 +55,8 @@ defmodule Tymeslot.Auth.OAuth.GenericOAuthTest do
 
       {_updated_conn, url} = GenericOAuth.authorize_url(conn, redirect_uri)
       assert url =~ "state=state123"
+      assert url =~ "code_challenge=challenge123"
+      assert url =~ "code_challenge_method=S256"
       assert url =~ "scope=openid"
     end
   end

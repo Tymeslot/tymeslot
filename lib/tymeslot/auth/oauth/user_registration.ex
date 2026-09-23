@@ -16,7 +16,6 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
           optional(:github_user_id) => String.t() | integer(),
           optional(:google_user_id) => String.t(),
           optional(:provider_uid) => String.t(),
-          optional(:is_verified) => boolean(),
           optional(:email_from_provider) => boolean(),
           optional(atom()) => term()
         }
@@ -67,7 +66,12 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   end
 
   @doc """
-  Creates a new user from OAuth provider information.
+  Creates a new user from OAuth provider information, or returns the account
+  that already carries this provider ID.
+
+  The account is created verified only when the provider vouched for the
+  email (`email_from_provider: true`); an address the user typed stays
+  unverified until they follow the emailed link.
   """
   @spec create_oauth_user(
           provider(),
@@ -77,29 +81,20 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
         ) ::
           {:ok, map()} | {:error, any()}
   def create_oauth_user(provider, oauth_user, profile_params \\ %{}, opts \\ []) do
-    email_verified = determine_email_verification_status(oauth_user)
     metadata = Keyword.get(opts, :metadata, %{})
-
-    auth_params = build_auth_params(provider, oauth_user, email_verified)
+    auth_params = build_auth_params(provider, oauth_user)
 
     case TransactionalUserCreation.find_or_create_oauth_user(
            provider,
            auth_params,
-           profile_params,
-           opts
+           profile_params
          ) do
       {:ok, %{user: user, created: true}} ->
-        {:ok, updated_user} =
-          handle_user_verification_status(user, email_verified, oauth_user.email)
-
-        PubSub.broadcast_user_registered(updated_user, metadata)
-        {:ok, updated_user}
+        PubSub.broadcast_user_registered(user, metadata)
+        {:ok, user}
 
       {:ok, %{user: user, created: false}} ->
-        case check_oauth_account_linking(provider, user, oauth_user) do
-          :should_link_account -> {:ok, user}
-          :email_already_taken -> {:error, :email_already_taken}
-        end
+        {:ok, user}
 
       {:error, reason} ->
         Logger.error("OAuth user creation failed", reason: inspect(reason))
@@ -197,60 +192,21 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
 
   defp check_email_unregistered(_user_queries, _email), do: {:error, :not_found}
 
-  defp determine_email_verification_status(%{email_from_provider: true}), do: true
-  defp determine_email_verification_status(%{email_from_provider: false}), do: false
+  defp build_auth_params(provider, oauth_user) do
+    uid_field = TransactionalUserCreation.provider_uid_field(provider)
 
-  defp determine_email_verification_status(oauth_user) do
-    Map.get(oauth_user, :is_verified, false)
+    Map.merge(
+      %{
+        "provider" => to_string(provider),
+        "email" => oauth_user.email,
+        uid_field => Map.get(oauth_user, String.to_existing_atom(uid_field))
+      },
+      verified_at(oauth_user)
+    )
   end
 
-  defp build_auth_params(:oauth, oauth_user, email_verified) do
-    %{
-      "provider" => "oauth",
-      "email" => oauth_user.email,
-      "is_verified" => email_verified,
-      "provider_uid" => Map.get(oauth_user, :provider_uid),
-      "terms_accepted" => to_string(Map.get(oauth_user, :terms_accepted, false))
-    }
-  end
+  defp verified_at(%{email_from_provider: true}),
+    do: %{"verified_at" => DateTime.utc_now(:second)}
 
-  defp build_auth_params(provider, oauth_user, email_verified) do
-    %{
-      "provider" => to_string(provider),
-      "email" => oauth_user.email,
-      "is_verified" => email_verified,
-      "#{provider}_user_id" =>
-        Map.get(oauth_user, String.to_existing_atom("#{provider}_user_id")),
-      "terms_accepted" => to_string(Map.get(oauth_user, :terms_accepted, false))
-    }
-  end
-
-  defp handle_user_verification_status(user, false, email) when is_binary(email) do
-    {:ok, Map.put(user, :needs_email_verification, true)}
-  end
-
-  defp handle_user_verification_status(user, _email_verified, _email), do: {:ok, user}
-
-  # NOTE: All generic OAuth users share provider="oauth" regardless of which IdP
-  # issued the credentials. If the admin switches IdPs (e.g., Keycloak → Authentik),
-  # `provider_uid` values from the old IdP remain in the database. A new IdP user
-  # whose `sub` collides with an old IdP user would be incorrectly matched. Switching
-  # IdPs requires clearing stale `provider="oauth"` rows from the users table.
-  defp check_oauth_account_linking(:oauth, user, oauth_user) do
-    if Map.get(user, :provider_uid) == Map.get(oauth_user, :provider_uid) do
-      :should_link_account
-    else
-      :email_already_taken
-    end
-  end
-
-  defp check_oauth_account_linking(provider, user, oauth_user) do
-    provider_id_field = String.to_existing_atom("#{provider}_user_id")
-
-    if Map.get(user, provider_id_field) == Map.get(oauth_user, provider_id_field) do
-      :should_link_account
-    else
-      :email_already_taken
-    end
-  end
+  defp verified_at(_oauth_user), do: %{}
 end

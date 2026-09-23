@@ -1,9 +1,13 @@
 defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   @moduledoc """
-  Handles OAuth user creation with proper transaction support to prevent race conditions.
+  Finds or creates the account for an OAuth identity, together with its
+  profile and default schedule, in one transaction.
 
-  This module ensures that checking for existing users and creating new users
-  happens atomically within a database transaction.
+  The lookup and the insert are not atomic: two requests for the same new
+  identity (a double-submitted completion form) can both miss the lookup.
+  The unique index on the provider ID lets only one insert through; the loser
+  re-reads the winner's account and returns it, so both requests end with the
+  same user.
   """
 
   import Ecto.Query, warn: false
@@ -20,8 +24,8 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   @doc """
   Finds or creates an OAuth user within a transaction.
 
-  This is useful when you want to either get an existing user or create a new one
-  atomically. Prevents duplicate user creation in high-concurrency scenarios.
+  Returns the existing account when one already carries this provider ID,
+  including one a concurrent request inserted first.
 
   ## Parameters
   - provider: The OAuth provider (:github or :google)
@@ -54,13 +58,42 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
       {:ok, {user, created}} ->
         {:ok, %{user: user, created: created}}
 
+      {:error, {:find_or_create, %Ecto.Changeset{} = changeset}} ->
+        recover_from_concurrent_insert(provider, provider_uid, changeset)
+
       {:error, {operation, reason}} ->
         Logger.error("OAuth find_or_create failed", operation: operation, reason: inspect(reason))
         {:error, reason}
     end
   end
 
+  @doc """
+  The auth-params key (and user column) holding a provider's stable user ID.
+  """
+  @spec provider_uid_field(atom()) :: String.t()
+  def provider_uid_field(:github), do: "github_user_id"
+  def provider_uid_field(:google), do: "google_user_id"
+  def provider_uid_field(:oauth), do: "provider_uid"
+
   # Private functions
+
+  # The failed insert aborted the transaction, so the re-read happens outside
+  # it. Found: another request created the account first. Not found: the
+  # changeset failed for its own reasons (a taken email, say).
+  defp recover_from_concurrent_insert(provider, provider_uid, changeset) do
+    case find_user_by_provider(Repo, provider, provider_uid) do
+      {:ok, user} ->
+        {:ok, %{user: user, created: false}}
+
+      {:error, :not_found} ->
+        Logger.error("OAuth find_or_create failed",
+          operation: :find_or_create,
+          reason: inspect(changeset)
+        )
+
+        {:error, changeset}
+    end
+  end
 
   defp ensure_profile(repo, user, true, profile_params) do
     create_profile(repo, user, profile_params)
@@ -122,6 +155,8 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
     end
   end
 
+  defp find_user_by_provider(_repo, _provider, nil), do: {:error, :not_found}
+
   defp find_user_by_provider(repo, provider, provider_uid) do
     case provider do
       :github -> UserQueries.get_user_by_github_id(provider_uid, repo)
@@ -139,9 +174,4 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
       {:error, %Ecto.Changeset{} = changeset} -> {:error, {:find_or_create, changeset}}
     end
   end
-
-  defp provider_uid_field(:github), do: "github_user_id"
-  defp provider_uid_field(:google), do: "google_user_id"
-  defp provider_uid_field(:oauth), do: "provider_uid"
-  defp provider_uid_field(_arg), do: nil
 end

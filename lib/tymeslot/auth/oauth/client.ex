@@ -31,11 +31,12 @@ defmodule Tymeslot.Auth.OAuth.Client do
   end
 
   @doc """
-  Exchange auth code for token.
+  Exchange auth code for token, proving possession of the PKCE code verifier.
   """
-  @spec exchange_code_for_token(Client.t(), String.t()) :: {:ok, Client.t()} | {:error, any()}
-  def exchange_code_for_token(client, code) do
-    Client.get_token(client, code: code)
+  @spec exchange_code_for_token(Client.t(), String.t(), String.t()) ::
+          {:ok, Client.t()} | {:error, any()}
+  def exchange_code_for_token(client, code, code_verifier) do
+    Client.get_token(client, code: code, code_verifier: code_verifier)
   end
 
   @doc """

@@ -45,7 +45,7 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
 
       assert {:ok, user} = result
       assert user.email == nil
-      assert user.github_user_id == 12_345
+      assert user.github_user_id == "12345"
       assert user.email_from_provider == false
     end
 

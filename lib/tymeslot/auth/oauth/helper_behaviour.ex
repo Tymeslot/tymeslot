@@ -5,11 +5,13 @@ defmodule Tymeslot.Auth.OAuth.HelperBehaviour do
 
   @callback build_oauth_client(atom(), String.t(), String.t()) :: OAuth2.Client.t()
   @callback build_oauth_client(atom(), String.t()) :: OAuth2.Client.t()
-  @callback exchange_code_for_token(OAuth2.Client.t(), String.t()) ::
+  @callback exchange_code_for_token(OAuth2.Client.t(), String.t(), String.t()) ::
               {:ok, OAuth2.Client.t()} | {:error, any()}
   @callback get_user_info(OAuth2.Client.t(), atom()) :: {:ok, map()} | {:error, any()}
-  @callback generate_and_store_state(Plug.Conn.t()) :: {Plug.Conn.t(), String.t()}
-  @callback validate_state(Plug.Conn.t(), String.t() | nil) :: :ok | {:error, :invalid_state}
+  @callback generate_and_store_state(Plug.Conn.t()) ::
+              {Plug.Conn.t(), Tymeslot.Auth.OAuth.State.flow_params()}
+  @callback validate_state(Plug.Conn.t(), String.t() | nil) ::
+              {:ok, String.t()} | {:error, :invalid_state}
   @callback clear_oauth_state(Plug.Conn.t()) :: Plug.Conn.t()
   @callback get_callback_url(atom()) :: String.t()
 
@@ -22,6 +24,7 @@ defmodule Tymeslot.Auth.OAuth.HelperBehaviour do
   @type flow_result ::
           {:ok, Plug.Conn.t(), atom()}
           | {:registration_required, Plug.Conn.t(), atom(), map()}
+          | {:verification_required, Plug.Conn.t(), atom(), :sent | :rate_limited | :failed}
           | {:error, :invalid_state, Plug.Conn.t()}
           | {:error, :oauth_error, atom(), Plug.Conn.t()}
           | {:error, :general_error, atom(), Plug.Conn.t()}

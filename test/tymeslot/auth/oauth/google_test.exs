@@ -26,7 +26,9 @@ defmodule Tymeslot.Auth.OAuth.GoogleTest do
     conn = PlugTest.init_test_session(PlugTest.conn(:get, "/"), %{})
     redirect_uri = "http://callback"
 
-    expect(HelperMock, :generate_and_store_state, fn ^conn -> {conn, "state456"} end)
+    expect(HelperMock, :generate_and_store_state, fn ^conn ->
+      {conn, %{state: "state456", code_challenge: "challenge456"}}
+    end)
 
     expect(HelperMock, :build_oauth_client, fn :google, ^redirect_uri, "state456" ->
       %OAuth2.Client{
@@ -41,6 +43,8 @@ defmodule Tymeslot.Auth.OAuth.GoogleTest do
     assert url =~ "state=state456"
     assert url =~ "scope=email+profile"
     assert url =~ "prompt=select_account"
+    assert url =~ "code_challenge=challenge456"
+    assert url =~ "code_challenge_method=S256"
   end
 
   test "get_callback_url/0 asks the helper for the :google provider" do

@@ -36,8 +36,8 @@ defmodule Tymeslot.Auth.OAuth.Helper do
   end
 
   @impl Tymeslot.Auth.OAuth.HelperBehaviour
-  def exchange_code_for_token(client, code) do
-    Client.exchange_code_for_token(client, code)
+  def exchange_code_for_token(client, code, code_verifier) do
+    Client.exchange_code_for_token(client, code, code_verifier)
   end
 
   # --- User Info ---

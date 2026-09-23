@@ -59,7 +59,7 @@ defmodule Tymeslot.AuthTestHelpers do
     redirect_uri = "http://callback"
 
     Mox.expect(Tymeslot.Auth.OAuth.HelperMock, :generate_and_store_state, 1, fn ^conn ->
-      {conn, "state123"}
+      {conn, %{state: "state123", code_challenge: "challenge123"}}
     end)
 
     {conn, redirect_uri}

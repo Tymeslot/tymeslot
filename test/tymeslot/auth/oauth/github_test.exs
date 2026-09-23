@@ -38,6 +38,8 @@ defmodule Tymeslot.Auth.OAuth.GitHubTest do
 
     {_updated_conn, url} = GitHub.authorize_url(conn, redirect_uri)
     assert url =~ "state=state123"
+    assert url =~ "code_challenge=challenge123"
+    assert url =~ "code_challenge_method=S256"
     assert url =~ "scope=user%3Aemail"
   end
 

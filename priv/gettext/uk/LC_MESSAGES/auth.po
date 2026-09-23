@@ -1069,3 +1069,18 @@ msgstr "Натисніть кнопку нижче, щоб перевести с
 #, elixir-autogen, elixir-format
 msgid "Confirm email change"
 msgstr "Підтвердити зміну електронної адреси"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before signing in. We could not send a new verification link; please try again later."
+msgstr "Будь ласка, підтвердіть свою адресу електронної пошти перед входом. Не вдалося надіслати нове посилання для підтвердження; спробуйте пізніше."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before signing in. We've sent you a new verification link."
+msgstr "Будь ласка, підтвердіть свою адресу електронної пошти перед входом. Ми надіслали вам нове посилання для підтвердження."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your sign-up session has expired. Please sign in again."
+msgstr "Термін дії сесії реєстрації минув. Будь ласка, увійдіть знову."
