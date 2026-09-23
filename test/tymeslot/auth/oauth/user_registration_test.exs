@@ -191,6 +191,20 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
     end
   end
 
+  describe "create_oauth_user/2 with a taken email" do
+    test "returns the email changeset error rather than another account" do
+      Factory.insert(:user, email: "taken@example.com", provider: "google", google_user_id: "g-9")
+
+      identity = %{email: "taken@example.com", provider_uid: "fresh-9", email_from_provider: true}
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               UserRegistration.create_oauth_user(:github, identity)
+
+      assert {"has already been taken", _opts} = changeset.errors[:email]
+      assert Repo.aggregate(UserSchema, :count) == 1
+    end
+  end
+
   describe "create_oauth_user/2 verification" do
     test "records a provider-vouched email as verified" do
       identity = %{email: "v@example.com", provider_uid: "301", email_from_provider: true}

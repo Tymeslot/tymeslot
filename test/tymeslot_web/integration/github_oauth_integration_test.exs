@@ -18,6 +18,8 @@ defmodule TymeslotWeb.Integration.GitHubOAuthIntegrationTest do
 
   describe "GitHub OAuth Security" do
     test "prevents CSRF attacks with state parameter validation" do
+      enable_social_auth(:github_enabled)
+
       # Setup: Create session with expected state
       conn =
         build_conn()
@@ -100,6 +102,8 @@ defmodule TymeslotWeb.Integration.GitHubOAuthIntegrationTest do
     end
 
     test "user sees error when the callback carries a state the server never issued" do
+      enable_social_auth(:github_enabled)
+
       # Act: GitHub redirects back on a session that never started a flow, so
       # there is no stored state to compare against.
       conn =

@@ -5,8 +5,9 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
 
   require Logger
   alias Tymeslot.Auth
+  alias Tymeslot.Auth.Helpers.AccountLogging
   alias Tymeslot.Auth.OAuth.{Providers, TransactionalUserCreation}
-  alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Auth.{UserQueries, UserSchema}
   alias Tymeslot.Infrastructure.{Config, PubSub}
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.EmailValidator
@@ -79,6 +80,35 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
         {:error, reason}
     end
   end
+
+  @doc """
+  Marks `account` verified when its email has not been verified yet and the
+  provider vouches for that very address (among any it vouches for), and
+  returns the account either way.
+
+  Covers accounts created before the provider's word counted, and typed
+  addresses the provider has since verified: sending an email to prove what
+  the provider already has would only lock the owner out until they read it.
+  """
+  @spec verify_vouched_email(map(), map()) :: map()
+  def verify_vouched_email(%UserSchema{verified_at: nil, email: email} = account, identity)
+      when is_binary(email) do
+    vouched = Enum.map(Map.get(identity, :verified_emails, []), &String.downcase/1)
+
+    with true <- String.downcase(email) in vouched,
+         {:ok, verified} <- UserQueries.verify_user(account) do
+      AccountLogging.log_user_verified(verified, "oauth_provider", %{
+        provider: account.provider
+      })
+
+      :telemetry.execute([:tymeslot, :auth, :email_verified], %{count: 1}, %{})
+      verified
+    else
+      _not_vouched_or_failed -> account
+    end
+  end
+
+  def verify_vouched_email(account, _identity), do: account
 
   @doc """
   Validates data submitted via the OAuth completion form.

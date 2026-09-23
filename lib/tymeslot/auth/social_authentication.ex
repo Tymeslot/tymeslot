@@ -34,16 +34,17 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   Completes a social registration from the pending entry the provider
   callback stored and the complete-registration form's `params`.
 
-  Returns `{:ok, provider, user}` with the account to sign in: a new one, or
-  the one already carrying this provider identity (a form submitted twice
-  signs in the account the first submission created). Whether the account
-  gets a session is the caller's decision, via its `verified_at`.
+  Returns `{:ok, provider, user, outcome}` with the account to sign in:
+  `:created` for a new one, or `:existing` for the one already carrying this
+  provider identity (a form submitted twice signs in the account the first
+  submission created). Whether the account gets a session is the caller's
+  decision, via its `verified_at`.
 
   `metadata` is forwarded with the registration broadcast; `terms_accepted`
   is added to it here.
   """
   @spec complete_registration(map() | nil, map(), map()) ::
-          {:ok, provider(), map()} | {:error, completion_error()}
+          {:ok, provider(), map(), :created | :existing} | {:error, completion_error()}
   def complete_registration(pending, params, metadata) do
     with :ok <- check_registration_enabled(),
          {:ok, pending} <- check_pending(pending),
@@ -53,7 +54,7 @@ defmodule Tymeslot.Auth.SocialAuthentication do
       oauth_data = build_oauth_data(pending, params)
 
       case UserRegistration.find_existing_user(provider, oauth_data) do
-        {:ok, user} -> {:ok, provider, user}
+        {:ok, user} -> {:ok, provider, user, :existing}
         {:error, _not_found_or_taken} -> register(provider, oauth_data, params, metadata)
       end
     end
@@ -92,7 +93,7 @@ defmodule Tymeslot.Auth.SocialAuthentication do
            UserRegistration.create_oauth_user(provider, oauth_data, profile_params(params),
              metadata: metadata
            ) do
-      {:ok, provider, user}
+      {:ok, provider, user, :created}
     end
   end
 

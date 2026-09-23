@@ -50,6 +50,20 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
       assert Repo.get_by(UserSchema, github_user_id: "12345")
     end
 
+    test "reports a display name too long to store and creates no account", %{conn: conn} do
+      conn =
+        conn
+        |> Test.init_test_session(%{pending_oauth_registration: pending()})
+        |> post(~p"/auth/complete", %{"profile" => %{"full_name" => String.duplicate("a", 256)}})
+
+      assert redirected_to(conn) == "/auth/complete-registration?error=validation_failed"
+
+      assert Flash.get(conn.assigns.flash, :error) ==
+               "Registration failed due to validation errors. Please check your information and try again."
+
+      refute Repo.get_by(UserSchema, github_user_id: "12345")
+    end
+
     test "fails if no email was typed", %{conn: conn} do
       conn = complete(conn, pending(email: "", email_from_provider: false), %{})
 

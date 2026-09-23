@@ -140,8 +140,40 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
 
       {conn, flow} = fresh_flow()
 
-      assert {:ok, result_conn, :github} = callback(conn, :github, flow.state)
+      result = capture_at_info(fn -> callback(conn, :github, flow.state) end)
+
+      assert {:ok, result_conn, :github} = result
       assert Conn.get_session(result_conn, :user_token)
+      assert Repo.reload!(user).verified_at
+
+      # Recorded as verified by the provider, not by an emailed link.
+      assert [%{verification_type: "oauth_provider", user_id: user_id}] =
+               LogCapture.drain()
+               |> Enum.map(&LogCapture.user_metadata/1)
+               |> Enum.filter(
+                 &(&1[:event] in ["user_oauth_provider_verified", "user_email_verified"])
+               )
+
+      assert user_id == user.id
+    end
+
+    test "an unverified account matching a non-primary verified GitHub address is verified" do
+      user =
+        insert(:user,
+          provider: "github",
+          github_user_id: "4249",
+          email: "work@example.com",
+          verified_at: nil
+        )
+
+      stub_github(%{"id" => 4249}, [
+        %{"email" => "home@example.com", "primary" => true, "verified" => true},
+        %{"email" => "work@example.com", "primary" => false, "verified" => true}
+      ])
+
+      {conn, flow} = fresh_flow()
+
+      assert {:ok, _conn, :github} = callback(conn, :github, flow.state)
       assert Repo.reload!(user).verified_at
     end
 

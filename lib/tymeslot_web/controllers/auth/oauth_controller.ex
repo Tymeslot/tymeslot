@@ -15,7 +15,7 @@ defmodule TymeslotWeb.OAuthController do
   alias TymeslotWeb.AuthControllerHelpers
   alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
 
-  @type provider :: :github | :google | :oauth
+  @type provider :: Providers.provider()
 
   @doc """
   Generic OAuth request handler that dispatches to provider-specific functions.
@@ -117,9 +117,15 @@ defmodule TymeslotWeb.OAuthController do
   def callback(conn, %{"provider" => provider, "code" => code, "state" => state}) do
     case validate_oauth_provider(provider) do
       {:ok, provider_atom} ->
-        with_rate_limit(conn, :callback, fn ->
-          handle_provider_callback(conn, provider_atom, code, state)
-        end)
+        # Checked again here, not only when the flow starts: a flow begun
+        # before an admin switched the provider off must not still sign in.
+        if social_auth_enabled?(provider_atom) do
+          with_rate_limit(conn, :callback, fn ->
+            handle_provider_callback(conn, provider_atom, code, state)
+          end)
+        else
+          disabled_redirect(conn, provider_atom)
+        end
 
       {:error, :unsupported_oauth_provider} ->
         unsupported_provider(conn, provider, get_login_path(conn))
@@ -165,7 +171,6 @@ defmodule TymeslotWeb.OAuthController do
     paths = get_redirect_paths(conn)
 
     conn
-    |> delete_session(:oauth_intent)
     |> FlowHandler.handle_oauth_callback(%{
       code: code,
       state: state,
@@ -184,11 +189,19 @@ defmodule TymeslotWeb.OAuthController do
     }
 
     case SocialAuthentication.complete_registration(pending, params, metadata) do
-      {:ok, provider, user} ->
+      {:ok, provider, user, :created} ->
         conn
         |> delete_session(:pending_oauth_registration)
         |> FlowHandler.sign_in(user, provider)
         |> respond_to_completion()
+
+      # The account already existed (the form was submitted twice): this is a
+      # sign-in, and says so.
+      {:ok, provider, user, :existing} ->
+        conn
+        |> delete_session(:pending_oauth_registration)
+        |> FlowHandler.sign_in(user, provider)
+        |> respond_to_oauth_result(success_path: ~p"/dashboard", login_path: ~p"/auth/login")
 
       {:error, reason} ->
         completion_failed(conn, reason, pending)
@@ -325,7 +338,7 @@ defmodule TymeslotWeb.OAuthController do
     |> redirect(to: ~p"/auth/complete-registration?#{query_params}")
   end
 
-  @spec get_welcome_message(String.t()) :: String.t()
+  @spec get_welcome_message(provider()) :: String.t()
   defp get_welcome_message(provider) do
     dgettext("auth", "Welcome! You've successfully signed up with %{provider}.",
       provider: provider_name(provider)

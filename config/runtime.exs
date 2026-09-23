@@ -649,20 +649,45 @@ config :tymeslot, :oauth_provider,
   userinfo_url: oauth_userinfo_url,
   scope: System.get_env("OAUTH_SCOPE", "openid email profile"),
   allow_id_fallback: System.get_env("OAUTH_ALLOW_ID_FALLBACK", "false") == "true",
-  # Trust the IdP's email when it omits the `email_verified` claim, unless the
-  # operator requires the claim. An explicit `false` is always unverified.
-  require_email_verified_claim:
-    System.get_env("OAUTH_REQUIRE_EMAIL_VERIFIED_CLAIM", "false") == "true"
+  # How far the IdP's `email_verified` claim is trusted; see
+  # `Tymeslot.Auth.OAuth.Providers`.
+  email_verified_claim:
+    (case System.get_env("OAUTH_EMAIL_VERIFIED_CLAIM", "trust_absent") do
+       "trust_absent" ->
+         :trust_absent
+
+       "require" ->
+         :require
+
+       "ignore" ->
+         :ignore
+
+       other ->
+         raise ~s(OAUTH_EMAIL_VERIFIED_CLAIM must be "trust_absent", "require" or "ignore", got: #{inspect(other)})
+     end)
 
 if oauth_enabled do
-  required_oauth_vars = %{
-    "OAUTH_CLIENT_ID / CLOUDRON_OIDC_CLIENT_ID" => oauth_client_id,
-    "OAUTH_CLIENT_SECRET / CLOUDRON_OIDC_CLIENT_SECRET" => oauth_client_secret,
-    "OAUTH_PROVIDER_URL / CLOUDRON_OIDC_ISSUER" => oauth_provider_url,
-    "OAUTH_AUTHORIZE_URL / CLOUDRON_OIDC_AUTH_ENDPOINT" => oauth_authorize_url,
-    "OAUTH_TOKEN_URL / CLOUDRON_OIDC_TOKEN_ENDPOINT" => oauth_token_url,
-    "OAUTH_USERINFO_URL / CLOUDRON_OIDC_PROFILE_ENDPOINT" => oauth_userinfo_url
-  }
+  # The provider's base URL is only needed to resolve an endpoint given as a
+  # relative path; with absolute endpoints it may be left unset.
+  relative_oauth_endpoint? =
+    Enum.any?([oauth_authorize_url, oauth_token_url, oauth_userinfo_url], fn url ->
+      is_binary(url) and String.trim(url) != "" and URI.parse(url).scheme == nil
+    end)
+
+  required_oauth_vars =
+    Map.merge(
+      %{
+        "OAUTH_CLIENT_ID / CLOUDRON_OIDC_CLIENT_ID" => oauth_client_id,
+        "OAUTH_CLIENT_SECRET / CLOUDRON_OIDC_CLIENT_SECRET" => oauth_client_secret,
+        "OAUTH_AUTHORIZE_URL / CLOUDRON_OIDC_AUTH_ENDPOINT" => oauth_authorize_url,
+        "OAUTH_TOKEN_URL / CLOUDRON_OIDC_TOKEN_ENDPOINT" => oauth_token_url,
+        "OAUTH_USERINFO_URL / CLOUDRON_OIDC_PROFILE_ENDPOINT" => oauth_userinfo_url
+      },
+      if(relative_oauth_endpoint?,
+        do: %{"OAUTH_PROVIDER_URL / CLOUDRON_OIDC_ISSUER" => oauth_provider_url},
+        else: %{}
+      )
+    )
 
   missing =
     required_oauth_vars
@@ -682,7 +707,7 @@ if oauth_enabled do
   end
 
   # Enforce HTTPS for OAuth URLs that carry secret material or security tokens.
-  # Relative paths (no scheme) are allowed — they're resolved against the site URL.
+  # Relative paths (no scheme) are allowed: they're resolved against OAUTH_PROVIDER_URL.
   https_required_vars = %{
     "OAUTH_AUTHORIZE_URL / CLOUDRON_OIDC_AUTH_ENDPOINT" => oauth_authorize_url,
     "OAUTH_TOKEN_URL / CLOUDRON_OIDC_TOKEN_ENDPOINT" => oauth_token_url,

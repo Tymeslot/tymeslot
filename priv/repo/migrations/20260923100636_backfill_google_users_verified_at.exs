@@ -7,7 +7,10 @@ defmodule Tymeslot.Repo.Migrations.BackfillGoogleUsersVerifiedAt do
   account until its owner follows an emailed link. Google accounts can be
   vouched for retroactively: Google sign-up always took its address from
   Google, and Google returns only addresses it has verified for its own
-  accounts, so the address was proven when the account was created.
+  accounts, so the address was proven when the account was created. A Google
+  account can carry an address from another domain that Google never
+  verified; such an account is rare, and was already signed in on the
+  strength of that address, so it is not singled out here.
 
   GitHub and SSO accounts stay unverified. Their address may have been typed
   on the complete-registration form, and nothing on record tells those apart

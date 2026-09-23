@@ -134,29 +134,10 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   defp callback_url(conn, provider),
     do: URLs.callback_url(conn, Providers.callback_path(provider))
 
-  # An account created before the provider's word counted (or with a typed
-  # address the provider has since verified) is verified on the spot when the
-  # provider vouches for the very address on record, rather than being sent
-  # an email proving what the provider already has.
-  defp verify_vouched_email(%{verified_at: nil, email: email} = account, %{
-         email_from_provider: true,
-         email: vouched
-       })
-       when is_binary(email) and is_binary(vouched) do
-    with true <- String.downcase(email) == String.downcase(vouched),
-         {:ok, verified} <- Verification.verify_user(account.id) do
-      verified
-    else
-      _not_vouched_or_failed -> account
-    end
-  end
-
-  defp verify_vouched_email(account, _identity), do: account
-
   defp complete_oauth_flow(conn, user, provider) do
     case UserRegistration.find_existing_user(provider, user) do
       {:ok, existing_user} ->
-        sign_in(conn, verify_vouched_email(existing_user, user), provider)
+        sign_in(conn, UserRegistration.verify_vouched_email(existing_user, user), provider)
 
       {:error, :not_found} ->
         handle_new_user_registration(conn, provider, user)

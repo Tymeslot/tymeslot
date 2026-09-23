@@ -21,6 +21,8 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
 
   describe "Google OAuth Security" do
     test "prevents CSRF attacks with state parameter validation" do
+      enable_social_auth(:google_enabled)
+
       # Setup: Create session with expected state
       conn =
         build_conn()
@@ -104,6 +106,8 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
     end
 
     test "callback with no stored state is rejected before the code is exchanged" do
+      enable_social_auth(:google_enabled)
+
       # Act: Google redirects back, but this browser's session carries no
       # `:_oauth_state` — the initiation leg never ran, or the session was lost.
       conn =

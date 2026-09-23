@@ -17,12 +17,13 @@ defmodule Tymeslot.Auth.OAuth.Providers do
     * `:email` - where a verified email comes from: `{:claim, key, absent}`
       when the userinfo response carries `key: true` beside the email, or
       `{:emails_endpoint, url}` for GitHub's list of addresses. `absent` says
-      what a response without the claim means: `:unverified`, or
-      `:trusted_unless_required` for the generic provider, whose identity
-      provider is the operator's own and often omits the claim (Authentik,
-      Entra ID, some Keycloak setups). Setting
-      `OAUTH_REQUIRE_EMAIL_VERIFIED_CLAIM=true` makes an absent claim count as
-      unverified there too. An explicit `false` is always unverified.
+      how the claim is read: `:unverified` (only `true` vouches), or
+      `:operator_policy` for the generic provider, whose identity provider is
+      the operator's own. `OAUTH_EMAIL_VERIFIED_CLAIM` sets that policy:
+      `trust_absent` (the default: a missing claim vouches, `false` does not;
+      Authentik, Entra ID and some Keycloak setups omit the claim), `require`
+      (only `true` vouches) or `ignore` (every email the IdP returns vouches,
+      for IdPs that send `false` for addresses they manage themselves).
     * `:auth_scheme` - the `Authorization` scheme for userinfo requests
     * `:authorize_params` - extra authorise-URL parameters
     * `:lookup` - the `UserQueries` function (and leading arguments) that
@@ -81,7 +82,7 @@ defmodule Tymeslot.Auth.OAuth.Providers do
       setting: :oauth_auth_enabled,
       uid_field: :provider_uid,
       uid_claims: ["sub"],
-      email: {:claim, "email_verified", :trusted_unless_required},
+      email: {:claim, "email_verified", :operator_policy},
       auth_scheme: "Bearer",
       authorize_params: %{},
       lookup: {:get_user_by_provider, ["oauth"]}
@@ -147,7 +148,8 @@ defmodule Tymeslot.Auth.OAuth.Providers do
   @doc """
   Endpoints, scope and client credentials for `provider`. The generic
   provider's come from `config :tymeslot, :oauth_provider`, and raise when a
-  required one is missing.
+  required one is missing; an endpoint given as a relative path is resolved
+  against the provider's base URL (`:site`).
   """
   @spec config(provider()) :: config()
   def config(:github) do
@@ -174,18 +176,28 @@ defmodule Tymeslot.Auth.OAuth.Providers do
 
   def config(:oauth) do
     config = Application.get_env(:tymeslot, :oauth_provider, [])
-    required = [:client_id, :client_secret, :authorize_url, :token_url, :userinfo_url]
+    endpoints = [:authorize_url, :token_url, :userinfo_url]
 
-    case Enum.filter(required, &is_nil(config[&1])) do
+    case Enum.filter([:client_id, :client_secret | endpoints], &is_nil(config[&1])) do
       [] ->
         config
-        |> Keyword.take(required)
+        |> Keyword.take([:client_id, :client_secret])
         |> Map.new()
+        |> Map.merge(Map.new(endpoints, &{&1, absolute_url(config[&1], config[:site])}))
         |> Map.put(:scope, Keyword.get(config, :scope, "openid email profile"))
 
       missing ->
         raise "Generic OAuth config incomplete, missing keys: #{inspect(missing)}. " <>
                 "Set the corresponding OAUTH_* environment variables."
+    end
+  end
+
+  # An endpoint may be configured as a path relative to the provider's base
+  # URL (`OAUTH_PROVIDER_URL`).
+  defp absolute_url(url, site) do
+    case URI.parse(url) do
+      %URI{scheme: nil} when is_binary(site) -> site |> URI.merge(url) |> URI.to_string()
+      _absolute_or_no_site -> url
     end
   end
 end

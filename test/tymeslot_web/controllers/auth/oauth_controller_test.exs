@@ -2,8 +2,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
   use TymeslotWeb.ConnCase, async: false
   @moduletag :auth
 
-  import Mox
-  import Tymeslot.Factory, only: [insert: 2, insert: 1]
+  import Tymeslot.Factory, only: [insert: 2]
   import Tymeslot.Test.OAuthProviderStub
 
   alias Phoenix.Flash
@@ -14,8 +13,6 @@ defmodule TymeslotWeb.OAuthControllerTest do
   alias Tymeslot.Infrastructure.DashboardCache
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Test.LogCapture
-
-  setup :verify_on_exit!
 
   setup do
     original_social_auth = Application.get_env(:tymeslot, :social_auth)
@@ -155,6 +152,31 @@ defmodule TymeslotWeb.OAuthControllerTest do
       assert session_data.provider == "github"
       assert session_data.email == "user@example.com"
       assert session_data.provider_uid == "123"
+    end
+
+    test "a provider switched off mid-flow signs no one in", %{conn: conn} do
+      insert(:user, provider: "github", github_user_id: "130")
+      stub_github(%{"id" => 130}, [])
+
+      start = get(conn, ~p"/auth/github")
+      %{"state" => state} = start |> redirected_to(302) |> authorise_params()
+
+      social_auth = Application.get_env(:tymeslot, :social_auth)
+
+      Application.put_env(
+        :tymeslot,
+        :social_auth,
+        Keyword.put(social_auth, :github_enabled, false)
+      )
+
+      conn =
+        start
+        |> recycle()
+        |> get(~p"/auth/github/callback", %{"code" => "code", "state" => state})
+
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :error) == "GitHub authentication is not available"
+      refute get_session(conn, :user_token)
     end
 
     test "invalid state: puts security error flash and redirects to login", %{conn: conn} do

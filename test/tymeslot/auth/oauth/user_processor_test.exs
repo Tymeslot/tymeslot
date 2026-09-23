@@ -30,6 +30,7 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
                provider_uid: "user-123",
                email: "sso@example.com",
                email_from_provider: true,
+               verified_emails: ["sso@example.com"],
                name: "SSO User"
              }
     end
@@ -65,16 +66,25 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
                UserProcessor.fetch_identity(:oauth, "token")
     end
 
-    describe_flag = "with OAUTH_REQUIRE_EMAIL_VERIFIED_CLAIM set"
-
-    for {claim, trusted} <- [{:absent, false}, {true, true}, {false, false}] do
-      test "#{describe_flag}, email_verified #{inspect(claim)} is #{if trusted, do: "trusted", else: "not trusted"}" do
+    # {policy, claim, trusted?}; the default policy (trust_absent) is covered above.
+    for {policy, claim, trusted} <- [
+          {:trust_absent, :absent, true},
+          {:trust_absent, true, true},
+          {:trust_absent, false, false},
+          {:require, :absent, false},
+          {:require, true, true},
+          {:require, false, false},
+          {:ignore, :absent, true},
+          {:ignore, true, true},
+          {:ignore, false, true}
+        ] do
+      test "policy #{policy}: email_verified #{inspect(claim)} is #{if trusted, do: "trusted", else: "not trusted"}" do
         config = Application.get_env(:tymeslot, :oauth_provider)
 
         Application.put_env(
           :tymeslot,
           :oauth_provider,
-          Keyword.put(config, :require_email_verified_claim, true)
+          Keyword.put(config, :email_verified_claim, unquote(policy))
         )
 
         claims =
@@ -168,9 +178,12 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
         %{"email" => "primary@example.com", "primary" => true, "verified" => true}
       ])
 
-      assert {:ok,
-              %{provider_uid: "123", email: "primary@example.com", email_from_provider: true}} =
-               UserProcessor.fetch_identity(:github, "token")
+      assert {:ok, identity} = UserProcessor.fetch_identity(:github, "token")
+
+      assert %{provider_uid: "123", email: "primary@example.com", email_from_provider: true} =
+               identity
+
+      assert Enum.sort(identity.verified_emails) == ["other@example.com", "primary@example.com"]
     end
 
     test "falls back to any verified address when the primary is unverified" do

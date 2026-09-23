@@ -241,6 +241,25 @@ defmodule TymeslotWeb.OAuthSignInJourneyTest do
       assert redirected_to(second) == "/dashboard"
       assert get_session(second, :user_token)
       assert Repo.aggregate(UserSchema, :count) == 1
+
+      # The second submission signed in; it did not sign anyone up.
+      assert Flash.get(second.assigns.flash, :info) == "Successfully signed in with GitHub."
+    end
+
+    test "submitted twice with a typed email asks to verify both times, welcoming once" do
+      stub_github(%{"id" => 8004, "email" => nil}, [])
+
+      form = sign_in(build_conn(), "github")
+
+      first = complete(form, "twice-typed@example.com")
+      second = complete(form, "twice-typed@example.com")
+
+      assert redirected_to(first) == "/auth/verify-email"
+      assert redirected_to(second) == "/auth/verify-email"
+      refute get_session(second, :user_token)
+      assert Flash.get(first.assigns.flash, :info) =~ "successfully signed up"
+      refute Flash.get(second.assigns.flash, :info) =~ "signed up"
+      assert Repo.aggregate(UserSchema, :count) == 1
     end
   end
 
