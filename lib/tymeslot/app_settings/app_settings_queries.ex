@@ -13,6 +13,11 @@ defmodule Tymeslot.AppSettings.AppSettingsQueries do
 
   @singleton_id 1
 
+  # Key for the transaction-scoped advisory lock that serialises the
+  # first-user admin bootstrap. Any constant works as long as nothing else
+  # takes the same one; this is the ASCII of "tsadmbst".
+  @admin_bootstrap_lock_key 0x747361646D627374
+
   @doc """
   Returns the singleton settings row. The row is seeded by the migration, so
   this always returns a struct — never `nil` — except during the brief window
@@ -73,5 +78,48 @@ defmodule Tymeslot.AppSettings.AppSettingsQueries do
         {:error, reason} -> repo.rollback(reason)
       end
     end)
+  end
+
+  @doc """
+  Takes the transaction-scoped advisory lock that serialises the first-user
+  admin bootstrap. Blocks until any other transaction holding it ends, and is
+  released when the caller's transaction commits or rolls back, so it must be
+  called inside one.
+  """
+  @spec lock_admin_bootstrap(module()) :: :ok
+  def lock_admin_bootstrap(repo \\ Repo) do
+    repo.query!("SELECT pg_advisory_xact_lock($1)", [@admin_bootstrap_lock_key])
+    :ok
+  end
+
+  @doc """
+  Whether the first-user admin bootstrap has already closed.
+  """
+  @spec admin_bootstrapped?(module()) :: boolean()
+  def admin_bootstrapped?(repo \\ Repo) do
+    repo.exists?(
+      from(s in AppSettingsSchema,
+        where: s.id == @singleton_id and not is_nil(s.admin_bootstrapped_at)
+      )
+    )
+  end
+
+  @doc """
+  Records that the first-user admin bootstrap has closed, creating the
+  singleton row if it is missing. Keeps an existing timestamp.
+  """
+  @spec mark_admin_bootstrapped(module()) :: :ok
+  def mark_admin_bootstrapped(repo \\ Repo) do
+    now = DateTime.utc_now(:second)
+
+    repo.insert!(%AppSettingsSchema{id: @singleton_id, admin_bootstrapped_at: now},
+      on_conflict:
+        from(s in AppSettingsSchema,
+          update: [set: [admin_bootstrapped_at: coalesce(s.admin_bootstrapped_at, ^now)]]
+        ),
+      conflict_target: :id
+    )
+
+    :ok
   end
 end
