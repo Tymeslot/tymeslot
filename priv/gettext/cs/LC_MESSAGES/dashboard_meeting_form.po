@@ -873,11 +873,6 @@ msgid "12 High Street, London EC1A 1BB"
 msgstr "Hlavní 12, 110 00 Praha"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "A booker who picks this location gets a room created on this account."
-msgstr "Kdo si vybere toto místo, dostane místnost vytvořenou na tomto účtu."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Add location"
@@ -902,11 +897,6 @@ msgstr "Zeptat se rezervujícího na jeho číslo"
 #, elixir-autogen, elixir-format
 msgid "Bookers will be asked to choose one of these."
 msgstr "Rezervující budou požádáni, aby si jedno z těchto míst vybrali."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose a provider"
-msgstr "Vyberte poskytovatele"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -1005,3 +995,18 @@ msgstr "Voláte vy. Nechte vypnuté, chcete-li místo toho zveřejnit číslo, n
 #, elixir-autogen, elixir-format
 msgid "e.g., Our London office"
 msgstr "např. Naše pražská kancelář"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Pick one or more. With several, the booker chooses which one the room is created on."
+msgstr "Vyberte jednoho nebo více. Pokud jich je více, rezervující osoba zvolí, u kterého se místnost vytvoří."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#, elixir-autogen, elixir-format
+msgid "The booker picks: %{providers}"
+msgstr "Rezervující osoba vybírá: %{providers}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Video providers"
+msgstr "Poskytovatelé videa"

@@ -12,11 +12,34 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
   defp office, do: option(id: "loc-office", kind: "in_person", label: "The office", position: 0)
 
   defp zoom,
-    do: option(id: "loc-zoom", kind: "video", label: "Zoom", video_integration_id: 7, position: 1)
+    do:
+      option(
+        id: "loc-zoom",
+        kind: "video",
+        label: "Zoom",
+        video_integration_ids: [7],
+        position: 1
+      )
 
   defp teams,
     do:
-      option(id: "loc-teams", kind: "video", label: "Teams", video_integration_id: 9, position: 2)
+      option(
+        id: "loc-teams",
+        kind: "video",
+        label: "Teams",
+        video_integration_ids: [9],
+        position: 2
+      )
+
+  defp video_call,
+    do:
+      option(
+        id: "loc-video",
+        kind: "video",
+        label: "Video call",
+        video_integration_ids: [7, 9],
+        position: 1
+      )
 
   defp call_me,
     do:
@@ -39,7 +62,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
     test "a meeting type with no list falls back to the video call it already offered" do
       type = %{locations: [], allow_video: true, video_integration_id: 42}
 
-      assert [%LocationOption{kind: "video", video_integration_id: 42}] =
+      assert [%LocationOption{kind: "video", video_integration_ids: [42]}] =
                LocationSelection.options(type)
     end
 
@@ -134,6 +157,31 @@ defmodule Tymeslot.MeetingTypes.LocationSelectionTest do
 
       assert %{location: "Zoom", attendee_phone: nil} =
                LocationSelection.resolve(type, "loc-zoom", "+44 7700 900123")
+    end
+
+    test "a video location offering several providers lands on the one the booker picked" do
+      type = %{locations: [office(), video_call()]}
+
+      assert %{video_integration_id: 9} = LocationSelection.resolve(type, "loc-video", nil, "9")
+    end
+
+    test "with no provider picked, a video location lands on its first" do
+      type = %{locations: [office(), video_call()]}
+
+      assert %{video_integration_id: 7} = LocationSelection.resolve(type, "loc-video")
+    end
+
+    test "a provider the location does not list is not honoured" do
+      type = %{locations: [office(), video_call()]}
+
+      assert %{video_integration_id: 7} = LocationSelection.resolve(type, "loc-video", nil, 99)
+    end
+
+    test "a provider submitted against a location that is not a video call is ignored" do
+      type = %{locations: [office(), video_call()]}
+
+      assert %{video_integration_id: nil} =
+               LocationSelection.resolve(type, "loc-office", nil, 9)
     end
 
     test "an ad-hoc booking resolves to no location at all" do

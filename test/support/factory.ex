@@ -166,7 +166,8 @@ defmodule Tymeslot.Factory do
   end
 
   @doc """
-  A video location for a meeting type, bound to `integration`.
+  A video location for a meeting type, bound to `integration`, or to a list
+  of integrations the booker picks between (the first is the default).
 
   A booking's video room follows the location the booker chose, not the
   request, so a test that expects a room has to give the meeting type
@@ -174,14 +175,14 @@ defmodule Tymeslot.Factory do
 
       insert(:meeting_type, user: user, locations: [video_location(integration)])
   """
-  @spec video_location(map(), keyword()) :: LocationOption.t()
-  def video_location(integration, attrs \\ []) do
+  @spec video_location(map() | [map()], keyword()) :: LocationOption.t()
+  def video_location(integrations, attrs \\ []) do
     struct!(
       %LocationOption{
         id: UUID.generate(),
         kind: "video",
         label: "Video call",
-        video_integration_id: integration.id,
+        video_integration_ids: integrations |> List.wrap() |> Enum.map(& &1.id),
         position: 0
       },
       attrs

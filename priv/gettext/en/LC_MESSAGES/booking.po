@@ -1873,3 +1873,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "with %{name}"
 msgstr "with %{name}"
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Which video service?"
+msgstr ""

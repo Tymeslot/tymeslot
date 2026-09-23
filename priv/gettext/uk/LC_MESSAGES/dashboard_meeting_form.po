@@ -873,11 +873,6 @@ msgid "12 High Street, London EC1A 1BB"
 msgstr "вул. Хрещатик, 12, Київ"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "A booker who picks this location gets a room created on this account."
-msgstr "Той, хто обере це місце, отримає кімнату в цьому обліковому записі."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Add location"
@@ -902,11 +897,6 @@ msgstr "Запитати номер у того, хто бронює"
 #, elixir-autogen, elixir-format
 msgid "Bookers will be asked to choose one of these."
 msgstr "Ті, хто бронює, обиратимуть одне з цих місць."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose a provider"
-msgstr "Оберіть провайдера"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -1005,3 +995,18 @@ msgstr "Ви телефонуєте їм. Вимкніть, щоб натомі�
 #, elixir-autogen, elixir-format
 msgid "e.g., Our London office"
 msgstr "напр., Наш офіс у Києві"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Pick one or more. With several, the booker chooses which one the room is created on."
+msgstr "Оберіть один або кілька. Якщо їх кілька, особа, що бронює, обирає, на якому створити кімнату."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#, elixir-autogen, elixir-format
+msgid "The booker picks: %{providers}"
+msgstr "Особа, що бронює, обирає: %{providers}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Video providers"
+msgstr "Відеопровайдери"

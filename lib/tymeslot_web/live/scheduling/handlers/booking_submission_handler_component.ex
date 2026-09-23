@@ -363,11 +363,13 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       custom_fields_snapshot: Map.get(sanitized_params, "custom_fields_snapshot", []),
       custom_field_answers: Map.get(sanitized_params, "custom_field_answers", %{}),
       guest_emails: socket.assigns[:guest_emails] || [],
-      # Only the chosen option's id travels. What it means is re-derived from
-      # the host's own meeting type in `Bookings.Policy`, so a forged id
-      # resolves to a location the host already offers.
+      # Only the chosen option's id travels, with the provider picked within a
+      # video option. What they mean is re-derived from the host's own meeting
+      # type in `Bookings.Policy`, so a forged id resolves to a location, or a
+      # provider, the host already offers.
       location_option_id: BookingLocation.submitted_option_id(socket.assigns),
-      location_phone: socket.assigns[:location_phone]
+      location_phone: socket.assigns[:location_phone],
+      location_video_integration_id: BookingLocation.submitted_video_id(socket.assigns)
     }
   end
 

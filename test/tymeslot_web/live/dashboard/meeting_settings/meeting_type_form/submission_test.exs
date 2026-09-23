@@ -83,10 +83,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SubmissionTest d
       assert location["details"] == "12 High Street"
       assert location["collect_from_guest"] == "false"
       assert location["position"] == "0"
-      refute Map.has_key?(location, "video_integration_id")
+      assert location["video_integration_ids"] == []
     end
 
-    test "carries a video location's integration id" do
+    test "carries every integration a video location offers, in order" do
       params =
         Submission.build_params(
           base_assigns(%{
@@ -95,14 +95,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.SubmissionTest d
                 id: "loc-2",
                 kind: "video",
                 label: "Zoom",
-                video_integration_id: 9,
+                video_integration_ids: [9, 4],
                 position: 0
               }
             ]
           })
         )
 
-      assert [%{"kind" => "video", "video_integration_id" => "9"}] = params["locations"]
+      assert [%{"kind" => "video", "video_integration_ids" => ["9", "4"]}] = params["locations"]
     end
 
     test "omits custom_fields entirely when custom questions are not allowed" do

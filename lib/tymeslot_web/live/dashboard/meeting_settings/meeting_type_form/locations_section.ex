@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
   alias Tymeslot.MeetingTypes.LocationOption
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
+  alias TymeslotWeb.Helpers.LocationIcons
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket), do: {:ok, assign(socket, assigns)}
@@ -83,7 +84,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
             </span>
 
             <CoreComponents.icon
-              name={kind_icon(location.kind)}
+              name={LocationIcons.icon(location.kind)}
               class="w-5 h-5 text-turquoise-500 shrink-0"
             />
 
@@ -223,23 +224,23 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationsSection
     dgettext("dashboard_meeting_form", "Bookers will be asked to choose one of these.")
   end
 
-  defp kind_icon("video"), do: "hero-video-camera"
-  defp kind_icon("phone"), do: "hero-phone"
-  defp kind_icon("in_person"), do: "hero-building-office"
-  defp kind_icon(_kind), do: "hero-map-pin"
-
   # The second line of a row: enough to tell two similar options apart at a
-  # glance, which for a video option is the account the room lands on rather
-  # than the provider name the host already sees in the label.
+  # glance, which for a video option with one provider is the account the
+  # room lands on, and with several, the providers the booker picks between.
   defp summary(%LocationOption{kind: "video"} = location, video_integrations) do
-    case Enum.find(video_integrations, &(&1.id == location.video_integration_id)) do
-      nil ->
+    case Enum.filter(video_integrations, &(&1.id in location.video_integration_ids)) do
+      [] ->
         dgettext("dashboard_meeting_form", "Video call: integration no longer available")
 
-      integration ->
+      [integration] ->
         [integration.name, integration.provider_account_email]
         |> Enum.reject(&(&1 in [nil, ""]))
         |> Enum.join(" · ")
+
+      integrations ->
+        dgettext("dashboard_meeting_form", "The booker picks: %{providers}",
+          providers: Enum.map_join(integrations, ", ", & &1.name)
+        )
     end
   end
 

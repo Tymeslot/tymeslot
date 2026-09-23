@@ -162,6 +162,20 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
     end
 
     @tag :capture_log
+    test "shows the detail of the chosen option only", %{conn: conn, profile: profile} do
+      view = navigate_to_booking_form(conn, profile, nil)
+
+      assert view |> element("[data-testid='location-detail']") |> render() =~ "12 High Street"
+
+      send(view.pid, {:step_event, :booking, :select_location, "loc-call"})
+      _drain = :sys.get_state(view.pid)
+
+      detail = view |> element("[data-testid='location-detail']") |> render()
+      assert detail =~ "We&#39;ll call you"
+      refute detail =~ "12 High Street"
+    end
+
+    @tag :capture_log
     test "an id that is not on offer is ignored rather than stored",
          %{conn: conn, profile: profile} do
       view = navigate_to_booking_form(conn, profile, nil)
@@ -219,6 +233,63 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       assert [meeting] = MeetingListQueries.list_meetings_by_attendee_email("default@example.com")
       assert meeting.location == "Our office (12 High Street)"
       assert meeting.location_option_id == "loc-office"
+    end
+  end
+
+  describe "a video location offering several providers" do
+    setup %{user: user} do
+      first = insert(:video_integration, user: user, name: "Zoom", is_active: true)
+      second = insert(:video_integration, user: user, name: "Teams", is_active: true)
+      retired = insert(:video_integration, user: user, name: "Retired", is_active: false)
+
+      insert(:meeting_type,
+        user: user,
+        duration_minutes: 30,
+        name: "Video Chat",
+        is_active: true,
+        locations: [
+          video_location([first, retired, second], id: "loc-video", label: "Video call")
+        ]
+      )
+
+      %{first: first, second: second}
+    end
+
+    @tag :capture_log
+    test "asks which provider, offering only the active ones, with the first preselected",
+         %{conn: conn, profile: profile, first: first, second: second} do
+      view = navigate_to_booking_form(conn, profile, nil)
+
+      # A single location is stated, so only the provider question is asked.
+      refute has_element?(view, "[data-testid='location-option']")
+      assert has_element?(view, "[data-testid='video-provider-field']")
+
+      offered =
+        view
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.attribute("[data-testid='video-provider-option']", "data-video-integration-id")
+
+      assert offered == [to_string(first.id), to_string(second.id)]
+      assert :sys.get_state(view.pid).socket.assigns.selected_video_id == first.id
+    end
+
+    @tag :capture_log
+    test "books the room on the provider the booker picked",
+         %{conn: conn, profile: profile, second: second} do
+      view = navigate_to_booking_form(conn, profile, nil)
+
+      send(view.pid, {:step_event, :booking, :select_video_provider, to_string(second.id)})
+      _drain = :sys.get_state(view.pid)
+
+      html = submit(view, "teams@example.com")
+
+      assert html =~ "Meeting Confirmed"
+      assert html =~ "Video call (Teams)"
+
+      assert [meeting] = MeetingListQueries.list_meetings_by_attendee_email("teams@example.com")
+      assert meeting.location_option_id == "loc-video"
+      assert meeting.video_integration_id == second.id
     end
   end
 

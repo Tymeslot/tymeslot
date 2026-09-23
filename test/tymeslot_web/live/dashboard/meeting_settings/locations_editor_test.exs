@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
         "location" => %{
           "kind" => "video",
           "label" => "Team Room",
-          "video_integration_id" => to_string(integration.id)
+          "video_integration_ids" => [to_string(integration.id)]
         }
       })
       |> render_submit()
@@ -142,11 +142,92 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.LocationsEditorTest do
 
       assert [_office, video] = reloaded.locations
       assert video.kind == "video"
-      assert video.video_integration_id == integration.id
+      assert video.video_integration_ids == [integration.id]
 
       # The pair every pre-list reader still consults is projected from it.
       assert reloaded.allow_video == true
       assert reloaded.video_integration_id == integration.id
+    end
+
+    test "offers the kinds as toggles with the current one checked", ctx do
+      {view, _meeting_type} = open_editor(ctx, [office()])
+
+      view |> element("button[data-testid='add-location']") |> render_click()
+
+      assert has_element?(view, "#location_kind input[type='radio'][value='in_person'][checked]")
+      refute has_element?(view, "#location_kind input[value='video'][checked]")
+
+      view
+      |> form("#location-editor-form", %{"location" => %{"kind" => "video"}})
+      |> render_change()
+
+      assert has_element?(view, "#location_kind input[value='video'][checked]")
+      refute has_element?(view, "#location_kind input[value='in_person'][checked]")
+    end
+
+    test "a video location can offer several providers for the booker to pick from",
+         %{user: user} = ctx do
+      zoom = insert(:video_integration, user: user, name: "Zoom", is_active: true)
+      teams = insert(:video_integration, user: user, name: "Teams", is_active: true)
+      {view, meeting_type} = open_editor(ctx, [office()])
+
+      view |> element("button[data-testid='add-location']") |> render_click()
+
+      view
+      |> form("#location-editor-form", %{"location" => %{"kind" => "video"}})
+      |> render_change()
+
+      view
+      |> form("#location-editor-form", %{
+        "location" => %{
+          "kind" => "video",
+          "label" => "Video call",
+          "video_integration_ids" => ["", to_string(zoom.id), to_string(teams.id)]
+        }
+      })
+      |> render_submit()
+
+      reloaded = reload(view, meeting_type, user)
+
+      assert [_office, video] = reloaded.locations
+      assert video.video_integration_ids == [zoom.id, teams.id]
+      assert reloaded.video_integration_id == zoom.id
+    end
+
+    test "tells two same-named integrations apart by their account", %{user: user} = ctx do
+      insert(:video_integration,
+        user: user,
+        name: "Zoom",
+        provider_account_email: "sales@example.com",
+        is_active: true
+      )
+
+      insert(:video_integration,
+        user: user,
+        name: "Zoom",
+        provider_account_email: "support@example.com",
+        is_active: true
+      )
+
+      insert(:video_integration, user: user, name: "Team Room", is_active: true)
+      {view, _meeting_type} = open_editor(ctx, [office()])
+
+      view |> element("button[data-testid='add-location']") |> render_click()
+
+      view
+      |> form("#location-editor-form", %{"location" => %{"kind" => "video"}})
+      |> render_change()
+
+      labels =
+        view
+        |> element("#location_video_integration_ids")
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.find("[data-testid='location_video_integration_ids-option']")
+        |> Enum.map(&String.trim(Floki.text(&1)))
+        |> Enum.sort()
+
+      assert labels == ["Team Room", "Zoom (sales@example.com)", "Zoom (support@example.com)"]
     end
 
     test "refuses a video location that names no integration", %{user: user} = ctx do

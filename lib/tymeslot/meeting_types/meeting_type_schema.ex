@@ -297,7 +297,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   # `allow_video` / `video_integration_id` are derived, never independently
   # authored: they answer "can this type produce a video room, and on which
   # integration" for every caller that predates the list. The first video
-  # option wins, matching the room a single-option type would have created.
+  # option wins, and within it the first provider, matching the room a
+  # booker who changes nothing would get.
   #
   # Only applied when `locations` is part of the changeset, so a changeset
   # that does not touch the list leaves the pair exactly as it found it.
@@ -310,7 +311,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
 
   defp project_video_fields(changeset), do: changeset
 
-  defp apply_video_projection(%LocationOption{video_integration_id: id}, changeset) do
+  defp apply_video_projection(%LocationOption{video_integration_ids: [id | _rest]}, changeset) do
     changeset
     |> put_change(:allow_video, true)
     |> put_change(:video_integration_id, id)

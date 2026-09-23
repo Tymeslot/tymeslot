@@ -331,11 +331,9 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
           :field_blur ->
             {:noreply, OrganizerHelpers.mark_field_touched(socket, data)}
 
-          :select_location ->
-            {:noreply, BookingLocation.choose(socket, data)}
-
-          :location_phone ->
-            {:noreply, BookingLocation.set_phone(socket, data)}
+          picker_event
+          when picker_event in [:select_location, :select_video_provider, :location_phone] ->
+            {:noreply, BookingLocation.apply_event(socket, picker_event, data)}
 
           :toggle_guests ->
             {:noreply, GuestBooking.open(socket)}

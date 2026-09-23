@@ -34,12 +34,24 @@ defmodule Tymeslot.MeetingTypes.LocationProjectionTest do
         changeset(
           %MeetingTypeSchema{},
           base_attrs(%{
-            locations: [location(kind: "video", label: "Zoom", video_integration_id: 7)]
+            locations: [location(kind: "video", label: "Zoom", video_integration_ids: [7])]
           })
         )
 
       assert Changeset.get_field(cs, :allow_video) == true
       assert Changeset.get_field(cs, :video_integration_id) == 7
+    end
+
+    test "a video location offering several providers projects its first" do
+      cs =
+        changeset(
+          %MeetingTypeSchema{},
+          base_attrs(%{
+            locations: [location(kind: "video", label: "Video", video_integration_ids: [9, 7])]
+          })
+        )
+
+      assert Changeset.get_field(cs, :video_integration_id) == 9
     end
 
     test "the first video location wins when several are offered" do
@@ -49,8 +61,8 @@ defmodule Tymeslot.MeetingTypes.LocationProjectionTest do
           base_attrs(%{
             locations: [
               location(kind: "in_person", label: "The office", position: 0),
-              location(kind: "video", label: "Zoom", video_integration_id: 7, position: 1),
-              location(kind: "video", label: "Teams", video_integration_id: 9, position: 2)
+              location(kind: "video", label: "Zoom", video_integration_ids: [7], position: 1),
+              location(kind: "video", label: "Teams", video_integration_ids: [9], position: 2)
             ]
           })
         )
@@ -114,7 +126,7 @@ defmodule Tymeslot.MeetingTypes.LocationProjectionTest do
               location(
                 kind: "video",
                 label: "Zoom",
-                video_integration_id: integration.id,
+                video_integration_ids: [integration.id],
                 position: 1
               )
             ]
@@ -127,7 +139,7 @@ defmodule Tymeslot.MeetingTypes.LocationProjectionTest do
       assert [in_person, video] = reloaded.locations
       assert in_person.kind == "in_person"
       assert in_person.details == "12 High St"
-      assert video.video_integration_id == integration.id
+      assert video.video_integration_ids == [integration.id]
       assert reloaded.allow_video == true
       assert reloaded.video_integration_id == integration.id
     end

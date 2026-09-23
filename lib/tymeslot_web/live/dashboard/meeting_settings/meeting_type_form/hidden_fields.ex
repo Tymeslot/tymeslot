@@ -133,10 +133,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.HiddenFields do
           value={to_string(location.collect_from_guest)}
         />
         <input
-          :if={location.video_integration_id}
+          :for={video_id <- location.video_integration_ids}
           type="hidden"
-          name={"meeting_type[locations][#{li}][video_integration_id]"}
-          value={location.video_integration_id}
+          name={"meeting_type[locations][#{li}][video_integration_ids][]"}
+          value={video_id}
         />
         <input
           type="hidden"

@@ -166,6 +166,7 @@ defmodule Tymeslot.Bookings.Create do
         video_integration_id: Map.get(meeting_params, :video_integration_id),
         location_option_id: Map.get(meeting_params, :location_option_id),
         location_phone: Map.get(meeting_params, :location_phone),
+        location_video_integration_id: Map.get(meeting_params, :location_video_integration_id),
         attendee_locale: Map.get(meeting_params, :attendee_locale) || default_locale(),
         custom_fields_snapshot: Map.get(meeting_params, :custom_fields_snapshot, []),
         custom_field_answers: Map.get(meeting_params, :custom_field_answers, %{}),

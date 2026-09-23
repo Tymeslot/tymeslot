@@ -56,8 +56,8 @@ defmodule Tymeslot.Bookings.Reschedule do
   never used: the rescheduled meeting keeps the original meeting's persisted
   duration (see `prepare_new_times/3`), never the request's.
 
-  `location_option_id` and `location_phone` are the booker's location choice,
-  applied only when it differs from the meeting's current location (see
+  `location_option_id`, `location_phone` and `location_video_integration_id`
+  are the booker's location choice, applied only when it differs from the meeting's current location (see
   `Tymeslot.Bookings.RescheduleLocation`).
   """
   @type reschedule_params :: %{
@@ -67,6 +67,7 @@ defmodule Tymeslot.Bookings.Reschedule do
           required(:user_timezone) => String.t(),
           optional(:location_option_id) => String.t() | nil,
           optional(:location_phone) => String.t() | nil,
+          optional(:location_video_integration_id) => integer() | String.t() | nil,
           optional(atom()) => term()
         }
 

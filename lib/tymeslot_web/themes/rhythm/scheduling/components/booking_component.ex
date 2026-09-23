@@ -62,6 +62,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("select_video_provider", %{"id" => id}, socket) do
+    send(self(), {:step_event, :booking, :select_video_provider, id})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
   def handle_event("location_phone_change", params, socket) do
     send(self(), {:step_event, :booking, :location_phone, params["location_phone"] || ""})
     {:noreply, socket}
@@ -151,6 +157,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               :if={BookingLocation.choice_required?(assigns)}
               location_options={@location_options}
               selected_location_id={@selected_location_id}
+              video_choices={BookingLocation.video_choices(assigns)}
+              selected_video_id={@selected_video_id}
               location_phone={@location_phone}
               location_error={@location_error}
               phone_required={BookingLocation.phone_required?(assigns)}

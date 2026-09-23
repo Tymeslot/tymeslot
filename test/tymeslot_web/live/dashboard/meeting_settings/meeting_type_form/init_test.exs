@@ -124,7 +124,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
     test "falls back to one video location for a type saved before the list existed" do
       type = %{locations: [], allow_video: true, video_integration_id: 42}
 
-      assert [%{kind: "video", video_integration_id: 42}] = Init.get_locations(type)
+      assert [%{kind: "video", video_integration_ids: [42]}] = Init.get_locations(type)
     end
   end
 

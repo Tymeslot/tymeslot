@@ -48,14 +48,26 @@ defmodule Tymeslot.MeetingTypes.LocationOptionTest do
       cs = changeset(%{"kind" => "video", "label" => "Zoom"})
 
       refute cs.valid?
-      assert %{video_integration_id: ["can't be blank"]} = errors(cs)
+      assert %{video_integration_ids: ["can't be blank"]} = errors(cs)
     end
 
     test "a video location naming an integration is valid" do
-      cs = changeset(%{"kind" => "video", "label" => "Zoom", "video_integration_id" => "7"})
+      cs = changeset(%{"kind" => "video", "label" => "Zoom", "video_integration_ids" => ["7"]})
 
       assert cs.valid?
-      assert Changeset.get_field(cs, :video_integration_id) == 7
+      assert Changeset.get_field(cs, :video_integration_ids) == [7]
+    end
+
+    test "a video location keeps several integrations in order, each once" do
+      cs =
+        changeset(%{
+          "kind" => "video",
+          "label" => "Video call",
+          "video_integration_ids" => ["9", "7", "9"]
+        })
+
+      assert cs.valid?
+      assert Changeset.get_field(cs, :video_integration_ids) == [9, 7]
     end
 
     test "a phone location must publish a number or ask the booker for theirs" do
@@ -95,13 +107,13 @@ defmodule Tymeslot.MeetingTypes.LocationOptionTest do
         id: "loc-1",
         kind: "video",
         label: "Zoom",
-        video_integration_id: 7
+        video_integration_ids: [7]
       }
 
       cs = changeset(%{"kind" => "in_person", "label" => "The office"}, video)
 
       assert cs.valid?
-      assert Changeset.get_field(cs, :video_integration_id) == nil
+      assert Changeset.get_field(cs, :video_integration_ids) == []
     end
 
     test "leaving the phone kind drops the ask-the-booker flag" do
@@ -136,13 +148,13 @@ defmodule Tymeslot.MeetingTypes.LocationOptionTest do
         id: "loc-1",
         kind: "video",
         label: "Zoom",
-        video_integration_id: 7
+        video_integration_ids: [7]
       }
 
       cs = changeset(%{"label" => "Zoom (sales)"}, video)
 
       assert cs.valid?
-      assert Changeset.get_field(cs, :video_integration_id) == 7
+      assert Changeset.get_field(cs, :video_integration_ids) == [7]
     end
   end
 

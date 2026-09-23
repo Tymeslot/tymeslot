@@ -86,7 +86,7 @@ defmodule Tymeslot.MeetingTypes.FormProcessingTest do
           %{
             "kind" => "video",
             "label" => "Zoom",
-            "video_integration_id" => to_string(video_integration.id),
+            "video_integration_ids" => [to_string(video_integration.id)],
             "position" => "0"
           }
         ]
@@ -597,7 +597,7 @@ defmodule Tymeslot.MeetingTypes.FormProcessingTest do
           %{
             "kind" => "video",
             "label" => "Zoom",
-            "video_integration_id" => to_string(video_integration.id),
+            "video_integration_ids" => [to_string(video_integration.id)],
             "position" => "0"
           }
         ]

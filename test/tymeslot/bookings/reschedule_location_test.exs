@@ -70,7 +70,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
       id: id,
       kind: "video",
       label: "Video #{id}",
-      video_integration_id: integration.id,
+      video_integration_ids: [integration.id],
       position: position
     }
   end
@@ -306,6 +306,55 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
         worker: VideoRoomWorker,
         args: %{"meeting_id" => meeting.id, "announce" => "rescheduled"}
       )
+    end
+
+    test "picking another provider within the same option moves the room there",
+         %{user: user, zoom: zoom, mirotalk: mirotalk} do
+      both = %{video("loc-video", zoom, 0) | video_integration_ids: [zoom.id, mirotalk.id]}
+      meeting = meeting_on(user, [office(), both], zoom_meeting_attrs(zoom, "loc-video"))
+
+      updated =
+        reschedule(meeting, %{
+          location_option_id: "loc-video",
+          location_video_integration_id: to_string(mirotalk.id)
+        })
+
+      assert updated.location_option_id == "loc-video"
+      assert updated.video_integration_id == mirotalk.id
+      assert updated.video_room_id == nil
+
+      assert_enqueued(
+        worker: VideoSyncWorker,
+        args: %{
+          "action" => "release",
+          "room_id" => "123456789",
+          "video_integration_id" => zoom.id
+        }
+      )
+
+      assert_enqueued(
+        worker: VideoRoomWorker,
+        args: %{"meeting_id" => meeting.id, "announce" => "rescheduled"}
+      )
+    end
+
+    test "keeping the option and its provider leaves the room alone",
+         %{user: user, zoom: zoom, mirotalk: mirotalk} do
+      # The meeting is on the option's second provider, so a reschedule that
+      # re-derived the first would move it.
+      both = %{video("loc-video", zoom, 0) | video_integration_ids: [mirotalk.id, zoom.id]}
+      meeting = meeting_on(user, [office(), both], zoom_meeting_attrs(zoom, "loc-video"))
+
+      updated =
+        reschedule(meeting, %{
+          location_option_id: "loc-video",
+          location_video_integration_id: to_string(zoom.id)
+        })
+
+      assert updated.video_integration_id == zoom.id
+      assert updated.video_room_id == "123456789"
+      refute_enqueued(worker: VideoSyncWorker, args: %{"action" => "release"})
+      refute_enqueued(worker: VideoRoomWorker)
     end
 
     test "moving between two options on the same integration keeps the room",

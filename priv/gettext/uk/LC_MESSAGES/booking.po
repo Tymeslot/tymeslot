@@ -1875,3 +1875,8 @@ msgstr "той, хто бронював"
 #, elixir-autogen, elixir-format
 msgid "with %{name}"
 msgstr "з %{name}"
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Which video service?"
+msgstr "Який відеосервіс?"

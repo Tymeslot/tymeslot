@@ -94,7 +94,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormCompositionTest do
       view |> element("button[data-testid='add-location']") |> render_click()
 
       # Choosing the kind is what reveals the provider picker, so the change
-      # has to land before the form carries a `video_integration_id` at all.
+      # has to land before the form carries a `video_integration_ids` at all.
       view
       |> form("#location-editor-form", %{"location" => %{"kind" => "video"}})
       |> render_change()
@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormCompositionTest do
         "location" => %{
           "kind" => "video",
           "label" => "Team Room",
-          "video_integration_id" => to_string(video.id)
+          "video_integration_ids" => [to_string(video.id)]
         }
       })
       |> render_submit()

@@ -15,9 +15,10 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
       chosen calendar turn read-only since the picker rendered. An availability
       schedule id additionally has to be *owned*, because the referenced
       schedule goes on to drive what the public booking page offers. Every
-      video location is checked, not just the one the schema projects onto
-      `video_integration_id`: a meeting type may now offer several, and an
-      unchecked second option would book rooms on someone else's account.
+      provider of every video location is checked, not just the one the
+      schema projects onto `video_integration_id`: a meeting type may offer
+      several, and an unchecked one would book rooms on someone else's
+      account.
 
   Both gates deliberately restrict only the *permissive* direction. Turning
   payment off, or saving no questions, is always allowed, so a host who has
@@ -60,8 +61,8 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
     end
   end
 
-  # Each video location must name an integration this host owns and has
-  # active. The list arrives as raw form input, so it can be either a list
+  # Each video location must name at least one integration, and every one it
+  # names must be this host's and active. The list arrives as raw form input, so it can be either a list
   # (the auto-save path, which builds params from socket assigns) or the
   # index-keyed map Plug parses `locations[0][kind]` into; the values are
   # likewise string- or atom-keyed. Both shapes are normalised before the
@@ -71,8 +72,9 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
     locations
     |> location_list()
     |> Enum.filter(&(location_field(&1, "kind") == "video"))
-    |> Enum.reduce_while(:ok, fn location, :ok ->
-      case video_integration_active?(location_field(location, "video_integration_id"), user_id) do
+    |> Enum.flat_map(&video_integration_ids/1)
+    |> Enum.reduce_while(:ok, fn id, :ok ->
+      case video_integration_active?(id, user_id) do
         :ok -> {:cont, :ok}
         error -> {:halt, error}
       end
@@ -93,6 +95,16 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   end
 
   defp location_list(_locations), do: []
+
+  # A video location naming no integration becomes a single `nil`, which
+  # `video_integration_active?/2` refuses, so an empty list cannot pass for
+  # "nothing to check".
+  defp video_integration_ids(location) do
+    case location |> location_field("video_integration_ids") |> List.wrap() do
+      [] -> [nil]
+      ids -> ids
+    end
+  end
 
   defp location_field(location, key) when is_map(location) do
     Map.get(location, key) || Map.get(location, String.to_existing_atom(key))

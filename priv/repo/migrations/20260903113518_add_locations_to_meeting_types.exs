@@ -38,7 +38,7 @@ defmodule Tymeslot.Repo.Migrations.AddLocationsToMeetingTypes do
         'kind', 'video',
         'label', COALESCE(NULLIF(vi.name, ''), 'Video call'),
         'collect_from_guest', false,
-        'video_integration_id', vi.id,
+        'video_integration_ids', jsonb_build_array(vi.id),
         'position', 0
       )
     ]::jsonb[]

@@ -123,6 +123,47 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
     end
   end
 
+  describe "a video location offering several providers" do
+    setup %{user: user, integration: first} do
+      second = insert(:video_integration, user: user, provider: "mirotalk", name: "Second")
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          name: "Pick a provider",
+          duration_minutes: 30,
+          allow_video: true,
+          video_integration: first,
+          locations: [video_location([first, second], id: "loc-video", position: 0)]
+        )
+
+      %{meeting_type: meeting_type, second: second}
+    end
+
+    test "creates the room on the provider the booker picked", ctx do
+      assert {:ok, meeting} =
+               book(ctx.meeting_type, ctx.user, %{
+                 location_option_id: "loc-video",
+                 location_video_integration_id: to_string(ctx.second.id)
+               })
+
+      assert meeting.video_integration_id == ctx.second.id
+      assert_enqueued(worker: VideoRoomWorker, args: %{"meeting_id" => meeting.id})
+    end
+
+    test "falls back to the first provider for one the location does not list", ctx do
+      stranger = insert(:video_integration, provider: "mirotalk")
+
+      assert {:ok, meeting} =
+               book(ctx.meeting_type, ctx.user, %{
+                 location_option_id: "loc-video",
+                 location_video_integration_id: stranger.id
+               })
+
+      assert meeting.video_integration_id == ctx.integration.id
+    end
+  end
+
   describe "a phone location that asks the booker for their number" do
     test "records the number on the meeting and in its location", ctx do
       assert {:ok, meeting} =

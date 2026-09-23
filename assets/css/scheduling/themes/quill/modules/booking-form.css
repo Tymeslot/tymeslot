@@ -588,61 +588,76 @@
   color: var(--text-opacity-medium-high);
 }
 
-.quill-theme-wrapper .location-options {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
+.quill-theme-wrapper .location-group {
   margin: 0;
   padding: 0;
-  list-style: none;
+  border: none;
+  min-width: 0;
 }
-
-.quill-theme-wrapper .location-option__label {
+.quill-theme-wrapper .location-group + .location-group {
+  margin-top: var(--space-sm);
+}
+.quill-theme-wrapper .location-options {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-xs);
-  padding: var(--space-xs);
-  background: var(--surface-light);
-  border: var(--border-width-thin) solid var(--border-light);
+  flex-wrap: wrap;
+  gap: var(--space-3xs);
+  margin: 0;
+  padding: var(--space-3xs);
+  background: var(--option-tile-bg);
+  border: var(--border-width-thin) solid var(--option-tile-border);
   border-radius: var(--input-border-radius);
   backdrop-filter: blur(var(--glass-blur-sm));
   -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+}
+.quill-theme-wrapper .location-option {
+  position: relative;
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-md);
+  color: var(--option-tile-text);
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
   cursor: pointer;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
 }
-
-.quill-theme-wrapper .location-option__label:hover {
-  border-color: var(--theme-primary);
+.quill-theme-wrapper .location-option:hover {
+  background: var(--option-tile-bg-hover);
+  color: white;
 }
-
-.quill-theme-wrapper .location-option__label--selected {
-  border-color: var(--theme-primary);
-  box-shadow: 0 0 0 1px var(--theme-primary);
+.quill-theme-wrapper .location-option:has(.location-option__radio:focus-visible) {
+  box-shadow: 0 0 0 3px var(--theme-primary-focus);
 }
-
+.quill-theme-wrapper .location-option--selected,
+.quill-theme-wrapper .location-option--selected:hover {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+/* The native radio stays in the page for keyboard and screen-reader use;
+   the toggle it sits in is what the booker sees. */
 .quill-theme-wrapper .location-option__radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.quill-theme-wrapper .location-option__icon {
   flex: none;
-  margin-top: 0.125rem;
-  accent-color: var(--theme-primary);
+  width: 1rem;
+  height: 1rem;
 }
-
-.quill-theme-wrapper .location-option__text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.quill-theme-wrapper .location-option__title {
-  font-size: var(--theme-font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-opacity-high);
-}
-
-.quill-theme-wrapper .location-option__detail {
+.quill-theme-wrapper .location-field__detail {
+  margin: var(--space-2xs) 0 0;
   font-size: var(--theme-font-size-sm);
   color: var(--text-opacity-subtle);
 }
-
 .quill-theme-wrapper .location-phone {
   margin-top: var(--space-xs);
 }

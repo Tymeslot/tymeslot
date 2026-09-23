@@ -150,17 +150,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   defp put_optional(map, key, value), do: Map.put(map, key, to_string(value))
 
   defp location_param(location) do
-    put_optional(
-      %{
-        "id" => location.id,
-        "kind" => location.kind,
-        "label" => location.label,
-        "details" => location.details || "",
-        "collect_from_guest" => to_string(location.collect_from_guest),
-        "position" => to_string(location.position)
-      },
-      "video_integration_id",
-      location.video_integration_id
-    )
+    %{
+      "id" => location.id,
+      "kind" => location.kind,
+      "label" => location.label,
+      "details" => location.details || "",
+      "collect_from_guest" => to_string(location.collect_from_guest),
+      "video_integration_ids" => Enum.map(location.video_integration_ids, &to_string/1),
+      "position" => to_string(location.position)
+    }
   end
 end

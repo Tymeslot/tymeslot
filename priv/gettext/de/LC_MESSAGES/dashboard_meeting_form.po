@@ -872,11 +872,6 @@ msgid "12 High Street, London EC1A 1BB"
 msgstr "Hauptstraße 12, 10115 Berlin"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "A booker who picks this location gets a room created on this account."
-msgstr "Wer diesen Ort wählt, erhält einen Raum in diesem Konto."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Add location"
@@ -901,11 +896,6 @@ msgstr "Den Buchenden nach seiner Nummer fragen"
 #, elixir-autogen, elixir-format
 msgid "Bookers will be asked to choose one of these."
 msgstr "Buchende werden gebeten, einen dieser Orte zu wählen."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose a provider"
-msgstr "Anbieter wählen"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -1004,3 +994,18 @@ msgstr "Sie rufen an. Lassen Sie dies aus, um stattdessen eine Nummer zum Anrufe
 #, elixir-autogen, elixir-format
 msgid "e.g., Our London office"
 msgstr "z. B. Unser Büro in Berlin"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Pick one or more. With several, the booker chooses which one the room is created on."
+msgstr "Wählen Sie einen oder mehrere. Bei mehreren entscheiden Buchende, bei welchem der Raum erstellt wird."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#, elixir-autogen, elixir-format
+msgid "The booker picks: %{providers}"
+msgstr "Buchende wählen: %{providers}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Video providers"
+msgstr "Videoanbieter"

@@ -508,60 +508,74 @@
   color: var(--theme-text);
 }
 
-.rhythm-theme-wrapper .location-options {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
+.rhythm-theme-wrapper .location-group {
   margin: 0;
   padding: 0;
-  list-style: none;
+  border: none;
+  min-width: 0;
 }
-
-.rhythm-theme-wrapper .location-option__label {
+.rhythm-theme-wrapper .location-group + .location-group {
+  margin-top: var(--space-sm);
+}
+.rhythm-theme-wrapper .location-options {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-xs);
-  padding: var(--space-xs);
+  flex-wrap: wrap;
+  gap: var(--space-3xs);
+  margin: 0;
+  padding: var(--space-3xs);
   background: var(--surface-subtle);
   border: var(--border-width-thin) solid var(--border-light);
   border-radius: var(--radius-lg);
+}
+.rhythm-theme-wrapper .location-option {
+  position: relative;
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-md);
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
   cursor: pointer;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
 }
-
-.rhythm-theme-wrapper .location-option__label:hover {
+.rhythm-theme-wrapper .location-option:hover {
   background: var(--surface-light);
-  border-color: var(--theme-primary);
-}
-
-.rhythm-theme-wrapper .location-option__label--selected {
-  border-color: var(--theme-primary);
-  box-shadow: 0 0 0 1px var(--theme-primary);
-}
-
-.rhythm-theme-wrapper .location-option__radio {
-  flex: none;
-  margin-top: 0.125rem;
-  accent-color: var(--theme-primary);
-}
-
-.rhythm-theme-wrapper .location-option__text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.rhythm-theme-wrapper .location-option__title {
-  font-size: var(--theme-font-size-base);
-  font-weight: var(--font-weight-medium);
   color: var(--theme-text);
 }
-
-.rhythm-theme-wrapper .location-option__detail {
+.rhythm-theme-wrapper .location-option:has(.location-option__radio:focus-visible) {
+  box-shadow: 0 0 0 3px var(--theme-primary-focus);
+}
+.rhythm-theme-wrapper .location-option--selected,
+.rhythm-theme-wrapper .location-option--selected:hover {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+/* The native radio stays in the page for keyboard and screen-reader use;
+   the toggle it sits in is what the booker sees. */
+.rhythm-theme-wrapper .location-option__radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.rhythm-theme-wrapper .location-option__icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+}
+.rhythm-theme-wrapper .location-field__detail {
+  margin: var(--space-2xs) 0 0;
   font-size: var(--theme-font-size-sm);
   color: var(--theme-text-secondary);
 }
-
 .rhythm-theme-wrapper .location-phone {
   margin-top: var(--space-xs);
 }

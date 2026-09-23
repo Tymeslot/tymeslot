@@ -69,7 +69,8 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
   meeting where it is.
 
   `params` carries the booker's `:location_option_id` and, for a phone option
-  that asks for it, `:location_phone`. An ad-hoc meeting (no
+  that asks for it, `:location_phone`, or for a video option offering several
+  providers, `:location_video_integration_id`. An ad-hoc meeting (no
   `meeting_type_id`) never changes location: the meeting type a reschedule
   resolves for it is matched by duration, and its locations were never the
   ones this meeting was booked against.
@@ -79,11 +80,7 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
   def attributes(%Meeting{}, nil, _params), do: %{}
 
   def attributes(%Meeting{} = meeting, meeting_type, params) do
-    case chosen(
-           meeting_type,
-           Map.get(params, :location_option_id),
-           Map.get(params, :location_phone)
-         ) do
+    case chosen(meeting_type, params) do
       nil -> %{}
       resolution -> changes(meeting, resolution)
     end
@@ -154,21 +151,28 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
 
   def create_room(%Meeting{}, %Meeting{}), do: :not_scheduled
 
-  defp chosen(meeting_type, option_id, phone) when is_binary(option_id) do
+  defp chosen(meeting_type, %{location_option_id: option_id} = params)
+       when is_binary(option_id) do
     if Enum.any?(MeetingTypes.location_options(meeting_type), &(&1.id == option_id)) do
-      MeetingTypes.resolve_location(meeting_type, option_id, phone)
+      MeetingTypes.resolve_location(
+        meeting_type,
+        option_id,
+        Map.get(params, :location_phone),
+        Map.get(params, :location_video_integration_id)
+      )
     end
   end
 
-  defp chosen(_meeting_type, _option_id, _phone), do: nil
+  defp chosen(_meeting_type, _params), do: nil
 
-  # The same option with the same number is the booker leaving the picker
-  # where it opened. Rewriting it would still not be a no-op: a video meeting's
-  # `location` holds its join URL, which re-resolving would replace with the
-  # option's label.
+  # The same option with the same number, on the same provider, is the booker
+  # leaving the picker where it opened. Rewriting it would still not be a
+  # no-op: a video meeting's `location` holds its join URL, which re-resolving
+  # would replace with the option's label. A different provider within the
+  # same option is a move, and falls through to the clauses below.
   defp changes(
-         %Meeting{location_option_id: id, attendee_phone: phone},
-         %{location_option_id: id, attendee_phone: phone}
+         %Meeting{location_option_id: id, attendee_phone: phone, video_integration_id: video_id},
+         %{location_option_id: id, attendee_phone: phone, video_integration_id: video_id}
        ),
        do: %{}
 

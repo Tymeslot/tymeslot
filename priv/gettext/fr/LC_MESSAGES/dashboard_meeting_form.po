@@ -872,11 +872,6 @@ msgid "12 High Street, London EC1A 1BB"
 msgstr "12 rue de la Paix, 75002 Paris"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "A booker who picks this location gets a room created on this account."
-msgstr "Une personne qui choisit ce lieu obtient une salle créée sur ce compte."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Add location"
@@ -901,11 +896,6 @@ msgstr "Demander son numéro à la personne"
 #, elixir-autogen, elixir-format
 msgid "Bookers will be asked to choose one of these."
 msgstr "Les personnes qui réservent devront choisir l'un de ces lieux."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose a provider"
-msgstr "Choisir un fournisseur"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -1004,3 +994,18 @@ msgstr "C'est vous qui appelez. Désactivez pour publier plutôt un numéro à a
 #, elixir-autogen, elixir-format
 msgid "e.g., Our London office"
 msgstr "ex. : Notre bureau de Paris"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Pick one or more. With several, the booker chooses which one the room is created on."
+msgstr "Choisissez-en un ou plusieurs. S'il y en a plusieurs, la personne qui réserve choisit celui sur lequel la salle est créée."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#, elixir-autogen, elixir-format
+msgid "The booker picks: %{providers}"
+msgstr "La personne qui réserve choisit : %{providers}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Video providers"
+msgstr "Fournisseurs vidéo"

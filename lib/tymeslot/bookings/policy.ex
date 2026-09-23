@@ -261,15 +261,17 @@ defmodule Tymeslot.Bookings.Policy do
   # display string, the kind, and the video integration a room would be
   # created on.
   #
-  # The booker submitted only an option id. The rest is re-derived here from
-  # the host's own meeting type, so a forged or stale id can only ever select
-  # a location the host already offers.
+  # The booker submitted only an option id, and within a video option the
+  # provider they picked. The rest is re-derived here from the host's own
+  # meeting type, so a forged or stale id can only ever select a location,
+  # or a provider, the host already offers.
   defp location_attributes(meeting_type_record, %BuildParams{} = params, fallback_video_id) do
     location =
       MeetingTypes.resolve_location(
         meeting_type_record,
         params.location_option_id,
-        params.location_phone
+        params.location_phone,
+        params.location_video_integration_id
       )
 
     %{

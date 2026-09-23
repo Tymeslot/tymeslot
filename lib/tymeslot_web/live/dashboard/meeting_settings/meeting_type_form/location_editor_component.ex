@@ -22,10 +22,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
   alias Phoenix.LiveView.JS
   alias Tymeslot.MeetingTypes.LocationOption
   alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Components.CoreComponents.Forms
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
+  alias TymeslotWeb.Helpers.LocationIcons
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
-  @allowed_error_fields ~w(label details video_integration_id)
+  @allowed_error_fields ~w(label details video_integration_ids)
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -42,7 +44,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
 
   @impl Phoenix.LiveComponent
   def handle_event("validate", %{"location" => params} = event_params, socket) do
-    params = default_label_for_kind(params, socket.assigns.changeset)
+    params =
+      params
+      |> normalise_video_integration_ids()
+      |> default_label_for_kind(socket.assigns.changeset)
 
     field_errors =
       FormValidationHelpers.clear_target_error(
@@ -59,7 +64,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
 
   @impl Phoenix.LiveComponent
   def handle_event("save", %{"location" => params}, socket) do
-    changeset = LocationOption.changeset(socket.assigns.location, params)
+    changeset =
+      LocationOption.changeset(
+        socket.assigns.location,
+        normalise_video_integration_ids(params)
+      )
 
     if changeset.valid? do
       location = Changeset.apply_changes(changeset)
@@ -139,18 +148,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
           phx-target={@myself}
           class="space-y-4"
         >
-          <CoreComponents.input
+          <.choice_toggle
+            id="location_kind"
             name="location[kind]"
             value={field_value(@changeset, :kind)}
-            id="location_kind"
-            type="select"
             label={dgettext("dashboard_meeting_form", "Type")}
             options={kind_options()}
           >
             <:description>
               {dgettext("dashboard_meeting_form", "Decides what happens when a booker picks this.")}
             </:description>
-          </CoreComponents.input>
+          </.choice_toggle>
 
           <CoreComponents.input
             name="location[label]"
@@ -267,11 +275,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
   defp video_integration_picker(assigns) do
     ~H"""
     <div>
-      <label class="label text-token-sm" for="location_video_integration_id">
-        {dgettext("dashboard_meeting_form", "Video provider")}
-        <span class="text-red-500 ml-0.5">*</span>
-      </label>
       <%= if @video_integrations == [] do %>
+        <Forms.label>
+          {dgettext("dashboard_meeting_form", "Video provider")}
+          <span class="text-red-500 ml-0.5">*</span>
+        </Forms.label>
         <div class="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-token-lg">
           <p class="text-token-sm text-yellow-700">
             {dgettext("dashboard_meeting_form", "No video integrations configured.")}
@@ -281,26 +289,107 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
           </p>
         </div>
       <% else %>
-        <CoreComponents.input
-          name="location[video_integration_id]"
-          value={field_value(@changeset, :video_integration_id)}
-          id="location_video_integration_id"
-          type="select"
-          prompt={dgettext("dashboard_meeting_form", "Choose a provider")}
+        <.choice_toggle
+          id="location_video_integration_ids"
+          name="location[video_integration_ids][]"
+          value={field_value(@changeset, :video_integration_ids)}
+          label={dgettext("dashboard_meeting_form", "Video providers")}
           options={integration_options(@video_integrations)}
-          errors={FormValidationHelpers.field_errors(@field_errors, :video_integration_id)}
+          multiple
+          required
+          errors={FormValidationHelpers.field_errors(@field_errors, :video_integration_ids)}
         >
           <:description>
             {dgettext(
               "dashboard_meeting_form",
-              "A booker who picks this location gets a room created on this account."
+              "Pick one or more. With several, the booker chooses which one the room is created on."
             )}
           </:description>
-        </CoreComponents.input>
+        </.choice_toggle>
       <% end %>
     </div>
     """
   end
+
+  attr :id, :string, required: true
+  attr :name, :string, required: true
+  attr :value, :any, default: nil
+  attr :label, :string, required: true
+  attr :options, :list, required: true, doc: "maps with :value, :label, :icon and optional :title"
+  attr :multiple, :boolean, default: false, doc: "checkboxes instead of radios; `value` is a list"
+  attr :required, :boolean, default: false
+  attr :errors, :list, default: []
+  slot :description
+
+  # A choice from a short, closed set, drawn as the row of pill toggles the
+  # admin settings use rather than a select, so every option is visible at
+  # once. Each pill wraps a visually hidden native radio (or checkbox, with
+  # `multiple`): the choice then travels with the form's `phx-change` like any
+  # other field, and the browser keeps the keyboard behaviour and group
+  # semantics of the native control.
+  #
+  # With `multiple`, a blank entry is always posted first. Unticking the last
+  # box would otherwise send no key at all, which the changeset reads as
+  # "unchanged" rather than "none"; `normalise_video_integration_ids/1`
+  # strips the blank again.
+  defp choice_toggle(assigns) do
+    ~H"""
+    <fieldset id={@id} class="form-field-wrapper">
+      <legend class="label mb-2 block">
+        {@label}
+        <span :if={@required} class="text-red-500 ml-0.5">*</span>
+      </legend>
+      <p
+        :if={@description != []}
+        class="text-token-xs text-tymeslot-500 font-medium normal-case tracking-normal -mt-1 mb-2"
+      >
+        {render_slot(@description)}
+      </p>
+      <input :if={@multiple} type="hidden" name={@name} value="" />
+      <div class="inline-flex flex-wrap items-center max-w-full p-1 bg-white border-2 border-tymeslot-100 rounded-token-xl shadow-sm gap-1">
+        <label
+          :for={option <- @options}
+          title={option[:title]}
+          data-testid={"#{@id}-option"}
+          data-value={option.value}
+          class={[
+            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-token-lg text-token-xs font-black uppercase tracking-wider transition-all cursor-pointer",
+            "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-turquoise-400 has-[:focus-visible]:ring-offset-1",
+            if(selected?(option.value, @value, @multiple),
+              do: "bg-turquoise-600 text-white shadow-md shadow-turquoise-200/40",
+              else: "text-tymeslot-500 hover:bg-tymeslot-50 hover:text-tymeslot-900"
+            )
+          ]}
+        >
+          <input
+            type={if @multiple, do: "checkbox", else: "radio"}
+            name={@name}
+            value={option.value}
+            checked={selected?(option.value, @value, @multiple)}
+            class="sr-only"
+          />
+          <CoreComponents.icon name={option.icon} class="w-4 h-4 shrink-0" />
+          <span>{option.label}</span>
+        </label>
+      </div>
+      <Forms.field_error errors={@errors} id={@errors != [] && "#{@id}-error"} />
+    </fieldset>
+    """
+  end
+
+  # The changeset holds integration ids as integers and a kind as a string;
+  # the inputs' values are strings either way.
+  defp selected?(option_value, values, true = _multiple),
+    do: Enum.any?(List.wrap(values), &selected?(option_value, &1, false))
+
+  defp selected?(option_value, value, false = _multiple),
+    do: to_string(option_value) == to_string(value)
+
+  defp normalise_video_integration_ids(%{"video_integration_ids" => ids} = params)
+       when is_list(ids),
+       do: Map.put(params, "video_integration_ids", Enum.reject(ids, &(&1 == "")))
+
+  defp normalise_video_integration_ids(params), do: params
 
   # A location's label is the one field the host must write, and every kind
   # has an obvious name for itself. Filling it in when the kind changes on a
@@ -332,25 +421,40 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.LocationEditorCo
   defp details_placeholder(_kind),
     do: dgettext("dashboard_meeting_form", "Anything the booker needs to know to get there")
 
+  # A pill shows the integration's name, with the account in its tooltip. Two
+  # integrations sharing a name (two Zoom accounts, say) would be two
+  # identical pills, so those carry the account on the pill itself.
   defp integration_options(integrations) do
+    shared_names =
+      integrations
+      |> Enum.frequencies_by(& &1.name)
+      |> Enum.flat_map(fn {name, count} -> if count > 1, do: [name], else: [] end)
+
     Enum.map(integrations, fn integration ->
-      {integration_label(integration), integration.id}
+      %{
+        value: integration.id,
+        label: integration_label(integration, integration.name in shared_names),
+        icon: LocationIcons.icon("video"),
+        title: integration.provider_account_email
+      }
     end)
   end
 
-  defp integration_label(%{name: name, provider_account_email: email})
+  defp integration_label(%{name: name, provider_account_email: email}, true)
        when is_binary(email) and email != "",
        do: "#{name} (#{email})"
 
-  defp integration_label(%{name: name}), do: name
+  defp integration_label(%{name: name}, _shared?), do: name
 
   defp kind_options do
-    [
-      {dgettext("dashboard_meeting_form", "In person"), "in_person"},
-      {dgettext("dashboard_meeting_form", "Video call"), "video"},
-      {dgettext("dashboard_meeting_form", "Phone call"), "phone"},
-      {dgettext("dashboard_meeting_form", "Something else"), "custom"}
-    ]
+    for {label, kind} <- [
+          {dgettext("dashboard_meeting_form", "In person"), "in_person"},
+          {dgettext("dashboard_meeting_form", "Video call"), "video"},
+          {dgettext("dashboard_meeting_form", "Phone call"), "phone"},
+          {dgettext("dashboard_meeting_form", "Something else"), "custom"}
+        ] do
+      %{value: kind, label: label, icon: LocationIcons.icon(kind)}
+    end
   end
 
   defp field_value(changeset, field), do: Changeset.get_field(changeset, field)

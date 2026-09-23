@@ -66,7 +66,7 @@ defmodule Tymeslot.Migrations.BackfillMeetingTypeLocationsTest do
     assert [location] = locations("Video Consultation")
     assert location["kind"] == "video"
     assert location["label"] == "Team Room"
-    assert location["video_integration_id"] == integration.id
+    assert location["video_integration_ids"] == [integration.id]
     assert location["position"] == 0
     assert location["collect_from_guest"] == false
     assert {:ok, _uuid} = UUID.cast(location["id"])

@@ -1875,3 +1875,8 @@ msgstr "la personne qui a réservé"
 #, elixir-autogen, elixir-format
 msgid "with %{name}"
 msgstr "avec %{name}"
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Which video service?"
+msgstr "Quel service vidéo ?"

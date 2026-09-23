@@ -22,6 +22,10 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
   honoured, so the worst a tampered submission achieves is booking a
   location the host already offers.
 
+  The same holds for the video provider a booker picks within a video
+  option: it is honoured only when the option lists it, and otherwise the
+  option's first provider is used.
+
   ## Meeting types with no stored list
 
   `locations` was added after meeting types existed, and rows can still
@@ -79,15 +83,43 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
 
   `guest_phone` is only consulted for a phone option that asks the booker
   for their number; it is ignored everywhere else, so a submission carrying
-  one against a video option cannot smuggle it onto the meeting.
+  one against a video option cannot smuggle it onto the meeting. Likewise
+  `video_integration_id`, the provider picked within a video option, is
+  only consulted for a video option.
   """
-  @spec resolve(map() | nil, String.t() | nil, String.t() | nil) :: resolution()
-  def resolve(meeting_type, chosen_id, guest_phone \\ nil) do
+  @spec resolve(map() | nil, String.t() | nil, String.t() | nil, integer() | String.t() | nil) ::
+          resolution()
+  def resolve(meeting_type, chosen_id, guest_phone \\ nil, video_integration_id \\ nil) do
     case fetch(meeting_type, chosen_id) do
       nil -> empty_resolution()
-      option -> resolution_for(option, guest_phone)
+      option -> resolution_for(option, guest_phone, video_integration_id)
     end
   end
+
+  @doc """
+  The video integration a choice lands on: the one the booker picked when
+  the option lists it, otherwise the option's first. Nil for an option that
+  is not a video call.
+  """
+  @spec video_integration_for(LocationOption.t(), integer() | String.t() | nil) ::
+          integer() | nil
+  def video_integration_for(%LocationOption{kind: "video", video_integration_ids: ids}, chosen) do
+    chosen_id = to_integer(chosen)
+    if chosen_id in ids, do: chosen_id, else: List.first(ids)
+  end
+
+  def video_integration_for(%LocationOption{}, _chosen), do: nil
+
+  defp to_integer(id) when is_integer(id), do: id
+
+  defp to_integer(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {int, ""} -> int
+      _other -> nil
+    end
+  end
+
+  defp to_integer(_id), do: nil
 
   @doc """
   The location string for an option, with the booker's own number folded in
@@ -103,12 +135,12 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
 
   def display(%LocationOption{} = option, _guest_phone), do: LocationOption.display(option)
 
-  defp resolution_for(%LocationOption{} = option, guest_phone) do
+  defp resolution_for(%LocationOption{} = option, guest_phone, video_integration_id) do
     %{
       location: display(option, guest_phone),
       location_kind: option.kind,
       location_option_id: option.id,
-      video_integration_id: option.video_integration_id,
+      video_integration_id: video_integration_for(option, video_integration_id),
       attendee_phone: collected_phone(option, guest_phone)
     }
   end
@@ -147,7 +179,7 @@ defmodule Tymeslot.MeetingTypes.LocationSelection do
         id: "legacy-video",
         kind: "video",
         label: dgettext("booking", "Video call"),
-        video_integration_id: id,
+        video_integration_ids: [id],
         position: 0
       }
     ]

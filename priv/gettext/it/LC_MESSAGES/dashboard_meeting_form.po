@@ -872,11 +872,6 @@ msgid "12 High Street, London EC1A 1BB"
 msgstr "Via Roma 12, 20121 Milano"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "A booker who picks this location gets a room created on this account."
-msgstr "Chi sceglie questa sede ottiene una stanza creata su questo account."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Add location"
@@ -901,11 +896,6 @@ msgstr "Chiedi il numero a chi prenota"
 #, elixir-autogen, elixir-format
 msgid "Bookers will be asked to choose one of these."
 msgstr "Chi prenota dovrà scegliere una di queste sedi."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
-#, elixir-autogen, elixir-format
-msgid "Choose a provider"
-msgstr "Scegli un provider"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -1004,3 +994,18 @@ msgstr "Chiami tu. Disattiva per pubblicare invece un numero da chiamare."
 #, elixir-autogen, elixir-format
 msgid "e.g., Our London office"
 msgstr "es. Il nostro ufficio di Milano"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Pick one or more. With several, the booker chooses which one the room is created on."
+msgstr "Scegline uno o più. Se sono più di uno, chi prenota sceglie su quale creare la stanza."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#, elixir-autogen, elixir-format
+msgid "The booker picks: %{providers}"
+msgstr "Chi prenota sceglie: %{providers}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Video providers"
+msgstr "Provider video"
