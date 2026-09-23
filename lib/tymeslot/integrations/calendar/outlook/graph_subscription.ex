@@ -108,20 +108,24 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
 
   # Private helpers
 
-  # Both Graph calls below unwrap a `CalendarCircuitBreaker.call/2` result, which
-  # comes in three shapes:
+  # Every Graph call below goes through `CalendarCircuitBreaker.call/2`, whose
+  # result comes in these shapes:
   #
-  #   * `{:ok, result}` — the breaker passes `{:ok, _}` returns through untouched
-  #     and wraps any *other* shape in `{:ok, _}`. `CalendarAPI` signals failure
-  #     with a 3-tuple, so its errors arrive as `{:ok, {:error, type, message}}`,
-  #     and `fetch_delta_page/5`'s 3-tuple success as `{:ok, {:ok, events, link}}`.
+  #   * `{:ok, result}` — a success. The breaker passes `{:ok, _}` returns
+  #     through untouched and wraps any other non-error shape in `{:ok, _}`, so
+  #     `fetch_delta_page/5`'s 3-tuple success arrives as
+  #     `{:ok, {:ok, events, link}}`.
+  #   * `{:error, type, message}` — a `CalendarAPI` error (an HTTP error status
+  #     or a transport failure), passed through unwrapped. Older breaker
+  #     versions wrapped it as `{:ok, {:error, type, message}}`;
+  #     `unwrap_breaker_result/1` folds that form into this one.
   #   * `{:error, :circuit_open}` — the breaker refused the call.
-  #   * `{:error, reason}` — any other breaker-level failure: `:breaker_not_found`,
-  #     an exception the breaker rescued (`{:error, %RuntimeError{}}`), or a plain
+  #   * `{:error, reason}` — any other failure: `:breaker_not_found`, an
+  #     exception the breaker rescued (`{:error, %RuntimeError{}}`), or a plain
   #     2-tuple error from the wrapped function (`:pagination_limit_exceeded`).
   #
-  # The last shape must stay a catch-all: matching only `:circuit_open` turns
-  # every rescued exception into a `CaseClauseError` that crashes the caller.
+  # Every error shape must fall through to the caller as it is: matching only
+  # the ones expected turns the rest into a `CaseClauseError` that crashes it.
 
   defp do_register(integration, webhook_base_url) do
     AccessToken.with_access_token(integration, &CalendarAPI.refresh_token/1, fn token ->
@@ -185,8 +189,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
 
   defp renew_stored_subscription(_token, _integration, _webhook_base_url), do: :none
 
-  # An API error can arrive wrapped by the breaker (`{:ok, {:error, _, _}}`,
-  # see the note above) or as the bare 3-tuple; both mean the same here.
+  # See the note above `do_register/2`: both forms of an API error mean the same.
   defp unwrap_breaker_result({:ok, {:error, _type, _message} = error}), do: error
   defp unwrap_breaker_result(result), do: result
 
@@ -237,7 +240,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
         CalendarAPI.make_request_with_body(:post, "/subscriptions", token, body)
       end)
 
-    case result do
+    case unwrap_breaker_result(result) do
       {:ok, response} when is_map(response) ->
         {:ok,
          %{
@@ -245,10 +248,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
            graph_subscription_expires_at: expires_at(response)
          }}
 
-      {:ok, error} ->
-        error
-
-      {:error, _reason} = error ->
+      error ->
         error
     end
   end
@@ -259,14 +259,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
         fetch_delta_page(token, @delta_path, initial_delta_params(), [])
       end)
 
-    case result do
+    case unwrap_breaker_result(result) do
       {:ok, {:ok, events, delta_link}} ->
         {:ok, {events, delta_link}}
 
-      {:ok, error} ->
-        error
-
-      {:error, _reason} = error ->
+      error ->
         error
     end
   end
