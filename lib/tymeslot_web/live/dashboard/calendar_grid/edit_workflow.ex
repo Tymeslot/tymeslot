@@ -17,7 +17,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   @spec default_integration_id(Phoenix.LiveView.Socket.t()) :: integer() | nil
   def default_integration_id(socket) do
-    case socket.assigns.integrations do
+    # The first connection that can actually take an event. Taking the first of
+    # all of them pre-selected read-only ones — a subscribed ICS feed sorting
+    # ahead of a writable account left the form pointing at a calendar whose
+    # provider answers `{:error, :read_only}`.
+    case Selection.writable_integrations(socket.assigns.integrations) do
       [first | _rest] -> first.id
       [] -> nil
     end

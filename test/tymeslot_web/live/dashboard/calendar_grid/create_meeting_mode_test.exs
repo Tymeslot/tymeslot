@@ -130,6 +130,54 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
     end
   end
 
+  describe "with only a subscribed calendar" do
+    # A feed can be read and never written, so for the purpose of creating an
+    # event it is no different from having no calendar at all.
+    setup %{user: user} do
+      insert(:calendar_integration,
+        user: user,
+        is_active: true,
+        name: "Fixture list",
+        provider: "ics_url",
+        calendar_list: [
+          %{"id" => "ics", "name" => "Fixture list", "selected" => true, "read_only" => true}
+        ]
+      )
+
+      :ok
+    end
+
+    test "quick add opens in meeting mode and offers no event mode", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+      html = open_create_form(lv)
+
+      assert html =~ "New Meeting"
+      refute html =~ ~s(data-testid="create-mode-meeting")
+    end
+
+    test "the subscription is not offered as somewhere to put the meeting", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+      html = open_create_form(lv)
+
+      # Neither by name nor through the "Default calendar" button that used to
+      # stand in for a connection with no writable calendar left in its list.
+      refute html =~ "Fixture list"
+      refute html =~ "Default calendar"
+    end
+
+    test "switching to event mode is refused", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_create_form(lv)
+
+      html =
+        lv |> element("#calendar-grid") |> render_hook("set_create_mode", %{"mode" => "event"})
+
+      assert html =~ "New Meeting"
+    end
+  end
+
   describe "with a calendar integration" do
     test "the modal offers an event/meeting toggle defaulting to event", %{
       conn: conn,
