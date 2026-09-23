@@ -11,7 +11,7 @@ defmodule Tymeslot.Auth.SessionTest do
   alias Tymeslot.Security.Token
   alias TymeslotWeb.Endpoint
 
-  import Plug.Conn, only: [get_session: 2, put_session: 3]
+  import Plug.Conn, only: [get_session: 2]
   import Tymeslot.Factory
   import Phoenix.ConnTest
 
@@ -63,6 +63,32 @@ defmodule Tymeslot.Auth.SessionTest do
       assert nil == UserSessionQueries.get_user_by_session_token(stale_token)
     end
 
+    test "signing in on a conn that already carries a session revokes that session" do
+      user = insert(:user)
+      {:ok, conn, old_token} = Session.create_session(init_test_session(build_conn(), %{}), user)
+
+      Endpoint.subscribe(live_socket_topic(old_token))
+
+      {:ok, conn, new_token} = Session.create_session(conn, user)
+
+      assert nil == UserSessionQueries.get_user_by_session_token(old_token)
+      assert_receive %Broadcast{event: "disconnect"}
+      assert %{id: user_id} = UserSessionQueries.get_user_by_session_token(new_token)
+      assert user_id == user.id
+      assert get_session(conn, :user_token) == new_token
+    end
+
+    test "leaves sessions carried by other connections alone" do
+      user = insert(:user)
+
+      {:ok, _conn, other_token} =
+        Session.create_session(init_test_session(build_conn(), %{}), user)
+
+      {:ok, _conn, _token} = Session.create_session(init_test_session(build_conn(), %{}), user)
+
+      assert UserSessionQueries.get_user_by_session_token(other_token)
+    end
+
     test "records the login as the user's last activity" do
       user = insert(:user)
       assert is_nil(user.last_active_at)
@@ -89,7 +115,7 @@ defmodule Tymeslot.Auth.SessionTest do
 
       updated_conn = Session.delete_session(conn)
 
-      assert nil == Session.get_current_user_id(updated_conn)
+      assert nil == get_session(updated_conn, :user_token)
     end
 
     test "force-disconnects the live socket bound to the revoked token" do
@@ -148,21 +174,20 @@ defmodule Tymeslot.Auth.SessionTest do
     end
   end
 
-  describe "get_current_user_id/1" do
-    test "returns user ID for valid session" do
+  describe "user_from_session/1" do
+    test "returns the user for a valid session token" do
       user = insert(:user)
-      {:ok, conn, _token} = Session.create_session(init_test_session(build_conn(), %{}), user)
+      {:ok, _conn, token} = Session.create_session(init_test_session(build_conn(), %{}), user)
 
-      assert Session.get_current_user_id(conn) == user.id
+      assert %{id: user_id} = Session.user_from_session(%{"user_token" => token})
+      assert user_id == user.id
     end
 
-    test "returns nil for unauthenticated sessions" do
-      conn = init_test_session(build_conn(), %{})
-
-      assert Session.get_current_user_id(conn) == nil
+    test "returns nil when the session carries no token" do
+      assert Session.user_from_session(%{}) == nil
     end
 
-    test "returns nil for expired session token" do
+    test "returns nil for an expired session token" do
       user = insert(:user)
 
       _expired_session =
@@ -172,12 +197,7 @@ defmodule Tymeslot.Auth.SessionTest do
           expires_at: DateTime.add(DateTime.utc_now(), -1, :hour)
         )
 
-      conn =
-        build_conn()
-        |> init_test_session(%{})
-        |> put_session(:user_token, "expired-token-value")
-
-      assert Session.get_current_user_id(conn) == nil
+      assert Session.user_from_session(%{"user_token" => "expired-token-value"}) == nil
     end
   end
 

@@ -6,9 +6,11 @@ defmodule TymeslotWeb.Plugs.RequireAdmin do
     * Authenticated non-admin → redirected to `/dashboard` with an explanatory
       flash. The user is signed in and can already see the rest of the app, so
       a 404 would be a worse UX than telling them why they're being bounced.
-    * No `current_user` (defensive — the upstream `require_authenticated_user`
-      plug should already have caught this) → 404, so anonymous probes can't
-      tell whether the admin scope exists.
+    * No `current_user` → 404. The router never gets here: the upstream
+      `require_authenticated_user` pipeline redirects anonymous visitors to
+      the login page first, so the scope's existence is not hidden from them.
+      The clause is a fail-closed default for the plug being mounted without
+      that pipeline.
   """
 
   use Phoenix.VerifiedRoutes,

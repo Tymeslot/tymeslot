@@ -98,34 +98,44 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
     end
   end
 
-  describe "on_mount(:ensure_not_authenticated, ...)" do
-    test "allows access when no token" do
-      socket = build_socket()
+  describe "on_mount({:redirect_if_authenticated, actions}, ...)" do
+    @hook {:redirect_if_authenticated, [:login, :signup]}
 
-      assert {:cont, updated_socket} =
-               AuthLiveSessionHook.on_mount(:ensure_not_authenticated, %{}, %{}, socket)
+    test "lets an anonymous visitor through" do
+      socket = build_socket(%{live_action: :login})
+
+      assert {:cont, updated_socket} = AuthLiveSessionHook.on_mount(@hook, %{}, %{}, socket)
 
       assert updated_socket.assigns.current_user == nil
     end
 
-    test "redirects authenticated users to dashboard" do
+    test "redirects a signed-in user away from a listed action" do
       user = insert(:user)
       session_record = insert(:user_session, user: user)
-      socket = build_socket()
+      socket = build_socket(%{live_action: :login})
       session = %{"user_token" => session_record.token}
 
-      assert {:halt, updated_socket} =
-               AuthLiveSessionHook.on_mount(:ensure_not_authenticated, %{}, session, socket)
+      assert {:halt, updated_socket} = AuthLiveSessionHook.on_mount(@hook, %{}, session, socket)
 
       assert updated_socket.redirected == {:redirect, %{to: "/dashboard", status: 302}}
     end
 
-    test "allows access when token exists but invalid" do
-      socket = build_socket()
+    test "lets a signed-in user reach an action that is not listed" do
+      user = insert(:user)
+      session_record = insert(:user_session, user: user)
+      socket = build_socket(%{live_action: :reset_password_form})
+      session = %{"user_token" => session_record.token}
+
+      assert {:cont, updated_socket} = AuthLiveSessionHook.on_mount(@hook, %{}, session, socket)
+
+      assert updated_socket.assigns.current_user.id == user.id
+    end
+
+    test "lets a visitor with a dead token through" do
+      socket = build_socket(%{live_action: :login})
       session = %{"user_token" => "invalid-token"}
 
-      assert {:cont, updated_socket} =
-               AuthLiveSessionHook.on_mount(:ensure_not_authenticated, %{}, session, socket)
+      assert {:cont, updated_socket} = AuthLiveSessionHook.on_mount(@hook, %{}, session, socket)
 
       assert updated_socket.assigns.current_user == nil
     end

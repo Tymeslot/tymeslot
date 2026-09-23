@@ -142,9 +142,15 @@ defmodule TymeslotWeb.Router do
   scope "/", TymeslotWeb do
     pipe_through :browser
 
-    # LiveView authentication routes with route bundle loading
+    # LiveView authentication routes with route bundle loading. A signed-in
+    # user is sent on from the login and sign-up screens; the emailed-link
+    # screens (password reset, email verification) stay reachable.
     live_session :auth,
-      on_mount: [TymeslotWeb.Hooks.LocaleHook, TymeslotWeb.Hooks.RouteBundleHook] do
+      on_mount: [
+        TymeslotWeb.Hooks.LocaleHook,
+        {TymeslotWeb.Hooks.AuthLiveSessionHook, {:redirect_if_authenticated, [:login, :signup]}},
+        TymeslotWeb.Hooks.RouteBundleHook
+      ] do
       live "/auth/login", AuthLive, :login
       live "/auth/signup", AuthLive, :signup
       live "/auth/verify-email", AuthLive, :verify_email
@@ -192,10 +198,17 @@ defmodule TymeslotWeb.Router do
     get "/auth/zoom/video/callback", VideoOAuthController, :zoom_callback
 
     # Session management routes
-    post "/auth/session", SessionController, :create
     delete "/auth/logout", SessionController, :delete
     get "/auth/verify-complete/:token", SessionController, :confirm_verification
     post "/auth/verify-complete/:token", SessionController, :verify_and_login
+  end
+
+  # The password login form posts here. A signed-in user is sent on rather
+  # than authenticated a second time.
+  scope "/", TymeslotWeb do
+    pipe_through [:browser, TymeslotWeb.Plugs.RedirectIfAuthenticated]
+
+    post "/auth/session", SessionController, :create
   end
 
   # =============================================================================
@@ -219,8 +232,15 @@ defmodule TymeslotWeb.Router do
       TymeslotWeb.Hooks.RouteBundleHook
     ]
 
+    @onboarding_hooks [
+      {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
+      TymeslotWeb.Hooks.AppLocaleHook,
+      TymeslotWeb.Hooks.ClientInfoHook
+    ]
+
+    @doc false
     @spec on_mount(
-            :dashboard_hooks,
+            :dashboard_hooks | :onboarding_hooks,
             map(),
             map(),
             Phoenix.LiveView.Socket.t()
@@ -231,47 +251,72 @@ defmodule TymeslotWeb.Router do
           dashboard_additional_hooks() ++
           [{TymeslotWeb.Hooks.AnnouncementsHook, :load_unseen_announcements}]
 
-      Enum.reduce_while(hooks, {:cont, socket}, fn
-        {module, function}, {:cont, socket} ->
-          case module.on_mount(function, params, session, socket) do
-            {:cont, socket} -> {:cont, {:cont, socket}}
-            {:halt, socket} -> {:halt, {:halt, socket}}
-          end
+      run_hooks(hooks, params, session, socket)
+    end
 
-        module, {:cont, socket} when is_atom(module) ->
-          case module.on_mount(:default, params, session, socket) do
-            {:cont, socket} -> {:cont, {:cont, socket}}
-            {:halt, socket} -> {:halt, {:halt, socket}}
-          end
+    # Onboarding sits outside the dashboard proper (DashboardInitHook would
+    # redirect an unfinished user straight back here), but the deployment's
+    # additional gates apply to it all the same.
+    def on_mount(:onboarding_hooks, params, session, socket) do
+      run_hooks(@onboarding_hooks ++ dashboard_additional_hooks(), params, session, socket)
+    end
 
-        _other, {:cont, socket} ->
-          {:cont, {:cont, socket}}
+    @doc """
+    The on_mount hooks configured under `:dashboard_additional_hooks`.
+
+    These are deployment gates (a legal-acceptance check, for instance), so a
+    configuration they cannot be run from raises rather than being skipped: a
+    typo must not quietly switch a gate off.
+    """
+    @spec dashboard_additional_hooks() :: list()
+    def dashboard_additional_hooks do
+      :tymeslot
+      |> Application.get_env(:dashboard_additional_hooks, [])
+      |> normalise_additional_hooks()
+      |> Enum.map(&validate_additional_hook!/1)
+    end
+
+    defp normalise_additional_hooks(hooks) when is_list(hooks), do: hooks
+
+    defp normalise_additional_hooks(hook) when is_tuple(hook) or is_atom(hook) do
+      Logger.warning(
+        "Expected :dashboard_additional_hooks to be a list, received a single hook. Wrapping."
+      )
+
+      [hook]
+    end
+
+    defp normalise_additional_hooks(other) do
+      raise ArgumentError,
+            "expected :dashboard_additional_hooks to be a list of hooks, got: #{inspect(other)}"
+    end
+
+    defp validate_additional_hook!({module, hook_name} = hook)
+         when is_atom(module) and is_atom(hook_name),
+         do: hook
+
+    defp validate_additional_hook!(module) when is_atom(module), do: module
+
+    defp validate_additional_hook!(other) do
+      raise ArgumentError,
+            "unrecognised :dashboard_additional_hooks entry #{inspect(other)}; " <>
+              "expected a module or a {module, hook_name} tuple"
+    end
+
+    defp run_hooks(hooks, params, session, socket) do
+      Enum.reduce_while(hooks, {:cont, socket}, fn hook, {:cont, socket} ->
+        case run_hook(hook, params, session, socket) do
+          {:cont, socket} -> {:cont, {:cont, socket}}
+          {:halt, socket} -> {:halt, {:halt, socket}}
+        end
       end)
     end
 
-    @doc false
-    @spec dashboard_additional_hooks() :: list()
-    def dashboard_additional_hooks do
-      case Application.get_env(:tymeslot, :dashboard_additional_hooks, []) do
-        hooks when is_list(hooks) ->
-          hooks
+    defp run_hook({module, hook_name}, params, session, socket),
+      do: module.on_mount(hook_name, params, session, socket)
 
-        hook when is_tuple(hook) or is_atom(hook) ->
-          Logger.warning(
-            "Expected :dashboard_additional_hooks to be a list, received a single hook. Wrapping."
-          )
-
-          [hook]
-
-        other ->
-          Logger.warning(
-            "Expected :dashboard_additional_hooks to be a list; ignoring invalid value",
-            value: inspect(other)
-          )
-
-          []
-      end
-    end
+    defp run_hook(module, params, session, socket),
+      do: module.on_mount(:default, params, session, socket)
 
     live_session :authenticated,
       on_mount: {__MODULE__, :dashboard_hooks} do
@@ -327,16 +372,17 @@ defmodule TymeslotWeb.Router do
     end
   end
 
-  # Onboarding routes
+  # Onboarding routes. The deployment's additional dashboard gates (plugs and
+  # on_mount hooks) apply here too; see `on_mount(:onboarding_hooks, ...)`.
   scope "/", TymeslotWeb do
-    pipe_through [:browser, :require_authenticated_user]
+    pipe_through [
+      :browser,
+      :require_authenticated_user,
+      TymeslotWeb.Plugs.AdditionalDashboardPlugs
+    ]
 
     live_session :onboarding,
-      on_mount: [
-        {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
-        TymeslotWeb.Hooks.AppLocaleHook,
-        TymeslotWeb.Hooks.ClientInfoHook
-      ] do
+      on_mount: {TymeslotWeb.Router, :onboarding_hooks} do
       live "/onboarding", OnboardingLive, :welcome
       live "/onboarding/:step", OnboardingLive, :step
     end
@@ -465,10 +511,18 @@ defmodule TymeslotWeb.Router do
       "locale" => Conn.get_session(conn, "locale"),
       "embed_token" => conn.assigns[:embed_token],
       "scheduling_referrer" => Conn.get_session(conn, "scheduling_referrer"),
-      # Forwarded so PageViewHook can recognise an organizer viewing their own
-      # booking page and skip logging that self-visit. Resolved to a user off
-      # the mount path, inside the async page-view Task.
-      "user_token" => Conn.get_session(conn, "user_token")
+      # Forwarded so PageViewHook can recognise an organiser viewing their own
+      # booking page and skip logging that self-visit. Only the id travels:
+      # this map is signed, not encrypted, into the public page's HTML, so the
+      # session token must never be put here.
+      "viewer_user_id" => viewer_user_id(conn)
     }
+  end
+
+  defp viewer_user_id(conn) do
+    case conn.assigns[:current_user] do
+      %{id: id} -> id
+      _anonymous -> nil
+    end
   end
 end

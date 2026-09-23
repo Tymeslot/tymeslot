@@ -31,23 +31,6 @@ defmodule Tymeslot.Security.TokenPropertyTest do
     end
   end
 
-  describe "generate_session_token/1 (with user_id)" do
-    test "returns a {token, expiry} tuple" do
-      {token, expiry} = Token.generate_session_token(1)
-
-      assert %DateTime{} = expiry
-      assert String.length(token) == 43
-    end
-
-    test "expiry is approximately 24 hours from now" do
-      {_token, expiry} = Token.generate_session_token(1)
-
-      diff = DateTime.diff(expiry, DateTime.utc_now(), :second)
-      # Allow 5 seconds of clock drift
-      assert_in_delta diff, 24 * 3600, 5
-    end
-  end
-
   describe "generate_email_verification_token/1" do
     test "returns a {token, expiry, purpose} tuple" do
       {token, expiry, purpose} = Token.generate_email_verification_token(1)

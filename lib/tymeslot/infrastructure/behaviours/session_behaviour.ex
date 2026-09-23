@@ -17,10 +17,4 @@ defmodule Tymeslot.Infrastructure.SessionBehaviour do
   Returns the updated conn.
   """
   @callback delete_session(Plug.Conn.t()) :: Plug.Conn.t()
-
-  @doc """
-  Retrieves the current user ID from the session token in Plug.Conn session.
-  Returns the user ID or nil if not found or invalid.
-  """
-  @callback get_current_user_id(Plug.Conn.t()) :: integer() | nil
 end

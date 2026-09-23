@@ -6,19 +6,6 @@ defmodule Tymeslot.Security.Token do
 
   alias Tymeslot.Clock
 
-  @session_token_validity_hours 24
-
-  @doc """
-  Generates a strong random session token and expiry datetime.
-  Returns {token, expiry}.
-  """
-  @spec generate_session_token(integer()) :: {String.t(), DateTime.t()}
-  def generate_session_token(_unused_user_id) do
-    token = generate_strong_token()
-    expiry = DateTime.add(Clock.utc_now(), @session_token_validity_hours * 3600, :second)
-    {token, expiry}
-  end
-
   @doc """
   Generates a strong random session token.
   Returns just the token string.

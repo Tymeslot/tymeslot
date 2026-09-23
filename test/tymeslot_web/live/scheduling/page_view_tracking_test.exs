@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Analytics.EventSchema
+  alias Tymeslot.Auth.Session
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Repo
@@ -69,6 +70,50 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
       _resp = get(conn, ~p"/#{ctx.username}/#{ctx.slug}")
 
       assert_only_control_event_logged!(ctx)
+    end
+  end
+
+  describe "signed-in visitors" do
+    test "the organiser's own visit is not logged and their session token stays out of the page",
+         %{conn: conn, ctx: ctx} do
+      {:ok, conn, token} =
+        conn
+        |> init_test_session(%{})
+        |> Session.create_session(ctx.user)
+
+      conn = put_req_header(conn, "user-agent", "Mozilla/5.0 (Macintosh) Chrome/126.0.0.0")
+
+      html = conn |> get(~p"/#{ctx.username}/#{ctx.slug}") |> html_response(200)
+      payloads = signed_session_payloads(html)
+
+      assert payloads != []
+      refute html =~ token
+      refute html =~ Base.url_encode64(token)
+      refute html =~ Base.encode64(token)
+      assert Enum.reject(payloads, &(:binary.match(&1, token) == :nomatch)) == []
+
+      # The organiser's id travels instead, for the self-visit check.
+      assert Enum.any?(payloads, &(&1 =~ "viewer_user_id"))
+
+      {:ok, _view, _html} = live(conn, ~p"/#{ctx.username}/#{ctx.slug}")
+
+      assert_only_control_event_logged!(ctx)
+    end
+
+    test "a different signed-in user's visit is logged", %{conn: conn, ctx: ctx} do
+      visitor = insert(:user)
+
+      {:ok, conn, _token} =
+        conn
+        |> init_test_session(%{})
+        |> Session.create_session(visitor)
+
+      {:ok, _view, _html} =
+        conn
+        |> put_req_header("user-agent", "Mozilla/5.0 (Macintosh) Chrome/126.0.0.0")
+        |> live(~p"/#{ctx.username}/#{ctx.slug}")
+
+      assert wait_for_event!().user_id == ctx.user.id
     end
   end
 
@@ -162,6 +207,18 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
       timeout: 2_000,
       interval: 50
     )
+  end
+
+  # The decoded payload of every `data-phx-session` in the page. LiveView signs
+  # (does not encrypt) this attribute, so its payload is readable by anyone
+  # holding the HTML: `<protected>.<base64url term>.<signature>`.
+  defp signed_session_payloads(html) do
+    ~r/data-phx-session="([^"]+)"/
+    |> Regex.scan(html, capture: :all_but_first)
+    |> Enum.map(fn [signed] ->
+      [_protected, payload, _signature] = String.split(signed, ".")
+      Base.url_decode64!(payload, padding: false)
+    end)
   end
 
   # Asserts that the preceding page visit logged nothing.
