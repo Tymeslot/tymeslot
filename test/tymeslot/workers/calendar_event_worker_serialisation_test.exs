@@ -21,7 +21,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerSerialisationTest do
   describe "perform/1 behind another write" do
     test "waits while an earlier write to the same meeting is in flight" do
       %{meeting: meeting} = setup_calendar_scenario()
-      running = running_job(meeting.id, "update")
+      running = running_job(meeting.id, "update", started: -1)
 
       assert {:snooze, seconds} =
                CalendarEventWorker.perform(job(running.id + 1, meeting.id, "update"))
@@ -31,32 +31,54 @@ defmodule Tymeslot.Workers.CalendarEventWorkerSerialisationTest do
 
     test "waits for any action, not only another update" do
       %{meeting: meeting} = setup_calendar_scenario()
-      running = running_job(meeting.id, "create")
+      running = running_job(meeting.id, "create", started: -1)
 
       assert {:snooze, _seconds} =
                CalendarEventWorker.perform(job(running.id + 1, meeting.id, "update"))
     end
 
+    # Enqueue order is not start order: a retry runs again under its old id,
+    # and a lower priority or a longer snooze lets a newer job go first.
+    test "waits for a newer job that started first" do
+      %{meeting: meeting} = setup_calendar_scenario()
+      running = running_job(meeting.id, "delete", started: -1)
+
+      assert {:snooze, _seconds} =
+               CalendarEventWorker.perform(job(running.id - 1, meeting.id, "update"))
+    end
+
     test "does not wait for a write to a different meeting" do
       %{meeting: meeting} = setup_calendar_scenario()
       %{meeting: other} = setup_calendar_scenario()
-      running = running_job(other.id, "update")
+      running = running_job(other.id, "update", started: -1)
       expect_calendar_update_success()
 
       assert :ok = CalendarEventWorker.perform(job(running.id + 1, meeting.id, "update"))
     end
 
-    test "does not wait for a job that was enqueued after it" do
+    test "does not wait for an older job that started after it" do
       %{meeting: meeting} = setup_calendar_scenario()
-      running = running_job(meeting.id, "update")
+      running = running_job(meeting.id, "update", started: 1)
       expect_calendar_update_success()
 
+      assert :ok = CalendarEventWorker.perform(job(running.id + 1, meeting.id, "update"))
+    end
+
+    # Two jobs fetched in the same instant: the id decides, so exactly one waits.
+    test "breaks a tie in start time by enqueue order" do
+      %{meeting: meeting} = setup_calendar_scenario()
+      running = running_job(meeting.id, "update", started: 0)
+
+      assert {:snooze, _seconds} =
+               CalendarEventWorker.perform(job(running.id + 1, meeting.id, "update"))
+
+      expect_calendar_update_success()
       assert :ok = CalendarEventWorker.perform(job(running.id - 1, meeting.id, "update"))
     end
 
     test "gives up waiting once the budget is spent and takes its chances" do
       %{meeting: meeting} = setup_calendar_scenario()
-      running = running_job(meeting.id, "update")
+      running = running_job(meeting.id, "update", started: -1)
       expect_calendar_update_success()
 
       spent = %{job(running.id + 1, meeting.id, "update") | meta: %{"snoozed" => 99}}
@@ -64,6 +86,10 @@ defmodule Tymeslot.Workers.CalendarEventWorkerSerialisationTest do
       assert :ok = CalendarEventWorker.perform(spent)
     end
   end
+
+  # Every job here is judged against the same instant, and a running job's
+  # `started:` offset in seconds places its start before or after it.
+  @now ~U[2026-01-01 12:00:00.000000Z]
 
   defp job(id, meeting_id, action) do
     %Oban.Job{
@@ -74,11 +100,12 @@ defmodule Tymeslot.Workers.CalendarEventWorkerSerialisationTest do
       args: %{"action" => action, "meeting_id" => meeting_id},
       worker: inspect(CalendarEventWorker),
       queue: "calendar_events",
-      state: "executing"
+      state: "executing",
+      attempted_at: @now
     }
   end
 
-  defp running_job(meeting_id, action) do
+  defp running_job(meeting_id, action, started: offset) do
     Repo.insert!(%Oban.Job{
       state: "executing",
       queue: "calendar_events",
@@ -86,7 +113,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerSerialisationTest do
       args: %{"action" => action, "meeting_id" => meeting_id},
       attempt: 1,
       max_attempts: 5,
-      attempted_at: DateTime.utc_now()
+      attempted_at: DateTime.add(@now, offset, :second)
     })
   end
 end

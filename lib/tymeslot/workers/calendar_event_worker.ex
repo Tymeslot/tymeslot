@@ -119,10 +119,11 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   # link, the new title, the answer that changed — whatever landed while the
   # other write was on the wire.
   #
-  # Only an *earlier* job is waited for, so of any two jobs exactly one waits
-  # and the queue always moves.
-  defp wait_behind_earlier_write(%Oban.Job{id: id} = job, meeting_id) when is_integer(id) do
-    if ObanJobQueries.earlier_job_executing?(__MODULE__, meeting_id, id) do
+  # Only a job that *started* earlier is waited for, so of any two jobs exactly
+  # one waits and the queue always moves.
+  defp wait_behind_earlier_write(%Oban.Job{id: id, attempted_at: %DateTime{}} = job, meeting_id)
+       when is_integer(id) do
+    if ObanJobQueries.earlier_job_executing?(__MODULE__, meeting_id, job) do
       case SnoozePolicy.snooze_or_exhaust(SnoozePolicy.executions(job),
              max_snoozes: @max_write_waits,
              base_seconds: @write_wait_seconds,
