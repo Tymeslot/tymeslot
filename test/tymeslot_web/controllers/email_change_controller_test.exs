@@ -50,6 +50,46 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
       assert updated_user.email == new_email
     end
 
+    test "the confirmation page's form passes CSRF protection", %{conn: conn} do
+      # Phoenix's test conns skip the CSRF check, so the POST tests above
+      # cannot tell a working form from one whose token is missing or wrong.
+      # Round-trip the rendered form with the check switched back on.
+      user = Factory.insert(:user, email: "old@example.com")
+      token = Token.generate_token()
+      {:ok, _user} = UserTokenQueries.request_email_change(user, "new@example.com", token)
+
+      page = get(conn, ~p"/email-change/#{token}")
+
+      [_match, csrf_token] =
+        Regex.run(~r/name="_csrf_token" value="([^"]+)"/, html_response(page, 200))
+
+      conn =
+        page
+        |> recycle()
+        |> put_private(:plug_skip_csrf_protection, false)
+        |> post(~p"/email-change/#{token}", %{"_csrf_token" => csrf_token})
+
+      assert redirected_to(conn) == "/auth/login"
+      assert Repo.reload!(user).email == "new@example.com"
+    end
+
+    test "refuses a confirmation posted without the form's CSRF token", %{conn: conn} do
+      user = Factory.insert(:user, email: "old@example.com")
+      token = Token.generate_token()
+      {:ok, _user} = UserTokenQueries.request_email_change(user, "new@example.com", token)
+
+      page = get(conn, ~p"/email-change/#{token}")
+
+      assert_error_sent 403, fn ->
+        page
+        |> recycle()
+        |> put_private(:plug_skip_csrf_protection, false)
+        |> post(~p"/email-change/#{token}")
+      end
+
+      assert Repo.reload!(user).email == "old@example.com"
+    end
+
     test "fails with invalid token", %{conn: conn} do
       conn = post(conn, ~p"/email-change/invalid-token")
 
