@@ -3,6 +3,8 @@ defmodule Tymeslot.Auth.AdminBootstrapTest do
 
   @moduletag :auth
 
+  import Tymeslot.Test.AdminBootstrapHelpers, only: [reopen_admin_bootstrap: 1]
+
   alias ExUnit.CaptureLog
   alias Tymeslot.AppSettings.AppSettingsQueries
   alias Tymeslot.Auth.{AdminBootstrap, UserQueries, UserSchema}
@@ -10,6 +12,8 @@ defmodule Tymeslot.Auth.AdminBootstrapTest do
   import Tymeslot.Factory
 
   describe "maybe_promote_first_user/2" do
+    setup :reopen_admin_bootstrap
+
     test "promotes the user when they are the only row in the table" do
       user = insert(:user)
       refute user.is_admin

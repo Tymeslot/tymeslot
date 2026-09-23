@@ -7,8 +7,8 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
   committed. Each sign-up here therefore runs on its own real connection
   (`Ecto.Adapters.SQL.Sandbox.unboxed_run/2`) and commits for real, which is
   why the module is synchronous (ExUnit runs it after every async module, with
-  nothing else in flight) and why `on_exit` deletes what it committed and
-  clears the bootstrap flag again.
+  nothing else in flight), why `on_exit` deletes what it committed, and why
+  the race test reopens the bootstrap and closes it again itself.
 
   The race is staged so that neither transaction has committed when both
   reach the promotion check: each inserts its user, then both are released
@@ -26,9 +26,10 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
   import Tymeslot.Factory
 
   alias Ecto.Adapters.SQL.Sandbox
-  alias Tymeslot.AppSettings.{AppSettingsQueries, AppSettingsSchema}
+  alias Tymeslot.AppSettings.AppSettingsQueries
   alias Tymeslot.Auth.{AdminBootstrap, UserSchema}
   alias Tymeslot.Repo
+  alias Tymeslot.Test.AdminBootstrapHelpers
 
   # How long to wait for a second promotion check before letting the first
   # transaction commit. Under the lock the second check never arrives inside
@@ -42,10 +43,6 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
     on_exit(fn ->
       Sandbox.unboxed_run(Repo, fn ->
         Repo.delete_all(from(u in UserSchema, where: u.email in ^emails))
-
-        Repo.update_all(from(s in AppSettingsSchema, where: s.id == 1),
-          set: [admin_bootstrapped_at: nil]
-        )
       end)
     end)
 
@@ -53,6 +50,18 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
   end
 
   test "concurrent first sign-ups promote exactly one user", %{emails: emails} do
+    # The race needs a fresh install, committed where both connections see it,
+    # and closed again afterwards as `test_helper.exs` left it.
+    Sandbox.unboxed_run(Repo, fn -> AdminBootstrapHelpers.reopen_admin_bootstrap() end)
+
+    try do
+      assert Enum.count(race_first_sign_ups(emails), & &1.is_admin) == 1
+    after
+      Sandbox.unboxed_run(Repo, &AdminBootstrapHelpers.close!/0)
+    end
+  end
+
+  defp race_first_sign_ups(emails) do
     parent = self()
 
     tasks =
@@ -73,9 +82,7 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
 
     Enum.each(tasks, &send(&1.pid, :commit))
 
-    results = Enum.map(tasks, &Task.await(&1, 10_000))
-
-    assert Enum.count(results, & &1.is_admin) == 1
+    Enum.map(tasks, &Task.await(&1, 10_000))
   end
 
   # Every sign-up on an established install passes through here, so it must
