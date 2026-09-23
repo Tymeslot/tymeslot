@@ -62,17 +62,24 @@ defmodule Tymeslot.Security.RateLimiter do
 
   @doc """
   Rate limit authentication attempts with account lockout.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  The lockout and the per-account budget are keyed on the email *and* the
+  client address, so failures from one address never lock the owner out from
+  another; a wider per-email ceiling covers a run spread across many
+  addresses. Returns :ok if allowed, {:error, :rate_limited, message} if
+  exceeded.
   """
   @spec check_auth_rate_limit(String.t(), String.t() | nil) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_auth_rate_limit(email, ip), do: Auth.check_auth(email, ip)
 
   @doc """
-  Record authentication attempt result for lockout tracking.
+  Record an authentication attempt's result for lockout tracking, against the
+  same email and client address `check_auth_rate_limit/2` consults.
   """
-  @spec record_auth_attempt(String.t(), boolean()) :: :ok | {:error, atom(), String.t()}
-  def record_auth_attempt(email, success), do: Auth.record_attempt(email, success)
+  @spec record_auth_attempt(String.t(), String.t() | nil, boolean()) ::
+          :ok | {:error, atom(), String.t()}
+  def record_auth_attempt(email, ip, success), do: Auth.record_attempt(email, ip, success)
 
   @doc """
   Rate limit signup attempts per email and per IP with multi-window buckets.

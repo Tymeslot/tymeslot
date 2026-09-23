@@ -31,19 +31,38 @@ defmodule Tymeslot.Security.RateLimiter.Auth do
     {"1y", 50, 365 * 24 * 60 * 60_000}
   ]
 
+  # Per email and client address: the budget a single source gets against one
+  # account. Keyed on the pair so that failures from one address can never lock
+  # the owner out from another.
+  @login_pair_limit 10
+  # Per email across every address: only a run spread over many addresses
+  # reaches it, so it caps distributed guessing without handing a single
+  # attacker a way to lock an account out.
+  @login_email_ceiling 50
+  @login_window_ms 1_800_000
+
   @spec check_auth(String.t(), String.t() | nil) :: :ok | {:error, :rate_limited, String.t()}
   def check_auth(email, ip) do
     # Normalise so whitespace-padded and case-variant emails share one bucket,
     # preventing " User@X.com " / "user@x.com" bypasses of the login limit.
-    downcased_email = email |> String.trim() |> String.downcase()
+    downcased_email = normalise_email(email)
+    pair = login_pair(downcased_email, ip)
 
-    with :ok <- AccountLockout.check_lockout_status(downcased_email),
+    with :ok <- AccountLockout.check_lockout_status(pair),
+         :ok <-
+           Helpers.check_with_logging(
+             "login:#{pair}",
+             @login_pair_limit,
+             @login_window_ms,
+             "authentication",
+             downcased_email
+           ),
          :ok <-
            Helpers.check_with_logging(
              "login:#{downcased_email}",
-             10,
-             1_800_000,
-             "authentication",
+             @login_email_ceiling,
+             @login_window_ms,
+             "authentication (account)",
              downcased_email
            ),
          :ok <- check_auth_ip_bucket(ip) do
@@ -54,10 +73,19 @@ defmodule Tymeslot.Security.RateLimiter.Auth do
     end
   end
 
-  @spec record_attempt(String.t(), boolean()) :: :ok | {:error, atom(), String.t()}
-  def record_attempt(email, success) do
-    AccountLockout.check_and_record_attempt(email, success)
+  @spec record_attempt(String.t(), String.t() | nil, boolean()) ::
+          :ok | {:error, atom(), String.t()}
+  def record_attempt(email, ip, success) do
+    email
+    |> normalise_email()
+    |> login_pair(ip)
+    |> AccountLockout.check_and_record_attempt(success)
   end
+
+  defp normalise_email(email), do: email |> String.trim() |> String.downcase()
+
+  # The email comes first so a bucket key still reads as the account it guards.
+  defp login_pair(downcased_email, ip), do: "#{downcased_email}|#{Helpers.normalize_ip(ip)}"
 
   @spec check_signup(String.t(), String.t() | :inet.ip_address() | nil) ::
           :ok | {:error, :rate_limited, String.t()}

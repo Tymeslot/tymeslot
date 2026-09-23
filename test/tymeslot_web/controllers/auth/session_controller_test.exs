@@ -247,6 +247,42 @@ defmodule TymeslotWeb.SessionControllerTest do
                "Too many failed attempts. Please wait before trying again"
     end
 
+    test "failed attempts from one address do not lock the owner out from another", %{
+      conn: conn,
+      user: user,
+      password: password
+    } do
+      attacker_ip = {198, 51, 100, 23}
+      owner_ip = {203, 0, 113, 45}
+
+      for _i <- 1..10 do
+        post(%{conn | remote_ip: attacker_ip}, ~p"/auth/session", %{
+          "email" => user.email,
+          "password" => "WrongPassword123!"
+        })
+      end
+
+      # The attacker's own address is throttled for this account...
+      blocked =
+        post(%{conn | remote_ip: attacker_ip}, ~p"/auth/session", %{
+          "email" => user.email,
+          "password" => password
+        })
+
+      assert Flash.get(blocked.assigns.flash, :error) ==
+               "Too many failed attempts. Please wait before trying again"
+
+      # ...but the owner, from their own address, still signs in.
+      conn =
+        post(%{conn | remote_ip: owner_ip}, ~p"/auth/session", %{
+          "email" => user.email,
+          "password" => password
+        })
+
+      assert redirected_to(conn) == "/dashboard"
+      assert get_session(conn, :user_token)
+    end
+
     test "blocks login after 50 attempts from the same IP across different emails", %{conn: conn} do
       rate_limit_ip = {10, 88, 88, 1}
 

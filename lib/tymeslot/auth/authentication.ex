@@ -142,7 +142,7 @@ defmodule Tymeslot.Auth.Authentication do
   # burst of concurrent failed logins against one account produces one
   # `account_lockout` audit entry per in-flight attempt, not one per lockout.
   defp record_auth_attempt(user, success, opts) do
-    case RateLimiter.record_auth_attempt(user.email, success) do
+    case RateLimiter.record_auth_attempt(user.email, opts[:ip_address], success) do
       {:error, :account_throttled, _message} ->
         SecurityLogger.log_account_lockout(user.email, "account_throttled", %{
           user_id: user.id,
