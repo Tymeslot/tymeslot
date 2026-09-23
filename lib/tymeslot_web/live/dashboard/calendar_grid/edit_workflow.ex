@@ -309,6 +309,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     )
   end
 
+  @doc """
+  The message shown when an organiser tries to change the video of an event
+  that is the calendar copy of a booking.
+  """
+  @spec booking_video_refused_message() :: String.t()
+  def booking_video_refused_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "This event is a booking, so its video link belongs to the booking. Reschedule or cancel the booking to change it."
+    )
+  end
+
   @spec assert_owns_event(Phoenix.LiveView.Socket.t(), map()) :: :ok | {:error, :unauthorized}
   def assert_owns_event(socket, event) do
     assert_owns_integration(socket, event.calendar_integration_id)

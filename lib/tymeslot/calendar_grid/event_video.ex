@@ -35,6 +35,7 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
 
   alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.CalendarGrid.EventVideoRooms
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.EventDetails
@@ -54,6 +55,8 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
       with no video. An integration with no link is not a no-op, since that
       is how an organiser provisions a room after a failed earlier attempt;
     * `{:error, :not_found}` when the video integration is not the organiser's;
+    * `{:error, :linked_to_booking}` when the event is the calendar copy of a
+      Tymeslot booking (see `ensure_video_changeable/1`). Nothing is changed;
     * `{:error, :missing_meeting_url}` when the provider created a room but
       returned no join URL, in which case the event keeps its current link;
     * `{:error, {:configuration_error, code}}` when the provider's own server
@@ -65,7 +68,7 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   """
   @spec change_event_video(pos_integer(), map(), pos_integer() | nil) ::
           {:ok, String.t() | nil | :unchanged}
-          | {:error, :missing_meeting_url | :not_found | term()}
+          | {:error, :missing_meeting_url | :not_found | :linked_to_booking | term()}
   def change_event_video(_user_id, %{video_integration_id: id, video_link: link}, id)
       when is_integer(id) and is_binary(link),
       do: {:ok, :unchanged}
@@ -73,7 +76,31 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   def change_event_video(_user_id, %{video_integration_id: nil, video_link: nil}, nil),
     do: {:ok, :unchanged}
 
-  def change_event_video(user_id, event, nil) do
+  def change_event_video(user_id, event, video_integration_id) do
+    with :ok <- ensure_video_changeable(event) do
+      apply_video_change(user_id, event, video_integration_id)
+    end
+  end
+
+  @doc """
+  Whether the video of `event` may be changed from the grid: not when the
+  event is the calendar copy of a Tymeslot booking, whose room belongs to the
+  meeting. A room made here would be unrelated to the meeting's own, so the
+  booking's confirmation, reminder and reschedule emails would keep pointing
+  at the old one while the calendar showed the new one.
+  """
+  @spec ensure_video_changeable(map()) :: :ok | {:error, :linked_to_booking}
+  def ensure_video_changeable(event) do
+    if CalendarEvents.event_linked_to_booking?(
+         event.calendar_integration_id,
+         Map.get(event, :provider_event_id),
+         event.uid
+       ),
+       do: {:error, :linked_to_booking},
+       else: :ok
+  end
+
+  defp apply_video_change(user_id, event, nil) do
     with :ok <- write_description(user_id, event, nil),
          :ok <- cache_link(event, nil, nil) do
       discard_room(user_id, event.video_integration_id, event.video_link)
@@ -81,8 +108,8 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
     end
   end
 
-  def change_event_video(user_id, event, video_integration_id)
-      when is_integer(video_integration_id) do
+  defp apply_video_change(user_id, event, video_integration_id)
+       when is_integer(video_integration_id) do
     with {:ok, _integration} <- Video.fetch_integration_for_user(video_integration_id, user_id),
          {:ok, url} <- create_room(user_id, event, video_integration_id),
          :ok <- write_new_description(user_id, event, video_integration_id, url),

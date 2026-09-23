@@ -356,8 +356,16 @@ defmodule Tymeslot.CalendarGrid do
   """
   @spec change_event_video(pos_integer(), map(), pos_integer() | nil) ::
           {:ok, String.t() | nil | :unchanged}
-          | {:error, :missing_meeting_url | :not_found | term()}
+          | {:error, :missing_meeting_url | :not_found | :linked_to_booking | term()}
   defdelegate change_event_video(user_id, event, video_integration_id), to: EventVideo
+
+  @doc """
+  Whether an event's video may be changed from the grid: not on the calendar
+  copy of a booking, whose room belongs to the meeting. See
+  `Tymeslot.CalendarGrid.EventVideo.ensure_video_changeable/1`.
+  """
+  @spec ensure_video_changeable(map()) :: :ok | {:error, :linked_to_booking}
+  defdelegate ensure_video_changeable(event), to: EventVideo
 
   @doc """
   Returns `description` with the "Join video call" line for the previous URL

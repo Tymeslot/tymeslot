@@ -1079,3 +1079,8 @@ msgstr "Opakované události zde zatím nelze upravovat. Upravte prosím tuto ud
 #, elixir-autogen, elixir-format
 msgid "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
 msgstr "Událost byla zkopírována do nového kalendáře, ale přesun se nedokončil. Zkontrolujte prosím původní kalendář a smažte původní událost, pokud tam stále je."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "This event is a booking, so its video link belongs to the booking. Reschedule or cancel the booking to change it."
+msgstr "Tato událost je rezervace, takže její odkaz na video patří k rezervaci. Chcete-li jej změnit, přeplánujte nebo zrušte rezervaci."

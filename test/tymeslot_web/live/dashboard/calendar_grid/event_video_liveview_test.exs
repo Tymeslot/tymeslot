@@ -366,6 +366,48 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
     end
   end
 
+  describe "the video selector on the calendar copy of a booking" do
+    test "refuses the change, says why, and leaves the event's link alone", %{
+      conn: conn,
+      user: user
+    } do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      video_integration = insert(:video_integration, user: user, is_active: true)
+      link = "https://video.example.com/join/booking-room"
+
+      event =
+        insert_event(integration, %{
+          summary: "Booked Call",
+          description: "Join video call: #{link}",
+          start_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[16:00:00], "Etc/UTC"),
+          all_day: false,
+          video_link: link,
+          video_integration_id: nil
+        })
+
+      insert(:meeting, calendar_integration_id: integration.id, uid: event.uid)
+
+      # Neither the video provider nor the calendar may be reached.
+      expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _opts -> :ok end)
+      expect(Tymeslot.CalendarMock, :update_event, 0, fn _uid, _payload, _context -> :ok end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_edit_video", %{
+        "video_integration_id" => to_string(video_integration.id)
+      })
+
+      assert render(lv) =~ "This event is a booking, so its video link belongs to the booking."
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+      assert {row.video_link, row.video_integration_id} == {link, nil}
+    end
+  end
+
   defp stub_room_created(url) do
     body = Jason.encode!(%{"room_id" => "room-123", "meeting_url" => url})
 

@@ -1080,3 +1080,8 @@ msgstr "Повторювані події поки що не можна реда
 #, elixir-autogen, elixir-format
 msgid "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
 msgstr "Подію скопійовано в новий календар, але переміщення не завершено. Перевірте початковий календар і видаліть оригінал, якщо він там ще є."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "This event is a booking, so its video link belongs to the booking. Reschedule or cancel the booking to change it."
+msgstr "Ця подія є бронюванням, тому її відеопосилання належить бронюванню. Щоб змінити його, перенесіть або скасуйте бронювання."

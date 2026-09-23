@@ -1066,3 +1066,8 @@ msgstr "Gli eventi ricorrenti non possono ancora essere modificati qui. Modifica
 #, elixir-autogen, elixir-format
 msgid "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
 msgstr "Evento copiato nel nuovo calendario, ma lo spostamento non è stato completato. Controlla il suo calendario di origine ed elimina l'originale se è ancora presente."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "This event is a booking, so its video link belongs to the booking. Reschedule or cancel the booking to change it."
+msgstr "Questo evento è una prenotazione, quindi il suo link video appartiene alla prenotazione. Riprogramma o annulla la prenotazione per modificarlo."

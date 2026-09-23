@@ -296,6 +296,9 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     {:noreply, put_flash(socket, :error, video_failed_message(payload[:reason]))}
   end
 
+  defp video_failed_message(:linked_to_booking),
+    do: EditWorkflow.booking_video_refused_message()
+
   defp video_failed_message(:missing_meeting_url) do
     dgettext(
       "dashboard_calendar_events",
