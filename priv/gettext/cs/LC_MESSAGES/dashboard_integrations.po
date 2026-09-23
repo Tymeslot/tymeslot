@@ -1618,3 +1618,13 @@ msgstr "Každá rezervace dostane vlastní veřejnou konverzaci Talk a hosté se
 #, elixir-autogen, elixir-format
 msgid "Enter the address on its own and put the username and password in their own fields."
 msgstr "Zadejte pouze adresu a uživatelské jméno s heslem vyplňte do jejich vlastních polí."
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid meeting link"
+msgstr "Neplatný odkaz na schůzku"
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting link placeholder is invalid, so all bookings currently share one room. Edit the integration to fix it."
+msgstr "Zástupný symbol v odkazu na schůzku je neplatný, takže všechny rezervace nyní sdílejí jednu místnost. Upravte integraci a opravte ho."

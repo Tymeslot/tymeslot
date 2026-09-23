@@ -1615,3 +1615,13 @@ msgstr "Chaque réservation obtient sa propre conversation Talk publique, et les
 #, elixir-autogen, elixir-format
 msgid "Enter the address on its own and put the username and password in their own fields."
 msgstr "Saisissez uniquement l'adresse et renseignez le nom d'utilisateur et le mot de passe dans leurs propres champs."
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid meeting link"
+msgstr "Lien de réunion invalide"
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting link placeholder is invalid, so all bookings currently share one room. Edit the integration to fix it."
+msgstr "L'espace réservé du lien de réunion est invalide : toutes les réservations partagent donc actuellement la même salle. Modifiez l'intégration pour corriger cela."

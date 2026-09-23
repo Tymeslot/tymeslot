@@ -1618,3 +1618,13 @@ msgstr "Кожне бронювання отримує власну публіч
 #, elixir-autogen, elixir-format
 msgid "Enter the address on its own and put the username and password in their own fields."
 msgstr "Введіть лише адресу, а ім'я користувача та пароль вкажіть у відповідних полях."
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid meeting link"
+msgstr "Недійсне посилання на зустріч"
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting link placeholder is invalid, so all bookings currently share one room. Edit the integration to fix it."
+msgstr "Заповнювач у посиланні на зустріч недійсний, тому всі бронювання зараз використовують одну кімнату. Відредагуйте інтеграцію, щоб це виправити."

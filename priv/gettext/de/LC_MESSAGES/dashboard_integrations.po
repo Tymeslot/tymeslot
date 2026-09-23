@@ -1615,3 +1615,13 @@ msgstr "Jede Buchung erhält eine eigene öffentliche Talk-Unterhaltung, und Gä
 #, elixir-autogen, elixir-format
 msgid "Enter the address on its own and put the username and password in their own fields."
 msgstr "Geben Sie nur die Adresse ein und tragen Sie Benutzername und Passwort in die dafür vorgesehenen Felder ein."
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid meeting link"
+msgstr "Ungültiger Meeting-Link"
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting link placeholder is invalid, so all bookings currently share one room. Edit the integration to fix it."
+msgstr "Der Platzhalter im Meeting-Link ist ungültig, daher teilen sich derzeit alle Buchungen einen Raum. Bearbeiten Sie die Integration, um das zu beheben."
