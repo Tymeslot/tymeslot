@@ -41,13 +41,17 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   end
 
   @doc """
-  Returns `true` when the event data carries a Google `conferenceData` payload
-  that requires the `conferenceDataVersion=1` query parameter on writes.
+  Returns `true` when the event data carries a Google `conferenceData` payload,
+  or asks for the conference to be removed, either of which requires the
+  `conferenceDataVersion=1` query parameter on writes.
   """
   @spec requires_conference_data_version?(map()) :: boolean()
   def requires_conference_data_version?(event_data) when is_map(event_data) do
     case get_field_value(event_data, :conference_data) do
       data when is_map(data) and map_size(data) > 0 -> true
+      # Taking the conference off (`ConferenceData.remove/0`) is itself a
+      # conference change, which Google ignores at version 0.
+      :remove -> true
       _other -> false
     end
   end

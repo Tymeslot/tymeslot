@@ -1084,3 +1084,8 @@ msgstr "Událost byla zkopírována do nového kalendáře, ale přesun se nedok
 #, elixir-autogen, elixir-format
 msgid "This event is a booking, so its video link belongs to the booking. Reschedule or cancel the booking to change it."
 msgstr "Tato událost je rezervace, takže její odkaz na video patří k rezervaci. Chcete-li jej změnit, přeplánujte nebo zrušte rezervaci."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Google Calendar added Google Meet to the event but has not returned its link yet. Choose Google Meet again to fetch it."
+msgstr "Kalendář Google přidal k události Google Meet, ale zatím nevrátil jeho odkaz. Vyberte Google Meet znovu, abyste jej získali."

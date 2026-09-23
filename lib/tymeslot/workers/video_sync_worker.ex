@@ -27,6 +27,10 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   whether the event is really over before deleting
   (`Tymeslot.CalendarGrid.check_event_video_room_expired/1`), since the event
   may have moved in between.
+
+  A room no record holds at all is deleted by its provider id through
+  `enqueue_room_delete/3`: the Zoom meeting a calendar grid event's video
+  change replaced, or one whose grid event was deleted.
   """
 
   use Oban.Worker,
@@ -75,9 +79,34 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
       when is_integer(room_id) and action in ["update", "delete", "expire"],
       do: insert_job(%{"event_room_id" => room_id, "action" => action}, :event_room_id)
 
+  @doc """
+  Enqueues the delete of a room no record holds, by the id its provider knows
+  it by, on the video integration `video_integration_id` of `user_id`.
+
+  For a calendar grid event's room that `Tymeslot.CalendarGrid.EventVideoRooms`
+  does not record, whose id was parsed exactly out of its join link (a Zoom
+  meeting's). A provider that no longer has the room counts as done, and so
+  does an integration that has gone, since nothing can reach the room then.
+  """
+  @spec enqueue_room_delete(pos_integer(), pos_integer(), String.t()) ::
+          {:ok, atom()} | {:error, term()}
+  def enqueue_room_delete(user_id, video_integration_id, room_id)
+      when is_integer(user_id) and is_integer(video_integration_id) and is_binary(room_id) and
+             room_id != "" do
+    insert_job(
+      %{
+        "user_id" => user_id,
+        "video_integration_id" => video_integration_id,
+        "room_id" => room_id,
+        "action" => "delete"
+      },
+      [:video_integration_id, :room_id]
+    )
+  end
+
   # Uniqueness keys on the record's own id: keyed on an absent `meeting_id`,
   # every event room's jobs for one action would count as duplicates.
-  defp insert_job(args, id_key) do
+  defp insert_job(args, id_keys) do
     job_changeset =
       new(args,
         queue: :video_rooms,
@@ -85,7 +114,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
         unique: [
           period: 300,
           fields: [:args, :queue],
-          keys: [id_key, :action],
+          keys: List.wrap(id_keys) ++ [:action],
           states: [:available, :scheduled, :executing, :retryable]
         ]
       )
@@ -122,6 +151,44 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
         )
 
         {:discard, "Calendar event video room not found"}
+    end
+  end
+
+  def perform(
+        %Oban.Job{
+          args: %{
+            "user_id" => user_id,
+            "video_integration_id" => video_integration_id,
+            "room_id" => room_id,
+            "action" => "delete"
+          }
+        } = job
+      ) do
+    executions = start_execution(job)
+
+    case Video.fetch_integration_for_user(video_integration_id, user_id) do
+      {:ok, integration} ->
+        target = %{
+          kind: :room,
+          record: nil,
+          user_id: user_id,
+          room_id: room_id,
+          provider: integration.provider,
+          log: [
+            video_integration_id: video_integration_id,
+            room_ref: Redactor.fingerprint(room_id)
+          ]
+        }
+
+        perform_action("delete", target, video_integration_id, executions)
+
+      {:error, :not_found} ->
+        Logger.info("Video integration gone before a room delete, discarding",
+          video_integration_id: video_integration_id,
+          room_ref: Redactor.fingerprint(room_id)
+        )
+
+        {:discard, "Video integration not found"}
     end
   end
 
@@ -371,6 +438,9 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   end
 
   defp clear_room(%{kind: :meeting, record: meeting}), do: clear_video_room(meeting)
+
+  # A room no record holds: once it is gone there is nothing left to clear.
+  defp clear_room(%{kind: :room}), do: :ok
 
   # A grid event's room exists only as this record, so once the room is gone
   # the record goes too, and nothing scans for it again.

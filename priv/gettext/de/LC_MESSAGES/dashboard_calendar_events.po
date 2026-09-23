@@ -1072,3 +1072,8 @@ msgstr "Ereignis in den neuen Kalender kopiert, aber das Verschieben wurde nicht
 #, elixir-autogen, elixir-format
 msgid "This event is a booking, so its video link belongs to the booking. Reschedule or cancel the booking to change it."
 msgstr "Dieses Ereignis ist eine Buchung, daher gehört sein Videolink zur Buchung. Verschieben oder stornieren Sie die Buchung, um ihn zu ändern."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Google Calendar added Google Meet to the event but has not returned its link yet. Choose Google Meet again to fetch it."
+msgstr "Google Kalender hat dem Ereignis Google Meet hinzugefügt, den Link aber noch nicht zurückgegeben. Wählen Sie Google Meet erneut, um ihn abzurufen."
