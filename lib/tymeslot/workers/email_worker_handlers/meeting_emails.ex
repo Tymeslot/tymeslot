@@ -13,6 +13,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Notifications.GuestNotifications
   alias Tymeslot.Utils.ReminderUtils
+  alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
   @spec handle_confirmation_emails(%{String.t() => term()}) ::
@@ -84,12 +85,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     end)
   end
 
-  @spec handle_cancellation_emails(%{String.t() => term()}) ::
+  @spec handle_cancellation_emails(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
-  def handle_cancellation_emails(%{"meeting_id" => meeting_id}) do
+  def handle_cancellation_emails(%{"meeting_id" => meeting_id}, job_id) do
     with_meeting(meeting_id, "cancellation emails", fn meeting ->
       if meeting.status == "cancelled" do
-        send_cancellation_emails_for_meeting(meeting)
+        send_cancellation_emails_for_meeting(meeting, job_id)
       else
         Logger.info("Skipping cancellation emails - meeting is not cancelled",
           meeting_id: meeting_id,
@@ -123,15 +124,38 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     end
   end
 
-  defp send_cancellation_emails_for_meeting(meeting) do
-    Logger.info("Sending cancellation emails", meeting_id: meeting.id, uid: meeting.uid)
-
+  # Unlike confirmations and reminders, a cancellation has no per-recipient
+  # sent flag on the meeting, so what stops a rescued job re-sending it is a
+  # claim on the job itself (`DeliveryClaims`): one for the organiser and
+  # attendee pair, which the email service sends in one call, and one for the
+  # guests. A retry after both participant emails failed releases the first
+  # claim and sends them again, as before.
+  defp send_cancellation_emails_for_meeting(meeting, job_id) do
     appointment_details = AppointmentBuilder.from_meeting(meeting)
+
+    result =
+      DeliveryClaims.once(job_id, "cancellation:participants", fn ->
+        send_participant_cancellations(meeting, appointment_details)
+      end)
+
+    # Guests are told whenever at least one participant email went out, even
+    # on a partial failure that is discarded rather than retried, so they are
+    # told now or never.
+    if result == :ok or match?({:discard, _reason}, result) do
+      DeliveryClaims.once(job_id, "cancellation:guests", fn ->
+        GuestNotifications.notify_cancelled(meeting, appointment_details)
+      end)
+    end
+
+    result
+  end
+
+  defp send_participant_cancellations(meeting, appointment_details) do
+    Logger.info("Sending cancellation emails", meeting_id: meeting.id, uid: meeting.uid)
 
     case Config.email_service_module().send_cancellation_emails(appointment_details) do
       {{:ok, _organizer}, {:ok, _attendee}} ->
         Logger.info("Cancellation emails sent successfully", meeting_id: meeting.id)
-        GuestNotifications.notify_cancelled(meeting, appointment_details)
         :ok
 
       {organizer_result, attendee_result} ->
@@ -142,9 +166,6 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
         )
 
         if match?({:ok, _}, organizer_result) or match?({:ok, _}, attendee_result) do
-          # Discarded rather than retried, so the guests are told now or never.
-          GuestNotifications.notify_cancelled(meeting, appointment_details)
-
           {:discard,
            "Partial cancellation email failure: one email succeeded, retry would duplicate"}
         else

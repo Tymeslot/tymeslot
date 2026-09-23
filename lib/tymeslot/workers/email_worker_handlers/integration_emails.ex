@@ -16,6 +16,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.RoomCreationError
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.EmailWorkerHandlers.CalendarEventDetails
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
@@ -300,10 +301,14 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
     end
   end
 
-  @spec handle_event_update_notification(%{String.t() => term()}) ::
+  # One job carries the whole recipient list, so each recipient is claimed
+  # separately (`DeliveryClaims`): a job the Oban lifeline rescues part-way
+  # through re-mails nobody it already reached.
+  @spec handle_event_update_notification(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_event_update_notification(
-        %{"event_uid" => event_uid, "integration_id" => integration_id} = args
+        %{"event_uid" => event_uid, "integration_id" => integration_id} = args,
+        job_id
       ) do
     with {:ok, user} <- UserQueries.get_user(args["user_id"]),
          {:ok, current_event} <-
@@ -312,7 +317,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
          false <- nothing_to_announce?(changes, args),
          {:ok, details} <-
            CalendarEventDetails.update_details(user, current_event, changes, args) do
-      deliver_event_update(args["attendee_emails"], details, event_uid)
+      deliver_event_update(args["attendee_emails"], details, event_uid, job_id)
     else
       {:error, :not_found} ->
         Logger.warning("Event or user not found for update notification",
@@ -346,10 +351,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
   defp nothing_to_announce?([], args), do: not CalendarEventDetails.first_notification?(args)
   defp nothing_to_announce?(_changes, _args), do: false
 
-  defp deliver_event_update(attendee_emails, details, event_uid) do
+  defp deliver_event_update(attendee_emails, details, event_uid, job_id) do
     results =
       Enum.map(attendee_emails, fn email ->
-        Config.email_service_module().send_event_update_notification(email, details)
+        DeliveryClaims.once(job_id, "attendee:#{email}", fn ->
+          Config.email_service_module().send_event_update_notification(email, details)
+        end)
       end)
 
     errors = Enum.filter(results, &match?({:error, _reason}, &1))

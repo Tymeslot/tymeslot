@@ -7,10 +7,12 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
 
   import Mox
   import Tymeslot.Factory
+  import Tymeslot.WorkerTestHelpers
 
   alias Ecto.UUID
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Workers.EmailWorker
 
   setup :verify_on_exit!
@@ -60,6 +62,63 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
                  "action" => "send_cancellation_emails",
                  "meeting_id" => meeting.id
                })
+    end
+
+    # The Oban lifeline re-runs a job orphaned after it sent; a cancellation
+    # has no per-recipient sent flag on the meeting, so the job's own claims
+    # are what keep the second run from mailing everyone again. The Mox
+    # expectations fail the test on a second call.
+    test "a rescued job sends the participant and guest cancellations only once" do
+      profile = insert(:profile)
+
+      meeting =
+        insert(:meeting,
+          organizer_user: profile.user,
+          status: "cancelled",
+          first_announced_at: DateTime.utc_now(:second)
+        )
+
+      {:ok, [_guest]} = Guests.create_for_meeting(meeting.id, ["guest@example.com"])
+
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_emails, 1, fn _details ->
+        {{:ok, :sent}, {:ok, :sent}}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_guest_cancellation, 1, fn "guest@example.com",
+                                                                        _details ->
+        {:ok, :sent}
+      end)
+
+      job =
+        persisted_job(EmailWorker, %{
+          "action" => "send_cancellation_emails",
+          "meeting_id" => meeting.id
+        })
+
+      assert :ok = EmailWorker.perform(job)
+      assert :ok = EmailWorker.perform(job)
+    end
+
+    test "a retry after a total failure sends the cancellation again" do
+      profile = insert(:profile)
+      meeting = insert(:meeting, organizer_user: profile.user, status: "cancelled")
+
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_emails, 1, fn _details ->
+        {{:error, :delivery_failed}, {:error, :delivery_failed}}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_emails, 1, fn _details ->
+        {{:ok, :sent}, {:ok, :sent}}
+      end)
+
+      job =
+        persisted_job(EmailWorker, %{
+          "action" => "send_cancellation_emails",
+          "meeting_id" => meeting.id
+        })
+
+      assert {:error, _reason} = EmailWorker.perform(job)
+      assert :ok = EmailWorker.perform(%{job | attempt: 2})
     end
 
     test "discards job on partial failure to avoid duplicate sends" do

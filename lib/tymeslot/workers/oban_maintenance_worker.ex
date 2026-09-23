@@ -3,7 +3,9 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
   Performs regular maintenance on Oban jobs:
 
   1. Cleans up stuck jobs in "executing" state
-  2. Provides metrics and logging for job health monitoring
+  2. Deletes delivery claims (`Tymeslot.Workers.DeliveryClaims`) whose job
+     Oban has pruned
+  3. Provides metrics and logging for job health monitoring
 
   This worker runs every 30 minutes to ensure job queue health.
 
@@ -33,6 +35,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
 
   alias Tymeslot.Infrastructure.ObanRescue
   alias Tymeslot.Jobs
+  alias Tymeslot.Workers.DeliveryClaims
 
   @stuck_job_threshold_hours ObanRescue.discard_after_hours()
 
@@ -41,12 +44,17 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
     Logger.info("Starting Oban maintenance", args: args)
 
     {:ok, stuck_count} = cleanup_stuck_jobs()
-    Logger.info("Oban maintenance completed", stuck_jobs_cleaned: stuck_count)
+    claims_pruned = DeliveryClaims.prune_orphaned()
+
+    Logger.info("Oban maintenance completed",
+      stuck_jobs_cleaned: stuck_count,
+      delivery_claims_pruned: claims_pruned
+    )
 
     # Schedule next run
     schedule_next_run()
 
-    {:ok, %{stuck_cleaned: stuck_count}}
+    {:ok, %{stuck_cleaned: stuck_count, claims_pruned: claims_pruned}}
   end
 
   @spec schedule_next_run() :: {:ok, Oban.Job.t()} | {:error, term()}
