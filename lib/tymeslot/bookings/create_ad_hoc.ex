@@ -116,6 +116,12 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
       attendee_name: params.attendee_name,
       attendee_email: params.attendee_email,
       attendee_message: nil,
+      # Explicitly none, not "unset". A nil here is read by
+      # `Notifications.Orchestrator` as a meeting from before the reminders
+      # column existed, and answered with the legacy default of 30 minutes —
+      # so a booking whose own confirmation says no reminders are scheduled
+      # sends one anyway. An empty list is honoured as the answer it is.
+      reminders: [],
       attendee_timezone: params[:attendee_timezone] || "Etc/UTC",
       attendee_locale: Locales.booking_default_locale(),
       status: "confirmed",
