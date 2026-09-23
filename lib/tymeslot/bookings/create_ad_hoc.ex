@@ -31,7 +31,9 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
           optional(:calendar_integration_id) => pos_integer() | nil,
           optional(:calendar_path) => String.t() | nil,
           optional(:video_integration_id) => pos_integer() | nil,
-          optional(:guest_emails) => [String.t()]
+          optional(:guest_emails) => [String.t()],
+          optional(:attendee_message) => String.t() | nil,
+          optional(:attendee_locale) => String.t() | nil
         }
 
   @spec execute(params()) ::
@@ -88,6 +90,15 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
 
   defp normalise_address(email), do: email |> String.trim() |> String.downcase()
 
+  defp presence(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> nil
+      text -> text
+    end
+  end
+
+  defp presence(_value), do: nil
+
   defp blank?(nil), do: true
   defp blank?(s) when is_binary(s), do: String.trim(s) == ""
   defp blank?(_other), do: false
@@ -115,9 +126,16 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
       video_integration_id: params[:video_integration_id],
       attendee_name: params.attendee_name,
       attendee_email: params.attendee_email,
-      attendee_message: nil,
+      # The note the host writes goes here rather than into `description`:
+      # that field carries the meeting type's own description on a booked
+      # meeting, and nothing outside the calendar entry reads it. This one
+      # shows on the booking card and in the emails the guests receive.
+      attendee_message: presence(params[:attendee_message]),
       attendee_timezone: params[:attendee_timezone] || "Etc/UTC",
-      attendee_locale: Locales.booking_default_locale(),
+      # The host chooses which language the guest is written to; an unsupported
+      # or missing choice falls back the way the form's own default does.
+      attendee_locale:
+        Locales.acceptable(params[:attendee_locale]) || Locales.booking_default_locale(),
       status: "confirmed",
       view_url: build_meeting_url(uid, "", org_username),
       reschedule_url: build_meeting_url(uid, "/reschedule", org_username),

@@ -2652,6 +2652,11 @@ msgstr "Поточні дані"
 msgid "Current details"
 msgstr "Поточні дані"
 
+#: lib/tymeslot/emails/shared/meeting/attendee.ex
+#, elixir-autogen, elixir-format
+msgid "Message from the organiser"
+msgstr "Повідомлення від організатора"
+
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "Description:"
@@ -2676,3 +2681,13 @@ msgstr "Учасник: %{attendee}"
 #, elixir-autogen, elixir-format
 msgid "Message from attendee:"
 msgstr "Повідомлення від учасника:"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen
+msgid "MESSAGE FROM THE ORGANISER:"
+msgstr "ПОВІДОМЛЕННЯ ВІД ОРГАНІЗАТОРА:"
+
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
+#, elixir-autogen, elixir-format
+msgid "Message from the organiser:"
+msgstr "Повідомлення від організатора:"
