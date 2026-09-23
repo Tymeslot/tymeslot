@@ -21,6 +21,22 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     with_meeting(meeting_id, "confirmation emails", &send_confirmation_emails/1)
   end
 
+  @doc """
+  Invites the guests a host added after the booking was made.
+
+  `invite_missed_guests/1` sends to whoever has no `confirmation_sent_at`, so
+  the guests already on the meeting are left alone: adding one colleague does
+  not mail the rest a second invitation.
+  """
+  @spec handle_guest_invitations(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_guest_invitations(%{"meeting_id" => meeting_id}) do
+    with_meeting(meeting_id, "guest invitations", fn meeting ->
+      invite_missed_guests(meeting)
+      :ok
+    end)
+  end
+
   @spec handle_reminder_emails(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_reminder_emails(%{"meeting_id" => meeting_id} = args) do

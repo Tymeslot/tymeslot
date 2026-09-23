@@ -71,6 +71,50 @@ defmodule Tymeslot.Meetings.Guests do
     end
   end
 
+  @doc """
+  Adds guests to a meeting that already exists, after the booking was made.
+
+  This is the host's own path — the meeting type's `allow_guests` decides what
+  the *booker* may do on the public form, and says nothing about whom the host
+  may invite to their own meeting afterwards. `Bookings.CreateAdHoc` already
+  treats it that way.
+
+  Returns only the guests actually added. Addresses already on the meeting are
+  dropped rather than refused, so inviting a list twice is harmless and never
+  produces a second invitation: a guest who is already there keeps the
+  `confirmation_sent_at` that stops the mail going out again.
+
+  `{:error, :full}` comes back when the meeting is already at `max_guests/0`,
+  which is counted across the guests it already has — the cap is per meeting,
+  not per addition.
+  """
+  @spec add_to_meeting(binary(), [String.t()] | nil, String.t() | nil) ::
+          {:ok, [GuestSchema.t()]} | {:error, :full | Ecto.Changeset.t()}
+  def add_to_meeting(meeting_id, emails, primary_email) when is_binary(meeting_id) do
+    existing = GuestQueries.list_for_meeting(meeting_id)
+    known = MapSet.new(existing, &normalize(&1.email))
+    room = @max_guests - length(existing)
+
+    additions =
+      emails
+      |> sanitize_emails(primary_email)
+      |> Enum.reject(&MapSet.member?(known, &1))
+
+    cond do
+      additions == [] -> {:ok, []}
+      room <= 0 -> {:error, :full}
+      true -> create_for_meeting(meeting_id, Enum.take(additions, room))
+    end
+  end
+
+  @doc """
+  How many more guests `meeting_id` can take before reaching `max_guests/0`.
+  """
+  @spec remaining_capacity(binary()) :: non_neg_integer()
+  def remaining_capacity(meeting_id) when is_binary(meeting_id) do
+    max(@max_guests - length(GuestQueries.list_for_meeting(meeting_id)), 0)
+  end
+
   @doc "Looks up a guest by their RSVP token without mutating anything."
   @spec get_by_token(String.t()) :: {:ok, GuestSchema.t()} | {:error, :not_found}
   defdelegate get_by_token(token), to: GuestQueries

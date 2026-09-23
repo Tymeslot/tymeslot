@@ -16,9 +16,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   alias TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents
   alias TymeslotWeb.Dashboard.BookingsManagement.Cancellation
+  alias TymeslotWeb.Dashboard.BookingsManagement.GuestActions
   alias TymeslotWeb.Dashboard.BookingsManagement.Modals
 
   alias TymeslotWeb.Dashboard.BookingsManagement.RequestActions
+  alias TymeslotWeb.Dashboard.BookingsManagement.RescheduleRequest
   alias TymeslotWeb.Live.Shared.Flash
 
   require Logger
@@ -49,8 +51,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
      |> ModalHook.mount_modal(
        cancel_meeting: false,
        reschedule_request: false,
-       decline_request: false
-     )}
+       decline_request: false,
+       add_guests: false
+     )
+     |> assign(:staged_guests, [])
+     |> assign(:add_guests_existing, [])}
   end
 
   @impl Phoenix.LiveComponent
@@ -211,7 +216,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
       :ok ->
         ModalHook.with_modal_data(socket, :reschedule_request, fn meeting ->
-          do_send_reschedule_request(socket, meeting)
+          {:noreply, RescheduleRequest.send(socket, meeting, &load_meetings/1)}
         end)
     end
   end
@@ -315,6 +320,26 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     end
   end
 
+  def handle_event("show_add_guests_modal", %{"id" => id}, socket) do
+    {:noreply, GuestActions.open(socket, id, &load_meetings/1)}
+  end
+
+  def handle_event("hide_add_guests_modal", _params, socket) do
+    {:noreply, ModalHook.hide_modal(socket, :add_guests)}
+  end
+
+  def handle_event("stage_guest", %{"email" => email}, socket) do
+    {:noreply, GuestActions.stage(socket, email)}
+  end
+
+  def handle_event("unstage_guest", %{"email" => email}, socket) do
+    {:noreply, GuestActions.unstage(socket, email)}
+  end
+
+  def handle_event("confirm_add_guests", _params, socket) do
+    {:noreply, GuestActions.confirm(socket, &load_meetings/1)}
+  end
+
   def handle_event("hide_decline_modal", _params, socket) do
     {:noreply, ModalHook.hide_modal(socket, :decline_request)}
   end
@@ -379,22 +404,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           target={@myself}
         />
 
-        <div :if={@has_more} class="mt-10 text-center">
-          <button
-            class="btn-secondary px-10 py-4"
-            phx-click="load_more"
-            phx-target={@myself}
-            disabled={@loading_more}
-          >
-            <span :if={@loading_more}>
-              <.spinner class="h-5 w-5 mr-3 inline-block" /> {dgettext(
-                "dashboard_bookings",
-                "Loading..."
-              )}
-            </span>
-            <span :if={!@loading_more}>{dgettext("dashboard_bookings", "Load more meetings")}</span>
-          </button>
-        </div>
+        <MeetingListComponents.load_more
+          has_more={@has_more}
+          loading_more={@loading_more}
+          target={@myself}
+        />
 
         <div class="mt-16">
           <MeetingListComponents.info_panel />
@@ -412,6 +426,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         reschedule_request={@reschedule_request_modal_data}
         show_reschedule={@show_reschedule_request_modal || false}
         sending_reschedule={@sending_reschedule}
+        add_guests={@add_guests_modal_data}
+        show_add_guests={@show_add_guests_modal || false}
+        staged_guests={@staged_guests}
+        existing_guests={@add_guests_existing}
         profile={@profile}
         time_format={@time_format}
         target={@myself}
@@ -480,54 +498,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     |> assign(:cancel_booking_payment, nil)
     |> load_meetings()
     |> ModalHook.hide_modal(:cancel_meeting)
-  end
-
-  defp do_send_reschedule_request(socket, meeting) do
-    socket = assign(socket, :sending_reschedule, meeting.id)
-
-    case Meetings.send_reschedule_request(meeting) do
-      :ok ->
-        :telemetry.execute(
-          [:tymeslot, :dashboard, :meetings, :reschedule, :confirm],
-          %{},
-          %{user_id: socket.assigns.current_user.id, meeting_id: meeting.id, result: :ok}
-        )
-
-        Flash.info(
-          dgettext("dashboard_bookings", "Reschedule request sent to %{attendee_name}",
-            attendee_name: meeting.attendee_name
-          )
-        )
-
-        {:noreply,
-         socket
-         |> assign(:sending_reschedule, nil)
-         |> load_meetings()
-         |> ModalHook.hide_modal(:reschedule_request)}
-
-      {:error, reason} ->
-        :telemetry.execute(
-          [:tymeslot, :dashboard, :meetings, :reschedule, :confirm],
-          %{},
-          %{
-            user_id: socket.assigns.current_user.id,
-            meeting_id: meeting.id,
-            result: :error,
-            reason: inspect(reason)
-          }
-        )
-
-        Logger.error("send_reschedule_request_failed",
-          reason: inspect(reason),
-          meeting_id: meeting.id
-        )
-
-        Flash.error(
-          dgettext("dashboard_bookings", "Failed to send reschedule request. Please try again.")
-        )
-
-        {:noreply, assign(socket, :sending_reschedule, nil)}
-    end
   end
 
   defp assign_awaiting_approval_count(socket) do

@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.BookingsManagement.Modals do
   @moduledoc """
-  The three modals the bookings dashboard can open, in one place.
+  The modals the bookings dashboard can open, in one place.
 
   Extracted from the component's `render/1` so the list, its tabs, and the
   loading states stay readable: the modals are always mounted and almost always
@@ -17,7 +17,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Modals do
 
   alias Phoenix.LiveView.JS
 
+  alias TymeslotWeb.Dashboard.BookingsManagement.GuestActions
+
   alias TymeslotWeb.Components.Dashboard.Meetings.{
+    AddGuestsModal,
     CancelMeetingModal,
     DeclineRequestModal,
     Helpers,
@@ -34,6 +37,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Modals do
   attr :reschedule_request, :map, default: nil
   attr :show_reschedule, :boolean, required: true
   attr :sending_reschedule, :any, default: nil
+  attr :add_guests, :map, default: nil
+  attr :show_add_guests, :boolean, required: true
+  attr :staged_guests, :list, default: []
+  attr :existing_guests, :list, default: []
   attr :profile, :any, default: nil
   attr :time_format, :string, required: true
   attr :target, :any, required: true
@@ -78,6 +85,18 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.Modals do
       }
       on_cancel={JS.push("hide_reschedule_modal", target: @target)}
       on_confirm={JS.push("confirm_reschedule_request", target: @target)}
+    />
+
+    <AddGuestsModal.add_guests_modal
+      id="add-guests-modal"
+      show={@show_add_guests}
+      meeting={@add_guests}
+      staged={@staged_guests}
+      existing={@existing_guests}
+      remaining={GuestActions.room(@existing_guests)}
+      on_cancel={JS.push("hide_add_guests_modal", target: @target)}
+      confirm_event="confirm_add_guests"
+      target={@target}
     />
     """
   end

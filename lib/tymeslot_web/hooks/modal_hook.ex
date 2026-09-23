@@ -74,6 +74,7 @@ defmodule TymeslotWeb.Hooks.ModalHook do
     cancel_meeting: {:show_cancel_meeting_modal, :cancel_meeting_modal_data},
     reschedule_request: {:show_reschedule_request_modal, :reschedule_request_modal_data},
     decline_request: {:show_decline_request_modal, :decline_request_modal_data},
+    add_guests: {:show_add_guests_modal, :add_guests_modal_data},
     delete_meeting_type: {:show_delete_meeting_type_modal, :delete_meeting_type_modal_data},
     delete_avatar: {:show_delete_avatar_modal, :delete_avatar_modal_data},
     delete: {:show_delete_modal, :delete_modal_data},
