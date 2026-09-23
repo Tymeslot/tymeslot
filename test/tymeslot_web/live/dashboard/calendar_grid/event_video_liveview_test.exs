@@ -366,6 +366,88 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
     end
   end
 
+  describe "switching a Google event to Meet from the calendar's own account" do
+    test "shows the event as written, with no join line the calendar does not have", %{
+      conn: conn,
+      user: user
+    } do
+      account = "google-account-#{System.unique_integer([:positive])}"
+      meet_url = "https://meet.google.com/abc-defg-hij"
+      zoom_url = "https://zoom.us/j/86360699337"
+
+      calendar =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          provider_account_id: account,
+          oauth_scope: "https://www.googleapis.com/auth/calendar",
+          default_booking_calendar_id: "primary",
+          is_active: true
+        )
+
+      zoom = insert(:video_integration, user: user, provider: "zoom", is_active: true)
+
+      meet =
+        insert(:video_integration,
+          user: user,
+          provider: "google_meet",
+          provider_account_id: account,
+          is_active: true
+        )
+
+      event =
+        insert_event(calendar, %{
+          summary: "Planning",
+          provider: "google",
+          provider_event_id: "googlehex1",
+          provider_calendar_id: "primary",
+          description: "Agenda\n\nJoin video call: #{zoom_url}",
+          start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
+          all_day: false,
+          video_link: zoom_url,
+          video_integration_id: zoom.id
+        })
+
+      expect_provider_update()
+
+      expect(GoogleCalendarAPIMock, :get_event, fn _integration, "primary", "googlehex1" ->
+        {:ok,
+         %{
+           "id" => "googlehex1",
+           "status" => "confirmed",
+           "summary" => "Planning",
+           "start" => %{"dateTime" => DateTime.to_iso8601(event.start_at)},
+           "end" => %{"dateTime" => DateTime.to_iso8601(event.end_at)},
+           "conferenceData" => %{
+             "entryPoints" => [%{"entryPointType" => "video", "uri" => meet_url}]
+           }
+         }}
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_edit_video", %{"video_integration_id" => to_string(meet.id)})
+
+      assert await_provider_update(lv).description == "Agenda"
+
+      html = render(lv)
+      assert html =~ "Video room created."
+      refute html =~ "Join video call:"
+
+      assert has_element?(
+               lv,
+               ~s|button[phx-value-video_integration_id="#{meet.id}"].border-turquoise-400|
+             )
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(calendar.id, event.uid)
+      assert {row.description, row.video_link} == {"Agenda", meet_url}
+    end
+  end
+
   describe "the video selector on the calendar copy of a booking" do
     test "refuses the change, says why, and leaves the event's link alone", %{
       conn: conn,

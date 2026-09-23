@@ -131,12 +131,43 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   defp apply_video_change(user_id, event, video_integration_id)
        when is_integer(video_integration_id) do
     with {:ok, _integration} <- Video.fetch_integration_for_user(video_integration_id, user_id) do
-      case MeetingProvisioning.plan(event.calendar_integration_id, video_integration_id, user_id) do
-        {:inline, _video_id} -> change_to_inline_meet(user_id, event, video_integration_id)
-        _separate -> change_to_room(user_id, event, video_integration_id)
-      end
+      if inline_meet?(user_id, event, video_integration_id),
+        do: change_to_inline_meet(user_id, event, video_integration_id),
+        else: change_to_room(user_id, event, video_integration_id)
     end
   end
+
+  @doc """
+  `event` as a successful `change_event_video/3` to `video_integration_id`
+  wrote it, given the `url` it answered with: the new link and integration,
+  and the description exactly as it was sent to the calendar.
+
+  A Meet link Google made for the event is not written into the description
+  (it lives on the event's own conference), so the description loses the old
+  link's line and gains none. Every other link replaces the old line.
+  """
+  @spec changed_event(pos_integer(), map(), pos_integer() | nil, String.t() | nil) :: map()
+  def changed_event(user_id, event, video_integration_id, url) do
+    line_url = if inline_meet?(user_id, event, video_integration_id), do: nil, else: url
+
+    %{
+      event
+      | video_integration_id: video_integration_id,
+        video_link: url,
+        description: put_join_link(event.description, event.video_link, line_url)
+    }
+  end
+
+  # Whether Google makes the conference itself: a Meet integration sharing
+  # the Google calendar's account (`MeetingProvisioning.plan/3`).
+  defp inline_meet?(_user_id, _event, nil), do: false
+
+  defp inline_meet?(user_id, event, video_integration_id),
+    do:
+      match?(
+        {:inline, _video_id},
+        MeetingProvisioning.plan(event.calendar_integration_id, video_integration_id, user_id)
+      )
 
   defp change_to_room(user_id, event, video_integration_id) do
     with {:ok, url} <- create_room(user_id, event, video_integration_id),
@@ -204,14 +235,9 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   # conference off the event, or its Meet button would stay beside the new
   # link. Any other event's conference is left alone.
   defp leave_conference(user_id, event) do
-    case MeetingProvisioning.plan(
-           event.calendar_integration_id,
-           event.video_integration_id,
-           user_id
-         ) do
-      {:inline, _video_id} -> [conference_data: ConferenceData.remove()]
-      _separate -> []
-    end
+    if inline_meet?(user_id, event, event.video_integration_id),
+      do: [conference_data: ConferenceData.remove()],
+      else: []
   end
 
   @doc """

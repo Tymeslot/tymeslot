@@ -360,6 +360,13 @@ defmodule Tymeslot.CalendarGrid do
   defdelegate change_event_video(user_id, event, video_integration_id), to: EventVideo
 
   @doc """
+  An event as a successful video change wrote it: its new link, integration
+  and description. See `Tymeslot.CalendarGrid.EventVideo.changed_event/4`.
+  """
+  @spec changed_event(pos_integer(), map(), pos_integer() | nil, String.t() | nil) :: map()
+  defdelegate changed_event(user_id, event, video_integration_id, url), to: EventVideo
+
+  @doc """
   Whether an event's video may be changed from the grid: not on the calendar
   copy of a booking, whose room belongs to the meeting. See
   `Tymeslot.CalendarGrid.EventVideo.ensure_video_changeable/1`.

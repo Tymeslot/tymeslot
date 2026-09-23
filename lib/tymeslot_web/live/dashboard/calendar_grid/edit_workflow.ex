@@ -231,10 +231,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
           {:ok, :unchanged} ->
             {:ok, :unchanged}
 
+          # The event as the change wrote it, so the grid shows what the
+          # calendar has and the notification diff sees exactly what the
+          # attendees' invitation will carry.
           {:ok, url} ->
             {:ok,
              original_event: event,
-             updated_event: video_changed_event(event, video_integration_id, url)}
+             updated_event: CalendarGrid.changed_event(user_id, event, video_integration_id, url)}
 
           {:error, reason} ->
             video_failure(event, reason)
@@ -242,18 +245,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       end,
       video_failure(event, :crashed)
     )
-  end
-
-  # The event as `EventVideo` has just written it: the same description
-  # rewrite it sent to the calendar, so the notification diff sees exactly
-  # what the attendees' invitation will carry.
-  defp video_changed_event(event, video_integration_id, url) do
-    %{
-      event
-      | video_integration_id: video_integration_id,
-        video_link: url,
-        description: CalendarGrid.put_join_link(event.description, event.video_link, url)
-    }
   end
 
   defp video_failure(event, reason), do: {:error, original_event: event, reason: reason}
