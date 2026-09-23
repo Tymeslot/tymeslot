@@ -667,3 +667,13 @@ msgstr "Si attiva quando rifiuti una richiesta di prenotazione"
 #, elixir-autogen, elixir-format
 msgid "Triggers on this event"
 msgstr "Si attiva per questo evento"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Delivery ID"
+msgstr "ID di consegna"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "The delivery ID is the same on every retry of one delivery and different for every other delivery. A failed or timed-out delivery can be retried, so your endpoint may receive the same event twice: record the delivery ID and ignore a request whose ID you have already processed."
+msgstr "L'ID di consegna è lo stesso a ogni nuovo tentativo della stessa consegna e diverso per ogni altra consegna. Una consegna non riuscita o scaduta può essere ritentata, quindi il tuo endpoint potrebbe ricevere lo stesso evento due volte: registra l'ID di consegna e ignora le richieste il cui ID hai già elaborato."
