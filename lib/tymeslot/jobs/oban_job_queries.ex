@@ -237,10 +237,6 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
     )
   end
 
-  # Oban stores worker names without the "Elixir." prefix; `Worker.to_string/1`
-  # normalises a module into that form so a match against `j.worker` can't
-  # silently miss every job. Callers that already hold the stored name (e.g. a
-  # worker's own `to_string(__MODULE__)`-shaped literal) pass it straight through.
   @doc """
   Whether an older job of `worker` for `meeting_id` is executing right now.
 
@@ -265,6 +261,10 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
     )
   end
 
+  # Oban stores worker names without the "Elixir." prefix; `Worker.to_string/1`
+  # normalises a module into that form so a match against `j.worker` can't
+  # silently miss every job. Callers that already hold the stored name (e.g. a
+  # worker's own `to_string(__MODULE__)`-shaped literal) pass it straight through.
   defp normalize_worker_name(worker) when is_atom(worker), do: Worker.to_string(worker)
   defp normalize_worker_name(worker) when is_binary(worker), do: worker
 end

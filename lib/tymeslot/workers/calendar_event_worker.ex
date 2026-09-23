@@ -30,7 +30,6 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.RetryHelpers
   alias Tymeslot.Workers.SnoozePolicy
-
   require Logger
 
   # Configuration
@@ -47,6 +46,10 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   # executions. A CalDAV round trip is a second or two, so a handful of short
   # waits covers an ordinary one; a write wedged behind a slow server stops
   # waiting and takes its chances rather than snoozing out of sight.
+  #
+  # The budget is measured in executions, genuine attempts included, so a job
+  # on its first run gets seven waits (roughly 14 to 21 seconds) and a retry
+  # gets correspondingly fewer; from the eighth attempt on it never waits.
   @write_wait_seconds 2
   @write_wait_jitter_seconds 1
   @max_write_waits 8
