@@ -103,8 +103,34 @@ defmodule Tymeslot.Precommit.RunnerTest do
     end
   end
 
+  describe "run/3 with steps left out on purpose" do
+    test "lists each skipped step with its reason after the steps that ran" do
+      steps = [{"credo", ["credo"], :dev}]
+      cmd_fun = stub(%{["credo"] => 0})
+
+      output =
+        capture_plain(fn ->
+          assert Runner.run(steps, false,
+                   cmd: cmd_fun,
+                   skipped: [{"sobelow", "no web code changed"}]
+                 ) == :ok
+        end)
+
+      assert output =~ ~r/ok      credo\n  not run  sobelow \(no web code changed\)/
+    end
+
+    test "an empty run with everything skipped passes" do
+      output =
+        capture_plain(fn ->
+          assert Runner.run([], false, skipped: [{"test", "no change reaches it"}]) == :ok
+        end)
+
+      assert output =~ "not run  test (no change reaches it)"
+    end
+  end
+
   describe "run/3 with the suite in the background" do
-    test "the suite runs while the later foreground steps do" do
+    test "the suite runs while the static checks do" do
       test_pid = self()
 
       steps = [
@@ -113,37 +139,36 @@ defmodule Tymeslot.Precommit.RunnerTest do
         {"credo", ["credo"], :dev}
       ]
 
-      # The suite blocks until the foreground releases it, so the run can only
-      # finish if the two were genuinely in flight at the same time. Verified by
-      # reverting the runner to the sequential path: this and the two cases
-      # below go red, here because a sequential run puts the suite through
-      # `cmd` instead, which this stub deliberately has no clause for.
-      capture_fun = fn ["test"], :test ->
-        send(test_pid, {:suite_started, self()})
+      # Both block until released, and the test releases them only once both
+      # have reported starting, so the run can only finish if the suite and
+      # credo were genuinely in flight at the same time.
+      capture_fun = fn [name], _env, [] ->
+        send(test_pid, {:started, name, self()})
 
         receive do
-          :release -> {"suite output\n", 0}
+          :release -> {"#{name} output\n", 0}
         end
-      end
-
-      cmd_fun = fn
-        ["compile"], :dev ->
-          0
-
-        ["credo"], :dev ->
-          assert_receive {:suite_started, suite}
-          send(suite, :release)
-          0
       end
 
       output =
         capture_plain(fn ->
-          assert Runner.run(steps, false, cmd: cmd_fun, capture: capture_fun) == :ok
+          runner =
+            Task.async(fn ->
+              Runner.run(steps, false, cmd: stub(%{["compile"] => 0}), capture: capture_fun)
+            end)
+
+          assert_receive {:started, first, first_pid}, 1_000
+          assert_receive {:started, second, second_pid}, 1_000
+          assert Enum.sort([first, second]) == ["credo", "test"]
+
+          send(first_pid, :release)
+          send(second_pid, :release)
+          assert Task.await(runner) == :ok
         end)
 
       assert output =~ "ok      test"
       assert output =~ "ok      credo"
-      assert output =~ "suite output"
+      assert output =~ "test output"
     end
 
     test "the summary keeps the declared order, not the order results arrived" do
@@ -156,8 +181,10 @@ defmodule Tymeslot.Precommit.RunnerTest do
       output =
         capture_plain(fn ->
           assert Runner.run(steps, false,
-                   cmd: stub(%{["compile"] => 0, ["dialyzer.incremental"] => 0}),
-                   capture: fn ["test"], :test -> {"", 0} end
+                   cmd: stub(%{["compile"] => 0}),
+                   capture: fn args, _env, [] ->
+                     {"", Map.fetch!(%{["test"] => 0, ["dialyzer.incremental"] => 0}, args)}
+                   end
                  ) == :ok
         end)
 
@@ -175,7 +202,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
           assert catch_exit(
                    Runner.run(steps, false,
                      cmd: stub(%{["compile"] => 0}),
-                     capture: fn ["test"], :test -> {"1 test, 1 failure\n", 2} end
+                     capture: fn ["test"], :test, [] -> {"1 test, 1 failure\n", 2} end
                    )
                  ) == {:shutdown, 1}
         end)
@@ -187,7 +214,7 @@ defmodule Tymeslot.Precommit.RunnerTest do
     test "a broken build never starts the suite" do
       steps = [{"compile", ["compile"], :dev}, {"test", ["test"], :test}]
 
-      capture_fun = fn _args, _env ->
+      capture_fun = fn _args, _env, _extra_env ->
         flunk("the suite ran against a build that does not compile")
       end
 
@@ -203,19 +230,220 @@ defmodule Tymeslot.Precommit.RunnerTest do
     end
 
     test "--fail-fast runs everything in sequence" do
-      steps = [{"compile", ["compile"], :dev}, {"test", ["test"], :test}]
+      steps = [
+        {"compile", ["compile"], :dev},
+        {"credo", ["credo"], :dev},
+        {"test", ["test"], :test}
+      ]
 
-      capture_fun = fn _args, _env -> flunk("--fail-fast must not background a step") end
+      capture_fun = fn _args, _env, _extra_env ->
+        flunk("--fail-fast must not run a step concurrently")
+      end
 
       output =
         capture_plain(fn ->
           assert Runner.run(steps, true,
-                   cmd: stub(%{["compile"] => 0, ["test"] => 0}),
+                   cmd: stub(%{["compile"] => 0, ["credo"] => 0, ["test"] => 0}),
                    capture: capture_fun
                  ) == :ok
         end)
 
+      assert output =~ "ok      credo"
       assert output =~ "ok      test"
+    end
+  end
+
+  describe "run/3 with the static checks running concurrently" do
+    test "the static checks after the compile barriers overlap each other" do
+      test_pid = self()
+
+      steps = [
+        {"compile", ["compile"], :dev},
+        {"credo", ["credo"], :dev},
+        {"sobelow", ["sobelow"], :dev}
+      ]
+
+      # Each check reports that it started and then blocks until released. The
+      # test releases them only once both have reported, so a runner that ran
+      # them one after the other never gets the second report.
+      capture_fun = fn [name], :dev, [] ->
+        send(test_pid, {:started, name, self()})
+
+        receive do
+          :release -> {"#{name} output\n", 0}
+        end
+      end
+
+      output =
+        capture_plain(fn ->
+          runner =
+            Task.async(fn ->
+              Runner.run(steps, false, cmd: stub(%{["compile"] => 0}), capture: capture_fun)
+            end)
+
+          assert_receive {:started, first, first_pid}, 1_000
+          assert_receive {:started, second, second_pid}, 1_000
+          assert Enum.sort([first, second]) == ["credo", "sobelow"]
+
+          send(first_pid, :release)
+          send(second_pid, :release)
+          assert Task.await(runner) == :ok
+        end)
+
+      assert output =~ "credo output"
+      assert output =~ "sobelow output"
+      assert output =~ "ok      credo"
+      assert output =~ "ok      sobelow"
+    end
+
+    test "a step that writes the build finishes before the concurrent checks start" do
+      test_pid = self()
+
+      steps = [
+        {"compile", ["compile"], :dev},
+        {"gettext", ["gettext.check"], :dev},
+        {"credo", ["credo"], :dev}
+      ]
+
+      # gettext runs in the calling process, so a credo already in flight would
+      # have reported by the time the refutation's window closes.
+      cmd_fun = fn
+        ["compile"], :dev ->
+          0
+
+        ["gettext.check"], :dev ->
+          refute_receive :credo_started, 200
+          0
+      end
+
+      capture_fun = fn ["credo"], :dev, [] ->
+        send(test_pid, :credo_started)
+        {"", 0}
+      end
+
+      output =
+        capture_plain(fn ->
+          assert Runner.run(steps, false, cmd: cmd_fun, capture: capture_fun) == :ok
+        end)
+
+      assert_received :credo_started
+      assert output =~ "ok      gettext"
+    end
+
+    test "a failing concurrent check is reported with its output and fails the run" do
+      steps = [
+        {"compile", ["compile"], :dev},
+        {"credo", ["credo"], :dev},
+        {"sobelow", ["sobelow"], :dev}
+      ]
+
+      capture_fun = fn
+        ["credo"], :dev, [] -> {"2 issues found\n", 4}
+        ["sobelow"], :dev, [] -> {"", 0}
+      end
+
+      output =
+        capture_plain(fn ->
+          assert catch_exit(
+                   Runner.run(steps, false, cmd: stub(%{["compile"] => 0}), capture: capture_fun)
+                 ) == {:shutdown, 1}
+        end)
+
+      assert output =~ "2 issues found"
+      assert output =~ "failed  credo (4)"
+      assert output =~ "ok      sobelow"
+    end
+  end
+
+  describe "run/3 with a partitioned suite" do
+    setup do
+      steps = [{"compile", ["compile"], :dev}, {"test", ["test"], :test}]
+      %{steps: steps, cmd: stub(%{["compile"] => 0})}
+    end
+
+    test "runs one mix test per partition, each numbered and capped, all at once",
+         %{steps: steps, cmd: cmd} do
+      test_pid = self()
+
+      # Each partition reports and blocks until released, and the test releases
+      # them only once all three have reported, so they must overlap.
+      capture_fun = fn ["test", "--partitions", "3"], :test, extra_env ->
+        env = Map.new(extra_env)
+        send(test_pid, {:partition, env["MIX_TEST_PARTITION"], env, self()})
+
+        receive do
+          :release -> {"partition #{env["MIX_TEST_PARTITION"]} ran\n", 0}
+        end
+      end
+
+      output =
+        capture_plain(fn ->
+          runner =
+            Task.async(fn ->
+              Runner.run(steps, false,
+                cmd: cmd,
+                capture: capture_fun,
+                suite_plan: fn -> %{partitions: 3, schedulers: 4} end
+              )
+            end)
+
+          partitions =
+            for _partition <- 1..3 do
+              assert_receive {:partition, number, env, pid}, 1_000
+              send(pid, :release)
+              {number, env}
+            end
+
+          assert partitions |> Enum.map(&elem(&1, 0)) |> Enum.sort() == ["1", "2", "3"]
+
+          for {_number, env} <- partitions do
+            assert env["ERL_FLAGS"] =~ ~r/\+S 4:4$/
+          end
+
+          assert Task.await(runner) == :ok
+        end)
+
+      assert output =~ "3 partitions of 4 schedulers each"
+      assert output =~ "--- partition 1 of 3 ---\npartition 1 ran"
+      assert output =~ "--- partition 3 of 3 ---\npartition 3 ran"
+      assert output =~ "ok      test"
+    end
+
+    test "one failing partition fails the suite", %{steps: steps, cmd: cmd} do
+      capture_fun = fn _args, :test, extra_env ->
+        case List.keyfind(extra_env, "MIX_TEST_PARTITION", 0) do
+          {_key, "2"} -> {"1 failure\n", 2}
+          _other -> {"", 0}
+        end
+      end
+
+      output =
+        capture_plain(fn ->
+          assert catch_exit(
+                   Runner.run(steps, false,
+                     cmd: cmd,
+                     capture: capture_fun,
+                     suite_plan: fn -> %{partitions: 3, schedulers: 2} end
+                   )
+                 ) == {:shutdown, 1}
+        end)
+
+      assert output =~ "--- partition 2 of 3 ---\n1 failure"
+      assert output =~ "failed  test (2)"
+    end
+
+    test "no plan runs the suite whole", %{steps: steps, cmd: cmd} do
+      output =
+        capture_plain(fn ->
+          assert Runner.run(steps, false,
+                   cmd: cmd,
+                   capture: fn ["test"], :test, [] -> {"whole\n", 0} end,
+                   suite_plan: fn -> nil end
+                 ) == :ok
+        end)
+
+      assert output =~ "whole"
+      refute output =~ "partition"
     end
   end
 
@@ -225,15 +453,26 @@ defmodule Tymeslot.Precommit.RunnerTest do
   # by about a fifth. Hence a test on the flag itself.
   describe "step_env/1" do
     test "caps schedulers for the dialyzer step" do
-      assert Runner.step_env(["dialyzer"]) == [{"ERL_FLAGS", "+S 8:8"}]
+      assert [{"ERL_FLAGS", flags}] = Runner.step_env(["dialyzer"])
+      assert flags == "+S #{expected_dialyzer_schedulers()}:#{expected_dialyzer_schedulers()}"
     end
 
     # The gate runs the incremental task and keeps `dialyzer` as the cross-check.
     # Both need the cap, and the clause that applies it matches on the task name,
     # so a step reworded to one and not the other would silently lose it.
     test "caps schedulers for the incremental dialyzer step too" do
-      assert Runner.step_env(["dialyzer.incremental", "--list-unused-filters"]) ==
-               [{"ERL_FLAGS", "+S 8:8"}]
+      assert [{"ERL_FLAGS", flags}] =
+               Runner.step_env(["dialyzer.incremental", "--list-unused-filters"])
+
+      assert flags == "+S #{expected_dialyzer_schedulers()}:#{expected_dialyzer_schedulers()}"
+    end
+
+    # Eight measured fastest on a 16-core host; a machine with fewer cores must
+    # not be handed more schedulers than it has.
+    test "caps dialyzer at eight schedulers, or the cores available when fewer" do
+      assert Runner.dialyzer_schedulers(16) == 8
+      assert Runner.dialyzer_schedulers(64) == 8
+      assert Runner.dialyzer_schedulers(4) == 4
     end
 
     test "leaves every other step's environment alone" do
@@ -248,4 +487,6 @@ defmodule Tymeslot.Precommit.RunnerTest do
     # that pushes modules to `async: false` across this suite. It is a plain
     # `System.get_env/2` default; the branch that matters is tested above.
   end
+
+  defp expected_dialyzer_schedulers, do: min(8, System.schedulers_online())
 end

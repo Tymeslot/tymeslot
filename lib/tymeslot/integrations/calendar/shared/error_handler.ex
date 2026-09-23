@@ -93,6 +93,20 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     )
   end
 
+  def sanitize_error_message(:unauthorized, :mailbox_org) do
+    dgettext(
+      "dashboard_calendar_providers",
+      "Authentication failed. If two-factor authentication is enabled on your mailbox.org account, generate an application-specific password under Settings → Security and use that instead."
+    )
+  end
+
+  def sanitize_error_message(:unauthorized, :nextcloud) do
+    dgettext(
+      "dashboard_calendar_providers",
+      "Authentication failed. Check your Nextcloud username and password, or generate an app password under Settings → Security."
+    )
+  end
+
   def sanitize_error_message(:unauthorized, _provider) do
     dgettext(
       "dashboard_calendar_providers",

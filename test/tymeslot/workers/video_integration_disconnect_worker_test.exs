@@ -84,6 +84,41 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
     assert {:error, :not_found} = VideoIntegrationQueries.get(integration.id)
   end
 
+  # A Talk conversation stays on the organiser's server until something deletes
+  # it, and once the row is purged nothing can: the nightly clean-up has no
+  # credentials left to use. So the drain takes the ended meetings' rooms too.
+  test "deletes the conversations of ended Talk meetings before purging the row" do
+    %{user: user} = create_user_with_profile()
+    host = "disconnect-ended.example.com"
+    integration = insert_talk_integration(user, host)
+
+    ended =
+      insert_meeting_for_user(user, %{
+        start_offset: -2 * 86_400,
+        duration: 1800,
+        video_integration_id: integration.id,
+        video_provider: "nextcloud_talk",
+        video_room_id: "ended001"
+      })
+
+    {:ok, _soft} = VideoIntegrationQueries.soft_delete(integration)
+
+    expect(HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
+      assert url == "https://#{host}/ocs/v2.php/apps/spreed/api/v4/room/ended001"
+
+      # The credentials must still exist while the conversation is deleted.
+      assert {:ok, _still_there} = VideoIntegrationQueries.get(integration.id)
+
+      {:ok, %Req.Response{status: 200, body: talk_ocs(nil)}}
+    end)
+
+    assert :ok =
+             perform_job(VideoIntegrationDisconnectWorker, %{"integration_id" => integration.id})
+
+    assert Repo.reload!(ended).video_room_id == nil
+    assert {:error, :not_found} = VideoIntegrationQueries.get(integration.id)
+  end
+
   test "retries and keeps the row when the provider call fails" do
     %{user: user} = create_user_with_profile()
     integration = insert_zoom_integration(user)
@@ -205,6 +240,22 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorkerTest do
     assert {:ok, still_there} = VideoIntegrationQueries.get(integration.id)
     assert still_there.is_active
   end
+
+  defp insert_talk_integration(user, host) do
+    base_url = "https://" <> host
+
+    insert(:video_integration,
+      user: user,
+      provider: "nextcloud_talk",
+      base_url: base_url,
+      client_id_encrypted: Encryption.encrypt("organiser"),
+      client_secret_encrypted: Encryption.encrypt("Abcde-Fghij-Klmno-Pqrst-Uvwxy"),
+      provider_account_id: base_url <> "||organiser"
+    )
+  end
+
+  defp talk_ocs(data),
+    do: Jason.encode!(%{"ocs" => %{"meta" => %{"status" => "ok"}, "data" => data}})
 
   defp insert_zoom_integration(user) do
     insert(:video_integration,

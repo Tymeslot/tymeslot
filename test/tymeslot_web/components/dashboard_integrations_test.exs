@@ -354,6 +354,36 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     assert html =~ ~s(name="integration[provider]" value="mailbox_org")
   end
 
+  test "Nextcloud asks for an app password while other CalDAV servers do not" do
+    base_assigns = %{
+      id: "test",
+      target: "parent-target",
+      myself: "self-target",
+      saving: false,
+      form_values: %{},
+      form_errors: %{},
+      show_calendar_selection: false,
+      discovered_calendars: [],
+      discovery_credentials: %{}
+    }
+
+    html = render_component(&NextcloudConfig.render/1, base_assigns)
+
+    assert html =~ "Create an app password in Nextcloud under"
+    assert html =~ "Personal settings → Security"
+    assert html =~ "two-factor authentication"
+    assert html =~ "App password"
+    refute html =~ "Password / App Password"
+
+    # Radicale, Baïkal, Zimbra and generic CalDAV servers take an ordinary
+    # login password, so they must keep the neutral label and gain no
+    # app-password guidance.
+    html = render_component(&CaldavConfig.render/1, base_assigns)
+
+    assert html =~ "Password / App Password"
+    refute html =~ "Create an app password in Nextcloud under"
+  end
+
   test "renders video provider configs" do
     base_assigns = %{
       target: "parent-target",

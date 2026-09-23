@@ -13,10 +13,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    _profile = insert(:profile, user: user)
+    _profile = insert(:profile, user: user, timezone: "Etc/UTC")
     conn = conn |> Test.init_test_session(%{}) |> fetch_session()
     conn = log_in_user(conn, user)
     {:ok, conn: conn, user: user}
+  end
+
+  # Edits write to the provider from a background Task; answering it keeps a
+  # crashed write from reverting the grid underneath the assertions.
+  setup do
+    Mox.stub(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _context -> :ok end)
+    :ok
   end
 
   describe "inline title editing" do
@@ -486,11 +493,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       |> element("#calendar-grid")
       |> render_hook("request_remove_attendee", %{"email" => "guest@example.com"})
 
+      test_pid = self()
+
+      Mox.stub(Tymeslot.CalendarMock, :update_event, fn uid, data, _context ->
+        send(test_pid, {:provider_update, uid, data})
+        :ok
+      end)
+
       lv
       |> element("#calendar-grid")
       |> render_hook("confirm_remove_attendee", %{})
 
       assert render(lv) =~ "Attendee removed and notified."
+
+      # The removal has to reach the provider as the shortened list: the guest
+      # is told the meeting is off, so leaving her on the server's copy would
+      # put her back in the grid on the next sync.
+      render_async(lv)
+      event_uid = event.uid
+      assert_receive {:provider_update, ^event_uid, %{attendees: []}}
 
       assert_enqueued(
         worker: EmailWorker,
@@ -512,6 +533,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
     end
   end
 
+  # Picking or clearing a provider is an edit of its own and is covered
+  # end-to-end in `InlineEditVideoTest`; this only proves the picker is
+  # offered for an editable event.
   describe "video integration selector on edit" do
     setup %{user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
@@ -540,62 +564,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       assert html =~ "update_edit_video"
       assert html =~ video_integration.name
       assert html =~ "None"
-    end
-
-    test "selecting a video integration marks it active", %{
-      conn: conn,
-      event: event,
-      video_integration: video_integration
-    } do
-      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("[id^='event-#{event.id}-']") |> render_click()
-
-      html =
-        lv
-        |> element("#calendar-grid")
-        |> render_hook("update_edit_video", %{
-          "video_integration_id" => to_string(video_integration.id)
-        })
-
-      # The active provider button gains the turquoise-400 border class.
-      assert html =~ "border-turquoise-400"
-      assert html =~ video_integration.name
-    end
-
-    test "selecting None clears the video integration", %{
-      conn: conn,
-      event: event,
-      video_integration: video_integration
-    } do
-      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("[id^='event-#{event.id}-']") |> render_click()
-
-      # First pick a provider.
-      lv
-      |> element("#calendar-grid")
-      |> render_hook("update_edit_video", %{
-        "video_integration_id" => to_string(video_integration.id)
-      })
-
-      # The provider button is the active one while it is selected.
-      assert has_element?(
-               lv,
-               ~s|button[phx-value-video_integration_id="#{video_integration.id}"].border-turquoise-400|
-             )
-
-      # Then clear it.
-      lv
-      |> element("#calendar-grid")
-      |> render_hook("update_edit_video", %{"video_integration_id" => ""})
-
-      # After clearing, None is the active (turquoise-400) button and the
-      # provider button is no longer active.
-      assert has_element?(lv, ~s|button[phx-value-video_integration_id=""].border-turquoise-400|)
-
-      refute has_element?(
-               lv,
-               ~s|button[phx-value-video_integration_id="#{video_integration.id}"].border-turquoise-400|
-             )
     end
   end
 

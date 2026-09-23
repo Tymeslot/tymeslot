@@ -49,7 +49,6 @@ msgstr "Invio in corso..."
 msgid "are still associated with this entry"
 msgstr "sono ancora associati a questo elemento"
 
-#: lib/tymeslot/auth/validation.ex
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "can't be blank"
@@ -240,3 +239,156 @@ msgstr "esiste già un'integrazione per questo provider"
 #, elixir-autogen, elixir-format
 msgid "is not a valid colour"
 msgstr "non è un colore valido"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be after the start time"
+msgstr "deve venire dopo l'ora di inizio"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must not be before the start date"
+msgstr "non può precedere la data di inizio"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must not be in the past"
+msgstr "non può essere nel passato"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "1 minuto"
+msgstr[1] "%{count} minuti"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "This username is reserved"
+msgstr "Questo nome utente è riservato"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username is required"
+msgstr "Il nome utente è obbligatorio"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be a text value"
+msgstr "Il nome utente deve essere un valore testuale"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be at least %{count} character long"
+msgid_plural "Username must be at least %{count} characters long"
+msgstr[0] "Il nome utente deve contenere almeno %{count} carattere"
+msgstr[1] "Il nome utente deve contenere almeno %{count} caratteri"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be at most %{count} character long"
+msgid_plural "Username must be at most %{count} characters long"
+msgstr[0] "Il nome utente può contenere al massimo %{count} carattere"
+msgstr[1] "Il nome utente può contenere al massimo %{count} caratteri"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"
+msgstr "Il nome utente deve iniziare con una lettera o un numero e può contenere solo lettere minuscole, numeri, trattini bassi e trattini"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "a moment"
+msgstr "un momento"
+
+#: lib/tymeslot/security/rate_limiter/integrations.ex
+#, elixir-autogen, elixir-format
+msgid "calendar lookups"
+msgstr "ricerche nel calendario"
+
+#: lib/tymeslot/security/rate_limiter/integrations.ex
+#, elixir-autogen, elixir-format
+msgid "calendar server checks"
+msgstr "verifiche del server di calendario"
+
+#: lib/tymeslot/security/rate_limiter/integrations.ex
+#, elixir-autogen, elixir-format
+msgid "connection tests"
+msgstr "test di connessione"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be within %{count} years"
+msgid_plural "must be within %{count} years"
+msgstr[0] "deve rientrare entro %{count} anno"
+msgstr[1] "deve rientrare entro %{count} anni"
+
+#: lib/tymeslot/security/rate_limiter/integrations.ex
+#, elixir-autogen, elixir-format
+msgid "video server checks"
+msgstr "verifiche del server video"
+
+#: lib/tymeslot/security/rate_limiter/bookings.ex
+#, elixir-autogen, elixir-format
+msgid "bookings"
+msgstr "prenotazioni"
+
+#: lib/tymeslot/security/rate_limiter/calendar.ex
+#, elixir-autogen, elixir-format
+msgid "calendar event moves"
+msgstr "spostamenti di eventi del calendario"
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "password reset requests"
+msgstr "richieste di reimpostazione della password"
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "signup attempts"
+msgstr "tentativi di registrazione"
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "verification emails"
+msgstr "email di verifica"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgid_plural "%{count} days"
+msgstr[0] "1 giorno"
+msgstr[1] "%{count} giorni"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgid_plural "%{count} hours"
+msgstr[0] "1 ora"
+msgstr[1] "%{count} ore"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "You've reached the limit of %{limit} %{action} per %{window}. Please try again in %{wait}."
+msgstr "Hai raggiunto il limite di %{limit} %{action} ogni %{window}. Riprova tra %{wait}."
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "day"
+msgid_plural "%{count} days"
+msgstr[0] "giorno"
+msgstr[1] "%{count} giorni"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "hour"
+msgid_plural "%{count} hours"
+msgstr[0] "ora"
+msgstr[1] "%{count} ore"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "minuto"
+msgstr[1] "%{count} minuti"

@@ -5,8 +5,11 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
 
   import Ecto.Query
 
+  alias Ecto.UUID
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Repo
+
+  @outstanding_refunds_limit 50
 
   @doc """
   Fetches a `booking_payment` by id and acquires a `SELECT … FOR UPDATE` row
@@ -26,12 +29,64 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     end
   end
 
+  @doc """
+  Like `get_for_update/1`, but only matches a payment taken by `host_user_id`.
+
+  Ownership is part of the locked query, so it is decided under the same row
+  lock as everything the caller validates afterwards. A malformed id, an
+  unknown id and another host's payment all return `{:error, :not_found}`.
+  """
+  @spec get_for_update(term(), integer()) ::
+          {:ok, BookingPaymentSchema.t()} | {:error, :not_found}
+  def get_for_update(id, host_user_id) when is_integer(host_user_id) do
+    with {:ok, uuid} <- cast_id(id) do
+      query =
+        from(b in BookingPaymentSchema,
+          where: b.id == ^uuid and b.host_user_id == ^host_user_id,
+          lock: "FOR UPDATE"
+        )
+
+      case Repo.one(query) do
+        nil -> {:error, :not_found}
+        schema -> {:ok, schema}
+      end
+    end
+  end
+
   @spec get(Ecto.UUID.t()) :: BookingPaymentSchema.t() | nil
   def get(id), do: Repo.get(BookingPaymentSchema, id)
+
+  @doc """
+  Fetches a payment by id only if `host_user_id` took it, or `nil`.
+
+  A malformed id returns `nil` rather than raising, since the id usually comes
+  from the client.
+  """
+  @spec get_for_host(term(), integer()) :: BookingPaymentSchema.t() | nil
+  def get_for_host(id, host_user_id) when is_integer(host_user_id) do
+    case cast_id(id) do
+      {:ok, uuid} -> Repo.get_by(BookingPaymentSchema, id: uuid, host_user_id: host_user_id)
+      {:error, :not_found} -> nil
+    end
+  end
 
   @spec by_meeting_id(Ecto.UUID.t()) :: BookingPaymentSchema.t() | nil
   def by_meeting_id(meeting_id),
     do: Repo.get_by(BookingPaymentSchema, meeting_id: meeting_id)
+
+  @doc """
+  Fetches the payment for a meeting only if `host_user_id` took it, or `nil`.
+  """
+  @spec by_meeting_id_for_host(term(), integer()) :: BookingPaymentSchema.t() | nil
+  def by_meeting_id_for_host(meeting_id, host_user_id) when is_integer(host_user_id) do
+    case cast_id(meeting_id) do
+      {:ok, uuid} ->
+        Repo.get_by(BookingPaymentSchema, meeting_id: uuid, host_user_id: host_user_id)
+
+      {:error, :not_found} ->
+        nil
+    end
+  end
 
   @spec by_checkout_session(String.t()) :: BookingPaymentSchema.t() | nil
   def by_checkout_session(session_id),
@@ -100,6 +155,88 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
         limit: ^limit
 
     Repo.all(query)
+  end
+
+  @doc """
+  Lists the host's payments whose meeting has been cancelled while the host
+  still holds the attendee's money.
+
+  Derived from the meeting's status and the payment's own balance rather than
+  from a stored "refund owed" flag, so it cannot drift out of step with either
+  side. Ordered oldest cancellation first: the longer an attendee has been out
+  of pocket, the more urgent the row.
+
+  Deliberately not bounded by `for_host/2`'s recent-payments window, which is
+  what let an older unrefunded cancellation drop off the dashboard entirely.
+  It is still bounded, at `#{@outstanding_refunds_limit}` rows, so pair it with
+  `outstanding_refunds_summary_for_host/1` and say how many rows the window is
+  hiding rather than truncating in silence.
+  """
+  @spec outstanding_refunds_for_host(integer(), keyword()) :: [BookingPaymentSchema.t()]
+  def outstanding_refunds_for_host(host_user_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit, @outstanding_refunds_limit)
+
+    query =
+      from [_b, m] in outstanding_refunds_query(host_user_id),
+        order_by: [asc: m.cancelled_at],
+        limit: ^limit,
+        preload: [meeting: m]
+
+    Repo.all(query)
+  end
+
+  @doc """
+  Summarises every outstanding refund a host owes: how many rows there are,
+  and how much is still owed in each currency.
+
+  Unbounded on purpose, and sharing its `where` with
+  `outstanding_refunds_for_host/2` so the two cannot drift: the card needs the
+  true count to report its own truncation, and the disconnect confirmation
+  needs the total before the host walks away from it.
+
+  Totals are per currency rather than one sum, because a host who changed
+  their default currency can be holding money in more than one.
+  """
+  @spec outstanding_refunds_summary_for_host(integer()) :: %{
+          count: non_neg_integer(),
+          totals: [%{currency: String.t(), amount_cents: non_neg_integer()}]
+        }
+  def outstanding_refunds_summary_for_host(host_user_id) do
+    # `amount_cents - refunded_amount_cents` is the SQL twin of
+    # `Refunds.refundable_remaining_cents/1`; the `where` above guarantees it
+    # is positive, so the `max(_, 0)` clamp has nothing to do here. The sum is
+    # typed because Ecto cannot infer a type through the subtraction and would
+    # otherwise hand back a `Decimal` where every other amount in the codebase
+    # is an integer count of cents.
+    query =
+      from b in outstanding_refunds_query(host_user_id),
+        group_by: b.currency,
+        order_by: [asc: b.currency],
+        select: %{
+          currency: b.currency,
+          count: count(b.id),
+          amount_cents: type(sum(b.amount_cents - b.refunded_amount_cents), :integer)
+        }
+
+    rows = Repo.all(query)
+
+    %{
+      count: Enum.sum(Enum.map(rows, & &1.count)),
+      totals: Enum.map(rows, &Map.take(&1, [:currency, :amount_cents]))
+    }
+  end
+
+  # Cancelled bookings whose money the host still holds. Derived from the
+  # meeting's status and the payment's own balance rather than from a stored
+  # "refund owed" flag, so it cannot drift out of step with either side.
+  defp outstanding_refunds_query(host_user_id) do
+    from b in BookingPaymentSchema,
+      join: m in assoc(b, :meeting),
+      where:
+        b.host_user_id == ^host_user_id and
+          b.status in ^BookingPaymentSchema.refundable_statuses() and
+          b.refunded_amount_cents < b.amount_cents and
+          m.status == "cancelled"
   end
 
   @doc """
@@ -197,5 +334,12 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
         updated_at: now
       ]
     )
+  end
+
+  defp cast_id(id) do
+    case UUID.cast(id) do
+      {:ok, uuid} -> {:ok, uuid}
+      :error -> {:error, :not_found}
+    end
   end
 end

@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   CalDAV transport layer.
 
   Provides credential-aware wrappers for the WebDAV/CalDAV HTTP methods
-  (PROPFIND, REPORT, PUT, DELETE, HEAD). Encodes Basic Auth credentials,
+  (PROPFIND, REPORT, GET, PUT, DELETE, HEAD). Encodes Basic Auth credentials,
   constructs method-specific headers, and maps raw HTTP status codes and
   transport exceptions into the typed `error_reason()` vocabulary.
 
@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   # Aliased as CalDAVBase to avoid shadowing Elixir's built-in Base module,
   # which is referenced by name in build_headers/3 for Base64 encoding.
   alias Tymeslot.Integrations.Calendar.CalDAV.Base, as: CalDAVBase
+  alias Tymeslot.Integrations.Calendar.CalDAV.DigestAuth
   alias Tymeslot.Integrations.Calendar.CalDAV.XmlHandler
   alias Tymeslot.Integrations.Calendar.Shared.HttpLogging
 
@@ -76,24 +77,26 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   end
 
   defp do_propfind(url, username, password, opts) do
-    headers = build_propfind_headers(username, password, opts)
     body = Keyword.get(opts, :body, XmlHandler.build_propfind_request())
     timeout = Keyword.get(opts, :timeout, Keyword.get(opts, :discovery_timeout, 10_000))
 
-    case Config.http_client_module().request(:propfind, url, body, headers,
-           receive_timeout: timeout,
-           ssrf_protect: true
-         ) do
+    extra_headers = [
+      {"Content-Type", "application/xml"},
+      {"Depth", Keyword.get(opts, :depth, "1")}
+    ]
+
+    result =
+      authed_request("PROPFIND", url, username, password, extra_headers, fn headers ->
+        Config.http_client_module().request(:propfind, url, body, headers,
+          receive_timeout: timeout,
+          ssrf_protect: true
+        )
+      end)
+
+    case result do
       {:ok, response} -> classify(response, :propfind, url, success: 200..299)
       {:error, reason} -> handle_read_transport_error(reason, "PROPFIND")
     end
-  end
-
-  defp build_propfind_headers(username, password, opts) do
-    build_headers(username, password, [
-      {"Content-Type", "application/xml"},
-      {"Depth", Keyword.get(opts, :depth, "1")}
-    ])
   end
 
   @doc """
@@ -113,18 +116,22 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   @spec report(String.t(), String.t(), String.t(), String.t(), keyword()) ::
           {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
   def report(url, username, password, body, opts \\ []) do
-    headers =
-      build_headers(username, password, [
-        {"Content-Type", "application/xml; charset=utf-8"},
-        {"Depth", Keyword.get(opts, :depth, "1")}
-      ])
+    extra_headers = [
+      {"Content-Type", "application/xml; charset=utf-8"},
+      {"Depth", Keyword.get(opts, :depth, "1")}
+    ]
 
     timeout = Keyword.get(opts, :timeout, CalDAVBase.report_timeout_ms())
 
-    case Config.http_client_module().request(:report, url, body, headers,
-           receive_timeout: timeout,
-           ssrf_protect: true
-         ) do
+    result =
+      authed_request("REPORT", url, username, password, extra_headers, fn headers ->
+        Config.http_client_module().request(:report, url, body, headers,
+          receive_timeout: timeout,
+          ssrf_protect: true
+        )
+      end)
+
+    case result do
       {:ok, response} ->
         classify(response, :report, url,
           success: 200..299,
@@ -148,7 +155,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   @spec put_event(String.t(), String.t(), String.t(), String.t(), keyword()) ::
           {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
   def put_event(url, username, password, ical_data, opts \\ []) do
-    headers = build_put_event_headers(username, password, opts)
+    extra_headers = put_event_headers(opts)
     # 45s is the sweet spot for CalDAV writes: long enough that transient
     # slowness (backup running, GC pause, lock contention) completes cleanly
     # without interrupting the server mid-write, short enough that a truly
@@ -158,10 +165,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     # Oban workers are async, so the user never waits on this timeout.
     timeout = Keyword.get(opts, :timeout, 45_000)
 
-    case Config.http_client_module().put(url, ical_data, headers,
-           receive_timeout: timeout,
-           ssrf_protect: true
-         ) do
+    result =
+      authed_request("PUT", url, username, password, extra_headers, fn headers ->
+        Config.http_client_module().put(url, ical_data, headers,
+          receive_timeout: timeout,
+          ssrf_protect: true
+        )
+      end)
+
+    case result do
       {:ok, response} ->
         classify(response, :put, url,
           success: [200, 201, 204],
@@ -187,14 +199,18 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   @spec delete_event(String.t(), String.t(), String.t(), keyword()) ::
           {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
   def delete_event(url, username, password, opts \\ []) do
-    headers = build_headers(username, password, [])
     # Matches put_event — see the note there for rationale.
     timeout = Keyword.get(opts, :timeout, 45_000)
 
-    case Config.http_client_module().delete(url, headers,
-           receive_timeout: timeout,
-           ssrf_protect: true
-         ) do
+    result =
+      authed_request("DELETE", url, username, password, [], fn headers ->
+        Config.http_client_module().delete(url, headers,
+          receive_timeout: timeout,
+          ssrf_protect: true
+        )
+      end)
+
+    case result do
       {:ok, response} ->
         # 404 counts as success — the event may already be gone.
         classify(response, :delete, url, success: [200, 204, 404])
@@ -205,18 +221,55 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   end
 
   @doc """
+  Performs a GET request for a single calendar object resource.
+
+  Answers with the server's current iCalendar document and, in the response
+  headers, the ETag that identifies it — the pair a property-level patch has
+  to be applied to, since patching anything older would revert whatever
+  changed on the server in between.
+
+  Unlike DELETE, a 404 is an error here (`:not_found`), and so is a 410
+  (`:gone`): the caller is asking whether the event exists.
+  """
+  @spec get_event(String.t(), String.t(), String.t(), keyword()) ::
+          {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
+  def get_event(url, username, password, opts \\ []) do
+    timeout = Keyword.get(opts, :timeout, 30_000)
+
+    result =
+      authed_request("GET", url, username, password, [], fn headers ->
+        Config.http_client_module().get(url, headers,
+          receive_timeout: timeout,
+          ssrf_protect: true
+        )
+      end)
+
+    case result do
+      {:ok, response} ->
+        classify(response, :get, url, success: [200], status_overrides: %{410 => :gone})
+
+      {:error, reason} ->
+        handle_read_transport_error(reason, :get)
+    end
+  end
+
+  @doc """
   Performs a HEAD request to retrieve current headers (e.g., ETag) for an event.
   """
   @spec head_event(String.t(), String.t(), String.t(), keyword()) ::
           {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
   def head_event(url, username, password, opts \\ []) do
-    headers = build_headers(username, password, [])
     timeout = Keyword.get(opts, :timeout, 30_000)
 
-    case Config.http_client_module().head(url, headers,
-           receive_timeout: timeout,
-           ssrf_protect: true
-         ) do
+    result =
+      authed_request("HEAD", url, username, password, [], fn headers ->
+        Config.http_client_module().head(url, headers,
+          receive_timeout: timeout,
+          ssrf_protect: true
+        )
+      end)
+
+    case result do
       {:ok, response} -> classify(response, :head, url, success: [200, 204])
       {:error, _error_reason} -> {:error, :network_error}
     end
@@ -257,6 +310,61 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     {:unexpected_status, status}
   end
 
+  # Every CalDAV request goes out with Basic credentials. A server that answers
+  # 401 with a Digest challenge gets exactly one retry carrying the computed
+  # Digest response, and the caller sees only the second answer.
+  #
+  # This is not a niche path: Baikal ships `dav_auth_type: Digest` as its
+  # default and SabreDAV refuses a Basic header outright in that mode, so
+  # without this a stock Baikal install is unreachable however correct the
+  # credentials are. See `CalDAV.DigestAuth` for what the challenge may name.
+  #
+  # `http_method` is the uppercase method as it goes on the wire; it is hashed
+  # into the digest credentials, so it must match the request `send` performs.
+  @spec authed_request(
+          String.t(),
+          String.t(),
+          String.t(),
+          String.t(),
+          list(),
+          (list() -> result)
+        ) :: result
+        when result: {:ok, Req.Response.t()} | {:error, Exception.t()}
+  defp authed_request(http_method, url, username, password, extra_headers, send) do
+    case send.(build_headers(username, password, extra_headers)) do
+      {:ok, %Req.Response{status: 401} = response} ->
+        retry_with_digest(response, http_method, url, username, password, extra_headers, send)
+
+      result ->
+        result
+    end
+  end
+
+  defp retry_with_digest(response, http_method, url, username, password, extra_headers, send) do
+    case DigestAuth.build_authorization(response, http_method, url, username, password) do
+      {:ok, authorization} ->
+        send.([authorization | extra_headers])
+
+      # No Digest challenge at all: an ordinary rejected-credentials 401 from a
+      # Basic-auth server. The original response carries the right meaning.
+      :none ->
+        {:ok, response}
+
+      # The server does want Digest, but named something this client cannot
+      # compute. The account owner will see the generic credentials message, so
+      # the specific cause has to reach the operator here or nowhere.
+      {:unsupported, detail} ->
+        Logger.warning(
+          "CalDAV server requires a Digest challenge Tymeslot cannot answer",
+          method: http_method,
+          url: HttpLogging.loggable_url(url, include_path: true),
+          detail: detail
+        )
+
+        {:ok, response}
+    end
+  end
+
   defp build_headers(username, password, additional_headers)
        when is_binary(username) and is_binary(password) do
     # Base.encode64 here refers to Elixir's standard Base module, not
@@ -269,11 +377,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     raise ArgumentError, "CalDAV credentials must be non-nil binaries"
   end
 
-  defp build_put_event_headers(username, password, opts) do
-    base_headers =
-      build_headers(username, password, [{"Content-Type", "text/calendar; charset=utf-8"}])
-
-    add_conditional_headers(base_headers, opts)
+  defp put_event_headers(opts) do
+    add_conditional_headers([{"Content-Type", "text/calendar; charset=utf-8"}], opts)
   end
 
   defp add_conditional_headers(headers, opts) do
@@ -281,7 +386,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
       :update ->
         case Keyword.get(opts, :if_match) do
           nil -> headers ++ [{"If-Match", "*"}]
-          etag -> headers ++ [{"If-Match", etag}]
+          etag -> headers ++ [{"If-Match", if_match_value(etag)}]
         end
 
       # Unconditional overwrite: no If-Match at all. Used by the :keep_local
@@ -297,6 +402,27 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
         headers
     end
   end
+
+  # `If-Match` takes a *quoted* entity-tag (RFC 9110 section 8.8.3). Cached
+  # ETags reach us with the quotes already stripped, since
+  # `EventProcessor.clean_etag/1` removes them so the same tag compares equal
+  # however a server spells it, so they have to be re-quoted here. Sending the
+  # bare token instead is a malformed precondition the server can only reject,
+  # and the rejection arrives as a 412: indistinguishable from a genuine
+  # conflict, so the write is dropped and the organiser is told their change
+  # was reverted. Idempotent, so a caller holding a tag still in wire form (the
+  # HEAD probe and the read-back both return the raw header) is unaffected, and
+  # a weak tag keeps its prefix.
+  defp if_match_value("*"), do: "*"
+
+  defp if_match_value(etag) when is_binary(etag) do
+    case String.trim(etag) do
+      "W/" <> tag -> "W/" <> quote_entity_tag(tag)
+      tag -> quote_entity_tag(tag)
+    end
+  end
+
+  defp quote_entity_tag(tag), do: ~s("#{String.trim(tag, ~s("))}")
 
   defp handle_read_transport_error(%Mint.TransportError{reason: :timeout}, _method),
     do: {:error, :timeout}

@@ -177,10 +177,51 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     api_module().update_event(integration, calendar_id, effective_id, event_attrs)
   end
 
-  @spec call_delete_event(CalendarIntegrationSchema.t(), String.t()) ::
+  @doc """
+  Fetches one event by the Google event id in `provider_event_id`, from the
+  calendar in `calendar_id`. Google addresses an event only within its
+  calendar, so without both the event cannot be looked up.
+  """
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def fetch_event(integration, %{provider_event_id: event_id, calendar_id: calendar_id} = ref)
+      when is_binary(event_id) and event_id != "" and is_binary(calendar_id) and calendar_id != "" do
+    case api_module().get_event(integration, calendar_id, event_id) do
+      {:ok, %{"status" => "cancelled"}} ->
+        {:error, :not_found}
+
+      {:ok, raw} ->
+        EventNormaliser.normalise_events([raw], fetch_context(ref, calendar_id))
+
+      {:error, type, _message} when type in [:not_found, :gone] ->
+        {:error, :not_found}
+
+      {:error, type, _message} ->
+        {:error, type}
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  def fetch_event(_integration, _ref), do: {:error, :unaddressable}
+
+  defp fetch_context(ref, calendar_id),
+    do: %{
+      calendar_integration_id: Map.get(ref, :calendar_integration_id),
+      provider_calendar_id: calendar_id,
+      synced_at: DateTime.utc_now()
+    }
+
+  @spec call_delete_event(CalendarIntegrationSchema.t(), String.t(), keyword()) ::
           {:ok, term()} | {:error, atom(), String.t()}
-  def call_delete_event(integration, event_id) do
-    calendar_id = integration.default_booking_calendar_id || "primary"
+  def call_delete_event(integration, event_id, opts) do
+    # The calendar the event is on, exactly as create and update already read
+    # it. Falling straight to the default booking calendar addressed the wrong
+    # resource for every event on a secondary calendar, which Google answers
+    # with a 404.
+    calendar_id =
+      opts[:calendar_id] || integration.default_booking_calendar_id || "primary"
+
     api_module().delete_event(integration, calendar_id, event_id)
   end
 
@@ -223,8 +264,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
       {:ok, _events} ->
         {:ok, dgettext("dashboard_calendar_providers", "Google Calendar connection successful")}
 
-      {:error, :unauthorized, _message} ->
-        {:error, :unauthorized}
+      {:error, :unauthorized, message} ->
+        {:error, ProviderCommon.unauthorized_reason(message)}
 
       {:error, :rate_limited, _message} ->
         {:error,

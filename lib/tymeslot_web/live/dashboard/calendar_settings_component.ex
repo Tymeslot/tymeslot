@@ -14,7 +14,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.Workers.SyncIcsCalendarWorker
   alias TymeslotWeb.Dashboard.CalendarSettings.ComponentView
   alias TymeslotWeb.Helpers.IntegrationProviders
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
@@ -227,7 +226,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
                |> Task.Supervisor.async_stream_nolink(
                  active,
                  fn integration ->
-                   {integration.name, refresh_one(integration)}
+                   {integration.name, Calendar.refresh_integration(integration)}
                  end,
                  max_concurrency: 5,
                  timeout: 30_000,
@@ -414,26 +413,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   # --- Private Helpers ---
-
-  # A subscription has no discoverable calendar list to refresh (discovery
-  # returns the same synthetic entry every time), so "refresh" means
-  # re-fetching the feed instead, through the same worker the scheduled sync
-  # sweep uses.
-  #
-  # This asks about the feed family specifically, not about read-only
-  # providers: `ics_url` is the only read-only provider left, and the two
-  # questions have different answers for everything else. An Exchange mailbox
-  # discovers real folders and has no feed to re-fetch, so it belongs on the
-  # discovery path with every other credentialed provider.
-  defp refresh_one(%{provider: provider} = integration) do
-    if ProviderConfig.subscription?(provider) do
-      %{"calendar_integration_id" => integration.id}
-      |> SyncIcsCalendarWorker.new()
-      |> Oban.insert()
-    else
-      Calendar.update_integration_with_discovery(integration)
-    end
-  end
 
   defp load_integrations(socket) do
     user_id = socket.assigns.current_user.id

@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
 
   alias Tymeslot.CalendarGrid
   alias TymeslotWeb.Dashboard.CalendarGrid.DesktopReminderFeed
+  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @spec handle_revert_event(map(), Phoenix.LiveView.Socket.t()) ::
@@ -145,6 +146,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     {:ok, socket}
   end
 
+  @doc """
+  Resets the confirmation after a delete the provider would not take.
+
+  Reloads the events on purpose, because a refused delete can still have
+  changed what the grid should show. A delete queued for retry leaves the
+  cached row marked `locally_deleted` with no timing, so the reload drops the
+  event the moment the flash says the delete is queued rather than leaving it
+  on screen until an unrelated reload. A failure that was not queued leaves
+  the row untouched, so the event stays where it was.
+  """
   @spec handle_event_delete_failed(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   def handle_event_delete_failed(assigns, socket) do
@@ -154,6 +165,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
       |> assign(:confirm_delete_event, nil)
       |> assign(:confirm_delete_linked_to_booking, false)
       |> assign(:deleting_event, false)
+      |> Helpers.load_events()
 
     {:ok, socket}
   end
@@ -207,12 +219,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     {:ok, socket}
   end
 
+  @doc """
+  Applies a finished video-room change to the loaded events and, when it is
+  the open one, to the detail modal, then runs the same attendee-notification
+  decision every other inline edit ends in.
+
+  Only the three columns the change wrote are merged, rather than the updated
+  event replacing what is on screen, so a sync that landed while the room was
+  being provisioned is not rolled back. The description is one of them: the
+  join link is written into it, and leaving it behind would show the previous
+  link in the detail modal.
+  """
   @spec handle_video_link_updated(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
-  def handle_video_link_updated(%{event_id: event_id, video_link: video_link}, socket) do
+  def handle_video_link_updated(%{original_event: original, updated_event: updated}, socket) do
+    video = Map.take(updated, [:video_link, :video_integration_id, :description])
+
     updated_events =
       Enum.map(socket.assigns.events, fn e ->
-        if e.id == event_id, do: Map.put(e, :video_link, video_link), else: e
+        if e.id == updated.id, do: Map.merge(e, video), else: e
       end)
 
     selected = socket.assigns.selected_event
@@ -221,12 +246,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
       socket
       |> assign(:events, updated_events)
       |> then(fn s ->
-        if selected && selected.id == event_id,
-          do: assign(s, :selected_event, Map.put(selected, :video_link, video_link)),
+        if selected && selected.id == updated.id,
+          do: assign(s, :selected_event, Map.merge(selected, video)),
           else: s
       end)
 
-    {:ok, socket}
+    {:ok,
+     EditWorkflow.apply_notify_result(
+       socket,
+       original,
+       updated,
+       EditWorkflow.video_changed_message(updated.video_link)
+     )}
   end
 
   @spec handle_initial(map(), Phoenix.LiveView.Socket.t()) ::
@@ -249,12 +280,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
           |> assign(:_initialized, true)
           |> Helpers.load_integrations()
           |> Helpers.assign_view_from_preferences()
+          |> Helpers.assign_timezone()
+          |> open_on_today()
           |> Helpers.load_events()
           |> maybe_auto_refresh()
       end
 
     {:ok, assign_desktop_reminder_feed(socket)}
   end
+
+  defp open_on_today(socket),
+    do: assign(socket, :date, Helpers.today(socket.assigns.user_timezone))
 
   # Recomputes the upcoming desktop-reminder feed. Runs on the initial connect
   # and again on every 60s `current_time` tick (which routes through this same
@@ -269,10 +305,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
       timezone = socket.assigns[:user_timezone] || "Etc/UTC"
       time_format = Helpers.time_format(socket.assigns)
 
+      integrations = Map.get(socket.assigns, :integrations, [])
+
       feed =
         socket
         |> visible_integration_ids()
-        |> CalendarGrid.list_upcoming_events_with_reminders(now)
+        |> CalendarGrid.list_upcoming_events_with_reminders(now, integrations)
         |> DesktopReminderFeed.build(now, timezone, time_format)
 
       assign(socket, :desktop_reminders_feed, feed)

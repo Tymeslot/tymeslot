@@ -38,7 +38,6 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Repo
@@ -199,7 +198,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       assert has_element?(view, "[data-testid='location-error']")
       assert html =~ "Enter the number we should call you on."
       refute html =~ "Meeting Confirmed"
-      assert MeetingListQueries.list_meetings_by_attendee_email("nophone@example.com") == []
+      assert Repo.all_by(MeetingSchema, attendee_email: "nophone@example.com") == []
     end
 
     @tag :capture_log
@@ -216,7 +215,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       assert html =~ "Meeting Confirmed"
       assert html =~ "Phone call (+1 555 0100)"
 
-      assert [meeting] = MeetingListQueries.list_meetings_by_attendee_email("phone@example.com")
+      assert [meeting] = Repo.all_by(MeetingSchema, attendee_email: "phone@example.com")
       assert meeting.location == "Phone call (+1 555 0100)"
       assert meeting.location_kind == "phone"
       assert meeting.location_option_id == "loc-call"
@@ -230,7 +229,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
 
       assert submit(view, "default@example.com") =~ "Meeting Confirmed"
 
-      assert [meeting] = MeetingListQueries.list_meetings_by_attendee_email("default@example.com")
+      assert [meeting] = Repo.all_by(MeetingSchema, attendee_email: "default@example.com")
       assert meeting.location == "Our office (12 High Street)"
       assert meeting.location_option_id == "loc-office"
     end
@@ -287,7 +286,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       assert html =~ "Meeting Confirmed"
       assert html =~ "Video call (Teams)"
 
-      assert [meeting] = MeetingListQueries.list_meetings_by_attendee_email("teams@example.com")
+      assert [meeting] = Repo.all_by(MeetingSchema, attendee_email: "teams@example.com")
       assert meeting.location_option_id == "loc-video"
       assert meeting.video_integration_id == second.id
     end
@@ -316,7 +315,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
 
       assert submit(view, "single@example.com") =~ "Meeting Confirmed"
 
-      assert [meeting] = MeetingListQueries.list_meetings_by_attendee_email("single@example.com")
+      assert [meeting] = Repo.all_by(MeetingSchema, attendee_email: "single@example.com")
       assert meeting.location == "Our office (12 High Street)"
       assert meeting.location_kind == "in_person"
     end
@@ -409,7 +408,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       assert moved.attendee_phone == nil
 
       # Moved, not rebooked.
-      assert [_only] = MeetingListQueries.list_meetings_by_attendee_email("rebook@example.com")
+      assert [_only] = Repo.all_by(MeetingSchema, attendee_email: "rebook@example.com")
     end
 
     @tag :capture_log

@@ -144,11 +144,45 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     end
   end
 
-  @spec call_delete_event(CalendarIntegrationSchema.t(), String.t()) ::
+  @doc """
+  Fetches one event by the Graph event id in `provider_event_id`, whichever
+  calendar holds it.
+  """
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def fetch_event(integration, %{provider_event_id: event_id} = ref)
+      when is_binary(event_id) and event_id != "" do
+    case api_module().get_event(integration, event_id) do
+      {:ok, %{"isCancelled" => true}} ->
+        {:error, :not_found}
+
+      {:ok, raw} ->
+        EventNormaliser.normalise_events([raw], %{
+          calendar_integration_id: Map.get(ref, :calendar_integration_id),
+          # Graph addresses the event without its calendar: this only labels it.
+          provider_calendar_id: Map.get(ref, :calendar_id) || "primary",
+          synced_at: DateTime.utc_now()
+        })
+
+      {:error, type, _message} when type in [:not_found, :gone] ->
+        {:error, :not_found}
+
+      {:error, type, _message} ->
+        {:error, type}
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  def fetch_event(_integration, _ref), do: {:error, :unaddressable}
+
+  @spec call_delete_event(CalendarIntegrationSchema.t(), String.t(), keyword()) ::
           :ok | {:error, atom(), String.t()}
-  def call_delete_event(integration, event_id) do
-    # Use the default booking calendar if set
-    calendar_id = integration.default_booking_calendar_id
+  def call_delete_event(integration, event_id, opts) do
+    # The calendar the event is on, exactly as create and update already read
+    # it; the integration's default booking calendar is only the fallback for
+    # a caller that names none.
+    calendar_id = opts[:calendar_id] || integration.default_booking_calendar_id
 
     if calendar_id do
       api_module().delete_event(integration, calendar_id, event_id)
@@ -198,8 +232,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
         {:ok,
          dgettext("dashboard_calendar_providers", "Outlook Calendar connected successfully!")}
 
-      {:error, :unauthorized, _message} ->
-        {:error, :unauthorized}
+      {:error, :unauthorized, message} ->
+        {:error, ProviderCommon.unauthorized_reason(message)}
 
       {:error, :rate_limited, _message} ->
         {:error,

@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Repo
 
   setup :setup_dashboard_user
@@ -97,6 +98,34 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
       assert has_element?(view, "span.bg-amber-500")
     end
 
+    # The credentials still work, so the integration classifies as healthy and
+    # nothing else in the dashboard says the provider is refusing every room.
+    test "surfaces a video server refusing to create rooms, and drops it once it stops",
+         %{conn: conn, user: user} do
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "nextcloud_talk",
+          name: "Team Talk",
+          is_active: true,
+          room_creation_error: :conversation_creation_restricted
+        )
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/integrations")
+
+      assert html =~ "1 connection needs attention"
+      assert html =~ "Team Talk: new bookings get no video link."
+      assert has_element?(view, "a[href='/dashboard/integrations?tab=video']", "Review")
+      assert has_element?(view, "span.bg-amber-500")
+
+      VideoIntegrationQueries.clear_room_creation_error(integration.id)
+
+      {:ok, cleared_view, cleared_html} = live(conn, ~p"/dashboard/integrations")
+
+      refute cleared_html =~ "needs attention"
+      refute has_element?(cleared_view, "span.bg-amber-500")
+    end
+
     test "shows the connected-calendar count on the Calendars tab",
          %{conn: conn, user: user} do
       insert(:calendar_integration, user: user, is_active: true)
@@ -161,15 +190,17 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubTest do
           provider: "mirotalk",
           name: "Team Room",
           is_active: true,
-          base_url: "https://meet.myserver.com"
+          base_url: "https://meet.myserver.com:8443/talk"
         )
 
       {:ok, view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
-      # The nested video settings component renders the integration title
-      # and its one-line summary (the self-hosted host and type tag).
+      # The nested video settings component renders the integration title, the
+      # self-hosted type tag, and a one-line summary naming the server down to
+      # its port and path — two instances behind one host are different
+      # accounts, so the row has to tell them apart.
       assert html =~ "Team Room"
-      assert html =~ "meet.myserver.com"
+      assert html =~ "meet.myserver.com:8443/talk"
       assert html =~ "self-hosted"
 
       # The row is flat: the edit and delete controls are visible immediately,

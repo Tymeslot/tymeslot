@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Common.OAuth.State do
   Optionally embeds an integration_id for re-authorization flows.
   """
 
+  alias Tymeslot.Security.RedirectPath
+
   @type user_id :: pos_integer()
   @type state :: String.t()
   @type secret :: iodata()
@@ -22,8 +24,9 @@ defmodule Tymeslot.Integrations.Common.OAuth.State do
   and optionally an integration_id for re-authorization and a return_to path.
 
   ## Options
-    - `:return_to` — a relative path (starting with `/`) to redirect to after
-      the OAuth callback. Embedded after a `|` separator in the signed data.
+    - `:return_to`: a relative path to redirect to after the OAuth callback,
+      embedded after a `|` separator in the signed data. Dropped unless
+      `Tymeslot.Security.RedirectPath.safe?/1` accepts it.
   """
   @spec generate(user_id(), secret(), pos_integer() | nil, keyword()) :: state()
   def generate(user_id, secret, integration_id \\ nil, opts \\ [])
@@ -77,25 +80,6 @@ defmodule Tymeslot.Integrations.Common.OAuth.State do
     end
   end
 
-  @doc """
-  Extracts the `return_to` path from a state string without full validation.
-
-  Only use this after `validate/3` has already confirmed the state is authentic.
-  Returns `nil` when no `return_to` was embedded.
-  """
-  @spec peek_return_to(state()) :: String.t() | nil
-  def peek_return_to(state) when is_binary(state) do
-    with [encoded_data, _sig] <- String.split(state, ".", parts: 2),
-         {:ok, data} <- Base.url_decode64(encoded_data),
-         [_core, return_to] <- String.split(data, "|", parts: 2) do
-      if valid_return_to?(return_to), do: return_to
-    else
-      _other -> nil
-    end
-  end
-
-  def peek_return_to(_other), do: nil
-
   # Private helpers
 
   defp secure_equals(a, b) when byte_size(a) == byte_size(b), do: :crypto.hash_equals(a, b)
@@ -143,11 +127,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.State do
     end
   end
 
-  defp valid_return_to?(path) when is_binary(path) do
-    String.starts_with?(path, "/") and not String.starts_with?(path, "//")
-  end
-
-  defp valid_return_to?(_other), do: false
+  defp valid_return_to?(path), do: RedirectPath.safe?(path)
 
   defp within_ttl?(timestamp, ttl_seconds) do
     now = System.system_time(:second)

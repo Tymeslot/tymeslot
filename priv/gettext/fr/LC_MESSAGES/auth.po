@@ -162,11 +162,6 @@ msgstr "Lien invalide"
 msgid "Invalid reset token"
 msgstr "Jeton de réinitialisation invalide"
 
-#: lib/tymeslot_web/controllers/email_change_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid verification link"
-msgstr "Lien de vérification invalide"
-
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #, elixir-autogen, elixir-format
 msgid "Join Tymeslot"
@@ -382,11 +377,6 @@ msgstr "Afficher/masquer le mot de passe"
 #, elixir-autogen, elixir-format
 msgid "Too many OAuth attempts. Please try again later."
 msgstr "Trop de tentatives OAuth. Veuillez réessayer plus tard."
-
-#: lib/tymeslot_web/controllers/email_change_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Too many attempts. Try again in a minute."
-msgstr "Trop de tentatives. Réessayez dans une minute."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
@@ -762,11 +752,6 @@ msgstr "Impossible de vérifier le changement d’adresse e-mail"
 msgid "If your email is registered, you will receive password reset instructions."
 msgstr "Si votre adresse e-mail est enregistrée, vous recevrez les instructions de réinitialisation du mot de passe."
 
-#: lib/tymeslot/auth/social_authentication.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid email format"
-msgstr "Format d’adresse e-mail invalide"
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password."
@@ -802,11 +787,6 @@ msgstr "La nouvelle adresse e-mail doit être différente de l’actuelle"
 #, elixir-autogen, elixir-format
 msgid "New password must be different from current password"
 msgstr "Le nouveau mot de passe doit être différent de l’actuel"
-
-#: lib/tymeslot/auth/validation.ex
-#, elixir-autogen, elixir-format
-msgid "Password is too long"
-msgstr "Le mot de passe est trop long"
 
 #: lib/tymeslot/auth/password_update.ex
 #, elixir-autogen, elixir-format
@@ -888,7 +868,7 @@ msgstr "Cette adresse e-mail est déjà enregistrée. Veuillez en utiliser une a
 msgid "This email is already registered. Please sign in instead."
 msgstr "Cette adresse e-mail est déjà enregistrée. Veuillez plutôt vous connecter."
 
-#: lib/tymeslot/auth/social_authentication.ex
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "This email is already registered. Please use a different email address."
 msgstr "Cette adresse e-mail est déjà enregistrée. Veuillez en utiliser une autre."
@@ -1056,3 +1036,33 @@ msgstr "Votre compte a été créé, mais l’e-mail de vérification n’a pas 
 #, elixir-autogen, elixir-format
 msgid "If an account exists with this email address, password reset instructions have been sent."
 msgstr "Si un compte existe avec cette adresse e-mail, les instructions de réinitialisation du mot de passe ont été envoyées."
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your email address"
+msgstr "Confirmez votre adresse e-mail"
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Press the button below to finish verifying your email address."
+msgstr "Cliquez sur le bouton ci-dessous pour terminer la vérification de votre adresse e-mail."
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Verify email address"
+msgstr "Vérifier l'adresse e-mail"
+
+#: lib/tymeslot_web/controllers/email_change_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your new email address"
+msgstr "Confirmez votre nouvelle adresse e-mail"
+
+#: lib/tymeslot_web/controllers/email_change_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Press the button below to switch your account to this email address."
+msgstr "Cliquez sur le bouton ci-dessous pour associer votre compte à cette adresse e-mail."
+
+#: lib/tymeslot_web/controllers/email_change_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm email change"
+msgstr "Confirmer le changement d'adresse e-mail"

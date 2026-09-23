@@ -102,6 +102,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     |> validate_embed_domains()
     |> validate_booking_limits(:profiles)
     |> unique_constraint(:username)
+    |> foreign_key_constraint(:primary_calendar_integration_id)
   end
 
   @doc """
@@ -189,7 +190,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
 
       username ->
         if username in Profiles.reserved_paths() do
-          add_error(changeset, :username, "is reserved")
+          add_error(changeset, :username, "is reserved", validation: :reserved)
         else
           changeset
         end

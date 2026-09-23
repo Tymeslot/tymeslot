@@ -52,10 +52,11 @@ defmodule Tymeslot.Availability.CalculateBreakTimezoneTest do
     %{
       schedule_id: 1,
       weekly_schedule: schedule(breaks),
-      # Both prefetch keys supplied, so no query is made and the module stays
+      # Every prefetch key supplied, so no query is made and the module stays
       # a pure calculation under test (`prefetch_schedule_data/4` lets an
       # existing key win).
       overrides: [],
+      time_off: [],
       min_advance_hours: 0,
       max_advance_booking_days: 3650,
       buffer_minutes: 0
@@ -157,6 +158,7 @@ defmodule Tymeslot.Availability.CalculateBreakTimezoneTest do
           }
         ],
         overrides: [],
+        time_off: [],
         duration_minutes: 30,
         min_advance_hours: 0,
         max_advance_booking_days: 3650,

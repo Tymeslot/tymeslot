@@ -2,10 +2,11 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
   # Uses global ETS rate limiter state; must not run concurrently.
   use TymeslotWeb.ConnCase, async: false
   @moduletag :utils
+  @moduletag :auth
 
   alias Ecto.Changeset
   alias Phoenix.Flash
-  alias Tymeslot.Auth.{UserQueries, UserTokenQueries}
+  alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Factory
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -17,6 +18,21 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
   end
 
   describe "GET /email-change/:token" do
+    test "renders a confirmation page without changing the email", %{conn: conn} do
+      user = Factory.insert(:user, email: "old@example.com")
+      token = Token.generate_token()
+      {:ok, _user} = UserTokenQueries.request_email_change(user, "new@example.com", token)
+
+      conn = get(conn, ~p"/email-change/#{token}")
+
+      html = html_response(conn, 200)
+      assert html =~ ~s(action="/email-change/#{token}")
+      assert html =~ ~s(method="post")
+      assert Repo.reload!(user).email == "old@example.com"
+    end
+  end
+
+  describe "POST /email-change/:token" do
     test "verifies email change with valid token", %{conn: conn} do
       user = Factory.insert(:user, email: "old@example.com")
       new_email = "new@example.com"
@@ -24,18 +40,58 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
 
       {:ok, _user} = UserTokenQueries.request_email_change(user, new_email, token)
 
-      conn = get(conn, ~p"/email-change/#{token}")
+      conn = post(conn, ~p"/email-change/#{token}")
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :info) =~ "Email changed successfully"
 
       # Verify email actually changed in DB
-      updated_user = UserQueries.get_user!(user.id)
+      updated_user = Repo.reload!(user)
       assert updated_user.email == new_email
     end
 
+    test "the confirmation page's form passes CSRF protection", %{conn: conn} do
+      # Phoenix's test conns skip the CSRF check, so the POST tests above
+      # cannot tell a working form from one whose token is missing or wrong.
+      # Round-trip the rendered form with the check switched back on.
+      user = Factory.insert(:user, email: "old@example.com")
+      token = Token.generate_token()
+      {:ok, _user} = UserTokenQueries.request_email_change(user, "new@example.com", token)
+
+      page = get(conn, ~p"/email-change/#{token}")
+
+      [_match, csrf_token] =
+        Regex.run(~r/name="_csrf_token" value="([^"]+)"/, html_response(page, 200))
+
+      conn =
+        page
+        |> recycle()
+        |> put_private(:plug_skip_csrf_protection, false)
+        |> post(~p"/email-change/#{token}", %{"_csrf_token" => csrf_token})
+
+      assert redirected_to(conn) == "/auth/login"
+      assert Repo.reload!(user).email == "new@example.com"
+    end
+
+    test "refuses a confirmation posted without the form's CSRF token", %{conn: conn} do
+      user = Factory.insert(:user, email: "old@example.com")
+      token = Token.generate_token()
+      {:ok, _user} = UserTokenQueries.request_email_change(user, "new@example.com", token)
+
+      page = get(conn, ~p"/email-change/#{token}")
+
+      assert_error_sent 403, fn ->
+        page
+        |> recycle()
+        |> put_private(:plug_skip_csrf_protection, false)
+        |> post(~p"/email-change/#{token}")
+      end
+
+      assert Repo.reload!(user).email == "old@example.com"
+    end
+
     test "fails with invalid token", %{conn: conn} do
-      conn = get(conn, ~p"/email-change/invalid-token")
+      conn = post(conn, ~p"/email-change/invalid-token")
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "Invalid or expired"
@@ -49,14 +105,14 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
       {:ok, _user} = UserTokenQueries.request_email_change(user, new_email, token)
 
       # Manually expire the token in DB
-      user_in_db = UserQueries.get_user!(user.id)
+      user_in_db = Repo.reload!(user)
       expired_at = DateTime.truncate(DateTime.add(DateTime.utc_now(), -49, :hour), :second)
 
       user_in_db
       |> Changeset.change(email_change_sent_at: expired_at)
       |> Repo.update!()
 
-      conn = get(conn, ~p"/email-change/#{token}")
+      conn = post(conn, ~p"/email-change/#{token}")
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "has expired"
@@ -66,12 +122,12 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
       # 30 requests allowed per minute per IP
       conn =
         Enum.reduce(1..30, conn, fn _attempt, acc ->
-          get(acc, ~p"/email-change/some-token")
+          post(acc, ~p"/email-change/some-token")
         end)
 
-      conn = get(conn, ~p"/email-change/some-token")
+      conn = post(conn, ~p"/email-change/some-token")
       assert redirected_to(conn) == "/auth/login"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Too many attempts"
+      assert Flash.get(conn.assigns.flash, :error) =~ "reached the limit of 30"
     end
   end
 end

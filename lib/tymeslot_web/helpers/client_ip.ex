@@ -15,6 +15,38 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   alias Plug.Conn
   alias Tymeslot.Security.PrivateIPv6
 
+  # The ranges `trusted_peer?/1` matches, in the CIDR form `RemoteIp` takes.
+  @private_client_blocks ~w[127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 ::1/128 fc00::/7]
+
+  @doc """
+  The `clients:` list for the endpoint's `RemoteIp` plug: the conn path's half
+  of `:trust_private_client_ips`.
+
+  `RemoteIp` skips a forwarded address in a reserved block unless `clients:`
+  names it (`proxies:` cannot, as `RemoteIp.type/2` consults it only after
+  `clients:`), so this returns the private blocks when the flag is on and
+  nothing otherwise. Reading the same flag as `get_from_mount/1` is what keeps
+  the conn and socket paths from being configured apart.
+  """
+  @spec remote_ip_clients() :: [String.t()]
+  def remote_ip_clients, do: remote_ip_clients(trust_private_clients?())
+
+  @doc false
+  @spec remote_ip_clients(boolean()) :: [String.t()]
+  def remote_ip_clients(true), do: @private_client_blocks
+  def remote_ip_clients(false), do: []
+
+  @doc """
+  Parses the `TRUST_PRIVATE_CLIENT_IPS` environment variable into the boolean
+  `config/runtime.exs` stores under `:trust_private_client_ips`.
+
+  Accepts `"true"`, `"1"` or `"yes"` (case-sensitive); anything else,
+  including unset (`nil`), leaves the flag off, the fail-safe default for an
+  internet-facing deployment.
+  """
+  @spec trust_private_clients_from_env(String.t() | nil) :: boolean()
+  def trust_private_clients_from_env(value), do: value in ~w[true 1 yes]
+
   @doc """
   Extracts the client IP address from a Plug.Conn or Phoenix.LiveView.Socket.
 
@@ -59,8 +91,22 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   """
   @spec get_from_mount(Phoenix.LiveView.Socket.t()) :: String.t()
   def get_from_mount(%Phoenix.LiveView.Socket{} = socket) do
+    get_from_mount(socket, trust_private_clients?())
+  end
+
+  @doc false
+  # Same as `get_from_mount/1`, with the `:trust_private_client_ips` decision
+  # supplied rather than read from config.
+  #
+  # The flag is threaded in as an argument so that both of its states are
+  # reachable from a test without mutating global application env in an async
+  # suite. Production has exactly one call site, `get_from_mount/1` above, which
+  # reads the configured value.
+  @spec get_from_mount(Phoenix.LiveView.Socket.t(), boolean()) :: String.t()
+  def get_from_mount(%Phoenix.LiveView.Socket{} = socket, trust_private_clients?)
+      when is_boolean(trust_private_clients?) do
     # Try forwarded headers first (critical for reverse proxy setups)
-    forwarded_ip = get_forwarded_from_socket(socket)
+    forwarded_ip = get_forwarded_from_socket(socket, trust_private_clients?)
     peer_ip = get_from_connect_info(socket)
 
     case forwarded_ip do
@@ -137,26 +183,32 @@ defmodule TymeslotWeb.Helpers.ClientIP do
     # Retained for bare %Plug.Conn{} construction in tests or unusual deployment
     # configurations where RemoteIp is not in the plug pipeline.
     # Precedence: cf-connecting-ip > x-real-ip > x-forwarded-for.
-    case Conn.get_req_header(conn, "cf-connecting-ip") do
-      [cf_ip | _rest] ->
-        {:ok, String.trim(cf_ip)}
+    #
+    # Unreachable or not, it applies the same hop filtering as the socket path
+    # and as RemoteIp: leftmost-entry semantics here would mean a deployment
+    # that ever does fall through to this branch resolves the head of a
+    # client-supplied `X-Forwarded-For`, the exact divergence between the two
+    # paths that issue #96 was about.
+    trust_private_clients? = trust_private_clients?()
 
-      [] ->
-        case Conn.get_req_header(conn, "x-real-ip") do
-          [real_ip | _rest] ->
-            {:ok, String.trim(real_ip)}
+    connecting_ip =
+      conn |> first_req_header("cf-connecting-ip") |> usable_forwarded_ip(trust_private_clients?)
 
-          [] ->
-            case Conn.get_req_header(conn, "x-forwarded-for") do
-              [forwarded | _rest] ->
-                # X-Forwarded-For can contain multiple IPs, take the first (original client)
-                ip = forwarded |> String.split(",") |> List.first() |> String.trim()
-                {:ok, ip}
+    real_ip = conn |> first_req_header("x-real-ip") |> usable_forwarded_ip(trust_private_clients?)
 
-              [] ->
-                :error
-            end
-        end
+    forwarded_for =
+      conn |> first_req_header("x-forwarded-for") |> rightmost_usable_hop(trust_private_clients?)
+
+    case connecting_ip || real_ip || forwarded_for do
+      nil -> :error
+      ip -> {:ok, ip}
+    end
+  end
+
+  defp first_req_header(conn, name) do
+    case Conn.get_req_header(conn, name) do
+      [value | _rest] -> value
+      [] -> nil
     end
   end
 
@@ -229,7 +281,12 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   # Forwarded headers are only trusted when the direct peer (socket's TCP source)
   # is a private/loopback address — i.e. a trusted local reverse proxy. A client
   # connecting directly from a public IP cannot inject a spoofed forwarded header.
-  defp get_forwarded_from_socket(socket) do
+  #
+  # `:trust_private_client_ips` deliberately does not move this line. It answers
+  # "may a private *forwarded* address name a visitor?", whereas this one answers
+  # "may this peer speak for someone else?"; trusting a public peer's headers
+  # would let any visitor forge their own rate-limit key.
+  defp get_forwarded_from_socket(socket, trust_private_clients?) do
     peer_address =
       case LiveView.get_connect_info(socket, :peer_data) do
         %{address: addr} -> addr
@@ -239,12 +296,12 @@ defmodule TymeslotWeb.Helpers.ClientIP do
     if trusted_peer?(peer_address) do
       case LiveView.get_connect_info(socket, :x_headers) do
         headers when is_list(headers) ->
-          extract_forwarded_ip_from_tuples(headers)
+          extract_forwarded_ip_from_tuples(headers, trust_private_clients?)
 
         _other ->
           # Fallback to connect_params (client-supplied headers); only reached
           # when connect_info is unavailable (e.g. embed socket without session).
-          get_forwarded_from_connect_params(socket)
+          get_forwarded_from_connect_params(socket, trust_private_clients?)
       end
     else
       # Direct connection from a non-private peer: ignore forwarded headers to
@@ -293,37 +350,123 @@ defmodule TymeslotWeb.Helpers.ClientIP do
 
   defp trusted_peer?(_addr), do: false
 
-  defp get_forwarded_from_connect_params(socket) do
+  defp get_forwarded_from_connect_params(socket, trust_private_clients?) do
     with %{} = connect_params <- LiveView.get_connect_params(socket),
          headers when is_map(headers) <- Map.get(connect_params, "headers", %{}),
-         ip when is_binary(ip) <- extract_forwarded_ip_from_map(headers) do
+         ip when is_binary(ip) <- extract_forwarded_ip_from_map(headers, trust_private_clients?) do
       ip
     else
       _other -> "unknown"
     end
   end
 
-  defp extract_forwarded_ip_from_tuples(headers) do
+  defp extract_forwarded_ip_from_tuples(headers, trust_private_clients?) do
     # Headers are [{name, value}, ...] tuples from :x_headers connect_info.
     # Phoenix's :x_headers collects only headers whose name starts with "x-",
     # so CF-Connecting-IP (no "x-" prefix) is never present on the socket path.
     # Resolution uses x-real-ip (trusted upstream proxy, e.g. Nginx) then
-    # x-forwarded-for (first hop only). Only called when the direct peer is a
-    # trusted private/loopback address (see get_forwarded_from_socket/1).
-    x_real_ip = find_header(headers, "x-real-ip")
-    x_forwarded_for = find_header(headers, "x-forwarded-for")
+    # x-forwarded-for. Only called when the direct peer is a trusted
+    # private/loopback address (see get_forwarded_from_socket/1).
+    real_ip = headers |> find_header("x-real-ip") |> usable_forwarded_ip(trust_private_clients?)
 
-    cond do
-      x_real_ip != nil ->
-        String.trim(x_real_ip)
+    forwarded_for =
+      headers |> find_header("x-forwarded-for") |> rightmost_usable_hop(trust_private_clients?)
 
-      x_forwarded_for != nil ->
-        # Take the first IP from x-forwarded-for chain
-        x_forwarded_for |> String.split(",") |> List.first() |> String.trim()
+    real_ip || forwarded_for || "unknown"
+  end
 
-      true ->
-        "unknown"
+  # A forwarded header may only name a *client*, never another hop.
+  #
+  # `trusted_peer?/1` already draws that line for the socket's direct peer, and
+  # the same line applies here: an address in one of those ranges is a proxy
+  # talking about itself, not a visitor. Accepting one collapses every IP-keyed
+  # rate limit into a single bucket shared by the whole deployment, which is
+  # how a two-tier proxy (`proxy_set_header X-Real-IP $remote_addr` on the
+  # inner hop) locked one self-hoster out of their own booking page — the
+  # limiter kept refusing bookings keyed on `192.168.1.254` (issue #96).
+  #
+  # This matches `Plug.RemoteIp`, which skips reserved blocks on the conn path;
+  # before this the two paths disagreed, and only the socket path was wrong.
+  #
+  # A deployment whose visitors genuinely are on a private network (an
+  # intranet-only self-host) is the case this gets wrong, and it resolves every
+  # visitor to the proxy's LAN address. `:trust_private_client_ips` is the
+  # opt-out for exactly that shape; see `trust_private_clients?/0`.
+  #
+  # That opt-out only restores per-visitor limits when the reverse proxy
+  # directly in front of the app is the only hop between it and the visitor.
+  # With a further private proxy tier upstream of that one (e.g. a LAN proxy
+  # in front of an inner nginx), the flag cannot tell the outer hop apart from
+  # a visitor either, and everyone behind it still collapses onto the outer
+  # proxy's address.
+  defp usable_forwarded_ip(nil, _trust_private_clients?), do: nil
+
+  defp usable_forwarded_ip(value, trust_private_clients?) when is_binary(value) do
+    candidate = value |> String.trim() |> strip_port()
+
+    case :inet.parse_address(String.to_charlist(candidate)) do
+      {:ok, address} -> if proxy_hop?(address, trust_private_clients?), do: nil, else: candidate
+      {:error, :einval} -> nil
     end
+  end
+
+  # Does this forwarded address name a hop rather than a visitor?
+  #
+  # With `:trust_private_client_ips` enabled nothing is treated as a hop and the
+  # rightmost entry wins, which is precisely what `remote_ip_clients/0` does on
+  # the conn path: `RemoteIp.type/2` consults `clients:` before its hardcoded
+  # `@reserved` list, and its own `client_from/2` walks the list from the right.
+  # The two paths therefore stay in agreement in both states of the flag.
+  defp proxy_hop?(_address, true), do: false
+  defp proxy_hop?(address, false), do: trusted_peer?(address)
+
+  # Whether forwarded addresses in loopback/RFC-1918/4193 ranges name visitors.
+  #
+  # `false` everywhere by default, which is the behaviour every internet-facing
+  # deployment needs: an address in one of those ranges is a proxy talking about
+  # itself. An operator whose visitors genuinely sit on the LAN sets
+  # `TRUST_PRIVATE_CLIENT_IPS=true`, which `config/runtime.exs` turns into this
+  # key. The socket path reads it here and the conn path through
+  # `remote_ip_clients/0`, so the two cannot be configured apart.
+  defp trust_private_clients? do
+    Application.get_env(:tymeslot, :trust_private_client_ips, false)
+  end
+
+  # Some proxies write the source port into the header: `[2001:db8::1]:8080`
+  # for IPv6, `203.0.113.9:1234` for IPv4. It has to come off before the value
+  # is used. The port is fresh on every connection, so leaving it in gives each
+  # request from one client its own rate-limit bucket and the limit never fires
+  # for that client at all.
+  defp strip_port("[" <> rest) do
+    case String.split(rest, "]", parts: 2) do
+      [address, _port] -> address
+      _unbracketed -> rest
+    end
+  end
+
+  defp strip_port(value) do
+    # Exactly one colon means IPv4 with a port; a bare IPv6 address has several
+    # and must be left alone.
+    case String.split(value, ":") do
+      [address, _port] -> address
+      _not_ipv4_with_port -> value
+    end
+  end
+
+  # The rightmost usable entry, not the leftmost.
+  #
+  # Each hop appends the address it received the request from, so the tail is
+  # written by our own infrastructure and the head by whoever spoke first — a
+  # client that sends its own `X-Forwarded-For: 1.2.3.4` header puts that value
+  # at the head. Walking from the right and stopping at the first non-hop
+  # address therefore yields the real client and cannot be steered by one.
+  defp rightmost_usable_hop(nil, _trust_private_clients?), do: nil
+
+  defp rightmost_usable_hop(value, trust_private_clients?) when is_binary(value) do
+    value
+    |> String.split(",")
+    |> Enum.reverse()
+    |> Enum.find_value(&usable_forwarded_ip(&1, trust_private_clients?))
   end
 
   defp find_header(headers, name) do
@@ -333,22 +476,18 @@ defmodule TymeslotWeb.Helpers.ClientIP do
     end
   end
 
-  defp extract_forwarded_ip_from_map(headers) do
+  defp extract_forwarded_ip_from_map(headers, trust_private_clients?) do
     # Check for various header formats (headers might be lowercase).
-    # Same precedence as extract_forwarded_ip_from_tuples/1.
-    cond do
-      Map.has_key?(headers, "cf-connecting-ip") ->
-        String.trim(Map.get(headers, "cf-connecting-ip"))
+    # Same precedence and same hop filtering as extract_forwarded_ip_from_tuples/2.
+    connecting_ip =
+      headers |> Map.get("cf-connecting-ip") |> usable_forwarded_ip(trust_private_clients?)
 
-      Map.has_key?(headers, "x-real-ip") ->
-        String.trim(Map.get(headers, "x-real-ip"))
+    real_ip = headers |> Map.get("x-real-ip") |> usable_forwarded_ip(trust_private_clients?)
 
-      Map.has_key?(headers, "x-forwarded-for") ->
-        String.trim(List.first(String.split(headers["x-forwarded-for"], ",")))
+    forwarded_for =
+      headers |> Map.get("x-forwarded-for") |> rightmost_usable_hop(trust_private_clients?)
 
-      true ->
-        nil
-    end
+    connecting_ip || real_ip || forwarded_for
   end
 
   # Private functions for User Agent extraction

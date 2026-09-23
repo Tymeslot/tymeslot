@@ -10,6 +10,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Availability.AvailabilityBreakSchema
   alias Tymeslot.Availability.AvailabilityOverrideSchema
   alias Tymeslot.Availability.AvailabilityScheduleSchema
+  alias Tymeslot.Availability.TimeOffPeriodSchema
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
@@ -295,6 +296,20 @@ defmodule Tymeslot.Factory do
     }
   end
 
+  @spec time_off_period_factory() :: Tymeslot.Availability.TimeOffPeriodSchema.t()
+  def time_off_period_factory do
+    starts_on = Date.add(Date.utc_today(), 7)
+
+    %TimeOffPeriodSchema{
+      starts_on: starts_on,
+      ends_on: Date.add(starts_on, 6),
+      start_time: nil,
+      end_time: nil,
+      label: "Holiday",
+      profile: build(:profile)
+    }
+  end
+
   @spec theme_customization_factory() :: Tymeslot.ThemeCustomizations.ThemeCustomizationSchema.t()
   def theme_customization_factory do
     %ThemeCustomizationSchema{
@@ -426,6 +441,16 @@ defmodule Tymeslot.Factory do
       status: "pending",
       refunded_amount_cents: 0
     }
+  end
+
+  # A settled charge, which is what the refund flow acts on.
+  @spec paid_booking_payment_factory() :: Tymeslot.MeetingPayments.BookingPaymentSchema.t()
+  def paid_booking_payment_factory do
+    struct!(booking_payment_factory(),
+      stripe_charge_id: sequence(:bp_stripe_charge_id, &"ch_#{&1}"),
+      status: "paid",
+      paid_at: DateTime.utc_now(:second)
+    )
   end
 
   @spec poll_factory() :: Tymeslot.Polls.PollSchema.t()

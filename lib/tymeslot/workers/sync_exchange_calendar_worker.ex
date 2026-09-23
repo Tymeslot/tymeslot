@@ -180,7 +180,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
-  alias Tymeslot.Integrations.HealthCheck
+  alias Tymeslot.Workers.SyncHealth
 
   @busy_only EventRole.busy_only()
   @display_only EventRole.display_only()
@@ -199,6 +199,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
         integration
         |> sync()
         |> handle_result(integration)
+        |> tap(&SyncHealth.record_outcome(integration, &1))
 
       {:error, :not_found} ->
         Logger.warning("Exchange integration not found, discarding sync job",
@@ -291,7 +292,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   end
 
   defp fetch_one_calendar(integration, client, from, to) do
-    calendar_id = client[:calendar_id]
+    calendar_id = client.calendar_id
     context = ItemCache.item_context(integration, client)
 
     with {:ok, items} <-
@@ -344,7 +345,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
 
     CalendarManagement.flag_for_reconnection(
       integration,
-      dgettext(
+      dgettext_noop(
         "dashboard_calendar_providers",
         "The Exchange server rejected the stored credentials. Please reconnect the integration."
       ),
@@ -358,7 +359,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   defp handle_result({:error, :no_mailbox_address}, integration) do
     CalendarManagement.flag_for_reconnection(
       integration,
-      dgettext(
+      dgettext_noop(
         "dashboard_calendar_providers",
         "Tymeslot needs the mailbox's email address to read its free/busy time. Please reconnect the integration and provide it."
       ),
@@ -406,27 +407,19 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   # whole window. It is not a general "this sync succeeded" marker here:
   # `ItemCache.full_sync_stale?/1` reads it back to decide when the next full
   # read is due, so an incremental cycle that stamped it would keep resetting
-  # the very clock it is measured against. `last_sync_at` and
-  # `last_external_sync_at` are the per-cycle markers, and the sweep's own
-  # Exchange cadence reads the latter.
+  # the very clock it is measured against. `last_external_sync_at` is the
+  # per-cycle marker, and the sweep's own Exchange cadence reads it.
+  #
+  # Clearing `sync_error` and `needs_reauth` is not done here: it belongs to
+  # every provider's successful cycle alike, so `SyncHealth.record_outcome/2`
+  # owns it at the job boundary.
   defp mark_synced(integration, count, item_read) do
     now = DateTime.utc_now(:second)
 
-    attrs =
-      Map.merge(
-        %{
-          last_sync_at: now,
-          last_external_sync_at: now,
-          sync_error: nil,
-          needs_reauth: false
-        },
-        full_read_stamp(item_read, now)
-      )
+    attrs = Map.merge(%{last_external_sync_at: now}, full_read_stamp(item_read, now))
 
     case CalendarIntegrationQueries.update_sync_state(integration, attrs) do
       {:ok, _updated} ->
-        HealthCheck.mark_synced_successfully(:calendar, integration.id)
-
         Logger.info("Exchange calendar refreshed",
           calendar_integration_id: integration.id,
           event_count: count
@@ -447,6 +440,10 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   defp full_read_stamp(:full, now), do: %{last_full_sync_at: now}
   defp full_read_stamp(:incremental, _now), do: %{}
 
+  # The failure streak is not recorded here: `perform/1` feeds the whole
+  # cycle's verdict to `SyncHealth.record_outcome/2`, and the clauses that
+  # flag for reconnection never reach this helper at all. This one owns the
+  # message the dashboard shows.
   defp record_failure(integration, reason) do
     Logger.error("Exchange calendar sync failed",
       calendar_integration_id: integration.id,

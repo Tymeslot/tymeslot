@@ -10,7 +10,6 @@ defmodule Tymeslot.Workers.ZoomScopeAuditWorkerTest do
   @moduletag :workers
   @moduletag :integrations
 
-  import ExUnit.CaptureLog
   import Tymeslot.Factory
 
   alias Tymeslot.Repo
@@ -18,26 +17,27 @@ defmodule Tymeslot.Workers.ZoomScopeAuditWorkerTest do
   alias Tymeslot.Workers.ZoomScopeAuditWorker
 
   # Everything Tymeslot currently asks Zoom for.
-  @current_grant "meeting:write:meeting meeting:delete:meeting meeting:read:meeting user:read:user"
+  @current_grant "meeting:write:meeting meeting:update:meeting meeting:delete:meeting " <>
+                   "meeting:read:meeting user:read:user"
 
-  # A grant issued before `meeting:delete:meeting` was requested: short of a
+  # A grant issued before `meeting:update:meeting` was requested: short of a
   # scope Tymeslot does ask for, so reconnecting genuinely restores it.
-  @pre_delete_grant "meeting:write:meeting meeting:read:meeting user:read:user"
+  @pre_update_grant "meeting:write:meeting meeting:delete:meeting meeting:read:meeting user:read:user"
 
   describe "perform/1" do
     test "flags a stale grant and tells the user what they have lost" do
-      integration = zoom_integration(oauth_scope: @pre_delete_grant)
+      integration = zoom_integration(oauth_scope: @pre_update_grant)
 
       assert :ok = perform_job(ZoomScopeAuditWorker, %{})
 
       reloaded = Repo.reload!(integration)
       assert reloaded.needs_reauth
-      assert reloaded.sync_error =~ "cancel meetings"
+      assert reloaded.sync_error =~ "reschedule meetings"
       assert reloaded.sync_error =~ "reconnect"
     end
 
     test "emails the account owner rather than waiting for them to visit the dashboard" do
-      integration = zoom_integration(oauth_scope: @pre_delete_grant)
+      integration = zoom_integration(oauth_scope: @pre_update_grant)
 
       assert :ok = perform_job(ZoomScopeAuditWorker, %{})
 
@@ -52,37 +52,15 @@ defmodule Tymeslot.Workers.ZoomScopeAuditWorkerTest do
       )
     end
 
-    test "does not ask a user to reconnect for a scope Tymeslot never requests" do
-      # `meeting:update:meeting` is absent from every grant because the Zoom app
-      # is not approved for it. Reconnecting would produce exactly the same
-      # scopes, so sending the user round that loop would be a lie.
-      integration = zoom_integration(oauth_scope: @current_grant)
+    test "names the earliest operation the grant cannot perform" do
+      # Short of both the update and the delete scope: rescheduling comes first
+      # in a meeting's lifecycle, so that is what the user is told they lost.
+      integration =
+        zoom_integration(oauth_scope: "meeting:write:meeting meeting:read:meeting user:read:user")
 
       assert :ok = perform_job(ZoomScopeAuditWorker, %{})
 
-      refute Repo.reload!(integration).needs_reauth
-      refute_enqueued(worker: EmailWorker)
-    end
-
-    test "reports the blocked integrations so the gap is not silent" do
-      zoom_integration(oauth_scope: @current_grant)
-
-      log =
-        capture_log(fn ->
-          assert :ok = perform_job(ZoomScopeAuditWorker, %{})
-        end)
-
-      assert log =~ "users cannot fix this by reconnecting"
-    end
-
-    test "still flags a stale grant that is also short an unrequestable scope" do
-      # The pre-delete grant lacks `meeting:update:meeting` too. The gap the
-      # user can close must not be masked by the one they cannot.
-      integration = zoom_integration(oauth_scope: @pre_delete_grant)
-
-      assert :ok = perform_job(ZoomScopeAuditWorker, %{})
-
-      assert Repo.reload!(integration).needs_reauth
+      assert Repo.reload!(integration).sync_error =~ "reschedule meetings"
     end
 
     test "leaves a grant holding every requested scope alone" do
@@ -108,7 +86,7 @@ defmodule Tymeslot.Workers.ZoomScopeAuditWorkerTest do
     test "does not re-notify an integration already flagged" do
       # The user has the badge and the email already; a second one would say
       # nothing new about a problem they are looking at.
-      zoom_integration(oauth_scope: @pre_delete_grant, needs_reauth: true)
+      zoom_integration(oauth_scope: @pre_update_grant, needs_reauth: true)
 
       assert :ok = perform_job(ZoomScopeAuditWorker, %{})
 
@@ -124,7 +102,7 @@ defmodule Tymeslot.Workers.ZoomScopeAuditWorkerTest do
     end
 
     test "ignores a deactivated Zoom integration" do
-      integration = zoom_integration(oauth_scope: @pre_delete_grant, is_active: false)
+      integration = zoom_integration(oauth_scope: @pre_update_grant, is_active: false)
 
       assert :ok = perform_job(ZoomScopeAuditWorker, %{})
 

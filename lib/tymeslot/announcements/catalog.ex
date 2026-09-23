@@ -50,6 +50,12 @@ defmodule Tymeslot.Announcements.Catalog do
   @booking_page_text_published_at ~U[2026-09-02 00:00:00Z]
   @booking_page_text_expires_at ~U[2026-10-02 00:00:00Z]
 
+  @time_off_published_at ~U[2026-09-19 00:00:00Z]
+  @time_off_expires_at ~U[2026-10-19 00:00:00Z]
+
+  @video_providers_published_at ~U[2026-09-22 00:00:00Z]
+  @video_providers_expires_at ~U[2026-10-22 00:00:00Z]
+
   @meeting_locations_published_at ~U[2026-09-23 00:00:00Z]
   @meeting_locations_expires_at ~U[2026-10-23 00:00:00Z]
 
@@ -61,6 +67,8 @@ defmodule Tymeslot.Announcements.Catalog do
     # entries.
     [
       meeting_locations(),
+      video_providers(),
+      time_off(),
       booking_approval(),
       booking_page_text(),
       availability_schedules(),
@@ -94,6 +102,47 @@ defmodule Tymeslot.Announcements.Catalog do
       cta_docs_slug: "meeting-locations",
       published_at: @meeting_locations_published_at,
       expires_at: @meeting_locations_expires_at
+    }
+  end
+
+  defp video_providers do
+    %Announcement{
+      key: "video_providers_2026_09",
+      title: dgettext("onboarding", "Meet on Jitsi, kMeet or Nextcloud Talk"),
+      body:
+        dgettext(
+          "onboarding",
+          "Three more video providers join Zoom, Google Meet, Teams and MiroTalk in the " <>
+            "integrations picker. Point Tymeslot at your own Jitsi or Nextcloud and every " <>
+            "booking gets a room of its own: a Talk conversation keeps its lobby shut until " <>
+            "the meeting starts, moves when you reschedule and is deleted when you cancel. " <>
+            "kMeet needs no setup at all."
+        ),
+      image_path: "/images/announcements/video-providers.svg",
+      cta_label: dgettext("onboarding", "Read the docs"),
+      cta_docs_slug: "nextcloud-talk",
+      published_at: @video_providers_published_at,
+      expires_at: @video_providers_expires_at
+    }
+  end
+
+  defp time_off do
+    %Announcement{
+      key: "time_off",
+      title: dgettext("onboarding", "Close the days you are away"),
+      body:
+        dgettext(
+          "onboarding",
+          "Add a holiday on the availability page and those days stop being offered, across " <>
+            "every schedule and every meeting type, without a blocking event in any calendar " <>
+            "you have connected. Give the first and last day a time when you leave mid-" <>
+            "afternoon or come back mid-morning. Bookings already in your diary keep their " <>
+            "times, and you are shown which ones before you save. Nobody booking you sees why " <>
+            "the days are closed."
+        ),
+      image_path: "/images/announcements/time-off.svg",
+      published_at: @time_off_published_at,
+      expires_at: @time_off_expires_at
     }
   end
 

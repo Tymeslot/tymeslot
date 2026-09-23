@@ -10,9 +10,11 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
   alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
+  alias Tymeslot.Integrations.Video.NeedsReauth
   alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
@@ -34,6 +36,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
                 )
 
   @graph_api_base_url "https://graph.microsoft.com/v1.0"
+
+  # Room creation's requests to the provider's API. `request_timeout` caps each
+  # whole response, so the budget below is a real bound; a create answers with
+  # one small JSON body, so the cap waits no less than the receive timeout
+  # alone did in practice. The API never redirects these requests, and one
+  # that did would get a fresh budget, so redirects are refused.
+  @create_request_options [receive_timeout: 45_000, request_timeout: 45_000, redirect: false]
   @teams_url_pattern ~r/teams\.microsoft\.com\/l\/meetup-join\//
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
@@ -97,7 +106,10 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
           }
         }
 
-        Logger.info("Successfully created Teams meeting", room_id: room_data.room_id)
+        Logger.info("Successfully created Teams meeting",
+          room_ref: Redactor.fingerprint(room_data.room_id)
+        )
+
         {:ok, room_data}
 
       {:error, reason} = error ->
@@ -124,6 +136,16 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
       do: error,
       else: {:provider_error, reason}
   end
+
+  # The slowest creation refreshes the token (through the shared OAuth client,
+  # at the HTTP client's default timeouts), creates the event and, when the
+  # event came back without a Teams link, deletes it again.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def room_creation_budget_ms,
+    do:
+      HTTPClient.request_budget_ms(:post) +
+        HTTPClient.request_budget_ms(:post, @create_request_options) +
+        HTTPClient.request_budget_ms(:delete, @create_request_options)
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, _participant_email, _role, _meeting_time) do
@@ -210,7 +232,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def handle_meeting_event(:meeting_ended, room_data, _additional_data) do
-    Logger.info("Teams meeting ended", room_id: room_data.room_id)
+    Logger.info("Teams meeting ended", room_ref: Redactor.fingerprint(room_data.room_id))
     :ok
   end
 
@@ -319,7 +341,12 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     # Pass nil to use default Teams scope from TeamsOAuthHelper
     teams_scope = nil
 
-    case teams_oauth_helper().refresh_access_token(refresh_token, teams_scope) do
+    case teams_oauth_helper().refresh_access_token(refresh_token, teams_scope,
+           log_context: [
+             integration_id: Map.get(config, :integration_id),
+             user_id: Map.get(config, :user_id)
+           ]
+         ) do
       {:ok, refreshed_tokens} ->
         Logger.info("Successfully refreshed Teams OAuth token")
 
@@ -368,7 +395,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
            url,
            Jason.encode!(meeting_payload),
            headers,
-           []
+           @create_request_options
          ) do
       {:ok, %Req.Response{status: 201, body: body}} ->
         parse_meeting_response(token, body)
@@ -399,11 +426,11 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   # surfaces this via the "Reconnect required" badge on the video row. Purely
   # additive: it does not touch token validation or the OAuthTokenManager flow.
   defp flag_revoked_token(config) do
-    OAuthTokenManager.flag_needs_reauth(config,
+    NeedsReauth.flag(config,
       label: "Teams",
       event: "teams_token_revoked",
       message:
-        dgettext(
+        dgettext_noop(
           "dashboard_integrations",
           "Microsoft Teams access was revoked. Please reconnect your Teams account."
         )
@@ -486,7 +513,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   defp delete_orphaned_event(token, event_id) do
     url = "#{@graph_api_base_url}/me/events/#{URI.encode(event_id)}"
 
-    case Config.http_client_module().request(:delete, url, "", graph_headers(token), []) do
+    case Config.http_client_module().request(
+           :delete,
+           url,
+           "",
+           graph_headers(token),
+           @create_request_options
+         ) do
       {:ok, %Req.Response{status: status}} when status in [200, 202, 204] ->
         Logger.info("Deleted Teams calendar event left without a join link")
         :ok

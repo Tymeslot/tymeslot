@@ -110,6 +110,7 @@ defmodule TymeslotWeb.AccountLiveTest do
         |> render_submit()
 
       assert html =~ "Current password is incorrect"
+      assert has_element?(view, ~s(input[name="email_form[current_password]"][aria-invalid]))
     end
 
     test "can cancel a pending email change", %{conn: conn, user: user} do
@@ -237,6 +238,59 @@ defmodule TymeslotWeb.AccountLiveTest do
         |> render_submit()
 
       assert html =~ "different from current"
+      assert has_element?(view, ~s(input[name="password_form[new_password]"][aria-invalid]))
+    end
+
+    test "a wrong current password equal to the new one is reported as incorrect",
+         %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      view |> element("button", "Change Password") |> render_click()
+
+      html =
+        view
+        |> form("form[phx-submit='update_password']", %{
+          "password_form" => %{
+            "current_password" => "WrongPassword123!",
+            "new_password" => "WrongPassword123!",
+            "new_password_confirmation" => "WrongPassword123!"
+          }
+        })
+        |> render_submit()
+
+      assert html =~ "Current password is incorrect"
+      refute html =~ "different from current"
+
+      assert has_element?(
+               view,
+               ~s(input[name="password_form[current_password]"][aria-invalid])
+             )
+    end
+
+    test "shows a translated domain error next to its field", %{conn: conn, user: user} do
+      {:ok, _user} = user |> Changeset.change(locale: "de") |> Repo.update()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      render_click(view, "toggle_password_form")
+
+      html =
+        view
+        |> form("form[phx-submit='update_password']", %{
+          "password_form" => %{
+            "current_password" => "WrongPassword123!",
+            "new_password" => "NewPassword123!",
+            "new_password_confirmation" => "NewPassword123!"
+          }
+        })
+        |> render_submit()
+
+      assert html =~ "Das aktuelle Passwort ist falsch"
+
+      assert has_element?(
+               view,
+               ~s(input[name="password_form[current_password]"][aria-invalid])
+             )
     end
   end
 
@@ -464,25 +518,23 @@ defmodule TymeslotWeb.AccountLiveTest do
                base: ["Rate limited"]
              }
 
-      assert ErrorFormatter.format({:error, "Current password is incorrect"}) == %{
-               current_password: ["Current password is incorrect"]
-             }
-
-      assert ErrorFormatter.format({:error, "email already taken"}) == %{
-               new_email: ["email already taken"]
-             }
-
-      assert ErrorFormatter.format({:error, "passwords must match"}) == %{
-               new_password_confirmation: ["passwords must match"]
-             }
-
-      assert ErrorFormatter.format({:error, "must be at least 8 characters"}) == %{
-               new_password: ["must be at least 8 characters"]
-             }
-
-      assert ErrorFormatter.format("some other error") == %{base: ["some other error"]}
+      assert ErrorFormatter.format({:error, "some other error"}) == %{base: ["some other error"]}
       assert ErrorFormatter.format(%{field: "error"}) == %{field: ["error"]}
       assert ErrorFormatter.format(nil) == %{base: ["An unexpected error occurred"]}
+    end
+
+    test "places a field-tagged error under its field whatever the message says" do
+      assert ErrorFormatter.format({:current_password, "Das aktuelle Passwort ist falsch"}) ==
+               %{current_password: ["Das aktuelle Passwort ist falsch"]}
+
+      # A message that the old wording-based placement would have misfiled.
+      assert ErrorFormatter.format({:new_password, "email must match"}) ==
+               %{new_password: ["email must match"]}
+    end
+
+    test "leaves a field-tagged error from the email form under its field" do
+      assert ErrorFormatter.format({:new_email, "Email address is already in use"}) ==
+               %{new_email: ["Email address is already in use"]}
     end
   end
 

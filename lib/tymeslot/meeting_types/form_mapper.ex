@@ -36,11 +36,9 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   """
   @spec build_attrs(map(), map()) :: {:ok, map()} | {:error, error()}
   def build_attrs(params, ui_state) do
-    payment_required = params["payment_required"] == "true"
-
     with {:ok, duration_minutes} <- parse_duration(params["duration"]),
          {:ok, reminder_config} <- normalize_reminder_config(params["reminder_config"]),
-         {:ok, price_cents} <- parse_price_cents(payment_required, params["price"]),
+         {:ok, payment} <- payment_attrs(params),
          {:ok, approval_window_hours} <- ApprovalWindow.parse(params["approval_window_hours"]) do
       attrs = %{
         name: params["name"],
@@ -55,9 +53,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         calendar_integration_id: blank_to_nil(params["calendar_integration_id"]),
         availability_schedule_id: blank_to_nil(params["availability_schedule_id"]),
         target_calendar_id: blank_to_nil(params["target_calendar_id"]),
-        reminder_config: reminder_config,
-        payment_required: payment_required,
-        price_cents: price_cents
+        reminder_config: reminder_config
       }
 
       attrs =
@@ -65,8 +61,33 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         |> Map.merge(booking_limits(params))
         |> maybe_put_custom_fields(params)
         |> maybe_put_locations(params)
+        |> Map.merge(payment)
 
       {:ok, attrs}
+    end
+  end
+
+  # A form that cannot render the payment controls does not post them, and an
+  # absent key is not a request to make the meeting type free. Both
+  # `MeetingTypeForm.Submission` and its hidden inputs omit the pair whenever
+  # the host cannot accept charges, so reading the absence as `false` cleared
+  # the stored price on the next unrelated save — a rename, a new duration —
+  # with nothing said to the host, who then had to re-enter every price after
+  # reconnecting Stripe. Same shape, and the same reason, as
+  # `maybe_put_custom_fields/2` below.
+  defp payment_attrs(params) do
+    if Map.has_key?(params, "payment_required") do
+      payment_required = params["payment_required"] == "true"
+
+      case parse_price_cents(payment_required, params["price"]) do
+        {:ok, price_cents} ->
+          {:ok, %{payment_required: payment_required, price_cents: price_cents}}
+
+        {:error, _reason} = error ->
+          error
+      end
+    else
+      {:ok, %{}}
     end
   end
 
@@ -79,7 +100,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   """
   @spec payment_opts(integer()) :: keyword()
   def payment_opts(user_id) do
-    currency = host_currency(user_id)
+    currency = MeetingPayments.host_currency(user_id)
 
     [
       host_charges_enabled: MeetingPayments.charges_enabled_for_user?(user_id),
@@ -149,20 +170,6 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value
-
-  # The host's pricing currency is their Connect account's default currency.
-  # When no account exists yet, fall back to the first entry of the currency
-  # allowlist (defaulting to "usd"), matching the default the payments
-  # dashboard surfaces.
-  defp host_currency(user_id) do
-    case MeetingPayments.get_connect_account_for_user(user_id) do
-      %{default_currency: currency} when is_binary(currency) and currency != "" ->
-        currency
-
-      _other ->
-        List.first(MeetingPayments.currency_allowlist()) || "usd"
-    end
-  end
 
   # Converts the major-unit price string from the form into integer cents.
   # When payment is not required the price is irrelevant and stored as nil.

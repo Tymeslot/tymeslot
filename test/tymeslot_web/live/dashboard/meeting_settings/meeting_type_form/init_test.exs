@@ -294,4 +294,29 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
       refute Init.all_selected_read_only?(999, [])
     end
   end
+
+  describe "target_calendar_status/3" do
+    setup do
+      calendars =
+        Enum.map(
+          [
+            %{id: "cal-1", name: "Work", selected: true, read_only: false},
+            %{id: "cal-2", name: "Shared (view only)", selected: true, read_only: true}
+          ],
+          &CalendarEntry.normalize/1
+        )
+
+      %{integrations: [%{id: 1, calendar_list: calendars}]}
+    end
+
+    test "reports the stored target's writability", %{integrations: integrations} do
+      assert Init.target_calendar_status(1, "cal-1", integrations) == :ok
+      assert Init.target_calendar_status(1, "cal-2", integrations) == :read_only
+      assert Init.target_calendar_status(1, "cal-gone", integrations) == :missing
+    end
+
+    test "is :ok when no integration matches", %{integrations: integrations} do
+      assert Init.target_calendar_status(999, "cal-2", integrations) == :ok
+    end
+  end
 end

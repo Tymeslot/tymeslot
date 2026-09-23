@@ -54,6 +54,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
         InfoHandlers,
         LiveHelpers,
         PathHandlers,
+        ReschedulePin,
         SchedulingInit,
         SlotGrouping
       }
@@ -406,6 +407,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
             engine.current_index == last_index ->
               case QEngine.validate_all(engine) do
                 {:ok, _answers} ->
+                  socket = assign(socket, :engine, QEngine.mark_reviewed(engine))
                   {:noreply, transition_to(socket, :booking, %{})}
 
                 {:error, _errors} ->
@@ -435,7 +437,15 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       defp handle_confirmation_events(socket, event, _data) do
         case event do
           :schedule_another ->
-            {:noreply, transition_to(GuestBooking.assign_defaults(socket), :overview, %{})}
+            # The flow restarts here without navigating, so the reschedule
+            # context has to be dropped explicitly or the next submit moves the
+            # meeting that was just moved. See `ReschedulePin.abandon/1`.
+            socket =
+              socket
+              |> GuestBooking.assign_defaults()
+              |> ReschedulePin.abandon()
+
+            {:noreply, transition_to(socket, :overview, %{})}
 
           _other ->
             {:noreply, socket}
@@ -473,7 +483,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
         engine =
           if defs != socket.assigns.engine.definitions,
-            do: QEngine.init(defs),
+            do: LiveHelpers.init_questions_engine(socket, defs),
             else: socket.assigns.engine
 
         assign(socket, :engine, engine)

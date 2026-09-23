@@ -7,13 +7,84 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar.Shared.DiscoveryCache
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.IntegrationHealthWorker
 
   setup :verify_on_exit!
+
+  describe "flag_for_reconnection/3" do
+    test "flags the integration with the reason and emails its owner" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, needs_reauth: false)
+
+      assert {:discard, "calendar gone"} =
+               CalendarManagement.flag_for_reconnection(
+                 integration,
+                 "Pick a calendar.",
+                 "calendar gone"
+               )
+
+      reloaded = Repo.reload!(integration)
+      assert reloaded.needs_reauth
+      assert reloaded.sync_error == "Pick a calendar."
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_reauth_notification",
+          "user_id" => user.id,
+          "integration_id" => integration.id,
+          "integration_type" => "calendar"
+        }
+      )
+    end
+
+    # Only the false → true transition is news; the sync workers can re-flag.
+    test "does not email again for an integration already flagged" do
+      integration = insert(:calendar_integration, needs_reauth: true, sync_error: "Old reason.")
+
+      assert {:discard, _reason} =
+               CalendarManagement.flag_for_reconnection(integration, "New reason.", "still gone")
+
+      assert Repo.reload!(integration).sync_error == "New reason."
+      refute_enqueued(worker: EmailWorker)
+    end
+  end
+
+  describe "handle_reauth_required/2" do
+    test "flags the integration and emails its owner on the false → true transition" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, needs_reauth: false)
+
+      assert {:discard, _reason} = CalendarManagement.handle_reauth_required(integration)
+
+      reloaded = Repo.reload!(integration)
+      assert reloaded.needs_reauth
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_reauth_notification",
+          "user_id" => user.id,
+          "integration_id" => integration.id,
+          "integration_type" => "calendar"
+        }
+      )
+    end
+
+    test "does not email again for an integration already flagged" do
+      integration = insert(:calendar_integration, needs_reauth: true, sync_error: "Old reason.")
+
+      assert {:discard, _reason} = CalendarManagement.handle_reauth_required(integration)
+
+      refute_enqueued(worker: EmailWorker)
+    end
+  end
 
   # ---------------------------------------------------------------------------
   # toggle_with_primary_rebalance/1 — reactivation health reset and conflicts
@@ -149,6 +220,15 @@ defmodule Tymeslot.Integrations.CalendarManagementTest do
   """
 
   describe "create_calendar_integration/1" do
+    # `DiscoveryCache` is a process-wide ETS table keyed on
+    # `{provider, "username@host"}`, and this fixture shares its key with the
+    # discovery tests, so a result they leave behind would stand in for the
+    # stubbed PROPFIND below.
+    setup do
+      DiscoveryCache.clear_all()
+      :ok
+    end
+
     test "emits [:tymeslot, :calendar, :connected] telemetry with provider on success" do
       stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 207, body: @propfind_calendar_response}}

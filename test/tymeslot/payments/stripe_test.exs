@@ -1,5 +1,7 @@
 defmodule Tymeslot.Payments.StripeTest do
-  use Tymeslot.DataCase, async: true
+  # async: false: The :stripe_* module keys and :api_key are read through Payments.Config by
+  # every payment path, so swapping them reaches far past this module.
+  use Tymeslot.DataCase, async: false
   @moduletag :payments
 
   import Mox

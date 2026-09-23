@@ -8,7 +8,10 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   """
 
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
+  alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles.ProfileQueries
@@ -16,9 +19,14 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   require Logger
 
+  # Failures a later replay cannot recover: queueing them would only keep a
+  # dead row in the offline queue.
+  @non_queueable_errors [:unauthorized, :not_found, :meeting_not_found, :rate_limited]
+
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
-  @type create_context ::
+  @type create_context :: write_context()
+  @type write_context ::
           user_id()
           | {integration_id(), user_id()}
           | MeetingSchema.t()
@@ -123,8 +131,14 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   Accepts a user_id, Meeting, or MeetingType to determine the target calendar.
   If a Meeting or MeetingType is provided, uses their configured calendar integration.
   Falls back to the user's primary calendar if not specified.
+
+  `{:ok, created}` carries a `CreatedEvent` struct whatever the provider is:
+  the UID the event was written under, plus whichever of the provider's own
+  event id, ETag and calendar id that provider answered with. A caller reads
+  the field it needs rather than matching on the provider.
   """
-  @spec create_event(calendar_event_data(), create_context()) :: {:ok, map()} | {:error, term()}
+  @spec create_event(calendar_event_data(), create_context()) ::
+          {:ok, CreatedEvent.t()} | {:error, term()}
   def create_event(event_data, context) do
     case context do
       id when is_integer(id) and id > 0 ->
@@ -164,21 +178,113 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   @doc """
   Delete an event with optional target integration, meeting context, or user_id.
+
+  `opts` reach the provider unchanged; pass `provider_event_id:` when the
+  event is addressed by its provider-native id rather than its iCal UID.
   """
-  @spec delete_event(
-          String.t(),
-          pos_integer() | MeetingSchema.t() | {pos_integer(), pos_integer()} | nil
-        ) ::
-          :ok | {:error, term()}
-  def delete_event(uid, context \\ nil) do
-    behaviour_module().delete_event(uid, context)
+  @spec delete_event(String.t(), write_context(), keyword()) :: :ok | {:error, term()}
+  def delete_event(uid, context \\ nil, opts \\ []) do
+    behaviour_module().delete_event(uid, context, opts)
   end
 
   @doc """
-  Get a single event by UID.
+  Deletes an event on the provider, then reconciles any Tymeslot meeting
+  linked to it as externally deleted.
+
+  The linked meeting is looked up before the delete, so its attendee email
+  can still be reported once the reconciliation has cancelled it. Nothing is
+  reconciled when the delete fails.
+
+  Returns `{:ok, result}` where `result` carries `:uid`, `:integration_id`,
+  `:reconcile_result` and, when a meeting was linked, `:meeting_attendee_email`.
+
+  An `{:error, _}` return means the provider refused the delete and the event
+  is still on the calendar. A reconciliation that fails once the event is
+  gone is not that: it is reported in `:reconcile_result`, whether it came
+  back as an error or blew up, so callers can tell the organiser their
+  booking may still stand rather than that the delete failed.
   """
-  @spec get_event(String.t(), user_id() | nil) :: {:ok, map()} | {:error, :not_found | term()}
-  def get_event(uid, user_id \\ nil), do: behaviour_module().get_event(uid, user_id)
+  @spec delete_event_and_reconcile(
+          String.t(),
+          String.t() | nil,
+          {integration_id(), user_id()},
+          keyword()
+        ) :: {:ok, map()} | {:error, term()}
+  def delete_event_and_reconcile(
+        uid,
+        provider_event_id,
+        {integration_id, _user_id} = context,
+        opts
+      ) do
+    linked_meeting = Sync.find_meeting(integration_id, provider_event_id, uid)
+
+    with :ok <- delete_event(uid, context, opts) do
+      reconcile_result = reconcile_deleted(integration_id, provider_event_id, uid)
+      result = %{uid: uid, integration_id: integration_id, reconcile_result: reconcile_result}
+
+      case linked_meeting do
+        {:ok, meeting} -> {:ok, Map.put(result, :meeting_attendee_email, meeting.attendee_email)}
+        {:error, :not_found} -> {:ok, result}
+      end
+    end
+  end
+
+  # The event is already off the calendar by the time this runs, so a raise
+  # here must not escape as a failed delete: the caller would report an event
+  # that no longer exists as still needing deleting, and say nothing about the
+  # booking that was left standing. Reported as a failed reconciliation
+  # instead, which is what it is.
+  defp reconcile_deleted(integration_id, provider_event_id, uid) do
+    Sync.reconcile(integration_id, provider_event_id, uid, :deleted)
+  rescue
+    error ->
+      Logger.error("Reconciliation crashed after the calendar event was deleted",
+        calendar_integration_id: integration_id,
+        provider_event_id: provider_event_id,
+        uid: uid,
+        error: Exception.format(:error, error, __STACKTRACE__)
+      )
+
+      {:error, error}
+  end
+
+  @doc """
+  Whether a calendar event is linked to a Tymeslot meeting, matched by
+  provider event id first and iCal UID second.
+  """
+  @spec event_linked_to_booking?(integration_id(), String.t() | nil, String.t() | nil) ::
+          boolean()
+  def event_linked_to_booking?(integration_id, provider_event_id, uid) do
+    match?({:ok, _meeting}, Sync.find_meeting(integration_id, provider_event_id, uid))
+  end
+
+  @doc """
+  Queues a failed write on `target` for replay on the next sync cycle.
+
+  `target` names the event (`:uid` and `:calendar_integration_id`) and
+  `event_data` carries the fields needed to rebuild the write. Returns `:ok`
+  when the write was queued, or `:ignored` when the integration has no
+  offline queue (every provider outside the CalDAV family).
+
+  Callers should consult `queueable_error?/1` first: a failure a retry cannot
+  recover would only leave a dead row in the queue.
+  """
+  @spec queue_for_offline_retry(QueueWiring.meeting(), QueueWiring.action(), map()) ::
+          :ok | :ignored
+  def queue_for_offline_retry(target, action, event_data) do
+    QueueWiring.tag(target, action, event_data)
+  end
+
+  @doc """
+  Whether a failed calendar write is worth queueing for a later retry.
+
+  Authorisation failures, missing events or meetings, and rate limiting are
+  not: replaying the same write cannot succeed, or must wait on the
+  provider's own retry schedule rather than the next sync cycle.
+  """
+  @spec queueable_error?(term()) :: boolean()
+  def queueable_error?(reason) when reason in @non_queueable_errors, do: false
+  def queueable_error?(_reason), do: true
 
   @doc """
   Returns the booking calendar integration info for a user or meeting type (id and path) used for event creation.

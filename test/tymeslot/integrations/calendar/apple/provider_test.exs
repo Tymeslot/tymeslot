@@ -46,6 +46,32 @@ defmodule Tymeslot.Integrations.Calendar.Apple.ProviderTest do
   end
 
   describe "validate_config/1" do
+    # The scheme-less form is how this field is most commonly got wrong, and
+    # `URI.parse/1` gives it `scheme: nil`, which lands in the same refusal
+    # branch as `ftp://`. Both must carry the provider's own guidance rather
+    # than the shared module's generic "start with https://" default.
+    test "names the expected iCloud server for a scheme-less URL" do
+      config = %{
+        base_url: "caldav.icloud.com",
+        username: "you@icloud.com",
+        password: "abcd-efgh-ijkl-mnop"
+      }
+
+      assert {:error, message} = Provider.validate_config(config)
+      assert String.contains?(message, "https://caldav.icloud.com")
+    end
+
+    test "names the expected iCloud server for a non-HTTP scheme" do
+      config = %{
+        base_url: "ftp://caldav.icloud.com",
+        username: "you@icloud.com",
+        password: "abcd-efgh-ijkl-mnop"
+      }
+
+      assert {:error, message} = Provider.validate_config(config)
+      assert String.contains?(message, "https://caldav.icloud.com")
+    end
+
     test "rejects HTTP for the public iCloud host" do
       config = %{
         base_url: "http://caldav.icloud.com",

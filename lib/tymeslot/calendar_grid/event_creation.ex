@@ -8,7 +8,10 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     * build iCal event data from the dashboard create form,
     * plan and attach video-conference data (inline Google Meet or a
       separately-provisioned room),
-    * call the calendar provider via `Calendar.Events`,
+    * call the calendar provider via `Calendar.Events`, queueing a failed
+      create for offline retry,
+    * drop the organiser's cached availability so the newly blocked time
+      stops being offered on the booking page,
     * fire attendee notifications, and
     * look up integration metadata for the cache row.
 
@@ -24,7 +27,11 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   require Logger
 
   alias Tymeslot.Bookings.CreateAdHoc
+  alias Tymeslot.CalendarGrid.EventVideo
+  alias Tymeslot.CalendarGrid.EventVideoRooms
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.CalendarManagement
@@ -32,7 +39,6 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.Rooms, as: VideoRooms
   alias Tymeslot.Meetings.AttendeeNotifications
-  alias Tymeslot.Utils.MapKeys
 
   @doc """
   Returns the flash message surfaced to the user when an integration's
@@ -53,10 +59,15 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   the parsed `:start_at`/`:end_at` datetimes. On success the returned map
   carries everything the web layer needs to cache the event, notify the grid,
   and flash the user (including `:reauth_required` when the integration's
-  credentials need re-encrypting). On failure it carries enough context for
-  the web layer to queue an offline retry.
+  credentials need re-encrypting).
+
+  A failed create is queued for replay on the next sync when the error is one
+  a retry can recover (see `Calendar.Events.queueable_error?/1`) and the
+  integration has an offline queue (the CalDAV family), and the failure reports
+  `retry: :queued`; otherwise `retry: :not_queued`.
   """
-  @spec run_create_event(map()) :: {:ok, map()} | {:error, term(), map()}
+  @spec run_create_event(map()) ::
+          {:ok, map()} | {:error, %{reason: term(), retry: :queued | :not_queued}}
   def run_create_event(payload) do
     %{creating: creating, user_id: user_id, start_at: start_at, end_at: end_at} = payload
 
@@ -83,7 +94,19 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     plan =
       MeetingProvisioning.plan(creating.integration_id, creating[:video_integration_id], user_id)
 
-    video_context = provision_video_room_for_plan(plan, event_details, user_id)
+    # What recording a room made for this event needs: the event's identity in
+    # the calendar and its timing (see `EventVideoRooms.record/2`).
+    grid_event = %{
+      user_id: user_id,
+      calendar_integration_id: creating.integration_id,
+      uid: uid,
+      all_day: Map.get(creating, :all_day, false),
+      start: start_at,
+      end: end_at,
+      recurrence_rule: Map.get(creating, :recurrence_rule)
+    }
+
+    video_context = provision_video_room_for_plan(plan, event_details, grid_event)
 
     event_data =
       build_event_data(uid, creating, start_at, end_at, event_details, video_context, plan)
@@ -156,12 +179,28 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
 
     base_data = MeetingProvisioning.attach_conference_data(raw_base, plan)
 
-    attendees = Enum.map(event_details.attendees, fn a -> %{"email" => a.email} end)
-
-    if attendees != [], do: Map.put(base_data, :attendees, attendees), else: base_data
+    case event_details.attendees do
+      [] -> base_data
+      attendees -> Map.put(base_data, :attendees, attendees)
+    end
   end
 
-  defp finalise_create_result({:ok, created}, ctx) do
+  defp finalise_create_result({:ok, %CreatedEvent{} = created}, ctx) do
+    # Google and Outlook address the event by the id they returned, not by the
+    # uid it was written under, so a room recorded under that uid learns it,
+    # and Google only within the calendar it was written to. The provider's
+    # own answer names that calendar where it reports one; the form's choice
+    # is the fallback for the providers that do not.
+    if ctx.video_context[:room_id],
+      do:
+        :ok =
+          EventVideoRooms.identified(
+            ctx.creating.integration_id,
+            ctx.uid,
+            CreatedEvent.local_uid(created),
+            created.calendar_id || written_calendar_id(ctx.creating)
+          )
+
     case MeetingProvisioning.finalise(ctx.video_context, created, ctx.plan) do
       {:ok, video_context} ->
         build_create_success(
@@ -195,30 +234,62 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   end
 
   defp finalise_create_result({:error, reason}, ctx) do
-    # Carry context so the LiveView can tag the cache row for offline
-    # retry. Use the pre-generated UID so a later retry reconciles to
-    # the same cache entry.
-    {:error, reason,
-     %{
-       uid: ctx.uid,
-       calendar_integration_id: ctx.creating.integration_id,
-       summary: ctx.creating.title,
-       start_time: ctx.start_at,
-       end_time: ctx.end_at,
-       location: ctx.creating[:location],
-       description: ctx.creating[:description]
-     }}
+    {:error, %{reason: reason, retry: queue_retry(ctx, reason)}}
   end
 
-  defp provision_video_room_for_plan(:none, _event_details, _user_id), do: %{}
-  defp provision_video_room_for_plan({:inline, _video_id}, _event_details, _user_id), do: %{}
+  # The queued row carries the pre-generated UID, so the replayed create
+  # addresses the same event the failed one tried to write.
+  #
+  # Deliberately no availability invalidation: a queued create exists on no
+  # server yet, and availability is fetched from the providers rather than
+  # read out of this table, so the slot is genuinely still free and dropping
+  # the organiser's entries would only make the next booking page slower. The
+  # sync that flushes the queue invalidates when the create actually lands.
+  defp queue_retry(ctx, reason) do
+    target = %{uid: ctx.uid, calendar_integration_id: ctx.creating.integration_id}
 
-  defp provision_video_room_for_plan({:separate, video_id}, event_details, user_id) do
-    provision_video_room(video_id, user_id, event_details)
+    event_data = %{
+      summary: ctx.creating.title,
+      start_time: ctx.start_at,
+      end_time: ctx.end_at,
+      location: ctx.creating[:location],
+      description: ctx.creating[:description]
+    }
+
+    with true <- CalendarEvents.queueable_error?(reason),
+         :ok <- CalendarEvents.queue_for_offline_retry(target, :create, event_data) do
+      :queued
+    else
+      _not_queued -> :not_queued
+    end
   end
 
-  defp build_create_success(created, creating, user_id, start_at, end_at, video_context) do
-    uid = if is_binary(created), do: created, else: MapKeys.get_binary(created, :uid)
+  # An all-day create carries its dates in `start_at`/`end_at` (see
+  # `build_event_data/7`); the invitation reads an all-day event by the same
+  # fields a cached one has, so they are renamed to match.
+  defp notify_timing(%{all_day: true}, %Date{} = start_date, %Date{} = end_date),
+    do: %{all_day: true, start_date: start_date, end_date: end_date}
+
+  defp notify_timing(_creating, start_at, end_at), do: %{start_at: start_at, end_at: end_at}
+
+  defp provision_video_room_for_plan(:none, _event_details, _grid_event), do: %{}
+
+  defp provision_video_room_for_plan({:inline, _video_id}, _event_details, _grid_event),
+    do: %{}
+
+  defp provision_video_room_for_plan({:separate, video_id}, event_details, grid_event) do
+    provision_video_room(video_id, event_details, grid_event)
+  end
+
+  defp build_create_success(
+         %CreatedEvent{} = created,
+         creating,
+         user_id,
+         start_at,
+         end_at,
+         video_context
+       ) do
+    uid = CreatedEvent.local_uid(created)
 
     {provider, default_booking_calendar_id, reauth_required?} =
       lookup_integration_metadata(creating.integration_id)
@@ -226,24 +297,39 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     meeting_url = video_context[:meeting_url]
     video_room_id = video_context[:room_id]
 
-    notify_event = %{
-      uid: uid,
-      summary: creating.title,
-      start_at: start_at,
-      end_at: end_at,
-      location: creating[:location],
-      description: build_description(creating[:description], video_context),
-      video_link: meeting_url,
-      attendee_video_url: meeting_url,
-      ical_sequence: 0,
-      calendar_integration: %{user_id: user_id}
-    }
+    notify_event =
+      creating
+      |> notify_timing(start_at, end_at)
+      |> Map.merge(%{
+        uid: uid,
+        summary: creating.title,
+        location: creating[:location],
+        description: build_description(creating[:description], video_context),
+        video_link: meeting_url,
+        attendee_video_url: meeting_url,
+        ical_sequence: 0,
+        calendar_integration: %{user_id: user_id}
+      })
 
     attendees =
       Enum.map(creating[:attendees] || [], fn email -> %{email: email} end)
 
+    # The provider write has landed, so the organiser is now busy for this
+    # slot. Availability is memoised per user, so without this the booking
+    # page keeps offering the hour the host has just blocked until the entries
+    # expire. Drawing an event on the grid is the ordinary way to make oneself
+    # unavailable, so it is the write path that most needs the drop. Both
+    # `finalise_create_result/2` success clauses funnel through here, and the
+    # failure clause does not, so a queued create is left alone.
+    AvailabilityCache.invalidate_for_user(user_id)
+
     {:ok, _status} = AttendeeNotifications.event_created(notify_event, attendees)
 
+    # The provider's answer to the create is the only place the event's
+    # server-side identity is free: after this it costs a sync. Both fields are
+    # optional (a CalDAV server need not answer a PUT with an ETag, and no
+    # provider is obliged to name the resource), so they travel as whatever the
+    # provider reported, including nil.
     {:ok,
      %{
        uid: uid,
@@ -251,6 +337,9 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
        start_at: start_at,
        end_at: end_at,
        provider: provider,
+       provider_event_id: created.provider_event_id,
+       written_calendar_id: created.calendar_id,
+       etag: created.etag,
        default_booking_calendar_id: default_booking_calendar_id,
        reauth_required: reauth_required?,
        attendees: attendees,
@@ -260,14 +349,46 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
      }}
   end
 
-  defp provision_video_room(integration_id, user_id, event_details)
+  # The calendar the provider wrote the event to: the one picked in the form,
+  # else the integration's booking calendar, as the provider resolves it.
+  defp written_calendar_id(%{calendar_id: calendar_id})
+       when is_binary(calendar_id) and calendar_id != "",
+       do: calendar_id
+
+  defp written_calendar_id(creating) do
+    case CalendarIntegrationQueries.get(creating.integration_id) do
+      {:ok, %{default_booking_calendar_id: calendar_id}} when is_binary(calendar_id) ->
+        calendar_id
+
+      _no_booking_calendar ->
+        "primary"
+    end
+  end
+
+  defp provision_video_room(integration_id, event_details, %{user_id: user_id} = grid_event)
        when is_integer(integration_id) do
-    opts = [integration_id: integration_id, event_details: event_details]
+    opts = [
+      integration_id: integration_id,
+      event_details: event_details,
+      meeting_id: grid_event.uid
+    ]
 
     case VideoRooms.create_meeting_room(user_id, opts) do
-      {:ok, %{room_data: room_data}} ->
+      {:ok, %{room_data: room_data} = meeting_context} ->
+        # Recorded as soon as the room exists, before the calendar write: a
+        # room whose event never reaches the calendar still falls due.
+        :ok =
+          EventVideoRooms.record(
+            meeting_context,
+            Map.put(grid_event, :video_integration_id, integration_id)
+          )
+
         %{
-          meeting_url: room_data.meeting_url,
+          # The description, the cached link and the invitees' notification
+          # all publish one link that names nobody, so it is the shared one
+          # rather than the bare room URL a token-enforcing server refuses.
+          # See `EventVideo.join_link/2`.
+          meeting_url: EventVideo.join_link(meeting_context, Map.get(grid_event, :start)),
           room_id: room_data.room_id,
           video_integration_id: integration_id
         }
@@ -283,21 +404,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     end
   end
 
-  defp build_description(existing, video_context) do
-    case video_context[:meeting_url] do
-      nil ->
-        existing
-
-      url when is_binary(url) ->
-        line = "Join video call: #{url}"
-
-        case existing do
-          nil -> line
-          "" -> line
-          text -> text <> "\n\n" <> line
-        end
-    end
-  end
+  defp build_description(existing, video_context),
+    do: EventVideo.put_join_link(existing, nil, video_context[:meeting_url])
 
   # Returns `{provider, default_booking_calendar_id, reauth_required?}`.
   #
@@ -306,8 +414,16 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   # signal the user-facing "reconnect" condition by returning `true` rather than
   # sending a flash — this runs in a Task whose mailbox the LiveView never
   # reads. The web layer maps the flag to a flash.
+  #
+  # An integration already flagged (its provider refused the credentials) gets
+  # the same signal: the booking client never writes to a flagged integration,
+  # so the event the user just created landed in another of their calendars,
+  # and reconnecting is the only thing that puts the one they picked back.
   defp lookup_integration_metadata(integration_id) do
     case CalendarIntegrationQueries.get(integration_id) do
+      {:ok, %{needs_reauth: true} = integration} ->
+        {integration.provider, integration.default_booking_calendar_id, true}
+
       {:ok, integration} ->
         {integration.provider, integration.default_booking_calendar_id, false}
 

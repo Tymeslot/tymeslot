@@ -31,14 +31,24 @@ defmodule Tymeslot.Auth.AuthenticationTest do
                        %{method: "password"}}
     end
 
-    test "unverified user returns {:error, :email_not_verified, _}" do
+    test "unverified user with the correct password returns {:unverified, user, _}" do
       password = "ValidPass123!"
       user = insert(:unverified_user, password_hash: Password.hash_password(password))
 
-      assert {:error, :email_not_verified, message} =
+      assert {:unverified, returned_user, message} =
                Authentication.authenticate_user(user.email, password)
 
+      assert returned_user.id == user.id
       assert message == "Please verify your email address before logging in."
+    end
+
+    test "unverified user with a wrong password gets the generic error, not 'not verified'" do
+      user = insert(:unverified_user, password_hash: Password.hash_password("ValidPass123!"))
+
+      assert {:error, :invalid_password, message} =
+               Authentication.authenticate_user(user.email, "WrongPass123!")
+
+      assert message == generic_error()
     end
 
     test "consistent error messages prevent user enumeration" do
@@ -86,12 +96,39 @@ defmodule Tymeslot.Auth.AuthenticationTest do
       assert errors[:password]
     end
 
-    test "oauth accounts cannot use password authentication" do
+    test "an account without a password gets the generic error, not 'social login'" do
       oauth_user = insert(:user, provider: "google", password_hash: nil)
 
-      assert {:error, :oauth_user, _error_message} =
+      assert {:error, :invalid_password, message} =
                Authentication.authenticate_user(oauth_user.email, "any-password")
+
+      assert message == generic_error()
     end
+
+    test "a social-login account is only named as such once its password is proved" do
+      password = "ValidPass123!"
+      user = insert(:user, provider: "google", password_hash: Password.hash_password(password))
+
+      assert {:error, :invalid_password, _message} =
+               Authentication.authenticate_user(user.email, "WrongPass123!")
+
+      assert {:error, :oauth_user, message} =
+               Authentication.authenticate_user(user.email, password)
+
+      assert message =~ "social login"
+    end
+  end
+
+  # What an unknown address gets: every other failure before the password is
+  # proved must be indistinguishable from it.
+  defp generic_error do
+    {:error, :not_found, message} =
+      Authentication.authenticate_user(
+        "nobody-#{System.unique_integer([:positive])}@example.com",
+        "x"
+      )
+
+    message
   end
 
   describe "get_user_by_session_token/1" do

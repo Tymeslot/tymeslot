@@ -65,24 +65,24 @@ defmodule Tymeslot.Auth.EmailChangeTest do
     test "fails with invalid password", %{user: user} do
       new_email = "new.email@example.com"
 
-      assert {:error, "Current password is incorrect"} =
+      assert {:error, {:current_password, "Current password is incorrect"}} =
                Auth.request_email_change(user, new_email, "wrong_password")
     end
 
     test "fails with same email as current", %{user: user} do
-      assert {:error, "New email must be different from current email"} =
+      assert {:error, {:new_email, "New email must be different from current email"}} =
                Auth.request_email_change(user, user.email, "Password123!")
     end
 
     test "fails with invalid email format", %{user: user} do
-      assert {:error, _error_reason} =
+      assert {:error, {:new_email, _message}} =
                Auth.request_email_change(user, "not-an-email", "Password123!")
     end
 
     test "fails when email is already taken", %{user: user} do
       other_user = insert(:user)
 
-      assert {:error, "Email address is already in use"} =
+      assert {:error, {:new_email, "Email address is already in use"}} =
                Auth.request_email_change(user, other_user.email, "Password123!")
     end
 

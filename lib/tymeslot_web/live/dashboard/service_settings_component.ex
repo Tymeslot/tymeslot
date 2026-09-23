@@ -57,17 +57,14 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   end
 
   # The host's pricing currency, used only to format the price token on paid
-  # meeting type cards. Resolved from the Stripe Connect account, and only
-  # when at least one meeting type is actually paid — unpaid lists skip the
-  # extra query and fall back to the first allowed currency.
+  # meeting type cards. Resolved only when at least one meeting type is
+  # actually paid: unpaid lists render no price, so they skip the query and
+  # take the unused fallback.
   defp host_currency(meeting_types, user_id) do
     if Enum.any?(meeting_types, & &1.payment_required) do
-      case MeetingPayments.get_connect_account_for_user(user_id) do
-        %{default_currency: currency} when is_binary(currency) and currency != "" -> currency
-        _other -> "eur"
-      end
+      MeetingPayments.host_currency(user_id)
     else
-      "eur"
+      MeetingPayments.host_currency(nil)
     end
   end
 

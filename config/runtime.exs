@@ -59,63 +59,9 @@ end
 # Supports: HTTP_PROXY, HTTPS_PROXY, NO_PROXY (case-insensitive)
 # This configuration applies to all outbound HTTP requests (CalDAV, Google API, etc.)
 
-# Helper to parse a proxy URL into structured config
-parse_proxy_url = fn proxy_url ->
-  if proxy_url && proxy_url != "" do
-    uri = URI.parse(proxy_url)
-
-    # Parse authentication from URL userinfo
-    proxy_auth =
-      case uri.userinfo do
-        nil ->
-          nil
-
-        userinfo ->
-          case String.split(userinfo, ":", parts: 2) do
-            [user, pass] -> {URI.decode(user), URI.decode(pass)}
-            [user] -> {URI.decode(user), ""}
-          end
-      end
-
-    %{
-      host:
-        uri.host ||
-          raise("Proxy URL must include a valid host (check HTTP_PROXY/HTTPS_PROXY format)"),
-      port: uri.port || 8080,
-      auth: proxy_auth,
-      scheme: uri.scheme || "http"
-    }
-  else
-    nil
-  end
-end
-
-# Read proxy environment variables (case-insensitive, uppercase takes precedence)
-http_proxy_url = System.get_env("HTTP_PROXY") || System.get_env("http_proxy")
-https_proxy_url = System.get_env("HTTPS_PROXY") || System.get_env("https_proxy")
-no_proxy_raw = System.get_env("NO_PROXY") || System.get_env("no_proxy") || ""
-
-# Parse NO_PROXY into list of patterns
-no_proxy_list =
-  no_proxy_raw
-  |> String.split(",", trim: true)
-  |> Enum.map(&String.trim/1)
-  |> Enum.reject(&(&1 == ""))
-
-# Build proxy configuration
-proxy_config =
-  if http_proxy_url || https_proxy_url do
-    %{
-      http_proxy: parse_proxy_url.(http_proxy_url),
-      https_proxy: parse_proxy_url.(https_proxy_url),
-      no_proxy: no_proxy_list
-    }
-  else
-    nil
-  end
-
-# Store proxy config for use by Req
-config :tymeslot, :http_proxy, proxy_config
+# Credentials in a proxy URL are stored as a struct that masks the password
+# wherever the application environment is inspected.
+config :tymeslot, :http_proxy, Tymeslot.Infrastructure.ProxyConfig.from_env(System.get_env())
 
 # ## Using releases
 #
@@ -278,27 +224,40 @@ if config_env() == :prod do
          Tymeslot.Repo,
          Tymeslot.Infrastructure.DatabaseConfig.build(deployment_type, System.get_env())
 
-  # Remote IP handling: trust private/loopback proxies and read proxy headers
-  # Cloudron uses x-forwarded-for header from its reverse proxy
-  config :remote_ip, RemoteIp,
-    headers: ~w[x-forwarded-for x-real-ip],
-    proxies: ~w[
-      127.0.0.0/8
-      10.0.0.0/8
-      172.16.0.0/12
-      192.168.0.0/16
-      ::1/128
-      fc00::/7
-      fd00::/8
-    ]
+  # Whether a forwarded address in a loopback or RFC-1918/4193 range names the
+  # visitor (an intranet-only deployment) rather than a proxy hop (the default).
+  # This one key drives both the LiveView socket path and, through
+  # `ClientIP.remote_ip_clients/0`, the `RemoteIp` plug in the endpoint, so the
+  # two cannot be configured apart. RemoteIp reads no application config, which
+  # is why its options live on the plug rather than here.
+  #
+  # Only fixes a single proxy tier: it works when the reverse proxy directly in
+  # front of the app is the only hop between it and the visitor. With a further
+  # private proxy tier upstream of that one, the flag cannot tell the outer hop
+  # apart from a visitor, and everyone behind it still collapses onto the outer
+  # proxy's address.
+  config :tymeslot,
+         :trust_private_client_ips,
+         TymeslotWeb.Helpers.ClientIP.trust_private_clients_from_env(
+           System.get_env("TRUST_PRIVATE_CLIENT_IPS")
+         )
 
   # Configure Oban for production
   # Queue definitions in config.exs are loaded at runtime by application.ex
   # This allows SaaS to extend Core queues via :oban_additional_queues config
   config :tymeslot, Oban,
     repo: Tymeslot.Repo,
-    # Allow in-flight jobs 15 seconds to finish on shutdown before being rescheduled
+    # Allow in-flight jobs 15 seconds to finish on shutdown. Whatever is still
+    # running when that expires is killed with its row left `executing`: the
+    # grace period reschedules nothing, which is what the lifeline is for.
     shutdown_grace_period: :timer.seconds(15),
+    # Return a job that has been `executing` for six hours to `available`, so a
+    # deploy that kills a node mid-job does not strand the job and everything
+    # it owed. Rescuing goes on elapsed time alone and cannot tell a dead node
+    # from a slow job, so the window has to clear the longest legitimate run:
+    # see `Tymeslot.Infrastructure.ObanRescue`, which holds the reasoning and
+    # warns at boot when this drifts out of the safe band.
+    lifeline: [rescue_after: {6, :hours}],
     pruner: [max_age: {7, :days}],
     cron: [
       crontab: [
@@ -311,6 +270,8 @@ if config_env() == :prod do
         # Run daily at 03:45 UTC to re-attempt provider deletion for cancelled
         # meetings whose video room was never cleaned up
         {"45 3 * * *", Tymeslot.Workers.OrphanedVideoRoomScanWorker},
+        # Run daily at 04:15 UTC to delete video rooms that outlived their meeting
+        {"15 4 * * *", Tymeslot.Workers.ExpiredVideoRoomCleanupWorker},
         # Run daily at 03:15 UTC
         {"15 3 * * *", Tymeslot.Workers.ExpiredSessionCleanupWorker},
         # Run daily at 02:00 UTC to renew expiring webhook channels
@@ -337,13 +298,13 @@ if config_env() == :prod do
       ]
     ]
 
-  # Enable the Zoom update scope only where the Marketplace app behind this
-  # deployment is actually configured for `meeting:update:meeting`. Requesting
-  # it elsewhere is silently dropped by Zoom and makes Tymeslot ask users to
-  # reconnect for a scope no reconnect can produce.
+  # Disable the Zoom update scope where the Marketplace app behind this
+  # deployment is not configured for `meeting:update:meeting`. Requesting it
+  # there is silently dropped by Zoom and makes Tymeslot ask users to reconnect
+  # for a scope no reconnect can produce.
   config :tymeslot,
          :zoom_update_scope_enabled,
-         System.get_env("ZOOM_UPDATE_SCOPE_ENABLED") == "true"
+         System.get_env("ZOOM_UPDATE_SCOPE_ENABLED") != "false"
 
   # Configure mailer based on EMAIL_ADAPTER setting. `Tymeslot.Mailer.Providers`
   # owns the list of supported values and the variables each one reads; an
@@ -560,6 +521,26 @@ case System.get_env("MEETING_PAYMENTS_APPLICATION_FEE_BP") do
         raise """
         MEETING_PAYMENTS_APPLICATION_FEE_BP must be an integer between 0 and 10000
         (basis points: 100 = 1%). Got: #{inspect(raw)}
+        """
+    end
+end
+
+case System.get_env("VIDEO_ROOM_RETENTION_DAYS") do
+  nil ->
+    :ok
+
+  "" ->
+    :ok
+
+  raw ->
+    case Integer.parse(raw) do
+      {days, ""} when days >= 1 ->
+        config :tymeslot, :video_room_retention_days, days
+
+      _other ->
+        raise """
+        VIDEO_ROOM_RETENTION_DAYS must be a whole number of days, 1 or more.
+        Got: #{inspect(raw)}
         """
     end
 end
@@ -798,11 +779,16 @@ end
 # common self-hosting case — opt out by setting ALLOW_PRIVATE_IPS_FOR_CALENDAR=true.
 #
 # For backwards compatibility this also satisfies video, which it was originally
-# documented as covering; ALLOW_PRIVATE_IPS_FOR_VIDEO below is the switch to
-# reach for now.
+# documented as covering, unless ALLOW_PRIVATE_IPS_FOR_VIDEO below is set;
+# that is the switch to reach for now.
 #
 # This does NOT relax webhook SSRF protection (Tymeslot.Webhooks.SsrfValidator);
 # webhooks have their own switch (ALLOW_PRIVATE_IPS_FOR_WEBHOOKS below).
+#
+# With this (or ALLOW_PRIVATE_IPS_FOR_VIDEO) set, a server on an internal name
+# (http://nextcloud, http://talk.lan) may be saved with plain http. Each such
+# request is still resolved first and refused unless the name resolves only to
+# private addresses, since it carries credentials in clear text.
 #
 # Seeded from env in non-test environments only, so an exported shell var can't
 # flip the default for the test suite (tests set the flag explicitly).
@@ -814,9 +800,20 @@ end
 # Video-scoped sibling of the above, covering both self-hosted MiroTalk and the
 # custom video link's reachability test. Set ALLOW_PRIVATE_IPS_FOR_VIDEO=true to
 # run a meeting server on an internal network without relaxing calendar SSRF.
-if config_env() != :test and
-     System.get_env("ALLOW_PRIVATE_IPS_FOR_VIDEO") in ["true", "1", "yes"] do
-  config :tymeslot, :allow_private_ips_for_video, true
+#
+# Unlike its siblings this key is left absent when the variable is unset or
+# blank, rather than written as false. Absent is what lets the calendar switch
+# above go on satisfying video, while an operator who writes
+# ALLOW_PRIVATE_IPS_FOR_VIDEO=false has answered for video and is not overruled
+# by it; `Tymeslot.Security.SsrfGuard.allow_private_for_video?/0` reads the
+# three states. `start-docker.sh` passes the variable through unset for the same
+# reason.
+allow_private_ips_for_video = String.trim(System.get_env("ALLOW_PRIVATE_IPS_FOR_VIDEO", ""))
+
+if config_env() != :test and allow_private_ips_for_video != "" do
+  config :tymeslot,
+         :allow_private_ips_for_video,
+         allow_private_ips_for_video in ["true", "1", "yes"]
 end
 
 # Webhook-scoped sibling of the above. In :prod, outbound webhook deliveries to

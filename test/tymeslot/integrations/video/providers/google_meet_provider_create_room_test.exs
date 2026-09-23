@@ -127,7 +127,12 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
         user_id: user.id
       }
 
-      expect(GoogleOAuthHelperMock, :refresh_access_token, fn "refresh", nil ->
+      expect(GoogleOAuthHelperMock, :refresh_access_token, fn "refresh", nil, opts ->
+        # The calendar refresh logs `provider: :google` too, so the integration
+        # id is the only thing telling a Meet failure apart from a Calendar one.
+        assert opts[:log_context][:integration_id] == integration.id
+        assert opts[:log_context][:user_id] == user.id
+
         {:ok,
          %{
            access_token: "new_token",
@@ -200,7 +205,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
         token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second)
       }
 
-      expect(GoogleOAuthHelperMock, :refresh_access_token, fn "refresh_token", nil ->
+      expect(GoogleOAuthHelperMock, :refresh_access_token, fn "refresh_token", nil, _opts ->
         {:error, "Token refresh failed: invalid_grant"}
       end)
 
@@ -215,7 +220,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderCreateRoomTest
         token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second)
       }
 
-      expect(GoogleOAuthHelperMock, :refresh_access_token, fn "refresh_token", nil ->
+      expect(GoogleOAuthHelperMock, :refresh_access_token, fn "refresh_token", nil, _opts ->
         {:error, "Network error during token refresh: timeout"}
       end)
 

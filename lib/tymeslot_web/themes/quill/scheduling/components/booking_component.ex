@@ -269,7 +269,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       class="flex-1"
                       title={get_submit_title(@submitting, @form)}
                     >
-                      {submit_label(@is_rescheduling, @meeting_type)} 🎆
+                      {submit_label(@is_rescheduling, @meeting_type)}
                     </.loading_button>
                   </div>
                 </div>

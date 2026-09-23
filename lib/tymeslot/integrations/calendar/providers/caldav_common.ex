@@ -8,22 +8,15 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Discovery, Events, Http, UrlBuilder}
+  alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Client, Discovery, Events, Http, UrlBuilder}
   alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.ICalNormaliser
+  alias Tymeslot.Utils.UriUtils
 
   require Logger
 
-  @type caldav_client :: %{
-          required(:base_url) => String.t(),
-          required(:username) => String.t() | nil,
-          required(:password) => String.t() | nil,
-          required(:calendar_paths) => [String.t()],
-          # Carried on the client but never applied here: nothing below this
-          # module builds a TLS option from it, so CalDAV always verifies. See
-          # the field comment on `CalendarIntegrationSchema` before changing it.
-          required(:verify_ssl) => boolean(),
-          required(:provider) => atom()
-        }
+  @type caldav_client :: Client.t()
 
   @spec normalize_url(String.t() | nil) :: String.t()
   def normalize_url(nil), do: ""
@@ -35,19 +28,26 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   end
 
   @doc """
-  Builds a client map for downstream Base.* functions.
-  Expects keys: :base_url, :username, :password, :calendar_paths, :verify_ssl
-  Options: provider: atom()
+  Builds the client struct downstream Base.* functions run on.
+
+  Accepts atom- or string-keyed config with `:base_url`, `:username`,
+  `:password`, `:calendar_paths` and `:verify_ssl`; takes the provider from
+  `opts`. This is the only place a `Client` is constructed, which is what
+  makes the password's inspect-time redaction hold for every CalDAV-family
+  provider.
   """
-  @spec build_client(%{atom() => term()}, keyword()) :: caldav_client()
+  @spec build_client(%{atom() => term()} | %{String.t() => term()}, keyword()) :: caldav_client()
   def build_client(config, opts) when is_map(config) do
     provider = Keyword.fetch!(opts, :provider)
 
-    %{
+    %Client{
       base_url: normalize_url(Map.get(config, :base_url) || Map.get(config, "base_url")),
       username: Map.get(config, :username) || Map.get(config, "username"),
       password: Map.get(config, :password) || Map.get(config, "password"),
       calendar_paths: Map.get(config, :calendar_paths) || [],
+      writable_calendar_paths:
+        Map.get(config, :writable_calendar_paths) ||
+          Map.get(config, "writable_calendar_paths") || [],
       verify_ssl: Map.get(config, :verify_ssl, true),
       provider: provider
     }
@@ -100,15 +100,15 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   @spec check_connectivity(caldav_client()) :: {:ok, map()} | {:error, term()}
   def check_connectivity(client) do
     with :ok <- validate_credentials(client) do
-      path = List.first(client[:calendar_paths] || []) || "/"
+      path = List.first(client.calendar_paths || []) || "/"
 
       # Use the same URL builder as create/read/delete so server-root-relative
       # paths (e.g. Nextcloud's "/remote.php/dav/calendars/...") aren't
       # double-prefixed when the client's base_url already contains a CalDAV
       # principal path.
-      url = UrlBuilder.build_calendar_url(client[:base_url], path)
+      url = UrlBuilder.build_calendar_url(client.base_url, path)
 
-      case Http.propfind(url, client[:username], client[:password],
+      case Http.propfind(url, client.username, client.password,
              depth: "0",
              timeout: 5_000
            ) do
@@ -253,24 +253,54 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
       )
     end)
 
+    # De-duplicated on the pair that identifies a VEVENT, not on the UID alone:
+    # a recurring event's overrides share the master's UID by RFC 5545, so
+    # keying on the UID collapsed a whole series back to one event and undid
+    # the parser keeping them.
     events =
       successes
       |> Enum.flat_map(fn {_path, {:ok, evs}} -> evs end)
-      |> Enum.uniq_by(& &1.uid)
+      |> Enum.uniq_by(&{&1.uid, &1[:recurrence_id]})
 
     {:ok, events}
   end
 
   @doc """
-  Create an event in the first configured calendar.
+  Create an event in the calendar the payload asks for, or in the client's own
+  calendar when it asks for none.
+
+  Answers a `CreatedEvent` carrying the uid, the collection and href the
+  resource was written to and the ETag the server assigned it, so the caller
+  can cache the event's identity without waiting for a sync to supply it.
   """
-  @spec create_event(caldav_client(), map()) :: {:ok, any()} | {:error, term()}
+  @spec create_event(caldav_client(), map()) :: {:ok, CreatedEvent.t()} | {:error, term()}
   def create_event(client, event_data) do
-    case primary_calendar_path(client) do
+    case create_path(client, event_data) do
       nil -> {:error, "No calendar configured for creating events"}
       path -> Events.create_calendar_event(client, path, event_data)
     end
   end
+
+  # The booking flow chooses no calendar, so the client's own collection is the
+  # default and bookings keep landing where they always have. The calendar grid
+  # does choose one, and used to be ignored: `event_data[:calendar_id]` was
+  # never read on this path, so an event created on, or moved to, any other
+  # collection silently went to the booking one instead.
+  #
+  # The choice is honoured only when it names a collection the integration
+  # lists as writable. `event_data` is caller-supplied, and a path taken from
+  # it unchecked is a URL taken from a payload.
+  defp create_path(client, event_data) do
+    chosen = Map.get(event_data, :calendar_id) || Map.get(event_data, "calendar_id")
+
+    client
+    |> writable_calendar_paths()
+    |> Enum.find(&UriUtils.uri_safe_match?(&1, chosen))
+    |> Kernel.||(primary_calendar_path(client))
+  end
+
+  defp writable_calendar_paths(%{writable_calendar_paths: paths}) when is_list(paths), do: paths
+  defp writable_calendar_paths(_client), do: []
 
   @doc """
   Diagnostic-only: PUT a hand-crafted iCalendar payload into the primary
@@ -283,7 +313,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   fresh UID per attempt.
   """
   @spec put_raw_event(caldav_client(), String.t(), String.t()) ::
-          {:ok, String.t()} | {:error, term()}
+          {:ok, CreatedEvent.t()} | {:error, term()}
   def put_raw_event(client, uid, ical_data) do
     case primary_calendar_path(client) do
       nil -> {:error, "No calendar configured for creating events"}
@@ -297,6 +327,11 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   `opts` may carry `:etag` (the caller's cached ETag for the event, used
   directly as `If-Match` without a HEAD probe) and any options accepted by
   `Events.update_calendar_event/5`.
+
+  When `event_data` carries the event's last-synced `:raw_ical` (and the
+  `:etag` it came with), that document is patched property by property rather
+  than rebuilt from the payload, so everything Tymeslot does not model — the
+  `ATTENDEE` block above all — survives the write.
 
   When `event_data` carries `colour_only: true` (the colour write-back
   path), dispatches to `Events.update_event_colour/5` instead — patching only
@@ -347,6 +382,40 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     end
   end
 
+  @doc """
+  Fetches one event straight from the server (see the provider behaviour's
+  `fetch_event/2`), by its href in `provider_event_id` or else by `uid` in the
+  client's calendar.
+  """
+  @spec fetch_event(caldav_client(), map()) ::
+          {:ok, list()} | {:error, :not_found} | {:error, term()}
+  def fetch_event(client, event_ref) do
+    href = Map.get(event_ref, :provider_event_id)
+    # CalDAV hrefs are paths, or on some servers absolute URLs. Any other
+    # identifier (a Google or Outlook id) does not address a resource here.
+    href = if is_binary(href) and String.starts_with?(href, ["/", "http"]), do: href
+
+    with {:ok, raw_events} <-
+           Events.fetch_calendar_event(
+             client,
+             primary_calendar_path(client),
+             Map.get(event_ref, :uid),
+             href
+           ) do
+      provider = Map.get(client, :provider, :caldav)
+
+      ICalNormaliser.normalise_events(
+        raw_events,
+        %{
+          calendar_integration_id: Map.get(event_ref, :calendar_integration_id),
+          provider_calendar_id: primary_calendar_path(client) || "",
+          synced_at: DateTime.utc_now()
+        },
+        provider
+      )
+    end
+  end
+
   # Helpers
 
   # Client configs are built atom-keyed in this application but arrive
@@ -373,10 +442,10 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   defp success_message(_arg),
     do: dgettext("dashboard_calendar_providers", "CalDAV connection successful")
 
-  defp validate_credentials(client) do
-    username = client[:username] || Map.get(client, :username)
-    password = client[:password] || Map.get(client, :password)
-
+  # Matches on the fields rather than on `%Client{}`: the redaction guarantee
+  # comes from `build_client/2` constructing the struct, not from strictness
+  # here, and several callers still hand this a bare client-shaped map.
+  defp validate_credentials(%{username: username, password: password}) do
     if is_binary(username) and String.trim(username) != "" and
          is_binary(password) and String.trim(password) != "" do
       :ok

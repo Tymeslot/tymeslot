@@ -2,12 +2,8 @@ defmodule TymeslotWeb.SessionControllerTest do
   use TymeslotWeb.ConnCase, async: false
   @moduletag :auth
 
-  import Mox
-
   alias Phoenix.Flash
-  alias Tymeslot.Auth.{UserQueries, UserTokenQueries}
-  alias Tymeslot.Auth.Verification
-  alias Tymeslot.Auth.VerificationMock
+  alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.AuthTestHelpers
   alias Tymeslot.Factory
   alias Tymeslot.Infrastructure.Config
@@ -138,6 +134,43 @@ defmodule TymeslotWeb.SessionControllerTest do
       assert Flash.get(conn.assigns.flash, :error) =~ "Please verify your email"
       assert get_session(conn, :unverified_user_id) == user.id
     end
+
+    test "a wrong password for an unverified account reveals nothing about it",
+         %{conn: conn, password: password} do
+      user =
+        Factory.insert(:user,
+          password_hash: Password.hash_password(password),
+          verified_at: nil
+        )
+
+      conn = post(conn, ~p"/auth/session", %{"email" => user.email, "password" => "Wrong1234!"})
+
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :error) == unknown_account_error()
+      refute get_session(conn, :unverified_user_id)
+      refute get_session(conn, :unverified_user_email)
+    end
+
+    test "an account without a password gets the generic error", %{conn: conn} do
+      user = Factory.insert(:user, provider: "google", password_hash: nil)
+
+      conn = post(conn, ~p"/auth/session", %{"email" => user.email, "password" => "Any1234!"})
+
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :error) == unknown_account_error()
+    end
+
+    # The flash an address with no account gets; every failure before the
+    # password is proved must read the same.
+    defp unknown_account_error do
+      conn =
+        post(build_conn(), ~p"/auth/session", %{
+          "email" => "nobody-#{System.unique_integer([:positive])}@example.com",
+          "password" => "Any1234!"
+        })
+
+      Flash.get(conn.assigns.flash, :error)
+    end
   end
 
   describe "POST /auth/session — password auth disabled" do
@@ -238,7 +271,7 @@ defmodule TymeslotWeb.SessionControllerTest do
       # IP Hammer bucket triggers, naming the per-IP budget rather than the account.
       assert Flash.get(conn.assigns.flash, :error) ==
                "You've reached the limit of 50 authentication (ip) actions per 30 minutes. " <>
-                 "Please wait a few minutes before trying again."
+                 "Please try again in 30 minutes."
     end
   end
 
@@ -254,14 +287,24 @@ defmodule TymeslotWeb.SessionControllerTest do
   end
 
   describe "GET /auth/verify-complete/:token" do
-    setup :verify_on_exit!
+    test "renders a confirmation page without verifying the address", %{conn: conn} do
+      user = Factory.insert(:user, verified_at: nil, signup_ip: "127.0.0.1")
 
+      {:ok, _user} =
+        UserTokenQueries.set_verification_token(user, "prefetched_token", "127.0.0.1")
+
+      conn = get(conn, ~p"/auth/verify-complete/prefetched_token")
+
+      html = html_response(conn, 200)
+      assert html =~ ~s(action="/auth/verify-complete/prefetched_token")
+      assert html =~ ~s(method="post")
+      refute get_session(conn, :user_token)
+      refute Repo.reload!(user).verified_at
+    end
+  end
+
+  describe "POST /auth/verify-complete/:token" do
     setup do
-      # Stub with real implementation by default; individual tests override as needed
-      Mox.stub(VerificationMock, :verify_user_token, fn token ->
-        Verification.verify_user_token(token)
-      end)
-
       %{token: "valid_token"}
     end
 
@@ -279,31 +322,31 @@ defmodule TymeslotWeb.SessionControllerTest do
     test "verifies and logs in user when IP matches", %{conn: conn, token: token} do
       user = insert_unverified_user(token, "127.0.0.1")
 
-      conn = get(conn, ~p"/auth/verify-complete/#{token}")
+      conn = post(conn, ~p"/auth/verify-complete/#{token}")
 
       assert redirected_to(conn) == "/dashboard"
       assert Flash.get(conn.assigns.flash, :success) =~ "successfully verified"
       assert get_session(conn, :user_token)
 
-      updated_user = UserQueries.get_user!(user.id)
+      updated_user = Repo.reload!(user)
       assert updated_user.verified_at
     end
 
     test "verifies but does NOT log in user when IP mismatch", %{conn: conn, token: token} do
       user = insert_unverified_user(token, "1.1.1.1")
 
-      conn = get(conn, ~p"/auth/verify-complete/#{token}")
+      conn = post(conn, ~p"/auth/verify-complete/#{token}")
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :info) =~ "Please log in to continue"
       refute get_session(conn, :user_token)
 
-      updated_user = UserQueries.get_user!(user.id)
+      updated_user = Repo.reload!(user)
       assert updated_user.verified_at
     end
 
     test "handles invalid token", %{conn: conn} do
-      conn = get(conn, ~p"/auth/verify-complete/invalid_token")
+      conn = post(conn, ~p"/auth/verify-complete/invalid_token")
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "no longer valid"
@@ -320,23 +363,11 @@ defmodule TymeslotWeb.SessionControllerTest do
         [expired_time, user.id]
       )
 
-      conn = get(conn, ~p"/auth/verify-complete/expired_verification_token")
+      conn = post(conn, ~p"/auth/verify-complete/expired_verification_token")
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "has expired"
-    end
-
-    test "handles verification failure for existing user", %{conn: conn, token: token} do
-      _unverified_user = insert_unverified_user(token, "127.0.0.1")
-
-      Mox.expect(VerificationMock, :verify_user_token, fn ^token ->
-        {:error, :invalid_token}
-      end)
-
-      conn = get(conn, ~p"/auth/verify-complete/#{token}")
-
-      assert redirected_to(conn) == "/auth/login"
-      assert Flash.get(conn.assigns.flash, :error) =~ "no longer valid"
+      refute Repo.reload!(user).verified_at
     end
   end
 end

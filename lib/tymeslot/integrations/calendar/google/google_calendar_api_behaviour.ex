@@ -10,9 +10,13 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour do
            :unauthorized
            | :not_found
            | :rate_limited
+           | :not_a_calendar_user
            | :network_error
            | :authentication_error
-           | :gone, String.t()}
+           | :gone
+           # A listing walked past the paginator's page cap, which means the
+           # provider is repeating a page token rather than advancing it.
+           | :too_many_pages, String.t()}
 
   @callback list_calendars(CalendarIntegrationSchema.t()) ::
               {:ok, [map()]} | api_error()
@@ -26,6 +30,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour do
               {:ok, map()} | api_error()
   @callback patch_event_colour(CalendarIntegrationSchema.t(), String.t(), String.t(), String.t()) ::
               {:ok, map()} | :ok | api_error()
+  @callback get_event(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
+              {:ok, map()} | api_error()
   @callback delete_event(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
               :ok | api_error()
   @callback refresh_token(CalendarIntegrationSchema.t()) ::

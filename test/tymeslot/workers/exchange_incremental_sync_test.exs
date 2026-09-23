@@ -352,7 +352,7 @@ defmodule Tymeslot.Workers.ExchangeIncrementalSyncTest do
     stale = DateTime.add(DateTime.utc_now(:second), -1, :hour)
 
     integration
-    |> Changeset.change(%{last_external_sync_at: stale, last_sync_at: stale})
+    |> Changeset.change(%{last_external_sync_at: stale})
     |> Repo.update!()
 
     stub_full_sync()
@@ -360,7 +360,6 @@ defmodule Tymeslot.Workers.ExchangeIncrementalSyncTest do
 
     reloaded = Repo.reload!(integration)
     assert DateTime.compare(reloaded.last_external_sync_at, stale) == :gt
-    assert DateTime.compare(reloaded.last_sync_at, stale) == :gt
     assert is_nil(reloaded.sync_error)
   end
 end

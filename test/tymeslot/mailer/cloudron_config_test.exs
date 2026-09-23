@@ -14,7 +14,7 @@ defmodule Tymeslot.Mailer.CloudronConfigTest do
           password: "secret"
         )
 
-      assert config[:adapter] == Swoosh.Adapters.SMTP
+      assert config[:adapter] == Tymeslot.Mailer.SMTPAdapter
       assert config[:relay] == "mail"
       assert config[:port] == 25
       assert config[:username] == "app"

@@ -147,11 +147,26 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       original_start_time_attendee_tz:
         convert_to_timezone(original_meeting.start_time, attendee_timezone),
       original_end_time: original_meeting.end_time,
+      original_attendee_video_url: Map.get(original_meeting, :attendee_video_url),
 
       # Reschedule context
       is_rescheduled: true,
       rescheduled_at: DateTime.utc_now()
     })
+  end
+
+  @doc """
+  Builds reschedule details for a booking whose new time was approved after a
+  reschedule sent it back into the approval gate.
+
+  Unlike `build_reschedule_details/2` there is no original meeting to compare
+  with, so the templates leave out their "previously scheduled" line.
+  """
+  @spec build_reapproval_details(%{atom() => term()}) :: %{atom() => term()}
+  def build_reapproval_details(meeting) do
+    meeting
+    |> AppointmentBuilder.from_meeting()
+    |> Map.merge(%{is_rescheduled: true, rescheduled_at: DateTime.utc_now()})
   end
 
   @doc """
@@ -215,12 +230,10 @@ defmodule Tymeslot.Notifications.ContentBuilder do
     end
   end
 
+  # Never the initials data URI `Profiles.avatar_url/2` falls back to: Gmail
+  # refuses to render data URI images in email.
   defp get_organizer_avatar_url(meeting) do
-    # Try to get the organizer's profile to fetch their avatar
-    case get_organizer_profile(meeting) do
-      nil -> nil
-      profile -> Profiles.avatar_url(profile, :thumb)
-    end
+    meeting |> get_organizer_profile() |> Profiles.uploaded_avatar_url()
   end
 
   defp get_organizer_profile(meeting) do

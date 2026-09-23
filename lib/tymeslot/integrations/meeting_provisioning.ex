@@ -18,12 +18,13 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   The `:inline` path for *edits* requires the calendar update call to include
   `conferenceData` and `conferenceDataVersion=1`. That wiring is not yet
   implemented in `EventOperations`; the edit flow therefore falls back to
-  `:separate` (see `EditWorkflow.sync_video_integration_async/3`).
+  `:separate` (see `Tymeslot.CalendarGrid.change_event_video/3`).
   """
 
   require Logger
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Google.ConferenceData
   alias Tymeslot.Integrations.Video
 
@@ -71,8 +72,8 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   @doc """
   Finalises the video context after the calendar create call completes.
 
-  For the `:inline` plan: extracts the Meet URL from the created-event
-  response and builds the `video_context` map.
+  For the `:inline` plan: extracts the Meet URL from the provider's own answer
+  to the create (`CreatedEvent.raw`) and builds the `video_context` map.
 
   Returns `{:ok, video_context}` on success. Returns
   `{:error, :no_meet_url, video_context}` when Google did not return a Meet URL
@@ -82,10 +83,10 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   For `:separate` and `:none`: returns `{:ok, video_context}` unchanged.
   """
-  @spec finalise(map(), map(), plan()) ::
+  @spec finalise(map(), CreatedEvent.t(), plan()) ::
           {:ok, map()} | {:error, :no_meet_url, map()}
-  def finalise(video_context, created, {:inline, video_id}) do
-    case ConferenceData.meet_url_from_event(created) do
+  def finalise(video_context, %CreatedEvent{raw: raw}, {:inline, video_id}) do
+    case ConferenceData.meet_url_from_event(raw) do
       nil ->
         Logger.warning(
           "Google Calendar create succeeded but did not return a Meet URL; " <>
@@ -99,7 +100,9 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
         {:ok,
          Map.merge(video_context, %{
            meeting_url: url,
-           room_id: Video.extract_room_id(url),
+           # The `:inline` plan only exists for a Google Calendar and Google
+           # Meet pair, so the link is a Meet link and Meet's rules parse it.
+           room_id: Video.extract_room_id(url, :google_meet),
            video_integration_id: video_id
          })}
     end

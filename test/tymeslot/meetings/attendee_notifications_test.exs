@@ -40,6 +40,31 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
       )
     end
 
+    test "an all-day event's invitation carries its dates instead of instants" do
+      event =
+        insert(:provider_calendar_event,
+          all_day: true,
+          start_date: ~D[2026-10-12],
+          end_date: ~D[2026-10-15],
+          start_at: nil,
+          end_at: nil
+        )
+
+      assert {:ok, :sent} = AttendeeNotifications.event_created(event, [%{email: "a@x.com"}])
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_calendar_invitation",
+          "attendee_email" => "a@x.com",
+          "event_all_day" => true,
+          "event_start_date" => "2026-10-12",
+          "event_end_date" => "2026-10-15",
+          "event_start_at" => nil
+        }
+      )
+    end
+
     test "enqueues a :request invitation for a MeetingSchema attendee" do
       meeting = insert(:meeting, attendee_email: "guest@example.com")
       attendees = [%{email: "guest@example.com"}]
@@ -74,6 +99,23 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
 
       assert {:ok, :no_changes} =
                AttendeeNotifications.event_updated(event, event, [%{email: "a@x.com"}])
+    end
+
+    test "asks to notify when an all-day event moves to other days" do
+      event =
+        insert(:provider_calendar_event,
+          all_day: true,
+          start_date: ~D[2026-10-12],
+          end_date: ~D[2026-10-13],
+          start_at: nil,
+          end_at: nil,
+          attendees: [%{"email" => "a@x.com"}]
+        )
+
+      moved = %{event | start_date: ~D[2026-10-19], end_date: ~D[2026-10-20]}
+
+      assert {:needs_confirmation, %ChangeSummary{changed_fields: [:start_date, :end_date]}} =
+               AttendeeNotifications.event_updated(event, moved, [%{email: "a@x.com"}])
     end
 
     test "returns {:ok, :no_changes} when there are no attendees regardless of diff" do
@@ -201,10 +243,10 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
   describe "pending?/1 and cancel_pending/1" do
     test "pending?/1 is false before scheduling, true after" do
       event = insert(:provider_calendar_event)
-      refute AttendeeNotifications.pending?(event.id)
+      refute AttendeeNotifications.pending?(event)
 
       {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
-      assert AttendeeNotifications.pending?(event.id)
+      assert AttendeeNotifications.pending?(event)
     end
 
     test "cancel_pending/1 removes scheduled jobs for the event" do
@@ -214,7 +256,19 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
 
       :ok = AttendeeNotifications.cancel_pending(event)
 
-      refute AttendeeNotifications.pending?(event.id)
+      refute AttendeeNotifications.pending?(event)
+    end
+
+    test "pending?/1 ignores a job of the other kind that happens to share the id" do
+      event = insert(:provider_calendar_event)
+
+      # `meetings` and `provider_calendar_events` number their rows
+      # independently, so the same integer names a different event in each.
+      # A meeting job must not make this provider event look pending.
+      {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :meeting)
+
+      refute AttendeeNotifications.pending?(event)
+      assert Dispatcher.pending?(event.id, :meeting)
     end
   end
 end

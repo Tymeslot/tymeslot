@@ -21,27 +21,60 @@ defmodule Tymeslot.Telegram.TelegramQueries do
 
   @stub_ttl_minutes 30
 
+  @doc """
+  Returns the user's integrations, newest first, with their status derived.
+
+  Expired setup stubs are filtered out rather than deleted: a listing is a
+  pure read, and the rows are reclaimed later by the scheduled cleanup in
+  `cleanup_orphaned_stubs/0`.
+  """
   @spec list_integrations(integer()) :: [TelegramIntegrationSchema.t()]
   def list_integrations(user_id) do
     TelegramIntegrationSchema
-    |> IntegrationQueries.list_for_user(user_id)
+    |> IntegrationQueries.for_user(user_id)
+    |> where(^excluding_expired_stubs())
+    |> Repo.all()
     |> Enum.map(&TelegramIntegrationSchema.derive_status/1)
   end
 
+  @doc """
+  Deletes every never-linked setup stub the user owns, whatever its age.
+  Integrations that were linked and later disconnected are kept.
+  """
   @spec delete_pending_stubs(integer()) :: {non_neg_integer(), nil | [term()]}
   def delete_pending_stubs(user_id) do
     TelegramIntegrationSchema
     |> where([i], i.user_id == ^user_id)
-    |> where([i], is_nil(i.chat_id))
+    |> where(^never_linked())
     |> Repo.delete_all()
   end
 
-  @spec cleanup_orphaned_stubs(integer()) :: {non_neg_integer(), nil | [term()]}
-  def cleanup_orphaned_stubs(user_id) do
+  @doc """
+  Deletes the given setup stub if it is still one: it belongs to `user_id`
+  and has never been linked. A stub the bot linked in the meantime is kept.
+  """
+  @spec delete_pending_stub(integer(), integer()) :: {non_neg_integer(), nil | [term()]}
+  def delete_pending_stub(id, user_id) do
     TelegramIntegrationSchema
-    |> where([i], i.user_id == ^user_id)
-    |> where([i], is_nil(i.chat_id))
-    |> IntegrationQueries.delete_stubs_older_than(@stub_ttl_minutes)
+    |> where([i], i.id == ^id and i.user_id == ^user_id)
+    |> where(^never_linked())
+    |> Repo.delete_all()
+  end
+
+  @doc """
+  Deletes every user's abandoned setup stubs: never linked, created more than
+  #{@stub_ttl_minutes} minutes ago, and not holding a link token issued within
+  that window.
+
+  Runs on a schedule from `Tymeslot.Workers.DataRetentionWorker`, never from a
+  read path. `list_integrations/1` hides expired stubs on its own, so the
+  cadence of this job only governs when the rows are reclaimed.
+  """
+  @spec cleanup_orphaned_stubs() :: {non_neg_integer(), nil | [term()]}
+  def cleanup_orphaned_stubs do
+    TelegramIntegrationSchema
+    |> where(^expired_stub(stub_cutoff()))
+    |> Repo.delete_all()
   end
 
   @spec list_active_integrations_for_event(integer(), String.t()) :: [
@@ -53,12 +86,17 @@ defmodule Tymeslot.Telegram.TelegramQueries do
     |> Enum.filter(&(not is_nil(&1.chat_id)))
   end
 
-  @spec find_by_link_token(String.t()) ::
+  @doc """
+  Finds the unlinked integration holding `token`, provided the token was
+  issued after `issued_after`.
+  """
+  @spec find_by_link_token(String.t(), DateTime.t()) ::
           {:ok, TelegramIntegrationSchema.t()} | {:error, :not_found}
-  def find_by_link_token(token) do
+  def find_by_link_token(token, issued_after) do
     result =
       TelegramIntegrationSchema
       |> where([i], i.link_token == ^token and is_nil(i.chat_id))
+      |> where([i], i.link_token_issued_at > ^issued_after)
       |> Repo.one()
 
     case result do
@@ -98,6 +136,25 @@ defmodule Tymeslot.Telegram.TelegramQueries do
     |> TelegramIntegrationSchema.changeset(attrs)
     |> IntegrationQueries.update()
     |> maybe_derive_status()
+  end
+
+  @doc """
+  Updates the link state (`chat_id`, `link_token`) of an integration that may
+  have been deleted since it was loaded, returning `{:error, :not_found}`
+  rather than raising in that case.
+  """
+  @spec update_link_state(TelegramIntegrationSchema.t(), map()) ::
+          {:ok, TelegramIntegrationSchema.t()} | {:error, :not_found | Ecto.Changeset.t()}
+  def update_link_state(%TelegramIntegrationSchema{} = integration, attrs) do
+    changeset = TelegramIntegrationSchema.changeset(integration, attrs)
+
+    case Repo.update(changeset, stale_error_field: :id) do
+      {:error, %Ecto.Changeset{errors: [{:id, {_message, [stale: true]}} | _rest]}} ->
+        {:error, :not_found}
+
+      result ->
+        maybe_derive_status(result)
+    end
   end
 
   @spec delete_integration(TelegramIntegrationSchema.t()) ::
@@ -182,6 +239,25 @@ defmodule Tymeslot.Telegram.TelegramQueries do
   end
 
   def cleanup_old_deliveries(_days), do: {0, nil}
+
+  defp excluding_expired_stubs, do: dynamic(not (^expired_stub(stub_cutoff())))
+
+  defp stub_cutoff, do: DateTime.add(DateTime.utc_now(), -@stub_ttl_minutes * 60, :second)
+
+  # A setup stub the user never completed: no chat was ever linked to it. An
+  # integration that was linked and later lost its chat is not a stub.
+  defp never_linked, do: dynamic([i], is_nil(i.chat_id) and is_nil(i.linked_at))
+
+  # A stub whose setup window has passed: never linked, created before the
+  # cutoff, and without a link token issued since. Deleting and hiding share
+  # this one definition so the two can never drift apart.
+  defp expired_stub(cutoff) do
+    dynamic(
+      [i],
+      ^never_linked() and i.inserted_at < ^cutoff and
+        (is_nil(i.link_token_issued_at) or i.link_token_issued_at < ^cutoff)
+    )
+  end
 
   defp maybe_derive_status({:ok, integration}),
     do: {:ok, TelegramIntegrationSchema.derive_status(integration)}

@@ -126,11 +126,6 @@ msgstr "Zobrazení agendy"
 msgid "All day"
 msgstr "Celý den"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "All events in series"
-msgstr "Všechny události v sérii"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Also switches the current view"
@@ -181,6 +176,7 @@ msgstr "Kalendáře byly obnoveny"
 msgid "Cancel"
 msgstr "Zrušit"
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
@@ -188,7 +184,7 @@ msgstr "Zrušit"
 msgid "Changes saved."
 msgstr "Změny byly uloženy."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
 #, elixir-autogen, elixir-format
 msgid "Changes saved. Attendees will be notified shortly."
@@ -380,11 +376,6 @@ msgstr "Událost se nepodařilo vytvořit"
 msgid "Failed to delete event"
 msgstr "Událost se nepodařilo smazat"
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to move event"
-msgstr "Událost se nepodařilo přesunout"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex
 #, elixir-autogen, elixir-format
@@ -522,8 +513,7 @@ msgstr "Ne"
 msgid "No calendars to sync"
 msgstr "Žádné kalendáře k synchronizaci"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "None"
 msgstr "Žádné"
@@ -721,20 +711,10 @@ msgstr "Ne"
 msgid "The recurrence end date must be on or after the event start."
 msgstr "Datum konce opakování nesmí předcházet začátku události."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This and following events"
-msgstr "Tuto a následující události"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This event is linked to a booking. The attendee will be notified of the cancellation."
 msgstr "Tato událost je propojena s rezervací. Účastník bude o zrušení informován."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This event only"
-msgstr "Pouze tuto událost"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex
 #, elixir-autogen, elixir-format
@@ -844,11 +824,6 @@ msgstr "Týdenní zobrazení"
 msgid "Weekly"
 msgstr "Týdně"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Which events do you want to update?"
-msgstr "Které události chcete upravit?"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex
 #, elixir-autogen, elixir-format
 msgid "Wk"
@@ -947,11 +922,6 @@ msgstr "Smazání se nezdařilo – zkusíme to znovu při příští synchroniz
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
-msgid "Failed to provision video room - link not updated"
-msgstr "Videomístnost se nepodařilo vytvořit – odkaz nebyl aktualizován"
-
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
-#, elixir-autogen, elixir-format
 msgid "Failed to update event - changes reverted"
 msgstr "Událost se nepodařilo aktualizovat – změny byly vráceny zpět"
 
@@ -1034,3 +1004,73 @@ msgstr "před událostí"
 #, elixir-autogen, elixir-format
 msgid "This calendar is read-only. Events on it can't be changed from Tymeslot."
 msgstr "Tento kalendář je jen pro čtení. Události v něm nelze měnit z Tymeslotu."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Could not change the video link - changes reverted"
+msgstr "Odkaz na videoschůzku se nepodařilo změnit – změny byly vráceny zpět"
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Could not move the event. It is still on its original calendar."
+msgstr "Událost se nepodařilo přesunout. Zůstává v původním kalendáři."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Event copied to the new calendar, but the original could not be removed. Please delete it from its original calendar."
+msgstr "Událost byla zkopírována do nového kalendáře, ale původní událost se nepodařilo odstranit. Smažte ji prosím z původního kalendáře."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Event copied to the new calendar. The original will be removed on the next sync."
+msgstr "Událost byla zkopírována do nového kalendáře. Původní událost bude odstraněna při příští synchronizaci."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Event moved to the new calendar."
+msgstr "Událost byla přesunuta do nového kalendáře."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring events cannot be moved to another calendar yet. Only single events can be moved."
+msgstr "Opakující se události zatím nelze přesunout do jiného kalendáře. Přesunout lze jen jednotlivé události."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "The video provider did not return a meeting link, so the video link was not changed."
+msgstr "Poskytovatel videa nevrátil odkaz na schůzku, takže odkaz na videoschůzku nebyl změněn."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Video link removed."
+msgstr "Odkaz na videoschůzku byl odebrán."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Video room created."
+msgstr "Místnost pro videoschůzku byla vytvořena."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar could not be reached. The change is saved and will sync on the next attempt."
+msgstr "K vašemu kalendáři se nepodařilo připojit. Změna je uložena a synchronizuje se při příštím pokusu."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring events cannot be deleted here yet. Please delete this one in your calendar app."
+msgstr "Opakované události zde zatím nelze smazat. Smažte prosím tuto událost ve své kalendářové aplikaci."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This event is part of a repeating series. Your change applies to this event only, and the rest of the series stays as it is. To change the whole series, use your calendar app."
+msgstr "Tato událost je součástí opakované série. Vaše změna se týká pouze této události a zbytek série zůstane beze změny. Chcete-li změnit celou sérii, použijte svou kalendářovou aplikaci."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Update this event"
+msgstr "Aktualizovat tuto událost"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring events cannot be edited here yet. Please change this one in your calendar app."
+msgstr "Opakované události zde zatím nelze upravovat. Upravte prosím tuto událost ve své kalendářové aplikaci."

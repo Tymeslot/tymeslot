@@ -4,6 +4,8 @@ defmodule Tymeslot.Security.Token do
   Utilities for generating secure tokens for authentication (session, verification, etc).
   """
 
+  alias Tymeslot.Clock
+
   @session_token_validity_hours 24
 
   @doc """
@@ -13,7 +15,7 @@ defmodule Tymeslot.Security.Token do
   @spec generate_session_token(integer()) :: {String.t(), DateTime.t()}
   def generate_session_token(_unused_user_id) do
     token = generate_strong_token()
-    expiry = DateTime.add(DateTime.utc_now(), @session_token_validity_hours * 3600, :second)
+    expiry = DateTime.add(Clock.utc_now(), @session_token_validity_hours * 3600, :second)
     {token, expiry}
   end
 
@@ -42,7 +44,7 @@ defmodule Tymeslot.Security.Token do
   def generate_email_verification_token(_unused_user_id) do
     token = generate_strong_token()
     # 24 hours expiry
-    expiry = DateTime.add(DateTime.utc_now(), 24 * 3600, :second)
+    expiry = DateTime.add(Clock.utc_now(), 24 * 3600, :second)
     purpose = "email_verification"
     {token, expiry, purpose}
   end
@@ -55,7 +57,7 @@ defmodule Tymeslot.Security.Token do
   def generate_password_reset_token do
     token = generate_strong_token()
     # 2 hours expiry
-    expiry = DateTime.add(DateTime.utc_now(), 2 * 3600, :second)
+    expiry = DateTime.add(Clock.utc_now(), 2 * 3600, :second)
     {token, expiry}
   end
 
@@ -82,7 +84,7 @@ defmodule Tymeslot.Security.Token do
   """
   @spec verify_token(String.t(), DateTime.t()) :: {:ok, String.t()} | {:error, :token_expired}
   def verify_token(token, expiry_datetime) do
-    case DateTime.compare(DateTime.utc_now(), expiry_datetime) do
+    case DateTime.compare(Clock.utc_now(), expiry_datetime) do
       :lt -> {:ok, token}
       _expired -> {:error, :token_expired}
     end

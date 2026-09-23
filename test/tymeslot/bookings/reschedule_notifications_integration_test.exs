@@ -30,7 +30,9 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
   alias Oban.Job
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Bookings.Reschedule
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Notifications.Orchestrator
+  alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.TelegramWorker
@@ -57,6 +59,14 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
 
     TestMocks.setup_email_mocks()
 
+    # The reschedule submit re-reads the host's connected calendars
+
+    # (`Tymeslot.Bookings.CalendarCheck`); these tests are about a host with
+
+    # nothing else in their diary.
+
+    TestMocks.stub_no_calendar_events()
+
     # The real service, so the templates actually render. Restored afterwards
     # for the rest of the suite.
     original_service = Application.get_env(:tymeslot, :email_service_module)
@@ -81,7 +91,7 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
     # only need one to exist so the reschedule resolves a policy at all. It
     # must offer every hour of every day: reschedule now refuses a time the
     # organiser's schedule doesn't offer, and these tests pick
-    # `future_datetime/2`, an arbitrary time of day.
+    # `future_datetime/2`, a fixed mid-day time.
     schedule =
       insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 15)
 
@@ -140,6 +150,36 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
 
       assert ics = Enum.find(attendee_email.attachments, &(&1.content_type =~ "text/calendar"))
       assert ics.data =~ "SEQUENCE:1"
+    end
+
+    test "each reschedule sends a higher SEQUENCE than the one before",
+         %{user: user, meeting: meeting} do
+      assert {:ok, _first} =
+               Reschedule.execute(
+                 meeting.uid,
+                 reschedule_params_for(future_datetime(10, :day)),
+                 %{},
+                 user.id
+               )
+
+      first_ics = attendee_ics(delivered_emails(), meeting)
+
+      assert {:ok, second} =
+               Reschedule.execute(
+                 meeting.uid,
+                 reschedule_params_for(future_datetime(12, :day)),
+                 %{},
+                 user.id
+               )
+
+      second_ics = attendee_ics(delivered_emails(), meeting)
+
+      assert first_ics.data =~ "SEQUENCE:1"
+      assert second_ics.data =~ "SEQUENCE:2"
+      # Stored as the last SEQUENCE sent, so a later cancellation or a change
+      # the host makes in their own calendar goes past it.
+      assert second.ical_sequence == 2
+      assert Repo.get!(MeetingSchema, meeting.id).ical_sequence == 2
     end
 
     test "dispatches the meeting.rescheduled webhook alongside the emails", %{
@@ -215,6 +255,13 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
 
   # ----- helpers -----
 
+  defp attendee_ics(delivered, meeting) do
+    Enum.find(
+      delivered[meeting.attendee_email].attachments,
+      &(&1.content_type =~ "text/calendar")
+    )
+  end
+
   # The two emails a reschedule sends, keyed by recipient address, so a test
   # names the one it means instead of depending on delivery order.
   defp delivered_emails do
@@ -240,19 +287,20 @@ defmodule Tymeslot.Bookings.RescheduleNotificationsIntegrationTest do
     )
   end
 
-  # Floored to the half hour: the open schedule's slots are generated in
-  # 30-minute steps from local midnight, so an unaligned current-time
-  # minute/second would land between slots and the reschedule's own
-  # schedule check (`Bookings.ScheduleCheck`) would refuse it.
+  # Only the date comes from the clock; the time of day is pinned. The open
+  # schedule's slots are a fixed grid generated in 30-minute steps from local
+  # midnight, and only a start with room for the full duration is offered, so
+  # the 00:00-23:59 window yields 00:00 to 23:00 and 23:30 is never available.
+  # Deriving the time of day from `DateTime.utc_now()` therefore missed the
+  # grid twice over: on an unaligned minute or second, and whenever the run
+  # fell in the last half hour of the target's local day. Both make the
+  # reschedule's own schedule check (`Bookings.ScheduleCheck`) refuse the
+  # target with `{:error, :slot_taken}`. A pinned mid-day time is independent
+  # of the grid's shape, so no fixture change can reintroduce either.
   defp future_datetime(amount, unit) do
-    DateTime.utc_now()
-    |> DateTime.add(amount, unit)
-    |> DateTime.truncate(:second)
-    |> floor_to_half_hour()
-  end
+    future = DateTime.add(DateTime.utc_now(), amount, unit)
 
-  defp floor_to_half_hour(%DateTime{minute: minute} = dt) do
-    %{dt | minute: minute - rem(minute, 30), second: 0, microsecond: {0, 0}}
+    %{future | hour: 10, minute: 0, second: 0, microsecond: {0, 0}}
   end
 
   defp reschedule_params_for(%DateTime{} = target_utc) do

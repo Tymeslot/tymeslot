@@ -1,6 +1,8 @@
 defmodule Tymeslot.Security.RateLimiter.Auth do
   @moduledoc false
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Security.AccountLockout
   alias Tymeslot.Security.RateLimiter.Helpers
 
@@ -62,10 +64,11 @@ defmodule Tymeslot.Security.RateLimiter.Auth do
   def check_signup(email, ip) do
     normalized_ip = Helpers.normalize_ip(ip)
     downcased_email = String.downcase(email)
+    action = dgettext("errors", "signup attempts")
 
     Helpers.check_multi_bucket_limits([
-      {"signup:email:#{downcased_email}", @signup_limits, "signup"},
-      {"signup:ip:#{normalized_ip}", @signup_limits, "signup"}
+      {"signup:email:#{downcased_email}", @signup_limits, "signup", action},
+      {"signup:ip:#{normalized_ip}", @signup_limits, "signup", action}
     ])
   end
 
@@ -73,10 +76,12 @@ defmodule Tymeslot.Security.RateLimiter.Auth do
           :ok | {:error, :rate_limited, String.t()}
   def check_verification(user_id, ip) do
     normalized_ip = Helpers.normalize_ip(ip)
+    action = dgettext("errors", "verification emails")
 
     Helpers.check_multi_bucket_limits([
-      {"email_verification:user:#{user_id}", @verification_limits, "email verification"},
-      {"email_verification:ip:#{normalized_ip}", @verification_limits, "email verification"}
+      {"email_verification:user:#{user_id}", @verification_limits, "email verification", action},
+      {"email_verification:ip:#{normalized_ip}", @verification_limits, "email verification",
+       action}
     ])
   end
 
@@ -85,11 +90,24 @@ defmodule Tymeslot.Security.RateLimiter.Auth do
   def check_password_reset(email, ip) do
     downcased_email = String.downcase(email)
     normalized_ip = Helpers.normalize_ip(ip)
+    action = dgettext("errors", "password reset requests")
 
     Helpers.check_multi_bucket_limits([
-      {"password_reset:email:#{downcased_email}", @password_reset_limits, "password reset"},
-      {"password_reset:ip:#{normalized_ip}", @password_reset_limits, "password reset"}
+      {"password_reset:email:#{downcased_email}", @password_reset_limits, "password reset",
+       action},
+      {"password_reset:ip:#{normalized_ip}", @password_reset_limits, "password reset", action}
     ])
+  end
+
+  @spec check_email_change_verify(String.t()) :: :ok | {:error, :rate_limited, String.t()}
+  def check_email_change_verify(client_ip) do
+    Helpers.check_with_logging(
+      "email_change_verify:#{client_ip}",
+      30,
+      60_000,
+      "email change verification",
+      client_ip
+    )
   end
 
   defp check_auth_ip_bucket(ip) when is_binary(ip) and ip != "" do

@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Integrations.Providers.Directory
@@ -13,7 +14,6 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
-  alias Tymeslot.Utils.SanitizeMerge
   alias TymeslotWeb.Dashboard.VideoSettings.ComponentView
   alias TymeslotWeb.Dashboard.VideoSettings.FormInput
   alias TymeslotWeb.Helpers.IntegrationProviders
@@ -32,6 +32,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:testing_connection, nil)
      |> assign(:health_states, %{})
      |> assign(:show_picker, false)
+     |> assign(:nextcloud_calendars, [])
+     |> assign(:copied_nextcloud_login, nil)
      |> assign(:available_video_providers, Directory.list(:video))}
   end
 
@@ -66,19 +68,51 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   def handle_event("hide_picker", _params, socket) do
-    {:noreply, assign(socket, show_picker: false, config_provider: nil)}
+    {:noreply,
+     assign(socket, show_picker: false, config_provider: nil, copied_nextcloud_login: nil)}
   end
 
   def handle_event("track_form_change", %{"integration" => params}, socket) do
     {:noreply, assign(socket, :form_values, params)}
   end
 
+  # Only the server and login name enter the socket. The app password stays in
+  # the calendar integration and is read again when the form is submitted.
+  def handle_event("copy_nextcloud_login", %{"id" => id}, socket) do
+    user_id = socket.assigns.current_user.id
+
+    with integration_id when is_integer(integration_id) <- FormInput.integration_id(id),
+         {:ok, login} <- Calendar.nextcloud_login(integration_id, user_id) do
+      form_values =
+        Map.merge(socket.assigns.form_values || %{}, %{
+          "base_url" => login.server_url,
+          "client_id" => login.username
+        })
+
+      {:noreply,
+       assign(socket,
+         form_values: form_values,
+         form_errors: %{},
+         copied_nextcloud_login: %{
+           id: integration_id,
+           server_url: login.server_url,
+           username: login.username
+         }
+       )}
+    else
+      _unavailable ->
+        {:noreply, copied_login_unavailable(socket)}
+    end
+  end
+
   def handle_event("back_to_providers", _params, socket) do
     {:noreply,
-     socket
-     |> assign(:config_provider, nil)
-     |> assign(:form_errors, %{})
-     |> assign(:form_values, %{})}
+     assign(socket,
+       config_provider: nil,
+       form_errors: %{},
+       form_values: %{},
+       copied_nextcloud_login: nil
+     )}
   end
 
   def handle_event("setup_provider", %{"provider" => provider}, socket) do
@@ -88,11 +122,14 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
           initiate_oauth(socket, provider_atom)
         else
           {:noreply,
-           socket
-           |> assign(:config_provider, provider)
-           |> assign(:show_picker, true)
-           |> assign(:form_errors, %{})
-           |> assign(:form_values, %{})}
+           assign(socket,
+             config_provider: provider,
+             show_picker: true,
+             form_errors: %{},
+             form_values: %{},
+             nextcloud_calendars: nextcloud_calendars(socket, provider_atom),
+             copied_nextcloud_login: nil
+           )}
         end
 
       _other ->
@@ -102,9 +139,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
   def handle_event("provider_changed", %{"value" => provider}, socket) do
     {:noreply,
-     socket
-     |> assign(:config_provider, provider)
-     |> assign(:form_errors, %{})}
+     assign(socket, config_provider: provider, form_errors: %{}, copied_nextcloud_login: nil)}
   end
 
   def handle_event("validate_field", %{"field" => field} = params, socket) do
@@ -126,44 +161,17 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     {:noreply, assign(socket, form_values: form_values, form_errors: form_errors)}
   end
 
-  def handle_event("add_integration", %{"integration" => params}, socket) do
+  def handle_event("add_integration", %{"integration" => submitted}, socket) do
     user_id = socket.assigns.current_user.id
 
-    with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
-      socket = assign(socket, :saving, true)
-      metadata = DashboardHelpers.get_security_metadata(socket)
+    case with_copied_app_password(submitted, socket.assigns.copied_nextcloud_login, user_id) do
+      {:ok, params} ->
+        create_from_form(socket, submitted, params)
 
-      case VideoInputValidation.validate_video_integration_form(params, metadata: metadata) do
-        {:ok, sanitized_params} ->
-          validated_params = SanitizeMerge.merge(params, sanitized_params)
-          provider = validated_params["provider"] || socket.assigns.config_provider
-
-          if is_nil(provider) do
-            {:noreply,
-             socket
-             |> assign(:form_errors, %{
-               base: dgettext("dashboard_integrations", "Please select a provider")
-             })
-             |> assign(:saving, false)}
-          else
-            handle_create_result(
-              Video.create_integration(
-                user_id,
-                provider,
-                FormInput.to_atom_keys(validated_params)
-              ),
-              socket
-            )
-          end
-
-        {:error, validation_errors} ->
-          {:noreply,
-           socket
-           |> assign(:form_errors, validation_errors)
-           |> assign(:form_values, params)
-           |> assign(:saving, false)}
-      end
-    end)
+      {:error, :copied_login_unavailable} ->
+        {:noreply,
+         socket |> copied_login_unavailable() |> assign(form_values: submitted, saving: false)}
+    end
   end
 
   def handle_event("reconnect_integration", %{"id" => id}, socket) do
@@ -177,19 +185,15 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
         integration_id ->
           case Video.get_integration(user_id, integration_id) do
             {:ok, integration} ->
-              case Video.oauth_reconnect_url(user_id, integration) do
-                {:ok, url} ->
-                  {:noreply, redirect(socket, external: url)}
+              reconnect(socket, user_id, integration)
 
-                {:error, _reason} ->
-                  notify_parent(
-                    {:flash,
-                     {:error,
-                      dgettext("dashboard_integrations", "Failed to reconnect. Please try again.")}}
-                  )
-
-                  {:noreply, socket}
-              end
+            # Credentials that no longer decrypt are precisely what re-running
+            # OAuth repairs, so this state reconnects like any other rather
+            # than being treated as an error. `oauth_reconnect_url/2` reads
+            # only the provider, the row id and the account email, none of
+            # which are encrypted, so it works on an undecryptable row.
+            {:error, :requires_reencryption, integration} ->
+              reconnect(socket, user_id, integration)
 
             {:error, :not_found} ->
               {:noreply, socket}
@@ -309,17 +313,35 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     {:noreply, assign(socket, :testing_connection, nil)}
   end
 
+  def handle_async({:connection_advisory, _integration_id}, result, socket) do
+    if warning = connection_advisory_warning(result) do
+      notify_parent({:flash, {:warning, warning}})
+    end
+
+    {:noreply, socket}
+  end
+
   @impl Phoenix.LiveComponent
   def render(assigns), do: ComponentView.settings(assigns)
 
   # Private functions
 
-  defp handle_create_result({:ok, _integration}, socket) do
-    notify_parent(
-      {:flash,
-       {:info, dgettext("dashboard_integrations", "Video integration added successfully")}}
-    )
+  defp reconnect(socket, user_id, integration) do
+    case Video.oauth_reconnect_url(user_id, integration) do
+      {:ok, url} ->
+        {:noreply, redirect(socket, external: url)}
 
+      {:error, _reason} ->
+        notify_parent(
+          {:flash,
+           {:error, dgettext("dashboard_integrations", "Failed to reconnect. Please try again.")}}
+        )
+
+        {:noreply, socket}
+    end
+  end
+
+  defp handle_create_result({:ok, integration}, _provider, socket) do
     notify_parent({:integration_added, :video})
 
     {:noreply,
@@ -327,17 +349,73 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> reset_form_state()
      |> assign(:show_picker, false)
      |> load_integrations()
-     |> assign(:form_values, %{})}
+     |> assign(:form_values, %{})
+     |> announce_added(integration)}
   end
 
-  defp handle_create_result({:error, %Ecto.Changeset{} = changeset}, socket) do
+  defp handle_create_result({:error, %Ecto.Changeset{} = changeset}, _provider, socket) do
     {:noreply,
      socket
-     |> assign(:form_errors, ChangesetUtils.get_first_error(changeset))
+     |> assign(:form_errors, %{base: ChangesetUtils.get_first_error(changeset)})
      |> assign(:saving, false)}
   end
 
-  defp handle_create_result({:error, :duplicate_integration}, socket) do
+  # A provider with a single fixed host (kMeet) allows one active integration.
+  defp handle_create_result({:error, :provider_already_connected}, _provider, socket) do
+    {:noreply,
+     socket
+     |> assign(:form_errors, %{
+       base:
+         dgettext(
+           "dashboard_integrations",
+           "This provider is already connected. Deactivate or remove the existing integration before adding another."
+         )
+     })
+     |> assign(:saving, false)}
+  end
+
+  # A Jitsi integration is keyed on its server URL, so the duplicate is that
+  # server, active or not.
+  defp handle_create_result({:error, :duplicate_integration}, "jitsi", socket) do
+    {:noreply,
+     socket
+     |> assign(:form_errors, %{
+       base:
+         dgettext(
+           "dashboard_integrations",
+           "This server is already connected. Edit or remove the existing integration instead."
+         )
+     })
+     |> assign(:saving, false)}
+  end
+
+  # A Nextcloud Talk integration is keyed on its server and login name, so the
+  # duplicate is that account, active or not.
+  defp handle_create_result({:error, :duplicate_integration}, "nextcloud_talk", socket) do
+    {:noreply,
+     socket
+     |> assign(:form_errors, %{
+       base:
+         dgettext(
+           "dashboard_integrations",
+           "This Nextcloud account is already connected. Edit or remove the existing integration instead."
+         )
+     })
+     |> assign(:saving, false)}
+  end
+
+  # The Jitsi and Nextcloud Talk providers' own validation words its messages
+  # for the organiser, and they concern the credentials as often as the URL, so
+  # they are shown for the whole form rather than under the URL field.
+  defp handle_create_result({:error, message}, provider, socket)
+       when provider in ["jitsi", "nextcloud_talk"] and is_binary(message) do
+    {:noreply,
+     socket
+     |> assign(:form_errors, %{base: message})
+     |> assign(:saving, false)}
+  end
+
+  defp handle_create_result({:error, :duplicate_integration}, _provider, socket) do
     {:noreply,
      socket
      |> assign(:form_errors, %{
@@ -350,12 +428,144 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:saving, false)}
   end
 
-  defp handle_create_result({:error, reason}, socket) do
+  defp handle_create_result({:error, reason}, _provider, socket) do
     {:noreply,
      socket
      |> assign(:saving, false)
      |> assign(:form_errors, IntegrationProviders.reason_to_form_errors(reason))}
   end
+
+  # The confirmation goes out at once, so it survives this component going
+  # away before a probe finishes.
+  defp announce_added(socket, integration) do
+    notify_parent(
+      {:flash,
+       {:info, dgettext("dashboard_integrations", "Video integration added successfully")}}
+    )
+
+    maybe_probe_connection(socket, integration)
+  end
+
+  # Advisory only. A Jitsi root path may legitimately answer with a redirect,
+  # a 403 or an authentication wall, and a server that is briefly unreachable
+  # is still worth keeping configured, so the probe can only add a warning,
+  # never change the outcome of the save. It runs after the form has closed,
+  # so a slow server never holds the dialog open, and each save gets its own
+  # task name: a second `start_async/3` under the same name would drop the
+  # first save's result.
+  defp maybe_probe_connection(socket, %{provider: "jitsi"} = integration) do
+    start_async(socket, {:connection_advisory, integration.id}, fn ->
+      Video.probe_integration(integration, scope: :interactive)
+    end)
+  end
+
+  defp maybe_probe_connection(socket, _integration), do: socket
+
+  defp connection_advisory_warning({:ok, {:ok, _message}}), do: nil
+
+  # A refused probe never reached the server, so it says nothing about it.
+  defp connection_advisory_warning({:ok, {:error, {:rate_limited, _message}}}), do: nil
+  defp connection_advisory_warning({:ok, {:error, :unattributable}}), do: nil
+
+  defp connection_advisory_warning(_failed) do
+    dgettext(
+      "dashboard_integrations",
+      "Saved, but the server did not answer as expected. Check the URL, or use Test connection once it is reachable."
+    )
+  end
+
+  # `submitted` is what the browser sent; `params` may also carry an app
+  # password read from a copied calendar connection, so only `submitted` is ever
+  # kept in the socket.
+  defp create_from_form(socket, submitted, params) do
+    metadata = DashboardHelpers.get_security_metadata(socket)
+
+    case VideoInputValidation.validate_video_integration_form(params, metadata: metadata) do
+      # The validated map is the whole set of fields the provider's form
+      # accepts, so anything else the browser sent never reaches the context.
+      {:ok, sanitized_params} ->
+        provider = params["provider"] || socket.assigns.config_provider
+
+        add_validated_integration(provider, sanitized_params, socket)
+
+      {:error, validation_errors} ->
+        {:noreply,
+         socket
+         |> assign(:form_errors, validation_errors)
+         |> assign(:form_values, submitted)
+         |> assign(:saving, false)}
+    end
+  end
+
+  defp add_validated_integration(nil, _validated_params, socket) do
+    {:noreply,
+     socket
+     |> assign(:form_errors, %{
+       base: dgettext("dashboard_integrations", "Please select a provider")
+     })
+     |> assign(:saving, false)}
+  end
+
+  # The write budget is charged only once the form is known to be worth
+  # submitting. Charging first meant an organiser correcting a typo paid a token
+  # per correction, for attempts that were refused before this point and never
+  # reached a provider, which is what the bucket meters.
+  defp add_validated_integration(provider, validated_params, socket) do
+    user_id = socket.assigns.current_user.id
+
+    with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
+      handle_create_result(
+        Video.create_integration(user_id, provider, FormInput.to_atom_keys(validated_params)),
+        provider,
+        assign(socket, :saving, true)
+      )
+    end)
+  end
+
+  defp copied_login_unavailable(socket) do
+    assign(socket,
+      form_errors: %{
+        base:
+          dgettext("dashboard_integrations", "That calendar connection is no longer available.")
+      },
+      copied_nextcloud_login: nil
+    )
+  end
+
+  defp nextcloud_calendars(socket, :nextcloud_talk),
+    do: Calendar.nextcloud_logins(socket.assigns.current_user.id)
+
+  defp nextcloud_calendars(_socket, _provider), do: []
+
+  # A copied login carries its app password only from here to the save: it is
+  # read from the calendar integration at submit time and never kept in the
+  # socket or sent to the browser. A password typed into the form wins, and a
+  # server or login name changed since the copy gets no password at all, so
+  # the calendar's password only ever goes to the account it belongs to.
+  #
+  # A calendar connection deleted or deactivated since the copy is reported as
+  # such, rather than as a missing app password the organiser never had to type.
+  defp with_copied_app_password(
+         %{"provider" => "nextcloud_talk"} = submitted,
+         %{id: calendar_id},
+         user_id
+       ) do
+    with true <- blank?(submitted["client_secret"]),
+         {:ok, login} <- Calendar.nextcloud_login(calendar_id, user_id) do
+      if FormInput.copied_login_applies?(login, submitted),
+        do: {:ok, Map.put(submitted, "client_secret", login.password)},
+        else: {:ok, submitted}
+    else
+      false -> {:ok, submitted}
+      {:error, :not_found} -> {:error, :copied_login_unavailable}
+    end
+  end
+
+  defp with_copied_app_password(submitted, _copied_login, _user_id), do: {:ok, submitted}
+
+  defp blank?(nil), do: true
+  defp blank?(value) when is_binary(value), do: String.trim(value) == ""
+  defp blank?(_value), do: false
 
   defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do
     notify_parent({:flash, {:error, message}})
@@ -380,10 +590,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   defp reset_form_state(socket) do
-    socket
-    |> assign(:config_provider, nil)
-    |> assign(:form_errors, %{})
-    |> assign(:saving, false)
+    assign(socket,
+      config_provider: nil,
+      form_errors: %{},
+      saving: false,
+      copied_nextcloud_login: nil
+    )
   end
 
   defp initiate_oauth(socket, provider) do

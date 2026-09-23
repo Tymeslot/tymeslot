@@ -26,7 +26,6 @@ defmodule TymeslotWeb.MeetingRequestLive do
 
   require Logger
 
-  alias Tymeslot.Clock
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingState
@@ -94,27 +93,34 @@ defmodule TymeslotWeb.MeetingRequestLive do
   # everything but a genuine decline falls back to the same "not currently
   # answerable" wording used for an unrecognised token, rather than borrowing
   # the decline copy.
+  #
+  # `:lapsed` is a request whose answer deadline has passed while the row is
+  # still `"awaiting_approval"`: the window between the deadline and the
+  # expiry sweep (or a losing race against it) actually running. Telling it
+  # apart from `:awaiting` keeps the page from showing a past deadline as if
+  # it were still ahead, and from offering Approve/Decline on a request that
+  # is already effectively closed.
   defp state_for(meeting) do
     cond do
-      MeetingState.awaiting_approval?(meeting) and lapsed?(meeting) -> :lapsed
-      MeetingState.awaiting_approval?(meeting) -> :awaiting
-      meeting.status == "confirmed" -> :approved
-      meeting.status == "expired" -> :expired
-      Approval.declined?(meeting) -> :declined
-      true -> :invalid
+      MeetingState.awaiting_approval?(meeting) and MeetingState.approval_deadline_passed?(meeting) ->
+        :lapsed
+
+      MeetingState.awaiting_approval?(meeting) ->
+        :awaiting
+
+      meeting.status == "confirmed" ->
+        :approved
+
+      meeting.status == "expired" ->
+        :expired
+
+      Approval.declined?(meeting) ->
+        :declined
+
+      true ->
+        :invalid
     end
   end
-
-  # True once the answer deadline has passed but the row is still
-  # `"awaiting_approval"` — the window between the deadline and the expiry
-  # sweep (or a losing race against it) actually running. Distinguishing this
-  # from `:awaiting` keeps the page from showing a past deadline as if it
-  # were still ahead, and from offering Approve/Decline on a request that is
-  # already effectively closed.
-  defp lapsed?(%{approval_deadline_at: nil}), do: false
-
-  defp lapsed?(%{approval_deadline_at: deadline}),
-    do: DateTime.compare(deadline, Clock.utc_now()) == :lt
 
   @impl Phoenix.LiveView
   def handle_event("choose", %{"intent" => intent}, socket) do

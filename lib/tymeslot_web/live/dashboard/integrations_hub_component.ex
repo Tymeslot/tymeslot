@@ -152,10 +152,37 @@ defmodule TymeslotWeb.Dashboard.IntegrationsHubComponent do
           }
         ]
 
-      _no_attention ->
+      :ok ->
+        room_creation_attention(integration, tab)
+
+      _paused ->
         []
     end
   end
+
+  # A connection the provider accepts but whose rooms it refuses is the one
+  # problem `attention_status/2` cannot see: the credentials are fine, so the
+  # integration classifies as healthy. Its row says so with its own badge and
+  # notice, and this puts the same thing in the banner, which is otherwise the
+  # only place the refusal never reaches its owner. Only for an otherwise
+  # healthy integration, exactly as the row's badge is, so a paused or
+  # unreachable one still reports the worse problem first.
+  defp room_creation_attention(%{room_creation_error: nil}, _tab), do: []
+
+  defp room_creation_attention(%{room_creation_error: _code} = integration, tab),
+    do: [
+      %{
+        tab: tab,
+        severity: :warning,
+        message:
+          dgettext("dashboard_integrations", "%{name}: new bookings get no video link.",
+            name: integration.name
+          )
+      }
+    ]
+
+  # Calendar integrations have no such field, and so no such refusal.
+  defp room_creation_attention(_integration, _tab), do: []
 
   defp payment_attention(:restricted),
     do: [

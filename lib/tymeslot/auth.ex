@@ -13,7 +13,6 @@ defmodule Tymeslot.Auth do
     AuthActions,
     Authentication,
     EmailChange,
-    PasswordReset,
     PasswordUpdate,
     Registration,
     Session,
@@ -39,7 +38,9 @@ defmodule Tymeslot.Auth do
       {:error, :invalid_credentials, "Invalid email or password"}
   """
   @spec authenticate_user(String.t(), String.t(), keyword()) ::
-          {:ok, term(), String.t()} | {:error, atom(), String.t()}
+          {:ok, term(), String.t()}
+          | {:unverified, term(), String.t()}
+          | {:error, atom(), String.t()}
   def authenticate_user(email, password, opts \\ []) do
     Authentication.authenticate_user(email, password, opts)
   end
@@ -47,9 +48,10 @@ defmodule Tymeslot.Auth do
   @doc """
   Requests an email change for a user.
   Validates password, creates token, stores pending email, and sends verification emails.
+  A failure is `{:error, {field, message}}`, naming the form field it belongs to.
   """
   @spec request_email_change(term(), String.t(), String.t()) ::
-          {:ok, term(), String.t()} | {:error, String.t()}
+          {:ok, term(), String.t()} | {:error, {:current_password | :new_email, String.t()}}
   def request_email_change(user, new_email, current_password) do
     EmailChange.request_email_change(user, new_email, current_password)
   end
@@ -75,10 +77,11 @@ defmodule Tymeslot.Auth do
 
   @doc """
   Updates a user's password after verifying their current password.
-  Pure domain logic without HTTP concerns.
+  Pure domain logic without HTTP concerns. A failure is
+  `{:error, {field, message}}`, naming the form field it belongs to.
   """
   @spec update_user_password(term(), String.t(), String.t(), String.t(), keyword()) ::
-          {:ok, term()} | {:error, String.t()}
+          {:ok, term()} | {:error, {PasswordUpdate.error_field(), String.t()}}
   def update_user_password(
         user,
         current_password,
@@ -134,29 +137,6 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
-  Initiates the password reset process.
-
-  This will:
-  - Generate a reset token
-  - Send reset instructions via email
-  - Return success regardless of whether user exists (security)
-  """
-  @spec initiate_password_reset(String.t(), keyword()) ::
-          {:ok, atom(), String.t()} | {:error, atom(), String.t()}
-  def initiate_password_reset(email, opts \\ []) do
-    PasswordReset.initiate_reset(email, opts)
-  end
-
-  @doc """
-  Resets a user's password using a valid reset token.
-  """
-  @spec reset_password(String.t(), String.t(), String.t(), keyword()) ::
-          {:ok, term(), String.t()} | {:error, atom(), String.t()}
-  def reset_password(token, new_password, password_confirmation, opts \\ []) do
-    PasswordReset.reset_password(token, new_password, password_confirmation, opts)
-  end
-
-  @doc """
   Verifies a user's email address.
 
   Deliberately broadcasts nothing: `user_registered` is published once, at
@@ -167,6 +147,15 @@ defmodule Tymeslot.Auth do
   def verify_user_email(token) do
     Verification.verify_user(token)
   end
+
+  @doc """
+  Completes an emailed verification link, reporting whether the person who
+  opened it may be signed straight in (`:auto_login`) or must log in
+  (`:manual`). See `Tymeslot.Auth.Verification.verify_email_and_maybe_login/2`.
+  """
+  @spec verify_email_and_maybe_login(String.t(), String.t() | nil) ::
+          {:ok, Ecto.Schema.t(), :auto_login | :manual} | {:error, atom()}
+  defdelegate verify_email_and_maybe_login(token, request_ip), to: Verification
 
   @doc """
   Subscribes the calling process to user-registration events.
@@ -225,9 +214,9 @@ defmodule Tymeslot.Auth do
 
   @doc """
   Checks if an email is available for registration.
-  Returns :ok if available, {:error, reason} otherwise.
+  Returns :ok if available, {:error, :email_already_taken | :invalid_email} otherwise.
   """
-  @spec check_email_availability(String.t()) :: :ok | {:error, String.t()}
+  @spec check_email_availability(term()) :: :ok | {:error, :email_already_taken | :invalid_email}
   def check_email_availability(email) do
     SocialAuthentication.check_email_availability(email)
   end

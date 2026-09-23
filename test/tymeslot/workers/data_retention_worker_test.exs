@@ -10,6 +10,7 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
   alias Tymeslot.Analytics.EventSchema
   alias Tymeslot.Slack.SlackDeliverySchema
   alias Tymeslot.Telegram.TelegramDeliverySchema
+  alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookEventSchema
   alias Tymeslot.Workers.DataRetentionWorker
@@ -248,6 +249,69 @@ defmodule Tymeslot.Workers.DataRetentionWorkerTest do
       assert :ok = perform_job(DataRetentionWorker, %{"telegram_delivery_retention_days" => 30})
       refute Repo.get(TelegramDeliverySchema, delivery.id)
     end
+  end
+
+  describe "perform/1 - abandoned Telegram setup stub cleanup" do
+    test "removes stubs abandoned past the link TTL" do
+      user = insert(:user)
+
+      abandoned = telegram_stub(user, inserted_at: forty_minutes_ago())
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      refute Repo.get(TelegramIntegrationSchema, abandoned.id)
+    end
+
+    test "keeps a stub created within the link TTL" do
+      user = insert(:user)
+
+      fresh = telegram_stub(user)
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      assert Repo.get(TelegramIntegrationSchema, fresh.id)
+    end
+
+    test "keeps an old stub whose link token was issued within the TTL" do
+      user = insert(:user)
+
+      refreshed =
+        telegram_stub(user,
+          inserted_at: forty_minutes_ago(),
+          link_token_issued_at: DateTime.utc_now(:second)
+        )
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      assert Repo.get(TelegramIntegrationSchema, refreshed.id)
+    end
+
+    test "keeps an integration that was linked and later lost its chat" do
+      user = insert(:user)
+
+      disconnected =
+        telegram_stub(user,
+          inserted_at: forty_minutes_ago(),
+          linked_at: forty_minutes_ago()
+        )
+
+      assert :ok = perform_job(DataRetentionWorker, %{})
+
+      assert Repo.get(TelegramIntegrationSchema, disconnected.id)
+    end
+
+    defp telegram_stub(user, attrs \\ []) do
+      defaults = [
+        user: user,
+        bot_mode: "shared",
+        chat_id: nil,
+        link_token: "tok-#{System.unique_integer([:positive])}"
+      ]
+
+      insert(:telegram_integration, Keyword.merge(defaults, attrs))
+    end
+
+    defp forty_minutes_ago, do: DateTime.add(DateTime.utc_now(:second), -40, :minute)
   end
 
   describe "perform/1 - analytics event cleanup" do

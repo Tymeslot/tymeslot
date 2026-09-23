@@ -4,7 +4,7 @@ defmodule Tymeslot.Mailer.CloudronConfig do
 
   Cloudron provides a local SMTP relay that does not use TLS/STARTTLS.
   This module reads `CLOUDRON_MAIL_SMTP_*` env vars and produces a config
-  keyword list compatible with `Swoosh.Adapters.SMTP`.
+  keyword list for `Tymeslot.Mailer.SMTPAdapter`.
 
   ## Cloudron Environment Variables
 
@@ -36,7 +36,7 @@ defmodule Tymeslot.Mailer.CloudronConfig do
     port = parse_port(opts[:port])
 
     config = [
-      adapter: Swoosh.Adapters.SMTP,
+      adapter: Tymeslot.Mailer.SMTPAdapter,
       relay: server,
       port: port,
       username: username,
@@ -44,7 +44,9 @@ defmodule Tymeslot.Mailer.CloudronConfig do
       ssl: false,
       tls: :never,
       auth: :always,
-      retries: 2,
+      # Oban retries mail; see `Tymeslot.Mailer.SMTPConfig` for why gen_smtp
+      # must not spend the worker's time budget on its own reconnects.
+      retries: 0,
       timeout: 10_000,
       no_mx_lookups: true
     ]

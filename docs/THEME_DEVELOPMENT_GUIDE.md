@@ -111,7 +111,7 @@ assets/css/scheduling/themes/[theme_name]/
 | `PathHandlers` | Navigation with locale preservation; `organizer_scheduling_path/1` for back-to-calendar links in cancel/reschedule pages |
 | `Customization.Helpers` | Wrapper background/customization helpers. Call `prepare_wrapper_assigns/1` once at the top of your wrapper (it derives `@has_video_background`, `@video_poster`, `@show_language_switcher`); use `get_background_style/1` for the inline gradient/colour/image style. There is no `generate_custom_css` — the `custom_css` string arrives as an assign already. |
 | `Customization.Video` | Video source generation — `render_preset_video_sources/1` and `render_upload_video_sources/1` build the `<source>` markup for a preset or an uploaded background |
-| `LocaleHandler` | Locale metadata for the language switcher — `get_locales_with_metadata/0`, `supported_locales/0` |
+| `LocaleHandler` | Applies a locale switch to the socket — `handle_locale_change/2`. The language switcher's locale list comes from `Tymeslot.Locales.supported/0` (each entry a `%{code:, name:, country_code:}` map) |
 | `SchedulingLive` | Shared LiveView macro — `use TymeslotWeb.Themes.Shared.SchedulingLive, theme_id: "N"` injects all common callbacks; only `render/1` (and optional overrides) needed in your LiveView |
 | `VideoSources` | Shared component rendering `<source>` elements for video backgrounds; import and use `<.video_sources theme_customization={@theme_customization} />` in your wrapper |
 | `Shared.Components.MeetingDetails` | Shared `meeting_detail_rows/1` component for cancel/reschedule pages; renders date, time, timezone, and organizer rows with icons |
@@ -730,10 +730,12 @@ def handle_info({ref, {:error, reason}}, socket) when is_reference(ref) do
   InfoHandlers.handle_availability_error(socket, ref, reason)
 end
 
-# Handle task crash or timeout
+# The availability task is linked, so a crash kills the LiveView rather than
+# arriving as a :DOWN message. Any :DOWN that does reach here belongs to a
+# monitor this LiveView never set up; ignore it instead of logging a warning.
 @impl Phoenix.LiveView
-def handle_info({:DOWN, ref, :process, _pid, reason}, socket) do
-  InfoHandlers.handle_availability_down(socket, ref, reason)
+def handle_info({:DOWN, _ref, :process, _pid, _reason}, socket) do
+  {:noreply, socket}
 end
 
 @impl Phoenix.LiveView
@@ -747,7 +749,6 @@ end
 - `handle_load_slots/2` - Load slots for date selection
 - `handle_availability_ok/3` - Process successful availability fetch
 - `handle_availability_error/3` - Handle availability fetch errors
-- `handle_availability_down/3` - Handle task crashes/timeouts
 - `handle_close_dropdown/1` - Close dropdowns after delay
 
 ### SchedulingInit
@@ -787,9 +788,11 @@ end
 
 ### BookingFlow
 
-`TymeslotWeb.Themes.Shared.BookingFlow` handles form validation and submission:
+`TymeslotWeb.Themes.Shared.BookingFlow` handles form validation and submission; field-touched state lives in `TymeslotWeb.Live.Scheduling.OrganizerHelpers`:
 
 ```elixir
+alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
+
 defp handle_booking_events(socket, event, data) do
   case event do
     :validate ->
@@ -799,7 +802,7 @@ defp handle_booking_events(socket, event, data) do
       BookingFlow.submit_booking(socket, data, &transition_to/3)
 
     :field_blur ->
-      {:noreply, Helpers.mark_field_touched(socket, data)}
+      {:noreply, OrganizerHelpers.mark_field_touched(socket, data)}
 
     :back_step ->
       handle_state_transition(socket, :booking, :schedule)
@@ -1061,7 +1064,7 @@ defmodule TymeslotWeb.Themes.Aurora.Scheduling.Wrapper do
         <%= if assigns[:locale] && assigns[:language_dropdown_open] != nil do %>
           <.language_switcher
             locale={@locale}
-            locales={TymeslotWeb.Themes.Shared.LocaleHandler.get_locales_with_metadata()}
+            locales={Tymeslot.Locales.supported()}
             dropdown_open={@language_dropdown_open}
             theme="aurora"
           />
@@ -1333,7 +1336,7 @@ The language switcher is typically integrated via the theme's wrapper:
 ```heex
 <.language_switcher
   locale={@locale}
-  locales={TymeslotWeb.Themes.Shared.LocaleHandler.get_locales_with_metadata()}
+  locales={Tymeslot.Locales.supported()}
   dropdown_open={@language_dropdown_open}
   theme={@theme_key}
 />

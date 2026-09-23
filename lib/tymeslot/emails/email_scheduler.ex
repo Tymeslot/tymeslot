@@ -41,6 +41,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_request_emails(meeting_id, opts \\ []), to: MeetingScheduler
   defdelegate schedule_approval_nudge(meeting_id, send_at), to: MeetingScheduler
   defdelegate schedule_request_outcome(meeting_id, variant), to: MeetingScheduler
+  defdelegate schedule_reschedule_request_expired(meeting_id), to: MeetingScheduler
   defdelegate cancel_approval_emails(meeting_id), to: MeetingScheduler
 
   # Auth emails
@@ -71,6 +72,9 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_integration_paused_notification(user, integration, type, cutoff_days),
     to: IntegrationScheduler
 
+  defdelegate schedule_video_room_creation_error_notification(user_id, integration_id, code),
+    to: IntegrationScheduler
+
   defdelegate schedule_admin_alert(recipient, category, severity, message, metadata, opts \\ []),
     to: IntegrationScheduler
 
@@ -84,6 +88,7 @@ defmodule Tymeslot.Emails.EmailScheduler do
     "send_booking_request_emails" => ["meeting_id"],
     "send_booking_approval_nudge" => ["meeting_id"],
     "send_booking_request_outcome" => ["meeting_id", "variant"],
+    "send_reschedule_request_expired" => ["meeting_id"],
     "send_email_verification" => ["user_id", "verification_url"],
     "send_password_reset" => ["user_id", "reset_url"],
     "send_poll_deadline_reminders" => ["poll_id"],
@@ -100,6 +105,11 @@ defmodule Tymeslot.Emails.EmailScheduler do
       "user_id",
       "integration_id",
       "integration_type"
+    ],
+    "send_video_room_creation_error_notification" => [
+      "user_id",
+      "integration_id",
+      "error_code"
     ],
     "send_calendar_invitation" => [
       "user_id",

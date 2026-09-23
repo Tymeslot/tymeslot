@@ -10,6 +10,7 @@ defmodule Tymeslot.Meetings do
   alias Tymeslot.Bookings.{Cancel, Reschedule, RescheduleRequest}
 
   alias Tymeslot.Meetings.{
+    BusyPeriods,
     CalendarEventLink,
     CalendarEvents,
     Cancellation,
@@ -29,13 +30,23 @@ defmodule Tymeslot.Meetings do
 
   alias Tymeslot.Pagination.CursorPage
 
-  @doc "Looks up a guest by their RSVP token without mutating anything."
-  defdelegate get_guest_by_token(token), to: Guests, as: :get_by_token
+  @doc """
+  Looks up the open invitation behind a guest's RSVP token, with its meeting
+  preloaded. Returns `{:error, :meeting_closed}` once the meeting no longer
+  takes responses.
+  """
+  defdelegate get_guest_invitation(token), to: Guests, as: :get_open_invitation
 
   @doc """
-  Records a guest's RSVP (`"accepted"` / `"declined"`) from their token.
+  Records a guest's RSVP (`"accepted"` / `"declined"`) from their token and
+  notifies the organiser's dashboard.
   """
   defdelegate record_guest_rsvp(token, response), to: Guests, as: :record_rsvp
+
+  @doc "Subscribes the caller to guest RSVP updates on a user's meetings."
+  defdelegate subscribe_to_guest_rsvp_updates(user_id),
+    to: Guests,
+    as: :subscribe_to_rsvp_updates
 
   @doc "Aggregates RSVP counts for a list of guests."
   defdelegate guest_rsvp_summary(guests), to: Guests, as: :summarize
@@ -69,16 +80,20 @@ defmodule Tymeslot.Meetings do
   @doc """
   Cancels a meeting and issues the resolved refund to the attendee.
 
+  Only the host who took the payment may ask for a refund; anyone else gets
+  `{:error, :not_found}` before the meeting is cancelled. Cancelling with
+  `:none` is open to whoever the caller already allows to cancel.
+
   Returns `{:error, {:refund_failed, reason}}` when the meeting was cancelled
   but the refund could not be issued, so callers can tell the host to settle it
   manually rather than reporting a failed cancellation.
   """
   @spec cancel_meeting_with_refund(
-          Ecto.Schema.t() | String.t(),
-          map() | nil,
+          Ecto.Schema.t(),
+          integer(),
           Cancellation.refund_action()
         ) :: {:ok, Ecto.Schema.t()} | {:error, term()}
-  defdelegate cancel_meeting_with_refund(meeting_or_uid, payment, refund_action),
+  defdelegate cancel_meeting_with_refund(meeting, acting_user_id, refund_action),
     to: Cancellation,
     as: :cancel
 
@@ -167,6 +182,13 @@ defmodule Tymeslot.Meetings do
   defdelegate list_meetings_in_range_for_organizer(organizer_user_id, from, to),
     to: MeetingListQueries,
     as: :list_for_organizer_in_range
+
+  @doc """
+  How many booking requests this organiser has not yet answered; drives the
+  dashboard's Requests tab badge.
+  """
+  @spec count_awaiting_approval_for_organizer(integer()) :: non_neg_integer()
+  defdelegate count_awaiting_approval_for_organizer(organizer_user_id), to: MeetingQueries
 
   @doc """
   Sends a reschedule request email for a meeting.
@@ -343,6 +365,17 @@ defmodule Tymeslot.Meetings do
               as: :apply_change
 
   @doc """
+  Applies an external calendar change signal to a meeting already in hand.
+
+  The identifier-free counterpart of `apply_external_calendar_change/4`, for
+  callers that resolved the meeting themselves, such as a batch that matched many
+  events in one query rather than two lookups per event.
+  """
+  defdelegate apply_external_calendar_change_to_meeting(meeting, signal),
+    to: ExternalCalendarChanges,
+    as: :apply_change_to_meeting
+
+  @doc """
   Clears an `"externally_modified"` flag on a meeting whose provider event
   agrees with it again.
 
@@ -391,6 +424,24 @@ defmodule Tymeslot.Meetings do
   defdelegate linked_to_calendar_event?(record, identifier_set),
     to: CalendarEventLink,
     as: :linked?
+
+  @doc """
+  Drops from `records` every calendar event that mirrors `meeting`, so a
+  meeting's own provider event never counts as a conflict with itself. `nil`
+  leaves `records` untouched.
+  """
+  defdelegate reject_calendar_event_mirrors(records, meeting),
+    to: CalendarEventLink,
+    as: :reject_mirrors
+
+  @doc """
+  Merges the organiser's live bookings in `[from, to)` into `calendar_events`
+  as busy periods, so a booking blocks its own slot whether or not it has
+  reached the host's calendar. See `Tymeslot.Meetings.BusyPeriods`.
+  """
+  defdelegate merge_busy_periods(calendar_events, organizer_user_id, from, to),
+    to: BusyPeriods,
+    as: :merge
 
   # =====================================
   # Analytics Query Functions

@@ -13,8 +13,10 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
 
   @type meeting_details :: %{
           required(:date) => Date.t() | DateTime.t(),
-          required(:start_time) => DateTime.t(),
-          required(:duration) => integer(),
+          required(:start_time) => DateTime.t() | nil,
+          required(:duration) => integer() | nil,
+          optional(:all_day) => boolean(),
+          optional(:last_date) => Date.t() | nil,
           optional(:location) => String.t() | nil,
           optional(:location_type) => atom() | nil,
           optional(:meeting_type) => String.t() | nil,
@@ -23,14 +25,20 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
           optional(atom()) => term()
         }
 
-  @doc "The hero meeting block, rendered in the recipient's locale."
+  @doc """
+  The hero meeting block, rendered in the recipient's locale.
+
+  An all-day event (`all_day: true`, with `:date` its first day and
+  `:last_date` its inclusive last day) has no clock time or duration in
+  minutes, so the time line says "All day" and the duration counts days.
+  """
   @spec meeting_details_table(meeting_details(), String.t()) :: String.t()
   def meeting_details_table(details, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       weekday = Formatting.format_weekday(details.date, locale)
       date_line = Formatting.format_date(details.date, locale)
       time_line = format_meeting_time(details, locale)
-      duration = Formatting.format_duration(details.duration, locale)
+      duration = format_meeting_duration(details, locale)
       location = Formatting.format_location(details)
       meeting_type = Map.get(details, :meeting_type)
 
@@ -53,18 +61,16 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
     end)
   end
 
-  @doc "Formats the meeting time line using the default locale."
-  @spec format_meeting_time(meeting_details()) :: String.t()
-  def format_meeting_time(details), do: format_meeting_time(details, "en")
-
-  @doc "Formats the meeting time line in a specific locale."
   @spec format_meeting_time(meeting_details(), String.t()) :: String.t()
-  def format_meeting_time(details, locale) do
+  defp format_meeting_time(details, locale) do
     # Set only by organiser-addressed emails; nil everywhere else means the
     # recipient's locale decides.
     time_format = Map.get(details, :time_format)
 
     case details do
+      %{all_day: true, date: %Date{} = first, last_date: %Date{} = last} ->
+        Formatting.format_all_day(first, last, locale)
+
       %{start_time: %DateTime{} = start_time, timezone: timezone} when is_binary(timezone) ->
         formatted = Formatting.format_time(start_time, locale, time_format)
 
@@ -79,6 +85,15 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
         dgettext("emails", "TBD")
     end
   end
+
+  defp format_meeting_duration(
+         %{all_day: true, date: %Date{} = first, last_date: %Date{} = last},
+         locale
+       ),
+       do: Formatting.format_day_count(first, last, locale)
+
+  defp format_meeting_duration(details, locale),
+    do: Formatting.format_duration(details.duration, locale)
 
   defp hero_eyebrow(weekday) do
     safe_weekday = Sanitise.sanitize_for_email(weekday)

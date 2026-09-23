@@ -71,6 +71,37 @@ defmodule Tymeslot.Auth.Verification do
   end
 
   @doc """
+  Verifies the email address behind `token` and decides whether the person who
+  opened the link may be signed straight in.
+
+  Auto-login is granted only when the link is completed from the IP address
+  the account signed up from (localhost spellings treated as one), so a link
+  forwarded to, or intercepted by, someone else verifies the address without
+  handing over a session.
+  """
+  @spec verify_email_and_maybe_login(String.t(), String.t() | nil) ::
+          {:ok, term(), :auto_login | :manual} | {:error, atom()}
+  def verify_email_and_maybe_login(token, request_ip) when is_binary(token) do
+    with {:ok, user} <- fetch_user_by_token(token),
+         {:ok, verified_user} <- verify_fetched_user(user) do
+      {:ok, verified_user, login_mode(user.signup_ip, request_ip)}
+    end
+  end
+
+  defp login_mode(nil, _request_ip), do: :manual
+
+  defp login_mode(signup_ip, request_ip) do
+    if normalise_localhost(signup_ip) == normalise_localhost(request_ip),
+      do: :auto_login,
+      else: :manual
+  end
+
+  defp normalise_localhost(ip) when ip in ["127.0.0.1", "::1", "0:0:0:0:0:0:0:1"],
+    do: "localhost"
+
+  defp normalise_localhost(ip), do: ip
+
+  @doc """
   Initiates the email verification process for a user, rate-limited by IP.
   """
   @impl Tymeslot.Infrastructure.VerificationBehaviour
@@ -78,14 +109,6 @@ defmodule Tymeslot.Auth.Verification do
   def verify_user_email(socket_or_conn, user, _profile_params) do
     send_within_rate_limit(socket_or_conn, user)
   end
-
-  @doc """
-  Handles the verification token submitted by the user (controller action).
-  Returns only tagged tuples, no Plug.Conn.
-  """
-  @impl Tymeslot.Infrastructure.VerificationBehaviour
-  @spec verify_user_token(String.t()) :: {:ok, term()} | {:error, atom()}
-  def verify_user_token(token), do: verify_user(token)
 
   @doc """
   Resends the verification email, rate-limited by IP.

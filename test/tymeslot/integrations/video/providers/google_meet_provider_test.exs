@@ -148,7 +148,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
         oauth_scope: "scope"
       }
 
-      expect(GoogleOAuthHelperMock, :refresh_access_token, fn "refresh_token", "scope" ->
+      expect(GoogleOAuthHelperMock, :refresh_access_token, fn "refresh_token", "scope", _opts ->
         {:ok,
          %{
            access_token: "new_token",
@@ -168,57 +168,21 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
   end
 
   describe "create_join_url/5" do
-    test "creates join URL with participant email and name" do
-      room_data = %{meeting_url: "https://meet.google.com/abc-defg-hij"}
-      participant_name = "John Doe"
-      participant_email = "john@example.com"
-      role = "attendee"
-      meeting_time = DateTime.utc_now()
+    # Meet has no per-person join link, and `authuser=<email>` sends anyone not
+    # signed in under that exact address to a Google sign-in page instead of
+    # the room, so both roles must get the untouched meeting URL.
+    for role <- ["organizer", "participant"] do
+      test "returns the plain meeting URL for the #{role} role" do
+        room_data = %{meeting_url: "https://meet.google.com/abc-defg-hij"}
 
-      assert {:ok, join_url} =
-               GoogleMeetProvider.create_join_url(
+        assert GoogleMeetProvider.create_join_url(
                  room_data,
-                 participant_name,
-                 participant_email,
-                 role,
-                 meeting_time
-               )
-
-      assert String.starts_with?(join_url, "https://meet.google.com/abc-defg-hij?")
-      assert String.contains?(join_url, "authuser=john%40example.com")
-      assert String.contains?(join_url, "uname=John+Doe")
-    end
-
-    test "adds host role parameter for organizer" do
-      room_data = %{meeting_url: "https://meet.google.com/abc-defg-hij"}
-      meeting_time = DateTime.utc_now()
-
-      assert {:ok, join_url} =
-               GoogleMeetProvider.create_join_url(
-                 room_data,
-                 "Organizer",
-                 "org@example.com",
-                 "organizer",
-                 meeting_time
-               )
-
-      assert String.contains?(join_url, "role=host")
-    end
-
-    test "does not add host role for attendee" do
-      room_data = %{meeting_url: "https://meet.google.com/abc-defg-hij"}
-      meeting_time = DateTime.utc_now()
-
-      assert {:ok, join_url} =
-               GoogleMeetProvider.create_join_url(
-                 room_data,
-                 "Attendee",
-                 "att@example.com",
-                 "attendee",
-                 meeting_time
-               )
-
-      refute String.contains?(join_url, "role=host")
+                 "John Doe",
+                 "john@example.com",
+                 unquote(role),
+                 DateTime.utc_now()
+               ) == {:ok, "https://meet.google.com/abc-defg-hij"}
+      end
     end
 
     test "returns error when meeting_url is missing" do

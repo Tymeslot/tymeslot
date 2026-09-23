@@ -1,8 +1,6 @@
 defmodule Tymeslot.Polls.PollVoteQueries do
   @moduledoc "Data access for poll votes."
 
-  import Ecto.Query
-
   alias Ecto.UUID
   alias Tymeslot.Polls.PollVoteSchema
   alias Tymeslot.Repo
@@ -23,12 +21,5 @@ defmodule Tymeslot.Polls.PollVoteQueries do
       on_conflict: {:replace, [:response, :updated_at]},
       conflict_target: [:poll_participant_id, :poll_time_slot_id]
     )
-  end
-
-  @spec list_for_participant(Ecto.UUID.t()) :: [PollVoteSchema.t()]
-  def list_for_participant(participant_id) do
-    PollVoteSchema
-    |> where([v], v.poll_participant_id == ^participant_id)
-    |> Repo.all()
   end
 end

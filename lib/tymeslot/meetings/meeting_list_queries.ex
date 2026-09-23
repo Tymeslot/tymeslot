@@ -15,17 +15,10 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Repo
 
-  # Cancelled meetings accumulate indefinitely; bound the default read so the
-  # list can never grow unbounded. Callers needing more can pass :limit.
-  @default_cancelled_limit 200
-
   # Query building helpers
 
   defp for_user_email(query, email),
     do: from(m in query, where: m.organizer_email == ^email or m.attendee_email == ^email)
-
-  defp for_attendee_email(query, email),
-    do: from(m in query, where: m.attendee_email == ^email)
 
   defp with_status(query, nil), do: query
   defp with_status(query, status), do: from(m in query, where: m.status == ^status)
@@ -40,7 +33,6 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
   defp upcoming(query, now), do: from(m in query, where: m.end_time > ^now)
   defp past(query, now), do: from(m in query, where: m.end_time < ^now)
-  defp order_by_start_desc(query), do: from(m in query, order_by: [desc: m.start_time])
   defp order_by_start_asc(query), do: from(m in query, order_by: [asc: m.start_time])
 
   defp apply_limit(query, limit), do: from(m in query, limit: ^limit)
@@ -62,55 +54,6 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
 
   defp order_by_start_desc_id_desc(query),
     do: from(m in query, order_by: [desc: m.start_time, desc: m.id])
-
-  @doc """
-  Returns the list of upcoming meetings (future meetings only).
-  """
-  @spec list_upcoming_meetings() :: [Meeting.t()]
-  def list_upcoming_meetings do
-    now = DateTime.utc_now()
-
-    Meeting
-    |> upcoming(now)
-    |> order_by_start_asc()
-    |> Repo.all()
-  end
-
-  @doc """
-  Returns the list of meetings for a specific attendee email.
-
-  ## Examples
-
-      iex> list_meetings_by_attendee_email("attendee@example.com")
-      [%Meeting{}, ...]
-
-  """
-  @spec list_meetings_by_attendee_email(String.t()) :: [Meeting.t()]
-  def list_meetings_by_attendee_email(email) do
-    Meeting
-    |> for_attendee_email(email)
-    |> order_by_start_desc()
-    |> Repo.all()
-  end
-
-  @doc """
-  Returns meetings in the reminder window with confirmed status.
-  Business logic for determining which meetings need reminders should be in the Meetings context.
-
-  Excludes meetings with a pending reschedule request: their slot is void
-  (see `Tymeslot.Meetings.MeetingState`), so reminding anyone of the old
-  time would contradict the reschedule-request email already sent.
-  """
-  @spec list_meetings_needing_reminders(DateTime.t(), DateTime.t()) :: [Meeting.t()]
-  def list_meetings_needing_reminders(start_time, end_time) do
-    base_query =
-      Meeting
-      |> where([m], m.start_time >= ^start_time and m.start_time <= ^end_time)
-      |> MeetingState.where_live_booking()
-      |> order_by([m], asc: m.start_time)
-
-    Repo.all(base_query)
-  end
 
   @doc """
   Returns upcoming meetings that should have a video room link but do not.
@@ -138,26 +81,78 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> Repo.all()
   end
 
+  @typedoc """
+  Which of an integration's rooms a disconnect deletes: those of upcoming live
+  bookings, or every room the integration still holds.
+  """
+  @type room_scope :: :upcoming | :all
+
   @doc """
-  Returns upcoming live bookings that still hold a provider-side room created by
-  the given integration.
+  Builds the query for meetings that still hold a provider-side room created by
+  the given integration, within `scope`.
+
+  `:upcoming` keeps to live bookings that have not ended by `now`: past
+  bookings are history, and most providers' rooms expire on their own. `:all`
+  takes every meeting, whatever its time or status, for providers whose rooms
+  stay on the organiser's server until something deletes them.
+
+  Shared by the list and the count, so what the disconnect modal offers to
+  delete is exactly what the disconnect deletes.
+  """
+  @spec with_video_room_for_integration(pos_integer(), room_scope(), DateTime.t()) ::
+          Ecto.Query.t()
+  def with_video_room_for_integration(integration_id, scope, %DateTime{} = now) do
+    Meeting
+    |> where([m], m.video_integration_id == ^integration_id)
+    |> where([m], not is_nil(m.video_room_id))
+    |> within_room_scope(scope, now)
+  end
+
+  defp within_room_scope(query, :all, _now), do: query
+
+  defp within_room_scope(query, :upcoming, now),
+    do: query |> MeetingState.where_live_booking() |> upcoming(now)
+
+  @doc """
+  Returns up to `limit` meetings holding a provider-side room created by the
+  given integration, within `scope` (see `with_video_room_for_integration/3`).
 
   Used when a user disconnects an integration and asks for the rooms to be
-  deleted along with it. Past bookings are left alone: they are history, and
-  their provider rooms have generally expired on their own.
+  deleted along with it.
   """
-  @spec list_upcoming_with_video_room_for_integration(
+  @spec list_with_video_room_for_integration(
           pos_integer(),
+          room_scope(),
           DateTime.t(),
           pos_integer()
         ) :: [Meeting.t()]
-  def list_upcoming_with_video_room_for_integration(integration_id, now, limit) do
+  def list_with_video_room_for_integration(integration_id, scope, now, limit) do
+    integration_id
+    |> with_video_room_for_integration(scope, now)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
+  @doc """
+  Returns the id and status of up to `limit` meetings holding a provider-side
+  room created by the given integration that have not ended by `now`, soonest
+  first, whatever their status.
+
+  Used to bring each room in line with its booking once the integration is
+  reconnected, since changes made while it could not reach the provider were
+  dropped: the room of a live booking is updated, and the room of a released
+  one deleted. Ended meetings are left to the clean-up jobs.
+  """
+  @spec list_upcoming_video_rooms_for_integration(pos_integer(), DateTime.t(), pos_integer()) ::
+          [%{id: String.t(), status: String.t()}]
+  def list_upcoming_video_rooms_for_integration(integration_id, %DateTime{} = now, limit) do
     Meeting
-    |> MeetingState.where_live_booking()
-    |> upcoming(now)
     |> where([m], m.video_integration_id == ^integration_id)
     |> where([m], not is_nil(m.video_room_id))
+    |> upcoming(now)
+    |> order_by([m], asc: m.start_time)
     |> limit(^limit)
+    |> select([m], %{id: m.id, status: m.status})
     |> Repo.all()
   end
 
@@ -177,6 +172,39 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> where([m], not is_nil(m.video_room_id))
     |> where([m], m.cancelled_at < ^cancelled_before)
     |> order_by([m], asc: m.cancelled_at)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
+  @doc """
+  Meetings whose video room still exists on one of `providers` and whose end
+  lies at or after `ended_after` and before `ended_before`.
+
+  `ended_after` bounds how far back the scan reaches. A room nothing can reach
+  any more, because its integration was disconnected and never replaced, drops
+  out of the window instead of being retried every night for ever.
+
+  Cancelled meetings are left out: `list_cancelled_with_video_room/2` covers
+  them, so no room is picked up by both scans. So are meetings whose
+  integration is waiting to be reconnected or is being disconnected, because
+  every delete through it would be refused. A meeting whose integration link is
+  gone stays in: `Tymeslot.Integrations.Video.IntegrationResolver` falls back on
+  the organiser's current integration for the same provider.
+  """
+  @spec list_ended_with_video_room([String.t()], DateTime.t(), DateTime.t(), pos_integer()) ::
+          [Meeting.t()]
+  def list_ended_with_video_room(providers, ended_before, ended_after, limit \\ 500) do
+    Meeting
+    |> join(:left, [m], vi in assoc(m, :video_integration))
+    |> where([m], m.video_provider in ^providers)
+    |> where([m], not is_nil(m.video_room_id))
+    |> where([m], m.status != "cancelled")
+    |> where(
+      [m, vi],
+      is_nil(m.video_integration_id) or (not vi.needs_reauth and is_nil(vi.deleted_at))
+    )
+    |> where([m], m.end_time < ^ended_before and m.end_time >= ^ended_after)
+    |> order_by([m], asc: m.end_time)
     |> limit(^limit)
     |> Repo.all()
   end
@@ -238,40 +266,6 @@ defmodule Tymeslot.Meetings.MeetingListQueries do
     |> for_user_email(user_email)
     |> upcoming(now)
     |> order_by_start_asc()
-    |> Repo.all()
-  end
-
-  @doc """
-  Get past meetings for a specific user with proper database filtering.
-  Replaces the N+1 pattern of loading all meetings and filtering in memory.
-  """
-  @spec list_past_meetings_for_user(String.t()) :: [Meeting.t()]
-  def list_past_meetings_for_user(user_email) do
-    now = DateTime.utc_now()
-
-    Meeting
-    |> for_user_email(user_email)
-    |> past(now)
-    |> order_by_start_desc()
-    |> Repo.all()
-  end
-
-  @doc """
-  Get cancelled meetings for a specific user with proper database filtering.
-  Replaces the N+1 pattern of loading all meetings and filtering in memory.
-
-  Bounded by `:limit` (default #{@default_cancelled_limit}) so this read is
-  never unbounded as cancelled meetings accrue over time.
-  """
-  @spec list_cancelled_meetings_for_user(String.t(), keyword()) :: [Meeting.t()]
-  def list_cancelled_meetings_for_user(user_email, opts) do
-    limit = Keyword.get(opts, :limit, @default_cancelled_limit)
-
-    Meeting
-    |> with_status("cancelled")
-    |> for_user_email(user_email)
-    |> order_by_start_desc()
-    |> apply_limit(limit)
     |> Repo.all()
   end
 

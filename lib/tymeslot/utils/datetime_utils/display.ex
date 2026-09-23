@@ -51,11 +51,8 @@ defmodule Tymeslot.Utils.DateTimeUtils.Display do
     end)
   end
 
-  @doc """
-  Determines the time period for a given time slot.
-  """
   @spec get_time_period(String.t()) :: String.t()
-  def get_time_period(slot_string) do
+  defp get_time_period(slot_string) do
     case DateTimeUtils.parse_time_string(slot_string) do
       {:ok, time} ->
         determine_period_from_hour(time.hour)

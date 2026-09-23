@@ -488,7 +488,31 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
         {:ok, :deleted}
       end)
 
-      assert {:ok, :deleted} = Provider.call_delete_event(integration, "event123")
+      assert {:ok, :deleted} = Provider.call_delete_event(integration, "event123", [])
+    end
+
+    # Deletes used to have no channel for the calendar at all, so an event on
+    # any calendar but the default was addressed under the default and 404'd.
+    test "call_delete_event addresses the calendar the event is actually on" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          default_booking_calendar_id: "bookings@group.calendar.google.com"
+        )
+
+      expect(GoogleCalendarAPIMock, :delete_event, fn _int,
+                                                      "team@group.calendar.google.com",
+                                                      "event123" ->
+        {:ok, :deleted}
+      end)
+
+      assert {:ok, :deleted} =
+               Provider.call_delete_event(integration, "event123",
+                 calendar_id: "team@group.calendar.google.com"
+               )
     end
   end
 
@@ -530,6 +554,18 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
       end)
 
       assert {:error, :unauthorized} = Provider.perform_connection_test(integration)
+    end
+
+    test "test_connection reports a revoked grant as an expired token" do
+      integration = insert(:calendar_integration, provider: "google", access_token: "test_token")
+
+      expect(GoogleCalendarAPIMock, :list_primary_events, fn _integration,
+                                                             _start_date,
+                                                             _end_date ->
+        {:error, :unauthorized, "Token refresh failed: invalid_grant"}
+      end)
+
+      assert {:error, :token_expired} = Provider.perform_connection_test(integration)
     end
   end
 

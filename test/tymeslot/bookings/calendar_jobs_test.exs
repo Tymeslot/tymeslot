@@ -13,9 +13,12 @@ defmodule Tymeslot.Bookings.CalendarJobsTest do
 
   @moduletag :bookings
 
+  import Ecto.Query, only: [from: 2]
   import Tymeslot.Factory
 
   alias Tymeslot.Bookings.CalendarJobs
+  alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.CalendarEventWorker
 
   describe "schedule_job/2" do
@@ -56,6 +59,77 @@ defmodule Tymeslot.Bookings.CalendarJobsTest do
       assert {:ok, :scheduled} = CalendarJobs.schedule_job(meeting, "create")
       assert {:ok, :already_scheduled} = CalendarJobs.schedule_job(meeting, "create")
     end
+
+    # An update carries the meeting as it stands when the job runs. One that is
+    # already executing read it before the change that prompted this call, so
+    # collapsing into it drops that change: this is how the video link goes
+    # missing from an approved booking's calendar entry.
+    test "still enqueues an update while another update is executing" do
+      meeting = insert(:meeting)
+
+      assert {:ok, :scheduled} = CalendarJobs.schedule_job(meeting, "update")
+      start_running(meeting, "update")
+
+      assert {:ok, :scheduled} = CalendarJobs.schedule_job(meeting, "update")
+    end
+
+    test "collapses an update into one that has not started yet" do
+      meeting = insert(:meeting)
+
+      assert {:ok, :scheduled} = CalendarJobs.schedule_job(meeting, "update")
+      assert {:ok, :already_scheduled} = CalendarJobs.schedule_job(meeting, "update")
+    end
+
+    # A create and a delete do not carry state that can go stale: whatever the
+    # running job writes is what the meeting says, so a second one is waste.
+    test "collapses a create into one that is executing" do
+      meeting = insert(:meeting)
+
+      assert {:ok, :scheduled} = CalendarJobs.schedule_job(meeting, "create")
+      start_running(meeting, "create")
+
+      assert {:ok, :already_scheduled} = CalendarJobs.schedule_job(meeting, "create")
+    end
+  end
+
+  describe "CalendarEventScheduler.schedule_calendar_update/1" do
+    # The path `Meetings.VideoRooms` takes once a room exists: the approval's
+    # own update is in flight, and this one carries the link it never saw.
+    test "enqueues while another update for the same meeting is executing" do
+      meeting = insert(:meeting)
+
+      assert {:ok, _job} = CalendarEventScheduler.schedule_calendar_update(meeting.id)
+      start_running(meeting, "update")
+
+      assert {:ok, job} = CalendarEventScheduler.schedule_calendar_update(meeting.id)
+      refute job.conflict?
+    end
+
+    test "a deletion still collapses into one that is executing" do
+      meeting = insert(:meeting)
+
+      assert {:ok, _job} = CalendarEventScheduler.schedule_calendar_deletion(meeting.id)
+      start_running(meeting, "delete")
+
+      assert {:ok, job} = CalendarEventScheduler.schedule_calendar_deletion(meeting.id)
+      assert job.conflict?
+    end
+  end
+
+  # Oban's uniqueness looks at the rows in the table, so moving the job to
+  # `executing` is what the next insert actually meets.
+  defp start_running(meeting, action) do
+    {1, _rows} =
+      Repo.update_all(
+        from(j in Oban.Job,
+          where: fragment("?->>'action' = ?", j.args, ^action),
+          where: fragment("?->>'meeting_id' = ?", j.args, ^meeting.id),
+          where: j.state == "available"
+        ),
+        set: [state: "executing"]
+      )
+
+    :ok
   end
 
   describe "priority_for_action/1" do

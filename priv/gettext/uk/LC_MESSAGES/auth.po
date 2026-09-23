@@ -162,11 +162,6 @@ msgstr "Недійсне посилання"
 msgid "Invalid reset token"
 msgstr "Недійсний токен скидання"
 
-#: lib/tymeslot_web/controllers/email_change_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid verification link"
-msgstr "Недійсне посилання для підтвердження"
-
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #, elixir-autogen, elixir-format
 msgid "Join Tymeslot"
@@ -383,11 +378,6 @@ msgstr "Показати або сховати пароль"
 #, elixir-autogen, elixir-format
 msgid "Too many OAuth attempts. Please try again later."
 msgstr "Забагато спроб входу через OAuth. Спробуйте пізніше."
-
-#: lib/tymeslot_web/controllers/email_change_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Too many attempts. Try again in a minute."
-msgstr "Забагато спроб. Спробуйте ще раз за хвилину."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
@@ -763,11 +753,6 @@ msgstr "Не вдалося підтвердити зміну електронн
 msgid "If your email is registered, you will receive password reset instructions."
 msgstr "Якщо ваша електронна адреса зареєстрована, ви отримаєте інструкції зі скидання пароля."
 
-#: lib/tymeslot/auth/social_authentication.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid email format"
-msgstr "Неправильний формат електронної адреси"
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password."
@@ -803,11 +788,6 @@ msgstr "Нова електронна адреса має відрізнятис
 #, elixir-autogen, elixir-format
 msgid "New password must be different from current password"
 msgstr "Новий пароль має відрізнятися від поточного"
-
-#: lib/tymeslot/auth/validation.ex
-#, elixir-autogen, elixir-format
-msgid "Password is too long"
-msgstr "Пароль задовгий"
 
 #: lib/tymeslot/auth/password_update.ex
 #, elixir-autogen, elixir-format
@@ -889,7 +869,7 @@ msgstr "Ця електронна адреса вже зареєстрована
 msgid "This email is already registered. Please sign in instead."
 msgstr "Ця електронна адреса вже зареєстрована. Натомість увійдіть."
 
-#: lib/tymeslot/auth/social_authentication.ex
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "This email is already registered. Please use a different email address."
 msgstr "Ця електронна адреса вже зареєстрована. Скористайтеся іншою адресою."
@@ -1059,3 +1039,33 @@ msgstr "Ваш обліковий запис створено, але лист �
 #, elixir-autogen, elixir-format
 msgid "If an account exists with this email address, password reset instructions have been sent."
 msgstr "Якщо обліковий запис із цією електронною адресою існує, інструкції зі скидання пароля вже надіслано."
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your email address"
+msgstr "Підтвердьте свою електронну адресу"
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Press the button below to finish verifying your email address."
+msgstr "Натисніть кнопку нижче, щоб завершити підтвердження електронної адреси."
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Verify email address"
+msgstr "Підтвердити електронну адресу"
+
+#: lib/tymeslot_web/controllers/email_change_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your new email address"
+msgstr "Підтвердьте нову електронну адресу"
+
+#: lib/tymeslot_web/controllers/email_change_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Press the button below to switch your account to this email address."
+msgstr "Натисніть кнопку нижче, щоб перевести свій обліковий запис на цю електронну адресу."
+
+#: lib/tymeslot_web/controllers/email_change_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm email change"
+msgstr "Підтвердити зміну електронної адреси"

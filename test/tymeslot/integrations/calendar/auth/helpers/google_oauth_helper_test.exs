@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
   alias Tymeslot.Integrations.Calendar.Google.OAuthHelper
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Repo
+  alias Tymeslot.Test.LogCapture
   import Tymeslot.Factory
   import Mox
 
@@ -139,6 +140,34 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
       # Should still succeed — discovery failure is non-fatal
       assert {:ok, integration} = OAuthHelper.handle_callback("code", state, "http://uri")
       assert integration.provider == "google"
+    end
+
+    test "logs a 3-tuple push channel registration error instead of crashing the task" do
+      previous = Application.get_env(:tymeslot, :webhook_base_url)
+      Application.put_env(:tymeslot, :webhook_base_url, "https://example.test")
+      on_exit(fn -> Application.put_env(:tymeslot, :webhook_base_url, previous) end)
+
+      LogCapture.attach()
+
+      user = insert(:user)
+      insert(:profile, user: user)
+      state = GoogleOAuthHelper.generate_state(user.id)
+
+      expect_token_response("at-push", "rt-push")
+
+      expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
+        {:ok, [%{id: "cal1", summary: "Primary", primary: true}]}
+      end)
+
+      expect(GoogleCalendarAPIMock, :register_push_channel, fn _integration ->
+        {:error, :not_a_calendar_user, "The user must be signed up for Google Calendar."}
+      end)
+
+      assert {:ok, integration} = OAuthHelper.handle_callback("code", state, "http://uri")
+
+      event = LogCapture.await_log("Google push channel registration failed")
+      assert event.meta.integration_id == integration.id
+      assert event.meta.reason =~ ":not_a_calendar_user"
     end
 
     test "rejects callback when calendar write scope was not granted" do

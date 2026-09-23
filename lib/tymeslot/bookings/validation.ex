@@ -42,7 +42,7 @@ defmodule Tymeslot.Bookings.Validation do
     with {:ok, date} <- parse_date(date_string),
          {:ok, time} <- safe_parse_time_slot(time_string),
          {:ok, duration_minutes} <- parse_duration(duration),
-         {:ok, start_datetime} <- new_datetime(date, time, timezone),
+         {:ok, start_datetime} <- DateTimeUtils.resolve_local(date, time, timezone),
          end_datetime <- DateTime.add(start_datetime, duration_minutes, :minute) do
       {:ok, {start_datetime, end_datetime}}
     else
@@ -118,23 +118,6 @@ defmodule Tymeslot.Bookings.Validation do
   end
 
   @doc """
-  Validates booking time from string inputs.
-
-  Parses date and time strings, validates the resulting datetime.
-  """
-  @spec validate_booking_time_from_strings(String.t(), String.t(), String.t()) ::
-          :ok | {:error, String.t()}
-  def validate_booking_time_from_strings(date_str, time_str, timezone) do
-    case parse_meeting_times(date_str, time_str, 30, timezone) do
-      {:ok, {start_datetime, end_datetime}} ->
-        validate_booking_time(start_datetime, end_datetime)
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  @doc """
   Validates that a time slot has no conflicts with existing events.
 
   Takes calendar events and checks for overlaps.
@@ -192,20 +175,6 @@ defmodule Tymeslot.Bookings.Validation do
   end
 
   defp parse_duration(_invalid), do: {:error, :invalid_duration}
-
-  # `DateTime.new/3` returns `{:ambiguous, first, second}` for a wall-clock
-  # time that occurs twice (autumn DST fallback) and `{:gap, before, after}`
-  # for one that never occurs (spring DST transition). Resolve both to a
-  # single unambiguous instant rather than rejecting the booking outright;
-  # an unrecognised timezone still falls through to `{:error, reason}`.
-  defp new_datetime(date, time, timezone) do
-    case DateTime.new(date, time, timezone) do
-      {:ok, datetime} -> {:ok, datetime}
-      {:ambiguous, first, _second} -> {:ok, first}
-      {:gap, _just_before, just_after} -> {:ok, just_after}
-      {:error, reason} -> {:error, reason}
-    end
-  end
 
   defp validate_booking_time_with_defaults(start_datetime, config, overrides) do
     defaults = %{

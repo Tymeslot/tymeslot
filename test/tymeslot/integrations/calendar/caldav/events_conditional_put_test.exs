@@ -3,8 +3,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsConditionalPutTest do
   What happens when a CalDAV server rejects the precondition on an update.
 
   Split from `EventsTest`, which covers how the ETag is resolved and how
-  transient failures are retried; this module covers only what the caller
-  gets back once the server has refused the conditional write.
+  transient failures are retried; this module covers only the precondition
+  itself: how it is put on the wire, and what the caller gets back once the
+  server has refused it.
   """
   use Tymeslot.HttpTransportCase, async: false
   @moduletag :integrations
@@ -19,6 +20,52 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsConditionalPutTest do
     verify_ssl: true,
     provider: :caldav
   }
+
+  # `If-Match` takes a quoted entity-tag (RFC 9110 section 8.8.3), but a cached
+  # ETag is stored unquoted so that the same tag compares equal however a server
+  # spells it. A create now caches one of those the moment the event is written,
+  # so the requoting is what stands between the next conditional write and a
+  # malformed precondition the server can only answer 412 to, which reads
+  # exactly like a genuine conflict.
+  describe "update_calendar_event/5: the precondition's wire form" do
+    test "quotes a cached ETag that reached us with its quotes stripped" do
+      assert capture_if_match(etag: "abc123") == [~s("abc123")]
+    end
+
+    test "leaves a tag that is already in wire form alone" do
+      assert capture_if_match(etag: ~s("abc123")) == [~s("abc123")]
+    end
+
+    test "keeps a weak tag's prefix outside the quotes" do
+      assert capture_if_match(etag: "W/abc123") == [~s(W/"abc123")]
+    end
+
+    defp capture_if_match(opts) do
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert conn.method == "PUT"
+        send(test_pid, {:if_match, Conn.get_req_header(conn, "if-match")})
+        Conn.send_resp(conn, 204, "")
+      end)
+
+      assert :ok =
+               Events.update_calendar_event(
+                 @caldav_client,
+                 "/calendars/user/personal/",
+                 "wire-form-uid",
+                 %{
+                   summary: "Precondition",
+                   start_time: ~U[2026-02-24 10:00:00Z],
+                   end_time: ~U[2026-02-24 11:00:00Z]
+                 },
+                 Keyword.merge([skip_breaker: true], opts)
+               )
+
+      assert_received {:if_match, if_match}
+      if_match
+    end
+  end
 
   describe "update_calendar_event/5 — rejected preconditions" do
     test "returns :precondition_failed on 412 with default :fail policy" do
@@ -197,6 +244,89 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsConditionalPutTest do
 
       # The ETag carried a real guarantee, so the write is never forced through.
       assert :counters.get(counter, 1) == 1
+    end
+  end
+
+  describe "conditional PUT If-Match" do
+    # Regression: `provider_calendar_events.etag` is stored with its quotes
+    # stripped (so the same tag compares equal however a server spells it), and
+    # the colour write-back passes that stored value straight through. It was
+    # sent as a bare token, which is not a valid entity-tag, so the server
+    # failed the precondition and the write was reported back as a conflict —
+    # the user's change silently reverted.
+    test "re-quotes a cached ETag that was stored without its quotes" do
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        send(test_pid, {:if_match, Conn.get_req_header(conn, "if-match")})
+        Conn.send_resp(conn, 204, "")
+      end)
+
+      assert :ok =
+               Events.update_calendar_event(
+                 @caldav_client,
+                 "/calendars/user/personal/",
+                 "some-uid",
+                 %{
+                   summary: "Updated",
+                   start_time: ~U[2026-02-24 10:00:00Z],
+                   end_time: ~U[2026-02-24 11:00:00Z]
+                 },
+                 etag: "92c6b31c8ed79bea274b1c79fe2f80a8",
+                 skip_breaker: true
+               )
+
+      assert_receive {:if_match, ["\"92c6b31c8ed79bea274b1c79fe2f80a8\""]}
+    end
+
+    test "leaves an already-quoted ETag alone" do
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        send(test_pid, {:if_match, Conn.get_req_header(conn, "if-match")})
+        Conn.send_resp(conn, 204, "")
+      end)
+
+      assert :ok =
+               Events.update_calendar_event(
+                 @caldav_client,
+                 "/calendars/user/personal/",
+                 "some-uid",
+                 %{
+                   summary: "Updated",
+                   start_time: ~U[2026-02-24 10:00:00Z],
+                   end_time: ~U[2026-02-24 11:00:00Z]
+                 },
+                 etag: "\"already-quoted\"",
+                 skip_breaker: true
+               )
+
+      assert_receive {:if_match, ["\"already-quoted\""]}
+    end
+
+    test "keeps the weak-comparison prefix when re-quoting" do
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        send(test_pid, {:if_match, Conn.get_req_header(conn, "if-match")})
+        Conn.send_resp(conn, 204, "")
+      end)
+
+      assert :ok =
+               Events.update_calendar_event(
+                 @caldav_client,
+                 "/calendars/user/personal/",
+                 "some-uid",
+                 %{
+                   summary: "Updated",
+                   start_time: ~U[2026-02-24 10:00:00Z],
+                   end_time: ~U[2026-02-24 11:00:00Z]
+                 },
+                 etag: "W/\"weak-tag",
+                 skip_breaker: true
+               )
+
+      assert_receive {:if_match, ["W/\"weak-tag\""]}
     end
   end
 end

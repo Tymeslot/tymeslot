@@ -12,6 +12,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
 
   alias Ecto.Changeset
   alias Ecto.UUID
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Repo
@@ -217,12 +218,6 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     meeting
     |> Changeset.change(last_notified_state: state, ical_sequence: sequence)
     |> Repo.update()
-  end
-
-  @doc "Deletes a meeting."
-  @spec delete_meeting(Meeting.t()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
-  def delete_meeting(%Meeting{} = meeting) do
-    Repo.delete(meeting)
   end
 
   @doc """
@@ -444,20 +439,22 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
-  Counts upcoming live bookings holding a provider room created by the given
-  integration.
+  Counts the meetings holding a provider room created by the given integration,
+  within `scope`.
 
-  Drives the "N upcoming bookings use this" line in the disconnect modal, so the
-  user knows what the optional room cleanup would affect before choosing it.
+  Drives the room cleanup line in the disconnect modal, so the user knows what
+  the optional cleanup would affect before choosing it. Built on the same query
+  the disconnect drains (`MeetingListQueries.with_video_room_for_integration/3`),
+  so the two cannot disagree.
   """
-  @spec count_upcoming_with_video_room_for_integration(pos_integer(), DateTime.t()) ::
-          non_neg_integer()
-  def count_upcoming_with_video_room_for_integration(integration_id, %DateTime{} = now) do
-    Meeting
-    |> MeetingState.where_live_booking()
-    |> where([m], m.end_time > ^now)
-    |> where([m], m.video_integration_id == ^integration_id)
-    |> where([m], not is_nil(m.video_room_id))
+  @spec count_with_video_room_for_integration(
+          pos_integer(),
+          MeetingListQueries.room_scope(),
+          DateTime.t()
+        ) :: non_neg_integer()
+  def count_with_video_room_for_integration(integration_id, scope, %DateTime{} = now) do
+    integration_id
+    |> MeetingListQueries.with_video_room_for_integration(scope, now)
     |> Repo.aggregate(:count, :id)
   end
 

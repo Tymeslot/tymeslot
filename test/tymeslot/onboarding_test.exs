@@ -2,7 +2,9 @@ defmodule Tymeslot.OnboardingTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :utils
+  @moduletag :onboarding
 
+  alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Onboarding
@@ -157,6 +159,40 @@ defmodule Tymeslot.OnboardingTest do
 
       refute "theme" in (updated.dashboard_setup_done_items || [])
       assert updated.dashboard_setup_done_items == []
+    end
+
+    test "toggle_dashboard_setup_item/2 refuses items that are not ticked by hand" do
+      user = insert(:user, dashboard_setup_done_items: ["theme"])
+
+      # Calendar and video complete only from a real connection; anything else
+      # is not an item at all.
+      for key <- ["calendar", "video", "bogus"] do
+        assert {:error, :unknown_item} = Onboarding.toggle_dashboard_setup_item(user, key)
+      end
+
+      assert Repo.get!(UserSchema, user.id).dashboard_setup_done_items == ["theme"]
+    end
+
+    test "manual_dashboard_setup_items/0 lists the items a host may tick by hand" do
+      for key <- Onboarding.manual_dashboard_setup_items() do
+        user = insert(:user)
+
+        assert {:ok, %{dashboard_setup_done_items: [^key]}} =
+                 Onboarding.toggle_dashboard_setup_item(user, key)
+      end
+    end
+
+    test "toggle_dashboard_setup_item/2 keeps a tick made from another tab" do
+      user = insert(:user)
+      stale = user
+
+      {:ok, _ticked_in_first_tab} = Onboarding.toggle_dashboard_setup_item(user, "theme")
+      {:ok, updated} = Onboarding.toggle_dashboard_setup_item(stale, "share")
+
+      assert Enum.sort(updated.dashboard_setup_done_items) == ["share", "theme"]
+
+      assert Enum.sort(Repo.get!(UserSchema, user.id).dashboard_setup_done_items) ==
+               ["share", "theme"]
     end
 
     test "dismiss_dashboard_setup/1 stamps the timestamp and is idempotent" do

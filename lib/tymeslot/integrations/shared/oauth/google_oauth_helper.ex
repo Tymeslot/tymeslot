@@ -7,7 +7,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   state management, and provides flexible scope configuration.
   """
 
-  alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Common.OAuth.{ErrorParser, IdToken, State, TokenExchange}
   alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
   alias Tymeslot.Integrations.Shared.OAuth.TokenFlow
@@ -96,7 +96,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
       grant_type: "authorization_code"
     }
 
-    case TokenFlow.exchange_code(@token_url, body, provider: :google) do
+    case TokenFlow.exchange_code(@token_url, body, log_context: [provider: :google]) do
       {:ok, response} ->
         tokens = build_token_map(response)
 
@@ -114,16 +114,12 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
             {:error, reason}
         end
 
+      # No second log line here: `TokenFlow` already logs the status and the
+      # redacted body, and names the provider too.
       {:error, {:http_error, status, body}} ->
-        Logger.error("OAuth token exchange failed",
-          status: status,
-          response_body: Redactor.redact_and_truncate(body)
-        )
-
         {:error, ErrorParser.build_message("OAuth token exchange failed", status, body)}
 
       {:error, {:network_error, reason}} ->
-        Logger.error("Network error during token exchange", reason: inspect(reason))
         {:error, "Network error during token exchange: #{inspect(reason)}"}
     end
   end
@@ -131,14 +127,21 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   @doc """
   Refreshes an access token using a refresh token.
 
+  This is the Google Meet **video** refresh as well as the calendar one, and
+  both log `provider: :google`, so a caller that can name the integration
+  should: pass `log_context: [integration_id: id, user_id: user_id]` and the
+  two stop being indistinguishable on the line.
+
   ## Parameters
     - refresh_token: The refresh token
     - current_scope: Current token scope (optional)
+    - opts: `:log_context`, forwarded to `TokenExchange.refresh_access_token/3`
 
   Returns {:ok, tokens} or {:error, reason}
   """
-  @spec refresh_access_token(String.t(), String.t() | nil) :: {:ok, map()} | {:error, String.t()}
-  def refresh_access_token(refresh_token, current_scope \\ nil) do
+  @spec refresh_access_token(String.t(), String.t() | nil, keyword()) ::
+          {:ok, map()} | {:error, String.t()}
+  def refresh_access_token(refresh_token, current_scope \\ nil, opts \\ []) do
     body = %{
       refresh_token: refresh_token,
       client_id: google_client_id(),
@@ -149,23 +152,20 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
     # Add scope if provided to maintain same scope
     body = if current_scope, do: Map.put(body, :scope, current_scope), else: body
 
+    # No second log line here: `TokenExchange` already logs the status and the
+    # redacted body, and now names the provider too.
     case TokenExchange.refresh_access_token(@token_url, body,
            fallback_refresh_token: refresh_token,
-           fallback_scope: current_scope
+           fallback_scope: current_scope,
+           log_context: Keyword.merge(Keyword.get(opts, :log_context, []), provider: :google)
          ) do
       {:ok, tokens} ->
         {:ok, tokens}
 
       {:error, {:http_error, status, body}} ->
-        Logger.error("Token refresh failed",
-          status: status,
-          response_body: Redactor.redact_and_truncate(body)
-        )
-
         {:error, ErrorParser.build_message("Token refresh failed", status, body)}
 
       {:error, {:network_error, reason}} ->
-        Logger.error("Network error during token refresh", reason: inspect(reason))
         {:error, "Network error during token refresh: #{inspect(reason)}"}
     end
   end
@@ -189,10 +189,20 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
 
   def validate_state(_invalid), do: {:error, "Invalid state parameter"}
 
+  @doc """
+  Returns the secret used to sign and verify Google OAuth `state` parameters.
+  """
+  @spec state_secret() :: String.t()
+  def state_secret do
+    Application.get_env(:tymeslot, :google_oauth)[:state_secret] ||
+      System.get_env("GOOGLE_STATE_SECRET") ||
+      raise "Google State Secret not configured"
+  end
+
   # Private functions
 
   defp build_token_map(response) do
-    expires_at = DateTime.add(DateTime.utc_now(), response["expires_in"], :second)
+    expires_at = DateTime.add(Clock.utc_now(), response["expires_in"], :second)
 
     {provider_account_id, provider_account_email} =
       case IdToken.decode(response["id_token"]) do
@@ -243,11 +253,5 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
     Application.get_env(:tymeslot, :google_oauth)[:client_secret] ||
       System.get_env("GOOGLE_CLIENT_SECRET") ||
       raise "Google Client Secret not configured"
-  end
-
-  defp state_secret do
-    Application.get_env(:tymeslot, :google_oauth)[:state_secret] ||
-      System.get_env("GOOGLE_STATE_SECRET") ||
-      raise "Google State Secret not configured"
   end
 end

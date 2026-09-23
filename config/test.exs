@@ -17,15 +17,20 @@ config :tymeslot, :pubsub_name, Tymeslot.PubSub
 # Force core router for tests
 config :tymeslot, :router, TymeslotWeb.Router
 
+# What keeps one test run's database and upload directory apart from
+# another's. A worktree sets MIX_TEST_PARTITION to its own suffix; a
+# partitioned run (`mix precommit`, via Tymeslot.Precommit.Runner) needs that
+# variable to be the bare partition number, so it hands the worktree suffix on
+# as MIX_TEST_PARTITION_BASE and the two are joined here.
+test_run_suffix =
+  "#{System.get_env("MIX_TEST_PARTITION_BASE")}#{System.get_env("MIX_TEST_PARTITION")}"
+
 # Upload directory for tests: a per-partition temp dir, cleaned up after the
 # suite (see test_helper.exs). Keeps generated avatars/attachments out of the
 # repo tree entirely.
 config :tymeslot,
        :upload_directory,
-       Path.join(
-         System.tmp_dir!(),
-         "tymeslot_test_uploads#{System.get_env("MIX_TEST_PARTITION")}"
-       )
+       Path.join(System.tmp_dir!(), "tymeslot_test_uploads#{test_run_suffix}")
 
 config :tymeslot, TymeslotWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("TEST_PORT") || "4002")],
@@ -74,11 +79,21 @@ config :tymeslot, Tymeslot.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: "tymeslot_test#{System.get_env("MIX_TEST_PARTITION")}",
+  database: "tymeslot_test#{test_run_suffix}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: test_pool_size,
   queue_target: 10_000,
-  queue_interval: 10_000
+  queue_interval: 10_000,
+  # The queue budget above lets a checkout wait up to ten seconds before its
+  # statement even starts, which leaves almost no margin under Ecto's default
+  # 15_000 ms statement timeout: a saturated pool then fails a random test with
+  # Postgrex 57014 (query_canceled) on an otherwise trivial INSERT. Nothing here
+  # is a slow query, so raise the statement budget well clear of the queue
+  # budget rather than cutting parallelism. The ownership window is raised for
+  # the same reason: a case that queues repeatedly can exhaust the 60_000 ms
+  # default and surface it as a confusing "owner exited" error instead.
+  timeout: 30_000,
+  ownership_timeout: 120_000
 
 # Configure Oban for testing
 # Queues are loaded at runtime in application.ex from :oban_queues config
@@ -110,7 +125,6 @@ config :phoenix_live_view,
 # Mock configuration
 config :tymeslot, :calendar_module, Tymeslot.CalendarMock
 config :tymeslot, :calendar_client_module, Tymeslot.RadicaleClientMock
-config :tymeslot, :mirotalk_api_module, Tymeslot.MiroTalkAPIMock
 config :tymeslot, :email_service_module, Tymeslot.EmailServiceMock
 config :tymeslot, :google_calendar_api_module, GoogleCalendarAPIMock
 config :tymeslot, :outlook_calendar_api_module, OutlookCalendarAPIMock
@@ -183,6 +197,9 @@ config :tymeslot, :video_providers, %{
   mirotalk: [enabled: true],
   google_meet: [enabled: true],
   teams: [enabled: true],
+  kmeet: [enabled: true],
+  jitsi: [enabled: true],
+  nextcloud_talk: [enabled: true],
   custom: [enabled: true]
 }
 

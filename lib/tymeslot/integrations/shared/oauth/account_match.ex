@@ -6,6 +6,9 @@ defmodule Tymeslot.Integrations.Common.OAuth.AccountMatch do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+
   require Logger
 
   @doc """
@@ -106,19 +109,18 @@ defmodule Tymeslot.Integrations.Common.OAuth.AccountMatch do
   end
 
   @doc """
-  Checks if an Ecto changeset error is a unique account constraint violation.
+  Checks whether a write was refused by the unique index on active video or
+  calendar integrations' account keys.
   """
   @spec unique_account_violation?(Ecto.Changeset.t()) :: boolean()
-  def unique_account_violation?(changeset) do
-    Enum.any?(changeset.errors, fn
-      {_field, {_msg, [constraint: :unique, constraint_name: name]}} ->
-        name in [
-          "unique_active_video_account_per_user",
-          "unique_active_calendar_account_per_user"
-        ]
+  def unique_account_violation?(%Ecto.Changeset{errors: errors}) do
+    account_indexes = [
+      VideoIntegrationSchema.account_index(),
+      CalendarIntegrationSchema.account_index()
+    ]
 
-      _other ->
-        false
+    Enum.any?(errors, fn {_field, {_message, opts}} ->
+      opts[:constraint] == :unique and opts[:constraint_name] in account_indexes
     end)
   end
 end

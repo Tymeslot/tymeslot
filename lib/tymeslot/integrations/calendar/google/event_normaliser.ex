@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
   require Logger
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Timezones
@@ -99,12 +100,12 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
 
   defp map_attendees(attendees) when is_list(attendees) do
     Enum.map(attendees, fn a ->
-      %{
+      Attendee.new(
         email: a["email"],
         display_name: a["displayName"],
         response_status: map_response_status(a["responseStatus"]),
         optional: a["optional"] || false
-      }
+      )
     end)
   end
 

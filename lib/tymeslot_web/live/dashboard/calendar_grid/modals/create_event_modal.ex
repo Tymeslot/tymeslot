@@ -5,13 +5,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
+  alias TymeslotWeb.Dashboard.CalendarGrid.VideoPicker
 
   attr :creating_event, :map, required: true
   attr :integrations, :list, required: true
@@ -189,42 +189,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         event_name="update_create_integration"
       />
 
-      <%!-- Video (meeting mode): which provider backs the meeting link --%>
-      <div
-        :if={@meeting_mode and @video_integrations != []}
-        class="border-t border-tymeslot-200 pt-3 mt-3"
-      >
+      <%!-- Video: which provider backs the event's join link. Offered for a
+      plain event as much as a meeting, and before attendees are added, so an
+      event can be created with a room in one step. --%>
+      <div :if={@video_integrations != []} class="border-t border-tymeslot-200 pt-3 mt-3">
         <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
           {dgettext("dashboard_calendar_events", "Video")}
         </p>
-        <div class="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            phx-click="update_create_video"
-            phx-value-video_integration_id=""
-            phx-target={@myself}
-            class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if is_nil(@creating_event[:video_integration_id]), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
-          >
-            {dgettext("dashboard_calendar_events", "None")}
-          </button>
-          <button
-            :for={vi <- @video_integrations}
-            type="button"
-            phx-click="update_create_video"
-            phx-value-video_integration_id={vi.id}
-            phx-target={@myself}
-            class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if to_string(vi.id) == to_string(@creating_event[:video_integration_id]), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
-          >
-            <ProviderIcon.provider_icon provider={vi.provider} type="video" size="mini" />
-            <span class="truncate max-w-[10rem]">{vi.name}</span>
-          </button>
-        </div>
+        <VideoPicker.video_picker
+          video_integrations={@video_integrations}
+          selected_id={@creating_event[:video_integration_id]}
+          target={@myself}
+          phx_event="update_create_video"
+        />
       </div>
 
       <%!-- Repeat --%>
       <div :if={!@meeting_mode} class="border-t border-tymeslot-200 pt-3 mt-3">
         <RecurrenceEditor.recurrence_editor
           recurrence_rule={@creating_event[:recurrence_rule]}
+          timezone={@user_timezone}
           myself={@myself}
           change_event="update_create_recurrence"
         />
@@ -303,33 +287,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
               "Invitations will be sent when you create the event."
             )}
           </p>
-        </div>
-        <div :if={(@creating_event[:attendees] || []) != [] and @video_integrations != []}>
-          <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
-            {dgettext("dashboard_calendar_events", "Video")}
-          </p>
-          <div class="flex flex-wrap gap-1.5">
-            <button
-              type="button"
-              phx-click="update_create_video"
-              phx-value-video_integration_id=""
-              phx-target={@myself}
-              class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if is_nil(@creating_event[:video_integration_id]), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
-            >
-              {dgettext("dashboard_calendar_events", "None")}
-            </button>
-            <button
-              :for={vi <- @video_integrations}
-              type="button"
-              phx-click="update_create_video"
-              phx-value-video_integration_id={vi.id}
-              phx-target={@myself}
-              class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if to_string(vi.id) == to_string(@creating_event[:video_integration_id]), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
-            >
-              <ProviderIcon.provider_icon provider={vi.provider} type="video" size="mini" />
-              <span class="truncate max-w-[10rem]">{vi.name}</span>
-            </button>
-          </div>
         </div>
       </div>
 

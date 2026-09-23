@@ -37,6 +37,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
 
   setup do
     TestMocks.setup_email_mocks()
+    TestMocks.stub_no_calendar_events()
 
     %{user: user} = create_always_bookable_profile()
     zoom = insert_zoom_integration(user)

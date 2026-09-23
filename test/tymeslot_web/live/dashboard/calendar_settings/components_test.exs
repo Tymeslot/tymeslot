@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :utils
+  @moduletag :calendar
 
   import Phoenix.LiveViewTest
   alias Tymeslot.Integrations.Calendar.CalendarEntry
@@ -44,6 +45,37 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
 
       assert Components.calendar_summary(integration) ==
                "booking target can no longer accept bookings"
+    end
+
+    # Booking writes to the configured calendar, not to the primary, so a
+    # read-only booking calendar must be reported even while the primary can
+    # still be written.
+    test "warns when the booking calendar turned read-only while the primary stays writable" do
+      integration =
+        summary_integration(
+          provider: "google",
+          default_booking_calendar_id: "cal-team",
+          calendar_list: [
+            %CalendarEntry{id: "cal-team", name: "Team", read_only: true, primary: false},
+            %CalendarEntry{id: "cal-primary", name: "Primary", read_only: false, primary: true}
+          ]
+        )
+
+      assert Components.calendar_summary(integration) ==
+               "booking target can no longer accept bookings"
+    end
+
+    test "does not name the primary when the booking calendar is no longer listed" do
+      integration =
+        summary_integration(
+          provider: "google",
+          default_booking_calendar_id: "cal-gone",
+          calendar_list: [
+            %CalendarEntry{id: "cal-primary", name: "Primary", read_only: false, primary: true}
+          ]
+        )
+
+      assert Components.calendar_summary(integration) == ""
     end
 
     test "stays silent (no warning) when no booking target has ever been configured" do
@@ -105,6 +137,38 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
 
       assert Components.calendar_summary(integration) ==
                "read-only, blocks time but takes no bookings"
+    end
+
+    # Only the OAuth providers record an account email, so before this the line
+    # for a CalDAV row started at the conflict-check segment and named neither
+    # the account nor the server it belonged to.
+    test "names the server when the provider records no account email" do
+      integration =
+        summary_integration(base_url: "https://cloud.example.com:8443/nextcloud")
+
+      assert Components.calendar_summary(integration) == "cloud.example.com:8443/nextcloud"
+    end
+
+    # The server URL field takes free text, so a password typed into it must
+    # not reach the dashboard.
+    test "never renders credentials embedded in the server URL" do
+      integration = summary_integration(base_url: "https://admin:hunter2@cloud.example.com")
+
+      summary = Components.calendar_summary(integration)
+
+      assert summary == "cloud.example.com"
+      refute summary =~ "hunter2"
+    end
+
+    test "prefers the account email over the server when the provider records one" do
+      integration =
+        summary_integration(
+          provider: "google",
+          provider_account_email: "organiser@example.com",
+          base_url: "https://www.googleapis.com"
+        )
+
+      assert Components.calendar_summary(integration) == "organiser@example.com"
     end
   end
 
@@ -375,6 +439,37 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
       assert html =~ "bg-amber-50"
     end
 
+    test "says why the integration needs reconnecting" do
+      html = render_row_with(needs_reauth: true, sync_error: "No calendar is selected.")
+
+      assert html =~ "No calendar is selected."
+    end
+
+    # The stored sync_error is the reason's untranslated English msgid, so the
+    # row must translate it into the viewer's own locale rather than rendering
+    # the persisted English text verbatim.
+    test "translates a known reason into the viewer's locale" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "de")
+      on_exit(fn -> Gettext.put_locale(TymeslotWeb.Gettext, "en") end)
+
+      html =
+        render_row_with(
+          needs_reauth: true,
+          sync_error:
+            "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
+        )
+
+      assert html =~
+               "Der Buchungskalender existiert bei Google nicht mehr. Bitte verbinden Sie die Integration erneut und wählen Sie einen anderen Kalender."
+    end
+
+    # sync_error also carries transient failures, which are not the owner's to fix.
+    test "keeps a stored sync error to itself while the integration is not flagged" do
+      html = render_row_with(needs_reauth: false, sync_error: "Timed out talking to the server.")
+
+      refute html =~ "Timed out talking to the server."
+    end
+
     test "shows a Healthy status when needs_reauth is false" do
       integration = %{
         id: 100,
@@ -415,11 +510,32 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
         provider: "caldav",
         provider_account_email: nil,
         is_active: false,
-        last_sync_at: nil,
         default_booking_calendar_id: nil,
         calendar_list: []
       },
       Map.new(attrs)
+    )
+  end
+
+  defp render_row_with(overrides) do
+    integration =
+      Enum.into(overrides, %{
+        id: 101,
+        name: "Flagged CalDAV",
+        provider: "caldav",
+        is_active: true,
+        calendar_list: [%CalendarEntry{id: "/a/", path: "/a/", name: "A", selected: true}],
+        calendar_paths: ["/a/"],
+        base_url: "https://caldav.example.com",
+        is_primary: false,
+        default_booking_calendar_id: nil,
+        provider_account_email: nil
+      })
+
+    render_component(&Components.calendar_connection_row/1,
+      integration: integration,
+      health_state: nil,
+      myself: "target"
     )
   end
 end

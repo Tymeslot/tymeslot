@@ -255,6 +255,89 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       # copy. HEEx escapes the apostrophe, so match the rendered entity form.
       assert render(view) =~ "Couldn&#39;t save changes"
     end
+
+    test "a reminder beyond one year is rejected on add and later edits still save", %{
+      conn: conn,
+      user: user
+    } do
+      meeting_type = insert(:meeting_type, user: user, duration_minutes: 30)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      view |> element("#tab-reminders") |> render_click()
+      view |> element("button[phx-click='toggle_custom_reminder']") |> render_click()
+
+      view
+      |> element(~s|input[name="reminder[value]"]|)
+      |> render_change(%{"reminder" => %{"value" => "400"}})
+
+      view
+      |> element(~s|select[name="reminder[unit]"]|)
+      |> render_change(%{"reminder" => %{"unit" => "days"}})
+
+      html = view |> element("button[phx-click='add_reminder']") |> render_click()
+
+      assert html =~ "Reminders cannot be set for more than 1 year in advance"
+      refute html =~ "Added 400 days before"
+
+      view
+      |> element(~s|input[name="meeting_type[duration]"]|)
+      |> render_change(%{"meeting_type" => %{"duration" => "45"}})
+
+      assert MeetingTypes.get_meeting_type(meeting_type.id, user.id).duration_minutes == 45
+      assert render(view) =~ "All changes saved"
+    end
+  end
+
+  # ===========================================================================
+  # Reminder Limit
+  # ===========================================================================
+
+  describe "Reminder limit" do
+    test "the add buttons lock once the last allowed reminder is added", %{
+      conn: conn,
+      user: user
+    } do
+      max = MeetingTypes.max_reminders()
+
+      # One short of the limit, so the host can still add exactly one more.
+      # Built from the limit itself: the UI must offer whatever the save path
+      # enforces, not a number written out beside it.
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          reminder_config: for(n <- 1..(max - 1)//1, do: %{"value" => n * 5, "unit" => "minutes"})
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view
+      |> element("[phx-click='edit_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      view |> element("#tab-reminders") |> render_click()
+
+      refute has_element?(view, "button[phx-click='toggle_custom_reminder'][disabled]")
+
+      view |> element("button[phx-click='toggle_custom_reminder']") |> render_click()
+
+      view
+      |> element(~s|input[name="reminder[value]"]|)
+      |> render_change(%{"reminder" => %{"value" => "45"}})
+
+      html = view |> element("button[phx-click='add_reminder']") |> render_click()
+
+      assert html =~ "Added 45 minutes before"
+      assert has_element?(view, "button[phx-click='toggle_custom_reminder'][disabled]")
+      assert html =~ "Maximum of #{max} reminders allowed"
+
+      assert length(MeetingTypes.get_meeting_type(meeting_type.id, user.id).reminder_config) ==
+               max
+    end
   end
 
   # ===========================================================================

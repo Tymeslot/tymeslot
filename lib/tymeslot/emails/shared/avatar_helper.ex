@@ -1,65 +1,81 @@
 defmodule Tymeslot.Emails.Shared.AvatarHelper do
   @moduledoc """
-  Helper functions for generating avatar URLs in email templates.
+  Renders the organiser avatar in the email organiser strip.
+
+  An uploaded avatar arrives as an absolute http(s) URL and renders as an
+  image. Anything else renders an initials badge built from plain HTML rather
+  than a generated image: Gmail strips `data:` URI images, so an inline SVG
+  shows up there as broken alt text.
   """
 
   alias Tymeslot.Emails.Shared.{Sanitise, Styles}
   alias Tymeslot.Emails.Shared.Styles.Tokens
+  alias Tymeslot.Security.UrlValidation
+
+  @size_px 44
 
   @doc """
-  Generates an avatar URL for an organizer.
-  Uses the provided avatar URL if available, otherwise generates a default SVG avatar based on the organizer name.
+  Returns the MJML for the organiser avatar: an `mj-image` when `avatar_url`
+  is an absolute http(s) URL, otherwise an initials badge for `organizer_name`.
   """
-  @spec generate_avatar_url(
-          %{
-            optional(:organizer_avatar_url) => String.t() | nil,
-            optional(:organizer_name) => String.t() | nil,
-            optional(atom()) => term()
-          }
-          | keyword()
-        ) :: String.t()
-  def generate_avatar_url(appointment_details) do
-    details =
-      if is_list(appointment_details), do: Map.new(appointment_details), else: appointment_details
-
-    case Map.get(details, :organizer_avatar_url) do
-      nil ->
-        name = Map.get(details, :organizer_name) || "User"
-        generate_default_avatar(name)
-
-      url when is_binary(url) ->
-        url
-
-      _other ->
-        name = Map.get(details, :organizer_name) || "User"
-        generate_default_avatar(name)
+  @spec avatar_mjml(String.t() | nil, String.t() | nil) :: String.t()
+  def avatar_mjml(avatar_url, organizer_name) when is_binary(avatar_url) do
+    case UrlValidation.validate_http_url(avatar_url) do
+      :ok -> image_mjml(avatar_url, organizer_name)
+      _invalid -> initials_badge_mjml(organizer_name)
     end
   end
 
+  def avatar_mjml(_no_url, organizer_name), do: initials_badge_mjml(organizer_name)
+
   @doc """
-  Generates a default SVG-based avatar data URI.
+  The initials shown in the badge: the first letters of the first and last
+  words of the name, so a long name still fits the circle.
   """
-  @spec generate_default_avatar(String.t()) :: String.t()
-  def generate_default_avatar(organizer_name) do
-    name = organizer_name || "User"
+  @spec initials(String.t() | nil) :: String.t()
+  def initials(organizer_name) do
+    case String.split(organizer_name || "") do
+      [] -> "U"
+      [only] -> first_letter(only)
+      [first | rest] -> first_letter(first) <> first_letter(List.last(rest))
+    end
+  end
 
-    initials =
-      name
-      |> String.split()
-      |> Enum.map_join("", &String.first/1)
-      |> String.upcase()
-      |> Sanitise.sanitize_for_email()
+  defp first_letter(word), do: word |> String.first() |> String.upcase()
 
+  defp image_mjml(avatar_url, organizer_name) do
+    """
+    <mj-image
+      src="#{Sanitise.sanitize_for_email(avatar_url)}"
+      width="#{@size_px}px"
+      height="#{@size_px}px"
+      border-radius="#{div(@size_px, 2)}px"
+      alt="#{Sanitise.sanitize_for_email(organizer_name || "")}"
+      align="left"
+      padding="0"
+    />
+    """
+  end
+
+  # A table cell rather than a div: Outlook ignores height on a div, so only a
+  # cell keeps the badge square (and round wherever border-radius is honoured).
+  defp initials_badge_mjml(organizer_name) do
     accent_deep = Tokens.intent_accent_deep(:confirmed)
 
-    svg = """
-    <svg width="50" height="50" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="25" cy="25" r="25" fill="#{accent_deep}"/>
-      <text x="25" y="30" text-anchor="middle" font-family="sans-serif" font-size="20" font-weight="600" fill="#{Styles.button_text_color(accent_deep)}">#{initials}</text>
-    </svg>
     """
-
-    encoded = Base.encode64(svg)
-    "data:image/svg+xml;base64,#{encoded}"
+    <mj-text padding="0" align="left">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td
+            width="#{@size_px}"
+            height="#{@size_px}"
+            align="center"
+            valign="middle"
+            style="width:#{@size_px}px;height:#{@size_px}px;border-radius:#{div(@size_px, 2)}px;background-color:#{accent_deep};color:#{Styles.button_text_color(accent_deep)};font-size:17px;font-weight:600;line-height:#{@size_px}px;text-align:center;"
+          >#{Sanitise.sanitize_for_email(initials(organizer_name))}</td>
+        </tr>
+      </table>
+    </mj-text>
+    """
   end
 end

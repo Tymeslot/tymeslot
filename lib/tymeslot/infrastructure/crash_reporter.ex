@@ -31,6 +31,10 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
       produce a new crash event that re-enters this handler (loop prevention).
     * Normal exits and client-error (4xx) exceptions are filtered out; a global
       rate limit caps alert volume during a crash storm.
+    * A LiveView or LiveComponent sent an event name none of its `handle_event/3`
+      clauses matches is logged as a warning instead of alerting. The client
+      chooses both the event name and the component it targets, so any signed-in
+      user can produce that crash on demand; it is bad input, not a system fault.
   """
 
   alias Tymeslot.Infrastructure.AdminAlerts
@@ -48,6 +52,8 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   @stacktrace_max_lines 50
 
   @normal_exits [:normal, :shutdown]
+
+  @event_name_max_length 100
 
   @doc """
   Installs the crash reporter as a global `:logger` handler.
@@ -125,8 +131,10 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   def log(_log_event, _config), do: :ok
 
   defp handle_crash(kind, reason, stacktrace) do
-    if reportable?(kind, reason) and within_rate_limit?() do
-      offload(kind, reason, stacktrace)
+    cond do
+      unmatched_client_event?(reason, stacktrace) -> log_unmatched_client_event(stacktrace)
+      reportable?(kind, reason) and within_rate_limit?() -> offload(kind, reason, stacktrace)
+      true -> :ok
     end
 
     :ok
@@ -143,6 +151,33 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   catch
     _kind, _reason -> :ok
   end
+
+  # Only a miss on the dispatch head itself counts. When no clause matches, the
+  # BEAM reports the failing call as the top frame with its argument list in
+  # place of an arity; a `FunctionClauseError` raised by something the handler
+  # body calls names that other function instead, and must keep alerting.
+  defp unmatched_client_event?(
+         %FunctionClauseError{module: module, function: :handle_event, arity: 3},
+         [{module, :handle_event, [_event, _params, _socket], _location} | _frames]
+       ),
+       do: function_exported?(module, :__live__, 0)
+
+  defp unmatched_client_event?(_reason, _stacktrace), do: false
+
+  # Logged from the handler process under our own domain, as the throttle
+  # notice is, so it can never re-enter this handler.
+  defp log_unmatched_client_event([
+         {module, :handle_event, [event, _params, _socket], _location} | _frames
+       ]) do
+    Logger.warning("Client sent a LiveView event no handle_event/3 clause matches",
+      live_module: inspect(module),
+      event: event_name(event),
+      domain: @own_domain
+    )
+  end
+
+  defp event_name(event) when is_binary(event), do: String.slice(event, 0, @event_name_max_length)
+  defp event_name(event), do: inspect(event, limit: 5, printable_limit: @event_name_max_length)
 
   defp offload(kind, reason, stacktrace) do
     Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->

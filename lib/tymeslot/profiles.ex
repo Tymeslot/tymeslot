@@ -199,6 +199,36 @@ defmodule Tymeslot.Profiles do
   end
 
   @doc """
+  Gives a profile with no timezone one, persisted: the detected (browser)
+  timezone when it is a real zone, otherwise the business default.
+
+  A timezone the profile already has is never overwritten. Always returns
+  `{:ok, profile}`: if the write fails, the profile comes back exactly as
+  loaded, so a caller never holds a timezone that was not saved.
+  """
+  @spec ensure_timezone(profile(), String.t() | nil) :: {:ok, profile()}
+  def ensure_timezone(%ProfileSchema{} = profile, detected_timezone) do
+    case Timezone.prefill_timezone(profile.timezone, detected_timezone) do
+      unchanged when unchanged == profile.timezone ->
+        {:ok, profile}
+
+      timezone ->
+        case update_timezone(profile, timezone) do
+          {:ok, updated} ->
+            {:ok, updated}
+
+          {:error, reason} ->
+            Logger.warning("Could not persist a prefilled profile timezone",
+              profile_id: profile.id,
+              reason: inspect(reason)
+            )
+
+            {:ok, profile}
+        end
+    end
+  end
+
+  @doc """
   Gets the timezone for a user, returning the default if no profile exists.
   """
   @spec get_user_timezone(user_id) :: timezone
@@ -237,13 +267,83 @@ defmodule Tymeslot.Profiles do
   def username_available?(username), do: ProfileQueries.username_available?(username)
 
   @doc """
+  Whether `username` can become `profile`'s username, and if not, why.
+
+  Surrounding whitespace is ignored. The profile's own current username is
+  `:unchanged` and is never re-checked, so a handle chosen before its word was
+  reserved keeps working. Otherwise the format is checked first, then the
+  reserved list, then whether another profile already holds it. `profile` may
+  be `nil` when there is no profile yet.
+
+  The profile changeset enforces the same rules again on write, which is what
+  settles a username taken between this check and the save.
+  """
+  @spec username_status(profile() | map() | nil, term()) ::
+          :unchanged | :ok | {:invalid, String.t()} | :reserved | :taken
+  def username_status(profile, username) when is_binary(username) do
+    candidate = String.trim(username)
+
+    if current_username?(profile, candidate),
+      do: :unchanged,
+      else: new_username_status(candidate)
+  end
+
+  def username_status(_profile, username), do: new_username_status(username)
+
+  defp current_username?(%{username: current}, candidate) when is_binary(current),
+    do: current == candidate
+
+  defp current_username?(_profile, _candidate), do: false
+
+  defp new_username_status(username) do
+    with :ok <- username_format_status(username),
+         :ok <- username_reserved_status(username) do
+      if ProfileQueries.username_available?(username), do: :ok, else: :taken
+    end
+  end
+
+  defp username_format_status(username) do
+    case UsernameValidator.validate(username) do
+      :ok -> :ok
+      {:error, message} -> {:invalid, message}
+    end
+  end
+
+  defp username_reserved_status(username) do
+    if username in ReservedPaths.list(), do: :reserved, else: :ok
+  end
+
+  @doc """
+  Why a profile changeset refused its username: `:taken` when another profile
+  holds it, `:reserved` when it is on the reserved list, `nil` for anything
+  else (a malformed username, or an error on another field).
+  """
+  @spec username_error(Ecto.Changeset.t()) :: :reserved | :taken | nil
+  def username_error(%Ecto.Changeset{errors: errors}) do
+    errors
+    |> Keyword.get_values(:username)
+    |> Enum.find_value(&username_error_kind/1)
+  end
+
+  defp username_error_kind({_message, opts}) do
+    cond do
+      opts[:constraint] == :unique -> :taken
+      opts[:validation] == :reserved -> :reserved
+      true -> nil
+    end
+  end
+
+  @doc """
   Updates a user's username with validation and rate limiting.
+
+  A username refused by validation does not count towards the change rate
+  limit; only an attempt that reaches the database does.
   """
   @spec update_username(profile(), username(), user_id()) :: result(profile())
   def update_username(%ProfileSchema{} = profile, username, user_id) do
-    with :ok <-
+    with :ok <- UsernameValidator.validate(username, reserved_words: ReservedPaths.list()),
+         :ok <-
            RateLimiter.check_username_change_rate_limit("user:" <> Integer.to_string(user_id)),
-         :ok <- UsernameValidator.validate(username, reserved_words: ReservedPaths.list()),
          {:ok, updated_profile} <- ProfileQueries.update_username(profile, username) do
       Publication.maybe_publish(updated_profile.user_id)
       {:ok, updated_profile}
@@ -332,6 +432,13 @@ defmodule Tymeslot.Profiles do
   @spec delete_avatar(profile) :: result(profile)
   def delete_avatar(profile), do: Avatars.delete_avatar(profile)
 
+  @doc """
+  Removes every avatar file stored for a deleted profile. See
+  `Avatars.delete_all_files/1`.
+  """
+  @spec delete_avatar_files(pos_integer()) :: :ok | {:error, File.posix(), Path.t()}
+  def delete_avatar_files(profile_id), do: Avatars.delete_all_files(profile_id)
+
   @spec avatar_url(profile | nil, atom()) :: String.t()
   def avatar_url(profile, version \\ :original), do: Avatars.avatar_url(profile, version)
 
@@ -341,6 +448,13 @@ defmodule Tymeslot.Profiles do
   """
   @spec uploaded_avatar_path(profile | nil) :: String.t() | nil
   def uploaded_avatar_path(profile), do: Avatars.uploaded_avatar_path(profile)
+
+  @doc """
+  Returns the absolute URL of a profile's uploaded avatar image, or `nil` when
+  none has been uploaded (see `Avatars.uploaded_avatar_url/1`).
+  """
+  @spec uploaded_avatar_url(profile | nil) :: String.t() | nil
+  def uploaded_avatar_url(profile), do: Avatars.uploaded_avatar_url(profile)
 
   @spec avatar_alt_text(profile | nil) :: String.t()
   def avatar_alt_text(profile), do: Avatars.avatar_alt_text(profile)

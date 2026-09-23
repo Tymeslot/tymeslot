@@ -139,6 +139,112 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
     end
   end
 
+  describe "filter/2 over message reports" do
+    test "redacts a credential nested inside an OTP report's arguments" do
+      # The shape an OTP task-termination report actually has: the crashed
+      # function's arguments verbatim, with a calendar client — and its
+      # decrypted CalDAV password — sitting inside them.
+      report = %{
+        label: {Task.Supervisor, :terminating},
+        report: %{
+          args: [:some_fun, [%{client: %{username: "LR07587", password: "s3cret"}}]],
+          reason: {%RuntimeError{message: "boom"}, []}
+        }
+      }
+
+      assert %{msg: {:report, filtered}} =
+               MetadataRedactor.filter(
+                 %{level: :error, msg: {:report, report}, meta: %{}},
+                 []
+               )
+
+      assert [_fun, [%{client: client}]] = filtered.report.args
+      assert client.password == "[REDACTED]"
+
+      # The rest of the report has to survive, or the redaction has cost us
+      # the diagnostic the report existed for.
+      assert client.username == "LR07587"
+      assert {%RuntimeError{message: "boom"}, []} = filtered.report.reason
+      assert filtered.label == {Task.Supervisor, :terminating}
+    end
+
+    test "redacts sensitive keys in a {format, args} message" do
+      assert %{msg: {~c"~p", args}} =
+               MetadataRedactor.filter(
+                 %{
+                   level: :error,
+                   msg: {~c"~p", [%{api_key: "sk-abc123", user_id: 42}]},
+                   meta: %{}
+                 },
+                 []
+               )
+
+      assert [%{api_key: "[REDACTED]", user_id: 42}] = args
+    end
+
+    test "leaves {:string, chardata} messages alone" do
+      msg = {:string, ["password: ", "s3cret"]}
+
+      assert %{msg: ^msg} =
+               MetadataRedactor.filter(%{level: :error, msg: msg, meta: %{}}, [])
+    end
+
+    test "preserves an improper list rather than raising inside the logger" do
+      chardata = ["abc" | "def"]
+
+      assert %{msg: {:report, filtered}} =
+               MetadataRedactor.filter(
+                 %{level: :error, msg: {:report, %{note: chardata, token: "t"}}, meta: %{}},
+                 []
+               )
+
+      assert filtered.note == chardata
+      assert filtered.token == "[REDACTED]"
+    end
+
+    test "keeps a struct in the report a struct" do
+      assert %{msg: {:report, filtered}} =
+               MetadataRedactor.filter(
+                 %{
+                   level: :error,
+                   msg: {:report, %{error: %ArgumentError{message: "bad"}}},
+                   meta: %{}
+                 },
+                 []
+               )
+
+      assert %ArgumentError{message: "bad"} = filtered.error
+    end
+
+    test "redacts within the depth cap and stops descending past it" do
+      nest = fn levels ->
+        Enum.reduce(1..levels, %{password: "s3cret"}, fn _level, acc -> %{nested: acc} end)
+      end
+
+      innermost = fn term ->
+        Enum.reduce_while(1..100, term, fn _step, acc ->
+          case acc do
+            %{nested: deeper} -> {:cont, deeper}
+            %{password: password} -> {:halt, password}
+          end
+        end)
+      end
+
+      assert %{msg: {:report, shallow}} =
+               MetadataRedactor.filter(%{level: :error, msg: {:report, nest.(5)}, meta: %{}}, [])
+
+      assert innermost.(shallow) == "[REDACTED]"
+
+      assert %{msg: {:report, deep}} =
+               MetadataRedactor.filter(%{level: :error, msg: {:report, nest.(40)}, meta: %{}}, [])
+
+      # Past the cap the term is handed on untouched rather than walked
+      # forever. Anything nested that deeply is not a shape credentials
+      # arrive in; bounding the walk keeps logging cheap.
+      assert innermost.(deep) == "s3cret"
+    end
+  end
+
   describe "attach/0" do
     test "is idempotent and survives repeated calls" do
       on_exit(fn -> :logger.remove_primary_filter(:tymeslot_metadata_redactor) end)

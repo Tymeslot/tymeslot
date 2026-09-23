@@ -27,6 +27,8 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
 
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.EmailWorker
@@ -71,11 +73,11 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
         # Return the converted event with :meet_url populated, matching what
         # Google.Provider.convert_event/1 produces from a real API response.
         {:ok,
-         %{
+         CreatedEvent.from_provider_event(%{
            uid: "uid-inline-123",
            summary: event_data.summary,
            meet_url: captured_url
-         }}
+         })}
       end)
 
       start_at = ~U[2026-04-06 09:00:00Z]
@@ -139,7 +141,12 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
         assert %{conference_data: _conference_data} = event_data
 
         # Google returns a response with no entryPoints (Meet URL missing)
-        {:ok, %{uid: "uid-no-url-456", summary: event_data.summary, meet_url: nil}}
+        {:ok,
+         CreatedEvent.from_provider_event(%{
+           uid: "uid-no-url-456",
+           summary: event_data.summary,
+           meet_url: nil
+         })}
       end)
 
       start_at = ~U[2026-04-07 10:00:00Z]
@@ -192,7 +199,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
         # Sanity check: the description reaching the provider now carries
         # the video link, so CalDAV servers propagate it to the ICS body.
         assert event_data.description =~ "https://video.example.com/join/room-123"
-        {:ok, "new-uid-123"}
+        {:ok, CreatedEvent.new("new-uid-123")}
       end)
 
       start_at = ~U[2026-04-06 09:00:00Z]
@@ -230,6 +237,46 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
     end
   end
 
+  describe "run_create_event/1 with a separate custom video integration using a template URL" do
+    test "derives the meeting_id-based room URL and embeds it in the description" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      video_integration =
+        insert(:video_integration,
+          user: user,
+          provider: "custom",
+          custom_meeting_url: "https://meet.example.com/{{meeting_id}}"
+        )
+
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+        assert event_data.description =~ "https://meet.example.com/"
+        {:ok, CreatedEvent.new("custom-template-uid-1")}
+      end)
+
+      start_at = ~U[2026-04-10 09:00:00Z]
+      end_at = ~U[2026-04-10 09:30:00Z]
+
+      payload = %{
+        creating: %{
+          title: "Custom Link Sync",
+          integration_id: integration.id,
+          calendar_id: "primary",
+          attendees: [],
+          video_integration_id: video_integration.id
+        },
+        user_id: user.id,
+        start_at: start_at,
+        end_at: end_at
+      }
+
+      assert {:ok, result} = EventCreation.run_create_event(payload)
+
+      assert result.meeting_url =~ ~r/\Ahttps:\/\/meet\.example\.com\/[0-9a-f]{16}\z/
+      assert result.description =~ "Join video call: #{result.meeting_url}"
+    end
+  end
+
   describe "run_create_event/1 — credentials require re-encryption" do
     test "flags the integration for reauth and returns reauth_required: true (no send/2)" do
       user = insert(:user)
@@ -247,7 +294,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
         )
 
       expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
-        {:ok, "reauth-uid-1"}
+        {:ok, CreatedEvent.new("reauth-uid-1")}
       end)
 
       payload = %{
@@ -277,12 +324,52 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
       refute_received {:flash, _}
     end
 
+    test "returns reauth_required: true when the chosen integration is already flagged" do
+      user = insert(:user)
+
+      # Flagged by the token refresh job after the provider refused the
+      # credentials. The booking client never writes to a flagged integration,
+      # so the event just created went to another of the user's calendars and
+      # the reconnect prompt is what tells them why.
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          is_active: true,
+          needs_reauth: true,
+          default_booking_calendar_id: "primary"
+        )
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
+        {:ok, CreatedEvent.new("flagged-uid-1")}
+      end)
+
+      payload = %{
+        creating: %{
+          title: "Flagged Calendar",
+          integration_id: integration.id,
+          calendar_id: "primary",
+          attendees: [],
+          video_integration_id: nil
+        },
+        user_id: user.id,
+        start_at: ~U[2026-04-08 10:00:00Z],
+        end_at: ~U[2026-04-08 10:30:00Z]
+      }
+
+      assert {:ok, result} = EventCreation.run_create_event(payload)
+
+      assert result.reauth_required == true
+      assert result.provider == "google"
+      assert result.default_booking_calendar_id == "primary"
+    end
+
     test "returns reauth_required: false on the happy path" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
-        {:ok, "ok-uid-1"}
+        {:ok, CreatedEvent.new("ok-uid-1")}
       end)
 
       payload = %{
@@ -303,6 +390,77 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
     end
   end
 
+  describe "run_create_event/1 when the calendar refuses the create" do
+    defp refused_create_payload(user, integration) do
+      %{
+        creating: %{
+          title: "Offline Create",
+          integration_id: integration.id,
+          calendar_id: nil,
+          attendees: [],
+          video_integration_id: nil
+        },
+        user_id: user.id,
+        start_at: ~U[2026-04-08 11:00:00Z],
+        end_at: ~U[2026-04-08 11:30:00Z]
+      }
+    end
+
+    defp expect_refused_create(reason) do
+      test_pid = self()
+
+      expect(Tymeslot.CalendarMock, :create_event, fn event_data, _context ->
+        send(test_pid, {:create_uid, event_data.uid})
+        {:error, reason}
+      end)
+    end
+
+    test "queues a CalDAV create for the next sync under the uid it tried to write" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
+
+      expect_refused_create(:network_error)
+
+      assert {:error, %{reason: :network_error, retry: :queued}} =
+               EventCreation.run_create_event(refused_create_payload(user, integration))
+
+      assert_received {:create_uid, uid}
+      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, uid)
+
+      assert {row.sync_state, row.summary, row.start_at} ==
+               {"locally_created", "Offline Create", ~U[2026-04-08 11:00:00.000000Z]}
+    end
+
+    test "does not queue a create a retry cannot recover" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
+
+      expect_refused_create(:unauthorized)
+
+      assert {:error, %{reason: :unauthorized, retry: :not_queued}} =
+               EventCreation.run_create_event(refused_create_payload(user, integration))
+
+      assert_received {:create_uid, uid}
+      assert {:error, :not_found} = ProviderCalendarEventQueries.get_by_uid(integration.id, uid)
+    end
+
+    test "reports a create on a calendar without an offline queue as not queued" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, provider: "google")
+      expect_refused_create(:network_error)
+
+      assert {:error, %{reason: :network_error, retry: :not_queued}} =
+               EventCreation.run_create_event(refused_create_payload(user, integration))
+
+      assert_received {:create_uid, uid}
+      assert {:error, :not_found} = ProviderCalendarEventQueries.get_by_uid(integration.id, uid)
+    end
+  end
+
   describe "run_create_ad_hoc_meeting/1" do
     test "creates a meeting and returns its id with the start/end times" do
       user = insert(:user)
@@ -312,7 +470,7 @@ defmodule Tymeslot.CalendarGrid.EventCreationTest do
       end_at = ~U[2026-04-09 13:30:00Z]
 
       stub(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
-        {:ok, "ad-hoc-uid-1"}
+        {:ok, CreatedEvent.new("ad-hoc-uid-1")}
       end)
 
       params = %{

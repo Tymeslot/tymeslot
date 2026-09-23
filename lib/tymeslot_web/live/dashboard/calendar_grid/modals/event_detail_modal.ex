@@ -5,15 +5,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias TymeslotWeb.Components.Dashboard.ColourSwatches
-  alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Components.UI.StatusSwitch
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrenceEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RemindersEditor
+  alias TymeslotWeb.Dashboard.CalendarGrid.VideoPicker
   alias TymeslotWeb.Helpers.LocaleFormat
 
   attr :selected_event, :map, required: true
@@ -33,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   def event_detail_modal(assigns) do
     assigns =
       assigns
-      |> assign(:attendees, List.wrap(Map.get(assigns.selected_event, :attendees)))
+      |> assign(:attendees, attendees(assigns.selected_event))
       |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
 
     ~H"""
@@ -374,7 +376,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
             {dgettext("dashboard_calendar_events", "Video")}
           </p>
-          <.video_integration_selector
+          <VideoPicker.video_picker
             video_integrations={@video_integrations}
             selected_id={Map.get(@selected_event, :video_integration_id)}
             target={@myself}
@@ -387,18 +389,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       <div :if={@editable} class="mb-3">
         <RecurrenceEditor.recurrence_editor
           recurrence_rule={Map.get(@selected_event, :recurrence_rule)}
+          timezone={Shared.recurrence_timezone(@selected_event, @user_timezone)}
           myself={@myself}
           change_event="update_event_recurrence"
         />
       </div>
       <div
-        :if={!@editable and recurrence_summary(@selected_event) != nil}
+        :if={!@editable and recurrence_summary(@selected_event, @user_timezone) != nil}
         class="flex items-start gap-3 mb-3"
       >
         <.icon name="hero-arrow-path" class="w-4 h-4 text-tymeslot-400 mt-0.5 shrink-0" />
         <div class="flex-1">
           <p class="text-token-sm text-tymeslot-600 leading-snug">
-            {recurrence_summary(@selected_event)}
+            {recurrence_summary(@selected_event, @user_timezone)}
           </p>
         </div>
       </div>
@@ -491,52 +494,33 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   end
 
   # Read-only human-readable summary of an event's recurrence rule, or nil when
-  # the event does not repeat.
-  defp recurrence_summary(event) do
+  # the event does not repeat. The rule's UNTIL is an instant written in UTC, so
+  # it is read back in the zone it was written against, the event's own.
+  defp recurrence_summary(event, user_timezone) do
     case Map.get(event, :recurrence_rule) do
       rule when is_binary(rule) and rule != "" ->
-        rule |> RRule.parse() |> RecurrenceEditor.summary()
+        rule
+        |> RRule.parse(timezone: Shared.recurrence_timezone(event, user_timezone))
+        |> RecurrenceEditor.summary()
 
       _none ->
         nil
     end
   end
 
-  attr :video_integrations, :list, required: true
-  attr :selected_id, :any, default: nil
-  attr :target, :any, required: true
-  attr :phx_event, :string, required: true
-
-  defp video_integration_selector(assigns) do
-    ~H"""
-    <div class="flex flex-wrap gap-1.5">
-      <button
-        type="button"
-        phx-click={@phx_event}
-        phx-value-video_integration_id=""
-        phx-target={@target}
-        class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if is_nil(@selected_id), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
-      >
-        {dgettext("dashboard_calendar_events", "None")}
-      </button>
-      <button
-        :for={vi <- @video_integrations}
-        type="button"
-        phx-click={@phx_event}
-        phx-value-video_integration_id={vi.id}
-        phx-target={@target}
-        class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if to_string(vi.id) == to_string(@selected_id), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
-      >
-        <ProviderIcon.provider_icon provider={vi.provider} type="video" size="mini" />
-        <span class="truncate max-w-[10rem]">{vi.name}</span>
-      </button>
-    </div>
-    """
-  end
-
   # Localised "Weekday, Month Day" label for the event's display date.
   defp full_date_label(date, locale) do
     "#{LocaleFormat.format_weekday_name(Date.day_of_week(date), locale, :full)}, " <>
       "#{LocaleFormat.format_month_name(date.month, locale)} #{date.day}"
+  end
+
+  # Cached attendees come back from JSONB string-keyed, while one the organiser
+  # has just added is still atom-keyed in memory, so the editor reads them all
+  # in the one canonical shape.
+  defp attendees(event) do
+    event
+    |> Map.get(:attendees)
+    |> List.wrap()
+    |> Enum.map(&Attendee.normalise/1)
   end
 end

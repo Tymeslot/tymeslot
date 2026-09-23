@@ -73,9 +73,9 @@ defmodule Tymeslot.DataCase do
   @doc """
   Points the verification mock at the real implementation.
 
-  Registration reads its verification module through the same
-  `:verification_module` key the session controller mocks, so without a default
-  the mock would swallow every signup. Delegating keeps signup tests on the real
+  Registration reads its verification module through the
+  `:verification_module` key, which tests point at a mock, so without a
+  default the mock would swallow every signup. Delegating keeps signup tests on the real
   implementation while leaving the seam available to a test that sets its own
   expectation.
   """

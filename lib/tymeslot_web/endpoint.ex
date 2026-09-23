@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Endpoint do
 
   alias Plug.Static
   alias Tymeslot.Infrastructure.StaticCompressors
+  alias TymeslotWeb.Helpers.ClientIP
 
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
@@ -122,7 +123,7 @@ defmodule TymeslotWeb.Endpoint do
 
   # Resolved at runtime rather than through `compile_env`. The upload root is
   # the one endpoint setting the test suite varies per run: `config/test.exs`
-  # suffixes it with `MIX_TEST_PARTITION` so partitioned suites cannot write
+  # suffixes it per test partition so partitioned suites cannot write
   # over each other. Pinned at compile time, that suffix makes every partition
   # but the one the build was compiled for abort at boot on a compile-env
   # mismatch, which rules out `mix test --partitions` entirely.
@@ -176,8 +177,14 @@ defmodule TymeslotWeb.Endpoint do
 
   plug Plug.RequestId
   plug Tymeslot.Infrastructure.CorrelationId
-  # Derive client IP from proxy headers (options pulled from config :remote_ip)
-  plug RemoteIp
+  # Derive client IP from proxy headers. RemoteIp reads no application config,
+  # so its options belong here. `headers:` narrows its default list to the two
+  # the socket path reads: `forwarded` and `x-client-ip` would let a client that
+  # a proxy does not strip them from name its own rate-limit key. `clients:` is
+  # an MFA so the `:trust_private_client_ips` flag is read at runtime.
+  plug RemoteIp,
+    headers: ~w[x-forwarded-for x-real-ip],
+    clients: {__MODULE__, :remote_ip_clients, []}
 
   plug Plug.Telemetry,
     event_prefix: [:phoenix, :endpoint],
@@ -194,6 +201,13 @@ defmodule TymeslotWeb.Endpoint do
   def request_log_level(%Plug.Conn{path_info: ["guest", _token, _response]}), do: false
   def request_log_level(%Plug.Conn{path_info: ["free-busy", _token]}), do: false
   def request_log_level(_conn), do: :info
+
+  # Called by RemoteIp on every request. A local function rather than an MFA
+  # naming `ClientIP` directly, so the plug options add no compile-time
+  # dependency from the endpoint.
+  @doc false
+  @spec remote_ip_clients() :: [String.t()]
+  def remote_ip_clients, do: ClientIP.remote_ip_clients()
 
   # Use custom body reader to cache raw body for webhooks needed for signature verification
   # Length reduced to 5MB for security; webhooks are typically much smaller.

@@ -4,17 +4,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
   @moduletag :calendar
   @moduletag :live
 
+  import Mox
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    _profile = insert(:profile, user: user)
+    _profile = insert(:profile, user: user, timezone: "Etc/UTC")
     conn = conn |> Test.init_test_session(%{}) |> fetch_session()
     conn = log_in_user(conn, user)
     {:ok, conn: conn, user: user}
+  end
+
+  # Edits write to the provider from a background Task; answering it keeps a
+  # crashed write from reverting the grid underneath the assertions.
+  setup do
+    Mox.stub(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _context -> :ok end)
+    :ok
   end
 
   describe "recurring event prompt" do
@@ -78,6 +87,29 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       refute html =~ "Edit recurring event"
       # Event is still rendered after revert
       assert html =~ "Recurring Meeting"
+    end
+
+    # No provider write honours a scope, so the prompt must not offer one: the
+    # edit lands on the occurrence that was dragged and nowhere else.
+    test "offers the edit for this event only", %{conn: conn, event: event} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      tomorrow_iso = Date.to_iso8601(Date.add(Date.utc_today(), 1))
+
+      lv
+      |> element("#calendar-drag-zone")
+      |> render_hook("event_dropped", %{
+        "event-id" => to_string(event.id),
+        "new-date" => tomorrow_iso,
+        "new-hour" => "10",
+        "new-minute" => "0",
+        "new-end-hour" => "11",
+        "new-end-minute" => "0"
+      })
+
+      assert has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='this_only']")
+      refute has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='all']")
+      refute has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='this_and_following']")
+      assert render(lv) =~ "Your change applies to this event only"
     end
 
     test "confirm 'this_only' scope dismisses the prompt", %{conn: conn, event: event} do
@@ -184,23 +216,45 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
   end
 
   describe "all-day event move" do
-    test "moving an all-day event to another integration does not crash", %{
+    test "moving an all-day event to another integration creates it there with its dates", %{
       conn: conn,
       user: user
     } do
       integration = insert(:calendar_integration, user: user, is_active: true)
-      other_integration = insert(:calendar_integration, user: user, is_active: true)
+
+      other_integration =
+        insert(:calendar_integration, user: user, is_active: true, calendar_paths: ["/other/"])
+
       today = Date.utc_today()
 
       event =
         insert_event(integration, %{
           summary: "All Day Conf",
+          provider: "caldav",
           all_day: true,
           start_date: today,
           end_date: Date.add(today, 1),
           start_at: nil,
           end_at: nil
         })
+
+      # Both provider writes report to the test in the order they are made. A
+      # create without dates is refused, as the adapters refuse it.
+      test_pid = self()
+
+      stub(Tymeslot.CalendarMock, :create_event, fn payload, context ->
+        send(test_pid, {:provider_call, self(), {:create, payload, context}})
+
+        case payload do
+          %{start_time: %Date{}, end_time: %Date{}} -> {:ok, CreatedEvent.new(payload.uid)}
+          _undated -> {:error, :invalid_event_data}
+        end
+      end)
+
+      stub(Tymeslot.CalendarMock, :delete_event, fn uid, context, _opts ->
+        send(test_pid, {:provider_call, self(), {:delete, uid, context}})
+        :ok
+      end)
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
@@ -215,11 +269,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
         "integration-id" => to_string(other_integration.id)
       })
 
-      # The optimistic UI update must not raise; no permission error expected.
-      # The flash reaches the DOM only on a later render, and renders escaped —
-      # see the matching assertion in "rejects a move to an integration owned by
-      # another user" below.
-      refute render(lv) =~ "You don&#39;t have permission"
+      # The first write must be the create: deleting first is what lost the
+      # event whenever the create then failed.
+      assert_receive {:provider_call, task_pid, first_call}, 5_000
+      assert {:create, payload, create_context} = first_call
+      assert_receive {:provider_call, ^task_pid, {:delete, deleted_uid, delete_context}}, 5_000
+      ref = Process.monitor(task_pid)
+      assert_receive {:DOWN, ^ref, :process, ^task_pid, _reason}, 5_000
+
+      assert {payload.start_time, payload.end_time} == {today, Date.add(today, 1)}
+      assert create_context == {other_integration.id, user.id}
+      assert {deleted_uid, delete_context} == {event.uid, {integration.id, user.id}}
+
+      # One render for the LiveView to take the Task's result, one for the grid
+      # to reload from the cache what that result told it.
+      render(lv)
+      html = render(lv)
+      assert html =~ "Event moved to the new calendar."
+      assert html =~ "All Day Conf"
     end
 
     test "rejects a move to an integration owned by another user", %{conn: conn, user: user} do
@@ -262,11 +329,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
       today = Date.utc_today()
 
-      # Start at 06:00 UTC = 09:00 AM Europe/Tallinn (the profile-factory default).
-      # The resize payload uses hour=12 in the user's local timezone; Shared.to_utc
-      # converts 12:00 Tallinn (EEST, UTC+3) back to 09:00 UTC. The original end of
-      # 07:00 UTC (= 10:00 AM Tallinn) becomes 09:00 UTC (= 12:00 PM Tallinn), so
-      # "12:00 PM" only appears in the rendered HTML AFTER the resize is applied.
+      # The profile is in UTC, so the resize payload's hour=12 (in the user's local
+      # timezone) moves the original 07:00 end to 12:00. Neither original edge is
+      # at noon, so "12:00 PM" only appears in the rendered HTML AFTER the resize
+      # is applied.
       event =
         insert_event(integration, %{
           summary: "Resizable Event",

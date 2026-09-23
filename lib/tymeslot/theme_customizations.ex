@@ -134,6 +134,13 @@ defmodule Tymeslot.ThemeCustomizations do
   end
 
   @doc """
+  Removes every theme background file stored for a deleted profile. The rows
+  are expected to be gone already; this touches the filesystem only.
+  """
+  @spec delete_profile_files(profile_id()) :: :ok | {:error, File.posix(), Path.t()}
+  def delete_profile_files(profile_id), do: Storage.delete_profile_directory(profile_id)
+
+  @doc """
   Deletes a theme customization.
   """
   @spec delete_theme_customization(ThemeCustomizationSchema.t()) ::

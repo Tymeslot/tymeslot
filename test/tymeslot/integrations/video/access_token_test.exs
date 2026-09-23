@@ -87,8 +87,8 @@ defmodule Tymeslot.Integrations.Video.AccessTokenTest do
   defmodule StubOAuthHelper do
     @moduledoc false
 
-    @spec refresh_access_token(String.t(), String.t() | nil) :: {:ok, map()}
-    def refresh_access_token(_refresh_token, _scope) do
+    @spec refresh_access_token(String.t(), String.t() | nil, keyword()) :: {:ok, map()}
+    def refresh_access_token(_refresh_token, _scope, _opts \\ []) do
       {:ok,
        %{
          access_token: "freshly-minted",

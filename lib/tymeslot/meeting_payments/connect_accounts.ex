@@ -4,12 +4,13 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
   Owns the placeholder-first onboarding flow: a row is persisted before
   Stripe is ever called so that a crash mid-flight cannot orphan a real
-  Stripe account. The Stripe API call itself is idempotency-keyed by the
-  user id, which makes a retry after a crash safe.
+  Stripe account. The Stripe API call itself is idempotency-keyed by that
+  placeholder row, which makes a retry after a crash safe.
   """
 
   require Logger
 
+  alias Tymeslot.Features
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
@@ -21,13 +22,41 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
   @type account :: ConnectAccountSchema.t()
 
-  @spec start_onboarding(user :: %{id: integer()}, opts :: keyword()) ::
-          {:ok, %{url: String.t(), account: account()}} | {:error, term()}
-  def start_onboarding(user, opts) do
-    country = Keyword.fetch!(opts, :country)
+  @doc """
+  Starts (or resumes) Stripe Connect onboarding for `user`.
 
-    with {:ok, placeholder} <- ensure_placeholder(user.id, country),
-         {:ok, stripe_account} <- create_stripe_account(user.id, country),
+  Enforces the feature gate itself, so a forged request cannot start
+  onboarding whatever the caller checked: the error is the
+  `Tymeslot.Features.check_access/2` reason (`:feature_disabled`,
+  `:insufficient_plan`, …). `{:error, :stripe_required}` from that check
+  counts as allowed, since establishing the account is what this flow is for.
+
+  A host whose row already carries a Stripe account (they left the hosted
+  onboarding part-way and came back) gets a fresh onboarding link for that
+  account; a new account is created only when the row has none. Returns
+  `{:error, :account_creation_restricted}` when Stripe has put a temporary
+  hold on the platform creating connected accounts.
+  """
+  @spec start_onboarding(user :: %{id: integer()}) ::
+          {:ok, %{url: String.t(), account: account()}} | {:error, term()}
+  def start_onboarding(user) do
+    country = default_country()
+
+    with :ok <- check_onboarding_access(user.id),
+         {:ok, account} <- ensure_placeholder(user.id, country) do
+      onboard(account, country)
+    end
+  end
+
+  defp onboard(%ConnectAccountSchema{stripe_account_id: stripe_account_id} = account, _country)
+       when is_binary(stripe_account_id) do
+    with {:ok, link} <- create_account_link(stripe_account_id) do
+      {:ok, %{url: link.url, account: account}}
+    end
+  end
+
+  defp onboard(%ConnectAccountSchema{} = placeholder, country) do
+    with {:ok, stripe_account} <- create_stripe_account(placeholder, country),
          {:ok, link} <- create_account_link(stripe_account.id),
          {:ok, account} <-
            ConnectAccountQueries.update(placeholder, %{
@@ -38,6 +67,21 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
       {:ok, %{url: link.url, account: account}}
     end
   end
+
+  # Uses the shared boolean predicate for the yes/no decision, and falls back
+  # to the raw `check_access/2` reason only when denied, so the caller can
+  # tell the host why.
+  defp check_onboarding_access(user_id) do
+    if Features.meeting_payments_allowed?(user_id),
+      do: :ok,
+      else: Features.check_access(user_id, :meeting_payments)
+  end
+
+  # The user's profile carries no country field, so onboarding uses the
+  # operator-configured default (MEETING_PAYMENTS_DEFAULT_COUNTRY, "ch" when
+  # unset). Read at runtime because `config/runtime.exs` sets it.
+  defp default_country,
+    do: Application.get_env(:tymeslot, :meeting_payments_default_country, "ch")
 
   @doc """
   Disconnects the host's Stripe account.
@@ -54,8 +98,17 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
        `paid` is not overwritten), transition the linked `awaiting_payment`
        meeting to `expired`, then soft-delete the connect_account row.
 
-  Returns `{:ok, %{cancelled_count: n}}` on success, `{:error, reason}` if the
-  transaction fails.
+  Returns `{:ok, %{cancelled_count: n, outstanding_refunds_count: m}}` on
+  success, `{:error, reason}` if the transaction fails.
+
+  ## Outstanding refunds
+
+  `outstanding_refunds_count` is measured before the soft delete and is not
+  acted on: these are cancelled bookings whose money the host still holds, and
+  disconnecting neither settles nor cancels them. It is reported because the
+  disconnect is the moment the host loses the ability to issue them from
+  Tymeslot (from here on only their Stripe dashboard can settle them), so the
+  caller can say so rather than let the obligation disappear quietly.
 
   ## Race with checkout.session.completed
 
@@ -74,11 +127,27 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   already expired/completed) we log and continue — the meeting and booking_payment
   are cancelled locally regardless, so the attendee cannot complete the booking
   even if the Stripe session is still technically open.
+
+  ## Paid meeting types are left alone
+
+  Deliberately: `payment_required` and `price_cents` survive a disconnect so a
+  host who reconnects gets their prices back instead of re-entering every one.
+  The form no longer clears them by omission
+  (`Tymeslot.MeetingTypes.FormMapper.build_attrs/2`), the changeset no longer
+  fails unrelated saves over the stored flag
+  (`MeetingTypeSchema.validate_payment_fields/2`), and `Bookings.Create`
+  refuses a paid booking outright while charges are off, so nothing is taken
+  in the meantime. Clearing them here, as `MeetingPayments.change_default_currency/2`
+  does for a currency change, would destroy that state for the far more common
+  case of a temporary disconnect.
   """
   @spec disconnect(user :: %{id: integer()}) ::
-          {:ok, %{cancelled_count: non_neg_integer()}} | {:error, term()}
+          {:ok,
+           %{cancelled_count: non_neg_integer(), outstanding_refunds_count: non_neg_integer()}}
+          | {:error, term()}
   def disconnect(user) do
     pending = BookingPaymentQueries.list_pending_for_host(user.id)
+    outstanding = BookingPaymentQueries.outstanding_refunds_summary_for_host(user.id)
     account = ConnectAccountQueries.live_for_user(user.id)
 
     expire_stripe_sessions(pending, account)
@@ -96,7 +165,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
       ConnectAccountQueries.soft_delete_for_user(user.id, now)
 
-      %{cancelled_count: cancelled_count}
+      %{cancelled_count: cancelled_count, outstanding_refunds_count: outstanding.count}
     end)
   end
 
@@ -279,19 +348,41 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
     end
   end
 
-  defp create_stripe_account(user_id, country) do
-    StripeAdapter.create_account(
-      %{
-        type: "standard",
-        country: country,
-        capabilities: %{
-          card_payments: %{requested: true},
-          transfers: %{requested: true}
-        }
-      },
-      idempotency_key: "account:#{user_id}"
-    )
+  # The idempotency key only protects a retry within Stripe's 24-hour key
+  # window; `onboard/2` never reaches here for a row that already has an
+  # account, which is what stops a later return creating a second one. It is
+  # keyed by the placeholder row rather than the user: a host who disconnects
+  # and starts again gets a new row, and must get a new account rather than
+  # Stripe's cached answer naming the one they just left.
+  defp create_stripe_account(%ConnectAccountSchema{id: placeholder_id}, country) do
+    %{
+      type: "standard",
+      country: country,
+      capabilities: %{
+        card_payments: %{requested: true},
+        transfers: %{requested: true}
+      }
+    }
+    |> StripeAdapter.create_account(idempotency_key: "connect_account:#{placeholder_id}")
+    |> classify_account_creation_error()
   end
+
+  # Stripe's risk system can place a temporary hold on the platform's ability
+  # to create connected accounts ("…temporarily restricted your ability to
+  # create this type of connected account…"). It is lifted only from the
+  # Stripe Dashboard, so an immediate retry cannot succeed. The message text
+  # is the only signal Stripe gives to tell it apart from other invalid
+  # requests.
+  defp classify_account_creation_error(
+         {:error, %Stripe.Error{code: :invalid_request_error, message: message}} = error
+       )
+       when is_binary(message) do
+    if String.contains?(message, "temporarily restricted"),
+      do: {:error, :account_creation_restricted},
+      else: error
+  end
+
+  defp classify_account_creation_error(result), do: result
 
   defp create_account_link(stripe_account_id) do
     StripeAdapter.create_account_link(%{

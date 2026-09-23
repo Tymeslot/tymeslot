@@ -253,6 +253,7 @@ msgid "Failed to disconnect Slack"
 msgstr "Slack konnte nicht getrennt werden"
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to generate link. Please try again."
 msgstr "Link konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
@@ -323,6 +324,7 @@ msgid "Integration deleted"
 msgstr "Integration gelöscht"
 
 #: lib/tymeslot_web/live/dashboard/automation/telegram/crud_handlers.ex
+#: lib/tymeslot_web/live/dashboard/automation/telegram/form_handlers.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram/modal_handlers.ex
 #: lib/tymeslot_web/live/dashboard/automation/telegram/state_handlers.ex
 #, elixir-autogen, elixir-format
@@ -540,6 +542,7 @@ msgstr "Slack-Integration wieder aktiviert"
 msgid "Slack integration updated"
 msgstr "Slack-Integration aktualisiert"
 
+#: lib/tymeslot/slack/slack.ex
 #: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Slack notifications are not enabled on this deployment."
@@ -743,3 +746,98 @@ msgstr "wiederholt von Telegram gedrosselt"
 #, elixir-autogen, elixir-format
 msgid "too many consecutive delivery failures"
 msgstr "zu viele aufeinanderfolgende Zustellfehler"
+
+#: lib/tymeslot/telegram/telegram.ex
+#, elixir-autogen, elixir-format
+msgid "My Telegram"
+msgstr "Mein Telegram"
+
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Slack connection cancelled."
+msgstr "Slack-Verbindung abgebrochen."
+
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Slack connection could not be completed. Please try again."
+msgstr "Die Slack-Verbindung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut."
+
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many requests. Please try again later."
+msgstr "Zu viele Anfragen. Bitte versuchen Sie es später erneut."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Slack credentials are missing. Reconnect to continue."
+msgstr "Die Slack-Zugangsdaten fehlen. Verbinden Sie Slack erneut, um fortzufahren."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook URL is missing. Add it again to continue."
+msgstr "Die Webhook-URL fehlt. Fügen Sie sie erneut hinzu, um fortzufahren."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Your plan does not include Slack notifications. Upgrade to connect Slack."
+msgstr "Ihr Tarif enthält keine Slack-Benachrichtigungen. Wechseln Sie auf einen höheren Tarif, um Slack zu verbinden."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Could not verify your plan right now. Please try again in a moment."
+msgstr "Ihr Tarif konnte gerade nicht überprüft werden. Bitte versuchen Sie es gleich erneut."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Slack app install is not available on this deployment. Use a webhook URL instead."
+msgstr "Die Installation der Slack-App ist in dieser Installation nicht verfügbar. Verwenden Sie stattdessen eine Webhook-URL."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Slack app is not configured as a bot token app. Check your Slack app settings and ensure the OAuth scopes grant a bot token."
+msgstr "Die Slack-App ist nicht für Bot-Tokens eingerichtet. Prüfen Sie die Einstellungen Ihrer Slack-App und stellen Sie sicher, dass die OAuth-Scopes ein Bot-Token gewähren."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Slack integration is misconfigured."
+msgstr "Die Slack-Integration ist falsch konfiguriert."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "This Slack workspace is already connected. Disconnect the existing integration first."
+msgstr "Dieser Slack-Arbeitsbereich ist bereits verbunden. Trennen Sie zuerst die bestehende Integration."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Could not save Slack integration."
+msgstr "Die Slack-Integration konnte nicht gespeichert werden."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Channel not accessible. If it's a private channel, invite the Tymeslot bot first."
+msgstr "Auf den Kanal kann nicht zugegriffen werden. Wenn es ein privater Kanal ist, laden Sie zuerst den Tymeslot-Bot ein."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Slack authorisation was revoked. Reconnect to continue."
+msgstr "Die Slack-Autorisierung wurde widerrufen. Verbinden Sie Slack erneut, um fortzufahren."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Bot is not in this channel. Either pick a public channel or invite the bot."
+msgstr "Der Bot ist nicht in diesem Kanal. Wählen Sie einen öffentlichen Kanal oder laden Sie den Bot ein."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Slack is rate-limiting. Try again in a minute."
+msgstr "Slack begrenzt gerade die Anfragen. Versuchen Sie es in einer Minute erneut."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook URL was revoked in Slack. Generate a new one."
+msgstr "Die Webhook-URL wurde in Slack widerrufen. Erstellen Sie eine neue."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Slack error: %{error}"
+msgstr "Slack-Fehler: %{error}"

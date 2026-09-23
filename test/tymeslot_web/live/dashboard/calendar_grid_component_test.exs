@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    _profile = insert(:profile, user: user)
+    _profile = insert(:profile, user: user, timezone: "Etc/UTC")
     _integration = insert(:calendar_integration, user: user)
     conn = conn |> Test.init_test_session(%{}) |> fetch_session()
     conn = log_in_user(conn, user)
@@ -37,6 +37,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
       label = lv |> element("#calendar-period-label") |> render()
 
       assert label =~ to_string(Date.utc_today().year)
+    end
+  end
+
+  describe "opening date" do
+    # UTC+14 and UTC-12 are 26 hours apart, so at every moment at least one of
+    # them is on a different calendar date from UTC. A grid that opened on the
+    # UTC date fails one of these two whatever hour the suite runs at.
+    for timezone <- ["Pacific/Kiritimati", "Etc/GMT+12"] do
+      test "opens on today in the user's timezone (#{timezone})" do
+        user = insert(:user, onboarding_completed_at: DateTime.utc_now())
+        insert(:profile, user: user, timezone: unquote(timezone))
+        conn = build_conn() |> Test.init_test_session(%{}) |> fetch_session() |> log_in_user(user)
+
+        {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+        lv |> element("button[phx-value-view='day']", "Day") |> render_click()
+
+        today = unquote(timezone) |> DateTime.now!() |> DateTime.to_date()
+        assert has_element?(lv, "[data-day-col='#{Date.to_iso8601(today)}']")
+      end
     end
   end
 
@@ -288,7 +307,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
   describe "empty state" do
     setup %{conn: conn} do
       user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-      _profile = insert(:profile, user: user)
+      _profile = insert(:profile, user: user, timezone: "Etc/UTC")
       conn = conn |> Test.init_test_session(%{}) |> fetch_session()
       conn = log_in_user(conn, user)
       {:ok, conn: conn, user: user}
@@ -315,7 +334,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
   describe "created_by_tymeslot badge" do
     setup %{conn: conn} do
       user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-      _profile = insert(:profile, user: user)
+      _profile = insert(:profile, user: user, timezone: "Etc/UTC")
       integration = insert(:calendar_integration, user: user)
       conn = conn |> Test.init_test_session(%{}) |> fetch_session()
       conn = log_in_user(conn, user)

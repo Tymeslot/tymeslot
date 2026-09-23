@@ -1,12 +1,11 @@
 defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   @moduledoc """
-  Calendar event CRUD operations (Create, Read, Update, Delete).
+  Calendar event write operations (create, update, delete).
 
   Responsibilities:
   - Create calendar events with validation
   - Update existing events by UID
   - Delete events by UID
-  - Get single events by UID
   - Context-aware routing (integration_id vs Meeting context)
 
   Failures surface as `{:error, type}`, where `type` is the provider's
@@ -19,11 +18,11 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
 
   require Logger
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
-  alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
-  alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.Utils.EventValidator
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
@@ -40,9 +39,13 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
 
   @doc """
   Creates a new event using the user's booking calendar.
+
+  The success value is a `CreatedEvent`: the identifier the event is addressed
+  by, plus whatever identity the provider gave away with it, namely its own id
+  for the resource and, on CalDAV, the ETag the server assigned.
   """
   @spec create_event(event_data(), context()) ::
-          {:ok, map()} | {:error, term()}
+          {:ok, CreatedEvent.t()} | {:error, term()}
   def create_event(event_data, context) do
     Metrics.time_operation(:create_event, %{}, fn ->
       Logger.info("Creating new calendar event")
@@ -157,83 +160,56 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   end
 
   @doc """
-  Deletes a calendar event and reconciles any linked meeting.
+  Fetches one event of the given calendar integration straight from its
+  provider, bypassing the sync cache.
 
-  Combines `delete_event/3` with `Sync.reconcile/4` and meeting lookup into a
-  single domain operation. Returns a result map containing the reconciliation
-  outcome and linked meeting info (if any).
+  Every calendar of the integration a client reaches is asked in turn, since
+  the event may live in any of them. The answer is `{:ok, events}` as soon as
+  one finds it, `{:error, :not_found}` only when every one of them says it
+  does not exist, `{:error, :unsupported}` when the provider cannot fetch a
+  single event, and any other error when it could not be told. An integration
+  that is not the user's, or no longer active, is
+  `{:error, :no_calendar_integration}`.
   """
-  @spec delete_event_and_reconcile(
-          event_uid(),
-          String.t() | nil,
-          {integration_id(), user_id()},
-          keyword()
-        ) :: {:ok, map()} | {:error, term()}
-  def delete_event_and_reconcile(
-        uid,
-        provider_event_id,
-        {integration_id, _user_id} = context,
-        opts
-      ) do
-    # Look up linked meeting before deletion for caller context
-    meeting_info =
-      case Sync.find_meeting(integration_id, provider_event_id, uid) do
-        {:ok, meeting} -> %{attendee_email: meeting.attendee_email}
-        {:error, :not_found} -> nil
+  @spec fetch_event(map(), {integration_id(), user_id()}) ::
+          {:ok, list()} | {:error, :not_found} | {:error, term()}
+  def fetch_event(event_ref, {integration_id, user_id})
+      when is_integer(integration_id) and is_integer(user_id) do
+    case CalendarManagement.fetch_integration_for_user(integration_id, user_id) do
+      {:ok, integration} ->
+        integration
+        |> event_clients()
+        |> fetch_from_clients(Map.put(event_ref, :calendar_integration_id, integration_id))
+
+      {:error, _reason} ->
+        {:error, :no_calendar_integration}
+    end
+  end
+
+  # One client per calendar the integration reaches, plus the booking calendar
+  # Tymeslot writes new events to, which need not be among the selected ones.
+  defp event_clients(integration) do
+    booking = ClientManager.get_client_by_integration_id(integration.id, integration.user_id)
+
+    Enum.uniq(ClientManager.clients_for_integration(integration) ++ List.wrap(booking))
+  end
+
+  defp fetch_from_clients([], _event_ref), do: {:error, :no_calendar_client}
+
+  defp fetch_from_clients(clients, event_ref) do
+    Enum.reduce_while(clients, {:error, :not_found}, fn client, acc ->
+      case ProviderAdapter.fetch_event(client, event_ref) do
+        {:ok, _events} = found -> {:halt, found}
+        {:error, :not_found} -> {:cont, acc}
+        # One calendar that could not answer leaves the event's absence
+        # unproven, whatever the others say, unless another one finds it.
+        {:error, _reason} = error -> {:cont, unproven(acc, error)}
       end
-
-    case delete_event(uid, context, opts) do
-      :ok ->
-        reconcile_result = Sync.reconcile(integration_id, provider_event_id, uid, :deleted)
-
-        result = %{uid: uid, integration_id: integration_id, reconcile_result: reconcile_result}
-
-        result =
-          case meeting_info do
-            %{attendee_email: email} -> Map.put(result, :meeting_attendee_email, email)
-            nil -> result
-          end
-
-        {:ok, result}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    end)
   end
 
-  @doc """
-  Checks whether a calendar event is linked to a Tymeslot meeting.
-  """
-  @spec event_linked_to_booking?(integration_id(), String.t() | nil, String.t() | nil) ::
-          boolean()
-  def event_linked_to_booking?(integration_id, provider_event_id, uid) do
-    match?({:ok, _}, Sync.find_meeting(integration_id, provider_event_id, uid))
-  end
-
-  @doc """
-  Get a single event by UID.
-  Searches across all calendars for the event for a specific user.
-  """
-  @spec get_event(event_uid(), user_id() | nil) :: {:ok, map()} | {:error, :not_found | term()}
-  def get_event(uid, user_id) do
-    Logger.debug("Getting calendar event", uid: uid, user_id: user_id)
-
-    case EventFetcher.list_events(user_id) do
-      {:ok, events} ->
-        event = Enum.find(events, &(&1.uid == uid))
-
-        if event do
-          Logger.debug("Found calendar event", uid: uid)
-          {:ok, event}
-        else
-          Logger.warning("Calendar event not found", uid: uid)
-          {:error, :not_found}
-        end
-
-      error ->
-        error
-    end
-  end
+  defp unproven({:error, :not_found}, error), do: error
+  defp unproven(earlier_error, _error), do: earlier_error
 
   # --- Private Helpers ---
 

@@ -1,0 +1,357 @@
+defmodule Tymeslot.Availability.Offer do
+  @moduledoc """
+  The times a public booking page offers.
+
+  Answers the two questions the booking page asks: which times are free on one
+  date (`slots_for_date/3`), and which days in a range have any free time at
+  all (`days_in_range/4`). Both build their rules from `config/4`, which rests
+  on `Tymeslot.Availability.Schedules.config/2`, the same rules the booking
+  submit re-checks against (`Tymeslot.Bookings.Policy.scheduling_config/2`).
+  A time offered here is therefore a time the submit accepts.
+
+  Both questions are answered against the same busy set: the host's connected
+  calendars, merged with the host's own live bookings. The bookings are what
+  stop the two paths disagreeing, because the submit refuses from the meetings
+  table and would otherwise reject a slot this module had just offered; see
+  `Tymeslot.Meetings.BusyPeriods`.
+
+  Works on a plain request map rather than a socket, so a fetch task can
+  capture it whole and nothing here depends on the web layer.
+  """
+
+  alias Tymeslot.Availability.{Calculate, Schedules, TimeSlots}
+  alias Tymeslot.Bookings.Orchestrator
+  alias Tymeslot.Demo
+  alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.BookingLimits.Checker
+  alias Tymeslot.Profiles
+
+  # A day. The duration can come from a URL slug, which is visitor input, so an
+  # unbounded parse would let `/:username/99999/book` hold a multi-day slot.
+  @max_duration_minutes 1440
+  @default_duration_minutes 30
+
+  # How far outside the dates being rendered the booking fetch reaches. A
+  # booking ending shortly before the window can still block its first slot
+  # through the host's buffer (two hours at most), and the window's own bounds
+  # are UTC while the days are the host's, so either edge can sit up to a
+  # timezone offset away. A day either side covers both; nothing further out
+  # can touch a slot inside.
+  @busy_window_padding_days 1
+
+  @typedoc """
+  What a booking page is showing, and to whom.
+
+    * `:profile` - the organiser's profile. Its `user_id` is whose calendar and
+      bookings are read, so the organiser cannot be named separately from the
+      profile and the two cannot disagree.
+    * `:user_timezone` - the booker's timezone.
+    * `:meeting_type` - the resolved meeting type, or nil before one is chosen.
+    * `:reschedule_uid` - the meeting a reschedule page is moving, as the link
+      named it. The meeting counts neither against the host's booking limits
+      nor as a calendar conflict with itself, exactly as
+      `Tymeslot.Bookings.Reschedule` leaves it out of both when the move is
+      submitted, but only once it is proven to be a movable meeting of this
+      organiser; any other value is ignored.
+    * `:demo_mode?` - whether the page is running as a demo.
+    * `:debug_calendar_module` - a calendar module override, for development.
+  """
+  @type request :: %{
+          required(:profile) => %{required(:user_id) => integer(), optional(atom()) => any()},
+          required(:user_timezone) => String.t(),
+          optional(:meeting_type) => map() | nil,
+          optional(:reschedule_uid) => String.t() | nil,
+          optional(:demo_mode?) => boolean() | nil,
+          optional(:debug_calendar_module) => module() | nil
+        }
+
+  @doc """
+  The times free on `date_string` (ISO 8601) for a meeting of `duration`.
+
+  `duration` is bounded as in `duration_minutes/2`. Returns `{:error, reason}`
+  for a date that does not parse and when the organiser's calendar cannot be
+  read.
+  """
+  @spec slots_for_date(request(), String.t(), String.t() | integer() | nil) ::
+          {:ok, [term()]} | {:error, any()}
+  def slots_for_date(%{profile: %{user_id: user_id} = profile} = request, date_string, duration) do
+    with {:ok, date} <- Date.from_iso8601(date_string) do
+      if demo?(request) do
+        Demo.get_available_slots(
+          date_string,
+          duration,
+          request.user_timezone,
+          user_id,
+          profile,
+          context(request)
+        )
+      else
+        free_slots(request, date, duration)
+      end
+    end
+  end
+
+  @doc """
+  Which days in `start_date..end_date` (inclusive) have at least one free
+  time, as a map of ISO 8601 date strings to booleans.
+
+  Computed against the organiser's real calendar and bookings, so a fully
+  booked day comes back `false`. Results are cached per range; calendar
+  failures are not, so the next request retries them.
+  """
+  @spec days_in_range(request(), Date.t(), Date.t(), pos_integer() | nil) ::
+          {:ok, %{String.t() => boolean()}} | {:error, any()}
+  def days_in_range(
+        %{profile: %{user_id: user_id} = profile} = request,
+        start_date,
+        end_date,
+        duration_minutes
+      ) do
+    if demo?(request) do
+      Demo.get_range_availability(
+        user_id,
+        start_date,
+        end_date,
+        request.user_timezone,
+        profile,
+        context(request),
+        duration_minutes
+      )
+    else
+      free_days(request, start_date, end_date, duration_minutes)
+    end
+  end
+
+  @doc """
+  The meeting length a booking is made for, in minutes.
+
+  The resolved meeting type's current duration is authoritative. Only when
+  there is none does `fallback` (a duration slug such as `"30min"`, or a
+  persisted length in minutes) decide, and that is bounded to a day, with
+  anything unparseable resolving to #{@default_duration_minutes} minutes.
+
+  The booking page, the booking submit and the reschedule submit all resolve
+  the duration here, so the grid a time was offered from and the grid it is
+  checked against cannot be stepped differently.
+  """
+  @spec duration_minutes(map() | nil, String.t() | integer() | nil) :: pos_integer()
+  def duration_minutes(%{duration_minutes: minutes}, _fallback) when is_integer(minutes),
+    do: minutes
+
+  def duration_minutes(_meeting_type, fallback), do: bounded_duration(fallback)
+
+  @doc """
+  The config the slot engine computes a page's offer from: the scheduling
+  rules of `Schedules.config/2`, plus the booking-limit check and the meeting
+  length.
+  """
+  @spec config(
+          Schedules.schedule() | nil,
+          map() | nil,
+          (DateTime.t() -> boolean()) | nil,
+          pos_integer() | nil
+        ) :: map()
+  def config(schedule, meeting_type, limit_checker, duration_minutes) do
+    schedule
+    |> Schedules.config(meeting_type)
+    |> Map.merge(%{limit_checker: limit_checker, duration_minutes: duration_minutes})
+  end
+
+  defp free_slots(%{profile: %{user_id: user_id} = profile} = request, date, duration) do
+    moving = moving_meeting(request)
+
+    with {:ok, events} <-
+           CalendarEvents.get_calendar_events_from_context(
+             date,
+             user_id,
+             calendar_context(request)
+           ) do
+      duration_minutes = bounded_duration(duration)
+      meeting_type = request[:meeting_type]
+
+      limit_checker = limit_checker(request, moving_uid(moving), date, date)
+
+      config =
+        meeting_type
+        |> Schedules.resolve_for(profile)
+        |> config(meeting_type, limit_checker, duration_minutes)
+
+      Calculate.available_slots(
+        date,
+        duration_minutes,
+        request.user_timezone,
+        owner_timezone(profile),
+        busy_periods(events, user_id, date, date, moving),
+        config
+      )
+    end
+  end
+
+  defp free_days(
+         %{profile: %{user_id: user_id} = profile} = request,
+         start_date,
+         end_date,
+         duration_minutes
+       ) do
+    meeting_type = request[:meeting_type]
+    moving = moving_meeting(request)
+    moving_uid = moving_uid(moving)
+
+    # Keyed on the proven uid only, so a mover's view is never served to
+    # anyone else and an arbitrary link value cannot mint an entry of its own.
+    cache_key =
+      AvailabilityCache.availability_range_key(
+        user_id,
+        start_date,
+        end_date,
+        request.user_timezone,
+        duration_minutes,
+        meeting_type && meeting_type.id,
+        moving_uid
+      )
+
+    AvailabilityCache.get_or_compute_events(cache_key, fn ->
+      with {:ok, events} <- booking_window_events(request, start_date) do
+        config =
+          meeting_type
+          |> Schedules.resolve_for(profile)
+          |> config(
+            meeting_type,
+            limit_checker(request, moving_uid, start_date, end_date),
+            duration_minutes || @default_duration_minutes
+          )
+
+        Calculate.range_availability(
+          start_date,
+          end_date,
+          owner_timezone(profile),
+          request.user_timezone,
+          busy_periods(events, user_id, start_date, end_date, moving),
+          config
+        )
+      end
+    end)
+  end
+
+  # The provider fetch behind this is window-shaped, not month-shaped:
+  # `Events.get_calendar_events/3` ignores the date it is given and always asks
+  # for `today .. today + advance_booking_days`. Folding it under a key built
+  # from the 42-day *display* range would therefore store the same event list
+  # once per rendered month and guarantee a miss for anything that moves the
+  # calendar, worst of all the next-available forward search, which re-enters
+  # `days_in_range/4` once per hop and would otherwise buy an identical round
+  # trip to the host's calendar each time, on exactly the fully booked hosts
+  # the search exists to help.
+  #
+  # So the events get their own entry, keyed on the user alone because that is
+  # the fetch's entire input. The folded map keeps its display-range key: the
+  # fold is what actually differs between hops.
+  #
+  # Errors stay uncached, for the reason `get_or_compute_events/2` exists at
+  # all: a timed-out calendar must be retried on the next request, not pinned
+  # empty for the TTL. `AvailabilityCache.invalidate_for_user/1` drops this
+  # entry with the folded maps, so a calendar sync cannot leave the two
+  # disagreeing about how fresh they are.
+  defp booking_window_events(%{profile: %{user_id: user_id}} = request, start_date) do
+    AvailabilityCache.get_or_compute_events(
+      AvailabilityCache.booking_window_events_key(user_id),
+      fn ->
+        CalendarEvents.get_calendar_events_from_context(
+          start_date,
+          user_id,
+          calendar_context(request)
+        )
+      end
+    )
+  end
+
+  # Everything that occupies the host's time across `first_date..last_date`:
+  # their connected calendars, plus their own live bookings, which reach the
+  # page this way rather than waiting to be mirrored onto a provider calendar
+  # (see `Tymeslot.Meetings.BusyPeriods`). `moving` is then excluded from the
+  # merged set, dropping the rescheduling meeting along with its mirror so that
+  # a booking is never a conflict with itself.
+  defp busy_periods(events, user_id, first_date, last_date, moving) do
+    events
+    |> Meetings.merge_busy_periods(
+      user_id,
+      utc_day_start(Date.add(first_date, -@busy_window_padding_days)),
+      utc_day_start(Date.add(last_date, 1 + @busy_window_padding_days))
+    )
+    |> Meetings.reject_calendar_event_mirrors(moving)
+  end
+
+  defp utc_day_start(date), do: DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
+
+  # Nil when the host has no booking limits configured, keeping the common path
+  # free of extra queries. The meeting being moved is left out of the counts,
+  # exactly as the reschedule submit leaves it out.
+  defp limit_checker(
+         %{profile: %{user_id: user_id} = profile} = request,
+         moving_uid,
+         start_date,
+         end_date
+       ) do
+    Checker.build_slot_checker(
+      user_id,
+      profile,
+      request[:meeting_type],
+      start_date,
+      end_date,
+      exclude_uid: moving_uid
+    )
+  end
+
+  # The meeting a reschedule page is moving, once
+  # `Orchestrator.get_meeting_for_reschedule/2` proves it is this organiser's
+  # and still movable (the lookup the submit's own flow relies on); nil for
+  # anything else. The link parameter is visitor input, so it is never used
+  # unverified.
+  #
+  # The whole record, not just its uid, because the page has to leave the
+  # meeting out of two different counts: the host's booking limits, keyed on
+  # the uid, and the events read back from their connected calendar, where the
+  # meeting appears as the provider event Tymeslot wrote and is matched by
+  # whichever identifier that provider family preserves.
+  defp moving_meeting(%{reschedule_uid: uid, profile: %{user_id: user_id}})
+       when is_binary(uid) and is_integer(user_id) do
+    case Orchestrator.get_meeting_for_reschedule(uid, user_id) do
+      {:ok, meeting} -> meeting
+      {:error, _not_movable} -> nil
+    end
+  end
+
+  defp moving_meeting(_request), do: nil
+
+  defp moving_uid(nil), do: nil
+  defp moving_uid(%{uid: uid}), do: uid
+
+  defp demo?(%{profile: profile} = request) do
+    Demo.demo_profile?(profile) || request[:demo_mode?] == true
+  end
+
+  # The context map the calendar fetch reads. Its contract names these two keys
+  # only, so the demo provider's extra keys stay out of it.
+  defp calendar_context(%{profile: profile} = request) do
+    %{organizer_profile: profile, debug_calendar_module: request[:debug_calendar_module]}
+  end
+
+  # The context map the demo provider reads.
+  defp context(request) do
+    request
+    |> calendar_context()
+    |> Map.merge(%{demo_mode: request[:demo_mode?] == true, meeting_type: request[:meeting_type]})
+  end
+
+  defp owner_timezone(profile), do: profile.timezone || Profiles.get_default_timezone()
+
+  defp bounded_duration(minutes) when is_integer(minutes) and minutes > 0,
+    do: min(minutes, @max_duration_minutes)
+
+  defp bounded_duration(slug) when is_binary(slug),
+    do: slug |> TimeSlots.parse_duration() |> min(@max_duration_minutes)
+
+  defp bounded_duration(_other), do: @default_duration_minutes
+end

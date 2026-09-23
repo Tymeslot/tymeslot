@@ -8,17 +8,21 @@ defmodule Tymeslot.Integrations.Video.EventDetails do
   calling into the video provider. This removes the three-shape problem that
   previously forced `GoogleMeetProvider.normalise_attendee/1` to compensate
   for divergent upstream shapes.
+
+  Attendees take the canonical `Tymeslot.Integrations.Calendar.Attendee`
+  shape, with the email trimmed and downcased, whichever source they came
+  from.
   """
 
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Meetings.MeetingSchema
 
-  @type attendee :: %{email: String.t(), name: String.t() | nil}
   @type t :: %__MODULE__{
           summary: String.t() | nil,
           description: String.t() | nil,
           start_time: DateTime.t() | NaiveDateTime.t() | nil,
           end_time: DateTime.t() | NaiveDateTime.t() | nil,
-          attendees: [attendee()]
+          attendees: [Attendee.t()]
         }
 
   defstruct summary: nil, description: nil, start_time: nil, end_time: nil, attendees: []
@@ -28,7 +32,7 @@ defmodule Tymeslot.Integrations.Video.EventDetails do
   the dashboard create flow.
 
   The `creating` map uses atom keys. Attendees are a list of plain email
-  strings; they are normalised to `%{email: _, name: nil}` maps. Empty or
+  strings, each built into an attendee with no name. Empty or
   whitespace-only titles are normalised to `nil`.
   """
   @spec from_creating_form(map()) :: t()
@@ -47,9 +51,9 @@ defmodule Tymeslot.Integrations.Video.EventDetails do
   dashboard edit flow.
 
   Event maps use atom keys; times are stored as `:start_at` / `:end_at`.
-  Attendees, when present, are already `%{email: _, name: _}` maps (or plain
-  strings from older cache rows). Empty or whitespace-only summaries are
-  normalised to `nil`.
+  Attendees are cached attendee maps in any stored shape (read through
+  `Attendee.normalise/1`), or plain strings from older cache rows. Empty or
+  whitespace-only summaries are normalised to `nil`.
   """
   @spec from_grid_event(map()) :: t()
   def from_grid_event(event) when is_map(event) do
@@ -88,17 +92,12 @@ defmodule Tymeslot.Integrations.Video.EventDetails do
     end
   end
 
-  defp meeting_attendees(%MeetingSchema{attendee_email: email, attendee_name: name})
-       when is_binary(email) and email != "" do
-    [%{email: String.downcase(String.trim(email)), name: name}]
-  end
+  defp meeting_attendees(%MeetingSchema{attendee_email: email, attendee_name: name}),
+    do: normalise_attendees([%{email: email, display_name: name}])
 
-  defp meeting_attendees(_meeting), do: []
-
-  # Accepts:
-  #   - plain email strings (from the creating-form path, where :attendees is [String.t()])
-  #   - %{"email" => _} maps (from legacy callers)
-  #   - %{email: _} / %{email: _, name: _} atom-key maps (normalised form)
+  # Accepts plain email strings (the creating-form path, and older cache rows)
+  # and attendee maps in any shape `Attendee.normalise/1` reads. An attendee
+  # without a usable email is dropped.
   defp normalise_attendees(attendees) when is_list(attendees) do
     attendees
     |> Enum.map(&normalise_attendee/1)
@@ -107,18 +106,26 @@ defmodule Tymeslot.Integrations.Video.EventDetails do
 
   defp normalise_attendees(_other), do: []
 
-  defp normalise_attendee(%{email: email} = a) when is_binary(email) and email != "" do
-    %{email: String.downcase(String.trim(email)), name: Map.get(a, :name)}
-  end
+  defp normalise_attendee(email) when is_binary(email),
+    do: normalise_attendee(%{email: email})
 
-  defp normalise_attendee(%{"email" => email} = a) when is_binary(email) and email != "" do
-    %{email: String.downcase(String.trim(email)), name: a["name"]}
-  end
+  defp normalise_attendee(%{} = attendee) do
+    attendee = Attendee.normalise(attendee)
 
-  # accepts legacy bare string emails from EventCreate's creating[:attendees] list
-  defp normalise_attendee(email) when is_binary(email) and email != "" do
-    %{email: String.downcase(String.trim(email)), name: nil}
+    case clean_email(attendee.email) do
+      nil -> nil
+      email -> %{attendee | email: email}
+    end
   end
 
   defp normalise_attendee(_other), do: nil
+
+  defp clean_email(email) when is_binary(email) do
+    case email |> String.trim() |> String.downcase() do
+      "" -> nil
+      cleaned -> cleaned
+    end
+  end
+
+  defp clean_email(_other), do: nil
 end

@@ -11,6 +11,7 @@ defmodule Tymeslot.SlackTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Notifications.Events
+  alias Tymeslot.Notifications.EventTypes
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Slack
   alias Tymeslot.Slack.{SlackIntegrationSchema, SlackQueries}
@@ -44,6 +45,20 @@ defmodule Tymeslot.SlackTest do
 
       assert integration.name == "Acme Slack"
       assert integration.channel_id == "C1"
+    end
+
+    test "create_webhook_integration/2 stores an active webhook-URL integration" do
+      user = insert(:user)
+
+      assert {:ok, integration} =
+               Slack.create_webhook_integration(user.id, %{
+                 name: "Team channel",
+                 webhook_url: "https://hooks.slack.com/services/TABC123/BABC123/sometoken123",
+                 events: ["meeting.created"]
+               })
+
+      assert integration.app_mode == "webhook_url"
+      assert integration.is_active == true
     end
 
     test "create_integration/2 returns :feature_disabled when Slack is off" do
@@ -118,22 +133,53 @@ defmodule Tymeslot.SlackTest do
   end
 
   describe "complete_oauth/2" do
-    test "persists a pending stub with the supplied bot token" do
+    test "persists a pending stub from the OAuth install details" do
       user = insert(:user)
 
       assert {:ok, stub} =
                Slack.complete_oauth(user.id, %{
-                 name: "Acme",
                  bot_token: "xoxb-new",
                  team_id: "T1",
                  team_name: "Acme",
                  authed_user_id: "U7",
-                 scope: "chat:write",
-                 events: ["meeting.created"]
+                 scope: "chat:write"
                })
 
       assert SlackIntegrationSchema.status(stub) == :pending_oauth
       assert SlackIntegrationSchema.bot_token(stub) == "xoxb-new"
+      assert stub.user_id == user.id
+      assert stub.app_mode == "oauth"
+      assert stub.team_id == "T1"
+      assert stub.authed_user_id == "U7"
+      assert stub.scope == "chat:write"
+    end
+
+    test "names the stub after the workspace and subscribes it to every event" do
+      user = insert(:user)
+
+      assert {:ok, stub} =
+               Slack.complete_oauth(user.id, %{
+                 bot_token: "xoxb-new",
+                 team_id: "T1",
+                 team_name: "Acme"
+               })
+
+      assert stub.name == "Acme"
+
+      assert Enum.sort(stub.events) == Enum.sort(EventTypes.all())
+    end
+
+    test "falls back to a generic name when Slack returns no workspace name" do
+      user = insert(:user)
+
+      assert {:ok, stub} =
+               Slack.complete_oauth(user.id, %{
+                 bot_token: "xoxb-new",
+                 team_id: "T1",
+                 team_name: nil
+               })
+
+      assert stub.name == "Slack"
     end
 
     test "returns :feature_disabled when Slack is off" do
@@ -141,7 +187,7 @@ defmodule Tymeslot.SlackTest do
       setup_config(:tymeslot, slack_notifications_allowed: false)
 
       assert {:error, :feature_disabled} =
-               Slack.complete_oauth(user.id, %{name: "x", bot_token: "t", team_id: "T"})
+               Slack.complete_oauth(user.id, %{bot_token: "t", team_id: "T", team_name: "x"})
     end
 
     test "removes stale pending OAuth stubs for the same user before inserting" do
@@ -165,10 +211,9 @@ defmodule Tymeslot.SlackTest do
 
       assert {:ok, latest} =
                Slack.complete_oauth(user.id, %{
-                 name: "Latest",
                  bot_token: "xoxb-new",
                  team_id: "T1",
-                 events: ["meeting.created"]
+                 team_name: "Latest"
                })
 
       remaining = Slack.list_integrations(user.id)
@@ -183,12 +228,7 @@ defmodule Tymeslot.SlackTest do
       user = insert(:user)
 
       {:ok, stub} =
-        Slack.complete_oauth(user.id, %{
-          name: "Acme",
-          bot_token: "xoxb-new",
-          team_id: "T1",
-          events: ["meeting.created"]
-        })
+        Slack.complete_oauth(user.id, %{bot_token: "xoxb-new", team_id: "T1", team_name: "Acme"})
 
       assert {:ok, active} =
                Slack.set_channel(stub, %{channel_id: "C42", channel_name: "#booking"})
@@ -384,6 +424,19 @@ defmodule Tymeslot.SlackTest do
       refute Slack.translate_error(:feature_disabled) =~ ":feature_disabled"
 
       assert Slack.translate_error(:feature_access_checker_failed) =~ "try again"
+    end
+
+    test "explains that the app install is unavailable and points to the webhook flow" do
+      assert Slack.translate_error(:oauth_unavailable) =~ "Use a webhook URL instead"
+    end
+
+    test "translates messages into the current locale" do
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        assert Slack.translate_error(:insufficient_plan) =~
+                 "Ihr Tarif enthält keine Slack-Benachrichtigungen"
+
+        assert Slack.translate_error("bogus_code") == "Slack-Fehler: bogus_code"
+      end)
     end
   end
 

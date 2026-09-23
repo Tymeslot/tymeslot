@@ -12,9 +12,6 @@ defmodule Tymeslot.TestMocks do
   Instead of manually setting up mocks in every test:
 
       setup do
-        stub(Tymeslot.MiroTalkAPIMock, :create_meeting_room, fn _ ->
-          {:ok, "https://test.mirotalk.com/join/room"}
-        end)
         stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _, _, _ ->
           {:ok, []}
         end)
@@ -31,7 +28,7 @@ defmodule Tymeslot.TestMocks do
 
   ### Complete Booking Flow Tests
 
-  For tests that exercise the full booking flow (calendar check, video room creation, email sending):
+  For tests that exercise the full booking flow (calendar check, email sending):
 
       setup :verify_on_exit!
       setup do
@@ -41,20 +38,6 @@ defmodule Tymeslot.TestMocks do
       test "creates booking with video link" do
         user = create_user_fixture()
         # All external services are mocked and will succeed
-      end
-
-  ### Video Meeting Tests
-
-  For tests focused on video provider integration:
-
-      setup do
-        setup_mirotalk_mocks(
-          room_url: "https://custom.mirotalk.com/join/custom-room"
-        )
-      end
-
-      test "generates custom video link" do
-        assert create_video_meeting() == {:ok, "https://custom.mirotalk.com/join/custom-room"}
       end
 
   ### Calendar Sync Tests
@@ -83,45 +66,37 @@ defmodule Tymeslot.TestMocks do
   For testing error handling and resilience:
 
       setup do
-        setup_error_mocks(:mirotalk_failure)
+        setup_error_mocks(:calendar_failure)
       end
 
-      test "handles video provider failure gracefully" do
-        assert {:error, _} = create_meeting_with_video()
-        assert_email_sent()  # Booking still created, fallback to no video
+      test "handles calendar failure gracefully" do
+        assert {:error, _} = fetch_calendar_events()
       end
 
   ## Available Mock Types
 
-  ### 1. Video Providers (MiroTalk)
-
-      setup_mirotalk_mocks()  # Default: successful room creation
-      setup_mirotalk_mocks(room_url: "custom_url")
-      setup_mirotalk_mocks(create_result: {:error, "API down"})
-
-  ### 2. Calendar Services
+  ### 1. Calendar Services
 
       setup_calendar_mocks()  # Default: empty calendar
       setup_calendar_mocks(events: [event1, event2])
       setup_calendar_mocks(result: {:error, "Auth failed"})
 
-  ### 3. Email Service
+  ### 2. Email Service
 
       setup_email_mocks()  # Default: all emails succeed
       setup_email_mocks(send_result: {:error, "SMTP error"})
 
-  ### 4. Subscription Manager (SaaS)
+  ### 3. Subscription Manager (SaaS)
 
       setup_subscription_mocks()  # Default: show branding
       setup_subscription_mocks(show_branding: false)
 
-  ### 5. All Services
+  ### 4. All Services
 
       setup_all_mocks()  # Sets up all services with success defaults
 
-  ### 6. Error Scenarios
+  ### 5. Error Scenarios
 
-      setup_error_mocks(:mirotalk_failure)
       setup_error_mocks(:calendar_failure)
       setup_error_mocks(:email_failure)
 
@@ -134,9 +109,8 @@ defmodule Tymeslot.TestMocks do
       setup do
         setup_all_mocks()
 
-        expect(Tymeslot.MiroTalkAPIMock, :create_meeting_room, 1, fn config ->
-          assert config.api_key == "expected_key"
-          {:ok, "https://room.url"}
+        expect(Tymeslot.EmailServiceMock, :send_appointment_confirmation_to_organizer, 1, fn _, _ ->
+          {:ok, :sent}
         end)
       end
 
@@ -148,17 +122,6 @@ defmodule Tymeslot.TestMocks do
   """
 
   alias Tymeslot.Mocks
-
-  @doc """
-  Sets up MiroTalk API mocks with default successful responses.
-
-  ## Options
-
-  - `:room_url` - The video room URL to return
-  - `:create_result` - Override the create_meeting_room result
-  """
-  @spec setup_mirotalk_mocks(keyword()) :: term()
-  defdelegate setup_mirotalk_mocks(opts \\ []), to: Mocks.MiroTalk, as: :setup
 
   @doc """
   Sets up Calendar mocks with configurable responses.
@@ -215,12 +178,11 @@ defmodule Tymeslot.TestMocks do
   @doc """
   Sets up all standard mocks for a typical successful flow.
 
-  Configures MiroTalk, Calendar, Email, Subscription, and HTTP Client mocks
+  Configures Calendar, Email, Subscription, and HTTP Client mocks
   with success defaults so happy-path tests need no further setup.
   """
   @spec setup_all_mocks() :: term()
   def setup_all_mocks do
-    setup_mirotalk_mocks()
     setup_calendar_mocks()
     setup_email_mocks()
     setup_subscription_mocks()
@@ -232,25 +194,17 @@ defmodule Tymeslot.TestMocks do
 
   ## Available Error Types
 
-  - `:mirotalk_failure` - Video room creation fails, calendar and email work
-  - `:calendar_failure` - Calendar sync fails, video and email work
-  - `:email_failure` - Email delivery fails, video and calendar work
+  - `:calendar_failure` - Calendar sync fails, email works
+  - `:email_failure` - Email delivery fails, calendar works
   """
   @spec setup_error_mocks(atom()) :: term()
   def setup_error_mocks(error_type) do
     case error_type do
-      :mirotalk_failure ->
-        setup_mirotalk_mocks(create_result: {:error, "MiroTalk API error"})
-        setup_calendar_mocks()
-        setup_email_mocks()
-
       :calendar_failure ->
-        setup_mirotalk_mocks()
         setup_calendar_mocks(result: {:error, "Calendar connection failed"})
         setup_email_mocks()
 
       :email_failure ->
-        setup_mirotalk_mocks()
         setup_calendar_mocks()
         setup_email_mocks(send_result: {:error, "Email delivery failed"})
     end

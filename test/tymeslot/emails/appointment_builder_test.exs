@@ -2,7 +2,9 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
   use Tymeslot.DataCase, async: true
   @moduletag :emails
 
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.AppointmentBuilder
+  alias Tymeslot.Locales
   alias Tymeslot.Profiles
 
   import Tymeslot.MeetingTestHelpers
@@ -45,6 +47,27 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
       assert %DateTime{time_zone: "America/New_York"} = result.end_time_attendee_tz
       assert DateTime.compare(result.start_time_owner_tz, meeting.start_time) == :eq
       assert DateTime.compare(result.end_time_attendee_tz, meeting.end_time) == :eq
+    end
+
+    test "carries the organizer's own locale, independent of the attendee's" do
+      # The organizer's copy of every booking email renders in this locale;
+      # the attendee's copy keeps `attendee_locale`.
+      %{user: user} = create_user_with_profile()
+      {:ok, user} = UserQueries.update_user_locale(user, "de")
+      meeting = insert_meeting_for_user(user, %{attendee_locale: "fr"})
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert result.organizer_locale == "de"
+      assert result.attendee_locale == "fr"
+    end
+
+    test "falls back to the default locale for an organizer who has chosen none" do
+      %{user: user} = create_user_with_profile()
+      meeting = insert_meeting_for_user(user)
+
+      assert AppointmentBuilder.from_meeting(meeting).organizer_locale ==
+               Locales.admin_default_locale()
     end
 
     test "uses the meeting summary when the meeting has one" do
@@ -351,6 +374,25 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
       result = AppointmentBuilder.from_meeting(meeting)
 
       assert result.booking_url == "http://localhost:4002/sarah-rodriguez"
+    end
+
+    test "carries the host's uploaded avatar as an absolute URL" do
+      %{user: user, profile: profile} = create_user_with_profile(%{avatar: "photo.png"})
+      meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert result.organizer_avatar_url ==
+               "http://localhost:4002/uploads/avatars/#{profile.id}/photo.png"
+    end
+
+    test "leaves the avatar unset, never a data URI, when the host has not uploaded one" do
+      %{user: user} = create_user_with_profile()
+      meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert result.organizer_avatar_url == nil
     end
 
     test "falls back to the app root when the host has no username" do

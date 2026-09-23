@@ -309,6 +309,21 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
       refute changeset.valid?
       assert changeset.errors[:name]
     end
+
+    test "forgets the sync token of a calendar path the owner deselects" do
+      # Kept, the token would resume a later reselection from a delta that
+      # assumes the cache already holds everything before it.
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          calendar_paths: ["/cal/a/", "/cal/b/"],
+          caldav_sync_tokens: %{"/cal/a/" => "token-a", "/cal/b/" => "token-b"}
+        )
+
+      changeset = CalendarIntegrationSchema.changeset(integration, %{calendar_paths: ["/cal/a/"]})
+
+      assert get_change(changeset, :caldav_sync_tokens) == %{"/cal/a/" => "token-a"}
+    end
   end
 
   describe "CalendarEntry.cast/1 and dump/1" do
@@ -544,6 +559,16 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
       refute inspected =~ "refresh_token_encrypted"
       refute inspected =~ "secretchannel"
       refute inspected =~ "google_channel_secret"
+    end
+
+    test "inspecting the integration itself hides the webhook channel secret" do
+      # Google and Outlook hand this struct to the availability fan-out as the
+      # provider client, so it reaches every crash report that prints a task's
+      # arguments. The virtual credential fields are already redacted; this
+      # one is persisted, and was not.
+      integration = build(:calendar_integration, google_channel_secret: "secretchannel")
+
+      refute inspect(integration) =~ "secretchannel"
     end
   end
 end

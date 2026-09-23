@@ -88,7 +88,8 @@ defmodule Tymeslot.Integrations.HealthCheck do
   5. Update health state via Monitor
   6. Detect transitions via Monitor
   7. Persist new state to DB via Monitor
-  8. Handle transitions via ResponseHandler
+  8. Respond via ResponseHandler: flag a permanent auth failure for
+     reconnection, then handle the transition
   """
   @impl Tymeslot.Integrations.HealthCheck.HealthCheckBehaviour
   @spec perform_single_check(integration_type(), integer()) :: :ok | {:error, any()}
@@ -354,13 +355,18 @@ defmodule Tymeslot.Integrations.HealthCheck do
     # Step 6: Persist new health state to DB
     Monitor.put_state(type, id, new_health_state)
 
-    # Step 7: Handle transition (logging, user notification after 48h)
-    ResponseHandler.handle_transition(type, integration, transition, new_health_state)
-
-    # Step 8: Fast-path immediate reauth + notification on permanent auth failures
-    # (e.g. Google `invalid_grant`). Bypasses the 48-hour notification threshold
-    # because the integration cannot recover without user action.
-    ResponseHandler.handle_permanent_auth_failure(type, integration, check_result)
+    # Steps 7-8: Fast-path immediate reauth + notification on permanent auth
+    # failures (e.g. Google `invalid_grant`), which cannot recover without user
+    # action, then the transition (logging, user notification after 48h). The
+    # fast-path runs first so the transition sees a freshly flagged integration
+    # and does not send the unhealthy email on top of the reauth one.
+    ResponseHandler.handle_check_result(
+      type,
+      integration,
+      transition,
+      new_health_state,
+      check_result
+    )
 
     case check_result do
       {:error, _reason} = error -> error

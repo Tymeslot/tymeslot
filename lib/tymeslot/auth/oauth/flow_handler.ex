@@ -41,6 +41,8 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
     exchange or user processing.
   - `{:error, :session_failed, provider, conn}` — OAuth succeeded but session
     creation failed.
+  - `{:error, :email_already_taken, provider, conn}` — no account carries this
+    provider ID, but the email belongs to an account created another way.
   """
   @spec handle_oauth_callback(Plug.Conn.t(), oauth_callback_params()) :: flow_result()
   def handle_oauth_callback(conn, %{code: code, state: state, provider: provider}) do
@@ -126,6 +128,14 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
 
       {:error, :not_found} ->
         handle_new_user_registration(conn, provider, user)
+
+      {:error, :email_already_taken} ->
+        log_social_auth(provider, false, conn, %{
+          email: Map.get(user, :email),
+          error_reason: "email_already_taken"
+        })
+
+        {:error, :email_already_taken, provider, conn}
     end
   end
 

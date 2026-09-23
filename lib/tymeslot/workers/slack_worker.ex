@@ -27,6 +27,7 @@ defmodule Tymeslot.Workers.SlackWorker do
 
   alias Tymeslot.Features
   alias Tymeslot.Meetings
+  alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Slack
   alias Tymeslot.Slack.{API, MessageBuilder, SlackIntegrationSchema, SlackQueries}
 
@@ -48,7 +49,8 @@ defmodule Tymeslot.Workers.SlackWorker do
          :ok <- check_feature_access(integration),
          :ok <- check_active(integration),
          {:ok, meeting} <- Meetings.get_meeting(meeting_id) do
-      blocks = MessageBuilder.build_blocks(event_type, meeting)
+      timezone = Recipients.get_organizer_timezone(meeting)
+      blocks = MessageBuilder.build_blocks(event_type, meeting, timezone)
       result = deliver(integration, blocks)
       handle_result(integration, event_type, meeting_id, blocks, job, result)
     else

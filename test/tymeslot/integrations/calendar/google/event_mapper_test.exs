@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
 
   @moduletag :integrations
 
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Google.EventMapper
   alias TymeslotWeb.Endpoint
 
@@ -188,6 +189,114 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
       [attendee] = result["attendees"]
       assert attendee["email"] == "charlie@example.com"
       assert attendee["displayName"] == "Charlie"
+    end
+  end
+
+  # The shape the JSONB cache column hands back: string keys, string values.
+  defp cached_attendee(email, status, extra \\ %{}) do
+    Map.merge(
+      %{
+        "email" => email,
+        "display_name" => "Ada Lovelace",
+        "response_status" => status,
+        "optional" => false
+      },
+      extra
+    )
+  end
+
+  defp event_with(attendees) do
+    EventMapper.format_event_data(%{
+      summary: "Sprint review",
+      start_time: ~U[2026-06-01 09:00:00Z],
+      end_time: ~U[2026-06-01 10:00:00Z],
+      timezone: "UTC",
+      attendees: attendees
+    })
+  end
+
+  describe "format_event_data/1 — attendee responses" do
+    test "carries a cached attendee's reply and label across a full-replace write" do
+      result = event_with([cached_attendee("ada@example.com", "accepted")])
+
+      assert [
+               %{
+                 "email" => "ada@example.com",
+                 "displayName" => "Ada Lovelace",
+                 "responseStatus" => "accepted"
+               }
+             ] = result["attendees"]
+    end
+
+    test "maps every canonical reply to Google's own spelling" do
+      for {cached, expected} <- [
+            {"accepted", "accepted"},
+            {"declined", "declined"},
+            {"tentative", "tentative"},
+            {"needs_action", "needsAction"}
+          ] do
+        result = event_with([cached_attendee("ada@example.com", cached)])
+        assert [%{"responseStatus" => ^expected}] = result["attendees"]
+      end
+    end
+
+    test "accepts the atom spelling the normalisers produce before any round trip" do
+      result =
+        event_with([
+          %{email: "ada@example.com", display_name: "Ada Lovelace", response_status: :tentative}
+        ])
+
+      assert [%{"responseStatus" => "tentative", "displayName" => "Ada Lovelace"}] =
+               result["attendees"]
+    end
+
+    test "folds a reply Google would reject down to needsAction" do
+      result = event_with([cached_attendee("ada@example.com", "delegated")])
+
+      assert [%{"responseStatus" => "needsAction"}] = result["attendees"]
+    end
+
+    test "sends no reply for an attendee the edit just added" do
+      # The grid builds a newly typed address with `Attendee.new/1`: no cached
+      # row, so no response to inherit from the attendee that preceded it.
+      result =
+        event_with([
+          cached_attendee("ada@example.com", "accepted"),
+          Attendee.new(email: "grace@example.com")
+        ])
+
+      assert [ada, grace] = result["attendees"]
+      assert ada["responseStatus"] == "accepted"
+      assert grace["email"] == "grace@example.com"
+      refute Map.has_key?(grace, "responseStatus")
+    end
+
+    test "sends no reply for an attendee the grid added before the canonical shape" do
+      # Rows written by the grid before `Attendee` existed carry a `status` key
+      # that no provider ever reported. It is not a reply and must not become one.
+      result =
+        event_with([%{"email" => "grace@example.com", "name" => nil, "status" => "accepted"}])
+
+      assert [grace] = result["attendees"]
+      refute Map.has_key?(grace, "responseStatus")
+    end
+
+    test "marks an optional attendee and leaves the flag off a required one" do
+      result =
+        event_with([
+          cached_attendee("ada@example.com", "accepted"),
+          cached_attendee("grace@example.com", "accepted", %{"optional" => true})
+        ])
+
+      assert [required, optional] = result["attendees"]
+      refute Map.has_key?(required, "optional")
+      assert optional["optional"] == true
+    end
+
+    test "falls back to the `name` spelling the ad-hoc booking payloads use" do
+      result = event_with([%{"email" => "ada@example.com", "name" => "Ada"}])
+
+      assert [%{"displayName" => "Ada"}] = result["attendees"]
     end
   end
 

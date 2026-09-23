@@ -46,7 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.Deletion do
   defp maybe_handle_primary(user_id, integration) do
     with {:ok, %{id: primary_id}} <- CalendarPrimary.get_primary_calendar_integration(user_id),
          true <- primary_id == integration.id do
-      promote_next_or_clear(user_id, integration.id)
+      promote_next_or_clear(user_id, [integration.id])
     else
       _not_primary -> :unchanged
     end
@@ -63,18 +63,28 @@ defmodule Tymeslot.Integrations.Calendar.Deletion do
     end)
   end
 
-  defp promote_next_or_clear(user_id, exclude_id) do
+  # Promotes the first bookable integration not in `exclude_ids`, or clears
+  # the primary when none is left.
+  #
+  # A candidate can vanish between the listing and the profile update: two
+  # deletions running side by side each list the other's integration as the
+  # next primary, and one of them loses the race. That surfaces as an error
+  # from `set_primary_calendar_integration/2` (a not-found on the pre-check,
+  # or the profile's foreign-key constraint when the row went in between), and
+  # the answer is the same as if the candidate had never been listed: exclude
+  # it and look again. Every pass excludes one more id, so this terminates.
+  defp promote_next_or_clear(user_id, exclude_ids) do
     others =
       user_id
       |> CalendarManagement.list_calendar_integrations()
-      |> Enum.reject(&(&1.id == exclude_id))
+      |> Enum.reject(&(&1.id in exclude_ids))
       |> BookingEligibility.filter_bookable()
 
     case others do
       [next | _rest] ->
         case CalendarPrimary.set_primary_calendar_integration(user_id, next.id) do
-          {:ok, _profile} -> {:promoted, next.id}
-          _error -> :unchanged
+          {:ok, _integration} -> {:promoted, next.id}
+          {:error, _reason} -> promote_next_or_clear(user_id, [next.id | exclude_ids])
         end
 
       [] ->

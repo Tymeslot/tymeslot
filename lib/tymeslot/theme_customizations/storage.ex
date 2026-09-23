@@ -37,6 +37,20 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
   end
 
   @doc """
+  Removes a profile's whole theme upload directory: every theme's images,
+  videos and transcoded variants, whether or not a row still references them.
+  """
+  @spec delete_profile_directory(pos_integer()) :: :ok | {:error, File.posix(), Path.t()}
+  def delete_profile_directory(profile_id) when is_integer(profile_id) do
+    case File.rm_rf(
+           Path.join([get_upload_base_directory(), "themes", Integer.to_string(profile_id)])
+         ) do
+      {:ok, _removed} -> :ok
+      {:error, reason, failed_path} -> {:error, reason, failed_path}
+    end
+  end
+
+  @doc """
   Ensures the given directory exists.
   Returns :ok on success, {:error, reason} on failure.
   """

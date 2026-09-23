@@ -84,7 +84,27 @@ defmodule Tymeslot.Integrations.Shared.ConnectionProbe do
   real external service.
   """
   @type bucket ::
-          :caldav | :nextcloud | :mirotalk | :custom | :ics_url | :oauth | :discovery | :unmetered
+          :caldav
+          | :nextcloud
+          | :mirotalk
+          | :custom
+          | :kmeet
+          | :jitsi
+          | :nextcloud_talk
+          | :ics_url
+          | :oauth
+          | :discovery
+          | :unmetered
+
+  @typedoc """
+  What the person did to reach the bucket, as opposed to which bucket they
+  reached. One bucket meters several actions (the `:custom` bucket is drawn on
+  by the "Test connection" button and by saving a self-hosted server's address),
+  and only the caller knows which of them is happening. It shapes the
+  refusal's wording and nothing else: an organiser who pressed "Add" should not
+  be told they ran too many connection tests.
+  """
+  @type action :: RateLimiter.Integrations.connection_action()
 
   @typedoc """
   Why `probe/1` refused to run the test. `{:rate_limited, message}` carries
@@ -107,6 +127,11 @@ defmodule Tymeslot.Integrations.Shared.ConnectionProbe do
     `provider_module.connection_test_bucket/0`; leave it `nil` to use the
     provider's own declared bucket. Neither field matters for a `:background`
     request: see the parent module's moduledoc on background metering.
+
+    `action` names what the person did (see `t:ConnectionProbe.action/0`), and
+    defaults to `:connection_test` because that is what most callers are: the
+    "Test connection" button, and the background probe that never reads it at
+    all. A caller whose user pressed something else says so.
     """
 
     @enforce_keys [:scope, :validate, :run]
@@ -114,6 +139,7 @@ defmodule Tymeslot.Integrations.Shared.ConnectionProbe do
               scope: nil,
               actor: nil,
               bucket: nil,
+              action: :connection_test,
               validate: nil,
               run: nil
 
@@ -122,6 +148,7 @@ defmodule Tymeslot.Integrations.Shared.ConnectionProbe do
             scope: Tymeslot.Integrations.Shared.ConnectionProbe.scope(),
             actor: Tymeslot.Integrations.Shared.ConnectionProbe.actor() | nil,
             bucket: Tymeslot.Integrations.Shared.ConnectionProbe.bucket() | nil,
+            action: Tymeslot.Integrations.Shared.ConnectionProbe.action(),
             validate: (-> :ok | {:error, term()}),
             run: (-> Tymeslot.Integrations.Shared.ConnectionProbe.result())
           }
@@ -172,7 +199,7 @@ defmodule Tymeslot.Integrations.Shared.ConnectionProbe do
     with :ok <- validate.() do
       case bucket_for(req) do
         :unmetered -> run_fun.()
-        bucket -> with :ok <- check(bucket, req.actor), do: run_fun.()
+        bucket -> with :ok <- check(bucket, req.actor, req.action), do: run_fun.()
       end
     end
   end
@@ -231,8 +258,8 @@ defmodule Tymeslot.Integrations.Shared.ConnectionProbe do
 
   defp bucket_for(%Request{bucket: bucket}), do: bucket
 
-  defp check(bucket, actor),
-    do: to_error(RateLimiter.check_connection_test_rate_limit(bucket, actor))
+  defp check(bucket, actor, action),
+    do: to_error(RateLimiter.check_connection_test_rate_limit(bucket, actor, action))
 
   defp to_error(:ok), do: :ok
   defp to_error({:error, :rate_limited, message}), do: {:error, {:rate_limited, message}}

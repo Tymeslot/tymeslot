@@ -37,7 +37,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ForceFetchTest do
           is_active: true,
           caldav_sync_tier: 1,
           calendar_paths: [path1(), path2()],
-          caldav_sync_token: "old-sync-token"
+          caldav_sync_tokens: %{path1() => "old-token-a", path2() => "old-token-b"}
         )
 
       # Both paths MUST receive a calendar-query REPORT (not a sync-collection).
@@ -78,12 +78,12 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ForceFetchTest do
       assert "event-from-path1@test" in cached_uids
       assert "event-from-path2@test" in cached_uids
 
-      # Integration state: sync token cleared, last_full_sync_at set,
+      # Integration state: every path's sync token cleared, last_full_sync_at set,
       # and the detected tier is reset to nil so the next normal sync
       # re-probes the server's capabilities (handles e.g. a server
       # upgrade that enabled sync-collection support).
       reloaded = Repo.reload!(integration)
-      assert is_nil(reloaded.caldav_sync_token)
+      assert reloaded.caldav_sync_tokens == %{}
       assert is_nil(reloaded.caldav_sync_tier)
       assert %DateTime{} = reloaded.last_full_sync_at
       assert %DateTime{} = reloaded.last_external_sync_at
@@ -96,7 +96,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ForceFetchTest do
           is_active: true,
           caldav_sync_tier: 1,
           calendar_paths: [path1()],
-          caldav_sync_token: "preserved-token",
+          caldav_sync_tokens: %{path1() => "preserved-token"},
           last_full_sync_at: ~U[2026-01-01 00:00:00Z]
         )
 
@@ -125,7 +125,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ForceFetchTest do
       assert {:error, _reason} = result
 
       reloaded = Repo.reload!(integration)
-      assert reloaded.caldav_sync_token == "preserved-token"
+      assert reloaded.caldav_sync_tokens == %{path1() => "preserved-token"}
       assert reloaded.last_full_sync_at == ~U[2026-01-01 00:00:00Z]
     end
 

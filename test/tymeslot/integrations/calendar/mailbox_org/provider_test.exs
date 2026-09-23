@@ -48,6 +48,24 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.ProviderTest do
   describe "validate_config/1" do
     import Tymeslot.CalendarProviderValidationCases
 
+    # The scheme-less form is how this field is most commonly got wrong, and
+    # `URI.parse/1` gives it `scheme: nil`, which lands in the same refusal
+    # branch as `ftp://`. Both must carry the provider's own guidance rather
+    # than the shared module's generic "start with https://" default.
+    test "names the mailbox.org endpoint for a scheme-less URL" do
+      config = %{base_url: "dav.mailbox.org", username: "you@mailbox.org", password: "pass"}
+
+      assert {:error, message} = Provider.validate_config(config)
+      assert String.contains?(message, "https://dav.mailbox.org")
+    end
+
+    test "names the mailbox.org endpoint for a non-HTTP scheme" do
+      config = %{base_url: "ftp://dav.mailbox.org", username: "you@mailbox.org", password: "pass"}
+
+      assert {:error, message} = Provider.validate_config(config)
+      assert String.contains?(message, "https://dav.mailbox.org")
+    end
+
     test "validates basic required fields" do
       assert :ok = test_basic_validation(Provider, "https://dav.mailbox.org")
     end

@@ -8,13 +8,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
   import Tymeslot.Factory
 
   alias Plug.Test
-  alias Tymeslot.CalendarGrid
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Repo
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    _profile = insert(:profile, user: user)
+    _profile = insert(:profile, user: user, timezone: "Etc/UTC")
     conn = conn |> Test.init_test_session(%{}) |> fetch_session()
     conn = log_in_user(conn, user)
     {:ok, conn: conn, user: user}
@@ -90,6 +88,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
             start_at: start_at,
             end_at: end_at,
             provider: "google",
+            provider_event_id: "google-event-id",
+            etag: nil,
+            written_calendar_id: nil,
             default_booking_calendar_id: "primary",
             attendees: [],
             meeting_url: nil,
@@ -136,6 +137,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
             start_at: start_at,
             end_at: end_at,
             provider: "google",
+            provider_event_id: "google-event-id",
+            etag: nil,
+            written_calendar_id: nil,
             default_booking_calendar_id: "primary",
             attendees: [],
             meeting_url: nil,
@@ -166,8 +170,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       send(lv.pid, {:event_move_result, {:error, original_event: event, reason: :api_error}})
 
       html = render(lv)
-      assert html =~ "Failed to move event"
+      assert html =~ "Could not move the event. It is still on its original calendar."
       assert html =~ "Move Me"
+    end
+
+    test "a refused recurring move reverts and explains why", %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      event =
+        insert_event(integration, %{
+          summary: "Weekly Standup",
+          start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
+          all_day: false
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      send(
+        lv.pid,
+        {:event_move_result, {:error, original_event: event, reason: :recurring_event}}
+      )
+
+      html = render(lv)
+      assert html =~ "Recurring events cannot be moved to another calendar yet."
+      refute html =~ "Could not move the event"
     end
 
     test "success path keeps the grid rendering without errors", %{conn: conn, user: user} do
@@ -190,36 +217,56 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
 
       render(lv)
       html = render(lv)
-      refute html =~ "Failed to move event"
+      refute html =~ "Could not move the event"
+      assert html =~ "Event moved to the new calendar."
       assert html =~ "Moved Event"
     end
   end
 
   describe "async event delete result" do
-    test "success path removes event from cache and grid", %{conn: conn, user: user} do
+    test "success path refreshes the grid and confirms", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
-      event =
-        insert_event(integration, %{
-          summary: "Delete Me",
-          start_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
-          end_at: DateTime.new!(Date.utc_today(), ~T[12:00:00], "Etc/UTC"),
-          all_day: false
-        })
-
-      {:ok, lv, html} = live(conn, ~p"/dashboard/calendar")
-      assert html =~ "Delete Me"
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
       send(
         lv.pid,
-        {:delete_event_result, {:ok, %{uid: event.uid, integration_id: integration.id}}}
+        {:delete_event_result,
+         {:ok, %{uid: "gone", integration_id: integration.id, linked_meeting: :none}}}
       )
 
       render(lv)
-      html = render(lv)
-      refute html =~ "Delete Me"
+      assert render(lv) =~ "Event deleted."
+    end
 
-      assert {:error, :not_found} = CalendarGrid.get_cached_event(integration.id, event.uid)
+    test "a cancelled linked meeting is reported", %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      send(
+        lv.pid,
+        {:delete_event_result,
+         {:ok, %{uid: "gone", integration_id: integration.id, linked_meeting: :cancelled}}}
+      )
+
+      render(lv)
+      assert render(lv) =~ "Event and linked meeting cancelled."
+    end
+
+    test "a linked meeting that could not be cancelled is reported", %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      send(
+        lv.pid,
+        {:delete_event_result,
+         {:ok, %{uid: "gone", integration_id: integration.id, linked_meeting: :cancel_failed}}}
+      )
+
+      render(lv)
+      assert render(lv) =~ "Event deleted, but meeting cancellation failed."
     end
 
     test "error path flashes failure message", %{conn: conn, user: user} do
@@ -234,11 +281,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
-      send(lv.pid, {:delete_event_result, {:error, :api_error}})
+      send(lv.pid, {:delete_event_result, {:error, %{reason: :api_error, retry: :not_queued}}})
 
       html = render(lv)
       assert html =~ "Failed to delete event"
       assert html =~ "Stubborn Event"
+    end
+
+    test "a delete queued for the next sync says so", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      send(lv.pid, {:delete_event_result, {:error, %{reason: :server_error, retry: :queued}}})
+
+      assert render(lv) =~ "Delete failed - queued to retry on next sync"
     end
   end
 
@@ -307,80 +362,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
     end
   end
 
-  describe "async create failure with CalDAV offline queue" do
-    test "tags cache row for retry and shows queued flash", %{conn: conn, user: user} do
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          is_active: true,
-          provider: "caldav",
-          calendar_paths: ["/cal/"]
-        )
-
+  describe "async create failure" do
+    test "a create queued for the next sync says so", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
-      uid = "offline-create-#{System.unique_integer([:positive])}"
+      send(lv.pid, {:create_event_result, {:error, %{reason: :server_error, retry: :queued}}})
 
-      send(
-        lv.pid,
-        {:create_event_result,
-         {:error, :server_error,
-          %{
-            uid: uid,
-            calendar_integration_id: integration.id,
-            summary: "Offline Create",
-            start_time: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
-            end_time: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
-            location: nil,
-            description: nil,
-            timezone: "Etc/UTC"
-          }}}
-      )
-
-      html = render(lv)
-      assert html =~ "queued to retry on next sync"
-
-      assert {:ok, cached} = ProviderCalendarEventQueries.get_by_uid(integration.id, uid)
-      assert cached.sync_state == "locally_created"
-      assert cached.summary == "Offline Create"
+      assert render(lv) =~ "Create failed - queued to retry on next sync"
     end
-  end
 
-  describe "async delete failure with CalDAV offline queue" do
-    test "tags cache row for retry and shows queued flash", %{conn: conn, user: user} do
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          is_active: true,
-          provider: "caldav",
-          calendar_paths: ["/cal/"]
-        )
-
-      event =
-        insert_event(integration, %{
-          uid: "offline-delete-#{System.unique_integer([:positive])}",
-          summary: "Offline Delete",
-          start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
-          end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
-          all_day: false,
-          provider: "caldav",
-          provider_calendar_id: "/cal/"
-        })
-
+    test "a create that was not queued says it failed", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
-      # The delete error path passes the context directly (uid + calendar_integration_id)
-      context = %{uid: event.uid, calendar_integration_id: integration.id}
-
-      send(lv.pid, {:delete_event_result, {:error, :server_error, context}})
+      send(lv.pid, {:create_event_result, {:error, %{reason: :server_error, retry: :not_queued}}})
 
       html = render(lv)
-      assert html =~ "queued to retry on next sync"
-
-      assert {:ok, cached} =
-               ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
-
-      assert cached.sync_state == "locally_deleted"
+      assert html =~ "Failed to create event"
+      refute html =~ "queued to retry"
     end
   end
 

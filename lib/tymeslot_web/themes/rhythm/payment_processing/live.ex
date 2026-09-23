@@ -10,16 +10,17 @@ defmodule TymeslotWeb.Themes.Rhythm.PaymentProcessingLive do
   approval-gated, in which case the webhook moves the meeting to
   `"awaiting_approval"` rather than `"confirmed"`
   (`CheckoutSessionCompleted.post_payment_status/1`).
-  `handle_info(:paid, _)` delegates to `PaymentReturn.refresh_after_paid/1`,
-  which re-fetches the meeting, not just the payment, so this page reads
-  that status rather than assuming a successful payment finished the
-  booking. `PaymentReturn.outcome/3` then turns that state (and a resolved
-  approval gate outcome — declined, expired) into what `render/1` shows.
+  `handle_info(:paid, _)` and `handle_info(:expired, _)` (a failed or
+  lapsed checkout) delegate to `PaymentReturn.refresh/1`, which re-fetches
+  the meeting, not just the payment, so this page reads what the webhook
+  wrote rather than assuming how the checkout ended.
+  `PaymentReturn.outcome/3` then turns that state into what `render/1` shows.
   """
 
   use TymeslotWeb, :live_view
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Meetings.Approval
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.PaymentReturn
@@ -30,9 +31,11 @@ defmodule TymeslotWeb.Themes.Rhythm.PaymentProcessingLive do
   end
 
   @impl Phoenix.LiveView
-  def handle_info(:paid, socket) do
-    {:noreply, PaymentReturn.refresh_after_paid(socket)}
+  def handle_info(message, socket) when message in [:paid, :expired] do
+    {:noreply, PaymentReturn.refresh(socket)}
   end
+
+  def handle_info(_message, socket), do: {:noreply, socket}
 
   @impl Phoenix.LiveView
   def render(assigns) do
@@ -43,6 +46,29 @@ defmodule TymeslotWeb.Themes.Rhythm.PaymentProcessingLive do
           <div class="payment-page-card">
             <div class="payment-page-card-body">
               <%= case PaymentReturn.outcome(@loading, @payment, @meeting) do %>
+                <% :failed -> %>
+                  <h1 class="payment-page-heading">
+                    {dgettext("booking", "Payment not completed")}
+                  </h1>
+                  <p class="payment-page-body">
+                    {dgettext(
+                      "booking",
+                      "Your booking is not confirmed. You can return and try again at any time."
+                    )}
+                  </p>
+                  <a :if={@rebook_path} href={@rebook_path} class="payment-page-link">
+                    {dgettext("booking", "Return to booking")}
+                  </a>
+                <% :cancelled -> %>
+                  <h1 class="payment-page-heading">
+                    {dgettext("booking", "Booking cancelled")}
+                  </h1>
+                  <p class="payment-page-body">
+                    {dgettext(
+                      "booking",
+                      "This booking has been cancelled, so it won't be going ahead."
+                    )}
+                  </p>
                 <% :loading -> %>
                   <h1 class="payment-page-heading">
                     {dgettext("booking", "Confirming your payment…")}
@@ -66,31 +92,53 @@ defmodule TymeslotWeb.Themes.Rhythm.PaymentProcessingLive do
                     class="mt-4"
                   />
                   <p :if={PaymentReturn.approval_deadline_text(@meeting)} class="payment-page-body">
-                    {dgettext(
-                      "booking",
-                      "If there's no answer by %{deadline}, the request lapses and you're refunded automatically.",
-                      deadline: PaymentReturn.approval_deadline_text(@meeting)
-                    )}
+                    <%= if Approval.refunds_on_release?(@meeting) do %>
+                      {dgettext(
+                        "booking",
+                        "If there's no answer by %{deadline}, the request lapses and you're refunded automatically.",
+                        deadline: PaymentReturn.approval_deadline_text(@meeting)
+                      )}
+                    <% else %>
+                      {dgettext(
+                        "booking",
+                        "If there's no answer by %{deadline}, the request lapses.",
+                        deadline: PaymentReturn.approval_deadline_text(@meeting)
+                      )}
+                    <% end %>
                   </p>
                 <% :declined -> %>
                   <h1 class="payment-page-heading">
                     {dgettext("booking", "Booking not accepted")}
                   </h1>
                   <p class="payment-page-body">
-                    {dgettext(
-                      "booking",
-                      "This booking wasn't accepted, so it won't be going ahead. Your payment is being refunded."
-                    )}
+                    <%= if Approval.refunds_on_release?(@meeting) do %>
+                      {dgettext(
+                        "booking",
+                        "This booking wasn't accepted, so it won't be going ahead. Your payment is being refunded."
+                      )}
+                    <% else %>
+                      {dgettext(
+                        "booking",
+                        "This booking wasn't accepted, so it won't be going ahead."
+                      )}
+                    <% end %>
                   </p>
                 <% :expired -> %>
                   <h1 class="payment-page-heading">
                     {dgettext("booking", "Booking request expired")}
                   </h1>
                   <p class="payment-page-body">
-                    {dgettext(
-                      "booking",
-                      "Nobody responded to this request in time, so it has lapsed. Your payment is being refunded."
-                    )}
+                    <%= if Approval.refunds_on_release?(@meeting) do %>
+                      {dgettext(
+                        "booking",
+                        "Nobody responded to this request in time, so it has lapsed. Your payment is being refunded."
+                      )}
+                    <% else %>
+                      {dgettext(
+                        "booking",
+                        "Nobody responded to this request in time, so it has lapsed."
+                      )}
+                    <% end %>
                   </p>
                 <% :confirmed -> %>
                   <h1 class="payment-page-heading">

@@ -3,7 +3,8 @@
 # start-docker.sh - Initialize and start Tymeslot inside a Docker container
 #
 # This script runs inside the Docker container as the entry point. It:
-#   1. Sets environment variables with sensible defaults
+#   1. Applies /app/data/.env (all but the database-selection keys), then sets
+#      environment variables with sensible defaults
 #   2. Validates required SECRET_KEY_BASE is set
 #   3. Initializes PostgreSQL database (first run only)
 #   4. Starts the PostgreSQL service
@@ -18,9 +19,71 @@
 
 set -eu  # Exit on error and on undefined variables
 
+# ==================== SECTION 0: Operator .env File ====================
+# /app/data/.env lives on the persistent volume and is the defaults layer under
+# anything passed with -e or --env-file, which still win. It is applied here,
+# before the defaults below and the database detection, so a value set only in
+# the file reaches both. Left to the release alone it arrived too late: by then
+# this script had exported its own default, often an empty string, for every
+# key it knows, and the release's reader leaves a key that is already set alone.
+#
+# The file is parsed, never sourced, by the same reader start.sh uses on
+# Cloudron.
+#
+# Which database the container uses, and which role the embedded cluster is
+# created with, stay with the container environment: POSTGRES_USER,
+# POSTGRES_DB, DATABASE_URL, DATABASE_HOST and DATABASE_PORT are container
+# settings (-e flags or the compose environment), never .env settings. Earlier
+# releases never read them from the file, so an existing install may carry a
+# stale copy there; honouring it on upgrade would point migrations at an empty
+# database (POSTGRES_DB) or flip the container to an unreachable external one
+# (DATABASE_URL). POSTGRES_PASSWORD is honoured, and section 6 keeps the
+# embedded cluster's role in step with it.
+ENV_FILE=/app/data/.env
+# shellcheck source=scripts/dotenv-reader.sh
+. "$(dirname "$0")/dotenv-reader.sh"
+
+CONTAINER_ONLY_KEYS="POSTGRES_USER POSTGRES_DB DATABASE_URL DATABASE_HOST DATABASE_PORT"
+preset_keys=""
+for key in $CONTAINER_ONLY_KEYS; do
+    if [ -n "${!key+set}" ]; then
+        preset_keys="$preset_keys $key"
+    fi
+done
+
+loaded_keys=""
+load_env_file "$ENV_FILE"
+
+# Any container-only key the file supplied is put back the way it was.
+ignored_keys=""
+for key in $CONTAINER_ONLY_KEYS; do
+    case " $preset_keys " in *" $key "*) continue ;; esac
+    if [ -n "${!key+set}" ]; then
+        unset "$key"
+        ignored_keys="$ignored_keys $key"
+    fi
+done
+
+applied_keys=""
+for key in $loaded_keys; do
+    case " $ignored_keys " in
+        *" $key "*) ;;
+        *) applied_keys="$applied_keys $key" ;;
+    esac
+done
+
+if [ -n "$applied_keys" ]; then
+    echo "✓ Loaded from $ENV_FILE:$applied_keys"
+fi
+if [ -n "$ignored_keys" ]; then
+    echo "⚠ Ignored in $ENV_FILE:$ignored_keys"
+    echo "  These choose the database and the embedded cluster's role, so they are"
+    echo "  container settings (-e flags or the compose environment), not .env settings."
+fi
+
 # ==================== SECTION 1: Environment Variable Defaults ====================
 # Set sensible defaults to avoid unbound variable errors when env vars are missing
-# These can be overridden by passing -e flags to 'docker run'
+# These can be overridden by passing -e flags to 'docker run' or in /app/data/.env
 POSTGRES_USER=${POSTGRES_USER:-tymeslot}
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-tymeslot}
 POSTGRES_DB=${POSTGRES_DB:-tymeslot}
@@ -298,11 +361,21 @@ fi
 if [ "$USING_EXTERNAL_DB" = false ]; then
     echo "Setting up database user and database..."
 
-    # Create user (suppress error if already exists)
-    if su - postgres -c "psql -c \"CREATE USER ${POSTGRES_USER} WITH PASSWORD '$POSTGRES_PASSWORD';\"" 2>/dev/null; then
+    # Create the user, or bring an existing role's password in line with
+    # POSTGRES_PASSWORD: CREATE USER leaves an existing role untouched, so
+    # without the ALTER a password set in /app/data/.env or rotated with -e
+    # would never reach the cluster and the release could not authenticate.
+    # Single quotes are doubled so a quote in the password cannot end the SQL
+    # literal early.
+    PG_PASSWORD_LITERAL="'${POSTGRES_PASSWORD//\'/\'\'}'"
+    if su - postgres -c "psql -c \"CREATE USER ${POSTGRES_USER} WITH PASSWORD ${PG_PASSWORD_LITERAL};\"" 2>/dev/null; then
         echo "✓ Created database user: ${POSTGRES_USER}"
+    elif su - postgres -c "psql -c \"ALTER USER ${POSTGRES_USER} WITH PASSWORD ${PG_PASSWORD_LITERAL};\"" 2>/dev/null; then
+        echo "  User '${POSTGRES_USER}' already exists; password set from POSTGRES_PASSWORD (OK)"
     else
-        echo "  User '${POSTGRES_USER}' already exists (OK)"
+        echo "✗ ERROR: Could not create database user '${POSTGRES_USER}' or set its password!"
+        echo "Check $PGDATA/logfile for details"
+        exit 1
     fi
 
     # Create database (suppress error if already exists)
@@ -400,7 +473,10 @@ export GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-}"
 export GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET:-}"
 export WEBHOOK_BASE_URL="${WEBHOOK_BASE_URL:-}"
 export ALLOW_PRIVATE_IPS_FOR_CALENDAR="${ALLOW_PRIVATE_IPS_FOR_CALENDAR:-false}"
-export ALLOW_PRIVATE_IPS_FOR_VIDEO="${ALLOW_PRIVATE_IPS_FOR_VIDEO:-false}"
+# Passed through only when the operator set it. Defaulting it to false here
+# would make every Docker deployment look like an explicit answer about video,
+# which revokes the calendar switch's long-standing cover for it.
+export ALLOW_PRIVATE_IPS_FOR_VIDEO
 export ALLOW_PRIVATE_IPS_FOR_WEBHOOKS="${ALLOW_PRIVATE_IPS_FOR_WEBHOOKS:-false}"
 export ENABLE_GOOGLE_AUTH="${ENABLE_GOOGLE_AUTH:-false}"
 export ENABLE_GITHUB_AUTH="${ENABLE_GITHUB_AUTH:-false}"

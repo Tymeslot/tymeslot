@@ -5,6 +5,8 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.Zimbra.Provider
 
+  setup :verify_on_exit!
+
   setup do
     CalendarCircuitBreaker.reset(:zimbra)
     :ok
@@ -47,6 +49,24 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
 
   describe "validate_config/1" do
     import Tymeslot.CalendarProviderValidationCases
+
+    # The scheme-less form is how this field is most commonly got wrong, and
+    # `URI.parse/1` gives it `scheme: nil`, which lands in the same refusal
+    # branch as `ftp://`. Both must carry the provider's own guidance rather
+    # than the shared module's generic "start with https://" default.
+    test "describes the expected Zimbra URL shape for a scheme-less URL" do
+      config = %{base_url: "mail.example.com", username: "user", password: "pass"}
+
+      assert {:error, message} = Provider.validate_config(config)
+      assert String.contains?(message, "Invalid Zimbra URL")
+    end
+
+    test "describes the expected Zimbra URL shape for a non-HTTP scheme" do
+      config = %{base_url: "ftp://mail.example.com", username: "user", password: "pass"}
+
+      assert {:error, message} = Provider.validate_config(config)
+      assert String.contains?(message, "Invalid Zimbra URL")
+    end
 
     test "validates basic required fields" do
       # The shared case block asserts on each missing/invalid field in turn and

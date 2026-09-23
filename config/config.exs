@@ -183,12 +183,6 @@ config :tymeslot, :oban_queues,
 # Webhook configuration
 config :tymeslot, :webhook_base_url, nil
 
-config :tymeslot, :webhook_paths, [
-  "/webhooks/stripe",
-  "/webhooks/stripe/connect",
-  "/auth/zoom/deauthorize"
-]
-
 # Webhook idempotency cache TTLs
 config :tymeslot, :webhook_idempotency,
   # How long to reserve an event while processing (prevents duplicate processing)
@@ -281,7 +275,7 @@ config :esbuild,
 
 # Configure tailwind
 config :tailwind,
-  version: "4.3.1",
+  version: "4.3.3",
   tymeslot: [
     args: ~w(
       --input=css/app.css
@@ -306,6 +300,42 @@ config :tailwind,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# Parameter names whose values are replaced with "[FILTERED]" before Phoenix or
+# LiveView writes them to a log line. The match is a case-sensitive substring of
+# the parameter key, so "password" also covers "current_password" and
+# "new_password", "secret" covers "client_secret", and "token" covers
+# "access_token", "refresh_token" and "bot_token".
+#
+# Setting this replaces Phoenix's own default of ["password", "token"], so both
+# have to be repeated here. The additions are the credential names this app
+# posts that neither of those words reaches: "api_key" (MiroTalk and the
+# other key-authenticated video providers), "webhook_url" (a Slack incoming
+# webhook URL is itself the credential), and "custom_meeting_url" (a personal
+# meeting link routinely carries its own room key in a "?pwd=" parameter, so
+# the webhook reasoning applies to it unchanged).
+#
+# "value" is here for a different reason. A LiveView `phx-blur` push carries
+# the focused element's own value under that fixed key, whatever the field is
+# called, so a secret input that validates on blur sends its plaintext under
+# "value" rather than under its own name. The key is generic by construction
+# and cannot be narrowed, so it is filtered wholesale; nothing this app logs
+# needs to read it.
+#
+# This lives in compile-time config rather than runtime.exs so it holds at every
+# log level and in every environment. Production pins the level to :info, where
+# the "Parameters:" line is not emitted at all, but dev runs at :debug and a
+# deployment raising the level must not start logging whatever an organiser
+# typed into a connect form.
+config :phoenix, :filter_parameters, [
+  "password",
+  "secret",
+  "token",
+  "api_key",
+  "webhook_url",
+  "custom_meeting_url",
+  "value"
+]
 
 # Precompressed siblings written by `mix phx.digest`, replacing the stock
 # [Phoenix.Digester.Gzip]. Order is irrelevant here; what a client is offered
@@ -361,14 +391,23 @@ config :tymeslot, :video_providers, %{
   mirotalk: [enabled: true],
   google_meet: [enabled: true],
   teams: [enabled: true],
+  kmeet: [enabled: true],
+  jitsi: [enabled: true],
+  nextcloud_talk: [enabled: true],
   custom: [enabled: true]
 }
 
+# Days after a meeting ends before Tymeslot deletes its video room, for
+# providers whose rooms otherwise stay on the organiser's server (Nextcloud
+# Talk). Overridden by VIDEO_ROOM_RETENTION_DAYS in config/runtime.exs.
+config :tymeslot, :video_room_retention_days, 7
+
 # Whether this deployment's Zoom Marketplace app is configured for
-# `meeting:update:meeting`. Off by default: requesting a scope the app lacks is
-# silently dropped by Zoom, and would make Tymeslot ask users to reconnect for a
-# scope no reconnect can produce. See `ZoomProvider.Scopes`.
-config :tymeslot, :zoom_update_scope_enabled, false
+# `meeting:update:meeting`. On by default; a deployment whose app lacks the
+# scope must turn it off, because Zoom silently drops a scope the app lacks and
+# Tymeslot would ask users to reconnect for a scope no reconnect can produce.
+# See `ZoomProvider.Scopes`.
+config :tymeslot, :zoom_update_scope_enabled, true
 
 config :tymeslot, :calendar_providers, %{
   caldav: [enabled: true],
@@ -451,6 +490,36 @@ config :tymeslot, :payments,
     analytics_event_days: 90,
     payload_days: 30
   ]
+
+# HSTS directives sent by TymeslotWeb.Plugs.SecurityHeadersPlug, read via
+# Application.compile_env. `max_age` covers the sending host and is always sent.
+# The other two reach past it (`include_subdomains` forces every sibling
+# subdomain of the operator's domain to HTTPS for the whole max-age, and
+# `preload` declares that domain eligible for the browser preload list), so
+# both default off rather than imposing them on a self-hoster's other services.
+# A deployment that owns its whole domain opts in. `preload` is only meaningful
+# alongside `include_subdomains`; the preload list requires it.
+config :tymeslot, :hsts,
+  max_age: 31_536_000,
+  include_subdomains: false,
+  preload: false
+
+# Whether a forwarded address in a loopback or RFC-1918/4193 range names the
+# visitor rather than a proxy hop. Off, because for an internet-facing
+# deployment such an address is always a proxy talking about itself, and
+# accepting one collapses every IP-keyed rate limit into a single bucket shared
+# by the whole deployment. An intranet-only self-host, whose visitors really are
+# on the LAN, sets TRUST_PRIVATE_CLIENT_IPS=true, which config/runtime.exs turns
+# into this key. TymeslotWeb.Helpers.ClientIP reads it for the LiveView socket
+# path and hands the endpoint's RemoteIp plug its `clients:` list from it for the
+# conn path, so the two cannot be configured apart.
+#
+# Only fixes a single proxy tier: it works when the reverse proxy directly in
+# front of the app is the only hop between it and the visitor. With a further
+# private proxy tier upstream of that one, the flag cannot tell the outer hop
+# apart from a visitor, and everyone behind it still collapses onto the outer
+# proxy's address.
+config :tymeslot, :trust_private_client_ips, false
 
 # Slack notifications — credentials supplied via env at runtime
 config :tymeslot,

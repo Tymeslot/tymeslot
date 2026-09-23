@@ -280,6 +280,26 @@ msgstr ""
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
+msgid "Add a holiday on the availability page and those days stop being offered, across every schedule and every meeting type, without a blocking event in any calendar you have connected. Give the first and last day a time when you leave mid-afternoon or come back mid-morning. Bookings already in your diary keep their times, and you are shown which ones before you save. Nobody booking you sees why the days are closed."
+msgstr ""
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Close the days you are away"
+msgstr ""
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Meet on Jitsi, kMeet or Nextcloud Talk"
+msgstr ""
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Three more video providers join Zoom, Google Meet, Teams and MiroTalk in the integrations picker. Point Tymeslot at your own Jitsi or Nextcloud and every booking gets a room of its own: a Talk conversation keeps its lobby shut until the meeting starts, moves when you reschedule and is deleted when you cancel. kMeet needs no setup at all."
+msgstr ""
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
 msgid "A meeting type can now offer several places to meet: in person at an address, a video call or a phone call. The person booking picks the one that suits them, and can change it when they reschedule. Offer more than one video service and they choose which one the meeting runs on."
 msgstr ""
 

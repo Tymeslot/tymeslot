@@ -93,44 +93,6 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
     end
   end
 
-  describe "delete_meeting/1" do
-    test "deletes an existing meeting" do
-      meeting = insert(:meeting)
-
-      assert {:ok, deleted} = MeetingQueries.delete_meeting(meeting)
-      assert {:error, :not_found} = MeetingQueries.get_meeting(deleted.id)
-    end
-  end
-
-  describe "list_upcoming_meetings/0" do
-    test "returns only future meetings" do
-      {future_start, future_end} = build_meeting_times(1, 60)
-
-      past_start = DateTime.add(DateTime.utc_now(), -1, :day)
-      past_end = DateTime.add(past_start, 60, :minute)
-
-      future_meeting = insert(:meeting, start_time: future_start, end_time: future_end)
-      _past_meeting = insert(:meeting, start_time: past_start, end_time: past_end)
-
-      upcoming = MeetingListQueries.list_upcoming_meetings()
-
-      assert length(upcoming) == 1
-      assert hd(upcoming).id == future_meeting.id
-    end
-  end
-
-  describe "list_meetings_by_attendee_email/1" do
-    test "returns meetings for specified attendee" do
-      meeting1 = insert(:meeting, attendee_email: "john@example.com")
-      _meeting2 = insert(:meeting, attendee_email: "jane@example.com")
-
-      meetings = MeetingListQueries.list_meetings_by_attendee_email("john@example.com")
-
-      assert length(meetings) == 1
-      assert hd(meetings).id == meeting1.id
-    end
-  end
-
   describe "list_user_meetings_missing_video_rooms/3" do
     defp future_times(offset_days) do
       start_time =

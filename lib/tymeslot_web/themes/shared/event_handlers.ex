@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Themes.Shared.LiveHelpers
+  alias TymeslotWeb.Themes.Shared.ReschedulePin
   import Phoenix.Component, only: [assign: 3]
 
   @doc """
@@ -65,11 +66,16 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
   def handle_overview_events(socket, event, data, callbacks) do
     case event do
       :select_duration ->
+        # A pinned reschedule has no choice of type to make, so the payload is
+        # ignored rather than trusted; `ReschedulePin` says why that matters
+        # even though no second card is rendered to click.
+        duration = ReschedulePin.selected_duration(socket, data)
+
         socket =
           socket
-          |> assign(:selected_duration, data)
-          |> assign(:duration, data)
-          |> callbacks.maybe_assign_meeting_type.(data)
+          |> assign(:selected_duration, duration)
+          |> assign(:duration, duration)
+          |> callbacks.maybe_assign_meeting_type.(duration)
           # Trigger availability refresh when duration changes
           |> AvailabilityHelpers.fetch_month_availability_async()
 

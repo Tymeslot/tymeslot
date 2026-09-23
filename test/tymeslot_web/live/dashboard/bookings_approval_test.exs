@@ -55,6 +55,11 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
     insert(:meeting, Map.merge(defaults, attrs))
   end
 
+  defp day_slot(days_ahead) do
+    start = DateTime.add(DateTime.utc_now(:second), days_ahead, :day)
+    %{start_time: start, end_time: DateTime.add(start, 30, :minute)}
+  end
+
   defp reload(meeting), do: Repo.get!(MeetingSchema, meeting.id)
 
   defp open_requests(conn) do
@@ -113,6 +118,24 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
 
       assert card =~ "Awaiting your approval"
       refute card =~ "Completed"
+    end
+
+    test "the tab counts this host's unanswered requests and nobody else's",
+         %{conn: conn, user: user} do
+      # Distinct slots per host: requests share the per-organiser uniqueness
+      # constraint on start time.
+      for day <- [3, 4], do: held_meeting(user, day_slot(day))
+
+      stranger = insert(:user)
+      for day <- [3, 4, 5], do: held_meeting(stranger, day_slot(day))
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      tab = view |> element("button[phx-value-filter='awaiting_approval']") |> render()
+
+      # The badge is the only number inside the tab; an unscoped count would
+      # read 5 here.
+      assert [[_badge, "2"]] = Regex.scan(~r/>\s*(\d+)\s*<\/span>/, tab)
     end
 
     test "the tab is hidden when a host has nothing to answer", %{conn: conn, user: user} do
@@ -378,6 +401,8 @@ defmodule TymeslotWeb.Dashboard.BookingsApprovalTest do
   end
 
   describe "answering somebody else's request" do
+    @describetag :cross_tenant
+
     test "an id belonging to another host is refused", %{conn: conn, user: user} do
       held_meeting(user)
       stranger = insert(:user)

@@ -35,13 +35,10 @@ defmodule Tymeslot.Timezones do
   defdelegate normalize(timezone_id), to: Data
   defdelegate sanitize(timezone), to: Data
   defdelegate valid?(timezone_id), to: Data
-  defdelegate offered?(timezone_id), to: Data
-  defdelegate offered_ids(), to: Data
   defdelegate flag_exists?(country_code), to: Data
 
   defdelegate format(timezone_id), to: Formatting
   defdelegate utc_offset(timezone_id), to: Formatting
-  defdelegate format_utc_offset(seconds), to: Formatting
 
   @fallback "Etc/UTC"
 

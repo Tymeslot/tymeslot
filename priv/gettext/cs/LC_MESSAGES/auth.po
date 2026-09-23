@@ -162,11 +162,6 @@ msgstr "Neplatný odkaz"
 msgid "Invalid reset token"
 msgstr "Neplatný token pro obnovení hesla"
 
-#: lib/tymeslot_web/controllers/email_change_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid verification link"
-msgstr "Neplatný ověřovací odkaz"
-
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #, elixir-autogen, elixir-format
 msgid "Join Tymeslot"
@@ -383,11 +378,6 @@ msgstr "Zobrazit nebo skrýt heslo"
 #, elixir-autogen, elixir-format
 msgid "Too many OAuth attempts. Please try again later."
 msgstr "Příliš mnoho pokusů o přihlášení přes OAuth. Zkuste to prosím později."
-
-#: lib/tymeslot_web/controllers/email_change_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Too many attempts. Try again in a minute."
-msgstr "Příliš mnoho pokusů. Zkuste to znovu za minutu."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
@@ -763,11 +753,6 @@ msgstr "Změnu e-mailu se nepodařilo ověřit"
 msgid "If your email is registered, you will receive password reset instructions."
 msgstr "Pokud je váš e-mail zaregistrovaný, přijdou vám pokyny k obnovení hesla."
 
-#: lib/tymeslot/auth/social_authentication.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid email format"
-msgstr "Neplatný formát e-mailu"
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password."
@@ -803,11 +788,6 @@ msgstr "Nový e-mail se musí lišit od současného"
 #, elixir-autogen, elixir-format
 msgid "New password must be different from current password"
 msgstr "Nové heslo se musí lišit od současného"
-
-#: lib/tymeslot/auth/validation.ex
-#, elixir-autogen, elixir-format
-msgid "Password is too long"
-msgstr "Heslo je příliš dlouhé"
 
 #: lib/tymeslot/auth/password_update.ex
 #, elixir-autogen, elixir-format
@@ -889,7 +869,7 @@ msgstr "Tato e-mailová adresa je již zaregistrovaná. Použijte prosím jiný 
 msgid "This email is already registered. Please sign in instead."
 msgstr "Tento e-mail je již zaregistrovaný. Přihlaste se prosím."
 
-#: lib/tymeslot/auth/social_authentication.ex
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "This email is already registered. Please use a different email address."
 msgstr "Tento e-mail je již zaregistrovaný. Použijte prosím jinou e-mailovou adresu."
@@ -1059,3 +1039,33 @@ msgstr "Váš účet byl vytvořen, ale ověřovací e-mail se zatím nepodařil
 #, elixir-autogen, elixir-format
 msgid "If an account exists with this email address, password reset instructions have been sent."
 msgstr "Pokud s touto e-mailovou adresou existuje účet, byly odeslány pokyny k obnovení hesla."
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your email address"
+msgstr "Potvrďte svou e-mailovou adresu"
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Press the button below to finish verifying your email address."
+msgstr "Stisknutím tlačítka níže dokončíte ověření své e-mailové adresy."
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Verify email address"
+msgstr "Ověřit e-mailovou adresu"
+
+#: lib/tymeslot_web/controllers/email_change_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your new email address"
+msgstr "Potvrďte svou novou e-mailovou adresu"
+
+#: lib/tymeslot_web/controllers/email_change_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Press the button below to switch your account to this email address."
+msgstr "Stisknutím tlačítka níže převedete svůj účet na tuto e-mailovou adresu."
+
+#: lib/tymeslot_web/controllers/email_change_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm email change"
+msgstr "Potvrdit změnu e-mailu"

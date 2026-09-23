@@ -1,7 +1,8 @@
 defmodule Tymeslot.Workers.VideoSyncWorkerTest do
   @moduledoc """
   Drives the supervised video-room sync worker used by reschedule (update) and
-  cancellation (delete). Covers the happy path, the transient-failure retry
+  cancellation (delete). Releasing a room a moved meeting left behind is in
+  `Tymeslot.Workers.VideoSyncWorkerReleaseTest`. Covers the happy path, the transient-failure retry
   path, the idempotent already-gone path, and the no-room discard.
   """
 
@@ -13,7 +14,6 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
   use Oban.Testing, repo: Tymeslot.Repo
   @moduletag :workers
 
-  import ExUnit.CaptureLog
   import Mox
   import Tymeslot.MeetingTestHelpers
 
@@ -21,8 +21,10 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
   alias Ecto.UUID
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.VideoSyncWorker
   alias Tymeslot.ZoomOAuthHelperMock
 
@@ -53,7 +55,8 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
         insert_meeting_for_user(user, %{
           video_integration_id: integration.id,
           video_room_id: "111",
-          title: "Strategy sync"
+          title: "Strategy sync",
+          summary: nil
         })
 
       stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
@@ -114,12 +117,11 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
 
       # Retrying cannot widen a grant, so the job must not burn its budget and
-      # page an admin. Nor is the user flagged: Tymeslot does not request
-      # `meeting:update:meeting`, so reconnecting would change nothing.
+      # page an admin. Reconnecting can, so the owner is flagged instead.
       assert {:discard, _reason} =
                perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "update"})
 
-      refute Repo.reload!(integration).needs_reauth
+      assert Repo.reload!(integration).needs_reauth
     end
 
     test "discards instead of retrying when Zoom rejects the PATCH with 4711" do
@@ -151,7 +153,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       assert {:discard, _reason} =
                perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "update"})
 
-      refute Repo.reload!(integration).needs_reauth
+      assert Repo.reload!(integration).needs_reauth
     end
   end
 
@@ -285,27 +287,37 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
           video_room_id: "86360699337"
         })
 
-      log =
-        capture_log(fn ->
+      events =
+        LogCapture.with_capture(fn ->
           assert {:discard, _reason} =
                    perform_job(VideoSyncWorker, %{
                      "meeting_id" => meeting.id,
                      "action" => "delete"
                    })
+
+          LogCapture.drain()
         end)
 
+      logged = Enum.map_join(events, "\n", &LogCapture.dump/1)
+
       # Silence here is the original defect: an unreachable room must be visible.
-      # The meeting id, provider and room id ride along as Logger metadata and
-      # reach production logs via the JSON formatter's :all_except setting; the
-      # test formatter whitelists only a few keys, so :reason is what is
-      # assertable here.
-      assert log =~ "no video integration can reach it"
-      assert log =~ "reason=no_active_integration"
+      # `LogCapture` sees the metadata the JSON formatter ships in production
+      # and the test formatter's whitelist would drop.
+      assert logged =~ "no video integration can reach it"
+      assert logged =~ "reason: :no_active_integration"
+      assert logged =~ "meeting_id: \"#{meeting.id}\""
+
+      # The room the job could not reach is still identified, but by a
+      # fingerprint: the id itself is the join link for a link-based provider,
+      # and the meeting id already leads to the row that holds it. fdfa5bf3 is
+      # the first eight hex characters of the SHA-256 of "86360699337".
+      assert logged =~ "room_ref: \"fdfa5bf3\""
+      refute logged =~ "86360699337"
     end
   end
 
   describe "perform/1 — room bookkeeping" do
-    test "clears the room id once the provider delete succeeds" do
+    test "clears the room id and its join links once the provider delete succeeds" do
       %{user: user} = create_user_with_profile()
       integration = insert_zoom_integration(user)
 
@@ -314,7 +326,9 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
           video_integration_id: integration.id,
           video_provider: "zoom",
           video_room_id: "4242",
-          video_room_enabled: true
+          video_room_enabled: true,
+          organizer_video_url: "https://zoom.example.com/s/4242",
+          attendee_video_url: "https://zoom.example.com/j/4242"
         })
 
       stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
@@ -331,6 +345,10 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       reloaded = Repo.reload!(meeting)
       assert reloaded.video_room_id == nil
       refute reloaded.video_room_enabled
+
+      # The room is gone, so the links into it are dead and go with it.
+      assert reloaded.organizer_video_url == nil
+      assert reloaded.attendee_video_url == nil
     end
 
     test "keeps the room id after an update so reschedules stay syncable" do
@@ -357,95 +375,137 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
     end
   end
 
-  describe "release/1" do
-    test "copies the room's identity into the job, keyed by room" do
-      %{user: user} = create_user_with_profile()
+  describe "perform/1, refused credentials" do
+    test "discards rather than retrying when the provider refuses the stored credentials" do
+      %{meeting: meeting, integration: integration} = talk_meeting("refused.example.com")
 
-      meeting =
-        insert_meeting_for_user(user, %{video_provider: "zoom", video_room_id: "first-room"})
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 401, body: ""}}
+      end)
 
-      assert {:ok, :scheduled} = VideoSyncWorker.release(meeting)
-      assert {:ok, :already_scheduled} = VideoSyncWorker.release(meeting)
+      assert {:discard, _reason} =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "delete"})
 
-      # A second room released from the same meeting is its own job.
-      assert {:ok, :scheduled} =
-               VideoSyncWorker.release(%{meeting | video_room_id: "second-room"})
-
-      assert_enqueued(
-        worker: VideoSyncWorker,
-        args: %{
-          "action" => "release",
-          "meeting_id" => meeting.id,
-          "room_id" => "first-room",
-          "video_provider" => "zoom",
-          "organizer_user_id" => user.id
-        }
-      )
+      assert Repo.get!(VideoIntegrationSchema, integration.id).needs_reauth
+      assert Repo.reload!(meeting).video_room_id == "abc123xy"
     end
   end
 
-  describe "perform/1 — release" do
-    test "DELETEs the room from the args and leaves the meeting alone" do
-      %{user: user} = create_user_with_profile()
-      integration = insert_zoom_integration(user)
+  describe "perform/1, refusals that repeat" do
+    test "discards a deletion the server refuses, keeping the room id" do
+      %{meeting: meeting} = talk_meeting("forbidden.example.com")
 
-      # The meeting has since moved on to a room of its own; the release must
-      # not touch it.
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: talk_refusal()}}
+      end)
+
+      assert {:discard, "Invalid configuration"} =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "delete"})
+
+      assert Repo.reload!(meeting).video_room_id == "abc123xy"
+    end
+
+    test "clears the room id when the owner marked the conversation to be preserved" do
+      %{meeting: meeting} = talk_meeting("preserved.example.com")
+
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 403,
+           body: Jason.encode!(%{"ocs" => %{"data" => %{"error" => "preserved"}}})
+         }}
+      end)
+
+      assert :ok =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "delete"})
+
+      assert Repo.reload!(meeting).video_room_id == nil
+    end
+
+    test "clears the room id when the conversation is already gone" do
+      %{meeting: meeting} = talk_meeting("gone.example.com")
+
+      expect(HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      assert :ok =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "delete"})
+
+      assert Repo.reload!(meeting).video_room_id == nil
+    end
+  end
+
+  describe "perform/1, Nextcloud Talk reschedule" do
+    test "renames the conversation to the name it was created with" do
+      %{meeting: meeting} = talk_meeting("rename.example.com")
+
       meeting =
-        insert_meeting_for_user(user, %{
-          video_integration_id: integration.id,
-          video_provider: "zoom",
-          video_room_id: "new-room"
-        })
+        meeting
+        |> Changeset.change(title: "Intro call", summary: "  Quarterly review  ")
+        |> Repo.update!()
 
-      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
-
-      expect(HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
-        assert url == "https://api.zoom.us/v2/meetings/old-room"
-        {:ok, %Req.Response{status: 204, body: ""}}
+      expect(HTTPClientMock, :request, fn :put, url, _body, _headers, _opts ->
+        assert url =~ "/webinar/lobby"
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"ocs" => %{"data" => %{}}})}}
       end)
 
-      assert :ok = perform_job(VideoSyncWorker, release_args(meeting, integration.id, "old-room"))
-      assert Repo.reload!(meeting).video_room_id == "new-room"
-    end
-
-    test "falls back to the user's current integration when the recorded one is gone" do
-      %{user: user} = create_user_with_profile()
-      meeting = insert_meeting_for_user(user)
-      insert_zoom_integration(user)
-
-      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
-
-      expect(HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
-        assert url == "https://api.zoom.us/v2/meetings/old-room"
-        {:ok, %Req.Response{status: 204, body: ""}}
+      expect(HTTPClientMock, :request, fn :put, _url, body, _headers, _opts ->
+        assert Jason.decode!(body) == %{"roomName" => "Quarterly review"}
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"ocs" => %{"data" => []}})}}
       end)
 
-      # An id no integration row carries any more, as after a disconnect.
-      assert :ok = perform_job(VideoSyncWorker, release_args(meeting, 987_654_321, "old-room"))
+      assert :ok =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "update"})
+    end
+  end
+
+  describe "perform/1, circuit open" do
+    test "discards once the snooze budget for an open breaker is spent" do
+      host = "breaker.example.com"
+      on_exit(fn -> VideoCircuitBreaker.reset(:nextcloud_talk, host) end)
+
+      %{meeting: meeting} = talk_meeting(host)
+      trip_talk_breaker(host)
+
+      args = %{"meeting_id" => meeting.id, "action" => "delete"}
+
+      assert {:snooze, _seconds} = perform_job(VideoSyncWorker, args)
+
+      assert {:discard, reason} =
+               perform_job(VideoSyncWorker, args, meta: %{"snoozed" => 9})
+
+      assert reason =~ "circuit breaker still open"
+      assert Repo.reload!(meeting).video_room_id == "abc123xy"
+    end
+  end
+
+  describe "perform/1, rate limited" do
+    test "snoozes on an interval that grows with each execution" do
+      %{meeting: meeting} = talk_meeting("throttled.example.com")
+
+      expect(HTTPClientMock, :request, 2, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 429, body: ""}}
+      end)
+
+      args = %{"meeting_id" => meeting.id, "action" => "delete"}
+
+      assert {:snooze, 60} = perform_job(VideoSyncWorker, args)
+      assert {:snooze, 180} = perform_job(VideoSyncWorker, args, meta: %{"snoozed" => 2})
+      assert Repo.reload!(meeting).video_room_id == "abc123xy"
     end
 
-    test "waits for a reconnect instead of discarding an unreachable room" do
-      %{user: user} = create_user_with_profile()
-      meeting = insert_meeting_for_user(user)
+    test "falls back to the ordinary retries once the snooze budget is spent" do
+      %{meeting: meeting} = talk_meeting("still-throttled.example.com")
 
-      assert {:snooze, 86_400} =
-               perform_job(VideoSyncWorker, release_args(meeting, nil, "old-room"))
-    end
+      expect(HTTPClientMock, :request, fn :put, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 429, body: ""}}
+      end)
 
-    test "gives up loudly once the wait is spent" do
-      %{user: user} = create_user_with_profile()
-      meeting = insert_meeting_for_user(user)
-
-      log =
-        capture_log(fn ->
-          assert {:discard, _reason} =
-                   perform_job(VideoSyncWorker, release_args(meeting, nil, "old-room"),
-                     meta: %{"snoozed" => 13}
-                   )
-        end)
-
-      assert log =~ "no video integration can reach it"
+      assert {:error, :rate_limited} =
+               perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "update"},
+                 meta: %{"snoozed" => 9}
+               )
     end
   end
 
@@ -472,15 +532,42 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
     end
   end
 
-  defp release_args(meeting, integration_id, room_id) do
-    %{
-      "action" => "release",
-      "meeting_id" => meeting.id,
-      "room_id" => room_id,
-      "video_provider" => "zoom",
-      "video_integration_id" => integration_id,
-      "organizer_user_id" => meeting.organizer_user_id
-    }
+  defp trip_talk_breaker(host) do
+    %{failure_threshold: threshold} = VideoCircuitBreaker.get_config(:nextcloud_talk)
+
+    Enum.each(1..threshold, fn _i ->
+      VideoCircuitBreaker.call_with_host(:nextcloud_talk, host, fn ->
+        {:provider_error, :simulated_outage}
+      end)
+    end)
+
+    assert %{status: :open} = VideoCircuitBreaker.status(:nextcloud_talk, host)
+  end
+
+  # Each test gets its own server, so the failures one test induces never open
+  # the per-host breaker another test calls through.
+  defp talk_meeting(host) do
+    %{user: user} = create_user_with_profile()
+    base_url = "https://" <> host
+
+    integration =
+      insert(:video_integration,
+        user: user,
+        provider: "nextcloud_talk",
+        base_url: base_url,
+        client_id_encrypted: Encryption.encrypt("organiser"),
+        client_secret_encrypted: Encryption.encrypt("Abcde-Fghij-Klmno-Pqrst-Uvwxy"),
+        provider_account_id: base_url <> "||organiser"
+      )
+
+    meeting =
+      insert_meeting_for_user(user, %{
+        video_integration_id: integration.id,
+        video_provider: "nextcloud_talk",
+        video_room_id: "abc123xy"
+      })
+
+    %{meeting: meeting, integration: integration}
   end
 
   defp insert_zoom_integration(user) do
@@ -500,5 +587,17 @@ defmodule Tymeslot.Workers.VideoSyncWorkerTest do
       oauth_scope: "meeting:write:meeting meeting:update:meeting meeting:delete:meeting",
       provider_account_id: nil
     )
+  end
+
+  # A refusal Talk itself worded: a 403 whose body is not the OCS envelope
+  # comes from something in front of Nextcloud, which the client reports as an
+  # HTTP error instead.
+  defp talk_refusal do
+    Jason.encode!(%{
+      "ocs" => %{
+        "meta" => %{"status" => "failure", "statuscode" => 403, "message" => ""},
+        "data" => %{"error" => "permissions"}
+      }
+    })
   end
 end

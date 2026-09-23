@@ -246,6 +246,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             refreshing_calendars={@refreshing_calendars}
             available_calendars={@available_calendars}
             no_writable_calendars={@no_writable_calendars}
+            target_calendar_status={@target_calendar_status}
             selected_target_calendar_id={@selected_target_calendar_id}
             form_errors={@form_errors}
             myself={@myself}
@@ -330,6 +331,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
         >
           <.reminders_section
             reminders={@reminders}
+            max_reminders={@max_reminders}
             new_reminder_value={@new_reminder_value}
             new_reminder_unit={@new_reminder_unit}
             reminder_error={@reminder_error}

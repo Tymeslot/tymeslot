@@ -61,7 +61,7 @@ defmodule TymeslotWeb.AuthLiveSignupRateLimitTest do
       })
       |> render_submit()
 
-    assert result =~ "Too many signup attempts"
+    assert result =~ "reached the limit of 5 signup attempts per 10 minutes"
     refute Auth.get_user_by_email(email)
   end
 end

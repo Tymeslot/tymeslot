@@ -54,6 +54,33 @@ defmodule Tymeslot.FreeBusyTest do
       %{profile: profile, integration: integration}
     end
 
+    test "publishes time off as busy alongside calendar events" do
+      profile = insert(:profile, timezone: "Europe/Berlin")
+
+      insert(:provider_calendar_event,
+        calendar_integration: insert(:calendar_integration, user: profile.user),
+        start_at: ~U[2030-06-01 09:00:00Z],
+        end_at: ~U[2030-06-01 10:00:00Z],
+        transparency: "opaque",
+        status: "confirmed"
+      )
+
+      insert(:time_off_period,
+        profile: profile,
+        starts_on: ~D[2030-06-10],
+        ends_on: ~D[2030-06-11]
+      )
+
+      intervals =
+        FreeBusy.busy_intervals(profile, ~U[2030-05-01 00:00:00Z], ~U[2030-07-01 00:00:00Z])
+
+      assert {~U[2030-06-09 22:00:00Z], ~U[2030-06-11 22:00:00Z]} in intervals
+
+      assert Enum.any?(intervals, fn {s, _e} ->
+               DateTime.truncate(s, :second) == ~U[2030-06-01 09:00:00Z]
+             end)
+    end
+
     test "includes blocking (opaque) events in the window", %{
       profile: profile,
       integration: integration

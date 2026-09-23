@@ -13,16 +13,20 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
 
   use Oban.Testing, repo: Tymeslot.Repo
 
+  import Mox
   import Req.Test, only: [set_req_test_to_shared: 1]
   import Tymeslot.CalDAVSyncTestFixtures
   import Tymeslot.ConfigTestHelpers
 
   alias Plug.Conn
   alias Req.Test, as: ReqTest
+  alias Tymeslot.EmailServiceMock
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
 
   setup :set_req_test_to_shared
+  setup :verify_on_exit!
 
   setup do
     with_config(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
@@ -81,6 +85,49 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
       assert updated.sync_error =~ "no longer exists"
     end
 
+    # The badge reaches only owners who open the dashboard, so the flag has to
+    # reach everyone else by email, carrying the same reason.
+    test "emails the owner why the calendar needs reconnecting" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          is_active: true,
+          caldav_sync_tier: 3,
+          calendar_paths: [path1()]
+        )
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        Conn.send_resp(conn, 404, "Not Found")
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      email_args = %{
+        "action" => "send_integration_reauth_notification",
+        "user_id" => user.id,
+        "integration_id" => integration.id,
+        "integration_type" => "calendar"
+      }
+
+      assert_enqueued(worker: EmailWorker, args: email_args)
+
+      expect(EmailServiceMock, :send_integration_reauth_notification, fn sent_user,
+                                                                         sent_integration,
+                                                                         :calendar ->
+        assert sent_user.id == user.id
+        assert sent_integration.sync_error =~ "no longer exists"
+        {:ok, "sent"}
+      end)
+
+      assert :ok = perform_job(EmailWorker, email_args)
+    end
+
     test "flags the integration when the booking path is gone during Tier 1 delta sync" do
       integration =
         insert(:calendar_integration,
@@ -88,7 +135,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
           is_active: true,
           caldav_sync_tier: 1,
           calendar_paths: [path1()],
-          caldav_sync_token: "valid-sync-token"
+          caldav_sync_tokens: %{path1() => "valid-sync-token"}
         )
 
       ReqTest.stub(:tymeslot_http, fn conn ->
@@ -242,7 +289,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
           is_active: true,
           caldav_sync_tier: 1,
           calendar_paths: [path1()],
-          caldav_sync_token: "stale-sync-token"
+          caldav_sync_tokens: %{path1() => "stale-sync-token"}
         )
 
       # The server no longer recognises the stored token, so it answers the
@@ -268,7 +315,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
       updated =
         Repo.get!(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
 
-      assert updated.caldav_sync_token == nil
+      assert updated.caldav_sync_tokens == %{}
 
       assert {:ok, _event} =
                ProviderCalendarEventQueries.get_by_uid(integration.id, "event-from-path1@test")
@@ -281,7 +328,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
           is_active: true,
           caldav_sync_tier: 1,
           calendar_paths: [path1()],
-          caldav_sync_token: "known-token"
+          caldav_sync_tokens: %{path1() => "known-token"}
         )
 
       test_pid = self()
@@ -365,7 +412,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
           is_active: true,
           caldav_sync_tier: 1,
           calendar_paths: [path1()],
-          caldav_sync_token: "known-token"
+          caldav_sync_tokens: %{path1() => "known-token"}
         )
 
       href = "#{path1()}event1.ics"
@@ -415,7 +462,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ErrorsTest do
       updated =
         Repo.get!(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
 
-      assert updated.caldav_sync_token == "known-token"
+      assert updated.caldav_sync_tokens == %{path1() => "known-token"}
     end
   end
 end

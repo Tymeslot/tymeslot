@@ -31,12 +31,23 @@ defmodule Tymeslot.Bookings.Activation do
   # Providers whose rooms Tymeslot creates through an API call, and which
   # therefore need the video job to run before the confirmation email is
   # composed. This is every provider `Video` knows about except `:none` (no
-  # integration configured, so there is nothing to create) — currently
-  # `ProviderConfig`'s `@providers`, restated here rather than pulled from
-  # `ProviderConfig.all_providers/0` because that list is toggle-filtered: an
-  # integration a host already connected before its provider was disabled
-  # must still get its room created, not silently skip straight to `notify/1`.
-  @api_created_providers [:mirotalk, :google_meet, :teams, :zoom, :custom]
+  # integration configured, so there is nothing to create), derived at
+  # compile time from `ProviderConfig.known_providers/0` rather than
+  # `ProviderConfig.all_providers/0`, because the latter is toggle-filtered:
+  # an integration a host already connected before its provider was disabled
+  # must still get its room created, not silently skip straight to
+  # `notify/1`. Deriving it, instead of restating the provider list by hand,
+  # is what keeps a newly registered provider from being missed here the way
+  # kMeet and Jitsi once were; the assertion below is a second line of
+  # defence against `known_providers/0` ever growing the `:none` sentinel
+  # into this list.
+  @api_created_providers VideoProviderConfig.known_providers()
+
+  if :none in @api_created_providers do
+    raise "ProviderConfig.known_providers/0 must never include :none: it is the " <>
+            "sentinel for \"no video integration\", not a provider whose room " <>
+            "Activation should hand to VideoRoomWorker"
+  end
 
   @doc """
   Runs the side effects a newly created or newly confirmed meeting needs.

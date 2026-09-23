@@ -9,6 +9,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.SyncOutlookCalendarWorker
 
@@ -49,14 +50,14 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
   end
 
   describe "perform/1 - unauthorized" do
-    test "returns :ok on auth error from event fetch" do
+    test "discards rather than retrying on an auth error from the event fetch" do
       integration = outlook_integration()
 
       expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
         {:ok, %{status: 401, body: ~s({"error":"unauthorized"})}}
       end)
 
-      assert :ok =
+      assert {:discard, _reason} =
                perform_job(SyncOutlookCalendarWorker, %{
                  "calendar_integration_id" => integration.id,
                  "graph_resource_id" => "event-abc-123"
@@ -239,5 +240,89 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
 
       CalendarCircuitBreaker.reset(:outlook)
     end
+
+    # Graph throttling us is not this integration's mailbox failing, and the
+    # job has not finished either — it is coming back. Counting a snooze would
+    # let a busy tenant raise a badge on an account nothing is wrong with.
+    test "a snooze is neither a failed nor a completed sync" do
+      integration = outlook_integration()
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 429, body: ""}}
+      end)
+
+      assert {:snooze, _seconds} =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "graph_resource_id" => "event-throttled-3"
+               })
+
+      assert health(integration).consecutive_sync_failures == 0
+
+      CalendarCircuitBreaker.reset(:outlook)
+    end
   end
+
+  describe "perform/1 - health state" do
+    test "counts a failed fetch, and a completed one clears the streak" do
+      integration = outlook_integration()
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 500, body: ~s({"error":"server_error"})}}
+      end)
+
+      assert {:error, _reason} =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "graph_resource_id" => "event-health-1"
+               })
+
+      assert health(integration).consecutive_sync_failures == 1
+
+      CalendarCircuitBreaker.reset(:outlook)
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "id" => "event-health-1",
+               "subject" => "Standup",
+               "start" => %{"dateTime" => "2026-09-10T09:00:00.0000000", "timeZone" => "UTC"},
+               "end" => %{"dateTime" => "2026-09-10T09:15:00.0000000", "timeZone" => "UTC"}
+             })
+         }}
+      end)
+
+      assert :ok =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "graph_resource_id" => "event-health-1"
+               })
+
+      assert health(integration).consecutive_sync_failures == 0
+    end
+
+    # A 401 is discarded, and `ObanFailureAlerter` ignores a discard by design,
+    # so the streak is the only thing that reports an account Graph has stopped
+    # accepting. Reporting it as a completed sync would have cleared one.
+    test "counts a discarded auth failure rather than clearing the streak" do
+      integration = outlook_integration()
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 401, body: ~s({"error":"unauthorized"})}}
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "graph_resource_id" => "event-health-2"
+               })
+
+      assert health(integration).consecutive_sync_failures == 1
+    end
+  end
+
+  defp health(integration), do: Monitor.get_state(:calendar, integration.id, integration.user_id)
 end

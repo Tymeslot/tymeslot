@@ -1,0 +1,195 @@
+name: Flake hunt
+
+# `verify.yml` runs the suite once per push and once per pull request: one run,
+# one ordering. A test that fails one run in twenty is invisible there until it
+# fails on somebody's unrelated branch, where it reads as "CI is flaky again"
+# and gets re-run rather than investigated. This job runs the suite repeatedly
+# on a schedule and names the tests that failed, so a flake is found here,
+# against nobody's deadline, instead of during someone else's review.
+#
+# It reports; it never gates. There is deliberately no `push` or
+# `pull_request` trigger, so it cannot appear as a check on a pull request and
+# must never be added as a required one: a check that goes red one night in ten
+# and blocks merges gets switched off within a fortnight. It does still exit
+# non-zero when it finds a flake, because a red scheduled run is how anyone
+# hears about it; a green tick with the finding buried in a log would just be a
+# quieter way of never looking.
+on:
+  schedule:
+    # Nightly at 23:11 UTC. Deliberately hours clear of the 03:17
+    # excluded-suites slot rather than merely a few minutes off it: this is the
+    # long job in the repo (a full loop is measured in hours, not minutes), so
+    # a nearby slot would mean the two runs overlapping most nights. Off the
+    # hour for the reason excluded-suites gives: the scheduler is most
+    # contended at :00 and jobs queued there are the ones that get dropped.
+    - cron: "11 23 * * *"
+  # Manual trigger, with the run count exposed, so a suspected flake can be
+  # hunted on demand at whatever N the suspicion warrants instead of waiting
+  # for the night.
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: "Number of suite runs"
+        required: false
+        default: "12"
+        type: number
+
+permissions:
+  contents: read
+
+jobs:
+  flake-hunt:
+    runs-on: ubuntu-latest
+    # Only run on GitHub, not Gitea
+    if: github.server_url == 'https://github.com'
+    # Roughly triple the nightly's ~1 hour, so a slow runner or a manually
+    # dispatched N of 20-odd still finishes, while a wedged run is cut at three
+    # hours rather than drifting up to the 360-minute platform default. Being
+    # cut off costs the whole report, not just the remaining iterations, which
+    # is why this is set deliberately rather than left to the default.
+    timeout-minutes: 180
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    env:
+      MIX_ENV: test
+      TEST_DB_POOL_SIZE: "10"
+      ELIXIR_VERSION: "1.20.3"
+      OTP_VERSION: "28.5.0.5"
+      # Empty on a scheduled run, so the nightly gets the default. One run of
+      # this suite measured 284s on a 9-core machine and 407s on a contended
+      # one; the runner here has 4 vCPUs, so size on the latter. 12 runs is
+      # then a 1.5-hour nightly, which has roughly a 70% chance of catching a
+      # one-in-ten flake on any given night and is near-certain to catch one
+      # across a week of them. Raising N mostly buys a faster answer, not a
+      # different one, and it is a manual-dispatch input for exactly that.
+      RUNS: ${{ github.event.inputs.runs || '12' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+      - uses: actions/cache@v5
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-elixir-${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}-mix-${{ hashFiles('mix.lock') }}
+      - run: mix deps.get
+      # Build lib/ and test/support once, outside the loop, so that iteration 1
+      # times the suite rather than the build and does not read as an outlier
+      # every time the cache is cold. The .exs test files are still loaded and
+      # compiled per run, but that cost is the same for every iteration, which
+      # is what makes the iterations comparable.
+      - run: mix compile
+      # Separate `mix test` invocations rather than `--repeat-until-failure N`:
+      #
+      #   * The seed `--repeat-until-failure` prints for repetitions 2..N does
+      #     not reproduce that repetition from a fresh run, so a failure it
+      #     catches is harder to chase than one caught here.
+      #   * It repeats within one VM instance, and Mix's own documentation
+      #     warns that global state left over from one repetition can trigger
+      #     an unrelated failure in the next, which makes a reported failure
+      #     harder to trust.
+      #   * Separate invocations reset the VM and re-roll the cross-file order,
+      #     which follows parallel-load completion rather than the seed.
+      #
+      # Not a reason, despite being an obvious guess: `--repeat-until-failure`
+      # does not hold the ordering fixed. With no explicit `--seed` it discards
+      # the generated seed and re-runs `configuration()` on every repetition,
+      # so each one gets a fresh seed and a fresh within-module order too.
+      #
+      # `--max-failures 1` stops a run at the first failure: once an iteration
+      # is red it has already told us what we came for, and finishing it would
+      # cost another few minutes per occurrence.
+      #
+      # There are no retries anywhere in this job, on purpose. Re-running until
+      # green is precisely what turns a visible flake into an invisible one.
+      #
+      # `mix test` here is the alias, which prepends `ecto.create --quiet` and
+      # `ecto.migrate --quiet`. That sets the database up on iteration 1 and
+      # costs every later iteration two idempotent no-ops, measured locally at
+      # ~11s against a suite of ~5 minutes, so roughly 3%. Left in place
+      # deliberately: Mix gives no way to invoke a task that the project's own
+      # alias shadows, so removing the overhead would mean adding a second
+      # alias whose only consumer is this job, and carrying that in mix.exs
+      # forever is the worse trade for 3%.
+      - name: Hunt
+        id: hunt
+        run: |
+          set -u
+          # Degrade to /dev/null rather than letting `set -u` abort the step and
+          # lose the whole loop: the same report goes to stdout via `tee`, so
+          # nothing is actually lost if the summary file is missing.
+          # GITHUB_OUTPUT is deliberately *not* guarded the same way: there is
+          # no graceful degradation for it, and the Report step silently never
+          # firing is a worse failure than a loud one.
+          : "${GITHUB_STEP_SUMMARY:=/dev/null}"
+          # `seq 1 "$RUNS"` on a non-numeric or zero RUNS produces no words,
+          # so the loop below silently runs zero times and reports a green
+          # "no failures" having tested nothing. Fail loudly instead.
+          case "$RUNS" in
+            ''|*[!0-9]*|0) echo "::error::RUNS must be a positive integer, got '$RUNS'"; exit 1 ;;
+          esac
+          mkdir -p flake-logs
+          failed=0
+          for i in $(seq 1 "$RUNS"); do
+            log="flake-logs/run-$i.log"
+            echo "::group::Run $i of $RUNS"
+            set +e
+            mix test --max-failures 1 2>&1 | tee "$log"
+            status=${PIPESTATUS[0]}
+            set -e
+            echo "::endgroup::"
+            if [ "$status" -eq 0 ]; then
+              rm -f "$log"
+            else
+              failed=$((failed + 1))
+              echo "::warning::Run $i of $RUNS failed (exit $status)"
+            fi
+          done
+          echo "failed=$failed" >> "$GITHUB_OUTPUT"
+          # The report is the failing test's name, its file and line, and its
+          # output, never just a seed. ExUnit shuffles only the tests within a
+          # module, so a seed fixes nothing about the order between the 1,259
+          # test files here, which is the part that decides most flakes. Handing
+          # the next person a seed and calling it a reproduction would be
+          # misleading; the full output of every red run is above, in that run's
+          # log group.
+          {
+            echo "## Flake hunt: $failed of $RUNS runs failed"
+            echo
+            if [ "$failed" -eq 0 ]; then
+              echo "No failures."
+            else
+              echo "Full output for each red run is in its \`Run N of $RUNS\` group in the job log."
+              for log in flake-logs/run-*.log; do
+                echo
+                echo "### ${log##*/}"
+                echo '```'
+                # A failing test prints `N) test name (Module)`; a failing
+                # setup_all prints `N) Module: failure on setup_all callback`
+                # instead, and names no test. Colour codes are stripped first so
+                # neither a coloured header nor escape codes reach the summary.
+                sed -E 's/\x1b\[[0-9;]*m//g' "$log" \
+                  | grep -E -A1 '^[[:space:]]+[0-9]+\) ((test|property|doctest) |[^ ]+: failure on setup_all callback)' \
+                  || echo "(no ExUnit failure block: this run died before or outside the suite)"
+                echo '```'
+              done
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      # Separate from the loop so that the loop itself always runs to
+      # completion: a failure in iteration 3 must not cost us iterations 4..N,
+      # which are the ones that turn "it broke once" into a failure rate.
+      - name: Report
+        if: steps.hunt.outputs.failed != '0'
+        run: |
+          echo "${{ steps.hunt.outputs.failed }} of $RUNS runs failed. See the job summary."
+          exit 1

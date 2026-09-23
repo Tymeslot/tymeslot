@@ -1,16 +1,49 @@
 defmodule Tymeslot.Security.UrlValidation do
   @moduledoc """
   Shared HTTP/HTTPS URL validation helpers for security-sensitive inputs.
+
+  ## The https rule and internal names
+
+  `enforce_https_for_public: true` refuses plain `http://` for any host that is
+  not local: `localhost`, a private or loopback IP literal, and the like. A name
+  is never local by that rule alone, since only DNS knows where it points.
+
+  `internal_names_local: true` additionally treats a host that is shaped like an
+  internal name as local, for the https rule only: a single label (a Docker
+  service name such as `nextcloud`) or a name under `.local`, `.lan`,
+  `.internal` or `.home.arpa`. Callers pass it only when the operator has opted
+  into private addresses for that integration domain. The decision is made
+  from the name's shape and never by resolving it: DNS can answer differently
+  between validation and use, and the SSRF guard already pins resolution for
+  each request. `block_private_ips` is unaffected, so no name ever counts as
+  private for that check.
+
+  The shape is only a claim about where a name points: a single label can be
+  completed to a public name by a resolver search domain, and `.lan` is not
+  reserved. `http_to_internal_name?/1` tells the SSRF guard which requests
+  passed on that claim, so it can confirm at request time that the address it
+  connects to really is private before any credentials are sent.
   """
 
   alias Tymeslot.Security.{PrivateIPv4, PrivateIPv6}
 
   @default_invalid_message "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)"
   @default_max_length 2_000
-  @default_scheme_error "Only HTTP and HTTPS URLs are allowed"
+
+  # Two refusals, two messages. The scheme check fires on what someone typed
+  # into an address field: a bare `cloud.example.com` (no scheme at all lands
+  # here too), or `ftp://…`. Naming the correction is what helps there. The
+  # substring check below fires on a nested `javascript:` or `data:` inside an
+  # otherwise well-formed https URL, where telling the reader to start with
+  # https:// would be nonsense, so it keeps the rule as its wording. Callers
+  # that want one message for both still get it: `:disallowed_protocol_error`
+  # overrides the pair.
+  @default_scheme_error "Enter a full address starting with https://, for example https://example.com"
+  @default_blocked_protocol_error "Only HTTP and HTTPS URLs are allowed"
   @default_https_error "Use HTTPS for non-local servers"
   @default_private_ip_error "Private or local network addresses are not allowed"
   @disallowed_protocols ["javascript:", "data:", "file:", "ftp:"]
+  @internal_suffixes [".local", ".lan", ".internal", ".home.arpa"]
 
   @spec validate_http_url(String.t(), keyword()) :: :ok | {:error, String.t()}
   def validate_http_url(url, opts \\ [])
@@ -27,10 +60,7 @@ defmodule Tymeslot.Security.UrlValidation do
         end
 
       %URI{scheme: scheme} when scheme not in ["http", "https"] ->
-        disallowed_protocol_error =
-          Keyword.get(opts, :disallowed_protocol_error, @default_scheme_error)
-
-        {:error, disallowed_protocol_error}
+        {:error, Keyword.get(opts, :disallowed_protocol_error, @default_scheme_error)}
 
       _invalid_url ->
         {:error, invalid_message}
@@ -39,14 +69,52 @@ defmodule Tymeslot.Security.UrlValidation do
 
   def validate_http_url(_url, _opts), do: {:error, @default_invalid_message}
 
+  @doc """
+  Whether `host` is shaped like a name on a private network: a single label (a
+  Docker service name such as `nextcloud`) or a name under `.local`, `.lan`,
+  `.internal` or `.home.arpa`. Never true for an IP literal.
+
+  This is the one definition of an internal name. Callers that relax a rule
+  for internal names (`internal_names_local: true` here, the server address
+  forms) do so only while the operator has allowed private addresses for that
+  integration, and never resolve the name to decide.
+  """
+  @spec internal_name?(String.t()) :: boolean()
+  def internal_name?(host) when is_binary(host) do
+    name = host |> String.downcase() |> String.trim_trailing(".")
+    labels = String.split(name, ".")
+
+    hostname?(labels) and not ip_literal?(name) and
+      (match?([_single], labels) or internal_suffix?(name))
+  end
+
+  @doc """
+  Whether `url` is a plain `http://` URL that the https rule accepts only
+  because its host is an internal name (see `internal_name?/1`), rather than
+  because the host is `localhost` or a private address literal.
+
+  Such a request trusts the name's shape, so `Tymeslot.Security.SsrfGuard`
+  confirms at request time that the name resolves to a private address.
+  """
+  @spec http_to_internal_name?(String.t()) :: boolean()
+  def http_to_internal_name?(url) when is_binary(url) do
+    with %URI{scheme: "http", host: host, authority: authority}
+         when is_binary(host) and host != "" <- URI.parse(url),
+         {:ok, real_host} <- authority_host(authority, host) do
+      not local_or_private_host?(real_host) and internal_name?(real_host)
+    else
+      _not_http_to_a_name -> false
+    end
+  end
+
   defp validate_url_checks(url, scheme, host, opts) do
     max_length = Keyword.get(opts, :max_length, @default_max_length)
 
     length_error =
       Keyword.get(opts, :length_error_message, default_length_error(max_length))
 
-    disallowed_protocol_error =
-      Keyword.get(opts, :disallowed_protocol_error, @default_scheme_error)
+    blocked_protocol_error =
+      Keyword.get(opts, :disallowed_protocol_error, @default_blocked_protocol_error)
 
     https_error_message = Keyword.get(opts, :https_error_message, @default_https_error)
     private_ip_error = Keyword.get(opts, :private_ip_error_message, @default_private_ip_error)
@@ -56,6 +124,7 @@ defmodule Tymeslot.Security.UrlValidation do
     # IPs are exempt so that dev/test environments work without HTTPS.
     enforce_https = Keyword.get(opts, :enforce_https, enforce_https_for_public)
     block_private_ips = Keyword.get(opts, :block_private_ips, false)
+    internal_names_local = Keyword.get(opts, :internal_names_local, false)
     extra_checks = Keyword.get(opts, :extra_checks)
 
     cond do
@@ -63,12 +132,12 @@ defmodule Tymeslot.Security.UrlValidation do
         {:error, length_error}
 
       contains_disallowed_substring?(url, disallowed_protocols) ->
-        {:error, disallowed_protocol_error}
+        {:error, blocked_protocol_error}
 
       block_private_ips and local_or_private_host?(host) ->
         {:error, private_ip_error}
 
-      enforce_https and scheme == "http" and not local_or_private_host?(host) ->
+      enforce_https and scheme == "http" and not local_for_https?(host, internal_names_local) ->
         {:error, https_error_message}
 
       true ->
@@ -146,6 +215,24 @@ defmodule Tymeslot.Security.UrlValidation do
   defp run_extra_checks(nil, _context), do: :ok
 
   defp run_extra_checks(fun, context) when is_function(fun, 1), do: fun.(context)
+
+  defp local_for_https?(host, internal_names_local) do
+    local_or_private_host?(host) or (internal_names_local and internal_name?(host))
+  end
+
+  defp hostname?(labels),
+    do: Enum.all?(labels, &Regex.match?(~r/\A[a-z0-9_]([a-z0-9_-]*[a-z0-9_])?\z/, &1))
+
+  defp internal_suffix?(name) do
+    Enum.any?(@internal_suffixes, fn suffix ->
+      String.ends_with?(name, suffix) and byte_size(name) > byte_size(suffix)
+    end)
+  end
+
+  defp ip_literal?(name) do
+    ambiguous_numeric_host?(name) or
+      match?({:ok, _address}, :inet.parse_strict_address(to_charlist(name)))
+  end
 
   defp local_or_private_host?(host) do
     host = String.downcase(host)

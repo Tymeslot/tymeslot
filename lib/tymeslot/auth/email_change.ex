@@ -23,9 +23,12 @@ defmodule Tymeslot.Auth.EmailChange do
   @doc """
   Requests an email change for a user.
   Validates password, creates token, stores pending email, and sends verification emails.
+
+  A failure names the form field it belongs to alongside the translated
+  message, so a caller can place the error without reading the message.
   """
   @spec request_email_change(term(), String.t(), String.t()) ::
-          {:ok, term(), String.t()} | {:error, String.t()}
+          {:ok, term(), String.t()} | {:error, {:current_password | :new_email, String.t()}}
   def request_email_change(user, new_email, current_password) do
     with :ok <- verify_current_password(user, current_password),
          :ok <- validate_email_format(new_email),
@@ -47,19 +50,19 @@ defmodule Tymeslot.Auth.EmailChange do
        dgettext("auth", "Verification email sent to %{email}", email: new_email)}
     else
       {:error, :invalid_password} ->
-        {:error, dgettext("auth", "Current password is incorrect")}
+        {:error, {:current_password, dgettext("auth", "Current password is incorrect")}}
 
       {:error, :same_email} ->
-        {:error, dgettext("auth", "New email must be different from current email")}
+        {:error, {:new_email, dgettext("auth", "New email must be different from current email")}}
 
       {:error, :taken} ->
-        {:error, dgettext("auth", "Email address is already in use")}
+        {:error, {:new_email, dgettext("auth", "Email address is already in use")}}
 
       {:error, %Changeset{} = changeset} ->
-        {:error, format_changeset_error(changeset)}
+        {:error, {:new_email, format_changeset_error(changeset)}}
 
       {:error, reason} when is_binary(reason) ->
-        {:error, reason}
+        {:error, {:new_email, reason}}
     end
   end
 

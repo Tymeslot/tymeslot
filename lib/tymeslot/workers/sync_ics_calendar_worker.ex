@@ -43,15 +43,34 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
-  alias Tymeslot.Integrations.HealthCheck
+  alias Tymeslot.Workers.SyncHealth
 
   @calendar_id "subscription"
+
+  @doc """
+  Enqueues a feed refresh for the subscription `integration_id`.
+
+  The worker's uniqueness window collapses repeat requests, so a refresh
+  already queued or running for the same integration answers
+  `{:ok, :already_scheduled}` rather than adding a second fetch of the feed.
+  Either `:ok` outcome means a refresh is on its way.
+  """
+  @spec enqueue(pos_integer()) :: {:ok, :enqueued | :already_scheduled} | {:error, term()}
+  def enqueue(integration_id) do
+    case %{"calendar_integration_id" => integration_id} |> new() |> Oban.insert() do
+      {:ok, %Oban.Job{conflict?: true}} -> {:ok, :already_scheduled}
+      {:ok, %Oban.Job{}} -> {:ok, :enqueued}
+      {:error, reason} -> {:error, reason}
+    end
+  end
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
-        sync(integration)
+        integration
+        |> sync()
+        |> tap(&SyncHealth.record_outcome(integration, &1))
 
       {:error, :not_found} ->
         Logger.warning("Calendar subscription not found, discarding sync job",
@@ -139,25 +158,20 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
     error -> record_failure(integration, error)
   end
 
-  # Stamps its own timestamps rather than going through
-  # `CalendarIntegrationQueries.mark_sync_success/1`: every real sync worker
-  # does the same, and a feed refresh is always a full one, so
-  # `last_full_sync_at` moves with the rest.
+  # A feed refresh is always a full one, so `last_full_sync_at` moves with the
+  # per-cycle marker rather than lagging behind it. Clearing `sync_error` and
+  # `needs_reauth` belongs to every provider's successful cycle alike, so
+  # `SyncHealth.record_outcome/2` owns that at the job boundary.
   defp mark_synced(integration, count) do
     now = DateTime.utc_now(:second)
 
     attrs = %{
-      last_sync_at: now,
       last_external_sync_at: now,
-      last_full_sync_at: now,
-      sync_error: nil,
-      needs_reauth: false
+      last_full_sync_at: now
     }
 
     case CalendarIntegrationQueries.update_sync_state(integration, attrs) do
       {:ok, _updated} ->
-        HealthCheck.mark_synced_successfully(:calendar, integration.id)
-
         Logger.info("Calendar subscription refreshed",
           calendar_integration_id: integration.id,
           event_count: count
@@ -175,6 +189,10 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
     end
   end
 
+  # The failure streak is not recorded here: `perform/1` feeds the whole
+  # cycle's verdict to `SyncHealth.record_outcome/2`, and the revoked-URL and
+  # missing-URL clauses never reach this helper. This one owns the message the
+  # dashboard shows.
   defp record_failure(integration, reason) do
     Logger.error("Calendar subscription sync failed",
       calendar_integration_id: integration.id,

@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.Video.Connection do
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
+  alias Tymeslot.Integrations.Video.RoomCreationError
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   @spec test_connection(pos_integer(), pos_integer()) :: {:ok, String.t()} | {:error, any()}
@@ -55,15 +56,25 @@ defmodule Tymeslot.Integrations.Video.Connection do
     with {:ok, provider_atom} <- ProviderConfig.parse_known(integration.provider),
          {:ok, provider_module} <- ProviderRegistry.get_provider(provider_atom) do
       decrypted = VideoIntegrationSchema.decrypt_credentials(integration)
-      config = provider_module.build_config(integration, decrypted, [])
 
-      ConnectionProbe.probe_provider(provider_module, integration,
+      # The scope travels in the config too, so a provider can keep a check
+      # meant for the owner (Nextcloud Talk's right to create conversations)
+      # out of the background health check. A config without it, such as the
+      # one `probe/3` proves before a save, is a test someone asked for.
+      config =
+        integration
+        |> provider_module.build_config(decrypted, [])
+        |> Map.put(:connection_test_scope, scope)
+
+      provider_module
+      |> ConnectionProbe.probe_provider(integration,
         scope: scope,
         # Video's `config` is always freshly built by a caller, so it really
         # is untrusted input worth validating before a token is charged.
         validate: fn -> provider_module.validate_config(config) end,
         run: fn -> ProviderAdapter.test_connection(provider_atom, config) end
       )
+      |> clear_disproved_refusal(integration, scope)
     else
       _other -> {:error, :unsupported_provider}
     end
@@ -97,6 +108,9 @@ defmodule Tymeslot.Integrations.Video.Connection do
           provider_module: provider_module,
           scope: :interactive,
           actor: actor,
+          # The one caller is the setup form's save, not the "Test connection"
+          # button, and a refusal has to say so: the organiser pressed "Add".
+          action: :video_setup,
           # Video's `config` is always freshly built by a caller, so it really
           # is untrusted input worth validating before a token is charged.
           validate: fn -> provider_module.validate_config(config) end,
@@ -107,6 +121,16 @@ defmodule Tymeslot.Integrations.Video.Connection do
         {:error, :unsupported_provider}
     end
   end
+
+  # A test the owner asked for that passes has just seen the server allow what
+  # a recorded refusal says it refuses, so the notice on the integration's row
+  # goes with it. The background probe proves no such thing: it does not ask.
+  defp clear_disproved_refusal({:ok, _message} = result, integration, :interactive) do
+    RoomCreationError.clear_proven_by_connection_test(integration)
+    result
+  end
+
+  defp clear_disproved_refusal(result, _integration, _scope), do: result
 
   defp run_connection_test(integration) do
     start_time = System.monotonic_time(:millisecond)

@@ -23,11 +23,11 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.AvailabilityIntegrationTest do
   @moduletag :integrations
   @moduletag :calendar
 
+  alias Tymeslot.Availability.Offer
   alias Tymeslot.Integrations.Calendar.EventRole
   alias Tymeslot.Integrations.Calendar.Exchange.Provider
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
   alias Tymeslot.Security.Encryption
-  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
 
   setup do
     # The test environment routes every calendar fetch to `CalendarMock`; the
@@ -92,7 +92,6 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.AvailabilityIntegrationTest do
 
   describe "a cached busy interval on the booking page" do
     test "removes every slot the schedule would otherwise offer, touching no network", %{
-      user: user,
       profile: profile,
       integration: integration
     } do
@@ -103,12 +102,12 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.AvailabilityIntegrationTest do
 
       # Anchor: the schedule has to offer something before "offers nothing" on
       # the busy day says anything at all.
-      assert {:ok, free_slots} = slots_for(free_date, user, profile)
+      assert {:ok, free_slots} = slots_for(free_date, profile)
 
       assert free_slots != [],
              "the schedule offered nothing even before the busy interval was applied"
 
-      assert {:ok, busy_slots} = slots_for(busy_date, user, profile)
+      assert {:ok, busy_slots} = slots_for(busy_date, profile)
 
       assert busy_slots == [],
              "the mailbox was busy all day yet slots were still offered: #{inspect(busy_slots)}"
@@ -117,7 +116,6 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.AvailabilityIntegrationTest do
     end
 
     test "an item row the provider knows to be incomplete never blocks a slot", %{
-      user: user,
       profile: profile,
       integration: integration
     } do
@@ -130,7 +128,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.AvailabilityIntegrationTest do
 
       cache_row(integration, EventRole.display_only(), item_date, "exchange-item-1")
 
-      assert {:ok, slots} = slots_for(item_date, user, profile)
+      assert {:ok, slots} = slots_for(item_date, profile)
 
       assert slots != [],
              "an incomplete item row reached availability and closed the day"
@@ -158,14 +156,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.AvailabilityIntegrationTest do
     )
   end
 
-  defp slots_for(date, user, profile) do
-    AvailabilityHelpers.get_available_slots(
-      Date.to_iso8601(date),
-      30,
-      "Etc/UTC",
-      user.id,
-      profile,
-      nil
-    )
+  defp slots_for(date, profile) do
+    Offer.slots_for_date(%{profile: profile, user_timezone: "Etc/UTC"}, Date.to_iso8601(date), 30)
   end
 end

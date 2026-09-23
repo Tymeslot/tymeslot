@@ -1,7 +1,8 @@
 defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.TierSyncTest do
   @moduledoc """
-  Covers the worker's per-tier sync paths (Tier 1 incremental + extras,
-  Tier 2 CTag-based, Tier 3 full fetch) and all-day event handling.
+  Covers the worker's per-tier sync paths (Tier 1 incremental and Tier 2
+  CTag-based, each per calendar path, and Tier 3 full fetch) and all-day
+  event handling.
   """
 
   use Tymeslot.DataCase, async: false
@@ -17,6 +18,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.TierSyncTest do
 
   alias Plug.Conn
   alias Req.Test, as: ReqTest
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
 
@@ -29,43 +31,47 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.TierSyncTest do
   end
 
   describe "perform/1 - Tier 1 multi-path sync" do
-    test "syncs events from all calendar paths: delta sync for primary, full fetch for extras" do
+    test "delta-syncs every calendar path against its own sync token" do
+      path_a = path1()
+      path_b = path2()
+
       integration =
         insert(:calendar_integration,
           provider: "caldav",
           is_active: true,
           caldav_sync_tier: 1,
-          calendar_paths: [path1(), path2()],
-          caldav_sync_token: "old-sync-token"
+          calendar_paths: [path_a, path_b],
+          caldav_sync_tokens: %{path_a => "token-a", path_b => "token-b"}
         )
 
-      path_a = path1()
-      path_b = path2()
+      test_pid = self()
 
       ReqTest.stub(:tymeslot_http, fn conn ->
-        case conn.request_path do
-          ^path_a ->
-            conn
-            |> Conn.put_resp_header("content-type", "application/xml")
-            |> Conn.send_resp(
-              207,
-              sync_collection_xml("#{path_a}event1.ics", ical_path1(), "new-sync-token")
-            )
+        {:ok, body, conn} = Conn.read_body(conn)
+        send(test_pid, {:body, conn.request_path, body})
 
-          ^path_b ->
-            conn
-            |> Conn.put_resp_header("content-type", "application/xml")
-            |> Conn.send_resp(207, caldav_report_xml("#{path_b}event2.ics", ical_path2()))
+        {href, ical, new_token} =
+          case conn.request_path do
+            ^path_a -> {"#{path_a}event1.ics", ical_path1(), "token-a2"}
+            ^path_b -> {"#{path_b}event2.ics", ical_path2(), "token-b2"}
+          end
 
-          other ->
-            Conn.send_resp(conn, 404, "unexpected path: #{other}")
-        end
+        conn
+        |> Conn.put_resp_header("content-type", "application/xml")
+        |> Conn.send_resp(207, sync_collection_xml(href, ical, new_token))
       end)
 
       assert :ok =
                perform_job(SyncCalDavCalendarWorker, %{
                  "calendar_integration_id" => integration.id
                })
+
+      # Each calendar asked for its own delta; neither was fetched in full.
+      assert_received {:body, ^path_a, body_a}
+      assert_received {:body, ^path_b, body_b}
+      assert body_a =~ "<d:sync-token>token-a</d:sync-token>"
+      assert body_b =~ "<d:sync-token>token-b</d:sync-token>"
+      refute_received {:body, _path, _body}
 
       cached_uids =
         Repo.all(
@@ -76,6 +82,58 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.TierSyncTest do
 
       assert "event-from-path1@test" in cached_uids
       assert "event-from-path2@test" in cached_uids
+
+      assert Repo.reload!(integration).caldav_sync_tokens ==
+               %{path_a => "token-a2", path_b => "token-b2"}
+    end
+
+    test "an expired token on one path re-fetches that path alone and keeps the other's" do
+      path_a = path1()
+      path_b = path2()
+
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          is_active: true,
+          caldav_sync_tier: 1,
+          calendar_paths: [path_a, path_b],
+          caldav_sync_tokens: %{path_a => "token-a", path_b => "stale-token-b"}
+        )
+
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        {:ok, body, conn} = Conn.read_body(conn)
+        kind = if body =~ "sync-collection", do: :sync_collection, else: :calendar_query
+        send(test_pid, {kind, conn.request_path})
+
+        case {kind, conn.request_path} do
+          {:sync_collection, ^path_a} ->
+            conn
+            |> Conn.put_resp_header("content-type", "application/xml")
+            |> Conn.send_resp(
+              207,
+              sync_collection_xml("#{path_a}event1.ics", ical_path1(), "token-a2")
+            )
+
+          {:sync_collection, ^path_b} ->
+            Conn.send_resp(conn, 410, "Gone")
+
+          {:calendar_query, _path} ->
+            respond_to_dual_paths(conn)
+        end
+      end)
+
+      assert :ok =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert_received {:calendar_query, ^path_b}
+      refute_received {:calendar_query, ^path_a}
+
+      # Path B restarts from nothing next cycle; path A's advance survives.
+      assert Repo.reload!(integration).caldav_sync_tokens == %{path_a => "token-a2"}
     end
   end
 
@@ -131,38 +189,37 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.TierSyncTest do
   end
 
   describe "perform/1 - Tier 2 multi-path sync" do
-    test "syncs events from all calendar paths when CTag changes" do
+    test "fetches only the calendars whose CTag moved, and records each path's CTag" do
+      path_a = path1()
+      path_b = path2()
+
       integration =
         insert(:calendar_integration,
           provider: "caldav",
           is_active: true,
           caldav_sync_tier: 2,
-          calendar_paths: [path1(), path2()],
-          caldav_sync_token: nil
+          calendar_paths: [path_a, path_b],
+          caldav_sync_tokens: %{path_a => "ctag-a", path_b => "ctag-b"}
         )
 
-      path_a = path1()
-      path_b = path2()
+      test_pid = self()
 
       ReqTest.stub(:tymeslot_http, fn conn ->
+        send(test_pid, {conn.method, conn.request_path})
+
         case {conn.method, conn.request_path} do
           {"PROPFIND", ^path_a} ->
             conn
             |> Conn.put_resp_header("content-type", "application/xml")
-            |> Conn.send_resp(207, ctag_xml("new-ctag"))
+            |> Conn.send_resp(207, ctag_xml("ctag-a"))
 
-          {_method, ^path_a} ->
+          {"PROPFIND", ^path_b} ->
             conn
             |> Conn.put_resp_header("content-type", "application/xml")
-            |> Conn.send_resp(207, caldav_report_xml("#{path_a}event1.ics", ical_path1()))
+            |> Conn.send_resp(207, ctag_xml("ctag-b2"))
 
-          {_method, ^path_b} ->
-            conn
-            |> Conn.put_resp_header("content-type", "application/xml")
-            |> Conn.send_resp(207, caldav_report_xml("#{path_b}event2.ics", ical_path2()))
-
-          {method, path} ->
-            Conn.send_resp(conn, 404, "unexpected #{method} #{path}")
+          {"REPORT", _path} ->
+            respond_to_dual_paths(conn)
         end
       end)
 
@@ -171,15 +228,15 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.TierSyncTest do
                  "calendar_integration_id" => integration.id
                })
 
-      cached_uids =
-        Repo.all(
-          from e in ProviderCalendarEventSchema,
-            where: e.calendar_integration_id == ^integration.id,
-            select: e.uid
-        )
+      # The unchanged primary is skipped; only the extra calendar is fetched.
+      assert_received {"REPORT", ^path_b}
+      refute_received {"REPORT", ^path_a}
 
-      assert "event-from-path1@test" in cached_uids
-      assert "event-from-path2@test" in cached_uids
+      assert {:ok, _event} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "event-from-path2@test")
+
+      assert Repo.reload!(integration).caldav_sync_tokens ==
+               %{path_a => "ctag-a", path_b => "ctag-b2"}
     end
   end
 

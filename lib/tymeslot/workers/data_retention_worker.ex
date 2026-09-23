@@ -9,6 +9,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   3. Slack delivery logs (60 days retention)
   4. Telegram delivery logs (60 days retention)
   5. Analytics page-view events (90 days retention)
+  6. Abandoned Telegram setup stubs (own minute-scale TTL, not a day count)
 
   Ensures the database doesn't grow indefinitely by removing
   old records based on configured retention periods.
@@ -74,6 +75,8 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
     # Nullify payloads on incoming Stripe events past the payload retention window
     nullify_stale_payloads(args)
 
+    prune_orphaned_telegram_stubs()
+
     Enum.each(@retention_jobs, &run_cleanup(&1, args))
 
     :ok
@@ -112,6 +115,19 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
       deleted_count: count,
       retention_days: retention_days
     )
+  end
+
+  # Deliberately not a `@retention_jobs` entry: those take a retention window
+  # in whole days, while an abandoned link-flow stub expires after minutes and
+  # owns its own TTL in `TelegramQueries`.
+  defp prune_orphaned_telegram_stubs do
+    case Telegram.prune_orphaned_stubs() do
+      {count, _rows} when count > 0 ->
+        Logger.info("Pruned abandoned Telegram setup stubs", deleted_count: count)
+
+      {0, _rows} ->
+        Logger.debug("No abandoned Telegram setup stubs to prune")
+    end
   end
 
   defp nullify_stale_payloads(args) do

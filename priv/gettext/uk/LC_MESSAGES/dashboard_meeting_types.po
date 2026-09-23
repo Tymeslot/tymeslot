@@ -173,6 +173,26 @@ msgstr "На тиждень"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
+msgid "Calendar gone"
+msgstr "Календар відсутній"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Read-only"
+msgstr "Лише для перегляду"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar this meeting type books into is no longer on the connected account. Edit it and choose another calendar."
+msgstr "Календаря, у який цей тип зустрічі додає записи, більше немає в підключеному обліковому записі. Відредагуйте цей тип зустрічі та виберіть інший календар."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type books into a calendar you can no longer write to. Edit it and choose another calendar."
+msgstr "Цей тип зустрічі додає записи в календар, до якого ви більше не маєте доступу на запис. Відредагуйте його та виберіть інший календар."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
 msgid "%{count} location"
 msgid_plural "%{count} locations"
 msgstr[0] "%{count} місце"

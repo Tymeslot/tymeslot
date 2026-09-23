@@ -33,8 +33,13 @@ defmodule Tymeslot.CalendarProviderValidationCases do
       password: "pass"
     }
 
+    # Providers word this differently: some return their own "Invalid … URL"
+    # copy, the rest fall through to the shared scheme error, which names the
+    # correction (start with `https://`) rather than the rule. Both are
+    # guidance about the address, which is as much as a case shared across
+    # providers can pin down.
     assert {:error, message} = provider_module.validate_config(config)
-    assert String.contains?(message, "URL")
+    assert message =~ ~r{URL|https://}
 
     :ok
   end

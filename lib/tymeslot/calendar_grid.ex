@@ -9,6 +9,14 @@ defmodule Tymeslot.CalendarGrid do
 
   alias Tymeslot.CalendarGrid.BookingEvent
   alias Tymeslot.CalendarGrid.BookingEvents
+  alias Tymeslot.CalendarGrid.EventDeletion
+  alias Tymeslot.CalendarGrid.EventEdit
+  alias Tymeslot.CalendarGrid.EventMove
+  alias Tymeslot.CalendarGrid.EventVideo
+  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
+  alias Tymeslot.CalendarGrid.EventVideoRooms
+  alias Tymeslot.CalendarGrid.EventVideoRoomSchema
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
   alias Tymeslot.Integrations.Calendar.CalendarEvent
@@ -94,18 +102,35 @@ defmodule Tymeslot.CalendarGrid do
   @doc """
   Returns the user's upcoming timed events that carry at least one reminder,
   within `[now, now + #{@reminder_feed_window_days}d)`, scoped to the given
-  (already visibility-filtered) integration IDs.
+  integration IDs.
+
+  `integrations` (the full structs, not just their ids) is used to drop rows
+  from a calendar the user has since deselected. Selection is pushed into the
+  query itself (see `Tymeslot.Integrations.Calendar.visibility_rules/1` and
+  `ProviderCalendarEventQueries.list_upcoming_timed/4`) rather than filtered
+  afterwards, so a busy deselected calendar can't crowd real matches out of
+  the feed: the `LIMIT` only ever counts rows the caller can actually see.
 
   Reminders are normalised to the canonical `%{method:, minutes_before:}` shape,
   so callers can read `minutes_before` regardless of how the row was stored.
+
+  ## Options
+
+  - `:limit`: maximum number of rows to return (default: see
+    `ProviderCalendarEventQueries.list_upcoming_timed/4`).
   """
-  @spec list_upcoming_events_with_reminders([integer()], DateTime.t()) ::
+  @spec list_upcoming_events_with_reminders([integer()], DateTime.t(), [map()], keyword()) ::
           [ProviderCalendarEventSchema.t()]
-  def list_upcoming_events_with_reminders(integration_ids, now) do
+  def list_upcoming_events_with_reminders(integration_ids, now, integrations, opts \\ []) do
     window_end = DateTime.add(now, @reminder_feed_window_days, :day)
+    rules = Calendar.visibility_rules(integrations)
 
     integration_ids
-    |> ProviderCalendarEventQueries.list_upcoming_timed(now, window_end)
+    |> ProviderCalendarEventQueries.list_upcoming_timed(
+      now,
+      window_end,
+      Keyword.put(opts, :visibility_rules, rules)
+    )
     |> Enum.map(&normalise_event_reminders/1)
     |> Enum.reject(&(&1.reminders == []))
   end
@@ -123,12 +148,28 @@ defmodule Tymeslot.CalendarGrid do
 
   Matches case-insensitively against event title, description, and location,
   scoped to the user's active integrations. Pass `:hidden_integration_ids` in
-  `opts` to exclude calendars the user has toggled off; results are ordered by
-  start time and capped at a sensible limit. A blank term returns `[]`.
+  `opts` to exclude calendars the user has toggled off entirely; results are
+  ordered by start time and capped at a sensible limit. A blank term returns
+  `[]`.
+
+  `integrations` (the full structs, not just their ids) is used to drop rows
+  from a calendar the user has *selectively* deselected, a finer grain than
+  `:hidden_integration_ids`. Selection is pushed into the query itself (see
+  `Tymeslot.Integrations.Calendar.visibility_rules/1` and
+  `ProviderCalendarEventQueries.search/3`) rather than filtered afterwards, so
+  a busy deselected calendar can't crowd real matches out of the results: the
+  `LIMIT` only ever counts rows the caller can actually see.
   """
-  @spec search_events(integer(), String.t(), keyword()) :: [ProviderCalendarEventSchema.t()]
-  def search_events(user_id, term, opts) do
-    ProviderCalendarEventQueries.search(user_id, term, opts)
+  @spec search_events(integer(), String.t(), [map()], keyword()) ::
+          [ProviderCalendarEventSchema.t()]
+  def search_events(user_id, term, integrations, opts \\ []) do
+    rules = Calendar.visibility_rules(integrations)
+
+    ProviderCalendarEventQueries.search(
+      user_id,
+      term,
+      Keyword.put(opts, :visibility_rules, rules)
+    )
   end
 
   @doc """
@@ -270,23 +311,12 @@ defmodule Tymeslot.CalendarGrid do
     :ok
   end
 
-  @doc """
-  Updates a cached event's attributes via upsert.
-
-  Accepts a map with at least `:uid` and `:calendar_integration_id`.
-  """
-  @spec update_cached_event(map()) :: :ok
-  def update_cached_event(attrs) do
-    {:ok, _count} = ProviderCalendarEventQueries.upsert_batch([normalise_cache_attrs(attrs)])
-    :ok
-  end
-
   # The cached events schema stores start/end/synced_at as :utc_datetime_usec
-  # and requires synced_at NOT NULL. Dashboard-originated create/update flows
-  # build datetimes at second precision and don't always supply synced_at —
-  # they're writing what they just committed, so "now" is the correct sync
-  # timestamp. synced_at is upcast unconditionally so a caller-supplied
-  # second-precision value does not fail Ecto's :utc_datetime_usec check.
+  # and requires synced_at NOT NULL. The dashboard create flow builds datetimes
+  # at second precision and doesn't always supply synced_at; it is writing what
+  # it just committed, so "now" is the correct sync timestamp. synced_at is
+  # upcast unconditionally so a caller-supplied second-precision value does not
+  # fail Ecto's :utc_datetime_usec check.
   defp normalise_cache_attrs(attrs) do
     now = DateTime.utc_now(:microsecond)
 
@@ -301,6 +331,72 @@ defmodule Tymeslot.CalendarGrid do
   defp to_usec(%DateTime{} = dt), do: %{dt | microsecond: {elem(dt.microsecond, 0), 6}}
   defp to_usec(other), do: other
 
+  @doc """
+  Applies `changes` to an existing event, writes the whole updated event to
+  its provider, and records the edit on the cached row. See
+  `Tymeslot.CalendarGrid.EventEdit.update_event/4`.
+  """
+  @spec update_event(pos_integer(), map(), EventEdit.changes(), keyword()) ::
+          {:ok, map()} | {:error, EventEdit.failure()}
+  defdelegate update_event(user_id, event, changes, opts \\ []), to: EventEdit
+
+  @doc """
+  Moves an event to another calendar, creating it on the destination before
+  deleting the original. See `Tymeslot.CalendarGrid.EventMove.move_event/3`.
+  """
+  @spec move_event(pos_integer(), map(), EventMove.destination()) ::
+          {:ok, EventMove.moved()} | {:error, term()}
+  defdelegate move_event(user_id, event, destination), to: EventMove
+
+  @doc """
+  Gives an event a room on the organiser's video integration, or removes its
+  video link when the integration is `nil`, on both the provider event and the
+  cached row, or answers `{:ok, :unchanged}` when the choice is the one the
+  event already has. See `Tymeslot.CalendarGrid.EventVideo.change_event_video/3`.
+  """
+  @spec change_event_video(pos_integer(), map(), pos_integer() | nil) ::
+          {:ok, String.t() | nil | :unchanged}
+          | {:error, :missing_meeting_url | :not_found | term()}
+  defdelegate change_event_video(user_id, event, video_integration_id), to: EventVideo
+
+  @doc """
+  Returns `description` with the "Join video call" line for the previous URL
+  taken out and one for the new URL appended. See
+  `Tymeslot.CalendarGrid.EventVideo.put_join_link/3`.
+  """
+  @spec put_join_link(String.t() | nil, String.t() | nil, String.t() | nil) :: String.t() | nil
+  defdelegate put_join_link(description, previous_url, url), to: EventVideo
+
+  @doc """
+  Deletes an event from its calendar, cancels the Tymeslot meeting it was
+  booked as, and removes its cached row. See
+  `Tymeslot.CalendarGrid.EventDeletion.delete_event/2`.
+  """
+  @spec delete_event(pos_integer(), EventDeletion.event()) ::
+          {:ok, EventDeletion.deleted()} | {:error, EventDeletion.failure()}
+  defdelegate delete_event(user_id, event), to: EventDeletion
+
+  @doc """
+  Whether an event may be deleted from the grid. See
+  `Tymeslot.CalendarGrid.EventDeletion.ensure_deletable/1`.
+  """
+  @spec ensure_deletable(map()) :: :ok | {:error, :recurring_event}
+  defdelegate ensure_deletable(event), to: EventDeletion
+
+  @doc """
+  Whether an event may be moved to another calendar. See
+  `Tymeslot.CalendarGrid.EventMove.ensure_movable/1`.
+  """
+  @spec ensure_movable(map()) :: :ok | {:error, :recurring_event}
+  defdelegate ensure_movable(event), to: EventMove
+
+  @doc """
+  Whether an event may be edited from the grid. See
+  `Tymeslot.CalendarGrid.EventEdit.ensure_editable/1`.
+  """
+  @spec ensure_editable(map()) :: :ok | {:error, :recurring_event}
+  defdelegate ensure_editable(event), to: EventEdit
+
   @doc "Fetches a single cached event by integration ID and UID."
   @spec get_cached_event(integer(), String.t()) ::
           {:ok, CalendarEvent.t()} | {:error, :not_found}
@@ -311,13 +407,81 @@ defmodule Tymeslot.CalendarGrid do
     end
   end
 
-  @doc """
-  Removes a cached event by its integration ID and UID.
-  """
-  @spec delete_cached_event(integer(), String.t()) :: {:ok, :deleted | :not_found}
-  def delete_cached_event(integration_id, uid) do
-    ProviderCalendarEventQueries.delete_by_uid(integration_id, uid)
-  end
+  # --- Video rooms of grid events (see `EventVideoRooms`) ---
+
+  @doc "Records a video room made for a grid event. See `EventVideoRooms.record/2`."
+  @spec record_event_video_room(map(), map()) :: :ok
+  defdelegate record_event_video_room(meeting_context, event), to: EventVideoRooms, as: :record
+
+  @doc "Brings a grid event's video rooms in step with its timing. See `EventVideoRooms.rescheduled/1`."
+  @spec reschedule_event_video_rooms(map()) :: :ok
+  defdelegate reschedule_event_video_rooms(event), to: EventVideoRooms, as: :rescheduled
+
+  @doc "Follows a grid event moved to another integration. See `EventVideoRooms.moved/4`."
+  @spec move_event_video_rooms(
+          map(),
+          pos_integer(),
+          String.t(),
+          String.t() | nil,
+          String.t() | nil
+        ) :: :ok
+  defdelegate move_event_video_rooms(
+                event,
+                to_integration_id,
+                new_uid,
+                provider_uid,
+                provider_calendar_id
+              ),
+              to: EventVideoRooms,
+              as: :moved
+
+  @doc "Deletes a deleted grid event's video rooms. See `EventVideoRooms.event_deleted/1`."
+  @spec delete_event_video_rooms(map()) :: :ok
+  defdelegate delete_event_video_rooms(event), to: EventVideoRooms, as: :event_deleted
+
+  @doc "Whether an ended grid event's room may be deleted. See `EventVideoRooms.check_expired/1`."
+  @spec check_event_video_room_expired(EventVideoRoomSchema.t()) :: :expired | :kept
+  defdelegate check_event_video_room_expired(room), to: EventVideoRooms, as: :check_expired
+
+  @doc "Whether an ended grid event's room may be deleted now. See `EventVideoRooms.confirm_expired/1`."
+  @spec confirm_event_video_room_expired(EventVideoRoomSchema.t()) :: :expired | :kept
+  defdelegate confirm_event_video_room_expired(room),
+    to: EventVideoRooms,
+    as: :confirm_expired
+
+  @doc "A grid event's video room with its integrations loaded."
+  @spec get_event_video_room(pos_integer()) ::
+          {:ok, EventVideoRoomSchema.t()} | {:error, :not_found}
+  defdelegate get_event_video_room(id), to: EventVideoRoomQueries, as: :get_with_integrations
+
+  @doc "Removes the record of a grid event's video room once the room is gone."
+  @spec forget_event_video_room(EventVideoRoomSchema.t()) :: :ok
+  defdelegate forget_event_video_room(room), to: EventVideoRoomQueries, as: :delete
+
+  @doc "Grid event video rooms whose event ended in a window. See `EventVideoRoomQueries.list_ended/4`."
+  @spec list_ended_event_video_rooms([String.t()], DateTime.t(), DateTime.t()) ::
+          [EventVideoRoomSchema.t()]
+  defdelegate list_ended_event_video_rooms(providers, ended_before, ended_after),
+    to: EventVideoRoomQueries,
+    as: :list_ended
+
+  @doc "A video integration's grid event rooms. See `EventVideoRoomQueries.list_for_integration/4`."
+  @spec list_event_video_rooms_for_integration(
+          pos_integer(),
+          :upcoming | :all,
+          DateTime.t(),
+          pos_integer()
+        ) :: [EventVideoRoomSchema.t()]
+  defdelegate list_event_video_rooms_for_integration(integration_id, scope, now, limit),
+    to: EventVideoRoomQueries,
+    as: :list_for_integration
+
+  @doc "How many grid event rooms a video integration holds. See `EventVideoRoomQueries.count_for_integration/3`."
+  @spec count_event_video_rooms_for_integration(pos_integer(), :upcoming | :all, DateTime.t()) ::
+          non_neg_integer()
+  defdelegate count_event_video_rooms_for_integration(integration_id, scope, now),
+    to: EventVideoRoomQueries,
+    as: :count_for_integration
 
   @doc """
   Returns active calendar integrations for the given user.
@@ -412,9 +576,7 @@ defmodule Tymeslot.CalendarGrid do
   # A subscription refresh is always a full re-fetch of the feed; there is no
   # delta mode to force past.
   defp enqueue_sync_worker(%{provider: "ics_url"} = integration) do
-    %{"calendar_integration_id" => integration.id}
-    |> SyncIcsCalendarWorker.new()
-    |> Oban.insert()
+    SyncIcsCalendarWorker.enqueue(integration.id)
   end
 
   # EWS has no delta mode either: a refresh re-reads the whole window through

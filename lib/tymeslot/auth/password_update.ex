@@ -15,6 +15,8 @@ defmodule Tymeslot.Auth.PasswordUpdate do
   alias Tymeslot.Security.{Password, SecurityLogger}
   alias Tymeslot.Utils.ChangesetUtils
 
+  @type error_field :: :current_password | :new_password | :new_password_confirmation
+
   @doc """
   Updates a user's password after verifying their current password.
   Pure domain logic without HTTP concerns.
@@ -23,9 +25,14 @@ defmodule Tymeslot.Auth.PasswordUpdate do
   `:ip_address` and `:user_agent`. Both are optional, but an audit entry for a
   password change that names no origin is materially weaker, so callers that
   have them should pass them.
+
+  A failure names the form field it belongs to alongside the translated
+  message, so a caller can place the error without reading the message. The
+  current password is checked first: a wrong current password is reported as
+  such even when the new password happens to equal what was typed.
   """
   @spec update_user_password(term(), String.t(), String.t(), String.t(), keyword()) ::
-          {:ok, term()} | {:error, String.t()}
+          {:ok, term()} | {:error, {error_field(), String.t()}}
   def update_user_password(
         user,
         current_password,
@@ -47,13 +54,16 @@ defmodule Tymeslot.Auth.PasswordUpdate do
       {:ok, updated_user}
     else
       {:error, :invalid_password} ->
-        {:error, dgettext("auth", "Current password is incorrect")}
+        {:error, {:current_password, dgettext("auth", "Current password is incorrect")}}
 
+      # `validate_new_password/2` has already ruled out a mismatched or short
+      # confirmation, so what the changeset can still refuse is the password
+      # policy itself.
       {:error, %Changeset{} = changeset} ->
-        {:error, format_changeset_error(changeset)}
+        {:error, {:new_password, ChangesetUtils.get_first_error(changeset)}}
 
-      {:error, reason} when is_binary(reason) ->
-        {:error, reason}
+      {:error, {_field, message}} = error when is_binary(message) ->
+        error
     end
   end
 
@@ -69,7 +79,8 @@ defmodule Tymeslot.Auth.PasswordUpdate do
 
   defp ensure_not_same_as_old(user, new_password) do
     if Password.verify_password(new_password, user.password_hash) do
-      {:error, dgettext("auth", "New password must be different from current password")}
+      {:error,
+       {:new_password, dgettext("auth", "New password must be different from current password")}}
     else
       :ok
     end
@@ -78,10 +89,10 @@ defmodule Tymeslot.Auth.PasswordUpdate do
   defp validate_new_password(password, password_confirmation) do
     cond do
       password != password_confirmation ->
-        {:error, dgettext("auth", "Passwords do not match")}
+        {:error, {:new_password_confirmation, dgettext("auth", "Passwords do not match")}}
 
       String.length(password) < 8 ->
-        {:error, dgettext("auth", "Password must be at least 8 characters long")}
+        {:error, {:new_password, dgettext("auth", "Password must be at least 8 characters long")}}
 
       true ->
         :ok
@@ -90,9 +101,5 @@ defmodule Tymeslot.Auth.PasswordUpdate do
 
   defp do_update_password(user, new_password, new_password_confirmation) do
     UserQueries.update_user_password(user, new_password, new_password_confirmation)
-  end
-
-  defp format_changeset_error(%Changeset{} = changeset) do
-    ChangesetUtils.get_first_error(changeset)
   end
 end

@@ -69,20 +69,6 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
   end
 
   @doc """
-  Checks if a theme supports a specific customization type.
-  """
-  @spec supports_customization?(String.t(), customization_type()) :: boolean()
-  def supports_customization?(theme_id, customization_type) do
-    case Catalog.get_by_id(theme_id) do
-      {:ok, theme} ->
-        check_capability_support(theme.features, customization_type)
-
-      _other ->
-        false
-    end
-  end
-
-  @doc """
   Generates CSS from customizations based on theme capabilities.
   """
   @spec generate_css(String.t(), customization_attrs()) :: String.t()
@@ -255,16 +241,12 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
     defaults
   end
 
-  defp check_capability_support(features, :color), do: features[:supports_custom_colors] || false
-
-  defp check_capability_support(features, :background) do
+  defp supports_background?(features) do
     features[:supports_gradient_background] ||
       features[:supports_image_background] ||
       features[:supports_video_background] ||
       false
   end
-
-  defp check_capability_support(_features, _type), do: false
 
   defp generate_capability_css(features, customizations) do
     css_parts = []
@@ -287,7 +269,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
     # Generate background CSS if supported
     # Background comes after color scheme in the list so it overrides it in the merge process
     css_parts =
-      if check_capability_support(features, :background) do
+      if supports_background?(features) do
         background_css = generate_background_css(customizations)
         if background_css, do: [background_css | css_parts], else: css_parts
       else

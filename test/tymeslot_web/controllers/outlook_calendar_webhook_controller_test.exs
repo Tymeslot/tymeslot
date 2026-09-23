@@ -10,9 +10,11 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Security.RateLimit
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.SyncOutlookCalendarWorker
 
-  describe "webhook/2 - validation challenge" do
+  describe "notification/2 - validation challenge" do
     test "returns 200 with the validationToken as plain text body", %{conn: conn} do
       conn =
         conn
@@ -48,7 +50,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
     end
   end
 
-  describe "webhook/2 - valid change notification" do
+  describe "notification/2 - valid change notification" do
     test "enqueues SyncOutlookCalendarWorker and returns 202 for a valid notification", %{
       conn: conn
     } do
@@ -110,7 +112,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
     end
   end
 
-  describe "webhook/2 - invalid clientState" do
+  describe "notification/2 - invalid clientState" do
     test "returns 202 without enqueuing a job when clientState is wrong", %{conn: conn} do
       integration =
         insert(:calendar_integration,
@@ -165,7 +167,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
     end
   end
 
-  describe "webhook/2 - unknown subscription" do
+  describe "notification/2 - unknown subscription" do
     test "returns 202 without enqueuing a job for an unknown subscriptionId", %{conn: conn} do
       payload = %{
         "value" => [
@@ -197,7 +199,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
     end
   end
 
-  describe "webhook/2 - batch notifications" do
+  describe "notification/2 - batch notifications" do
     test "enqueues jobs only for valid integrations and skips unknown subscriptions", %{
       conn: conn
     } do
@@ -255,6 +257,97 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
       # The unknown subscription should not have enqueued a job —
       # only 2 jobs should exist in total.
       assert length(all_enqueued(worker: SyncOutlookCalendarWorker)) == 2
+    end
+  end
+
+  describe "notification/2 - payloads Graph never sends" do
+    # The endpoint is public, so anyone can post these. They must be
+    # acknowledged like any other payload rather than raising into a 500.
+    test "returns 202 for a value that is not a list", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/webhooks/outlook-calendar", %{"value" => "x"})
+
+      assert conn.status == 202
+      refute_enqueued(worker: SyncOutlookCalendarWorker)
+    end
+
+    test "returns 202 for notification entries that are not objects", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/webhooks/outlook-calendar", %{"value" => [1, "a"]})
+
+      assert conn.status == 202
+      refute_enqueued(worker: SyncOutlookCalendarWorker)
+    end
+
+    test "returns 202 for notifications whose subscriptionId is not a string", %{conn: conn} do
+      # The subscription-id lookup cannot cast these; they used to raise an
+      # Ecto.Query.CastError into a 500.
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/webhooks/outlook-calendar", %{
+          "value" => [
+            %{"subscriptionId" => 1, "clientState" => "x"},
+            %{"subscriptionId" => ["a"], "clientState" => "x"}
+          ]
+        })
+
+      assert conn.status == 202
+      refute_enqueued(worker: SyncOutlookCalendarWorker)
+    end
+
+    test "returns 202 for a payload carrying no value at all", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/webhooks/outlook-calendar", %{"unrelated" => "field"})
+
+      assert conn.status == 202
+      refute_enqueued(worker: SyncOutlookCalendarWorker)
+    end
+  end
+
+  describe "notification/2 - source address flood" do
+    test "returns 429 once the calendar push bucket is exhausted", %{conn: conn} do
+      # A source address of its own keeps this bucket clear of every other
+      # test posting to the calendar webhooks from 127.0.0.1.
+      client_ip = "198.51.100.21"
+
+      # 1001 hits against the 1000-per-minute limit, so the sliding window is
+      # exhausted whatever the timing jitter.
+      for _i <- 1..1001, do: RateLimit.hit("calendar_push:#{client_ip}", 60_000, 1_000)
+
+      assert {:error, :rate_limited} = RateLimiter.check_calendar_push_rate_limit(client_ip)
+
+      integration =
+        insert(:calendar_integration,
+          provider: "outlook",
+          graph_subscription_id: "sub-flooded",
+          graph_client_state: "state-flooded"
+        )
+
+      payload = %{
+        "value" => [
+          %{
+            "subscriptionId" => integration.graph_subscription_id,
+            "clientState" => integration.graph_client_state,
+            "resourceData" => %{"id" => "event-flooded"}
+          }
+        ]
+      }
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("x-forwarded-for", client_ip)
+        |> post("/webhooks/outlook-calendar", payload)
+
+      assert conn.status == 429
+      refute_enqueued(worker: SyncOutlookCalendarWorker)
     end
   end
 end

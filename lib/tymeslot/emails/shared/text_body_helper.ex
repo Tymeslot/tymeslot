@@ -142,6 +142,12 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
     end)
   end
 
+  defp format_time_line(
+         %{all_day: true, date: %Date{} = first, last_date: %Date{} = last},
+         locale
+       ),
+       do: "#{dgettext("emails", "Time:")} #{Formatting.format_all_day(first, last, locale)}"
+
   defp format_time_line(appointment_details, locale) do
     time_key =
       cond do
@@ -195,4 +201,34 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   end
 
   defp format_single_change(_other, _locale), do: nil
+
+  @doc """
+  Formats the current details of an event whose previous state was never
+  recorded, from the `{field, nil, current}` list a first notification
+  carries: each line states what the field is now, with no arrow claiming a
+  previous value.
+  """
+  @spec format_event_details([{atom(), term(), term()}], String.t()) :: String.t()
+  def format_event_details(changes, locale) do
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      changes
+      |> Enum.map(&format_current_detail(&1, locale))
+      |> Enum.filter(& &1)
+      |> Enum.join("\n")
+    end)
+  end
+
+  defp format_current_detail({:title, _from, to}, _locale),
+    do: "#{dgettext("emails", "Title:")} #{to}"
+
+  defp format_current_detail({:location, _from, to}, _locale),
+    do: "#{dgettext("emails", "Location:")} #{to}"
+
+  defp format_current_detail({:description, _from, to}, _locale),
+    do: "#{dgettext("emails", "Description:")} #{Formatting.plain_excerpt(to)}"
+
+  defp format_current_detail({:time, _from, to}, locale),
+    do: "#{dgettext("emails", "Time:")} #{Formatting.format_time_short(to, locale)}"
+
+  defp format_current_detail(_other, _locale), do: nil
 end

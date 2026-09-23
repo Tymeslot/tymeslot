@@ -57,7 +57,6 @@ msgid "Auto-notifications"
 msgstr "Notifications automatiques"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Annuler"

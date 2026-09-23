@@ -326,6 +326,26 @@ msgstr "Rédigez votre propre accueil"
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
+msgid "Add a holiday on the availability page and those days stop being offered, across every schedule and every meeting type, without a blocking event in any calendar you have connected. Give the first and last day a time when you leave mid-afternoon or come back mid-morning. Bookings already in your diary keep their times, and you are shown which ones before you save. Nobody booking you sees why the days are closed."
+msgstr "Ajoutez une absence depuis la page Disponibilités et ces jours cessent d'être proposés, sur tous vos plannings et tous vos types de réunion, sans événement bloquant dans aucun calendrier connecté. Donnez une heure au premier et au dernier jour si vous partez en milieu d'après-midi ou revenez en milieu de matinée. Les réservations déjà prises gardent leur horaire, et la liste vous est montrée avant l'enregistrement. Personne ne voit pourquoi ces jours sont fermés."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Close the days you are away"
+msgstr "Fermez les jours de votre absence"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Meet on Jitsi, kMeet or Nextcloud Talk"
+msgstr "Se retrouver sur Jitsi, kMeet ou Nextcloud Talk"
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Three more video providers join Zoom, Google Meet, Teams and MiroTalk in the integrations picker. Point Tymeslot at your own Jitsi or Nextcloud and every booking gets a room of its own: a Talk conversation keeps its lobby shut until the meeting starts, moves when you reschedule and is deleted when you cancel. kMeet needs no setup at all."
+msgstr "Trois fournisseurs vidéo de plus rejoignent Zoom, Google Meet, Teams et MiroTalk dans le sélecteur d'intégrations. Indiquez à Tymeslot votre propre Jitsi ou Nextcloud et chaque réservation obtient sa propre salle : une conversation Talk garde son salon d'attente fermé jusqu'au début du rendez-vous, se déplace quand vous reportez et est supprimée quand vous annulez. kMeet ne demande aucune configuration."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
 msgid "A meeting type can now offer several places to meet: in person at an address, a video call or a phone call. The person booking picks the one that suits them, and can change it when they reschedule. Offer more than one video service and they choose which one the meeting runs on."
 msgstr "Un type de rendez-vous peut désormais proposer plusieurs lieux : en personne à une adresse, un appel vidéo ou un appel téléphonique. La personne qui réserve choisit celui qui lui convient et peut le changer en reprogrammant. Proposez plusieurs services vidéo et elle choisit celui sur lequel se tient la réunion."
 

@@ -28,6 +28,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.SsrfGuard
 
+  # The partial unique index allowing one active integration per user,
+  # provider and account key.
+  @account_index :unique_active_calendar_account_per_user
+
   @type t :: %__MODULE__{
           id: integer() | nil,
           user_id: integer() | nil,
@@ -48,7 +52,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
           verify_ssl: boolean(),
           is_active: boolean(),
           needs_reauth: boolean(),
-          last_sync_at: DateTime.t() | nil,
           provider_account_id: String.t() | nil,
           provider_account_email: String.t() | nil,
           sync_error: String.t() | nil,
@@ -64,7 +67,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
           graph_delta_link: String.t() | nil,
           last_outlook_notification_at: DateTime.t() | nil,
           caldav_sync_tier: integer() | nil,
-          caldav_sync_token: String.t() | nil,
+          caldav_sync_tokens: %{optional(String.t()) => String.t()} | nil,
           exchange_sync_states: %{optional(String.t()) => String.t()},
           last_external_sync_at: DateTime.t() | nil,
           last_full_sync_at: DateTime.t() | nil,
@@ -101,7 +104,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     field(:verify_ssl, :boolean, default: true)
     field(:is_active, :boolean, default: true)
     field(:needs_reauth, :boolean, default: false)
-    field(:last_sync_at, :utc_datetime)
     field(:provider_account_id, :string)
     field(:provider_account_email, :string)
     field(:sync_error, :string)
@@ -112,7 +114,11 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     field(:google_channel_expires_at, :utc_datetime)
     # Stored as plaintext: random verification token with no credential reuse risk.
     # Used solely to verify webhook authenticity. Follow _encrypted pattern if threat model changes.
-    field(:google_channel_secret, :string)
+    # Redacted like the virtual credential fields below: Google and Outlook
+    # hand this whole struct to the availability fan-out as the provider
+    # client, so it reaches anything that inspects a client — including an OTP
+    # crash report. It is the token inbound webhooks are verified against.
+    field(:google_channel_secret, :string, redact: true)
     field(:google_sync_token, :string)
     field(:last_google_notification_at, :utc_datetime)
 
@@ -127,7 +133,11 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
 
     # CalDAV sync fields
     field(:caldav_sync_tier, :integer)
-    field(:caldav_sync_token, :string)
+    # Keyed by calendar path, because a `DAV:sync-token` (Tier 1) and a
+    # `getctag` (Tier 2) both describe one collection: a multi-calendar
+    # integration keeps one per path, or every calendar but one would be
+    # fetched in full every cycle.
+    field(:caldav_sync_tokens, :map, default: %{})
 
     # Exchange (EWS) sync fields. A map rather than a single token because
     # `SyncFolderItems` is folder-scoped: an Exchange mailbox syncs each
@@ -154,6 +164,33 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     )
 
     timestamps(type: :utc_datetime)
+  end
+
+  @doc """
+  The name of the unique index on active integrations' account keys, as a
+  refused write reports it.
+  """
+  @spec account_index() :: String.t()
+  def account_index, do: Atom.to_string(@account_index)
+
+  @doc """
+  Answers whether `attrs` would build a valid row, without writing one.
+
+  The creation paths that probe a user-supplied server run this before the
+  probe. That probe is an outbound request to an address someone typed, and is
+  metered as such, so a submission the changeset was always going to reject has
+  to be refused ahead of it rather than after: the alternative charges an
+  organiser's connection budget for a mistake decided entirely in-process.
+
+  The changeset handed back is the one the insert would have returned, so
+  callers render it unchanged.
+  """
+  @spec validate_new(map()) :: :ok | {:error, Ecto.Changeset.t()}
+  def validate_new(attrs) do
+    case %__MODULE__{} |> changeset(attrs) |> apply_action(:insert) do
+      {:ok, _integration} -> :ok
+      {:error, changeset} -> {:error, changeset}
+    end
   end
 
   @doc false
@@ -183,6 +220,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
       :sync_error
     ])
     |> update_change(:base_url, &PathUtils.normalize_base_url/1)
+    |> prune_caldav_sync_tokens()
     |> validate_required([:name, :provider, :user_id])
     # The column is a varchar(255); provider-supplied names (an Outlook mailbox,
     # a CalDAV collection title) are not length-checked anywhere upstream, so
@@ -209,7 +247,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     |> foreign_key_constraint(:user_id)
     |> check_constraint(:provider, name: :calendar_integrations_provider_check)
     |> unique_constraint([:user_id, :provider, :provider_account_id],
-      name: :unique_active_calendar_account_per_user,
+      name: @account_index,
       # `TymeslotWeb.Components.CoreComponents.Forms.translate_error/1` runs the stored msgid
       # through the "errors" domain at render time, so the changeset must
       # carry the untranslated msgid — hence `dgettext_noop/2`, not
@@ -220,6 +258,18 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
       name: :unique_active_calendar_null_account_per_user,
       message: dgettext_noop("errors", "an integration for this provider already exists")
     )
+  end
+
+  # A path's sync token only describes that path while it is synced. Kept after
+  # the owner deselects a calendar, it would resume a later reselection from a
+  # delta that assumes the cache already holds everything before it.
+  defp prune_caldav_sync_tokens(changeset) do
+    with {:ok, paths} <- fetch_change(changeset, :calendar_paths),
+         %{} = tokens when map_size(tokens) > 0 <- get_field(changeset, :caldav_sync_tokens) do
+      put_change(changeset, :caldav_sync_tokens, Map.take(tokens, paths || []))
+    else
+      _unchanged -> changeset
+    end
   end
 
   @doc """
@@ -236,7 +286,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     integration
     |> change(%{is_active: is_active})
     |> unique_constraint([:user_id, :provider, :provider_account_id],
-      name: :unique_active_calendar_account_per_user,
+      name: @account_index,
       message: dgettext_noop("errors", "an integration for this account already exists")
     )
     |> unique_constraint([:user_id, :provider],

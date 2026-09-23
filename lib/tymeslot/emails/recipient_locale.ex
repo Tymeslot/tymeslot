@@ -13,10 +13,11 @@ defmodule Tymeslot.Emails.RecipientLocale do
   An admin changing a user's address, or a webhook cancelling a booking, must
   still produce mail in the reader's language.
 
-  Booking mail resolves its locale from the meeting (`attendee_locale`) and is
-  wrapped by `Tymeslot.Emails.AppointmentBuilder`; this module covers the
-  account, auth, and calendar mail addressed to a registered user, whose locale
-  lives on `users.locale`.
+  Booking mail to the attendee resolves its locale from the meeting
+  (`attendee_locale`) and is wrapped by `Tymeslot.Emails.AppointmentBuilder`.
+  Everything addressed to a registered user — account, auth and calendar mail,
+  and the organiser's copy of booking mail — uses `users.locale`, through this
+  module.
 
   `users.locale` is nullable, and NULL means "no explicit choice" — the web layer
   reads such a user's locale from their browser, which an email has no access to.
@@ -56,6 +57,18 @@ defmodule Tymeslot.Emails.RecipientLocale do
   end
 
   def locale_for(_user), do: Locales.admin_default_locale()
+
+  @doc """
+  The locale for the organiser's copy of a booking email.
+
+  `Tymeslot.Emails.AppointmentBuilder` resolves it once per payload, from the
+  organiser's `users.locale`, as `:organizer_locale`. A payload built without
+  it, or carrying one the instance no longer supports, falls back to the
+  default locale, as a user without a choice does.
+  """
+  @spec organizer_locale(map()) :: String.t()
+  def organizer_locale(%{organizer_locale: locale}), do: locale_for(%{locale: locale})
+  def organizer_locale(_details), do: Locales.admin_default_locale()
 
   @doc "The locale to render for the user identified by `user_id`."
   @spec locale_for_user_id(term()) :: String.t()

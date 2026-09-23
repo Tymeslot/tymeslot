@@ -8,7 +8,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   links.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.CustomFields.AnswerRenderer
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Utils.MapKeys
   alias Tymeslot.Utils.ReminderUtils
@@ -101,11 +104,12 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   @doc """
   Assembles a calendar event description from a meeting's fields.
 
-  The attendee identity is prepended because `ICalBuilder` deliberately
-  does not emit an `ATTENDEE` line on the CalDAV-write path (issue #41) —
-  if the description didn't carry the attendee's name and email the
-  organiser would have no way to see who the meeting is with from inside
-  their calendar app.
+  The attendee identity is prepended because no provider renders it the same
+  way: Google and Outlook show a real attendee list, CalDAV usually does too,
+  and Zimbra gets only a `CONTACT` line, which most clients ignore (see
+  `CalDAV.Scheduling`). The description is the one field every client shows,
+  so the organiser can always see who the meeting is with from inside their
+  calendar app.
 
   Custom question answers are appended directly after the attendee message
   so the organiser sees what was asked at booking time alongside the rest
@@ -113,18 +117,26 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   """
   @spec build_event_description(map()) :: String.t()
   def build_event_description(meeting) do
-    parts = [
-      attendee_identity_line(meeting),
-      meeting.description,
-      if(meeting.attendee_message, do: "\n\nMessage from attendee:\n#{meeting.attendee_message}"),
-      custom_answers_section(meeting),
-      attachments_section(meeting),
-      if(meeting.meeting_url, do: "\n\nVideo meeting: #{meeting.meeting_url}")
-    ]
+    # Rendered in the organiser's language: this entry goes into their own
+    # calendar. The attendee's copy is a separate document, built by
+    # `ICSGenerator` in the attendee's language. Nothing sets a Gettext locale
+    # on the way here — calendar writes run from an Oban worker — so without
+    # this wrapper every label below falls back to the default locale, which
+    # is how a German host ends up with an "Attendee:" line.
+    RecipientLocale.with_user_id_locale(Map.get(meeting, :organizer_user_id), fn ->
+      parts = [
+        attendee_identity_line(meeting),
+        meeting.description,
+        attendee_message_section(meeting),
+        custom_answers_section(meeting),
+        attachments_section(meeting),
+        video_meeting_section(meeting)
+      ]
 
-    parts
-    |> Enum.filter(& &1)
-    |> Enum.join()
+      parts
+      |> Enum.filter(& &1)
+      |> Enum.join()
+    end)
   end
 
   @doc """
@@ -160,7 +172,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
 
       attachments ->
         links = Enum.map_join(attachments, "\n", &"#{&1.filename}: #{&1.url}")
-        "\n\nAttachments:\n#{links}"
+        "\n\n" <> dgettext("emails", "Attachments:") <> "\n#{links}"
     end
   end
 
@@ -176,18 +188,38 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
       end
 
     case lines do
-      [] -> nil
-      lines -> "\n\nAdditional details:\n" <> Enum.join(lines, "\n")
+      [] ->
+        nil
+
+      lines ->
+        "\n\n" <> dgettext("emails", "Additional details:") <> "\n" <> Enum.join(lines, "\n")
     end
   end
 
   defp attendee_identity_line(%{attendee_email: email} = meeting)
        when is_binary(email) and email != "" do
-    case Map.get(meeting, :attendee_name) do
-      name when is_binary(name) and name != "" -> "Attendee: #{name} <#{email}>\n\n"
-      _missing -> "Attendee: #{email}\n\n"
-    end
+    identity =
+      case Map.get(meeting, :attendee_name) do
+        name when is_binary(name) and name != "" -> "#{name} <#{email}>"
+        _missing -> email
+      end
+
+    dgettext("emails", "Attendee: %{attendee}", attendee: identity) <> "\n\n"
   end
 
   defp attendee_identity_line(_meeting), do: nil
+
+  defp attendee_message_section(meeting) do
+    case meeting.attendee_message do
+      nil -> nil
+      message -> "\n\n" <> dgettext("emails", "Message from attendee:") <> "\n#{message}"
+    end
+  end
+
+  defp video_meeting_section(meeting) do
+    case meeting.meeting_url do
+      nil -> nil
+      url -> "\n\n" <> dgettext("emails", "Video meeting:") <> " #{url}"
+    end
+  end
 end

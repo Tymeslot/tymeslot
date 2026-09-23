@@ -7,6 +7,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
 
   alias Ecto.Changeset
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias TymeslotWeb.Components.CoreComponents.Heroicons
 
   describe "changeset/2 with custom_fields" do
     test "defaults to empty list" do
@@ -142,6 +143,49 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
       changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs)
       refute changeset.valid?
       assert "cannot have more than 3 reminders" in errors_on(changeset).reminder_config
+    end
+
+    test "prevents a reminder more than one year in advance" do
+      user = insert(:user)
+
+      attrs = %{
+        name: "Far Ahead",
+        duration_minutes: 30,
+        user_id: user.id,
+        reminder_config: [%{value: 400, unit: "days"}]
+      }
+
+      changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs)
+      refute changeset.valid?
+
+      assert "cannot be set for more than 1 year in advance" in errors_on(changeset).reminder_config
+    end
+
+    # The stored shape is string-keyed JSON and the form resubmits atom keys,
+    # so the reminders count as changed on every save, including this one.
+    test "saves an unrelated edit to a meeting type holding a reminder from before the limit" do
+      meeting_type =
+        insert(:meeting_type, reminder_config: [%{"value" => 400, "unit" => "days"}])
+
+      changeset =
+        MeetingTypeSchema.changeset(meeting_type, %{
+          name: "Renamed",
+          reminder_config: [%{value: 400, unit: "days"}]
+        })
+
+      assert changeset.valid?
+    end
+
+    test "still prevents adding a reminder over a year to such a meeting type" do
+      meeting_type =
+        insert(:meeting_type, reminder_config: [%{"value" => 400, "unit" => "days"}])
+
+      changeset =
+        MeetingTypeSchema.changeset(meeting_type, %{
+          reminder_config: [%{value: 400, unit: "days"}, %{value: 500, unit: "days"}]
+        })
+
+      assert "cannot be set for more than 1 year in advance" in errors_on(changeset).reminder_config
     end
   end
 
@@ -341,6 +385,27 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
 
       refute changeset.valid?
       assert "must be less than or equal to 480" in errors_on(changeset).slot_interval_minutes
+    end
+  end
+
+  describe "icon catalogue" do
+    # The picker renders `valid_icons_with_names/0` while the changeset gates on
+    # `@valid_icons`; a name added to one list only is offered but unsaveable
+    # (or saveable but never offered), and nothing else catches the drift.
+    test "every offered icon is accepted by the changeset" do
+      for {icon, _label} <- MeetingTypeSchema.valid_icons_with_names(), icon != "none" do
+        changeset =
+          MeetingTypeSchema.changeset(%MeetingTypeSchema{}, Map.put(valid_attrs(), :icon, icon))
+
+        assert changeset.valid?, "the picker offers #{icon} but the changeset rejects it"
+      end
+    end
+
+    test "every offered icon resolves to a vendored heroicon" do
+      for {icon, _label} <- MeetingTypeSchema.valid_icons_with_names(), icon != "none" do
+        assert Heroicons.known?(icon),
+               "the picker offers #{icon} but no such heroicon is vendored"
+      end
     end
   end
 

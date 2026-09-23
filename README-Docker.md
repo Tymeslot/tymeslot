@@ -53,7 +53,7 @@ docker run -d \
   luka1thb/tymeslot:latest
 ```
 
-A long `-e` list gets unwieldy. Compose reads a `.env` next to it (see below), and `docker run` has two alternatives: `--env-file ./my-env` on the host, or a `.env` file inside the `/app/data` volume, which the app reads at boot and which survives image updates because the volume does. Values passed with `-e` or `--env-file` win over that file, so it works as the defaults layer under one-off overrides. Copy [`.env.example`](.env.example) as your starting point; it documents every variable.
+A long `-e` list gets unwieldy. Compose reads a `.env` next to it (see below), and `docker run` has two alternatives: `--env-file ./my-env` on the host, or a `.env` file inside the `/app/data` volume, which the app reads at boot and which survives image updates because the volume does. Values passed with `-e` or `--env-file` win over that file, so it works as the defaults layer under one-off overrides. Five keys are the exception and are ignored in that file with a warning at boot: `POSTGRES_USER`, `POSTGRES_DB`, `DATABASE_URL`, `DATABASE_HOST` and `DATABASE_PORT`. They decide which database the container uses and which role the embedded cluster is created with, so they are container settings (`-e`, `--env-file` or Compose), and earlier releases never read them from that file, so a stale copy left there would otherwise point an upgraded install at an empty database or an unreachable host. `POSTGRES_PASSWORD` is honoured, and the embedded cluster's role is brought in line with it on every start. Copy [`.env.example`](.env.example) as your starting point; it documents every variable.
 
 This will pull the image automatically if it is not present locally. For a pinned version, replace `latest` with a release tag — `luka1thb/tymeslot:<VERSION>`, substituting the version number you want. The full list of published tags is on [Docker Hub](https://hub.docker.com/r/luka1thb/tymeslot/tags).
 
@@ -307,7 +307,7 @@ Email configuration is **required for production deployments** to enable:
 
 | `EMAIL_ADAPTER` | Additional variables |
 |---|---|
-| `smtp` | `SMTP_HOST`, `SMTP_PORT` (default 587), `SMTP_USERNAME`, `SMTP_PASSWORD`, and for a self-hosted relay `SMTP_CACERTFILE` or `SMTP_TLS_VERIFY` (see below) |
+| `smtp` | `SMTP_HOST`, `SMTP_PORT` (default 587), `SMTP_USERNAME` and `SMTP_PASSWORD` (leave both unset for a relay that needs no login), optional `SMTP_SSL`, and for a self-hosted relay `SMTP_CACERTFILE` or `SMTP_TLS_VERIFY` (see below) |
 | `postmark` | `POSTMARK_API_KEY` |
 | `sendgrid` | `SENDGRID_API_KEY` |
 | `mailgun` | `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, optional `MAILGUN_BASE_URL` for EU accounts |
@@ -327,7 +327,7 @@ SMTP_USERNAME=your-smtp-username
 SMTP_PASSWORD=your-smtp-password
 ```
 
-Port 587 (STARTTLS) and port 465 (implicit TLS) are both supported; any other port negotiates TLS opportunistically. The certificate is verified against the system trust store, which is what you want for a commercial relay but usually fails against your own mail server: Stalwart, Mailcow and Mailu all serve a self-signed certificate until you point them at Let's Encrypt.
+Port 587 (STARTTLS) and port 465 (implicit TLS) are both supported; any other port negotiates TLS opportunistically. A provider that serves implicit TLS on another port (2465, 8465) needs `SMTP_SSL=true`; without it the connection hangs waiting for a greeting. A relay that authorises by network rather than by login (a local Postfix, a company relay) needs no `SMTP_USERNAME` or `SMTP_PASSWORD`; set both or neither. The certificate is verified against the system trust store, which is what you want for a commercial relay but usually fails against your own mail server: Stalwart, Mailcow and Mailu all serve a self-signed certificate until you point them at Let's Encrypt.
 
 Two variables cover that case. Prefer the first, which keeps the connection authenticated:
 
@@ -341,6 +341,8 @@ SMTP_CACERTFILE=/app/data/smtp-ca.pem
 # be detected.
 SMTP_TLS_VERIFY=none
 ```
+
+Rarely, a firewall or proxy between the container and the relay drops a TLS 1.3 handshake because it does not look like TLS 1.2. The symptom is a connection that times out or closes during the handshake while the same relay works from other mail clients; `SMTP_TLS_MIDDLEBOX_COMPAT=true` restores the TLS 1.2 shape. Leave it off otherwise: relays that do not expect it abort every handshake, and the health check at boot says so explicitly when they do.
 
 **Option 2: a provider API (clearer delivery errors, no SMTP port needed)**
 ```bash
@@ -410,7 +412,8 @@ All outbound HTTP/HTTPS requests including:
 - CalDAV calendar integrations (Nextcloud, Radicale, etc.)
 - Google Calendar API
 - Microsoft Outlook/Office 365 API
-- Video provider APIs (Google Meet, Microsoft Teams)
+- Video provider APIs (Google Meet, Microsoft Teams, Zoom, Nextcloud Talk)
+- Reachability tests for self-hosted meeting servers (MiroTalk, Jitsi Meet, kMeet, custom links)
 - OAuth token exchanges
 - All other external API calls
 
@@ -419,6 +422,8 @@ All outbound HTTP/HTTPS requests including:
 - `graph.microsoft.com` (Outlook Calendar, Microsoft Teams)
 - `oauth2.googleapis.com` (OAuth)
 - Your CalDAV server domains
+- `kmeet.infomaniak.com` (kMeet)
+- Your own meeting server domains (MiroTalk, Jitsi Meet, Nextcloud Talk)
 - Any custom video provider endpoints
 
 ### Using an External Database
@@ -795,6 +800,7 @@ Tymeslot supports multiple OAuth providers for authentication and calendar/video
 - [Microsoft OAuth](https://tymeslot.app/docs/microsoft-oauth) · [Outlook Calendar](https://tymeslot.app/docs/outlook-calendar) · [Teams](https://tymeslot.app/docs/teams)
 - [GitHub login](https://tymeslot.app/docs/github-login) · [Generic OIDC / SSO](https://tymeslot.app/docs/oidc-sso)
 - [CalDAV](https://tymeslot.app/docs/caldav) (Nextcloud, Radicale, Zimbra, mailbox.org)
+- [MiroTalk](https://tymeslot.app/docs/mirotalk) · [Jitsi Meet](https://tymeslot.app/docs/jitsi) · [Nextcloud Talk](https://tymeslot.app/docs/nextcloud-talk) · [kMeet](https://tymeslot.app/docs/kmeet) · [Custom video link](https://tymeslot.app/docs/custom-video-link) (no OAuth app needed)
 
 ### Google OAuth Setup
 
@@ -942,6 +948,7 @@ The online docs at **<https://tymeslot.app/docs>** stay in lock-step with each r
 - [Backup & Restore](https://tymeslot.app/docs/backup-restore) — protecting your data volumes
 - [Upgrading](https://tymeslot.app/docs/upgrading) — moving between versions safely
 - [SMTP](https://tymeslot.app/docs/email-smtp) / [Postmark](https://tymeslot.app/docs/email-postmark) — email delivery
+- [MiroTalk](https://tymeslot.app/docs/mirotalk) · [Jitsi Meet](https://tymeslot.app/docs/jitsi) · [Nextcloud Talk](https://tymeslot.app/docs/nextcloud-talk) · [kMeet](https://tymeslot.app/docs/kmeet) · [Custom video link](https://tymeslot.app/docs/custom-video-link)
 - [Generic OIDC / SSO](https://tymeslot.app/docs/oidc-sso) · [reCAPTCHA](https://tymeslot.app/docs/recaptcha) · [Telegram](https://tymeslot.app/docs/telegram)
 
 ---

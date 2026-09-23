@@ -33,6 +33,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
   alias Tymeslot.Availability.AvailabilityBreakSchema
   alias Tymeslot.Availability.AvailabilityOverrideSchema
   alias Tymeslot.Availability.AvailabilityScheduleSchema
+  alias Tymeslot.Availability.TimeOffPeriodSchema
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
@@ -106,6 +107,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       schedule = insert(:availability_schedule, profile: profile, is_default: true)
       weekly = insert(:weekly_availability, schedule: schedule)
       override = insert(:availability_override, schedule: schedule)
+      time_off = insert(:time_off_period, profile: profile)
 
       # Transitive cascade via weekly_availability_id -> delete_all
       availability_break = insert(:availability_break, weekly_availability: weekly)
@@ -160,6 +162,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       assert Repo.get(AvailabilityScheduleSchema, schedule.id)
       assert Repo.get(WeeklyAvailabilitySchema, weekly.id)
       assert Repo.get(AvailabilityOverrideSchema, override.id)
+      assert Repo.get(TimeOffPeriodSchema, time_off.id)
       assert Repo.get(ThemeCustomizationSchema, theme.id)
       assert Repo.get(IntegrationHealthStateSchema, health_state.id)
       assert Repo.get(UserSeenAnnouncementSchema, seen_announcement.id)
@@ -269,6 +272,9 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
 
       refute Repo.get(AvailabilityOverrideSchema, override.id),
              "availability_override: expected transitive delete-cascade through its schedule"
+
+      refute Repo.get(TimeOffPeriodSchema, time_off.id),
+             "time_off_period: expected transitive delete-cascade through its profile"
 
       refute Repo.get(ThemeCustomizationSchema, theme.id),
              "theme_customization: expected transitive delete-cascade through its profile"

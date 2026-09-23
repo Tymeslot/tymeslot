@@ -60,22 +60,6 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   end
 
   @doc """
-  Gets a profile by user ID, creating one if it doesn't exist.
-  Note: The caller is responsible for any post-creation side effects
-  (e.g. creating default weekly schedules).
-  """
-  @spec get_or_create_by_user_id(integer()) :: {:ok, ProfileSchema.t()} | {:error, term()}
-  def get_or_create_by_user_id(user_id) do
-    case get_by_user_id(user_id) do
-      {:error, :not_found} ->
-        insert_profile(user_id)
-
-      {:ok, profile} ->
-        {:ok, profile}
-    end
-  end
-
-  @doc """
   Gets a profile by user ID.
   Returns {:ok, profile} if found, {:error, :not_found} otherwise.
   """
@@ -135,19 +119,13 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   end
 
   @doc """
-  Updates a specific field in the profile.
-  """
-  @spec update_field(ProfileSchema.t(), atom(), term()) ::
-          {:ok, ProfileSchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_field(%ProfileSchema{} = profile, field, value) do
-    profile
-    |> ProfileSchema.changeset(%{field => value})
-    |> Repo.update()
-  end
-
-  @doc """
   Gets a profile by username.
   Returns {:ok, profile} if found, {:error, :not_found} otherwise.
+
+  Matched exactly. Which handle resolves which booking page is a routing
+  decision, so this lookup and `get_by_username_with_user/1` deliberately do
+  not fold case; `username_available?/1` does, because it answers a different
+  question.
   """
   @spec get_by_username(String.t()) :: {:ok, ProfileSchema.t()} | {:error, :not_found}
   def get_by_username(username) when is_binary(username) do
@@ -159,13 +137,21 @@ defmodule Tymeslot.Profiles.ProfileQueries do
 
   @doc """
   Checks if a username is available.
+
+  Asked the way the database answers it: the unique index behind `username`
+  is on `lower(username)`, so a row stored as `JohnSmith` makes `johnsmith`
+  taken. An exact-match lookup would call it free and leave the collision for
+  the insert to discover, one round trip after the live check could have said
+  so. Only rows written outside the changeset can be non-lowercase, which is
+  exactly the case the functional index exists to catch.
   """
   @spec username_available?(String.t()) :: boolean()
   def username_available?(username) when is_binary(username) do
-    case get_by_username(username) do
-      {:error, :not_found} -> true
-      {:ok, _result} -> false
-    end
+    normalised = String.downcase(username)
+
+    not Repo.exists?(
+      from(p in ProfileSchema, where: fragment("lower(?)", p.username) == ^normalised)
+    )
   end
 
   @doc """

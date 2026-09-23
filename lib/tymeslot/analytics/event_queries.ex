@@ -8,6 +8,7 @@ defmodule Tymeslot.Analytics.EventQueries do
   import Ecto.Query
 
   alias Tymeslot.Analytics.EventSchema
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.BatchDeleteQueries
   alias Tymeslot.Repo
 
@@ -26,7 +27,7 @@ defmodule Tymeslot.Analytics.EventQueries do
   """
   @spec delete_events_older_than(integer()) :: {non_neg_integer(), nil}
   def delete_events_older_than(days) when is_integer(days) and days > 0 do
-    cutoff = DateTime.add(DateTime.utc_now(), -days, :day)
+    cutoff = DateTime.add(Clock.utc_now(), -days, :day)
 
     BatchDeleteQueries.delete_older_than(EventSchema, :inserted_at, cutoff)
   end

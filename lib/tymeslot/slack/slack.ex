@@ -9,11 +9,13 @@ defmodule Tymeslot.Slack do
 
   @behaviour Tymeslot.Security.EncryptedStorage
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Features
   alias Tymeslot.Repo
-  alias Tymeslot.Slack.{API, MessageBuilder, SlackIntegrationSchema, SlackQueries}
+  alias Tymeslot.Slack.{API, MessageBuilder, OAuth, SlackIntegrationSchema, SlackQueries}
   alias Tymeslot.Workers.SlackWorker
 
   @impl Tymeslot.Security.EncryptedStorage
@@ -54,6 +56,20 @@ defmodule Tymeslot.Slack do
     else
       {:error, :feature_disabled}
     end
+  end
+
+  @doc """
+  Creates an integration that posts through a pasted Incoming Webhook URL.
+  """
+  @spec create_webhook_integration(integer(), map()) ::
+          {:ok, SlackIntegrationSchema.t()}
+          | {:error,
+             Ecto.Changeset.t()
+             | :insufficient_plan
+             | :feature_access_checker_failed
+             | :feature_disabled}
+  def create_webhook_integration(user_id, attrs) do
+    create_integration(user_id, Map.put(attrs, :app_mode, "webhook_url"))
   end
 
   @spec update_integration(SlackIntegrationSchema.t(), map()) ::
@@ -106,23 +122,25 @@ defmodule Tymeslot.Slack do
   @doc """
   Persists a partial OAuth-completed integration record using `oauth_init_changeset/2`.
 
+  Takes the install map returned by `Tymeslot.Slack.OAuth.exchange_code/2`
+  and maps it onto the integration: the display name defaults to the workspace
+  name so the dashboard has something to show before the user edits it, and
+  the integration subscribes to every event until the user prunes the list.
+
   The returned integration is in `:pending_oauth` status until `set_channel/2`
   is called with the user's channel selection.
   """
-  @spec complete_oauth(integer(), map()) ::
+  @spec complete_oauth(integer(), OAuth.install()) ::
           {:ok, SlackIntegrationSchema.t()}
           | {:error,
              Ecto.Changeset.t()
              | :insufficient_plan
              | :feature_access_checker_failed
              | :feature_disabled}
-  def complete_oauth(user_id, attrs) do
+  def complete_oauth(user_id, install) do
     if slack_enabled?() do
       with :ok <- Features.check_access(user_id, :automations_allowed) do
-        stub_attrs =
-          attrs
-          |> Map.put(:user_id, user_id)
-          |> Map.put(:app_mode, "oauth")
+        stub_attrs = install_to_attrs(user_id, install)
 
         transaction_result =
           Repo.transaction(fn ->
@@ -143,6 +161,20 @@ defmodule Tymeslot.Slack do
     else
       {:error, :feature_disabled}
     end
+  end
+
+  defp install_to_attrs(user_id, install) do
+    %{
+      user_id: user_id,
+      app_mode: "oauth",
+      name: install[:team_name] || "Slack",
+      bot_token: install[:bot_token],
+      team_id: install[:team_id],
+      team_name: install[:team_name],
+      authed_user_id: install[:authed_user_id],
+      scope: install[:scope],
+      events: default_events_for_new_integration()
+    }
   end
 
   @doc """
@@ -441,56 +473,106 @@ defmodule Tymeslot.Slack do
   def translate_error({:error, reason}), do: translate_error(reason)
   def translate_error({:slack_error, code, _body}), do: translate_error_code(code)
   def translate_error(code) when is_binary(code), do: translate_error_code(code)
-  def translate_error(:no_token), do: "Slack credentials are missing. Reconnect to continue."
-  def translate_error(:no_webhook_url), do: "Webhook URL is missing. Add it again to continue."
 
-  def translate_error(:insufficient_plan),
-    do: "Your plan does not include Slack notifications. Upgrade to connect Slack."
+  def translate_error(:no_token),
+    do:
+      dgettext(
+        "dashboard_automation_chat",
+        "Slack credentials are missing. Reconnect to continue."
+      )
+
+  def translate_error(:no_webhook_url),
+    do: dgettext("dashboard_automation_chat", "Webhook URL is missing. Add it again to continue.")
+
+  def translate_error(reason) when reason in [:insufficient_plan, :pro_required],
+    do:
+      dgettext(
+        "dashboard_automation_chat",
+        "Your plan does not include Slack notifications. Upgrade to connect Slack."
+      )
 
   def translate_error(:feature_access_checker_failed),
-    do: "Could not verify your plan right now. Please try again in a moment."
+    do:
+      dgettext(
+        "dashboard_automation_chat",
+        "Could not verify your plan right now. Please try again in a moment."
+      )
 
   def translate_error(:feature_disabled),
-    do: "Slack notifications are not enabled on this deployment."
+    do:
+      dgettext(
+        "dashboard_automation_chat",
+        "Slack notifications are not enabled on this deployment."
+      )
+
+  def translate_error(:oauth_unavailable),
+    do:
+      dgettext(
+        "dashboard_automation_chat",
+        "Slack app install is not available on this deployment. Use a webhook URL instead."
+      )
 
   def translate_error(:missing_bot_token),
     do:
-      "Slack app is not configured as a bot token app. Check your Slack app settings and ensure the OAuth scopes grant a bot token."
+      dgettext(
+        "dashboard_automation_chat",
+        "Slack app is not configured as a bot token app. Check your Slack app settings and ensure the OAuth scopes grant a bot token."
+      )
 
-  def translate_error({:unknown_mode, _mode}), do: "Slack integration is misconfigured."
+  def translate_error({:unknown_mode, _mode}),
+    do: dgettext("dashboard_automation_chat", "Slack integration is misconfigured.")
 
   def translate_error(%Ecto.Changeset{} = changeset) do
     case changeset.errors do
       [{_field, {"workspace already connected", _opts}} | _rest] ->
-        "This Slack workspace is already connected. Disconnect the existing integration first."
+        dgettext(
+          "dashboard_automation_chat",
+          "This Slack workspace is already connected. Disconnect the existing integration first."
+        )
 
       [{field, {msg, _opts}} | _rest] ->
         "#{field} #{msg}"
 
       _other ->
-        "Could not save Slack integration."
+        dgettext("dashboard_automation_chat", "Could not save Slack integration.")
     end
   end
 
-  def translate_error(other), do: "Slack error: #{inspect(other)}"
+  def translate_error(other), do: unknown_error(inspect(other))
 
   defp translate_error_code("channel_not_found"),
-    do: "Channel not accessible. If it's a private channel, invite the Tymeslot bot first."
+    do:
+      dgettext(
+        "dashboard_automation_chat",
+        "Channel not accessible. If it's a private channel, invite the Tymeslot bot first."
+      )
 
-  defp translate_error_code("token_revoked"),
-    do: "Slack authorisation was revoked. Reconnect to continue."
-
-  defp translate_error_code("account_inactive"),
-    do: "Slack authorisation was revoked. Reconnect to continue."
+  defp translate_error_code(code) when code in ["token_revoked", "account_inactive"],
+    do:
+      dgettext(
+        "dashboard_automation_chat",
+        "Slack authorisation was revoked. Reconnect to continue."
+      )
 
   defp translate_error_code("not_in_channel"),
-    do: "Bot is not in this channel. Either pick a public channel or invite the bot."
+    do:
+      dgettext(
+        "dashboard_automation_chat",
+        "Bot is not in this channel. Either pick a public channel or invite the bot."
+      )
 
   defp translate_error_code("ratelimited"),
-    do: "Slack is rate-limiting. Try again in a minute."
+    do: dgettext("dashboard_automation_chat", "Slack is rate-limiting. Try again in a minute.")
 
   defp translate_error_code("webhook_url_revoked"),
-    do: "Webhook URL was revoked in Slack. Generate a new one."
+    do:
+      dgettext(
+        "dashboard_automation_chat",
+        "Webhook URL was revoked in Slack. Generate a new one."
+      )
 
-  defp translate_error_code(other), do: "Slack error: #{other}"
+  defp translate_error_code(other), do: unknown_error(other)
+
+  defp unknown_error(detail),
+    do: dgettext("dashboard_automation_chat", "Slack error: %{error}", error: detail)
 end

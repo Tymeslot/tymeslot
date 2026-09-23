@@ -66,14 +66,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   @spec default_retry_opts() :: keyword()
   def default_retry_opts, do: @default_retry_opts
 
-  @type client :: %{
-          base_url: String.t(),
-          username: String.t(),
-          password: String.t(),
-          calendar_paths: list(String.t()),
-          verify_ssl: boolean(),
-          provider: atom()
-        }
+  @type client :: Tymeslot.Integrations.Calendar.CalDAV.Client.t()
 
   @type error_reason ::
           :unauthorized
@@ -89,6 +82,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
           | :server_unresponsive
           | :sync_token_expired
           | :timeout
+          # Neither a server-supplied href nor a calendar path and UID were
+          # available, so the event names no resource to act on.
+          | :unaddressable
           # Credentials were accepted but no calendar collection could be
           # reached; carries the server URL to show the account owner.
           | {:calendar_home_not_found, String.t()}

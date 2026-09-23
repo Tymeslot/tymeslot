@@ -21,7 +21,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
 
     test "includes integrations with enough consecutive hard failures",
          %{user: user, integration: integration} do
-      upsert_health(user.id, integration.id,
+      seed_health(user.id, integration.id,
         failures: SyncGating.threshold(),
         consecutive_hard_failures: SyncGating.threshold(),
         last_error_class: "hard"
@@ -33,7 +33,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
 
     test "does not include integrations whose last error was transient",
          %{user: user, integration: integration} do
-      upsert_health(user.id, integration.id,
+      seed_health(user.id, integration.id,
         failures: SyncGating.threshold() * 5,
         consecutive_hard_failures: 0,
         last_error_class: "transient"
@@ -47,7 +47,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
 
     test "does not include integrations below the threshold",
          %{user: user, integration: integration} do
-      upsert_health(user.id, integration.id,
+      seed_health(user.id, integration.id,
         failures: SyncGating.threshold() - 1,
         consecutive_hard_failures: SyncGating.threshold() - 1,
         last_error_class: "hard"
@@ -63,7 +63,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
          %{user: user, integration: integration} do
       # Regression: an integration with many accumulated failures (transient history)
       # and only 2 consecutive hard failures must not be paused at a threshold of 10.
-      upsert_health(user.id, integration.id,
+      seed_health(user.id, integration.id,
         failures: 10,
         consecutive_hard_failures: 2,
         last_error_class: "hard"
@@ -87,7 +87,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
         end
       end)
 
-      upsert_health(user.id, integration.id,
+      seed_health(user.id, integration.id,
         failures: 3,
         consecutive_hard_failures: 3,
         last_error_class: "hard"
@@ -100,21 +100,16 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
     end
   end
 
-  defp upsert_health(user_id, integration_id, fields) do
-    attrs =
-      Map.merge(
-        %{
-          user_id: user_id,
-          status: "unhealthy",
-          failures: 0,
-          consecutive_hard_failures: 0,
-          successes: 0,
-          backoff_ms: 1_800_000,
-          last_check_at: DateTime.utc_now()
-        },
-        Map.new(fields)
-      )
+  # Seeds the row through the production write path: `get_or_init/3` inserts
+  # the baseline, `update_fields/3` applies the failure history under test.
+  defp seed_health(user_id, integration_id, fields) do
+    {:ok, _record} = IntegrationHealthStateQueries.get_or_init(:calendar, integration_id, user_id)
 
-    {:ok, _record} = IntegrationHealthStateQueries.upsert(:calendar, integration_id, attrs)
+    {1, nil} =
+      IntegrationHealthStateQueries.update_fields(
+        :calendar,
+        integration_id,
+        Keyword.merge([status: "unhealthy", last_check_at: DateTime.utc_now()], fields)
+      )
   end
 end

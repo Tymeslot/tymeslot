@@ -20,6 +20,60 @@
  */
 const PENDING_LIMIT = 50;
 
+/**
+ * Name of the global the tracker calls before sending anything. The loader in
+ * `analytics_scripts/1` (`layouts.ex`) passes it to Umami as `data-before-send`
+ * and refuses to load the tracker at all when it is missing, so an unscrubbed
+ * address can never be sent.
+ */
+export const BEFORE_SEND_GLOBAL = "tymeslotAnalyticsBeforeSend";
+
+// A meeting's uid is the only credential its cancel and reschedule links carry:
+// whoever holds `/:username/meeting/<uid>/cancel` can cancel that meeting. Keep
+// the page recognisable, drop the credential.
+const MEETING_UID_SEGMENT = /\/meeting\/[^/]+/g;
+
+// Query strings carry identifiers too (`?reschedule_meeting_uid=`, and names or
+// emails on older confirmation links), so only campaign tags survive.
+const KEPT_QUERY_PARAM = /^utm_[a-z]+$/;
+
+/**
+ * Removes credentials and personal data from an address before it reaches the
+ * analytics store: meeting uids in the path, every query parameter except
+ * `utm_*` campaign tags, and the fragment. Accepts absolute URLs and the
+ * origin-relative paths Umami sends as the referrer; anything that does not
+ * parse is returned unchanged.
+ */
+export function scrubAnalyticsUrl(value) {
+  if (typeof value !== "string" || value === "") return value;
+
+  let url;
+  try {
+    url = new URL(value, "https://relative.invalid");
+  } catch (_e) {
+    return value;
+  }
+
+  url.pathname = url.pathname.replace(MEETING_UID_SEGMENT, "/meeting/:uid");
+  for (const key of [...url.searchParams.keys()]) {
+    if (!KEPT_QUERY_PARAM.test(key)) url.searchParams.delete(key);
+  }
+  url.hash = "";
+
+  const absolute = /^[a-z][a-z0-9+.-]*:|^\/\//i.test(value);
+  return absolute ? url.toString() : `${url.pathname}${url.search}`;
+}
+
+/** Umami `before-send` callback: scrubs the page and referrer addresses of every payload. */
+export function scrubAnalyticsPayload(_type, payload) {
+  if (!payload || typeof payload !== "object") return payload;
+  return {
+    ...payload,
+    url: scrubAnalyticsUrl(payload.url),
+    referrer: scrubAnalyticsUrl(payload.referrer),
+  };
+}
+
 export function installAnalytics(target = window) {
   const pending = [];
 
@@ -49,6 +103,7 @@ export function installAnalytics(target = window) {
     },
   };
 
+  target[BEFORE_SEND_GLOBAL] = scrubAnalyticsPayload;
   target.addEventListener?.("tymeslot:analytics-ready", flush);
   return target.analytics;
 }

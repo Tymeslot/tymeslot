@@ -2,52 +2,56 @@ defmodule Tymeslot.Telegram.MessageBuilder do
   @moduledoc """
   Builds formatted Telegram HTML messages for meeting events.
   All user-provided data is HTML-escaped before insertion.
+
+  Times are rendered in the timezone the caller passes, which is the
+  organiser's: these messages go to the organiser's own chat, so the attendee's
+  timezone would leave them converting every booking by hand.
   """
 
   alias Phoenix.HTML
 
-  @spec build_message(String.t(), %{atom() => term()}) :: String.t()
-  def build_message("meeting.created", meeting) do
+  @spec build_message(String.t(), %{atom() => term()}, String.t()) :: String.t()
+  def build_message("meeting.created", meeting, timezone) do
     String.trim("""
     #{emoji(:calendar)} <b>New Meeting</b>
 
     <b>#{esc(attendee_name(meeting))}</b> booked <i>#{esc(meeting_title(meeting))}</i>
-    #{emoji(:clock)} #{format_time(meeting)}
+    #{emoji(:clock)} #{format_time(meeting, timezone)}
     #{emoji(:email)} #{esc(meeting.attendee_email)}
     #{video_line(meeting)}\
     #{link_line(meeting)}\
     """)
   end
 
-  def build_message("meeting.cancelled", meeting) do
+  def build_message("meeting.cancelled", meeting, timezone) do
     String.trim("""
     #{emoji(:cancel)} <b>Meeting Cancelled</b>
 
     <b>#{esc(attendee_name(meeting))}</b> cancelled <i>#{esc(meeting_title(meeting))}</i>
-    #{emoji(:clock)} #{format_time(meeting)}
+    #{emoji(:clock)} #{format_time(meeting, timezone)}
     #{cancellation_reason(meeting)}\
     #{link_line(meeting)}\
     """)
   end
 
-  def build_message("meeting.rescheduled", meeting) do
+  def build_message("meeting.rescheduled", meeting, timezone) do
     String.trim("""
     #{emoji(:reschedule)} <b>Meeting Rescheduled</b>
 
     <b>#{esc(attendee_name(meeting))}</b> rescheduled <i>#{esc(meeting_title(meeting))}</i>
-    #{emoji(:clock)} #{format_time(meeting)}
+    #{emoji(:clock)} #{format_time(meeting, timezone)}
     #{emoji(:email)} #{esc(meeting.attendee_email)}
     #{video_line(meeting)}\
     #{link_line(meeting)}\
     """)
   end
 
-  def build_message(event_type, meeting) do
+  def build_message(event_type, meeting, timezone) do
     String.trim("""
     #{emoji(:calendar)} <b>Meeting Update</b>
 
     <b>#{esc(attendee_name(meeting))}</b> — <i>#{esc(meeting_title(meeting))}</i>
-    #{emoji(:clock)} #{format_time(meeting)}
+    #{emoji(:clock)} #{format_time(meeting, timezone)}
     #{emoji(:email)} #{esc(meeting.attendee_email)}
     Event: #{esc(event_type)}\
     #{link_line(meeting)}\
@@ -88,9 +92,7 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     end
   end
 
-  defp format_time(meeting) do
-    timezone = meeting.attendee_timezone || "UTC"
-
+  defp format_time(meeting, timezone) do
     start_time =
       case DateTime.shift_zone(meeting.start_time, timezone) do
         {:ok, dt} -> dt

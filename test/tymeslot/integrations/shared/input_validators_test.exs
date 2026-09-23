@@ -56,6 +56,45 @@ defmodule Tymeslot.Integrations.Shared.InputValidatorsTest do
       assert InputValidators.normalize_url_protocol("  example.com  ") ==
                "https://example.com"
     end
+
+    test "leaves an upper-case scheme alone rather than prefixing it" do
+      # Schemes are case-insensitive (RFC 3986 §3.1), and a mobile keyboard
+      # autocapitalises the first word of a field.
+      assert InputValidators.normalize_url_protocol("HTTPS://cloud.example.com") ==
+               "HTTPS://cloud.example.com"
+
+      assert InputValidators.normalize_url_protocol("Http://cloud.example.com") ==
+               "Http://cloud.example.com"
+    end
+
+    test "leaves a scheme it does not allow alone, for the allow-list to refuse" do
+      assert InputValidators.normalize_url_protocol("ftp://files.example.com") ==
+               "ftp://files.example.com"
+
+      assert InputValidators.normalize_url_protocol("ldap://x.example.com") ==
+               "ldap://x.example.com"
+    end
+
+    test "still prefixes a host and port, which is not a scheme however it parses" do
+      # A dot is a legal scheme character, so `cloud.example.com:8443` satisfies
+      # the RFC 3986 scheme production on its own. Requiring either `//` or a
+      # dot-free scheme is what keeps it reading as the host and port it is.
+      assert InputValidators.normalize_url_protocol("cloud.example.com:8443") ==
+               "https://cloud.example.com:8443"
+
+      assert InputValidators.normalize_url_protocol("cloud.example.com:8443/dav") ==
+               "https://cloud.example.com:8443/dav"
+    end
+
+    test "still prefixes a value whose leading character cannot start a scheme" do
+      assert InputValidators.normalize_url_protocol("8443:something") ==
+               "https://8443:something"
+    end
+
+    test "a host and port survives validation as the address it is" do
+      assert {:ok, "https://cloud.example.com:8443/dav"} =
+               InputValidators.validate_server_url("cloud.example.com:8443/dav", %{})
+    end
   end
 
   describe "validate_server_url/3" do
@@ -95,6 +134,90 @@ defmodule Tymeslot.Integrations.Shared.InputValidatorsTest do
                  %{},
                  validate_url_fn: always_fail
                )
+    end
+
+    test "refuses a non-http scheme in the words written for that mistake" do
+      # Gluing https:// in front made this fail the *host* check instead, so the
+      # one message written for a wrong scheme never fired on the field where
+      # the mistake is made.
+      assert {:error, message} =
+               InputValidators.validate_server_url("ftp://files.example.com", %{})
+
+      assert message =~ "https://"
+    end
+
+    test "accepts a URL whose scheme was autocapitalised" do
+      assert {:ok, "HTTPS://cloud.example.com"} =
+               InputValidators.validate_server_url("HTTPS://cloud.example.com", %{})
+    end
+
+    test "refuses credentials embedded in the URL, pointing at the proper fields" do
+      # The host parses cleanly, so this used to be stored verbatim while every
+      # screen rendering a connection shows the host alone — a password in a
+      # field nothing displays.
+      assert {:error, message} =
+               InputValidators.validate_server_url("https://user:pass@cloud.example.com", %{})
+
+      assert message =~ "username and password"
+    end
+
+    test "falls back to the HTTP/HTTPS allow-list when no validate_url_fn is given" do
+      # 2000 characters is `UrlValidation`'s own limit, so a longer URL only
+      # fails if the default really does run that check.
+      long_url = "https://example.com/" <> String.duplicate("a", 2_000)
+
+      assert {:error, message} = InputValidators.validate_server_url(long_url, %{})
+      assert message =~ "2000 characters"
+    end
+  end
+
+  describe "validate_server_url/3 stores the URL as typed" do
+    test "keeps a path segment containing a double hyphen" do
+      url = "https://meet.example.com/team--sync"
+      assert {:ok, ^url} = InputValidators.validate_server_url(url, %{})
+    end
+
+    test "keeps a percent-encoded hash rather than decoding it into a fragment" do
+      url = "https://meet.example.com/room%23a"
+      assert {:ok, ^url} = InputValidators.validate_server_url(url, %{})
+    end
+
+    test "keeps a path segment that reads as a hex literal" do
+      url = "https://meet.example.com/0xdeadbeef-room"
+      assert {:ok, ^url} = InputValidators.validate_server_url(url, %{})
+    end
+
+    test "keeps percent-encoded slashes, question marks and percent signs" do
+      url = "https://meet.example.com/a%2Fb%3Fc?token=100%25"
+      assert {:ok, ^url} = InputValidators.validate_server_url(url, %{})
+    end
+
+    test "keeps a relative-looking path segment" do
+      url = "https://meet.example.com/../rooms/standup"
+      assert {:ok, ^url} = InputValidators.validate_server_url(url, %{})
+    end
+
+    test "refuses rather than rewrites a URL containing a newline" do
+      assert {:error, _msg} =
+               InputValidators.validate_server_url(
+                 "https://meet.example.com/room\nHost: elsewhere.example",
+                 %{}
+               )
+    end
+
+    test "refuses a URL containing an inner space" do
+      assert {:error, _msg} =
+               InputValidators.validate_server_url("https://meet.example.com/my room", %{})
+    end
+
+    test "refuses a URL containing an invisible character" do
+      assert {:error, _msg} =
+               InputValidators.validate_server_url("https://meet.exa​mple.com/room", %{})
+    end
+
+    test "still strips null bytes, which PostgreSQL rejects" do
+      assert {:ok, "https://meet.example.com/room"} =
+               InputValidators.validate_server_url("https://meet.example.com/ro\x00om", %{})
     end
   end
 end

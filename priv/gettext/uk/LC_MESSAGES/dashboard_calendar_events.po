@@ -126,11 +126,6 @@ msgstr "Подання «Розклад»"
 msgid "All day"
 msgstr "Увесь день"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "All events in series"
-msgstr "Усі події серії"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Also switches the current view"
@@ -181,6 +176,7 @@ msgstr "Календарі оновлено"
 msgid "Cancel"
 msgstr "Скасувати"
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
@@ -188,7 +184,7 @@ msgstr "Скасувати"
 msgid "Changes saved."
 msgstr "Зміни збережено."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
 #, elixir-autogen, elixir-format
 msgid "Changes saved. Attendees will be notified shortly."
@@ -380,11 +376,6 @@ msgstr "Не вдалося створити подію"
 msgid "Failed to delete event"
 msgstr "Не вдалося видалити подію"
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to move event"
-msgstr "Не вдалося перемістити подію"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/preferences.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/visibility.ex
 #, elixir-autogen, elixir-format
@@ -522,8 +513,7 @@ msgstr "Ні"
 msgid "No calendars to sync"
 msgstr "Немає календарів для синхронізації"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "None"
 msgstr "Немає"
@@ -721,20 +711,10 @@ msgstr "Нд"
 msgid "The recurrence end date must be on or after the event start."
 msgstr "Дата завершення повторення має бути не раніше початку події."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This and following events"
-msgstr "Цю та наступні події"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This event is linked to a booking. The attendee will be notified of the cancellation."
 msgstr "Ця подія пов'язана з бронюванням. Учасник отримає сповіщення про скасування."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This event only"
-msgstr "Лише цю подію"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex
 #, elixir-autogen, elixir-format
@@ -844,11 +824,6 @@ msgstr "Тижневе подання"
 msgid "Weekly"
 msgstr "Щотижня"
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Which events do you want to update?"
-msgstr "Які події ви хочете оновити?"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/mini_month_popover.ex
 #, elixir-autogen, elixir-format
 msgid "Wk"
@@ -947,11 +922,6 @@ msgstr "Помилка видалення - додано в чергу для п
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
-msgid "Failed to provision video room - link not updated"
-msgstr "Не вдалося створити відеокімнату - посилання не оновлено"
-
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
-#, elixir-autogen, elixir-format
 msgid "Failed to update event - changes reverted"
 msgstr "Не вдалося оновити подію - зміни скасовано"
 
@@ -1035,3 +1005,73 @@ msgstr "перед подією"
 #, elixir-autogen, elixir-format
 msgid "This calendar is read-only. Events on it can't be changed from Tymeslot."
 msgstr "Цей календар доступний лише для перегляду. Події в ньому не можна змінювати з Tymeslot."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Could not change the video link - changes reverted"
+msgstr "Не вдалося змінити посилання на відеозустріч - зміни скасовано"
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Could not move the event. It is still on its original calendar."
+msgstr "Не вдалося перемістити подію. Вона залишається в початковому календарі."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Event copied to the new calendar, but the original could not be removed. Please delete it from its original calendar."
+msgstr "Подію скопійовано в новий календар, але оригінал не вдалося видалити. Видаліть його з початкового календаря."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Event copied to the new calendar. The original will be removed on the next sync."
+msgstr "Подію скопійовано в новий календар. Оригінал буде видалено під час наступної синхронізації."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Event moved to the new calendar."
+msgstr "Подію переміщено в новий календар."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring events cannot be moved to another calendar yet. Only single events can be moved."
+msgstr "Повторювані події поки що не можна перемістити в інший календар. Переміщувати можна лише окремі події."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "The video provider did not return a meeting link, so the video link was not changed."
+msgstr "Провайдер відеозв'язку не повернув посилання на зустріч, тому посилання на відеозустріч не змінено."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Video link removed."
+msgstr "Посилання на відеозустріч видалено."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Video room created."
+msgstr "Кімнату для відеозустрічі створено."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Your calendar could not be reached. The change is saved and will sync on the next attempt."
+msgstr "Не вдалося зв'язатися з вашим календарем. Зміну збережено, її буде синхронізовано під час наступної спроби."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring events cannot be deleted here yet. Please delete this one in your calendar app."
+msgstr "Повторювані події поки що не можна видалити тут. Видаліть цю подію у своєму календарному застосунку."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This event is part of a repeating series. Your change applies to this event only, and the rest of the series stays as it is. To change the whole series, use your calendar app."
+msgstr "Ця подія є частиною серії. Ваша зміна стосується лише цієї події, решта серії залишається без змін. Щоб змінити всю серію, скористайтеся своїм календарним застосунком."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Update this event"
+msgstr "Оновити цю подію"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring events cannot be edited here yet. Please change this one in your calendar app."
+msgstr "Повторювані події поки що не можна редагувати тут. Змініть цю подію у своєму календарному застосунку."

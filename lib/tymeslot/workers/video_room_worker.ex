@@ -30,6 +30,8 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     priority: 0
 
   alias Ecto.Changeset
+  alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.Workers.SnoozePolicy
@@ -37,7 +39,10 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
   require Logger
 
-  @video_api_timeout_ms 20_000
+  # What the provider call may spend beyond waiting on the provider itself:
+  # reading and writing the meeting, and asking the circuit breaker.
+  @local_work_margin_ms 10_000
+
   @backoff_base_ms 1_000
   @backoff_cap_ms 16_000
 
@@ -88,7 +93,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
           announce: Announcement.owed?(announcement)
         )
 
-        create_room(meeting_id, announcement, execution)
+        create_room(meeting, announcement, execution)
 
       {:error, :not_found} ->
         Logger.warning("Meeting not found, discarding video room job", meeting_id: meeting_id)
@@ -196,15 +201,42 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     end
   end
 
+  @doc """
+  How long the job waits for room creation on `meeting`, in milliseconds.
+
+  Longer than the network budget its video integration's provider declares,
+  so the job only stops waiting on a call its own request timeouts have failed
+  to end. Giving up any sooner would abandon a room the provider may already
+  have created, and the retry would create another that no booking records.
+  Waiting on the provider the meeting actually uses, rather than the slowest
+  of all, keeps a slow provider from holding the queue for every other one.
+
+  The meeting is read for those two fields alone, so a `MeetingSchema` and a
+  bare map of them are both accepted. `%{a: t}` in a spec is a map with
+  exactly that key, which a schema struct never is, hence the open map here.
+  """
+  @spec creation_timeout_ms(%{
+          :organizer_user_id => pos_integer() | nil,
+          :video_integration_id => pos_integer() | nil,
+          optional(any()) => any()
+        }) :: pos_integer()
+  def creation_timeout_ms(meeting) do
+    Video.room_creation_budget_ms(meeting.organizer_user_id, meeting.video_integration_id) +
+      @local_work_margin_ms
+  end
+
   # The provider call runs in a supervised task so a hung connection cannot pin
   # the queue's worker for longer than the timeout.
-  defp create_room(meeting_id, announcement, execution) do
+  defp create_room(meeting, announcement, execution) do
+    meeting_id = meeting.id
+    timeout_ms = creation_timeout_ms(meeting)
+
     task =
       Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
         Meetings.add_video_room_to_meeting(meeting_id)
       end)
 
-    case Task.yield(task, @video_api_timeout_ms) || Task.shutdown(task) do
+    case Task.yield(task, timeout_ms) || Task.shutdown(task) do
       {:ok, {:ok, meeting}} ->
         handle_success(meeting, announcement, execution)
 
@@ -219,7 +251,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
       nil ->
         Logger.error("Video room creation timed out",
           meeting_id: meeting_id,
-          timeout_ms: @video_api_timeout_ms
+          timeout_ms: timeout_ms
         )
 
         handle_timeout(meeting_id, announcement, execution)
@@ -231,8 +263,8 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   # that.
   defp handle_success(meeting, announcement, execution) do
     Logger.info("Video room created successfully",
-      meeting_id: meeting.id,
-      room_id: meeting.video_room_id
+      meeting_id: Map.get(meeting, :id),
+      room_ref: Redactor.fingerprint(Map.get(meeting, :video_room_id))
     )
 
     Announcement.deliver(

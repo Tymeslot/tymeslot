@@ -38,6 +38,20 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationAttendeeTest do
       assert ics.filename =~ details.uid
     end
 
+    # A confirmation is not always the first calendar entry a booking sends: a
+    # booking rescheduled back into the approval gate is announced again when
+    # the host approves it, and `Bookings.Reschedule` has advanced
+    # `ical_sequence` by then. Sending the revision keeps that second entry
+    # ahead of the one the attendee's client already holds.
+    test "attendee ICS carries the revision the booking has reached" do
+      details = build_appointment_details(%{ical_sequence: 2})
+      email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
+
+      ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
+
+      assert ics.data =~ "SEQUENCE:2"
+    end
+
     # Issue #41: a METHOD:REQUEST attachment with untagged ORGANIZER/ATTENDEE
     # triggers recipient-side iMIP handling on scheduling-aware mail servers
     # (Zimbra, Nextcloud, iCloud), which auto-imports the event and auto-RSVPs,
@@ -50,8 +64,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationAttendeeTest do
 
       ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
 
-      assert ics.content_type =~ "method=PUBLISH"
-      refute ics.content_type =~ "method=REQUEST"
+      assert ics.content_type == "text/calendar"
       assert ics.data =~ "METHOD:PUBLISH"
       refute ics.data =~ "METHOD:REQUEST"
       assert ics.data =~ ~r/^ORGANIZER;SCHEDULE-AGENT=CLIENT[;:]/m

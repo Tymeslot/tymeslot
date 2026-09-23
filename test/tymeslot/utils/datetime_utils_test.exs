@@ -68,6 +68,47 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
     end
   end
 
+  describe "resolve_local/3" do
+    test "resolves an ordinary wall-clock time" do
+      assert {:ok, dt} =
+               DateTimeUtils.resolve_local(~D[2024-06-01], ~T[12:00:00], "Europe/Berlin")
+
+      assert DateTime.compare(dt, ~U[2024-06-01 10:00:00Z]) == :eq
+      assert dt.time_zone == "Europe/Berlin"
+    end
+
+    test "resolves a time in an hour-long spring-forward gap to the end of the gap" do
+      # 2024-03-31 Europe/Berlin jumps from 02:00 CET to 03:00 CEST.
+      assert {:ok, dt} =
+               DateTimeUtils.resolve_local(~D[2024-03-31], ~T[02:30:00], "Europe/Berlin")
+
+      assert DateTime.compare(dt, ~U[2024-03-31 01:00:00Z]) == :eq
+      assert {dt.hour, dt.minute} == {3, 0}
+    end
+
+    test "resolves a time in a half-hour gap to the end of the gap" do
+      # 2026-10-04 Australia/Lord_Howe jumps from 02:00 to 02:30.
+      assert {:ok, dt} =
+               DateTimeUtils.resolve_local(~D[2026-10-04], ~T[02:15:00], "Australia/Lord_Howe")
+
+      assert {dt.hour, dt.minute} == {2, 30}
+    end
+
+    test "resolves a repeated fall-back time to its first occurrence" do
+      # 2024-10-27 Europe/Berlin repeats 02:00-03:00; the first pass is CEST.
+      assert {:ok, dt} =
+               DateTimeUtils.resolve_local(~D[2024-10-27], ~T[02:30:00], "Europe/Berlin")
+
+      assert DateTime.compare(dt, ~U[2024-10-27 00:30:00Z]) == :eq
+      assert dt.zone_abbr == "CEST"
+    end
+
+    test "returns an error for an unknown timezone" do
+      assert {:error, _reason} =
+               DateTimeUtils.resolve_local(~D[2024-01-01], ~T[12:00:00], "Invalid/Timezone")
+    end
+  end
+
   describe "create_datetime_safe/3" do
     test "handles standard time correctly" do
       date = ~D[2024-06-01]
@@ -91,9 +132,10 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
 
       dt = DateTimeUtils.create_datetime_safe(date, time, timezone)
 
-      # Should shift forward by 1 hour
+      # Resolves to the end of the gap, when the clocks land at 02:00 BST
       assert dt.hour == 2
-      assert dt.minute == 30
+      assert dt.minute == 0
+      assert dt.zone_abbr == "BST"
       assert dt.time_zone == "Europe/London"
     end
 

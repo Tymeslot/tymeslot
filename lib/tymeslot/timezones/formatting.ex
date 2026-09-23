@@ -38,9 +38,9 @@ defmodule Tymeslot.Timezones.Formatting do
   end
 
   @spec format_utc_offset(integer()) :: String.t()
-  def format_utc_offset(0), do: "UTC±0"
+  defp format_utc_offset(0), do: "UTC±0"
 
-  def format_utc_offset(seconds) when seconds > 0 do
+  defp format_utc_offset(seconds) when seconds > 0 do
     hours = div(seconds, 3600)
     minutes = div(rem(seconds, 3600), 60)
 
@@ -51,7 +51,7 @@ defmodule Tymeslot.Timezones.Formatting do
     end
   end
 
-  def format_utc_offset(seconds) when seconds < 0 do
+  defp format_utc_offset(seconds) when seconds < 0 do
     hours = div(-seconds, 3600)
     minutes = div(rem(-seconds, 3600), 60)
 

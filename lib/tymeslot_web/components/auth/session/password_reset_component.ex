@@ -36,7 +36,6 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
       subtitle={
         dgettext("auth", "Enter your email and we'll send you instructions to reset your password")
       }
-      flash={assigns[:flash] || %{}}
     >
       <:form>
         <.auth_form
@@ -232,10 +231,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
   @spec password_reset_success(map()) :: Phoenix.LiveView.Rendered.t()
   def password_reset_success(assigns) do
     ~H"""
-    <.auth_card_layout
-      title={dgettext("auth", "Success!")}
-      flash={assigns[:flash] || %{}}
-    >
+    <.auth_card_layout title={dgettext("auth", "Success!")}>
       <:form>
         <div class="text-center mb-8">
           <h2 class="text-xl font-bold text-tymeslot-900 tracking-tight mb-3">
@@ -270,10 +266,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
   @spec invalid_token(map()) :: Phoenix.LiveView.Rendered.t()
   def invalid_token(assigns) do
     ~H"""
-    <.auth_card_layout
-      title={dgettext("auth", "Invalid Link")}
-      flash={assigns[:flash] || %{}}
-    >
+    <.auth_card_layout title={dgettext("auth", "Invalid Link")}>
       <:form>
         <div class="text-center mb-8">
           <div class="mx-auto w-20 h-20 flex items-center justify-center rounded-2xl bg-red-50 border-2 border-red-100 shadow-xl shadow-red-500/10 mb-6 transform hover:scale-105 transition-all duration-300">

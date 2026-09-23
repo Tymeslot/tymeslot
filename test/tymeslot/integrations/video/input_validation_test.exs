@@ -148,6 +148,327 @@ defmodule Tymeslot.Integrations.Video.InputValidationTest do
       assert {:error, errors} = InputValidation.validate_video_integration_form(params)
       assert Map.has_key?(errors, :custom_meeting_url)
     end
+
+    test "tells someone who left the scheme off how to write the address" do
+      params = %{
+        "provider" => "custom",
+        "name" => "My Video Tool",
+        "custom_meeting_url" => "room"
+      }
+
+      assert {:error, %{custom_meeting_url: message}} =
+               InputValidation.validate_video_integration_form(params)
+
+      assert message ==
+               "Enter a full address starting with https://, for example https://meet.example.com"
+    end
+
+    test "points at the URL itself when the scheme is already there" do
+      params = %{
+        "provider" => "custom",
+        "name" => "My Video Tool",
+        "custom_meeting_url" => "https://room"
+      }
+
+      assert {:error, %{custom_meeting_url: message}} =
+               InputValidation.validate_video_integration_form(params)
+
+      assert message ==
+               "Please enter a valid meeting URL (e.g., https://meet.google.com/abc-defg-hij)"
+    end
+  end
+
+  describe "validate_video_integration_form/2 - custom meeting URL template syntax" do
+    defp custom_params(url),
+      do: %{"provider" => "custom", "name" => "My Video Tool", "custom_meeting_url" => url}
+
+    test "refuses a malformed meeting ID placeholder on the meeting URL field" do
+      assert {:error, %{custom_meeting_url: message}} =
+               InputValidation.validate_video_integration_form(
+                 custom_params("https://meet.jit.si/{meeting_id}")
+               )
+
+      assert message == "Use double curly brackets: {{meeting_id}} not {meeting_id}"
+    end
+
+    test "refuses a percent-encoded placeholder that decodes to a malformed one" do
+      assert {:error, %{custom_meeting_url: message}} =
+               InputValidation.validate_video_integration_form(
+                 custom_params("https://meet.jit.si/%7Bmeeting_id%7D")
+               )
+
+      assert message == "Use double curly brackets: {{meeting_id}} not {meeting_id}"
+    end
+
+    test "refuses a percent-encoded placeholder that is otherwise written correctly" do
+      # Room creation substitutes the literal {{meeting_id}}, so the escaped
+      # form would never be replaced and every booking would share one room.
+      assert {:error, %{custom_meeting_url: message}} =
+               InputValidation.validate_video_integration_form(
+                 custom_params("https://meet.jit.si/%7B%7Bmeeting_id%7D%7D")
+               )
+
+      assert message ==
+               "Write {{meeting_id}} with plain brackets: percent-encoded ones are never replaced"
+    end
+
+    test "refuses an angle-bracket placeholder" do
+      assert {:error, %{custom_meeting_url: message}} =
+               InputValidation.validate_video_integration_form(
+                 custom_params("https://meet.jit.si/<meeting_id>")
+               )
+
+      assert message == "Use curly brackets: {{meeting_id}} not <meeting_id>"
+    end
+
+    test "refuses a placeholder wrapped in an extra brace" do
+      assert {:error, %{custom_meeting_url: message}} =
+               InputValidation.validate_video_integration_form(
+                 custom_params("https://meet.jit.si/{{{meeting_id}}}")
+               )
+
+      assert message == "Write the template variable exactly as {{meeting_id}}"
+    end
+
+    test "accepts a correctly written template" do
+      url = "https://meet.jit.si/{{meeting_id}}"
+
+      assert {:ok, %{"custom_meeting_url" => ^url}} =
+               InputValidation.validate_video_integration_form(custom_params(url))
+    end
+
+    test "accepts a static URL" do
+      url = "https://meet.jit.si/my-room"
+
+      assert {:ok, %{"custom_meeting_url" => ^url}} =
+               InputValidation.validate_video_integration_form(custom_params(url))
+    end
+
+    test "accepts a permanent Teams link and stores it exactly as typed" do
+      url =
+        "https://teams.microsoft.com/l/meetup-join/19%3ameeting_NjU4YTQ%40thread.v2/0?context=%7b%22Tid%22%3a%2272f988bf%22%2c%22Oid%22%3a%22a1b2c3d4%22%7d"
+
+      assert {:ok, %{"custom_meeting_url" => ^url}} =
+               InputValidation.validate_video_integration_form(custom_params(url))
+    end
+
+    test "validate_single_field/3 refuses the same malformed placeholder" do
+      assert InputValidation.validate_single_field(
+               :custom_meeting_url,
+               "https://meet.jit.si/{meeting_id}"
+             ) == {:error, "Use double curly brackets: {{meeting_id}} not {meeting_id}"}
+    end
+  end
+
+  describe "validate_video_integration_form/2 - kmeet" do
+    test "accepts a name and returns only the name" do
+      params = %{
+        "provider" => "kmeet",
+        "name" => "  Team kMeet  ",
+        "base_url" => "https://elsewhere.example.com"
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_video_integration_form(params)
+      assert sanitized == %{"name" => "Team kMeet"}
+    end
+
+    test "rejects a missing name" do
+      params = %{"provider" => "kmeet", "name" => ""}
+      assert {:error, errors} = InputValidation.validate_video_integration_form(params)
+      assert Map.has_key?(errors, :name)
+    end
+  end
+
+  describe "validate_video_integration_form/2 - jitsi" do
+    test "trims the server URL and credentials and leaves their checks to the provider" do
+      params = %{
+        "provider" => "jitsi",
+        "name" => "  Our Jitsi  ",
+        "base_url" => " https://meet.example.com ",
+        "client_id" => " tymeslot ",
+        "client_secret" => " <secret&with?symbols> "
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_video_integration_form(params)
+
+      assert sanitized == %{
+               "name" => "Our Jitsi",
+               "base_url" => "https://meet.example.com",
+               "client_id" => "tymeslot",
+               "client_secret" => "<secret&with?symbols>",
+               "remove_token_authentication" => false
+             }
+    end
+
+    test "turns the removal checkbox into a boolean" do
+      params = %{
+        "provider" => "jitsi",
+        "name" => "Our Jitsi",
+        "remove_token_authentication" => "true"
+      }
+
+      assert {:ok, %{"remove_token_authentication" => true} = sanitized} =
+               InputValidation.validate_video_integration_form(params)
+
+      refute Map.has_key?(sanitized, "client_secret")
+    end
+
+    # A credential key in the result means "supplied", which clears
+    # `needs_reauth` on update; a blank field must not claim that.
+    test "leaves blank credentials out" do
+      params = %{
+        "provider" => "jitsi",
+        "name" => "Our Jitsi",
+        "base_url" => "https://meet.example.com",
+        "client_id" => "",
+        "client_secret" => "   "
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_video_integration_form(params)
+      refute Map.has_key?(sanitized, "client_id")
+      refute Map.has_key?(sanitized, "client_secret")
+    end
+
+    test "strips a null byte from the server URL" do
+      params = %{
+        "provider" => "jitsi",
+        "name" => "Our Jitsi",
+        "base_url" => "https://meet.example.com/a\0b"
+      }
+
+      assert {:ok, %{"base_url" => "https://meet.example.com/ab"}} =
+               InputValidation.validate_video_integration_form(params)
+    end
+
+    test "strips a null byte from the App ID and App secret and leaves the rest of the secret alone" do
+      params = %{
+        "provider" => "jitsi",
+        "name" => "Our Jitsi",
+        "base_url" => "https://meet.example.com",
+        "client_id" => "tyme\0slot",
+        "client_secret" => "<secret\0&symbols>"
+      }
+
+      assert {:ok, sanitized} = InputValidation.validate_video_integration_form(params)
+      assert sanitized["client_id"] == "tymeslot"
+      assert sanitized["client_secret"] == "<secret&symbols>"
+    end
+
+    test "rejects a missing name" do
+      params = %{"provider" => "jitsi", "name" => "", "base_url" => "https://meet.example.com"}
+      assert {:error, errors} = InputValidation.validate_video_integration_form(params)
+      assert Map.has_key?(errors, :name)
+    end
+  end
+
+  describe "validate_video_integration_form/2 - nextcloud_talk" do
+    @talk_params %{
+      "provider" => "nextcloud_talk",
+      "name" => "Team Talk",
+      "base_url" => " https://cloud.example.com ",
+      "client_id" => " organiser ",
+      "client_secret" => " Abcde-Fghij-Klmno-Pqrst-Uvwxy "
+    }
+
+    test "trims the server, login name and app password and passes nothing else on" do
+      assert {:ok, sanitized} =
+               InputValidation.validate_video_integration_form(
+                 Map.put(@talk_params, "remove_token_authentication", "true")
+               )
+
+      assert sanitized == %{
+               "name" => "Team Talk",
+               "base_url" => "https://cloud.example.com",
+               "client_id" => "organiser",
+               "client_secret" => "Abcde-Fghij-Klmno-Pqrst-Uvwxy"
+             }
+    end
+
+    # A credential key in the result means "supplied"; the edit dialog's blank
+    # app password field must keep the stored one instead.
+    test "leaves a blank app password out" do
+      assert {:ok, sanitized} =
+               InputValidation.validate_video_integration_form(%{
+                 @talk_params
+                 | "client_secret" => "   "
+               })
+
+      refute Map.has_key?(sanitized, "client_secret")
+    end
+
+    test "strips a null byte from the server, login name and app password" do
+      assert {:ok, sanitized} =
+               InputValidation.validate_video_integration_form(%{
+                 @talk_params
+                 | "base_url" => "https://cloud.example.com/nc\0",
+                   "client_id" => "organ\0iser",
+                   "client_secret" => "Abcde\0-Fghij"
+               })
+
+      assert sanitized["base_url"] == "https://cloud.example.com/nc"
+      assert sanitized["client_id"] == "organiser"
+      assert sanitized["client_secret"] == "Abcde-Fghij"
+    end
+
+    test "still requires a name" do
+      assert {:error, %{name: _message}} =
+               InputValidation.validate_video_integration_form(%{@talk_params | "name" => ""})
+    end
+  end
+
+  describe "validate_video_integration_form/2 - URLs are stored as typed" do
+    defp custom_url(url),
+      do: %{"provider" => "custom", "name" => "My Video Tool", "custom_meeting_url" => url}
+
+    defp mirotalk_url(url),
+      do: %{
+        "provider" => "mirotalk",
+        "name" => "Team Meetings",
+        "api_key" => "a-very-long-api-key-12345",
+        "base_url" => url
+      }
+
+    test "keeps a double hyphen in a custom meeting URL" do
+      url = "https://meet.example.com/team--sync"
+
+      assert {:ok, %{"custom_meeting_url" => ^url}} =
+               InputValidation.validate_video_integration_form(custom_url(url))
+    end
+
+    test "keeps a percent-encoded hash in a custom meeting URL" do
+      url = "https://meet.example.com/room%23a"
+
+      assert {:ok, %{"custom_meeting_url" => ^url}} =
+               InputValidation.validate_video_integration_form(custom_url(url))
+    end
+
+    test "keeps a hex-looking path segment in a custom meeting URL" do
+      url = "https://meet.example.com/0xdeadbeef-room"
+
+      assert {:ok, %{"custom_meeting_url" => ^url}} =
+               InputValidation.validate_video_integration_form(custom_url(url))
+    end
+
+    test "keeps a template URL whose room name also contains a double hyphen" do
+      url = "https://meet.example.com/team--sync/{{meeting_id}}"
+
+      assert {:ok, %{"custom_meeting_url" => ^url}} =
+               InputValidation.validate_video_integration_form(custom_url(url))
+    end
+
+    test "keeps a double hyphen in a MiroTalk base URL" do
+      url = "https://meet--eu.example.com/api"
+
+      assert {:ok, %{"base_url" => ^url}} =
+               InputValidation.validate_video_integration_form(mirotalk_url(url))
+    end
+
+    test "keeps a hex-looking path segment in a MiroTalk base URL" do
+      url = "https://meet.example.com/0xdeadbeef"
+
+      assert {:ok, %{"base_url" => ^url}} =
+               InputValidation.validate_video_integration_form(mirotalk_url(url))
+    end
   end
 
   describe "validate_video_integration_form/2 - unknown provider" do

@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.Demo
+  alias Tymeslot.Availability.Offer
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
 
   @doc """
@@ -59,19 +59,11 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
           String.t()
         ) :: {:ok, Phoenix.LiveView.Socket.t()} | {:error, Phoenix.LiveView.Socket.t()}
   def fetch_available_slots(socket, date, _duration, timezone) do
-    # Prepare context map for better performance and to avoid extra DB lookups in core.
-    # `Demo.demo_mode?/1` is computed fresh from the socket here (mirroring
-    # `AvailabilityHelpers.perform_availability_fetch/1`) rather than read
-    # from a `:demo_mode` socket assign: nothing in Core ever sets one — the
-    # write side (`TemplateDemo.Context.put_demo_mode/2`) was removed as
-    # unreachable, so reading `socket.assigns[:demo_mode]` here always
-    # resolved to `nil`, silently disabling demo detection on this path.
-    context = %{
-      demo_mode: Demo.demo_mode?(socket),
-      organizer_profile: socket.assigns.organizer_profile,
-      meeting_type: socket.assigns[:meeting_type],
-      debug_calendar_module: socket.private[:debug_calendar_module]
-    }
+    # `request/1` computes demo mode fresh from the socket rather than reading
+    # a `:demo_mode` assign: nothing in Core ever sets one, so reading the
+    # assign always resolved to `nil`, silently disabling demo detection. The
+    # timezone is the one the fetch message names.
+    request = %{AvailabilityHelpers.request(socket) | user_timezone: timezone}
 
     # Single resolver for display and submit, so the offered slots can't
     # drift from the duration the domain will validate against.
@@ -85,14 +77,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
     # date pick — the one case that must reset it, since the open hour would
     # describe a grid that no longer applies — resets it at the point the
     # booker makes that choice, in `handle_schedule_date_selection/2`.
-    case AvailabilityHelpers.get_available_slots(
-           date,
-           duration_to_fetch,
-           timezone,
-           socket.assigns.organizer_user_id,
-           socket.assigns.organizer_profile,
-           context
-         ) do
+    case Offer.slots_for_date(request, date, duration_to_fetch) do
       {:ok, slots} ->
         socket =
           socket

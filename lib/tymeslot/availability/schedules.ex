@@ -9,6 +9,8 @@ defmodule Tymeslot.Availability.Schedules do
   deleted, which nilifies the reference at the database level.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Availability.AvailabilityBreakQueries
   alias Tymeslot.Availability.AvailabilityOverrideQueries
   alias Tymeslot.Availability.AvailabilityScheduleQueries
@@ -145,7 +147,13 @@ defmodule Tymeslot.Availability.Schedules do
   end
 
   @doc """
-  Copies a schedule's weekly pattern, breaks and policy under a new name.
+  Copies a schedule's weekly pattern, breaks and policy under a "(copy)" name.
+
+  The name is chosen inside the insert's transaction from the profile's current
+  schedule names: the first of "<name> (copy)", "<name> (copy) 2", ... that no
+  schedule holds. When the result would pass the name length limit, the source
+  name is shortened rather than the suffix, so every candidate stays distinct
+  and within the limit.
 
   Date overrides are deliberately not copied: they name specific calendar dates,
   and carrying a stale exception list into a copy is more often wrong than right.
@@ -153,16 +161,12 @@ defmodule Tymeslot.Availability.Schedules do
   Returns `{:error, :schedule_limit_reached}` once the profile owns
   `max_schedules/0` of them.
   """
-  @spec duplicate(schedule(), String.t()) :: result()
-  def duplicate(%AvailabilityScheduleSchema{} = source, name) do
-    attrs =
-      source
-      |> Map.take(@policy_fields)
-      |> Map.merge(%{profile_id: source.profile_id, name: name, is_default: false})
-
+  @spec duplicate(schedule()) :: result()
+  def duplicate(%AvailabilityScheduleSchema{} = source) do
     copy =
       Repo.transaction(fn ->
         with :ok <- check_limit(source.profile_id),
+             attrs = copy_attrs(source),
              {:ok, inserted} <- AvailabilityScheduleQueries.insert(attrs) do
           copy_weekly_days(source.id, inserted.id)
           inserted
@@ -199,7 +203,7 @@ defmodule Tymeslot.Availability.Schedules do
   @doc """
   Whether a schedule has any date overrides.
 
-  `duplicate/2` leaves them behind on purpose, so a caller can use this to say
+  `duplicate/1` leaves them behind on purpose, so a caller can use this to say
   so at the moment it matters rather than letting the copy quietly differ.
   """
   @spec has_overrides?(integer()) :: boolean()
@@ -266,6 +270,82 @@ defmodule Tymeslot.Availability.Schedules do
   @spec policy(schedule() | nil, atom()) :: integer()
   def policy(nil, key), do: Map.fetch!(Constraints.scheduling_policy_defaults(), key)
   def policy(schedule, key), do: Map.fetch!(schedule, key)
+
+  @typedoc "The scheduling rules every availability and booking config carries."
+  @type config :: %{
+          required(:schedule_id) => integer() | nil,
+          required(:buffer_minutes) => non_neg_integer(),
+          required(:min_advance_hours) => non_neg_integer(),
+          required(:max_advance_booking_days) => pos_integer(),
+          required(:slot_interval_minutes) => pos_integer() | nil
+        }
+
+  @doc """
+  The scheduling rules a resolved schedule and meeting type impose, as the
+  keys the slot engine and the booking validation both read.
+
+  This is the one place those keys are assembled. The booking page builds its
+  offer from it and the submit re-checks against it, so a rule added here
+  reaches both; a key present in one copy but not the other is how a slot
+  comes to be offered and then refused.
+
+  `max_advance_booking_days` is this map's name for the schedule's
+  `advance_booking_days`. `schedule_id` is carried so callers can recompute
+  the schedule's own windows from the config alone.
+  """
+  @spec config(schedule() | nil, map() | nil) :: config()
+  def config(schedule, meeting_type) do
+    %{
+      schedule_id: schedule && schedule.id,
+      buffer_minutes: policy(schedule, :buffer_minutes),
+      min_advance_hours: policy(schedule, :min_advance_hours),
+      max_advance_booking_days: policy(schedule, :advance_booking_days),
+      slot_interval_minutes: slot_interval_minutes(meeting_type)
+    }
+  end
+
+  @doc """
+  A meeting type's booking interval, in minutes.
+
+  NULL means "use the meeting type's own duration", the default for almost
+  every meeting type. Nil for a nil meeting type and for meeting-type maps
+  (such as the demo provider's) that omit the key entirely, so this never
+  raises whatever shape of meeting type it is handed.
+  """
+  @spec slot_interval_minutes(map() | nil) :: pos_integer() | nil
+  def slot_interval_minutes(%{slot_interval_minutes: minutes}), do: minutes
+  def slot_interval_minutes(_meeting_type), do: nil
+
+  defp copy_attrs(source) do
+    source
+    |> Map.take(@policy_fields)
+    |> Map.merge(%{profile_id: source.profile_id, name: copy_name(source), is_default: false})
+  end
+
+  # One more candidate than there are names guarantees a free one, so the
+  # search is bounded by the profile's schedule count.
+  defp copy_name(%{name: name, profile_id: profile_id}) do
+    taken =
+      profile_id
+      |> AvailabilityScheduleQueries.list_by_profile()
+      |> MapSet.new(& &1.name)
+
+    1..(MapSet.size(taken) + 1)
+    |> Enum.map(&with_copy_suffix(name, &1))
+    |> Enum.find(&(not MapSet.member?(taken, &1)))
+  end
+
+  defp with_copy_suffix(name, number) do
+    suffix = " " <> copy_suffix(number)
+    max = AvailabilityScheduleSchema.name_max_length()
+
+    String.slice(name, 0, max - String.length(suffix)) <> suffix
+  end
+
+  defp copy_suffix(1), do: dgettext("dashboard_availability", "(copy)")
+
+  defp copy_suffix(number),
+    do: dgettext("dashboard_availability", "(copy) %{number}", number: number)
 
   defp check_limit(profile_id) do
     if can_create?(profile_id), do: :ok, else: {:error, :schedule_limit_reached}

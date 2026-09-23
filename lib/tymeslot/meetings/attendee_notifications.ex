@@ -24,13 +24,16 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       nobody to notify.
     * `event_deleted_confirm/2` — delegates to Dispatcher for debounced send.
     * `pending?/1` / `cancel_pending/1` — inspection and cancellation of the
-      debounced pipeline for either event kind.
+      debounced pipeline. Both take the event, not its id: `meetings` and
+      `provider_calendar_events` number their rows independently, so an id
+      alone does not name an event.
 
   The debounced update/delete path is owned by `Dispatcher`. This module does
   not itself know anything about Oban.
   """
 
   alias Tymeslot.Emails.EmailScheduler.CalendarScheduler
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeDetector
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
@@ -39,7 +42,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   alias Tymeslot.Meetings.MeetingSchema
 
   @type event :: map
-  @type attendee :: %{optional(:email) => String.t(), optional(:name) => String.t() | nil}
+  @type attendee ::
+          Attendee.t() | %{optional(:email) => String.t(), optional(:name) => String.t() | nil}
 
   @spec event_created(event, [attendee]) :: {:ok, :sent | :noop}
   def event_created(_event, []), do: {:ok, :noop}
@@ -117,17 +121,18 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     end
   end
 
-  @spec pending?(integer | binary) :: boolean
-  def pending?(event_id) when is_integer(event_id) do
-    Dispatcher.pending?(event_id, :meeting) or
-      Dispatcher.pending?(event_id, :provider_calendar_event)
-  end
+  @doc """
+  Whether a debounced job is already queued for this event.
 
-  def pending?(event_id) when is_binary(event_id) do
-    case Integer.parse(event_id) do
-      {int_id, ""} -> pending?(int_id)
-      _other -> false
-    end
+  Takes the event rather than its id so the kind is derived from the struct:
+  ids are only unique *within* a kind, and an id that matched a job of the
+  other kind used to answer `true` here. That sent the caller down the
+  "already pending" branch, joining a stranger's debounce window instead of
+  asking this event's host, off nothing but a numeric collision.
+  """
+  @spec pending?(event) :: boolean
+  def pending?(event) do
+    Dispatcher.pending?(event_id(event), event_kind(event))
   end
 
   @spec cancel_pending(event) :: :ok
@@ -138,22 +143,40 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   ## Internal helpers
 
   defp send_immediate(event, attendees, method, sequence) do
+    timing = invitation_timing(event)
+
     Enum.each(attendees, fn attendee ->
-      CalendarScheduler.schedule_calendar_invitation(%{
-        user_id: user_id_for(event),
-        attendee_email: Map.get(attendee, :email),
-        event_title: title_for(event),
-        event_uid: Map.get(event, :uid),
-        event_start_at: iso(start_at_for(event)),
-        event_end_at: iso(end_at_for(event)),
-        event_location: Map.get(event, :location),
-        event_description: Map.get(event, :description),
-        method: method,
-        sequence: sequence
-      })
+      CalendarScheduler.schedule_calendar_invitation(
+        Map.merge(timing, %{
+          user_id: user_id_for(event),
+          attendee_email: Map.get(attendee, :email),
+          event_title: title_for(event),
+          event_uid: Map.get(event, :uid),
+          event_location: Map.get(event, :location),
+          event_description: Map.get(event, :description),
+          method: method,
+          sequence: sequence
+        })
+      )
     end)
 
     :ok
+  end
+
+  # An all-day event has dates and no instants, so it travels as dates; the
+  # instants stay in the args as nil because the job requires the keys.
+  defp invitation_timing(%{all_day: true, start_date: %Date{} = start_date, end_date: end_date}) do
+    %{
+      all_day: true,
+      event_start_date: Date.to_iso8601(start_date),
+      event_end_date: Date.to_iso8601(end_date),
+      event_start_at: nil,
+      event_end_at: nil
+    }
+  end
+
+  defp invitation_timing(event) do
+    %{event_start_at: iso(start_at_for(event)), event_end_at: iso(end_at_for(event))}
   end
 
   defp to_event_map(event, attendees) do
@@ -161,6 +184,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       title: title_for(event),
       starts_at: start_at_for(event),
       ends_at: end_at_for(event),
+      start_date: Map.get(event, :start_date),
+      end_date: Map.get(event, :end_date),
       location: Map.get(event, :location),
       description: Map.get(event, :description),
       video_link: video_link_for(event),

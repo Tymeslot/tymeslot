@@ -8,6 +8,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Utils.DateTimeUtils
+  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @weekday_atoms %{
@@ -43,33 +45,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   # The calendar grid renders events in the user's timezone, so drag/drop/create
   # coordinates are in that timezone and must be converted back to UTC for storage.
   #
-  # Returns `{:ok, utc_datetime}` on success. DST edge cases are handled
-  # gracefully rather than crashing:
-  #   - Gap (spring-forward): the time falls in the skipped hour; we use
-  #     `just_after` (the first valid instant post-gap) so the event is placed
-  #     at the nearest valid local time rather than raising.
-  #   - Ambiguous (fall-back): the time occurs twice; we pick `first` (the
-  #     DST instant) which is the intuitive choice when someone schedules a
-  #     meeting "at 1:30am" before they know the clocks fall back.
-  #   - Other errors: propagated as `{:error, reason}` so callers can surface
-  #     a flash instead of crashing the LiveView.
+  # DST gaps and overlaps resolve by `DateTimeUtils.resolve_local/3`, the rule
+  # every other wall-clock conversion uses. An unknown timezone is returned as
+  # `{:error, reason}` so callers can surface a flash instead of crashing the
+  # LiveView.
   @spec to_utc(Date.t(), non_neg_integer(), non_neg_integer(), String.t()) ::
           {:ok, DateTime.t()} | {:error, term()}
   def to_utc(date, hour, minute, timezone) do
     time = Time.new!(hour, minute, 0, {0, 6})
 
-    case DateTime.new(date, time, timezone) do
-      {:ok, dt} ->
-        {:ok, DateTime.shift_zone!(dt, "Etc/UTC")}
-
-      {:gap, _just_before, just_after} ->
-        {:ok, DateTime.shift_zone!(just_after, "Etc/UTC")}
-
-      {:ambiguous, first, _second} ->
-        {:ok, DateTime.shift_zone!(first, "Etc/UTC")}
-
-      {:error, reason} ->
-        {:error, reason}
+    with {:ok, local} <- DateTimeUtils.resolve_local(date, time, timezone) do
+      {:ok, DateTime.shift_zone!(local, "Etc/UTC")}
     end
   end
 
@@ -146,6 +132,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   defp parse_reminder_method(_other), do: :error
 
   @doc """
+  The timezone a recurring event's UNTIL date ends its day in: the event's own,
+  falling back to the organiser's profile zone for an event that carries none.
+
+  A series belongs to the calendar it sits on, not to whoever is looking at it,
+  so reading the organiser's zone for both is only right while they agree. An
+  organiser in `Europe/Tallinn` ending an `America/Los_Angeles` series on 31
+  December otherwise gets an UNTIL at 13:59 Los Angeles time, cutting that day's
+  afternoon occurrences; west-to-east the mirror case adds one.
+
+  Creates pass the organiser's zone directly and do not call this: an event
+  being drawn on the grid has no zone of its own yet, and the grid's wall clock
+  is the organiser's.
+  """
+  @spec recurrence_timezone(map() | nil, String.t() | nil) :: String.t() | nil
+  def recurrence_timezone(event, user_timezone)
+  def recurrence_timezone(nil, user_timezone), do: user_timezone
+
+  def recurrence_timezone(event, user_timezone) do
+    case Map.get(event, :timezone) do
+      zone when is_binary(zone) and zone != "" -> zone
+      _none -> user_timezone
+    end
+  end
+
+  @doc """
   Composes a canonical RRULE string from the recurrence editor's raw form
   fields (`freq`, `interval`, `by_day[]`, `end_type`, `count`, `until`).
 
@@ -160,6 +171,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
     - `:all_day` — a boolean that controls UNTIL value-type: all-day recurring
       events must emit `UNTIL=YYYYMMDD` (RFC 5545 §3.3.10) rather than the
       default UTC date-time form.
+    - `:timezone` — the timezone whose day the UNTIL date ends, from
+      `recurrence_timezone/2`. A timed event's UNTIL is an instant, so the date
+      the form supplies has to end its day in a zone rather than in UTC, or the
+      series ends a day early west of UTC and a day late east of it.
 
   Returns `{:error, :until_before_start}` when `until` precedes `:start_date`.
   """
@@ -170,33 +185,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
         nil
 
       freq ->
-        all_day = Map.get(event_context, :all_day, false)
-        start_date = Map.get(event_context, :start_date)
-
         opts =
           %{freq: freq}
           |> put_interval(params["interval"])
           |> put_by_day(freq, params["by_day"])
           |> put_end_condition(params["end_type"], params)
 
-        with :ok <- validate_until_after_start(opts, start_date) do
-          RRule.build(opts, all_day: all_day)
+        # `build/2` and `retarget/2` are handed the same value-type options, so
+        # the rule composed here and the rule read back agree on how UNTIL is
+        # written; retarget/2 is what rejects a series ending before it starts.
+        fit_opts = [
+          all_day: Map.get(event_context, :all_day, false),
+          timezone: Map.get(event_context, :timezone),
+          start_date: Map.get(event_context, :start_date)
+        ]
+
+        case RRule.retarget(RRule.build(opts, fit_opts), fit_opts) do
+          {:ok, rule} -> rule
+          {:error, :until_before_start} = error -> error
         end
     end
   end
-
-  # Returns :ok when there is no UNTIL, no start_date to compare, or when
-  # UNTIL is on or after the start date. Returns {:error, :until_before_start}
-  # when the rule would expand to zero occurrences.
-  defp validate_until_after_start(%{until: until}, %Date{} = start_date) do
-    if Date.compare(until, start_date) == :lt do
-      {:error, :until_before_start}
-    else
-      :ok
-    end
-  end
-
-  defp validate_until_after_start(_opts, _no_start), do: :ok
 
   defp parse_freq("daily"), do: :daily
   defp parse_freq("weekly"), do: :weekly
@@ -297,6 +306,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
 
     * `{:error, :unauthorized}` — "You don't have permission to modify this event"
     * `{:error, :read_only}` — "This calendar is read-only..."
+    * `{:error, :recurring_event}` — "Recurring events cannot be edited here yet..."
     * `{:error, :rate_limited, _message}` — "Too many edits. Please wait a moment."
 
   Flash messages are sent via `send(self(), {:flash, ...})` (the LiveComponent
@@ -328,6 +338,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
 
     {:noreply, socket}
   end
+
+  def flash_guard_error(socket, {:error, :recurring_event}),
+    do: {:noreply, EditWorkflow.refuse_recurring_edit(socket)}
 
   def flash_guard_error(socket, {:error, :rate_limited, _message}) do
     send(

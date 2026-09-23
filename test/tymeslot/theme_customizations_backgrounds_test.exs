@@ -2,7 +2,7 @@ defmodule Tymeslot.ThemeCustomizationsBackgroundsTest do
   use Tymeslot.DataCase, async: true
   @moduletag :utils
 
-  alias Tymeslot.ThemeCustomizations.{Backgrounds, Presets}
+  alias Tymeslot.ThemeCustomizations.Backgrounds
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   describe "Backgrounds module" do
@@ -111,126 +111,6 @@ defmodule Tymeslot.ThemeCustomizationsBackgroundsTest do
       }
 
       assert Backgrounds.determine_cleanup_files(old, new) == []
-    end
-
-    test "generate_background_description/2 for gradient" do
-      presets = Presets.get_all_presets()
-
-      customization = %ThemeCustomizationSchema{
-        background_type: "gradient",
-        background_value: "gradient_1"
-      }
-
-      description = Backgrounds.generate_background_description(customization, presets)
-
-      assert description =~ "Gradient:"
-      assert description =~ "Aurora"
-    end
-
-    test "generate_background_description/2 for color" do
-      customization = %ThemeCustomizationSchema{
-        background_type: "color",
-        background_value: "#ff5500"
-      }
-
-      description = Backgrounds.generate_background_description(customization, %{})
-
-      assert description =~ "Solid Color:"
-    end
-
-    test "generate_background_description/2 for custom image" do
-      customization = %ThemeCustomizationSchema{
-        background_type: "image",
-        background_value: "custom",
-        background_image_path: "themes/1/images/bg.jpg"
-      }
-
-      description = Backgrounds.generate_background_description(customization, %{})
-
-      assert description == "Custom Image Uploaded"
-    end
-
-    test "generate_background_description/2 for preset image" do
-      presets = Presets.get_all_presets()
-
-      customization = %ThemeCustomizationSchema{
-        background_type: "image",
-        background_value: "preset:artistic-studio",
-        background_image_path: nil
-      }
-
-      description = Backgrounds.generate_background_description(customization, presets)
-
-      assert description =~ "Preset:"
-    end
-
-    test "generate_background_description/2 for custom video" do
-      customization = %ThemeCustomizationSchema{
-        background_type: "video",
-        background_value: "custom",
-        background_video_path: "themes/1/videos/bg.mp4"
-      }
-
-      description = Backgrounds.generate_background_description(customization, %{})
-
-      assert description == "Custom Video Uploaded"
-    end
-
-    test "generate_background_description/2 for unknown type" do
-      customization = %ThemeCustomizationSchema{
-        background_type: "unknown",
-        background_value: nil
-      }
-
-      description = Backgrounds.generate_background_description(customization, %{})
-
-      assert description == "No Background Selected"
-    end
-
-    test "get_background_css/2 for gradient" do
-      presets = Presets.get_all_presets()
-
-      customization = %ThemeCustomizationSchema{
-        background_type: "gradient",
-        background_value: "gradient_1"
-      }
-
-      css = Backgrounds.get_background_css(customization, presets)
-
-      assert css =~ "linear-gradient"
-    end
-
-    test "get_background_css/2 for color" do
-      customization = %ThemeCustomizationSchema{
-        background_type: "color",
-        background_value: "#ff5500"
-      }
-
-      assert Backgrounds.get_background_css(customization, %{}) == "#ff5500"
-    end
-
-    test "get_background_css/2 for custom image" do
-      customization = %ThemeCustomizationSchema{
-        background_type: "image",
-        background_value: "custom",
-        background_image_path: "themes/1/images/bg.jpg"
-      }
-
-      css = Backgrounds.get_background_css(customization, %{})
-
-      assert css == "/uploads/themes/1/images/bg.jpg"
-    end
-
-    test "get_background_css/2 for custom video" do
-      customization = %ThemeCustomizationSchema{
-        background_type: "video",
-        background_value: "custom",
-        background_video_path: "themes/1/videos/bg.mp4"
-      }
-
-      css = Backgrounds.get_background_css(customization, %{})
-
-      assert css == "/uploads/themes/1/videos/bg.mp4"
     end
   end
 end

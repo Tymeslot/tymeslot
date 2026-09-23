@@ -11,6 +11,9 @@ defmodule Tymeslot.Integrations.Video.PrivateIpOptOutTest do
 
   The request-time half lives in
   `Tymeslot.Integrations.Video.Providers.CustomProviderSsrfTest`.
+
+  The switch has three states, and all four combinations of it with the calendar
+  switch are pinned here: unset defers to calendar, set decides on its own.
   """
 
   use Tymeslot.DataCase, async: false
@@ -29,7 +32,9 @@ defmodule Tymeslot.Integrations.Video.PrivateIpOptOutTest do
 
   setup do
     with_config(:tymeslot, :allow_private_ips_for_calendar, false)
-    with_config(:tymeslot, :allow_private_ips_for_video, false)
+    # `nil` is the unset switch: `config/runtime.exs` leaves the key absent
+    # unless the operator set the environment variable.
+    with_config(:tymeslot, :allow_private_ips_for_video, nil)
     :ok
   end
 
@@ -44,8 +49,28 @@ defmodule Tymeslot.Integrations.Video.PrivateIpOptOutTest do
       assert SsrfGuard.allow_private_for_video?()
     end
 
-    test "is still satisfied by the calendar switch, which shipped covering video" do
+    test "unset, is still satisfied by the calendar switch, which shipped covering video" do
       with_config(:tymeslot, :allow_private_ips_for_calendar, true)
+
+      assert SsrfGuard.allow_private_for_video?()
+    end
+
+    test "set to false, overrules the calendar switch rather than being ignored" do
+      with_config(:tymeslot, :allow_private_ips_for_calendar, true)
+      with_config(:tymeslot, :allow_private_ips_for_video, false)
+
+      refute SsrfGuard.allow_private_for_video?()
+    end
+
+    test "set to false with calendar off, stays off" do
+      with_config(:tymeslot, :allow_private_ips_for_video, false)
+
+      refute SsrfGuard.allow_private_for_video?()
+    end
+
+    test "set to true, holds however the calendar switch is set" do
+      with_config(:tymeslot, :allow_private_ips_for_calendar, true)
+      with_config(:tymeslot, :allow_private_ips_for_video, true)
 
       assert SsrfGuard.allow_private_for_video?()
     end

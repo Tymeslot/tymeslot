@@ -11,10 +11,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    _profile = insert(:profile, user: user)
+    _profile = insert(:profile, user: user, timezone: "Etc/UTC")
     conn = conn |> Test.init_test_session(%{}) |> fetch_session()
     conn = log_in_user(conn, user)
     {:ok, conn: conn, user: user}
+  end
+
+  # Edits write to the provider from a background Task; answering it keeps a
+  # crashed write from reverting the grid underneath the assertions.
+  setup do
+    Mox.stub(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _context -> :ok end)
+    :ok
   end
 
   describe "event creation form" do
@@ -183,6 +190,36 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
       assert html =~ ~s(id="edit-attendee-email")
     end
 
+    test "shows a synced attendee by the name their calendar gave them", %{
+      conn: conn,
+      user: user
+    } do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      event =
+        insert_event(integration, %{
+          summary: "Team Sync",
+          start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
+          all_day: false,
+          attendees: [
+            %{
+              "email" => "ada@example.com",
+              "display_name" => "Ada Lovelace",
+              "response_status" => "accepted",
+              "optional" => false
+            }
+          ]
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      assert lv
+             |> element("#event-detail-modal span", "Ada Lovelace")
+             |> has_element?()
+    end
+
     test "adding a duplicate attendee is a no-op", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
@@ -276,6 +313,35 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
 
       # Should not appear as a pending attendee (dashed border = pending tag)
       refute html =~ "border-dashed"
+    end
+
+    test "rejects an existing attendee typed in a different case", %{
+      conn: conn,
+      integration: integration
+    } do
+      # CalDAV and Outlook keep the case the address was stored with.
+      event =
+        insert_event(integration, %{
+          summary: "Mixed Case Attendee Event",
+          start_at: DateTime.new!(Date.utc_today(), ~T[13:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
+          all_day: false,
+          attendees: [
+            %{"email" => "Mixed.Case@Example.com", "name" => "Mixed", "status" => "accepted"}
+          ]
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      html_before = lv |> element("[id^='event-#{event.id}-']") |> render_click()
+      count_before = occurrences(html_before, "mixed.case@example.com")
+      assert count_before >= 1
+
+      html_after =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("add_event_attendee", %{"email" => "mixed.case@example.com"})
+
+      assert occurrences(html_after, "mixed.case@example.com") == count_before
     end
 
     test "rejects duplicate of newly-added attendee", %{conn: conn, event: event} do
@@ -385,5 +451,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
 
   defp insert_event(integration, attrs) do
     insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
+  end
+
+  defp occurrences(html, email) do
+    length(String.split(String.downcase(html), email)) - 1
   end
 end

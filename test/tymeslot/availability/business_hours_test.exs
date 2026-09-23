@@ -7,7 +7,10 @@ defmodule Tymeslot.Availability.BusinessHoursTest do
 
   @moduletag :availability
 
-  alias Tymeslot.Availability.BusinessHours
+  import Tymeslot.Test.ClockHelpers
+
+  alias Tymeslot.Availability.{BusinessHours, Calculate}
+  alias Tymeslot.Bookings.Validation
 
   describe "business_day?" do
     test "returns true for weekdays (default)" do
@@ -59,7 +62,9 @@ defmodule Tymeslot.Availability.BusinessHoursTest do
       #
       # We inject the schedule via config to avoid database access, and pass a
       # non-nil profile_id so the schedule branch (not the nil fallback) is taken.
-      # The overrides list is empty so no override can interfere.
+      # The overrides and time-off lists are empty so neither can interfere;
+      # both keys must be present, since a missing one sends the lookup to the
+      # database.
       fake_profile_id = 1
 
       schedule = [
@@ -84,7 +89,7 @@ defmodule Tymeslot.Availability.BusinessHoursTest do
         }
       ]
 
-      config = %{weekly_schedule: schedule, overrides: []}
+      config = %{weekly_schedule: schedule, overrides: [], time_off: []}
 
       windows =
         BusinessHours.windows_for_target_date(
@@ -150,7 +155,8 @@ defmodule Tymeslot.Availability.BusinessHoursTest do
         }
       ]
 
-      result = BusinessHours.breaks_for_day(@monday, 1, %{weekly_schedule: schedule})
+      result =
+        BusinessHours.breaks_for_day(@monday, 1, %{weekly_schedule: schedule, time_off: []})
 
       assert result == [{~T[12:00:00], ~T[13:00:00]}, {~T[15:00:00], ~T[15:15:00]}]
     end
@@ -167,7 +173,64 @@ defmodule Tymeslot.Availability.BusinessHoursTest do
         }
       ]
 
-      assert BusinessHours.breaks_for_day(@monday, 1, %{weekly_schedule: schedule}) == []
+      assert BusinessHours.breaks_for_day(@monday, 1, %{weekly_schedule: schedule, time_off: []}) ==
+               []
+    end
+  end
+
+  describe "business hours starting inside a DST gap" do
+    # Local times skipped by a spring-forward gap resolve to the end of the
+    # gap, the same rule booking validation applies to the slot a booker
+    # picks, so the offered slots and the bookable ones cannot drift apart.
+
+    test "a window opening in the skipped hour starts when the clocks land" do
+      # 2027-03-28 (a Sunday): Europe/Berlin jumps from 02:00 to 03:00, so the
+      # owner's 02:30 opening does not exist that day.
+      schedule = [
+        %{day_of_week: 7, is_available: true, start_time: ~T[02:30:00], end_time: ~T[06:00:00]}
+      ]
+
+      config = %{weekly_schedule: schedule, overrides: [], time_off: []}
+
+      assert [%{start_dt: start_dt, date: ~D[2027-03-28]}] =
+               BusinessHours.windows_for_target_date(
+                 ~D[2027-03-28],
+                 1,
+                 "Europe/Berlin",
+                 "Europe/Berlin",
+                 config
+               )
+
+      assert DateTime.compare(start_dt, ~U[2027-03-28 01:00:00Z]) == :eq
+    end
+
+    test "a slot offered after a half-hour gap can be booked" do
+      # 2026-10-04 (a Sunday): Australia/Lord_Howe jumps from 02:00 to 02:30.
+      freeze_clock(~U[2026-10-01 00:00:00Z])
+      timezone = "Australia/Lord_Howe"
+      date = ~D[2026-10-04]
+
+      schedule = [
+        %{day_of_week: 7, is_available: true, start_time: ~T[02:15:00], end_time: ~T[04:15:00]}
+      ]
+
+      config = %{
+        schedule_id: 1,
+        weekly_schedule: schedule,
+        overrides: [],
+        time_off: [],
+        min_advance_hours: 0,
+        max_advance_booking_days: 365
+      }
+
+      assert {:ok, ["2:30 AM", "3:00 AM", "3:30 AM"]} =
+               Calculate.available_slots(date, 30, timezone, timezone, [], config)
+
+      assert {:ok, {start_datetime, _end_datetime}} =
+               Validation.parse_meeting_times("2026-10-04", "2:30 AM", 30, timezone)
+
+      assert {:ok, true} =
+               Calculate.offers_slot(date, start_datetime, 30, timezone, timezone, config)
     end
   end
 end

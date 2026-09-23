@@ -415,3 +415,28 @@ msgstr "Installa il plugin ufficiale Tymeslot per incorporare la tua pagina di p
 #, elixir-autogen, elixir-format
 msgid "Updates every snippet below. Defaults work for most embeds - adjust when your site needs them."
 msgstr "Aggiorna ogni snippet qui sotto. Le impostazioni predefinite vanno bene per la maggior parte degli incorporamenti - modificale quando il tuo sito lo richiede."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Preview"
+msgstr "Anteprima della prenotazione"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Booking widget is still loading. Please try again in a second."
+msgstr "Il widget di prenotazione si sta ancora caricando. Riprova tra un secondo."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Click to test the booking modal"
+msgstr "Fai clic per provare la finestra di prenotazione"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Preview only: this link opens in test mode and stops working after an hour. Copy the link to share from the Embed Options tab."
+msgstr "Solo anteprima: questo link si apre in modalità di prova e smette di funzionare dopo un’ora. Copia il link da condividere dalla scheda “Opzioni di incorporamento”."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "The preview is disabled because your booking link is currently deactivated."
+msgstr "L’anteprima è disattivata perché il tuo link di prenotazione è attualmente disattivato."

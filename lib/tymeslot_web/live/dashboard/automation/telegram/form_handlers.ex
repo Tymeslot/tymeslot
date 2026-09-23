@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.FormHandlers do
 
   alias Tymeslot.Telegram
   alias Tymeslot.Telegram.InputValidation, as: TelegramInputValidation
+  alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -18,23 +19,13 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.FormHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_show_form(_params, socket) do
     if Telegram.shared_bot_mode?() do
-      user_id = socket.assigns.current_user.id
-      Telegram.delete_pending_stubs(user_id)
-      token = Telegram.generate_link_token()
-
-      case Telegram.create_integration(user_id, %{
-             name: "My Telegram",
-             events: ["meeting.created"],
-             link_token: token
-           }) do
-        {:ok, integration} ->
-          deep_link = Telegram.build_deep_link(token)
-
+      case Telegram.start_link_flow(socket.assigns.current_user.id) do
+        {:ok, integration, deep_link} ->
           timer_ref =
             Process.send_after(
               self(),
               {:telegram_link_expired, integration.id},
-              :timer.minutes(10)
+              Telegram.link_token_ttl_ms()
             )
 
           {:noreply,
@@ -86,24 +77,9 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.FormHandlers do
       Process.cancel_timer(socket.assigns.telegram_link_timer)
     end
 
-    if socket.assigns.telegram_form_is_stub and socket.assigns.telegram_form_mode == :create do
-      case socket.assigns.telegram_form_data do
-        %{chat_id: nil} = integration -> Telegram.delete_integration(integration)
-        _integration -> :ok
-      end
-    end
+    maybe_discard_stub(socket.assigns)
 
-    {:noreply,
-     socket
-     |> assign(:show_telegram_form, false)
-     |> assign(:telegram_form_data, nil)
-     |> assign(:telegram_form_errors, %{})
-     |> assign(:telegram_form_values, %{})
-     |> assign(:telegram_link_timer, nil)
-     |> assign(:telegram_deep_link, nil)
-     |> assign(:telegram_link_expired, false)
-     |> assign(:telegram_form_is_stub, false)
-     |> AutomationHelpers.maybe_load_telegram()}
+    {:noreply, reset_form(socket)}
   end
 
   @spec handle_refresh_link(map(), Phoenix.LiveView.Socket.t()) ::
@@ -120,13 +96,21 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.FormHandlers do
         deep_link = Telegram.build_deep_link(token)
 
         timer_ref =
-          Process.send_after(self(), {:telegram_link_expired, integration.id}, :timer.minutes(10))
+          Process.send_after(
+            self(),
+            {:telegram_link_expired, integration.id},
+            Telegram.link_token_ttl_ms()
+          )
 
         {:noreply,
          socket
          |> assign(:telegram_deep_link, deep_link)
          |> assign(:telegram_link_expired, false)
          |> assign(:telegram_link_timer, timer_ref)}
+
+      {:error, :not_found} ->
+        Flash.error(dgettext("dashboard_automation_chat", "Integration not found"))
+        {:noreply, reset_form(socket)}
 
       {:error, _reason} ->
         Flash.error(
@@ -187,5 +171,27 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.FormHandlers do
   def handle_toggle_event(%{"event" => event}, socket) do
     form_values = AutomationHelpers.toggle_event(socket.assigns.telegram_form_values, event)
     {:noreply, assign(socket, :telegram_form_values, form_values)}
+  end
+
+  defp maybe_discard_stub(%{
+         telegram_form_is_stub: true,
+         telegram_form_mode: :create,
+         telegram_form_data: %TelegramIntegrationSchema{} = stub
+       }),
+       do: Telegram.discard_pending(stub)
+
+  defp maybe_discard_stub(_assigns), do: :ok
+
+  defp reset_form(socket) do
+    socket
+    |> assign(:show_telegram_form, false)
+    |> assign(:telegram_form_data, nil)
+    |> assign(:telegram_form_errors, %{})
+    |> assign(:telegram_form_values, %{})
+    |> assign(:telegram_link_timer, nil)
+    |> assign(:telegram_deep_link, nil)
+    |> assign(:telegram_link_expired, false)
+    |> assign(:telegram_form_is_stub, false)
+    |> AutomationHelpers.maybe_load_telegram()
   end
 end

@@ -18,13 +18,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModalTest do
     )
   end
 
-  test "renders all three scope options" do
+  # The scoped choices come back once a provider write honours a scope; until
+  # then offering them would promise a change that does not happen.
+  test "offers the edit for this event only" do
     html = render_component(&RecurrencePromptModal.recurrence_prompt_modal/1, base_assigns())
 
     assert html =~ "Edit recurring event"
-    assert html =~ "This event only"
-    assert html =~ "This and following events"
-    assert html =~ "All events in series"
+    assert html =~ ~s(phx-value-scope="this_only")
+    assert html =~ "Update this event"
+    refute html =~ ~s(phx-value-scope="this_and_following")
+    refute html =~ ~s(phx-value-scope="all")
   end
 
   test "renders cancel button" do

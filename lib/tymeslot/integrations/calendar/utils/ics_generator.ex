@@ -22,10 +22,21 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
   @doc """
   Generates a Swoosh email attachment with ICS content.
+
+  The SEQUENCE comes from the payload's `:ical_sequence`, which every detail
+  map built by `Tymeslot.Emails.AppointmentBuilder` carries and which records
+  the revision of the last calendar entry sent for the meeting. A first
+  invitation therefore sends `SEQUENCE:0`, identical in meaning to the omitted
+  property it replaces. An invitation re-sent for a revision already announced
+  once (a booking approved after it was rescheduled back into the gate) sends
+  the higher value, so the recipient's calendar supersedes the entry it holds
+  instead of weighing two entries of equal revision against their DTSTAMP.
   """
   @spec generate_ics_attachment(map(), String.t(), String.t()) :: Swoosh.Attachment.t()
   def generate_ics_attachment(meeting_details, locale \\ "en", filename \\ "meeting.ics") do
-    build_attachment(meeting_details, :request, nil, locale, filename)
+    sequence = Map.get(meeting_details, :ical_sequence) || 0
+
+    build_attachment(meeting_details, :request, sequence, locale, filename)
   end
 
   @doc """
@@ -66,9 +77,16 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   defp build_attachment(meeting_details, method, sequence, locale, filename) do
     ics_content = generate_ics_with(meeting_details, method, sequence, locale)
 
+    # Bare `text/calendar`, no inline params. Swoosh splits the attachment
+    # content_type on "/", so a value like "text/calendar; method=PUBLISH"
+    # lands the params inside the subtype and the MIME encoder emits an
+    # ambiguous Content-Type that strict gateways defer (Proxmox Mail Gateway
+    # since PSA-2026-00005-1). The method is already carried in the body
+    # (METHOD:PUBLISH) and the part is base64-encoded, so a charset param is
+    # moot on the wire.
     %Swoosh.Attachment{
       filename: filename,
-      content_type: "text/calendar; charset=utf-8; method=PUBLISH",
+      content_type: "text/calendar",
       data: ics_content
     }
   end
@@ -85,8 +103,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     %{
       summary: Map.get(meeting_details, :title, dgettext("emails", "Meeting")),
       description: build_ics_description(meeting_details),
-      dtstart: meeting_details.start_time,
-      dtend: meeting_details.end_time,
+      dtstart: dtstart(meeting_details),
+      dtend: dtend(meeting_details),
       location: determine_location(meeting_details),
       uid:
         "#{Map.get(meeting_details, :uid, UUID.uuid4())}@#{Application.get_env(:tymeslot, :email)[:domain]}",
@@ -96,6 +114,14 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
       status: Map.get(meeting_details, :status, "CONFIRMED")
     }
   end
+
+  # An all-day event has dates and no instants: RFC 5545 §3.3.4 date-only
+  # values, with the exclusive end date the iCal convention already uses.
+  defp dtstart(%{all_day: true, start_date: %Date{} = start_date}), do: start_date
+  defp dtstart(meeting_details), do: meeting_details.start_time
+
+  defp dtend(%{all_day: true, end_date: %Date{} = end_date}), do: end_date
+  defp dtend(meeting_details), do: meeting_details.end_time
 
   defp conference_uri(meeting_details) do
     case Map.get(meeting_details, :meeting_url) do
@@ -133,8 +159,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     BEGIN:VEVENT
     UID:#{event.uid}
     DTSTAMP:#{format_datetime_utc(DateTime.utc_now())}
-    DTSTART:#{format_datetime_utc(event.dtstart)}
-    DTEND:#{format_datetime_utc(event.dtend)}
+    DTSTART#{format_ical_time(event.dtstart)}
+    DTEND#{format_ical_time(event.dtend)}
     #{sequence_line}SUMMARY#{tag_language(summary_text, lang)}:#{summary_text}
     DESCRIPTION#{tag_language(description_text, lang)}:#{description_text}
     LOCATION#{tag_language(location_text, lang)}:#{location_text}
@@ -362,6 +388,9 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   end
 
   defp escape_ical_text(nil), do: ""
+
+  defp format_ical_time(%Date{} = date), do: ";VALUE=DATE:#{Calendar.strftime(date, "%Y%m%d")}"
+  defp format_ical_time(datetime), do: ":#{format_datetime_utc(datetime)}"
 
   defp format_datetime_utc(datetime) do
     datetime

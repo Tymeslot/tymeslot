@@ -79,10 +79,15 @@ defmodule TymeslotWeb do
       # SecurityHeadersPlug runs in `:any` mode so the page frames on ANY
       # origin (including ones embedding is blocked on) — that's the whole
       # point: it replaces the marketing-homepage fallback inside the iframe.
+      # No session: the notice is framed cross-site, where the browser withholds
+      # the SameSite=Lax session cookie, so the locale comes from the `locale`
+      # query param EmbedAuthHook forwards from the refused booking page, then
+      # Accept-Language.
       pipeline :embed_notice do
         plug :accepts, ["html"]
         plug :put_secure_browser_headers
         plug TymeslotWeb.Plugs.SecurityHeadersPlug, allow_embedding: :any
+        plug TymeslotWeb.Plugs.LocalePlug, surface: :booking, session: false
       end
 
       pipeline :api do
@@ -122,13 +127,6 @@ defmodule TymeslotWeb do
       pipeline :require_authenticated_user do
         plug TymeslotWeb.Plugs.RequireAuthPlug
       end
-    end
-  end
-
-  @spec channel() :: Macro.t()
-  def channel do
-    quote do
-      use Phoenix.Channel
     end
   end
 

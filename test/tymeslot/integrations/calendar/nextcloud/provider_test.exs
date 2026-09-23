@@ -6,6 +6,9 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder
   alias Tymeslot.Integrations.Calendar.Nextcloud.Provider
+  alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
+
+  setup :verify_on_exit!
 
   setup do
     CalendarCircuitBreaker.reset(:nextcloud)
@@ -205,7 +208,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
                {:ok, "Nextcloud connection successful"}
     end
 
-    test "translates 401 to a Nextcloud-flavoured authentication failure message" do
+    test "reports 401 as :unauthorized rather than as copy" do
       integration = %{
         base_url: "https://cloud.example.com",
         username: "alice",
@@ -217,7 +220,13 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
         {:ok, %Req.Response{status: 401, body: ""}}
       end)
 
-      assert {:error, message} = Provider.perform_connection_test(integration)
+      # The reason, not a sentence: the scheduled health probe classifies what
+      # comes back, and only the atom says the credentials are permanently
+      # refused. The Nextcloud-flavoured copy is written once in
+      # `ErrorHandler`, on the paths that show a message.
+      assert Provider.perform_connection_test(integration) == {:error, :unauthorized}
+
+      message = ErrorHandler.sanitize_error_message(:unauthorized, :nextcloud)
       assert message =~ "Authentication failed"
       assert message =~ "app password"
     end

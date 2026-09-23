@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
 
   alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.EventRole
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries.Visibility
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
 
@@ -17,6 +18,12 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   # a rename cannot leave a stale literal behind in a `where` clause that would
   # then silently match nothing.
   @role_busy_only EventRole.busy_only()
+  @sync_state_locally_deleted "locally_deleted"
+
+  # The columns a dashboard edit may change on a cached row: what a user can
+  # edit on an event, plus the video room an edit can attach to it.
+  @local_edit_fields ~w(summary description location start_at end_at all_day start_date end_date
+                        reminders recurrence_rule colour attendees video_link video_integration_id)a
 
   @doc """
   Returns all cached events for the given integration IDs within a time range.
@@ -33,6 +40,14 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   Availability reads `CalendarEventQueries.in_range/2` instead, which excludes
   the other side. Every provider but Exchange writes only `both` rows, so
   neither filter changes what they return.
+
+  A row the organiser has deleted is also excluded, even while the delete is
+  still queued for the server: the flash says the event is gone and will be
+  retried, so leaving it drawn contradicts it. Availability deliberately keeps
+  counting the row until the delete lands, because the event is still on the
+  server and the slot is not free yet. This used to happen by accident — the
+  queue tag blanked the timing columns the overlap test reads — and stopped
+  the moment that blanking was fixed.
 
   ## Options
 
@@ -53,6 +68,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
     ProviderCalendarEventSchema
     |> where([e], e.calendar_integration_id in ^integration_ids)
     |> where([e], e.role != ^@role_busy_only)
+    |> where([e], e.sync_state != ^@sync_state_locally_deleted)
     |> where_overlapping_range(range_start, range_end)
     |> order_by([e], asc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)))
     |> maybe_limit(limit)
@@ -71,19 +87,34 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   Only timed events are returned — all-day events have no meaningful clock time
   to fire a desktop reminder against. Reminder filtering (events that actually
   carry reminders) is done by the caller after normalisation.
+
+  ## Options
+
+  - `:limit`: maximum number of rows to return (default #{@upcoming_reminder_limit}).
+  - `:visibility_rules`: a map of `integration_id => Selection.visibility_rule/0`
+    (see `Tymeslot.Integrations.Calendar.Selection.visibility_rules/1`), applied
+    as a `where` clause so a deselected calendar's rows never occupy a limit
+    slot a real match could have used. Omitted or `%{}` returns every row
+    regardless of selection, matching the pre-selection behaviour.
   """
-  @spec list_upcoming_timed([integer()], DateTime.t(), DateTime.t()) :: [
+  @spec list_upcoming_timed([integer()], DateTime.t(), DateTime.t(), keyword()) :: [
           ProviderCalendarEventSchema.t()
         ]
-  def list_upcoming_timed([], _now, _window_end), do: []
+  def list_upcoming_timed(integration_ids, now, window_end, opts \\ [])
 
-  def list_upcoming_timed(integration_ids, now, window_end) do
+  def list_upcoming_timed([], _now, _window_end, _opts), do: []
+
+  def list_upcoming_timed(integration_ids, now, window_end, opts) do
+    limit = Keyword.get(opts, :limit, @upcoming_reminder_limit)
+    rules = Keyword.get(opts, :visibility_rules, %{})
+
     ProviderCalendarEventSchema
     |> where([e], e.calendar_integration_id in ^integration_ids)
     |> where([e], e.all_day == false and not is_nil(e.start_at))
     |> where([e], e.start_at >= ^now and e.start_at < ^window_end)
-    |> order_by([e], asc: e.start_at)
-    |> limit(@upcoming_reminder_limit)
+    |> where([e], ^Visibility.dynamic_for(rules))
+    |> order_by([e], asc: e.start_at, asc: e.id)
+    |> limit(^limit)
     |> Repo.all()
   end
 
@@ -105,6 +136,11 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
 
   - `:hidden_integration_ids` — list of integration ids to exclude (default `[]`).
   - `:limit` — maximum number of rows to return (default #{@default_search_limit}).
+  - `:visibility_rules`: a map of `integration_id => Selection.visibility_rule/0`
+    (see `Tymeslot.Integrations.Calendar.Selection.visibility_rules/1`), applied
+    as a `where` clause so a deselected calendar's rows never occupy a limit
+    slot a real match could have used. Omitted or `%{}` returns every row
+    regardless of selection, matching the pre-selection behaviour.
   """
   @spec search(integer(), String.t(), keyword()) :: [ProviderCalendarEventSchema.t()]
   def search(user_id, term, opts \\ []) when is_integer(user_id) do
@@ -115,6 +151,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
     else
       hidden_ids = Keyword.get(opts, :hidden_integration_ids, [])
       limit = Keyword.get(opts, :limit, @default_search_limit)
+      rules = Keyword.get(opts, :visibility_rules, %{})
       pattern = "%" <> escape_like(trimmed) <> "%"
 
       ProviderCalendarEventSchema
@@ -126,7 +163,11 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
         ilike(e.summary, ^pattern) or ilike(e.description, ^pattern) or
           ilike(e.location, ^pattern)
       )
-      |> order_by([e, _i], asc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)))
+      |> where([e, _i], ^Visibility.dynamic_for(rules))
+      |> order_by([e, _i],
+        asc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)),
+        asc: e.id
+      )
       |> limit(^limit)
       |> Repo.all()
     end
@@ -320,6 +361,96 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   end
 
   @doc """
+  Fetches the cached event linked to any of `identifiers`, which is the
+  identifier list of a meeting or event as `Tymeslot.Meetings.CalendarEventLink`
+  defines it.
+
+  Matches `uid` *or* `provider_event_id`, because which of the two carries the
+  link depends on the provider family: Google and Outlook agree with the
+  meeting on `provider_event_id` while their cached `uid` is the provider's own
+  iCalUID, and the CalDAV family is the mirror image, keeping the mapping in
+  `uid` and an href in `provider_event_id`. Testing one column alone therefore
+  matches nothing for half the providers — see that module for the full rule.
+
+  Unlike `get_by_uid/2` this cannot rest on a unique index: only
+  `(calendar_integration_id, uid)` is unique, and an event's
+  `provider_event_id` is not (every expanded occurrence of a recurring series
+  shares its parent's). So it takes the first row rather than raising on a
+  second, ordered by `id` so the choice is at least deterministic.
+  """
+  @spec get_by_identifiers(integer(), [String.t()]) ::
+          {:ok, ProviderCalendarEventSchema.t()} | {:error, :not_found}
+  def get_by_identifiers(_calendar_integration_id, []), do: {:error, :not_found}
+
+  def get_by_identifiers(calendar_integration_id, identifiers) when is_list(identifiers) do
+    query =
+      ProviderCalendarEventSchema
+      |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+      |> where([e], e.uid in ^identifiers or e.provider_event_id in ^identifiers)
+      |> order_by([e], asc: e.id)
+      |> limit(1)
+
+    case Repo.one(query) do
+      nil -> {:error, :not_found}
+      event -> {:ok, event}
+    end
+  end
+
+  @doc """
+  Writes through the timing/content fields Tymeslot itself just pushed to the
+  provider onto the matching cache row.
+
+  Used by `Tymeslot.Meetings.CalendarEventSync.update/2` after a successful
+  *outbound* push (e.g. a reschedule), so the calendar-view grid — which
+  prefers a linked cache row over the live meeting — doesn't keep showing
+  the pre-update time until the next inbound sync cycle happens to reconcile
+  it. Limited to the handful of fields Tymeslot actually knows it just
+  wrote; everything else on the row (etag, provider_metadata, the offline
+  sync-queue bookkeeping columns, ...) is left untouched for a real inbound
+  sync to reconcile, matching `update_notification_baseline/3`'s narrow
+  targeted-update pattern rather than `upsert_batch/1`'s full-row replace.
+
+  `timezone` is not among the castable fields on purpose: what the outbound
+  push carries there is the booker's display zone rather than the event's own
+  TZID, so writing it would put a value on the row that no provider reports
+  back. The caller documents the rest of the field choice.
+  """
+  @spec update_after_outbound_push(ProviderCalendarEventSchema.t(), map()) ::
+          {:ok, ProviderCalendarEventSchema.t()} | {:error, Changeset.t()}
+  def update_after_outbound_push(%ProviderCalendarEventSchema{} = event, attrs) do
+    event
+    |> Changeset.cast(attrs, [
+      :start_at,
+      :end_at,
+      :summary,
+      :description,
+      :location,
+      :status,
+      :transparency
+    ])
+    |> Repo.update()
+  end
+
+  @doc """
+  Writes a dashboard edit Tymeslot has just pushed to the provider onto the
+  cached row, touching only the columns a user can edit (#{Enum.map_join(@local_edit_fields, ", ", &"`#{&1}`")}).
+
+  Unlike `upsert_batch/1`'s full-row replace, everything the provider owns
+  (`etag`, `raw_ical`, `recurring_event_id`, `organiser`, ...) keeps its
+  value until the next inbound sync. Keys outside that list are ignored.
+  """
+  @spec apply_local_edit(integer(), String.t(), map()) ::
+          {:ok, ProviderCalendarEventSchema.t()} | {:error, :not_found | Changeset.t()}
+  def apply_local_edit(calendar_integration_id, uid, attrs) when is_map(attrs) do
+    with {:ok, event} <- get_by_uid(calendar_integration_id, uid) do
+      event
+      |> Changeset.cast(attrs, @local_edit_fields)
+      |> Changeset.foreign_key_constraint(:video_integration_id)
+      |> Repo.update()
+    end
+  end
+
+  @doc """
   Deletes a single event identified by its integration and uid.
 
   Returns `{:ok, :deleted}` if a row was removed, `{:ok, :not_found}` if nothing matched.
@@ -385,25 +516,6 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
 
       acc + count
     end)
-  end
-
-  @doc """
-  Deletes a single event identified by its integration and provider event ID.
-
-  Returns `{:ok, :deleted}` if a row was removed, `{:ok, :not_found}` if nothing matched.
-  """
-  @spec delete_by_provider_event_id(integer(), String.t()) :: {:ok, :deleted | :not_found}
-  def delete_by_provider_event_id(calendar_integration_id, provider_event_id) do
-    {count, _rows} =
-      ProviderCalendarEventSchema
-      |> where(
-        [e],
-        e.calendar_integration_id == ^calendar_integration_id and
-          e.provider_event_id == ^provider_event_id
-      )
-      |> Repo.delete_all()
-
-    if count > 0, do: {:ok, :deleted}, else: {:ok, :not_found}
   end
 
   @doc """

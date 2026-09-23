@@ -2,13 +2,14 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   @moduledoc """
   Database queries for integration health state persistence.
 
-  Provides get/upsert operations for the `integration_health_states` table,
+  Provides read and write operations for the `integration_health_states` table,
   which stores the current health monitoring state for each calendar and video
   integration so that state survives process restarts.
   """
 
   import Ecto.Query
 
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.HealthCheck.HealthStatus
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
@@ -71,32 +72,6 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   end
 
   @doc """
-  Upserts the health state for an integration.
-
-  Replaces all provided fields on conflict against the `[integration_type, integration_id]`
-  unique index. Returns `{:ok, record}` on success.
-  """
-  @spec upsert(String.t() | atom(), integer(), map()) ::
-          {:ok, IntegrationHealthStateSchema.t()} | {:error, any()}
-  def upsert(type, integration_id, attrs) do
-    type_str = to_string(type)
-    replace_fields = Map.keys(attrs) ++ [:updated_at]
-
-    attrs_with_identity =
-      attrs
-      |> Map.put(:integration_type, type_str)
-      |> Map.put(:integration_id, integration_id)
-
-    %IntegrationHealthStateSchema{}
-    |> IntegrationHealthStateSchema.upsert_changeset(attrs_with_identity)
-    |> Repo.insert(
-      on_conflict: {:replace, replace_fields},
-      conflict_target: [:integration_type, :integration_id],
-      returning: true
-    )
-  end
-
-  @doc """
   Updates specific fields on an existing health state record.
   Only updates if a record already exists (no INSERT). Safe to call
   concurrently — a genuinely atomic single statement, so a row deleted
@@ -117,7 +92,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       from(s in IntegrationHealthStateSchema,
         where: s.integration_type == ^type_str and s.integration_id == ^integration_id
       ),
-      set: field_updates ++ [updated_at: DateTime.utc_now()]
+      set: field_updates ++ [updated_at: Clock.utc_now()]
     )
   end
 
@@ -151,7 +126,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       consecutive_sync_failures: 0,
       successes: 0,
       backoff_ms: 1_800_000,
-      last_check_at: DateTime.utc_now(),
+      last_check_at: Clock.utc_now(),
       last_error_class: nil,
       became_unhealthy_at: nil,
       notification_sent_at: nil

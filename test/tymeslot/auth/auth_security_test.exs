@@ -7,8 +7,7 @@ defmodule Tymeslot.Auth.SecurityTest do
 
   alias Tymeslot.Auth
   alias Tymeslot.Auth.Authentication
-  alias Tymeslot.Auth.UserTokenQueries
-  alias Tymeslot.Security.{Password, Token}
+  alias Tymeslot.Security.Password
 
   import Tymeslot.Factory
 
@@ -115,34 +114,13 @@ defmodule Tymeslot.Auth.SecurityTest do
     end
   end
 
-  describe "password reset security" do
-    test "reset tokens are single-use" do
-      user = insert(:user)
-      assert {:ok, :reset_initiated, _message} = Auth.initiate_password_reset(user.email)
-
-      # Get token directly using helper - initiate_password_reset sends it via email
-      # For testing, we generate a fresh token and store it
-      {token, _value} = Token.generate_password_reset_token()
-      {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
-
-      # First use succeeds
-      result = Auth.reset_password(token, "NewPass123!", "NewPass123!")
-      # Should succeed (returns 3-tuple)
-      assert match?({:ok, _, _}, result)
-
-      # Second use always fails
-      assert {:error, :invalid_token, _message} =
-               Auth.reset_password(token, "AnotherPass123!", "AnotherPass123!")
-    end
-  end
-
   describe "account protection" do
     test "email changes require current password" do
       user =
         insert(:user, password_hash: Password.hash_password("Current123!"))
 
       # Wrong password blocks email change
-      assert {:error, "Current password is incorrect"} =
+      assert {:error, {:current_password, "Current password is incorrect"}} =
                Auth.request_email_change(user, "new@example.com", "Wrong123!")
 
       # Correct password initiates email change
@@ -159,7 +137,7 @@ defmodule Tymeslot.Auth.SecurityTest do
         insert(:user, password_hash: Password.hash_password("Current123!"))
 
       # Wrong password blocks password change
-      assert {:error, _reason} =
+      assert {:error, {:current_password, _message}} =
                Auth.update_user_password(user, "Wrong123!", "New123!New", "New123!New")
 
       # Correct password allows password change

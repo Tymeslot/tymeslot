@@ -165,6 +165,33 @@ defmodule Tymeslot.Auth.Session do
   end
 
   @doc """
+  Remembers an unverified user in the Plug session, so the verify-email page
+  can offer to resend their link.
+
+  Only call this once the user has proved their password: whoever holds this
+  session can have the verification email resent, which rotates the pending
+  link. `get_unverified_user_from_session/1` reads it back.
+  """
+  @spec put_unverified_user(Conn.t(), user_minimal()) :: Conn.t()
+  def put_unverified_user(conn, %{id: id, email: email}) do
+    conn
+    |> Conn.put_session(:unverified_user_id, id)
+    |> Conn.put_session(:unverified_user_email, email)
+    |> Conn.put_session(:unverified_session_timestamp, DateTime.to_unix(DateTime.utc_now()))
+  end
+
+  @doc """
+  Forgets the unverified user stored by `put_unverified_user/2`.
+  """
+  @spec clear_unverified_user(Conn.t()) :: Conn.t()
+  def clear_unverified_user(conn) do
+    conn
+    |> Conn.delete_session(:unverified_user_id)
+    |> Conn.delete_session(:unverified_user_email)
+    |> Conn.delete_session(:unverified_session_timestamp)
+  end
+
+  @doc """
   Get unverified user from session data.
   Used during email verification flow to track incomplete registrations.
   """

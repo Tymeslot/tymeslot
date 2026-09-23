@@ -4,11 +4,23 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   API event format. Pure data transformations with no side effects.
   """
 
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.EventTimeFormatter
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias Tymeslot.Integrations.Calendar.Reminder
   alias Tymeslot.Utils.UrlBuilder
+
+  # Google's attendee `responseStatus` vocabulary, keyed by the canonical reply
+  # `Attendee.normalise/1` reads every cached spelling into. That read folds
+  # anything unrecognised to `:needs_action`, so Google is never sent a
+  # `responseStatus` it would reject.
+  @google_response_statuses %{
+    accepted: "accepted",
+    declined: "declined",
+    tentative: "tentative",
+    needs_action: "needsAction"
+  }
 
   @doc """
   Formats internal event data into a Google Calendar API event body.
@@ -117,25 +129,58 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
   end
 
   defp build_attendees(event_data) do
-    attendees = get_field_value(event_data, :attendees)
+    case get_field_value(event_data, :attendees) do
+      attendees when is_list(attendees) and attendees != [] ->
+        Enum.map(attendees, &google_attendee/1)
 
-    if is_list(attendees) and attendees != [] do
-      Enum.map(attendees, fn attendee ->
-        remove_nil_values(%{
-          "email" => get_field_value(attendee, :email),
-          "displayName" => get_field_value(attendee, :name)
-        })
-      end)
-    else
-      # Legacy single-attendee path (ad-hoc meetings)
-      email = get_field_value(event_data, :attendee_email)
-      name = get_field_value(event_data, :attendee_name)
+      _none ->
+        legacy_attendee(event_data)
+    end
+  end
 
-      if email do
-        [remove_nil_values(%{"email" => email, "displayName" => name})]
-      else
+  # `events.update` is a full replace, so an attendee sent without its
+  # `responseStatus` comes back from Google as `needsAction` and every reply
+  # already given to the invitation is thrown away, silently, because the
+  # write suppresses notifications. The cached status is therefore carried
+  # across whenever the event has one. An attendee the edit just added has
+  # none, and the key is left out for them: Google's own default for a new
+  # invitee is `needsAction`, which is exactly right. `Attendee.normalise/1`
+  # settles the shape first, since cached attendees come back from JSONB
+  # string-keyed and older rows spell the label `name`.
+  defp google_attendee(attendee) do
+    attendee = Attendee.normalise(attendee)
+
+    remove_nil_values(%{
+      "email" => attendee.email,
+      "displayName" => attendee.display_name,
+      "responseStatus" => google_response_status(attendee.response_status),
+      "optional" => optional_flag(attendee.optional)
+    })
+  end
+
+  defp google_response_status(nil), do: nil
+  defp google_response_status(status), do: Map.fetch!(@google_response_statuses, status)
+
+  # Google reads a missing `optional` as a required attendee, so only the
+  # optional case needs writing.
+  defp optional_flag(true), do: true
+  defp optional_flag(false), do: nil
+
+  # Legacy single-attendee path (ad-hoc meetings), which names the invitee on
+  # the event itself rather than in an attendee list. Such an event is always
+  # freshly created, so there is no response to carry.
+  defp legacy_attendee(event_data) do
+    case get_field_value(event_data, :attendee_email) do
+      email when is_binary(email) ->
+        [
+          remove_nil_values(%{
+            "email" => email,
+            "displayName" => get_field_value(event_data, :attendee_name)
+          })
+        ]
+
+      _none ->
         nil
-      end
     end
   end
 

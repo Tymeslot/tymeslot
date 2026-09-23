@@ -31,6 +31,29 @@ defmodule Tymeslot.Validation.Constraints do
   def min_advance_hours_range, do: 0..168
 
   @doc """
+  How many years ahead of the owner's today a time-off period may end.
+
+  Derived from `advance_booking_days_range/0` rather than picked: no schedule
+  can offer a slot more than a year out, so a period reaching beyond that plus
+  a generous margin closes nothing that was ever bookable. What a date past it
+  really means is a mistyped year, and that mistake has no symptom other than
+  an account nobody can book, for ever, with nothing on the booking page
+  saying why.
+  """
+  @spec time_off_max_years_ahead() :: pos_integer()
+  def time_off_max_years_ahead, do: 2
+
+  @doc """
+  The last day a time-off period may end on, read from the owner's `today`.
+
+  Takes the date rather than reading the clock because only the caller knows
+  whose timezone today is read in; a bound computed from UTC would be a day
+  out for a host in Auckland.
+  """
+  @spec time_off_last_end_date(Date.t()) :: Date.t()
+  def time_off_last_end_date(today), do: Date.shift(today, year: time_off_max_years_ahead())
+
+  @doc """
   How long a meeting may be, in minutes.
 
   The floor is five rather than one because a booking shorter than that is a
@@ -168,9 +191,6 @@ defmodule Tymeslot.Validation.Constraints do
   @spec name_length_range() :: Range.t()
   def name_length_range, do: 1..100
 
-  @spec integration_name_length_range() :: Range.t()
-  def integration_name_length_range, do: 2..100
-
   @spec webhook_name_length_range() :: Range.t()
   def webhook_name_length_range, do: 1..255
 
@@ -203,6 +223,9 @@ defmodule Tymeslot.Validation.Constraints do
 
   @spec override_reason_max_length() :: pos_integer()
   def override_reason_max_length, do: 100
+
+  @spec time_off_label_max_length() :: pos_integer()
+  def time_off_label_max_length, do: 60
 
   # Booking-page introductory text. The caps are the point at which the copy
   # stops behaving on the tightest viewport the booker supports: at 80

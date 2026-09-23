@@ -320,15 +320,6 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Updates a user changeset using a specific repo (for transactions).
-  """
-  @spec update_changeset(Changeset.t(), module()) ::
-          {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def update_changeset(changeset, repo) do
-    repo.update(changeset)
-  end
-
-  @doc """
   Updates user verification status and marks token as used.
   NOTE: Intentionally keeps signup_ip for audit trail and fraud detection.
   """
@@ -370,14 +361,6 @@ defmodule Tymeslot.Auth.UserQueries do
   @spec delete_user_row(UserSchema.t()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
   def delete_user_row(%UserSchema{} = user) do
     Repo.delete(user)
-  end
-
-  @doc """
-  Gets a user by ID and raises if not found.
-  """
-  @spec get_user!(integer()) :: UserSchema.t()
-  def get_user!(id) do
-    Repo.get!(UserSchema, id)
   end
 
   @doc """
@@ -424,15 +407,45 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Replaces the host's manually-ticked dashboard setup items. Callers own the
-  membership logic (add/remove a key); this only persists the resulting list.
+  Adds `item` to the host's manually-ticked dashboard setup items, or removes it
+  when it is already there, in a single statement. Membership is read from the
+  stored row, so concurrent toggles from two tabs never clobber each other.
+
+  Returns `user` carrying the stored list, with its preloads intact.
   """
-  @spec set_dashboard_setup_done_items(UserSchema.t(), [String.t()]) ::
-          {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def set_dashboard_setup_done_items(%UserSchema{} = user, items) when is_list(items) do
-    user
-    |> Changeset.change(%{dashboard_setup_done_items: items})
-    |> Repo.update()
+  @spec toggle_dashboard_setup_done_item(UserSchema.t(), String.t()) ::
+          {:ok, UserSchema.t()} | {:error, :not_found}
+  def toggle_dashboard_setup_done_item(%UserSchema{id: id} = user, item) when is_binary(item) do
+    now = DateTime.utc_now(:second)
+
+    query =
+      from(u in UserSchema,
+        where: u.id == ^id,
+        update: [
+          set: [
+            dashboard_setup_done_items:
+              fragment(
+                "CASE WHEN ?::varchar = ANY(?) THEN array_remove(?, ?::varchar) ELSE array_append(?, ?::varchar) END",
+                ^item,
+                u.dashboard_setup_done_items,
+                u.dashboard_setup_done_items,
+                ^item,
+                u.dashboard_setup_done_items,
+                ^item
+              ),
+            updated_at: ^now
+          ]
+        ],
+        select: u.dashboard_setup_done_items
+      )
+
+    case Repo.update_all(query, []) do
+      {1, [items]} ->
+        {:ok, %{user | dashboard_setup_done_items: items, updated_at: now}}
+
+      {0, _none} ->
+        {:error, :not_found}
+    end
   end
 
   @doc """

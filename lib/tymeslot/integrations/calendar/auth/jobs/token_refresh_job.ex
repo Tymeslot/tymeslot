@@ -18,12 +18,14 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Tokens
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.Common.ErrorHandler
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Workers.RetryHelpers
 
   @refresh_threshold_hours 2
@@ -163,20 +165,21 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
   defp handle_refresh_error(integration, reason, provider) do
     case categorize_error(reason) do
       :permanent ->
-        # Don't retry - mark for re-authorization
-        error_msg =
-          ErrorHandler.format_integration_error(
-            provider,
-            "token refresh",
-            "#{reason} (PERMANENT)"
-          )
-
-        CalendarIntegrationQueries.update(integration, %{
-          sync_error: error_msg,
-          is_active: false
-        })
-
-        {:discard, "Permanent error: #{reason}"}
+        # Only the owner can fix this, so ask them to reconnect rather than
+        # deactivating: a deactivated integration reads as paused on the
+        # dashboard, sends no email, and drops out of the health probe that
+        # could otherwise correct the verdict.
+        #
+        # The discard reason is what an operator sees on the job record, so it
+        # carries the OAuth error code: `invalid_grant` and `invalid_client`
+        # point at different things (the owner's account, our client
+        # registration) and the flag alone cannot tell them apart.
+        with {:discard, message} <-
+               CalendarManagement.handle_reauth_required(integration,
+                 cause: ReauthHandling.rejection_cause(reason)
+               ) do
+          {:discard, "#{message}: #{reason}"}
+        end
 
       :rate_limited ->
         # Respect rate limiting with custom backoff
@@ -189,7 +192,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
             "#{reason} (RATE_LIMITED)"
           )
 
-        CalendarIntegrationQueries.update(integration, %{sync_error: error_msg})
+        persist_refresh_failure(integration, error_msg)
 
         {:snooze, retry_after}
 
@@ -202,52 +205,50 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
             "#{reason} (RETRYABLE)"
           )
 
-        CalendarIntegrationQueries.update(integration, %{sync_error: error_msg})
+        persist_refresh_failure(integration, error_msg)
 
         {:error, "#{reason}"}
     end
   end
 
-  defp categorize_error(reason) when is_binary(reason) do
-    reason_lower = String.downcase(reason)
+  # A flagged integration's `sync_error` already carries the reason the owner
+  # needs to act on (no calendar selected, deleted booking calendar, expired
+  # grant). A refresh failure diagnostic is a different, unrelated cause
+  # hitting the same field, so it must not clobber that reason.
+  defp persist_refresh_failure(%{needs_reauth: true}, _error_msg), do: :ok
 
-    cond do
-      permanent_error?(reason_lower) -> :permanent
-      rate_limited_error?(reason_lower) -> :rate_limited
-      retryable_error?(reason_lower) -> :retryable
-      true -> :retryable
-    end
+  defp persist_refresh_failure(integration, error_msg) do
+    CalendarIntegrationQueries.update(integration, %{sync_error: error_msg})
   end
 
-  defp categorize_error(reason) when is_atom(reason) do
-    permanent_atoms = [
-      :unsupported_provider,
-      :invalid_provider,
-      :missing_credentials,
-      :token_persistence_failed
-    ]
+  # `:permanent` means "the provider refused the credential and only the owner
+  # can fix it": it flags the integration and sends a reconnection email that
+  # cannot be recalled. So the verdict comes from the OAuth error code the
+  # provider returned, matched as a whole word by the same rule the breaker
+  # and the health check use (`BreakerOutcome.permanent_credential_error?/1`).
+  # A substring match on "unauthorized" is not that: every token-endpoint
+  # refusal reaches here as `"unauthorized: Token refresh failed: ..."`, so it
+  # would treat an unparseable 400 body, `invalid_request` or
+  # `unsupported_grant_type` as a revoked grant.
+  #
+  # A refreshed token that failed to persist, or our own provider
+  # misconfiguration, is a failure on our side: retrying it is cheap and
+  # telling the owner their credentials were rejected would be wrong.
+  defp categorize_error(:missing_credentials), do: :permanent
+  defp categorize_error(reason) when is_atom(reason), do: categorize_error(Atom.to_string(reason))
 
-    if reason in permanent_atoms do
-      :permanent
-    else
-      categorize_error(to_string(reason))
+  defp categorize_error(reason) when is_binary(reason) do
+    cond do
+      BreakerOutcome.permanent_credential_error?(reason) -> :permanent
+      rate_limited_error?(reason) -> :rate_limited
+      true -> :retryable
     end
   end
 
   defp categorize_error(_reason), do: :retryable
 
-  defp permanent_error?(reason_lower) do
-    permanent_errors = ["invalid_grant", "unauthorized", "invalid_client", "access_denied"]
-    Enum.any?(permanent_errors, &String.contains?(reason_lower, &1))
-  end
-
-  defp rate_limited_error?(reason_lower) do
-    rate_limit_errors = ["rate_limited", "too_many_requests", "quota"]
-    Enum.any?(rate_limit_errors, &String.contains?(reason_lower, &1))
-  end
-
-  defp retryable_error?(reason_lower) do
-    retryable_errors = ["network", "timeout", "connection", "dns", "ssl"]
-    Enum.any?(retryable_errors, &String.contains?(reason_lower, &1))
+  defp rate_limited_error?(reason) do
+    reason_lower = String.downcase(reason)
+    Enum.any?(["rate_limited", "too_many_requests", "quota"], &String.contains?(reason_lower, &1))
   end
 end

@@ -6,7 +6,9 @@ defmodule Tymeslot.Mailer.SmtpProbeTest do
 
   import ExUnit.CaptureLog
 
+  alias Tymeslot.Mailer.SMTPConfig
   alias Tymeslot.Mailer.SmtpProbe
+  alias Tymeslot.Test.FakeSmtpRelay
 
   # ---------------------------------------------------------------------------
   # Helpers
@@ -40,13 +42,24 @@ defmodule Tymeslot.Mailer.SmtpProbeTest do
     :gen_tcp.close(listen_socket)
   end
 
+  # `tls: :never`: these listeners only greet, so the probe must not go on to
+  # negotiate STARTTLS with them.
   defp valid_config(port) do
     [
       relay: "127.0.0.1",
       port: port,
       username: "user",
-      password: "pass"
+      password: "pass",
+      tls: :never
     ]
+  end
+
+  # The production configuration for `localhost`, pointed at a test relay.
+  defp relay_config(relay, opts) do
+    [host: "localhost", port: 587, username: "user", password: "pass"]
+    |> Keyword.merge(opts)
+    |> SMTPConfig.build()
+    |> Keyword.put(:port, relay.port)
   end
 
   # ---------------------------------------------------------------------------
@@ -78,6 +91,108 @@ defmodule Tymeslot.Mailer.SmtpProbeTest do
   # ---------------------------------------------------------------------------
   # Port 587 (STARTTLS path — plain TCP greeting)
   # ---------------------------------------------------------------------------
+
+  describe "test_connection/1 — STARTTLS" do
+    setup do
+      %{certs: FakeSmtpRelay.certificates()}
+    end
+
+    test "passes when the upgraded connection presents a trusted certificate", %{certs: certs} do
+      relay = FakeSmtpRelay.start(starttls: certs)
+
+      capture_log(fn ->
+        assert :ok = SmtpProbe.test_connection(relay_config(relay, cacertfile: certs.cacertfile))
+      end)
+
+      assert_receive {:smtp_relay, {:tls_up, _info}}
+    end
+
+    # The probe used to stop at the plain-text greeting, reporting the mailer
+    # healthy while every send failed this handshake.
+    test "fails when no trust store validates the relay's certificate", %{certs: certs} do
+      relay = FakeSmtpRelay.start(starttls: certs)
+
+      capture_log(fn ->
+        assert {:error, message} = SmtpProbe.test_connection(relay_config(relay, []))
+        assert message =~ "SSL/TLS alert"
+        assert message =~ "SMTP_CACERTFILE"
+      end)
+    end
+
+    test "fails when a port that requires STARTTLS is not offered it" do
+      relay = FakeSmtpRelay.start()
+
+      capture_log(fn ->
+        assert {:error, message} = SmtpProbe.test_connection(relay_config(relay, []))
+        assert message =~ "does not offer STARTTLS"
+        assert message =~ "SMTP_SSL=true"
+      end)
+    end
+
+    # The probe restated the sender's TLS options instead of taking them, and
+    # so kept requiring the middlebox ChangeCipherSpec after the sender had
+    # stopped: on a relay that omits that record the probe failed with
+    # `:tls_failed` while every send went through, reporting a working mailer
+    # broken at every boot.
+    #
+    # A relay that actually omits the record cannot be built out of `:ssl` —
+    # an OTP server sends it precisely when the client's session id says the
+    # client is in middlebox mode — so the assertion is on that session id,
+    # which is what the option controls and what the relay decides from.
+    test "handshakes with the middlebox compatibility mode the sender uses",
+         %{certs: certs} do
+      relay = FakeSmtpRelay.start(starttls: certs)
+
+      capture_log(fn ->
+        assert :ok = SmtpProbe.test_connection(relay_config(relay, cacertfile: certs.cacertfile))
+      end)
+
+      assert_receive {:smtp_relay, {:tls_up, info}}
+      assert info.protocol == :"tlsv1.3"
+      assert info.session_id == ""
+    end
+
+    # The one failure the operator cannot diagnose from the alert alone: every
+    # other `:tls_alert` here means a rejected certificate, and the advice that
+    # goes with it sends them hunting for a CA bundle that is already correct.
+    test "names the missing middlebox record when the compatibility mode is on",
+         %{certs: certs} do
+      relay =
+        [starttls: certs] |> FakeSmtpRelay.start() |> FakeSmtpRelay.without_middlebox_record()
+
+      config = relay_config(relay, cacertfile: certs.cacertfile, middlebox_compat: true)
+
+      capture_log(fn ->
+        assert {:error, message} = SmtpProbe.test_connection(config)
+        assert message =~ "does not send the TLS 1.3 middlebox compatibility record"
+        assert message =~ "Unset SMTP_TLS_MIDDLEBOX_COMPAT"
+        refute message =~ "SMTP_CACERTFILE"
+      end)
+    end
+  end
+
+  describe "test_connection/1 — implicit TLS" do
+    setup do
+      %{certs: FakeSmtpRelay.certificates()}
+    end
+
+    test "passes against a trusted certificate on any port with ssl: true", %{certs: certs} do
+      relay = FakeSmtpRelay.start(implicit_tls: certs)
+      config = relay_config(relay, ssl: true, cacertfile: certs.cacertfile)
+
+      capture_log(fn -> assert :ok = SmtpProbe.test_connection(config) end)
+      assert_receive {:smtp_relay, {:tls_up, _info}}
+    end
+
+    test "fails when no trust store validates the relay's certificate", %{certs: certs} do
+      relay = FakeSmtpRelay.start(implicit_tls: certs)
+
+      capture_log(fn ->
+        assert {:error, message} = SmtpProbe.test_connection(relay_config(relay, ssl: true))
+        assert message =~ "SSL/TLS alert"
+      end)
+    end
+  end
 
   describe "test_connection/1 — port 587 TCP greeting" do
     test "returns :ok when the server sends a valid 220 ESMTP greeting" do
@@ -149,13 +264,6 @@ defmodule Tymeslot.Mailer.SmtpProbeTest do
   # Port 465 (direct SSL path)
   # ---------------------------------------------------------------------------
 
-  # NOTE: The SSL path (port 465) calls :ssl.connect/4, which requires a real
-  # TLS handshake.  Standing up a self-signed TLS listener in a unit test is
-  # possible but requires generating ephemeral certificates (via :public_key or
-  # a helper library) and is too heavy for this test suite.  The DNS-failure
-  # branch is exercised below as a representative path.  Full SSL-path coverage
-  # belongs in an integration / E2E test with a controlled SMTP fixture server.
-
   describe "test_connection/1 — port 465 SSL path" do
     test "returns an error when the relay hostname does not resolve (DNS failure)" do
       config = [
@@ -171,27 +279,6 @@ defmodule Tymeslot.Mailer.SmtpProbeTest do
         assert message =~ "465"
         assert message =~ "DNS"
       end)
-    end
-
-    test "returns a formatted error with port-specific TLS suggestion on handshake failure" do
-      # Probe a port with a plain-TCP echo server on 465 — SSL handshake fails.
-      # This exercises the {:tls_alert, _} branch of format_connection_error/3.
-      {port, listen_socket, server_task} =
-        with_tcp_listener(fn client_socket ->
-          # Accept without speaking TLS — the probe's ssl.connect will fail.
-          :timer.sleep(100)
-          :gen_tcp.close(client_socket)
-        end)
-
-      capture_log(fn ->
-        config = [relay: "127.0.0.1", port: port, username: "user", password: "pass"]
-        # The probe attempts SSL on any port configured as 465, but here we
-        # pass the actual ephemeral port so it reaches the listener.
-        # Error shape verified: either ssl_alert or closed — not :ok.
-        assert {:error, _msg} = SmtpProbe.test_connection(config)
-      end)
-
-      stop_listener({port, listen_socket, server_task})
     end
   end
 

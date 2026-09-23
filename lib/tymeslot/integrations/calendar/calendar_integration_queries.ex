@@ -323,6 +323,69 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
+  Forgets every calendar path's CalDAV sync token, so the next sync of each
+  starts from a full fetch.
+  """
+  @spec clear_caldav_sync_tokens(CalendarIntegrationSchema.t()) :: :ok
+  def clear_caldav_sync_tokens(%CalendarIntegrationSchema{id: id}) do
+    query =
+      from(ci in CalendarIntegrationSchema,
+        where: ci.id == ^id,
+        update: [set: [caldav_sync_tokens: fragment("'{}'::jsonb")]]
+      )
+
+    Repo.update_all(query, [])
+
+    :ok
+  end
+
+  @doc """
+  Records one calendar path's CalDAV sync token, or forgets it when `token` is
+  `nil`.
+
+  A single atomic jsonb edit rather than a changeset over the whole map: a sync
+  run writes a token per path from the integration struct it loaded at the
+  start, so replacing the map would drop every token another path wrote
+  earlier in the same run.
+  """
+  @spec put_caldav_sync_token(CalendarIntegrationSchema.t(), String.t(), String.t() | nil) ::
+          :ok
+  def put_caldav_sync_token(%CalendarIntegrationSchema{id: id}, path, nil) do
+    query =
+      from(ci in CalendarIntegrationSchema,
+        where: ci.id == ^id,
+        update: [set: [caldav_sync_tokens: fragment("? - ?::text", ci.caldav_sync_tokens, ^path)]]
+      )
+
+    Repo.update_all(query, [])
+
+    :ok
+  end
+
+  def put_caldav_sync_token(%CalendarIntegrationSchema{id: id}, path, token)
+      when is_binary(token) do
+    query =
+      from(ci in CalendarIntegrationSchema,
+        where: ci.id == ^id,
+        update: [
+          set: [
+            caldav_sync_tokens:
+              fragment(
+                "COALESCE(?, '{}'::jsonb) || jsonb_build_object(?::text, ?::text)",
+                ci.caldav_sync_tokens,
+                ^path,
+                ^token
+              )
+          ]
+        ]
+      )
+
+    Repo.update_all(query, [])
+
+    :ok
+  end
+
+  @doc """
   Deletes a calendar integration.
   """
   @spec delete(CalendarIntegrationSchema.t()) ::
@@ -332,19 +395,29 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
-  Updates the last sync timestamp and clears any error. Also clears the
-  `needs_reauth` flag — a successful sync proves the credentials are readable
-  and valid, so the flag would otherwise become stale.
+  Clears the reconnection flag and the error that accompanied it, for a sync
+  cycle that read from the provider.
+
+  A cycle that completed disproves every condition that sets the flag: rejected
+  credentials, a booking calendar deleted at the provider, a CalDAV integration
+  with no calendar selected. Left set, the flag keeps the integration out of
+  booking indefinitely (`BookingIntegrationResolver.booking_target?/1` requires
+  `needs_reauth: false`) however well it is syncing, and nothing but the owner
+  reconnecting by hand ever clears it.
+
+  This is deliberately narrower than it looks: a *successful token refresh*
+  must not clear it, because a fresh token says nothing about a deleted
+  calendar — see `Calendar.Auth.Tokens.maybe_clear_sync_error/2`. Only a sync
+  that actually read the calendar carries the proof.
+
+  Ecto skips the statement entirely when neither field has changed, so the
+  overwhelming majority of cycles cost nothing here.
   """
-  @spec mark_sync_success(CalendarIntegrationSchema.t()) ::
+  @spec clear_reauth_flag(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def mark_sync_success(%CalendarIntegrationSchema{} = integration) do
+  def clear_reauth_flag(%CalendarIntegrationSchema{} = integration) do
     integration
-    |> Changeset.change(%{
-      last_sync_at: DateTime.utc_now(:second),
-      sync_error: nil,
-      needs_reauth: false
-    })
+    |> Changeset.change(%{sync_error: nil, needs_reauth: false})
     |> Repo.update()
   end
 

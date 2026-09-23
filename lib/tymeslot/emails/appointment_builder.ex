@@ -6,9 +6,10 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
 
   require Logger
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Shared.BookingRequestLocation
-  alias Tymeslot.Locales
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.Meetings.VideoRooms
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.ReminderUtils
@@ -26,11 +27,14 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       owner_timezone = owner_timezone(meeting)
       attendee_timezone = attendee_timezone(meeting, owner_timezone)
 
+      organizer_profile = organizer_profile(meeting)
+      organizer_locale = RecipientLocale.locale_for_user_id(Map.get(meeting, :organizer_user_id))
+
       base_details = base_details(meeting)
       timezone_details = timezone_details(meeting, owner_timezone, attendee_timezone)
-      participant_details = participant_details(meeting)
+      participant_details = participant_details(meeting, organizer_profile)
       preparation_details = preparation_details()
-      url_details = url_details(meeting)
+      url_details = url_details(meeting, organizer_profile)
       reminder_details = reminder_details(meeting, reminder_interval)
 
       base_details
@@ -40,7 +44,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       |> Map.merge(url_details)
       |> Map.merge(reminder_details)
       |> Map.put(:attendee_locale, attendee_locale)
-      |> Map.put(:organizer_time_format, organizer_time_format(meeting))
+      |> Map.put(:organizer_locale, organizer_locale)
+      |> Map.put(:organizer_time_format, organizer_time_format(meeting, organizer_locale))
       |> Map.put(:booking_payment, booking_payment_for(meeting))
     end)
   end
@@ -49,11 +54,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   # template. Deliberately namespaced away from the plain `:time_format` key the
   # hero and text bodies read, so an attendee-addressed branch cannot pick it up
   # by accident: only the organiser branches copy it across.
-  defp organizer_time_format(meeting) do
-    CalendarGrid.get_user_time_format(
-      Map.get(meeting, :organizer_user_id),
-      Locales.admin_default_locale()
-    )
+  defp organizer_time_format(meeting, organizer_locale) do
+    CalendarGrid.get_user_time_format(Map.get(meeting, :organizer_user_id), organizer_locale)
   end
 
   # Look up the booking payment row attached to this meeting, if any.
@@ -126,12 +128,13 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     }
   end
 
-  defp participant_details(meeting) do
+  defp participant_details(meeting, organizer_profile) do
     %{
       # Organizer details
       organizer_name: meeting.organizer_name,
       organizer_email: meeting.organizer_email,
       organizer_title: meeting.organizer_title,
+      organizer_avatar_url: Profiles.uploaded_avatar_url(organizer_profile),
       organizer_contact_info: dgettext("emails", "reply to this email"),
 
       # Attendee details
@@ -151,33 +154,33 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     }
   end
 
-  defp url_details(meeting) do
+  defp url_details(meeting, organizer_profile) do
     %{
       view_url: meeting.view_url || "#",
       reschedule_url: meeting.reschedule_url || "#",
       cancel_url: meeting.cancel_url || "#",
-      booking_url: booking_url(meeting),
+      # The host's public booking page, resolved at send time rather than read
+      # from the meeting row. Unlike the per-meeting action URLs it is not
+      # persisted, so it always reflects the host's current username.
+      booking_url: UrlBuilder.booking_url(organizer_profile && organizer_profile.username),
       meeting_url: meeting.meeting_url,
       organizer_video_url: meeting.organizer_video_url,
-      attendee_video_url: meeting.attendee_video_url
+      attendee_video_url: meeting.attendee_video_url,
+      # The guests' link is the one this payload has to build rather than
+      # read: it is not a column on the meeting, because a booking has any
+      # number of guests. It names nobody, so one link serves them all and
+      # the payload carries it once however many guests it is sent to.
+      guest_video_url: VideoRooms.guest_join_url(meeting)
     }
   end
 
-  # The host's public booking page, resolved at send time rather than read from
-  # the meeting row. Unlike the per-meeting action URLs it is not persisted, so
-  # it always reflects the host's current username.
-  defp booking_url(meeting) do
-    meeting
-    |> Map.get(:organizer_user_id)
-    |> organizer_username()
-    |> UrlBuilder.booking_url()
-  end
+  defp organizer_profile(meeting), do: meeting |> Map.get(:organizer_user_id) |> profile_for()
 
-  defp organizer_username(nil), do: nil
+  defp profile_for(nil), do: nil
 
-  defp organizer_username(user_id) do
+  defp profile_for(user_id) do
     case Profiles.get_profile_by_user_id(user_id) do
-      {:ok, %{username: username}} -> username
+      {:ok, profile} -> profile
       {:error, :not_found} -> nil
     end
   end

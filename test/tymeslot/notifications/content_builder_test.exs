@@ -36,6 +36,29 @@ defmodule Tymeslot.Notifications.ContentBuilderTest do
     end
   end
 
+  describe "build_appointment_details/1 organiser avatar" do
+    test "is an absolute URL to the uploaded avatar" do
+      user = insert(:user)
+      profile = insert(:profile, user: user, avatar: "photo.png")
+
+      details =
+        ContentBuilder.build_appointment_details(build(:meeting, organizer_user_id: user.id))
+
+      assert details.organizer_avatar_url ==
+               "http://localhost:4002/uploads/avatars/#{profile.id}/photo.png"
+    end
+
+    test "is nil, not a generated data URI, when the organiser has no uploaded avatar" do
+      user = insert(:user)
+      insert(:profile, user: user, avatar: nil)
+
+      details =
+        ContentBuilder.build_appointment_details(build(:meeting, organizer_user_id: user.id))
+
+      assert details.organizer_avatar_url == nil
+    end
+  end
+
   describe "build_reschedule_details/2" do
     setup do
       user = insert(:user)
@@ -70,6 +93,19 @@ defmodule Tymeslot.Notifications.ContentBuilderTest do
       assert details.original_start_time_owner_tz.time_zone == "Europe/Berlin"
       assert details.original_start_time_attendee_tz.time_zone == details.attendee_timezone
       assert details.start_time == ~U[2026-03-04 15:00:00Z]
+    end
+
+    test "carries the attendee join link the meeting had before the move", %{
+      original: original,
+      updated: updated
+    } do
+      original = %{original | attendee_video_url: "https://meet.example.com/room?jwt=old"}
+      updated = %{updated | attendee_video_url: "https://meet.example.com/room?jwt=new"}
+
+      details = ContentBuilder.build_reschedule_details(updated, original)
+
+      assert details.original_attendee_video_url == "https://meet.example.com/room?jwt=old"
+      assert details.attendee_video_url == "https://meet.example.com/room?jwt=new"
     end
 
     # Issue #76: this payload is handed straight to an email template rather

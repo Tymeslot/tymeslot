@@ -4,7 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
 
   Each public function maps one field of the canonical event map to its RFC
   5545 / RFC 7986 property line — or `nil` when the field is absent — for
-  assembly by `ICalBuilder.build_simple_event/2`.
+  assembly by `ICalBuilder.build_simple_event/3`.
   """
 
   import Tymeslot.Integrations.Calendar.ICalBuilder.Format,
@@ -16,6 +16,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
       sanitize_ical_value: 1
     ]
 
+  alias Tymeslot.Integrations.Calendar.Attendee
+  alias Tymeslot.Integrations.Calendar.CalDAV.Scheduling
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
 
@@ -216,51 +218,78 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Properties do
 
   def build_exdate(_event), do: nil
 
-  # Issue #41: Zimbra (and likely other CalDAV servers) silently strips
-  # `SCHEDULE-AGENT` from incoming events and runs iTIP scheduling for any
-  # event that carries an `ATTENDEE` block — re-emailing the attendee on top
-  # of Tymeslot's own notification. The only reliable way to keep CalDAV
-  # servers from auto-scheduling is to not advertise an attendee at all.
+  # Which property carries the attendee is the server's call, not this
+  # module's: `CalDAV.Scheduling.attendee_mode/1` weighs the two failure modes
+  # (issues #41 and #123) per server and this serialises its answer.
   #
-  # We emit `CONTACT` instead (RFC 5545 §3.8.4.2), which carries the same
-  # name/email but is not part of the iTIP scheduling model. The attendee
-  # identity is also folded into the event DESCRIPTION (see
-  # `CalendarEventBuilder.build_event_description/1`) so it remains visible
-  # in calendar clients that don't render CONTACT.
-  @spec build_attendee_lines(map()) :: String.t() | nil
-  def build_attendee_lines(%{attendees: attendees})
+  # `:attendee` emits `ATTENDEE;SCHEDULE-AGENT=CLIENT`, the RFC 6638 §7.1 way
+  # to say "stored, but don't mail them — I already did". `:contact` emits
+  # `CONTACT` (RFC 5545 §3.8.4.2), which carries the same name and address
+  # outside the iTIP model entirely, for a server that ignores the parameter
+  # and would invite the attendee a second time.
+  #
+  # Either way the attendee identity is also folded into the event DESCRIPTION
+  # (see `CalendarEventBuilder.build_event_description/1`), which is what
+  # Google and Outlook events carry too, and the only form that renders in a
+  # client showing neither property.
+  @spec build_attendee_lines(map(), Scheduling.mode()) :: String.t() | nil
+  def build_attendee_lines(event, mode \\ :contact)
+
+  def build_attendee_lines(%{attendees: attendees}, mode)
       when is_list(attendees) and attendees != [] do
     attendees
-    |> Enum.map(&format_attendee/1)
+    |> Enum.map(&format_attendee(&1, mode))
     |> Enum.reject(&is_nil/1)
     |> Enum.join("\r\n")
   end
 
-  def build_attendee_lines(%{attendee_email: email} = event) when is_binary(email) do
-    name = Map.get(event, :attendee_name)
-    format_attendee(%{email: email, name: name})
+  def build_attendee_lines(%{attendee_email: email} = event, mode) when is_binary(email) do
+    format_attendee(
+      Attendee.new(email: email, display_name: Map.get(event, :attendee_name)),
+      mode
+    )
   end
 
-  def build_attendee_lines(_event), do: nil
+  def build_attendee_lines(_event, _mode), do: nil
 
-  defp format_attendee(%{"email" => email} = a),
-    do: format_attendee(%{email: email, name: a["name"]})
+  defp format_attendee(%{} = attendee, mode) do
+    case Attendee.normalise(attendee) do
+      %{email: email, display_name: name} when is_binary(email) and email != "" ->
+        attendee_property(sanitize_ical_value(email), name, mode)
 
-  defp format_attendee(%{email: email} = a) when is_binary(email) and email != "" do
-    case a[:name] do
-      name when is_binary(name) and name != "" ->
-        "CONTACT:#{escape_text(name)} <#{sanitize_ical_value(email)}>"
-
-      _missing ->
-        "CONTACT:#{sanitize_ical_value(email)}"
+      _no_address ->
+        nil
     end
   end
 
-  defp format_attendee(email) when is_binary(email) and email != "" do
-    "CONTACT:#{sanitize_ical_value(email)}"
+  defp format_attendee(email, mode) when is_binary(email) and email != "" do
+    attendee_property(sanitize_ical_value(email), nil, mode)
   end
 
-  defp format_attendee(_other), do: nil
+  defp format_attendee(_other, _mode), do: nil
+
+  # PARTSTAT=NEEDS-ACTION is the honest starting state: the attendee booked
+  # through Tymeslot, which is not an RSVP to this calendar entry. RSVP=FALSE
+  # says not to chase one, since the server was just told not to send the
+  # invitation that would ask.
+  defp attendee_property(email, name, :attendee) do
+    params = "SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE"
+
+    case name do
+      name when is_binary(name) and name != "" ->
+        "ATTENDEE;#{params};CN=#{escape_text(name)}:mailto:#{email}"
+
+      _missing ->
+        "ATTENDEE;#{params}:mailto:#{email}"
+    end
+  end
+
+  defp attendee_property(email, name, :contact) do
+    case name do
+      name when is_binary(name) and name != "" -> "CONTACT:#{escape_text(name)} <#{email}>"
+      _missing -> "CONTACT:#{email}"
+    end
+  end
 
   # We still emit `ORGANIZER` on every event so scheduling-aware servers
   # don't inject one of their own at calendar-owner level (which would

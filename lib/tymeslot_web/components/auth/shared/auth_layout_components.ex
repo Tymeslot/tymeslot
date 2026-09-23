@@ -9,7 +9,6 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
   alias Tymeslot.Infrastructure.Config
   alias TymeslotWeb.Components.Auth.AuthVideoConfig
   import TymeslotWeb.Components.BackgroundMotionToggle, only: [background_motion_toggle: 1]
-  import TymeslotWeb.Components.CoreComponents, only: [flash_group: 1]
 
   @spec auth_logo_header(map()) :: Phoenix.LiveView.Rendered.t()
   defp auth_logo_header(assigns) do
@@ -101,11 +100,8 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
 
           {if assigns[:heading], do: render_slot(@heading)}
 
-          <%= if Map.get(assigns, :flash) do %>
-            <div class="mb-6">
-              <.flash_group flash={@flash} />
-            </div>
-          <% end %>
+          <%!-- No flash group here: the `app` layout owns the only one, and
+          `AuthLive` renders through it like every other LiveView. --%>
 
           <div class="space-y-6">
             {render_slot(@form)}

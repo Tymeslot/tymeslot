@@ -6,8 +6,10 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
   against OAuth token endpoints (Google, Microsoft, etc.).
   """
 
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Common.OAuth.LogContext
 
   require Logger
 
@@ -100,6 +102,23 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
   Refreshes an access token using a refresh token payload.
 
   Returns {:ok, tokens} with the same structure as `exchange_code_for_tokens/6`.
+
+  ## Options
+
+    * `:log_context` — key/value pairs merged into the failure log lines so a
+      refresh failure can be attributed without joining against neighbouring
+      lines. This is the shared refresh helper for every provider, so without
+      it a failure line says only which status came back.
+
+  Only `:integration_id`, `:user_id` and `:provider` are kept; anything else is
+  dropped rather than widening the line. Pass ids, never the integration
+  struct: it carries the encrypted OAuth credentials, and the response body is
+  redacted at this call site precisely so they stay out of the logs.
+
+  The correlation id is deliberately not on that list. It is process metadata
+  that `ObanLogger` and the request plug already set, and the JSON formatter
+  emits all process metadata, so on a path that has one it is on the line
+  already and on a path that does not the caller has nothing to pass.
   """
   @spec refresh_access_token(String.t(), map(), keyword()) ::
           {:ok, map()} | {:error, {:http_error, integer(), String.t()} | {:network_error, any()}}
@@ -107,6 +126,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
     fallback_refresh_token = Keyword.get(opts, :fallback_refresh_token)
     fallback_scope = Keyword.get(opts, :fallback_scope)
     headers = Keyword.get(opts, :headers, @default_headers)
+    log_context = LogContext.from_opts(opts)
 
     case Config.http_client_module().request(
            :post,
@@ -123,9 +143,10 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
             parse_token_response(resp_body, fallback_refresh_token, fallback_scope)
 
           _other ->
-            Logger.error("OAuth token refresh failed",
-              status: status,
-              body: Redactor.redact_and_truncate(resp_body)
+            Logger.error(
+              "OAuth token refresh failed",
+              log_context ++
+                [status: status, body: Redactor.redact_and_truncate(resp_body)]
             )
 
             # Preserve the raw response body so callers can extract the OAuth
@@ -135,7 +156,11 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
         end
 
       {:error, reason} ->
-        Logger.error("Network error during token refresh", reason: inspect(reason))
+        Logger.error(
+          "Network error during token refresh",
+          log_context ++ [reason: inspect(reason)]
+        )
+
         {:error, {:network_error, reason}}
     end
   end
@@ -146,7 +171,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
     case Jason.decode(response_body) do
       {:ok, response} ->
         expires_in = if is_integer(response["expires_in"]), do: response["expires_in"], else: 3600
-        expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
+        expires_at = DateTime.add(Clock.utc_now(), expires_in, :second)
 
         {:ok,
          %{

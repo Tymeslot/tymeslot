@@ -30,28 +30,6 @@ defmodule Tymeslot.Integrations.Calendar.TokenUtilsTest do
     end
   end
 
-  describe "format_token_expiry/1" do
-    test "handles nil token_expires_at" do
-      assert {:no_expiry, "No expiry"} = TokenUtils.format_token_expiry(%{token_expires_at: nil})
-    end
-
-    test "handles expired tokens" do
-      past = DateTime.add(DateTime.utc_now(), -3700, :second)
-      assert {:expired, msg} = TokenUtils.format_token_expiry(%{token_expires_at: past})
-      assert msg =~ "1 hour ago"
-    end
-
-    test "handles valid tokens" do
-      future = DateTime.add(DateTime.utc_now(), 3700, :second)
-      assert {:valid, msg} = TokenUtils.format_token_expiry(%{token_expires_at: future})
-      assert msg =~ "in 1 hour"
-    end
-
-    test "handles unknown input" do
-      assert {:unknown, "Unknown"} = TokenUtils.format_token_expiry(%{})
-    end
-  end
-
   describe "relative_time/1" do
     test "formats various time diffs" do
       now = DateTime.utc_now()
