@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.ApprovalWindow
   alias Tymeslot.Utils.ReminderUtils
+  alias TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
@@ -404,7 +405,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
          |> assign(
            :reminder_confirmation,
            dgettext("dashboard_meeting_form", "Added %{label} before",
-             label: ReminderUtils.format_reminder_label(reminder.value, reminder.unit)
+             label: Reminders.reminder_label(reminder.value, reminder.unit)
            )
          )
          |> assign(:reminder_error, nil)
@@ -435,7 +436,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
            show_custom_reminder: false,
            reminder_confirmation:
              dgettext("dashboard_meeting_form", "Added %{label} before",
-               label: ReminderUtils.format_reminder_label(reminder.value, reminder.unit)
+               label: Reminders.reminder_label(reminder.value, reminder.unit)
              )
          )
          |> Autosave.maybe_run()}
