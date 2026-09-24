@@ -23,6 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
 
   @typep converted_event :: %{
            required(:uid) => String.t() | nil,
+           required(:ical_uid) => String.t() | nil,
            required(:summary) => String.t() | nil,
            required(:description) => String.t() | nil,
            required(:location) => String.t() | nil,
@@ -91,6 +92,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
 
     %{
       uid: outlook_event[:id] || outlook_event[:uid],
+      # The key sync caches the event under (`EventNormaliser`).
+      ical_uid: outlook_event[:ical_uid],
       summary: outlook_event[:summary],
       description: outlook_event[:description],
       location: outlook_event[:location],

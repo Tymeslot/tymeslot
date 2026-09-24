@@ -52,6 +52,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
           verify_ssl: boolean(),
           is_active: boolean(),
           needs_reauth: boolean(),
+          reauth_flagged_at: DateTime.t() | nil,
           provider_account_id: String.t() | nil,
           provider_account_email: String.t() | nil,
           sync_error: String.t() | nil,
@@ -104,6 +105,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     field(:verify_ssl, :boolean, default: true)
     field(:is_active, :boolean, default: true)
     field(:needs_reauth, :boolean, default: false)
+    # When `needs_reauth` last went from false to true. Deliberately left in
+    # place when the flag clears, so a flag raised and resolved within the
+    # hour still counts towards the rate `HealthCheck.Alerting` watches.
+    field(:reauth_flagged_at, :utc_datetime)
     field(:provider_account_id, :string)
     field(:provider_account_email, :string)
     field(:sync_error, :string)

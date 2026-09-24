@@ -26,11 +26,21 @@ defmodule Tymeslot.Notifications.Events do
   racing cannot both dispatch. A fan-out that then fails keeps the claim: every
   channel here is best-effort and none of the callers retry the event, so
   releasing it would buy nothing and would risk announcing twice instead.
+
+  A booking can win the claim a second time in one case: a reschedule sent it
+  back into the approval gate, which frees the claim so the host's approval of
+  the new time still gets the invitee their emails and reminders. To the
+  integration channels that booking is not new, so webhooks, Telegram and
+  Slack receive `meeting.rescheduled` for it instead, and `meeting.created`
+  fires once per meeting across its whole life. The emails are the same either
+  way: the confirmation is suppressed by its sent flags, and
+  `Tymeslot.Meetings.Approval` sends the reschedule notice itself.
   """
   @spec meeting_created(term()) :: {:ok, term()} | {:error, term()}
   def meeting_created(meeting) do
     case MeetingQueries.claim_announcement(Map.get(meeting, :id)) do
-      :ok -> dispatch_meeting_created(meeting)
+      {:ok, :first_announcement} -> dispatch_meeting_created(meeting, :meeting_created)
+      {:ok, :re_announcement} -> dispatch_meeting_created(meeting, :meeting_rescheduled)
       :already_announced -> already_announced(meeting)
     end
   end
@@ -43,21 +53,17 @@ defmodule Tymeslot.Notifications.Events do
     {:ok, :already_announced}
   end
 
-  defp dispatch_meeting_created(meeting) do
-    # Send email notifications
+  # `channel_event` is what webhooks, Telegram and Slack are told; the email
+  # and reminder fan-out is the same for both announcements.
+  defp dispatch_meeting_created(meeting, channel_event) do
     result =
       send_notifications(:meeting_created, meeting, fn ->
         Orchestrator.schedule_meeting_notifications(meeting)
       end)
 
-    # Dispatch webhooks (don't fail if webhooks fail)
-    dispatch_webhooks(:meeting_created, meeting)
-
-    # Dispatch Telegram notifications (don't fail if Telegram fails)
-    dispatch_telegram(:meeting_created, meeting)
-
-    # Dispatch Slack notifications (don't fail if Slack fails)
-    dispatch_slack(:meeting_created, meeting)
+    dispatch_webhooks(channel_event, meeting)
+    dispatch_telegram(channel_event, meeting)
+    dispatch_slack(channel_event, meeting)
 
     result
   end

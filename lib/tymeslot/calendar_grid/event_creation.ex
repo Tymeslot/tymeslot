@@ -289,7 +289,10 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
          end_at,
          video_context
        ) do
-    uid = CreatedEvent.local_uid(created)
+    # The key the provider's sync caches the event under: Google and Outlook
+    # report an iCalendar UID of their own, and a row cached under their event
+    # id instead would be joined by a second one on the next sync.
+    uid = CreatedEvent.cache_uid(created)
 
     {provider, default_booking_calendar_id, reauth_required?} =
       lookup_integration_metadata(creating.integration_id)
