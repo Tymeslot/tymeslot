@@ -11,16 +11,17 @@ defmodule Tymeslot.Auth.VerificationTest do
   alias Tymeslot.Auth.Verification
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Repo
-  alias Tymeslot.Security.Token
+  alias Tymeslot.Security.{RateLimiter, Token}
   alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.EmailWorker
+  alias TymeslotWeb.Helpers.ClientIP
 
   import Tymeslot.Factory
 
   describe "verify_email_and_maybe_login/2" do
     defp user_with_token(signup_ip) do
       user = insert(:unverified_user, signup_ip: signup_ip)
-      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      token = Token.generate_token()
       {:ok, _user} = UserTokenQueries.set_verification_token(user, token)
       {user, token}
     end
@@ -29,7 +30,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       {user, token} = user_with_token("203.0.113.9")
 
       assert {:ok, verified, :auto_login} =
-               Verification.verify_email_and_maybe_login(token, "203.0.113.9")
+               Verification.verify_email_and_maybe_login(token, ip: "203.0.113.9")
 
       assert verified.id == user.id
       assert verified.verified_at
@@ -39,14 +40,14 @@ defmodule Tymeslot.Auth.VerificationTest do
       {_user, token} = user_with_token("127.0.0.1")
 
       assert {:ok, _verified, :auto_login} =
-               Verification.verify_email_and_maybe_login(token, "::1")
+               Verification.verify_email_and_maybe_login(token, ip: "::1")
     end
 
     test "verifies but requires a manual login from any other IP" do
       {user, token} = user_with_token("203.0.113.9")
 
       assert {:ok, _verified, :manual} =
-               Verification.verify_email_and_maybe_login(token, "198.51.100.1")
+               Verification.verify_email_and_maybe_login(token, ip: "198.51.100.1")
 
       assert Repo.reload!(user).verified_at
     end
@@ -54,19 +55,19 @@ defmodule Tymeslot.Auth.VerificationTest do
     test "requires a manual login when no signup IP was recorded" do
       {_user, token} = user_with_token(nil)
 
-      assert {:ok, _verified, :manual} = Verification.verify_email_and_maybe_login(token, nil)
+      assert {:ok, _verified, :manual} = Verification.verify_email_and_maybe_login(token, ip: nil)
     end
 
     test "rejects an unknown token" do
       assert {:error, :invalid_token} =
-               Verification.verify_email_and_maybe_login("no-such-token", "203.0.113.9")
+               Verification.verify_email_and_maybe_login("no-such-token", ip: "203.0.113.9")
     end
   end
 
   describe "verify_user/1 with token" do
     test "verification tokens are single-use" do
       user = insert(:unverified_user)
-      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      token = Token.generate_token()
 
       {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
 
@@ -79,7 +80,7 @@ defmodule Tymeslot.Auth.VerificationTest do
 
     test "verifying a user emits anonymous [:tymeslot, :auth, :email_verified] telemetry" do
       user = insert(:unverified_user)
-      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      token = Token.generate_token()
       {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
 
       ref = :telemetry_test.attach_event_handlers(self(), [[:tymeslot, :auth, :email_verified]])
@@ -91,7 +92,7 @@ defmodule Tymeslot.Auth.VerificationTest do
 
     test "expired token (>24 hours) returns {:error, :token_expired}" do
       user = insert(:unverified_user)
-      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      token = Token.generate_token()
 
       {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
 
@@ -112,7 +113,7 @@ defmodule Tymeslot.Auth.VerificationTest do
 
     test "verifying stamps the token as used and clears it, so reuse fails at lookup" do
       user = insert(:unverified_user)
-      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      token = Token.generate_token()
 
       {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
 
@@ -129,29 +130,79 @@ defmodule Tymeslot.Auth.VerificationTest do
     end
   end
 
-  describe "verify_user/1 with user_id" do
-    test "directly verifies user with integer user_id" do
-      user = insert(:unverified_user)
-      assert is_nil(user.verified_at)
-
-      {:ok, verified_user} = Verification.verify_user(user.id)
-      assert %DateTime{} = verified_user.verified_at
-    end
-  end
-
   describe "resend_verification_email_by_email/2" do
-    test "returns error for non-existent email" do
-      result =
-        Verification.resend_verification_email_by_email("nonexistent@example.com", %Plug.Conn{})
+    test "every account state gets the same :ok, and only an unverified account is sent mail" do
+      unverified = insert(:unverified_user)
+      verified = insert(:user)
+      unknown = "nobody-#{System.unique_integer([:positive])}@example.com"
 
-      assert {:error, :user_not_found} = result
+      replies =
+        for email <- [unverified.email, verified.email, unknown, nil] do
+          Verification.resend_verification_email_by_email(email, ip: ClientIP.get(%Plug.Conn{}))
+        end
+
+      assert replies == [:ok, :ok, :ok, :ok]
+
+      assert [job] = all_enqueued(worker: EmailWorker)
+      assert job.args["user_id"] == unverified.id
+    end
+
+    test "a verified account's stored token is left alone" do
+      verified = insert(:user)
+
+      assert :ok =
+               Verification.resend_verification_email_by_email(
+                 verified.email,
+                 ip: ClientIP.get(%Plug.Conn{})
+               )
+
+      assert Repo.get!(UserSchema, verified.id).verification_token ==
+               verified.verification_token
+    end
+
+    test "an account at its per-user cap is answered :ok and sent nothing" do
+      user = insert(:unverified_user)
+
+      for _i <- 1..5 do
+        RateLimiter.check_verification_rate_limit(user.id, "198.51.100.77")
+      end
+
+      assert :ok =
+               Verification.resend_verification_email_by_email(
+                 user.email,
+                 ip: ClientIP.get(%Plug.Conn{})
+               )
+
+      assert [] = all_enqueued(worker: EmailWorker)
+    end
+
+    test "the address bucket is charged before the lookup, whatever the address" do
+      conn = ClientIP.get(%Plug.Conn{remote_ip: {198, 51, 100, 78}})
+
+      # Five resends for addresses with no account still use up the budget...
+      for i <- 1..5 do
+        assert :ok =
+                 Verification.resend_verification_email_by_email(
+                   "unknown-#{i}@example.com",
+                   ip: conn
+                 )
+      end
+
+      # ...so a real unverified account is refused from that address too.
+      user = insert(:unverified_user)
+
+      assert {:error, :rate_limited, message} =
+               Verification.resend_verification_email_by_email(user.email, ip: conn)
+
+      assert message =~ "verification emails"
+      assert [] = all_enqueued(worker: EmailWorker)
     end
 
     test "a resend within the dedup window rotates the token and updates the queued job" do
       user = insert(:unverified_user)
 
       # Simulate signup: the first token is stored and its email is already queued.
-      {original_token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      original_token = Token.generate_token()
       {:ok, _user} = UserTokenQueries.set_verification_token(user, original_token)
 
       assert {:ok, :scheduled} =
@@ -164,8 +215,11 @@ defmodule Tymeslot.Auth.VerificationTest do
       # The user hammers "resend" while that first email is still in the dedup window.
       # The token is rotated unconditionally; the scheduler replaces the queued job's
       # args with the new URL so job payload and DB token remain in lock-step.
-      assert {:ok, _user} =
-               Verification.resend_verification_email_by_email(user.email, %Plug.Conn{})
+      assert :ok =
+               Verification.resend_verification_email_by_email(
+                 user.email,
+                 ip: ClientIP.get(%Plug.Conn{})
+               )
 
       # The original token is now invalid — a fresh token was persisted.
       assert {:error, :invalid_token} = Verification.verify_user(original_token)
@@ -182,11 +236,14 @@ defmodule Tymeslot.Auth.VerificationTest do
       user = insert(:unverified_user)
 
       # An older, still-stored token with no queued email (its delivery never happened).
-      {stale_token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      stale_token = Token.generate_token()
       {:ok, _user} = UserTokenQueries.set_verification_token(user, stale_token)
 
-      assert {:ok, _user} =
-               Verification.resend_verification_email_by_email(user.email, %Plug.Conn{})
+      assert :ok =
+               Verification.resend_verification_email_by_email(
+                 user.email,
+                 ip: ClientIP.get(%Plug.Conn{})
+               )
 
       # A genuinely new email is sent, so the token is rotated; the stale token no
       # longer verifies and the fresh raw token lives only in the new email link.
@@ -197,7 +254,7 @@ defmodule Tymeslot.Auth.VerificationTest do
   describe "token tamper resistance" do
     test "a single-bit-flipped token is rejected as :invalid_token, not matched to a neighbour" do
       user = insert(:unverified_user)
-      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      token = Token.generate_token()
       {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
 
       # Flip the last character of the base64url token.
@@ -216,7 +273,7 @@ defmodule Tymeslot.Auth.VerificationTest do
   describe "verify_user/1 never logs the raw token" do
     test "an expired token's audit entry identifies the user, never the token" do
       user = insert(:unverified_user)
-      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      token = Token.generate_token()
       {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
 
       expired_time = DateTime.add(DateTime.utc_now(), -25 * 3600, :second)

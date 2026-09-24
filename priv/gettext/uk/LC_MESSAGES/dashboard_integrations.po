@@ -120,17 +120,17 @@ msgstr "Для всіх зустрічей використовуватимет�
 msgid "Are you sure you want to delete this %{type} integration?"
 msgstr "Ви впевнені, що хочете видалити цю інтеграцію %{type}?"
 
-#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. Please try again."
 msgstr "Помилка автентифікації. Спробуйте ще раз."
 
-#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication session mismatch. Please sign in and try again."
 msgstr "Помилка сеансу автентифікації. Увійдіть у систему та спробуйте ще раз."
 
-#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Authorization was denied. Please try again."
 msgstr "В авторизації відмовлено. Спробуйте ще раз."
@@ -209,7 +209,7 @@ msgstr "Неочікувана помилка перевірки підключ�
 msgid "Connection test failed: %{reason}"
 msgstr "Помилка перевірки підключення: %{reason}"
 
-#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Could not identify your Zoom account. Please try again."
 msgstr "Не вдалося ідентифікувати ваш обліковий запис Zoom. Спробуйте ще раз."
@@ -366,7 +366,7 @@ msgstr "Інтеграцію успішно оновлено"
 msgid "Integrations"
 msgstr "Інтеграції"
 
-#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid authentication response. Please try again."
 msgstr "Некоректна відповідь під час автентифікації. Спробуйте ще раз."
@@ -447,7 +447,7 @@ msgstr "Відсутні закривні дужки - має бути {{meeting
 msgid "Missing opening brackets - should be {{meeting_id}}"
 msgstr "Відсутні відкривні дужки - має бути {{meeting_id}}"
 
-#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Missing required Microsoft Teams information. Please try again."
 msgstr "Відсутня необхідна інформація для Microsoft Teams. Спробуйте ще раз."
@@ -651,7 +651,7 @@ msgstr "Інтеграція відеозв'язку"
 msgid "Video integration added successfully"
 msgstr "Відеоінтеграцію успішно додано"
 
-#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
 msgstr "Ваша організація Microsoft вимагає схвалення адміністратора перед підключенням Tymeslot. Будь ласка, попросіть свого ІТ-адміністратора надати дозвіл для цього застосунку."
@@ -703,7 +703,7 @@ msgstr "⚠ Некоректний синтаксис"
 msgid "✓ Valid Template"
 msgstr "✓ Правильний шаблон"
 
-#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "%{service} connected successfully!"
 msgstr "%{service} успішно підключено!"
@@ -713,7 +713,7 @@ msgstr "%{service} успішно підключено!"
 msgid "API Key"
 msgstr "Ключ API"
 
-#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to connect %{service}. Please try again."
 msgstr "Не вдалося підключити %{service}. Будь ласка, спробуйте ще раз."
@@ -813,7 +813,7 @@ msgstr[0] "%{count} з'єднання потребує уваги - %{message}"
 msgstr[1] "%{count} з'єднання потребують уваги - %{message}"
 msgstr[2] "%{count} з'єднань потребують уваги - %{message}"
 
-#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" - Tymeslot needs this to create meetings and Google Meet links."
 msgstr "%{service} не підключено, оскільки не надано дозвіл на доступ до календаря. Будь ласка, спробуйте ще раз і поставте прапорець біля пункту «Переглядати, редагувати, ділитися та остаточно видаляти всі календарі, до яких ви маєте доступ за допомогою Google Calendar» - це потрібно Tymeslot для створення зустрічей і посилань Google Meet."

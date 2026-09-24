@@ -12,7 +12,7 @@ defmodule Tymeslot.Release do
   alias Tymeslot.AppSettings
   alias Tymeslot.AppSettings.LockoutPolicy
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.{AdminRoles, UserQueries, UserSchema}
+  alias Tymeslot.Auth.{AdminRoles, AdminUserQueries, UserQueries, UserSchema}
 
   @doc """
   Promotes the user with the given email to admin.
@@ -105,7 +105,7 @@ defmodule Tymeslot.Release do
   def list_admins do
     ensure_started()
 
-    Enum.map(UserQueries.list_admins(), fn user -> %{id: user.id, email: user.email} end)
+    Enum.map(AdminUserQueries.list_admins(), fn user -> %{id: user.id, email: user.email} end)
   end
 
   # When called via `bin/tymeslot eval`, the application isn't started — we

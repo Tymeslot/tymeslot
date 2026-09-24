@@ -116,7 +116,8 @@ defmodule TymeslotWeb.SessionControllerTest do
       refute get_session(conn, :user_token)
     end
 
-    test "handles unverified email", %{conn: conn, password: password} do
+    test "an unverified account with its password looks like a failed login",
+         %{conn: conn, password: password} do
       user =
         Factory.insert(:user,
           password: password,
@@ -124,15 +125,13 @@ defmodule TymeslotWeb.SessionControllerTest do
           verified_at: nil
         )
 
-      conn =
-        post(conn, ~p"/auth/session", %{
-          "email" => user.email,
-          "password" => password
-        })
+      conn = post(conn, ~p"/auth/session", %{"email" => user.email, "password" => password})
 
-      assert redirected_to(conn) == "/auth/verify-email"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Please verify your email"
-      assert get_session(conn, :unverified_user_id) == user.id
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :error) == unknown_account_error()
+      refute get_session(conn, :user_token)
+      refute get_session(conn, :unverified_user_id)
+      refute get_session(conn, :unverified_user_email)
     end
 
     test "a wrong password for an unverified account reveals nothing about it",
@@ -247,6 +246,42 @@ defmodule TymeslotWeb.SessionControllerTest do
                "Too many failed attempts. Please wait before trying again"
     end
 
+    test "failed attempts from one address do not lock the owner out from another", %{
+      conn: conn,
+      user: user,
+      password: password
+    } do
+      attacker_ip = {198, 51, 100, 23}
+      owner_ip = {203, 0, 113, 45}
+
+      for _i <- 1..10 do
+        post(%{conn | remote_ip: attacker_ip}, ~p"/auth/session", %{
+          "email" => user.email,
+          "password" => "WrongPassword123!"
+        })
+      end
+
+      # The attacker's own address is throttled for this account...
+      blocked =
+        post(%{conn | remote_ip: attacker_ip}, ~p"/auth/session", %{
+          "email" => user.email,
+          "password" => password
+        })
+
+      assert Flash.get(blocked.assigns.flash, :error) ==
+               "Too many failed attempts. Please wait before trying again"
+
+      # ...but the owner, from their own address, still signs in.
+      conn =
+        post(%{conn | remote_ip: owner_ip}, ~p"/auth/session", %{
+          "email" => user.email,
+          "password" => password
+        })
+
+      assert redirected_to(conn) == "/dashboard"
+      assert get_session(conn, :user_token)
+    end
+
     test "blocks login after 50 attempts from the same IP across different emails", %{conn: conn} do
       rate_limit_ip = {10, 88, 88, 1}
 
@@ -350,6 +385,26 @@ defmodule TymeslotWeb.SessionControllerTest do
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "no longer valid"
+    end
+
+    test "refuses a client past 30 links a minute, leaving the token unspent", %{
+      conn: conn,
+      token: token
+    } do
+      user = insert_unverified_user(token, "10.77.0.1")
+      client = %{conn | remote_ip: {10, 77, 0, 1}}
+
+      for _i <- 1..30 do
+        refused = post(client, ~p"/auth/verify-complete/not-a-token")
+        assert Flash.get(refused.assigns.flash, :error) =~ "no longer valid"
+      end
+
+      conn = post(client, ~p"/auth/verify-complete/#{token}")
+
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :error) =~ "reached the limit"
+      refute get_session(conn, :user_token)
+      refute Repo.reload!(user).verified_at
     end
 
     test "handles expired verification token", %{conn: conn} do

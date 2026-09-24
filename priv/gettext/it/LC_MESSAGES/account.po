@@ -47,11 +47,6 @@ msgstr "Sicurezza dell'account"
 msgid "Account Settings"
 msgstr "Impostazioni dell'account"
 
-#: lib/tymeslot_web/live/account_live/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "An unexpected error occurred"
-msgstr "Si è verificato un errore imprevisto"
-
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "At least 8 characters"
@@ -171,11 +166,6 @@ msgstr "Nuovo indirizzo in sospeso:"
 #, elixir-autogen, elixir-format
 msgid "Sent %{time}"
 msgstr "Inviata %{time}"
-
-#: lib/tymeslot_web/live/account_live/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Too many attempts. Please try again later."
-msgstr "Troppi tentativi. Riprova più tardi."
 
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format

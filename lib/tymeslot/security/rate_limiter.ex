@@ -62,17 +62,24 @@ defmodule Tymeslot.Security.RateLimiter do
 
   @doc """
   Rate limit authentication attempts with account lockout.
-  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  The lockout and the per-account budget are keyed on the email *and* the
+  client address, so failures from one address never lock the owner out from
+  another; a wider per-email ceiling covers a run spread across many
+  addresses. Returns :ok if allowed, {:error, :rate_limited, message} if
+  exceeded.
   """
   @spec check_auth_rate_limit(String.t(), String.t() | nil) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_auth_rate_limit(email, ip), do: Auth.check_auth(email, ip)
 
   @doc """
-  Record authentication attempt result for lockout tracking.
+  Record an authentication attempt's result for lockout tracking, against the
+  same email and client address `check_auth_rate_limit/2` consults.
   """
-  @spec record_auth_attempt(String.t(), boolean()) :: :ok | {:error, atom(), String.t()}
-  def record_auth_attempt(email, success), do: Auth.record_attempt(email, success)
+  @spec record_auth_attempt(String.t(), String.t() | nil, boolean()) ::
+          :ok | {:error, atom(), String.t()}
+  def record_auth_attempt(email, ip, success), do: Auth.record_attempt(email, ip, success)
 
   @doc """
   Rate limit signup attempts per email and per IP with multi-window buckets.
@@ -87,6 +94,37 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_verification_rate_limit(String.t(), String.t() | :inet.ip_address() | nil) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_verification_rate_limit(user_id, ip), do: Auth.check_verification(user_id, ip)
+
+  @doc """
+  The per-IP half of `check_verification_rate_limit/2`, on the same bucket.
+  """
+  @spec check_verification_ip_rate_limit(String.t() | :inet.ip_address() | nil) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_verification_ip_rate_limit(ip), do: Auth.check_verification_ip(ip)
+
+  @doc """
+  The per-user half of `check_verification_rate_limit/2`, on the same bucket.
+  """
+  @spec check_verification_user_rate_limit(term()) :: :ok | {:error, :rate_limited, String.t()}
+  def check_verification_user_rate_limit(user_id), do: Auth.check_verification_user(user_id)
+
+  @doc """
+  Rate limit the note sent to an account's owner when someone tries to sign up
+  with their address, per recipient.
+  """
+  @spec check_signup_attempt_notice_rate_limit(term()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_signup_attempt_notice_rate_limit(user_id),
+    do: Auth.check_signup_attempt_notice(user_id)
+
+  @doc """
+  Rate limit the link that finishes a social sign-up with a typed address,
+  per recipient address.
+  """
+  @spec check_social_signup_confirmation_rate_limit(String.t()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_social_signup_confirmation_rate_limit(email),
+    do: Auth.check_social_signup_confirmation(email)
 
   @doc """
   Rate limit password reset requests per email and per IP.
@@ -104,6 +142,21 @@ defmodule Tymeslot.Security.RateLimiter do
           :ok | {:error, :rate_limited, String.t()}
   def check_email_change_verify_rate_limit(client_ip),
     do: Auth.check_email_change_verify(client_ip)
+
+  @doc """
+  Rate limit setting a new password against a reset token, per IP.
+  """
+  @spec check_password_reset_submit_rate_limit(String.t() | nil) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_password_reset_submit_rate_limit(client_ip),
+    do: Auth.check_password_reset_submit(client_ip)
+
+  @doc """
+  Rate limit completing emailed verification links, per IP.
+  """
+  @spec check_verification_link_rate_limit(String.t() | nil) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_verification_link_rate_limit(client_ip), do: Auth.check_verification_link(client_ip)
 
   # OAuth
 

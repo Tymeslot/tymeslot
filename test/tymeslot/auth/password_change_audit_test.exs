@@ -14,6 +14,7 @@ defmodule Tymeslot.Auth.PasswordChangeAuditTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.Password
   alias Tymeslot.Test.LogCapture
+  alias TymeslotWeb.Helpers.ClientIP
 
   import Tymeslot.Factory
 
@@ -40,7 +41,7 @@ defmodule Tymeslot.Auth.PasswordChangeAuditTest do
                    "CurrentPass123!",
                    "NewPass456!",
                    "NewPass456!",
-                   ip_address: "203.0.113.12",
+                   ip: "203.0.113.12",
                    user_agent: "Mozilla/5.0"
                  )
       end)
@@ -51,10 +52,18 @@ defmodule Tymeslot.Auth.PasswordChangeAuditTest do
       assert meta.user_agent == "Mozilla/5.0"
     end
 
-    test "records the entry with no context when the caller supplies none", %{user: user} do
+    test "records the entry with no origin when the caller explicitly has none",
+         %{user: user} do
       capture_at_info(fn ->
         assert {:ok, _updated} =
-                 Auth.update_user_password(user, "CurrentPass123!", "NewPass456!", "NewPass456!")
+                 Auth.update_user_password(
+                   user,
+                   "CurrentPass123!",
+                   "NewPass456!",
+                   "NewPass456!",
+                   ip: nil,
+                   user_agent: nil
+                 )
       end)
 
       assert_receive {:captured_log, %{meta: %{event_type: "password_change"} = meta}}
@@ -62,10 +71,24 @@ defmodule Tymeslot.Auth.PasswordChangeAuditTest do
       assert meta.ip_address == nil
     end
 
+    test "refuses a caller that does not say who is asking", %{user: user} do
+      assert_raise KeyError, fn ->
+        Auth.update_user_password(user, "CurrentPass123!", "NewPass456!", "NewPass456!", [])
+      end
+
+      assert Password.verify_password("CurrentPass123!", Repo.reload!(user).password_hash)
+    end
+
     test "records nothing when the current password is wrong", %{user: user} do
       capture_at_info(fn ->
         assert {:error, _message} =
-                 Auth.update_user_password(user, "WrongPass123!", "NewPass456!", "NewPass456!")
+                 Auth.update_user_password(
+                   user,
+                   "WrongPass123!",
+                   "NewPass456!",
+                   "NewPass456!",
+                   ClientIP.request_opts(%Plug.Conn{})
+                 )
       end)
 
       refute "password_change" in logged_event_types()

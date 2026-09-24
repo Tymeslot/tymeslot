@@ -23,6 +23,11 @@ end
 
 # Start Ecto sandbox - ensure Repo is ready first
 {:ok, _result} = Application.ensure_all_started(:tymeslot)
+
+# Run the suite as an established install, so sign-ups skip the first-user
+# admin bootstrap's lock (see Tymeslot.Test.AdminBootstrapHelpers).
+Tymeslot.Test.AdminBootstrapHelpers.close!()
+
 Ecto.Adapters.SQL.Sandbox.mode(Tymeslot.Repo, :manual)
 
 # Mox mocks are defined once, at compile time, in

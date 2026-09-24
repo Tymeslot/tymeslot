@@ -4,14 +4,23 @@ defmodule Tymeslot.Auth.PasswordResetTest do
 
   @moduletag :auth
 
-  alias Tymeslot.Auth.PasswordReset
-  alias Tymeslot.Auth.{UserSchema, UserSessionQueries, UserTokenQueries}
+  alias Tymeslot.Auth
+
+  alias Tymeslot.Auth.{
+    AccountTokens,
+    PasswordReset,
+    UserSchema,
+    UserSessionQueries,
+    UserTokenQueries
+  }
+
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, Token}
   alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Endpoint
+  alias TymeslotWeb.Helpers.ClientIP
 
   import Tymeslot.Factory
 
@@ -44,13 +53,44 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       refute message2 =~ "user not found"
     end
 
-    test "oauth users cannot reset passwords" do
-      oauth_user = insert(:user, provider: "google", password_hash: nil)
+    test "password, social and unknown addresses get the identical reply" do
+      password_user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
+      social_user = insert(:user, provider: "google", password_hash: nil)
+      unknown = "nobody-#{System.unique_integer([:positive])}@example.com"
 
-      # OAuth users should get an error
-      result = PasswordReset.initiate_reset(oauth_user.email)
+      replies =
+        for email <- [password_user.email, social_user.email, unknown] do
+          PasswordReset.initiate_reset(email)
+        end
 
-      assert {:error, :oauth_user, _message} = result
+      assert [reply, reply, reply] = replies
+      assert {:ok, :reset_initiated, _message} = reply
+    end
+
+    test "each case enqueues the email only the address's owner can read" do
+      password_user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
+      social_user = insert(:user, provider: "github", password_hash: nil)
+      unknown = "nobody-#{System.unique_integer([:positive])}@example.com"
+
+      for email <- [password_user.email, social_user.email, unknown] do
+        PasswordReset.initiate_reset(email)
+      end
+
+      assert [reset_job] =
+               all_enqueued(worker: EmailWorker, args: %{"action" => "send_password_reset"})
+
+      assert reset_job.args["user_id"] == password_user.id
+
+      assert [notice_job] =
+               all_enqueued(
+                 worker: EmailWorker,
+                 args: %{"action" => "send_no_password_to_reset"}
+               )
+
+      assert notice_job.args["user_id"] == social_user.id
+
+      # Nothing else: the unknown address produced no job at all.
+      assert length(all_enqueued(worker: EmailWorker)) == 2
     end
   end
 
@@ -59,7 +99,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
 
       # Simulate the first request: store the reset token and queue its email.
-      {original_token, _value} = Token.generate_password_reset_token()
+      original_token = Token.generate_token()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, original_token)
 
       assert {:ok, :scheduled} =
@@ -87,18 +127,38 @@ defmodule Tymeslot.Auth.PasswordResetTest do
   end
 
   describe "verify_token/1" do
-    test "with valid token returns {:ok, user_map, message}" do
+    test "with valid token returns the user as a schema struct" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
-      {token, _value} = Token.generate_password_reset_token()
+      token = Token.generate_token()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
-      assert {:ok, user_map, _message} = PasswordReset.verify_token(token)
-      assert user_map.id == user.id
+      # A struct, not a bare map: the schema's `redact: true` keeps secrets
+      # out of anything that inspects it.
+      assert {:ok, %UserSchema{id: user_id}, _message} = PasswordReset.verify_token(token)
+      assert user_id == user.id
+    end
+
+    test "a token issued just inside its two-hour lifetime is still valid" do
+      user = insert(:user)
+      token = Token.generate_token()
+      {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
+      set_reset_sent_at(user, -(2 * 3600 - 60))
+
+      assert {:ok, _user, _message} = PasswordReset.verify_token(token)
+    end
+
+    test "a token just past its two-hour lifetime has expired" do
+      user = insert(:user)
+      token = Token.generate_token()
+      {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
+      set_reset_sent_at(user, -(2 * 3600 + 60))
+
+      assert {:error, :token_expired, _message} = PasswordReset.verify_token(token)
     end
 
     test "with expired token returns {:error, :token_expired, _}" do
       user = insert(:user)
-      {token, _value} = Token.generate_password_reset_token()
+      token = Token.generate_token()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       # Manually expire the token by setting reset_sent_at to 3 hours ago
@@ -121,23 +181,86 @@ defmodule Tymeslot.Auth.PasswordResetTest do
   describe "reset_password/3" do
     test "reset tokens are single-use" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
-      {token, _value} = Token.generate_password_reset_token()
+      token = Token.generate_token()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       new_password = "NewSecurePassword123!"
 
       # First use succeeds
       assert {:ok, _user_map, _message} =
-               PasswordReset.reset_password(token, new_password, new_password)
+               PasswordReset.reset_password(
+                 token,
+                 new_password,
+                 new_password,
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       # Second use always fails
       assert {:error, :invalid_token, _message} =
-               PasswordReset.reset_password(token, "AnotherPass123!", "AnotherPass123!")
+               PasswordReset.reset_password(
+                 token,
+                 "AnotherPass123!",
+                 "AnotherPass123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
+    end
+
+    test "returns the user struct without the plaintext password" do
+      user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
+      token = Token.generate_token()
+      {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
+
+      assert {:ok, %UserSchema{} = updated, _message} =
+               PasswordReset.reset_password(
+                 token,
+                 "NewSecurePassword123!",
+                 "NewSecurePassword123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
+
+      assert updated.id == user.id
+      assert updated.password == nil
+      assert updated.password_confirmation == nil
+      assert Password.verify_password("NewSecurePassword123!", updated.password_hash)
+    end
+
+    # Someone who knew the old password requests an email change to an address
+    # they control. The owner notices and resets the password to lock them out;
+    # the pending change must die with the old credentials, or the attacker
+    # could still confirm it and take the account over.
+    test "revokes a pending email change, so its link can no longer be confirmed" do
+      user = insert(:user, password_hash: Password.hash_password("Password123!"))
+
+      change_token = Token.generate_token()
+
+      {:ok, pending_user} =
+        UserTokenQueries.request_email_change(user, "attacker@example.com", change_token)
+
+      reset_token = Token.generate_token()
+      {:ok, _result} = UserTokenQueries.set_reset_token(pending_user, reset_token)
+
+      assert {:ok, _user, _message} =
+               PasswordReset.reset_password(
+                 reset_token,
+                 "NewSecurePassword123!",
+                 "NewSecurePassword123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
+
+      reloaded = Repo.get!(UserSchema, user.id)
+      assert reloaded.pending_email == nil
+      assert reloaded.email_change_token_hash == nil
+      assert reloaded.email_change_sent_at == nil
+
+      assert {:error, {:invalid_token, _message}} =
+               Auth.verify_email_change(change_token, ClientIP.request_opts(%Plug.Conn{}))
+
+      assert Repo.get!(UserSchema, user.id).email == user.email
     end
 
     test "records a password_change audit entry carrying the request context" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
-      {token, _value} = Token.generate_password_reset_token()
+      token = Token.generate_token()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       # SecurityLogger emits at :info; config/test.exs pins the primary level to
@@ -168,11 +291,18 @@ defmodule Tymeslot.Auth.PasswordResetTest do
         Endpoint.subscribe("users_sessions:#{Base.url_encode64(Token.hash_token(session.token))}")
       end)
 
-      {token, _value} = Token.generate_password_reset_token()
+      token = Token.generate_token()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       new_password = "NewSecurePassword123!"
-      {:ok, _user_map, _message} = PasswordReset.reset_password(token, new_password, new_password)
+
+      {:ok, _user_map, _message} =
+        PasswordReset.reset_password(
+          token,
+          new_password,
+          new_password,
+          ClientIP.request_opts(%Plug.Conn{})
+        )
 
       # All sessions should be invalidated and their live sockets disconnected
       Enum.each(sessions, fn session ->
@@ -183,20 +313,31 @@ defmodule Tymeslot.Auth.PasswordResetTest do
 
     test "with mismatched confirmation returns error" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
-      {token, _value} = Token.generate_password_reset_token()
+      token = Token.generate_token()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       assert {:error, _reason, _message} =
-               PasswordReset.reset_password(token, "NewPass123!", "DifferentPass123!")
+               PasswordReset.reset_password(
+                 token,
+                 "NewPass123!",
+                 "DifferentPass123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
     test "enforces strong password requirements" do
       user = insert(:user)
-      {token, _value} = Token.generate_password_reset_token()
+      token = Token.generate_token()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       # Weak password rejected
-      assert {:error, _reason, _changeset} = PasswordReset.reset_password(token, "weak", "weak")
+      assert {:error, _reason, _changeset} =
+               PasswordReset.reset_password(
+                 token,
+                 "weak",
+                 "weak",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
   end
 
@@ -237,10 +378,30 @@ defmodule Tymeslot.Auth.PasswordResetTest do
     end
   end
 
+  describe "reset_password/4 rate limiting" do
+    test "refuses a client past 30 attempts a minute, before the token is looked at" do
+      user = insert(:user)
+      {:ok, _user, token} = AccountTokens.issue(:reset, user)
+      opts = [ip: "192.0.2.77", user_agent: "reset-submit-test"]
+
+      for _i <- 1..30 do
+        assert {:error, :invalid_token, _message} =
+                 Auth.reset_password("guess", "NewPass123!", "NewPass123!", opts)
+      end
+
+      assert {:error, :rate_limited, "Too many attempts. Please try again later."} =
+               Auth.reset_password(token, "NewPass123!", "NewPass123!", opts)
+
+      # The genuine token was never spent, and another client is unaffected.
+      assert {:ok, _user, _message} =
+               Auth.reset_password(token, "NewPass123!", "NewPass123!", ip: "192.0.2.78")
+    end
+  end
+
   describe "token tamper + replay resistance" do
     test "a single-bit-flipped token is rejected as :invalid_token, not matched to a neighbour" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
-      {token, _value} = Token.generate_password_reset_token()
+      token = Token.generate_token()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       # Flip the last character to produce a different-but-same-length token.
@@ -248,12 +409,22 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       refute tampered == token
 
       assert {:error, :invalid_token, _msg} =
-               PasswordReset.reset_password(tampered, "NewPass123!", "NewPass123!")
+               PasswordReset.reset_password(
+                 tampered,
+                 "NewPass123!",
+                 "NewPass123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       # And the real token still works — the tampered attempt must not have
       # burned the legitimate reset token.
       assert {:ok, _user_map, _msg} =
-               PasswordReset.reset_password(token, "NewPass123!", "NewPass123!")
+               PasswordReset.reset_password(
+                 token,
+                 "NewPass123!",
+                 "NewPass123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
     test "concurrent resets with the same valid token: only one succeeds" do
@@ -266,12 +437,14 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       # lock itself is verified at the query level in
       # `Tymeslot.Auth.UserTokenQueriesTest`.
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
-      {token, _value} = Token.generate_password_reset_token()
+      token = Token.generate_token()
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       tasks =
         for pw <- ["FirstNewPass1!", "SecondNewPass2!"] do
-          Task.async(fn -> PasswordReset.reset_password(token, pw, pw) end)
+          Task.async(fn ->
+            PasswordReset.reset_password(token, pw, pw, ClientIP.request_opts(%Plug.Conn{}))
+          end)
         end
 
       results = Task.await_many(tasks, 10_000)
@@ -293,5 +466,11 @@ defmodule Tymeslot.Auth.PasswordResetTest do
     <<prefix::binary-size(^prefix_size), last::utf8>> = token
     flipped = if last == ?A, do: ?B, else: ?A
     <<prefix::binary, flipped::utf8>>
+  end
+
+  defp set_reset_sent_at(user, offset_seconds) do
+    sent_at = DateTime.add(DateTime.utc_now(:second), offset_seconds, :second)
+
+    Repo.update_all(from(u in UserSchema, where: u.id == ^user.id), set: [reset_sent_at: sent_at])
   end
 end

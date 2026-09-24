@@ -46,14 +46,56 @@ defmodule TymeslotWeb.RouterHookConfigTest do
     assert log =~ "Expected :dashboard_additional_hooks to be a list, received a single hook"
   end
 
-  test "ignores invalid values and logs a warning" do
-    log =
-      capture_log(fn ->
-        Application.put_env(:tymeslot, :dashboard_additional_hooks, "invalid")
+  test "raises on a value that is not a list of hooks" do
+    Application.put_env(:tymeslot, :dashboard_additional_hooks, "invalid")
 
-        assert Router.dashboard_additional_hooks() == []
-      end)
+    assert_raise ArgumentError, ~r/expected :dashboard_additional_hooks to be a list/, fn ->
+      Router.dashboard_additional_hooks()
+    end
+  end
 
-    assert log =~ "Expected :dashboard_additional_hooks to be a list; ignoring invalid value"
+  # These hooks are deployment gates (a legal-acceptance check, for
+  # instance). An entry that cannot be run used to be skipped, which switched the
+  # gate off without a trace.
+  test "raises on an entry that is neither a module nor a {module, hook} tuple" do
+    Application.put_env(:tymeslot, :dashboard_additional_hooks, [
+      ClientInfoHook,
+      {AuthLiveSessionHook, :ensure_authenticated, :extra}
+    ])
+
+    assert_raise ArgumentError, ~r/unrecognised :dashboard_additional_hooks entry/, fn ->
+      Router.dashboard_additional_hooks()
+    end
+  end
+
+  test "a mount through the dashboard chain fails rather than skipping a bad entry" do
+    Application.put_env(:tymeslot, :dashboard_additional_hooks, ["MyApp.Hooks.Typo"])
+
+    socket = %Phoenix.LiveView.Socket{endpoint: TymeslotWeb.Endpoint}
+
+    assert_raise ArgumentError, ~r/unrecognised :dashboard_additional_hooks entry/, fn ->
+      Router.on_mount(:dashboard_hooks, %{}, %{}, socket)
+    end
+  end
+
+  describe "validate_additional_hooks!/0 (run at boot)" do
+    test "accepts hooks that define on_mount/4" do
+      Application.put_env(:tymeslot, :dashboard_additional_hooks, [
+        {AuthLiveSessionHook, :ensure_authenticated},
+        ClientInfoHook
+      ])
+
+      assert :ok = Router.validate_additional_hooks!()
+    end
+
+    test "rejects a well-formed entry naming a module that does not exist" do
+      Application.put_env(:tymeslot, :dashboard_additional_hooks, [
+        {MyApp.Hooks.Mispelt, :check}
+      ])
+
+      assert_raise ArgumentError, ~r/MyApp.Hooks.Mispelt, which does not define on_mount/, fn ->
+        Router.validate_additional_hooks!()
+      end
+    end
   end
 end

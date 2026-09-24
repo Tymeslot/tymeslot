@@ -1,9 +1,8 @@
 defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
   @moduledoc """
-  `Verification.verify_user_email/3` may refuse to send, returning the
-  three-element `{:error, :rate_limited, message}` that
-  `Tymeslot.Infrastructure.VerificationBehaviour` declares alongside the
-  two-element form. `Registration` used to `case` over only the two-element
+  `Verification.send_verification_email/2` may refuse to send, returning the
+  three-element `{:error, :rate_limited, message}` alongside the two-element
+  form. `Registration` used to `case` over only the two-element
   one, so a refusal raised `CaseClauseError` from inside the LiveView.
 
   The crash was the visible half. The damage was that it struck after the user
@@ -11,6 +10,10 @@ defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
   the address was rejected as a duplicate on retry and the account could never
   be reached. These tests hold both halves: the refusal is returned rather than
   raised, and whatever the outcome the account is left whole.
+
+  A refusal also no longer changes the reply at all: a taken address never
+  sends a verification email, so a distinct "could not be sent" answer would
+  tell a visitor the address was free. The account waits for a resend.
 
   The verification module is resolved at runtime via `Application.get_env/3`,
   which is why Dialyzer could not see the missing clause; the limit is
@@ -27,6 +30,7 @@ defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Test.LogCapture
+  alias TymeslotWeb.Helpers.ClientIP
 
   @client_ip {203, 0, 113, 50}
   @client_ip_string "203.0.113.50"
@@ -39,7 +43,7 @@ defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
     :ok
   end
 
-  defp conn, do: %Plug.Conn{remote_ip: @client_ip}
+  defp conn, do: ClientIP.request_opts(%Plug.Conn{remote_ip: @client_ip})
 
   defp signup_params(email) do
     %{
@@ -59,25 +63,16 @@ defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
     end
   end
 
-  test "a refused verification email returns an error instead of raising" do
+  test "a refused verification email is answered like any other sign-up" do
     exhaust_verification_allowance()
 
-    assert {:error, :rate_limited, message} =
+    assert {:ok, user, message} =
              Registration.register_user(signup_params("refused@example.com"), conn())
 
-    # The tuple shape is the point here: pre-fix this call raised CaseClauseError
-    # rather than returning at all. The wording is asserted in the next test.
-    assert byte_size(message) > 0
-  end
+    assert user.email == "refused@example.com"
 
-  test "the message tells the user the account exists and to resend" do
-    exhaust_verification_allowance()
-
-    assert {:error, :rate_limited, message} =
-             Registration.register_user(signup_params("refused-copy@example.com"), conn())
-
-    assert message =~ "account was created"
-    assert message =~ "resend"
+    assert message ==
+             "Account created successfully. Please check your email for verification instructions."
   end
 
   test "a refused verification email is recorded as a rate-limit audit entry" do
@@ -86,7 +81,7 @@ defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
     # SecurityLogger emits at :info; config/test.exs pins the primary level to
     # :warning, so lower it for the duration of the call.
     LogCapture.with_capture([logger_level: :info], fn ->
-      assert {:error, :rate_limited, _message} =
+      assert {:ok, _user, _message} =
                Registration.register_user(signup_params("audited@example.com"), conn())
     end)
 
@@ -102,7 +97,7 @@ defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
   test "the account is left complete, not stranded without a profile" do
     exhaust_verification_allowance()
 
-    assert {:error, :rate_limited, _message} =
+    assert {:ok, _user, _message} =
              Registration.register_user(signup_params("stranded@example.com"), conn())
 
     assert {:ok, user} = UserQueries.get_user_by_email("stranded@example.com")
@@ -115,7 +110,7 @@ defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
     :ok = Auth.subscribe_to_user_registrations()
     exhaust_verification_allowance()
 
-    assert {:error, :rate_limited, _message} =
+    assert {:ok, _user, _message} =
              Registration.register_user(signup_params("broadcast@example.com"), conn())
 
     assert_receive {:user_registered, %{user: user}}

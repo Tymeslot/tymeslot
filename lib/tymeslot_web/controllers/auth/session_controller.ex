@@ -7,10 +7,10 @@ defmodule TymeslotWeb.SessionController do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.{AuthActions, Authentication, Session}
   alias Tymeslot.Infrastructure.Config
   alias TymeslotWeb.EmailLinkConfirmHTML
   alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
+  alias TymeslotWeb.UserAuth
 
   require Logger
 
@@ -19,35 +19,10 @@ defmodule TymeslotWeb.SessionController do
   This is called by LiveView after successful authentication to establish HTTP session.
   """
   @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def create(conn, %{"email" => _email, "password" => _password} = params) do
-    if Config.password_auth_enabled?() do
-      do_create(conn, params)
-    else
-      conn
-      |> put_flash(:error, AuthActions.password_auth_disabled_message())
-      |> redirect(to: ~p"/auth/login")
-    end
-  end
-
-  defp do_create(conn, %{"email" => email, "password" => password} = params) do
-    ip = ClientIP.get(conn)
-    user_agent = List.first(get_req_header(conn, "user-agent"))
-
-    case Authentication.authenticate_user(email, password,
-           calling_app: :auth,
-           ip_address: ip,
-           user_agent: user_agent
-         ) do
+  def create(conn, %{"email" => email, "password" => password} = params) do
+    case Auth.authenticate_user(email, password, ClientIP.request_opts(conn)) do
       {:ok, user, message} ->
         handle_authenticated_user(conn, user, message, params)
-
-      # Reached only with the correct password, so the verify-email page (and
-      # its resend button) is never offered for someone else's account.
-      {:unverified, user, message} ->
-        conn
-        |> Session.put_unverified_user(user)
-        |> put_flash(:error, message)
-        |> redirect(to: ~p"/auth/verify-email")
 
       {:error, :invalid_input, _errors} ->
         conn
@@ -62,7 +37,7 @@ defmodule TymeslotWeb.SessionController do
   end
 
   defp handle_authenticated_user(conn, user, message, params) do
-    case Session.create_session(conn, user) do
+    case UserAuth.create_session(conn, user) do
       {:ok, updated_conn, _token} ->
         redirect_path =
           RedirectSanitizer.sanitize(params["redirect_to"], get_success_redirect_path())
@@ -86,8 +61,8 @@ defmodule TymeslotWeb.SessionController do
   @spec delete(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def delete(conn, _params) do
     conn
-    |> Auth.delete_session()
-    |> Session.clear_unverified_user()
+    |> UserAuth.delete_session()
+    |> UserAuth.clear_unverified_user()
     |> put_flash(:info, dgettext("auth", "Logged out successfully."))
     |> redirect(to: ~p"/")
   end
@@ -118,13 +93,18 @@ defmodule TymeslotWeb.SessionController do
   """
   @spec verify_and_login(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def verify_and_login(conn, %{"token" => token}) do
-    case Auth.verify_email_and_maybe_login(token, ClientIP.get(conn)) do
+    case Auth.verify_email_and_maybe_login(token, ClientIP.request_opts(conn)) do
       {:ok, user, :auto_login} ->
         auto_login(conn, user)
 
       {:ok, user, :manual} ->
         Logger.info("Auto-login denied - IP mismatch", user_id: user.id)
         redirect_to_login_verified(conn)
+
+      {:error, {:rate_limited, message}} ->
+        conn
+        |> put_flash(:error, message)
+        |> redirect(to: ~p"/auth/login")
 
       {:error, :token_expired} ->
         conn
@@ -145,10 +125,10 @@ defmodule TymeslotWeb.SessionController do
   defp auto_login(conn, user) do
     Logger.info("Auto-login approved - IP match confirmed", user_id: user.id)
 
-    case Session.create_session(conn, user) do
+    case UserAuth.create_session(conn, user) do
       {:ok, updated_conn, _token} ->
         updated_conn
-        |> Session.clear_unverified_user()
+        |> UserAuth.clear_unverified_user()
         |> put_flash(
           :success,
           dgettext("auth", "Your email has been successfully verified! You're now logged in.")

@@ -13,7 +13,7 @@ defmodule TymeslotWeb.AuthControllerHelpers do
 
   import Phoenix.Controller
 
-  alias Tymeslot.Auth.AuthActions
+  alias Tymeslot.Auth
 
   @doc """
   Handles rate limited response with flash message and redirect.
@@ -137,7 +137,7 @@ defmodule TymeslotWeb.AuthControllerHelpers do
           )
 
         :registration_disabled ->
-          AuthActions.registration_disabled_message()
+          Auth.error_message(:registration_disabled)
 
         _unknown_error ->
           dgettext("auth", "Authentication failed. Please try again.")

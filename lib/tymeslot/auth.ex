@@ -10,67 +10,127 @@ defmodule Tymeslot.Auth do
   alias Tymeslot.Auth.{
     AccountDeletion,
     AdminRoles,
-    AuthActions,
+    AdminUserQueries,
     Authentication,
     EmailChange,
+    ErrorFormatter,
+    PasswordReset,
     PasswordUpdate,
     Registration,
-    Session,
     SocialAuthentication,
     UserQueries,
     UserSchema,
+    Validation,
     Verification
   }
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.PubSub
-  alias Tymeslot.Security.Token
+
+  @typedoc "A flow that signs in or manages an account with an email and password."
+  @type password_flow :: :login | :signup | :reset
 
   @doc """
-  Authenticates a user with email and password.
+  Whether a password flow is open on this deployment.
 
-  ## Examples
+  Password authentication can be switched off entirely, which closes every
+  flow; registration can be switched off on its own, which closes `:signup`.
+  Every entry point below that runs a password flow checks this, so the web
+  layer only needs it to refuse early (a link, a navigation) with the same
+  message the flow itself would give.
+  """
+  @spec check_password_flow(password_flow()) ::
+          :ok | {:error, :password_auth_disabled | :registration_disabled, String.t()}
+  def check_password_flow(flow) when flow in [:login, :signup, :reset] do
+    cond do
+      not Config.password_auth_enabled?() -> flow_closed(:password_auth_disabled)
+      flow == :signup -> check_registration_open()
+      true -> :ok
+    end
+  end
 
-      iex> authenticate_user("user@example.com", "valid_password")
-      {:ok, %User{}, "Welcome back!"}
+  @doc """
+  Whether new accounts may be created on this deployment, by any sign-up
+  method, with the message to show when they may not.
+  """
+  @spec check_registration_open() :: :ok | {:error, :registration_disabled, String.t()}
+  def check_registration_open do
+    if Config.registration_enabled?(), do: :ok, else: flow_closed(:registration_disabled)
+  end
 
-      iex> authenticate_user("user@example.com", "invalid")
-      {:error, :invalid_credentials, "Invalid email or password"}
+  defp flow_closed(reason), do: {:error, reason, ErrorFormatter.format_auth_error(reason)}
+
+  @doc """
+  The user-facing message for an auth failure reason, such as
+  `:registration_disabled`; see `Tymeslot.Auth.ErrorFormatter.format_auth_error/1`.
+  """
+  @spec error_message(atom()) :: String.t()
+  defdelegate error_message(reason), to: ErrorFormatter, as: :format_auth_error
+
+  @doc """
+  Authenticates a user with email and password, once password sign-in is
+  open (see `check_password_flow/1`).
+
+  `opts` carries the client (`:ip`, `:user_agent`). A wrong password, an
+  unknown address, an account with no password and an unverified account all
+  return the same generic error; see
+  `Tymeslot.Auth.Authentication.authenticate_user/3`.
   """
   @spec authenticate_user(String.t(), String.t(), keyword()) ::
-          {:ok, term(), String.t()}
-          | {:unverified, term(), String.t()}
+          {:ok, UserSchema.t(), String.t()}
           | {:error, atom(), String.t()}
-  def authenticate_user(email, password, opts \\ []) do
-    Authentication.authenticate_user(email, password, opts)
+          | {:error, :invalid_input, map()}
+  def authenticate_user(email, password, opts) do
+    with :ok <- check_password_flow(:login) do
+      Authentication.authenticate_user(email, password, request_opts!(opts))
+    end
   end
+
+  @doc """
+  Validates a sign-in form's fields without looking anything up, for
+  instant feedback: the same rules `authenticate_user/3` applies. Messages
+  are translated and keyed by field.
+  """
+  @spec validate_login(term(), term()) ::
+          :ok | {:error, %{optional(:email | :password) => String.t()}}
+  defdelegate validate_login(email, password), to: Validation, as: :validate_login_input
+
+  @doc """
+  Validates an email address as every auth form does, for instant feedback.
+  Returns the sanitised address or a translated message.
+  """
+  @spec validate_email(term(), map()) :: {:ok, String.t()} | {:error, String.t()}
+  defdelegate validate_email(email, metadata \\ %{}), to: Validation
 
   @doc """
   Requests an email change for a user.
   Validates password, creates token, stores pending email, and sends verification emails.
-  A failure is `{:error, {field, message}}`, naming the form field it belongs to.
+  A failure is `{:error, %{field => message}}`, keyed by the form field each
+  message belongs to.
   """
-  @spec request_email_change(term(), String.t(), String.t()) ::
-          {:ok, term(), String.t()} | {:error, {:current_password | :new_email, String.t()}}
-  def request_email_change(user, new_email, current_password) do
-    EmailChange.request_email_change(user, new_email, current_password)
+  @spec request_email_change(term(), term(), term(), keyword()) ::
+          {:ok, term(), String.t()}
+          | {:error, %{optional(:current_password | :new_email) => String.t()}}
+          | {:error, :rate_limited, String.t()}
+  def request_email_change(user, new_email, current_password, opts) do
+    EmailChange.request_email_change(user, new_email, current_password, request_opts!(opts))
   end
 
   @doc """
   Verifies and completes an email change using the verification token.
   Uses a database transaction to ensure atomicity.
   """
-  @spec verify_email_change(String.t()) ::
-          {:ok, Ecto.Schema.t(), String.t()} | {:error, atom(), String.t()}
-  def verify_email_change(token) when is_binary(token) do
-    EmailChange.verify_email_change(token)
+  @spec verify_email_change(String.t(), keyword()) ::
+          {:ok, Ecto.Schema.t(), String.t()} | {:error, {atom(), String.t()}}
+  def verify_email_change(token, opts) when is_binary(token) do
+    EmailChange.verify_email_change(token, request_opts!(opts))
   end
 
   @doc """
   Cancels a pending email change request.
   """
   @spec cancel_email_change(Ecto.Schema.t()) ::
-          {:ok, Ecto.Schema.t(), String.t()} | {:error, String.t()}
+          {:ok, Ecto.Schema.t(), String.t()} | {:error, {atom(), String.t()}}
   def cancel_email_change(user) do
     EmailChange.cancel_email_change(user)
   end
@@ -78,23 +138,26 @@ defmodule Tymeslot.Auth do
   @doc """
   Updates a user's password after verifying their current password.
   Pure domain logic without HTTP concerns. A failure is
-  `{:error, {field, message}}`, naming the form field it belongs to.
+  `{:error, %{field => message}}`, keyed by the form field each message
+  belongs to.
   """
-  @spec update_user_password(term(), String.t(), String.t(), String.t(), keyword()) ::
-          {:ok, term()} | {:error, {PasswordUpdate.error_field(), String.t()}}
+  @spec update_user_password(term(), term(), term(), term(), keyword()) ::
+          {:ok, term()}
+          | {:error, %{optional(PasswordUpdate.error_field()) => String.t()}}
+          | {:error, :rate_limited, String.t()}
   def update_user_password(
         user,
         current_password,
         new_password,
         new_password_confirmation,
-        opts \\ []
+        opts
       ) do
     PasswordUpdate.update_user_password(
       user,
       current_password,
       new_password,
       new_password_confirmation,
-      opts
+      request_opts!(opts)
     )
   end
 
@@ -109,32 +172,99 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
-  Registers a new user account.
+  Registers a new user account with an email and password, once sign-up is
+  open (see `check_password_flow/1`: both password authentication and
+  registration must be enabled).
 
-  Handles the complete registration flow including:
-  - Input validation
-  - Password hashing
-  - Account creation
-  - Verification email sending
-  - PubSub event broadcasting
+  Runs the anti-abuse gate (honeypot, rate limit, reCAPTCHA), validates the
+  input, creates the account and its profile, broadcasts the registration and
+  sends the verification email. `opts` carries the client (`:ip`,
+  `:user_agent`) and `:via`; see `Tymeslot.Auth.Registration.register_user/2`.
+
+  Returns `{:ok, user, message}` for a new account and
+  `{:existing_account, message}` when the address was already registered, or
+  `{:honeypot, message}` when a bot was caught. The message is identical in
+  all three, and the owner of a taken address is emailed instead.
   """
-  @spec register_user(map(), term(), keyword()) ::
-          {:ok, term(), String.t()} | {:error, term(), String.t()}
-  def register_user(params, socket_or_conn, opts \\ []) do
-    if Config.registration_enabled?() do
-      Registration.register_user(params, socket_or_conn, opts)
-    else
-      {:error, :registration_disabled, AuthActions.registration_disabled_message()}
+  @spec register_user(map(), keyword()) ::
+          {:ok, Tymeslot.Auth.UserSchema.t(), String.t()}
+          | {:existing_account, String.t()}
+          | {:honeypot, String.t()}
+          | {:error, term(), String.t()}
+          | {:error, :input, map() | String.t()}
+  def register_user(params, opts) do
+    with :ok <- check_password_flow(:signup) do
+      Registration.register_user(params, request_opts!(opts))
     end
   end
 
   @doc """
-  Terminates a user session.
+  Requests a password reset link for `email`, once password resets are open
+  (see `check_password_flow/1`).
+
+  The reply is the same whether or not the address has an account, so it
+  cannot be used to discover who is registered. `opts` carries the client
+  (`:ip`, `:user_agent`) for the rate limit.
   """
-  @spec delete_session(Plug.Conn.t()) :: Plug.Conn.t()
-  def delete_session(conn) do
-    Session.delete_session(conn)
+  @spec request_password_reset(String.t(), keyword()) ::
+          {:ok, String.t()} | {:error, atom(), String.t()}
+  def request_password_reset(email, opts) do
+    with :ok <- check_password_flow(:reset) do
+      case PasswordReset.initiate_reset(email, request_opts!(opts)) do
+        {:ok, :reset_initiated, message} -> {:ok, message}
+        # The address is the visitor's own input: say which rule it broke.
+        {:error, :invalid_input, _message} = invalid -> invalid
+        {:error, reason, _message} -> reset_failed(reason)
+      end
+    end
   end
+
+  @doc """
+  Sets a new password against a reset token, once password resets are open
+  (see `check_password_flow/1`). Every session the account had is revoked.
+
+  `opts` carries the client (`:ip`, `:user_agent`), for the per-address
+  limit on attempts and the audit entry.
+  """
+  @spec reset_password(String.t(), String.t(), String.t(), keyword()) ::
+          {:ok, UserSchema.t(), String.t()} | {:error, atom(), String.t()}
+  def reset_password(token, password, password_confirmation, opts) do
+    with :ok <- check_password_flow(:reset) do
+      case PasswordReset.reset_password(
+             token,
+             password,
+             password_confirmation,
+             request_opts!(opts)
+           ) do
+        {:ok, _user, _message} = ok -> ok
+        # A rejected password keeps its own message: the user needs to know
+        # which rule it broke. Every other reason describes the token.
+        {:error, :invalid_input, _message} = invalid -> invalid
+        {:error, reason, _message} -> reset_failed(reason)
+      end
+    end
+  end
+
+  defp reset_failed(reason),
+    do: {:error, reason, ErrorFormatter.format_password_reset_error(reason)}
+
+  @doc """
+  Checks a password reset token without spending it, for showing the form
+  it leads to.
+  """
+  @spec verify_password_reset_token(String.t()) ::
+          {:ok, UserSchema.t(), String.t()} | {:error, atom(), String.t()}
+  defdelegate verify_password_reset_token(token), to: PasswordReset, as: :verify_token
+
+  @doc """
+  Resends the verification link to the session-bound unverified account
+  `email`, answering the same way whatever the address turns out to be; see
+  `Tymeslot.Auth.Verification.resend_verification_email_by_email/2`.
+  """
+  @spec resend_verification_email(String.t() | nil, keyword()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def resend_verification_email(email, opts),
+    do: Verification.resend_verification_email_by_email(email, request_opts!(opts))
 
   @doc """
   Verifies a user's email address.
@@ -151,11 +281,97 @@ defmodule Tymeslot.Auth do
   @doc """
   Completes an emailed verification link, reporting whether the person who
   opened it may be signed straight in (`:auto_login`) or must log in
-  (`:manual`). See `Tymeslot.Auth.Verification.verify_email_and_maybe_login/2`.
+  (`:manual`). Following links is limited per address. See
+  `Tymeslot.Auth.Verification.verify_email_and_maybe_login/2`.
   """
-  @spec verify_email_and_maybe_login(String.t(), String.t() | nil) ::
-          {:ok, Ecto.Schema.t(), :auto_login | :manual} | {:error, atom()}
-  defdelegate verify_email_and_maybe_login(token, request_ip), to: Verification
+  @spec verify_email_and_maybe_login(String.t(), keyword()) ::
+          {:ok, Ecto.Schema.t(), :auto_login | :manual}
+          | {:error, atom() | {:rate_limited, String.t()}}
+  def verify_email_and_maybe_login(token, opts),
+    do: Verification.verify_email_and_maybe_login(token, request_opts!(opts))
+
+  # Social sign-in
+
+  @doc """
+  The provider's authorise URL for a new social sign-in; see
+  `Tymeslot.Auth.SocialAuthentication.authorize_url/3`.
+  """
+  @spec social_authorize_url(atom(), String.t(), map()) :: String.t()
+  defdelegate social_authorize_url(provider, callback_url, flow),
+    to: SocialAuthentication,
+    as: :authorize_url
+
+  @doc """
+  Decides what a provider callback means: sign in, verify first, register,
+  or refuse. See `Tymeslot.Auth.SocialAuthentication.resolve_callback/5`.
+  """
+  @spec resolve_social_callback(atom(), String.t(), String.t(), String.t(), keyword()) ::
+          SocialAuthentication.callback_outcome()
+  def resolve_social_callback(provider, code, code_verifier, callback_url, opts) do
+    SocialAuthentication.resolve_callback(
+      provider,
+      code,
+      code_verifier,
+      callback_url,
+      request_opts!(opts)
+    )
+  end
+
+  @doc """
+  Decides whether a social sign-in's account may have a session, resending
+  an unverified one its link instead; see
+  `Tymeslot.Auth.SocialAuthentication.admit/3`.
+  """
+  @spec admit_social_user(map(), atom(), keyword()) :: SocialAuthentication.admission()
+  def admit_social_user(user, provider, opts),
+    do: SocialAuthentication.admit(user, provider, request_opts!(opts))
+
+  @doc """
+  Completes a social registration from the pending entry a callback left and
+  the complete-registration form; see
+  `Tymeslot.Auth.SocialAuthentication.complete_registration/3`.
+  """
+  @spec complete_social_registration(map() | nil, map(), keyword()) ::
+          {:ok, atom(), map(), :created | :existing}
+          | {:ok, atom(), :check_email, :sent | :rate_limited}
+          | {:error, SocialAuthentication.completion_error()}
+  def complete_social_registration(pending, params, opts),
+    do: SocialAuthentication.complete_registration(pending, params, request_opts!(opts))
+
+  @doc """
+  Finishes a social sign-up from its emailed confirmation link; see
+  `Tymeslot.Auth.SocialAuthentication.confirm_signup/2`.
+  """
+  @spec confirm_social_signup(String.t(), keyword()) ::
+          {:ok, atom(), map()} | {:error, :invalid_link}
+  def confirm_social_signup(token, opts),
+    do: SocialAuthentication.confirm_signup(token, request_opts!(opts))
+
+  @doc """
+  Charges the per-address limit on a social entry point; see
+  `Tymeslot.Auth.SocialAuthentication.check_rate_limit/2`.
+  """
+  @spec check_social_rate_limit(:initiation | :callback | :completion, keyword()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_social_rate_limit(action, opts),
+    do: SocialAuthentication.check_rate_limit(action, request_opts!(opts))
+
+  @doc """
+  Records a social-auth audit entry; see
+  `Tymeslot.Auth.SocialAuthentication.audit/4`.
+  """
+  @spec log_social_auth(atom() | String.t() | nil, boolean(), map(), keyword()) :: :ok
+  defdelegate log_social_auth(provider, success, details, opts),
+    to: SocialAuthentication,
+    as: :audit
+
+  # Every rate-limited entry point needs to know who is asking: without an
+  # `:ip`, attempts from every such caller would share one bucket. A caller
+  # with no request (a provisioning task) passes an explicit value.
+  defp request_opts!(opts) do
+    _ip = Keyword.fetch!(opts, :ip)
+    opts
+  end
 
   @doc """
   Subscribes the calling process to user-registration events.
@@ -183,15 +399,14 @@ defmodule Tymeslot.Auth do
   Generates a fresh verification token for a user and persists it without sending an email.
 
   Intended for background workers that need to produce a valid verification URL before
-  delivering their own email (e.g. a 24-hour reminder). Existing tokens expire after 2 hours,
-  so callers must regenerate before building any verification link.
+  delivering their own email (e.g. a 24-hour reminder). The raw token is never stored, and
+  an existing one may have expired (see `Tymeslot.Auth.AccountTokens.ttl_seconds/1`), so
+  callers must regenerate before building any verification link.
   """
   @spec regenerate_verification_token(integer()) :: {:ok, String.t()} | {:error, atom()}
   def regenerate_verification_token(user_id) do
-    {token, expiry, _purpose} = Token.generate_email_verification_token(user_id)
-
-    case Verification.store_verification_token(user_id, token, expiry) do
-      {:ok, _user} -> {:ok, token}
+    case Verification.issue_verification_token(user_id) do
+      {:ok, _user, token} -> {:ok, token}
       {:error, reason} -> {:error, reason}
     end
   end
@@ -211,15 +426,6 @@ defmodule Tymeslot.Auth do
     do: user.provider_email || user.email
 
   def google_signup_login_hint(_user), do: nil
-
-  @doc """
-  Checks if an email is available for registration.
-  Returns :ok if available, {:error, :email_already_taken | :invalid_email} otherwise.
-  """
-  @spec check_email_availability(term()) :: :ok | {:error, :email_already_taken | :invalid_email}
-  def check_email_availability(email) do
-    SocialAuthentication.check_email_availability(email)
-  end
 
   @doc """
   Gets a user by email.
@@ -257,36 +463,36 @@ defmodule Tymeslot.Auth do
   @doc """
   Lists all users in the system, ordered by id ascending.
   """
-  defdelegate list_users(), to: UserQueries, as: :list_all_users
+  defdelegate list_users(), to: AdminUserQueries, as: :list_all_users
 
   @doc """
   Counts all users in the system.
   """
-  defdelegate count_users(), to: UserQueries
+  defdelegate count_users(), to: AdminUserQueries
 
   @doc """
   Counts admin users in the system.
   """
-  defdelegate count_admins(), to: UserQueries
+  defdelegate count_admins(), to: AdminUserQueries
 
   @doc """
   Returns `true` if at least one admin can sign in via email + password.
   """
-  defdelegate any_admin_uses_password_auth?(), to: UserQueries
+  defdelegate any_admin_uses_password_auth?(), to: AdminUserQueries
 
   @doc """
   Counts admins, other than `user_id`, who can actually sign in today.
-  See `Tymeslot.Auth.UserQueries.count_signin_capable_admins_excluding/3`.
+  See `Tymeslot.Auth.AdminUserQueries.count_signin_capable_admins_excluding/3`.
   """
   @spec count_signin_capable_admins_excluding(integer(), [atom()]) :: non_neg_integer()
   def count_signin_capable_admins_excluding(user_id, usable_sso_providers) do
-    UserQueries.count_signin_capable_admins_excluding(user_id, usable_sso_providers)
+    AdminUserQueries.count_signin_capable_admins_excluding(user_id, usable_sso_providers)
   end
 
   @doc """
   Returns `true` if at least one admin account exists.
   """
-  defdelegate any_admin?(), to: UserQueries
+  defdelegate any_admin?(), to: AdminUserQueries
 
   @doc """
   Promotes the user identified by `user_id` to admin.
