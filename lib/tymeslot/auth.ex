@@ -116,9 +116,17 @@ defmodule Tymeslot.Auth do
   - Account creation
   - Verification email sending
   - PubSub event broadcasting
+
+  Returns `{:ok, user, message}` for a new account and
+  `{:existing_account, message}` when the address was already registered.
+  The message is identical in both, and the owner of a taken address is
+  emailed instead; see `Tymeslot.Auth.Registration.register_user/3`.
   """
   @spec register_user(map(), term(), keyword()) ::
-          {:ok, term(), String.t()} | {:error, term(), String.t()}
+          {:ok, Tymeslot.Auth.UserSchema.t(), String.t()}
+          | {:existing_account, String.t()}
+          | {:error, term(), String.t()}
+          | {:error, :input, map()}
   def register_user(params, socket_or_conn, opts \\ []) do
     if Config.registration_enabled?() do
       Registration.register_user(params, socket_or_conn, opts)

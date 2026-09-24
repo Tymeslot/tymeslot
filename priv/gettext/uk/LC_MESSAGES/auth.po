@@ -624,11 +624,6 @@ msgstr "Сталася помилка сервера. Спробуйте ще р
 msgid "Account created but profile creation failed: %{reason}"
 msgstr "Обліковий запис створено, але не вдалося створити профіль: %{reason}"
 
-#: lib/tymeslot/auth/registration.ex
-#, elixir-autogen, elixir-format
-msgid "Account created but verification failed: %{reason}"
-msgstr "Обліковий запис створено, але не вдалося підтвердити його: %{reason}"
-
 #: lib/tymeslot/auth/auth_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid input provided"
@@ -993,11 +988,6 @@ msgstr "Пароль має містити щонайменше один спе�
 #, elixir-autogen, elixir-format
 msgid "Password must contain at least one uppercase letter"
 msgstr "Пароль має містити щонайменше одну велику літеру"
-
-#: lib/tymeslot/auth/registration.ex
-#, elixir-autogen, elixir-format
-msgid "Your account was created, but the verification email could not be sent yet. Please wait a few minutes, then use the resend link."
-msgstr "Ваш обліковий запис створено, але лист для підтвердження ще не вдалося надіслати. Зачекайте кілька хвилин, а потім скористайтеся посиланням для повторного надсилання."
 
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format

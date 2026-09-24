@@ -47,7 +47,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
       }
 
       # Answered exactly as a free address would be; the owner is told by email.
-      assert {:ok, :existing_account, _message} = Registration.register_user(params, conn)
+      assert {:existing_account, _message} = Registration.register_user(params, conn)
       assert Repo.aggregate(UserSchema, :count, :id) == 1
     end
 
@@ -79,7 +79,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
         "terms_accepted" => "true"
       }
 
-      assert {:ok, :existing_account, _message} = Registration.register_user(params, %Plug.Conn{})
+      assert {:existing_account, _message} = Registration.register_user(params, %Plug.Conn{})
       assert Repo.aggregate(UserSchema, :count, :id) == 1
     end
   end

@@ -26,7 +26,7 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
   import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
 
   alias Tymeslot.Auth.{AuthActions, SignupSecurity}
-  alias Tymeslot.Security.InputProcessor
+  alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias TymeslotWeb.AuthLive.SecurityHelper
 
   @typedoc "A LiveView `handle_event/3` return value."
@@ -92,7 +92,14 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
     end
   end
 
+  # Spends the address's verification allowance as a real sign-up's email
+  # does, so the resend budget left afterwards matches too.
   defp pretend_registered(socket, user_params) do
+    socket
+    |> SecurityHelper.extract_client_metadata()
+    |> SecurityHelper.rate_limit_ip()
+    |> RateLimiter.check_verification_ip_rate_limit()
+
     message =
       dgettext(
         "auth",

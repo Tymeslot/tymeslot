@@ -64,7 +64,7 @@ defmodule Tymeslot.Auth.RegistrationDuplicateTest do
       Registration.register_user(params(unique_email("fresh")), %Plug.Conn{})
 
     for owner <- [password_owner, social_owner] do
-      assert {:ok, _existing, ^new_message} =
+      assert {:existing_account, ^new_message} =
                Registration.register_user(params(String.upcase(owner.email)), %Plug.Conn{})
     end
 
@@ -103,7 +103,7 @@ defmodule Tymeslot.Auth.RegistrationDuplicateTest do
 
     for _i <- 1..5, do: RateLimiter.check_signup_attempt_notice_rate_limit(owner.id)
 
-    assert {:ok, _existing, _message} =
+    assert {:existing_account, _message} =
              Registration.register_user(params(owner.email), %Plug.Conn{})
 
     assert [] = notices()
@@ -121,12 +121,53 @@ defmodule Tymeslot.Auth.RegistrationDuplicateTest do
 
     winner = insert(:user, email: unique_email("race"))
 
-    assert {:ok, :existing_account, message} =
+    assert {:existing_account, message} =
              Registration.register_user(params(winner.email), %Plug.Conn{})
 
     assert message =~ "Please check your email"
     assert Repo.aggregate(UserSchema, :count, :id) == 1
     assert [notice] = notices()
     assert notice.args["user_id"] == winner.id
+  end
+
+  describe "the address's verification allowance" do
+    defp conn_from(ip), do: %Plug.Conn{remote_ip: ip}
+
+    # Resends the address may still make before the verification limit
+    # refuses it.
+    defp remaining_resends(ip_string) do
+      Enum.count(1..10, fn _i ->
+        RateLimiter.check_verification_ip_rate_limit(ip_string) == :ok
+      end)
+    end
+
+    test "a new and a taken sign-up spend the same allowance" do
+      owner = insert(:user)
+
+      {:ok, _user, _message} =
+        Registration.register_user(params(unique_email("fresh")), conn_from({198, 51, 100, 31}))
+
+      {:existing_account, _message} =
+        Registration.register_user(params(owner.email), conn_from({198, 51, 100, 32}))
+
+      assert remaining_resends("198.51.100.31") == 4
+      assert remaining_resends("198.51.100.32") == 4
+    end
+
+    test "with the allowance used up, a free address is answered like a taken one" do
+      owner = insert(:user)
+      conn = conn_from({198, 51, 100, 33})
+      for _i <- 1..5, do: RateLimiter.check_verification_ip_rate_limit("198.51.100.33")
+
+      fresh = unique_email("fresh")
+      assert {:ok, user, message} = Registration.register_user(params(fresh), conn)
+      assert {:existing_account, ^message} = Registration.register_user(params(owner.email), conn)
+
+      # The account exists; its verification email simply waits for a resend.
+      assert user.email == fresh
+
+      assert [] =
+               all_enqueued(worker: EmailWorker, args: %{"action" => "send_email_verification"})
+    end
   end
 end

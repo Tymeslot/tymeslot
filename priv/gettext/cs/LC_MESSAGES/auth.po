@@ -624,11 +624,6 @@ msgstr "Došlo k chybě serveru. Zkuste to prosím znovu"
 msgid "Account created but profile creation failed: %{reason}"
 msgstr "Účet byl vytvořen, ale profil se nepodařilo vytvořit: %{reason}"
 
-#: lib/tymeslot/auth/registration.ex
-#, elixir-autogen, elixir-format
-msgid "Account created but verification failed: %{reason}"
-msgstr "Účet byl vytvořen, ale ověření se nezdařilo: %{reason}"
-
 #: lib/tymeslot/auth/auth_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid input provided"
@@ -993,11 +988,6 @@ msgstr "Heslo musí obsahovat alespoň jeden speciální znak"
 #, elixir-autogen, elixir-format
 msgid "Password must contain at least one uppercase letter"
 msgstr "Heslo musí obsahovat alespoň jedno velké písmeno"
-
-#: lib/tymeslot/auth/registration.ex
-#, elixir-autogen, elixir-format
-msgid "Your account was created, but the verification email could not be sent yet. Please wait a few minutes, then use the resend link."
-msgstr "Váš účet byl vytvořen, ale ověřovací e-mail se zatím nepodařilo odeslat. Počkejte prosím několik minut a poté použijte odkaz pro opětovné odeslání."
 
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format

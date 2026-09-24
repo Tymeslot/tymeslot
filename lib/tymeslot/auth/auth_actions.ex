@@ -73,7 +73,7 @@ defmodule Tymeslot.Auth.AuthActions do
            # for this attempt on the LiveView path; avoid double-counting it.
            rate_limit_checked: true
          ) do
-      {:ok, :existing_account, message} ->
+      {:existing_account, message} ->
         {:ok, :verify_email, message, nil}
 
       {:ok, user, message} ->

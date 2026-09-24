@@ -305,9 +305,12 @@ defmodule TymeslotWeb.AuthLive.RateLimitingTest do
 
       assert_patch(view, ~p"/auth/verify-email")
 
-      for _i <- 1..5 do
+      # The sign-up spent one of the five, exactly as a new account's
+      # verification email would have, so four resends remain.
+      for _i <- 1..4 do
         render_hook(view, "resend_verification", %{})
         assert render(view) =~ "Verification email sent! Please check your inbox."
+        refute render(view) =~ "reached the limit"
         for _tick <- 1..60, do: send(view.pid, :resend_cooldown_tick)
       end
 

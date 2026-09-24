@@ -623,11 +623,6 @@ msgstr "Une erreur serveur s’est produite. Veuillez réessayer"
 msgid "Account created but profile creation failed: %{reason}"
 msgstr "Compte créé, mais la création du profil a échoué : %{reason}"
 
-#: lib/tymeslot/auth/registration.ex
-#, elixir-autogen, elixir-format
-msgid "Account created but verification failed: %{reason}"
-msgstr "Compte créé, mais la vérification a échoué : %{reason}"
-
 #: lib/tymeslot/auth/auth_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid input provided"
@@ -991,11 +986,6 @@ msgstr "Le mot de passe doit contenir au moins un caractère spécial"
 #, elixir-autogen, elixir-format
 msgid "Password must contain at least one uppercase letter"
 msgstr "Le mot de passe doit contenir au moins une lettre majuscule"
-
-#: lib/tymeslot/auth/registration.ex
-#, elixir-autogen, elixir-format
-msgid "Your account was created, but the verification email could not be sent yet. Please wait a few minutes, then use the resend link."
-msgstr "Votre compte a été créé, mais l’e-mail de vérification n’a pas encore pu être envoyé. Veuillez patienter quelques minutes, puis utiliser le lien de renvoi."
 
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format

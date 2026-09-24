@@ -100,7 +100,7 @@ defmodule Tymeslot.AuthTest do
       }
 
       # Answered exactly as a free address would be; no second account.
-      assert {:ok, :existing_account, _message} = Auth.register_user(params, %Plug.Conn{})
+      assert {:existing_account, _message} = Auth.register_user(params, %Plug.Conn{})
     end
   end
 

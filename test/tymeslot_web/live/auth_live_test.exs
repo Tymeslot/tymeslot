@@ -8,7 +8,7 @@ defmodule TymeslotWeb.AuthLiveTest do
   alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.PasswordValidator
-  alias Tymeslot.Security.{Password, Token}
+  alias Tymeslot.Security.{Password, RateLimiter, Token}
   import Ecto.Query, only: [from: 2]
   import Tymeslot.Factory
 
@@ -105,6 +105,25 @@ defmodule TymeslotWeb.AuthLiveTest do
 
       assert [same, same, same] = outcomes
       assert Repo.aggregate(UserSchema, :count, :id) == 3
+    end
+
+    test "with the address's verification allowance used up, taken and free still match",
+         %{conn: conn} do
+      for _i <- 1..5, do: RateLimiter.check_verification_ip_rate_limit("127.0.0.1")
+      owner = insert(:user)
+      fresh = "fresh-#{System.unique_integer([:positive])}@example.com"
+
+      outcomes =
+        for email <- [fresh, owner.email] do
+          {:ok, view, _html} = live(conn, ~p"/auth/signup")
+          submit_signup(view, email)
+          assert_patch(view, ~p"/auth/verify-email")
+
+          {view |> element("#auth-live") |> render() |> String.replace(email, "EMAIL"),
+           view |> element("#app-flash-group") |> render()}
+        end
+
+      assert [same, same] = outcomes
     end
 
     test "a genuine sign-up can resend its verification email", %{conn: conn} do
