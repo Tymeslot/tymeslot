@@ -51,6 +51,40 @@ defmodule Tymeslot.Workers.VideoSyncWorkerReleaseTest do
     end
   end
 
+  describe "release/1 for a Teams meeting on the booking's own calendar event" do
+    test "enqueues nothing, since deleting the room would delete the booking's event" do
+      %{user: user} = create_user_with_profile()
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          video_provider: "teams",
+          video_room_id: "AAMk-booking-event",
+          provider_event_id: "AAMk-booking-event"
+        })
+
+      assert VideoSyncWorker.release(meeting) == {:ok, :calendar_event}
+      refute_enqueued(worker: VideoSyncWorker)
+    end
+
+    test "still releases a Teams room that is an event of its own" do
+      %{user: user} = create_user_with_profile()
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          video_provider: "teams",
+          video_room_id: "AAMk-own-event",
+          provider_event_id: "AAMk-booking-event"
+        })
+
+      assert {:ok, :scheduled} = VideoSyncWorker.release(meeting)
+
+      assert_enqueued(
+        worker: VideoSyncWorker,
+        args: %{"action" => "release", "room_id" => "AAMk-own-event"}
+      )
+    end
+  end
+
   describe "perform/1 — release" do
     test "DELETEs the room from the args and leaves the meeting alone" do
       %{user: user} = create_user_with_profile()

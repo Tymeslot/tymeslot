@@ -298,11 +298,12 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   def queueable_error?(_reason), do: true
 
   @doc """
-  Returns the booking calendar integration info for a user or meeting type (id and path) used for event creation.
+  Returns the booking calendar integration info for a user, meeting type or meeting (id and path) used for event creation.
   """
   @spec get_booking_integration_info(
           pos_integer()
           | Tymeslot.MeetingTypes.MeetingTypeSchema.t()
+          | Tymeslot.Meetings.MeetingSchema.t()
         ) ::
           {:ok, %{integration_id: pos_integer(), calendar_path: String.t()}} | {:error, term()}
   def get_booking_integration_info(context) do

@@ -275,7 +275,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   end
 
   defp handle_failure(reason, meeting_id, announcement, execution) do
-    Logger.error("Failed to create video room", meeting_id: meeting_id, reason: inspect(reason))
+    log_failure(reason, meeting_id)
 
     {:error, categorized} = ErrorPolicy.categorize(reason)
 
@@ -297,6 +297,14 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
         {:error, categorized}
     end
   end
+
+  # Waiting for the booking's calendar event is the expected first outcome for
+  # a Teams meeting attached to it, not a failure; `VideoRooms` logs the wait.
+  defp log_failure(:calendar_event_pending, _meeting_id), do: :ok
+
+  defp log_failure(reason, meeting_id),
+    do:
+      Logger.error("Failed to create video room", meeting_id: meeting_id, reason: inspect(reason))
 
   defp handle_timeout(meeting_id, announcement, execution) do
     if Recovery.recovering?(execution, Announcement.owed?(announcement)) do

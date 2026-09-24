@@ -28,6 +28,13 @@ defmodule Tymeslot.Integrations.Video.Rooms do
 
   Returns {:ok, meeting_context} or {:error, reason}.
   The meeting_context contains provider-specific room data and metadata.
+
+  ## Optional opts
+    - `:event_details` — the `Tymeslot.Integrations.Video.EventDetails` the
+      room is for, its title and times
+    - `:calendar_event_id` — the booking's own calendar event, for a provider
+      that can host the meeting on it (Teams on the same Microsoft account)
+      instead of creating an event of its own
   """
   @spec create_meeting_room(pos_integer() | nil, keyword()) ::
           {:ok, MeetingContext.t()} | {:error, any()}
@@ -43,7 +50,11 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   defp do_create_meeting_room(user_id, opts) do
     case resolve_integration(user_id, opts) do
       {:ok, integration, provider_type, config} ->
-        config = maybe_attach_event_details(config, opts)
+        config =
+          config
+          |> maybe_attach_event_details(opts)
+          |> maybe_put(:calendar_event_id, Keyword.get(opts, :calendar_event_id))
+
         result = create_room_with_provider(provider_type, config)
         RoomCreationError.track(integration, result)
         result

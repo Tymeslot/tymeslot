@@ -25,8 +25,14 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.Events
   alias Tymeslot.Integrations.Calendar.Google.ConferenceData
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Meetings.MeetingSchema
+
+  # How long a booking's Teams meeting waits for the booking's own calendar
+  # event before giving up on it (see `teams_room_placement/1`).
+  @calendar_event_grace_seconds 120
 
   @type plan ::
           {:inline, video_id :: integer()}
@@ -110,7 +116,70 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   def finalise(video_context, _created, _plan), do: {:ok, video_context}
 
+  @doc """
+  Where a booking's Microsoft Teams meeting belongs.
+
+  A Teams meeting is an Outlook calendar event with an online meeting on it.
+  When the booking is written to an Outlook calendar of the same Microsoft
+  account as its Teams integration, that event already exists, so the meeting
+  is attached to it and the organiser's calendar holds one entry for the
+  booking instead of two:
+
+  * `{:calendar_event, provider_event_id}` — attach it to the booking's event.
+  * `:awaiting_calendar_event` — it belongs on the booking's event, which
+    `Tymeslot.Workers.CalendarEventWorker` has not written yet. Creating a
+    separate event meanwhile is exactly the duplicate this avoids, so the
+    caller waits for it, for up to two minutes from the booking; after that
+    the answer becomes `:own_event`.
+  * `:own_event` — any other combination, including a Teams account that is
+    not the calendar's (a host can connect several Outlook accounts): the
+    meeting needs an event of its own.
+  """
+  @spec teams_room_placement(MeetingSchema.t()) ::
+          {:calendar_event, String.t()} | :awaiting_calendar_event | :own_event
+  def teams_room_placement(%MeetingSchema{} = meeting) do
+    with %{video_integration_id: vid_id, organizer_user_id: user_id}
+         when is_integer(vid_id) and is_integer(user_id) <- meeting,
+         {:ok, %{provider: "teams"} = video} <- Video.fetch_integration_for_user(vid_id, user_id),
+         {:ok, %{integration_id: cal_id}} <- Events.get_booking_integration_info(meeting),
+         {:ok, calendar} <- Calendar.get_integration(cal_id, user_id),
+         true <- same_microsoft_account?(calendar, video) do
+      booking_event_placement(meeting, cal_id)
+    else
+      _other -> :own_event
+    end
+  end
+
   # ── Private helpers ──────────────────────────────────────────────────────────
+
+  # The event only counts once it is in the calendar the booking writes to: a
+  # mapping left over from another integration names an event this Teams
+  # account may not even be able to see.
+  defp booking_event_placement(
+         %MeetingSchema{provider_event_id: event_id, calendar_integration_id: cal_id},
+         cal_id
+       )
+       when is_binary(event_id) and event_id != "",
+       do: {:calendar_event, event_id}
+
+  # The calendar job normally writes the event within seconds of the booking.
+  # One that has not after the grace period is failing, and may never succeed,
+  # so the meeting takes an event of its own rather than leave the booking
+  # without a link: a second calendar entry is the lesser harm.
+  defp booking_event_placement(%MeetingSchema{inserted_at: inserted_at}, _cal_id) do
+    if DateTime.diff(DateTime.utc_now(), inserted_at, :second) < @calendar_event_grace_seconds,
+      do: :awaiting_calendar_event,
+      else: :own_event
+  end
+
+  # Both integrations record the account's Microsoft Entra object id (`oid`).
+  defp same_microsoft_account?(%{provider: "outlook", provider_account_id: account_id}, %{
+         provider_account_id: account_id
+       })
+       when is_binary(account_id) and account_id != "",
+       do: true
+
+  defp same_microsoft_account?(_calendar, _video), do: false
 
   # Returns true when the given calendar and video integrations both belong to
   # the same Google account (Google Calendar + Google Meet, sharing

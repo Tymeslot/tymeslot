@@ -39,6 +39,11 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
   @max_rate_limit_snooze_seconds 300
   @rate_limit_snooze_step_seconds 60
 
+  # How long, and how many times, a Teams meeting waits for the booking's
+  # calendar event before the wait counts against the job's attempts.
+  @calendar_event_snooze_seconds 3
+  @max_calendar_event_snoozes 10
+
   # A provider outage is worth waiting out at a fixed, unhurried interval.
   @service_unavailable_snooze_seconds 120
 
@@ -122,6 +127,21 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicy do
 
   def to_result(:service_unavailable, _executions),
     do: {:snooze, @service_unavailable_snooze_seconds}
+
+  # A Teams meeting waiting for the booking's own calendar event, which the
+  # calendar job is writing alongside this one and usually finishes within
+  # seconds. A short snooze picks it up without holding the confirmation back
+  # for a full retry interval. Bounded, so an event that never arrives falls
+  # through to the ordinary retries, which end the job.
+  def to_result(:calendar_event_pending, executions) do
+    case SnoozePolicy.snooze_or_exhaust(executions,
+           max_snoozes: @max_calendar_event_snoozes,
+           base_seconds: @calendar_event_snooze_seconds
+         ) do
+      {:snooze, _seconds} = snooze -> snooze
+      :exhausted -> {:error, :calendar_event_pending}
+    end
+  end
 
   # The provider's circuit breaker is open, so every attempt made before it
   # recovers fails instantly. Snoozing past the recovery window costs no

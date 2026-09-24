@@ -80,6 +80,53 @@ defmodule Tymeslot.Integrations.Video.EventDetails do
     }
   end
 
+  @doc """
+  Reads the event a provider is asked to create or move a room for out of the
+  provider config.
+
+  Creation attaches the event under `:event_details` (see
+  `Tymeslot.Integrations.Video.Rooms.create_meeting_room/2`), while an update
+  hands its changes over as the flat `:meeting_topic`, `:meeting_start_time`
+  and `:meeting_end_time` keys. The event details win field by field, and a
+  field neither source carries stays `nil`: guessing a title or a time here
+  would write an event the organiser never booked into their calendar.
+  """
+  @spec from_provider_config(map()) :: t()
+  def from_provider_config(config) when is_map(config) do
+    details =
+      case Map.get(config, :event_details) do
+        %__MODULE__{} = details -> details
+        %{} = details -> struct(__MODULE__, details)
+        _other -> %__MODULE__{}
+      end
+
+    %{
+      details
+      | summary: details.summary || normalise_summary(Map.get(config, :meeting_topic)),
+        start_time: details.start_time || config_time(config, :meeting_start_time),
+        end_time: details.end_time || config_time(config, :meeting_end_time)
+    }
+  end
+
+  # The flat keys arrive as `DateTime`s from `Rooms.update_meeting_room/2`,
+  # and as ISO 8601 strings from a config that went through JSON. A string that
+  # does not parse is as good as absent.
+  defp config_time(config, key) do
+    case Map.get(config, key) do
+      %DateTime{} = datetime ->
+        datetime
+
+      iso8601 when is_binary(iso8601) ->
+        case DateTime.from_iso8601(iso8601) do
+          {:ok, datetime, _offset} -> datetime
+          {:error, _reason} -> nil
+        end
+
+      _other ->
+        nil
+    end
+  end
+
   # ── Private helpers ───────────────────────────────────────────────────────
 
   defp normalise_summary(nil), do: nil

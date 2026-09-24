@@ -32,9 +32,14 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       assert updated_meeting.calendar_path == "primary"
     end
 
-    test "switches to update when the meeting already carries an external UID" do
+    # Some older rows carry a provider event id in `uid` itself: a Teams room
+    # used to overwrite it, and the repair migration can only restore the uid
+    # where a stored cancel or reschedule link still holds it. New bookings
+    # always keep their UUID, so this only keeps legacy rows pointed at the
+    # event they already have.
+    test "switches to update for a legacy row whose non-UUID uid is the provider's event id" do
       %{integration: integration, meeting: meeting} =
-        setup_calendar_scenario(uid: "teams-external-event-xyz")
+        setup_calendar_scenario(uid: "legacy-provider-event-xyz")
 
       uid = meeting.uid
 
