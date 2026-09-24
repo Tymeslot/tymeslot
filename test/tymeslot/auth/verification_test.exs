@@ -17,6 +17,52 @@ defmodule Tymeslot.Auth.VerificationTest do
 
   import Tymeslot.Factory
 
+  describe "verify_email_and_maybe_login/2" do
+    defp user_with_token(signup_ip) do
+      user = insert(:unverified_user, signup_ip: signup_ip)
+      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      {:ok, _user} = UserTokenQueries.set_verification_token(user, token)
+      {user, token}
+    end
+
+    test "grants auto-login when the link is completed from the signup IP" do
+      {user, token} = user_with_token("203.0.113.9")
+
+      assert {:ok, verified, :auto_login} =
+               Verification.verify_email_and_maybe_login(token, "203.0.113.9")
+
+      assert verified.id == user.id
+      assert verified.verified_at
+    end
+
+    test "treats the localhost spellings as one address" do
+      {_user, token} = user_with_token("127.0.0.1")
+
+      assert {:ok, _verified, :auto_login} =
+               Verification.verify_email_and_maybe_login(token, "::1")
+    end
+
+    test "verifies but requires a manual login from any other IP" do
+      {user, token} = user_with_token("203.0.113.9")
+
+      assert {:ok, _verified, :manual} =
+               Verification.verify_email_and_maybe_login(token, "198.51.100.1")
+
+      assert Repo.reload!(user).verified_at
+    end
+
+    test "requires a manual login when no signup IP was recorded" do
+      {_user, token} = user_with_token(nil)
+
+      assert {:ok, _verified, :manual} = Verification.verify_email_and_maybe_login(token, nil)
+    end
+
+    test "rejects an unknown token" do
+      assert {:error, :invalid_token} =
+               Verification.verify_email_and_maybe_login("no-such-token", "203.0.113.9")
+    end
+  end
+
   describe "verify_user/1 with token" do
     test "verification tokens are single-use" do
       user = insert(:unverified_user)

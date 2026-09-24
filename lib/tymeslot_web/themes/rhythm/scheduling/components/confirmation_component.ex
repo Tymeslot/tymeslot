@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
+  alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
@@ -133,6 +134,20 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                       </div>
                     </div>
                   <% end %>
+
+                  <div
+                    :if={BookingLocation.chosen_display(assigns)}
+                    class="ticket-row"
+                    data-testid="confirmation-location"
+                  >
+                    <div class="ticket-icon">
+                      <.icon name="hero-map-pin" class="hero-icon hero-icon--md" />
+                    </div>
+                    <div class="ticket-info">
+                      <span class="ticket-value">{BookingLocation.chosen_display(assigns)}</span>
+                      <span class="ticket-sublabel">{dgettext("booking", "Location")}</span>
+                    </div>
+                  </div>
 
                   <div :if={@guest_emails not in [nil, []]} class="ticket-row">
                     <div class="ticket-icon">

@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" fill="none" role="img" aria-label="A meeting type offering in person, video and phone locations, and the booking page letting the guest pick one and a video service">
+  <defs>
+    <linearGradient id="ml-bg" x1="0" y1="0" x2="640" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ecfeff"/>
+      <stop offset="1" stop-color="#f0fdfa"/>
+    </linearGradient>
+    <filter id="ml-shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0d9488" flood-opacity="0.12"/>
+    </filter>
+    <!-- the three location glyphs, drawn in currentColor on a 16px grid -->
+    <symbol id="ml-building" viewBox="0 0 16 16">
+      <rect x="3" y="2" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M6 5.5h1M9 5.5h1M6 8.5h1M9 8.5h1M7 14v-2.5h2V14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="ml-video" viewBox="0 0 16 16">
+      <rect x="1.5" y="4" width="9" height="8" rx="2" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M10.5 7l4-2.5v7l-4-2.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="ml-phone" viewBox="0 0 16 16">
+      <path d="M3.5 2h2.5l1.2 3-1.6 1.2a8 8 0 0 0 3.7 3.7L10.5 8.3l3 1.2V12a2 2 0 0 1-2 2A10 10 0 0 1 1.5 4a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+  <rect width="640" height="240" fill="url(#ml-bg)"/>
+
+  <!-- left: the meeting type editor, listing the places it offers -->
+  <g filter="url(#ml-shadow)">
+    <rect x="48" y="44" width="248" height="152" rx="18" fill="#ffffff"/>
+  </g>
+
+  <!-- section label -->
+  <rect x="72" y="64" width="78" height="7" rx="3.5" fill="#cbd5e1"/>
+
+  <!-- in person -->
+  <rect x="72" y="82" width="200" height="30" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5"/>
+  <circle cx="90" cy="97" r="10" fill="#ccfbf1"/>
+  <use href="#ml-building" x="83" y="90" width="14" height="14" color="#0d9488"/>
+  <rect x="108" y="94" width="72" height="7" rx="3.5" fill="#0f766e"/>
+
+  <!-- video, with two providers named beneath its label -->
+  <rect x="72" y="118" width="200" height="30" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5"/>
+  <circle cx="90" cy="133" r="10" fill="#ccfbf1"/>
+  <use href="#ml-video" x="83" y="126" width="14" height="14" color="#0d9488"/>
+  <rect x="108" y="130" width="56" height="7" rx="3.5" fill="#0f766e"/>
+  <rect x="200" y="127" width="30" height="12" rx="6" fill="#ccfbf1"/>
+  <rect x="234" y="127" width="30" height="12" rx="6" fill="#ccfbf1"/>
+
+  <!-- phone -->
+  <rect x="72" y="154" width="200" height="30" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5"/>
+  <circle cx="90" cy="169" r="10" fill="#ccfbf1"/>
+  <use href="#ml-phone" x="83" y="162" width="14" height="14" color="#0d9488"/>
+  <rect x="108" y="166" width="64" height="7" rx="3.5" fill="#0f766e"/>
+
+  <!-- the choices carry across to the booking page -->
+  <path d="M312 120 H352" stroke="#5eead4" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 9"/>
+  <path d="M348 113 L358 120 L348 127 Z" fill="#5eead4"/>
+
+  <!-- right: the booking page, where the guest picks one -->
+  <g filter="url(#ml-shadow)">
+    <rect x="374" y="44" width="218" height="152" rx="18" fill="#ffffff"/>
+  </g>
+
+  <!-- question label -->
+  <rect x="394" y="62" width="96" height="7" rx="3.5" fill="#cbd5e1"/>
+
+  <!-- location toggles in a row: video is the one picked -->
+  <rect x="394" y="78" width="54" height="26" rx="13" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/>
+  <use href="#ml-building" x="402" y="84" width="14" height="14" color="#0d9488"/>
+  <rect x="420" y="88" width="20" height="6" rx="3" fill="#5eead4"/>
+
+  <rect x="454" y="78" width="54" height="26" rx="13" fill="#14b8a6"/>
+  <use href="#ml-video" x="462" y="84" width="14" height="14" color="#ffffff"/>
+  <rect x="480" y="88" width="20" height="6" rx="3" fill="#ffffff"/>
+
+  <rect x="514" y="78" width="58" height="26" rx="13" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/>
+  <use href="#ml-phone" x="522" y="84" width="14" height="14" color="#0d9488"/>
+  <rect x="540" y="88" width="24" height="6" rx="3" fill="#5eead4"/>
+
+  <!-- second question: which video service -->
+  <rect x="394" y="118" width="80" height="7" rx="3.5" fill="#cbd5e1"/>
+
+  <rect x="394" y="132" width="64" height="24" rx="12" fill="#14b8a6"/>
+  <rect x="408" y="141" width="36" height="6" rx="3" fill="#ffffff"/>
+
+  <rect x="464" y="132" width="64" height="24" rx="12" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5"/>
+  <rect x="478" y="141" width="36" height="6" rx="3" fill="#5eead4"/>
+
+  <!-- confirm button -->
+  <rect x="394" y="166" width="178" height="18" rx="9" fill="#0f766e"/>
+  <rect x="456" y="172" width="54" height="6" rx="3" fill="#99f6e4"/>
+</svg>

@@ -162,11 +162,6 @@ msgstr "Link non valido"
 msgid "Invalid reset token"
 msgstr "Token di reimpostazione non valido"
 
-#: lib/tymeslot_web/controllers/email_change_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid verification link"
-msgstr "Link di verifica non valido"
-
 #: lib/tymeslot_web/components/auth/registration/signup_component.ex
 #, elixir-autogen, elixir-format
 msgid "Join Tymeslot"
@@ -382,11 +377,6 @@ msgstr "Mostra/nascondi la password"
 #, elixir-autogen, elixir-format
 msgid "Too many OAuth attempts. Please try again later."
 msgstr "Troppi tentativi OAuth. Riprova più tardi."
-
-#: lib/tymeslot_web/controllers/email_change_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Too many attempts. Try again in a minute."
-msgstr "Troppi tentativi. Riprova tra un minuto."
 
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
@@ -762,11 +752,6 @@ msgstr "Impossibile verificare la modifica dell'email"
 msgid "If your email is registered, you will receive password reset instructions."
 msgstr "Se il tuo indirizzo email è registrato, riceverai le istruzioni per reimpostare la password."
 
-#: lib/tymeslot/auth/social_authentication.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid email format"
-msgstr "Formato dell'email non valido"
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password."
@@ -883,7 +868,7 @@ msgstr "Questo indirizzo email è già registrato. Usa un altro indirizzo o acce
 msgid "This email is already registered. Please sign in instead."
 msgstr "Questo indirizzo email è già registrato. Accedi invece di registrarti."
 
-#: lib/tymeslot/auth/social_authentication.ex
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "This email is already registered. Please use a different email address."
 msgstr "Questo indirizzo email è già registrato. Usa un altro indirizzo."
@@ -1051,3 +1036,33 @@ msgstr "Il tuo account è stato creato, ma l'email di verifica non è ancora sta
 #, elixir-autogen, elixir-format
 msgid "If an account exists with this email address, password reset instructions have been sent."
 msgstr "Se esiste un account con questo indirizzo e-mail, le istruzioni per reimpostare la password sono state inviate."
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your email address"
+msgstr "Conferma il tuo indirizzo email"
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Press the button below to finish verifying your email address."
+msgstr "Premi il pulsante qui sotto per completare la verifica del tuo indirizzo email."
+
+#: lib/tymeslot_web/controllers/auth/session_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Verify email address"
+msgstr "Verifica indirizzo email"
+
+#: lib/tymeslot_web/controllers/email_change_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your new email address"
+msgstr "Conferma il tuo nuovo indirizzo email"
+
+#: lib/tymeslot_web/controllers/email_change_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Press the button below to switch your account to this email address."
+msgstr "Premi il pulsante qui sotto per associare il tuo account a questo indirizzo email."
+
+#: lib/tymeslot_web/controllers/email_change_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm email change"
+msgstr "Conferma la modifica dell'email"

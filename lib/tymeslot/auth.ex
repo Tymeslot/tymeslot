@@ -38,7 +38,9 @@ defmodule Tymeslot.Auth do
       {:error, :invalid_credentials, "Invalid email or password"}
   """
   @spec authenticate_user(String.t(), String.t(), keyword()) ::
-          {:ok, term(), String.t()} | {:error, atom(), String.t()}
+          {:ok, term(), String.t()}
+          | {:unverified, term(), String.t()}
+          | {:error, atom(), String.t()}
   def authenticate_user(email, password, opts \\ []) do
     Authentication.authenticate_user(email, password, opts)
   end
@@ -147,6 +149,15 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
+  Completes an emailed verification link, reporting whether the person who
+  opened it may be signed straight in (`:auto_login`) or must log in
+  (`:manual`). See `Tymeslot.Auth.Verification.verify_email_and_maybe_login/2`.
+  """
+  @spec verify_email_and_maybe_login(String.t(), String.t() | nil) ::
+          {:ok, Ecto.Schema.t(), :auto_login | :manual} | {:error, atom()}
+  defdelegate verify_email_and_maybe_login(token, request_ip), to: Verification
+
+  @doc """
   Subscribes the calling process to user-registration events.
 
   Every account that completes registration is delivered to the caller's
@@ -203,9 +214,9 @@ defmodule Tymeslot.Auth do
 
   @doc """
   Checks if an email is available for registration.
-  Returns :ok if available, {:error, reason} otherwise.
+  Returns :ok if available, {:error, :email_already_taken | :invalid_email} otherwise.
   """
-  @spec check_email_availability(String.t()) :: :ok | {:error, String.t()}
+  @spec check_email_availability(term()) :: :ok | {:error, :email_already_taken | :invalid_email}
   def check_email_availability(email) do
     SocialAuthentication.check_email_availability(email)
   end

@@ -12,6 +12,7 @@ defmodule Tymeslot.Security.RateLimiter do
   alias Tymeslot.Security.RateLimiter.Integrations
   alias Tymeslot.Security.RateLimiter.OAuth
   alias Tymeslot.Security.RateLimiter.Profile
+  alias Tymeslot.Security.RateLimiter.PublicEndpoints
 
   @type bucket_key :: String.t()
   @type rate_check_result :: {:allow, pos_integer()} | {:deny, pos_integer()}
@@ -96,6 +97,14 @@ defmodule Tymeslot.Security.RateLimiter do
         ) :: :ok | {:error, :rate_limited, String.t()}
   def check_password_reset_rate_limit(email, ip), do: Auth.check_password_reset(email, ip)
 
+  @doc """
+  Rate limit completing emailed email-change links, per IP.
+  """
+  @spec check_email_change_verify_rate_limit(String.t()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_email_change_verify_rate_limit(client_ip),
+    do: Auth.check_email_change_verify(client_ip)
+
   # OAuth
 
   @doc """
@@ -176,6 +185,18 @@ defmodule Tymeslot.Security.RateLimiter do
   def check_webhook_rate_limit(client_ip), do: Bookings.check_webhook_endpoint(client_ip)
 
   @doc """
+  Rate limit the Stripe platform and Connect webhook endpoints per source
+  address (1000/min, one bucket shared by both).
+
+  Deliberately far looser than `check_webhook_rate_limit/1`: Stripe sends from
+  a small pool of addresses, and a delayed event can leave a paid booking
+  waiting. See `Tymeslot.Security.RateLimiter.Bookings.check_stripe_webhook_endpoint/1`.
+  """
+  @spec check_stripe_webhook_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
+  def check_stripe_webhook_rate_limit(client_ip),
+    do: Bookings.check_stripe_webhook_endpoint(client_ip)
+
+  @doc """
   Rate limit booking submission attempts.
   Returns {:allow, count} if allowed, {:deny, limit} if exceeded.
   """
@@ -211,6 +232,14 @@ defmodule Tymeslot.Security.RateLimiter do
           :ok | {:error, :rate_limited, String.t()}
   def check_meeting_approval_rate_limit(client_ip),
     do: Bookings.check_meeting_approval(client_ip)
+
+  @doc """
+  Rate limit guest RSVP page views and responses.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+  """
+  @spec check_guest_rsvp_rate_limit(String.t()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_guest_rsvp_rate_limit(client_ip), do: Bookings.check_guest_rsvp(client_ip)
 
   @doc """
   Rate limit meeting keep/uncancel attempts.
@@ -489,4 +518,20 @@ defmodule Tymeslot.Security.RateLimiter do
   """
   @spec check_calendar_push_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
   def check_calendar_push_rate_limit(client_ip), do: Calendar.check_push_endpoint(client_ip)
+
+  # Public endpoints
+
+  @doc "Rate limit the public free/busy feed per client IP (60/min)."
+  @spec check_freebusy_feed_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
+  def check_freebusy_feed_rate_limit(client_ip),
+    do: PublicEndpoints.check_freebusy_feed(client_ip)
+
+  @doc "Rate limit the per-meeting `.ics` download per client IP (60/min)."
+  @spec check_meeting_calendar_feed_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
+  def check_meeting_calendar_feed_rate_limit(client_ip),
+    do: PublicEndpoints.check_meeting_calendar_feed(client_ip)
+
+  @doc "Rate limit the healthcheck endpoint per client IP (30/min)."
+  @spec check_healthcheck_rate_limit(String.t()) :: :ok | {:error, :rate_limited}
+  def check_healthcheck_rate_limit(client_ip), do: PublicEndpoints.check_healthcheck(client_ip)
 end

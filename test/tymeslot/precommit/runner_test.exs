@@ -97,8 +97,8 @@ defmodule Tymeslot.Precommit.RunnerTest do
         end)
 
       assert output =~ "failed  a (1)"
-      refute output =~ "b"
-      refute output =~ "c"
+      refute output =~ "==> b"
+      refute output =~ "==> c"
       refute output =~ "skipped"
     end
   end
@@ -451,6 +451,73 @@ defmodule Tymeslot.Precommit.RunnerTest do
   # numbers), and losing it is the kind of regression nothing else in a `mix
   # precommit` run would report: the gate would simply get slower, silently and
   # by about a fifth. Hence a test on the flag itself.
+  describe "run/3 reporting each step as it finishes" do
+    test "prints a plain result line per step, at the start of its own line" do
+      steps = [{"a", ["a"], :dev}, {"b", ["b"], :dev}]
+
+      output =
+        capture_io(fn ->
+          catch_exit(Runner.run(steps, false, cmd: stub(%{["a"] => 0, ["b"] => 3})))
+        end)
+
+      assert output =~ ~r/^precommit: ok a$/m
+      assert output =~ ~r/^precommit: failed b \(3\)$/m
+    end
+
+    test "the suite reports as soon as it finishes, while the static checks still run" do
+      test_pid = self()
+      device = spawn_link(fn -> forward_io(test_pid) end)
+
+      steps = [
+        {"compile", ["compile"], :dev},
+        {"test", ["test"], :test},
+        {"credo", ["credo"], :dev}
+      ]
+
+      # credo holds the run open until the test has seen the suite's line, so
+      # the run can only finish if that line arrives while credo is in flight.
+      capture_fun = fn
+        ["test"], :test, [] ->
+          {"", 0}
+
+        ["credo"], :dev, [] ->
+          send(test_pid, {:credo_started, self()})
+
+          receive do
+            :release -> {"", 0}
+          end
+      end
+
+      runner =
+        Task.async(fn ->
+          Process.group_leader(self(), device)
+          Runner.run(steps, false, cmd: stub(%{["compile"] => 0}), capture: capture_fun)
+        end)
+
+      assert_receive {:credo_started, credo_pid}, 1_000
+      assert_receive {:io, "precommit: ok test\n"}, 1_000
+
+      send(credo_pid, :release)
+      assert Task.await(runner) == :ok
+      assert_receive {:io, "precommit: ok credo\n"}
+    end
+  end
+
+  # A minimal IO device that hands every write to the test process as it
+  # happens, which `capture_io/1` cannot: it only returns the output once the
+  # function it wraps has returned.
+  defp forward_io(test_pid) do
+    receive do
+      {:io_request, from, ref, request} ->
+        with {:put_chars, _encoding, chars} <- request do
+          send(test_pid, {:io, IO.chardata_to_string(chars)})
+        end
+
+        send(from, {:io_reply, ref, :ok})
+        forward_io(test_pid)
+    end
+  end
+
   describe "step_env/1" do
     test "caps schedulers for the dialyzer step" do
       assert [{"ERL_FLAGS", flags}] = Runner.step_env(["dialyzer"])

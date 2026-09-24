@@ -23,11 +23,18 @@ defmodule Tymeslot.Auth.Authentication do
 
   ## Returns
     - {:ok, user, flash_info} on success
+    - {:unverified, user, flash_error} when the password is correct but the
+      email address has not been verified yet
     - {:error, reason, flash_error} on failure
+
+  A wrong password, an unknown address and an account with no password all
+  return the same generic error; nothing about the account is disclosed until
+  the password has been proved.
 
   """
   @spec authenticate_user(String.t(), String.t(), keyword()) ::
           {:ok, term(), String.t() | nil}
+          | {:unverified, term(), String.t()}
           | {:error, atom(), String.t()}
           | {:error, :invalid_input, map()}
   def authenticate_user(email, password, opts \\ []) do
@@ -77,32 +84,41 @@ defmodule Tymeslot.Auth.Authentication do
     end
   end
 
+  # The password is checked before anything about the account is revealed.
+  # "Not verified" and "social login" are only disclosed to someone who has
+  # just proved they hold the password; everyone else gets the same generic
+  # error, at the same bcrypt cost, as a wrong password on any other account.
   defp verify_user_password(user, password, opts) do
+    if password_matches?(user, password) do
+      # A proved password is never a failed guess, whatever the account's
+      # state, so it clears the lockout counter rather than adding to it.
+      record_auth_attempt(user, true, opts)
+      authorise_login(user, opts)
+    else
+      log_auth_attempt(user, :invalid_password, opts)
+      record_auth_attempt(user, false, opts)
+      {:error, :invalid_password, ErrorFormatter.format_auth_error(:invalid_password)}
+    end
+  end
+
+  defp authorise_login(user, opts) do
     cond do
       user.provider not in [nil, "email"] ->
         log_auth_attempt(user, :oauth_user, opts)
-        record_auth_attempt(user, false, opts)
         {:error, :oauth_user, ErrorFormatter.format_auth_error(:oauth_user)}
 
       user.verified_at == nil ->
         log_auth_attempt(user, :email_not_verified, opts)
-        record_auth_attempt(user, false, opts)
-        {:error, :email_not_verified, ErrorFormatter.format_auth_error(:email_not_verified)}
+        {:unverified, user, ErrorFormatter.format_auth_error(:email_not_verified)}
 
-      verify_password(user, password) ->
+      true ->
         log_auth_attempt(user, :success, opts)
 
         :telemetry.execute([:tymeslot, :auth, :login_completed], %{count: 1}, %{
           method: "password"
         })
 
-        record_auth_attempt(user, true, opts)
         {:ok, user, dgettext("auth", "Login successful.")}
-
-      true ->
-        log_auth_attempt(user, :invalid_password, opts)
-        record_auth_attempt(user, false, opts)
-        {:error, :invalid_password, ErrorFormatter.format_auth_error(:invalid_password)}
     end
   end
 
@@ -206,7 +222,10 @@ defmodule Tymeslot.Auth.Authentication do
     if map_size(errors) == 0, do: :ok, else: {:error, errors}
   end
 
-  defp verify_password(user, password) do
-    Password.verify_password(password, user.password_hash)
-  end
+  # An account without a password (signed up through a social login) still
+  # pays for a dummy hash, so it cannot be told apart by response time.
+  defp password_matches?(%{password_hash: hash}, password) when is_binary(hash),
+    do: Password.verify_password(password, hash)
+
+  defp password_matches?(_user, _password), do: Password.no_user_verify()
 end

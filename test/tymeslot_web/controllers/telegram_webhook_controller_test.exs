@@ -78,6 +78,32 @@ defmodule TymeslotWeb.TelegramWebhookControllerTest do
       assert json_response(conn, 403)["error"] == "forbidden"
     end
 
+    test "returns 403 when the configured secret is empty, even for an empty header", %{
+      conn: conn
+    } do
+      # An empty TELEGRAM_WEBHOOK_SECRET must not turn the check into "an
+      # empty header is trusted".
+      with_config(:tymeslot, telegram_webhook_secret: "")
+
+      conn =
+        conn
+        |> put_req_header("x-telegram-bot-api-secret-token", "")
+        |> post("/api/telegram/webhook", %{"update_id" => 1})
+
+      assert json_response(conn, 403)["error"] == "forbidden"
+    end
+
+    test "returns 403 when no secret is configured", %{conn: conn} do
+      with_config(:tymeslot, telegram_webhook_secret: nil)
+
+      conn =
+        conn
+        |> put_req_header("x-telegram-bot-api-secret-token", "")
+        |> post("/api/telegram/webhook", %{"update_id" => 1})
+
+      assert json_response(conn, 403)["error"] == "forbidden"
+    end
+
     test "returns 404 when telegram is disabled", %{conn: conn} do
       with_config(:tymeslot, telegram_notifications_allowed: false)
 

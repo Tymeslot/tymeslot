@@ -202,12 +202,6 @@ config :tymeslot, :integration_health_alerting,
 # Webhook configuration
 config :tymeslot, :webhook_base_url, nil
 
-config :tymeslot, :webhook_paths, [
-  "/webhooks/stripe",
-  "/webhooks/stripe/connect",
-  "/auth/zoom/deauthorize"
-]
-
 # Webhook idempotency cache TTLs
 config :tymeslot, :webhook_idempotency,
   # How long to reserve an event while processing (prevents duplicate processing)
