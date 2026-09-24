@@ -284,6 +284,65 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == "teams-event"
     end
 
+    # The video queue does not wait for the calendar queue: a room job can
+    # switch Teams on for the old event again, and record it, while the new
+    # event is being written. The meeting is then re-read under its lock.
+    test "deletes the new event and updates the old one when a room is attached to it meanwhile",
+         %{meeting: meeting} do
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
+        {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{video_room_id: "teams-event"})
+        {:ok, CreatedEvent.provider_minted("replacement-event")}
+      end)
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn "replacement-event", _ctx -> :ok end)
+      expect(Tymeslot.CalendarMock, :update_event, fn "teams-event", _data, _ctx -> :ok end)
+
+      assert :ok = CalendarEventSync.replace(meeting.id, "teams-event", 1)
+
+      assert %{provider_event_id: "teams-event", video_room_id: "teams-event"} =
+               Repo.get!(MeetingSchema, meeting.id)
+    end
+
+    test "deletes the new event when the meeting is cancelled while it is written", %{
+      meeting: meeting
+    } do
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
+        {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
+        {:ok, CreatedEvent.provider_minted("replacement-event")}
+      end)
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn "replacement-event", _ctx -> :ok end)
+
+      assert :ok = CalendarEventSync.replace(meeting.id, "teams-event", 1)
+      assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == "teams-event"
+    end
+
+    # Two replacements of one event, the second queued behind the first: the
+    # second finds the meeting on the first's new event and has nothing left
+    # to write, and the old event it deletes is already gone.
+    test "a second replacement of the same event creates nothing", %{
+      integration: integration,
+      meeting: meeting
+    } do
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
+        {:ok, CreatedEvent.provider_minted("replacement-event")}
+      end)
+
+      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
+        {:ok, %{integration_id: integration.id, calendar_path: "primary"}}
+      end)
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn "teams-event", _ctx -> :ok end)
+      assert :ok = CalendarEventSync.replace(meeting.id, "teams-event", 1)
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn "teams-event", _ctx ->
+        {:error, :not_found}
+      end)
+
+      assert :ok = CalendarEventSync.replace(meeting.id, "teams-event", 1)
+      assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == "replacement-event"
+    end
+
     test "returns {:error, :meeting_not_found} for a meeting deleted in the meantime" do
       # Any calendar call would fail the test: none is expected.
       assert {:error, :meeting_not_found} =

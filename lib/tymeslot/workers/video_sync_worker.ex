@@ -150,7 +150,13 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   # online meeting on that event for good once set, so the only way to take
   # the join link off it is a new event, and that is calendar sync's job. It
   # runs in the calendar queue, one write per meeting at a time, so it cannot
-  # race the update the same location change enqueued there.
+  # race the update the same location change enqueued there. The video queue
+  # does not wait for it, though: a later move back to Teams can attach a
+  # room to the event while it is being replaced. Both sides re-check the
+  # meeting under its row lock before recording anything
+  # (`Tymeslot.Meetings.CalendarEventSync.replace/3`,
+  # `Tymeslot.Meetings.VideoRoomAttachment.persist/2`), so whichever records
+  # first, the other gives way.
   def release(%{id: meeting_id, video_room_id: event_id, provider_event_id: event_id})
       when is_binary(meeting_id) and is_binary(event_id) do
     case CalendarEventScheduler.schedule_calendar_replacement(meeting_id, event_id) do

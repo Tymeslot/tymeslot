@@ -29,6 +29,14 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventScheduler do
   # enqueues to carry the link is dropped as a duplicate of the one that has
   # already read the meeting without it.
   #
+  # A replacement is the same case. It decides between replacing the event and
+  # only updating it on the meeting it reads, so one collapsed into a running
+  # replacement that has already chosen to update is lost: a booking moved
+  # back to Teams and then away again while that update is on the wire keeps
+  # the Teams meeting on its event. A second replacement of the same event
+  # costs nothing when it follows one that did replace it: it finds the
+  # meeting on the new event and only deletes the old one, which is gone.
+  #
   # Enqueuing it is half the fix. `Workers.CalendarEventWorker` holds the new
   # job behind the one in flight, so the two do not write at once — the server
   # would refuse the second conditional PUT, and the write that carries the
@@ -43,7 +51,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventScheduler do
   the same worker, cannot drift from the rule here.
   """
   @spec unique_states(String.t()) :: [atom()]
-  def unique_states("update"), do: @update_unique_states
+  def unique_states(action) when action in ["update", "replace"], do: @update_unique_states
   def unique_states(_action), do: @exclusive_unique_states
 
   @doc """

@@ -27,15 +27,13 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   """
 
   alias Ecto.UUID
-  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Integrations.Calendar.CreatedEvent
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
-  alias Tymeslot.Integrations.Calendar.SyncBroadcast
-  alias Tymeslot.Meetings.CalendarEventLink
+  alias Tymeslot.Meetings.CalendarEventCache
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
+  alias Tymeslot.Repo
   require Logger
 
   @doc """
@@ -170,7 +168,9 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   Nothing is replaced when the meeting holds a room on `event_id` again (the
   booking moved back to Teams before this ran), which is an ordinary update,
   or when it no longer expects a calendar event, whose own delete job removes
-  the event.
+  the event. Both are checked again under the meeting's row lock before the
+  new event is recorded, since a room can be attached to `event_id` while the
+  new event is being written; the new event is then deleted again.
   """
   @spec replace(term(), String.t(), pos_integer()) :: :ok | {:error, term()}
   def replace(meeting_id, event_id, attempt) do
@@ -188,35 +188,82 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   # Internal orchestration
   # ---------------------------------------------------------------------------
 
-  defp replace_event(%{video_room_id: event_id} = meeting, event_id, attempt),
-    do: update(meeting.id, attempt)
-
-  defp replace_event(%{provider_event_id: event_id} = meeting, event_id, _attempt) do
-    if MeetingState.expects_calendar_event?(meeting) do
-      create_replacement(meeting, event_id)
-    else
-      Logger.info("Meeting no longer expects a calendar event, skipping replacement",
-        meeting_id: meeting.id
-      )
-
-      :ok
+  defp replace_event(meeting, event_id, attempt) do
+    case replacement_step(meeting, event_id) do
+      :replace -> create_replacement(meeting, event_id, attempt)
+      step -> run_replacement_step(step, meeting, event_id, attempt)
     end
   end
 
-  # Recorded on an earlier attempt: only the old event is left to delete.
-  defp replace_event(meeting, event_id, _attempt), do: delete_replaced_event(meeting, event_id)
+  # What replacing `event_id` still takes, judged from `meeting` as it stands.
+  # Asked twice: on the meeting the job read, and again under the row lock
+  # before the new event is recorded, since the video queue does not wait for
+  # this one and can attach a room to `event_id` while the new event is being
+  # written.
+  defp replacement_step(%{video_room_id: event_id}, event_id), do: :update
 
-  defp create_replacement(meeting, event_id) do
+  defp replacement_step(%{provider_event_id: event_id} = meeting, event_id) do
+    if MeetingState.expects_calendar_event?(meeting), do: :replace, else: :skip
+  end
+
+  # Recorded on an earlier attempt: only the old event is left to delete.
+  defp replacement_step(_meeting, _event_id), do: :delete
+
+  defp run_replacement_step(:update, meeting, _event_id, attempt),
+    do: update(meeting.id, attempt)
+
+  defp run_replacement_step(:skip, meeting, _event_id, _attempt) do
+    Logger.info("Meeting no longer expects a calendar event, skipping replacement",
+      meeting_id: meeting.id
+    )
+
+    :ok
+  end
+
+  defp run_replacement_step(:delete, meeting, event_id, _attempt),
+    do: delete_replaced_event(meeting, event_id)
+
+  defp create_replacement(meeting, event_id, attempt) do
     Logger.info("Replacing calendar event", meeting_id: meeting.id)
 
     event_data = CalendarEventBuilder.build_event_data(meeting)
 
-    # The old id is cleared in the same write that records the new event, so
-    # the meeting stops pointing at it whatever the new event is keyed by.
-    with {:ok, created} <- calendar_module().create_event(event_data, meeting),
-         :ok <- persist_or_compensate(meeting, created, %{provider_event_id: nil}) do
-      delete_replaced_event(meeting, event_id)
+    with {:ok, created} <- calendar_module().create_event(event_data, meeting) do
+      case record_replacement(meeting, event_id, created) do
+        {:ok, :recorded} ->
+          delete_replaced_event(meeting, event_id)
+
+        # The meeting moved on while the new event was written, most often a
+        # room attached to `event_id` meanwhile: the new event is not needed.
+        {:ok, step} ->
+          Logger.info("Meeting changed while its replacement event was written, deleting it",
+            meeting_id: meeting.id
+          )
+
+          discard_created_event(meeting, created)
+          run_replacement_step(step, meeting, event_id, attempt)
+
+        {:error, reason} ->
+          compensate_orphaned_event(meeting, created)
+          {:error, reason}
+      end
     end
+  end
+
+  # The old id is cleared in the same write that records the new event, so
+  # the meeting stops pointing at it whatever the new event is keyed by.
+  defp record_replacement(meeting, event_id, created) do
+    Repo.transaction(fn ->
+      with {:ok, locked} <- MeetingQueries.get_meeting_for_update(meeting.id),
+           :replace <- replacement_step(locked, event_id),
+           :ok <- persist_calendar_mapping(locked, created, %{provider_event_id: nil}) do
+        :recorded
+      else
+        {:error, :not_found} -> Repo.rollback(:meeting_not_found)
+        {:error, reason} -> Repo.rollback(reason)
+        step -> step
+      end
+    end)
   end
 
   # `meeting` still names the calendar the old event lives in. Once it is
@@ -226,22 +273,12 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     case calendar_module().delete_event(event_id, meeting) do
       result when result in [:ok, {:ok, :deleted}, {:error, :not_found}] ->
         Logger.info("Replaced calendar event deleted", meeting_id: meeting.id)
-        forget_cached_event(meeting, event_id)
+        CalendarEventCache.forget(meeting, event_id)
 
       error ->
         error
     end
   end
-
-  defp forget_cached_event(%{calendar_integration_id: integration_id} = meeting, event_id)
-       when is_integer(integration_id) do
-    ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, [event_id])
-    AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
-    SyncBroadcast.broadcast_cache_update(meeting.organizer_user_id, [])
-    :ok
-  end
-
-  defp forget_cached_event(_meeting, _event_id), do: :ok
 
   defp external_id?(nil), do: false
 
@@ -290,93 +327,8 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
   defp record_successful_update(meeting, event_data) do
     Logger.info("Calendar event updated successfully", meeting_id: meeting.id)
-    sync_cache_after_outbound_update(meeting, event_data)
+    CalendarEventCache.write_through_update(meeting, event_data)
     :ok
-  end
-
-  # Write-through for the outbound push above: keeps the local
-  # `provider_calendar_event` cache row (and any live calendar-grid viewers
-  # subscribed via PubSub) in sync with a Tymeslot-initiated change, instead
-  # of waiting on the next inbound sync cycle to notice the drift.
-  #
-  # The inbound counterpart is
-  # `Tymeslot.Integrations.Calendar.Sync.post_commit_reconciliation/2`, and the
-  # availability-cache invalidation is here for the reason it is there, in the
-  # same order: Exchange answers availability out of this very table
-  # (`Exchange.Provider.list_events/2` is a cache read), so a row this function
-  # moves has to drop the slots that were computed from where it used to be
-  # before anyone reacts to the broadcast.
-  #
-  # Never fails the update, and that has to hold for a raise as much as for an
-  # error tuple: the provider push has already landed, so letting an exception
-  # out would have the worker retry a write that succeeded. The next inbound
-  # sync reconciles the row either way.
-  defp sync_cache_after_outbound_update(meeting, event_data) do
-    with {:ok, cached_event} <- find_cached_event(meeting),
-         {:ok, _updated} <- update_cached_event(cached_event, event_data) do
-      AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
-      SyncBroadcast.broadcast_cache_update(meeting.organizer_user_id, [cached_event.uid])
-    else
-      {:error, :not_found} ->
-        # No cache row yet — e.g. this is the very first outbound push and no
-        # inbound sync has cached the event. Nothing stale to correct.
-        :ok
-
-      {:error, reason} ->
-        log_write_through_failure(meeting, reason)
-    end
-  rescue
-    error -> log_write_through_failure(meeting, error)
-  end
-
-  defp log_write_through_failure(meeting, reason) do
-    Logger.warning("Failed to write through outbound calendar update to local cache",
-      meeting_id: meeting.id,
-      reason: inspect(reason)
-    )
-
-    :ok
-  end
-
-  # `CalendarEventLink` is this project's one rule for "this cached provider
-  # event is that meeting": the two match when they share any non-blank
-  # identifier, within a single integration. Going through it rather than
-  # hand-rolling a lookup order matters here specifically, because the grid
-  # dedup this write-through exists to correct
-  # (`CalendarGrid.BookingEvents.list_for_range/4`) links the two sides by that
-  # same rule — so any narrower rule here would silently fail to update exactly
-  # the rows the grid had already decided were linked.
-  defp find_cached_event(meeting) do
-    ProviderCalendarEventQueries.get_by_identifiers(
-      meeting.calendar_integration_id,
-      CalendarEventLink.identifiers(meeting)
-    )
-  end
-
-  # `status` and `transparency` belong here because the push carries them and
-  # they are not always the same as last time: approving a pending booking
-  # flips its event TENTATIVE → CONFIRMED through this very "update" action
-  # (`Tymeslot.Meetings.Approval`), and `show_as_free` decides whether the row
-  # blocks time at all (`CalendarEvent.blocking?/1`). Writing the new times
-  # while leaving those two behind produced a row that looked freshly synced
-  # and still claimed the old status.
-  #
-  # `timezone` is left out for the opposite reason: `event_data.timezone` is
-  # the booker's display zone, not the event's TZID, and `ICalBuilder` emits
-  # UTC with no TZID at all — so writing it invents a value the provider never
-  # reports back and the next inbound sync clears again.
-  defp update_cached_event(cached_event, event_data) do
-    attrs = %{
-      start_at: event_data.start_time,
-      end_at: event_data.end_time,
-      summary: event_data.summary,
-      description: event_data.description,
-      location: event_data.location,
-      status: Atom.to_string(event_data.status),
-      transparency: Atom.to_string(event_data.transparency)
-    }
-
-    ProviderCalendarEventQueries.update_after_outbound_push(cached_event, attrs)
   end
 
   defp handle_missing_event(meeting_id, event_data, meeting) do
@@ -482,17 +434,18 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   # create call so the delete targets the exact orphan, independent of whatever
   # (stale, unpersisted) UID the meeting still carries.
   defp compensate_orphaned_event(meeting, %CreatedEvent{} = created) do
+    Logger.warning(
+      "Calendar mapping persistence failed after create; deleting orphaned event to keep retry idempotent",
+      meeting_id: meeting.id
+    )
+
+    discard_created_event(meeting, created)
+  end
+
+  defp discard_created_event(meeting, %CreatedEvent{} = created) do
     case CreatedEvent.local_uid(created) do
-      nil ->
-        :ok
-
-      identifier ->
-        Logger.warning(
-          "Calendar mapping persistence failed after create; deleting orphaned event to keep retry idempotent",
-          meeting_id: meeting.id
-        )
-
-        delete_orphan(meeting, identifier)
+      nil -> :ok
+      identifier -> delete_orphan(meeting, identifier)
     end
   end
 

@@ -24,8 +24,9 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
 
   Returns `{:ok, meeting}` when the room was attached, or when it was not
   because another writer attached one first or the meeting moved to another
-  location (its room is then released); `{:error, reason}` when the write
-  failed.
+  location (its room is then released); `{:error, :calendar_event_pending}`
+  when the room was placed on a booking calendar event the meeting has since
+  left; `{:error, reason}` when the write failed.
   """
   # The room was created for the integration `meeting` named when it was read,
   # before the provider call. A reschedule can move the meeting to another
@@ -33,17 +34,24 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
   # hand an in-person meeting a join link. So the integration is re-checked
   # under the lock too, and a room created for a location the meeting has left
   # is released rather than attached.
+  #
+  # A Teams meeting placed on the booking's own calendar event (see
+  # `Tymeslot.Integrations.MeetingProvisioning.teams_room_placement/1`) is
+  # that event, so its room id is the event id the meeting was read with. The
+  # calendar queue can replace that event meanwhile
+  # (`Tymeslot.Meetings.CalendarEventSync.replace/3`), and the room would then
+  # be recorded on an event that is gone. So the event is re-checked under the
+  # lock as well, and a room placed on an event the meeting has left is not
+  # attached: the job waits and places it again on the event the meeting now
+  # has. The online meeting goes with the event it was put on.
   @spec persist(MeetingSchema.t(), map()) ::
           {:ok, MeetingSchema.t()} | {:error, term()}
-  def persist(
-        %MeetingSchema{video_integration_id: integration_id} = meeting,
-        video_room_attrs
-      ) do
+  def persist(%MeetingSchema{} = meeting, video_room_attrs) do
     transaction_result =
       Repo.transaction(fn ->
         case MeetingQueries.get_meeting_for_update(meeting.id) do
           {:ok, locked_meeting} ->
-            attach_to_locked(locked_meeting, integration_id, video_room_attrs)
+            attach_to_locked(locked_meeting, meeting, video_room_attrs)
 
           {:error, :not_found} ->
             Repo.rollback(:meeting_not_found)
@@ -54,17 +62,7 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
       {:ok, {:attached, updated_meeting}} ->
         # Schedule the calendar update only once we have definitively attached the
         # video room in this call path.
-        case CalendarEventScheduler.schedule_calendar_update(updated_meeting.id) do
-          {:ok, _job} ->
-            :ok
-
-          {:error, reason} ->
-            Logger.warning("Failed to schedule calendar update after video room attachment",
-              meeting_id: updated_meeting.id,
-              reason: inspect(reason)
-            )
-        end
-
+        schedule_calendar_update(updated_meeting)
         {:ok, updated_meeting}
 
       {:ok, {:location_changed, moved_meeting}} ->
@@ -74,6 +72,14 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
 
         release_unattached_room(meeting, video_room_attrs)
         {:ok, moved_meeting}
+
+      {:ok, {:calendar_event_replaced, replaced_meeting}} ->
+        Logger.info(
+          "Booking's calendar event was replaced while its video room was placed on it; placing it again",
+          meeting_id: replaced_meeting.id
+        )
+
+        {:error, :calendar_event_pending}
 
       {:ok, {:already_attached, existing_meeting}} ->
         Logger.info(
@@ -101,27 +107,57 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
     end
   end
 
-  defp attach_to_locked(
-         %MeetingSchema{video_room_id: nil, video_integration_id: integration_id} = locked_meeting,
-         integration_id,
-         video_room_attrs
-       ) do
-    case update_meeting_with_video_room(locked_meeting, video_room_attrs) do
-      {:ok, updated_meeting} -> {:attached, updated_meeting}
-      {:error, reason} -> Repo.rollback(reason)
+  defp schedule_calendar_update(meeting) do
+    case CalendarEventScheduler.schedule_calendar_update(meeting.id) do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to schedule calendar update after video room attachment",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
     end
   end
 
   defp attach_to_locked(
-         %MeetingSchema{video_room_id: nil} = moved_meeting,
-         _integration_id,
-         _attrs
-       ),
-       do: {:location_changed, moved_meeting}
+         %MeetingSchema{video_room_id: nil, video_integration_id: integration_id} = locked_meeting,
+         %MeetingSchema{video_integration_id: integration_id} = meeting,
+         video_room_attrs
+       ) do
+    if left_booking_event?(locked_meeting, meeting, video_room_attrs) do
+      {:calendar_event_replaced, locked_meeting}
+    else
+      case update_meeting_with_video_room(locked_meeting, video_room_attrs) do
+        {:ok, updated_meeting} -> {:attached, updated_meeting}
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end
+  end
+
+  defp attach_to_locked(%MeetingSchema{video_room_id: nil} = moved_meeting, _meeting, _attrs),
+    do: {:location_changed, moved_meeting}
 
   # Another worker won the race; keep the existing attachment.
-  defp attach_to_locked(%MeetingSchema{} = already_attached, _integration_id, _attrs),
+  defp attach_to_locked(%MeetingSchema{} = already_attached, _meeting, _attrs),
     do: {:already_attached, already_attached}
+
+  # Whether the room was placed on the booking's calendar event as `meeting`
+  # was read, and the locked meeting is on another event now.
+  defp left_booking_event?(
+         %MeetingSchema{provider_event_id: event_id},
+         %MeetingSchema{provider_event_id: event_id},
+         _attrs
+       ),
+       do: false
+
+  defp left_booking_event?(_locked_meeting, %MeetingSchema{provider_event_id: event_id}, %{
+         video_room_id: event_id
+       })
+       when is_binary(event_id),
+       do: true
+
+  defp left_booking_event?(_locked_meeting, _meeting, _attrs), do: false
 
   defp release_unattached_room(meeting, %{video_room_id: room_id} = video_room_attrs)
        when is_binary(room_id) do

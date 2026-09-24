@@ -72,7 +72,8 @@ defmodule Tymeslot.Meetings.VideoRooms do
     - {:error, :video_disabled} if video provider is set to "none"
     - {:error, :video_integration_missing} if no video integration configured
     - {:error, :calendar_event_pending} if a Teams meeting is to be attached
-      to the booking's calendar event and that event is not written yet
+      to the booking's calendar event and that event is not written yet, or
+      was replaced while the meeting was being attached to it
     - {:error, :video_integration_inactive} if integration is disabled
     - {:error, :unknown_provider} if provider is unsupported
     - {:error, :incomplete_video_room} if the provider returned a room carrying
