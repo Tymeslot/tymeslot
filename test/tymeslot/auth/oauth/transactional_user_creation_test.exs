@@ -3,6 +3,8 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
 
   @moduletag :auth
 
+  import Tymeslot.Test.AdminBootstrapHelpers, only: [reopen_admin_bootstrap: 1]
+
   use ExUnitProperties
 
   alias Tymeslot.Auth.OAuth.TransactionalUserCreation
@@ -64,6 +66,8 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
   end
 
   describe "admin bootstrap" do
+    setup :reopen_admin_bootstrap
+
     test "the first user created via OAuth is promoted to admin" do
       auth_params = %{
         "email" => "first-oauth@example.com",

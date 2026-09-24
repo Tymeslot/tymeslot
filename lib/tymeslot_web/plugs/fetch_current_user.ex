@@ -1,25 +1,38 @@
 defmodule TymeslotWeb.Plugs.FetchCurrentUser do
   @moduledoc """
-  A plug that fetches the current user from the session and assigns it to the connection.
+  Resolves the signed-in user from the session and assigns it to the
+  connection as `:current_user` (`nil` when nobody is signed in).
 
-  This plug should be used in the browser pipeline to make the current user
-  available in all controllers and views.
+  A session token that no longer maps to a live session (expired or revoked)
+  is dropped from the session, so the browser stops presenting it on every
+  later request.
+
+  Runs in the browser pipelines so the user is available to every controller
+  and to the dead render of every LiveView.
   """
 
   import Plug.Conn
-  alias Tymeslot.Auth.Authentication
+
+  alias Tymeslot.Auth.Session
 
   @spec init(Keyword.t()) :: Keyword.t()
   def init(opts), do: opts
 
   @spec call(Plug.Conn.t(), Keyword.t()) :: Plug.Conn.t()
   def call(conn, _opts) do
-    user_token = get_session(conn, :user_token)
-
-    user = user_token && Authentication.get_user_by_session_token(user_token)
+    session = get_session(conn)
+    user = Session.user_from_session(session)
 
     conn
+    |> drop_dead_token(session, user)
     |> assign(:current_user, user)
-    |> assign(:user_token, user_token)
   end
+
+  defp drop_dead_token(conn, %{"user_token" => _token}, nil) do
+    conn
+    |> delete_session(:user_token)
+    |> delete_session(:live_socket_id)
+  end
+
+  defp drop_dead_token(conn, _session, _user), do: conn
 end

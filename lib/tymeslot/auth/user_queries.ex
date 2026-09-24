@@ -170,13 +170,11 @@ defmodule Tymeslot.Auth.UserQueries do
   same transaction as the insert it is gating, so the visibility check happens
   against the just-inserted row.
 
-  Note: this does **not** make the "first user becomes admin" bootstrap fully
-  race-free. Under PostgreSQL's default READ COMMITTED isolation two signups
-  that commit concurrently on a brand-new install can each see only their own
-  row and both be promoted to admin. That outcome is accepted by design (see
-  `Tymeslot.Auth.AdminBootstrap`): both belong to the operator setting up the
-  instance. A stricter guarantee would require SERIALIZABLE isolation or an
-  advisory lock around the first insert.
+  On its own this does not make the "first user becomes admin" bootstrap
+  race-free: under READ COMMITTED two concurrent signups on a brand-new
+  install can each see only their own row. `Tymeslot.Auth.AdminBootstrap`
+  closes that gap with an atomic claim on the settings row taken before this
+  check.
   """
   @spec only_user?(UserSchema.t(), module()) :: boolean()
   def only_user?(%UserSchema{id: id}, repo) do

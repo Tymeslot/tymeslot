@@ -3,6 +3,8 @@ defmodule Tymeslot.Auth.RegistrationTest do
 
   @moduletag :auth
 
+  import Tymeslot.Test.AdminBootstrapHelpers, only: [reopen_admin_bootstrap: 1]
+
   alias Tymeslot.Auth.Registration
   import Tymeslot.Factory
 
@@ -103,6 +105,8 @@ defmodule Tymeslot.Auth.RegistrationTest do
   end
 
   describe "admin bootstrap" do
+    setup :reopen_admin_bootstrap
+
     test "the first registered user is promoted to admin" do
       conn = %Plug.Conn{}
 

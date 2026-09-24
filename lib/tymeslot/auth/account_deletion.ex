@@ -10,8 +10,7 @@ defmodule Tymeslot.Auth.AccountDeletion do
 
   require Logger
 
-  alias Tymeslot.Auth.UserQueries
-  alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Auth.{Session, UserQueries, UserSchema, UserSessionQueries}
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
@@ -35,7 +34,11 @@ defmodule Tymeslot.Auth.AccountDeletion do
   happen in the same transaction. Required for tax-record retention under EU
   and Swiss commercial law (GDPR Art. 17(3)(b) carve-out).
 
-  Once the transaction commits, the profile's uploaded avatars and theme
+  Once the transaction commits, every live socket bound to one of the user's
+  sessions is disconnected: the cascade removes the session rows, but a
+  connected LiveView socket never re-reads them.
+
+  Then the profile's uploaded avatars and theme
   backgrounds are removed from disk. The database cascade deletes only rows,
   and an avatar is usually a photo of the person, so leaving the files would
   keep personal data past an erasure request. Files go only after the commit:
@@ -53,20 +56,35 @@ defmodule Tymeslot.Auth.AccountDeletion do
       user.id
       |> run_deletion_transaction(user)
       |> log_transaction_failure(user.id)
+      |> disconnect_sessions()
       |> delete_uploaded_files(profile)
     end
   end
 
+  # The session rows go with the user by FK cascade; their hashes are read
+  # first, inside the same transaction, so the live sockets bound to them can
+  # be told to disconnect once the deletion has committed.
   defp run_deletion_transaction(user_id, user) do
     Repo.transaction(fn ->
+      session_hashes = UserSessionQueries.list_user_session_token_hashes(user_id)
+
       with :ok <- MeetingPayments.anonymise_host(user_id),
            {:ok, deleted} <- UserQueries.delete_user_row(user) do
-        deleted
+        {deleted, session_hashes}
       else
         {:error, reason} -> Repo.rollback(reason)
       end
     end)
   end
+
+  # Only after the commit: a rolled-back deletion must leave its sessions
+  # connected.
+  defp disconnect_sessions({:ok, {deleted, session_hashes}}) do
+    Enum.each(session_hashes, &Session.disconnect_session_hash/1)
+    {:ok, deleted}
+  end
+
+  defp disconnect_sessions(error), do: error
 
   defp log_transaction_failure({:error, reason} = error, user_id) do
     Logger.error(

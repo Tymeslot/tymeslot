@@ -7,7 +7,7 @@ defmodule Tymeslot.Auth.Authentication do
 
   alias Tymeslot.Auth.ErrorFormatter
   alias Tymeslot.Auth.Helpers.AccountLogging
-  alias Tymeslot.Auth.{UserQueries, UserSessionQueries}
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Infrastructure.StructuredLogger
   alias Tymeslot.Security.{InputProcessor, Password, RateLimiter, SecurityLogger}
 
@@ -186,16 +186,6 @@ defmodule Tymeslot.Auth.Authentication do
       ip_address: opts[:ip_address],
       user_agent: opts[:user_agent]
     })
-  end
-
-  @doc """
-  Retrieves a user by their session token.
-
-  Returns the full user record if found, otherwise nil.
-  """
-  @spec get_user_by_session_token(String.t()) :: term() | nil
-  def get_user_by_session_token(token) do
-    UserSessionQueries.get_user_by_session_token(token)
   end
 
   # Private functions

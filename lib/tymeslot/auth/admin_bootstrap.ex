@@ -2,31 +2,40 @@ defmodule Tymeslot.Auth.AdminBootstrap do
   @moduledoc """
   First-user-becomes-admin bootstrap for self-hosted installs.
 
-  When the very first user registers on a fresh install (the `users` table is
-  empty up to the moment of their insert), they are promoted to admin in the
-  same transaction. Once any user exists, the gate stays closed permanently
-  — additional admins can only be promoted via `mix tymeslot.promote_admin`
-  or `Tymeslot.Release.promote_admin/1`.
+  The first user to register on a fresh install is promoted to admin in the
+  same transaction as their insert. The bootstrap then closes for good: the
+  `admin_bootstrapped_at` timestamp on the `app_settings` singleton is set in
+  that transaction, and while it is set nobody else is promoted this way.
+  Further admins come only from an existing admin or from
+  `mix tymeslot.promote_admin` / `Tymeslot.Release.promote_admin/1`.
 
-  The check is performed *after* the insert by asking "is this user the only
-  row in the table?". This makes the bootstrap idempotent against the race
-  where two signups arrive in quick succession on a brand-new install: at
-  worst both become admin, which is acceptable because both belong to the
-  operator setting up a fresh instance.
+  The timestamp is what makes the gate one-way. Deciding by "is this user the
+  only row in the table?" alone reopened it whenever the table emptied again,
+  so if the sole user deleted their account, the next stranger to sign up
+  became admin. Installs that already had users when the column was added are
+  marked bootstrapped by its migration.
+
+  Closing it is an atomic claim (`AppSettingsQueries.claim_admin_bootstrap/1`):
+  of two concurrent first sign-ups, the second waits for the first to commit
+  and then finds nothing to claim, so exactly one can be promoted. Once the
+  bootstrap is closed, a sign-up sees so from a plain read and returns at
+  once, so an established install never contends for the settings row.
   """
 
   require Logger
 
+  alias Tymeslot.AppSettings.AppSettingsQueries
   alias Tymeslot.Auth.{UserQueries, UserSchema}
   alias Tymeslot.Repo
 
   @doc """
-  If `user` is the only row in the `users` table, promote them to admin.
-  Otherwise, return the user unchanged.
+  Promotes `user` to admin if the install has not been bootstrapped yet and
+  `user` is its only user, and closes the bootstrap either way. Once closed,
+  returns the user unchanged.
 
-  Must be called inside the same transaction as the user insert so the
-  visibility check happens against uncommitted state. Two calling conventions
-  are supported:
+  Call it in the same transaction as the user insert, so the claim and the
+  "only user" check are committed or rolled back with it. Called outside a
+  transaction it opens its own. Two calling conventions are supported:
 
     * **Explicit repo** (recommended when using `Repo.transaction(fn repo -> end)`):
       pass the transaction's repo as the second argument so all queries in the
@@ -40,17 +49,36 @@ defmodule Tymeslot.Auth.AdminBootstrap do
   @spec maybe_promote_first_user(UserSchema.t(), module()) ::
           {:ok, UserSchema.t()} | {:error, Ecto.Changeset.t()}
   def maybe_promote_first_user(%UserSchema{} = user, repo \\ Repo) do
+    # Fast path: once closed the bootstrap never reopens, so an established
+    # install answers from a plain read.
+    if AppSettingsQueries.admin_bootstrapped?(repo) do
+      {:ok, user}
+    else
+      repo.transaction(fn ->
+        if AppSettingsQueries.claim_admin_bootstrap(repo) do
+          promote_if_only_user(user, repo)
+        else
+          user
+        end
+      end)
+    end
+  end
+
+  # Kept alongside the timestamp: an install that reaches its first bootstrap
+  # with users already present (created by a path that skips this module) has
+  # no first user to promote.
+  defp promote_if_only_user(user, repo) do
     if UserQueries.only_user?(user, repo) do
       case UserQueries.set_admin(user, true, repo) do
         {:ok, promoted} ->
           Logger.info("Promoted first registered user to admin", user_id: promoted.id)
-          {:ok, promoted}
+          promoted
 
-        {:error, _changeset} = error ->
-          error
+        {:error, changeset} ->
+          repo.rollback(changeset)
       end
     else
-      {:ok, user}
+      user
     end
   end
 

@@ -130,30 +130,4 @@ defmodule Tymeslot.Auth.AuthenticationTest do
 
     message
   end
-
-  describe "get_user_by_session_token/1" do
-    test "returns user for valid session" do
-      user = insert(:user)
-      session = insert(:user_session, user: user)
-
-      assert %{id: id} = Authentication.get_user_by_session_token(session.token)
-      assert id == user.id
-    end
-
-    test "expired sessions cannot authenticate" do
-      user = insert(:user)
-
-      expired =
-        insert(:user_session,
-          user: user,
-          expires_at: DateTime.add(DateTime.utc_now(), -1, :hour)
-        )
-
-      assert nil == Authentication.get_user_by_session_token(expired.token)
-    end
-
-    test "returns nil for nonexistent token" do
-      assert nil == Authentication.get_user_by_session_token("nonexistent-token")
-    end
-  end
 end

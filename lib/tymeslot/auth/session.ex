@@ -1,13 +1,14 @@
 defmodule Tymeslot.Auth.Session do
   @moduledoc """
-  Handles session token creation, storage, and Plug.Conn session management.
+  Handles session token creation, storage, and Plug.Conn session management,
+  and resolves the signed-in user from a session.
   """
   @behaviour Tymeslot.Infrastructure.SessionBehaviour
 
   require Logger
   alias Phoenix.Component
   alias Plug.Conn
-  alias Tymeslot.Auth.{UserQueries, UserSessionQueries}
+  alias Tymeslot.Auth.{UserQueries, UserSchema, UserSessionQueries}
   alias Tymeslot.Security.{SecurityLogger, Token}
   alias TymeslotWeb.Endpoint
 
@@ -21,14 +22,20 @@ defmodule Tymeslot.Auth.Session do
         }
 
   @doc """
-  Creates a session for the given user, stores the session token in the database.
-  For Plug.Conn: also stores in the connection session.
-  For LiveView sockets: stores in socket assigns.
-  Returns {:ok, conn_or_socket, token} on success, or {:error, reason, details} on failure.
+  Creates a session for the given user: stores the session token in the
+  database and in the Plug.Conn session.
+
+  A session already carried by the connection is revoked first (its row
+  deleted and any live socket bound to it disconnected), so signing in again
+  never leaves the previous token usable until it expires.
+
+  Returns {:ok, conn, token} on success, or {:error, reason, details} on failure.
   """
-  @spec create_session(Conn.t() | Phoenix.LiveView.Socket.t(), user_minimal()) ::
-          {:ok, Conn.t() | Phoenix.LiveView.Socket.t(), String.t()} | {:error, atom(), any()}
-  def create_session(conn_or_socket, user) do
+  @spec create_session(Conn.t(), user_minimal()) ::
+          {:ok, Conn.t(), String.t()} | {:error, atom(), any()}
+  def create_session(%Conn{} = conn, user) do
+    revoke_token(Conn.get_session(conn, @user_token_key))
+
     token = Token.generate_session_token()
     # The socket's disconnect topic is derived from the token *hash*, so it can
     # be reconstructed at revocation time (which only has the stored hash).
@@ -43,50 +50,39 @@ defmodule Tymeslot.Auth.Session do
         # Record login as the user's most recent activity (inactivity tracking).
         UserQueries.touch_last_active_at(user.id)
 
-        result =
-          case conn_or_socket do
-            %Conn{} = conn ->
-              updated_conn =
-                conn
-                |> Conn.put_session(@user_token_key, token)
-                |> Conn.put_session(:live_socket_id, live_socket_topic(token_hash))
-                |> Conn.configure_session(renew: true)
+        updated_conn =
+          conn
+          |> Conn.put_session(@user_token_key, token)
+          |> Conn.put_session(:live_socket_id, live_socket_topic(token_hash))
+          |> Conn.configure_session(renew: true)
 
-              # Log session creation for Plug.Conn
-              SecurityLogger.log_session_event("created", user.id, token, %{
-                ip_address: get_peer_data(conn)[:address],
-                user_agent: List.first(Conn.get_req_header(conn, "user-agent"))
-              })
+        SecurityLogger.log_session_event("created", user.id, token, %{
+          ip_address: get_peer_data(conn)[:address],
+          user_agent: List.first(Conn.get_req_header(conn, "user-agent"))
+        })
 
-              {:ok, updated_conn, token}
-
-            %Phoenix.LiveView.Socket{} = socket ->
-              updated_socket = %{
-                socket
-                | assigns:
-                    Map.merge(socket.assigns, %{
-                      user_token: token,
-                      current_user: user,
-                      live_socket_id: live_socket_topic(token_hash)
-                    })
-              }
-
-              # Log session creation for LiveView socket
-              SecurityLogger.log_session_event("created", user.id, token, %{
-                ip_address: socket.assigns[:client_ip] || "unknown",
-                user_agent: "liveview"
-              })
-
-              {:ok, updated_socket, token}
-          end
-
-        result
+        {:ok, updated_conn, token}
 
       {:error, changeset} ->
         Logger.error("Failed to create session", error: inspect(changeset))
         {:error, :session_creation_failed, "Failed to create session"}
     end
   end
+
+  @doc """
+  Resolves the signed-in user from a session map: a Plug session
+  (`Plug.Conn.get_session/1`) or a LiveView mount session, both keyed by
+  strings.
+
+  Returns `nil` when the session carries no token, or when the token no
+  longer maps to a live session row (expired, revoked, or never valid).
+  """
+  @spec user_from_session(map()) :: UserSchema.t() | nil
+  def user_from_session(%{"user_token" => token}) when is_binary(token) do
+    UserSessionQueries.get_user_by_session_token(token)
+  end
+
+  def user_from_session(_session), do: nil
 
   @doc """
   Deletes the session token from the Plug.Conn session.
@@ -109,8 +105,7 @@ defmodule Tymeslot.Auth.Session do
           nil
       end
 
-      UserSessionQueries.delete_session_by_token(user_token)
-      disconnect_session_hash(Token.hash_token(user_token))
+      revoke_token(user_token)
     end
 
     conn
@@ -148,20 +143,6 @@ defmodule Tymeslot.Auth.Session do
   def disconnect_session_hash(token_hash) when is_binary(token_hash) do
     Endpoint.broadcast(live_socket_topic(token_hash), "disconnect", %{})
     :ok
-  end
-
-  @doc """
-  Retrieves the current user ID from the session token in Plug.Conn session.
-  Returns the user ID or nil if not found or invalid.
-  """
-  @spec get_current_user_id(Conn.t()) :: integer() | nil
-  def get_current_user_id(conn) do
-    with token when is_binary(token) <- Conn.get_session(conn, @user_token_key),
-         %{id: id} <- UserSessionQueries.get_user_by_session_token(token) do
-      id
-    else
-      _other -> nil
-    end
   end
 
   @doc """
@@ -248,6 +229,14 @@ defmodule Tymeslot.Auth.Session do
     end
   end
 
+  # Deletes one session row and disconnects any live socket bound to it.
+  defp revoke_token(nil), do: :ok
+
+  defp revoke_token(token) when is_binary(token) do
+    UserSessionQueries.delete_session_by_token(token)
+    disconnect_session_hash(Token.hash_token(token))
+  end
+
   # The `live_socket_id` topic a connected socket is subscribed to, derived from
   # its session token *hash* so revocation (which only has the stored hash) can
   # reconstruct the same topic. Broadcasting "disconnect" here closes the socket.
@@ -259,7 +248,7 @@ defmodule Tymeslot.Auth.Session do
   # broadcasting to the new hash topic will not reach their sockets — a
   # password/email change or logout won't force-close them. Those stale
   # sessions still get cleared correctly on their *next* HTTP request once
-  # their `user_sessions` row is revoked (`get_current_user_id/1` will fail to
+  # their `user_sessions` row is revoked (`user_from_session/1` will fail to
   # resolve the deleted row), so the gap is a live-socket-disconnect miss only,
   # bounded by the 24h session validity window, not a permanent security hole.
   defp live_socket_topic(token_hash), do: "users_sessions:#{Base.url_encode64(token_hash)}"

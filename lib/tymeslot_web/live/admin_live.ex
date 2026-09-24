@@ -481,6 +481,9 @@ defmodule TymeslotWeb.AdminLive do
   defp role_change_error_message(_action, :not_found),
     do: dgettext("dashboard_admin", "User not found.")
 
+  defp role_change_error_message(_action, :forbidden),
+    do: dgettext("dashboard_admin", "Admin access required.")
+
   defp role_change_error_message(_action, :admin_ui_disabled),
     do: dgettext("dashboard_admin", "Admin UI is disabled.")
 
