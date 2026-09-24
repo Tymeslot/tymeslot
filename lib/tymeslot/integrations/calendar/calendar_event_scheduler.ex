@@ -2,7 +2,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventScheduler do
   @moduledoc """
   Schedules calendar event jobs via Oban.
 
-  Enqueues calendar event update and deletion jobs. Creation jobs are
+  Enqueues calendar event update, deletion and replacement jobs. Creation jobs are
   enqueued by `Tymeslot.Bookings.CalendarJobs.schedule_job/2` instead. Each
   function constructs the appropriate Oban job via
   `Tymeslot.Workers.CalendarEventWorker.new/2` and inserts it into the
@@ -83,6 +83,36 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventScheduler do
         fields: [:args, :queue],
         keys: [:action, :meeting_id],
         states: unique_states("delete")
+      ]
+    )
+    |> Oban.insert()
+  end
+
+  @doc """
+  Schedules the replacement of a meeting's calendar event `event_id` with a
+  fresh one written from the meeting as it now stands.
+
+  For an event that carries something an update cannot take off it: a
+  Microsoft Teams meeting attached to the booking's own Outlook event, which
+  Graph keeps for good once set (see
+  `Tymeslot.Meetings.CalendarEventSync.replace/3`). The event's id travels in
+  the args, so a retry after the new event was written still knows which one
+  to delete, and a later replacement of that new event is its own job rather
+  than a duplicate of this one.
+  """
+  @spec schedule_calendar_replacement(String.t(), String.t()) ::
+          {:ok, Oban.Job.t()} | {:error, Ecto.Changeset.t()}
+  def schedule_calendar_replacement(meeting_id, event_id)
+      when is_binary(meeting_id) and is_binary(event_id) do
+    %{"action" => "replace", "meeting_id" => meeting_id, "event_id" => event_id}
+    |> CalendarEventWorker.new(
+      queue: :calendar_events,
+      priority: 2,
+      unique: [
+        period: 300,
+        fields: [:args, :queue],
+        keys: [:action, :meeting_id, :event_id],
+        states: unique_states("replace")
       ]
     )
     |> Oban.insert()

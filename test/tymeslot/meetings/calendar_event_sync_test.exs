@@ -212,6 +212,89 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
     end
   end
 
+  # The journey through a reschedule and the real Outlook client is in
+  # `Tymeslot.Bookings.RescheduleTeamsCalendarEventTest`; these pin the
+  # branches it does not reach.
+  describe "replace/3" do
+    setup do
+      %{integration: integration, meeting: meeting} = setup_calendar_scenario()
+
+      {:ok, meeting} =
+        MeetingQueries.update_meeting(meeting, %{provider_event_id: "teams-event"})
+
+      %{integration: integration, meeting: meeting}
+    end
+
+    test "on a retry after the new event was recorded, only deletes the old one", %{
+      meeting: meeting
+    } do
+      {:ok, meeting} =
+        MeetingQueries.update_meeting(meeting, %{provider_event_id: "replacement-event"})
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn "teams-event", _ctx -> :ok end)
+
+      assert :ok = CalendarEventSync.replace(meeting.id, "teams-event", 2)
+      assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == "replacement-event"
+    end
+
+    test "keeps the new event recorded when deleting the old one fails, for the retry", %{
+      integration: integration,
+      meeting: meeting
+    } do
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
+        {:ok, CreatedEvent.provider_minted("replacement-event")}
+      end)
+
+      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
+        {:ok, %{integration_id: integration.id, calendar_path: "primary"}}
+      end)
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn "teams-event", _ctx ->
+        {:error, :connection_failed}
+      end)
+
+      assert {:error, :connection_failed} =
+               CalendarEventSync.replace(meeting.id, "teams-event", 1)
+
+      assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == "replacement-event"
+    end
+
+    test "records the new event even with no booking integration to name", %{meeting: meeting} do
+      expect(Tymeslot.CalendarMock, :create_event, fn _data, _ctx ->
+        {:ok, CreatedEvent.provider_minted("replacement-event")}
+      end)
+
+      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ctx ->
+        {:error, :no_integration}
+      end)
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn "teams-event", _ctx -> :ok end)
+
+      assert :ok = CalendarEventSync.replace(meeting.id, "teams-event", 1)
+      assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == "replacement-event"
+    end
+
+    test "updates rather than replaces an event that holds a room again", %{meeting: meeting} do
+      {:ok, meeting} =
+        MeetingQueries.update_meeting(meeting, %{video_room_id: "teams-event"})
+
+      expect(Tymeslot.CalendarMock, :update_event, fn "teams-event", _data, _ctx -> :ok end)
+
+      assert :ok = CalendarEventSync.replace(meeting.id, "teams-event", 1)
+      assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == "teams-event"
+    end
+
+    test "leaves the event of a meeting cancelled in the meantime to its delete job", %{
+      meeting: meeting
+    } do
+      {:ok, meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
+
+      # Any calendar call would fail the test: none is expected.
+      assert :ok = CalendarEventSync.replace(meeting.id, "teams-event", 1)
+      assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == "teams-event"
+    end
+  end
+
   describe "delete/2" do
     # Deletion is only ever scheduled once the meeting's slot has already
     # been voided (cancellation, or a pending reschedule request) — mirror

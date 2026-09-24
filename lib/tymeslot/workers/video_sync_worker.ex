@@ -59,6 +59,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.IntegrationResolver
@@ -146,9 +147,17 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   # A room that is the booking's own calendar event (a Teams meeting on the
   # same Microsoft account) is not the provider's to delete: deleting it would
   # delete the booking's event, which calendar sync still owns. Graph keeps the
-  # online meeting on it for good once set, so there is nothing else to undo.
-  def release(%{video_room_id: event_id, provider_event_id: event_id}) when is_binary(event_id),
-    do: {:ok, :calendar_event}
+  # online meeting on that event for good once set, so the only way to take
+  # the join link off it is a new event, and that is calendar sync's job. It
+  # runs in the calendar queue, one write per meeting at a time, so it cannot
+  # race the update the same location change enqueued there.
+  def release(%{id: meeting_id, video_room_id: event_id, provider_event_id: event_id})
+      when is_binary(meeting_id) and is_binary(event_id) do
+    case CalendarEventScheduler.schedule_calendar_replacement(meeting_id, event_id) do
+      {:ok, _job} -> {:ok, :calendar_event}
+      {:error, reason} -> {:error, reason}
+    end
+  end
 
   def release(%{id: meeting_id, video_room_id: room_id} = meeting)
       when is_binary(meeting_id) and is_binary(room_id) do
