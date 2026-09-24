@@ -152,6 +152,43 @@ defmodule Tymeslot.Security.RateLimiterAuthTest do
     end
   end
 
+  describe "IPv6 clients are keyed on their /64" do
+    test "failures from one address throttle the rest of its /64" do
+      email = "v6-lockout-#{System.unique_integer([:positive])}@example.com"
+
+      for _i <- 1..10, do: RateLimiter.record_auth_attempt(email, "2001:db8:1:2::1", false)
+
+      assert {:error, :rate_limited, _msg} =
+               RateLimiter.check_auth_rate_limit(email, "2001:db8:1:2:ffff::9")
+
+      assert :ok = RateLimiter.check_auth_rate_limit(email, "2001:db8:1:3::1")
+    end
+
+    test "rotating addresses inside one /64 shares the per-address budget" do
+      for i <- 1..50 do
+        assert :ok =
+                 RateLimiter.check_auth_rate_limit(
+                   "v6-ip-#{i}@example.com",
+                   "2001:db8:9:9::#{Integer.to_string(i, 16)}"
+                 )
+      end
+
+      assert {:error, :rate_limited, _msg} =
+               RateLimiter.check_auth_rate_limit(
+                 "v6-ip-overflow@example.com",
+                 "2001:db8:9:9::ffff"
+               )
+    end
+
+    test "IPv4 addresses stay keyed individually" do
+      email = "v4-#{System.unique_integer([:positive])}@example.com"
+
+      for _i <- 1..10, do: RateLimiter.record_auth_attempt(email, "198.51.100.90", false)
+
+      assert :ok = RateLimiter.check_auth_rate_limit(email, "198.51.100.91")
+    end
+  end
+
   describe "AccountLockout integration with check_auth_rate_limit/2" do
     # Isolated AccountLockout behaviour (thresholds, durations, counts) is tested in
     # account_lockout_test.exs. This block covers only the integration point where

@@ -26,7 +26,8 @@ defmodule Tymeslot.Security.AccountLockout do
   ## Keyed on the email and the client address
 
   `Tymeslot.Security.RateLimiter.Auth` passes an identifier of the form
-  `"email|ip"`, so failures from one address throttle only that address
+  `"email|ip"` (for IPv6 the client's /64, which one host can rotate
+  through freely), so failures from one address throttle only that address
   against that account, and the owner can still sign in from anywhere else.
   Keyed on the email alone, ten wrong guesses from anywhere locked the owner
   out of their own account for up to an hour. A run spread across many

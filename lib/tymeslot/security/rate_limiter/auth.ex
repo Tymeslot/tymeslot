@@ -85,7 +85,28 @@ defmodule Tymeslot.Security.RateLimiter.Auth do
   defp normalise_email(email), do: email |> String.trim() |> String.downcase()
 
   # The email comes first so a bucket key still reads as the account it guards.
-  defp login_pair(downcased_email, ip), do: "#{downcased_email}|#{Helpers.normalize_ip(ip)}"
+  defp login_pair(downcased_email, ip), do: "#{downcased_email}|#{login_source(ip)}"
+
+  # The unit a login limit counts as one source. An IPv6 host is usually
+  # handed a whole /64 and can pick a fresh address from it for every
+  # request, so keying on the full address would give it an unlimited
+  # supply of fresh buckets; the /64 is what it actually controls. IPv4
+  # addresses, and anything that does not parse, are keyed as they are.
+  defp login_source(ip) do
+    normalized = Helpers.normalize_ip(ip)
+
+    case :inet.parse_address(String.to_charlist(normalized)) do
+      {:ok, {0, 0, 0, 0, 0, 0xFFFF, _hi, _lo}} ->
+        normalized
+
+      {:ok, {a, b, c, d, _e, _f, _g, _h}} ->
+        prefix = {a, b, c, d, 0, 0, 0, 0} |> :inet.ntoa() |> to_string()
+        prefix <> "/64"
+
+      _ipv4_or_unparseable ->
+        normalized
+    end
+  end
 
   @spec check_signup(String.t(), String.t() | :inet.ip_address() | nil) ::
           :ok | {:error, :rate_limited, String.t()}
@@ -167,7 +188,7 @@ defmodule Tymeslot.Security.RateLimiter.Auth do
 
   defp check_auth_ip_bucket(ip) when is_binary(ip) and ip != "" do
     Helpers.check_with_logging(
-      "login_ip:#{ip}",
+      "login_ip:#{login_source(ip)}",
       50,
       1_800_000,
       "authentication (ip)",
