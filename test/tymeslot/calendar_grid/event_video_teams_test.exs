@@ -105,6 +105,19 @@ defmodule Tymeslot.CalendarGrid.EventVideoTeamsTest do
       assert {cached.video_link, cached.video_integration_id} ==
                {join_url(@grid_event_id), ctx.teams.id}
     end
+
+    test "writes no second event when Outlook does not name the event it created", ctx do
+      expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
+        {:ok, %CreatedEvent{ical_uid: "040000008200E00074C5B7101A82E008-grid"}}
+      end)
+
+      assert {:ok, result} = EventCreation.run_create_event(create_payload(ctx, ctx.teams))
+
+      # Nothing to attach the meeting to, and an event of its own now could
+      # not reach the description already written: Graph is left alone.
+      assert graph_requests() == []
+      assert result.meeting_url == nil
+    end
   end
 
   describe "creating an Outlook event with Teams from another account" do

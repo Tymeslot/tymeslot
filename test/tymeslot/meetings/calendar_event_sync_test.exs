@@ -284,6 +284,12 @@ defmodule Tymeslot.Meetings.CalendarEventSyncTest do
       assert Repo.get!(MeetingSchema, meeting.id).provider_event_id == "teams-event"
     end
 
+    test "returns {:error, :meeting_not_found} for a meeting deleted in the meantime" do
+      # Any calendar call would fail the test: none is expected.
+      assert {:error, :meeting_not_found} =
+               CalendarEventSync.replace(UUID.generate(), "teams-event", 1)
+    end
+
     test "leaves the event of a meeting cancelled in the meantime to its delete job", %{
       meeting: meeting
     } do

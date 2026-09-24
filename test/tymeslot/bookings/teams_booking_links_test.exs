@@ -25,14 +25,19 @@ defmodule Tymeslot.Bookings.TeamsBookingLinksTest do
   import Tymeslot.Factory
   import TymeslotWeb.ThemeMeetingTestCases, only: [test_reschedule_page_navigation: 4]
 
-  alias Tymeslot.Bookings.Orchestrator
+  alias Tymeslot.Bookings.{Cancel, Orchestrator, Reschedule}
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.TestMocks
-  alias Tymeslot.Workers.VideoRoomWorker
+  alias Tymeslot.Workers.{VideoRoomWorker, VideoSyncWorker}
 
   setup :verify_on_exit!
+
+  # Graph names the room's event with an id that is not a UUID, as it always
+  # does, and one carrying `=`, which the request path must escape.
+  @room_event_id "AAMkAGI2TG93AAA="
+  @room_event_url "https://graph.microsoft.com/v1.0/me/events/AAMkAGI2TG93AAA%3D"
 
   setup do
     # No booking calendar, so the Teams meeting gets an event of its own.
@@ -77,15 +82,13 @@ defmodule Tymeslot.Bookings.TeamsBookingLinksTest do
 
     stub(Tymeslot.TeamsOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
 
-    # Graph names the room's event with an id that is not a UUID, as it
-    # always does.
     stub(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
       {:ok,
        %Req.Response{
          status: 201,
          body:
            Jason.encode!(%{
-             "id" => "AAMkAGI2TG93AAA=",
+             "id" => @room_event_id,
              "onlineMeeting" => %{
                "joinUrl" => "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc"
              }
@@ -100,7 +103,7 @@ defmodule Tymeslot.Bookings.TeamsBookingLinksTest do
        %{conn: conn, user: user, profile: profile, meeting_type: meeting_type} do
     meeting = book_with_teams_room(user, meeting_type)
 
-    assert meeting.video_room_id == "AAMkAGI2TG93AAA="
+    assert meeting.video_room_id == @room_event_id
 
     assert URI.parse(meeting.cancel_url).path ==
              "/#{profile.username}/meeting/#{meeting.uid}/cancel"
@@ -130,6 +133,91 @@ defmodule Tymeslot.Bookings.TeamsBookingLinksTest do
     assert to =~ "/meeting/#{meeting.uid}/cancel-confirmed"
     assert Repo.get!(MeetingSchema, meeting.id).status == "cancelled"
   end
+
+  # A Teams meeting with an event of its own (no booking calendar here) holds
+  # the booking's time on that event, so a reschedule moves it and a
+  # cancellation deletes it, or the organiser's calendar keeps the old slot.
+  test "rescheduling moves the Teams meeting's own event to the new time",
+       %{user: user, meeting_type: meeting_type} do
+    meeting = book_with_teams_room(user, meeting_type)
+    report_graph_requests()
+
+    new_date = Date.add(Date.utc_today(), 3)
+
+    assert {:ok, rescheduled} =
+             Reschedule.execute(
+               meeting.uid,
+               %{
+                 date: Date.to_string(new_date),
+                 time: "10:00 AM",
+                 duration: "30min",
+                 user_timezone: "Europe/London"
+               },
+               %{},
+               user.id
+             )
+
+    assert DateTime.compare(rescheduled.start_time, meeting.start_time) != :eq
+
+    assert_enqueued(
+      worker: VideoSyncWorker,
+      args: %{"meeting_id" => meeting.id, "action" => "update"}
+    )
+
+    assert :ok =
+             perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "update"})
+
+    assert_received {:graph, :patch, url, body}
+    assert url == @room_event_url
+    sent = Jason.decode!(body)
+    assert sent["start"] == %{"dateTime" => iso(rescheduled.start_time), "timeZone" => "UTC"}
+    assert sent["end"] == %{"dateTime" => iso(rescheduled.end_time), "timeZone" => "UTC"}
+    refute_received {:graph, _method, _url, _body}
+
+    assert Repo.get!(MeetingSchema, meeting.id).video_room_id == @room_event_id
+  end
+
+  test "cancelling deletes the Teams meeting's own event",
+       %{user: user, meeting_type: meeting_type} do
+    meeting = book_with_teams_room(user, meeting_type)
+    report_graph_requests()
+
+    assert {:ok, _cancelled} = Cancel.execute(meeting.uid)
+
+    assert_enqueued(
+      worker: VideoSyncWorker,
+      args: %{"meeting_id" => meeting.id, "action" => "delete"}
+    )
+
+    assert :ok =
+             perform_job(VideoSyncWorker, %{"meeting_id" => meeting.id, "action" => "delete"})
+
+    assert_received {:graph, :delete, @room_event_url, _body}
+    refute_received {:graph, _method, _url, _body}
+
+    cancelled = Repo.get!(MeetingSchema, meeting.id)
+    assert cancelled.status == "cancelled"
+    assert cancelled.video_room_id == nil
+  end
+
+  # From here on Graph answers any write to the room's event and reports it.
+  defp report_graph_requests do
+    test_pid = self()
+
+    stub(Tymeslot.HTTPClientMock, :request, fn method, url, body, _headers, _opts ->
+      send(test_pid, {:graph, method, url, body})
+
+      case method do
+        :delete ->
+          {:ok, %Req.Response{status: 204, body: ""}}
+
+        _write ->
+          {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"id" => @room_event_id})}}
+      end
+    end)
+  end
+
+  defp iso(datetime), do: datetime |> DateTime.shift_zone!("Etc/UTC") |> DateTime.to_iso8601()
 
   # Books through the public booking path, which builds the stored links from
   # the booking's uid, then runs the room job the booking enqueued.

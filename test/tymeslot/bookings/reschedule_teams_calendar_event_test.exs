@@ -156,6 +156,45 @@ defmodule Tymeslot.Bookings.RescheduleTeamsCalendarEventTest do
     assert updated.video_room_id == nil
   end
 
+  # The reschedule queues the calendar update before the replacement, so the
+  # queue ordinarily runs the update first (the test above). A retried update
+  # can land after the replacement instead; it must then move the new event,
+  # never write to the old one or bring the Teams meeting back.
+  test "an update running after the replacement writes to the new event only",
+       %{meeting: meeting} do
+    reschedule_to_office(meeting)
+
+    jobs = all_enqueued(worker: CalendarEventWorker, queue: :calendar_events)
+    assert [replace] = for(%{args: %{"action" => "replace"} = args} <- jobs, do: args)
+    assert [update] = for(%{args: %{"action" => "update"} = args} <- jobs, do: args)
+
+    stub_graph(meeting)
+    assert :ok = perform_job(CalendarEventWorker, replace)
+    assert :ok = perform_job(CalendarEventWorker, update)
+    calls = graph_calls()
+
+    assert [_created] = for({:graph, :post, @events_url, body, _id} <- calls, do: body)
+
+    assert for({:graph, :delete, url, _body, _id} <- calls, do: url) ==
+             ["#{@events_url}/#{@teams_event}"]
+
+    # The update addresses the replacement, and nothing after the delete
+    # touches the old event again.
+    assert [patched] =
+             for(
+               {:graph, :patch, url, body, _id} <- calls,
+               url == "#{@events_url}/#{@replacement_event}",
+               do: body
+             )
+
+    refute Map.has_key?(patched, "isOnlineMeeting")
+    refute Enum.any?(calls, &match?({:graph, :patch, "#{@events_url}/#{@teams_event}", _, _}, &1))
+
+    updated = Repo.get!(MeetingSchema, meeting.id)
+    assert updated.provider_event_id == @replacement_event
+    assert updated.status == "confirmed"
+  end
+
   test "the old event's removal arriving through inbound sync leaves the booking standing",
        %{calendar: calendar, meeting: meeting} do
     reschedule_to_office(meeting)
@@ -188,6 +227,11 @@ defmodule Tymeslot.Bookings.RescheduleTeamsCalendarEventTest do
   # mocked HTTP client that reports each request to the test. A delete also
   # reports which event the booking pointed at when it was sent.
   defp run_calendar_jobs(meeting) do
+    stub_graph(meeting)
+    assert %{failure: 0, discard: 0} = Oban.drain_queue(queue: :calendar_events)
+  end
+
+  defp stub_graph(meeting) do
     use_runtime_calendar()
     test_pid = self()
 
@@ -197,8 +241,6 @@ defmodule Tymeslot.Bookings.RescheduleTeamsCalendarEventTest do
       send(test_pid, {:graph, method, url, sent, pointed_at})
       graph_response(method, url, sent)
     end)
-
-    assert %{failure: 0, discard: 0} = Oban.drain_queue(queue: :calendar_events)
   end
 
   defp graph_response(:delete, _url, _sent), do: {:ok, %Req.Response{status: 204, body: ""}}
