@@ -1039,6 +1039,7 @@ msgstr "Voláte vy. Nechte vypnuté, chcete-li místo toho zveřejnit číslo, n
 #, elixir-autogen, elixir-format
 msgid "e.g., Our London office"
 msgstr "např. Naše pražská kancelář"
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} day"

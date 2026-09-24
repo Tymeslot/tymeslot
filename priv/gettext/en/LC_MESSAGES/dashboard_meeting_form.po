@@ -1035,6 +1035,7 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "e.g., Our London office"
 msgstr ""
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} day"

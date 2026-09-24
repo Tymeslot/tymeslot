@@ -1035,6 +1035,7 @@ msgstr "C'est vous qui appelez. Désactivez pour publier plutôt un numéro à a
 #, elixir-autogen, elixir-format
 msgid "e.g., Our London office"
 msgstr "ex. : Notre bureau de Paris"
+
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} day"
