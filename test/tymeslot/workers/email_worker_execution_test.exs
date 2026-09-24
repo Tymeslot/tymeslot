@@ -13,6 +13,7 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Workers.DeliveryClaims.DeliveryClaimQueries
   alias Tymeslot.Workers.EmailWorker
 
   setup :verify_on_exit!
@@ -96,6 +97,44 @@ defmodule Tymeslot.Workers.EmailWorkerExecutionTest do
         })
 
       assert :ok = EmailWorker.perform(job)
+      assert :ok = EmailWorker.perform(job)
+    end
+
+    # A node that stops part-way through the guests leaves the claims of those
+    # already mailed; the rescued run must still reach the others.
+    test "a job rescued part-way through the guests tells the guests not yet told" do
+      profile = insert(:profile)
+
+      meeting =
+        insert(:meeting,
+          organizer_user: profile.user,
+          status: "cancelled",
+          first_announced_at: DateTime.utc_now(:second)
+        )
+
+      {:ok, guests} =
+        Guests.create_for_meeting(meeting.id, ["told@example.com", "untold@example.com"])
+
+      told = Enum.find(guests, &(&1.email == "told@example.com"))
+
+      job =
+        persisted_job(EmailWorker, %{
+          "action" => "send_cancellation_emails",
+          "meeting_id" => meeting.id
+        })
+
+      :claimed = DeliveryClaimQueries.claim(job.id, "cancellation:participants")
+      :claimed = DeliveryClaimQueries.claim(job.id, "cancellation:guest:#{told.id}")
+
+      expect(Tymeslot.EmailServiceMock, :send_cancellation_emails, 0, fn _details ->
+        {{:ok, :sent}, {:ok, :sent}}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_guest_cancellation, 1, fn "untold@example.com",
+                                                                        _details ->
+        {:ok, :sent}
+      end)
+
       assert :ok = EmailWorker.perform(job)
     end
 

@@ -127,9 +127,10 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   # Unlike confirmations and reminders, a cancellation has no per-recipient
   # sent flag on the meeting, so what stops a rescued job re-sending it is a
   # claim on the job itself (`DeliveryClaims`): one for the organiser and
-  # attendee pair, which the email service sends in one call, and one for the
-  # guests. A retry after both participant emails failed releases the first
-  # claim and sends them again, as before.
+  # attendee pair, which the email service sends in one call, and one for each
+  # guest, so a rescue part-way through the guests still tells the rest. A
+  # retry after both participant emails failed releases the first claim and
+  # sends them again, as before.
   defp send_cancellation_emails_for_meeting(meeting, job_id) do
     appointment_details = AppointmentBuilder.from_meeting(meeting)
 
@@ -142,9 +143,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
     # on a partial failure that is discarded rather than retried, so they are
     # told now or never.
     if result == :ok or match?({:discard, _reason}, result) do
-      DeliveryClaims.once(job_id, "cancellation:guests", fn ->
-        GuestNotifications.notify_cancelled(meeting, appointment_details)
-      end)
+      GuestNotifications.notify_cancelled(
+        meeting,
+        appointment_details,
+        &DeliveryClaims.once(job_id, &1, &2)
+      )
     end
 
     result
