@@ -12,7 +12,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   alias Phoenix.LiveView
   alias Tymeslot.Auth
   alias Tymeslot.Locales
-  alias Tymeslot.Security.{InputProcessor, RateLimiter}
+  alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.AccountLive.{ErrorFormatter, Helpers}
   alias TymeslotWeb.Helpers.ClientIP
 
@@ -121,23 +121,11 @@ defmodule TymeslotWeb.AccountLive.Handlers do
     metadata = build_metadata(socket)
     user = socket.assigns.current_user
 
-    # The current password is checked by the domain, under login's rules
-    # rather than the creation policy, so only the new address goes through
-    # the form validator here.
-    with {:ok, sanitized_params} <-
-           InputProcessor.validate_form(
-             Map.take(params, ["new_email"]),
-             [{"new_email", :email}],
-             metadata: metadata,
-             universal_opts: [allow_html: false]
-           ),
-         :ok <- RateLimiter.check_auth_rate_limit(user.email, metadata[:ip]),
+    # Every rule (address format, current password) is the domain's, which
+    # reports each field's problem at once.
+    with :ok <- RateLimiter.check_auth_rate_limit(user.email, metadata[:ip]),
          {:ok, updated_user, message} <-
-           Auth.request_email_change(
-             user,
-             sanitized_params["new_email"],
-             params["current_password"]
-           ) do
+           Auth.request_email_change(user, params["new_email"], params["current_password"]) do
       {:noreply,
        socket
        |> LiveView.put_flash(:info, message)

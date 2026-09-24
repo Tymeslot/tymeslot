@@ -303,7 +303,6 @@ defmodule TymeslotWeb.AuthLiveTest do
             provider: "github",
             email: "oauth@example.com",
             name: nil,
-            is_verified: true,
             email_from_provider: true,
             provider_uid: "12345",
             github_user_id: nil,
@@ -484,6 +483,30 @@ defmodule TymeslotWeb.AuthLiveTest do
     %{user: user, token: token}
   end
 
+  describe "social sign-in buttons" do
+    test "offer exactly the enabled providers, by display name", %{conn: conn} do
+      social_auth = Application.get_env(:tymeslot, :social_auth, [])
+
+      Application.put_env(
+        :tymeslot,
+        :social_auth,
+        Keyword.merge(social_auth,
+          google_enabled: false,
+          github_enabled: true,
+          oauth_enabled: true
+        )
+      )
+
+      on_exit(fn -> Application.put_env(:tymeslot, :social_auth, social_auth) end)
+
+      {:ok, view, _html} = live(conn, ~p"/auth/login")
+
+      assert has_element?(view, ~s(a.btn-oauth[href="/auth/github"]), "GitHub")
+      assert has_element?(view, ~s(a.btn-oauth[href="/auth/oauth"]), "SSO")
+      refute has_element?(view, ~s(a.btn-oauth[href="/auth/google"]))
+    end
+  end
+
   describe "OAuth Completion" do
     test "renders complete registration form with session data", %{conn: conn} do
       conn =
@@ -492,7 +515,6 @@ defmodule TymeslotWeb.AuthLiveTest do
             provider: "github",
             email: "oauth@example.com",
             name: nil,
-            is_verified: true,
             email_from_provider: true,
             provider_uid: "12345",
             github_user_id: "12345",
@@ -507,17 +529,25 @@ defmodule TymeslotWeb.AuthLiveTest do
     end
 
     test "successful OAuth completion", %{conn: conn} do
+      social_auth = Application.get_env(:tymeslot, :social_auth, [])
+
+      Application.put_env(
+        :tymeslot,
+        :social_auth,
+        Keyword.put(social_auth, :github_enabled, true)
+      )
+
+      on_exit(fn -> Application.put_env(:tymeslot, :social_auth, social_auth) end)
+
       conn =
         init_test_session(conn, %{
           "pending_oauth_registration" => %{
             provider: "github",
             email: "oauth_new@example.com",
             name: nil,
-            is_verified: true,
             email_from_provider: true,
             provider_uid: "gh_new_123",
-            github_user_id: "gh_new_123",
-            google_user_id: nil
+            created_at: System.system_time(:second)
           }
         })
 

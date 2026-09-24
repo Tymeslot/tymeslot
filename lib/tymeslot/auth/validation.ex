@@ -6,6 +6,8 @@ defmodule Tymeslot.Auth.Validation do
   keeping it within the Auth bounded context according to DDD principles.
   """
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias Tymeslot.Security.{InputProcessor, Password}
@@ -59,22 +61,42 @@ defmodule Tymeslot.Auth.Validation do
   @spec check_current_password(UserSchema.t(), term()) ::
           :ok | {:error, :missing_password | :invalid_password}
   def check_current_password(%{password_hash: hash}, password) do
-    cond do
-      not is_binary(password) or password == "" ->
-        {:error, :missing_password}
+    with :ok <- validate_current_password_input(password) do
+      cond do
+        is_nil(hash) ->
+          Password.no_user_verify()
+          {:error, :invalid_password}
 
-      byte_size(password) > @max_current_password_bytes ->
-        {:error, :invalid_password}
+        Password.verify_password(password, hash) ->
+          :ok
 
-      is_nil(hash) ->
-        Password.no_user_verify()
-        {:error, :invalid_password}
-
-      Password.verify_password(password, hash) ->
-        :ok
-
-      true ->
-        {:error, :invalid_password}
+        true ->
+          {:error, :invalid_password}
+      end
     end
   end
+
+  @doc """
+  The input half of `check_current_password/2`, for reporting alongside the
+  form's other field errors before any password is hashed.
+  """
+  @spec validate_current_password_input(term()) ::
+          :ok | {:error, :missing_password | :invalid_password}
+  def validate_current_password_input(password) do
+    cond do
+      not is_binary(password) or password == "" -> {:error, :missing_password}
+      byte_size(password) > @max_current_password_bytes -> {:error, :invalid_password}
+      true -> :ok
+    end
+  end
+
+  @doc """
+  The message shown on the current-password field for a failure from
+  `check_current_password/2`.
+  """
+  @spec current_password_message(:missing_password | :invalid_password) :: String.t()
+  def current_password_message(:missing_password), do: dgettext("auth", "Password is required")
+
+  def current_password_message(:invalid_password),
+    do: dgettext("auth", "Current password is incorrect")
 end

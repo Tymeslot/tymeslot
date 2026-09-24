@@ -109,9 +109,6 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
               provider: reg_data[:provider],
               email: reg_data[:email],
               name: reg_data[:name],
-              verified_email: reg_data[:is_verified] == true,
-              github_user_id: reg_data[:github_user_id],
-              google_user_id: reg_data[:google_user_id],
               provider_uid: reg_data[:provider_uid]
             })
             |> assign(:email_required, reg_data[:email_from_provider] != true)

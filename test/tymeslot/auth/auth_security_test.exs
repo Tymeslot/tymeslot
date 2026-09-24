@@ -120,7 +120,7 @@ defmodule Tymeslot.Auth.SecurityTest do
         insert(:user, password_hash: Password.hash_password("Current123!"))
 
       # Wrong password blocks email change
-      assert {:error, {:current_password, "Current password is incorrect"}} =
+      assert {:error, %{current_password: "Current password is incorrect"}} =
                Auth.request_email_change(user, "new@example.com", "Wrong123!")
 
       # Correct password initiates email change
@@ -137,7 +137,7 @@ defmodule Tymeslot.Auth.SecurityTest do
         insert(:user, password_hash: Password.hash_password("Current123!"))
 
       # Wrong password blocks password change
-      assert {:error, {:current_password, _message}} =
+      assert {:error, %{current_password: _message}} =
                Auth.update_user_password(user, "Wrong123!", "New123!New", "New123!New")
 
       # Correct password allows password change

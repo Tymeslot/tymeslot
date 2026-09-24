@@ -138,7 +138,6 @@ config :tymeslot, :email_service, Tymeslot.EmailServiceMock
 config :tymeslot, :transcoder, Tymeslot.Media.TranscoderMock
 config :tymeslot, :health_check_module, Tymeslot.Integrations.HealthCheckMock
 config :tymeslot, :verification_module, Tymeslot.Auth.VerificationMock
-config :tymeslot, :oauth_callback_module, Tymeslot.Auth.OAuth.HelperMock
 
 # MiroTalk test configuration
 config :tymeslot, :mirotalk_api,

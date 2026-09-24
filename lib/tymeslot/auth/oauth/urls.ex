@@ -1,15 +1,7 @@
 defmodule Tymeslot.Auth.OAuth.URLs do
   @moduledoc """
-  URL helpers for OAuth callback paths and absolute URLs.
+  Builds absolute OAuth callback URLs.
   """
-
-  @doc """
-  Returns the callback path for a given provider.
-  """
-  @spec callback_path(:github | :google | :oauth) :: String.t()
-  def callback_path(:github), do: "/auth/github/callback"
-  def callback_path(:google), do: "/auth/google/callback"
-  def callback_path(:oauth), do: "/auth/oauth/callback"
 
   @doc """
   Builds a full callback URL from the connection and relative path.

@@ -47,13 +47,13 @@ defmodule Tymeslot.AuthTest do
         )
 
       # Wrong password blocks change
-      assert {:error, {:current_password, "Current password is incorrect"}} =
+      assert {:error, %{current_password: "Current password is incorrect"}} =
                Auth.request_email_change(user, "new@example.com", "WrongPassword")
 
       # Duplicate email blocked
       insert(:user, email: "taken@example.com")
 
-      assert {:error, {:new_email, "Email address is already in use"}} =
+      assert {:error, %{new_email: "Email address is already in use"}} =
                Auth.request_email_change(user, "taken@example.com", "CurrentPassword123!")
     end
   end

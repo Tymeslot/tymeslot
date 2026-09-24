@@ -226,8 +226,7 @@ msgstr "Пароль"
 msgid "Password Reset Successfully"
 msgstr "Пароль успішно скинуто"
 
-#: lib/tymeslot/auth/email_change.ex
-#: lib/tymeslot/auth/password_update.ex
+#: lib/tymeslot/auth/validation.ex
 #: lib/tymeslot/security/field_validators/password_validator.ex
 #: lib/tymeslot_web/live/auth_live.ex
 #, elixir-autogen, elixir-format
@@ -704,8 +703,7 @@ msgstr "Обліковий запис створено, але не вдалос
 msgid "An error occurred. Please try again."
 msgstr "Сталася помилка. Спробуйте ще раз."
 
-#: lib/tymeslot/auth/email_change.ex
-#: lib/tymeslot/auth/password_update.ex
+#: lib/tymeslot/auth/validation.ex
 #, elixir-autogen, elixir-format
 msgid "Current password is incorrect"
 msgstr "Поточний пароль неправильний"
@@ -1033,3 +1031,18 @@ msgstr "Пароль має бути не довшим за %{count} байті�
 #, elixir-autogen, elixir-format
 msgid "Sign in to receive a new verification link."
 msgstr "Увійдіть, щоб отримати нове посилання для підтвердження."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before signing in. We could not send a new verification link; please try again later."
+msgstr "Будь ласка, підтвердіть свою адресу електронної пошти перед входом. Не вдалося надіслати нове посилання для підтвердження; спробуйте пізніше."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before signing in. We've sent you a new verification link."
+msgstr "Будь ласка, підтвердіть свою адресу електронної пошти перед входом. Ми надіслали вам нове посилання для підтвердження."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your sign-up session has expired. Please sign in again."
+msgstr "Термін дії сесії реєстрації минув. Будь ласка, увійдіть знову."

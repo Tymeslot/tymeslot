@@ -6,9 +6,10 @@ defmodule Tymeslot.Auth.EmailChange do
   persisting tokens, scheduling notification emails, and confirming the
   change via a verification link.
 
-  Every function fails the same way, `{:error, {reason, message}}`: `reason`
-  is an atom a caller can branch on (for a request, the form field the error
-  belongs to), `message` is translated and ready to show.
+  A request is a form submission and fails with `{:error, %{field =>
+  message}}`, so every field's problem can be shown at once. Verifying and
+  cancelling fail with `{:error, {reason, message}}`: `reason` is an atom a
+  caller can branch on, `message` is translated and ready to show.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -26,8 +27,7 @@ defmodule Tymeslot.Auth.EmailChange do
 
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Repo
-  alias Tymeslot.Security.FieldValidators.EmailValidator
-  alias Tymeslot.Security.Token
+  alias Tymeslot.Security.{InputProcessor, Token}
   alias Tymeslot.Utils.{ChangesetUtils, UrlBuilder}
 
   require Logger
@@ -38,18 +38,20 @@ defmodule Tymeslot.Auth.EmailChange do
   Requests an email change for a user.
   Validates password, creates token, stores pending email, and sends verification emails.
 
-  A failure's reason is the form field it belongs to, `:current_password` or
-  `:new_email`.
+  A failure is `{:error, %{field => message}}`, keyed by the form field each
+  message belongs to (`:current_password`, `:new_email`). Malformed input is
+  reported for every field at once, before the password is checked.
+
+  `user` only identifies the account: it is re-read under a row lock, so the
+  password is checked against the current hash and the request serialises
+  with a concurrent password change instead of slipping a token in after it.
   """
-  @spec request_email_change(term(), String.t(), String.t()) ::
-          {:ok, term(), String.t()} | {:error, {:current_password | :new_email, String.t()}}
-  def request_email_change(user, new_email, current_password) do
-    with :ok <- Validation.check_current_password(user, current_password),
-         :ok <- validate_email_format(new_email),
-         :ok <- validate_email_not_same(user.email, new_email),
-         {:ok, :available} <- UserQueries.check_email_availability(new_email),
-         {:ok, updated_user, token} <-
-           AccountTokens.issue(:email_change, user, %{new_email: new_email}) do
+  @spec request_email_change(term(), term(), term()) ::
+          {:ok, term(), String.t()}
+          | {:error, %{optional(:current_password | :new_email) => String.t()}}
+  def request_email_change(%{id: user_id}, new_email, current_password) do
+    with {:ok, new_email} <- validate_input(new_email, current_password),
+         {:ok, updated_user, token} <- issue_in_transaction(user_id, new_email, current_password) do
       # Queue emails via Oban; do not fail the request if scheduling fails
       _result =
         EmailScheduler.schedule_email_change_emails(
@@ -62,23 +64,72 @@ defmodule Tymeslot.Auth.EmailChange do
       {:ok, updated_user,
        dgettext("auth", "Verification email sent to %{email}", email: new_email)}
     else
-      {:error, :invalid_password} ->
-        {:error, {:current_password, dgettext("auth", "Current password is incorrect")}}
+      {:error, errors} when is_map(errors) and not is_struct(errors) ->
+        {:error, errors}
 
-      {:error, :missing_password} ->
-        {:error, {:current_password, dgettext("auth", "Password is required")}}
+      {:error, reason} when reason in [:invalid_password, :missing_password] ->
+        {:error, %{current_password: Validation.current_password_message(reason)}}
+
+      {:error, :not_found} ->
+        {:error, %{current_password: Validation.current_password_message(:invalid_password)}}
 
       {:error, :same_email} ->
-        {:error, {:new_email, dgettext("auth", "New email must be different from current email")}}
+        {:error, %{new_email: dgettext("auth", "New email must be different from current email")}}
 
       {:error, :taken} ->
-        {:error, {:new_email, email_taken_message()}}
+        {:error, %{new_email: email_taken_message()}}
 
       {:error, %Changeset{} = changeset} ->
-        {:error, {:new_email, request_changeset_message(changeset)}}
+        {:error, %{new_email: request_changeset_message(changeset)}}
+    end
+  end
 
-      {:error, reason} when is_binary(reason) ->
-        {:error, {:new_email, reason}}
+  # Every field's problem at once, so the form can show them together. The
+  # current password is held only to login's presence and length rules.
+  defp validate_input(new_email, current_password) do
+    email_result =
+      InputProcessor.validate_field(new_email, :email, universal_opts: [allow_html: false])
+
+    errors =
+      Enum.reduce(
+        [email_result, Validation.validate_current_password_input(current_password)],
+        %{},
+        fn
+          {:error, message}, acc when is_binary(message) ->
+            Map.put(acc, :new_email, message)
+
+          {:error, reason}, acc when is_atom(reason) ->
+            Map.put(acc, :current_password, Validation.current_password_message(reason))
+
+          _ok, acc ->
+            acc
+        end
+      )
+
+    case {errors, email_result} do
+      {empty, {:ok, sanitised_email}} when empty == %{} -> {:ok, sanitised_email}
+      {errors, _email_result} -> {:error, errors}
+    end
+  end
+
+  defp issue_in_transaction(user_id, new_email, current_password) do
+    result =
+      Repo.transaction(fn ->
+        with {:ok, user} <- UserQueries.get_user_for_update(user_id),
+             :ok <- Validation.check_current_password(user, current_password),
+             :ok <- validate_email_not_same(user.email, new_email),
+             {:ok, :available} <- UserQueries.check_email_availability(new_email),
+             {:ok, updated_user, token} <-
+               AccountTokens.issue(:email_change, user, %{new_email: new_email}) do
+          {updated_user, token}
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+
+    case result do
+      {:ok, {updated_user, token}} -> {:ok, updated_user, token}
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -135,13 +186,6 @@ defmodule Tymeslot.Auth.EmailChange do
   end
 
   # --- Private helpers ---
-
-  defp validate_email_format(email) do
-    case EmailValidator.validate(email) do
-      :ok -> :ok
-      {:error, message} -> {:error, message}
-    end
-  end
 
   defp validate_email_not_same(current_email, new_email) do
     if String.downcase(String.trim(current_email)) == String.downcase(String.trim(new_email)) do

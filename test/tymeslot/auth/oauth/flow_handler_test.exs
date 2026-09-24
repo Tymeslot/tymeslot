@@ -1,426 +1,347 @@
-# :meck migration scope (assessed 2026-03-29):
-# - This file uses :meck to mock 6 modules:
-#     Client, State, URLs, UserProcessor, UserRegistration, Session
-# - 54 :meck.expect calls across 10 tests
-# - Modules with existing @behaviour + Mox mock:
-#     Client (ClientBehaviour / Tymeslot.Auth.OAuth.ClientMock)
-#     Session (SessionBehaviour / Tymeslot.Auth.SessionMock)
-# - Internal modules currently mocked:
-#     State, URLs, UserProcessor, UserRegistration
-#   Per project test philosophy ("mock at system boundaries only"),
-#   these internal module mocks should be removed entirely — not
-#   migrated to Mox. The correct fix is to test FlowHandler through
-#   its real dependencies with a DB-backed test, mocking only the
-#   external HTTP calls (Client) and session storage (Session).
-# - Estimated effort: complex
-# - See docs/superpowers/plans/2026-03-29-test-suite-improvements.md Task 18
 defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
-  use Tymeslot.DataCase, async: false
-  @moduletag :auth
+  @moduledoc """
+  DB-backed coverage for `Tymeslot.Auth.OAuth.FlowHandler.handle_oauth_callback/2`:
 
+    state validation -> token exchange -> user info -> normalisation ->
+    account lookup -> session, verify screen, or registration
+
+  Only the provider's HTTP endpoints are stubbed
+  (`Tymeslot.Test.OAuthProviderStub`); state, lookups and sessions are real.
+  """
+
+  use Tymeslot.DataCase, async: false
+
+  @moduletag :auth
+  @moduletag :integration
+
+  import Ecto.Query
+  import Tymeslot.Test.OAuthProviderStub
+
+  alias Plug.Conn
   alias Plug.Test, as: PlugTest
-  alias Tymeslot.Auth.OAuth.{Client, FlowHandler, State, URLs, UserProcessor, UserRegistration}
-  alias Tymeslot.Auth.{Session, UserSchema}
-  alias Tymeslot.Factory
+  alias Req.Test, as: ReqTest
+  alias Tymeslot.Auth.OAuth.{FlowHandler, State}
+  alias Tymeslot.Auth.{Session, UserSchema, UserSessionSchema}
   alias Tymeslot.Repo
+  alias Tymeslot.Security.Token
   alias Tymeslot.Test.LogCapture
 
-  setup do
-    modules = [Client, State, URLs, UserProcessor, UserRegistration, Session]
+  setup :setup_providers
 
-    Enum.each(modules, &unload_if_loaded/1)
-    Enum.each(modules, &:meck.new(&1, [:passthrough]))
+  describe "state validation" do
+    test "rejects a callback on a session that never started a flow" do
+      conn = PlugTest.init_test_session(PlugTest.conn(:get, "/"), %{})
 
-    on_exit(fn ->
-      Enum.each(modules, &unload_if_loaded/1)
-    end)
+      assert {:error, :invalid_state, _conn} = callback(conn, :github, "any-state")
+    end
 
-    :ok
+    test "rejects a state other than the one issued, and audits it" do
+      {conn, _flow} = fresh_flow()
+
+      capture_at_info(fn ->
+        assert {:error, :invalid_state, _conn} = callback(conn, :github, "not-the-real-state")
+      end)
+
+      assert [%{event_type: "social_auth_failure", provider: "github", email_masked: nil}] =
+               social_auth_events()
+    end
   end
 
-  defp base_conn do
-    PlugTest.init_test_session(PlugTest.conn(:get, "/"), %{})
+  describe "existing-user login" do
+    test "signs a known GitHub user in by GitHub ID, not email, and audits it" do
+      user = insert(:user, provider: "github", github_user_id: "4242", email: "owner@example.com")
+
+      stub_github(%{"id" => 4242}, [
+        %{"email" => "other@example.com", "primary" => true, "verified" => true}
+      ])
+
+      {conn, flow} = fresh_flow()
+
+      result =
+        capture_at_info(fn -> callback(conn, :github, flow.state) end)
+
+      assert {:ok, result_conn, :github} = result
+      assert [session_row] = Repo.all(from s in UserSessionSchema, where: s.user_id == ^user.id)
+
+      assert Token.hash_token(Conn.get_session(result_conn, :user_token)) ==
+               session_row.token_hash
+
+      assert [event] = social_auth_events()
+      assert event.event_type == "social_auth_success"
+      assert event.email_masked == "o***@example.com"
+      refute inspect(event) =~ "owner@example.com"
+    end
+
+    test "signs a known Google user in" do
+      insert(:user, provider: "google", google_user_id: "g-77")
+      stub_google(%{"id" => "g-77", "email" => "g@example.com", "verified_email" => true})
+      {conn, flow} = fresh_flow()
+
+      assert {:ok, _conn, :google} = callback(conn, :google, flow.state)
+    end
+
+    test "signs a known SSO user in by provider_uid" do
+      insert(:user, provider: "oauth", provider_uid: "sub-9")
+      stub_sso(%{"sub" => "sub-9", "email" => "s@example.com", "email_verified" => true})
+      {conn, flow} = fresh_flow()
+
+      assert {:ok, _conn, :oauth} = callback(conn, :oauth, flow.state)
+    end
+
+    test "emits an anonymous login_completed telemetry event" do
+      insert(:user, provider: "github", github_user_id: "4243")
+      stub_github(%{"id" => 4243}, [])
+      {conn, flow} = fresh_flow()
+
+      test_pid = self()
+      handler_id = {__MODULE__, System.unique_integer([:positive])}
+
+      :telemetry.attach(
+        handler_id,
+        [:tymeslot, :auth, :login_completed],
+        fn _event, measurements, meta, _config ->
+          send(test_pid, {:login_completed, measurements, meta})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      assert {:ok, _conn, :github} = callback(conn, :github, flow.state)
+      assert_receive {:login_completed, %{count: 1}, meta}
+      assert meta == %{method: "oauth", provider: "github"}
+    end
+
+    test "an unverified account gets no session" do
+      user = insert(:user, provider: "github", github_user_id: "4244", verified_at: nil)
+      stub_github(%{"id" => 4244}, [])
+      {conn, flow} = fresh_flow()
+
+      assert {:verification_required, result_conn, :github, :sent} =
+               callback(conn, :github, flow.state)
+
+      assert Conn.get_session(result_conn, :user_token) == nil
+      assert Conn.get_session(result_conn, :unverified_user_id) == user.id
+      assert Repo.all(from s in UserSessionSchema, where: s.user_id == ^user.id) == []
+    end
+
+    test "an unverified account becomes verified when the provider vouches for its email" do
+      user =
+        insert(:user,
+          provider: "github",
+          github_user_id: "4247",
+          email: "owner@example.com",
+          verified_at: nil
+        )
+
+      stub_github(%{"id" => 4247}, [
+        %{"email" => "Owner@Example.com", "primary" => true, "verified" => true}
+      ])
+
+      {conn, flow} = fresh_flow()
+
+      result = capture_at_info(fn -> callback(conn, :github, flow.state) end)
+
+      assert {:ok, result_conn, :github} = result
+      assert Conn.get_session(result_conn, :user_token)
+      assert Repo.reload!(user).verified_at
+
+      # Recorded as verified by the provider, not by an emailed link.
+      assert [%{verification_type: "oauth_provider", user_id: user_id}] =
+               LogCapture.drain()
+               |> Enum.map(&LogCapture.user_metadata/1)
+               |> Enum.filter(
+                 &(&1[:event] in ["user_oauth_provider_verified", "user_email_verified"])
+               )
+
+      assert user_id == user.id
+    end
+
+    test "an unverified account matching a non-primary verified GitHub address is verified" do
+      user =
+        insert(:user,
+          provider: "github",
+          github_user_id: "4249",
+          email: "work@example.com",
+          verified_at: nil
+        )
+
+      stub_github(%{"id" => 4249}, [
+        %{"email" => "home@example.com", "primary" => true, "verified" => true},
+        %{"email" => "work@example.com", "primary" => false, "verified" => true}
+      ])
+
+      {conn, flow} = fresh_flow()
+
+      assert {:ok, _conn, :github} = callback(conn, :github, flow.state)
+      assert Repo.reload!(user).verified_at
+    end
+
+    test "an unverified account whose provider vouches for another address stays unverified" do
+      user =
+        insert(:user,
+          provider: "github",
+          github_user_id: "4248",
+          email: "typed@example.com",
+          verified_at: nil
+        )
+
+      stub_github(%{"id" => 4248}, [
+        %{"email" => "someone-else@example.com", "primary" => true, "verified" => true}
+      ])
+
+      {conn, flow} = fresh_flow()
+
+      assert {:verification_required, _conn, :github, :sent} = callback(conn, :github, flow.state)
+      assert Repo.reload!(user).verified_at == nil
+    end
+
+    test "reports and audits a session that could not be created" do
+      insert(:user, provider: "github", github_user_id: "4245", email: "s@example.com")
+      stub_github(%{"id" => 4245}, [])
+      {conn, flow} = fresh_flow()
+
+      # The one internal seam left: nothing a test can arrange makes a real
+      # session insert fail for an account that exists.
+      :meck.new(Session, [:passthrough])
+      on_exit(fn -> :meck.unload() end)
+      :meck.expect(Session, :create_session, fn _conn, _user -> {:error, :db_error, "failed"} end)
+
+      result = capture_at_info(fn -> callback(conn, :github, flow.state) end)
+
+      assert {:error, :session_failed, :github, _conn} = result
+
+      assert [%{event_type: "social_auth_failure", email_masked: "s***@example.com"}] =
+               social_auth_events()
+    end
+
+    test "refuses a login whose email belongs to an account from another provider" do
+      google_account =
+        insert(:user, email: "taken@example.com", provider: "google", google_user_id: "g-1")
+
+      stub_github(%{"id" => 4246}, [
+        %{"email" => "taken@example.com", "primary" => true, "verified" => true}
+      ])
+
+      {conn, flow} = fresh_flow()
+
+      result = capture_at_info(fn -> callback(conn, :github, flow.state) end)
+
+      assert {:error, :email_already_taken, :github, _conn} = result
+      assert [%{event_type: "social_auth_failure"}] = social_auth_events()
+      assert Repo.get!(UserSchema, google_account.id).github_user_id == nil
+    end
   end
 
-  # Sets up State validation, URL resolution, and Client build mocks — the
-  # common prefix shared by every test that reaches the token-exchange step.
-  defp setup_pre_exchange_mocks do
-    :meck.expect(State, :validate_state, fn _conn, "state" -> :ok end)
-    :meck.expect(State, :clear_oauth_state, fn conn -> conn end)
-    :meck.expect(URLs, :callback_path, fn :github -> "/auth/github/callback" end)
+  describe "new user" do
+    test "routes to registration with the provider's verified email, unaudited" do
+      stub_github(%{"id" => 5150, "name" => "Brand New"}, [
+        %{"email" => "new@example.com", "primary" => true, "verified" => true}
+      ])
 
-    :meck.expect(URLs, :callback_url, fn _conn, "/auth/github/callback" ->
-      "https://example.com/auth/github/callback"
-    end)
+      {conn, flow} = fresh_flow()
 
-    :meck.expect(Client, :build, fn :github, "https://example.com/auth/github/callback", "" ->
-      :oauth_client
-    end)
+      result = capture_at_info(fn -> callback(conn, :github, flow.state) end)
+
+      assert {:registration_required, _conn, :github, data} = result
+      assert data.email == "new@example.com"
+      assert data.email_from_provider == true
+      assert data.provider_uid == "5150"
+      assert data.provider == "github"
+      assert social_auth_events() == []
+    end
+
+    test "leaves the email for the user to type when GitHub has no verified one" do
+      stub_github(%{"id" => 5151, "email" => "public@example.com"}, [])
+      {conn, flow} = fresh_flow()
+
+      assert {:registration_required, _conn, :github, data} = callback(conn, :github, flow.state)
+      assert data.email == ""
+      assert data.email_from_provider == false
+    end
+
+    test "is refused, and audited, while registration is disabled" do
+      original = Application.get_env(:tymeslot, :registration_enabled)
+      Application.put_env(:tymeslot, :registration_enabled, false)
+
+      on_exit(fn ->
+        if is_nil(original),
+          do: Application.delete_env(:tymeslot, :registration_enabled),
+          else: Application.put_env(:tymeslot, :registration_enabled, original)
+      end)
+
+      stub_sso(%{"sub" => "sub-new", "email" => "n@example.com", "email_verified" => true})
+      {conn, flow} = fresh_flow()
+
+      result = capture_at_info(fn -> callback(conn, :oauth, flow.state) end)
+
+      assert {:error, :registration_disabled, :oauth, _conn} = result
+      assert [%{event_type: "social_auth_failure", provider: "oauth"}] = social_auth_events()
+      assert Repo.aggregate(UserSchema, :count) == 0
+    end
   end
 
-  # Sets up the full chain through find_existing_user for an existing GitHub
-  # user. Returns {processed_user, enhanced_user, existing_user} for tests that
-  # need to reference or override individual steps.
-  defp setup_existing_user_flow_mocks do
-    user_info = %{"id" => 123}
+  describe "provider errors" do
+    test "a transport failure on the token exchange is a general error" do
+      stub_provider(%{
+        "/login/oauth/access_token" => &ReqTest.transport_error(&1, :econnrefused)
+      })
 
-    processed_user = %{
-      email: "user@example.com",
-      github_user_id: 123,
-      name: "Test",
-      is_verified: true
-    }
+      {conn, flow} = fresh_flow()
 
-    enhanced_user = Map.put(processed_user, :email_from_provider, true)
-    existing_user = %{id: 987}
+      assert {:error, :general_error, :github, _conn} = callback(conn, :github, flow.state)
+    end
 
-    setup_pre_exchange_mocks()
+    test "a refused token exchange is an OAuth error, audited without the OAuth code" do
+      stub_provider(%{
+        "/login/oauth/access_token" => &Conn.send_resp(&1, 401, ~s({"error":"bad_code"}))
+      })
 
-    :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
-      {:ok, :authed_client}
-    end)
+      {conn, flow} = fresh_flow()
 
-    :meck.expect(Client, :get_user_info, fn :authed_client, :github -> {:ok, user_info} end)
+      result = capture_at_info(fn -> callback(conn, :github, flow.state) end)
 
-    :meck.expect(UserProcessor, :process_user, fn :github, ^user_info -> {:ok, processed_user} end)
+      assert {:error, :oauth_error, :github, _conn} = result
+      assert [event] = social_auth_events()
+      assert event.event_type == "social_auth_failure"
+      refute inspect(event) =~ "provider-code"
+    end
 
-    :meck.expect(UserProcessor, :enhance_user_data, fn :github, ^processed_user, :authed_client ->
-      enhanced_user
-    end)
+    test "GitHub answering a bad code with 200 and an error is an OAuth error" do
+      stub_provider(%{"/login/oauth/access_token" => %{"error" => "bad_verification_code"}})
+      {conn, flow} = fresh_flow()
 
-    :meck.expect(UserRegistration, :find_existing_user, fn :github, ^enhanced_user ->
-      {:ok, existing_user}
-    end)
+      assert {:error, :oauth_error, :github, _conn} = callback(conn, :github, flow.state)
+    end
 
-    {processed_user, enhanced_user, existing_user}
+    test "userinfo without an identifier is a general error" do
+      stub_sso(%{"email" => "no-sub@example.com"})
+      {conn, flow} = fresh_flow()
+
+      assert {:error, :general_error, :oauth, _conn} = callback(conn, :oauth, flow.state)
+    end
   end
 
-  defp invoke_github_callback(conn \\ nil) do
-    FlowHandler.handle_oauth_callback(conn || base_conn(), %{
-      code: "code",
-      state: "state",
-      provider: :github
+  defp fresh_flow do
+    conn = PlugTest.init_test_session(PlugTest.conn(:get, "/"), %{})
+    State.generate_and_store_state(conn)
+  end
+
+  defp callback(conn, provider, state) do
+    FlowHandler.handle_oauth_callback(conn, %{
+      code: "provider-code",
+      state: state,
+      provider: provider
     })
-  end
-
-  test "emits an anonymous login_completed telemetry event on existing-user OAuth login" do
-    {_processed_user, _enhanced_user, _existing_user} = setup_existing_user_flow_mocks()
-    :meck.expect(Session, :create_session, fn conn, %{id: 987} -> {:ok, conn, "token"} end)
-
-    test_pid = self()
-    handler_id = {__MODULE__, :login_completed, System.unique_integer([:positive])}
-
-    :telemetry.attach(
-      handler_id,
-      [:tymeslot, :auth, :login_completed],
-      fn _event, measurements, meta, _config ->
-        send(test_pid, {:login_completed, measurements, meta})
-      end,
-      nil
-    )
-
-    on_exit(fn -> :telemetry.detach(handler_id) end)
-
-    assert {:ok, _conn, :github} = invoke_github_callback()
-
-    assert_receive {:login_completed, %{count: 1}, meta}
-    assert meta.method == "oauth"
-    assert meta.provider == "github"
-    # No user identifier may ride along in the telemetry metadata.
-    refute Map.has_key?(meta, :user_id)
-    refute Map.has_key?(meta, :email)
-  end
-
-  test "returns {:error, :session_failed, provider, conn} when session creation fails" do
-    {_processed_user, _enhanced_user, _existing_user} = setup_existing_user_flow_mocks()
-
-    :meck.expect(Session, :create_session, fn _conn, %{id: 987} ->
-      {:error, :db_error, "failed"}
-    end)
-
-    assert {:error, :session_failed, :github, _conn} = invoke_github_callback()
-  end
-
-  test "returns {:registration_required, conn, provider, params} with missing fields" do
-    user_info = %{"id" => 123}
-    processed_user = %{email: nil, github_user_id: 123, name: "New User", is_verified: false}
-    enhanced_user = Map.put(processed_user, :email_from_provider, false)
-
-    setup_pre_exchange_mocks()
-
-    :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
-      {:ok, :authed_client}
-    end)
-
-    :meck.expect(Client, :get_user_info, fn :authed_client, :github -> {:ok, user_info} end)
-
-    :meck.expect(UserProcessor, :process_user, fn :github, ^user_info -> {:ok, processed_user} end)
-
-    :meck.expect(UserProcessor, :enhance_user_data, fn :github, ^processed_user, :authed_client ->
-      enhanced_user
-    end)
-
-    :meck.expect(UserRegistration, :find_existing_user, fn :github, ^enhanced_user ->
-      {:error, :not_found}
-    end)
-
-    :meck.expect(UserRegistration, :check_oauth_requirements, fn :github, ^enhanced_user ->
-      {:missing, [:email]}
-    end)
-
-    assert {:registration_required, _conn, :github, data} = invoke_github_callback()
-
-    assert data.provider == "github"
-    assert data.email == ""
-    assert data.is_verified == false
-    assert data.email_from_provider == false
-    assert data.github_user_id == 123
-    assert data.name == "New User"
-  end
-
-  test "returns {:error, :general_error, provider, conn} when process_user fails" do
-    user_info = %{"id" => 123}
-    setup_pre_exchange_mocks()
-
-    :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
-      {:ok, :authed_client}
-    end)
-
-    :meck.expect(Client, :get_user_info, fn :authed_client, :github -> {:ok, user_info} end)
-
-    :meck.expect(UserProcessor, :process_user, fn :github, ^user_info ->
-      {:error, :invalid_user_info}
-    end)
-
-    assert {:error, :general_error, :github, _conn} = invoke_github_callback()
-  end
-
-  test "returns {:error, :general_error, provider, conn} on unexpected token exchange failure" do
-    setup_pre_exchange_mocks()
-
-    :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
-      {:error, :timeout}
-    end)
-
-    assert {:error, :general_error, :github, _conn} = invoke_github_callback()
   end
 
   # SecurityLogger emits at :info while config/test.exs pins the primary level
   # to :warning, so it has to come down for the duration. Safe: async: false.
-  defp capture_at_info(fun) do
-    LogCapture.with_capture([logger_level: :info], fun)
-  end
+  defp capture_at_info(fun), do: LogCapture.with_capture([logger_level: :info], fun)
 
   defp social_auth_events do
     LogCapture.drain()
     |> Enum.map(&LogCapture.user_metadata/1)
     |> Enum.filter(&(&1[:event_type] in ["social_auth_success", "social_auth_failure"]))
-  end
-
-  describe "social auth auditing" do
-    test "logs a success naming the provider and the masked account" do
-      setup_existing_user_flow_mocks()
-
-      :meck.expect(UserRegistration, :find_existing_user, fn :github, _user ->
-        {:ok, %{id: 987, email: "user@example.com"}}
-      end)
-
-      :meck.expect(Session, :create_session, fn conn, %{id: 987} -> {:ok, conn, "token"} end)
-
-      capture_at_info(fn -> assert {:ok, _conn, :github} = invoke_github_callback() end)
-
-      assert [event] = social_auth_events()
-      assert event.event_type == "social_auth_success"
-      assert event.provider == "github"
-      assert event.email_masked == "u***@example.com"
-      assert event.ip_address == "127.0.0.1"
-      refute inspect(event) =~ "user@example.com"
-    end
-
-    test "logs a failure when the CSRF state is invalid or missing" do
-      :meck.expect(State, :validate_state, fn _conn, "state" -> {:error, :invalid_state} end)
-
-      capture_at_info(fn ->
-        assert {:error, :invalid_state, _conn} = invoke_github_callback()
-      end)
-
-      assert [event] = social_auth_events()
-      assert event.event_type == "social_auth_failure"
-      assert event.provider == "github"
-      assert event.email_masked == nil
-    end
-
-    test "logs a failure when the token exchange fails, without the OAuth code" do
-      setup_pre_exchange_mocks()
-
-      :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
-        {:error, :timeout}
-      end)
-
-      capture_at_info(fn ->
-        assert {:error, :general_error, :github, _conn} = invoke_github_callback()
-      end)
-
-      assert [event] = social_auth_events()
-      assert event.event_type == "social_auth_failure"
-      assert event.provider == "github"
-    end
-
-    test "logs a failure when session creation fails after a successful OAuth" do
-      setup_existing_user_flow_mocks()
-
-      :meck.expect(UserRegistration, :find_existing_user, fn :github, _user ->
-        {:ok, %{id: 987, email: "user@example.com"}}
-      end)
-
-      :meck.expect(Session, :create_session, fn _conn, %{id: 987} ->
-        {:error, :db_error, "failed"}
-      end)
-
-      capture_at_info(fn ->
-        assert {:error, :session_failed, :github, _conn} = invoke_github_callback()
-      end)
-
-      assert [event] = social_auth_events()
-      assert event.event_type == "social_auth_failure"
-      assert event.provider == "github"
-      assert event.email_masked == "u***@example.com"
-    end
-
-    test "refuses and logs a login whose email belongs to an account from another provider" do
-      setup_existing_user_flow_mocks()
-
-      # Real lookup, so the refusal is decided against the database
-      :meck.expect(UserRegistration, :find_existing_user, fn provider, user ->
-        :meck.passthrough([provider, user])
-      end)
-
-      google_account =
-        Factory.insert(:user,
-          email: "user@example.com",
-          provider: "google",
-          google_user_id: "google-id"
-        )
-
-      capture_at_info(fn ->
-        assert {:error, :email_already_taken, :github, _conn} = invoke_github_callback()
-      end)
-
-      assert [event] = social_auth_events()
-      assert event.event_type == "social_auth_failure"
-      assert event.provider == "github"
-      assert event.email_masked == "u***@example.com"
-      assert Repo.get!(UserSchema, google_account.id).github_user_id == nil
-    end
-
-    test "does not log a failure when a new user is routed to registration" do
-      user_info = %{"id" => 123}
-      processed_user = %{email: nil, github_user_id: 123, name: "New User", is_verified: false}
-      enhanced_user = Map.put(processed_user, :email_from_provider, false)
-
-      setup_pre_exchange_mocks()
-
-      :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
-        {:ok, :authed_client}
-      end)
-
-      :meck.expect(Client, :get_user_info, fn :authed_client, :github -> {:ok, user_info} end)
-
-      :meck.expect(UserProcessor, :process_user, fn :github, ^user_info ->
-        {:ok, processed_user}
-      end)
-
-      :meck.expect(UserProcessor, :enhance_user_data, fn :github,
-                                                         ^processed_user,
-                                                         :authed_client ->
-        enhanced_user
-      end)
-
-      :meck.expect(UserRegistration, :find_existing_user, fn :github, ^enhanced_user ->
-        {:error, :not_found}
-      end)
-
-      :meck.expect(UserRegistration, :check_oauth_requirements, fn :github, ^enhanced_user ->
-        {:missing, [:email]}
-      end)
-
-      capture_at_info(fn ->
-        assert {:registration_required, _conn, :github, _data} = invoke_github_callback()
-      end)
-
-      assert social_auth_events() == []
-    end
-  end
-
-  describe "generic OAuth (:oauth) provider flow" do
-    defp setup_oauth_pre_exchange_mocks do
-      :meck.expect(State, :validate_state, fn _conn, "state" -> :ok end)
-      :meck.expect(State, :clear_oauth_state, fn conn -> conn end)
-      :meck.expect(URLs, :callback_path, fn :oauth -> "/auth/oauth/callback" end)
-
-      :meck.expect(URLs, :callback_url, fn _conn, "/auth/oauth/callback" ->
-        "https://example.com/auth/oauth/callback"
-      end)
-
-      :meck.expect(Client, :build, fn :oauth, "https://example.com/auth/oauth/callback", "" ->
-        :oauth_client
-      end)
-    end
-
-    test "returns {:registration_required, ...} with provider_uid param for new generic OAuth user" do
-      user_info = %{"sub" => "new-user-789", "email" => "new-sso@example.com"}
-
-      processed_user = %{
-        email: "new-sso@example.com",
-        provider_uid: "new-user-789",
-        name: "New SSO",
-        is_verified: true
-      }
-
-      enhanced_user = Map.put(processed_user, :email_from_provider, true)
-
-      setup_oauth_pre_exchange_mocks()
-
-      :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
-        {:ok, :authed_client}
-      end)
-
-      :meck.expect(Client, :get_user_info, fn :authed_client, :oauth -> {:ok, user_info} end)
-
-      :meck.expect(UserProcessor, :process_user, fn :oauth, ^user_info ->
-        {:ok, processed_user}
-      end)
-
-      :meck.expect(UserProcessor, :enhance_user_data, fn :oauth,
-                                                         ^processed_user,
-                                                         :authed_client ->
-        enhanced_user
-      end)
-
-      :meck.expect(UserRegistration, :find_existing_user, fn :oauth, ^enhanced_user ->
-        {:error, :not_found}
-      end)
-
-      :meck.expect(UserRegistration, :check_oauth_requirements, fn :oauth, ^enhanced_user ->
-        :complete
-      end)
-
-      assert {:registration_required, _conn, :oauth, data} =
-               FlowHandler.handle_oauth_callback(base_conn(), %{
-                 code: "code",
-                 state: "state",
-                 provider: :oauth
-               })
-
-      assert data.provider == "oauth"
-      assert data.provider_uid == "new-user-789"
-      assert data.email == "new-sso@example.com"
-    end
-  end
-
-  defp unload_if_loaded(module) do
-    :meck.unload(module)
-  rescue
-    _error -> :ok
   end
 end

@@ -4,7 +4,7 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
   @moduletag :auth
 
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.{PasswordReset, UserSessionSchema, UserTokenQueries}
+  alias Tymeslot.Auth.{PasswordReset, UserSchema, UserSessionSchema, UserTokenQueries}
   alias Tymeslot.Security.{Password, Token}
   alias TymeslotWeb.Endpoint
 
@@ -25,17 +25,17 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
     end
 
     test "fails with wrong current password", %{user: user} do
-      assert {:error, {:current_password, "Current password is incorrect"}} =
+      assert {:error, %{current_password: "Current password is incorrect"}} =
                Auth.update_user_password(user, "WrongPass123!", "NewPass456!", "NewPass456!")
     end
 
     test "reports a wrong current password even when the new password equals it", %{user: user} do
-      assert {:error, {:current_password, "Current password is incorrect"}} =
+      assert {:error, %{current_password: "Current password is incorrect"}} =
                Auth.update_user_password(user, "WrongPass123!", "WrongPass123!", "WrongPass123!")
     end
 
     test "fails when new password is the same as the current password", %{user: user} do
-      assert {:error, {:new_password, message}} =
+      assert {:error, %{new_password: message}} =
                Auth.update_user_password(
                  user,
                  "CurrentPass123!",
@@ -47,7 +47,7 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
     end
 
     test "fails when new password and confirmation do not match", %{user: user} do
-      assert {:error, {:new_password_confirmation, message}} =
+      assert {:error, %{new_password_confirmation: message}} =
                Auth.update_user_password(
                  user,
                  "CurrentPass123!",
@@ -59,7 +59,7 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
     end
 
     test "fails when new password is too short", %{user: user} do
-      assert {:error, {:new_password, message}} =
+      assert {:error, %{new_password: message}} =
                Auth.update_user_password(user, "CurrentPass123!", "short", "short")
 
       assert message =~ "8 characters"
@@ -104,6 +104,59 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
       assert {:error, :invalid_token, _message} = PasswordReset.verify_token(reset_token)
     end
 
+    # The account page passes the user it loaded at mount. Someone who knew
+    # the old password requests an email change to their own address after
+    # that; the owner's password change must still kill it, although the
+    # struct it was handed shows no pending change and no reset token.
+    test "revokes tokens issued after the caller loaded its copy of the user", %{user: stale_user} do
+      change_token = Token.generate_token()
+
+      {:ok, _fresh} =
+        UserTokenQueries.request_email_change(stale_user, "attacker@example.com", change_token)
+
+      reset_token = Token.generate_token()
+      {:ok, _fresh} = UserTokenQueries.set_reset_token(stale_user, reset_token)
+
+      assert stale_user.pending_email == nil
+      assert stale_user.reset_token_hash == nil
+
+      assert {:ok, _updated_user} =
+               Auth.update_user_password(
+                 stale_user,
+                 "CurrentPass123!",
+                 "NewPass456!",
+                 "NewPass456!"
+               )
+
+      stored = Repo.get!(UserSchema, stale_user.id)
+      assert stored.pending_email == nil
+      assert stored.email_change_token_hash == nil
+      assert stored.reset_token_hash == nil
+
+      assert {:error, {:invalid_token, _message}} = Auth.verify_email_change(change_token)
+      assert {:error, :invalid_token, _message} = PasswordReset.verify_token(reset_token)
+      assert Repo.get!(UserSchema, stale_user.id).email == stale_user.email
+    end
+
+    test "checks the current password against the stored hash, not the caller's copy", %{
+      user: stale_user
+    } do
+      {:ok, _user} =
+        Auth.update_user_password(stale_user, "CurrentPass123!", "NewPass456!", "NewPass456!")
+
+      # The stale struct still carries the old hash; the old password must not pass.
+      assert {:error, %{current_password: "Current password is incorrect"}} =
+               Auth.update_user_password(stale_user, "CurrentPass123!", "Other789!", "Other789!")
+    end
+
+    test "reports every malformed field at once", %{user: user} do
+      assert {:error, errors} = Auth.update_user_password(user, "", "short", "different")
+
+      assert errors.current_password == "Password is required"
+      assert errors.new_password =~ "8 characters"
+      assert Map.has_key?(errors, :new_password_confirmation)
+    end
+
     test "returns the user without the plaintext password", %{user: user} do
       assert {:ok, updated_user} =
                Auth.update_user_password(user, "CurrentPass123!", "NewPass456!", "NewPass456!")
@@ -121,15 +174,15 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
     end
 
     test "reports a missing current password on its field", %{user: user} do
-      assert {:error, {:current_password, "Password is required"}} =
+      assert {:error, %{current_password: "Password is required"}} =
                Auth.update_user_password(user, "", "NewPass456!", "NewPass456!")
 
-      assert {:error, {:current_password, "Password is required"}} =
+      assert {:error, %{current_password: "Password is required"}} =
                Auth.update_user_password(user, nil, "NewPass456!", "NewPass456!")
     end
 
     test "rejects an oversized current password without hashing it", %{user: user} do
-      assert {:error, {:current_password, "Current password is incorrect"}} =
+      assert {:error, %{current_password: "Current password is incorrect"}} =
                Auth.update_user_password(
                  user,
                  String.duplicate("a", 1025),
@@ -141,13 +194,13 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
     test "returns an error, not a crash, for an account with no password" do
       user = insert(:user, provider: "google", password_hash: nil)
 
-      assert {:error, {:current_password, "Current password is incorrect"}} =
+      assert {:error, %{current_password: "Current password is incorrect"}} =
                Auth.update_user_password(user, "Anything123!", "NewPass456!", "NewPass456!")
     end
 
     test "applies the shared password policy to the new password", %{user: user} do
       # Long enough, but missing the special character the policy requires.
-      assert {:error, {:new_password, "Password must contain at least one special character"}} =
+      assert {:error, %{new_password: "Password must contain at least one special character"}} =
                Auth.update_user_password(user, "CurrentPass123!", "NewPass4567", "NewPass4567")
     end
   end

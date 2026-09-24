@@ -1,209 +1,144 @@
 defmodule Tymeslot.Auth.OAuth.UserProcessor do
   @moduledoc """
-  Processes user information returned from OAuth providers.
+  Turns a provider's userinfo into the identity sign-in works with:
+
+      %{provider_uid: "…", email: "…" | nil, email_from_provider: boolean,
+        verified_emails: ["…"], name: "…" | nil}
+
+  `email` is the provider's address only when the provider vouches for it
+  (see `:email` in `Tymeslot.Auth.OAuth.Providers`); an address the provider
+  has not verified is dropped, so the user types one and proves it by email
+  instead. `email_from_provider` records which of the two happened, and
+  `verified_emails` lists every address the provider vouches for (GitHub
+  can vouch for several).
   """
 
   require Logger
 
-  alias Tymeslot.Auth.OAuth.Client
+  alias Tymeslot.Auth.OAuth.{Client, Providers}
 
-  @type provider :: :github | :google | :oauth
-  @type normalized_user :: %{
+  @type provider :: Providers.provider()
+  @type identity :: %{
+          required(:provider_uid) => String.t(),
           required(:email) => String.t() | nil,
-          required(:name) => String.t() | nil,
-          required(:is_verified) => boolean(),
           required(:email_from_provider) => boolean(),
-          optional(:github_user_id) => String.t() | integer(),
-          optional(:google_user_id) => String.t(),
-          optional(:provider_uid) => String.t()
+          required(:verified_emails) => [String.t()],
+          required(:name) => String.t() | nil
         }
 
   @doc """
-  Processes the raw user info from the provider into a normalized user map.
+  Fetches the userinfo with `token` and normalises it.
   """
-  @spec process_user(provider(), map()) :: {:ok, normalized_user()} | {:error, :invalid_user_info}
-  def process_user(:github, %{"id" => github_user_id} = user_info) do
-    email = extract_email(user_info)
-    email_from_provider = email != nil and String.trim(email) != ""
-
-    user = %{
-      email: email,
-      github_user_id: github_user_id,
-      name: Map.get(user_info, "name"),
-      is_verified: true,
-      email_from_provider: email_from_provider
-    }
-
-    {:ok, user}
+  @spec fetch_identity(provider(), String.t()) :: {:ok, identity()} | {:error, term()}
+  def fetch_identity(provider, token) do
+    with {:ok, user_info} <- Client.fetch_userinfo(provider, token),
+         {:ok, provider_uid} <- provider_uid(provider, user_info) do
+      {:ok,
+       Map.merge(verified_email(provider, user_info, token), %{
+         provider_uid: provider_uid,
+         name: string_or_nil(Map.get(user_info, "name"))
+       })}
+    end
   end
 
-  def process_user(:google, %{"email" => email, "id" => google_user_id} = user_info) do
-    user = %{
-      email: email,
-      google_user_id: google_user_id,
-      name: Map.get(user_info, "name"),
-      is_verified: true,
-      email_from_provider: true
-    }
-
-    {:ok, user}
+  defp provider_uid(provider, user_info) when is_map(user_info) do
+    case Enum.find_value(uid_claims(provider), &Map.get(user_info, &1)) do
+      uid when is_integer(uid) -> {:ok, Integer.to_string(uid)}
+      uid when is_binary(uid) and uid != "" -> {:ok, uid}
+      _missing -> missing_uid(provider)
+    end
   end
 
-  def process_user(:oauth, %{"sub" => provider_uid} = user_info) do
-    build_oauth_user(user_info, provider_uid)
+  defp provider_uid(_provider, _user_info), do: {:error, :invalid_user_info}
+
+  # Non-OIDC providers may return "id" or "user_id" instead of the standard
+  # "sub" claim. These identifiers are not standardised and can collide across
+  # identity providers, so they are only accepted when the admin opts in with
+  # OAUTH_ALLOW_ID_FALLBACK=true.
+  defp uid_claims(:oauth) do
+    claims = Providers.fetch!(:oauth).uid_claims
+    if allow_id_fallback?(), do: claims ++ ["id", "user_id"], else: claims
   end
 
-  def process_user(:oauth, user_info) when is_map(user_info) do
-    # Non-OIDC providers may return "id" or "user_id" instead of the standard
-    # "sub" claim. Because these identifiers are not standardized, they can
-    # collide across different IdPs. Only accept them when the admin has
-    # explicitly opted in via OAUTH_ALLOW_ID_FALLBACK=true.
-    if allow_id_fallback?() do
-      case Map.get(user_info, "id") || Map.get(user_info, "user_id") do
-        nil ->
-          {:error, :invalid_user_info}
+  defp uid_claims(provider), do: Providers.fetch!(provider).uid_claims
 
-        uid ->
-          Logger.warning(
-            "OAuth provider returned no \"sub\" claim; falling back to alternative ID",
-            key_used: if(Map.has_key?(user_info, "id"), do: "id", else: "user_id")
+  defp missing_uid(:oauth) do
+    Logger.error(
+      "OAuth provider returned no usable \"sub\" claim",
+      id_fallback_enabled: allow_id_fallback?()
+    )
+
+    {:error, :invalid_user_info}
+  end
+
+  defp missing_uid(_provider), do: {:error, :invalid_user_info}
+
+  defp verified_email(provider, user_info, token) do
+    case Providers.fetch!(provider).email do
+      {:claim, claim, absent} ->
+        email = string_or_nil(Map.get(user_info, "email"))
+        verified = claim_verified?(Map.fetch(user_info, claim), absent)
+        vouched(email, if(verified and email, do: [email], else: []))
+
+      {:emails_endpoint, url} ->
+        vouched_from_list(provider, url, token)
+    end
+  end
+
+  # The primary address when the provider has verified it, otherwise any
+  # verified one. Every verified address is kept, so an existing account can
+  # be matched against any of them. A failed request leaves the user to type
+  # an address.
+  defp vouched_from_list(provider, url, token) do
+    case Client.get(provider, url, token) do
+      {:ok, emails} when is_list(emails) ->
+        verified =
+          Enum.filter(
+            emails,
+            &(is_map(&1) and &1["verified"] == true and string_or_nil(&1["email"]))
           )
 
-          build_oauth_user(user_info, uid)
-      end
-    else
-      Logger.error(
-        "OAuth provider did not return a \"sub\" claim and OAUTH_ALLOW_ID_FALLBACK is not enabled"
-      )
+        primary = Enum.find(verified, &(&1["primary"] == true))
+        chosen = primary || List.first(verified)
+        vouched(chosen && chosen["email"], Enum.map(verified, & &1["email"]))
 
-      {:error, :invalid_user_info}
+      other ->
+        Logger.warning("Could not read the provider's email addresses",
+          provider: to_string(provider),
+          reason: inspect(other)
+        )
+
+        vouched(nil, [])
     end
   end
 
-  def process_user(_provider, _user_info), do: {:error, :invalid_user_info}
+  defp claim_verified?(claim, :unverified), do: claim_true?(claim)
 
-  @doc """
-  Enhances user data with additional information (e.g., fetching GitHub emails).
-  """
-  @spec enhance_user_data(provider(), normalized_user(), OAuth2.Client.t()) :: normalized_user()
-  def enhance_user_data(:github, %{email: email} = user, client)
-      when is_nil(email) or email == "" do
-    case get_github_user_emails(client) do
-      {:ok, emails} when is_list(emails) ->
-        add_github_email_to_user(user, emails)
+  defp claim_verified?(claim, :operator_policy),
+    do: claim_verified_by_policy(claim, email_verified_claim_policy())
 
-      {:error, _error_reason} ->
-        Map.put(user, :email_from_provider, false)
-    end
+  defp claim_verified_by_policy(_claim, :ignore), do: true
+  defp claim_verified_by_policy(:error, :trust_absent), do: true
+  defp claim_verified_by_policy(claim, _trust_absent_or_require), do: claim_true?(claim)
+
+  defp claim_true?({:ok, value}), do: value in [true, "true"]
+  defp claim_true?(:error), do: false
+
+  defp vouched(email, [_first | _rest] = verified_emails) when is_binary(email),
+    do: %{email: email, email_from_provider: true, verified_emails: verified_emails}
+
+  defp vouched(_email, _verified_emails),
+    do: %{email: nil, email_from_provider: false, verified_emails: []}
+
+  defp string_or_nil(value) when is_binary(value) and value != "", do: value
+  defp string_or_nil(_value), do: nil
+
+  defp allow_id_fallback?, do: oauth_provider_setting(:allow_id_fallback, false)
+
+  defp email_verified_claim_policy,
+    do: oauth_provider_setting(:email_verified_claim, :trust_absent)
+
+  defp oauth_provider_setting(key, default) do
+    :tymeslot |> Application.get_env(:oauth_provider, []) |> Keyword.get(key, default)
   end
-
-  def enhance_user_data(_provider, user, _client) do
-    case Map.get(user, :email_from_provider) do
-      nil ->
-        email_provided =
-          case user.email do
-            nil -> false
-            "" -> false
-            email when is_binary(email) -> String.trim(email) != ""
-            _other -> false
-          end
-
-        Map.put(user, :email_from_provider, email_provided)
-
-      _existing_flag ->
-        user
-    end
-  end
-
-  # Fetches the authenticated user's email addresses from the GitHub API.
-  @spec get_github_user_emails(OAuth2.Client.t()) :: {:ok, list(map())} | {:error, any()}
-  defp get_github_user_emails(client) do
-    client = Client.with_auth_header(client, :github)
-
-    case OAuth2.Client.get(client, "https://api.github.com/user/emails") do
-      {:ok, %OAuth2.Response{body: body}} -> parse_user_emails_body(body)
-      err -> err
-    end
-  end
-
-  # Private helpers
-
-  defp allow_id_fallback? do
-    config = Application.get_env(:tymeslot, :oauth_provider, [])
-    Keyword.get(config, :allow_id_fallback, false)
-  end
-
-  defp build_oauth_user(user_info, provider_uid)
-       when is_binary(provider_uid) or is_integer(provider_uid) do
-    uid_string = to_string(provider_uid)
-
-    if uid_string == "" do
-      {:error, :invalid_user_info}
-    else
-      email = extract_email(user_info)
-      email_from_provider = email != nil and String.trim(email) != ""
-
-      user = %{
-        email: email,
-        provider_uid: uid_string,
-        name: Map.get(user_info, "name"),
-        is_verified: Map.get(user_info, "email_verified", false) in [true, "true"],
-        email_from_provider: email_from_provider
-      }
-
-      {:ok, user}
-    end
-  end
-
-  defp build_oauth_user(_user_info, _provider_uid), do: {:error, :invalid_user_info}
-
-  defp extract_email(user_info) do
-    case Map.get(user_info, "email") do
-      nil -> nil
-      "" -> nil
-      email when is_binary(email) -> email
-      _other -> nil
-    end
-  end
-
-  defp parse_user_emails_body(body) when is_binary(body) do
-    case Jason.decode(body) do
-      {:ok, list} when is_list(list) -> {:ok, list}
-      {:ok, _other} -> {:error, {:unexpected_body, body}}
-      {:error, %Jason.DecodeError{} = err} -> {:error, err}
-    end
-  end
-
-  defp parse_user_emails_body(body) when is_list(body), do: {:ok, body}
-  defp parse_user_emails_body(other), do: {:error, {:unexpected_body, other}}
-
-  defp add_github_email_to_user(user, emails) do
-    primary_email = find_primary_email(emails)
-    verified_email = primary_email || find_verified_email(emails)
-
-    case extract_email_address(primary_email, verified_email) do
-      {:ok, email} -> %{user | email: email, email_from_provider: true}
-      :error -> Map.put(user, :email_from_provider, false)
-    end
-  end
-
-  defp find_primary_email(emails) do
-    Enum.find(emails, fn email ->
-      Map.get(email, "primary", false) && Map.get(email, "verified", false)
-    end)
-  end
-
-  defp find_verified_email(emails) do
-    Enum.find(emails, fn email ->
-      Map.get(email, "verified", false)
-    end)
-  end
-
-  defp extract_email_address(%{"email" => email}, _fallback) when is_binary(email),
-    do: {:ok, email}
-
-  defp extract_email_address(_primary, %{"email" => email}) when is_binary(email),
-    do: {:ok, email}
-
-  defp extract_email_address(_primary, _fallback), do: :error
 end

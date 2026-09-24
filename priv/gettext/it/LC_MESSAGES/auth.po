@@ -226,8 +226,7 @@ msgstr "Password"
 msgid "Password Reset Successfully"
 msgstr "Password reimpostata con successo"
 
-#: lib/tymeslot/auth/email_change.ex
-#: lib/tymeslot/auth/password_update.ex
+#: lib/tymeslot/auth/validation.ex
 #: lib/tymeslot/security/field_validators/password_validator.ex
 #: lib/tymeslot_web/live/auth_live.ex
 #, elixir-autogen, elixir-format
@@ -703,8 +702,7 @@ msgstr "Account creato, ma la configurazione del profilo non è riuscita. Contat
 msgid "An error occurred. Please try again."
 msgstr "Si è verificato un errore. Riprova."
 
-#: lib/tymeslot/auth/email_change.ex
-#: lib/tymeslot/auth/password_update.ex
+#: lib/tymeslot/auth/validation.ex
 #, elixir-autogen, elixir-format
 msgid "Current password is incorrect"
 msgstr "La password attuale non è corretta"
@@ -1031,3 +1029,18 @@ msgstr "La password deve essere lunga al massimo %{count} byte. Le lettere accen
 #, elixir-autogen, elixir-format
 msgid "Sign in to receive a new verification link."
 msgstr "Accedi per ricevere un nuovo link di verifica."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before signing in. We could not send a new verification link; please try again later."
+msgstr "Verifica il tuo indirizzo email prima di accedere. Non è stato possibile inviare un nuovo link di verifica; riprova più tardi."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before signing in. We've sent you a new verification link."
+msgstr "Verifica il tuo indirizzo email prima di accedere. Ti abbiamo inviato un nuovo link di verifica."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your sign-up session has expired. Please sign in again."
+msgstr "La sessione di registrazione è scaduta. Accedi di nuovo."

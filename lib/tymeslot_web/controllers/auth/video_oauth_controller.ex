@@ -5,7 +5,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
   use TymeslotWeb, :controller
 
-  alias TymeslotWeb.OAuthCallbackHandler
+  alias TymeslotWeb.Integrations.OAuthCallbackHandler
 
   @doc """
   Handles Google Meet OAuth callback.
