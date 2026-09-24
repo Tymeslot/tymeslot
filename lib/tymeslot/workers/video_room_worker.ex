@@ -21,6 +21,19 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
   What is left here is the job itself: fetch the meeting, run the call under a
   timeout, and report the outcome.
+
+  ## Waiting for the booking's calendar event
+
+  A Teams meeting on the same Microsoft account as the booking's Outlook
+  calendar is attached to the booking's own event, which the calendar job
+  writes alongside this one. Until it exists, the job hands over to a fresh
+  copy of itself a few seconds later rather than snoozing. A snooze counts as
+  an execution, and `Recovery` measures executions: a wait of a dozen seconds
+  would otherwise enter recovery and announce the booking without its link.
+  The wait is bounded by the meeting, not the job:
+  `Tymeslot.Integrations.MeetingProvisioning.teams_room_placement/1` stops
+  asking for it two minutes after the booking, and the meeting gets a Teams
+  event of its own instead.
   """
 
   use Oban.Worker,
@@ -42,6 +55,10 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   # What the provider call may spend beyond waiting on the provider itself:
   # reading and writing the meeting, and asking the circuit breaker.
   @local_work_margin_ms 10_000
+
+  # How long a Teams meeting waits between looks for the booking's calendar
+  # event; see "Waiting for the booking's calendar event" above.
+  @calendar_event_wait_seconds 3
 
   @backoff_base_ms 1_000
   @backoff_cap_ms 16_000
@@ -93,7 +110,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
           announce: Announcement.owed?(announcement)
         )
 
-        create_room(meeting, announcement, execution)
+        create_room(meeting, announcement, execution, args)
 
       {:error, :not_found} ->
         Logger.warning("Meeting not found, discarding video room job", meeting_id: meeting_id)
@@ -227,7 +244,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
   # The provider call runs in a supervised task so a hung connection cannot pin
   # the queue's worker for longer than the timeout.
-  defp create_room(meeting, announcement, execution) do
+  defp create_room(meeting, announcement, execution, args) do
     meeting_id = meeting.id
     timeout_ms = creation_timeout_ms(meeting)
 
@@ -239,6 +256,9 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     case Task.yield(task, timeout_ms) || Task.shutdown(task) do
       {:ok, {:ok, meeting}} ->
         handle_success(meeting, announcement, execution)
+
+      {:ok, {:error, :calendar_event_pending}} ->
+        wait_for_calendar_event(meeting_id, args)
 
       {:ok, {:error, reason}} ->
         reason
@@ -255,6 +275,25 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
         )
 
         handle_timeout(meeting_id, announcement, execution)
+    end
+  end
+
+  # A fresh job starts its execution count again, which is the point. The
+  # uniqueness window is deliberately not applied: it would match this job.
+  defp wait_for_calendar_event(meeting_id, args) do
+    case args
+         |> new(queue: :video_rooms, priority: 0, schedule_in: @calendar_event_wait_seconds)
+         |> Oban.insert() do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule the wait for the booking's calendar event",
+          meeting_id: meeting_id,
+          error: format_insert_error(reason)
+        )
+
+        {:error, "Failed to schedule job"}
     end
   end
 
@@ -297,10 +336,6 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
         {:error, categorized}
     end
   end
-
-  # Waiting for the booking's calendar event is the expected first outcome for
-  # a Teams meeting attached to it, not a failure; `VideoRooms` logs the wait.
-  defp log_failure(:calendar_event_pending, _meeting_id), do: :ok
 
   defp log_failure(reason, meeting_id),
     do:

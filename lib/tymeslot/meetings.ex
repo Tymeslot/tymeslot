@@ -146,6 +146,11 @@ defmodule Tymeslot.Meetings do
 
         {:error, :meeting_not_found}
 
+      # A Teams meeting waiting for the booking's own calendar event: the
+      # expected first outcome, which `VideoRooms` already logs as a wait.
+      {:error, :calendar_event_pending} = pending ->
+        pending
+
       {:error, reason} = error ->
         Logger.error("Failed to add video room", meeting_id: meeting_id, reason: inspect(reason))
         error

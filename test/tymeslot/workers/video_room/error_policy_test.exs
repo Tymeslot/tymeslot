@@ -60,23 +60,6 @@ defmodule Tymeslot.Workers.VideoRoom.ErrorPolicyTest do
     end
   end
 
-  describe "to_result/2 with :calendar_event_pending" do
-    # A Teams meeting waiting for the booking's own Outlook event, which the
-    # calendar job writes within seconds. The wait must be short, and must end.
-    test "snoozes briefly while the booking's calendar event is being written" do
-      assert ErrorPolicy.to_result(:calendar_event_pending, 1) == {:snooze, 3}
-      assert ErrorPolicy.to_result(:calendar_event_pending, 9) == {:snooze, 3}
-    end
-
-    test "falls back to an ordinary retryable error once the snooze budget is spent" do
-      assert ErrorPolicy.to_result(:calendar_event_pending, 10) ==
-               {:error, :calendar_event_pending}
-
-      assert ErrorPolicy.to_result(:calendar_event_pending, 11) ==
-               {:error, :calendar_event_pending}
-    end
-  end
-
   describe "to_result/2 with :circuit_open" do
     test "snoozes past the breaker's recovery window instead of retrying" do
       assert {:snooze, seconds} = ErrorPolicy.to_result(:circuit_open, 1)
