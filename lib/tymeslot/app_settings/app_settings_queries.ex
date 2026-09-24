@@ -13,11 +13,6 @@ defmodule Tymeslot.AppSettings.AppSettingsQueries do
 
   @singleton_id 1
 
-  # Key for the transaction-scoped advisory lock that serialises the
-  # first-user admin bootstrap. Any constant works as long as nothing else
-  # takes the same one; this is the ASCII of "tsadmbst".
-  @admin_bootstrap_lock_key 0x747361646D627374
-
   @doc """
   Returns the singleton settings row. The row is seeded by the migration, so
   this always returns a struct — never `nil` — except during the brief window
@@ -81,18 +76,6 @@ defmodule Tymeslot.AppSettings.AppSettingsQueries do
   end
 
   @doc """
-  Takes the transaction-scoped advisory lock that serialises the first-user
-  admin bootstrap. Blocks until any other transaction holding it ends, and is
-  released when the caller's transaction commits or rolls back, so it must be
-  called inside one.
-  """
-  @spec lock_admin_bootstrap(module()) :: :ok
-  def lock_admin_bootstrap(repo \\ Repo) do
-    repo.query!("SELECT pg_advisory_xact_lock($1)", [@admin_bootstrap_lock_key])
-    :ok
-  end
-
-  @doc """
   Whether the first-user admin bootstrap has already closed.
   """
   @spec admin_bootstrapped?(module()) :: boolean()
@@ -105,21 +88,34 @@ defmodule Tymeslot.AppSettings.AppSettingsQueries do
   end
 
   @doc """
-  Records that the first-user admin bootstrap has closed, creating the
-  singleton row if it is missing. Keeps an existing timestamp.
-  """
-  @spec mark_admin_bootstrapped(module()) :: :ok
-  def mark_admin_bootstrapped(repo \\ Repo) do
-    now = DateTime.utc_now(:second)
+  Closes the first-user admin bootstrap, returning `true` only to the caller
+  that closed it.
 
-    repo.insert!(%AppSettingsSchema{id: @singleton_id, admin_bootstrapped_at: now},
-      on_conflict:
-        from(s in AppSettingsSchema,
-          update: [set: [admin_bootstrapped_at: coalesce(s.admin_bootstrapped_at, ^now)]]
-        ),
+  The claim is one conditional `UPDATE ... WHERE admin_bootstrapped_at IS
+  NULL`. Two concurrent callers cannot both win: the second blocks on the row
+  the first updated, and once the first commits, PostgreSQL re-evaluates the
+  condition against the committed row and updates nothing. If the first
+  rolls back, the second claims it instead. A missing singleton row is
+  created first with `ON CONFLICT DO NOTHING`, which leaves the claim to the
+  same `UPDATE`.
+  """
+  @spec claim_admin_bootstrap(module()) :: boolean()
+  def claim_admin_bootstrap(repo \\ Repo) do
+    now = DateTime.utc_now()
+
+    repo.insert_all(AppSettingsSchema, [%{id: @singleton_id, inserted_at: now, updated_at: now}],
+      on_conflict: :nothing,
       conflict_target: :id
     )
 
-    :ok
+    {claimed, _rows} =
+      repo.update_all(
+        from(s in AppSettingsSchema,
+          where: s.id == @singleton_id and is_nil(s.admin_bootstrapped_at)
+        ),
+        set: [admin_bootstrapped_at: DateTime.truncate(now, :second)]
+      )
+
+    claimed == 1
   end
 end

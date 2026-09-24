@@ -3,11 +3,11 @@ defmodule Tymeslot.Test.AdminBootstrapHelpers do
   The first-user admin bootstrap in tests.
 
   A migrated test database has no users, so its bootstrap is open, and every
-  sign-up in the suite would take the bootstrap's global advisory lock and
-  hold it until its test's sandbox transaction ends, serialising sign-ups
-  across async tests. `close!/0` runs once from `test_helper.exs`, outside the
+  first sign-up in a test would claim the settings row and hold its lock
+  until that test's sandbox transaction ends, serialising sign-ups across
+  async tests. `close!/0` runs once from `test_helper.exs`, outside the
   sandbox, so the suite runs as an established install does: sign-ups read the
-  flag and never touch the lock.
+  flag and never touch the row.
 
   A test about the first user becoming admin reopens the bootstrap inside its
   own transaction with `reopen/1` (usable as `setup :reopen_admin_bootstrap`),
@@ -24,7 +24,10 @@ defmodule Tymeslot.Test.AdminBootstrapHelpers do
   test partition against its own database.
   """
   @spec close!() :: :ok
-  def close!, do: AppSettingsQueries.mark_admin_bootstrapped()
+  def close! do
+    _claimed? = AppSettingsQueries.claim_admin_bootstrap()
+    :ok
+  end
 
   @doc """
   Reopens the bootstrap. Inside a sandboxed test the change is rolled back

@@ -43,6 +43,19 @@ defmodule Tymeslot.AppSettings.AdminBootstrappedAtMigrationTest do
     assert %DateTime{} = bootstrapped_at()
   end
 
+  test "re-applying keeps a timestamp that is already set" do
+    insert(:user)
+    earlier = ~U[2026-01-02 03:04:05Z]
+
+    Repo.update_all(from(s in AppSettingsSchema, where: s.id == 1),
+      set: [admin_bootstrapped_at: earlier]
+    )
+
+    MigrationRunner.replay!(@version)
+
+    assert bootstrapped_at() == earlier
+  end
+
   defp bootstrapped_at do
     Repo.one(from(s in AppSettingsSchema, where: s.id == 1, select: s.admin_bootstrapped_at))
   end

@@ -15,11 +15,11 @@ defmodule Tymeslot.Auth.AdminBootstrap do
   became admin. Installs that already had users when the column was added are
   marked bootstrapped by its migration.
 
-  Concurrent first sign-ups are serialised by a transaction-scoped advisory
-  lock, with the timestamp re-read once it is held: the second waits for the
-  first to commit and then finds the bootstrap closed, so exactly one becomes
-  admin. Once the bootstrap is closed, a sign-up reads the timestamp without
-  the lock and returns at once, so an established install never queues on it.
+  Closing it is an atomic claim (`AppSettingsQueries.claim_admin_bootstrap/1`):
+  of two concurrent first sign-ups, the second waits for the first to commit
+  and then finds nothing to claim, so exactly one can be promoted. Once the
+  bootstrap is closed, a sign-up sees so from a plain read and returns at
+  once, so an established install never contends for the settings row.
   """
 
   require Logger
@@ -33,11 +33,9 @@ defmodule Tymeslot.Auth.AdminBootstrap do
   `user` is its only user, and closes the bootstrap either way. Once closed,
   returns the user unchanged.
 
-  Call it in the same transaction as the user insert: while the bootstrap is
-  still open, the advisory lock it takes is held until that transaction ends, which is what serialises
-  concurrent sign-ups. Called outside a transaction it opens its own, which is
-  safe but serialises nothing beyond this call. Two calling conventions are
-  supported:
+  Call it in the same transaction as the user insert, so the claim and the
+  "only user" check are committed or rolled back with it. Called outside a
+  transaction it opens its own. Two calling conventions are supported:
 
     * **Explicit repo** (recommended when using `Repo.transaction(fn repo -> end)`):
       pass the transaction's repo as the second argument so all queries in the
@@ -52,27 +50,18 @@ defmodule Tymeslot.Auth.AdminBootstrap do
           {:ok, UserSchema.t()} | {:error, Ecto.Changeset.t()}
   def maybe_promote_first_user(%UserSchema{} = user, repo \\ Repo) do
     # Fast path: once closed the bootstrap never reopens, so an established
-    # install answers without queueing on the global lock.
+    # install answers from a plain read.
     if AppSettingsQueries.admin_bootstrapped?(repo) do
       {:ok, user}
     else
-      bootstrap_under_lock(user, repo)
+      repo.transaction(fn ->
+        if AppSettingsQueries.claim_admin_bootstrap(repo) do
+          promote_if_only_user(user, repo)
+        else
+          user
+        end
+      end)
     end
-  end
-
-  # Re-checks under the lock: another sign-up may have closed the bootstrap
-  # between the unlocked read and taking the lock.
-  defp bootstrap_under_lock(user, repo) do
-    repo.transaction(fn ->
-      AppSettingsQueries.lock_admin_bootstrap(repo)
-
-      if AppSettingsQueries.admin_bootstrapped?(repo) do
-        user
-      else
-        AppSettingsQueries.mark_admin_bootstrapped(repo)
-        promote_if_only_user(user, repo)
-      end
-    end)
   end
 
   # Kept alongside the timestamp: an install that reaches its first bootstrap

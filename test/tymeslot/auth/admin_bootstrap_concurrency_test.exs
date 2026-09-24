@@ -1,22 +1,22 @@
 defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
   @moduledoc """
-  Two first sign-ups racing on a fresh install: exactly one becomes admin.
+  Races on the first-user admin bootstrap, on real connections.
 
-  The sandbox cannot show this. It gives a test one connection, so two
+  The sandbox cannot show a race. It gives a test one connection, so two
   "concurrent" transactions queue on it and the second always sees the first
-  committed. Each sign-up here therefore runs on its own real connection
+  committed. Each contender here therefore runs on its own connection
   (`Ecto.Adapters.SQL.Sandbox.unboxed_run/2`) and commits for real, which is
   why the module is synchronous (ExUnit runs it after every async module, with
-  nothing else in flight), why `on_exit` deletes what it committed, and why
-  the race test reopens the bootstrap and closes it again itself.
+  nothing else in flight), why `on_exit` deletes the users it committed, and
+  why the race tests reopen the bootstrap and close it again themselves.
 
-  The race is staged so that neither transaction has committed when both
-  reach the promotion check: each inserts its user, then both are released
-  together. Without the lock both see themselves as the only user and both
-  are promoted. With it, the second waits for the first to commit and then
-  finds the install already bootstrapped. The only timing involved is a
-  bounded wait for the second check, which under the lock cannot arrive until
-  the first transaction is allowed to commit.
+  Each race is staged so that neither transaction has committed when both
+  reach the contended step: both are released together, the first to finish
+  it is noted, and only then are both allowed to commit. An atomic claim makes
+  the second wait for the first to commit and then lose. A claim split into a
+  read and a write lets both read "open" before either writes, and both win.
+  The only timing involved is a bounded wait for the second contender, which
+  under an atomic claim cannot finish until the first is allowed to commit.
   """
   use Tymeslot.DataCase, async: false
 
@@ -26,15 +26,14 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
   import Tymeslot.Factory
 
   alias Ecto.Adapters.SQL.Sandbox
-  alias Tymeslot.AppSettings.AppSettingsQueries
+  alias Tymeslot.AppSettings.{AppSettingsQueries, AppSettingsSchema}
   alias Tymeslot.Auth.{AdminBootstrap, UserSchema}
   alias Tymeslot.Repo
   alias Tymeslot.Test.AdminBootstrapHelpers
 
-  # How long to wait for a second promotion check before letting the first
-  # transaction commit. Under the lock the second check never arrives inside
-  # it; without the lock it arrives almost at once.
-  @second_check_window 500
+  # How long to wait for the second contender before letting the first
+  # transaction commit.
+  @second_contender_window 500
 
   setup do
     emails =
@@ -49,49 +48,41 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
     %{emails: emails}
   end
 
-  test "concurrent first sign-ups promote exactly one user", %{emails: emails} do
-    # The race needs a fresh install, committed where both connections see it,
-    # and closed again afterwards as `test_helper.exs` left it.
-    Sandbox.unboxed_run(Repo, fn -> AdminBootstrapHelpers.reopen_admin_bootstrap() end)
+  # The property the bootstrap stands on. `only_user?` cannot mask a
+  # non-atomic claim here, because no users are involved.
+  test "two concurrent claims on an open bootstrap yield exactly one winner" do
+    results =
+      with_open_bootstrap(fn ->
+        race(for _n <- 1..2, do: fn -> AppSettingsQueries.claim_admin_bootstrap() end)
+      end)
 
-    try do
-      assert Enum.count(race_first_sign_ups(emails), & &1.is_admin) == 1
-    after
-      Sandbox.unboxed_run(Repo, &AdminBootstrapHelpers.close!/0)
-    end
+    assert Enum.sort(results) == [false, true]
   end
 
-  defp race_first_sign_ups(emails) do
-    parent = self()
+  test "concurrent first sign-ups promote exactly one user", %{emails: emails} do
+    users =
+      with_open_bootstrap(fn ->
+        race(
+          for email <- emails do
+            fn ->
+              user = insert(:user, email: email)
+              {:ok, user} = AdminBootstrap.maybe_promote_first_user(user)
+              user
+            end
+          end
+        )
+      end)
 
-    tasks =
-      for email <- emails do
-        Task.async(fn -> sign_up(parent, email) end)
-      end
-
-    for _task <- tasks, do: assert_receive({:inserted, _pid}, 5_000)
-    Enum.each(tasks, &send(&1.pid, :check))
-
-    assert_receive {:checked, _first}, 5_000
-
-    receive do
-      {:checked, _second} -> :ok
-    after
-      @second_check_window -> :ok
-    end
-
-    Enum.each(tasks, &send(&1.pid, :commit))
-
-    Enum.map(tasks, &Task.await(&1, 10_000))
+    assert Enum.count(users, & &1.is_admin) == 1
   end
 
   # Every sign-up on an established install passes through here, so it must
-  # not queue on the global bootstrap lock. Another connection holds that lock
-  # for the whole test; a sign-up that tried to take it would never return.
-  test "a sign-up on a bootstrapped install does not wait for the bootstrap lock" do
-    AppSettingsQueries.mark_admin_bootstrapped()
+  # not queue on the settings row. Another connection holds that row locked
+  # for the whole test; a sign-up that tried to claim it would never return.
+  test "a sign-up on a bootstrapped install does not wait on the settings row" do
+    assert AppSettingsQueries.admin_bootstrapped?()
     user = insert(:user)
-    holder = hold_bootstrap_lock()
+    holder = hold_settings_row()
 
     task = Task.async(fn -> AdminBootstrap.maybe_promote_first_user(user) end)
 
@@ -104,38 +95,69 @@ defmodule Tymeslot.Auth.AdminBootstrapConcurrencyTest do
     end
   end
 
-  defp hold_bootstrap_lock do
+  defp with_open_bootstrap(fun) do
+    Sandbox.unboxed_run(Repo, fn -> AdminBootstrapHelpers.reopen_admin_bootstrap() end)
+
+    try do
+      fun.()
+    after
+      Sandbox.unboxed_run(Repo, &AdminBootstrapHelpers.close!/0)
+    end
+  end
+
+  # Runs each step in its own committed transaction on its own connection,
+  # releasing them together and committing only once the first has finished
+  # and the second has had its window. Returns the steps' results.
+  defp race(steps) do
+    parent = self()
+    tasks = Enum.map(steps, fn step -> Task.async(fn -> contend(parent, step) end) end)
+
+    for _task <- tasks, do: assert_receive({:ready, _pid}, 5_000)
+    Enum.each(tasks, &send(&1.pid, :go))
+
+    assert_receive {:done, _first}, 5_000
+
+    receive do
+      {:done, _second} -> :ok
+    after
+      @second_contender_window -> :ok
+    end
+
+    Enum.each(tasks, &send(&1.pid, :commit))
+    Enum.map(tasks, &Task.await(&1, 10_000))
+  end
+
+  defp contend(parent, step) do
+    Sandbox.unboxed_run(Repo, fn ->
+      {:ok, result} =
+        Repo.transaction(fn ->
+          send(parent, {:ready, self()})
+          receive do: (:go -> :ok)
+
+          result = step.()
+          send(parent, {:done, self()})
+          receive do: (:commit -> result)
+        end)
+
+      result
+    end)
+  end
+
+  defp hold_settings_row do
     parent = self()
 
     holder =
       spawn(fn ->
         Sandbox.unboxed_run(Repo, fn ->
           Repo.transaction(fn ->
-            AppSettingsQueries.lock_admin_bootstrap()
-            send(parent, :lock_held)
+            Repo.one!(from(s in AppSettingsSchema, where: s.id == 1, lock: "FOR UPDATE"))
+            send(parent, :row_locked)
             receive do: (:release -> :ok)
           end)
         end)
       end)
 
-    assert_receive :lock_held, 5_000
+    assert_receive :row_locked, 5_000
     holder
-  end
-
-  defp sign_up(parent, email) do
-    Sandbox.unboxed_run(Repo, fn ->
-      {:ok, user} =
-        Repo.transaction(fn ->
-          user = insert(:user, email: email)
-          send(parent, {:inserted, self()})
-          receive do: (:check -> :ok)
-
-          {:ok, user} = AdminBootstrap.maybe_promote_first_user(user)
-          send(parent, {:checked, self()})
-          receive do: (:commit -> user)
-        end)
-
-      user
-    end)
   end
 end
