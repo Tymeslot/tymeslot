@@ -2756,7 +2756,12 @@ msgstr ""
 msgid "Your Tymeslot account has no password to reset."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/no_password_to_reset.ex
+#: lib/tymeslot/emails/shared/sign_in_provider.ex
 #, elixir-autogen, elixir-format
 msgid "single sign-on"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Someone just tried to create a new Tymeslot account with this email address, which already has an account. If it was you, sign in with %{provider} below."
 msgstr ""

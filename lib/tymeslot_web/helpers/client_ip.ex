@@ -18,8 +18,16 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   neither header outranks the other. Giving `X-Real-IP` precedence on the
   socket alone let one visitor resolve to two addresses, and therefore two
   rate-limit buckets, depending on whether a request arrived over HTTP or the
-  LiveView socket. A deployment whose proxy sets only `X-Real-IP` still
-  resolves from it, since it is the only entry.
+  LiveView socket.
+
+  Because the rightmost entry across both headers wins, a proxy that sets
+  only `X-Real-IP` but passes a client-supplied `X-Forwarded-For` through
+  unchanged lets the client choose its own address whenever that header
+  arrives after `X-Real-IP`. Operators must have the proxy strip or
+  overwrite `X-Forwarded-For` (nginx: `proxy_set_header X-Forwarded-For
+  $proxy_add_x_forwarded_for;` appends the real peer, which is then the
+  rightmost entry). The same holds for the conn path, which `RemoteIp`
+  resolves the same way.
   """
 
   alias Phoenix.LiveView

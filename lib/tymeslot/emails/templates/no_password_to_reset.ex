@@ -9,14 +9,14 @@ defmodule Tymeslot.Emails.Templates.NoPasswordToReset do
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Emails.Shared.{Buttons, Greeting, TemplateHelper, Text}
+  alias Tymeslot.Emails.Shared.{Buttons, Greeting, SignInProvider, TemplateHelper, Text}
 
   # Account security information, but nothing has changed and nothing is wrong.
   @intent :alert
 
   @spec render(Tymeslot.Emails.EmailService.user_map(), String.t()) :: String.t()
   def render(user, sign_in_url) do
-    provider = provider_label(user)
+    provider = SignInProvider.display_name(user)
 
     mjml_content = """
     #{Text.centered_html(Greeting.html(user), padding: "8px 0 4px 0", font_size: "16px")}
@@ -45,7 +45,7 @@ defmodule Tymeslot.Emails.Templates.NoPasswordToReset do
 
   @spec render_text(Tymeslot.Emails.EmailService.user_map(), String.t()) :: String.t()
   def render_text(user, sign_in_url) do
-    provider = provider_label(user)
+    provider = SignInProvider.display_name(user)
 
     """
     #{dgettext("emails", "No password to reset")}
@@ -68,8 +68,4 @@ defmodule Tymeslot.Emails.Templates.NoPasswordToReset do
       provider: provider
     )
   end
-
-  defp provider_label(%{provider: "google"}), do: "Google"
-  defp provider_label(%{provider: "github"}), do: "GitHub"
-  defp provider_label(_user), do: dgettext("emails", "single sign-on")
 end

@@ -45,4 +45,21 @@ defmodule Tymeslot.Emails.Templates.SignupAttemptNoticeTest do
       assert text =~ "Vous avez déjà un compte"
     end
   end
+
+  describe "for an account that signs in through a provider" do
+    test "says to sign in with the provider and offers no password reset" do
+      user = build_user_data(%{provider: "google"})
+
+      html = SignupAttemptNotice.render(user, @sign_in_url, @reset_url)
+      text = SignupAttemptNotice.render_text(user, @sign_in_url, @reset_url)
+
+      for body <- [html, text] do
+        assert body =~ "sign in with Google"
+        refute body =~ @reset_url
+        refute body =~ "reset your password"
+      end
+
+      assert html =~ ~s(href="#{@sign_in_url}")
+    end
+  end
 end

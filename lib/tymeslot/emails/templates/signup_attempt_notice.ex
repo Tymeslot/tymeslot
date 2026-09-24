@@ -9,7 +9,15 @@ defmodule Tymeslot.Emails.Templates.SignupAttemptNotice do
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Emails.Shared.{Buttons, Greeting, Sanitise, Styles, TemplateHelper, Text}
+  alias Tymeslot.Emails.Shared.{
+    Buttons,
+    Greeting,
+    Sanitise,
+    SignInProvider,
+    Styles,
+    TemplateHelper,
+    Text
+  }
 
   # Account security information about an attempt the owner may not have made.
   @intent :alert
@@ -19,11 +27,11 @@ defmodule Tymeslot.Emails.Templates.SignupAttemptNotice do
     mjml_content = """
     #{Text.centered_html(Greeting.html(user), padding: "8px 0 4px 0", font_size: "16px")}
 
-    #{Text.centered_text(dgettext("emails", "Someone just tried to create a new Tymeslot account with this email address, which already has an account. If it was you, sign in below, or reset your password if you can't remember it."), padding: "0 0 20px 0")}
+    #{Text.centered_text(explanation(user), padding: "0 0 20px 0")}
 
     #{Buttons.action_button(@intent, dgettext("emails", "Sign In to Tymeslot"), sign_in_url, full_width: true, size: :large)}
 
-    #{Text.centered_html(reset_link(reset_url), padding: "4px 0 0 0")}
+    #{reset_section(user, reset_url)}
 
     #{Text.system_footer_note(dgettext("emails", "If it wasn't you, you can ignore this email. No new account was created and nothing about your account has changed."))}
     """
@@ -47,16 +55,48 @@ defmodule Tymeslot.Emails.Templates.SignupAttemptNotice do
 
     #{Greeting.text(user)}
 
-    #{dgettext("emails", "Someone just tried to create a new Tymeslot account with this email address, which already has an account. If it was you, sign in below, or reset your password if you can't remember it.")}
+    #{explanation(user)}
 
     #{dgettext("emails", "Sign In to Tymeslot:")}
     #{sign_in_url}
-
-    #{dgettext("emails", "Reset your password:")}
-    #{reset_url}
-
+    #{reset_text(user, reset_url)}
     #{dgettext("emails", "If it wasn't you, you can ignore this email. No new account was created and nothing about your account has changed.")}
     """
+  end
+
+  # An account that signs in through a provider has no password to reset, so
+  # it is pointed at the provider instead of at the reset form.
+  defp explanation(user) do
+    if SignInProvider.social?(user) do
+      dgettext(
+        "emails",
+        "Someone just tried to create a new Tymeslot account with this email address, which already has an account. If it was you, sign in with %{provider} below.",
+        provider: SignInProvider.display_name(user)
+      )
+    else
+      dgettext(
+        "emails",
+        "Someone just tried to create a new Tymeslot account with this email address, which already has an account. If it was you, sign in below, or reset your password if you can't remember it."
+      )
+    end
+  end
+
+  defp reset_section(user, reset_url) do
+    if SignInProvider.social?(user),
+      do: "",
+      else: Text.centered_html(reset_link(reset_url), padding: "4px 0 0 0")
+  end
+
+  defp reset_text(user, reset_url) do
+    if SignInProvider.social?(user) do
+      ""
+    else
+      """
+
+      #{dgettext("emails", "Reset your password:")}
+      #{reset_url}
+      """
+    end
   end
 
   # A secondary, text-weight link under the one button, so the email keeps a
