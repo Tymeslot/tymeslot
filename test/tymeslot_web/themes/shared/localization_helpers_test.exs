@@ -2,12 +2,14 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
   @moduledoc """
   Covers `format_meeting_datetime/2`, which renders a meeting's start time on
   the payment return pages in the attendee's own timezone rather than raw UTC,
-  and its compact sibling used by lists that repeat the date on every row.
+  and its compact sibling used by lists that repeat the date on every row, plus
+  the month form a date takes versus a standalone month heading.
   """
 
   use ExUnit.Case, async: true
 
   @moduletag :utils
+  @moduletag :i18n
 
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
@@ -150,6 +152,26 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
 
     test "falls back to the raw input when the string is not a valid date" do
       assert LocalizationHelpers.format_full_date_label("not-a-date") == "not-a-date"
+    end
+  end
+
+  describe "month forms" do
+    test "a month inside a date takes the genitive in Ukrainian" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "uk")
+
+      assert LocalizationHelpers.format_date(~D[2026-06-15]) == "15 червня 2026"
+    end
+
+    test "a month inside a date is lowercase in French" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "fr")
+
+      assert LocalizationHelpers.format_date(~D[2026-06-15]) == "15 juin 2026"
+    end
+
+    test "a standalone month heading keeps the nominative in Ukrainian" do
+      Gettext.put_locale(TymeslotWeb.Gettext, "uk")
+
+      assert LocalizationHelpers.get_month_year_display(2026, 6) == "Червень 2026"
     end
   end
 end
