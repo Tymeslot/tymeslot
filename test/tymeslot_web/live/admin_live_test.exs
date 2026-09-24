@@ -13,7 +13,7 @@ defmodule TymeslotWeb.AdminLiveTest do
   alias Tymeslot.Analytics
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Auth.AdminUserQueries
   alias Tymeslot.Repo
   alias TymeslotWeb.Helpers.ClientIP
 
@@ -536,9 +536,9 @@ defmodule TymeslotWeb.AdminLiveTest do
       # Demote every admin except the current user, leaving them as the only
       # admin. The UI must offer no way to demote — instead an inline note
       # explains why.
-      UserQueries.list_admins()
+      AdminUserQueries.list_admins()
       |> Enum.reject(&(&1.id == admin.id))
-      |> Enum.each(fn other -> UserQueries.set_admin(other, false) end)
+      |> Enum.each(fn other -> AdminUserQueries.set_admin(other, false) end)
 
       {:ok, lv, html} = live(conn, ~p"/admin/users")
 
@@ -579,7 +579,7 @@ defmodule TymeslotWeb.AdminLiveTest do
     test "after self-demote, /admin redirects to /dashboard with a flash",
          %{conn: conn, admin: admin} do
       # Simulate the post-demote state: user is no longer admin.
-      {:ok, _user} = UserQueries.set_admin(admin, false)
+      {:ok, _user} = AdminUserQueries.set_admin(admin, false)
 
       conn = get(conn, ~p"/admin")
 
@@ -595,7 +595,7 @@ defmodule TymeslotWeb.AdminLiveTest do
         |> Changeset.change(onboarding_completed_at: DateTime.utc_now(:second))
         |> Repo.update()
 
-      {:ok, _user} = UserQueries.set_admin(admin, false)
+      {:ok, _user} = AdminUserQueries.set_admin(admin, false)
 
       {:ok, _lv, html} = live(conn, ~p"/dashboard")
 

@@ -9,7 +9,7 @@ defmodule Tymeslot.Auth.AdminRolesTest do
 
   import Tymeslot.Factory
 
-  alias Tymeslot.Auth.{AdminRoles, UserQueries}
+  alias Tymeslot.Auth.{AdminRoles, AdminUserQueries}
   alias Tymeslot.Repo
 
   describe "promote/2" do
@@ -46,7 +46,7 @@ defmodule Tymeslot.Auth.AdminRolesTest do
       actor = insert(:user, is_admin: true)
       _other_admin = insert(:user, is_admin: true)
       target = insert(:user)
-      {:ok, _demoted} = UserQueries.set_admin(actor, false)
+      {:ok, _demoted} = AdminUserQueries.set_admin(actor, false)
 
       assert {:error, :forbidden} = AdminRoles.promote(actor, target.id)
       refute Repo.reload!(target).is_admin
@@ -83,7 +83,7 @@ defmodule Tymeslot.Auth.AdminRolesTest do
       actor = insert(:user, is_admin: true)
       target = insert(:user, is_admin: true)
       _third_admin = insert(:user, is_admin: true)
-      {:ok, _demoted} = UserQueries.set_admin(actor, false)
+      {:ok, _demoted} = AdminUserQueries.set_admin(actor, false)
 
       assert {:error, :forbidden} = AdminRoles.demote(actor, target.id)
       assert Repo.reload!(target).is_admin

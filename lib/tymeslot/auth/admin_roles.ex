@@ -22,7 +22,7 @@ defmodule Tymeslot.Auth.AdminRoles do
 
   require Logger
 
-  alias Tymeslot.Auth.{UserQueries, UserSchema}
+  alias Tymeslot.Auth.{AdminUserQueries, UserQueries, UserSchema}
   alias Tymeslot.Repo
 
   @type actor :: UserSchema.t() | :cli
@@ -48,7 +48,7 @@ defmodule Tymeslot.Auth.AdminRoles do
       Repo.transaction(fn ->
         # Locked as in demote/2, so the actor cannot be demoted between the
         # authorisation check and the promotion it allows.
-        UserQueries.lock_admins()
+        AdminUserQueries.lock_admins()
         authorise!(actor)
 
         case UserQueries.get_user(target_user_id) do
@@ -59,7 +59,7 @@ defmodule Tymeslot.Auth.AdminRoles do
             target
 
           {:ok, target} ->
-            case UserQueries.set_admin(target, true) do
+            case AdminUserQueries.set_admin(target, true) do
               {:ok, updated} ->
                 log_role_change(:promote, actor, updated.id)
                 updated
@@ -106,7 +106,7 @@ defmodule Tymeslot.Auth.AdminRoles do
   defp demote_in_transaction(actor, target_user_id) do
     # Lock all admin rows before counting so that concurrent demotions
     # see a consistent view and cannot race past the last-admin guard.
-    UserQueries.lock_admins()
+    AdminUserQueries.lock_admins()
     authorise!(actor)
 
     case UserQueries.get_user(target_user_id) do
@@ -124,7 +124,7 @@ defmodule Tymeslot.Auth.AdminRoles do
         Repo.rollback(:last_admin)
 
       :ok ->
-        case UserQueries.set_admin(target, false) do
+        case AdminUserQueries.set_admin(target, false) do
           {:ok, updated} ->
             log_role_change(:demote, actor, updated.id)
             updated
@@ -178,7 +178,7 @@ defmodule Tymeslot.Auth.AdminRoles do
   defp check_last_admin(_actor, %UserSchema{is_admin: false}), do: :ok
 
   defp check_last_admin(_actor, %UserSchema{is_admin: true}) do
-    if UserQueries.count_admins() <= 1 do
+    if AdminUserQueries.count_admins() <= 1 do
       {:error, :last_admin}
     else
       :ok

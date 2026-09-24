@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Integration.SlackOAuthJourneyTest do
 
   alias Phoenix.Flash
   alias Phoenix.Token
-  alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Onboarding.OnboardingQueries
   alias Tymeslot.Slack
   alias Tymeslot.Slack.SlackIntegrationSchema
   alias TymeslotWeb.Endpoint
@@ -128,7 +128,7 @@ defmodule TymeslotWeb.Integration.SlackOAuthJourneyTest do
   describe "LiveView with ?slack_pending=<id>" do
     setup do
       user = insert(:user)
-      {:ok, user} = UserQueries.mark_onboarding_complete(user)
+      {:ok, user} = OnboardingQueries.mark_onboarding_complete(user)
 
       # Stub subscription and email mocks that the dashboard LiveView needs
       stub(Tymeslot.Payments.SubscriptionManagerMock, :should_show_branding?, fn _user_id ->

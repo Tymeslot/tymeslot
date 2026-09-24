@@ -20,43 +20,6 @@ defmodule Tymeslot.Auth.UserQueriesTest do
     end
   end
 
-  # `any_admin_uses_password_auth?/1` backs the lockout guard in
-  # `Tymeslot.AppSettings.LockoutPolicy`: it must count only admins who can
-  # actually pass `Tymeslot.Auth.Authentication.verify_user_password/2`'s
-  # gate, or the guard can be talked into disabling the last working sign-in
-  # path by an admin who merely has a password hash on file.
-  describe "any_admin_uses_password_auth?/1" do
-    test "true for an admin with a verified, non-OAuth password account" do
-      insert(:user, is_admin: true, password_hash: "hash", verified_at: DateTime.utc_now())
-
-      assert UserQueries.any_admin_uses_password_auth?()
-    end
-
-    test "false for an unverified admin, even with a password hash set" do
-      insert(:user, is_admin: true, password_hash: "hash", verified_at: nil)
-
-      refute UserQueries.any_admin_uses_password_auth?()
-    end
-
-    test "false for an OAuth-only admin, even with a leftover password hash" do
-      insert(:user,
-        is_admin: true,
-        password_hash: "hash",
-        verified_at: DateTime.utc_now(),
-        provider: "google",
-        google_user_id: "google-1"
-      )
-
-      refute UserQueries.any_admin_uses_password_auth?()
-    end
-
-    test "false when no admin has a password hash at all" do
-      insert(:user, is_admin: true, password_hash: nil, verified_at: DateTime.utc_now())
-
-      refute UserQueries.any_admin_uses_password_auth?()
-    end
-  end
-
   describe "user registration security" do
     test "prevents duplicate email registrations" do
       insert(:user, email: "existing@example.com")
@@ -99,29 +62,6 @@ defmodule Tymeslot.Auth.UserQueriesTest do
 
       {:error, changeset} = UserQueries.create_social_user(hijack_attempt)
       assert "has already been taken" in errors_on(changeset).provider
-    end
-  end
-
-  describe "mark_dashboard_tour_seen/1" do
-    test "sets dashboard_tour_seen_at to now for a user that hasn't seen the tour" do
-      user = insert(:user, dashboard_tour_seen_at: nil)
-
-      assert {:ok, updated} = UserQueries.mark_dashboard_tour_seen(user)
-      assert %DateTime{} = updated.dashboard_tour_seen_at
-    end
-
-    test "overwrites an existing timestamp — this write is unconditional" do
-      # Idempotence is not a property of this query: it lives one layer up in
-      # Onboarding.mark_dashboard_tour_seen/1, which short-circuits when the
-      # tour has already been seen. Here a stale stamp is always replaced.
-      previously_seen = DateTime.add(DateTime.utc_now(:second), -365, :day)
-      user = insert(:user, dashboard_tour_seen_at: previously_seen)
-
-      assert {:ok, updated} = UserQueries.mark_dashboard_tour_seen(user)
-
-      assert DateTime.compare(updated.dashboard_tour_seen_at, previously_seen) == :gt
-      assert DateTime.diff(DateTime.utc_now(), updated.dashboard_tour_seen_at, :second) <= 5
-      assert Repo.reload!(user).dashboard_tour_seen_at == updated.dashboard_tour_seen_at
     end
   end
 

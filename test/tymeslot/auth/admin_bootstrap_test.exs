@@ -7,7 +7,7 @@ defmodule Tymeslot.Auth.AdminBootstrapTest do
 
   alias ExUnit.CaptureLog
   alias Tymeslot.AppSettings.AppSettingsQueries
-  alias Tymeslot.Auth.{AdminBootstrap, UserQueries, UserSchema}
+  alias Tymeslot.Auth.{AdminBootstrap, AdminUserQueries, UserQueries, UserSchema}
 
   import Tymeslot.Factory
 
@@ -21,7 +21,7 @@ defmodule Tymeslot.Auth.AdminBootstrapTest do
       assert {:ok, promoted} = AdminBootstrap.maybe_promote_first_user(user)
       assert promoted.is_admin
 
-      assert UserQueries.count_admins() == 1
+      assert AdminUserQueries.count_admins() == 1
     end
 
     test "records that the install has been bootstrapped" do
@@ -44,7 +44,7 @@ defmodule Tymeslot.Auth.AdminBootstrapTest do
 
       assert {:ok, returned} = AdminBootstrap.maybe_promote_first_user(stranger)
       refute returned.is_admin
-      refute UserQueries.any_admin?()
+      refute AdminUserQueries.any_admin?()
     end
 
     test "does NOT promote when other users already exist" do
@@ -54,7 +54,7 @@ defmodule Tymeslot.Auth.AdminBootstrapTest do
       assert {:ok, returned} = AdminBootstrap.maybe_promote_first_user(newcomer)
       refute returned.is_admin
 
-      assert UserQueries.count_admins() == 0
+      assert AdminUserQueries.count_admins() == 0
     end
 
     test "does NOT promote when other users exist even if no admin exists" do
@@ -65,11 +65,11 @@ defmodule Tymeslot.Auth.AdminBootstrapTest do
       _existing_two = insert(:user)
       newcomer = insert(:user)
 
-      refute UserQueries.any_admin?()
+      refute AdminUserQueries.any_admin?()
 
       assert {:ok, returned} = AdminBootstrap.maybe_promote_first_user(newcomer)
       refute returned.is_admin
-      refute UserQueries.any_admin?()
+      refute AdminUserQueries.any_admin?()
     end
   end
 

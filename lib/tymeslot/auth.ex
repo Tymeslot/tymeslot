@@ -10,6 +10,7 @@ defmodule Tymeslot.Auth do
   alias Tymeslot.Auth.{
     AccountDeletion,
     AdminRoles,
+    AdminUserQueries,
     Authentication,
     EmailChange,
     ErrorFormatter,
@@ -381,36 +382,36 @@ defmodule Tymeslot.Auth do
   @doc """
   Lists all users in the system, ordered by id ascending.
   """
-  defdelegate list_users(), to: UserQueries, as: :list_all_users
+  defdelegate list_users(), to: AdminUserQueries, as: :list_all_users
 
   @doc """
   Counts all users in the system.
   """
-  defdelegate count_users(), to: UserQueries
+  defdelegate count_users(), to: AdminUserQueries
 
   @doc """
   Counts admin users in the system.
   """
-  defdelegate count_admins(), to: UserQueries
+  defdelegate count_admins(), to: AdminUserQueries
 
   @doc """
   Returns `true` if at least one admin can sign in via email + password.
   """
-  defdelegate any_admin_uses_password_auth?(), to: UserQueries
+  defdelegate any_admin_uses_password_auth?(), to: AdminUserQueries
 
   @doc """
   Counts admins, other than `user_id`, who can actually sign in today.
-  See `Tymeslot.Auth.UserQueries.count_signin_capable_admins_excluding/3`.
+  See `Tymeslot.Auth.AdminUserQueries.count_signin_capable_admins_excluding/3`.
   """
   @spec count_signin_capable_admins_excluding(integer(), [atom()]) :: non_neg_integer()
   def count_signin_capable_admins_excluding(user_id, usable_sso_providers) do
-    UserQueries.count_signin_capable_admins_excluding(user_id, usable_sso_providers)
+    AdminUserQueries.count_signin_capable_admins_excluding(user_id, usable_sso_providers)
   end
 
   @doc """
   Returns `true` if at least one admin account exists.
   """
-  defdelegate any_admin?(), to: UserQueries
+  defdelegate any_admin?(), to: AdminUserQueries
 
   @doc """
   Promotes the user identified by `user_id` to admin.

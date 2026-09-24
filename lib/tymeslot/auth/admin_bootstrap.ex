@@ -25,7 +25,7 @@ defmodule Tymeslot.Auth.AdminBootstrap do
   require Logger
 
   alias Tymeslot.AppSettings.AppSettingsQueries
-  alias Tymeslot.Auth.{UserQueries, UserSchema}
+  alias Tymeslot.Auth.{AdminUserQueries, UserSchema}
   alias Tymeslot.Repo
 
   @doc """
@@ -68,8 +68,8 @@ defmodule Tymeslot.Auth.AdminBootstrap do
   # with users already present (created by a path that skips this module) has
   # no first user to promote.
   defp promote_if_only_user(user, repo) do
-    if UserQueries.only_user?(user, repo) do
-      case UserQueries.set_admin(user, true, repo) do
+    if AdminUserQueries.only_user?(user, repo) do
+      case AdminUserQueries.set_admin(user, true, repo) do
         {:ok, promoted} ->
           Logger.info("Promoted first registered user to admin", user_id: promoted.id)
           promoted
@@ -91,7 +91,7 @@ defmodule Tymeslot.Auth.AdminBootstrap do
   """
   @spec warn_if_orphaned_install() :: :ok
   def warn_if_orphaned_install do
-    if UserQueries.any_user?() and not UserQueries.any_admin?() do
+    if AdminUserQueries.any_user?() and not AdminUserQueries.any_admin?() do
       Logger.warning(
         "No admin users exist. Promote one with `mix tymeslot.promote_admin <email>` " <>
           "or `bin/tymeslot rpc 'Tymeslot.Release.promote_admin(\"<email>\")'`."
