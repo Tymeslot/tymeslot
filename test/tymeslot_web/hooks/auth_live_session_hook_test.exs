@@ -98,8 +98,8 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
     end
   end
 
-  describe "on_mount({:redirect_if_authenticated, actions}, ...)" do
-    @hook {:redirect_if_authenticated, [:login, :signup]}
+  describe "on_mount({:redirect_if_authenticated, opts}, ...)" do
+    @hook {:redirect_if_authenticated, actions: [:login, :signup], events: ["submit_signup"]}
 
     test "lets an anonymous visitor through" do
       socket = build_socket(%{live_action: :login})
@@ -123,7 +123,13 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHookTest do
     test "lets a signed-in user reach an action that is not listed" do
       user = insert(:user)
       session_record = insert(:user_session, user: user)
-      socket = build_socket(%{live_action: :reset_password_form})
+      # Mounted at the router, as the patch and event guards it attaches need.
+      socket = %{
+        build_socket(%{live_action: :reset_password_form})
+        | router: TymeslotWeb.Router,
+          private: %{lifecycle: %Phoenix.LiveView.Lifecycle{}}
+      }
+
       session = %{"user_token" => session_record.token}
 
       assert {:cont, updated_socket} = AuthLiveSessionHook.on_mount(@hook, %{}, session, socket)

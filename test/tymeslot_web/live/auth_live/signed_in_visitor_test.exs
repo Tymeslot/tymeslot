@@ -14,7 +14,15 @@ defmodule TymeslotWeb.AuthLive.SignedInVisitorTest do
   import Tymeslot.Factory
 
   alias Phoenix.Flash
-  alias Tymeslot.Auth.{Session, UserSessionQueries, UserSessionSchema, UserTokenQueries}
+
+  alias Tymeslot.Auth.{
+    Session,
+    UserSchema,
+    UserSessionQueries,
+    UserSessionSchema,
+    UserTokenQueries
+  }
+
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, Token}
 
@@ -70,6 +78,51 @@ defmodule TymeslotWeb.AuthLive.SignedInVisitorTest do
 
     test "the reset-request screen still renders", %{conn: conn} do
       assert {:ok, _view, _html} = live(conn, ~p"/auth/reset-password")
+    end
+
+    test "the verify-email screen still renders", %{conn: conn} do
+      assert {:ok, _view, _html} = live(conn, ~p"/auth/verify-email")
+    end
+  end
+
+  # AuthLive moves between its screens with push_patch, which never re-runs
+  # on_mount, so the guard must also hold on handle_params and on the events.
+  describe "screens reached without a fresh mount" do
+    test "patching from the reset screen to sign-up redirects to the dashboard", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
+
+      render_patch(view, ~p"/auth/signup")
+
+      assert_redirect(view, "/dashboard")
+    end
+
+    test "patching from the reset screen to login redirects to the dashboard", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
+
+      render_patch(view, ~p"/auth/login")
+
+      assert_redirect(view, "/dashboard")
+    end
+
+    test "the sign-up event is refused while signed in", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
+      email = "second-account-#{System.unique_integer([:positive])}@example.com"
+
+      csrf_html = view |> element("input[name=_csrf_token]") |> render()
+      [_match, csrf_token] = Regex.run(~r/value="([^"]+)"/, csrf_html)
+
+      render_hook(view, "submit_signup", %{
+        "user" => %{
+          "email" => email,
+          "password" => "ValidPassword123!",
+          "terms_accepted" => "true",
+          "website" => ""
+        },
+        "_csrf_token" => csrf_token
+      })
+
+      assert_redirect(view, "/dashboard")
+      refute Repo.get_by(UserSchema, email: email)
     end
   end
 

@@ -6,11 +6,12 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
       to the login page when nobody is signed in.
     * `:fetch_current_user` assigns `:current_user`, `nil` when nobody is
       signed in.
-    * `{:redirect_if_authenticated, actions}` sends a signed-in user to the
-      post-login page when the LiveView mounts on one of `actions`. The login
-      and sign-up screens use it; the emailed-link screens that share their
-      LiveView (password reset, email verification) stay reachable while
-      signed in.
+    * `{:redirect_if_authenticated, actions: actions, events: events}` sends a
+      signed-in user to the post-login page when the LiveView mounts or is
+      patched onto one of `actions`, and refuses the listed `events`. The
+      login and sign-up screens use it; the emailed-link screens that share
+      their LiveView (password reset, email verification) stay reachable
+      while signed in.
 
   All of them also assign `:is_email_verified`. On the dead render the user
   already resolved by `TymeslotWeb.Plugs.FetchCurrentUser` is reused, so the
@@ -60,18 +61,45 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
     {:cont, assign_current_user(socket, session)}
   end
 
-  def on_mount({:redirect_if_authenticated, actions}, _params, session, socket)
-      when is_list(actions) do
+  def on_mount({:redirect_if_authenticated, opts}, _params, session, socket) when is_list(opts) do
+    actions = Keyword.fetch!(opts, :actions)
+    events = Keyword.get(opts, :events, [])
     socket = assign_current_user(socket, session)
 
-    if socket.assigns.current_user && socket.assigns[:live_action] in actions do
-      {:halt,
-       socket
-       |> put_flash(:info, dgettext("auth", "You are already logged in."))
-       |> redirect(to: Config.success_redirect_path())}
-    else
-      {:cont, socket}
+    cond do
+      is_nil(socket.assigns.current_user) ->
+        {:cont, socket}
+
+      socket.assigns[:live_action] in actions ->
+        {:halt, send_signed_in_user_on(socket)}
+
+      true ->
+        # A LiveView that switches screens with push_patch never mounts again,
+        # so the same check has to run on every patch, and the listed events
+        # (a sign-up submission, say) are refused whichever screen sent them.
+        {:cont,
+         socket
+         |> attach_hook(:redirect_if_authenticated_params, :handle_params, fn _params,
+                                                                              _uri,
+                                                                              socket ->
+           if socket.assigns[:live_action] in actions,
+             do: {:halt, send_signed_in_user_on(socket)},
+             else: {:cont, socket}
+         end)
+         |> attach_hook(:redirect_if_authenticated_events, :handle_event, fn event,
+                                                                             _params,
+                                                                             socket ->
+           if event in events,
+             do: {:halt, send_signed_in_user_on(socket)},
+             else: {:cont, socket}
+         end)}
     end
+  end
+
+  defp send_signed_in_user_on(socket) do
+    socket
+    |> put_flash(:info, dgettext("auth", "You are already logged in."))
+    |> redirect(to: Config.success_redirect_path())
   end
 
   defp assign_current_user(socket, session) do

@@ -148,7 +148,8 @@ defmodule TymeslotWeb.Router do
     live_session :auth,
       on_mount: [
         TymeslotWeb.Hooks.LocaleHook,
-        {TymeslotWeb.Hooks.AuthLiveSessionHook, {:redirect_if_authenticated, [:login, :signup]}},
+        {TymeslotWeb.Hooks.AuthLiveSessionHook,
+         {:redirect_if_authenticated, actions: [:login, :signup], events: ["submit_signup"]}},
         TymeslotWeb.Hooks.RouteBundleHook
       ] do
       live "/auth/login", AuthLive, :login
