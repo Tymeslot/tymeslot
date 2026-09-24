@@ -155,6 +155,9 @@ defmodule Tymeslot.Emails.EmailService do
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_signup_attempt_notice(user, sign_in_url, reset_url), to: AuthEmails
 
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_social_signup_confirmation(recipient, provider, confirm_url), to: AuthEmails
+
   # Account emails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour

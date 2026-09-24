@@ -8,11 +8,12 @@ defmodule TymeslotWeb.OAuthController do
   use Gettext, backend: TymeslotWeb.Gettext
   require Logger
 
-  alias Tymeslot.Auth.{AuthActions, Session, SocialAuthentication}
-  alias Tymeslot.Auth.OAuth.{FlowHandler, Providers}
+  alias Tymeslot.Auth.{AuthActions, SocialAuthentication}
+  alias Tymeslot.Auth.OAuth.{FlowHandler, Providers, SignupConfirmation}
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.{RateLimiter, SecurityLogger}
   alias TymeslotWeb.AuthControllerHelpers
+  alias TymeslotWeb.EmailLinkConfirmHTML
   alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
 
   @type provider :: Providers.provider()
@@ -189,18 +190,17 @@ defmodule TymeslotWeb.OAuthController do
     }
 
     case SocialAuthentication.complete_registration(pending, params, metadata) do
-      # A typed address that already has an account: answered exactly as a
-      # new account awaiting verification is, below.
-      {:ok, provider, :existing_account, delivery} ->
+      # An address typed into the form, taken or free: nothing was created,
+      # and both are answered with the same page, flash and session.
+      {:ok, provider, :check_email, delivery} ->
         conn
         |> delete_session(:pending_oauth_registration)
-        |> then(&respond_to_completion({:verification_required, &1, provider, delivery}))
+        |> check_your_email(provider, delivery)
 
       {:ok, provider, user, :created} ->
         conn
         |> delete_session(:pending_oauth_registration)
         |> FlowHandler.sign_in(user, provider)
-        |> forget_unverified_account()
         |> respond_to_completion()
 
       # The account already existed (the form was submitted twice): this is a
@@ -216,36 +216,20 @@ defmodule TymeslotWeb.OAuthController do
     end
   end
 
-  # The session cookie is signed, not encrypted, so a visitor can read it. A
-  # new account awaiting verification must leave it just as a taken address
-  # does, with no account in it; the verify-email page then asks the visitor
-  # to sign in again for a new link.
-  defp forget_unverified_account({:verification_required, conn, provider, delivery}),
-    do: {:verification_required, Session.clear_unverified_user(conn), provider, delivery}
-
-  defp forget_unverified_account(result), do: result
-
-  defp respond_to_completion({:ok, authed_conn, provider}) do
-    authed_conn
-    |> put_flash(:info, get_welcome_message(provider))
-    |> redirect(to: ~p"/dashboard")
-  end
-
-  defp respond_to_completion({:verification_required, conn, provider, delivery}) do
+  defp check_your_email(conn, provider, delivery) do
     message =
       case delivery do
         :sent ->
           dgettext(
             "auth",
-            "Welcome! You've successfully signed up with %{provider}. Please check your email to verify your account.",
+            "Check your email: we've sent a link to finish signing up with %{provider}.",
             provider: provider_name(provider)
           )
 
-        _not_sent ->
+        :rate_limited ->
           dgettext(
             "auth",
-            "Welcome! You've successfully signed up with %{provider}. Verification email could not be sent - please contact support if needed.",
-            provider: provider_name(provider)
+            "We couldn't send the link to finish signing up just now. Please try again later."
           )
       end
 
@@ -254,11 +238,76 @@ defmodule TymeslotWeb.OAuthController do
     |> redirect(to: ~p"/auth/verify-email")
   end
 
+  @doc """
+  Landing page for the link that finishes a social sign-up with a typed
+  address. Renders a confirmation button only: opening the link must not
+  create the account, or a mail scanner prefetching it would.
+  """
+  @spec confirm_signup(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def confirm_signup(conn, %{"token" => token}) do
+    conn
+    |> put_layout(html: false)
+    |> put_view(html: EmailLinkConfirmHTML)
+    |> render(:confirm,
+      action: ~p"/auth/oauth/confirm/#{token}",
+      icon: "hero-envelope",
+      title: dgettext("auth", "Finish signing up"),
+      body:
+        dgettext(
+          "auth",
+          "Press the button below to confirm your email address and create your account."
+        ),
+      button: dgettext("auth", "Create my account")
+    )
+  end
+
+  @doc """
+  Finishes a social sign-up from its emailed link: creates the account,
+  verified, and signs the owner in.
+  """
+  @spec finish_signup(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def finish_signup(conn, %{"token" => token}) do
+    with_rate_limit(conn, :completion, fn ->
+      metadata = %{
+        ip: ClientIP.get(conn),
+        user_agent: ClientIP.get_user_agent(conn),
+        source: "oauth_signup"
+      }
+
+      case SignupConfirmation.confirm(token, metadata) do
+        {:ok, provider, user} ->
+          conn
+          |> FlowHandler.sign_in(user, provider)
+          |> respond_to_completion()
+
+        {:error, :invalid_link} ->
+          conn
+          |> put_flash(
+            :error,
+            dgettext("auth", "This link is no longer valid. Please sign in to continue.")
+          )
+          |> redirect(to: ~p"/auth/login")
+      end
+    end)
+  end
+
+  defp respond_to_completion({:ok, authed_conn, provider}) do
+    authed_conn
+    |> put_flash(:info, get_welcome_message(provider))
+    |> redirect(to: ~p"/dashboard")
+  end
+
   defp respond_to_completion({:error, :session_failed, _provider, conn}) do
     conn
     |> put_flash(:error, dgettext("auth", "Failed to create session. Please try again."))
     |> redirect(to: ~p"/auth/login")
   end
+
+  # Only an account created with an unproved email awaits verification, and
+  # neither completion path creates one any more; one made before that change
+  # is answered as a provider sign-in to it would be.
+  defp respond_to_completion({:verification_required, _conn, _provider, _delivery} = result),
+    do: respond_to_oauth_result(result, success_path: ~p"/dashboard", login_path: ~p"/auth/login")
 
   defp completion_failed(conn, :registration_disabled, _pending) do
     conn

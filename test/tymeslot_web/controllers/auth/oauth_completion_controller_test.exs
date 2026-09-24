@@ -105,10 +105,19 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
       assert [same, same] = outcomes
       assert {"/auth/verify-email", _flash, %{}} = same
 
-      # The fresh address got its account; the taken one got none, and its
-      # owner was sent the sign-up attempt notice instead.
-      assert Repo.get_by(UserSchema, github_user_id: "111")
+      # Neither got an account: the fresh address was sent a link to finish
+      # signing up, and the taken one's owner the sign-up attempt notice.
+      refute Repo.get_by(UserSchema, github_user_id: "111")
       refute Repo.get_by(UserSchema, github_user_id: "222")
+
+      assert [_link] =
+               all_enqueued(
+                 worker: EmailWorker,
+                 args: %{
+                   "action" => "send_social_signup_confirmation",
+                   "email" => "fresh@example.com"
+                 }
+               )
 
       assert [notice] =
                all_enqueued(

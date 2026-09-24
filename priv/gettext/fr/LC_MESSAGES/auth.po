@@ -439,16 +439,6 @@ msgstr "Content de vous revoir !"
 msgid "Welcome! You've successfully signed up with %{provider}."
 msgstr "Bienvenue ! Vous vous êtes inscrit avec succès via %{provider}."
 
-#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Welcome! You've successfully signed up with %{provider}. Please check your email to verify your account."
-msgstr "Bienvenue ! Vous vous êtes inscrit avec succès via %{provider}. Veuillez consulter votre e-mail pour vérifier votre compte."
-
-#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Welcome! You've successfully signed up with %{provider}. Verification email could not be sent - please contact support if needed."
-msgstr "Bienvenue ! Vous vous êtes inscrit avec succès via %{provider}. L’e-mail de vérification n’a pas pu être envoyé : veuillez contacter le support si nécessaire."
-
 #: lib/tymeslot_web/controllers/auth/session_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Your email has been successfully verified! Please log in to continue."
@@ -1044,3 +1034,33 @@ msgstr "Votre session d'inscription a expiré. Veuillez vous reconnecter."
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password. If you signed up recently, check your inbox for the verification link."
 msgstr "Adresse e-mail ou mot de passe invalide. Si vous vous êtes inscrit récemment, consultez votre boîte de réception pour trouver le lien de vérification."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Check your email: we've sent a link to finish signing up with %{provider}."
+msgstr "Consultez vos e-mails : nous vous avons envoyé un lien pour finaliser votre inscription avec %{provider}."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Create my account"
+msgstr "Créer mon compte"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Finish signing up"
+msgstr "Finaliser l’inscription"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Press the button below to confirm your email address and create your account."
+msgstr "Cliquez sur le bouton ci-dessous pour confirmer votre adresse e-mail et créer votre compte."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "This link is no longer valid. Please sign in to continue."
+msgstr "Ce lien n’est plus valide. Veuillez vous connecter pour continuer."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "We couldn't send the link to finish signing up just now. Please try again later."
+msgstr "Nous n’avons pas pu envoyer le lien pour finaliser votre inscription. Veuillez réessayer plus tard."

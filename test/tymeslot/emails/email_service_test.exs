@@ -206,6 +206,22 @@ defmodule Tymeslot.Emails.EmailServiceTest do
     end
   end
 
+  describe "send_social_signup_confirmation/3" do
+    test "sends the finish-signing-up link to the typed address" do
+      recipient = %{email: "typed@example.com", name: "Ada", locale: "en"}
+      url = "https://example.com/auth/oauth/confirm/token"
+
+      assert {:ok, _response} =
+               EmailService.send_social_signup_confirmation(recipient, "github", url)
+
+      email = next_email()
+      assert email.to == [{"Ada", "typed@example.com"}]
+      assert email.subject == "Confirm your email to finish signing up"
+      assert email.html_body =~ url
+      assert_no_more_emails()
+    end
+  end
+
   describe "send_email_change_verification/3" do
     test "sends the verification to the new address, never the current one" do
       user = build_user_data(%{email: "old@example.com"})

@@ -150,6 +150,57 @@ defmodule Tymeslot.Emails.EmailScheduler.AuthScheduler do
   def schedule_signup_attempt_notice(user_id),
     do: schedule_account_notice("send_signup_attempt_notice", user_id)
 
+  @doc """
+  Schedules the link that finishes a social sign-up with a typed address. There
+  is no account yet, so the job carries the recipient itself (address, name,
+  and the locale the form was filled in) and the link, encrypted.
+  """
+  @spec schedule_social_signup_confirmation(%{
+          email: String.t(),
+          name: String.t() | nil,
+          provider: String.t(),
+          confirm_url: String.t(),
+          locale: String.t() | nil
+        }) :: {:ok, :scheduled | :duplicate} | {:error, String.t()}
+  def schedule_social_signup_confirmation(details) do
+    result =
+      %{
+        "action" => "send_social_signup_confirmation",
+        "email" => details.email,
+        "name" => details.name,
+        "provider" => details.provider,
+        "locale" => details.locale
+      }
+      |> LinkArg.put("confirm_url", details.confirm_url)
+      |> EmailWorker.new(
+        queue: :emails,
+        priority: 0,
+        unique: [
+          period: 120,
+          fields: [:args, :queue],
+          keys: [:action, :email],
+          states: [:scheduled, :available]
+        ],
+        replace: [:args]
+      )
+      |> Oban.insert()
+
+    case result do
+      {:ok, %Oban.Job{conflict?: true}} ->
+        {:ok, :duplicate}
+
+      {:ok, _job} ->
+        {:ok, :scheduled}
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule sign-up confirmation",
+          error: Helpers.format_insert_error(reason)
+        )
+
+        {:error, "Failed to schedule job"}
+    end
+  end
+
   # Notices that carry no token: the job needs only the recipient, and the links
   # in them lead to public pages, so the worker builds them at send time. A
   # second request inside the window coalesces with the first rather than

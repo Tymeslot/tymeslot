@@ -439,16 +439,6 @@ msgstr ""
 msgid "Welcome! You've successfully signed up with %{provider}."
 msgstr ""
 
-#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Welcome! You've successfully signed up with %{provider}. Please check your email to verify your account."
-msgstr ""
-
-#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Welcome! You've successfully signed up with %{provider}. Verification email could not be sent - please contact support if needed."
-msgstr ""
-
 #: lib/tymeslot_web/controllers/auth/session_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Your email has been successfully verified! Please log in to continue."
@@ -1043,4 +1033,34 @@ msgstr ""
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password. If you signed up recently, check your inbox for the verification link."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Check your email: we've sent a link to finish signing up with %{provider}."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Create my account"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Finish signing up"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Press the button below to confirm your email address and create your account."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "This link is no longer valid. Please sign in to continue."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "We couldn't send the link to finish signing up just now. Please try again later."
 msgstr ""

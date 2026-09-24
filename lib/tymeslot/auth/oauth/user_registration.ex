@@ -47,9 +47,13 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   Creates a new user from OAuth provider information, or returns the account
   that already carries this provider ID.
 
-  The account is created verified only when the provider vouched for the
-  email (`email_from_provider: true`); an address the user typed stays
-  unverified until they follow the emailed link.
+  The account is always created verified: callers only get here with a
+  proved email, one the provider vouched for or one confirmed through
+  `Tymeslot.Auth.OAuth.SignupConfirmation`. An address typed into the
+  complete-registration form never reaches this function unconfirmed, so no
+  account exists for it until its owner follows the emailed link. Accounts
+  created unverified before that change keep the verify-first handling in
+  `Tymeslot.Auth.OAuth.FlowHandler`.
   """
   @spec create_oauth_user(
           provider(),
@@ -148,18 +152,11 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   defp build_auth_params(provider, oauth_user) do
     uid_field = Atom.to_string(Providers.fetch!(provider).uid_field)
 
-    Map.merge(
-      %{
-        "provider" => to_string(provider),
-        "email" => oauth_user.email,
-        uid_field => oauth_user.provider_uid
-      },
-      verified_at(oauth_user)
-    )
+    %{
+      "provider" => to_string(provider),
+      "email" => oauth_user.email,
+      uid_field => oauth_user.provider_uid,
+      "verified_at" => DateTime.utc_now(:second)
+    }
   end
-
-  defp verified_at(%{email_from_provider: true}),
-    do: %{"verified_at" => DateTime.utc_now(:second)}
-
-  defp verified_at(_oauth_user), do: %{}
 end

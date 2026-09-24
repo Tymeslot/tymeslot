@@ -159,6 +159,16 @@ defmodule Tymeslot.Security.RateLimiter.Auth do
     ])
   end
 
+  # Caps the link sent to finish a social sign-up with a typed address, per
+  # recipient, so the form cannot be used to flood an address with them.
+  @spec check_social_signup_confirmation(String.t()) :: :ok | {:error, :rate_limited, String.t()}
+  def check_social_signup_confirmation(email) do
+    Helpers.check_multi_bucket_limits([
+      {"social_signup_confirmation:email:#{normalise_email(email)}", @verification_limits,
+       "social signup confirmation", verification_action()}
+    ])
+  end
+
   defp verification_action, do: dgettext("errors", "verification emails")
 
   @spec check_password_reset(String.t(), String.t() | :inet.ip_address() | nil) ::

@@ -181,6 +181,8 @@ defmodule TymeslotWeb.Router do
     get "/auth/:provider", OAuthController, :request
     get "/auth/:provider/callback", OAuthController, :callback
     post "/auth/complete", OAuthController, :complete
+    get "/auth/oauth/confirm/:token", OAuthController, :confirm_signup
+    post "/auth/oauth/confirm/:token", OAuthController, :finish_signup
 
     # Calendar OAuth routes
     get "/auth/google/calendar/callback", CalendarOAuthController, :google_callback

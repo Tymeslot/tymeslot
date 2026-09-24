@@ -212,13 +212,6 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
       assert {:ok, user} = UserRegistration.create_oauth_user(:github, identity)
       assert %DateTime{} = user.verified_at
     end
-
-    test "leaves a typed email unverified" do
-      identity = %{email: "t@example.com", provider_uid: "302", email_from_provider: false}
-
-      assert {:ok, user} = UserRegistration.create_oauth_user(:github, identity)
-      assert user.verified_at == nil
-    end
   end
 
   describe "UserQueries.get_user_by_provider/3" do

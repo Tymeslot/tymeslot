@@ -31,6 +31,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     "send_password_reset" => {AuthEmails, :handle_password_reset},
     "send_no_password_to_reset" => {AuthEmails, :handle_no_password_to_reset},
     "send_signup_attempt_notice" => {AuthEmails, :handle_signup_attempt_notice},
+    "send_social_signup_confirmation" => {AuthEmails, :handle_social_signup_confirmation},
     "send_email_change_verification" => {AuthEmails, :handle_email_change_verification},
     "send_email_change_notification" => {AuthEmails, :handle_email_change_notification},
     "send_integration_unhealthy_notification" =>

@@ -118,6 +118,15 @@ defmodule Tymeslot.Security.RateLimiter do
     do: Auth.check_signup_attempt_notice(user_id)
 
   @doc """
+  Rate limit the link that finishes a social sign-up with a typed address,
+  per recipient address.
+  """
+  @spec check_social_signup_confirmation_rate_limit(String.t()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_social_signup_confirmation_rate_limit(email),
+    do: Auth.check_social_signup_confirmation(email)
+
+  @doc """
   Rate limit password reset requests per email and per IP.
   """
   @spec check_password_reset_rate_limit(

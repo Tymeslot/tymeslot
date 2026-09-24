@@ -5,6 +5,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmailsTest do
 
   import Mox
   import Tymeslot.Factory
+  alias Tymeslot.Emails.EmailScheduler.LinkArg
   alias Tymeslot.Emails.Templates.PasswordReset
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Workers.EmailWorkerHandlers
@@ -115,6 +116,45 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmailsTest do
       assert {:error, _reason} =
                EmailWorkerHandlers.execute_email_action("send_no_password_to_reset", %{
                  "user_id" => user.id
+               })
+    end
+  end
+
+  describe "sign-up confirmation" do
+    test "decrypts the link and sends it to the typed address in the form's locale" do
+      parent = self()
+      url = "https://example.com/auth/oauth/confirm/token"
+
+      expect(EmailServiceMock, :send_social_signup_confirmation, fn recipient, provider, link ->
+        send(parent, {:confirmation, recipient, provider, link})
+        {:ok, "sent"}
+      end)
+
+      args =
+        LinkArg.put(
+          %{
+            "email" => "typed@example.com",
+            "name" => "Ada",
+            "provider" => "github",
+            "locale" => "fr"
+          },
+          "confirm_url",
+          url
+        )
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_social_signup_confirmation", args)
+
+      assert_receive {:confirmation, recipient, "github", ^url}
+      assert recipient.email == "typed@example.com"
+      assert recipient.locale == "fr"
+    end
+
+    test "a job whose link cannot be read is discarded" do
+      assert {:discard, _reason} =
+               EmailWorkerHandlers.execute_email_action("send_social_signup_confirmation", %{
+                 "email" => "typed@example.com",
+                 "provider" => "github"
                })
     end
   end

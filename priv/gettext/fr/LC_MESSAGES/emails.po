@@ -648,6 +648,7 @@ msgid "Account Update"
 msgstr "Mise à jour du compte"
 
 #: lib/tymeslot/emails/templates/email_verification.ex
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Account Verification"
 msgstr "Vérification du compte"
@@ -1140,6 +1141,7 @@ msgid "Wednesday"
 msgstr "mercredi"
 
 #: lib/tymeslot/emails/templates/email_verification.ex
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Welcome"
 msgstr "Bienvenue"
@@ -2765,3 +2767,43 @@ msgstr "l’authentification unique"
 #, elixir-autogen, elixir-format
 msgid "Someone just tried to create a new Tymeslot account with this email address, which already has an account. If it was you, sign in with %{provider} below."
 msgstr "Quelqu’un vient d’essayer de créer un nouveau compte Tymeslot avec cette adresse e-mail, qui a déjà un compte. Si c’était vous, connectez-vous ci-dessous avec %{provider}."
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm Email & Finish Signing Up"
+msgstr "Confirmer l’e-mail et finaliser l’inscription"
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm Email & Finish Signing Up:"
+msgstr "Confirmer l’e-mail et finaliser l’inscription :"
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your email and your account is ready."
+msgstr "Confirmez votre e-mail et votre compte est prêt."
+
+#: lib/tymeslot/emails/email_service/auth_emails.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your email to finish signing up"
+msgstr "Confirmez votre e-mail pour finaliser votre inscription"
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your email to finish signing up for Tymeslot."
+msgstr "Confirmez votre e-mail pour finaliser votre inscription à Tymeslot."
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "One step to go"
+msgstr "Plus qu’une étape"
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "This link expires in 24 hours. If you didn't sign up for Tymeslot, you can ignore this email and no account will be created."
+msgstr "Ce lien expire dans 24 heures. Si vous ne vous êtes pas inscrit à Tymeslot, vous pouvez ignorer cet e-mail et aucun compte ne sera créé."
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "You're signing up for Tymeslot with %{provider}. Confirm this email address to create your account and sign in."
+msgstr "Vous vous inscrivez à Tymeslot avec %{provider}. Confirmez cette adresse e-mail pour créer votre compte et vous connecter."

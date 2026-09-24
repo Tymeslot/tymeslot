@@ -96,6 +96,28 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
     end
   end
 
+  @spec handle_social_signup_confirmation(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_social_signup_confirmation(%{"email" => email, "provider" => provider} = args) do
+    recipient = %{email: email, name: args["name"], locale: args["locale"], id: nil}
+
+    with {:ok, confirm_url} <- fetch_link(args, "confirm_url") do
+      case Config.email_service_module().send_social_signup_confirmation(
+             recipient,
+             provider,
+             confirm_url
+           ) do
+        {:ok, _result} ->
+          Logger.info("Queued sign-up confirmation sent")
+          :ok
+
+        {:error, reason} ->
+          Logger.error("Failed to send sign-up confirmation", error: inspect(reason))
+          DeliveryOutcome.from_error(reason, "Failed to send sign-up confirmation")
+      end
+    end
+  end
+
   defp sign_in_url, do: UrlBuilder.build_url("/auth/login")
 
   defp notice_outcome({:ok, _result}, user, label) do

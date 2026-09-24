@@ -15,7 +15,8 @@ defmodule Tymeslot.Emails.EmailService.AuthEmails do
     EmailVerification,
     NoPasswordToReset,
     PasswordReset,
-    SignupAttemptNotice
+    SignupAttemptNotice,
+    SocialSignupConfirmation
   }
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -94,6 +95,26 @@ defmodule Tymeslot.Emails.EmailService.AuthEmails do
       {dgettext("emails", "You already have a Tymeslot account"),
        SignupAttemptNotice.render(user, sign_in_url, reset_url),
        SignupAttemptNotice.render_text(user, sign_in_url, reset_url)}
+    end)
+  end
+
+  @doc """
+  Sends the link that finishes a social sign-up with a typed address. There
+  is no account yet: `recipient` is the typed address, the name the provider
+  gave, and the locale the form was filled in.
+  """
+  @spec send_social_signup_confirmation(
+          Tymeslot.Emails.EmailService.user_map(),
+          String.t(),
+          String.t()
+        ) :: {:ok, any()} | {:error, any()}
+  def send_social_signup_confirmation(recipient, provider, confirm_url) do
+    Logger.info("Sending sign-up confirmation")
+
+    deliver_to(recipient, fn ->
+      {dgettext("emails", "Confirm your email to finish signing up"),
+       SocialSignupConfirmation.render(recipient, provider, confirm_url),
+       SocialSignupConfirmation.render_text(recipient, provider, confirm_url)}
     end)
   end
 
