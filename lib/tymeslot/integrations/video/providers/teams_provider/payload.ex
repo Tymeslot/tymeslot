@@ -13,15 +13,22 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider.Payload do
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Video.EventDetails
 
-  @type window :: %{subject: String.t(), start_time: DateTime.t(), end_time: DateTime.t()}
+  @type window :: %{
+          subject: String.t() | nil,
+          start_time: DateTime.t(),
+          end_time: DateTime.t()
+        }
 
-  # Used only when the booking has no title of its own: the times, unlike a
+  # Used only when a new event has no title of its own: the times, unlike a
   # title, have no safe stand-in (see `event_window/1`).
   @fallback_subject "Scheduled Meeting"
 
   @doc """
   The title and times the provider's event must carry, read from `config`
-  (see `EventDetails.from_provider_config/1`).
+  (see `EventDetails.from_provider_config/1`). The title is `nil` when
+  `config` gives none: a new event then takes a generic one, and a moved event
+  keeps the title it has, as a calendar grid event's room does, whose update
+  carries only its times.
 
   Missing or unreadable times are refused rather than made up. An event
   written at a guessed time sits in the organiser's calendar looking like a
@@ -35,7 +42,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider.Payload do
          {:ok, end_time} <- to_datetime(details.end_time, :end_time) do
       {:ok,
        %{
-         subject: details.summary || @fallback_subject,
+         subject: details.summary,
          start_time: start_time,
          end_time: end_time
        }}
@@ -47,7 +54,12 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider.Payload do
   that cannot live on the booking's own calendar event.
   """
   @spec new_event(window(), map()) :: map()
-  def new_event(window, config), do: Map.merge(event_fields(window), online_meeting(config))
+  def new_event(window, config) do
+    window
+    |> Map.update!(:subject, &(&1 || @fallback_subject))
+    |> event_fields()
+    |> Map.merge(online_meeting(config))
+  end
 
   @doc """
   The body that turns an existing event into a Teams meeting.
@@ -66,14 +78,16 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider.Payload do
 
   @doc """
   The body that moves an existing event to a booking's new title and times.
+  A window with no title leaves the event's title as it is.
   """
   @spec event_fields(window()) :: map()
   def event_fields(%{subject: subject, start_time: start_time, end_time: end_time}) do
-    %{
-      subject: subject,
+    times = %{
       start: %{dateTime: DateTime.to_iso8601(start_time), timeZone: "UTC"},
       end: %{dateTime: DateTime.to_iso8601(end_time), timeZone: "UTC"}
     }
+
+    if subject, do: Map.put(times, :subject, subject), else: times
   end
 
   @doc """

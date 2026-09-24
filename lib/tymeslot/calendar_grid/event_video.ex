@@ -430,10 +430,10 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
     end
   end
 
-  # Recorded as soon as the provider reports the room, so that a provider
-  # whose rooms Tymeslot has to delete (Nextcloud Talk today) has its room
-  # deleted with the event or once the event has ended, rather than left on
-  # the organiser's server with nothing pointing at it.
+  # Recorded as soon as the provider reports the room, so that a room that
+  # has to follow its event (a Nextcloud Talk conversation, or a Teams meeting
+  # held as a separate Outlook event) is moved and deleted with it rather than
+  # left behind with nothing pointing at it (see `EventVideoRooms.record/2`).
   defp record_room(meeting_context, event, video_integration_id, user_id) do
     event_fields =
       Map.take(event, [

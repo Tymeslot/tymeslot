@@ -156,32 +156,38 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
   end
 
   @doc """
-  Up to `limit` rooms made through the given integration, within `scope` (see
+  Up to `limit` rooms on one of `providers` made through the given
+  integration, within `scope` (see
   `MeetingListQueries.with_video_room_for_integration/3`). `:upcoming` keeps to
   rooms whose event has not ended by `now`.
   """
   @spec list_for_integration(
           pos_integer(),
+          [String.t()],
           MeetingListQueries.room_scope(),
           DateTime.t(),
           pos_integer()
         ) :: [EventVideoRoomSchema.t()]
-  def list_for_integration(integration_id, scope, now, limit) do
+  def list_for_integration(integration_id, providers, scope, now, limit) do
     integration_id
-    |> for_integration(scope, now)
+    |> for_integration(providers, scope, now)
     |> order_by([r], asc: r.id)
     |> limit(^limit)
     |> Repo.all()
   end
 
   @doc """
-  How many rooms `list_for_integration/4` covers, without a limit.
+  How many rooms `list_for_integration/5` covers, without a limit.
   """
-  @spec count_for_integration(pos_integer(), MeetingListQueries.room_scope(), DateTime.t()) ::
-          non_neg_integer()
-  def count_for_integration(integration_id, scope, now) do
+  @spec count_for_integration(
+          pos_integer(),
+          [String.t()],
+          MeetingListQueries.room_scope(),
+          DateTime.t()
+        ) :: non_neg_integer()
+  def count_for_integration(integration_id, providers, scope, now) do
     integration_id
-    |> for_integration(scope, now)
+    |> for_integration(providers, scope, now)
     |> Repo.aggregate(:count, :id)
   end
 
@@ -233,9 +239,9 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
     |> Repo.exists?()
   end
 
-  defp for_integration(integration_id, scope, %DateTime{} = now) do
+  defp for_integration(integration_id, providers, scope, %DateTime{} = now) do
     EventVideoRoomSchema
-    |> where([r], r.video_integration_id == ^integration_id)
+    |> where([r], r.video_integration_id == ^integration_id and r.provider in ^providers)
     |> within_scope(scope, now)
   end
 

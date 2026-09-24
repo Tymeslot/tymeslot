@@ -22,17 +22,16 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscard do
   the room by `Tymeslot.Infrastructure.Logging.Redactor.fingerprint/1` only.
 
   A Teams room is an Outlook event, and its link does not carry that event's
-  id, so it is left in place too, by its id as well as by its link. Deleting
-  one by id would be wrong more often than not: a Teams meeting on the
-  calendar's own Microsoft account is attached to the grid event itself
-  (`Tymeslot.CalendarGrid.EventVideo`), so its id is the grid event's own,
-  and deleting that room would delete the event. Only the separate event a
-  Teams meeting on another account gets is left behind in that account's
-  calendar.
+  id. The separate event a Teams meeting gets when it cannot be attached to
+  the grid event is recorded, and deleted by its record like any other. One
+  attached to the grid event itself (`Tymeslot.CalendarGrid.EventVideo`) is
+  never recorded, since its id is the grid event's own and deleting that room
+  would delete the event, so it is left in place, by its id as well as by its
+  link.
 
-  Leaving them is also what keeps deletion no more aggressive than the
+  Leaving the rest is also what keeps deletion no more aggressive than the
   notification an attendee gets: an attendee who still holds a replaced
-  Teams or MiroTalk link can still join, as before.
+  MiroTalk link can still join, as before.
 
   ## A room another event still uses
 

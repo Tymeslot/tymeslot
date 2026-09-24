@@ -27,6 +27,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Reminder
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
@@ -480,23 +481,38 @@ defmodule Tymeslot.CalendarGrid do
     to: EventVideoRoomQueries,
     as: :list_ended
 
-  @doc "A video integration's grid event rooms. See `EventVideoRoomQueries.list_for_integration/4`."
+  # The grid event rooms a disconnect deletes: only those of a provider whose
+  # rooms Tymeslot deletes after the meeting. A room held as a calendar event
+  # of its own (a separate Teams event) is recorded to follow its grid event,
+  # not to be swept up with the integration.
+  @doc "A video integration's grid event rooms a disconnect deletes. See `EventVideoRoomQueries.list_for_integration/5`."
   @spec list_event_video_rooms_for_integration(
           pos_integer(),
           :upcoming | :all,
           DateTime.t(),
           pos_integer()
         ) :: [EventVideoRoomSchema.t()]
-  defdelegate list_event_video_rooms_for_integration(integration_id, scope, now, limit),
-    to: EventVideoRoomQueries,
-    as: :list_for_integration
+  def list_event_video_rooms_for_integration(integration_id, scope, now, limit) do
+    EventVideoRoomQueries.list_for_integration(
+      integration_id,
+      VideoProviderConfig.rooms_deleted_after_meeting(),
+      scope,
+      now,
+      limit
+    )
+  end
 
-  @doc "How many grid event rooms a video integration holds. See `EventVideoRoomQueries.count_for_integration/3`."
+  @doc "How many grid event rooms a disconnect of a video integration deletes. See `EventVideoRoomQueries.count_for_integration/4`."
   @spec count_event_video_rooms_for_integration(pos_integer(), :upcoming | :all, DateTime.t()) ::
           non_neg_integer()
-  defdelegate count_event_video_rooms_for_integration(integration_id, scope, now),
-    to: EventVideoRoomQueries,
-    as: :count_for_integration
+  def count_event_video_rooms_for_integration(integration_id, scope, now) do
+    EventVideoRoomQueries.count_for_integration(
+      integration_id,
+      VideoProviderConfig.rooms_deleted_after_meeting(),
+      scope,
+      now
+    )
+  end
 
   @doc """
   Returns active calendar integrations for the given user.

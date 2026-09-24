@@ -386,6 +386,11 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     end
   end
 
+  # A grid event's own calendar event (an attached Teams meeting) is never
+  # recorded; should one be, it goes with the event, as a booking's does.
+  defp dispatch_event_room(action, %{room_id: id, provider_event_id: id} = room, executions),
+    do: handle_result(:ok, action, event_room_target(room), executions)
+
   defp dispatch_event_room(action, room, executions) do
     resolvable = %{
       video_integration_id: room.video_integration_id,
@@ -468,7 +473,9 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
       end_time: meeting.end_time
     ]
 
-  # A grid event's room keeps its name: only the lobby follows the event.
+  # A grid event's room keeps its name: only its timing follows the event. For
+  # Talk that is the lobby; a separate Teams event records the event's own
+  # start as its lobby time, so the event itself moves.
   defp room_changes(%{kind: :event_room, record: room}),
     do: [start_time: room.lobby_opens_at, end_time: room.ends_at]
 

@@ -52,10 +52,10 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider.PayloadTest do
       assert window.end_time == ~U[2030-04-02 15:00:00Z]
     end
 
-    test "falls back to a generic subject when the booking has no title" do
+    test "leaves the subject out when the booking has no title" do
       config = %{event_details: %EventDetails{start_time: @start, end_time: @finish}}
 
-      assert {:ok, %{subject: "Scheduled Meeting"}} = Payload.event_window(config)
+      assert {:ok, %{subject: nil}} = Payload.event_window(config)
     end
 
     test "refuses a booking without a start time" do
@@ -90,6 +90,15 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider.PayloadTest do
                end: %{dateTime: "2030-03-14T10:15:00Z", timeZone: "UTC"}
              }
     end
+
+    test "moves only the times when the window has no subject, keeping the event's title" do
+      window = %{subject: nil, start_time: @start, end_time: @finish}
+
+      assert Payload.event_fields(window) == %{
+               start: %{dateTime: "2030-03-14T09:30:00Z", timeZone: "UTC"},
+               end: %{dateTime: "2030-03-14T10:15:00Z", timeZone: "UTC"}
+             }
+    end
   end
 
   describe "online_meeting/1" do
@@ -117,6 +126,12 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider.PayloadTest do
                isOnlineMeeting: true,
                onlineMeetingProvider: "teamsForBusiness"
              }
+    end
+
+    test "falls back to a generic subject when the booking has no title" do
+      window = %{subject: nil, start_time: @start, end_time: @finish}
+
+      assert %{subject: "Scheduled Meeting"} = Payload.new_event(window, %{tenant_id: nil})
     end
   end
 

@@ -5,15 +5,30 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   server for ever are deleted, and never one still in use.
 
   A booking's room is held by its `meetings` row, which every clean-up path
-  works from. A grid event lives only in the organiser's calendar, so for a
-  provider whose rooms persist until something deletes them
-  (`ProviderConfig.rooms_deleted_after_meeting/0`) the room is recorded here
-  when it is made. The record follows the event through the grid: moving the
-  event moves the record's times, and the room's lobby with them; deleting a
-  one-off event deletes the room. `Tymeslot.Workers.ExpiredVideoRoomCleanupWorker`
-  deletes rooms some days after their event has ended, once the calendar
-  confirms it (`Tymeslot.CalendarGrid.EventVideoRoomExpiry`), and disconnecting the integration with its
-  rooms deletes them too.
+  works from. A grid event lives only in the organiser's calendar, so the room
+  is recorded here when it is made, for the providers whose rooms have to
+  follow their event (`ProviderConfig.rooms_recorded_for_grid_events/0`):
+
+    * A room that persists until something deletes it
+      (`ProviderConfig.rooms_deleted_after_meeting/0`, Nextcloud Talk).
+      `Tymeslot.Workers.ExpiredVideoRoomCleanupWorker` deletes it some days
+      after its event has ended, once the calendar confirms it
+      (`Tymeslot.CalendarGrid.EventVideoRoomExpiry`), and disconnecting the
+      integration with its rooms deletes it too.
+    * A room that is an event of its own in the organiser's calendar
+      (`ProviderConfig.room_held_as_calendar_event?/1`): the separate Outlook
+      event a Teams meeting gets when it cannot be attached to the grid event
+      itself. Its join link does not name that event, so the record is the only
+      way back to it. It is an ordinary meeting once its time has passed, so
+      neither the nightly clean-up nor a disconnect deletes it.
+
+  The record follows the event through the grid: moving the event moves the
+  record's times, and the room's lobby, or its event, with them; replacing the
+  event's video or deleting a one-off event deletes the room.
+
+  A Teams meeting attached to the grid event itself is never recorded. Its
+  room id is the event's own Outlook id, so it moves and goes with the event
+  through the calendar, and deleting it as a room would delete the event.
 
   ## Which event a room belongs to
 
@@ -59,18 +74,23 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
 
   @doc """
   Records a room just made for a grid event, when its provider is one whose
-  rooms Tymeslot deletes.
+  rooms follow their event (`ProviderConfig.rooms_recorded_for_grid_events/0`)
+  and the room is not the event itself.
 
   `event` carries `:user_id`, `:video_integration_id`,
   `:calendar_integration_id`, `:uid`, optionally `:provider_event_id`, and the
   event's timing and recurrence (see `EventVideoRoomTimes.for_event/1`).
   """
   @spec record(map(), map()) :: :ok
+  # A Teams meeting attached to the event: its room id is the event's own
+  # Outlook id (see the moduledoc).
+  def record(%{room_data: %{room_id: event_id}}, %{provider_event_id: event_id}), do: :ok
+
   def record(%{provider_type: provider, room_data: %{room_id: room_id}}, event)
       when is_binary(room_id) and room_id != "" do
     provider = Atom.to_string(provider)
 
-    if provider in ProviderConfig.rooms_deleted_after_meeting() do
+    if provider in ProviderConfig.rooms_recorded_for_grid_events() do
       insert(provider, room_id, event)
     else
       :ok
@@ -101,7 +121,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
 
   @doc """
   Brings the rooms of a grid event in step with its timing after the event
-  changed, and moves each room's lobby when it moved.
+  changed, and moves each room's lobby, or its event, when it moved.
   """
   @spec rescheduled(map()) :: :ok
   def rescheduled(event) do
@@ -109,9 +129,19 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
 
     event
     |> rooms_of_event()
+    |> Enum.filter(&follows_timing?(&1, event, times))
     |> Enum.each(
       &apply_times(&1, EventVideoRoomTimes.merge({&1.lobby_opens_at, &1.ends_at}, times))
     )
+  end
+
+  # A room held as a calendar event of its own carries one meeting's start and
+  # end, which only a one-off timed event gives it: a series' times only ever
+  # widen, and an all-day event's are whole days. Such a room is left where
+  # it is rather than stretched over them.
+  defp follows_timing?(room, event, {mode, _lobby, _ends}) do
+    not ProviderConfig.room_held_as_calendar_event?(room.provider) or
+      (mode == :exact and Map.get(event, :all_day) != true)
   end
 
   @doc """
@@ -231,23 +261,35 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   end
 
   @doc """
-  Sets a room's lobby time and end, and queues the room's lobby to move when
-  its lobby time changed. A room deleted meanwhile is left deleted.
+  Sets a room's lobby time and end, and queues the room to move when what it
+  follows changed: its lobby time, or for a room held as a calendar event of
+  its own, its start or end. A room deleted meanwhile is left deleted.
   """
   @spec apply_times(EventVideoRoomSchema.t(), {DateTime.t() | nil, DateTime.t() | nil}) :: :ok
   def apply_times(%{lobby_opens_at: lobby, ends_at: ends}, {lobby, ends}), do: :ok
 
   def apply_times(room, {lobby, ends}) do
     case EventVideoRoomQueries.update_times(room, lobby, ends) do
-      :ok -> maybe_move_lobby(room, lobby)
+      :ok -> maybe_move_room(room, {lobby, ends})
       # Deleted meanwhile, by a delete job or a disconnect: nothing to follow.
       :gone -> :ok
     end
   end
 
-  defp maybe_move_lobby(%{lobby_opens_at: same}, same), do: :ok
-  defp maybe_move_lobby(_room, nil), do: :ok
-  defp maybe_move_lobby(room, _lobby), do: enqueue(room, "update")
+  defp maybe_move_room(room, {lobby, ends}) do
+    if moves?(room, lobby, ends), do: enqueue(room, "update"), else: :ok
+  end
+
+  # Reached only once the times changed. A room held as a calendar event of
+  # its own follows its start and end, and needs both; any other follows its
+  # lobby time alone.
+  defp moves?(_room, nil, _ends), do: false
+
+  defp moves?(room, lobby, ends) do
+    if ProviderConfig.room_held_as_calendar_event?(room.provider),
+      do: ends != nil,
+      else: lobby != room.lobby_opens_at
+  end
 
   defp enqueue(room, action) do
     case VideoSyncWorker.enqueue_event_room(room.id, action) do
