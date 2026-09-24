@@ -549,7 +549,8 @@
   color: var(--theme-text);
 }
 .rhythm-theme-wrapper .location-option:has(.location-option__radio:focus-visible) {
-  box-shadow: 0 0 0 3px var(--theme-primary-focus);
+  outline: var(--border-width-thick) solid var(--theme-primary);
+  outline-offset: var(--space-3xs);
 }
 .rhythm-theme-wrapper .location-option--selected,
 .rhythm-theme-wrapper .location-option--selected:hover {
