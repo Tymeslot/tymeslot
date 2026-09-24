@@ -22,6 +22,39 @@ defmodule Tymeslot.Workers.ReregisterOutlookSubscriptionWorkerTest do
                })
     end
 
+    # The stored subscription is gone and Graph refuses the replacement: the
+    # job must fail as a retryable error rather than crash on the error shape.
+    test "retries when Graph refuses the replacement subscription" do
+      Application.put_env(:tymeslot, :webhook_base_url, "https://hook.example.com")
+      on_exit(fn -> Application.delete_env(:tymeslot, :webhook_base_url) end)
+
+      integration =
+        insert(:calendar_integration,
+          provider: "outlook",
+          access_token_encrypted: Encryption.encrypt("valid-token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
+          graph_subscription_id: "graph-sub-removed",
+          graph_client_state: "old-client-state",
+          graph_subscription_expires_at: DateTime.add(DateTime.utc_now(:second), 12, :hour)
+        )
+
+      stub(Tymeslot.HTTPClientMock, :request, fn
+        :patch, _url, _body, _headers, _opts ->
+          {:ok, %Req.Response{status: 404, body: Jason.encode!(%{"error" => %{}})}}
+
+        :post, _url, _body, _headers, _opts ->
+          {:ok, %Req.Response{status: 403, body: Jason.encode!(%{"error" => %{}})}}
+      end)
+
+      assert {:error, _type} =
+               perform_job(ReregisterOutlookSubscriptionWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert reloaded.graph_subscription_id == "graph-sub-removed"
+    end
+
     # `subscriptionRemoved`: the stored subscription is gone, so the first run
     # creates a replacement. A run the Oban lifeline repeats afterwards must
     # renew that replacement, not create a third subscription that would push
