@@ -34,6 +34,25 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   takes the conference off in the same write, so the event's Meet button does
   not stay beside the new link.
 
+  ## Microsoft Teams from the calendar's own account
+
+  A Teams meeting is an Outlook event with an online meeting switched on. On
+  an Outlook event whose chosen Teams integration shares the calendar's
+  Microsoft account, the meeting is switched on for the event itself, as for
+  a booking and for an event created from the grid
+  (`MeetingProvisioning.plan/3`'s `:attach`), rather than written as a second
+  event beside it. The previous room's line leaves the description first,
+  then the Teams provider attaches the meeting to the event by its Outlook
+  id; Outlook adds the meeting's own join details to the event, so no line is
+  written for it.
+
+  Microsoft Graph cannot take an online meeting off an event again. Moving
+  such an event to another room, or to "None", therefore leaves the Teams
+  meeting on the Outlook event: its join button stays beside the new link
+  until the organiser removes it in Outlook. The meeting is never deleted as
+  a room, since deleting it would delete the event (see
+  `Tymeslot.CalendarGrid.EventVideoDiscard`).
+
   ## Rooms
 
   A room that is no longer referenced (the one just replaced or removed, or a
@@ -131,9 +150,11 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   defp apply_video_change(user_id, event, video_integration_id)
        when is_integer(video_integration_id) do
     with {:ok, _integration} <- Video.fetch_integration_for_user(video_integration_id, user_id) do
-      if inline_meet?(user_id, event, video_integration_id),
-        do: change_to_inline_meet(user_id, event, video_integration_id),
-        else: change_to_room(user_id, event, video_integration_id)
+      case link_placement(user_id, event, video_integration_id) do
+        :inline_meet -> change_to_inline_meet(user_id, event, video_integration_id)
+        :attached_teams -> change_to_attached_teams(user_id, event, video_integration_id)
+        :room -> change_to_room(user_id, event, video_integration_id)
+      end
     end
   end
 
@@ -142,13 +163,15 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   wrote it, given the `url` it answered with: the new link and integration,
   and the description exactly as it was sent to the calendar.
 
-  A Meet link Google made for the event is not written into the description
-  (it lives on the event's own conference), so the description loses the old
-  link's line and gains none. Every other link replaces the old line.
+  A Meet link Google made for the event, or a Teams meeting attached to the
+  Outlook event, is not written into the description (it lives on the event
+  itself), so the description loses the old link's line and gains none. Every
+  other link replaces the old line.
   """
   @spec changed_event(pos_integer(), map(), pos_integer() | nil, String.t() | nil) :: map()
   def changed_event(user_id, event, video_integration_id, url) do
-    line_url = if inline_meet?(user_id, event, video_integration_id), do: nil, else: url
+    line_url =
+      if link_placement(user_id, event, video_integration_id) == :room, do: url, else: nil
 
     %{
       event
@@ -158,16 +181,32 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
     }
   end
 
-  # Whether Google makes the conference itself: a Meet integration sharing
-  # the Google calendar's account (`MeetingProvisioning.plan/3`).
-  defp inline_meet?(_user_id, _event, nil), do: false
+  # Where the link of a room on `video_integration_id` lives
+  # (`MeetingProvisioning.plan/3`): on the event itself, as the Meet
+  # conference Google makes for a Google event of the same account
+  # (`:inline_meet`) or the Teams meeting switched on for an Outlook event of
+  # the same Microsoft account (`:attached_teams`), or else in a room of its
+  # own whose link is written into the description (`:room`). An Outlook
+  # event not yet known by its Outlook id has nothing to attach to.
+  defp link_placement(_user_id, _event, nil), do: :room
+
+  defp link_placement(user_id, event, video_integration_id) do
+    case MeetingProvisioning.plan(event.calendar_integration_id, video_integration_id, user_id) do
+      {:inline, _video_id} -> :inline_meet
+      {:attach, _video_id} -> if outlook_event_id(event), do: :attached_teams, else: :room
+      _separate -> :room
+    end
+  end
 
   defp inline_meet?(user_id, event, video_integration_id),
-    do:
-      match?(
-        {:inline, _video_id},
-        MeetingProvisioning.plan(event.calendar_integration_id, video_integration_id, user_id)
-      )
+    do: link_placement(user_id, event, video_integration_id) == :inline_meet
+
+  defp outlook_event_id(event) do
+    case Map.get(event, :provider_event_id) do
+      id when is_binary(id) and id != "" -> id
+      _unknown -> nil
+    end
+  end
 
   defp change_to_room(user_id, event, video_integration_id) do
     with {:ok, url} <- create_room(user_id, event, video_integration_id),
@@ -205,6 +244,37 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
         error
     end
   end
+
+  # An Outlook event whose Teams comes from the calendar's own Microsoft
+  # account gets the meeting switched on for it, as when it is created from
+  # the grid. The previous room's line leaves the description first, so the
+  # join details Outlook adds to the event are not overwritten by that write.
+  defp change_to_attached_teams(user_id, event, video_integration_id) do
+    with :ok <- write_description(user_id, event, nil, []) do
+      case create_room(user_id, event, video_integration_id,
+             calendar_event_id: outlook_event_id(event)
+           ) do
+        {:ok, url} ->
+          with :ok <- cache_link(event, video_integration_id, url) do
+            discard_replaced(user_id, event)
+            {:ok, url}
+          end
+
+        {:error, _reason} = error ->
+          drop_replaced(user_id, event)
+          error
+      end
+    end
+  end
+
+  # The previous link has left the description, but no meeting took its
+  # place: the event has no video now, and its cached row says so.
+  defp drop_replaced(user_id, %{video_link: link} = event) when is_binary(link) and link != "" do
+    _cached = cache_link(event, nil, nil)
+    discard_replaced(user_id, event)
+  end
+
+  defp drop_replaced(_user_id, _event), do: :ok
 
   # One read of the event, only after a write that asked Google for a Meet
   # conference: the update's own answer does not reach this layer.
@@ -310,16 +380,19 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
 
   defp join_line(url), do: @join_line_prefix <> url
 
-  defp create_room(user_id, event, video_integration_id) do
+  # `extra_opts` carries `:calendar_event_id` for a Teams meeting attached to
+  # the event itself (see `change_to_attached_teams/3`).
+  defp create_room(user_id, event, video_integration_id, extra_opts \\ []) do
     # The event's iCal uid, the same identifier the creation flow passes as
     # `meeting_id`, so a provider that derives its room from it (a templated
     # custom link, say) produces the same room whether video was chosen when
     # the event was made or switched on afterwards.
-    opts = [
-      integration_id: video_integration_id,
-      event_details: EventDetails.from_grid_event(event),
-      meeting_id: event.uid
-    ]
+    opts =
+      [
+        integration_id: video_integration_id,
+        event_details: EventDetails.from_grid_event(event),
+        meeting_id: event.uid
+      ] ++ extra_opts
 
     case Video.create_meeting_room(user_id, opts) do
       {:ok, %{room_data: %{meeting_url: url}} = meeting_context}

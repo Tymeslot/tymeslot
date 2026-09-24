@@ -120,6 +120,48 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
     end
   end
 
+  describe "MeetingProvisioning.plan/3 with Outlook and Teams" do
+    defp outlook_and_teams(calendar_provider, calendar_account, teams_account) do
+      user = insert(:user)
+
+      cal =
+        insert(:calendar_integration,
+          user: user,
+          provider: calendar_provider,
+          provider_account_id: calendar_account
+        )
+
+      vid =
+        insert(:video_integration,
+          user: user,
+          provider: "teams",
+          provider_account_id: teams_account
+        )
+
+      {user, cal, vid}
+    end
+
+    test "returns {:attach, vid_id} when both belong to the same Microsoft account" do
+      {user, cal, vid} = outlook_and_teams("outlook", "entra-oid-1", "entra-oid-1")
+      assert MeetingProvisioning.plan(cal.id, vid.id, user.id) == {:attach, vid.id}
+    end
+
+    test "returns {:separate, vid_id} when the Microsoft accounts differ" do
+      {user, cal, vid} = outlook_and_teams("outlook", "entra-oid-1", "entra-oid-2")
+      assert MeetingProvisioning.plan(cal.id, vid.id, user.id) == {:separate, vid.id}
+    end
+
+    test "returns {:separate, vid_id} when the calendar is not Outlook" do
+      {user, cal, vid} = outlook_and_teams("google", "entra-oid-1", "entra-oid-1")
+      assert MeetingProvisioning.plan(cal.id, vid.id, user.id) == {:separate, vid.id}
+    end
+
+    test "returns {:separate, vid_id} when neither records an account" do
+      {user, cal, vid} = outlook_and_teams("outlook", nil, nil)
+      assert MeetingProvisioning.plan(cal.id, vid.id, user.id) == {:separate, vid.id}
+    end
+  end
+
   describe "MeetingProvisioning.attach_conference_data/2" do
     test "{:inline, _} plan attaches :conference_data key with a createRequest map" do
       event_data = %{summary: "Planning", description: "Q4 plan"}
@@ -136,6 +178,13 @@ defmodule Tymeslot.Integrations.MeetingProvisioningTest do
       result = MeetingProvisioning.attach_conference_data(event_data, {:separate, 42})
 
       assert result == event_data
+    end
+
+    # Only Google understands the payload: a Teams plan must never carry it
+    # to an Outlook write.
+    test "{:attach, _} plan returns event_data unchanged" do
+      event_data = %{summary: "Planning", description: "Q4 plan"}
+      assert MeetingProvisioning.attach_conference_data(event_data, {:attach, 42}) == event_data
     end
 
     test ":none plan returns event_data unchanged" do

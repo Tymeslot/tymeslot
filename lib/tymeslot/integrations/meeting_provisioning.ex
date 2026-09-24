@@ -12,13 +12,22 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
     account. Attaching `conferenceData.createRequest` to the calendar create/update
     call lets Google provision the Meet link in a single round-trip and avoids
     creating a duplicate calendar event.
+  * `{:attach, video_id}`: an Outlook calendar and Microsoft Teams sharing the
+    same Microsoft account. A Teams meeting is itself an Outlook event, so the
+    calendar event is written first and the Teams provider then switches the
+    online meeting on for that very event (its `:calendar_event_id` option),
+    rather than creating a second event to carry the meeting. Kept apart from
+    `:inline` because nothing is added to the calendar write itself: in
+    particular it never reaches `attach_conference_data/2`, whose payload only
+    Google understands.
   * `{:separate, video_id}` — any other combination. The video provider is called
     independently and the resulting URL is written into the event description.
 
   An edit follows the same plan: `Tymeslot.CalendarGrid.change_event_video/3`
   sends `conferenceData` with `conferenceDataVersion=1` on the update when the
   plan is `:inline`, and reads the event back for the link Google made, since
-  the update's own answer does not reach it.
+  the update's own answer does not reach it. On `:attach` it has the Teams
+  provider attach the meeting to the existing event.
   """
 
   require Logger
@@ -36,14 +45,16 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   @type plan ::
           {:inline, video_id :: integer()}
+          | {:attach, video_id :: integer()}
           | {:separate, video_id :: integer()}
           | :none
 
   @doc """
   Returns the provisioning plan for the given combination of integrations.
 
-  Detects the Google same-account case via a private overlap check.
-  All other combinations yield `:separate` or `:none`.
+  `:inline` for Google Calendar with Google Meet, and `:attach` for Outlook
+  with Microsoft Teams, each only when both integrations belong to the same
+  account. All other combinations yield `:separate` or `:none`.
   """
   @spec plan(integer() | nil, integer() | nil, integer()) :: plan()
   def plan(calendar_integration_id, video_integration_id, user_id)
@@ -52,10 +63,11 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   def plan(cal_id, vid_id, user_id)
       when is_integer(cal_id) and is_integer(vid_id) and is_integer(user_id) do
-    if google_account_overlap?(cal_id, vid_id, user_id) do
-      {:inline, vid_id}
+    with {:ok, calendar} <- Calendar.get_integration(cal_id, user_id),
+         {:ok, video} <- Video.fetch_integration_for_user(vid_id, user_id) do
+      {placement(calendar, video), vid_id}
     else
-      {:separate, vid_id}
+      _unresolved -> {:separate, vid_id}
     end
   end
 
@@ -87,7 +99,9 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
   still includes `video_integration_id` so callers can persist the integration
   association even without a URL.
 
-  For `:separate` and `:none`: returns `{:ok, video_context}` unchanged.
+  For every other plan: returns `{:ok, video_context}` unchanged. An `:attach`
+  plan's meeting is made by the caller once the event exists, since it needs
+  the id the calendar just gave the event.
   """
   @spec finalise(map(), CreatedEvent.t(), plan()) ::
           {:ok, map()} | {:error, :no_meet_url, map()}
@@ -181,18 +195,20 @@ defmodule Tymeslot.Integrations.MeetingProvisioning do
 
   defp same_microsoft_account?(_calendar, _video), do: false
 
-  # Returns true when the given calendar and video integrations both belong to
-  # the same Google account (Google Calendar + Google Meet, sharing
-  # provider_account_id). Returns false for any missing/mismatched case.
-  defp google_account_overlap?(calendar_integration_id, video_integration_id, user_id) do
-    with {:ok, cal} <- Calendar.get_integration(calendar_integration_id, user_id),
-         {:ok, vid} <- Video.fetch_integration_for_user(video_integration_id, user_id),
-         true <- cal.provider == "google" and vid.provider == "google_meet",
-         account_id when is_binary(account_id) and account_id != "" <- cal.provider_account_id,
-         true <- vid.provider_account_id == account_id do
-      true
-    else
-      _other -> false
-    end
+  # Google Calendar and Google Meet on the same Google account: Google makes
+  # the conference with the event.
+  defp placement(
+         %{provider: "google", provider_account_id: account_id},
+         %{provider: "google_meet", provider_account_id: account_id}
+       )
+       when is_binary(account_id) and account_id != "",
+       do: :inline
+
+  # Teams on the Outlook calendar's own Microsoft account: the meeting goes on
+  # the calendar event, the rule `teams_room_placement/1` applies to bookings.
+  defp placement(calendar, %{provider: "teams"} = video) do
+    if same_microsoft_account?(calendar, video), do: :attach, else: :separate
   end
+
+  defp placement(_calendar, _video), do: :separate
 end

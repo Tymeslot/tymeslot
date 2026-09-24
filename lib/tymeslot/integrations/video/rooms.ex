@@ -32,9 +32,10 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   ## Optional opts
     - `:event_details` — the `Tymeslot.Integrations.Video.EventDetails` the
       room is for, its title and times
-    - `:calendar_event_id` — the booking's own calendar event, for a provider
-      that can host the meeting on it (Teams on the same Microsoft account)
-      instead of creating an event of its own
+    - `:calendar_event_id`: the calendar event the room is for (a booking's
+      or a calendar grid event's), for a provider that can host the meeting on
+      it (Teams on the same Microsoft account) instead of creating an event of
+      its own
   """
   @spec create_meeting_room(pos_integer() | nil, keyword()) ::
           {:ok, MeetingContext.t()} | {:error, any()}

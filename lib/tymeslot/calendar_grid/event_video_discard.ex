@@ -17,10 +17,18 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscard do
   the link only where that is exact, which is Zoom alone: the meeting id in
   `/j/<id>` is the id the delete addresses. Google Meet's link names a meeting
   code rather than the space it was created as, and the Meet API has no call
-  that deletes a space anyway; Teams, MiroTalk and custom links have no room
-  object to delete. Those rooms are left where they are, with an `info` line
-  naming the room by `Tymeslot.Infrastructure.Logging.Redactor.fingerprint/1`
-  only.
+  that deletes a space anyway; MiroTalk and custom links have no room object
+  to delete. Those rooms are left where they are, with an `info` line naming
+  the room by `Tymeslot.Infrastructure.Logging.Redactor.fingerprint/1` only.
+
+  A Teams room is an Outlook event, and its link does not carry that event's
+  id, so it is left in place too, by its id as well as by its link. Deleting
+  one by id would be wrong more often than not: a Teams meeting on the
+  calendar's own Microsoft account is attached to the grid event itself
+  (`Tymeslot.CalendarGrid.EventVideo`), so its id is the grid event's own,
+  and deleting that room would delete the event. Only the separate event a
+  Teams meeting on another account gets is left behind in that account's
+  calendar.
 
   Leaving them is also what keeps deletion no more aggressive than the
   notification an attendee gets: an attendee who still holds a replaced
