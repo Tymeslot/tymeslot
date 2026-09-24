@@ -91,6 +91,14 @@ defmodule Tymeslot.Auth.Validation do
   end
 
   @doc """
+  Whether a submitted terms-of-service checkbox counts as accepted: a checked
+  box posts `"on"` (or `"true"`), and callers building params by hand may
+  pass `true`. Anything else, including absence, is not acceptance.
+  """
+  @spec terms_accepted?(term()) :: boolean()
+  def terms_accepted?(value), do: value in [true, "true", "on"]
+
+  @doc """
   The message shown on the current-password field for a failure from
   `check_current_password/2`.
   """

@@ -210,7 +210,7 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
     end
   end
 
-  # The entry `FlowHandler` leaves for a GitHub sign-up whose verified email
+  # The entry `OAuthFlow` leaves for a GitHub sign-up whose verified email
   # GitHub supplied.
   defp pending(overrides \\ []) do
     Map.merge(

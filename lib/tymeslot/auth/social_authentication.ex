@@ -6,7 +6,7 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   """
 
   alias Tymeslot.Auth.OAuth.{Providers, SignupConfirmation, UserRegistration}
-  alias Tymeslot.Auth.Registration
+  alias Tymeslot.Auth.{Registration, Validation}
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Config
 
@@ -175,13 +175,13 @@ defmodule Tymeslot.Auth.SocialAuthentication do
       provider_uid: pending[:provider_uid],
       name: pending[:name] || "",
       terms_accepted:
-        terms_accepted?(get_in(params, ["auth", "terms_accepted"]) || params["terms_accepted"])
+        Validation.terms_accepted?(
+          get_in(params, ["auth", "terms_accepted"]) || params["terms_accepted"]
+        )
     }
   end
 
   defp profile_params(params), do: %{full_name: get_in(params, ["profile", "full_name"])}
-
-  defp terms_accepted?(value), do: value in [true, "true", "on"]
 
   defp user_queries_module do
     Config.user_queries_module()

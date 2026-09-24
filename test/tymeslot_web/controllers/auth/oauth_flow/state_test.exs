@@ -1,10 +1,10 @@
-defmodule Tymeslot.Auth.OAuth.StateTest do
+defmodule TymeslotWeb.OAuthFlow.StateTest do
   use ExUnit.Case, async: true
   @moduletag :auth
 
   alias Plug.Conn
   alias Plug.Test
-  alias Tymeslot.Auth.OAuth.State
+  alias TymeslotWeb.OAuthFlow.State
 
   defp build_conn do
     :get

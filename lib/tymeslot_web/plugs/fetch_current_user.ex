@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Plugs.FetchCurrentUser do
 
   import Plug.Conn
 
-  alias Tymeslot.Auth.Session
+  alias TymeslotWeb.UserAuth
 
   @spec init(Keyword.t()) :: Keyword.t()
   def init(opts), do: opts
@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Plugs.FetchCurrentUser do
   @spec call(Plug.Conn.t(), Keyword.t()) :: Plug.Conn.t()
   def call(conn, _opts) do
     session = get_session(conn)
-    user = Session.user_from_session(session)
+    user = UserAuth.user_from_session(session)
 
     conn
     |> drop_dead_token(session, user)

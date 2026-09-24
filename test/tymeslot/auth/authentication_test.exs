@@ -49,7 +49,7 @@ defmodule Tymeslot.Auth.AuthenticationTest do
       password = "ValidPass123!"
       user = insert(:unverified_user, password_hash: Password.hash_password(password))
 
-      Authentication.authenticate_user(user.email, password, ip_address: "198.51.100.61")
+      Authentication.authenticate_user(user.email, password, ip: "198.51.100.61")
 
       assert [job] =
                all_enqueued(
@@ -66,7 +66,7 @@ defmodule Tymeslot.Auth.AuthenticationTest do
       for _i <- 1..5, do: RateLimiter.check_verification_user_rate_limit(user.id)
 
       assert {:error, :invalid_password, message} =
-               Authentication.authenticate_user(user.email, password, ip_address: "198.51.100.62")
+               Authentication.authenticate_user(user.email, password, ip: "198.51.100.62")
 
       assert message == generic_error()
       assert [] = all_enqueued(worker: EmailWorker)
@@ -75,7 +75,7 @@ defmodule Tymeslot.Auth.AuthenticationTest do
     test "a wrong password on an unverified account sends nothing" do
       user = insert(:unverified_user, password_hash: Password.hash_password("ValidPass123!"))
 
-      Authentication.authenticate_user(user.email, "WrongPass123!", ip_address: "198.51.100.63")
+      Authentication.authenticate_user(user.email, "WrongPass123!", ip: "198.51.100.63")
 
       assert [] = all_enqueued(worker: EmailWorker)
     end

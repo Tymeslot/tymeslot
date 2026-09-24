@@ -7,11 +7,9 @@ defmodule Tymeslot.Auth.Authentication do
 
   alias Tymeslot.Auth.ErrorFormatter
   alias Tymeslot.Auth.Helpers.AccountLogging
-  alias Tymeslot.Auth.{UserQueries, Verification}
+  alias Tymeslot.Auth.{RateLimit, UserQueries, Verification}
   alias Tymeslot.Infrastructure.StructuredLogger
   alias Tymeslot.Security.{InputProcessor, Password, RateLimiter, SecurityLogger}
-
-  @type conn :: Plug.Conn.t()
 
   @doc """
   Authenticates a user with the given email and password.
@@ -19,7 +17,8 @@ defmodule Tymeslot.Auth.Authentication do
   ## Parameters
     - email: String.t() (user email)
     - password: String.t() (user password)
-    - opts: Keyword list
+    - opts: Keyword list; `:ip` and `:user_agent` identify the client for
+      the rate limit, the lockout tracker and the audit trail
 
   ## Returns
     - {:ok, user, flash_info} on success
@@ -46,18 +45,11 @@ defmodule Tymeslot.Auth.Authentication do
   end
 
   defp check_rate_limit_and_authenticate(email, password, opts) do
-    case RateLimiter.check_auth_rate_limit(email, opts[:ip_address]) do
-      :ok ->
-        authenticate_with_password(email, password, opts)
-
-      {:error, :rate_limited, message} ->
-        SecurityLogger.log_rate_limit_violation(email, "authentication", %{
-          ip_address: opts[:ip_address],
-          user_agent: opts[:user_agent]
-        })
-
-        {:error, :rate_limit_exceeded, message}
-    end
+    RateLimit.with_limit(
+      RateLimiter.check_auth_rate_limit(email, opts[:ip]),
+      [event: "authentication", identifier: email, ip: opts[:ip], user_agent: opts[:user_agent]],
+      fn -> authenticate_with_password(email, password, opts) end
+    )
   end
 
   defp authenticate_with_password(email, password, opts) do
@@ -71,7 +63,7 @@ defmodule Tymeslot.Auth.Authentication do
         AccountLogging.log_operation_failure("authentication", email, :not_found)
 
         SecurityLogger.log_authentication_attempt(email, false, "user_not_found", %{
-          ip_address: opts[:ip_address],
+          ip_address: opts[:ip],
           user_agent: opts[:user_agent]
         })
 
@@ -113,7 +105,7 @@ defmodule Tymeslot.Auth.Authentication do
       user.verified_at == nil ->
         log_auth_attempt(user, :email_not_verified, opts)
         record_auth_attempt(user, false, opts)
-        Verification.send_link_after_sign_in(user, opts[:ip_address])
+        Verification.send_link_after_sign_in(user, opts[:ip])
         {:error, :invalid_password, ErrorFormatter.format_auth_error(:invalid_password)}
 
       true ->
@@ -148,11 +140,11 @@ defmodule Tymeslot.Auth.Authentication do
   # burst of concurrent failed logins against one account produces one
   # `account_lockout` audit entry per in-flight attempt, not one per lockout.
   defp record_auth_attempt(user, success, opts) do
-    case RateLimiter.record_auth_attempt(user.email, opts[:ip_address], success) do
+    case RateLimiter.record_auth_attempt(user.email, opts[:ip], success) do
       {:error, :account_throttled, _message} ->
         SecurityLogger.log_account_lockout(user.email, "account_throttled", %{
           user_id: user.id,
-          ip_address: opts[:ip_address],
+          ip_address: opts[:ip],
           user_agent: opts[:user_agent]
         })
 
@@ -164,14 +156,14 @@ defmodule Tymeslot.Auth.Authentication do
   defp log_auth_attempt(user, :success, opts) do
     StructuredLogger.log_auth_event(:login_success, user.id, %{
       email_masked: SecurityLogger.mask_email(user.email),
-      ip_address: opts[:ip_address],
+      ip_address: opts[:ip],
       user_agent: opts[:user_agent]
     })
 
     AccountLogging.log_operation_success("authentication", user.email, %{user_id: user.id})
 
     SecurityLogger.log_authentication_attempt(user.email, true, "success", %{
-      ip_address: opts[:ip_address],
+      ip_address: opts[:ip],
       user_agent: opts[:user_agent]
     })
   end
@@ -180,7 +172,7 @@ defmodule Tymeslot.Auth.Authentication do
     StructuredLogger.log_auth_event(:login_failure, user.id, %{
       email_masked: SecurityLogger.mask_email(user.email),
       reason: reason,
-      ip_address: opts[:ip_address],
+      ip_address: opts[:ip],
       user_agent: opts[:user_agent]
     })
 
@@ -189,7 +181,7 @@ defmodule Tymeslot.Auth.Authentication do
     })
 
     SecurityLogger.log_authentication_attempt(user.email, false, to_string(reason), %{
-      ip_address: opts[:ip_address],
+      ip_address: opts[:ip],
       user_agent: opts[:user_agent]
     })
   end

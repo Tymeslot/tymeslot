@@ -12,7 +12,6 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   alias Phoenix.LiveView
   alias Tymeslot.Auth
   alias Tymeslot.Locales
-  alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.AccountLive.{ErrorFormatter, Helpers}
   alias TymeslotWeb.Helpers.ClientIP
 
@@ -118,19 +117,21 @@ defmodule TymeslotWeb.AccountLive.Handlers do
 
   defp update_email(socket, params) do
     socket = assign(socket, :saving_email, true)
-    metadata = build_metadata(socket)
-    user = socket.assigns.current_user
 
-    # Every rule (address format, current password) is the domain's, which
-    # reports each field's problem at once.
-    with :ok <- RateLimiter.check_auth_rate_limit(user.email, metadata[:ip]),
-         {:ok, updated_user, message} <-
-           Auth.request_email_change(user, params["new_email"], params["current_password"]) do
-      {:noreply,
-       socket
-       |> LiveView.put_flash(:info, message)
-       |> Helpers.reset_form_state(:email, updated_user)}
-    else
+    # Every rule (rate limit, address format, current password) is the
+    # domain's, which reports each field's problem at once.
+    case Auth.request_email_change(
+           socket.assigns.current_user,
+           params["new_email"],
+           params["current_password"],
+           ClientIP.request_opts(socket)
+         ) do
+      {:ok, updated_user, message} ->
+        {:noreply,
+         socket
+         |> LiveView.put_flash(:info, message)
+         |> Helpers.reset_form_state(:email, updated_user)}
+
       {:error, :rate_limited, message} ->
         {:noreply, socket |> LiveView.put_flash(:error, message) |> assign(:saving_email, false)}
 
@@ -141,32 +142,29 @@ defmodule TymeslotWeb.AccountLive.Handlers do
 
   defp update_password(socket, params) do
     socket = assign(socket, :saving_password, true)
-    metadata = build_metadata(socket)
-    user = socket.assigns.current_user
 
-    # Every rule (current password, new-password policy, confirmation) is
-    # the domain's; restating any of them here would let the two drift.
-    with :ok <- RateLimiter.check_auth_rate_limit(user.email, metadata[:ip]),
-         {:ok, _updated_user} <-
-           Auth.update_user_password(
-             user,
-             params["current_password"],
-             params["new_password"],
-             params["new_password_confirmation"],
-             ip_address: metadata[:ip],
-             user_agent: metadata[:user_agent]
-           ) do
-      {:noreply,
-       socket
-       |> LiveView.put_flash(
-         :info,
-         dgettext(
-           "account",
-           "Your password has been changed. Please sign in again with your new password."
+    # Every rule (rate limit, current password, new-password policy,
+    # confirmation) is the domain's; restating any of them here would let the
+    # two drift.
+    case Auth.update_user_password(
+           socket.assigns.current_user,
+           params["current_password"],
+           params["new_password"],
+           params["new_password_confirmation"],
+           ClientIP.request_opts(socket)
+         ) do
+      {:ok, _updated_user} ->
+        {:noreply,
+         socket
+         |> LiveView.put_flash(
+           :info,
+           dgettext(
+             "account",
+             "Your password has been changed. Please sign in again with your new password."
+           )
          )
-       )
-       |> LiveView.redirect(to: ~p"/auth/login")}
-    else
+         |> LiveView.redirect(to: ~p"/auth/login")}
+
       {:error, :rate_limited, message} ->
         {:noreply,
          socket |> LiveView.put_flash(:error, message) |> assign(:saving_password, false)}
@@ -189,14 +187,6 @@ defmodule TymeslotWeb.AccountLive.Handlers do
      socket
      |> assign(error_key, formatted_errors)
      |> assign(saving_key, false)}
-  end
-
-  defp build_metadata(socket) do
-    %{
-      ip: ClientIP.get(socket),
-      user_agent: socket.assigns[:user_agent] || "unknown",
-      user_id: socket.assigns.current_user.id
-    }
   end
 
   defp social_user_message(socket, field) do

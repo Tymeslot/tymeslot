@@ -32,8 +32,8 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
   import Phoenix.LiveView
   import Phoenix.Component
 
-  alias Tymeslot.Auth.Session
   alias Tymeslot.Infrastructure.Config
+  alias TymeslotWeb.UserAuth
 
   @type hook ::
           :ensure_authenticated | :fetch_current_user | {:redirect_if_authenticated, [atom()]}
@@ -103,7 +103,7 @@ defmodule TymeslotWeb.Hooks.AuthLiveSessionHook do
   end
 
   defp assign_current_user(socket, session) do
-    socket = assign_new(socket, :current_user, fn -> Session.user_from_session(session) end)
+    socket = assign_new(socket, :current_user, fn -> UserAuth.user_from_session(session) end)
     assign(socket, :is_email_verified, email_verified?(socket.assigns.current_user))
   end
 

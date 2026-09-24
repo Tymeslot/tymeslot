@@ -18,6 +18,7 @@ defmodule Tymeslot.Auth.EmailChange do
 
   alias Tymeslot.Auth.{
     AccountTokens,
+    RateLimit,
     Session,
     UserQueries,
     UserSessionQueries,
@@ -27,7 +28,7 @@ defmodule Tymeslot.Auth.EmailChange do
 
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Repo
-  alias Tymeslot.Security.{InputProcessor, Token}
+  alias Tymeslot.Security.{InputProcessor, RateLimiter, Token}
   alias Tymeslot.Utils.{ChangesetUtils, UrlBuilder}
 
   require Logger
@@ -45,11 +46,29 @@ defmodule Tymeslot.Auth.EmailChange do
   `user` only identifies the account: it is re-read under a row lock, so the
   password is checked against the current hash and the request serialises
   with a concurrent password change instead of slipping a token in after it.
+
+  `opts` carries the request context (`:ip`, `:user_agent`). The request is
+  held to the login rate limit, since it checks a password; over it the
+  result is `{:error, :rate_limited, message}` and nothing is checked.
   """
-  @spec request_email_change(term(), term(), term()) ::
+  @spec request_email_change(term(), term(), term(), keyword()) ::
           {:ok, term(), String.t()}
           | {:error, %{optional(:current_password | :new_email) => String.t()}}
-  def request_email_change(%{id: user_id}, new_email, current_password) do
+          | {:error, :rate_limited, String.t()}
+  def request_email_change(user, new_email, current_password, opts \\ []) do
+    RateLimit.with_limit(
+      RateLimiter.check_auth_rate_limit(user.email, opts[:ip]),
+      [
+        event: "email_change",
+        identifier: user.email,
+        ip: opts[:ip],
+        user_agent: opts[:user_agent]
+      ],
+      fn -> do_request_email_change(user, new_email, current_password) end
+    )
+  end
+
+  defp do_request_email_change(%{id: user_id}, new_email, current_password) do
     with {:ok, new_email} <- validate_input(new_email, current_password),
          {:ok, updated_user, token} <- issue_in_transaction(user_id, new_email, current_password) do
       # Queue emails via Oban; do not fail the request if scheduling fails
@@ -137,11 +156,23 @@ defmodule Tymeslot.Auth.EmailChange do
   Verifies and completes an email change using the verification token.
   Uses a database transaction to ensure atomicity.
 
-  A failure's reason is `:invalid_token`, `:token_expired` or
-  `:changeset_error`.
+  A failure's reason is `:rate_limited`, `:invalid_token`, `:token_expired`
+  or `:changeset_error`. `opts` carries the request context (`:ip`,
+  `:user_agent`), which keys the per-address limit on following links.
   """
-  @spec verify_email_change(String.t()) :: {:ok, Ecto.Schema.t(), String.t()} | error()
-  def verify_email_change(token) when is_binary(token) do
+  @spec verify_email_change(String.t(), keyword()) ::
+          {:ok, Ecto.Schema.t(), String.t()} | error()
+  def verify_email_change(token, opts \\ []) when is_binary(token) do
+    limit = RateLimiter.check_email_change_verify_rate_limit(opts[:ip])
+    context = [event: "email_change_verify", ip: opts[:ip], user_agent: opts[:user_agent]]
+
+    case RateLimit.check(limit, context) do
+      :ok -> complete_email_change(token)
+      {:error, :rate_limited, message} -> {:error, {:rate_limited, message}}
+    end
+  end
+
+  defp complete_email_change(token) do
     case verify_email_change_in_transaction(token) do
       {:ok, result} ->
         # After successful commit, disconnect any live sockets bound to the

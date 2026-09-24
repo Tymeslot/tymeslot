@@ -5,10 +5,7 @@ defmodule Tymeslot.Infrastructure.VerificationBehaviour do
 
   @type verification_result ::
           {:ok, struct()} | {:error, atom()} | {:error, :rate_limited, String.t()}
-  @type socket_or_conn :: Phoenix.LiveView.Socket.t() | Plug.Conn.t()
 
-  @callback verify_user_email(socket_or_conn(), struct(), map()) ::
-              verification_result()
+  @callback send_verification_email(struct(), String.t() | nil) :: verification_result()
   @callback verify_user(String.t() | integer()) :: verification_result()
-  @callback resend_verification_email(socket_or_conn(), struct()) :: verification_result()
 end

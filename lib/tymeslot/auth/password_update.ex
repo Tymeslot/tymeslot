@@ -12,9 +12,9 @@ defmodule Tymeslot.Auth.PasswordUpdate do
 
   alias Ecto.Changeset
 
-  alias Tymeslot.Auth.{Session, UserQueries, Validation}
+  alias Tymeslot.Auth.{RateLimit, Session, UserQueries, Validation}
   alias Tymeslot.Repo
-  alias Tymeslot.Security.{Password, SecurityLogger}
+  alias Tymeslot.Security.{Password, RateLimiter, SecurityLogger}
   alias Tymeslot.Utils.ChangesetUtils
 
   @type error_field :: :current_password | :new_password | :new_password_confirmation
@@ -23,10 +23,13 @@ defmodule Tymeslot.Auth.PasswordUpdate do
   Updates a user's password after verifying their current password.
   Pure domain logic without HTTP concerns.
 
-  `opts` carries the request context for the audit entry the change emits:
-  `:ip_address` and `:user_agent`. Both are optional, but an audit entry for a
-  password change that names no origin is materially weaker, so callers that
-  have them should pass them.
+  `opts` carries the request context: `:ip` and `:user_agent`. They key the
+  rate limit (the login one: a current-password check is a password guess)
+  and name the origin on the audit entry the change emits. Both are
+  optional, but an audit entry for a password change that names no origin is
+  materially weaker, so callers that have them should pass them. Over the
+  limit the result is `{:error, :rate_limited, message}` and nothing is
+  checked.
 
   A failure is `{:error, %{field => message}}`, keyed by the form field each
   message belongs to. Malformed input is reported for every field at once;
@@ -40,7 +43,9 @@ defmodule Tymeslot.Auth.PasswordUpdate do
   hash nor leaves a token issued since then alive.
   """
   @spec update_user_password(term(), term(), term(), term(), keyword()) ::
-          {:ok, term()} | {:error, %{optional(error_field()) => String.t()}}
+          {:ok, term()}
+          | {:error, %{optional(error_field()) => String.t()}}
+          | {:error, :rate_limited, String.t()}
   def update_user_password(
         user,
         current_password,
@@ -48,6 +53,33 @@ defmodule Tymeslot.Auth.PasswordUpdate do
         new_password_confirmation,
         opts
       ) do
+    RateLimit.with_limit(
+      RateLimiter.check_auth_rate_limit(user.email, opts[:ip]),
+      [
+        event: "password_change",
+        identifier: user.email,
+        ip: opts[:ip],
+        user_agent: opts[:user_agent]
+      ],
+      fn ->
+        do_update_user_password(
+          user,
+          current_password,
+          new_password,
+          new_password_confirmation,
+          opts
+        )
+      end
+    )
+  end
+
+  defp do_update_user_password(
+         user,
+         current_password,
+         new_password,
+         new_password_confirmation,
+         opts
+       ) do
     with :ok <- validate_input(current_password, new_password, new_password_confirmation),
          {:ok, updated_user} <-
            update_in_transaction(
@@ -58,7 +90,7 @@ defmodule Tymeslot.Auth.PasswordUpdate do
            ),
          :ok <- Session.revoke_all_sessions(updated_user.id) do
       SecurityLogger.log_password_change(updated_user.id, %{
-        ip_address: opts[:ip_address],
+        ip_address: opts[:ip],
         user_agent: opts[:user_agent],
         sessions_invalidated: true
       })

@@ -8,6 +8,7 @@ defmodule Tymeslot.Auth.SecurityTest do
   alias Tymeslot.Auth
   alias Tymeslot.Auth.Session
   alias Tymeslot.Security.Password
+  alias TymeslotWeb.Helpers.ClientIP
 
   import Tymeslot.Factory
 
@@ -24,7 +25,7 @@ defmodule Tymeslot.Auth.SecurityTest do
       end)
 
       # Subsequent attempts should be rate limited
-      assert {:error, :rate_limit_exceeded, _message} =
+      assert {:error, :rate_limited, _message} =
                Auth.authenticate_user(user.email, "ValidPass123!")
     end
   end
@@ -43,7 +44,7 @@ defmodule Tymeslot.Auth.SecurityTest do
 
       # Verify all old sessions are invalid
       Enum.each(sessions, fn session ->
-        assert nil == Session.user_from_session(%{"user_token" => session.token})
+        assert nil == Session.get_user_by_token(session.token)
       end)
     end
   end
@@ -72,7 +73,8 @@ defmodule Tymeslot.Auth.SecurityTest do
           "terms_accepted" => "true"
         }
 
-        assert {:error, :input, _changeset} = Auth.register_user(params, %Plug.Conn{})
+        assert {:error, :input, _changeset} =
+                 Auth.register_user(params, ClientIP.request_opts(%Plug.Conn{}))
       end)
     end
 
@@ -92,14 +94,15 @@ defmodule Tymeslot.Auth.SecurityTest do
         "terms_accepted" => "true"
       }
 
-      assert {:ok, user, _message} = Auth.register_user(params, %Plug.Conn{})
+      assert {:ok, user, _message} =
+               Auth.register_user(params, ClientIP.request_opts(%Plug.Conn{}))
 
       assert user.email == "safe@example.com"
       assert is_nil(user.name)
     end
 
     test "new accounts require email verification" do
-      conn = %Plug.Conn{}
+      conn = ClientIP.request_opts(%Plug.Conn{})
 
       params = %{
         "email" => "new@example.com",

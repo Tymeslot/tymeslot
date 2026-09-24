@@ -10,6 +10,7 @@ defmodule Tymeslot.Auth.PasswordReset do
   alias Tymeslot.Auth.{
     AccountTokens,
     Helpers.AccountLogging,
+    RateLimit,
     Session,
     UserSchema,
     Validation
@@ -20,14 +21,14 @@ defmodule Tymeslot.Auth.PasswordReset do
   alias Tymeslot.Repo
   alias Tymeslot.Security.{InputProcessor, Password, RateLimiter, SecurityLogger, Token}
   alias Tymeslot.Utils.UrlBuilder
-  alias TymeslotWeb.Helpers.ClientIP
 
   @doc """
   Initiates the password reset process for a given email.
 
   ## Parameters
     - email: String.t() (user email)
-    - opts: Keyword list
+    - opts: Keyword list; `:ip` and `:user_agent` identify the requester for
+      the rate limit and its audit entry
 
   ## Returns
     - `{:ok, :reset_initiated, message}` for every well-formed address within
@@ -44,25 +45,22 @@ defmodule Tymeslot.Auth.PasswordReset do
           | {:error, :invalid_input | :rate_limited, String.t()}
   def initiate_reset(email, opts \\ []) do
     user_queries = Keyword.get(opts, :user_queries_module, Config.user_queries_module())
-    ip = extract_ip_from_opts(opts)
 
     with {:ok, validated_email} <- validate_email_format(email),
-         :ok <- check_reset_rate_limit(validated_email, ip) do
+         :ok <- check_reset_rate_limit(validated_email, opts) do
       process_password_reset_secure(validated_email, user_queries)
     else
       {:error, reason, message} -> {:error, reason, message}
     end
   end
 
-  defp check_reset_rate_limit(email, ip) do
-    case RateLimiter.check_password_reset_rate_limit(email, ip) do
-      :ok ->
-        :ok
-
-      {:error, :rate_limited, message} ->
-        SecurityLogger.log_rate_limit_violation(email, "password_reset", %{ip_address: ip})
-        {:error, :rate_limited, message}
-    end
+  defp check_reset_rate_limit(email, opts) do
+    RateLimit.check(RateLimiter.check_password_reset_rate_limit(email, opts[:ip]),
+      event: "password_reset",
+      identifier: email,
+      ip: opts[:ip],
+      user_agent: opts[:user_agent]
+    )
   end
 
   # Every account state gets the same reply, and the explanation, where there
@@ -102,17 +100,6 @@ defmodule Tymeslot.Auth.PasswordReset do
       {:ok, validated} -> {:ok, validated}
       {:error, msg} -> {:error, :invalid_input, msg}
     end
-  end
-
-  # `:ip_address` is the canonical key (matches `PasswordUpdate.update_user_password/5`'s
-  # convention, and what the audit entry itself is keyed under); `:ip` is
-  # accepted too since `AuthActions` still passes it for this flow's callers.
-  defp extract_ip_from_opts(opts) do
-    opts[:ip_address] || opts[:ip] ||
-      case opts[:socket_or_conn] do
-        nil -> nil
-        soc -> ClientIP.get(soc)
-      end
   end
 
   defp process_regular_user_reset(user) do
@@ -246,7 +233,7 @@ defmodule Tymeslot.Auth.PasswordReset do
     - token: String.t() (password reset token)
     - new_password: String.t() (new password)
     - password_confirmation: String.t() (password confirmation)
-    - opts: Keyword list; `:ip_address` (or `:ip`) and `:user_agent` are recorded on the audit
+    - opts: Keyword list; `:ip` and `:user_agent` are recorded on the audit
       entry the completed reset emits
 
   ## Returns
@@ -263,7 +250,7 @@ defmodule Tymeslot.Auth.PasswordReset do
         :ok = invalidate_all_sessions(updated_user)
 
         SecurityLogger.log_password_change(updated_user.id, %{
-          ip_address: extract_ip_from_opts(opts),
+          ip_address: opts[:ip],
           user_agent: opts[:user_agent],
           sessions_invalidated: true
         })

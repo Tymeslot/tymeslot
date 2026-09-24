@@ -14,6 +14,7 @@ defmodule Tymeslot.Auth.VerificationTest do
   alias Tymeslot.Security.{RateLimiter, Token}
   alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.EmailWorker
+  alias TymeslotWeb.Helpers.ClientIP
 
   import Tymeslot.Factory
 
@@ -147,7 +148,7 @@ defmodule Tymeslot.Auth.VerificationTest do
 
       replies =
         for email <- [unverified.email, verified.email, unknown, nil] do
-          Verification.resend_verification_email_by_email(email, %Plug.Conn{})
+          Verification.resend_verification_email_by_email(email, ClientIP.get(%Plug.Conn{}))
         end
 
       assert replies == [:ok, :ok, :ok, :ok]
@@ -159,7 +160,11 @@ defmodule Tymeslot.Auth.VerificationTest do
     test "a verified account's stored token is left alone" do
       verified = insert(:user)
 
-      assert :ok = Verification.resend_verification_email_by_email(verified.email, %Plug.Conn{})
+      assert :ok =
+               Verification.resend_verification_email_by_email(
+                 verified.email,
+                 ClientIP.get(%Plug.Conn{})
+               )
 
       assert Repo.get!(UserSchema, verified.id).verification_token ==
                verified.verification_token
@@ -172,12 +177,17 @@ defmodule Tymeslot.Auth.VerificationTest do
         RateLimiter.check_verification_rate_limit(user.id, "198.51.100.77")
       end
 
-      assert :ok = Verification.resend_verification_email_by_email(user.email, %Plug.Conn{})
+      assert :ok =
+               Verification.resend_verification_email_by_email(
+                 user.email,
+                 ClientIP.get(%Plug.Conn{})
+               )
+
       assert [] = all_enqueued(worker: EmailWorker)
     end
 
     test "the address bucket is charged before the lookup, whatever the address" do
-      conn = %Plug.Conn{remote_ip: {198, 51, 100, 78}}
+      conn = ClientIP.get(%Plug.Conn{remote_ip: {198, 51, 100, 78}})
 
       # Five resends for addresses with no account still use up the budget...
       for i <- 1..5 do
@@ -216,7 +226,10 @@ defmodule Tymeslot.Auth.VerificationTest do
       # The token is rotated unconditionally; the scheduler replaces the queued job's
       # args with the new URL so job payload and DB token remain in lock-step.
       assert :ok =
-               Verification.resend_verification_email_by_email(user.email, %Plug.Conn{})
+               Verification.resend_verification_email_by_email(
+                 user.email,
+                 ClientIP.get(%Plug.Conn{})
+               )
 
       # The original token is now invalid — a fresh token was persisted.
       assert {:error, :invalid_token} = Verification.verify_user(original_token)
@@ -237,7 +250,10 @@ defmodule Tymeslot.Auth.VerificationTest do
       {:ok, _user} = UserTokenQueries.set_verification_token(user, stale_token)
 
       assert :ok =
-               Verification.resend_verification_email_by_email(user.email, %Plug.Conn{})
+               Verification.resend_verification_email_by_email(
+                 user.email,
+                 ClientIP.get(%Plug.Conn{})
+               )
 
       # A genuinely new email is sent, so the token is rotated; the stale token no
       # longer verifies and the fresh raw token lives only in the new email link.

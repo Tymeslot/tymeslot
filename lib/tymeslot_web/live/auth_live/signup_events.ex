@@ -25,9 +25,10 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
 
-  alias Tymeslot.Auth.{AuthActions, SignupSecurity}
-  alias Tymeslot.Security.{InputProcessor, RateLimiter}
+  alias Tymeslot.Auth.AuthActions
+  alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.AuthLive.SecurityHelper
+  alias TymeslotWeb.Helpers.ClientIP
 
   @typedoc "A LiveView `handle_event/3` return value."
   @type reply :: {:noreply, Phoenix.LiveView.Socket.t()}
@@ -41,7 +42,7 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
   @spec validate(map(), Phoenix.LiveView.Socket.t()) :: reply()
   def validate(params, socket) do
     user_params = params["user"] || %{}
-    metadata = SecurityHelper.extract_client_metadata(socket)
+    metadata = socket |> ClientIP.request_opts() |> Map.new()
     form_data = Map.merge(socket.assigns[:form_data] || %{}, %{email: user_params["email"] || ""})
 
     errors =
@@ -54,28 +55,25 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
   end
 
   @doc """
-  Submits the signup form, once CSRF and the anti-abuse gate both pass.
+  Submits the signup form once CSRF passes. The anti-abuse gate (honeypot,
+  rate limit, reCAPTCHA) runs in the domain, as part of registering.
   """
   @spec submit(map(), Phoenix.LiveView.Socket.t()) :: reply()
   def submit(%{"user" => user_params} = params, socket) do
-    with :ok <- SecurityHelper.validate_csrf_token(socket, params),
-         metadata = SecurityHelper.extract_client_metadata(socket),
-         :ok <- SignupSecurity.gate(user_params, metadata) do
-      register(socket, user_params)
-    else
-      :honeypot ->
-        pretend_registered(socket, user_params)
+    case SecurityHelper.validate_csrf_token(socket, params) do
+      :ok ->
+        register(socket, user_params)
 
       {:error, :invalid_csrf} ->
-        {:noreply, SecurityHelper.set_errors(socket, %{general: csrf_message()})}
-
-      {:error, _kind, message} ->
-        {:noreply, SecurityHelper.set_errors(socket, %{general: message})}
+        {:noreply, SecurityHelper.set_errors(socket, %{general: SecurityHelper.csrf_message()})}
     end
   end
 
   defp register(socket, user_params) do
-    case AuthActions.register_user(user_params, socket) do
+    case AuthActions.register_user(user_params, ClientIP.request_opts(socket)) do
+      {:honeypot, message} ->
+        pretend_registered(socket, message, user_params)
+
       {:ok, new_state, message, pending} ->
         socket =
           socket
@@ -92,20 +90,9 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
     end
   end
 
-  # Spends the address's verification allowance as a real sign-up's email
-  # does, so the resend budget left afterwards matches too.
-  defp pretend_registered(socket, user_params) do
-    socket
-    |> SecurityHelper.extract_client_metadata()
-    |> SecurityHelper.rate_limit_ip()
-    |> RateLimiter.check_verification_ip_rate_limit()
-
-    message =
-      dgettext(
-        "auth",
-        "Account created successfully. Please check your email for verification instructions."
-      )
-
+  # The domain has already spent the verification allowance a real sign-up's
+  # email would, and answered with a real sign-up's message.
+  defp pretend_registered(socket, message, user_params) do
     socket =
       socket
       |> to_verify_email(:verify_email, message, user_params)
@@ -141,7 +128,4 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
     |> assign(:signed_up_here, true)
     |> push_patch(to: ~p"/auth/verify-email")
   end
-
-  defp csrf_message,
-    do: dgettext("auth", "Security validation failed. Please refresh the page.")
 end

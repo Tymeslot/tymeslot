@@ -1,7 +1,15 @@
-defmodule Tymeslot.Auth.OAuth.FlowHandler do
+defmodule TymeslotWeb.OAuthFlow do
   @moduledoc """
-  Orchestrates social sign-in: starting the flow at the provider, handling
-  its callback, and signing an account in. Returns tagged result tuples.
+  The web adapter for social sign-in: starting the flow at the provider,
+  handling its callback, and signing an account in on the connection.
+  Returns tagged result tuples.
+
+  It lives in the web layer because the flow is carried by the connection:
+  the OAuth state and PKCE verifier sit in the Plug session between the
+  redirect and the callback (`TymeslotWeb.OAuthFlow.State`), and a sign-in
+  ends in a session cookie (`TymeslotWeb.UserAuth`). The decisions (which
+  account an identity belongs to, whether a new one may be created) stay in
+  the domain, in `Tymeslot.Auth.OAuth`.
 
   All presentation concerns (flash messages, HTTP redirects) are the
   responsibility of the calling controller.
@@ -9,13 +17,15 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
 
   require Logger
 
-  alias Tymeslot.Auth.OAuth.{Client, Providers, State, URLs, UserProcessor, UserRegistration}
+  alias Tymeslot.Auth.OAuth.{Client, Providers, UserProcessor, UserRegistration}
 
-  alias Tymeslot.Auth.{Session, Verification}
+  alias Tymeslot.Auth.Verification
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.OAuthFlow.State
+  alias TymeslotWeb.UserAuth
 
   @type provider :: Providers.provider()
 
@@ -131,8 +141,20 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
     end
   end
 
-  defp callback_url(conn, provider),
-    do: URLs.callback_url(conn, Providers.callback_path(provider))
+  # The endpoint's configured URL when the conn went through one (every real
+  # request does), else one built from the conn itself.
+  defp callback_url(conn, provider), do: base_url(conn) <> Providers.callback_path(provider)
+
+  defp base_url(%{private: %{phoenix_endpoint: endpoint}}) when endpoint != nil,
+    do: endpoint.url()
+
+  defp base_url(conn) do
+    case {conn.scheme, conn.port} do
+      {:https, 443} -> "https://#{conn.host}"
+      {:http, 80} -> "http://#{conn.host}"
+      {scheme, port} -> "#{scheme}://#{conn.host}:#{port}"
+    end
+  end
 
   defp complete_oauth_flow(conn, user, provider) do
     case UserRegistration.find_existing_user(provider, user) do
@@ -165,7 +187,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   @spec sign_in(Plug.Conn.t(), map(), provider()) :: flow_result()
   def sign_in(conn, %{verified_at: nil} = user, provider) do
     delivery =
-      case Verification.resend_verification_email(conn, user) do
+      case Verification.send_verification_email(user, ClientIP.get(conn)) do
         {:ok, _user} -> :sent
         {:error, :rate_limited, _message} -> :rate_limited
         {:error, _reason} -> :failed
@@ -176,13 +198,13 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
       error_reason: "email_not_verified"
     })
 
-    {:verification_required, Session.put_unverified_user(conn, user), provider, delivery}
+    {:verification_required, UserAuth.put_unverified_user(conn, user), provider, delivery}
   end
 
   def sign_in(conn, user, provider), do: create_user_session(conn, user, provider)
 
   defp create_user_session(conn, user, provider) do
-    case Session.create_session(conn, %{id: user.id}) do
+    case UserAuth.create_session(conn, %{id: user.id}) do
       {:ok, session_conn, _token} ->
         # Funnel: count OAuth logins alongside password logins. Categorical only
         # (method + provider) - never any user identifier.

@@ -1,4 +1,4 @@
-defmodule Tymeslot.Auth.OAuth.State do
+defmodule TymeslotWeb.OAuthFlow.State do
   @moduledoc """
   Keeps the per-flow OAuth secrets in the session: the `state` parameter that
   ties the callback to the browser that started the flow (CSRF), and the PKCE

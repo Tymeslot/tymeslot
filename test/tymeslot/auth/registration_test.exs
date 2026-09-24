@@ -7,11 +7,12 @@ defmodule Tymeslot.Auth.RegistrationTest do
 
   alias Tymeslot.Auth.{Registration, UserSchema}
   alias Tymeslot.Repo
+  alias TymeslotWeb.Helpers.ClientIP
   import Tymeslot.Factory
 
   describe "registration security" do
     test "enforces strong password requirements" do
-      conn = %Plug.Conn{}
+      conn = ClientIP.request_opts(%Plug.Conn{})
 
       weak_passwords = [
         # Too short
@@ -37,7 +38,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
     end
 
     test "prevents duplicate accounts (case-insensitive)" do
-      conn = %Plug.Conn{}
+      conn = ClientIP.request_opts(%Plug.Conn{})
       insert(:user, email: "existing@example.com")
 
       params = %{
@@ -54,7 +55,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
     end
 
     test "new accounts require email verification" do
-      conn = %Plug.Conn{}
+      conn = ClientIP.request_opts(%Plug.Conn{})
 
       params = %{
         "email" => "new@example.com",
@@ -81,7 +82,9 @@ defmodule Tymeslot.Auth.RegistrationTest do
         "terms_accepted" => "true"
       }
 
-      assert {:existing_account, _message} = Registration.register_user(params, %Plug.Conn{})
+      assert {:existing_account, _message} =
+               Registration.register_user(params, ClientIP.request_opts(%Plug.Conn{}))
+
       assert Repo.aggregate(UserSchema, :count, :id) == 1
     end
   end
@@ -101,7 +104,8 @@ defmodule Tymeslot.Auth.RegistrationTest do
         "terms_accepted" => "true"
       }
 
-      {:ok, user, _session} = Registration.register_user(params, %Plug.Conn{})
+      {:ok, user, _session} =
+        Registration.register_user(params, ClientIP.request_opts(%Plug.Conn{}))
 
       assert user.email == "safe@example.com"
       assert is_nil(user.name)
@@ -112,7 +116,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
     setup :reopen_admin_bootstrap
 
     test "the first registered user is promoted to admin" do
-      conn = %Plug.Conn{}
+      conn = ClientIP.request_opts(%Plug.Conn{})
 
       params = %{
         "email" => "first@example.com",
@@ -127,7 +131,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
     end
 
     test "a second registered user is not promoted to admin" do
-      conn = %Plug.Conn{}
+      conn = ClientIP.request_opts(%Plug.Conn{})
 
       first_params = %{
         "email" => "first2@example.com",
@@ -164,7 +168,8 @@ defmodule Tymeslot.Auth.RegistrationTest do
         "terms_accepted" => "true"
       }
 
-      {:ok, user, _session} = Registration.register_user(params, %Plug.Conn{})
+      {:ok, user, _session} =
+        Registration.register_user(params, ClientIP.request_opts(%Plug.Conn{}))
 
       # Never store plaintext
       refute user.password_hash == plain

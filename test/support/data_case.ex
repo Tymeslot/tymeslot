@@ -81,7 +81,7 @@ defmodule Tymeslot.DataCase do
   """
   @spec stub_verification_default() :: :ok
   def stub_verification_default do
-    Mox.stub(VerificationMock, :verify_user_email, &Verification.verify_user_email/3)
+    Mox.stub(VerificationMock, :send_verification_email, &Verification.send_verification_email/2)
 
     :ok
   end

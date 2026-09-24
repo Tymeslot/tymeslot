@@ -112,7 +112,9 @@ defmodule Tymeslot.Security.RateLimiter.Auth do
           :ok | {:error, :rate_limited, String.t()}
   def check_signup(email, ip) do
     normalized_ip = Helpers.normalize_ip(ip)
-    downcased_email = String.downcase(email)
+    # Trimmed as well as downcased: the gate sees the raw form value, so a
+    # padded address must not buy itself a fresh bucket.
+    downcased_email = normalise_email(email)
     action = dgettext("errors", "signup attempts")
 
     Helpers.check_multi_bucket_limits([

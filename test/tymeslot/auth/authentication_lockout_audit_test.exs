@@ -16,7 +16,7 @@ defmodule Tymeslot.Auth.AuthenticationLockoutAuditTest do
   import Tymeslot.Factory
 
   @password "ValidPass123!"
-  @opts [ip_address: "203.0.113.7", user_agent: "curl/8.0"]
+  @opts [ip: "203.0.113.7", user_agent: "curl/8.0"]
 
   # The lockout tracker lives in ETS and outlives the sandbox transaction, so
   # each test clears its own account's attempts on the way out.
@@ -34,7 +34,7 @@ defmodule Tymeslot.Auth.AuthenticationLockoutAuditTest do
   # threshold, so the next real failed login is the attempt that crosses it.
   defp prime_failures(email, count) do
     Enum.each(1..count, fn _n ->
-      RateLimiter.record_auth_attempt(email, @opts[:ip_address], false)
+      RateLimiter.record_auth_attempt(email, @opts[:ip], false)
     end)
   end
 

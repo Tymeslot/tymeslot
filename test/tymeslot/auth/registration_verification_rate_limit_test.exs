@@ -31,6 +31,7 @@ defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
   alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Test.LogCapture
+  alias TymeslotWeb.Helpers.ClientIP
 
   @client_ip {203, 0, 113, 50}
   @client_ip_string "203.0.113.50"
@@ -43,7 +44,7 @@ defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
     :ok
   end
 
-  defp conn, do: %Plug.Conn{remote_ip: @client_ip}
+  defp conn, do: ClientIP.request_opts(%Plug.Conn{remote_ip: @client_ip})
 
   defp signup_params(email) do
     %{

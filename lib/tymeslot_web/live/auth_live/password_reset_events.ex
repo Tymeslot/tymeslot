@@ -24,6 +24,7 @@ defmodule TymeslotWeb.AuthLive.PasswordResetEvents do
   alias Tymeslot.Auth.AuthActions
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.AuthLive.SecurityHelper
+  alias TymeslotWeb.Helpers.ClientIP
 
   @typedoc "A LiveView `handle_event/3` return value."
   @type reply :: {:noreply, Phoenix.LiveView.Socket.t()}
@@ -33,7 +34,7 @@ defmodule TymeslotWeb.AuthLive.PasswordResetEvents do
   """
   @spec validate_request(String.t(), Phoenix.LiveView.Socket.t()) :: reply()
   def validate_request(email, socket) do
-    metadata = SecurityHelper.extract_client_metadata(socket)
+    metadata = socket |> ClientIP.request_opts() |> Map.new()
 
     case InputProcessor.validate_form(%{"email" => email}, [{"email", :email}],
            metadata: metadata
@@ -55,7 +56,8 @@ defmodule TymeslotWeb.AuthLive.PasswordResetEvents do
   @spec submit_request(String.t(), map(), Phoenix.LiveView.Socket.t()) :: reply()
   def submit_request(email, params, socket) do
     with :ok <- SecurityHelper.validate_csrf_token(socket, params),
-         {:ok, new_state, message} <- AuthActions.request_password_reset(email, socket) do
+         {:ok, new_state, message} <-
+           AuthActions.request_password_reset(email, ClientIP.request_opts(socket)) do
       socket =
         socket
         |> AuthActions.transition_state(new_state, :reset_password)
@@ -64,7 +66,7 @@ defmodule TymeslotWeb.AuthLive.PasswordResetEvents do
 
       {:noreply, socket}
     else
-      {:error, :invalid_csrf} -> general_error(socket, csrf_message())
+      {:error, :invalid_csrf} -> general_error(socket, SecurityHelper.csrf_message())
       {:error, message} -> general_error(socket, message)
     end
   end
@@ -76,7 +78,7 @@ defmodule TymeslotWeb.AuthLive.PasswordResetEvents do
   def submit_new_password(params, socket) do
     case SecurityHelper.validate_csrf_token(socket, params) do
       :ok -> reset(socket.assigns[:reset_token], params, socket)
-      {:error, :invalid_csrf} -> general_error(socket, csrf_message())
+      {:error, :invalid_csrf} -> general_error(socket, SecurityHelper.csrf_message())
     end
   end
 
@@ -85,7 +87,7 @@ defmodule TymeslotWeb.AuthLive.PasswordResetEvents do
            token,
            params["password"],
            params["password_confirmation"],
-           socket
+           ClientIP.request_opts(socket)
          ) do
       {:ok, new_state, message} ->
         socket =
@@ -113,7 +115,4 @@ defmodule TymeslotWeb.AuthLive.PasswordResetEvents do
   defp general_error(socket, message) do
     {:noreply, SecurityHelper.set_errors(socket, %{general: message})}
   end
-
-  defp csrf_message,
-    do: dgettext("auth", "Security validation failed. Please refresh the page.")
 end

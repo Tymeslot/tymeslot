@@ -8,13 +8,14 @@ defmodule TymeslotWeb.OAuthController do
   use Gettext, backend: TymeslotWeb.Gettext
   require Logger
 
-  alias Tymeslot.Auth.{AuthActions, SocialAuthentication}
-  alias Tymeslot.Auth.OAuth.{FlowHandler, Providers, SignupConfirmation}
+  alias Tymeslot.Auth.{AuthActions, RateLimit, SocialAuthentication}
+  alias Tymeslot.Auth.OAuth.{Providers, SignupConfirmation}
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Security.{RateLimiter, SecurityLogger}
+  alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.AuthControllerHelpers
   alias TymeslotWeb.EmailLinkConfirmHTML
   alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
+  alias TymeslotWeb.OAuthFlow
 
   @type provider :: Providers.provider()
 
@@ -50,7 +51,7 @@ defmodule TymeslotWeb.OAuthController do
   defp social_auth_enabled?(provider), do: Providers.enabled?(provider)
 
   defp do_provider_auth(conn, provider) do
-    {updated_conn, authorize_url} = FlowHandler.authorize(conn, provider)
+    {updated_conn, authorize_url} = OAuthFlow.authorize(conn, provider)
     redirect(updated_conn, external: authorize_url)
   end
 
@@ -66,19 +67,15 @@ defmodule TymeslotWeb.OAuthController do
   # Every public entry point is rate limited by IP; the violation is logged
   # and answered the same way, so a new action cannot apply half the gate.
   defp with_rate_limit(conn, action, on_allowed) do
-    ip = ClientIP.get(conn)
+    [ip: ip, user_agent: user_agent] = ClientIP.request_opts(conn)
     {check, event, message, redirect_path} = rate_limit(action, conn)
+    context = [event: event, identifier: ip, ip: ip, user_agent: user_agent]
 
-    case check.(ip) do
+    case RateLimit.check(check.(ip), context) do
       :ok ->
         on_allowed.()
 
       {:error, :rate_limited, _message} ->
-        SecurityLogger.log_rate_limit_violation(ip, event, %{
-          ip_address: ip,
-          user_agent: ClientIP.get_user_agent(conn)
-        })
-
         AuthControllerHelpers.handle_rate_limited(conn, message, redirect_path)
     end
   end
@@ -172,7 +169,7 @@ defmodule TymeslotWeb.OAuthController do
     paths = get_redirect_paths(conn)
 
     conn
-    |> FlowHandler.handle_oauth_callback(%{
+    |> OAuthFlow.handle_oauth_callback(%{
       code: code,
       state: state,
       provider: provider
@@ -183,13 +180,7 @@ defmodule TymeslotWeb.OAuthController do
   defp process_oauth_completion(conn, params) do
     pending = get_session(conn, :pending_oauth_registration)
 
-    metadata = %{
-      ip: ClientIP.get(conn),
-      user_agent: ClientIP.get_user_agent(conn),
-      source: "oauth_signup"
-    }
-
-    case SocialAuthentication.complete_registration(pending, params, metadata) do
+    case SocialAuthentication.complete_registration(pending, params, signup_metadata(conn)) do
       # An address typed into the form, taken or free: nothing was created,
       # and both are answered with the same page, flash and session.
       {:ok, provider, :check_email, delivery} ->
@@ -200,7 +191,7 @@ defmodule TymeslotWeb.OAuthController do
       {:ok, provider, user, :created} ->
         conn
         |> delete_session(:pending_oauth_registration)
-        |> FlowHandler.sign_in(user, provider)
+        |> OAuthFlow.sign_in(user, provider)
         |> respond_to_completion()
 
       # The account already existed (the form was submitted twice): this is a
@@ -208,7 +199,7 @@ defmodule TymeslotWeb.OAuthController do
       {:ok, provider, user, :existing} ->
         conn
         |> delete_session(:pending_oauth_registration)
-        |> FlowHandler.sign_in(user, provider)
+        |> OAuthFlow.sign_in(user, provider)
         |> respond_to_oauth_result(success_path: ~p"/dashboard", login_path: ~p"/auth/login")
 
       {:error, reason} ->
@@ -268,16 +259,10 @@ defmodule TymeslotWeb.OAuthController do
   @spec finish_signup(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def finish_signup(conn, %{"token" => token}) do
     with_rate_limit(conn, :completion, fn ->
-      metadata = %{
-        ip: ClientIP.get(conn),
-        user_agent: ClientIP.get_user_agent(conn),
-        source: "oauth_signup"
-      }
-
-      case SignupConfirmation.confirm(token, metadata) do
+      case SignupConfirmation.confirm(token, signup_metadata(conn)) do
         {:ok, provider, user} ->
           conn
-          |> FlowHandler.sign_in(user, provider)
+          |> OAuthFlow.sign_in(user, provider)
           |> respond_to_completion()
 
         {:error, :invalid_link} ->
@@ -289,6 +274,11 @@ defmodule TymeslotWeb.OAuthController do
           |> redirect(to: ~p"/auth/login")
       end
     end)
+  end
+
+  # Forwarded with the registration broadcast a completed sign-up publishes.
+  defp signup_metadata(conn) do
+    conn |> ClientIP.request_opts() |> Map.new() |> Map.put(:source, "oauth_signup")
   end
 
   defp respond_to_completion({:ok, authed_conn, provider}) do
@@ -316,7 +306,7 @@ defmodule TymeslotWeb.OAuthController do
   end
 
   defp completion_failed(conn, :missing_pending_registration, _pending) do
-    FlowHandler.log_social_auth("unknown", false, conn, %{
+    OAuthFlow.log_social_auth("unknown", false, conn, %{
       error_reason: "missing_pending_registration"
     })
 
@@ -375,7 +365,7 @@ defmodule TymeslotWeb.OAuthController do
   end
 
   defp log_completion_failure(conn, pending, error_reason) do
-    FlowHandler.log_social_auth(pending[:provider], false, conn, %{
+    OAuthFlow.log_social_auth(pending[:provider], false, conn, %{
       email: pending[:email],
       error_reason: error_reason
     })
@@ -412,7 +402,7 @@ defmodule TymeslotWeb.OAuthController do
   end
 
   @spec respond_to_oauth_result(
-          FlowHandler.flow_result(),
+          OAuthFlow.flow_result(),
           keyword()
         ) :: Plug.Conn.t()
   defp respond_to_oauth_result({:ok, authed_conn, provider}, paths) do

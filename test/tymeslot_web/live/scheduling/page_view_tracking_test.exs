@@ -14,13 +14,13 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Analytics.EventSchema
-  alias Tymeslot.Auth.Session
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
   alias TymeslotWeb.Hooks.PageViewHook
+  alias TymeslotWeb.UserAuth
 
   @moduletag :scheduling
   @moduletag :live
@@ -79,7 +79,7 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
       {:ok, conn, token} =
         conn
         |> init_test_session(%{})
-        |> Session.create_session(ctx.user)
+        |> UserAuth.create_session(ctx.user)
 
       conn = put_req_header(conn, "user-agent", "Mozilla/5.0 (Macintosh) Chrome/126.0.0.0")
 
@@ -106,7 +106,7 @@ defmodule TymeslotWeb.Live.Scheduling.PageViewTrackingTest do
       {:ok, conn, _token} =
         conn
         |> init_test_session(%{})
-        |> Session.create_session(visitor)
+        |> UserAuth.create_session(visitor)
 
       {:ok, _view, _html} =
         conn

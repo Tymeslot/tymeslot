@@ -17,12 +17,13 @@ defmodule TymeslotWeb.AuthLive.SignedInVisitorTest do
 
   alias Tymeslot.Auth.{
     AccountTokens,
-    Session,
     UserSchema,
     UserSessionQueries,
     UserSessionSchema,
     UserTokenQueries
   }
+
+  alias TymeslotWeb.UserAuth
 
   alias Tymeslot.Repo
   alias Tymeslot.Security.Password
@@ -39,7 +40,7 @@ defmodule TymeslotWeb.AuthLive.SignedInVisitorTest do
     {:ok, conn, token} =
       conn
       |> init_test_session(%{})
-      |> Session.create_session(user)
+      |> UserAuth.create_session(user)
 
     %{conn: conn, user: user, token: token}
   end

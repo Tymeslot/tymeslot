@@ -6,13 +6,22 @@ defmodule Tymeslot.Auth.Registration do
   use Gettext, backend: TymeslotWeb.Gettext
 
   require Logger
-  alias Tymeslot.Auth.{AdminBootstrap, ErrorFormatter, Helpers.AccountLogging, UserSchema}
+
+  alias Tymeslot.Auth.{
+    AdminBootstrap,
+    ErrorFormatter,
+    Helpers.AccountLogging,
+    RateLimit,
+    SignupSecurity,
+    UserSchema,
+    Validation
+  }
+
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.{Config, PubSub}
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
-  alias Tymeslot.Security.{InputProcessor, Password, RateLimiter, SecurityLogger}
-  alias TymeslotWeb.Helpers.ClientIP
+  alias Tymeslot.Security.{InputProcessor, Password, RateLimiter}
 
   @type signup_params :: Tymeslot.Auth.Validation.signup_params()
 
@@ -23,16 +32,18 @@ defmodule Tymeslot.Auth.Registration do
   @doc """
   Registers a new user with the provided parameters.
 
-  ## Parameters
-    - params: User registration parameters
-    - socket_or_conn: Phoenix socket or connection
-    - opts: Optional parameters including:
-      - :return_url - URL to redirect to after registration
-      - :metadata - Map of app-specific data to include in PubSub event
-      - :rate_limit_checked - set to `true` when the caller has already
-        consumed a signup rate-limit token for this attempt (e.g.
-        `Tymeslot.Auth.SignupSecurity.gate/2` on the LiveView signup path),
-        so this function skips its own check instead of double-counting
+  Every sign-up passes `Tymeslot.Auth.SignupSecurity.gate/2` first, so the
+  signup rate limit is charged exactly once per attempt, before any bot check
+  that costs an external call.
+
+  ## Options
+    - `:ip`, `:user_agent` - the requesting client, for the rate limit and
+      the audit trail
+    - `:metadata` - map of app-specific data to include in the PubSub event,
+      with `terms_accepted` added; without it the event carries none
+    - `:bot_checks` - `false` skips the honeypot and reCAPTCHA, which only a
+      browser form can satisfy; for trusted server-side callers such as
+      provisioning tasks. The rate limit applies regardless.
 
   ## Returns
     - `{:ok, user, message}` when a new account was created. A verification
@@ -41,25 +52,55 @@ defmodule Tymeslot.Auth.Registration do
     - `{:existing_account, message}` when the address already had an
       account. `message` is the same one a new account gets, and nothing
       user-facing may tell the two apart: the owner is emailed instead (see
-      `create_and_verify_user/3`). The distinct tag exists so machine callers
+      `create_and_verify_user/2`). The distinct tag exists so machine callers
       cannot mistake it for a created account.
+    - `{:honeypot, message}` when the honeypot caught a bot. Nothing is
+      created, but the reply and the verification allowance spent match a
+      real sign-up's, so the bot learns nothing.
     - `{:error, reason, message}` on failure with appropriate flash message,
       which never depends on whether the address has an account
   """
-  @spec register_user(signup_params(), Phoenix.LiveView.Socket.t() | Plug.Conn.t(), Keyword.t()) ::
+  @spec register_user(signup_params(), keyword()) ::
           {:ok, UserSchema.t(), String.t()}
           | {:existing_account, String.t()}
+          | {:honeypot, String.t()}
           | {:error, atom(), String.t()}
-          | {:error, :input, map()}
-  def register_user(params, socket_or_conn, opts \\ []) do
-    with {:ok, validated_params} <- validate_input(params),
-         :ok <- check_rate_limit(validated_params["email"], socket_or_conn, opts) do
-      case create_and_verify_user(validated_params, socket_or_conn, opts) do
+          | {:error, :input, map() | String.t()}
+  def register_user(params, opts \\ []) do
+    case SignupSecurity.gate(params, opts) do
+      :ok -> validate_and_register(params, opts)
+      :honeypot -> answer_honeypot(opts[:ip])
+      {:error, _kind, _message} = refused -> refused
+    end
+  end
+
+  defp validate_and_register(params, opts) do
+    with {:ok, validated_params} <- validate_input(params) do
+      terms_accepted = Validation.terms_accepted?(params["terms_accepted"])
+      validated_params = Map.put(validated_params, "terms_accepted", terms_accepted)
+
+      case create_and_verify_user(validated_params, with_terms(opts, terms_accepted)) do
         {:ok, :existing_account} -> {:existing_account, success_message()}
         {:ok, user} -> {:ok, user, success_message()}
         {:error, _reason, _message} = error -> error
       end
     end
+  end
+
+  # The broadcast says whether the terms were accepted, but only for a caller
+  # that asked for one with metadata: a listener records legal acceptance from
+  # it, which a provisioning task must be able to leave pending.
+  defp with_terms(opts, terms_accepted) do
+    if Keyword.has_key?(opts, :metadata),
+      do: Keyword.update!(opts, :metadata, &Map.put(&1, :terms_accepted, terms_accepted)),
+      else: opts
+  end
+
+  # Spends the address's verification allowance as a real sign-up's email
+  # does, so the resend budget left afterwards matches too.
+  defp answer_honeypot(ip) do
+    _allowance = RateLimiter.check_verification_ip_rate_limit(ip)
+    {:honeypot, success_message()}
   end
 
   # One message for every outcome that reaches the mailbox, new account or
@@ -91,40 +132,21 @@ defmodule Tymeslot.Auth.Registration do
 
   defp validate_terms(params, validated_params) do
     if Application.get_env(:tymeslot, :enforce_legal_agreements, false) do
-      case Map.get(params, "terms_accepted") do
-        value when value in ["true", "on", true] ->
-          {:ok, validated_params}
+      if Validation.terms_accepted?(params["terms_accepted"]) do
+        {:ok, validated_params}
+      else
+        errors = %{
+          terms_accepted: dgettext("auth", "Terms of service must be accepted")
+        }
 
-        _other ->
-          errors = %{
-            terms_accepted: dgettext("auth", "Terms of service must be accepted")
-          }
+        AccountLogging.log_validation_failure("signup", params["email"], errors)
+        formatted = ErrorFormatter.format_validation_errors(errors)
 
-          AccountLogging.log_validation_failure("signup", params["email"], errors)
-          formatted = ErrorFormatter.format_validation_errors(errors)
-
-          {:error, :input,
-           dgettext("auth", "Please correct the following errors: %{errors}", errors: formatted)}
+        {:error, :input,
+         dgettext("auth", "Please correct the following errors: %{errors}", errors: formatted)}
       end
     else
       {:ok, validated_params}
-    end
-  end
-
-  defp check_rate_limit(email, socket_or_conn, opts) do
-    if Keyword.get(opts, :rate_limit_checked, false) do
-      :ok
-    else
-      ip = ClientIP.get(socket_or_conn)
-
-      case RateLimiter.check_signup_rate_limit(email, ip) do
-        :ok ->
-          :ok
-
-        {:error, :rate_limited, message} ->
-          SecurityLogger.log_rate_limit_violation(email, "signup", %{ip_address: ip})
-          {:error, :rate_limited, message}
-      end
     end
   end
 
@@ -132,29 +154,29 @@ defmodule Tymeslot.Auth.Registration do
   # the same dominant cost, one bcrypt hash (the new-user branch pays it in the
   # registration changeset). The explanation goes to the address's owner by
   # email, which only they can read. No account is created.
-  defp create_and_verify_user(validated_params, socket_or_conn, opts) do
+  defp create_and_verify_user(validated_params, opts) do
     case Config.user_queries_module().get_user_by_email(validated_params["email"]) do
       {:ok, existing} ->
         _discarded = Password.hash_password(validated_params["password"])
-        duplicate_attempt(existing, socket_or_conn)
+        duplicate_attempt(existing, opts[:ip])
 
       {:error, :not_found} ->
-        create_new_user(validated_params, socket_or_conn, opts)
+        create_new_user(validated_params, opts)
     end
   end
 
-  defp create_new_user(validated_params, socket_or_conn, opts) do
+  defp create_new_user(validated_params, opts) do
     case create_user(validated_params) do
       {:ok, user} ->
         AccountLogging.log_user_created(user)
-        verify_and_notify_user(user, validated_params, socket_or_conn, opts)
+        verify_and_notify_user(user, opts)
 
       # Another sign-up for the address committed between the lookup and the
       # insert. The changeset has already paid the bcrypt cost, so this is the
       # duplicate branch in every respect but that.
       {:error, :email_taken} ->
         case Config.user_queries_module().get_user_by_email(validated_params["email"]) do
-          {:ok, existing} -> duplicate_attempt(existing, socket_or_conn)
+          {:ok, existing} -> duplicate_attempt(existing, opts[:ip])
           # The winner is already gone again; there is no one to tell.
           {:error, :not_found} -> {:ok, :existing_account}
         end
@@ -170,8 +192,8 @@ defmodule Tymeslot.Auth.Registration do
     end
   end
 
-  defp duplicate_attempt(existing, socket_or_conn) do
-    _outcome = answer_taken_address(existing, ClientIP.get(socket_or_conn))
+  defp duplicate_attempt(existing, ip) do
+    _outcome = answer_taken_address(existing, ip)
     {:ok, :existing_account}
   end
 
@@ -202,12 +224,17 @@ defmodule Tymeslot.Auth.Registration do
   # Capped per recipient so the sign-up form cannot be used to flood an
   # owner's mailbox; over the cap the note is simply not sent.
   defp notify_owner_of_attempt(existing) do
-    with :ok <- RateLimiter.check_signup_attempt_notice_rate_limit(existing.id),
+    with :ok <-
+           RateLimit.check(
+             RateLimiter.check_signup_attempt_notice_rate_limit(existing.id),
+             event: "signup_attempt_notice",
+             identifier: existing.id
+           ),
          {:ok, _status} <- EmailScheduler.schedule_signup_attempt_notice(existing.id) do
       :ok
     else
       {:error, :rate_limited, _message} ->
-        SecurityLogger.log_rate_limit_violation(existing.id, "signup_attempt_notice", %{})
+        :ok
 
       {:error, reason} ->
         Logger.error("Failed to schedule sign-up attempt notice",
@@ -222,9 +249,9 @@ defmodule Tymeslot.Auth.Registration do
   # way deliberately: a send that fails or is rate limited must not leave a
   # committed user row with no profile and no broadcast, because the address is
   # then rejected as a duplicate on retry and the account can never be reached.
-  defp verify_and_notify_user(user, validated_params, socket_or_conn, opts) do
+  defp verify_and_notify_user(user, opts) do
     case create_profile_and_announce(user, opts) do
-      :ok -> send_verification_email(user, validated_params, socket_or_conn)
+      :ok -> send_verification_email(user, opts[:ip])
       {:error, _reason, _message} = error -> error
     end
   end
@@ -253,8 +280,8 @@ defmodule Tymeslot.Auth.Registration do
   # A send that is refused or fails must not change the reply, because a taken
   # address never reaches this point and would answer differently. The user
   # can resend from the verify-email screen, or sign in to be sent a new link.
-  defp send_verification_email(user, validated_params, socket_or_conn) do
-    case verification_module().verify_user_email(socket_or_conn, user, validated_params) do
+  defp send_verification_email(user, ip) do
+    case verification_module().send_verification_email(user, ip) do
       {:ok, _updated_user} ->
         :ok
 

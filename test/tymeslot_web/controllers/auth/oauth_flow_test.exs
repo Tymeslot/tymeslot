@@ -1,6 +1,6 @@
-defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
+defmodule TymeslotWeb.OAuthFlowTest do
   @moduledoc """
-  DB-backed coverage for `Tymeslot.Auth.OAuth.FlowHandler.handle_oauth_callback/2`:
+  DB-backed coverage for `TymeslotWeb.OAuthFlow.handle_oauth_callback/2`:
 
     state validation -> token exchange -> user info -> normalisation ->
     account lookup -> session, verify screen, or registration
@@ -20,11 +20,12 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
   alias Plug.Conn
   alias Plug.Test, as: PlugTest
   alias Req.Test, as: ReqTest
-  alias Tymeslot.Auth.OAuth.{FlowHandler, State}
   alias Tymeslot.Auth.{Session, UserSchema, UserSessionSchema}
   alias Tymeslot.Repo
   alias Tymeslot.Security.Token
   alias Tymeslot.Test.LogCapture
+  alias TymeslotWeb.OAuthFlow
+  alias TymeslotWeb.OAuthFlow.State
 
   setup :setup_providers
 
@@ -328,7 +329,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
   end
 
   defp callback(conn, provider, state) do
-    FlowHandler.handle_oauth_callback(conn, %{
+    OAuthFlow.handle_oauth_callback(conn, %{
       code: "provider-code",
       state: state,
       provider: provider

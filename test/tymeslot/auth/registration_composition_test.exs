@@ -1,7 +1,7 @@
 defmodule Tymeslot.Auth.RegistrationCompositionTest do
   @moduledoc """
   End-to-end composition coverage for
-  `Tymeslot.Auth.Registration.register_user/3`.
+  `Tymeslot.Auth.Registration.register_user/2`.
 
   The unit suite (`registration_test.exs`) covers validation paths and
   password hashing. This file exercises the full pipeline:
@@ -36,6 +36,7 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.EmailWorker
+  alias TymeslotWeb.Helpers.ClientIP
 
   setup do
     :ok = Auth.subscribe_to_user_registrations()
@@ -47,7 +48,7 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
     :ok
   end
 
-  describe "register_user/3 — full pipeline" do
+  describe "register_user/2 — full pipeline" do
     test "creates user, profile, weekly schedule, and broadcasts :user_registered" do
       email = "composition-#{System.unique_integer([:positive])}@example.com"
 
@@ -61,8 +62,10 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
       }
 
       assert {:ok, user, message} =
-               Registration.register_user(params, %Plug.Conn{},
-                 metadata: %{source: "composition-test"}
+               Registration.register_user(
+                 params,
+                 [metadata: %{source: "composition-test"}] ++
+                   ClientIP.request_opts(%Plug.Conn{})
                )
 
       assert message =~ "Account created"
@@ -102,11 +105,11 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
       # PubSub event for cross-app listeners (SaaS, etc.).
       assert_received {:user_registered, %{user: broadcast_user, metadata: metadata}}
       assert broadcast_user.id == user.id
-      assert metadata == %{source: "composition-test"}
+      assert metadata == %{source: "composition-test", terms_accepted: true}
     end
   end
 
-  describe "register_user/3 — rate limit refuses creation" do
+  describe "register_user/2 — rate limit refuses creation" do
     test "does not create a user when the signup rate limit is already exhausted" do
       email = "rate-#{System.unique_integer([:positive])}@example.com"
       # Burn through the 10-minute / 5-attempt signup bucket for this email.
@@ -124,7 +127,7 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
       }
 
       assert {:error, :rate_limited, _message} =
-               Registration.register_user(params, %Plug.Conn{})
+               Registration.register_user(params, ClientIP.request_opts(%Plug.Conn{}))
 
       # No user row was created despite the matching password and terms.
       refute Repo.get_by(UserSchema, email: email)

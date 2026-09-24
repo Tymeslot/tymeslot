@@ -19,6 +19,7 @@ defmodule Tymeslot.Auth.RegistrationDuplicateTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.EmailWorker
+  alias TymeslotWeb.Helpers.ClientIP
 
   defmodule RacingUserQueries do
     @moduledoc false
@@ -61,11 +62,17 @@ defmodule Tymeslot.Auth.RegistrationDuplicateTest do
     social_owner = insert(:user, provider: "google", password_hash: nil)
 
     {:ok, _new_user, new_message} =
-      Registration.register_user(params(unique_email("fresh")), %Plug.Conn{})
+      Registration.register_user(
+        params(unique_email("fresh")),
+        ClientIP.request_opts(%Plug.Conn{})
+      )
 
     for owner <- [password_owner, social_owner] do
       assert {:existing_account, ^new_message} =
-               Registration.register_user(params(String.upcase(owner.email)), %Plug.Conn{})
+               Registration.register_user(
+                 params(String.upcase(owner.email)),
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
     assert Repo.aggregate(UserSchema, :count, :id) == 3
@@ -74,7 +81,7 @@ defmodule Tymeslot.Auth.RegistrationDuplicateTest do
   test "the owner of a taken address is sent the sign-up attempt notice" do
     owner = insert(:user)
 
-    Registration.register_user(params(owner.email), %Plug.Conn{})
+    Registration.register_user(params(owner.email), ClientIP.request_opts(%Plug.Conn{}))
 
     assert [notice] = notices()
     assert notice.args["user_id"] == owner.id
@@ -87,7 +94,8 @@ defmodule Tymeslot.Auth.RegistrationDuplicateTest do
   test "a free address gets the verification email and no notice" do
     email = unique_email("fresh")
 
-    {:ok, user, _message} = Registration.register_user(params(email), %Plug.Conn{})
+    {:ok, user, _message} =
+      Registration.register_user(params(email), ClientIP.request_opts(%Plug.Conn{}))
 
     assert [_verification] =
              all_enqueued(
@@ -104,7 +112,7 @@ defmodule Tymeslot.Auth.RegistrationDuplicateTest do
     for _i <- 1..5, do: RateLimiter.check_signup_attempt_notice_rate_limit(owner.id)
 
     assert {:existing_account, _message} =
-             Registration.register_user(params(owner.email), %Plug.Conn{})
+             Registration.register_user(params(owner.email), ClientIP.request_opts(%Plug.Conn{}))
 
     assert [] = notices()
   end
@@ -122,7 +130,7 @@ defmodule Tymeslot.Auth.RegistrationDuplicateTest do
     winner = insert(:user, email: unique_email("race"))
 
     assert {:existing_account, message} =
-             Registration.register_user(params(winner.email), %Plug.Conn{})
+             Registration.register_user(params(winner.email), ClientIP.request_opts(%Plug.Conn{}))
 
     assert message =~ "Please check your email"
     assert Repo.aggregate(UserSchema, :count, :id) == 1
@@ -131,7 +139,7 @@ defmodule Tymeslot.Auth.RegistrationDuplicateTest do
   end
 
   describe "the address's verification allowance" do
-    defp conn_from(ip), do: %Plug.Conn{remote_ip: ip}
+    defp conn_from(ip), do: ClientIP.request_opts(%Plug.Conn{remote_ip: ip})
 
     # Resends the address may still make before the verification limit
     # refuses it.

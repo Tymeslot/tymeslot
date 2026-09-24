@@ -13,7 +13,6 @@ defmodule Tymeslot.Auth.AuthActions do
 
   alias Tymeslot.Auth.{PasswordReset, Registration}
   alias Tymeslot.Infrastructure.Config
-  alias TymeslotWeb.Helpers.ClientIP
 
   @type signup_params :: Tymeslot.Auth.Validation.signup_params()
 
@@ -42,39 +41,29 @@ defmodule Tymeslot.Auth.AuthActions do
   either way, so the screen cannot tell a visitor which case applied; the
   pending account stays server-side.
   """
-  @spec register_user(signup_params(), Phoenix.LiveView.Socket.t()) ::
+  @spec register_user(signup_params(), keyword()) ::
           {:ok, atom(), String.t(), %{id: term(), email: String.t()} | nil}
+          | {:honeypot, String.t()}
+          | {:error, atom(), String.t()}
           | {:error, String.t()}
           | {:error, :field_errors, map()}
-  def register_user(user_params, socket) do
+  def register_user(user_params, request_opts) do
     cond do
       not Config.password_auth_enabled?() -> {:error, password_auth_disabled_message()}
       not Config.registration_enabled?() -> {:error, registration_disabled_message()}
-      true -> do_register_user(user_params, socket)
+      true -> do_register_user(user_params, request_opts)
     end
   end
 
-  defp do_register_user(user_params, socket) do
-    converted_params = convert_terms_accepted(user_params)
+  defp do_register_user(user_params, request_opts) do
+    metadata = request_opts |> Map.new() |> Map.put(:source, "signup")
 
-    metadata = %{
-      ip: ClientIP.get(socket),
-      user_agent: ClientIP.get_user_agent(socket),
-      source: "signup",
-      terms_accepted: Map.get(converted_params, "terms_accepted")
-    }
-
-    case Registration.register_user(
-           converted_params,
-           socket,
-           calling_app: :auth,
-           metadata: metadata,
-           # SignupSecurity.gate/2 already consumed a signup rate-limit token
-           # for this attempt on the LiveView path; avoid double-counting it.
-           rate_limit_checked: true
-         ) do
+    case Registration.register_user(user_params, [metadata: metadata] ++ request_opts) do
       {:existing_account, message} ->
         {:ok, :verify_email, message, nil}
+
+      {:honeypot, _message} = honeypot ->
+        honeypot
 
       {:ok, user, message} ->
         {:ok, :verify_email, message, %{id: user.id, email: user.email}}
@@ -92,20 +81,18 @@ defmodule Tymeslot.Auth.AuthActions do
   @doc """
   Initiates password reset flow for the given email.
   """
-  @spec request_password_reset(String.t(), term()) ::
+  @spec request_password_reset(String.t(), keyword()) ::
           {:ok, atom(), String.t()} | {:error, String.t()}
-  def request_password_reset(email, socket) do
+  def request_password_reset(email, request_opts) do
     if Config.password_auth_enabled?() do
-      do_request_password_reset(email, socket)
+      do_request_password_reset(email, request_opts)
     else
       {:error, password_auth_disabled_message()}
     end
   end
 
-  defp do_request_password_reset(email, socket) do
-    ip = ClientIP.get(socket)
-
-    case PasswordReset.initiate_reset(email, socket_or_conn: socket, ip: ip) do
+  defp do_request_password_reset(email, request_opts) do
+    case PasswordReset.initiate_reset(email, request_opts) do
       {:ok, :reset_initiated, message} ->
         {:ok, :reset_password_sent, message}
 
@@ -120,14 +107,11 @@ defmodule Tymeslot.Auth.AuthActions do
   @doc """
   Completes password reset with new password.
   """
-  @spec reset_password(String.t(), String.t(), String.t(), term()) ::
+  @spec reset_password(String.t(), String.t(), String.t(), keyword()) ::
           {:ok, atom(), String.t()} | {:error, String.t()}
-  def reset_password(token, password, password_confirmation, socket) do
+  def reset_password(token, password, password_confirmation, request_opts) do
     if Config.password_auth_enabled?() do
-      do_reset_password(token, password, password_confirmation,
-        ip: ClientIP.get(socket),
-        user_agent: ClientIP.get_user_agent(socket)
-      )
+      do_reset_password(token, password, password_confirmation, request_opts)
     else
       {:error, password_auth_disabled_message()}
     end

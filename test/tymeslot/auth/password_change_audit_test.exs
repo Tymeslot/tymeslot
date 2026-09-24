@@ -40,7 +40,7 @@ defmodule Tymeslot.Auth.PasswordChangeAuditTest do
                    "CurrentPass123!",
                    "NewPass456!",
                    "NewPass456!",
-                   ip_address: "203.0.113.12",
+                   ip: "203.0.113.12",
                    user_agent: "Mozilla/5.0"
                  )
       end)

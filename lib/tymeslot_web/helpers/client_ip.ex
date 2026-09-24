@@ -159,6 +159,21 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   def get_user_agent(_other), do: "unknown"
 
   @doc """
+  The request context a domain function records against an action: the
+  client's IP and user agent, as keyword options (`ip:`, `user_agent:`).
+
+  Domain modules never read a conn or socket themselves; the web layer
+  extracts this once and passes it in. Safe to call wherever `get/1` is.
+  """
+  @spec request_opts(Plug.Conn.t() | Phoenix.LiveView.Socket.t()) :: [
+          ip: String.t(),
+          user_agent: String.t()
+        ]
+  def request_opts(conn_or_socket) do
+    [ip: get(conn_or_socket), user_agent: get_user_agent(conn_or_socket)]
+  end
+
+  @doc """
   Reads user-agent from LiveView connect params (headers). Call only during mount/3
   and then store it in assigns for later usage.
   """

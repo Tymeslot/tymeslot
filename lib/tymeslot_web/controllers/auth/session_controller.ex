@@ -7,10 +7,11 @@ defmodule TymeslotWeb.SessionController do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.{AuthActions, Authentication, Session}
+  alias Tymeslot.Auth.{AuthActions, Authentication}
   alias Tymeslot.Infrastructure.Config
   alias TymeslotWeb.EmailLinkConfirmHTML
   alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
+  alias TymeslotWeb.UserAuth
 
   require Logger
 
@@ -30,14 +31,7 @@ defmodule TymeslotWeb.SessionController do
   end
 
   defp do_create(conn, %{"email" => email, "password" => password} = params) do
-    ip = ClientIP.get(conn)
-    user_agent = List.first(get_req_header(conn, "user-agent"))
-
-    case Authentication.authenticate_user(email, password,
-           calling_app: :auth,
-           ip_address: ip,
-           user_agent: user_agent
-         ) do
+    case Authentication.authenticate_user(email, password, ClientIP.request_opts(conn)) do
       {:ok, user, message} ->
         handle_authenticated_user(conn, user, message, params)
 
@@ -54,7 +48,7 @@ defmodule TymeslotWeb.SessionController do
   end
 
   defp handle_authenticated_user(conn, user, message, params) do
-    case Session.create_session(conn, user) do
+    case UserAuth.create_session(conn, user) do
       {:ok, updated_conn, _token} ->
         redirect_path =
           RedirectSanitizer.sanitize(params["redirect_to"], get_success_redirect_path())
@@ -78,8 +72,8 @@ defmodule TymeslotWeb.SessionController do
   @spec delete(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def delete(conn, _params) do
     conn
-    |> Auth.delete_session()
-    |> Session.clear_unverified_user()
+    |> UserAuth.delete_session()
+    |> UserAuth.clear_unverified_user()
     |> put_flash(:info, dgettext("auth", "Logged out successfully."))
     |> redirect(to: ~p"/")
   end
@@ -137,10 +131,10 @@ defmodule TymeslotWeb.SessionController do
   defp auto_login(conn, user) do
     Logger.info("Auto-login approved - IP match confirmed", user_id: user.id)
 
-    case Session.create_session(conn, user) do
+    case UserAuth.create_session(conn, user) do
       {:ok, updated_conn, _token} ->
         updated_conn
-        |> Session.clear_unverified_user()
+        |> UserAuth.clear_unverified_user()
         |> put_flash(
           :success,
           dgettext("auth", "Your email has been successfully verified! You're now logged in.")

@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Plugs.FetchCurrentUserTest do
   alias Tymeslot.Auth.Session
   alias Tymeslot.Factory
   alias TymeslotWeb.Plugs.FetchCurrentUser
+  alias TymeslotWeb.UserAuth
 
   defp conn_with_session(conn) do
     conn
@@ -32,7 +33,7 @@ defmodule TymeslotWeb.Plugs.FetchCurrentUserTest do
       {:ok, conn, token} =
         conn
         |> conn_with_session()
-        |> Session.create_session(user)
+        |> UserAuth.create_session(user)
 
       conn = FetchCurrentUser.call(conn, [])
 
@@ -69,7 +70,7 @@ defmodule TymeslotWeb.Plugs.FetchCurrentUserTest do
       {:ok, conn, _token} =
         conn
         |> conn_with_session()
-        |> Session.create_session(user)
+        |> UserAuth.create_session(user)
 
       Session.revoke_all_sessions(user.id)
 

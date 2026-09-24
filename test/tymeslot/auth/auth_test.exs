@@ -19,6 +19,7 @@ defmodule Tymeslot.AuthTest do
   alias Tymeslot.Infrastructure.PubSub
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
+  alias TymeslotWeb.Helpers.ClientIP
 
   import Tymeslot.Factory
 
@@ -87,7 +88,7 @@ defmodule Tymeslot.AuthTest do
     end
   end
 
-  describe "register_user/3" do
+  describe "register_user/2" do
     test "prevents duplicate registrations" do
       insert(:user, email: "taken@example.com")
 
@@ -100,7 +101,8 @@ defmodule Tymeslot.AuthTest do
       }
 
       # Answered exactly as a free address would be; no second account.
-      assert {:existing_account, _message} = Auth.register_user(params, %Plug.Conn{})
+      assert {:existing_account, _message} =
+               Auth.register_user(params, ClientIP.request_opts(%Plug.Conn{}))
     end
   end
 

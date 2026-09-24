@@ -7,18 +7,16 @@ defmodule Tymeslot.Auth.Verification do
 
   require Logger
 
-  alias Tymeslot.Auth.{AccountTokens, UserSchema}
+  alias Tymeslot.Auth.{AccountTokens, RateLimit, UserSchema}
   alias Tymeslot.Auth.Helpers.AccountLogging
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Repo
-  alias Tymeslot.Security.{RateLimiter, SecurityLogger, Token}
+  alias Tymeslot.Security.{RateLimiter, Token}
   alias Tymeslot.Utils.UrlBuilder
-  alias TymeslotWeb.Helpers.ClientIP
 
   @type verification_result ::
           {:ok, term()} | {:error, atom()} | {:error, :rate_limited, String.t()}
-  @type socket_or_conn :: Phoenix.LiveView.Socket.t() | Plug.Conn.t()
 
   @doc """
   Issues a fresh verification token for a user, replacing any earlier one,
@@ -126,21 +124,22 @@ defmodule Tymeslot.Auth.Verification do
   defp normalise_localhost(ip), do: ip
 
   @doc """
-  Initiates the email verification process for a user, rate-limited by IP.
-  """
-  @impl Tymeslot.Infrastructure.VerificationBehaviour
-  @spec verify_user_email(socket_or_conn(), term(), map()) :: verification_result()
-  def verify_user_email(socket_or_conn, user, _profile_params) do
-    send_within_rate_limit(socket_or_conn, user)
-  end
+  Sends `user` a fresh verification link, within the per-account and
+  per-address limits the initial send and every resend share.
 
-  @doc """
-  Resends the verification email, rate-limited by IP.
+  `ip` is the requesting client's address; it keys the limit and is stored
+  with the token, so a link completed from the same address may sign in.
   """
   @impl Tymeslot.Infrastructure.VerificationBehaviour
-  @spec resend_verification_email(socket_or_conn(), term()) :: verification_result()
-  def resend_verification_email(socket_or_conn, user) do
-    send_within_rate_limit(socket_or_conn, user)
+  @spec send_verification_email(UserSchema.t(), String.t() | nil) :: verification_result()
+  def send_verification_email(user, ip) do
+    RateLimit.with_limit(
+      RateLimiter.check_verification_rate_limit(user.id, ip),
+      [event: "email_verification", identifier: user.id, ip: ip],
+      fn ->
+        issue_and_send(user, ip)
+      end
+    )
   end
 
   @doc """
@@ -157,22 +156,16 @@ defmodule Tymeslot.Auth.Verification do
   Callers pass an address the requester has already proved is theirs (the
   session-bound unverified user), never one typed into a form.
   """
-  @spec resend_verification_email_by_email(String.t() | nil, socket_or_conn()) ::
+  @spec resend_verification_email_by_email(String.t() | nil, String.t() | nil) ::
           :ok | {:error, :rate_limited, String.t()}
-  def resend_verification_email_by_email(email, socket_or_conn) do
-    ip_address = extract_ip_address(socket_or_conn)
-
-    case RateLimiter.check_verification_ip_rate_limit(ip_address) do
-      :ok ->
-        email |> unverified_user() |> resend_quietly(socket_or_conn)
-
-      {:error, :rate_limited, message} ->
-        SecurityLogger.log_rate_limit_violation(nil, "email_verification", %{
-          ip_address: ip_address
-        })
-
-        {:error, :rate_limited, message}
-    end
+  def resend_verification_email_by_email(email, ip) do
+    RateLimit.with_limit(
+      RateLimiter.check_verification_ip_rate_limit(ip),
+      [event: "email_verification", identifier: nil, ip: ip],
+      fn ->
+        email |> unverified_user() |> resend_quietly(ip)
+      end
+    )
   end
 
   @doc """
@@ -186,19 +179,11 @@ defmodule Tymeslot.Auth.Verification do
   """
   @spec send_link_after_sign_in(UserSchema.t(), String.t() | nil) :: :ok
   def send_link_after_sign_in(%UserSchema{verified_at: nil} = user, ip_address) do
-    case RateLimiter.check_verification_rate_limit(user.id, ip_address) do
-      :ok ->
-        with {:error, reason} <- issue_and_send(user, ip_address) do
-          Logger.error("Verification link after sign-in failed",
-            user_id: user.id,
-            reason: inspect(reason)
-          )
-        end
-
-      {:error, :rate_limited, _message} ->
-        SecurityLogger.log_rate_limit_violation(user.id, "email_verification", %{
-          ip_address: ip_address
-        })
+    with {:error, reason} <- send_verification_email(user, ip_address) do
+      Logger.error("Verification link after sign-in failed",
+        user_id: user.id,
+        reason: inspect(reason)
+      )
     end
 
     :ok
@@ -215,24 +200,20 @@ defmodule Tymeslot.Auth.Verification do
     end
   end
 
-  defp resend_quietly(nil, _socket_or_conn), do: :ok
+  defp resend_quietly(nil, _ip), do: :ok
 
-  defp resend_quietly(user, socket_or_conn) do
-    case RateLimiter.check_verification_user_rate_limit(user.id) do
-      :ok ->
-        with {:error, reason} <- do_verify_user_email(socket_or_conn, user) do
+  defp resend_quietly(user, ip) do
+    RateLimit.with_limit(
+      RateLimiter.check_verification_user_rate_limit(user.id),
+      [event: "email_verification", identifier: user.id, ip: ip],
+      fn ->
+        with {:error, reason} <- issue_and_send(user, ip) do
           Logger.error("Verification resend failed", user_id: user.id, reason: inspect(reason))
         end
+      end
+    )
 
-        :ok
-
-      {:error, :rate_limited, _message} ->
-        SecurityLogger.log_rate_limit_violation(user.id, "email_verification", %{
-          ip_address: extract_ip_address(socket_or_conn)
-        })
-
-        :ok
-    end
+    :ok
   end
 
   # Private functions
@@ -250,24 +231,6 @@ defmodule Tymeslot.Auth.Verification do
         # the token may still be valid and unconsumed.
         AccountLogging.log_operation_failure("email_verification", user.id, reason)
         error
-    end
-  end
-
-  # The initial send and the resend are the same operation as far as the limiter
-  # is concerned: they share a bucket, a rejection message, and an audit entry.
-  defp send_within_rate_limit(socket_or_conn, user) do
-    ip_address = extract_ip_address(socket_or_conn)
-
-    case RateLimiter.check_verification_rate_limit(user.id, ip_address) do
-      :ok ->
-        do_verify_user_email(socket_or_conn, user)
-
-      {:error, :rate_limited, message} ->
-        SecurityLogger.log_rate_limit_violation(user.id, "email_verification", %{
-          ip_address: ip_address
-        })
-
-        {:error, :rate_limited, message}
     end
   end
 
@@ -296,9 +259,6 @@ defmodule Tymeslot.Auth.Verification do
     end
   end
 
-  defp do_verify_user_email(socket_or_conn, user),
-    do: issue_and_send(user, extract_ip_address(socket_or_conn))
-
   defp issue_and_send(user, ip_address) do
     # Persist the token first so it is valid in the database before the job runs.
     # The job carries the token's hash; the worker discards it at send time if a
@@ -306,7 +266,7 @@ defmodule Tymeslot.Auth.Verification do
     # retrying job can never deliver an invalidated link.
     with {:ok, updated_user, token} <- issue_verification_token(user.id, ip_address),
          {:ok, _status} <-
-           send_verification_email(
+           schedule_verification_email(
              updated_user,
              UrlBuilder.email_verification_url(token),
              Token.hash_token(token)
@@ -327,7 +287,7 @@ defmodule Tymeslot.Auth.Verification do
     end
   end
 
-  defp send_verification_email(user, verification_url, token_hash) do
+  defp schedule_verification_email(user, verification_url, token_hash) do
     # Use the email worker to send the verification email asynchronously.
     case EmailScheduler.schedule_email_verification(user.id, verification_url, token_hash) do
       {:ok, :scheduled} ->
@@ -345,9 +305,5 @@ defmodule Tymeslot.Auth.Verification do
 
         {:error, reason}
     end
-  end
-
-  defp extract_ip_address(socket_or_conn) do
-    ClientIP.get(socket_or_conn)
   end
 end

@@ -19,6 +19,7 @@ defmodule TymeslotWeb.Auth.AddressSquattingTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.Password
   alias Tymeslot.Workers.EmailWorker
+  alias TymeslotWeb.Helpers.ClientIP
 
   @attacker_password "Attacker123!pw"
   @owner_password "OwnerChosen456!pw"
@@ -53,7 +54,7 @@ defmodule TymeslotWeb.Auth.AddressSquattingTest do
                  "password" => @attacker_password,
                  "terms_accepted" => "true"
                },
-               %Plug.Conn{}
+               ClientIP.request_opts(%Plug.Conn{})
              )
 
     # Signing in with that correct password looks exactly like a wrong password

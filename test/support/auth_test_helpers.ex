@@ -15,17 +15,17 @@ defmodule Tymeslot.AuthTestHelpers do
   alias Phoenix.ConnTest
   alias Plug.Conn
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.Session
   alias Tymeslot.Factory
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.Token
+  alias TymeslotWeb.UserAuth
 
   @doc """
   Logs in a user for controller/LiveView tests.
   """
   @spec log_in_user(Conn.t(), term()) :: Conn.t()
   def log_in_user(conn, user) do
-    assert {:ok, conn, _token} = Session.create_session(conn, user)
+    assert {:ok, conn, _token} = UserAuth.create_session(conn, user)
     conn
   end
 

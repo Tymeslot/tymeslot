@@ -46,7 +46,7 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
 
   alias Tymeslot.Auth.{SignupSecurity, Verification}
   alias Tymeslot.Security.SecurityLogger
-  alias TymeslotWeb.AuthLive.SecurityHelper
+  alias TymeslotWeb.Helpers.ClientIP
 
   @typedoc "A LiveView `handle_event/3` return value."
   @type reply :: {:noreply, Phoenix.LiveView.Socket.t()}
@@ -115,7 +115,10 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
   # no bound user the domain still charges the address bucket and answers as
   # if an email went out, so the reply cannot tell anyone which case applied.
   defp attempt(socket) do
-    case Verification.resend_verification_email_by_email(bound_email(socket), socket) do
+    case Verification.resend_verification_email_by_email(
+           bound_email(socket),
+           ClientIP.get(socket)
+         ) do
       :ok ->
         maybe_log_honeypot(socket)
         :sent
@@ -132,7 +135,7 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
   defp bound_email(_socket), do: nil
 
   defp maybe_log_honeypot(%{assigns: %{honeypot_signup: true}} = socket) do
-    socket |> SecurityHelper.extract_client_metadata() |> SignupSecurity.log_honeypot_resend()
+    socket |> ClientIP.request_opts() |> SignupSecurity.log_honeypot_resend()
   end
 
   defp maybe_log_honeypot(_socket), do: :ok
@@ -141,11 +144,11 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
   # flagged as a bot, so it's the one worth recording separately. There is no
   # account to identify it by, so `identifier` is `nil`.
   defp maybe_log_honeypot_violation(%{assigns: %{honeypot_signup: true}} = socket) do
-    metadata = SecurityHelper.extract_client_metadata(socket)
+    [ip: ip, user_agent: user_agent] = ClientIP.request_opts(socket)
 
     SecurityLogger.log_rate_limit_violation(nil, "email_verification_honeypot", %{
-      ip_address: SecurityHelper.rate_limit_ip(metadata),
-      user_agent: metadata.user_agent
+      ip_address: ip,
+      user_agent: user_agent
     })
   end
 

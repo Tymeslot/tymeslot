@@ -15,6 +15,7 @@ defmodule TymeslotWeb.AdminLiveTest do
   alias Tymeslot.Auth
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Repo
+  alias TymeslotWeb.Helpers.ClientIP
 
   setup do
     # Under a downstream overlay, the endpoint routes through that overlay's
@@ -203,13 +204,19 @@ defmodule TymeslotWeb.AdminLiveTest do
       # End-to-end: an admin's click in the UI propagates through to the
       # public registration entry point.
       assert {:error, :registration_disabled, _msg} =
-               Auth.register_user(%{"email" => "new@example.com"}, %Plug.Conn{})
+               Auth.register_user(
+                 %{"email" => "new@example.com"},
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       lv |> setting_tag(:registration_enabled, "true") |> render_click()
 
       refute match?(
                {:error, :registration_disabled, _ignored},
-               Auth.register_user(%{"email" => "new@example.com"}, %Plug.Conn{})
+               Auth.register_user(
+                 %{"email" => "new@example.com"},
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
              )
     end
 

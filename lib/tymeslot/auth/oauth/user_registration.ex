@@ -53,7 +53,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   complete-registration form never reaches this function unconfirmed, so no
   account exists for it until its owner follows the emailed link. Accounts
   created unverified before that change keep the verify-first handling in
-  `Tymeslot.Auth.OAuth.FlowHandler`.
+  `TymeslotWeb.OAuthFlow`.
   """
   @spec create_oauth_user(
           provider(),

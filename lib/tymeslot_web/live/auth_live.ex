@@ -24,7 +24,7 @@ defmodule TymeslotWeb.AuthLive do
   import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
 
   alias Phoenix.Controller
-  alias Tymeslot.Auth.{AuthActions, Session}
+  alias Tymeslot.Auth.AuthActions
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.AuthLive.PageMetaHelper
@@ -38,6 +38,7 @@ defmodule TymeslotWeb.AuthLive do
   alias TymeslotWeb.Registration.VerifyEmailComponent
   alias TymeslotWeb.Session.LoginComponent
   alias TymeslotWeb.Session.PasswordResetComponent
+  alias TymeslotWeb.UserAuth
 
   require Logger
 
@@ -55,7 +56,7 @@ defmodule TymeslotWeb.AuthLive do
         csrf_token: Controller.get_csrf_token(),
         client_ip: ClientIP.get_from_mount(socket),
         user_agent: ClientIP.get_user_agent_from_mount(socket),
-        unverified_user: Session.get_unverified_user_from_session(session),
+        unverified_user: UserAuth.unverified_user_from_session(session),
         pending_oauth_registration: session["pending_oauth_registration"]
       )
 
@@ -68,7 +69,7 @@ defmodule TymeslotWeb.AuthLive do
       socket
       |> StateHelper.determine_auth_state(params, uri)
       |> StateHelper.handle_auth_params(params)
-      |> Session.populate_unverified_user_data()
+      |> prefill_verification_email()
       |> StateHelper.clear_errors()
       |> PageMetaHelper.assign_page_meta()
 
@@ -157,6 +158,14 @@ defmodule TymeslotWeb.AuthLive do
   end
 
   defp blocked_reason(_state), do: nil
+
+  # The verify-email screen shows the address its resend would go to.
+  defp prefill_verification_email(
+         %{assigns: %{current_state: :verify_email, unverified_user: %{email: email}}} = socket
+       ),
+       do: assign(socket, :form_data, %{email: email})
+
+  defp prefill_verification_email(socket), do: socket
 
   defp navigate(state, socket) do
     if StateHelper.valid_state?(state) do

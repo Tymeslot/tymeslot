@@ -15,7 +15,6 @@ defmodule Tymeslot.Auth do
     EmailChange,
     PasswordUpdate,
     Registration,
-    Session,
     SocialAuthentication,
     UserQueries,
     UserSchema,
@@ -49,21 +48,22 @@ defmodule Tymeslot.Auth do
   A failure is `{:error, %{field => message}}`, keyed by the form field each
   message belongs to.
   """
-  @spec request_email_change(term(), term(), term()) ::
+  @spec request_email_change(term(), term(), term(), keyword()) ::
           {:ok, term(), String.t()}
           | {:error, %{optional(:current_password | :new_email) => String.t()}}
-  def request_email_change(user, new_email, current_password) do
-    EmailChange.request_email_change(user, new_email, current_password)
+          | {:error, :rate_limited, String.t()}
+  def request_email_change(user, new_email, current_password, opts \\ []) do
+    EmailChange.request_email_change(user, new_email, current_password, opts)
   end
 
   @doc """
   Verifies and completes an email change using the verification token.
   Uses a database transaction to ensure atomicity.
   """
-  @spec verify_email_change(String.t()) ::
+  @spec verify_email_change(String.t(), keyword()) ::
           {:ok, Ecto.Schema.t(), String.t()} | {:error, {atom(), String.t()}}
-  def verify_email_change(token) when is_binary(token) do
-    EmailChange.verify_email_change(token)
+  def verify_email_change(token, opts \\ []) when is_binary(token) do
+    EmailChange.verify_email_change(token, opts)
   end
 
   @doc """
@@ -82,7 +82,9 @@ defmodule Tymeslot.Auth do
   belongs to.
   """
   @spec update_user_password(term(), term(), term(), term(), keyword()) ::
-          {:ok, term()} | {:error, %{optional(PasswordUpdate.error_field()) => String.t()}}
+          {:ok, term()}
+          | {:error, %{optional(PasswordUpdate.error_field()) => String.t()}}
+          | {:error, :rate_limited, String.t()}
   def update_user_password(
         user,
         current_password,
@@ -122,27 +124,20 @@ defmodule Tymeslot.Auth do
   Returns `{:ok, user, message}` for a new account and
   `{:existing_account, message}` when the address was already registered.
   The message is identical in both, and the owner of a taken address is
-  emailed instead; see `Tymeslot.Auth.Registration.register_user/3`.
+  emailed instead; see `Tymeslot.Auth.Registration.register_user/2`.
   """
-  @spec register_user(map(), term(), keyword()) ::
+  @spec register_user(map(), keyword()) ::
           {:ok, Tymeslot.Auth.UserSchema.t(), String.t()}
           | {:existing_account, String.t()}
+          | {:honeypot, String.t()}
           | {:error, term(), String.t()}
-          | {:error, :input, map()}
-  def register_user(params, socket_or_conn, opts \\ []) do
+          | {:error, :input, map() | String.t()}
+  def register_user(params, opts \\ []) do
     if Config.registration_enabled?() do
-      Registration.register_user(params, socket_or_conn, opts)
+      Registration.register_user(params, opts)
     else
       {:error, :registration_disabled, AuthActions.registration_disabled_message()}
     end
-  end
-
-  @doc """
-  Terminates a user session.
-  """
-  @spec delete_session(Plug.Conn.t()) :: Plug.Conn.t()
-  def delete_session(conn) do
-    Session.delete_session(conn)
   end
 
   @doc """
