@@ -358,3 +358,24 @@ msgid "You can configure up to %{count} reminder"
 msgid_plural "You can configure up to %{count} reminders"
 msgstr[0] "Sie können bis zu %{count} Erinnerung konfigurieren"
 msgstr[1] "Sie können bis zu %{count} Erinnerungen konfigurieren"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} day"
+msgid_plural "%{count} days"
+msgstr[0] "%{count} Tag"
+msgstr[1] "%{count} Tage"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} hour"
+msgid_plural "%{count} hours"
+msgstr[0] "%{count} Stunde"
+msgstr[1] "%{count} Stunden"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "%{count} Minute"
+msgstr[1] "%{count} Minuten"

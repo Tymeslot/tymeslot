@@ -70,9 +70,7 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
         <% else %>
           <%= for reminder <- @reminders do %>
             <span class="tag-semantic tag-semantic-turquoise">
-              {dgettext("common", "%{label} before",
-                label: ReminderUtils.format_reminder_label(reminder.value, reminder.unit)
-              )}
+              {dgettext("common", "%{label} before", label: reminder_label(reminder))}
               <button
                 type="button"
                 phx-click={
@@ -202,6 +200,29 @@ defmodule TymeslotWeb.Components.Shared.ReminderPicker do
       <% end %>
     </section>
     """
+  end
+
+  @doc """
+  A reminder's lead time in the reader's own language: "30 minutes",
+  "1 Stunde", "5 хвилин".
+
+  `ReminderUtils.format_reminder_label/2` builds the same label from English
+  words, which is right for anything machine-facing but reached the screen
+  here — a German organiser was shown "30 minutes vorher", half translated.
+  The unit word is a plural form rather than a lookup, so a language that
+  inflects after a number ("1 minutu", "2 minuty", "5 minut") can say it
+  properly, while the sentences around it ("%{label} before", "Added %{label}
+  before") stay one msgid each.
+  """
+  @spec reminder_label(%{value: integer() | String.t(), unit: String.t()}) :: String.t()
+  def reminder_label(%{value: value, unit: unit}) do
+    value = ReminderUtils.parse_reminder_value(value)
+
+    case ReminderUtils.normalize_reminder_unit(unit) do
+      "hours" -> dngettext("common", "%{count} hour", "%{count} hours", value)
+      "days" -> dngettext("common", "%{count} day", "%{count} days", value)
+      _minutes -> dngettext("common", "%{count} minute", "%{count} minutes", value)
+    end
   end
 
   @doc """

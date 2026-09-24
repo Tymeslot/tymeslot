@@ -139,8 +139,6 @@ defmodule TymeslotWeb.Components.Shared.ReminderPickerState do
   end
 
   defp confirmation(reminder) do
-    dgettext("common", "Added %{label} before",
-      label: ReminderUtils.format_reminder_label(reminder.value, reminder.unit)
-    )
+    dgettext("common", "Added %{label} before", label: ReminderPicker.reminder_label(reminder))
   end
 end
