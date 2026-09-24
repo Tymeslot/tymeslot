@@ -125,6 +125,16 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
       end
     end
 
+    test "rejects a userinfo response that is not a JSON object" do
+      stub_provider(%{
+        "/token" => %{"access_token" => "sso-token", "token_type" => "Bearer"},
+        "/userinfo" => [%{"sub" => "sso-123"}]
+      })
+
+      assert {:error, {:invalid_response, :not_an_object}} =
+               UserProcessor.fetch_identity(:oauth, "token")
+    end
+
     test "ignores id and user_id unless the fallback is enabled" do
       stub_sso(%{"id" => "alt-456", "user_id" => "uid-789"})
 

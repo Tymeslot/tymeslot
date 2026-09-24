@@ -49,8 +49,6 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
     end
   end
 
-  defp provider_uid(_provider, _user_info), do: {:error, :invalid_user_info}
-
   # Non-OIDC providers may return "id" or "user_id" instead of the standard
   # "sub" claim. These identifiers are not standardised and can collide across
   # identity providers, so they are only accepted when the admin opts in with

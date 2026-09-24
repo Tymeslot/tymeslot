@@ -88,8 +88,13 @@ defmodule Tymeslot.Auth.OAuth.Client do
   The signed-in user's profile from the provider's userinfo endpoint.
   """
   @spec fetch_userinfo(provider(), String.t()) :: {:ok, map()} | {:error, error()}
-  def fetch_userinfo(provider, token),
-    do: get(provider, Providers.config(provider).userinfo_url, token)
+  def fetch_userinfo(provider, token) do
+    case get(provider, Providers.config(provider).userinfo_url, token) do
+      {:ok, %{} = user_info} -> {:ok, user_info}
+      {:ok, _not_an_object} -> {:error, {:invalid_response, :not_an_object}}
+      {:error, _reason} = error -> error
+    end
+  end
 
   @doc """
   An authenticated GET against the provider's API, decoded from JSON.
