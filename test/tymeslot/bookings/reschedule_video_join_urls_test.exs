@@ -379,11 +379,19 @@ defmodule Tymeslot.Bookings.RescheduleVideoJoinUrlsTest do
     )
   end
 
-  # Whole hours, so the open schedule's slot grid always contains the time.
+  # A fixed whole hour, so the open schedule's slot grid always contains the
+  # time. Whole, because the grid is hourly; fixed, because carrying today's
+  # hour forward made the test depend on when it ran: the host is bookable
+  # 00:00–23:59, so an hour-long slot starting at 23:00 local time runs a
+  # minute past the end of the day and is not offered, and every reschedule
+  # here came back `{:error, :slot_taken}` for a run started late in the
+  # evening. 09:00 UTC is the middle of the working day in the Europe/Berlin
+  # zone these tests book in, whichever side of a DST change they run on.
   defp future_hour(days) do
     %{
       DateTime.add(DateTime.utc_now(), days, :day)
-      | minute: 0,
+      | hour: 9,
+        minute: 0,
         second: 0,
         microsecond: {0, 0}
     }

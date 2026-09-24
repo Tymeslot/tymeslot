@@ -153,9 +153,71 @@ defmodule CredoChecks.TestGlobalStateRequiresSyncTest do
       |> run_check(TestGlobalStateRequiresSync)
       |> assert_issue()
     end
+
+    test "flags :logger.add_handler/3 while async: true" do
+      """
+      defmodule Tymeslot.Audit.OwnHandlerTest do
+        use Tymeslot.DataCase, async: true
+
+        setup do
+          :logger.add_handler(:mine, MyHandler, %{})
+          :ok
+        end
+      end
+      """
+      |> to_source_file("test/tymeslot/audit/own_handler_test.exs")
+      |> run_check(TestGlobalStateRequiresSync)
+      |> assert_issue(fn issue -> assert issue.message =~ ":logger.add_handler" end)
+    end
+
+    test "flags :logger.remove_handler/1 while async: true" do
+      """
+      defmodule Tymeslot.Audit.RemovesHandlerTest do
+        use Tymeslot.DataCase, async: true
+
+        test "restores the handler" do
+          on_exit(fn -> :logger.remove_handler(:mine) end)
+        end
+      end
+      """
+      |> to_source_file("test/tymeslot/audit/removes_handler_test.exs")
+      |> run_check(TestGlobalStateRequiresSync)
+      |> assert_issue(fn issue -> assert issue.message =~ ":logger.remove_handler" end)
+    end
   end
 
   describe "accepted cases" do
+    test "accepts :logger.add_handler/3 and :logger.remove_handler/1 when async: false" do
+      """
+      defmodule Tymeslot.Audit.OwnHandlerTest do
+        use Tymeslot.DataCase, async: false
+
+        setup do
+          :logger.add_handler(:mine, MyHandler, %{})
+          on_exit(fn -> :logger.remove_handler(:mine) end)
+        end
+      end
+      """
+      |> to_source_file("test/tymeslot/audit/own_handler_test.exs")
+      |> run_check(TestGlobalStateRequiresSync)
+      |> refute_issues()
+    end
+
+    test "accepts reading :logger handler config while async: true" do
+      """
+      defmodule Tymeslot.Audit.ReadsHandlerTest do
+        use Tymeslot.DataCase, async: true
+
+        test "the handler is installed" do
+          assert {:ok, _config} = :logger.get_handler_config(:mine)
+        end
+      end
+      """
+      |> to_source_file("test/tymeslot/audit/reads_handler_test.exs")
+      |> run_check(TestGlobalStateRequiresSync)
+      |> refute_issues()
+    end
+
     test "accepts setup :set_mox_global when async: false" do
       """
       defmodule Tymeslot.Workers.SomeGlobalMoxTest do
