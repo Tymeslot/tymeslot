@@ -1,4 +1,4 @@
-defmodule TymeslotWeb.OAuthCallbackHandler do
+defmodule TymeslotWeb.Integrations.OAuthCallbackHandler do
   @moduledoc """
   The one callback path for every calendar and video OAuth provider.
 

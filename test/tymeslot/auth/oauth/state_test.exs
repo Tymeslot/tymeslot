@@ -13,32 +13,35 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
   end
 
   describe "generate_and_store_state/1" do
-    test "returns a {conn, state} tuple and stores {state, timestamp} in session" do
-      {conn, state} = State.generate_and_store_state(build_conn())
+    test "returns the state and the S256 challenge of the verifier it stores" do
+      {conn, %{state: state, code_challenge: challenge}} =
+        State.generate_and_store_state(build_conn())
 
       # 32 random bytes, url-safe base64 without padding.
       assert state =~ ~r/\A[A-Za-z0-9_-]{43}\z/
-      assert {^state, timestamp} = Conn.get_session(conn, "_oauth_state")
-      assert is_integer(timestamp)
+      assert {:ok, verifier} = State.validate_state(conn, state)
+      assert verifier =~ ~r/\A[A-Za-z0-9_-]{43}\z/
+      assert Base.url_encode64(:crypto.hash(:sha256, verifier), padding: false) == challenge
     end
 
     test "generates unique states across calls" do
-      {_conn1, state1} = State.generate_and_store_state(build_conn())
-      {_conn2, state2} = State.generate_and_store_state(build_conn())
+      {_conn1, flow1} = State.generate_and_store_state(build_conn())
+      {_conn2, flow2} = State.generate_and_store_state(build_conn())
 
-      refute state1 == state2
+      refute flow1.state == flow2.state
+      refute flow1.code_challenge == flow2.code_challenge
     end
   end
 
   describe "validate_state/2" do
-    test "returns :ok for a valid state with timestamp" do
-      {conn, state} = State.generate_and_store_state(build_conn())
+    test "returns the code verifier for a valid state" do
+      {conn, %{state: state}} = State.generate_and_store_state(build_conn())
 
-      assert :ok = State.validate_state(conn, state)
+      assert {:ok, _verifier} = State.validate_state(conn, state)
     end
 
     test "returns error for mismatched state" do
-      {conn, _state} = State.generate_and_store_state(build_conn())
+      {conn, _flow} = State.generate_and_store_state(build_conn())
 
       assert {:error, :invalid_state} = State.validate_state(conn, "wrong-state")
     end
@@ -55,21 +58,17 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
       assert {:error, :invalid_state} = State.validate_state(conn, "some-state")
     end
 
-    test "backward compat: accepts bare string state without timestamp" do
-      conn = build_conn()
-      state = "legacy-state-value"
+    test "rejects a bare string state, which carries no expiry" do
+      conn = Conn.put_session(build_conn(), "_oauth_state", "legacy-state-value")
 
-      conn = Conn.put_session(conn, "_oauth_state", state)
-
-      assert :ok = State.validate_state(conn, state)
+      assert {:error, :invalid_state} = State.validate_state(conn, "legacy-state-value")
     end
 
-    test "backward compat: rejects mismatched bare string state" do
-      conn = build_conn()
+    test "rejects a state stored without a code verifier" do
+      timestamp = System.system_time(:second)
+      conn = Conn.put_session(build_conn(), "_oauth_state", {"pre-pkce", timestamp})
 
-      conn = Conn.put_session(conn, "_oauth_state", "stored-value")
-
-      assert {:error, :invalid_state} = State.validate_state(conn, "different-value")
+      assert {:error, :invalid_state} = State.validate_state(conn, "pre-pkce")
     end
 
     test "rejects state at exact TTL boundary (601 seconds)" do
@@ -78,7 +77,7 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
       # 601 seconds ago — just past the 600-second TTL
       timestamp = System.system_time(:second) - 601
 
-      conn = Conn.put_session(conn, "_oauth_state", {state, timestamp})
+      conn = Conn.put_session(conn, "_oauth_state", {state, "verifier", timestamp})
 
       assert {:error, :invalid_state} = State.validate_state(conn, state)
     end
@@ -90,15 +89,15 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
       # during validation, which would otherwise push the delta to 601.
       timestamp = System.system_time(:second) - 599
 
-      conn = Conn.put_session(conn, "_oauth_state", {state, timestamp})
+      conn = Conn.put_session(conn, "_oauth_state", {state, "verifier", timestamp})
 
-      assert :ok = State.validate_state(conn, state)
+      assert {:ok, "verifier"} = State.validate_state(conn, state)
     end
   end
 
   describe "clear_oauth_state/1" do
     test "removes the state from session" do
-      {conn, _state} = State.generate_and_store_state(build_conn())
+      {conn, _flow} = State.generate_and_store_state(build_conn())
 
       conn = State.clear_oauth_state(conn)
 

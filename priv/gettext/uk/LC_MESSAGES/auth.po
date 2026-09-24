@@ -1051,3 +1051,18 @@ msgstr "Підтвердити зміну електронної адреси"
 #, elixir-autogen, elixir-format
 msgid "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte."
 msgstr "Пароль має бути не довшим за %{count} байтів. Літери з діакритичними знаками та емодзі займають більше одного байта."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before signing in. We could not send a new verification link; please try again later."
+msgstr "Будь ласка, підтвердіть свою адресу електронної пошти перед входом. Не вдалося надіслати нове посилання для підтвердження; спробуйте пізніше."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before signing in. We've sent you a new verification link."
+msgstr "Будь ласка, підтвердіть свою адресу електронної пошти перед входом. Ми надіслали вам нове посилання для підтвердження."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your sign-up session has expired. Please sign in again."
+msgstr "Термін дії сесії реєстрації минув. Будь ласка, увійдіть знову."

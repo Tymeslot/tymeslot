@@ -1049,3 +1049,18 @@ msgstr "Confirmer le changement d'adresse e-mail"
 #, elixir-autogen, elixir-format
 msgid "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte."
 msgstr "Le mot de passe ne doit pas dépasser %{count} octets. Les lettres accentuées et les emojis comptent pour plus d’un octet."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before signing in. We could not send a new verification link; please try again later."
+msgstr "Veuillez vérifier votre adresse e-mail avant de vous connecter. Nous n'avons pas pu envoyer de nouveau lien de vérification ; veuillez réessayer plus tard."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address before signing in. We've sent you a new verification link."
+msgstr "Veuillez vérifier votre adresse e-mail avant de vous connecter. Nous vous avons envoyé un nouveau lien de vérification."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Your sign-up session has expired. Please sign in again."
+msgstr "Votre session d'inscription a expiré. Veuillez vous reconnecter."
