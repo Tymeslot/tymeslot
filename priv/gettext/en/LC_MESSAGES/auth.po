@@ -541,11 +541,6 @@ msgstr ""
 msgid "Sign in to your Tymeslot account to manage scheduling links, availability, and bookings."
 msgstr ""
 
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "This email address is already associated with another account. Please use a different email or sign in to your existing account."
-msgstr ""
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Please try again later."
@@ -938,4 +933,9 @@ msgstr ""
 #: lib/tymeslot/auth/validation.ex
 #, elixir-autogen, elixir-format
 msgid "Password is too long"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "An account with this email address already exists. Sign in with your password or with the service you originally signed up with. If you have forgotten your password, you can reset it from the sign-in page."
 msgstr ""

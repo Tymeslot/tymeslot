@@ -541,11 +541,6 @@ msgstr "Registrazione non riuscita a causa di errori di convalida. Controlla i t
 msgid "Sign in to your Tymeslot account to manage scheduling links, availability, and bookings."
 msgstr "Accedi al tuo account Tymeslot per gestire i link di pianificazione, la disponibilità e le prenotazioni."
 
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "This email address is already associated with another account. Please use a different email or sign in to your existing account."
-msgstr "Questo indirizzo email è già associato a un altro account. Usa un'email diversa o accedi al tuo account esistente."
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Please try again later."
@@ -939,3 +934,8 @@ msgstr "Al momento non siamo riusciti a inviare il link per completare la regist
 #, elixir-autogen, elixir-format
 msgid "Password is too long"
 msgstr "La password è troppo lunga"
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "An account with this email address already exists. Sign in with your password or with the service you originally signed up with. If you have forgotten your password, you can reset it from the sign-in page."
+msgstr "Esiste già un account con questo indirizzo email. Accedi con la tua password o con il servizio che hai usato per registrarti. Se hai dimenticato la password, puoi reimpostarla dalla pagina di accesso."

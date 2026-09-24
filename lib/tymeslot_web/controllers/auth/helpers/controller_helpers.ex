@@ -130,10 +130,13 @@ defmodule TymeslotWeb.AuthControllerHelpers do
         :terms_not_accepted ->
           dgettext("auth", "You must accept the terms to continue.")
 
+        # The provider vouched for this address, so the person reading this
+        # owns it: their account was made with a password or another
+        # provider, and they should be pointed back to it, not away from it.
         :email_already_taken ->
           dgettext(
             "auth",
-            "This email address is already associated with another account. Please use a different email or sign in to your existing account."
+            "An account with this email address already exists. Sign in with your password or with the service you originally signed up with. If you have forgotten your password, you can reset it from the sign-in page."
           )
 
         :registration_disabled ->

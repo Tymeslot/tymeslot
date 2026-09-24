@@ -542,11 +542,6 @@ msgstr "Registrace se nezdařila kvůli chybám ve formuláři. Zkontrolujte pr
 msgid "Sign in to your Tymeslot account to manage scheduling links, availability, and bookings."
 msgstr "Přihlaste se ke svému účtu Tymeslot a spravujte rezervační odkazy, dostupnost a rezervace."
 
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "This email address is already associated with another account. Please use a different email or sign in to your existing account."
-msgstr "Tato e-mailová adresa už patří k jinému účtu. Použijte prosím jiný e-mail nebo se přihlaste ke stávajícímu účtu."
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Please try again later."
@@ -941,3 +936,8 @@ msgstr "Odkaz k dokončení registrace se teď nepodařilo odeslat. Zkuste to pr
 #, elixir-autogen, elixir-format
 msgid "Password is too long"
 msgstr "Heslo je příliš dlouhé"
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "An account with this email address already exists. Sign in with your password or with the service you originally signed up with. If you have forgotten your password, you can reset it from the sign-in page."
+msgstr "Účet s touto e-mailovou adresou už existuje. Přihlaste se heslem nebo službou, přes kterou jste se původně zaregistrovali. Pokud jste heslo zapomněli, můžete si ho obnovit na přihlašovací stránce."

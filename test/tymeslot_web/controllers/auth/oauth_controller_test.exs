@@ -303,7 +303,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
       assert redirected_to(conn) == "/?auth=login"
 
       assert Flash.get(conn.assigns.flash, :error) =~
-               "already associated with another account"
+               "Sign in with your password or with the service you originally signed up with"
     end
 
     test "successful generic oauth callback redirects to dashboard", %{conn: conn} do

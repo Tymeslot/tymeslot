@@ -542,11 +542,6 @@ msgstr "Помилка реєстрації через некоректні да
 msgid "Sign in to your Tymeslot account to manage scheduling links, availability, and bookings."
 msgstr "Увійдіть до свого облікового запису Tymeslot, щоб керувати посиланнями для бронювання, доступністю та бронюваннями."
 
-#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
-#, elixir-autogen, elixir-format
-msgid "This email address is already associated with another account. Please use a different email or sign in to your existing account."
-msgstr "Ця електронна адреса вже пов'язана з іншим обліковим записом. Використайте іншу адресу або увійдіть до наявного облікового запису."
-
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Please try again later."
@@ -941,3 +936,8 @@ msgstr "Зараз не вдалося надіслати посилання д�
 #, elixir-autogen, elixir-format
 msgid "Password is too long"
 msgstr "Пароль задовгий"
+
+#: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "An account with this email address already exists. Sign in with your password or with the service you originally signed up with. If you have forgotten your password, you can reset it from the sign-in page."
+msgstr "Обліковий запис із цією електронною адресою вже існує. Увійдіть за допомогою пароля або сервісу, через який ви зареєструвалися. Якщо ви забули пароль, його можна скинути на сторінці входу."
