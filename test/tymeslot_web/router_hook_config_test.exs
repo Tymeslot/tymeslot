@@ -77,4 +77,25 @@ defmodule TymeslotWeb.RouterHookConfigTest do
       Router.on_mount(:dashboard_hooks, %{}, %{}, socket)
     end
   end
+
+  describe "validate_additional_hooks!/0 (run at boot)" do
+    test "accepts hooks that define on_mount/4" do
+      Application.put_env(:tymeslot, :dashboard_additional_hooks, [
+        {AuthLiveSessionHook, :ensure_authenticated},
+        ClientInfoHook
+      ])
+
+      assert :ok = Router.validate_additional_hooks!()
+    end
+
+    test "rejects a well-formed entry naming a module that does not exist" do
+      Application.put_env(:tymeslot, :dashboard_additional_hooks, [
+        {MyApp.Hooks.Mispelt, :check}
+      ])
+
+      assert_raise ArgumentError, ~r/MyApp.Hooks.Mispelt, which does not define on_mount/, fn ->
+        Router.validate_additional_hooks!()
+      end
+    end
+  end
 end

@@ -46,6 +46,9 @@ defmodule Tymeslot.Auth.AdminRoles do
   def promote(actor, target_user_id) do
     with :ok <- ensure_admin_ui_enabled() do
       Repo.transaction(fn ->
+        # Locked as in demote/2, so the actor cannot be demoted between the
+        # authorisation check and the promotion it allows.
+        UserQueries.lock_admins()
         authorise!(actor)
 
         case UserQueries.get_user(target_user_id) do

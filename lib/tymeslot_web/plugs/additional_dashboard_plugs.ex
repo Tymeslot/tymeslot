@@ -32,6 +32,29 @@ defmodule TymeslotWeb.Plugs.AdditionalDashboardPlugs do
   defp run({module, opts}, conn), do: module.call(conn, module.init(opts))
   defp run(module, conn) when is_atom(module), do: module.call(conn, module.init([]))
 
+  @doc """
+  Boot-time check of `:dashboard_additional_plugs`: on top of the shape check
+  every request repeats, each plug module must be loadable and export
+  `init/1` and `call/2`, so a misspelt module name stops the application
+  starting instead of surfacing at the first gated request.
+  """
+  @spec validate_config!() :: :ok
+  def validate_config! do
+    Enum.each(configured_plugs(), fn plug ->
+      module = plug_module(plug)
+
+      unless Code.ensure_loaded?(module) and function_exported?(module, :init, 1) and
+               function_exported?(module, :call, 2) do
+        raise ArgumentError,
+              ":dashboard_additional_plugs entry #{inspect(plug)} names " <>
+                "#{inspect(module)}, which is not a module plug"
+      end
+    end)
+  end
+
+  defp plug_module({module, _opts}), do: module
+  defp plug_module(module), do: module
+
   # These plugs are deployment gates, so a configuration they cannot be run
   # from raises rather than being skipped: a typo must not quietly switch a
   # gate off. Every entry is checked before any plug runs.

@@ -183,6 +183,10 @@ defmodule Tymeslot.Auth.SessionTest do
       assert user_id == user.id
     end
 
+    test "returns nil for a token that matches no session" do
+      assert Session.user_from_session(%{"user_token" => "nonexistent-token"}) == nil
+    end
+
     test "returns nil when the session carries no token" do
       assert Session.user_from_session(%{}) == nil
     end

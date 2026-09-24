@@ -135,4 +135,20 @@ defmodule TymeslotWeb.Plugs.AdditionalDashboardPlugsTest do
       assert_raise ArgumentError, fn -> AdditionalDashboardPlugs.call(conn, []) end
     end
   end
+
+  describe "validate_config!/0 (run at boot)" do
+    test "accepts module plugs, bare or with options" do
+      setup_config(:tymeslot, dashboard_additional_plugs: [PassthroughPlug, {OptsPlug, [a: 1]}])
+
+      assert :ok = AdditionalDashboardPlugs.validate_config!()
+    end
+
+    test "rejects a well-formed entry naming a module that does not exist" do
+      setup_config(:tymeslot, dashboard_additional_plugs: [MyApp.Plugs.Mispelt])
+
+      assert_raise ArgumentError, ~r/MyApp.Plugs.Mispelt, which is not a module plug/, fn ->
+        AdditionalDashboardPlugs.validate_config!()
+      end
+    end
+  end
 end

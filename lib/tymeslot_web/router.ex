@@ -277,6 +277,28 @@ defmodule TymeslotWeb.Router do
       |> Enum.map(&validate_additional_hook!/1)
     end
 
+    @doc """
+    Boot-time check of `:dashboard_additional_hooks`: on top of the shape
+    check every mount repeats, each hook module must be loadable and export
+    `on_mount/4`, so a misspelt module name stops the application starting
+    instead of surfacing at the first dashboard mount.
+    """
+    @spec validate_additional_hooks!() :: :ok
+    def validate_additional_hooks! do
+      Enum.each(dashboard_additional_hooks(), fn hook ->
+        module = hook_module(hook)
+
+        unless Code.ensure_loaded?(module) and function_exported?(module, :on_mount, 4) do
+          raise ArgumentError,
+                ":dashboard_additional_hooks entry #{inspect(hook)} names " <>
+                  "#{inspect(module)}, which does not define on_mount/4"
+        end
+      end)
+    end
+
+    defp hook_module({module, _hook_name}), do: module
+    defp hook_module(module), do: module
+
     defp normalise_additional_hooks(hooks) when is_list(hooks), do: hooks
 
     defp normalise_additional_hooks(hook) when is_tuple(hook) or is_atom(hook) do

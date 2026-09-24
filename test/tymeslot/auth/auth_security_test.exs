@@ -6,7 +6,7 @@ defmodule Tymeslot.Auth.SecurityTest do
   @moduletag :auth
 
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.Authentication
+  alias Tymeslot.Auth.Session
   alias Tymeslot.Security.Password
 
   import Tymeslot.Factory
@@ -43,7 +43,7 @@ defmodule Tymeslot.Auth.SecurityTest do
 
       # Verify all old sessions are invalid
       Enum.each(sessions, fn session ->
-        assert nil == Authentication.get_user_by_session_token(session.token)
+        assert nil == Session.user_from_session(%{"user_token" => session.token})
       end)
     end
   end
