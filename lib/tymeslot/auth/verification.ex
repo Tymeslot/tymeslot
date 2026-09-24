@@ -3,8 +3,6 @@ defmodule Tymeslot.Auth.Verification do
   Handles user verification processes.
   """
 
-  @behaviour Tymeslot.Infrastructure.VerificationBehaviour
-
   require Logger
 
   alias Tymeslot.Auth.{AccountTokens, RateLimit, UserSchema}
@@ -40,25 +38,13 @@ defmodule Tymeslot.Auth.Verification do
   end
 
   @doc """
-  Verifies a user based on the provided token or user ID.
-
-  ## When passing a token (String)
-  Looks up the user by token, checks if the token is expired, and marks the user as verified.
-
-  ## When passing a user_id (Integer)
-  Directly marks the user as verified without token validation (useful for testing).
+  Verifies the user behind an email verification `token`: looks the user up
+  by token, refuses an expired one, and marks the user as verified.
   """
-  @impl Tymeslot.Infrastructure.VerificationBehaviour
-  @spec verify_user(String.t() | integer()) :: verification_result()
+  @spec verify_user(String.t()) :: verification_result()
   def verify_user(token) when is_binary(token) do
     with {:ok, _user, verified_user} <- verify_by_token(token) do
       {:ok, verified_user}
-    end
-  end
-
-  def verify_user(user_id) when is_integer(user_id) do
-    with {:ok, user} <- fetch_user(user_id, "marking as verified") do
-      mark_user_as_verified(user)
     end
   end
 
@@ -130,7 +116,6 @@ defmodule Tymeslot.Auth.Verification do
   `ip` is the requesting client's address; it keys the limit and is stored
   with the token, so a link completed from the same address may sign in.
   """
-  @impl Tymeslot.Infrastructure.VerificationBehaviour
   @spec send_verification_email(UserSchema.t(), String.t() | nil) :: verification_result()
   def send_verification_email(user, ip) do
     RateLimit.with_limit(

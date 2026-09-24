@@ -14,7 +14,8 @@ defmodule Tymeslot.Auth.Registration do
     RateLimit,
     SignupSecurity,
     UserSchema,
-    Validation
+    Validation,
+    Verification
   }
 
   alias Tymeslot.Emails.EmailScheduler
@@ -24,10 +25,6 @@ defmodule Tymeslot.Auth.Registration do
   alias Tymeslot.Security.{InputProcessor, Password, RateLimiter}
 
   @type signup_params :: Tymeslot.Auth.Validation.signup_params()
-
-  # Use function instead of compile-time module attribute to allow test-time mocking
-  defp verification_module,
-    do: Application.get_env(:tymeslot, :verification_module, Tymeslot.Auth.Verification)
 
   @doc """
   Registers a new user with the provided parameters.
@@ -281,7 +278,7 @@ defmodule Tymeslot.Auth.Registration do
   # address never reaches this point and would answer differently. The user
   # can resend from the verify-email screen, or sign in to be sent a new link.
   defp send_verification_email(user, ip) do
-    case verification_module().send_verification_email(user, ip) do
+    case Verification.send_verification_email(user, ip) do
       {:ok, _updated_user} ->
         :ok
 

@@ -1,9 +1,8 @@
 defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
   @moduledoc """
   `Verification.send_verification_email/2` may refuse to send, returning the
-  three-element `{:error, :rate_limited, message}` that
-  `Tymeslot.Infrastructure.VerificationBehaviour` declares alongside the
-  two-element form. `Registration` used to `case` over only the two-element
+  three-element `{:error, :rate_limited, message}` alongside the two-element
+  form. `Registration` used to `case` over only the two-element
   one, so a refusal raised `CaseClauseError` from inside the LiveView.
 
   The crash was the visible half. The damage was that it struck after the user

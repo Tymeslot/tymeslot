@@ -18,8 +18,6 @@ defmodule Tymeslot.DataCase do
 
   alias Ecto.Adapters.SQL.Sandbox
   alias Ecto.Changeset
-  alias Tymeslot.Auth.Verification
-  alias Tymeslot.Auth.VerificationMock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.CircuitBreaker
@@ -63,25 +61,7 @@ defmodule Tymeslot.DataCase do
       {:ok, %{"latest_charge" => nil}}
     end)
 
-    stub_verification_default()
-
     reset_stateful_components(tags)
-
-    :ok
-  end
-
-  @doc """
-  Points the verification mock at the real implementation.
-
-  Registration reads its verification module through the
-  `:verification_module` key, which tests point at a mock, so without a
-  default the mock would swallow every signup. Delegating keeps signup tests on the real
-  implementation while leaving the seam available to a test that sets its own
-  expectation.
-  """
-  @spec stub_verification_default() :: :ok
-  def stub_verification_default do
-    Mox.stub(VerificationMock, :send_verification_email, &Verification.send_verification_email/2)
 
     :ok
   end

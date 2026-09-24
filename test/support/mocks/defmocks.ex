@@ -58,8 +58,6 @@ Mox.defmock(Tymeslot.Integrations.HealthCheckMock,
   for: Tymeslot.Integrations.HealthCheck.HealthCheckBehaviour
 )
 
-Mox.defmock(Tymeslot.Auth.VerificationMock, for: Tymeslot.Infrastructure.VerificationBehaviour)
-
 # --- Payments ---
 Mox.defmock(Tymeslot.Payments.StripeMock, for: Tymeslot.Payments.Behaviours.StripeProvider)
 

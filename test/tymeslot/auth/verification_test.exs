@@ -130,16 +130,6 @@ defmodule Tymeslot.Auth.VerificationTest do
     end
   end
 
-  describe "verify_user/1 with user_id" do
-    test "directly verifies user with integer user_id" do
-      user = insert(:unverified_user)
-      assert is_nil(user.verified_at)
-
-      {:ok, verified_user} = Verification.verify_user(user.id)
-      assert %DateTime{} = verified_user.verified_at
-    end
-  end
-
   describe "resend_verification_email_by_email/2" do
     test "every account state gets the same :ok, and only an unverified account is sent mail" do
       unverified = insert(:unverified_user)
