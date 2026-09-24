@@ -104,6 +104,18 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
       )
     end
 
+    test "schedules the reminder emails the host picked", %{base_params: params} do
+      params = Map.put(params, :reminders, [%{value: 2, unit: "hours"}])
+
+      assert {:ok, meeting} = CreateAdHoc.execute(params)
+      assert meeting.reminders == [%{value: 2, unit: "hours"}]
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{"action" => "send_reminder_emails", "meeting_id" => meeting.id}
+      )
+    end
+
     test "schedules email notifications when no video integration", %{base_params: params} do
       assert {:ok, _meeting} = CreateAdHoc.execute(params)
       assert_enqueued(worker: Tymeslot.Workers.EmailWorker)

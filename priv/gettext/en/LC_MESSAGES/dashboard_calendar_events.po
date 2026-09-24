@@ -1091,3 +1091,10 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "What the meeting is about, where to meet, anything they should bring..."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Add up to %{count} reminder email for this meeting. The guest and anyone else invited receive it."
+msgid_plural "Add up to %{count} reminder emails for this meeting. The guest and anyone else invited receive it."
+msgstr[0] ""
+msgstr[1] ""

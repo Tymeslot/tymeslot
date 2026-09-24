@@ -11,16 +11,6 @@ msgstr ""
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "%{label} before"
-msgstr "%{label} vorher"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "1 hour before"
-msgstr "1 Stunde vorher"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
 msgid "1. Select Calendar Account"
@@ -30,21 +20,6 @@ msgstr "1. Kalenderkonto auswählen"
 #, elixir-autogen, elixir-format
 msgid "2. Select Specific Calendar"
 msgstr "2. Bestimmten Kalender auswählen"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "30 min. before"
-msgstr "30 Min. vorher"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Add"
-msgstr "Hinzufügen"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Add Custom"
-msgstr "Benutzerdefiniert hinzufügen"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #, elixir-autogen, elixir-format
@@ -61,11 +36,6 @@ msgstr "Option hinzufügen"
 #, elixir-autogen, elixir-format
 msgid "Add question"
 msgstr "Frage hinzufügen"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form.ex
-#, elixir-autogen, elixir-format
-msgid "Added %{label} before"
-msgstr "%{label} vorher hinzugefügt"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/autosave.ex
 #, elixir-autogen, elixir-format
@@ -107,11 +77,6 @@ msgstr "Kalenderverfügbarkeit"
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Abbrechen"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel Custom"
-msgstr "Benutzerdefiniert abbrechen"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -173,11 +138,6 @@ msgstr "Benutzerdefinierte Fragen"
 #, elixir-autogen, elixir-format
 msgid "Date"
 msgstr "Datum"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Days"
-msgstr "Tage"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #, elixir-autogen, elixir-format
@@ -265,11 +225,6 @@ msgstr "Hilfetext (optional)"
 msgid "Highest value the booker may enter."
 msgstr "Höchster Wert, den Buchende eingeben können."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Hours"
-msgstr "Stunden"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
 msgid "Icon"
@@ -330,11 +285,6 @@ msgstr "Min"
 msgid "Minimum %{amount}."
 msgstr "Mindestens %{amount}."
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Minutes"
-msgstr "Minuten"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
@@ -360,11 +310,6 @@ msgstr "Keine Kalender für dieses Konto gefunden."
 #, elixir-autogen, elixir-format
 msgid "No custom questions yet"
 msgstr "Noch keine benutzerdefinierten Fragen"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "No reminders configured."
-msgstr "Keine Erinnerungen konfiguriert."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
@@ -429,17 +374,6 @@ msgstr "Erneut verbinden"
 msgid "Refreshing calendars..."
 msgstr "Kalender werden aktualisiert…"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
-#, elixir-autogen, elixir-format
-msgid "Reminder value is required"
-msgstr "Erinnerungswert ist erforderlich"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
-#, elixir-autogen, elixir-format
-msgid "Reminder value must be a positive number"
-msgstr "Erinnerungswert muss eine positive Zahl sein"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders"
@@ -449,11 +383,6 @@ msgstr "Erinnerungen"
 #, elixir-autogen, elixir-format
 msgid "Remove option"
 msgstr "Option entfernen"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Remove reminder"
-msgstr "Erinnerung entfernen"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format
@@ -479,11 +408,6 @@ msgstr "Wird gespeichert…"
 #, elixir-autogen, elixir-format
 msgid "Select Video Provider"
 msgstr "Videoanbieter auswählen"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
-#, elixir-autogen, elixir-format
-msgid "Select a valid reminder unit"
-msgstr "Wählen Sie eine gültige Erinnerungseinheit"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
@@ -531,11 +455,6 @@ msgstr "Der Hinweis, den Buchende lesen und bestätigen müssen, bevor sie fortf
 #, elixir-autogen, elixir-format
 msgid "The question shown to the booker."
 msgstr "Die Frage, die Buchenden angezeigt wird."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
-#, elixir-autogen, elixir-format
-msgid "This reminder already exists"
-msgstr "Diese Erinnerung existiert bereits"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
@@ -843,24 +762,12 @@ msgstr "Entsprechend der Termindauer werden Startzeiten alle %{minutes} Minuten 
 msgid "Times will be offered every %{minutes} minutes: %{examples}…"
 msgstr "Startzeiten werden alle %{minutes} Minuten angeboten: %{examples}…"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
-#, elixir-autogen, elixir-format
-msgid "Reminders cannot be set for more than 1 year in advance"
-msgstr "Erinnerungen können höchstens 1 Jahr im Voraus festgelegt werden"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
 #, elixir-autogen, elixir-format
 msgid "Add up to %{count} reminder email for this meeting type. We recommend using only one."
 msgid_plural "Add up to %{count} reminder emails for this meeting type. We recommend using only one."
 msgstr[0] "Fügen Sie bis zu %{count} Erinnerungs-E-Mail für diesen Termintyp hinzu. Wir empfehlen, nur eine zu verwenden."
 msgstr[1] "Fügen Sie bis zu %{count} Erinnerungs-E-Mails für diesen Termintyp hinzu. Wir empfehlen, nur eine zu verwenden."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
-#, elixir-autogen, elixir-format
-msgid "Maximum of %{count} reminder allowed"
-msgid_plural "Maximum of %{count} reminders allowed"
-msgstr[0] "Maximal %{count} Erinnerung erlaubt"
-msgstr[1] "Maximal %{count} Erinnerungen erlaubt"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
 #, elixir-autogen, elixir-format
@@ -871,13 +778,6 @@ msgstr "Der Kalender, in den dieser Termintyp bucht, ist nicht mehr mit diesem K
 #, elixir-autogen, elixir-format
 msgid "The calendar this meeting type books into is now read-only. Choose another calendar."
 msgstr "Der Kalender, in den dieser Termintyp bucht, ist jetzt schreibgeschützt. Wählen Sie einen anderen Kalender."
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/validation.ex
-#, elixir-autogen, elixir-format
-msgid "You can configure up to %{count} reminder"
-msgid_plural "You can configure up to %{count} reminders"
-msgstr[0] "Sie können bis zu %{count} Erinnerung konfigurieren"
-msgstr[1] "Sie können bis zu %{count} Erinnerungen konfigurieren"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/payments_section.ex
 #, elixir-autogen, elixir-format

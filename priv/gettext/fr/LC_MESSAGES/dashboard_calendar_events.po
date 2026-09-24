@@ -1092,3 +1092,10 @@ msgstr "La langue de tous les e-mails concernant cette réunion, pour l'invité 
 #, elixir-autogen, elixir-format
 msgid "What the meeting is about, where to meet, anything they should bring..."
 msgstr "Le sujet, le lieu de rendez-vous, ce qu'il faut apporter…"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Add up to %{count} reminder email for this meeting. The guest and anyone else invited receive it."
+msgid_plural "Add up to %{count} reminder emails for this meeting. The guest and anyone else invited receive it."
+msgstr[0] "Ajoutez jusqu’à %{count} e-mail de rappel pour cette réunion. L’invité et toutes les autres personnes conviées le reçoivent."
+msgstr[1] "Ajoutez jusqu’à %{count} e-mails de rappel pour cette réunion. L’invité et toutes les autres personnes conviées les reçoivent."

@@ -254,3 +254,107 @@ msgstr "Lire la vidéo d'arrière-plan"
 #, elixir-autogen, elixir-format
 msgid "Search timezones"
 msgstr "Rechercher des fuseaux horaires"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{label} before"
+msgstr "%{label} avant"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour before"
+msgstr "1 heure avant"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "30 min. before"
+msgstr "30 min. avant"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add"
+msgstr "Ajouter"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add Custom"
+msgstr "Ajouter un rappel personnalisé"
+
+#: lib/tymeslot_web/components/shared/reminder_picker_state.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{label} before"
+msgstr "Ajouté : %{label} avant"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel Custom"
+msgstr "Annuler le rappel personnalisé"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Days"
+msgstr "Jours"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Hours"
+msgstr "Heures"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Maximum of %{count} reminder allowed"
+msgid_plural "Maximum of %{count} reminders allowed"
+msgstr[0] "Maximum de %{count} rappel autorisé"
+msgstr[1] "Maximum de %{count} rappels autorisés"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Minutes"
+msgstr "Minutes"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "No reminders configured."
+msgstr "Aucun rappel configuré."
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder value is required"
+msgstr "La valeur du rappel est obligatoire"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder value must be a positive number"
+msgstr "La valeur du rappel doit être un nombre positif"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders"
+msgstr "Rappels"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders cannot be set for more than 1 year in advance"
+msgstr "Les rappels ne peuvent pas être programmés plus d'un an à l'avance"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Remove reminder"
+msgstr "Supprimer le rappel"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Select a valid reminder unit"
+msgstr "Sélectionnez une unité de rappel valide"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "This reminder already exists"
+msgstr "Ce rappel existe déjà"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "You can configure up to %{count} reminder"
+msgid_plural "You can configure up to %{count} reminders"
+msgstr[0] "Vous pouvez configurer jusqu’à %{count} rappel"
+msgstr[1] "Vous pouvez configurer jusqu’à %{count} rappels"

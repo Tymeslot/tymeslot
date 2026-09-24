@@ -254,3 +254,107 @@ msgstr "Riproduci il video di sfondo"
 #, elixir-autogen, elixir-format
 msgid "Search timezones"
 msgstr "Cerca fusi orari"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{label} before"
+msgstr "%{label} prima"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour before"
+msgstr "1 ora prima"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "30 min. before"
+msgstr "30 min. prima"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add"
+msgstr "Aggiungi"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add Custom"
+msgstr "Aggiungi personalizzato"
+
+#: lib/tymeslot_web/components/shared/reminder_picker_state.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{label} before"
+msgstr "Promemoria aggiunto: %{label} prima"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel Custom"
+msgstr "Annulla personalizzato"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Days"
+msgstr "Giorni"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Hours"
+msgstr "Ore"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Maximum of %{count} reminder allowed"
+msgid_plural "Maximum of %{count} reminders allowed"
+msgstr[0] "È consentito al massimo %{count} promemoria"
+msgstr[1] "Sono consentiti al massimo %{count} promemoria"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Minutes"
+msgstr "Minuti"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "No reminders configured."
+msgstr "Nessun promemoria configurato."
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder value is required"
+msgstr "Il valore del promemoria è obbligatorio"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder value must be a positive number"
+msgstr "Il valore del promemoria deve essere un numero positivo"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders"
+msgstr "Promemoria"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders cannot be set for more than 1 year in advance"
+msgstr "I promemoria non possono essere impostati con più di 1 anno di anticipo"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Remove reminder"
+msgstr "Rimuovi promemoria"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Select a valid reminder unit"
+msgstr "Seleziona un'unità di promemoria valida"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "This reminder already exists"
+msgstr "Questo promemoria esiste già"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "You can configure up to %{count} reminder"
+msgid_plural "You can configure up to %{count} reminders"
+msgstr[0] "Puoi configurare fino a %{count} promemoria"
+msgstr[1] "Puoi configurare fino a %{count} promemoria"

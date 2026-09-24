@@ -130,8 +130,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       video_integration_id: creating[:video_integration_id],
       guest_emails: creating[:guest_emails] || [],
       attendee_message: String.trim(creating[:message] || ""),
-      attendee_locale: creating[:locale]
+      attendee_locale: creating[:locale],
+      reminders: reminders_of(creating)
     }
+  end
+
+  # What the reminder picker holds, or nothing at all. Nothing is an answer
+  # here: a quick-added meeting sends the reminders the host picked and no
+  # others, so an untouched picker means no reminder email.
+  defp reminders_of(creating) do
+    case creating[:meeting_reminders] do
+      %{reminders: reminders} -> reminders
+      _unset -> []
+    end
   end
 
   # All-day events round-trip start/end as Dates (and `all_day: true`) so the

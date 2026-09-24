@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Security.UniversalSanitizer
+  alias TymeslotWeb.Components.Shared.ReminderPickerState
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -113,6 +114,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       attendees: [],
       attendee_input: "",
       reminders: [],
+      # Meeting mode's own reminders: when Tymeslot emails the guest before the
+      # meeting. Kept apart from `reminders` above, which are the provider
+      # alarms a plain calendar event carries and mean nothing to a booking.
+      meeting_reminders: ReminderPickerState.new(),
       recurrence_rule: nil,
       video_integration_id: nil
     }
@@ -249,6 +254,45 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
   defp toggle_all_day(%{date: date} = creating),
     do: %{creating | all_day: true, end_date: date}
+
+  @doc """
+  Handles every event the meeting-mode reminder picker sends, named by the
+  `meeting_` prefix it renders them with.
+
+  One clause for all five keeps the component's own dispatch to a single
+  entry: the picker's state is a map inside `creating_event`, so nothing here
+  needs to know which field an event touches.
+  """
+  @spec handle_meeting_reminder_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_meeting_reminder_event(event, params, socket) do
+    case socket.assigns.creating_event do
+      nil ->
+        {:noreply, socket}
+
+      creating ->
+        state = Map.get(creating, :meeting_reminders) || ReminderPickerState.new()
+        {_changed, updated} = apply_meeting_reminder_event(event, state, params)
+
+        {:noreply,
+         assign(socket, :creating_event, Map.put(creating, :meeting_reminders, updated))}
+    end
+  end
+
+  defp apply_meeting_reminder_event("meeting_add_quick_reminder", state, params),
+    do: ReminderPickerState.add_quick(state, params)
+
+  defp apply_meeting_reminder_event("meeting_add_reminder", state, params),
+    do: ReminderPickerState.add_custom(state, params)
+
+  defp apply_meeting_reminder_event("meeting_remove_reminder", state, params),
+    do: ReminderPickerState.remove(state, params)
+
+  defp apply_meeting_reminder_event("meeting_toggle_custom_reminder", state, _params),
+    do: ReminderPickerState.toggle_custom(state)
+
+  defp apply_meeting_reminder_event("meeting_update_reminder_input", state, params),
+    do: ReminderPickerState.update_input(state, params)
 
   @spec handle_add_create_reminder(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}

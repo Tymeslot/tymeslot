@@ -7,6 +7,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.MeetingTypes.ReminderValidation
+  alias TymeslotWeb.Components.Shared.ReminderPicker
+  alias TymeslotWeb.Components.Shared.ReminderPickerState
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -25,7 +28,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
 
   @spec create_event_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def create_event_modal(assigns) do
-    assigns = assign(assigns, :meeting_mode, assigns.creating_event[:mode] == :meeting)
+    assigns =
+      assigns
+      |> assign(:meeting_mode, assigns.creating_event[:mode] == :meeting)
+      |> assign(
+        :reminder_picker,
+        assigns.creating_event[:meeting_reminders] || ReminderPickerState.new()
+      )
 
     ~H"""
     <.modal
@@ -313,7 +322,45 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         />
       </div>
 
-      <%!-- Reminders --%>
+      <%!-- Meeting mode's reminders: the emails Tymeslot sends before the
+            meeting, the same ones a meeting type configures. No confirmation
+            line is passed: it would only repeat what the reminder appearing
+            in the list above already says. --%>
+      <div :if={@meeting_mode} class="border-t border-tymeslot-200 pt-3 mt-3">
+        <%!-- The picker's custom row posts through `phx-change`, which is a
+              form binding: on the meeting type page the surrounding form is
+              the page's own, and here it is this one. `phx-submit` makes
+              Enter in the number field add the reminder rather than reload
+              the page. --%>
+        <form
+          id="create-meeting-reminders-form"
+          phx-change="meeting_update_reminder_input"
+          phx-submit="meeting_add_reminder"
+          phx-target={@myself}
+        >
+          <ReminderPicker.reminder_picker
+            reminders={@reminder_picker.reminders}
+            max_reminders={ReminderValidation.max_reminders()}
+            new_reminder_value={@reminder_picker.new_reminder_value}
+            new_reminder_unit={@reminder_picker.new_reminder_unit}
+            reminder_error={@reminder_picker.reminder_error}
+            show_custom_reminder={@reminder_picker.show_custom_reminder}
+            description={
+              dngettext(
+                "dashboard_calendar_events",
+                "Add up to %{count} reminder email for this meeting. The guest and anyone else invited receive it.",
+                "Add up to %{count} reminder emails for this meeting. The guest and anyone else invited receive it.",
+                ReminderValidation.max_reminders()
+              )
+            }
+            event_prefix="meeting_"
+            myself={@myself}
+          />
+        </form>
+      </div>
+
+      <%!-- Event mode's reminders: alarms the calendar provider fires on the
+            organiser's own devices. --%>
       <div :if={!@meeting_mode} class="border-t border-tymeslot-200 pt-3 mt-3">
         <RemindersEditor.reminders_editor
           reminders={@creating_event[:reminders] || []}

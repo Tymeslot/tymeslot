@@ -33,7 +33,8 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
           optional(:video_integration_id) => pos_integer() | nil,
           optional(:guest_emails) => [String.t()],
           optional(:attendee_message) => String.t() | nil,
-          optional(:attendee_locale) => String.t() | nil
+          optional(:attendee_locale) => String.t() | nil,
+          optional(:reminders) => [%{value: pos_integer(), unit: String.t()}]
         }
 
   @spec execute(params()) ::
@@ -131,12 +132,12 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
       # meeting, and nothing outside the calendar entry reads it. This one
       # shows on the booking card and in the emails the guests receive.
       attendee_message: presence(params[:attendee_message]),
-      # Explicitly none, not "unset". A nil here is read by
-      # `Notifications.Orchestrator` as a meeting from before the reminders
-      # column existed, and answered with the legacy default of 30 minutes —
-      # so a booking whose own confirmation says no reminders are scheduled
-      # sends one anyway. An empty list is honoured as the answer it is.
-      reminders: [],
+      # What the host picked, and nothing when they picked nothing. The empty
+      # list matters: a nil here is read by `Notifications.Orchestrator` as a
+      # meeting from before the reminders column existed, and answered with the
+      # legacy default of 30 minutes — so a booking whose own confirmation says
+      # no reminders are scheduled would send one anyway.
+      reminders: params[:reminders] || [],
       attendee_timezone: params[:attendee_timezone] || "Etc/UTC",
       # The host chooses which language the guest is written to; an unsupported
       # or missing choice falls back the way the form's own default does.

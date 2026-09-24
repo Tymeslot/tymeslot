@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
   import PaymentsSection, only: [payments_section: 1]
   import VisibilitySection, only: [visibility_section: 1]
   import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
-  import TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders
+  import TymeslotWeb.Components.Shared.ReminderPicker, only: [reminder_picker: 1]
 
   # The dropdown value that opens the custom number input. Not a duration, so
   # it can never collide with one: every real value parses as an integer.
@@ -327,7 +327,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
           hidden={@is_edit && @active_tab != "reminders"}
           class={panel_class(@is_edit, @active_tab, "reminders")}
         >
-          <.reminders_section
+          <.reminder_picker
             reminders={@reminders}
             max_reminders={@max_reminders}
             new_reminder_value={@new_reminder_value}
@@ -335,7 +335,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.FormView do
             reminder_error={@reminder_error}
             show_custom_reminder={@show_custom_reminder}
             reminder_confirmation={@reminder_confirmation}
-            form_errors={@form_errors}
+            description={
+              dngettext(
+                "dashboard_meeting_form",
+                "Add up to %{count} reminder email for this meeting type. We recommend using only one.",
+                "Add up to %{count} reminder emails for this meeting type. We recommend using only one.",
+                @max_reminders
+              )
+            }
+            extra_errors={
+              @form_errors
+              |> FormValidationHelpers.field_errors(:reminder_config)
+              |> Enum.map(&Helpers.format_errors/1)
+            }
             myself={@myself}
           />
         </div>
