@@ -45,21 +45,18 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
     end
   end
 
-  @doc """
-  Whether the screen for `state` is open on this deployment, with the
-  message to show when it is not. Password screens follow
-  `Tymeslot.Auth.check_password_flow/1`; completing a social sign-up needs
-  only registration, since it involves no password.
-  """
-  @spec check_state_open(atom()) :: :ok | {:error, atom(), String.t()}
-  def check_state_open(:signup), do: Auth.check_password_flow(:signup)
+  # Whether the screen for `state` is open on this deployment, with the
+  # message to show when it is not. Password screens follow
+  # `Tymeslot.Auth.check_password_flow/1`; completing a social sign-up needs
+  # only registration, since it involves no password.
+  defp check_state_open(:signup), do: Auth.check_password_flow(:signup)
 
-  def check_state_open(state) when state in @password_reset_states,
+  defp check_state_open(state) when state in @password_reset_states,
     do: Auth.check_password_flow(:reset)
 
-  def check_state_open(:complete_registration), do: Auth.check_registration_open()
+  defp check_state_open(:complete_registration), do: Auth.check_registration_open()
 
-  def check_state_open(_state), do: :ok
+  defp check_state_open(_state), do: :ok
 
   @doc """
   Moves the socket to `new_state`, remembering where it came from.

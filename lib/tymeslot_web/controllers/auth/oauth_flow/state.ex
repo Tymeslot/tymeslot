@@ -59,11 +59,8 @@ defmodule TymeslotWeb.OAuthFlow.State do
   @spec clear_oauth_state(Plug.Conn.t()) :: Plug.Conn.t()
   def clear_oauth_state(conn), do: delete_session(conn, @state_session_key)
 
-  @doc """
-  The S256 PKCE code challenge for a code verifier.
-  """
-  @spec code_challenge(String.t()) :: String.t()
-  def code_challenge(code_verifier),
+  # The S256 PKCE code challenge for a code verifier.
+  defp code_challenge(code_verifier),
     do: Base.url_encode64(:crypto.hash(:sha256, code_verifier), padding: false)
 
   # 32 random bytes, url-safe base64 without padding: 43 characters, which is

@@ -17,7 +17,6 @@ defmodule Tymeslot.Auth do
     PasswordReset,
     PasswordUpdate,
     Registration,
-    SocialAuthentication,
     UserQueries,
     UserSchema,
     Validation,
@@ -336,15 +335,6 @@ defmodule Tymeslot.Auth do
     do: user.provider_email || user.email
 
   def google_signup_login_hint(_user), do: nil
-
-  @doc """
-  Checks if an email is available for registration.
-  Returns :ok if available, {:error, :email_already_taken | :invalid_email} otherwise.
-  """
-  @spec check_email_availability(term()) :: :ok | {:error, :email_already_taken | :invalid_email}
-  def check_email_availability(email) do
-    SocialAuthentication.check_email_availability(email)
-  end
 
   @doc """
   Gets a user by email.

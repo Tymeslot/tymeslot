@@ -20,6 +20,19 @@ defmodule Tymeslot.Auth.UserQueriesTest do
     end
   end
 
+  describe "get_user_by_email/2" do
+    test "normalises case and surrounding whitespace before the lookup" do
+      user = insert(:user, email: "test@example.com")
+
+      # A social provider handing back a differently-cased or padded address
+      # must still find the account, otherwise a second one would be created
+      # for the same person and the lower(email) unique index would reject it.
+      assert {:ok, %{id: id}} = UserQueries.get_user_by_email("TEST@Example.com")
+      assert id == user.id
+      assert {:ok, %{id: ^id}} = UserQueries.get_user_by_email("  test@example.com  ")
+    end
+  end
+
   describe "user registration security" do
     test "prevents duplicate email registrations" do
       insert(:user, email: "existing@example.com")

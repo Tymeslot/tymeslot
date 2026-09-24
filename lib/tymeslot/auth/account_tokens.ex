@@ -14,9 +14,8 @@ defmodule Tymeslot.Auth.AccountTokens do
     * `consume/3` spends it
   """
 
-  alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Auth.{UserSchema, UserTokenQueries}
   alias Tymeslot.Clock
-  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.Token
 
   @type purpose :: :reset | :verification | :email_change
@@ -60,13 +59,13 @@ defmodule Tymeslot.Auth.AccountTokens do
   end
 
   defp persist(:reset, user, token, _attrs),
-    do: queries().set_reset_token(user, token)
+    do: UserTokenQueries.set_reset_token(user, token)
 
   defp persist(:verification, user, token, attrs),
-    do: queries().set_verification_token(user, token, Map.get(attrs, :ip_address))
+    do: UserTokenQueries.set_verification_token(user, token, Map.get(attrs, :ip_address))
 
   defp persist(:email_change, user, token, %{new_email: new_email}),
-    do: queries().request_email_change(user, new_email, token)
+    do: UserTokenQueries.request_email_change(user, new_email, token)
 
   @doc """
   Resolves a raw token to the user holding it.
@@ -82,7 +81,7 @@ defmodule Tymeslot.Auth.AccountTokens do
           | {:error, :invalid_token}
           | {:error, :token_expired, UserSchema.t()}
   def fetch(purpose, token, opts \\ []) when is_binary(token) do
-    case queries().get_user_by_token(purpose, token, opts) do
+    case UserTokenQueries.get_user_by_token(purpose, token, opts) do
       {:error, :not_found} ->
         {:error, :invalid_token}
 
@@ -123,13 +122,11 @@ defmodule Tymeslot.Auth.AccountTokens do
   def consume(purpose, user, attrs \\ %{})
 
   def consume(:reset, %UserSchema{} = user, attrs),
-    do: queries().consume_reset_token(user, attrs)
+    do: UserTokenQueries.consume_reset_token(user, attrs)
 
   def consume(:verification, %UserSchema{} = user, _attrs),
-    do: queries().consume_verification_token(user)
+    do: UserTokenQueries.consume_verification_token(user)
 
   def consume(:email_change, %UserSchema{} = user, _attrs),
-    do: queries().confirm_email_change(user)
-
-  defp queries, do: Config.user_token_queries_module()
+    do: UserTokenQueries.confirm_email_change(user)
 end

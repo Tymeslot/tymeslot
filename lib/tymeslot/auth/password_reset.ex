@@ -44,11 +44,9 @@ defmodule Tymeslot.Auth.PasswordReset do
           {:ok, :reset_initiated, String.t()}
           | {:error, :invalid_input | :rate_limited, String.t()}
   def initiate_reset(email, opts \\ []) do
-    user_queries = Keyword.get(opts, :user_queries_module, Config.user_queries_module())
-
     with {:ok, validated_email} <- validate_email_format(email),
          :ok <- check_reset_rate_limit(validated_email, opts) do
-      process_password_reset_secure(validated_email, user_queries)
+      process_password_reset_secure(validated_email)
     else
       {:error, reason, message} -> {:error, reason, message}
     end
@@ -70,11 +68,11 @@ defmodule Tymeslot.Auth.PasswordReset do
   # bcrypt operation, paid here rather than inside each branch so a branch
   # added later cannot forget it. The work left in the branches (a token write,
   # an Oban insert, or nothing) is small beside it.
-  defp process_password_reset_secure(email, user_queries) do
+  defp process_password_reset_secure(email) do
     Password.no_user_verify()
 
     email
-    |> user_queries.get_user_by_email()
+    |> Config.user_queries_module().get_user_by_email()
     |> handle_password_reset_attempt(email)
 
     {:ok, :reset_initiated,
