@@ -8,7 +8,7 @@ defmodule TymeslotWeb.OAuthController do
   use Gettext, backend: TymeslotWeb.Gettext
   require Logger
 
-  alias Tymeslot.Auth.{AuthActions, SocialAuthentication}
+  alias Tymeslot.Auth.{AuthActions, Session, SocialAuthentication}
   alias Tymeslot.Auth.OAuth.{FlowHandler, Providers}
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.{RateLimiter, SecurityLogger}
@@ -189,10 +189,18 @@ defmodule TymeslotWeb.OAuthController do
     }
 
     case SocialAuthentication.complete_registration(pending, params, metadata) do
+      # A typed address that already has an account: answered exactly as a
+      # new account awaiting verification is, below.
+      {:ok, provider, :existing_account, delivery} ->
+        conn
+        |> delete_session(:pending_oauth_registration)
+        |> then(&respond_to_completion({:verification_required, &1, provider, delivery}))
+
       {:ok, provider, user, :created} ->
         conn
         |> delete_session(:pending_oauth_registration)
         |> FlowHandler.sign_in(user, provider)
+        |> forget_unverified_account()
         |> respond_to_completion()
 
       # The account already existed (the form was submitted twice): this is a
@@ -207,6 +215,15 @@ defmodule TymeslotWeb.OAuthController do
         completion_failed(conn, reason, pending)
     end
   end
+
+  # The session cookie is signed, not encrypted, so a visitor can read it. A
+  # new account awaiting verification must leave it just as a taken address
+  # does, with no account in it; the verify-email page then asks the visitor
+  # to sign in again for a new link.
+  defp forget_unverified_account({:verification_required, conn, provider, delivery}),
+    do: {:verification_required, Session.clear_unverified_user(conn), provider, delivery}
+
+  defp forget_unverified_account(result), do: result
 
   defp respond_to_completion({:ok, authed_conn, provider}) do
     authed_conn

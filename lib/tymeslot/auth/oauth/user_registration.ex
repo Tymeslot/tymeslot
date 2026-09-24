@@ -4,7 +4,6 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   """
 
   require Logger
-  alias Tymeslot.Auth
   alias Tymeslot.Auth.Helpers.AccountLogging
   alias Tymeslot.Auth.OAuth.{Providers, TransactionalUserCreation}
   alias Tymeslot.Auth.{UserQueries, UserSchema, UserTokenQueries}
@@ -113,8 +112,10 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   @doc """
   Validates data submitted via the OAuth completion form.
 
-  Checks that the email is present, well-formed, not already registered, and
-  that legal agreements have been accepted when required.
+  Checks that the email is present and well-formed, and that legal
+  agreements have been accepted when required. Whether the address is taken
+  is the caller's question: a typed address that is taken must be answered
+  like a free one (see `Tymeslot.Auth.SocialAuthentication`).
   """
   @spec validate_completion_data(oauth_registration_data()) :: :ok | {:error, atom() | String.t()}
   def validate_completion_data(oauth_data) do
@@ -131,7 +132,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
         {:error, :terms_not_accepted}
 
       true ->
-        Auth.check_email_availability(email)
+        :ok
     end
   end
 

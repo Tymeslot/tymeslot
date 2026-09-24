@@ -6,6 +6,7 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   """
 
   alias Tymeslot.Auth.OAuth.{Providers, UserRegistration}
+  alias Tymeslot.Auth.Registration
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Config
 
@@ -40,11 +41,19 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   submission created). Whether the account gets a session is the caller's
   decision, via its `verified_at`.
 
+  Returns `{:ok, provider, :existing_account, delivery}` when the address
+  typed into the form already has an account: no account is created, the
+  owner is emailed, and the caller must answer exactly as it answers a new
+  account awaiting verification, using `delivery` (`:sent` or
+  `:rate_limited`) where it would use the verification email's.
+
   `metadata` is forwarded with the registration broadcast; `terms_accepted`
   is added to it here.
   """
   @spec complete_registration(map() | nil, map(), map()) ::
-          {:ok, provider(), map(), :created | :existing} | {:error, completion_error()}
+          {:ok, provider(), map(), :created | :existing}
+          | {:ok, provider(), :existing_account, :sent | :rate_limited}
+          | {:error, completion_error()}
   def complete_registration(pending, params, metadata) do
     with :ok <- check_registration_enabled(),
          {:ok, pending} <- check_pending(pending),
@@ -88,8 +97,35 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   defp register(provider, oauth_data, params, metadata) do
     metadata = Map.put(metadata, :terms_accepted, oauth_data.terms_accepted)
 
-    with :ok <- UserRegistration.validate_completion_data(oauth_data),
-         {:ok, user} <-
+    with :ok <- UserRegistration.validate_completion_data(oauth_data) do
+      case taken_account(oauth_data) do
+        {:typed, existing} ->
+          {:ok, provider, :existing_account,
+           Registration.answer_taken_address(existing, metadata[:ip])}
+
+        {:vouched, _existing} ->
+          {:error, :email_already_taken}
+
+        :free ->
+          create(provider, oauth_data, params, metadata)
+      end
+    end
+  end
+
+  # An address typed into the form could be anyone's, so a taken one is
+  # answered like a free one and its owner is emailed, exactly as on the
+  # sign-up form. One the provider vouched for belongs to whoever signed in
+  # with it, so saying it is taken tells them nothing they do not know.
+  defp taken_account(%{email: email, email_from_provider: from_provider}) do
+    case user_queries_module().get_user_by_email(email) do
+      {:ok, existing} when from_provider -> {:vouched, existing}
+      {:ok, existing} -> {:typed, existing}
+      {:error, :not_found} -> :free
+    end
+  end
+
+  defp create(provider, oauth_data, params, metadata) do
+    with {:ok, user} <-
            UserRegistration.create_oauth_user(provider, oauth_data, profile_params(params),
              metadata: metadata
            ) do

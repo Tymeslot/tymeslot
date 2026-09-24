@@ -170,18 +170,33 @@ defmodule Tymeslot.Auth.Registration do
     end
   end
 
-  # A new account's verification email spends the address's verification
-  # allowance (`Verification.verify_user_email/3` charges it); the duplicate
-  # spends the same, or the resend budget left afterwards would tell the two
-  # apart. The answer is ignored for the same reason it is for a new account.
   defp duplicate_attempt(existing, socket_or_conn) do
+    _outcome = answer_taken_address(existing, ClientIP.get(socket_or_conn))
+    {:ok, :existing_account}
+  end
+
+  @doc """
+  Handles a sign-up for an address that already has an account, on any
+  sign-up form, so the visitor's reply can match a new account's.
+
+  Sends the owner the sign-up attempt notice (capped per recipient) and spends
+  the requesting address's verification allowance, as a new account's
+  verification email would; the result says whether that allowance let the
+  "email" through, `:sent` or `:rate_limited`, so a caller that reports
+  delivery can report it the same way it would for a new account.
+  """
+  @spec answer_taken_address(UserSchema.t(), String.t() | nil) :: :sent | :rate_limited
+  def answer_taken_address(%UserSchema{} = existing, ip) do
     AccountLogging.log_operation_failure("registration", existing.email, :duplicate_email, %{
       user_id: existing.id
     })
 
-    _spent = RateLimiter.check_verification_ip_rate_limit(ClientIP.get(socket_or_conn))
     notify_owner_of_attempt(existing)
-    {:ok, :existing_account}
+
+    case RateLimiter.check_verification_ip_rate_limit(ip) do
+      :ok -> :sent
+      {:error, :rate_limited, _message} -> :rate_limited
+    end
   end
 
   # Capped per recipient so the sign-up form cannot be used to flood an
