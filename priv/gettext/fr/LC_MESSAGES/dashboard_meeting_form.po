@@ -1035,3 +1035,23 @@ msgstr "C'est vous qui appelez. Désactivez pour publier plutôt un numéro à a
 #, elixir-autogen, elixir-format
 msgid "e.g., Our London office"
 msgstr "ex. : Notre bureau de Paris"
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} day"
+msgid_plural "%{count} days"
+msgstr[0] "%{count} jour"
+msgstr[1] "%{count} jours"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} hour"
+msgid_plural "%{count} hours"
+msgstr[0] "%{count} heure"
+msgstr[1] "%{count} heures"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/components/reminders.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "%{count} minute"
+msgstr[1] "%{count} minutes"
