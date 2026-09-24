@@ -19,6 +19,8 @@ defmodule Tymeslot.Timezones.Cities.Africa do
       {"Africa/Juba", "Juba", "South Sudan", "SS"},
       # Indian Ocean
       {"Indian/Mauritius", "Port Louis", "Mauritius", "MU"},
+      {"Indian/Reunion", "Saint-Denis", "Reunion", "RE"},
+      {"Indian/Mayotte", "Mamoudzou", "Mayotte", "YT"},
       # West Africa
       {"Africa/Lagos", "Lagos", "Nigeria", "NG"},
       {"Africa/Accra", "Accra", "Ghana", "GH"},
