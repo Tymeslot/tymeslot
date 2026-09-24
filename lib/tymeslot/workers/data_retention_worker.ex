@@ -33,49 +33,52 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
 
   # Each entry drives one `run_cleanup/2` pass: which args key overrides the
   # retention window, which `@retention` key and literal back it up, and
-  # which prune function (always `(days) -> {deleted_count, nil}`) to call.
+  # which prune function (always `(days) -> {deleted_count, nil}`) to call,
+  # held as `{module, function}` rather than a capture: a capture in a module
+  # attribute is evaluated at compile time and makes every pruning module a
+  # compile-time dependency of this worker.
   @retention_jobs [
     %{
       name: "webhook delivery",
       args_key: "retention_days",
       config_key: :outgoing_webhook_days,
       default_days: 60,
-      prune: &WebhookQueries.cleanup_old_deliveries/1
+      prune: {WebhookQueries, :cleanup_old_deliveries}
     },
     %{
       name: "Stripe webhook event",
       args_key: "stripe_event_retention_days",
       config_key: :stripe_event_days,
       default_days: 90,
-      prune: &__MODULE__.prune_incoming_webhook_events/1
+      prune: {__MODULE__, :prune_incoming_webhook_events}
     },
     %{
       name: "Slack delivery",
       args_key: "slack_delivery_retention_days",
       config_key: :outgoing_webhook_days,
       default_days: 60,
-      prune: &Slack.prune_deliveries/1
+      prune: {Slack, :prune_deliveries}
     },
     %{
       name: "Telegram delivery",
       args_key: "telegram_delivery_retention_days",
       config_key: :outgoing_webhook_days,
       default_days: 60,
-      prune: &Telegram.prune_deliveries/1
+      prune: {Telegram, :prune_deliveries}
     },
     %{
       name: "analytics event",
       args_key: "analytics_event_retention_days",
       config_key: :analytics_event_days,
       default_days: 90,
-      prune: &Analytics.prune_events/1
+      prune: {Analytics, :prune_events}
     },
     %{
       name: "availability refusal",
       args_key: "availability_refusal_retention_days",
       config_key: :availability_refusal_days,
       default_days: 30,
-      prune: &AvailabilityRefusalQueries.prune_older_than/1
+      prune: {AvailabilityRefusalQueries, :prune_older_than}
     }
   ]
 
@@ -92,8 +95,9 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
   end
 
   @doc false
-  # Public only so it can be captured as `&__MODULE__.prune_incoming_webhook_events/1`
-  # in `@retention_jobs`; not part of the worker's external API.
+  # Public only so `@retention_jobs` can name it as
+  # `{__MODULE__, :prune_incoming_webhook_events}`; not part of the worker's
+  # external API.
   @spec prune_incoming_webhook_events(integer()) :: {non_neg_integer(), nil}
   def prune_incoming_webhook_events(days) do
     cutoff_date = DateTime.add(DateTime.utc_now(), -days, :day)
@@ -106,7 +110,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
            args_key: args_key,
            config_key: config_key,
            default_days: default_days,
-           prune: prune
+           prune: {module, function}
          },
          args
        ) do
@@ -117,7 +121,7 @@ defmodule Tymeslot.Workers.DataRetentionWorker do
 
     Logger.info("Starting retention cleanup", job: name, retention_days: retention_days)
 
-    {count, _rows} = prune.(retention_days)
+    {count, _rows} = apply(module, function, [retention_days])
 
     Logger.info("Retention cleanup completed",
       job: name,
