@@ -1894,3 +1894,44 @@ msgstr "Für diesen Termin sind keine Antworten mehr möglich"
 #, elixir-autogen, elixir-format
 msgid "We couldn't find an invitation for this link. Please check that you copied the whole link from your email, or contact the meeting host."
 msgstr "Zu diesem Link wurde keine Einladung gefunden. Bitte prüfen Sie, ob Sie den vollständigen Link aus Ihrer E-Mail kopiert haben, oder wenden Sie sich an den Gastgeber."
+
+#: lib/tymeslot_web/themes/shared/booking_location.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the number we should call you on."
+msgstr "Geben Sie die Nummer an, unter der wir Sie erreichen."
+
+#: lib/tymeslot/meeting_types/location_selection.ex
+#, elixir-autogen, elixir-format
+msgid "In person"
+msgstr "Vor Ort"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr "Ort"
+
+#: lib/tymeslot/meeting_types/location_selection.ex
+#, elixir-autogen, elixir-format
+msgid "Video call"
+msgstr "Videoanruf"
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "We'll call you"
+msgstr "Wir rufen Sie an"
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Where shall we meet?"
+msgstr "Wo sollen wir uns treffen?"
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Which video service?"
+msgstr "Welcher Videodienst?"
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Your phone number"
+msgstr "Ihre Telefonnummer"

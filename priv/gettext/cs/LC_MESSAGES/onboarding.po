@@ -301,3 +301,13 @@ msgstr "Schůzky přes Jitsi, kMeet nebo Nextcloud Talk"
 #, elixir-autogen, elixir-format
 msgid "Three more video providers join Zoom, Google Meet, Teams and MiroTalk in the integrations picker. Point Tymeslot at your own Jitsi or Nextcloud and every booking gets a room of its own: a Talk conversation keeps its lobby shut until the meeting starts, moves when you reschedule and is deleted when you cancel. kMeet needs no setup at all."
 msgstr "Další tři poskytovatelé videohovorů se přidávají k Zoomu, Google Meet, Teams a MiroTalku ve výběru integrací. Nasměrujte Tymeslot na vlastní Jitsi nebo Nextcloud a každá rezervace dostane vlastní místnost: konverzace v Talku drží čekárnu zavřenou až do začátku schůzky, přesune se, když termín změníte, a smaže se, když ho zrušíte. kMeet nepotřebuje žádné nastavení."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "A meeting type can now offer several places to meet: in person at an address, a video call or a phone call. The person booking picks the one that suits them, and can change it when they reschedule. Offer more than one video service and they choose which one the meeting runs on."
+msgstr "Typ schůzky teď může nabízet více míst setkání: osobně na adrese, videohovor nebo telefonát. Rezervující si vybere, co mu vyhovuje, a může to změnit při přesunutí termínu. Nabídněte více videoslužeb a vybere si i tu, na které schůzka proběhne."
+
+#: lib/tymeslot/announcements/catalog.ex
+#, elixir-autogen, elixir-format
+msgid "Let people choose where you meet"
+msgstr "Nechte ostatní vybrat, kde se sejdete"

@@ -485,3 +485,129 @@
   color: var(--theme-error);
   font-size: var(--theme-font-size-sm);
 }
+
+/* ===== Location picker ===== */
+/* The radio group the booker chooses a location from, shown only when the
+   meeting type offers more than one. Constrained to the same 500px column
+   as the form and the guest field above it, so the slide reads as one
+   stack rather than three widths. */
+
+.rhythm-theme-wrapper .location-field {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto var(--space-sm);
+  padding: 0;
+  border: none;
+}
+
+.rhythm-theme-wrapper .location-field__label {
+  padding: 0;
+  margin-bottom: var(--space-xs);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--theme-text);
+}
+
+.rhythm-theme-wrapper .location-group {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+.rhythm-theme-wrapper .location-group + .location-group {
+  margin-top: var(--space-sm);
+}
+.rhythm-theme-wrapper .location-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3xs);
+  margin: 0;
+  padding: var(--space-3xs);
+  background: var(--surface-subtle);
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--radius-lg);
+}
+.rhythm-theme-wrapper .location-option {
+  position: relative;
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-md);
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.rhythm-theme-wrapper .location-option:hover {
+  background: var(--surface-light);
+  color: var(--theme-text);
+}
+.rhythm-theme-wrapper .location-option:has(.location-option__radio:focus-visible) {
+  box-shadow: 0 0 0 3px var(--theme-primary-focus);
+}
+.rhythm-theme-wrapper .location-option--selected,
+.rhythm-theme-wrapper .location-option--selected:hover {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+/* The native radio stays in the page for keyboard and screen-reader use;
+   the toggle it sits in is what the booker sees. */
+.rhythm-theme-wrapper .location-option__radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.rhythm-theme-wrapper .location-option__icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+}
+.rhythm-theme-wrapper .location-field__detail {
+  margin: var(--space-2xs) 0 0;
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-text-secondary);
+}
+.rhythm-theme-wrapper .location-phone {
+  margin-top: var(--space-xs);
+}
+
+.rhythm-theme-wrapper .location-phone__label {
+  display: block;
+  margin-bottom: var(--space-3xs);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--theme-text);
+}
+
+.rhythm-theme-wrapper .location-phone__input {
+  width: 100%;
+  max-width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  background: var(--surface-subtle);
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-base);
+  transition: border-color var(--transition-fast);
+  box-sizing: border-box;
+}
+
+.rhythm-theme-wrapper .location-phone__input:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+}
+
+.rhythm-theme-wrapper .location-field__error {
+  margin-top: var(--space-3xs);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-error-light);
+}

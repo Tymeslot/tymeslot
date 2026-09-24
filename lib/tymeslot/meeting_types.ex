@@ -2,19 +2,89 @@ defmodule Tymeslot.MeetingTypes do
   @moduledoc """
   Context for managing meeting types.
   """
+  alias Ecto.UUID
   alias Tymeslot.BookingPage.Publication
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.MeetingTypes.Duration
   alias Tymeslot.MeetingTypes.FormMapper
   alias Tymeslot.MeetingTypes.FormValidation
+  alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Utils.UriUtils
   require Logger
+
+  @doc """
+  The locations this meeting type offers, in the host's order.
+
+  See `Tymeslot.MeetingTypes.LocationSelection` for what a meeting type
+  with no stored list falls back to.
+  """
+  @spec location_options(map() | nil) :: [LocationOption.t()]
+  defdelegate location_options(meeting_type), to: LocationSelection, as: :options
+
+  @doc "Whether the booking page must ask the booker to choose a location."
+  @spec location_choice_required?(map() | nil) :: boolean()
+  defdelegate location_choice_required?(meeting_type),
+    to: LocationSelection,
+    as: :choice_required?
+
+  @doc """
+  Resolves the location option id a booker submitted, with the provider
+  they picked within a video option, into the meeting fields that follow
+  from it.
+  """
+  @spec resolve_location(
+          map() | nil,
+          String.t() | nil,
+          String.t() | nil,
+          integer() | String.t() | nil
+        ) :: LocationSelection.resolution()
+  defdelegate resolve_location(meeting_type, option_id, guest_phone, video_integration_id \\ nil),
+    to: LocationSelection,
+    as: :resolve
+
+  @doc """
+  The video providers the booker can pick between, per video location:
+  a map from option id to the host's active integrations that option
+  lists, in the host's order.
+
+  An integration the host has since deactivated or deleted is left out, so
+  the booker is never offered a provider that cannot create a room. A
+  location left with nothing active is absent from the map.
+  """
+  @spec location_video_choices(map() | nil) :: %{
+          String.t() => [%{id: integer(), name: String.t(), provider: String.t()}]
+        }
+  def location_video_choices(%{user_id: user_id} = meeting_type) when is_integer(user_id) do
+    video_options =
+      meeting_type |> LocationSelection.options() |> Enum.filter(&(&1.kind == "video"))
+
+    if video_options == [] do
+      %{}
+    else
+      active =
+        user_id
+        |> Video.list_integrations()
+        |> Enum.filter(& &1.is_active)
+        |> Map.new(&{&1.id, %{id: &1.id, name: &1.name, provider: &1.provider}})
+
+      for option <- video_options,
+          choices =
+            option.video_integration_ids |> Enum.map(&active[&1]) |> Enum.reject(&is_nil/1),
+          choices != [],
+          into: %{},
+          do: {option.id, choices}
+    end
+  end
+
+  def location_video_choices(_meeting_type), do: %{}
 
   @doc """
   Gets all active meeting types for a user, creating defaults if none exist.
@@ -319,6 +389,7 @@ defmodule Tymeslot.MeetingTypes do
         sort_order: 0,
         is_active: true,
         allow_video: false,
+        locations: [default_in_person_location()],
         calendar_integration_id: calendar_integration_id,
         target_calendar_id: target_calendar_id,
         reminder_config: [%{value: 30, unit: "minutes"}],
@@ -334,6 +405,7 @@ defmodule Tymeslot.MeetingTypes do
         sort_order: 1,
         is_active: true,
         allow_video: false,
+        locations: [default_in_person_location()],
         calendar_integration_id: calendar_integration_id,
         target_calendar_id: target_calendar_id,
         reminder_config: [%{value: 30, unit: "minutes"}],
@@ -341,5 +413,17 @@ defmodule Tymeslot.MeetingTypes do
         updated_at: now
       }
     ]
+  end
+
+  # These templates are bulk-inserted, so they bypass the changeset. Ecto
+  # still dumps the embed on the way to the database and refuses anything but
+  # the struct, so the struct is what the template carries.
+  defp default_in_person_location do
+    %LocationOption{
+      id: UUID.generate(),
+      kind: "in_person",
+      label: "In person",
+      position: 0
+    }
   end
 end
