@@ -201,6 +201,73 @@ defmodule Tymeslot.Integrations.HealthCheck.AlertingTest do
     end
   end
 
+  describe "deduplication across incidents" do
+    test "a second incident after a recovery alerts and recovers under new keys", %{
+      user: user,
+      hour: hour
+    } do
+      insert_refusals(user, hour, 5)
+      later = DateTime.add(hour, 3, :hour)
+      insert_refusals(user, later, 5)
+
+      assert :alerted = Alerting.check_signal(:availability_refusals, at(hour, 1))
+      assert :recovered = Alerting.check_signal(:availability_refusals, at(hour, 2))
+      assert :alerted = Alerting.check_signal(:availability_refusals, at(later, 1))
+      assert :recovered = Alerting.check_signal(:availability_refusals, at(later, 2))
+
+      assert_received {:send_alert, :integration_health_failure, first_failure}
+      assert_received {:send_alert, :integration_health_recovery, first_recovery}
+      assert_received {:send_alert, :integration_health_failure, second_failure}
+      assert_received {:send_alert, :integration_health_recovery, second_recovery}
+
+      refute dedup_key(:integration_health_failure, first_failure) ==
+               dedup_key(:integration_health_failure, second_failure)
+
+      refute dedup_key(:integration_health_recovery, first_recovery) ==
+               dedup_key(:integration_health_recovery, second_recovery)
+
+      assert dedup_key(:integration_health_recovery, first_recovery) ==
+               "integration_health_recovery:availability_refusals:" <>
+                 DateTime.to_iso8601(DateTime.add(hour, 1, :hour))
+    end
+
+    test "each hour of one incident shares the key of its first alert", %{
+      user: user,
+      hour: hour
+    } do
+      for offset <- 0..2, do: insert_refusals(user, DateTime.add(hour, offset, :hour), 5)
+
+      for offset <- 1..3, do: Alerting.check_signal(:availability_refusals, at(hour, offset))
+
+      keys =
+        for _n <- 1..3 do
+          assert_received {:send_alert, :integration_health_failure, payload}
+          dedup_key(:integration_health_failure, payload)
+        end
+
+      assert [_one_key] = Enum.uniq(keys)
+    end
+
+    test "an incident longer than the dedup window keeps one key rather than one per hour", %{
+      user: user,
+      hour: hour
+    } do
+      for offset <- 0..26, do: insert_refusals(user, DateTime.add(hour, offset, :hour), 5)
+
+      Alerting.check_signal(:availability_refusals, at(hour, 26))
+      Alerting.check_signal(:availability_refusals, at(hour, 27))
+
+      assert_received {:send_alert, :integration_health_failure, earlier}
+      assert_received {:send_alert, :integration_health_failure, later}
+
+      assert dedup_key(:integration_health_failure, earlier) ==
+               "integration_health_failure:availability_refusals:elevated"
+
+      assert dedup_key(:integration_health_failure, earlier) ==
+               dedup_key(:integration_health_failure, later)
+    end
+  end
+
   describe "recovery" do
     test "fires once when a signal drops back under its threshold", %{user: user, hour: hour} do
       insert_refusals(user, hour, 5)
@@ -306,6 +373,8 @@ defmodule Tymeslot.Integrations.HealthCheck.AlertingTest do
       assert id == recent.id
     end
   end
+
+  defp dedup_key(type, payload), do: AlertTypes.dedup_key(type, PIIScrubber.scrub(payload))
 
   defp at(hour, offset_hours),
     do: hour |> DateTime.add(offset_hours, :hour) |> DateTime.add(5, :minute)

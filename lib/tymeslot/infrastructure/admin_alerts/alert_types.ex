@@ -141,19 +141,31 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   # worsening one (band "elevated" to "severe") alerts again. An auto-pause
   # alert also carries its run's date: each daily run reports different
   # integrations, and the next run lands just inside the 24-hour window.
-  # Matched on the signal shape only, so the shared Telegram token alert keeps
-  # its message-based key.
+  # The hourly signals carry the hour their incident began, and their recovery
+  # the same hour, so a second incident on the same day alerts again instead
+  # of colliding with the first. Matched on the signal shape only, so the
+  # shared Telegram token alert keeps its message-based key.
   def dedup_key(:integration_health_failure, %{signal: signal, band: band} = metadata) do
-    ["integration_health_failure", signal, Map.get(metadata, :run_date), band]
-    |> Enum.reject(&is_nil/1)
-    |> Enum.join(":")
+    health_key([
+      "integration_health_failure",
+      signal,
+      Map.get(metadata, :run_date),
+      Map.get(metadata, :incident_started_at),
+      band
+    ])
   end
 
-  def dedup_key(:integration_health_recovery, %{signal: signal}) do
-    "integration_health_recovery:#{signal}"
+  def dedup_key(:integration_health_recovery, %{signal: signal} = metadata) do
+    health_key([
+      "integration_health_recovery",
+      signal,
+      Map.get(metadata, :incident_started_at)
+    ])
   end
 
   def dedup_key(type, metadata), do: format_message(type, metadata)
+
+  defp health_key(parts), do: parts |> Enum.reject(&is_nil/1) |> Enum.join(":")
 
   @doc "Formats a human-readable message for the given alert type and metadata."
   @spec format_message(atom(), map()) :: String.t()

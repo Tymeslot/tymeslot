@@ -53,6 +53,15 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
   alerts also carry the run's date, because each daily run pauses different
   integrations and the next run falls just inside the 24-hour window.
 
+  The two hourly signals also carry the hour their incident began, found by
+  walking back over the consecutive windows at or above the threshold, and
+  their recovery carries the same hour. Without it a second incident on the
+  day of a first one (alert, recovery, then trouble again) would share the
+  first one's keys and be swallowed whole, leaving the recovery as the last
+  word the operator heard. An incident older than the dedup window reports no
+  start, so a long one is reminded of once a day as before rather than every
+  hour as its apparent start slides.
+
   Alert metadata carries counts and internal ids only, never user records.
   """
 
@@ -80,6 +89,10 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
   @max_listed_ids 20
 
   @signals [:availability_refusals, :reauth_flags]
+
+  # How far back an incident's start is looked for: the admin alert dedup
+  # window, beyond which a start no longer changes which alerts collapse.
+  @max_incident_lookback_hours 24
 
   @type signal :: :availability_refusals | :reauth_flags
 
@@ -135,13 +148,17 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
     threshold = threshold(signal, config)
     current = measure(signal, window_end, config)
 
+    previous_end = DateTime.add(window_end, -1, :hour)
+
     cond do
       current.count >= threshold ->
-        report_failure(signal, current, threshold, config)
+        started_at = incident_started_at(signal, window_end, threshold, config)
+        report_failure(signal, current, threshold, started_at, config)
         :alerted
 
-      measure(signal, DateTime.add(window_end, -1, :hour), config).count >= threshold ->
-        report_recovery(signal, current, threshold, config)
+      measure(signal, previous_end, config).count >= threshold ->
+        started_at = incident_started_at(signal, previous_end, threshold, config)
+        report_recovery(signal, current, threshold, started_at, config)
         :recovered
 
       true ->
@@ -210,7 +227,23 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
     %{count: by_provider |> Map.values() |> Enum.sum(), context: %{by_provider: by_provider}}
   end
 
-  defp report_failure(signal, %{count: count, context: context}, threshold, config) do
+  # The end of the earliest window in the unbroken run of windows at or above
+  # the threshold that ends with the one ending at `window_end`, or nil when
+  # the run reaches further back than the lookback.
+  defp incident_started_at(signal, window_end, threshold, config),
+    do: walk_back(signal, window_end, threshold, config, @max_incident_lookback_hours)
+
+  defp walk_back(_signal, _start, _threshold, _config, 0), do: nil
+
+  defp walk_back(signal, start, threshold, config, hours_left) do
+    earlier = DateTime.add(start, -1, :hour)
+
+    if measure(signal, earlier, config).count >= threshold,
+      do: walk_back(signal, earlier, threshold, config, hours_left - 1),
+      else: DateTime.to_iso8601(start)
+  end
+
+  defp report_failure(signal, %{count: count, context: context}, threshold, started_at, config) do
     window_hours = Keyword.fetch!(config, :window_hours)
 
     AdminAlerts.report(:integration_health_failure,
@@ -219,6 +252,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
         Map.merge(context, %{
           signal: Atom.to_string(signal),
           band: band(count, threshold),
+          incident_started_at: started_at,
           count: count,
           threshold: threshold,
           window_hours: window_hours
@@ -226,7 +260,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
     )
   end
 
-  defp report_recovery(signal, %{count: count, context: context}, threshold, config) do
+  defp report_recovery(signal, %{count: count, context: context}, threshold, started_at, config) do
     window_hours = Keyword.fetch!(config, :window_hours)
 
     AdminAlerts.report(:integration_health_recovery,
@@ -236,6 +270,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Alerting do
       context:
         Map.merge(context, %{
           signal: Atom.to_string(signal),
+          incident_started_at: started_at,
           count: count,
           threshold: threshold,
           window_hours: window_hours
