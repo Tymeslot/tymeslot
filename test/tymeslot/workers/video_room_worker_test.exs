@@ -455,4 +455,59 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
       )
     end
   end
+
+  describe "scheduling a reschedule's room" do
+    setup do
+      original = %MeetingSchema{
+        id: UUID.generate(),
+        start_time: ~U[2026-10-01 09:00:00Z],
+        end_time: ~U[2026-10-01 10:00:00Z]
+      }
+
+      %{original: original, updated: %{original | start_time: ~U[2026-10-01 09:00:00Z]}}
+    end
+
+    test "still deduplicates a job that has not run yet", %{
+      original: original,
+      updated: updated
+    } do
+      assert :ok =
+               VideoRoomWorker.schedule_video_room_creation_with_reschedule_announcement(
+                 updated,
+                 original
+               )
+
+      assert :ok =
+               VideoRoomWorker.schedule_video_room_creation_with_reschedule_announcement(
+                 updated,
+                 original
+               )
+
+      assert [_one] = all_enqueued(worker: VideoRoomWorker, args: %{"meeting_id" => updated.id})
+    end
+
+    # A location-only change (Zoom to Teams) and its reversal a minute later
+    # carry the same args; the second must still get its room and its notice.
+    test "queues a repeat of a reschedule whose first job already finished", %{
+      original: original,
+      updated: updated
+    } do
+      assert :ok =
+               VideoRoomWorker.schedule_video_room_creation_with_reschedule_announcement(
+                 updated,
+                 original
+               )
+
+      Repo.update_all(Oban.Job, set: [state: "completed", completed_at: DateTime.utc_now()])
+
+      assert :ok =
+               VideoRoomWorker.schedule_video_room_creation_with_reschedule_announcement(
+                 updated,
+                 original
+               )
+
+      assert [_repeat] =
+               all_enqueued(worker: VideoRoomWorker, args: %{"meeting_id" => updated.id})
+    end
+  end
 end

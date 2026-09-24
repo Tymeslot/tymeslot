@@ -75,15 +75,20 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     :unauthorized
   ]
 
-  # Deduplicate identical jobs within five minutes, so a retried booking step
-  # cannot queue a second room creation for the same meeting. The reschedule
-  # times are part of the key: two reschedules in quick succession owe two
-  # announcements, and the window includes completed jobs, so without them the
-  # second would be swallowed by the first and never sent at all.
+  # Deduplicate identical jobs while one is still pending, so a retried booking
+  # step cannot queue a second room creation for the same meeting. Only
+  # in-flight jobs count: a finished one has nothing left to deduplicate
+  # against, and counting it would swallow a later reschedule whose args
+  # happen to repeat an earlier one (Zoom to Teams and back within the window,
+  # or A to B, back to A, and to B again), leaving that reschedule with no
+  # room and no announcement. A second job for a meeting that already has its
+  # room is harmless: `VideoRooms` finds the room attached and creates none,
+  # and `Announcement.deliver/3` claims a booking's announcement only once.
   @unique [
     period: 300,
     fields: [:args, :queue],
-    keys: [:meeting_id, :announce, :previous_start_time, :start_time]
+    keys: [:meeting_id, :announce, :previous_start_time, :start_time],
+    states: [:available, :scheduled, :executing, :retryable]
   ]
 
   @impl Oban.Worker
