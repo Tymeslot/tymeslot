@@ -519,3 +519,50 @@ msgstr "Na tuto žádost se nepodařilo odpovědět."
 #, elixir-autogen, elixir-format
 msgid "That time has since been booked, so the request can no longer be approved."
 msgstr "Tento termín byl mezitím rezervován, takže žádost už nelze schválit."
+
+#: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} day before"
+msgid_plural "%{count} days before"
+msgstr[0] "%{count} den předem"
+msgstr[1] "%{count} dny předem"
+msgstr[2] "%{count} dní předem"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} hour before"
+msgid_plural "%{count} hours before"
+msgstr[0] "%{count} hodinu předem"
+msgstr[1] "%{count} hodiny předem"
+msgstr[2] "%{count} hodin předem"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} minute before"
+msgid_plural "%{count} minutes before"
+msgstr[0] "%{count} minutu předem"
+msgstr[1] "%{count} minuty předem"
+msgstr[2] "%{count} minut předem"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders"
+msgstr "Připomínky"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
+#, elixir-autogen, elixir-format
+msgctxt "reminder status"
+msgid "After approval"
+msgstr "Po schválení"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
+#, elixir-autogen, elixir-format
+msgctxt "reminder status"
+msgid "Sent"
+msgstr "Odesláno"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
+#, elixir-autogen, elixir-format
+msgctxt "reminder status"
+msgid "Not yet sent"
+msgstr "Zatím neodesláno"

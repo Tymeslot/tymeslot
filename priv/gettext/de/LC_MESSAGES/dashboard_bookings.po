@@ -518,3 +518,47 @@ msgstr "Diese Anfrage konnte nicht beantwortet werden."
 #, elixir-autogen, elixir-format
 msgid "That time has since been booked, so the request can no longer be approved."
 msgstr "Dieser Termin wurde inzwischen gebucht, daher kann die Anfrage nicht mehr bestätigt werden."
+
+#: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} day before"
+msgid_plural "%{count} days before"
+msgstr[0] "%{count} Tag vorher"
+msgstr[1] "%{count} Tage vorher"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} hour before"
+msgid_plural "%{count} hours before"
+msgstr[0] "%{count} Stunde vorher"
+msgstr[1] "%{count} Stunden vorher"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} minute before"
+msgid_plural "%{count} minutes before"
+msgstr[0] "%{count} Minute vorher"
+msgstr[1] "%{count} Minuten vorher"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders"
+msgstr "Erinnerungen"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
+#, elixir-autogen, elixir-format
+msgctxt "reminder status"
+msgid "After approval"
+msgstr "Nach Freigabe"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
+#, elixir-autogen, elixir-format
+msgctxt "reminder status"
+msgid "Sent"
+msgstr "Gesendet"
+
+#: lib/tymeslot_web/components/dashboard/meetings/reminders_section.ex
+#, elixir-autogen, elixir-format
+msgctxt "reminder status"
+msgid "Not yet sent"
+msgstr "Noch nicht gesendet"
