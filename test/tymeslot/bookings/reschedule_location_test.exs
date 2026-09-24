@@ -25,6 +25,7 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
   alias Tymeslot.Bookings.Reschedule
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Repo
@@ -505,6 +506,46 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
         worker: VideoSyncWorker,
         args: %{"action" => "release", "room_id" => "123456789"}
       )
+    end
+  end
+
+  # The meeting type's location keeps naming an integration the host has
+  # since disconnected, until the host next edits it. Resolving that id would
+  # point the meeting at a row that no longer exists, which the foreign key
+  # refuses, failing the whole reschedule.
+  describe "a video location whose integration was since disconnected" do
+    test "keeping the location leaves the room and its join link alone",
+         %{user: user, zoom: zoom} do
+      meeting =
+        meeting_on(
+          user,
+          [office(), video("loc-zoom", zoom, 1)],
+          zoom_meeting_attrs(zoom, "loc-zoom")
+        )
+
+      assert {:ok, :deleted} = Video.delete_integration(user.id, zoom.id)
+
+      updated = reschedule(meeting, %{location_option_id: "loc-zoom"})
+
+      assert updated.video_integration_id == nil
+      assert updated.video_room_id == "123456789"
+      assert updated.attendee_video_url == meeting.attendee_video_url
+      refute_enqueued(worker: VideoSyncWorker, args: %{"action" => "release"})
+      refute_enqueued(worker: VideoRoomWorker)
+    end
+
+    test "moving onto it records the location without promising a room",
+         %{user: user, zoom: zoom} do
+      meeting = meeting_on(user, [office(), video("loc-zoom", zoom, 1)], office_meeting_attrs())
+
+      assert {:ok, :deleted} = Video.delete_integration(user.id, zoom.id)
+
+      updated = reschedule(meeting, %{location_option_id: "loc-zoom"})
+
+      assert updated.location_option_id == "loc-zoom"
+      assert updated.location_kind == "video"
+      assert updated.video_integration_id == nil
+      refute_enqueued(worker: VideoRoomWorker)
     end
   end
 

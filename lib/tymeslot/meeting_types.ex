@@ -39,6 +39,14 @@ defmodule Tymeslot.MeetingTypes do
   Resolves the location option id a booker submitted, with the provider
   they picked within a video option, into the meeting fields that follow
   from it.
+
+  A video location can outlive an integration it names: the host
+  disconnected it, and the location keeps its id until the host next edits
+  the meeting type. Such an id is resolved as if the location did not list
+  it, so the meeting lands on the location's next listed integration, or on
+  none, and is booked without a room, just as a booking on a deactivated
+  integration is. A deactivated integration still resolves: the room job
+  checks it when it runs, and it may be switched back on by then.
   """
   @spec resolve_location(
           map() | nil,
@@ -46,9 +54,37 @@ defmodule Tymeslot.MeetingTypes do
           String.t() | nil,
           integer() | String.t() | nil
         ) :: LocationSelection.resolution()
-  defdelegate resolve_location(meeting_type, option_id, guest_phone, video_integration_id \\ nil),
-    to: LocationSelection,
-    as: :resolve
+  def resolve_location(meeting_type, option_id, guest_phone, video_integration_id \\ nil) do
+    meeting_type
+    |> without_removed_video_integrations()
+    |> LocationSelection.resolve(option_id, guest_phone, video_integration_id)
+  end
+
+  # Only a stored list can name a removed integration: the option a meeting
+  # type without one derives comes from its `video_integration_id`, which the
+  # foreign key nils when the integration goes.
+  defp without_removed_video_integrations(
+         %{user_id: user_id, locations: [_first | _rest] = locations} = meeting_type
+       )
+       when is_integer(user_id) do
+    if Enum.any?(locations, &(&1.video_integration_ids != [])) do
+      held = user_id |> Video.list_integrations() |> MapSet.new(& &1.id)
+
+      locations =
+        Enum.map(locations, fn location ->
+          %{
+            location
+            | video_integration_ids: Enum.filter(location.video_integration_ids, &(&1 in held))
+          }
+        end)
+
+      %{meeting_type | locations: locations}
+    else
+      meeting_type
+    end
+  end
+
+  defp without_removed_video_integrations(meeting_type), do: meeting_type
 
   @doc """
   The video providers the booker can pick between, per video location:

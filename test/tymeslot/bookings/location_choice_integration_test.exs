@@ -19,6 +19,7 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Bookings.Create
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.VideoRoomWorker
@@ -161,6 +162,17 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
                })
 
       assert meeting.video_integration_id == ctx.integration.id
+    end
+
+    # The location still lists the first provider after the host disconnected
+    # it, and would otherwise resolve to it as the booker's default.
+    test "passes over a provider the host has since disconnected", ctx do
+      assert {:ok, :deleted} = Video.delete_integration(ctx.user.id, ctx.integration.id)
+
+      assert {:ok, meeting} = book(ctx.meeting_type, ctx.user, %{location_option_id: "loc-video"})
+
+      assert meeting.video_integration_id == ctx.second.id
+      assert_enqueued(worker: VideoRoomWorker, args: %{"meeting_id" => meeting.id})
     end
   end
 

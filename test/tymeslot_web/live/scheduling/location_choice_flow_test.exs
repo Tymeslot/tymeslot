@@ -38,6 +38,7 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Repo
@@ -289,6 +290,43 @@ defmodule TymeslotWeb.Live.Scheduling.LocationChoiceFlowTest do
       assert [meeting] = Repo.all_by(MeetingSchema, attendee_email: "teams@example.com")
       assert meeting.location_option_id == "loc-video"
       assert meeting.video_integration_id == second.id
+    end
+  end
+
+  # The location keeps naming the disconnected integration until the host
+  # next edits the meeting type; the booking must not fail on it.
+  describe "a video location whose integration the host has disconnected" do
+    setup %{user: user} do
+      gone = insert(:video_integration, user: user, name: "Zoom", is_active: true)
+
+      insert(:meeting_type,
+        user: user,
+        duration_minutes: 30,
+        name: "Consultation",
+        is_active: true,
+        locations: [office(), video_location(gone, id: "loc-video", label: "Video call")]
+      )
+
+      assert {:ok, :deleted} = Video.delete_integration(user.id, gone.id)
+
+      :ok
+    end
+
+    @tag :capture_log
+    test "still books it, without a provider to pick or a room to create",
+         %{conn: conn, profile: profile} do
+      view = navigate_to_booking_form(conn, profile, nil)
+
+      send(view.pid, {:step_event, :booking, :select_location, "loc-video"})
+      _drain = :sys.get_state(view.pid)
+
+      refute has_element?(view, "[data-testid='video-provider-field']")
+      assert submit(view, "gone@example.com") =~ "Meeting Confirmed"
+
+      assert [meeting] = Repo.all_by(MeetingSchema, attendee_email: "gone@example.com")
+      assert meeting.location_option_id == "loc-video"
+      assert meeting.location_kind == "video"
+      assert meeting.video_integration_id == nil
     end
   end
 
