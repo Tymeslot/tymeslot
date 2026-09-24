@@ -113,8 +113,17 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
   end
 
   @doc """
-  Schedules a room for a confirmed meeting that a reschedule moved onto a new
-  video integration, handing it the reschedule's announcement.
+  Schedules a room for a confirmed meeting a reschedule left on a video
+  integration without one, handing it the reschedule's announcement.
+
+  That is a meeting the reschedule moved onto a new video integration, and
+  equally one whose room was still on its way when the reschedule came: an
+  earlier job owes the announcement of the time it was booked or rescheduled
+  to, which this reschedule makes stale, so that job drops it
+  (`Tymeslot.Workers.VideoRoom.Announcement.deliver/3`). Sent from here, the
+  email would go out before the room exists and carry no link, so it is
+  handed to a job of its own; whichever job creates the room, the other finds
+  it attached and announces with the link.
 
   Returns `:scheduled` when the room's job now owns the announcement, and
   `:not_scheduled` when the caller still has to send it.
@@ -125,10 +134,10 @@ defmodule Tymeslot.Bookings.RescheduleLocation do
   """
   @spec create_room(Meeting.t(), Meeting.t()) :: :scheduled | :not_scheduled
   def create_room(
-        %Meeting{status: "confirmed", video_room_id: nil, video_integration_id: new_id} = updated,
-        %Meeting{video_integration_id: old_id} = original
+        %Meeting{status: "confirmed", video_room_id: nil, video_integration_id: id} = updated,
+        %Meeting{} = original
       )
-      when is_integer(new_id) and new_id != old_id do
+      when is_integer(id) do
     case VideoRoomWorker.schedule_video_room_creation_with_reschedule_announcement(
            updated,
            original

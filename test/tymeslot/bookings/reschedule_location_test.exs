@@ -430,6 +430,44 @@ defmodule Tymeslot.Bookings.RescheduleLocationTest do
       refute_received {:reschedule_emails, _details}
     end
 
+    # The second reschedule keeps the location, but the room the first one
+    # asked for is not there yet: sent at once, its email would carry no link,
+    # and the first room job rightly drops the announcement it owed, which is
+    # now stale.
+    test "a time-only reschedule while the room is on its way waits for the link too",
+         %{user: user, mirotalk: mirotalk} do
+      test_pid = self()
+
+      stub(EmailServiceMock, :send_reschedule_emails, fn details ->
+        send(test_pid, {:reschedule_emails, details})
+        {{:ok, :sent}, {:ok, :sent}}
+      end)
+
+      meeting =
+        meeting_on(user, [office(), video("loc-miro", mirotalk, 1)], office_meeting_attrs())
+
+      reschedule(meeting, %{location_option_id: "loc-miro"})
+
+      later =
+        reschedule(meeting, %{
+          date: Date.to_string(Date.add(Date.utc_today(), 3)),
+          location_option_id: "loc-miro"
+        })
+
+      refute_received {:reschedule_emails, _details}
+
+      [first_job, second_job] = Enum.sort_by(all_enqueued(worker: VideoRoomWorker), & &1.id)
+      expect_mirotalk_success()
+
+      assert :ok = perform_job(VideoRoomWorker, second_job.args)
+      assert :ok = perform_job(VideoRoomWorker, first_job.args)
+
+      assert_received {:reschedule_emails, details}
+      assert details.attendee_video_url =~ "https://test.mirotalk.com/join/test-room-123"
+      assert details.start_time == later.start_time
+      refute_received {:reschedule_emails, _details}
+    end
+
     test "tells the attendee straight away when no room is on its way",
          %{user: user, zoom: zoom} do
       test_pid = self()

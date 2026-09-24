@@ -372,11 +372,12 @@ defmodule Tymeslot.Bookings.Reschedule do
     Approval.activate_confirmed(updated)
   end
 
-  # A room on a newly chosen video integration is created here rather than
-  # alongside the release, because only this path confirms nothing on its own:
-  # the two clauses above leave room creation to the approval that confirms
-  # the booking. When a room is on its way, its job sends these notifications
-  # once the join link exists.
+  # A room on a newly chosen video integration, or one still on its way when
+  # the reschedule came, is scheduled here rather than alongside the release,
+  # because only this path confirms nothing on its own: the two clauses above
+  # leave room creation to the approval that confirms the booking. When a room
+  # is on its way, its job sends these notifications once the join link
+  # exists.
   defp announce(updated, original) do
     case RescheduleLocation.create_room(updated, original) do
       :scheduled -> :ok
