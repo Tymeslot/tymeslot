@@ -19,6 +19,8 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Bookings.Create
+  alias Tymeslot.Emails.AppointmentBuilder
+  alias Tymeslot.Emails.Templates.AppointmentConfirmation
   alias Tymeslot.Integrations.Video
   alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.TestMocks
@@ -188,6 +190,22 @@ defmodule Tymeslot.Bookings.LocationChoiceIntegrationTest do
       assert meeting.location_kind == "phone"
       assert meeting.attendee_phone == "+44 7700 900123"
       assert meeting.video_integration_id == nil
+    end
+
+    # The host has to call this number, so the confirmation that tells them
+    # about the booking must carry it, not just a "Phone Call" label.
+    test "shows the number in the host's confirmation email", ctx do
+      assert {:ok, meeting} =
+               book(ctx.meeting_type, ctx.user, %{
+                 location_option_id: "loc-call",
+                 location_phone: "+44 7700 900123"
+               })
+
+      details = AppointmentBuilder.from_meeting(meeting)
+      email = AppointmentConfirmation.render(:organizer, meeting.organizer_email, details)
+
+      assert email.html_body =~ "+44 7700 900123"
+      assert email.text_body =~ "+44 7700 900123"
     end
   end
 
