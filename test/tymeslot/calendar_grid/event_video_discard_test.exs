@@ -25,6 +25,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.VideoSyncWorker
@@ -127,6 +129,61 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscardTest do
       end)
 
       assert {:error, %{retry: :queued}} = CalendarGrid.delete_event(ctx.user.id, address(event))
+      refute_enqueued(worker: VideoSyncWorker)
+    end
+  end
+
+  describe "a Zoom room two events hold" do
+    setup ctx do
+      destination =
+        insert(:calendar_integration,
+          user: ctx.user,
+          provider: "caldav",
+          calendar_paths: ["/dest/"]
+        )
+
+      %{destination: destination}
+    end
+
+    # A move whose original could not be deleted leaves the original and its
+    # copy sharing one Zoom meeting, and the organiser is told to delete the
+    # original themselves.
+    test "deleting the original a move left behind keeps the moved copy's meeting", ctx do
+      original = insert_event(ctx.caldav, video(ctx.zoom, @zoom_url))
+
+      expect(Tymeslot.CalendarMock, :create_event, fn payload, _context ->
+        {:ok, CreatedEvent.new(payload.uid)}
+      end)
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn _uid, _context, _opts ->
+        {:error, :not_found}
+      end)
+
+      assert {:ok, %{uid: moved_uid, source: :left_behind}} =
+               CalendarGrid.move_event(ctx.user.id, original, %{integration: ctx.destination})
+
+      expect(Tymeslot.CalendarMock, :delete_event, 2, fn _uid, _context, _opts -> :ok end)
+
+      assert {:ok, _deleted} = CalendarGrid.delete_event(ctx.user.id, address(original))
+      refute_enqueued(worker: VideoSyncWorker)
+
+      {:ok, moved} = ProviderCalendarEventQueries.get_by_uid(ctx.destination.id, moved_uid)
+      assert moved.video_link == @zoom_url
+
+      assert {:ok, _deleted} = CalendarGrid.delete_event(ctx.user.id, address(moved))
+
+      assert_enqueued(
+        worker: VideoSyncWorker,
+        args: %{"video_integration_id" => ctx.zoom.id, "room_id" => "86360699337"}
+      )
+    end
+
+    test "changing the video on one of them keeps the other's meeting", ctx do
+      event = insert_event(ctx.caldav, video(ctx.zoom, @zoom_url))
+      _other = insert_event(ctx.destination, video(ctx.zoom, @zoom_url))
+
+      replace_video(ctx, event)
+
       refute_enqueued(worker: VideoSyncWorker)
     end
   end

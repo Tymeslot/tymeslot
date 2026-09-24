@@ -25,12 +25,21 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscard do
   Leaving them is also what keeps deletion no more aggressive than the
   notification an attendee gets: an attendee who still holds a replaced
   Teams or MiroTalk link can still join, as before.
+
+  ## A room another event still uses
+
+  A room known only by its link is left in place while any other cached event
+  still carries that link from the same integration. A move whose original
+  could not be deleted leaves two events holding one Zoom meeting, and so
+  does every occurrence of a series; deleting or re-linking one of them must
+  not take the meeting from the others.
   """
 
   require Logger
 
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Workers.VideoSyncWorker
 
@@ -52,7 +61,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscard do
   def discard(user_id, event, video_integration_id, ref)
       when is_integer(video_integration_id) and is_tuple(ref) do
     case recorded(event, video_integration_id, ref) do
-      [] -> discard_unrecorded(user_id, video_integration_id, ref)
+      [] -> discard_unrecorded(user_id, event, video_integration_id, ref)
       rooms -> EventVideoRooms.discard(rooms)
     end
   end
@@ -73,7 +82,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscard do
       )
       when is_integer(video_integration_id) and is_binary(link) and link != "" do
     case EventVideoRooms.rooms_on_integration(event, video_integration_id) do
-      [] -> discard_unrecorded(user_id, video_integration_id, {:link, link})
+      [] -> discard_unrecorded(user_id, event, video_integration_id, {:link, link})
       _recorded -> :ok
     end
   end
@@ -89,7 +98,25 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscard do
   defp recorded(event, video_integration_id, {:link, _link}),
     do: EventVideoRooms.rooms_on_integration(event, video_integration_id)
 
-  defp discard_unrecorded(user_id, video_integration_id, {_kind, known_by} = ref) do
+  defp discard_unrecorded(user_id, event, video_integration_id, {:link, link} = ref) do
+    if ProviderCalendarEventQueries.video_link_held_elsewhere?(video_integration_id, link, event) do
+      Logger.info("Video room left in place: another calendar event still uses it",
+        video_integration_id: video_integration_id,
+        room_ref: Redactor.fingerprint(link)
+      )
+    else
+      delete_unrecorded(user_id, video_integration_id, ref)
+    end
+
+    :ok
+  end
+
+  # A room known by its id was made for this event alone and never reached any
+  # calendar.
+  defp discard_unrecorded(user_id, _event, video_integration_id, {:id, _room_id} = ref),
+    do: delete_unrecorded(user_id, video_integration_id, ref)
+
+  defp delete_unrecorded(user_id, video_integration_id, {_kind, known_by} = ref) do
     room_ref = Redactor.fingerprint(known_by)
 
     case Video.fetch_integration_for_user(video_integration_id, user_id) do

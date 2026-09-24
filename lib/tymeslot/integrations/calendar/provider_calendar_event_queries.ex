@@ -361,6 +361,25 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   end
 
   @doc """
+  Whether a cached event other than `event` (addressed by its
+  `calendar_integration_id` and `uid`) carries the join link `video_link`
+  from the video integration `video_integration_id`.
+  """
+  @spec video_link_held_elsewhere?(pos_integer(), String.t(), %{
+          calendar_integration_id: pos_integer(),
+          uid: String.t()
+        }) :: boolean()
+  def video_link_held_elsewhere?(video_integration_id, video_link, %{
+        calendar_integration_id: calendar_integration_id,
+        uid: uid
+      }) do
+    ProviderCalendarEventSchema
+    |> where([e], e.video_integration_id == ^video_integration_id and e.video_link == ^video_link)
+    |> where([e], not (e.calendar_integration_id == ^calendar_integration_id and e.uid == ^uid))
+    |> Repo.exists?()
+  end
+
+  @doc """
   Fetches the cached event linked to any of `identifiers`, which is the
   identifier list of a meeting or event as `Tymeslot.Meetings.CalendarEventLink`
   defines it.
