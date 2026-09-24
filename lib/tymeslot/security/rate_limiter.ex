@@ -143,6 +143,21 @@ defmodule Tymeslot.Security.RateLimiter do
   def check_email_change_verify_rate_limit(client_ip),
     do: Auth.check_email_change_verify(client_ip)
 
+  @doc """
+  Rate limit setting a new password against a reset token, per IP.
+  """
+  @spec check_password_reset_submit_rate_limit(String.t() | nil) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_password_reset_submit_rate_limit(client_ip),
+    do: Auth.check_password_reset_submit(client_ip)
+
+  @doc """
+  Rate limit completing emailed verification links, per IP.
+  """
+  @spec check_verification_link_rate_limit(String.t() | nil) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_verification_link_rate_limit(client_ip), do: Auth.check_verification_link(client_ip)
+
   # OAuth
 
   @doc """

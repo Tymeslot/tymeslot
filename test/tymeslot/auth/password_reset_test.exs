@@ -5,14 +5,22 @@ defmodule Tymeslot.Auth.PasswordResetTest do
   @moduletag :auth
 
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.PasswordReset
-  alias Tymeslot.Auth.{UserSchema, UserSessionQueries, UserTokenQueries}
+
+  alias Tymeslot.Auth.{
+    AccountTokens,
+    PasswordReset,
+    UserSchema,
+    UserSessionQueries,
+    UserTokenQueries
+  }
+
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, Token}
   alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Endpoint
+  alias TymeslotWeb.Helpers.ClientIP
 
   import Tymeslot.Factory
 
@@ -180,11 +188,21 @@ defmodule Tymeslot.Auth.PasswordResetTest do
 
       # First use succeeds
       assert {:ok, _user_map, _message} =
-               PasswordReset.reset_password(token, new_password, new_password)
+               PasswordReset.reset_password(
+                 token,
+                 new_password,
+                 new_password,
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       # Second use always fails
       assert {:error, :invalid_token, _message} =
-               PasswordReset.reset_password(token, "AnotherPass123!", "AnotherPass123!")
+               PasswordReset.reset_password(
+                 token,
+                 "AnotherPass123!",
+                 "AnotherPass123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
     test "returns the user struct without the plaintext password" do
@@ -196,7 +214,8 @@ defmodule Tymeslot.Auth.PasswordResetTest do
                PasswordReset.reset_password(
                  token,
                  "NewSecurePassword123!",
-                 "NewSecurePassword123!"
+                 "NewSecurePassword123!",
+                 ClientIP.request_opts(%Plug.Conn{})
                )
 
       assert updated.id == user.id
@@ -224,7 +243,8 @@ defmodule Tymeslot.Auth.PasswordResetTest do
                PasswordReset.reset_password(
                  reset_token,
                  "NewSecurePassword123!",
-                 "NewSecurePassword123!"
+                 "NewSecurePassword123!",
+                 ClientIP.request_opts(%Plug.Conn{})
                )
 
       reloaded = Repo.get!(UserSchema, user.id)
@@ -232,7 +252,9 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       assert reloaded.email_change_token_hash == nil
       assert reloaded.email_change_sent_at == nil
 
-      assert {:error, {:invalid_token, _message}} = Auth.verify_email_change(change_token)
+      assert {:error, {:invalid_token, _message}} =
+               Auth.verify_email_change(change_token, ClientIP.request_opts(%Plug.Conn{}))
+
       assert Repo.get!(UserSchema, user.id).email == user.email
     end
 
@@ -273,7 +295,14 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       new_password = "NewSecurePassword123!"
-      {:ok, _user_map, _message} = PasswordReset.reset_password(token, new_password, new_password)
+
+      {:ok, _user_map, _message} =
+        PasswordReset.reset_password(
+          token,
+          new_password,
+          new_password,
+          ClientIP.request_opts(%Plug.Conn{})
+        )
 
       # All sessions should be invalidated and their live sockets disconnected
       Enum.each(sessions, fn session ->
@@ -288,7 +317,12 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       assert {:error, _reason, _message} =
-               PasswordReset.reset_password(token, "NewPass123!", "DifferentPass123!")
+               PasswordReset.reset_password(
+                 token,
+                 "NewPass123!",
+                 "DifferentPass123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
     test "enforces strong password requirements" do
@@ -297,7 +331,13 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       # Weak password rejected
-      assert {:error, _reason, _changeset} = PasswordReset.reset_password(token, "weak", "weak")
+      assert {:error, _reason, _changeset} =
+               PasswordReset.reset_password(
+                 token,
+                 "weak",
+                 "weak",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
   end
 
@@ -338,6 +378,26 @@ defmodule Tymeslot.Auth.PasswordResetTest do
     end
   end
 
+  describe "reset_password/4 rate limiting" do
+    test "refuses a client past 30 attempts a minute, before the token is looked at" do
+      user = insert(:user)
+      {:ok, _user, token} = AccountTokens.issue(:reset, user)
+      opts = [ip: "192.0.2.77", user_agent: "reset-submit-test"]
+
+      for _i <- 1..30 do
+        assert {:error, :invalid_token, _message} =
+                 Auth.reset_password("guess", "NewPass123!", "NewPass123!", opts)
+      end
+
+      assert {:error, :rate_limited, "Too many attempts. Please try again later."} =
+               Auth.reset_password(token, "NewPass123!", "NewPass123!", opts)
+
+      # The genuine token was never spent, and another client is unaffected.
+      assert {:ok, _user, _message} =
+               Auth.reset_password(token, "NewPass123!", "NewPass123!", ip: "192.0.2.78")
+    end
+  end
+
   describe "token tamper + replay resistance" do
     test "a single-bit-flipped token is rejected as :invalid_token, not matched to a neighbour" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
@@ -349,12 +409,22 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       refute tampered == token
 
       assert {:error, :invalid_token, _msg} =
-               PasswordReset.reset_password(tampered, "NewPass123!", "NewPass123!")
+               PasswordReset.reset_password(
+                 tampered,
+                 "NewPass123!",
+                 "NewPass123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       # And the real token still works — the tampered attempt must not have
       # burned the legitimate reset token.
       assert {:ok, _user_map, _msg} =
-               PasswordReset.reset_password(token, "NewPass123!", "NewPass123!")
+               PasswordReset.reset_password(
+                 token,
+                 "NewPass123!",
+                 "NewPass123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
     test "concurrent resets with the same valid token: only one succeeds" do
@@ -372,7 +442,9 @@ defmodule Tymeslot.Auth.PasswordResetTest do
 
       tasks =
         for pw <- ["FirstNewPass1!", "SecondNewPass2!"] do
-          Task.async(fn -> PasswordReset.reset_password(token, pw, pw) end)
+          Task.async(fn ->
+            PasswordReset.reset_password(token, pw, pw, ClientIP.request_opts(%Plug.Conn{}))
+          end)
         end
 
       results = Task.await_many(tasks, 10_000)

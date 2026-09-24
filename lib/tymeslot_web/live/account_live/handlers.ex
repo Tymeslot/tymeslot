@@ -12,7 +12,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   alias Phoenix.LiveView
   alias Tymeslot.Auth
   alias Tymeslot.Locales
-  alias TymeslotWeb.AccountLive.{ErrorFormatter, Helpers}
+  alias TymeslotWeb.AccountLive.Helpers
   alias TymeslotWeb.Helpers.ClientIP
 
   # Provider constants
@@ -175,7 +175,9 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   end
 
   defp handle_update_error(socket, errors, form_type) do
-    formatted_errors = ErrorFormatter.format(errors)
+    # The domain keys each message by the field it belongs to; the form
+    # components take a list per field.
+    formatted_errors = Map.new(errors, fn {field, message} -> {field, List.wrap(message)} end)
 
     {error_key, saving_key} =
       case form_type do

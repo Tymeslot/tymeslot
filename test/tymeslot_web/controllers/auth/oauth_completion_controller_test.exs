@@ -17,6 +17,7 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
 
   alias Phoenix.Flash
   alias Plug.Test
+  alias Tymeslot.Auth
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -51,6 +52,22 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
 
       assert redirected_to(conn) == "/dashboard"
       assert Repo.get_by(UserSchema, github_user_id: "12345")
+    end
+
+    test "announces the new account as a social sign-up from this client", %{conn: conn} do
+      :ok = Auth.subscribe_to_user_registrations()
+      Application.put_env(:tymeslot, :enforce_legal_agreements, true)
+
+      conn = %{conn | remote_ip: {203, 0, 113, 61}}
+      complete(conn, pending(), %{"auth" => %{"terms_accepted" => "on"}})
+
+      user = Repo.get_by!(UserSchema, github_user_id: "12345")
+      user_id = user.id
+
+      assert_receive {:user_registered, %{user: %{id: ^user_id}, metadata: metadata}}
+      assert metadata.source == "oauth_signup"
+      assert metadata.ip == "203.0.113.61"
+      assert metadata.terms_accepted == true
     end
 
     test "reports a display name too long to store and creates no account", %{conn: conn} do

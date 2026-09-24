@@ -45,8 +45,6 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
   import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
 
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.SignupSecurity
-  alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
 
   @typedoc "A LiveView `handle_event/3` return value."
@@ -116,17 +114,11 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
   # no bound user the domain still charges the address bucket and answers as
   # if an email went out, so the reply cannot tell anyone which case applied.
   defp attempt(socket) do
-    case Auth.resend_verification_email(
-           bound_email(socket),
-           ClientIP.get(socket)
-         ) do
-      :ok ->
-        maybe_log_honeypot(socket)
-        :sent
+    opts = [honeypot: socket.assigns[:honeypot_signup] == true] ++ ClientIP.request_opts(socket)
 
-      {:error, :rate_limited, message} ->
-        maybe_log_honeypot_violation(socket)
-        {:rate_limited, message}
+    case Auth.resend_verification_email(bound_email(socket), opts) do
+      :ok -> :sent
+      {:error, :rate_limited, message} -> {:rate_limited, message}
     end
   end
 
@@ -134,26 +126,6 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
     do: email
 
   defp bound_email(_socket), do: nil
-
-  defp maybe_log_honeypot(%{assigns: %{honeypot_signup: true}} = socket) do
-    socket |> ClientIP.request_opts() |> SignupSecurity.log_honeypot_resend()
-  end
-
-  defp maybe_log_honeypot(_socket), do: :ok
-
-  # This is the resend rate limit rejecting traffic the honeypot has already
-  # flagged as a bot, so it's the one worth recording separately. There is no
-  # account to identify it by, so `identifier` is `nil`.
-  defp maybe_log_honeypot_violation(%{assigns: %{honeypot_signup: true}} = socket) do
-    [ip: ip, user_agent: user_agent] = ClientIP.request_opts(socket)
-
-    SecurityLogger.log_rate_limit_violation(nil, "email_verification_honeypot", %{
-      ip_address: ip,
-      user_agent: user_agent
-    })
-  end
-
-  defp maybe_log_honeypot_violation(_socket), do: :ok
 
   defp start_cooldown(socket) do
     schedule_tick()

@@ -21,6 +21,7 @@ defmodule Tymeslot.Auth.PasswordFlowPolicyTest do
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Helpers.ClientIP
 
   @registration_disabled "Registration is currently disabled."
   @password_auth_disabled "Password authentication is currently disabled."
@@ -84,21 +85,33 @@ defmodule Tymeslot.Auth.PasswordFlowPolicyTest do
     test "authenticate_user/3 refuses before looking the account up" do
       with_flags_off([:password_auth_enabled], fn ->
         assert {:error, :password_auth_disabled, @password_auth_disabled} =
-                 Auth.authenticate_user("anyone@example.com", "ValidPassword123!")
+                 Auth.authenticate_user(
+                   "anyone@example.com",
+                   "ValidPassword123!",
+                   ClientIP.request_opts(%Plug.Conn{})
+                 )
       end)
     end
 
     test "request_password_reset/2 refuses" do
       with_flags_off([:password_auth_enabled], fn ->
         assert {:error, :password_auth_disabled, @password_auth_disabled} =
-                 Auth.request_password_reset("anyone@example.com")
+                 Auth.request_password_reset(
+                   "anyone@example.com",
+                   ClientIP.request_opts(%Plug.Conn{})
+                 )
       end)
     end
 
     test "reset_password/4 refuses" do
       with_flags_off([:password_auth_enabled], fn ->
         assert {:error, :password_auth_disabled, @password_auth_disabled} =
-                 Auth.reset_password("some-token", "NewPass123!", "NewPass123!")
+                 Auth.reset_password(
+                   "some-token",
+                   "NewPass123!",
+                   "NewPass123!",
+                   ClientIP.request_opts(%Plug.Conn{})
+                 )
       end)
     end
   end

@@ -198,6 +198,32 @@ defmodule Tymeslot.Security.RateLimiter.Auth do
     )
   end
 
+  # Setting a new password against a reset token, per IP: the token is the
+  # only secret on that form, and each attempt pays for a bcrypt hash.
+  @spec check_password_reset_submit(String.t() | nil) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_password_reset_submit(client_ip) do
+    Helpers.check_with_logging(
+      "password_reset_submit:#{Helpers.normalize_ip(client_ip)}",
+      30,
+      60_000,
+      "password reset submission",
+      client_ip
+    )
+  end
+
+  # Completing an emailed verification link, per IP, as for email-change links.
+  @spec check_verification_link(String.t() | nil) :: :ok | {:error, :rate_limited, String.t()}
+  def check_verification_link(client_ip) do
+    Helpers.check_with_logging(
+      "verification_link:#{Helpers.normalize_ip(client_ip)}",
+      30,
+      60_000,
+      "email verification link",
+      client_ip
+    )
+  end
+
   defp check_auth_ip_bucket(ip) when is_binary(ip) and ip != "" do
     Helpers.check_with_logging(
       "login_ip:#{login_source(ip)}",

@@ -34,13 +34,14 @@ defmodule Tymeslot.Auth.Registration do
   that costs an external call.
 
   ## Options
-    - `:ip`, `:user_agent` - the requesting client, for the rate limit and
-      the audit trail
-    - `:metadata` - map of app-specific data to include in the PubSub event,
-      with `terms_accepted` added; without it the event carries none
-    - `:bot_checks` - `false` skips the honeypot and reCAPTCHA, which only a
-      browser form can satisfy; for trusted server-side callers such as
-      provisioning tasks. The rate limit applies regardless.
+    - `:ip` (required), `:user_agent` - the requesting client, for the rate
+      limit, the audit trail and the registration broadcast
+    - `:via` - `:signup_form` (the default) or `:provisioning`, for trusted
+      server-side callers with no browser. Provisioning skips the honeypot
+      and reCAPTCHA, which only a browser form can satisfy, and its
+      broadcast carries no terms acceptance or client, so the caller alone
+      decides whether legal terms were accepted. The rate limit applies
+      either way.
 
   ## Returns
     - `{:ok, user, message}` when a new account was created. A verification
@@ -63,8 +64,10 @@ defmodule Tymeslot.Auth.Registration do
           | {:honeypot, String.t()}
           | {:error, atom(), String.t()}
           | {:error, :input, map() | String.t()}
-  def register_user(params, opts \\ []) do
-    case SignupSecurity.gate(params, opts) do
+  def register_user(params, opts) do
+    gate_opts = [bot_checks: via(opts) == :signup_form] ++ opts
+
+    case SignupSecurity.gate(params, gate_opts) do
       :ok -> validate_and_register(params, opts)
       :honeypot -> answer_honeypot(opts[:ip])
       {:error, _kind, _message} = refused -> refused
@@ -76,7 +79,9 @@ defmodule Tymeslot.Auth.Registration do
       terms_accepted = Validation.terms_accepted?(params["terms_accepted"])
       validated_params = Map.put(validated_params, "terms_accepted", terms_accepted)
 
-      case create_and_verify_user(validated_params, with_terms(opts, terms_accepted)) do
+      opts = Keyword.put(opts, :metadata, broadcast_metadata(opts, terms_accepted))
+
+      case create_and_verify_user(validated_params, opts) do
         {:ok, :existing_account} -> {:existing_account, success_message()}
         {:ok, user} -> {:ok, user, success_message()}
         {:error, _reason, _message} = error -> error
@@ -84,13 +89,23 @@ defmodule Tymeslot.Auth.Registration do
     end
   end
 
-  # The broadcast says whether the terms were accepted, but only for a caller
-  # that asked for one with metadata: a listener records legal acceptance from
-  # it, which a provisioning task must be able to leave pending.
-  defp with_terms(opts, terms_accepted) do
-    if Keyword.has_key?(opts, :metadata),
-      do: Keyword.update!(opts, :metadata, &Map.put(&1, :terms_accepted, terms_accepted)),
-      else: opts
+  defp via(opts), do: Keyword.get(opts, :via, :signup_form)
+
+  # A listener records legal acceptance from the broadcast, so only a sign-up
+  # form's carries it; a provisioning task must be able to leave it pending.
+  defp broadcast_metadata(opts, terms_accepted) do
+    case via(opts) do
+      :signup_form ->
+        %{
+          ip: opts[:ip],
+          user_agent: opts[:user_agent],
+          source: "signup",
+          terms_accepted: terms_accepted
+        }
+
+      :provisioning ->
+        %{source: "provisioning"}
+    end
   end
 
   # Spends the address's verification allowance as a real sign-up's email
@@ -259,8 +274,7 @@ defmodule Tymeslot.Auth.Registration do
         Logger.info("Created profile", user_id: user.id)
 
         # Notify apps about successful registration via PubSub
-        metadata = Keyword.get(opts, :metadata, %{})
-        PubSub.broadcast_user_registered(user, metadata)
+        PubSub.broadcast_user_registered(user, Keyword.fetch!(opts, :metadata))
         :ok
 
       {:error, reason} ->

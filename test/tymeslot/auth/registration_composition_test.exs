@@ -62,10 +62,9 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
       }
 
       assert {:ok, user, message} =
-               Registration.register_user(
-                 params,
-                 [metadata: %{source: "composition-test"}] ++
-                   ClientIP.request_opts(%Plug.Conn{})
+               Registration.register_user(params,
+                 ip: "203.0.113.41",
+                 user_agent: "Composition/1.0"
                )
 
       assert message =~ "Account created"
@@ -105,7 +104,34 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
       # PubSub event for cross-app listeners (SaaS, etc.).
       assert_received {:user_registered, %{user: broadcast_user, metadata: metadata}}
       assert broadcast_user.id == user.id
-      assert metadata == %{source: "composition-test", terms_accepted: true}
+
+      assert metadata == %{
+               source: "signup",
+               ip: "203.0.113.41",
+               user_agent: "Composition/1.0",
+               terms_accepted: true
+             }
+    end
+  end
+
+  describe "register_user/2 — provisioning" do
+    test "broadcasts no terms acceptance, so the caller decides the legal state" do
+      email = "provisioned-#{System.unique_integer([:positive])}@example.com"
+
+      assert {:ok, user, _message} =
+               Registration.register_user(
+                 %{
+                   "email" => email,
+                   "password" => "ValidPassword123!",
+                   "terms_accepted" => "true"
+                 },
+                 ip: "203.0.113.42",
+                 via: :provisioning
+               )
+
+      user_id = user.id
+      assert_received {:user_registered, %{user: %{id: ^user_id}, metadata: metadata}}
+      assert metadata == %{source: "provisioning"}
     end
   end
 

@@ -7,6 +7,7 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
   alias Tymeslot.Auth.{PasswordReset, UserSchema, UserSessionSchema, UserTokenQueries}
   alias Tymeslot.Security.{Password, Token}
   alias TymeslotWeb.Endpoint
+  alias TymeslotWeb.Helpers.ClientIP
 
   import Tymeslot.Factory
 
@@ -18,7 +19,13 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
 
     test "successfully updates password hash in the database", %{user: user} do
       assert {:ok, updated_user} =
-               Auth.update_user_password(user, "CurrentPass123!", "NewPass456!", "NewPass456!")
+               Auth.update_user_password(
+                 user,
+                 "CurrentPass123!",
+                 "NewPass456!",
+                 "NewPass456!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       assert Password.verify_password("NewPass456!", updated_user.password_hash)
       refute Password.verify_password("CurrentPass123!", updated_user.password_hash)
@@ -26,12 +33,24 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
 
     test "fails with wrong current password", %{user: user} do
       assert {:error, %{current_password: "Current password is incorrect"}} =
-               Auth.update_user_password(user, "WrongPass123!", "NewPass456!", "NewPass456!")
+               Auth.update_user_password(
+                 user,
+                 "WrongPass123!",
+                 "NewPass456!",
+                 "NewPass456!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
     test "reports a wrong current password even when the new password equals it", %{user: user} do
       assert {:error, %{current_password: "Current password is incorrect"}} =
-               Auth.update_user_password(user, "WrongPass123!", "WrongPass123!", "WrongPass123!")
+               Auth.update_user_password(
+                 user,
+                 "WrongPass123!",
+                 "WrongPass123!",
+                 "WrongPass123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
     test "fails when new password is the same as the current password", %{user: user} do
@@ -40,7 +59,8 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
                  user,
                  "CurrentPass123!",
                  "CurrentPass123!",
-                 "CurrentPass123!"
+                 "CurrentPass123!",
+                 ClientIP.request_opts(%Plug.Conn{})
                )
 
       assert message =~ "different from current"
@@ -52,7 +72,8 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
                  user,
                  "CurrentPass123!",
                  "NewPass456!",
-                 "DifferentPass456!"
+                 "DifferentPass456!",
+                 ClientIP.request_opts(%Plug.Conn{})
                )
 
       assert message =~ "match"
@@ -60,7 +81,13 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
 
     test "fails when new password is too short", %{user: user} do
       assert {:error, %{new_password: message}} =
-               Auth.update_user_password(user, "CurrentPass123!", "short", "short")
+               Auth.update_user_password(
+                 user,
+                 "CurrentPass123!",
+                 "short",
+                 "short",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       assert message =~ "8 characters"
     end
@@ -69,7 +96,13 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
       session = insert(:user_session, user: user)
 
       assert {:ok, _updated_user} =
-               Auth.update_user_password(user, "CurrentPass123!", "NewPass456!", "NewPass456!")
+               Auth.update_user_password(
+                 user,
+                 "CurrentPass123!",
+                 "NewPass456!",
+                 "NewPass456!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       refute Repo.get(UserSessionSchema, session.id)
     end
@@ -79,7 +112,13 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
       Endpoint.subscribe("users_sessions:#{Base.url_encode64(Token.hash_token(session.token))}")
 
       assert {:ok, _updated_user} =
-               Auth.update_user_password(user, "CurrentPass123!", "NewPass456!", "NewPass456!")
+               Auth.update_user_password(
+                 user,
+                 "CurrentPass123!",
+                 "NewPass456!",
+                 "NewPass456!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
     end
@@ -94,13 +133,21 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
       {:ok, user} = UserTokenQueries.set_reset_token(user, reset_token)
 
       assert {:ok, updated_user} =
-               Auth.update_user_password(user, "CurrentPass123!", "NewPass456!", "NewPass456!")
+               Auth.update_user_password(
+                 user,
+                 "CurrentPass123!",
+                 "NewPass456!",
+                 "NewPass456!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       assert updated_user.pending_email == nil
       assert updated_user.email_change_token_hash == nil
       assert updated_user.reset_token_hash == nil
 
-      assert {:error, {:invalid_token, _message}} = Auth.verify_email_change(change_token)
+      assert {:error, {:invalid_token, _message}} =
+               Auth.verify_email_change(change_token, ClientIP.request_opts(%Plug.Conn{}))
+
       assert {:error, :invalid_token, _message} = PasswordReset.verify_token(reset_token)
     end
 
@@ -125,7 +172,8 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
                  stale_user,
                  "CurrentPass123!",
                  "NewPass456!",
-                 "NewPass456!"
+                 "NewPass456!",
+                 ClientIP.request_opts(%Plug.Conn{})
                )
 
       stored = Repo.get!(UserSchema, stale_user.id)
@@ -133,7 +181,9 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
       assert stored.email_change_token_hash == nil
       assert stored.reset_token_hash == nil
 
-      assert {:error, {:invalid_token, _message}} = Auth.verify_email_change(change_token)
+      assert {:error, {:invalid_token, _message}} =
+               Auth.verify_email_change(change_token, ClientIP.request_opts(%Plug.Conn{}))
+
       assert {:error, :invalid_token, _message} = PasswordReset.verify_token(reset_token)
       assert Repo.get!(UserSchema, stale_user.id).email == stale_user.email
     end
@@ -142,15 +192,34 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
       user: stale_user
     } do
       {:ok, _user} =
-        Auth.update_user_password(stale_user, "CurrentPass123!", "NewPass456!", "NewPass456!")
+        Auth.update_user_password(
+          stale_user,
+          "CurrentPass123!",
+          "NewPass456!",
+          "NewPass456!",
+          ClientIP.request_opts(%Plug.Conn{})
+        )
 
       # The stale struct still carries the old hash; the old password must not pass.
       assert {:error, %{current_password: "Current password is incorrect"}} =
-               Auth.update_user_password(stale_user, "CurrentPass123!", "Other789!", "Other789!")
+               Auth.update_user_password(
+                 stale_user,
+                 "CurrentPass123!",
+                 "Other789!",
+                 "Other789!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
     test "reports every malformed field at once", %{user: user} do
-      assert {:error, errors} = Auth.update_user_password(user, "", "short", "different")
+      assert {:error, errors} =
+               Auth.update_user_password(
+                 user,
+                 "",
+                 "short",
+                 "different",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       assert errors.current_password == "Password is required"
       assert errors.new_password =~ "8 characters"
@@ -159,7 +228,13 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
 
     test "returns the user without the plaintext password", %{user: user} do
       assert {:ok, updated_user} =
-               Auth.update_user_password(user, "CurrentPass123!", "NewPass456!", "NewPass456!")
+               Auth.update_user_password(
+                 user,
+                 "CurrentPass123!",
+                 "NewPass456!",
+                 "NewPass456!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       assert updated_user.password == nil
       assert updated_user.password_confirmation == nil
@@ -170,15 +245,33 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
       user = insert(:user, password_hash: Password.hash_password("legacypassword1"))
 
       assert {:ok, _updated_user} =
-               Auth.update_user_password(user, "legacypassword1", "NewPass456!", "NewPass456!")
+               Auth.update_user_password(
+                 user,
+                 "legacypassword1",
+                 "NewPass456!",
+                 "NewPass456!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
     test "reports a missing current password on its field", %{user: user} do
       assert {:error, %{current_password: "Password is required"}} =
-               Auth.update_user_password(user, "", "NewPass456!", "NewPass456!")
+               Auth.update_user_password(
+                 user,
+                 "",
+                 "NewPass456!",
+                 "NewPass456!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       assert {:error, %{current_password: "Password is required"}} =
-               Auth.update_user_password(user, nil, "NewPass456!", "NewPass456!")
+               Auth.update_user_password(
+                 user,
+                 nil,
+                 "NewPass456!",
+                 "NewPass456!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
     test "rejects an oversized current password without hashing it", %{user: user} do
@@ -187,7 +280,8 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
                  user,
                  String.duplicate("a", 1025),
                  "NewPass456!",
-                 "NewPass456!"
+                 "NewPass456!",
+                 ClientIP.request_opts(%Plug.Conn{})
                )
     end
 
@@ -195,13 +289,25 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
       user = insert(:user, provider: "google", password_hash: nil)
 
       assert {:error, %{current_password: "Current password is incorrect"}} =
-               Auth.update_user_password(user, "Anything123!", "NewPass456!", "NewPass456!")
+               Auth.update_user_password(
+                 user,
+                 "Anything123!",
+                 "NewPass456!",
+                 "NewPass456!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
     test "applies the shared password policy to the new password", %{user: user} do
       # Long enough, but missing the special character the policy requires.
       assert {:error, %{new_password: "Password must contain at least one special character"}} =
-               Auth.update_user_password(user, "CurrentPass123!", "NewPass4567", "NewPass4567")
+               Auth.update_user_password(
+                 user,
+                 "CurrentPass123!",
+                 "NewPass4567",
+                 "NewPass4567",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
   end
 end

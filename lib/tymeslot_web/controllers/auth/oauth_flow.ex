@@ -7,9 +7,10 @@ defmodule TymeslotWeb.OAuthFlow do
   It lives in the web layer because the flow is carried by the connection:
   the OAuth state and PKCE verifier sit in the Plug session between the
   redirect and the callback (`TymeslotWeb.OAuthFlow.State`), and a sign-in
-  ends in a session cookie (`TymeslotWeb.UserAuth`). The decisions (which
-  account an identity belongs to, whether a new one may be created) stay in
-  the domain, in `Tymeslot.Auth.OAuth`.
+  ends in a session cookie (`TymeslotWeb.UserAuth`). Every decision (the
+  code exchange, which account an identity belongs to, whether it may sign in
+  or must verify first, whether a new one may be created) is the domain's,
+  reached through `Tymeslot.Auth`.
 
   All presentation concerns (flash messages, HTTP redirects) are the
   responsibility of the calling controller.
@@ -17,12 +18,8 @@ defmodule TymeslotWeb.OAuthFlow do
 
   require Logger
 
-  alias Tymeslot.Auth.OAuth.{Client, Providers, UserProcessor, UserRegistration}
-
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.Verification
-  alias Tymeslot.Clock
-  alias Tymeslot.Security.SecurityLogger
+  alias Tymeslot.Auth.OAuth.Providers
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.OAuthFlow.State
   alias TymeslotWeb.UserAuth
@@ -46,11 +43,14 @@ defmodule TymeslotWeb.OAuthFlow do
   @spec authorize(Plug.Conn.t(), provider()) :: {Plug.Conn.t(), String.t()}
   def authorize(conn, provider) do
     {conn, flow} = State.generate_and_store_state(conn)
-    {conn, Client.authorize_url(provider, callback_url(conn, provider), flow)}
+    {conn, Auth.social_authorize_url(provider, callback_url(conn, provider), flow)}
   end
 
   @doc """
-  Handles the complete OAuth callback flow.
+  Handles the complete OAuth callback flow: checks the flow's state and
+  recovers its PKCE verifier, lets the domain decide what the callback means
+  (`Tymeslot.Auth.resolve_social_callback/5`), and carries the outcome onto
+  the connection.
 
   Returns a tagged tuple describing the outcome. Callers are responsible for
   translating each variant into flash messages and HTTP redirects:
@@ -69,16 +69,49 @@ defmodule TymeslotWeb.OAuthFlow do
     creation failed.
   - `{:error, :email_already_taken, provider, conn}` - no account carries this
     provider ID, but the email belongs to an account created another way.
+  - `{:error, :registration_disabled, provider, conn}` - a new identity, and
+    sign-ups are closed.
   """
   @spec handle_oauth_callback(Plug.Conn.t(), oauth_callback_params()) :: flow_result()
   def handle_oauth_callback(conn, %{code: code, state: state, provider: provider}) do
-    with {:ok, conn, code_verifier} <- validate_oauth_state(conn, state, provider),
-         {:ok, conn, user} <- process_oauth_response(conn, code, code_verifier, provider) do
-      complete_oauth_flow(conn, user, provider)
+    with {:ok, conn, code_verifier} <- validate_oauth_state(conn, state, provider) do
+      provider
+      |> Auth.resolve_social_callback(
+        code,
+        code_verifier,
+        callback_url(conn, provider),
+        ClientIP.request_opts(conn)
+      )
+      |> carry(conn, provider)
     end
   end
 
-  # Private helpers
+  @doc """
+  Signs in the account a social sign-in resolved to, provided its email is
+  verified; the domain decides (`Tymeslot.Auth.admit_social_user/3`).
+
+  An unverified account gets no session: it has been resent its
+  verification link, and the conn remembers it for the verify-email screen.
+  The last element of `:verification_required` says whether the email went
+  out (`:sent`), was refused by the rate limiter (`:rate_limited`) or failed
+  (`:failed`).
+  """
+  @spec sign_in(Plug.Conn.t(), map(), provider()) :: flow_result()
+  def sign_in(conn, user, provider) do
+    user
+    |> Auth.admit_social_user(provider, ClientIP.request_opts(conn))
+    |> carry(conn, provider)
+  end
+
+  defp carry({:sign_in, user}, conn, provider), do: create_user_session(conn, user, provider)
+
+  defp carry({:verify, user, delivery}, conn, provider),
+    do: {:verification_required, UserAuth.put_unverified_user(conn, user), provider, delivery}
+
+  defp carry({:register, pending}, conn, provider),
+    do: {:registration_required, conn, provider, pending}
+
+  defp carry({:error, reason}, conn, provider), do: {:error, reason, provider, conn}
 
   # The provider is threaded in purely so the audit entry can name it: a
   # social auth failure that cannot distinguish Google from GitHub is not much
@@ -100,46 +133,9 @@ defmodule TymeslotWeb.OAuthFlow do
     end
   end
 
-  @doc """
-  Records a social-auth audit entry via `SecurityLogger.log_social_auth_event/3`.
-
-  Shared by every OAuth entry point (callback flow here, and the
-  complete-registration controller) so the audit shape stays in one place.
-  No email is available in the CSRF-state and early-error branches; the
-  masking helper drops a nil address cleanly. The OAuth code, state and
-  client tokens are never recorded.
-  """
-  @spec log_social_auth(provider() | String.t(), boolean(), Plug.Conn.t(), map()) :: :ok
-  def log_social_auth(provider, success, conn, details) do
-    SecurityLogger.log_social_auth_event(
-      to_string(provider),
-      success,
-      Map.merge(
-        %{ip_address: ClientIP.get(conn), user_agent: ClientIP.get_user_agent(conn)},
-        details
-      )
-    )
-  end
-
-  defp process_oauth_response(conn, code, code_verifier, provider) do
-    with {:ok, token} <-
-           Client.exchange_code(provider, code, code_verifier, callback_url(conn, provider)),
-         {:ok, identity} <- UserProcessor.fetch_identity(provider, token) do
-      {:ok, conn, identity}
-    else
-      {:error, reason} ->
-        error =
-          if match?({:provider_rejected, _status}, reason), do: :oauth_error, else: :general_error
-
-        Logger.error("OAuth authentication error",
-          provider: to_string(provider),
-          reason: inspect(reason)
-        )
-
-        log_social_auth(provider, false, conn, %{error_reason: Atom.to_string(error)})
-        {:error, error, provider, conn}
-    end
-  end
+  # The client this conn came from, on a social-auth audit entry.
+  defp log_social_auth(provider, success, conn, details),
+    do: Auth.log_social_auth(provider, success, details, ClientIP.request_opts(conn))
 
   # The endpoint's configured URL when the conn went through one (every real
   # request does), else one built from the conn itself.
@@ -156,53 +152,6 @@ defmodule TymeslotWeb.OAuthFlow do
     end
   end
 
-  defp complete_oauth_flow(conn, user, provider) do
-    case UserRegistration.find_existing_user(provider, user) do
-      {:ok, existing_user} ->
-        sign_in(conn, UserRegistration.verify_vouched_email(existing_user, user), provider)
-
-      {:error, :not_found} ->
-        handle_new_user_registration(conn, provider, user)
-
-      {:error, :email_already_taken} ->
-        log_social_auth(provider, false, conn, %{
-          email: Map.get(user, :email),
-          error_reason: "email_already_taken"
-        })
-
-        {:error, :email_already_taken, provider, conn}
-    end
-  end
-
-  @doc """
-  Signs in the account an OAuth identity belongs to, provided its email is
-  verified.
-
-  An unverified account gets no session: its email is resent the
-  verification link (rate limited) and the conn remembers the account for the
-  verify-email screen. The last element of `:verification_required` says
-  whether the email went out (`:sent`), was refused by the rate limiter
-  (`:rate_limited`) or failed (`:failed`).
-  """
-  @spec sign_in(Plug.Conn.t(), map(), provider()) :: flow_result()
-  def sign_in(conn, %{verified_at: nil} = user, provider) do
-    delivery =
-      case Verification.send_verification_email(user, ClientIP.get(conn)) do
-        {:ok, _user} -> :sent
-        {:error, :rate_limited, _message} -> :rate_limited
-        {:error, _reason} -> :failed
-      end
-
-    log_social_auth(provider, false, conn, %{
-      email: Map.get(user, :email),
-      error_reason: "email_not_verified"
-    })
-
-    {:verification_required, UserAuth.put_unverified_user(conn, user), provider, delivery}
-  end
-
-  def sign_in(conn, user, provider), do: create_user_session(conn, user, provider)
-
   defp create_user_session(conn, user, provider) do
     case UserAuth.create_session(conn, %{id: user.id}) do
       {:ok, session_conn, _token} ->
@@ -213,9 +162,8 @@ defmodule TymeslotWeb.OAuthFlow do
           provider: to_string(provider)
         })
 
-        # Map.get/2 rather than user.email: create_user_session/3 is reached
-        # with whatever find_existing_user/2 returned, and an audit line must
-        # never be the thing that fails an otherwise successful login.
+        # Map.get/2 rather than user.email: an audit line must never be the
+        # thing that fails an otherwise successful login.
         log_social_auth(provider, true, session_conn, %{
           email: Map.get(user, :email),
           oauth_state_valid: true
@@ -236,36 +184,5 @@ defmodule TymeslotWeb.OAuthFlow do
 
         {:error, :session_failed, provider, conn}
     end
-  end
-
-  # A new identity always goes through the complete-registration form, even
-  # with every field known: the account is created on explicit confirmation,
-  # never silently.
-  defp handle_new_user_registration(conn, provider, user) do
-    case Auth.check_registration_open() do
-      :ok ->
-        {:registration_required, conn, provider, build_registration_data(provider, user)}
-
-      {:error, :registration_disabled, _message} ->
-        log_social_auth(provider, false, conn, %{
-          email: Map.get(user, :email),
-          error_reason: "registration_disabled"
-        })
-
-        {:error, :registration_disabled, provider, conn}
-    end
-  end
-
-  # Kept in the session until the complete-registration form is submitted.
-  # `created_at` (unix seconds) lets the completion refuse a stale entry.
-  defp build_registration_data(provider, user) do
-    %{
-      provider: to_string(provider),
-      email: user.email || "",
-      name: user.name || "",
-      email_from_provider: user.email_from_provider == true,
-      provider_uid: user.provider_uid,
-      created_at: DateTime.to_unix(Clock.utc_now())
-    }
   end
 end

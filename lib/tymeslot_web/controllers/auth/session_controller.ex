@@ -93,13 +93,18 @@ defmodule TymeslotWeb.SessionController do
   """
   @spec verify_and_login(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def verify_and_login(conn, %{"token" => token}) do
-    case Auth.verify_email_and_maybe_login(token, ClientIP.get(conn)) do
+    case Auth.verify_email_and_maybe_login(token, ClientIP.request_opts(conn)) do
       {:ok, user, :auto_login} ->
         auto_login(conn, user)
 
       {:ok, user, :manual} ->
         Logger.info("Auto-login denied - IP mismatch", user_id: user.id)
         redirect_to_login_verified(conn)
+
+      {:error, {:rate_limited, message}} ->
+        conn
+        |> put_flash(:error, message)
+        |> redirect(to: ~p"/auth/login")
 
       {:error, :token_expired} ->
         conn

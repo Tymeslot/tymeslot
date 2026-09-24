@@ -30,7 +30,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       {user, token} = user_with_token("203.0.113.9")
 
       assert {:ok, verified, :auto_login} =
-               Verification.verify_email_and_maybe_login(token, "203.0.113.9")
+               Verification.verify_email_and_maybe_login(token, ip: "203.0.113.9")
 
       assert verified.id == user.id
       assert verified.verified_at
@@ -40,14 +40,14 @@ defmodule Tymeslot.Auth.VerificationTest do
       {_user, token} = user_with_token("127.0.0.1")
 
       assert {:ok, _verified, :auto_login} =
-               Verification.verify_email_and_maybe_login(token, "::1")
+               Verification.verify_email_and_maybe_login(token, ip: "::1")
     end
 
     test "verifies but requires a manual login from any other IP" do
       {user, token} = user_with_token("203.0.113.9")
 
       assert {:ok, _verified, :manual} =
-               Verification.verify_email_and_maybe_login(token, "198.51.100.1")
+               Verification.verify_email_and_maybe_login(token, ip: "198.51.100.1")
 
       assert Repo.reload!(user).verified_at
     end
@@ -55,12 +55,12 @@ defmodule Tymeslot.Auth.VerificationTest do
     test "requires a manual login when no signup IP was recorded" do
       {_user, token} = user_with_token(nil)
 
-      assert {:ok, _verified, :manual} = Verification.verify_email_and_maybe_login(token, nil)
+      assert {:ok, _verified, :manual} = Verification.verify_email_and_maybe_login(token, ip: nil)
     end
 
     test "rejects an unknown token" do
       assert {:error, :invalid_token} =
-               Verification.verify_email_and_maybe_login("no-such-token", "203.0.113.9")
+               Verification.verify_email_and_maybe_login("no-such-token", ip: "203.0.113.9")
     end
   end
 
@@ -138,7 +138,7 @@ defmodule Tymeslot.Auth.VerificationTest do
 
       replies =
         for email <- [unverified.email, verified.email, unknown, nil] do
-          Verification.resend_verification_email_by_email(email, ClientIP.get(%Plug.Conn{}))
+          Verification.resend_verification_email_by_email(email, ip: ClientIP.get(%Plug.Conn{}))
         end
 
       assert replies == [:ok, :ok, :ok, :ok]
@@ -153,7 +153,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       assert :ok =
                Verification.resend_verification_email_by_email(
                  verified.email,
-                 ClientIP.get(%Plug.Conn{})
+                 ip: ClientIP.get(%Plug.Conn{})
                )
 
       assert Repo.get!(UserSchema, verified.id).verification_token ==
@@ -170,7 +170,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       assert :ok =
                Verification.resend_verification_email_by_email(
                  user.email,
-                 ClientIP.get(%Plug.Conn{})
+                 ip: ClientIP.get(%Plug.Conn{})
                )
 
       assert [] = all_enqueued(worker: EmailWorker)
@@ -184,7 +184,7 @@ defmodule Tymeslot.Auth.VerificationTest do
         assert :ok =
                  Verification.resend_verification_email_by_email(
                    "unknown-#{i}@example.com",
-                   conn
+                   ip: conn
                  )
       end
 
@@ -192,7 +192,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       user = insert(:unverified_user)
 
       assert {:error, :rate_limited, message} =
-               Verification.resend_verification_email_by_email(user.email, conn)
+               Verification.resend_verification_email_by_email(user.email, ip: conn)
 
       assert message =~ "verification emails"
       assert [] = all_enqueued(worker: EmailWorker)
@@ -218,7 +218,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       assert :ok =
                Verification.resend_verification_email_by_email(
                  user.email,
-                 ClientIP.get(%Plug.Conn{})
+                 ip: ClientIP.get(%Plug.Conn{})
                )
 
       # The original token is now invalid — a fresh token was persisted.
@@ -242,7 +242,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       assert :ok =
                Verification.resend_verification_email_by_email(
                  user.email,
-                 ClientIP.get(%Plug.Conn{})
+                 ip: ClientIP.get(%Plug.Conn{})
                )
 
       # A genuinely new email is sent, so the token is rotated; the stale token no

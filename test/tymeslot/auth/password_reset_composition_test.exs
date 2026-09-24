@@ -31,6 +31,7 @@ defmodule Tymeslot.Auth.PasswordResetCompositionTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, RateLimiter}
   alias Tymeslot.Workers.EmailWorker
+  alias TymeslotWeb.Helpers.ClientIP
 
   setup do
     RateLimiter.clear_all()
@@ -70,7 +71,12 @@ defmodule Tymeslot.Auth.PasswordResetCompositionTest do
       new_password = "BrandNewPassword456!"
 
       assert {:ok, _user_map, _message} =
-               PasswordReset.reset_password(raw_token, new_password, new_password)
+               PasswordReset.reset_password(
+                 raw_token,
+                 new_password,
+                 new_password,
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       # Password actually changed.
       {:ok, final_user} = UserQueries.get_user_by_email(user.email)
@@ -84,7 +90,12 @@ defmodule Tymeslot.Auth.PasswordResetCompositionTest do
 
       # Token is now single-use; a second attempt with the same token is rejected.
       assert {:error, :invalid_token, _message} =
-               PasswordReset.reset_password(raw_token, new_password, new_password)
+               PasswordReset.reset_password(
+                 raw_token,
+                 new_password,
+                 new_password,
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
     test "a social account is told by email, never on screen, and gets no reset link" do

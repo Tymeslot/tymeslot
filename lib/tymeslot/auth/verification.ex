@@ -5,12 +5,12 @@ defmodule Tymeslot.Auth.Verification do
 
   require Logger
 
-  alias Tymeslot.Auth.{AccountTokens, RateLimit, UserSchema}
+  alias Tymeslot.Auth.{AccountTokens, RateLimit, SignupSecurity, UserSchema}
   alias Tymeslot.Auth.Helpers.AccountLogging
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Repo
-  alias Tymeslot.Security.{RateLimiter, Token}
+  alias Tymeslot.Security.{RateLimiter, SecurityLogger, Token}
   alias Tymeslot.Utils.UrlBuilder
 
   @type verification_result ::
@@ -87,12 +87,28 @@ defmodule Tymeslot.Auth.Verification do
   the account signed up from (localhost spellings treated as one), so a link
   forwarded to, or intercepted by, someone else verifies the address without
   handing over a session.
+
+  `opts` carries the client (`:ip`, `:user_agent`). Following links is
+  limited per address; over the limit the result is
+  `{:error, {:rate_limited, message}}` and the token is left untouched.
   """
-  @spec verify_email_and_maybe_login(String.t(), String.t() | nil) ::
-          {:ok, term(), :auto_login | :manual} | {:error, atom()}
-  def verify_email_and_maybe_login(token, request_ip) when is_binary(token) do
-    with {:ok, user, verified_user} <- verify_by_token(token) do
-      {:ok, verified_user, login_mode(user.signup_ip, request_ip)}
+  @spec verify_email_and_maybe_login(String.t(), keyword()) ::
+          {:ok, term(), :auto_login | :manual}
+          | {:error, atom() | {:rate_limited, String.t()}}
+  def verify_email_and_maybe_login(token, opts) when is_binary(token) do
+    limit = RateLimiter.check_verification_link_rate_limit(opts[:ip])
+    context = [event: "email_verification_link", ip: opts[:ip], user_agent: opts[:user_agent]]
+
+    with :ok <- limit_link(limit, context),
+         {:ok, user, verified_user} <- verify_by_token(token) do
+      {:ok, verified_user, login_mode(user.signup_ip, opts[:ip])}
+    end
+  end
+
+  defp limit_link(limit, context) do
+    case RateLimit.check(limit, context) do
+      :ok -> :ok
+      {:error, :rate_limited, message} -> {:error, {:rate_limited, message}}
     end
   end
 
@@ -140,17 +156,38 @@ defmodule Tymeslot.Auth.Verification do
 
   Callers pass an address the requester has already proved is theirs (the
   session-bound unverified user), never one typed into a form.
+
+  `opts` carries the client (`:ip`, `:user_agent`) and `:honeypot`, `true`
+  when the resend comes from the decoy screen a honeypot-caught sign-up was
+  shown; such resends are audited as bot traffic.
   """
-  @spec resend_verification_email_by_email(String.t() | nil, String.t() | nil) ::
+  @spec resend_verification_email_by_email(String.t() | nil, keyword()) ::
           :ok | {:error, :rate_limited, String.t()}
-  def resend_verification_email_by_email(email, ip) do
-    RateLimit.with_limit(
-      RateLimiter.check_verification_ip_rate_limit(ip),
-      [event: "email_verification", identifier: nil, ip: ip],
-      fn ->
-        email |> unverified_user() |> resend_quietly(ip)
-      end
-    )
+  def resend_verification_email_by_email(email, opts) do
+    ip = opts[:ip]
+
+    result =
+      RateLimit.with_limit(
+        RateLimiter.check_verification_ip_rate_limit(ip),
+        [event: "email_verification", identifier: nil, ip: ip, user_agent: opts[:user_agent]],
+        fn -> email |> unverified_user() |> resend_quietly(ip) end
+      )
+
+    if opts[:honeypot], do: audit_honeypot_resend(result, opts)
+    result
+  end
+
+  # A resend from the decoy screen a honeypot-caught sign-up lands on is a bot
+  # following the fake success path. A refused one is recorded separately too,
+  # since it is the limiter rejecting traffic already known to be a bot; there
+  # is no account to name it by.
+  defp audit_honeypot_resend(:ok, opts), do: SignupSecurity.log_honeypot_resend(opts)
+
+  defp audit_honeypot_resend({:error, :rate_limited, _message}, opts) do
+    SecurityLogger.log_rate_limit_violation(nil, "email_verification_honeypot", %{
+      ip_address: opts[:ip],
+      user_agent: opts[:user_agent]
+    })
   end
 
   @doc """

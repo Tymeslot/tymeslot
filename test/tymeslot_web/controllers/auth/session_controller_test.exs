@@ -387,6 +387,26 @@ defmodule TymeslotWeb.SessionControllerTest do
       assert Flash.get(conn.assigns.flash, :error) =~ "no longer valid"
     end
 
+    test "refuses a client past 30 links a minute, leaving the token unspent", %{
+      conn: conn,
+      token: token
+    } do
+      user = insert_unverified_user(token, "10.77.0.1")
+      client = %{conn | remote_ip: {10, 77, 0, 1}}
+
+      for _i <- 1..30 do
+        refused = post(client, ~p"/auth/verify-complete/not-a-token")
+        assert Flash.get(refused.assigns.flash, :error) =~ "no longer valid"
+      end
+
+      conn = post(client, ~p"/auth/verify-complete/#{token}")
+
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :error) =~ "reached the limit"
+      refute get_session(conn, :user_token)
+      refute Repo.reload!(user).verified_at
+    end
+
     test "handles expired verification token", %{conn: conn} do
       expired_time = DateTime.add(DateTime.utc_now(), -25 * 3600, :second)
 

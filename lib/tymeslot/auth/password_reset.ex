@@ -231,8 +231,9 @@ defmodule Tymeslot.Auth.PasswordReset do
     - token: String.t() (password reset token)
     - new_password: String.t() (new password)
     - password_confirmation: String.t() (password confirmation)
-    - opts: Keyword list; `:ip` and `:user_agent` are recorded on the audit
-      entry the completed reset emits
+    - opts: Keyword list; `:ip` keys the per-address limit on attempts, and
+      it and `:user_agent` are recorded on the audit entry the completed reset
+      emits
 
   ## Returns
     - {:ok, user, message} on success
@@ -241,7 +242,15 @@ defmodule Tymeslot.Auth.PasswordReset do
   @spec reset_password(String.t(), String.t(), String.t(), keyword()) ::
           {:ok, UserSchema.t(), String.t()}
           | {:error, atom(), String.t()}
-  def reset_password(token, new_password, password_confirmation, opts \\ []) do
+  def reset_password(token, new_password, password_confirmation, opts) do
+    RateLimit.with_limit(
+      RateLimiter.check_password_reset_submit_rate_limit(opts[:ip]),
+      [event: "password_reset_submit", ip: opts[:ip], user_agent: opts[:user_agent]],
+      fn -> do_reset_password(token, new_password, password_confirmation, opts) end
+    )
+  end
+
+  defp do_reset_password(token, new_password, password_confirmation, opts) do
     case consume_and_update(token, new_password, password_confirmation) do
       {:ok, updated_user} ->
         AccountLogging.log_password_reset(updated_user, "completed")

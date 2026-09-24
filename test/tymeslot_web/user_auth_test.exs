@@ -26,6 +26,13 @@ defmodule TymeslotWeb.UserAuthTest do
       assert get_session(conn, :user_token)
     end
 
+    test "renews the session, so a pre-login session id is never reused" do
+      conn = init_test_session(build_conn(), %{})
+      {:ok, conn, _token} = UserAuth.create_session(conn, insert(:user))
+
+      assert conn.private[:plug_session_info] == :renew
+    end
+
     test "stores session token in database" do
       user = insert(:user)
       {:ok, _conn, token} = UserAuth.create_session(init_test_session(build_conn(), %{}), user)

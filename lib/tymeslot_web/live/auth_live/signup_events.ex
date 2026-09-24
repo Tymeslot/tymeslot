@@ -68,10 +68,7 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
   end
 
   defp register(socket, user_params) do
-    request_opts = ClientIP.request_opts(socket)
-    metadata = request_opts |> Map.new() |> Map.put(:source, "signup")
-
-    case Auth.register_user(user_params, [metadata: metadata] ++ request_opts) do
+    case Auth.register_user(user_params, ClientIP.request_opts(socket)) do
       {:ok, user, message} ->
         {:noreply, answer_signup(socket, message, user_params, %{id: user.id, email: user.email})}
 

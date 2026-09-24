@@ -17,6 +17,7 @@ defmodule TymeslotWeb.AccountLiveCredentialsTest do
   alias Tymeslot.Auth.{UserSchema, UserTokenQueries}
   alias Tymeslot.Repo
   alias Tymeslot.Security.{RateLimiter, Token}
+  alias TymeslotWeb.Helpers.ClientIP
 
   setup %{conn: conn} do
     RateLimiter.clear_all()
@@ -62,7 +63,9 @@ defmodule TymeslotWeb.AccountLiveCredentialsTest do
       stored = Repo.get!(UserSchema, user.id)
       assert stored.pending_email == nil
       assert stored.email_change_token_hash == nil
-      assert {:error, {:invalid_token, _message}} = Auth.verify_email_change(change_token)
+
+      assert {:error, {:invalid_token, _message}} =
+               Auth.verify_email_change(change_token, ClientIP.request_opts(%Plug.Conn{}))
     end
 
     test "shows an error on every invalid field at once", %{conn: conn} do

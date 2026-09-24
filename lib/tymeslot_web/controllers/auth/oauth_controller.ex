@@ -9,10 +9,8 @@ defmodule TymeslotWeb.OAuthController do
   require Logger
 
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.OAuth.{Providers, SignupConfirmation}
-  alias Tymeslot.Auth.{RateLimit, SocialAuthentication}
+  alias Tymeslot.Auth.OAuth.Providers
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.AuthControllerHelpers
   alias TymeslotWeb.EmailLinkConfirmHTML
   alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
@@ -68,33 +66,27 @@ defmodule TymeslotWeb.OAuthController do
   # Every public entry point is rate limited by IP; the violation is logged
   # and answered the same way, so a new action cannot apply half the gate.
   defp with_rate_limit(conn, action, on_allowed) do
-    [ip: ip, user_agent: user_agent] = ClientIP.request_opts(conn)
-    {check, event, message, redirect_path} = rate_limit(action, conn)
-    context = [event: event, identifier: ip, ip: ip, user_agent: user_agent]
-
-    case RateLimit.check(check.(ip), context) do
+    case Auth.check_social_rate_limit(action, ClientIP.request_opts(conn)) do
       :ok ->
         on_allowed.()
 
       {:error, :rate_limited, _message} ->
+        {message, redirect_path} = rate_limited_reply(action, conn)
         AuthControllerHelpers.handle_rate_limited(conn, message, redirect_path)
     end
   end
 
-  defp rate_limit(:initiation, _conn) do
-    {&RateLimiter.check_oauth_initiation_rate_limit/1, "oauth_initiation",
-     dgettext("auth", "Too many OAuth attempts. Please try again later."), ~p"/auth/login"}
+  defp rate_limited_reply(:initiation, _conn) do
+    {dgettext("auth", "Too many OAuth attempts. Please try again later."), ~p"/auth/login"}
   end
 
-  defp rate_limit(:callback, conn) do
-    {&RateLimiter.check_oauth_callback_rate_limit/1, "oauth_callback",
-     dgettext("auth", "Too many authentication attempts. Please try again later."),
+  defp rate_limited_reply(:callback, conn) do
+    {dgettext("auth", "Too many authentication attempts. Please try again later."),
      get_login_path(conn)}
   end
 
-  defp rate_limit(:completion, _conn) do
-    {&RateLimiter.check_oauth_completion_rate_limit/1, "oauth_completion",
-     dgettext("auth", "Too many registration attempts. Please try again later."), ~p"/auth/login"}
+  defp rate_limited_reply(:completion, _conn) do
+    {dgettext("auth", "Too many registration attempts. Please try again later."), ~p"/auth/login"}
   end
 
   defp disabled_redirect(conn, provider_atom) do
@@ -181,7 +173,7 @@ defmodule TymeslotWeb.OAuthController do
   defp process_oauth_completion(conn, params) do
     pending = get_session(conn, :pending_oauth_registration)
 
-    case SocialAuthentication.complete_registration(pending, params, signup_metadata(conn)) do
+    case Auth.complete_social_registration(pending, params, ClientIP.request_opts(conn)) do
       # An address typed into the form, taken or free: nothing was created,
       # and both are answered with the same page, flash and session.
       {:ok, provider, :check_email, delivery} ->
@@ -260,7 +252,7 @@ defmodule TymeslotWeb.OAuthController do
   @spec finish_signup(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def finish_signup(conn, %{"token" => token}) do
     with_rate_limit(conn, :completion, fn ->
-      case SignupConfirmation.confirm(token, signup_metadata(conn)) do
+      case Auth.confirm_social_signup(token, ClientIP.request_opts(conn)) do
         {:ok, provider, user} ->
           conn
           |> OAuthFlow.sign_in(user, provider)
@@ -275,11 +267,6 @@ defmodule TymeslotWeb.OAuthController do
           |> redirect(to: ~p"/auth/login")
       end
     end)
-  end
-
-  # Forwarded with the registration broadcast a completed sign-up publishes.
-  defp signup_metadata(conn) do
-    conn |> ClientIP.request_opts() |> Map.new() |> Map.put(:source, "oauth_signup")
   end
 
   defp respond_to_completion({:ok, authed_conn, provider}) do
@@ -307,7 +294,7 @@ defmodule TymeslotWeb.OAuthController do
   end
 
   defp completion_failed(conn, :missing_pending_registration, _pending) do
-    OAuthFlow.log_social_auth("unknown", false, conn, %{
+    log_social_auth("unknown", false, conn, %{
       error_reason: "missing_pending_registration"
     })
 
@@ -366,11 +353,14 @@ defmodule TymeslotWeb.OAuthController do
   end
 
   defp log_completion_failure(conn, pending, error_reason) do
-    OAuthFlow.log_social_auth(pending[:provider], false, conn, %{
+    log_social_auth(pending[:provider], false, conn, %{
       email: pending[:email],
       error_reason: error_reason
     })
   end
+
+  defp log_social_auth(provider, success, conn, details),
+    do: Auth.log_social_auth(provider, success, details, ClientIP.request_opts(conn))
 
   @spec handle_oauth_creation_error(Plug.Conn.t(), any()) :: Plug.Conn.t()
   defp handle_oauth_creation_error(conn, reason) do

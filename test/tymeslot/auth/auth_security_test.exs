@@ -21,12 +21,16 @@ defmodule Tymeslot.Auth.SecurityTest do
 
       # Should block after 10 failed attempts (as configured in RateLimiter)
       Enum.each(1..10, fn _attempt ->
-        Auth.authenticate_user(user.email, "WrongPassword")
+        Auth.authenticate_user(user.email, "WrongPassword", ClientIP.request_opts(%Plug.Conn{}))
       end)
 
       # Subsequent attempts should be rate limited
       assert {:error, :rate_limited, _message} =
-               Auth.authenticate_user(user.email, "ValidPass123!")
+               Auth.authenticate_user(
+                 user.email,
+                 "ValidPass123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
   end
 
@@ -40,7 +44,13 @@ defmodule Tymeslot.Auth.SecurityTest do
 
       # Change password
       {:ok, _updated_user} =
-        Auth.update_user_password(user, "OldPass123!", "NewPass123!", "NewPass123!")
+        Auth.update_user_password(
+          user,
+          "OldPass123!",
+          "NewPass123!",
+          "NewPass123!",
+          ClientIP.request_opts(%Plug.Conn{})
+        )
 
       # Verify all old sessions are invalid
       Enum.each(sessions, fn session ->
@@ -124,11 +134,21 @@ defmodule Tymeslot.Auth.SecurityTest do
 
       # Wrong password blocks email change
       assert {:error, %{current_password: "Current password is incorrect"}} =
-               Auth.request_email_change(user, "new@example.com", "Wrong123!")
+               Auth.request_email_change(
+                 user,
+                 "new@example.com",
+                 "Wrong123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       # Correct password initiates email change
       assert {:ok, updated, _message} =
-               Auth.request_email_change(user, "new@example.com", "Current123!")
+               Auth.request_email_change(
+                 user,
+                 "new@example.com",
+                 "Current123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       assert updated.pending_email == "new@example.com"
       # SHA-256 hex digest of the emailed token — the raw token is never stored.
@@ -141,11 +161,23 @@ defmodule Tymeslot.Auth.SecurityTest do
 
       # Wrong password blocks password change
       assert {:error, %{current_password: _message}} =
-               Auth.update_user_password(user, "Wrong123!", "New123!New", "New123!New")
+               Auth.update_user_password(
+                 user,
+                 "Wrong123!",
+                 "New123!New",
+                 "New123!New",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       # Correct password allows password change
       assert {:ok, _updated} =
-               Auth.update_user_password(user, "Current123!", "NewPass123!", "NewPass123!")
+               Auth.update_user_password(
+                 user,
+                 "Current123!",
+                 "NewPass123!",
+                 "NewPass123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
   end
 end

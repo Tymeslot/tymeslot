@@ -32,11 +32,19 @@ defmodule Tymeslot.AuthTest do
 
       # Wrong password
       assert {:error, :invalid_password, _reason} =
-               Auth.authenticate_user(user.email, "WrongPassword")
+               Auth.authenticate_user(
+                 user.email,
+                 "WrongPassword",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       # Non-existent user
       assert {:error, :not_found, _reason} =
-               Auth.authenticate_user("fake@example.com", "Password123!")
+               Auth.authenticate_user(
+                 "fake@example.com",
+                 "Password123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
   end
 
@@ -49,13 +57,23 @@ defmodule Tymeslot.AuthTest do
 
       # Wrong password blocks change
       assert {:error, %{current_password: "Current password is incorrect"}} =
-               Auth.request_email_change(user, "new@example.com", "WrongPassword")
+               Auth.request_email_change(
+                 user,
+                 "new@example.com",
+                 "WrongPassword",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       # Duplicate email blocked
       insert(:user, email: "taken@example.com")
 
       assert {:error, %{new_email: "Email address is already in use"}} =
-               Auth.request_email_change(user, "taken@example.com", "CurrentPassword123!")
+               Auth.request_email_change(
+                 user,
+                 "taken@example.com",
+                 "CurrentPassword123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
   end
 
@@ -75,7 +93,8 @@ defmodule Tymeslot.AuthTest do
           user,
           "CurrentPassword123!",
           "NewPassword123!",
-          "NewPassword123!"
+          "NewPassword123!",
+          ClientIP.request_opts(%Plug.Conn{})
         )
 
       # The pre-change session is revoked, so the old cookie no longer resolves
@@ -84,7 +103,12 @@ defmodule Tymeslot.AuthTest do
       refute UserSessionQueries.get_user_by_session_token(old_session.token)
 
       # Verify new password works
-      assert {:ok, _user, _conn} = Auth.authenticate_user(user.email, "NewPassword123!")
+      assert {:ok, _user, _conn} =
+               Auth.authenticate_user(
+                 user.email,
+                 "NewPassword123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
   end
 

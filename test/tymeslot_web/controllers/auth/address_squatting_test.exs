@@ -72,7 +72,8 @@ defmodule TymeslotWeb.Auth.AddressSquattingTest do
              PasswordReset.reset_password(
                reset_token(squatted.id),
                @owner_password,
-               @owner_password
+               @owner_password,
+               ClientIP.request_opts(%Plug.Conn{})
              )
 
     # Resetting through the mailbox proves the address, so the account is now

@@ -18,6 +18,7 @@ defmodule Tymeslot.AuthTestHelpers do
   alias Tymeslot.Factory
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.Token
+  alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.UserAuth
 
   @doc """
@@ -144,7 +145,7 @@ defmodule Tymeslot.AuthTestHelpers do
   def trigger_account_lockout(user) do
     # Make multiple failed login attempts
     for _attempt <- 1..5 do
-      Auth.authenticate_user(user.email, "wrong_password")
+      Auth.authenticate_user(user.email, "wrong_password", ClientIP.request_opts(%Plug.Conn{}))
     end
   end
 

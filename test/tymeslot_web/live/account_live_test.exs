@@ -16,7 +16,7 @@ defmodule TymeslotWeb.AccountLiveTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, RateLimiter}
   alias Tymeslot.Test.LogCapture
-  alias TymeslotWeb.AccountLive.ErrorFormatter
+  alias TymeslotWeb.Helpers.ClientIP
 
   setup %{conn: conn} do
     RateLimiter.clear_all()
@@ -137,7 +137,12 @@ defmodule TymeslotWeb.AccountLiveTest do
     test "can cancel a pending email change", %{conn: conn, user: user} do
       # Setup pending email change
       {:ok, user, _email_change_token} =
-        Auth.request_email_change(user, "pending@example.com", "Password123!")
+        Auth.request_email_change(
+          user,
+          "pending@example.com",
+          "Password123!",
+          ClientIP.request_opts(%Plug.Conn{})
+        )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 
@@ -549,36 +554,6 @@ defmodule TymeslotWeb.AccountLiveTest do
 
       assert render(view) == baseline
       assert Process.alive?(view.pid)
-    end
-  end
-
-  describe "Error Formatter" do
-    test "formats various error types" do
-      assert ErrorFormatter.format(:rate_limited) == %{
-               base: ["Too many attempts. Please try again later."]
-             }
-
-      assert ErrorFormatter.format({:error, :rate_limited, "Rate limited"}) == %{
-               base: ["Rate limited"]
-             }
-
-      assert ErrorFormatter.format({:error, "some other error"}) == %{base: ["some other error"]}
-      assert ErrorFormatter.format(%{field: "error"}) == %{field: ["error"]}
-      assert ErrorFormatter.format(nil) == %{base: ["An unexpected error occurred"]}
-    end
-
-    test "places a field-tagged error under its field whatever the message says" do
-      assert ErrorFormatter.format({:current_password, "Das aktuelle Passwort ist falsch"}) ==
-               %{current_password: ["Das aktuelle Passwort ist falsch"]}
-
-      # A message that the old wording-based placement would have misfiled.
-      assert ErrorFormatter.format({:new_password, "email must match"}) ==
-               %{new_password: ["email must match"]}
-    end
-
-    test "leaves a field-tagged error from the email form under its field" do
-      assert ErrorFormatter.format({:new_email, "Email address is already in use"}) ==
-               %{new_email: ["Email address is already in use"]}
     end
   end
 
