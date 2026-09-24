@@ -5,7 +5,8 @@ defmodule Tymeslot.Auth.RegistrationTest do
 
   import Tymeslot.Test.AdminBootstrapHelpers, only: [reopen_admin_bootstrap: 1]
 
-  alias Tymeslot.Auth.Registration
+  alias Tymeslot.Auth.{Registration, UserSchema}
+  alias Tymeslot.Repo
   import Tymeslot.Factory
 
   describe "registration security" do
@@ -47,7 +48,9 @@ defmodule Tymeslot.Auth.RegistrationTest do
         "terms_accepted" => "true"
       }
 
-      assert {:error, :auth, _reason} = Registration.register_user(params, conn)
+      # Answered exactly as a free address would be; the owner is told by email.
+      assert {:existing_account, _message} = Registration.register_user(params, conn)
+      assert Repo.aggregate(UserSchema, :count, :id) == 1
     end
 
     test "new accounts require email verification" do
@@ -78,7 +81,8 @@ defmodule Tymeslot.Auth.RegistrationTest do
         "terms_accepted" => "true"
       }
 
-      assert {:error, :auth, _changeset} = Registration.register_user(params, %Plug.Conn{})
+      assert {:existing_account, _message} = Registration.register_user(params, %Plug.Conn{})
+      assert Repo.aggregate(UserSchema, :count, :id) == 1
     end
   end
 

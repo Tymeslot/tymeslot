@@ -4,7 +4,6 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   """
 
   require Logger
-  alias Tymeslot.Auth
   alias Tymeslot.Auth.Helpers.AccountLogging
   alias Tymeslot.Auth.OAuth.{Providers, TransactionalUserCreation}
   alias Tymeslot.Auth.{UserQueries, UserSchema, UserTokenQueries}
@@ -48,9 +47,13 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   Creates a new user from OAuth provider information, or returns the account
   that already carries this provider ID.
 
-  The account is created verified only when the provider vouched for the
-  email (`email_from_provider: true`); an address the user typed stays
-  unverified until they follow the emailed link.
+  The account is always created verified: callers only get here with a
+  proved email, one the provider vouched for or one confirmed through
+  `Tymeslot.Auth.OAuth.SignupConfirmation`. An address typed into the
+  complete-registration form never reaches this function unconfirmed, so no
+  account exists for it until its owner follows the emailed link. Accounts
+  created unverified before that change keep the verify-first handling in
+  `Tymeslot.Auth.OAuth.FlowHandler`.
   """
   @spec create_oauth_user(
           provider(),
@@ -113,8 +116,10 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   @doc """
   Validates data submitted via the OAuth completion form.
 
-  Checks that the email is present, well-formed, not already registered, and
-  that legal agreements have been accepted when required.
+  Checks that the email is present and well-formed, and that legal
+  agreements have been accepted when required. Whether the address is taken
+  is the caller's question: a typed address that is taken must be answered
+  like a free one (see `Tymeslot.Auth.SocialAuthentication`).
   """
   @spec validate_completion_data(oauth_registration_data()) :: :ok | {:error, atom() | String.t()}
   def validate_completion_data(oauth_data) do
@@ -131,7 +136,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
         {:error, :terms_not_accepted}
 
       true ->
-        Auth.check_email_availability(email)
+        :ok
     end
   end
 
@@ -147,18 +152,11 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   defp build_auth_params(provider, oauth_user) do
     uid_field = Atom.to_string(Providers.fetch!(provider).uid_field)
 
-    Map.merge(
-      %{
-        "provider" => to_string(provider),
-        "email" => oauth_user.email,
-        uid_field => oauth_user.provider_uid
-      },
-      verified_at(oauth_user)
-    )
+    %{
+      "provider" => to_string(provider),
+      "email" => oauth_user.email,
+      uid_field => oauth_user.provider_uid,
+      "verified_at" => DateTime.utc_now(:second)
+    }
   end
-
-  defp verified_at(%{email_from_provider: true}),
-    do: %{"verified_at" => DateTime.utc_now(:second)}
-
-  defp verified_at(_oauth_user), do: %{}
 end

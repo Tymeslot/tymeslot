@@ -9,7 +9,6 @@ defmodule Tymeslot.Auth.PasswordReset do
 
   alias Tymeslot.Auth.{
     AccountTokens,
-    ErrorFormatter,
     Helpers.AccountLogging,
     Session,
     UserSchema,
@@ -19,7 +18,7 @@ defmodule Tymeslot.Auth.PasswordReset do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Repo
-  alias Tymeslot.Security.{InputProcessor, RateLimiter, SecurityLogger, Token}
+  alias Tymeslot.Security.{InputProcessor, Password, RateLimiter, SecurityLogger, Token}
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Helpers.ClientIP
 
@@ -31,12 +30,18 @@ defmodule Tymeslot.Auth.PasswordReset do
     - opts: Keyword list
 
   ## Returns
-    - {:ok, user, message} on success
-    - {:error, reason, message} on failure
+    - `{:ok, :reset_initiated, message}` for every well-formed address within
+      the rate limit, whether it belongs to a password account, an account
+      that signs in through a provider, or no account at all. The reply is
+      byte-identical across the three; what differs is only the email the
+      address's owner receives (a reset link, a note that there is no password
+      to reset, or nothing).
+    - `{:error, :invalid_input | :rate_limited, message}` otherwise, which
+      depends only on the input and the requester, never on the account
   """
   @spec initiate_reset(String.t(), keyword()) ::
-          {:ok, atom(), String.t()}
-          | {:error, atom(), String.t()}
+          {:ok, :reset_initiated, String.t()}
+          | {:error, :invalid_input | :rate_limited, String.t()}
   def initiate_reset(email, opts \\ []) do
     user_queries = Keyword.get(opts, :user_queries_module, Config.user_queries_module())
     ip = extract_ip_from_opts(opts)
@@ -60,50 +65,37 @@ defmodule Tymeslot.Auth.PasswordReset do
     end
   end
 
-  # Secure implementation that prevents timing attacks and email enumeration.
-  # The timing randomisation lives inside handle_password_reset_attempt/2
-  # (Process.sleep for the not-found case), so no Task wrapping is needed here.
+  # Every account state gets the same reply, and the explanation, where there
+  # is one, goes to the mailbox: only the address's owner can read it.
+  #
+  # Timing is kept equal by giving every branch the same dominant cost, one
+  # bcrypt operation, paid here rather than inside each branch so a branch
+  # added later cannot forget it. The work left in the branches (a token write,
+  # an Oban insert, or nothing) is small beside it.
   defp process_password_reset_secure(email, user_queries) do
-    case handle_password_reset_attempt(email, user_queries) do
-      {:oauth_user_error, message} ->
-        {:error, :oauth_user, message}
+    Password.no_user_verify()
 
-      _other ->
-        # Always return the same message for non-OAuth cases to prevent user enumeration
-        {:ok, :reset_initiated,
-         dgettext(
-           "auth",
-           "If an account exists with this email address, password reset instructions have been sent."
-         )}
-    end
+    email
+    |> user_queries.get_user_by_email()
+    |> handle_password_reset_attempt(email)
+
+    {:ok, :reset_initiated,
+     dgettext(
+       "auth",
+       "If an account exists with this email address, password reset instructions have been sent."
+     )}
   end
 
-  defp handle_password_reset_attempt(email, user_queries) do
-    case user_queries.get_user_by_email(email) do
-      {:error, :not_found} ->
-        # Simulate work to match timing of successful case
-        Process.sleep(:rand.uniform(50) + 50)
-        AccountLogging.log_operation_failure("password_reset", email, :user_not_found)
-        :user_not_found
-
-      {:ok, user} ->
-        case handle_user_found(user) do
-          {:ok, _user, _token} -> :email_sent
-          {:error, :oauth_user, message} -> {:oauth_user_error, message}
-          _other -> :error
-        end
-    end
+  defp handle_password_reset_attempt({:error, :not_found}, email) do
+    AccountLogging.log_operation_failure("password_reset", email, :user_not_found)
   end
 
-  defp handle_user_found(user) do
-    case user.provider do
-      provider when provider in [nil, "email"] ->
-        process_regular_user_reset(user)
-
-      provider ->
-        handle_oauth_user_reset(user, provider)
-    end
+  defp handle_password_reset_attempt({:ok, %{provider: provider} = user}, _email)
+       when provider in [nil, "email"] do
+    process_regular_user_reset(user)
   end
+
+  defp handle_password_reset_attempt({:ok, user}, _email), do: notify_no_password(user)
 
   defp validate_email_format(email) do
     case InputProcessor.validate_field(email, :email) do
@@ -208,13 +200,27 @@ defmodule Tymeslot.Auth.PasswordReset do
     end
   end
 
-  defp handle_oauth_user_reset(user, provider) do
+  # An account that signs in through a provider has no password to reset. Its
+  # owner is told so by email, with a sign-in link; the screen says nothing.
+  defp notify_no_password(user) do
     AccountLogging.log_operation_failure("password_reset", user.email, :oauth_user, %{
       user_id: user.id,
-      provider: provider
+      provider: user.provider
     })
 
-    {:error, :oauth_user, ErrorFormatter.format_password_reset_error(:oauth_user)}
+    case EmailScheduler.schedule_no_password_to_reset(user.id) do
+      {:ok, _status} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule no-password notice",
+          user_id: user.id,
+          reason: inspect(reason),
+          event: :password_reset_no_password_notice_failed
+        )
+
+        :error
+    end
   end
 
   @doc """

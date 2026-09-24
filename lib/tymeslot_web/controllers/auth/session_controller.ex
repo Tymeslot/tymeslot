@@ -41,14 +41,6 @@ defmodule TymeslotWeb.SessionController do
       {:ok, user, message} ->
         handle_authenticated_user(conn, user, message, params)
 
-      # Reached only with the correct password, so the verify-email page (and
-      # its resend button) is never offered for someone else's account.
-      {:unverified, user, message} ->
-        conn
-        |> Session.put_unverified_user(user)
-        |> put_flash(:error, message)
-        |> redirect(to: ~p"/auth/verify-email")
-
       {:error, :invalid_input, _errors} ->
         conn
         |> put_flash(:error, dgettext("auth", "Please enter your email and password."))

@@ -8,7 +8,7 @@ defmodule TymeslotWeb.AuthLiveTest do
   alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.PasswordValidator
-  alias Tymeslot.Security.{Password, Token}
+  alias Tymeslot.Security.{Password, RateLimiter, Token}
   import Ecto.Query, only: [from: 2]
   import Tymeslot.Factory
 
@@ -43,7 +43,9 @@ defmodule TymeslotWeb.AuthLiveTest do
           "password" => "WrongPassword"
         })
 
-      assert Flash.get(conn.assigns.flash, :error) == "Invalid email or password."
+      assert Flash.get(conn.assigns.flash, :error) ==
+               "Invalid email or password. If you signed up recently, check your inbox for the verification link."
+
       assert redirected_to(conn) == ~p"/auth/login"
     end
   end
@@ -83,6 +85,79 @@ defmodule TymeslotWeb.AuthLiveTest do
       assert render(view) =~ "Account created successfully"
 
       assert Auth.get_user_by_email(email)
+    end
+
+    test "a taken address sees exactly what a free one sees", %{conn: conn} do
+      password_owner = insert(:user)
+      social_owner = insert(:user, provider: "github", password_hash: nil)
+      fresh = "fresh-#{System.unique_integer([:positive])}@example.com"
+
+      outcomes =
+        for email <- [fresh, password_owner.email, social_owner.email] do
+          {:ok, view, _html} = live(conn, ~p"/auth/signup")
+          submit_signup(view, email)
+
+          assert_patch(view, ~p"/auth/verify-email")
+
+          # The screen shows the address that was typed; take that out and
+          # everything else the visitor sees must match.
+          {view |> element("#auth-live") |> render() |> String.replace(email, "EMAIL"),
+           view |> element("#app-flash-group") |> render()}
+        end
+
+      assert [same, same, same] = outcomes
+      assert Repo.aggregate(UserSchema, :count, :id) == 3
+    end
+
+    test "with the address's verification allowance used up, taken and free still match",
+         %{conn: conn} do
+      for _i <- 1..5, do: RateLimiter.check_verification_ip_rate_limit("127.0.0.1")
+      owner = insert(:user)
+      fresh = "fresh-#{System.unique_integer([:positive])}@example.com"
+
+      outcomes =
+        for email <- [fresh, owner.email] do
+          {:ok, view, _html} = live(conn, ~p"/auth/signup")
+          submit_signup(view, email)
+          assert_patch(view, ~p"/auth/verify-email")
+
+          {view |> element("#auth-live") |> render() |> String.replace(email, "EMAIL"),
+           view |> element("#app-flash-group") |> render()}
+        end
+
+      assert [same, same] = outcomes
+    end
+
+    test "a genuine sign-up can resend its verification email", %{conn: conn} do
+      email = "resend-#{System.unique_integer([:positive])}@example.com"
+      {:ok, view, _html} = live(conn, ~p"/auth/signup")
+      submit_signup(view, email)
+      assert_patch(view, ~p"/auth/verify-email")
+
+      user = Repo.get_by!(UserSchema, email: email)
+      Repo.delete_all(Oban.Job)
+
+      render_hook(view, "resend_verification", %{})
+
+      assert render(view) =~ "Verification email sent! Please check your inbox."
+
+      assert [job] = Repo.all(Oban.Job)
+      assert job.args["action"] == "send_email_verification"
+      assert job.args["user_id"] == user.id
+    end
+
+    test "a sign-up with a taken address cannot resend to it, and is told the same",
+         %{conn: conn} do
+      owner = insert(:unverified_user)
+      {:ok, view, _html} = live(conn, ~p"/auth/signup")
+      submit_signup(view, owner.email)
+      assert_patch(view, ~p"/auth/verify-email")
+      Repo.delete_all(Oban.Job)
+
+      render_hook(view, "resend_verification", %{})
+
+      assert render(view) =~ "Verification email sent! Please check your inbox."
+      assert [] = Repo.all(Oban.Job)
     end
 
     test "validation errors on registration", %{conn: conn} do
@@ -129,26 +204,35 @@ defmodule TymeslotWeb.AuthLiveTest do
       assert render(view) =~ "Check Your Email"
     end
 
-    test "OAuth-only user is told to use their provider instead of crashing", %{conn: conn} do
-      oauth_user =
+    test "password, social and unknown addresses see the same confirmation", %{conn: conn} do
+      password_user = insert(:user)
+
+      social_user =
         insert(:user,
           provider: "google",
           password_hash: nil,
           email: "oauth-reset-#{System.unique_integer([:positive])}@example.com"
         )
 
-      {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
+      unknown = "nobody-#{System.unique_integer([:positive])}@example.com"
 
-      result =
-        view
-        |> form("#reset-password-form", %{"email" => oauth_user.email})
-        |> render_submit()
+      outcomes =
+        for email <- [password_user.email, social_user.email, unknown] do
+          {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
 
-      # The OAuth branch is the one deliberate exception to the identical
-      # "if an account exists" confirmation, so the specific message must
-      # survive the trip through AuthActions rather than being discarded.
-      assert result =~ "managed by an external authentication provider"
-      refute result =~ "Check Your Email"
+          view
+          |> form("#reset-password-form", %{"email" => email})
+          |> render_submit()
+
+          assert_patch(view, ~p"/auth/reset-password-sent")
+          assert render(view) =~ "Check Your Email"
+
+          # The page and the flash the visitor sees, element for element.
+          {view |> element("#auth-live") |> render(),
+           view |> element("#app-flash-group") |> render()}
+        end
+
+      assert [same, same, same] = outcomes
     end
 
     test "empty email shows an error rather than the success confirmation", %{conn: conn} do
@@ -499,5 +583,18 @@ defmodule TymeslotWeb.AuthLiveTest do
       # session, not left on the process default ("en").
       assert render(view) =~ "Willkommen zurück!"
     end
+  end
+
+  defp submit_signup(view, email) do
+    view
+    |> form("#signup-form", %{
+      "user" => %{
+        "email" => email,
+        "password" => "ValidPassword123!",
+        "terms_accepted" => "true",
+        "website" => ""
+      }
+    })
+    |> render_submit()
   end
 end

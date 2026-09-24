@@ -142,11 +142,6 @@ msgstr "Не вдалося пройти автентифікацію через
 msgid "Failed to create session. Please try again."
 msgstr "Не вдалося створити сеанс. Спробуйте ще раз."
 
-#: lib/tymeslot_web/live/auth_live/verification_events.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to send verification email. Please try again later."
-msgstr "Не вдалося надіслати лист для підтвердження. Спробуйте пізніше."
-
 #: lib/tymeslot_web/components/auth/session/login_component.ex
 #, elixir-autogen, elixir-format
 msgid "Forgot password?"
@@ -400,11 +395,6 @@ msgstr "Забагато спроб підтвердження. Спробуйт
 msgid "Try again"
 msgstr "Спробувати ще раз"
 
-#: lib/tymeslot_web/live/auth_live/verification_events.ex
-#, elixir-autogen, elixir-format
-msgid "Unable to resend verification email. Please try signing up again."
-msgstr "Не вдалося повторно надіслати лист для підтвердження. Спробуйте зареєструватися ще раз."
-
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Unsupported OAuth provider."
@@ -449,16 +439,6 @@ msgstr "З поверненням!"
 #, elixir-autogen, elixir-format
 msgid "Welcome! You've successfully signed up with %{provider}."
 msgstr "Вітаємо! Ви успішно зареєструвалися через %{provider}."
-
-#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Welcome! You've successfully signed up with %{provider}. Please check your email to verify your account."
-msgstr "Вітаємо! Ви успішно зареєструвалися через %{provider}. Перевірте свою електронну пошту, щоб підтвердити обліковий запис."
-
-#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Welcome! You've successfully signed up with %{provider}. Verification email could not be sent - please contact support if needed."
-msgstr "Вітаємо! Ви успішно зареєструвалися через %{provider}. Не вдалося надіслати лист для підтвердження - за потреби зверніться до служби підтримки."
 
 #: lib/tymeslot_web/controllers/auth/session_controller.ex
 #, elixir-autogen, elixir-format
@@ -633,11 +613,6 @@ msgstr "Сталася помилка сервера. Спробуйте ще р
 msgid "Account created but profile creation failed: %{reason}"
 msgstr "Обліковий запис створено, але не вдалося створити профіль: %{reason}"
 
-#: lib/tymeslot/auth/registration.ex
-#, elixir-autogen, elixir-format
-msgid "Account created but verification failed: %{reason}"
-msgstr "Обліковий запис створено, але не вдалося підтвердити його: %{reason}"
-
 #: lib/tymeslot/auth/auth_actions.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid input provided"
@@ -672,11 +647,6 @@ msgstr "Реєстрацію наразі вимкнено."
 #, elixir-autogen, elixir-format
 msgid "Terms of service must be accepted"
 msgstr "Потрібно прийняти умови надання послуг"
-
-#: lib/tymeslot/auth/registration.ex
-#, elixir-autogen, elixir-format
-msgid "This email is already registered. Please use a different email or sign in."
-msgstr "Ця електронна адреса вже зареєстрована. Скористайтеся іншою адресою або увійдіть."
 
 #: lib/tymeslot/auth/auth_actions.ex
 #, elixir-autogen, elixir-format
@@ -747,11 +717,6 @@ msgstr "Не вдалося виконати автентифікацію чер
 #, elixir-autogen, elixir-format
 msgid "If your email is registered, you will receive password reset instructions."
 msgstr "Якщо ваша електронна адреса зареєстрована, ви отримаєте інструкції зі скидання пароля."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid email or password."
-msgstr "Неправильна електронна адреса або пароль."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
@@ -1007,11 +972,6 @@ msgstr "Пароль має містити щонайменше один спе�
 msgid "Password must contain at least one uppercase letter"
 msgstr "Пароль має містити щонайменше одну велику літеру"
 
-#: lib/tymeslot/auth/registration.ex
-#, elixir-autogen, elixir-format
-msgid "Your account was created, but the verification email could not be sent yet. Please wait a few minutes, then use the resend link."
-msgstr "Ваш обліковий запис створено, але лист для підтвердження ще не вдалося надіслати. Зачекайте кілька хвилин, а потім скористайтеся посиланням для повторного надсилання."
-
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "If an account exists with this email address, password reset instructions have been sent."
@@ -1052,6 +1012,11 @@ msgstr "Підтвердити зміну електронної адреси"
 msgid "Password must be at most %{count} bytes long. Accented letters and emoji count as more than one byte."
 msgstr "Пароль має бути не довшим за %{count} байтів. Літери з діакритичними знаками та емодзі займають більше одного байта."
 
+#: lib/tymeslot_web/live/auth_live/verification_events.ex
+#, elixir-autogen, elixir-format
+msgid "Sign in to receive a new verification link."
+msgstr "Увійдіть, щоб отримати нове посилання для підтвердження."
+
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Please verify your email address before signing in. We could not send a new verification link; please try again later."
@@ -1066,3 +1031,38 @@ msgstr "Будь ласка, підтвердіть свою адресу еле
 #, elixir-autogen, elixir-format
 msgid "Your sign-up session has expired. Please sign in again."
 msgstr "Термін дії сесії реєстрації минув. Будь ласка, увійдіть знову."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid email or password. If you signed up recently, check your inbox for the verification link."
+msgstr "Невірна адреса електронної пошти або пароль. Якщо ви нещодавно зареєструвалися, пошукайте посилання для підтвердження у своїй поштовій скриньці."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Check your email: we've sent a link to finish signing up with %{provider}."
+msgstr "Перевірте пошту: ми надіслали посилання, щоб завершити реєстрацію через %{provider}."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Create my account"
+msgstr "Створити мій обліковий запис"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Finish signing up"
+msgstr "Завершення реєстрації"
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Press the button below to confirm your email address and create your account."
+msgstr "Натисніть кнопку нижче, щоб підтвердити адресу електронної пошти й створити обліковий запис."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "This link is no longer valid. Please sign in to continue."
+msgstr "Це посилання більше не дійсне. Увійдіть, щоб продовжити."
+
+#: lib/tymeslot_web/controllers/auth/oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "We couldn't send the link to finish signing up just now. Please try again later."
+msgstr "Зараз не вдалося надіслати посилання для завершення реєстрації. Спробуйте пізніше."

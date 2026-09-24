@@ -2,6 +2,13 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
   @moduledoc """
   The signup flow's event handlers, lifted out of `TymeslotWeb.AuthLive`.
 
+  ## Why a taken address looks like a success
+
+  Signing up with an address that already has an account answers with the same
+  message, state and screen as a new account, so the form cannot be used to
+  learn who is registered. The owner is emailed instead. The only difference
+  is server-side: no account is bound for the verify-email screen's resend.
+
   ## Why a honeypot submission looks like a success
 
   A submission caught by the honeypot is answered with the same message, the
@@ -19,7 +26,7 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
   import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
 
   alias Tymeslot.Auth.{AuthActions, SignupSecurity}
-  alias Tymeslot.Security.InputProcessor
+  alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias TymeslotWeb.AuthLive.SecurityHelper
 
   @typedoc "A LiveView `handle_event/3` return value."
@@ -69,8 +76,13 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
 
   defp register(socket, user_params) do
     case AuthActions.register_user(user_params, socket) do
-      {:ok, new_state, message} ->
-        {:noreply, to_verify_email(socket, new_state, message, user_params)}
+      {:ok, new_state, message, pending} ->
+        socket =
+          socket
+          |> to_verify_email(new_state, message, user_params)
+          |> bind_pending_verification(pending)
+
+        {:noreply, socket}
 
       {:error, :field_errors, errors} ->
         {:noreply, SecurityHelper.set_errors(socket, errors)}
@@ -80,7 +92,14 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
     end
   end
 
+  # Spends the address's verification allowance as a real sign-up's email
+  # does, so the resend budget left afterwards matches too.
   defp pretend_registered(socket, user_params) do
+    socket
+    |> SecurityHelper.extract_client_metadata()
+    |> SecurityHelper.rate_limit_ip()
+    |> RateLimiter.check_verification_ip_rate_limit()
+
     message =
       dgettext(
         "auth",
@@ -90,16 +109,36 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
     socket =
       socket
       |> to_verify_email(:verify_email, message, user_params)
+      |> bind_pending_verification(nil)
       |> assign(:honeypot_signup, true)
 
     {:noreply, socket}
   end
 
+  # The account the verify-email screen may resend for, held in this process
+  # only: a new sign-up's own account, or none when the address was already
+  # taken (so a resend there goes nowhere, and says so in the same words).
+  # Replacing any earlier binding matters too: a sign-up must never leave the
+  # resend pointing at an account from before it.
+  defp bind_pending_verification(socket, nil), do: assign(socket, :unverified_user, nil)
+
+  defp bind_pending_verification(socket, %{id: id, email: email}) do
+    assign(socket, :unverified_user, %{
+      id: id,
+      email: email,
+      timestamp: DateTime.to_unix(DateTime.utc_now())
+    })
+  end
+
+  # `signed_up_here` marks that this process answered a sign-up, whatever its
+  # outcome, so the resend knows it owes the visitor the sign-up's answer and
+  # not the reload one (see `TymeslotWeb.AuthLive.VerificationEvents`).
   defp to_verify_email(socket, new_state, message, user_params) do
     socket
     |> AuthActions.transition_state(new_state, :signup)
     |> put_flash(:info, message)
     |> assign(:form_data, %{email: user_params["email"]})
+    |> assign(:signed_up_here, true)
     |> push_patch(to: ~p"/auth/verify-email")
   end
 

@@ -5,7 +5,8 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   callback left in the session.
   """
 
-  alias Tymeslot.Auth.OAuth.{Providers, UserRegistration}
+  alias Tymeslot.Auth.OAuth.{Providers, SignupConfirmation, UserRegistration}
+  alias Tymeslot.Auth.Registration
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.Config
 
@@ -40,11 +41,20 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   submission created). Whether the account gets a session is the caller's
   decision, via its `verified_at`.
 
+  Returns `{:ok, provider, :check_email, delivery}` for an address typed into
+  the form, taken or free: no account is created either way. A free address
+  is emailed a link that finishes the sign-up; a taken one's owner is sent
+  the sign-up attempt notice. The caller must answer both identically, using
+  `delivery` (`:sent` or `:rate_limited`) only to say whether an email went
+  out.
+
   `metadata` is forwarded with the registration broadcast; `terms_accepted`
   is added to it here.
   """
   @spec complete_registration(map() | nil, map(), map()) ::
-          {:ok, provider(), map(), :created | :existing} | {:error, completion_error()}
+          {:ok, provider(), map(), :created | :existing}
+          | {:ok, provider(), :check_email, :sent | :rate_limited}
+          | {:error, completion_error()}
   def complete_registration(pending, params, metadata) do
     with :ok <- check_registration_enabled(),
          {:ok, pending} <- check_pending(pending),
@@ -88,8 +98,42 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   defp register(provider, oauth_data, params, metadata) do
     metadata = Map.put(metadata, :terms_accepted, oauth_data.terms_accepted)
 
-    with :ok <- UserRegistration.validate_completion_data(oauth_data),
-         {:ok, user} <-
+    with :ok <- UserRegistration.validate_completion_data(oauth_data) do
+      case taken_account(oauth_data) do
+        {:typed, existing} ->
+          {:ok, provider, :check_email,
+           Registration.answer_taken_address(existing, metadata[:ip])}
+
+        :typed_free ->
+          {:ok, provider, :check_email,
+           SignupConfirmation.request(provider, oauth_data, profile_params(params), metadata[:ip])}
+
+        {:vouched, _existing} ->
+          {:error, :email_already_taken}
+
+        :vouched_free ->
+          create(provider, oauth_data, params, metadata)
+      end
+    end
+  end
+
+  # An address typed into the form could be anyone's, so nothing is created
+  # for it here: a free one is emailed a link that finishes the sign-up (see
+  # `Tymeslot.Auth.OAuth.SignupConfirmation`), a taken one's owner is sent the
+  # sign-up attempt notice, and the reply is the same. One the provider
+  # vouched for belongs to whoever signed in with it, so its account is
+  # created at once, and saying it is taken tells them nothing new.
+  defp taken_account(%{email: email, email_from_provider: from_provider}) do
+    case {user_queries_module().get_user_by_email(email), from_provider} do
+      {{:ok, existing}, true} -> {:vouched, existing}
+      {{:ok, existing}, false} -> {:typed, existing}
+      {{:error, :not_found}, true} -> :vouched_free
+      {{:error, :not_found}, false} -> :typed_free
+    end
+  end
+
+  defp create(provider, oauth_data, params, metadata) do
+    with {:ok, user} <-
            UserRegistration.create_oauth_user(provider, oauth_data, profile_params(params),
              metadata: metadata
            ) do

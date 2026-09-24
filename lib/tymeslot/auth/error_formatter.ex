@@ -182,7 +182,10 @@ defmodule Tymeslot.Auth.ErrorFormatter do
   # Returns a generic authentication error message to prevent user enumeration.
   @spec generic_auth_error() :: String.t()
   defp generic_auth_error do
-    dgettext("auth", "Invalid email or password.")
+    dgettext(
+      "auth",
+      "Invalid email or password. If you signed up recently, check your inbox for the verification link."
+    )
   end
 
   @doc """

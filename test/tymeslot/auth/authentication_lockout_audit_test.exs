@@ -22,7 +22,7 @@ defmodule Tymeslot.Auth.AuthenticationLockoutAuditTest do
   # each test clears its own account's attempts on the way out.
   setup do
     user = insert(:user, password_hash: Password.hash_password(@password))
-    on_exit(fn -> AccountLockout.clear_failed_attempts(user.email) end)
+    on_exit(fn -> AccountLockout.clear_all() end)
     {:ok, user: user}
   end
 
@@ -33,7 +33,9 @@ defmodule Tymeslot.Auth.AuthenticationLockoutAuditTest do
   # Nine recorded failures leave the account one short of the throttle
   # threshold, so the next real failed login is the attempt that crosses it.
   defp prime_failures(email, count) do
-    Enum.each(1..count, fn _n -> RateLimiter.record_auth_attempt(email, false) end)
+    Enum.each(1..count, fn _n ->
+      RateLimiter.record_auth_attempt(email, @opts[:ip_address], false)
+    end)
   end
 
   describe "account lockout auditing" do

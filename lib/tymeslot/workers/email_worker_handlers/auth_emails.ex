@@ -9,6 +9,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.EmailScheduler.LinkArg
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Utils.UrlBuilder
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
   @spec handle_email_verification(%{String.t() => term()}) ::
@@ -69,6 +70,69 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
 
         DeliveryOutcome.from_error(reason, "Failed to send password reset email")
     end
+  end
+
+  @spec handle_no_password_to_reset(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_no_password_to_reset(%{"user_id" => user_id}) do
+    with {:ok, user} <- fetch_user(user_id, "no-password-to-reset notice") do
+      result = Config.email_service_module().send_no_password_to_reset(user, sign_in_url())
+      notice_outcome(result, user, "no-password-to-reset notice")
+    end
+  end
+
+  @spec handle_signup_attempt_notice(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_signup_attempt_notice(%{"user_id" => user_id}) do
+    with {:ok, user} <- fetch_user(user_id, "sign-up attempt notice") do
+      result =
+        Config.email_service_module().send_signup_attempt_notice(
+          user,
+          sign_in_url(),
+          UrlBuilder.build_url("/auth/reset-password")
+        )
+
+      notice_outcome(result, user, "sign-up attempt notice")
+    end
+  end
+
+  @spec handle_social_signup_confirmation(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_social_signup_confirmation(%{"email" => email, "provider" => provider} = args) do
+    recipient = %{email: email, name: args["name"], locale: args["locale"], id: nil}
+
+    with {:ok, confirm_url} <- fetch_link(args, "confirm_url") do
+      case Config.email_service_module().send_social_signup_confirmation(
+             recipient,
+             provider,
+             confirm_url
+           ) do
+        {:ok, _result} ->
+          Logger.info("Queued sign-up confirmation sent")
+          :ok
+
+        {:error, reason} ->
+          Logger.error("Failed to send sign-up confirmation", error: inspect(reason))
+          DeliveryOutcome.from_error(reason, "Failed to send sign-up confirmation")
+      end
+    end
+  end
+
+  defp sign_in_url, do: UrlBuilder.build_url("/auth/login")
+
+  defp notice_outcome({:ok, _result}, user, label) do
+    Logger.info("Queued account notice sent", notice: label, user_id: user.id)
+    :ok
+  end
+
+  defp notice_outcome({:error, reason}, user, label) do
+    Logger.error("Failed to send account notice",
+      notice: label,
+      user_id: user.id,
+      error: inspect(reason)
+    )
+
+    DeliveryOutcome.from_error(reason, "Failed to send #{label}")
   end
 
   @spec handle_email_change_verification(%{String.t() => term()}) ::

@@ -144,26 +144,94 @@ defmodule Tymeslot.Auth.Verification do
   end
 
   @doc """
-  Resends verification email by email address.
-  Looks up the user first, then resends if found.
-  Used by AuthLive for email-based resending.
+  Resends the verification email for `email`, answering the same way whatever
+  the address turns out to be.
+
+  The address bucket is charged first, before anything is looked up, so the
+  only refusal a caller can see depends on who is asking and never on the
+  account. After that the reply is `:ok` for an unverified account (which is
+  sent a fresh link), a verified one, an unknown address, `nil` (no account to
+  resend for), and an account that has used up its own resend allowance: the
+  mailbox is the only place the difference shows.
+
+  Callers pass an address the requester has already proved is theirs (the
+  session-bound unverified user), never one typed into a form.
   """
-  @spec resend_verification_email_by_email(String.t(), socket_or_conn()) :: verification_result()
+  @spec resend_verification_email_by_email(String.t() | nil, socket_or_conn()) ::
+          :ok | {:error, :rate_limited, String.t()}
   def resend_verification_email_by_email(email, socket_or_conn) do
+    ip_address = extract_ip_address(socket_or_conn)
+
+    case RateLimiter.check_verification_ip_rate_limit(ip_address) do
+      :ok ->
+        email |> unverified_user() |> resend_quietly(socket_or_conn)
+
+      {:error, :rate_limited, message} ->
+        SecurityLogger.log_rate_limit_violation(nil, "email_verification", %{
+          ip_address: ip_address
+        })
+
+        {:error, :rate_limited, message}
+    end
+  end
+
+  @doc """
+  Sends an unverified account a fresh verification link after its owner
+  proved the password at sign-in, within the usual per-account and per-address
+  limits.
+
+  Silent by design: sign-in answers an unverified account exactly as it
+  answers a wrong password, so this is how a genuine new user who lost the
+  first email still gets one. Whatever happens here is logged, never returned.
+  """
+  @spec send_link_after_sign_in(UserSchema.t(), String.t() | nil) :: :ok
+  def send_link_after_sign_in(%UserSchema{verified_at: nil} = user, ip_address) do
+    case RateLimiter.check_verification_rate_limit(user.id, ip_address) do
+      :ok ->
+        with {:error, reason} <- issue_and_send(user, ip_address) do
+          Logger.error("Verification link after sign-in failed",
+            user_id: user.id,
+            reason: inspect(reason)
+          )
+        end
+
+      {:error, :rate_limited, _message} ->
+        SecurityLogger.log_rate_limit_violation(user.id, "email_verification", %{
+          ip_address: ip_address
+        })
+    end
+
+    :ok
+  end
+
+  def send_link_after_sign_in(_verified_user, _ip_address), do: :ok
+
+  defp unverified_user(nil), do: nil
+
+  defp unverified_user(email) do
     case Config.user_queries_module().get_user_by_email(email) do
-      {:ok, user} ->
-        resend_verification_email(socket_or_conn, user)
+      {:ok, %{verified_at: nil} = user} -> user
+      _verified_or_unknown -> nil
+    end
+  end
 
-      {:error, :not_found} ->
-        Logger.warning("Attempted to resend verification for non-existent email",
-          email_masked: SecurityLogger.mask_email(email)
-        )
+  defp resend_quietly(nil, _socket_or_conn), do: :ok
 
-        {:error, :user_not_found}
+  defp resend_quietly(user, socket_or_conn) do
+    case RateLimiter.check_verification_user_rate_limit(user.id) do
+      :ok ->
+        with {:error, reason} <- do_verify_user_email(socket_or_conn, user) do
+          Logger.error("Verification resend failed", user_id: user.id, reason: inspect(reason))
+        end
 
-      other ->
-        Logger.error("Unexpected return from get_user_by_email/1", result: inspect(other))
-        {:error, :user_not_found}
+        :ok
+
+      {:error, :rate_limited, _message} ->
+        SecurityLogger.log_rate_limit_violation(user.id, "email_verification", %{
+          ip_address: extract_ip_address(socket_or_conn)
+        })
+
+        :ok
     end
   end
 
@@ -228,9 +296,10 @@ defmodule Tymeslot.Auth.Verification do
     end
   end
 
-  defp do_verify_user_email(socket_or_conn, user) do
-    ip_address = extract_ip_address(socket_or_conn)
+  defp do_verify_user_email(socket_or_conn, user),
+    do: issue_and_send(user, extract_ip_address(socket_or_conn))
 
+  defp issue_and_send(user, ip_address) do
     # Persist the token first so it is valid in the database before the job runs.
     # The job carries the token's hash; the worker discards it at send time if a
     # newer request has since rotated the stored token, so an in-flight or

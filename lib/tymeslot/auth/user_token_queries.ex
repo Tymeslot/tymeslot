@@ -125,12 +125,29 @@ defmodule Tymeslot.Auth.UserTokenQueries do
   @spec consume_reset_token(UserSchema.t(), map()) ::
           {:ok, UserSchema.t()} | {:error, Changeset.t()}
   def consume_reset_token(%UserSchema{} = user, attrs) do
+    now = DateTime.utc_now(:second)
+
     user
     |> UserSchema.password_reset_changeset(attrs)
-    |> Changeset.put_change(:reset_token_used_at, DateTime.utc_now(:second))
+    |> Changeset.put_change(:reset_token_used_at, now)
+    |> verify_through_reset(user, now)
     |> Repo.update()
     |> UserSchema.drop_plaintext_password()
   end
+
+  # The reset link was delivered to the account's address, so following it
+  # proves the mailbox just as the verification link would. Verifying here is
+  # what lets an address's owner reclaim an account someone else signed up
+  # with it: the reset replaces the stranger's password and makes it theirs.
+  defp verify_through_reset(changeset, %UserSchema{verified_at: nil}, now) do
+    Changeset.change(changeset,
+      verified_at: now,
+      verification_token: nil,
+      verification_token_used_at: now
+    )
+  end
+
+  defp verify_through_reset(changeset, _verified_user, _now), do: changeset
 
   @doc """
   Consumes a verification token: marks the user verified and the token used.
