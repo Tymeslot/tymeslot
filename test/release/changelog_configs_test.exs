@@ -103,7 +103,10 @@ defmodule Tymeslot.Release.ChangelogConfigsTest do
     git_cliff = System.find_executable("git-cliff")
     config_path = Path.expand("../../#{config}", __DIR__)
 
-    {changelog, 0} = System.cmd(git_cliff, ["--config", config_path], cd: repo, env: [])
+    # git-cliff logs a new-release notice at info level on every run, which
+    # would otherwise land in the middle of the suite's output.
+    {changelog, 0} =
+      System.cmd(git_cliff, ["--config", config_path], cd: repo, env: [{"RUST_LOG", "warn"}])
 
     changelog
   end
