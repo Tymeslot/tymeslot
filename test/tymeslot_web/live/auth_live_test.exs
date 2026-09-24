@@ -43,7 +43,9 @@ defmodule TymeslotWeb.AuthLiveTest do
           "password" => "WrongPassword"
         })
 
-      assert Flash.get(conn.assigns.flash, :error) == "Invalid email or password."
+      assert Flash.get(conn.assigns.flash, :error) ==
+               "Invalid email or password. If you signed up recently, check your inbox for the verification link."
+
       assert redirected_to(conn) == ~p"/auth/login"
     end
   end

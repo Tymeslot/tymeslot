@@ -729,11 +729,6 @@ msgstr "Se il tuo indirizzo email è registrato, riceverai le istruzioni per rei
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
-msgid "Invalid email or password."
-msgstr "Email o password non validi."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
 msgid "Invalid input provided."
 msgstr "Dati inseriti non validi."
 
@@ -1044,3 +1039,8 @@ msgstr "Verifica il tuo indirizzo email prima di accedere. Ti abbiamo inviato un
 #, elixir-autogen, elixir-format
 msgid "Your sign-up session has expired. Please sign in again."
 msgstr "La sessione di registrazione è scaduta. Accedi di nuovo."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid email or password. If you signed up recently, check your inbox for the verification link."
+msgstr "Email o password non validi. Se ti sei registrato di recente, controlla la tua casella di posta per il link di verifica."

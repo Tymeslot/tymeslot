@@ -14,7 +14,8 @@ defmodule Tymeslot.Auth.ErrorFormatterTest do
       Enum.each(
         [:invalid_input, :not_found, :invalid_password, :invalid_credentials],
         fn reason ->
-          assert ErrorFormatter.format_auth_error(reason) == "Invalid email or password."
+          assert ErrorFormatter.format_auth_error(reason) ==
+                   "Invalid email or password. If you signed up recently, check your inbox for the verification link."
         end
       )
     end

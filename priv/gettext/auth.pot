@@ -729,11 +729,6 @@ msgstr ""
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
-msgid "Invalid email or password."
-msgstr ""
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
 msgid "Invalid input provided."
 msgstr ""
 
@@ -1043,4 +1038,9 @@ msgstr ""
 #: lib/tymeslot_web/controllers/auth/oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Your sign-up session has expired. Please sign in again."
+msgstr ""
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid email or password. If you signed up recently, check your inbox for the verification link."
 msgstr ""

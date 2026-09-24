@@ -116,7 +116,8 @@ defmodule TymeslotWeb.SessionControllerTest do
       refute get_session(conn, :user_token)
     end
 
-    test "handles unverified email", %{conn: conn, password: password} do
+    test "an unverified account with its password looks like a failed login",
+         %{conn: conn, password: password} do
       user =
         Factory.insert(:user,
           password: password,
@@ -124,15 +125,13 @@ defmodule TymeslotWeb.SessionControllerTest do
           verified_at: nil
         )
 
-      conn =
-        post(conn, ~p"/auth/session", %{
-          "email" => user.email,
-          "password" => password
-        })
+      conn = post(conn, ~p"/auth/session", %{"email" => user.email, "password" => password})
 
-      assert redirected_to(conn) == "/auth/verify-email"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Please verify your email"
-      assert get_session(conn, :unverified_user_id) == user.id
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :error) == unknown_account_error()
+      refute get_session(conn, :user_token)
+      refute get_session(conn, :unverified_user_id)
+      refute get_session(conn, :unverified_user_email)
     end
 
     test "a wrong password for an unverified account reveals nothing about it",

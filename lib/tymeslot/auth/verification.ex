@@ -175,6 +175,37 @@ defmodule Tymeslot.Auth.Verification do
     end
   end
 
+  @doc """
+  Sends an unverified account a fresh verification link after its owner
+  proved the password at sign-in, within the usual per-account and per-address
+  limits.
+
+  Silent by design: sign-in answers an unverified account exactly as it
+  answers a wrong password, so this is how a genuine new user who lost the
+  first email still gets one. Whatever happens here is logged, never returned.
+  """
+  @spec send_link_after_sign_in(UserSchema.t(), String.t() | nil) :: :ok
+  def send_link_after_sign_in(%UserSchema{verified_at: nil} = user, ip_address) do
+    case RateLimiter.check_verification_rate_limit(user.id, ip_address) do
+      :ok ->
+        with {:error, reason} <- issue_and_send(user, ip_address) do
+          Logger.error("Verification link after sign-in failed",
+            user_id: user.id,
+            reason: inspect(reason)
+          )
+        end
+
+      {:error, :rate_limited, _message} ->
+        SecurityLogger.log_rate_limit_violation(user.id, "email_verification", %{
+          ip_address: ip_address
+        })
+    end
+
+    :ok
+  end
+
+  def send_link_after_sign_in(_verified_user, _ip_address), do: :ok
+
   defp unverified_user(nil), do: nil
 
   defp unverified_user(email) do
@@ -265,9 +296,10 @@ defmodule Tymeslot.Auth.Verification do
     end
   end
 
-  defp do_verify_user_email(socket_or_conn, user) do
-    ip_address = extract_ip_address(socket_or_conn)
+  defp do_verify_user_email(socket_or_conn, user),
+    do: issue_and_send(user, extract_ip_address(socket_or_conn))
 
+  defp issue_and_send(user, ip_address) do
     # Persist the token first so it is valid in the database before the job runs.
     # The job carries the token's hash; the worker discards it at send time if a
     # newer request has since rotated the stored token, so an in-flight or

@@ -730,11 +730,6 @@ msgstr "Pokud je váš e-mail zaregistrovaný, přijdou vám pokyny k obnovení 
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
-msgid "Invalid email or password."
-msgstr "Neplatný e-mail nebo heslo."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
 msgid "Invalid input provided."
 msgstr "Byla zadána neplatná data."
 
@@ -1046,3 +1041,8 @@ msgstr "Před přihlášením prosím ověřte svou e-mailovou adresu. Poslali j
 #, elixir-autogen, elixir-format
 msgid "Your sign-up session has expired. Please sign in again."
 msgstr "Platnost vaší registrace vypršela. Přihlaste se prosím znovu."
+
+#: lib/tymeslot/auth/error_formatter.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid email or password. If you signed up recently, check your inbox for the verification link."
+msgstr "Neplatný e-mail nebo heslo. Pokud jste se nedávno zaregistrovali, najdete ověřovací odkaz ve své schránce."

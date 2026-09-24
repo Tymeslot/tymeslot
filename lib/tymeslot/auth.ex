@@ -38,7 +38,6 @@ defmodule Tymeslot.Auth do
   """
   @spec authenticate_user(String.t(), String.t(), keyword()) ::
           {:ok, term(), String.t()}
-          | {:unverified, term(), String.t()}
           | {:error, atom(), String.t()}
   def authenticate_user(email, password, opts \\ []) do
     Authentication.authenticate_user(email, password, opts)

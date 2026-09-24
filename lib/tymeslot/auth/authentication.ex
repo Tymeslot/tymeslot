@@ -7,7 +7,7 @@ defmodule Tymeslot.Auth.Authentication do
 
   alias Tymeslot.Auth.ErrorFormatter
   alias Tymeslot.Auth.Helpers.AccountLogging
-  alias Tymeslot.Auth.{UserQueries, UserSessionQueries}
+  alias Tymeslot.Auth.{UserQueries, UserSessionQueries, Verification}
   alias Tymeslot.Infrastructure.StructuredLogger
   alias Tymeslot.Security.{InputProcessor, Password, RateLimiter, SecurityLogger}
 
@@ -23,18 +23,16 @@ defmodule Tymeslot.Auth.Authentication do
 
   ## Returns
     - {:ok, user, flash_info} on success
-    - {:unverified, user, flash_error} when the password is correct but the
-      email address has not been verified yet
     - {:error, reason, flash_error} on failure
 
-  A wrong password, an unknown address and an account with no password all
-  return the same generic error; nothing about the account is disclosed until
-  the password has been proved.
-
+  A wrong password, an unknown address, an account with no password and an
+  unverified account (even with its correct password) all return the same
+  generic error, which also points a recent sign-up at their inbox. An
+  unverified account whose password was proved is sent a fresh verification
+  link, quietly; see `Verification.send_link_after_sign_in/2`.
   """
   @spec authenticate_user(String.t(), String.t(), keyword()) ::
           {:ok, term(), String.t() | nil}
-          | {:unverified, term(), String.t()}
           | {:error, atom(), String.t()}
           | {:error, :invalid_input, map()}
   def authenticate_user(email, password, opts \\ []) do
@@ -90,9 +88,6 @@ defmodule Tymeslot.Auth.Authentication do
   # error, at the same bcrypt cost, as a wrong password on any other account.
   defp verify_user_password(user, password, opts) do
     if password_matches?(user, password) do
-      # A proved password is never a failed guess, whatever the account's
-      # state, so it clears the lockout counter rather than adding to it.
-      record_auth_attempt(user, true, opts)
       authorise_login(user, opts)
     else
       log_auth_attempt(user, :invalid_password, opts)
@@ -104,14 +99,25 @@ defmodule Tymeslot.Auth.Authentication do
   defp authorise_login(user, opts) do
     cond do
       user.provider not in [nil, "email"] ->
+        # A proved password is never a failed guess, so it clears the lockout
+        # counter rather than adding to it.
+        record_auth_attempt(user, true, opts)
         log_auth_attempt(user, :oauth_user, opts)
         {:error, :oauth_user, ErrorFormatter.format_auth_error(:oauth_user)}
 
+      # Anyone can sign up an unverified account for an address they do not
+      # own, so admitting to one, even to the holder of its password, would
+      # tell them the address was free. It is answered as a wrong password,
+      # and counted as one so the lockout cannot tell them apart either. The
+      # genuine owner is sent a fresh link instead, which only they can read.
       user.verified_at == nil ->
         log_auth_attempt(user, :email_not_verified, opts)
-        {:unverified, user, ErrorFormatter.format_auth_error(:email_not_verified)}
+        record_auth_attempt(user, false, opts)
+        Verification.send_link_after_sign_in(user, opts[:ip_address])
+        {:error, :invalid_password, ErrorFormatter.format_auth_error(:invalid_password)}
 
       true ->
+        record_auth_attempt(user, true, opts)
         log_auth_attempt(user, :success, opts)
 
         :telemetry.execute([:tymeslot, :auth, :login_completed], %{count: 1}, %{
