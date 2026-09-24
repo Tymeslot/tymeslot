@@ -1,7 +1,9 @@
 defmodule Tymeslot.Availability.TimeOffConflictsTest do
   @moduledoc """
   Covers `TimeOff.conflicting_meetings/1`: the bookings that already sit inside
-  a period, which the dashboard names rather than acts on.
+  a period, which the dashboard names rather than acts on. Also covers
+  `TimeOff.clashing_ranges/2`, the same question asked the other way round for
+  host-chosen times that have not been booked yet.
 
   Time off takes days out of future availability and leaves the diary alone, so
   a host entering a holiday over three confirmed bookings has to be told. The
@@ -114,6 +116,47 @@ defmodule Tymeslot.Availability.TimeOffConflictsTest do
         attrs
       )
     )
+  end
+
+  describe "clashing_ranges/2" do
+    test "returns the ranges that overlap time off, read in the owner's timezone" do
+      user = insert(:user)
+      profile = insert(:profile, user: user, timezone: "Europe/Berlin")
+      # Blocks 2026-09-09 22:00Z to 2026-09-10 22:00Z.
+      period_for(profile, ~D[2026-09-10], ~D[2026-09-10])
+
+      inside = {~U[2026-09-10 08:00:00Z], ~U[2026-09-10 09:00:00Z]}
+      straddling_start = {~U[2026-09-09 21:30:00Z], ~U[2026-09-09 22:30:00Z]}
+      ending_as_it_starts = {~U[2026-09-09 21:00:00Z], ~U[2026-09-09 22:00:00Z]}
+      starting_as_it_ends = {~U[2026-09-10 22:00:00Z], ~U[2026-09-10 23:00:00Z]}
+
+      assert TimeOff.clashing_ranges(user.id, [
+               ending_as_it_starts,
+               inside,
+               starting_as_it_ends,
+               straddling_start
+             ]) == [inside, straddling_start]
+    end
+
+    test "ignores another user's time off" do
+      user = insert(:user)
+      insert(:profile, user: user, timezone: "Etc/UTC")
+      insert(:time_off_period, starts_on: ~D[2026-09-10], ends_on: ~D[2026-09-10])
+
+      assert TimeOff.clashing_ranges(user.id, [
+               {~U[2026-09-10 08:00:00Z], ~U[2026-09-10 09:00:00Z]}
+             ]) ==
+               []
+    end
+
+    test "finds nothing for a user without a profile" do
+      user = insert(:user)
+
+      assert TimeOff.clashing_ranges(user.id, [
+               {~U[2026-09-10 08:00:00Z], ~U[2026-09-10 09:00:00Z]}
+             ]) ==
+               []
+    end
   end
 
   defp period_for(profile, starts_on, ends_on) do

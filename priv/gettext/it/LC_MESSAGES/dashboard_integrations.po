@@ -1577,3 +1577,13 @@ msgstr "Ogni prenotazione ha la sua conversazione Talk pubblica, e gli ospiti en
 #, elixir-autogen, elixir-format
 msgid "Enter the address on its own and put the username and password in their own fields."
 msgstr "Inserisci solo l'indirizzo e metti nome utente e password nei rispettivi campi."
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid meeting link"
+msgstr "Link della riunione non valido"
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting link placeholder is invalid, so all bookings currently share one room. Edit the integration to fix it."
+msgstr "Il segnaposto del link della riunione non è valido, quindi tutte le prenotazioni condividono attualmente la stessa stanza. Modifica l'integrazione per correggerlo."

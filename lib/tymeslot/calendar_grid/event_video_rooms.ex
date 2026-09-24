@@ -161,6 +161,27 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   end
 
   @doc """
+  The recorded rooms of `event` (or of its series) made on the video
+  integration `video_integration_id`.
+  """
+  @spec rooms_on_integration(map(), pos_integer() | nil) :: [EventVideoRoomSchema.t()]
+  def rooms_on_integration(event, video_integration_id) when is_integer(video_integration_id) do
+    event
+    |> rooms_of_event()
+    |> Enum.filter(&(&1.video_integration_id == video_integration_id))
+  end
+
+  def rooms_on_integration(_event, _video_integration_id), do: []
+
+  @doc """
+  Deletes `rooms`, which their event no longer uses, through
+  `Tymeslot.Workers.VideoSyncWorker`, which removes each record once its room
+  is gone.
+  """
+  @spec discard([EventVideoRoomSchema.t()]) :: :ok
+  def discard(rooms), do: Enum.each(rooms, &enqueue(&1, "delete"))
+
+  @doc """
   Whether an ended room's event is over in its calendar's cache. The nightly
   scan's check; see `EventVideoRoomExpiry.check/1`.
   """

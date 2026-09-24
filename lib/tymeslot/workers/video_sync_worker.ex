@@ -10,8 +10,10 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   calendar sync — it runs here through Oban with retries rather than inline as a
   single best-effort attempt.
 
-  Providers without a server-side meeting object (Google Meet, Teams, MiroTalk,
+  Providers without a server-side meeting object (Google Meet, MiroTalk,
   Custom) resolve to `:ok` immediately, so enqueuing for them is a cheap no-op.
+  So does a Teams meeting attached to the booking's own calendar event, which
+  calendar sync keeps in step instead.
 
   The meeting is re-read on every attempt so the provider always receives the
   current times — never stale args captured at enqueue time. A meeting that no
@@ -27,6 +29,10 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   whether the event is really over before deleting
   (`Tymeslot.CalendarGrid.check_event_video_room_expired/1`), since the event
   may have moved in between.
+
+  A room no record holds at all is deleted by its provider id through
+  `enqueue_room_delete/3`: the Zoom meeting a calendar grid event's video
+  change replaced, or one whose grid event was deleted.
 
   ## Releasing a room the meeting no longer owns
 
@@ -53,6 +59,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.IntegrationResolver
@@ -100,6 +107,31 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
       do: insert_job(%{"event_room_id" => room_id, "action" => action}, [:event_room_id, :action])
 
   @doc """
+  Enqueues the delete of a room no record holds, by the id its provider knows
+  it by, on the video integration `video_integration_id` of `user_id`.
+
+  For a calendar grid event's room that `Tymeslot.CalendarGrid.EventVideoRooms`
+  does not record, whose id was parsed exactly out of its join link (a Zoom
+  meeting's). A provider that no longer has the room counts as done, and so
+  does an integration that has gone, since nothing can reach the room then.
+  """
+  @spec enqueue_room_delete(pos_integer(), pos_integer(), String.t()) ::
+          {:ok, atom()} | {:error, term()}
+  def enqueue_room_delete(user_id, video_integration_id, room_id)
+      when is_integer(user_id) and is_integer(video_integration_id) and is_binary(room_id) and
+             room_id != "" do
+    insert_job(
+      %{
+        "user_id" => user_id,
+        "video_integration_id" => video_integration_id,
+        "room_id" => room_id,
+        "action" => "delete"
+      },
+      [:video_integration_id, :room_id, :action]
+    )
+  end
+
+  @doc """
   Enqueues deletion of the provider room `meeting` holds, for a meeting that
   is about to stop holding it (see the module doc).
 
@@ -110,6 +142,23 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   deleted.
   """
   @spec release(map()) :: {:ok, atom()} | {:error, term()}
+  def release(meeting)
+
+  # A room that is the booking's own calendar event (a Teams meeting on the
+  # same Microsoft account) is not the provider's to delete: deleting it would
+  # delete the booking's event, which calendar sync still owns. Graph keeps the
+  # online meeting on that event for good once set, so the only way to take
+  # the join link off it is a new event, and that is calendar sync's job. It
+  # runs in the calendar queue, one write per meeting at a time, so it cannot
+  # race the update the same location change enqueued there.
+  def release(%{id: meeting_id, video_room_id: event_id, provider_event_id: event_id})
+      when is_binary(meeting_id) and is_binary(event_id) do
+    case CalendarEventScheduler.schedule_calendar_replacement(meeting_id, event_id) do
+      {:ok, _job} -> {:ok, :calendar_event}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   def release(%{id: meeting_id, video_room_id: room_id} = meeting)
       when is_binary(meeting_id) and is_binary(room_id) do
     insert_job(
@@ -127,7 +176,8 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
 
   # Uniqueness keys on the id of whatever the job acts on: keyed on an absent
   # `meeting_id`, every event room's jobs for one action would count as
-  # duplicates, and a released room is keyed by the room itself.
+  # duplicates, a released room is keyed by the room itself, and a room
+  # deleted by its provider id by that id and its integration.
   defp insert_job(args, unique_keys) do
     job_changeset =
       new(args,
@@ -184,6 +234,44 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
         )
 
         {:discard, "Calendar event video room not found"}
+    end
+  end
+
+  def perform(
+        %Oban.Job{
+          args: %{
+            "user_id" => user_id,
+            "video_integration_id" => video_integration_id,
+            "room_id" => room_id,
+            "action" => "delete"
+          }
+        } = job
+      ) do
+    executions = start_execution(job)
+
+    case Video.fetch_integration_for_user(video_integration_id, user_id) do
+      {:ok, integration} ->
+        target = %{
+          kind: :room,
+          record: nil,
+          user_id: user_id,
+          room_id: room_id,
+          provider: integration.provider,
+          log: [
+            video_integration_id: video_integration_id,
+            room_ref: Redactor.fingerprint(room_id)
+          ]
+        }
+
+        perform_action("delete", target, video_integration_id, executions)
+
+      {:error, :not_found} ->
+        Logger.info("Video integration gone before a room delete, discarding",
+          video_integration_id: video_integration_id,
+          room_ref: Redactor.fingerprint(room_id)
+        )
+
+        {:discard, "Video integration not found"}
     end
   end
 
@@ -327,6 +415,17 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   # problem worth surfacing. Testing for the room first keeps the two apart.
   defp dispatch(_action, %{video_room_id: nil}, _executions), do: discard_no_room()
   defp dispatch(_action, %{organizer_user_id: nil}, _executions), do: discard_no_room()
+
+  # A room that is the booking's own calendar event moves and goes with that
+  # event, through calendar sync. Updating it here would race the calendar's
+  # own write, and deleting it would delete the booking's event, so the
+  # provider is left alone and only the local record converges.
+  defp dispatch(
+         action,
+         %{video_room_id: event_id, provider_event_id: event_id} = meeting,
+         executions
+       ),
+       do: handle_result(:ok, action, meeting_target(meeting), executions)
 
   defp dispatch(action, meeting, executions) do
     case IntegrationResolver.resolve_for_meeting(meeting) do
@@ -493,6 +592,9 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   end
 
   defp clear_room(%{kind: :meeting, record: meeting}), do: clear_video_room(meeting)
+
+  # A room no record holds: once it is gone there is nothing left to clear.
+  defp clear_room(%{kind: :room}), do: :ok
 
   # A grid event's room exists only as this record, so once the room is gone
   # the record goes too, and nothing scans for it again.

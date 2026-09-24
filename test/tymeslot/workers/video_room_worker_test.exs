@@ -89,6 +89,10 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
         )
 
       stub(Tymeslot.TeamsOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+      # No booking calendar: the Teams meeting needs an event of its own.
+      stub(Tymeslot.CalendarMock, :get_booking_integration_info, fn _meeting ->
+        {:error, :no_integration}
+      end)
 
       # Graph creates the calendar event but returns no Teams link: the account
       # has no Teams licence. That never changes on a retry.
@@ -137,6 +141,10 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
         )
 
       stub(Tymeslot.TeamsOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+      # No booking calendar: the Teams meeting needs an event of its own.
+      stub(Tymeslot.CalendarMock, :get_booking_integration_info, fn _meeting ->
+        {:error, :no_integration}
+      end)
 
       assert {:discard, "Invalid configuration"} =
                perform_job(

@@ -93,6 +93,11 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     * `:recurrence_scope` - which occurrences of a recurring series the edit
       is meant for (`"this_only"`, `"following"`, `"all"`). Forwarded to the
       provider payload; no provider acts on it yet.
+    * `:conference_data` - a change to a Google event's own conference, sent
+      with the write: a `createRequest` from
+      `Tymeslot.Integrations.Calendar.Google.ConferenceData.create_request/0`,
+      or `ConferenceData.remove/0`. Without it the event's conference is left
+      as it is.
     * `:timezone` - the organiser's timezone. A timed event's `UNTIL` is an
       instant (RFC 5545 §3.3.10), so refitting one has to end the organiser's
       chosen day in their own zone; without it the day ends in UTC and the
@@ -120,6 +125,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
       payload =
         payload
         |> maybe_put_scope(Keyword.get(opts, :recurrence_scope))
+        |> maybe_put_conference(Keyword.get(opts, :conference_data))
         |> put_stored_document(stored)
         |> scope_attendees(event, changes)
 
@@ -247,6 +253,9 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
       {:error, :until_before_start} = error -> error
     end
   end
+
+  defp maybe_put_conference(payload, nil), do: payload
+  defp maybe_put_conference(payload, change), do: Map.put(payload, :conference_data, change)
 
   defp maybe_put_scope(payload, nil), do: payload
   defp maybe_put_scope(payload, scope), do: Map.put(payload, :recurrence_scope, scope)

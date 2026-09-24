@@ -41,6 +41,7 @@ Tymeslot.Test.SuiteConfig.setup_analytics_completeness(
 )
 
 Tymeslot.Test.SuiteConfig.cleanup_uploads_after_suite()
+Tymeslot.Test.SuiteConfig.setup_log_capture()
 
 ExUnit.start()
 

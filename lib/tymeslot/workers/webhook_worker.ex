@@ -8,6 +8,18 @@ defmodule Tymeslot.Workers.WebhookWorker do
   - Exponential backoff retry logic
   - Circuit breaker (auto-disable after consecutive failures)
   - Delivery logging and metrics
+  - At-most-once posting per job, and a stable delivery id on the wire
+
+  ## Duplicate deliveries
+
+  The post is claimed through `Tymeslot.Workers.DeliveryClaims` before it is
+  sent, so a job the Oban lifeline rescues after the post went out does not
+  post it again. A post that failed is still retried as before, and a retry
+  after a timeout can reach a receiver that did get the first request.
+
+  Every request therefore carries an `X-Tymeslot-Delivery-Id` header: the
+  Oban job id, identical on every attempt of the same delivery and different
+  for every other one. A receiver that records it can discard a second copy.
   """
 
   use Oban.Worker,
@@ -22,6 +34,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Webhooks
+  alias Tymeslot.Workers.DeliveryClaims
 
   alias Tymeslot.Webhooks.{
     HttpDelivery,
@@ -43,6 +56,8 @@ defmodule Tymeslot.Workers.WebhookWorker do
     approval_requested_at approval_deadline_at approval_resolved_at
     approval_declined_at
   )a
+
+  @delivery_id_header "X-Tymeslot-Delivery-Id"
 
   @datetime_snapshot_fields ~w(
     cancelled_at approval_requested_at approval_deadline_at approval_resolved_at
@@ -86,7 +101,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
          :ok = Logger.metadata(user_id: webhook.user_id),
          :ok <- check_feature_access(webhook.user_id, webhook_id, event_type, feature),
          {:ok, meeting} <- fetch_meeting(meeting_id, args["snapshot"]),
-         {:ok, _delivery} <- deliver_webhook(webhook, event_type, meeting, attempt) do
+         :ok <- deliver_once(webhook, event_type, meeting, job) do
       :ok
     else
       error -> handle_delivery_error(error, webhook_id, meeting_id, event_type)
@@ -317,9 +332,18 @@ defmodule Tymeslot.Workers.WebhookWorker do
 
   defp decode_snapshot_field(_field, value), do: value
 
-  defp deliver_webhook(%WebhookSchema{} = webhook, event_type, meeting, attempt) do
+  defp deliver_once(webhook, event_type, meeting, job) do
+    case DeliveryClaims.once(job, "webhook", fn ->
+           deliver_webhook(webhook, event_type, meeting, job)
+         end) do
+      {:ok, _delivery} -> :ok
+      other -> other
+    end
+  end
+
+  defp deliver_webhook(%WebhookSchema{} = webhook, event_type, meeting, job) do
     if WebhookSchema.should_be_active?(webhook) do
-      do_deliver_webhook(webhook, event_type, meeting, attempt)
+      do_deliver_webhook(webhook, event_type, meeting, job)
     else
       {:error, :disabled}
     end
@@ -352,15 +376,28 @@ defmodule Tymeslot.Workers.WebhookWorker do
     end
   end
 
-  defp do_deliver_webhook(webhook, event_type, meeting, attempt) do
+  defp do_deliver_webhook(webhook, event_type, meeting, %Oban.Job{} = job) do
     webhook = WebhookSchema.decrypt_token(webhook)
     payload = PayloadBuilder.build_payload(event_type, meeting, to_string(webhook.id))
-    headers = Webhooks.build_headers(payload, webhook.webhook_token)
+
+    headers =
+      payload
+      |> Webhooks.build_headers(webhook.webhook_token)
+      |> put_delivery_id(job)
+
     encoded_payload = Jason.encode!(payload)
     result = HttpDelivery.post(webhook.url, encoded_payload, headers)
 
-    log_and_update_status(webhook, event_type, meeting, payload, attempt, result)
+    log_and_update_status(webhook, event_type, meeting, payload, job.attempt, result)
   end
+
+  # The job id is the delivery id because it is the one identifier that stays
+  # the same across every attempt of a delivery, a lifeline rescue included,
+  # and differs between deliveries. A job that was never persisted has none.
+  defp put_delivery_id(headers, %Oban.Job{id: nil}), do: headers
+
+  defp put_delivery_id(headers, %Oban.Job{id: job_id}),
+    do: [{@delivery_id_header, Integer.to_string(job_id)} | headers]
 
   defp log_and_update_status(webhook, event_type, meeting, payload, attempt, result) do
     delivery_attrs = %{

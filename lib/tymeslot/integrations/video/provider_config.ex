@@ -356,10 +356,11 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
     do: Enum.map(@rooms_deleted_after_meeting, &Atom.to_string/1)
 
   # Providers whose rooms hold the meeting's time or name on the provider's side
-  # (a Zoom meeting's start, a Talk conversation's lobby timer and name), so a
-  # reschedule has to be sent to the room. Every other provider's room is a
-  # link that stays right whatever the meeting's time.
-  @rooms_updated_on_reschedule [:zoom, :nextcloud_talk]
+  # (a Zoom meeting's start, a Talk conversation's lobby timer and name, the
+  # calendar event a Teams meeting lives on), so a reschedule has to be sent to
+  # the room. Every other provider's room is a link that stays right whatever
+  # the meeting's time.
+  @rooms_updated_on_reschedule [:zoom, :nextcloud_talk, :teams]
 
   @doc """
   Whether a provider's rooms hold the meeting's time or name, so a reschedule

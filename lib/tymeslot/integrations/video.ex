@@ -14,6 +14,7 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Video.Connection
   alias Tymeslot.Integrations.Video.Disconnect
   alias Tymeslot.Integrations.Video.Discovery
+  alias Tymeslot.Integrations.Video.MeetingLinkTemplate
   alias Tymeslot.Integrations.Video.OAuth
   alias Tymeslot.Integrations.Video.OAuthCallback
   alias Tymeslot.Integrations.Video.ProviderConfig
@@ -52,6 +53,10 @@ defmodule Tymeslot.Integrations.Video do
   def list_integrations(user_id) when is_integer(user_id) do
     VideoIntegrationQueries.list_all_for_user(user_id)
   end
+
+  @doc "See `Tymeslot.Integrations.Video.MeetingLinkTemplate.invalid?/1`."
+  @spec meeting_link_template_invalid?(map()) :: boolean()
+  defdelegate meeting_link_template_invalid?(integration), to: MeetingLinkTemplate, as: :invalid?
 
   @doc """
   Gets a single video integration by ID for a specific user.

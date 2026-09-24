@@ -13,6 +13,22 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   push was enabled. The daily cadence doubles as retry throttling: a
   registration that keeps failing is retried at most once per day rather than
   on every fallback-sync tick.
+
+  ## Repeated runs
+
+  A per-integration job may run twice for one renewal: the Oban lifeline
+  re-runs a job whose node stopped before Oban recorded its outcome. Each run
+  therefore first re-reads the stored channel or subscription and does nothing
+  if it no longer expires inside the renewal window, which is what a first
+  run that finished its renewal leaves behind.
+
+  Outlook renewals extend the stored Graph subscription in place (see
+  `Tymeslot.Integrations.Calendar.Outlook.GraphSubscription.register/1`), so
+  even a repeat that gets past that check creates nothing new. Google offers
+  no way to extend a push channel, so a renewal always opens a new one; if the
+  node stops after Google accepted it and before it was stored, the next run
+  opens another. The unrecorded channel expires on its own, and its
+  notifications are rejected because they match no stored channel id.
   """
 
   use Oban.Worker,
@@ -29,6 +45,17 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.CalendarManagement
+
+  # How far ahead an expiring channel or subscription is renewed.
+  @renewal_window_hours 48
+
+  # The two providers differ only in which API call registers the subscription
+  # and what it is called in the logs. Every decision about the outcome is
+  # identical, so it is made once in `handle_renewal/3`.
+  @renewal_labels %{
+    "google" => "Google Calendar push channel",
+    "outlook" => "Outlook Graph subscription"
+  }
 
   # Batch entry point: enumerate expiring integrations and schedule one
   # per-integration renewal job with a staggered `schedule_in` delay.
@@ -53,7 +80,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
         integration = CalendarIntegrationSchema.decrypt_oauth_tokens(integration)
-        renew_single(integration, provider)
+        renew_if_due(integration, provider)
 
       {:error, :not_found} ->
         Logger.warning("Integration not found for webhook renewal; discarding",
@@ -72,7 +99,8 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   # ---------------------------------------------------------------------------
 
   defp schedule_google_renewals do
-    expiring = CalendarIntegrationWebhookQueries.list_expiring_google_channels(48)
+    expiring =
+      CalendarIntegrationWebhookQueries.list_expiring_google_channels(@renewal_window_hours)
 
     unregistered =
       backfill(&CalendarIntegrationWebhookQueries.list_unregistered_google_channels/0)
@@ -81,7 +109,8 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   end
 
   defp schedule_outlook_renewals do
-    expiring = CalendarIntegrationWebhookQueries.list_expiring_outlook_subscriptions(48)
+    expiring =
+      CalendarIntegrationWebhookQueries.list_expiring_outlook_subscriptions(@renewal_window_hours)
 
     unregistered =
       backfill(&CalendarIntegrationWebhookQueries.list_unregistered_outlook_subscriptions/0)
@@ -133,13 +162,32 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
     end)
   end
 
-  # The two providers differ only in which API call registers the subscription
-  # and what it is called in the logs. Every decision about the outcome is
-  # identical, so it is made once in `handle_renewal/3`.
-  @renewal_labels %{
-    "google" => "Google Calendar push channel",
-    "outlook" => "Outlook Graph subscription"
-  }
+  defp renew_if_due(integration, provider) do
+    if renewal_due?(integration, provider) do
+      renew_single(integration, provider)
+    else
+      Logger.info("Webhook channel already renewed; nothing to do",
+        calendar_integration_id: integration.id,
+        channel_kind: @renewal_labels[provider]
+      )
+
+      :ok
+    end
+  end
+
+  defp renewal_due?(integration, "google"),
+    do: due?(integration.google_channel_id, integration.google_channel_expires_at)
+
+  defp renewal_due?(integration, "outlook"),
+    do: due?(integration.graph_subscription_id, integration.graph_subscription_expires_at)
+
+  defp due?(nil, _expires_at), do: true
+  defp due?(_id, nil), do: true
+
+  defp due?(_id, %DateTime{} = expires_at) do
+    horizon = DateTime.add(DateTime.utc_now(), @renewal_window_hours, :hour)
+    DateTime.compare(expires_at, horizon) != :gt
+  end
 
   defp renew_single(integration, "google" = provider) do
     api = Config.google_calendar_api_module()

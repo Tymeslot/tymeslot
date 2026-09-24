@@ -19,6 +19,7 @@ defmodule Tymeslot.Workers.VideoSyncWorkerReleaseTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.LogCapture
+  alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.VideoSyncWorker
   alias Tymeslot.ZoomOAuthHelperMock
 
@@ -47,6 +48,51 @@ defmodule Tymeslot.Workers.VideoSyncWorkerReleaseTest do
           "video_provider" => "zoom",
           "organizer_user_id" => user.id
         }
+      )
+    end
+  end
+
+  describe "release/1 for a Teams meeting on the booking's own calendar event" do
+    # Deleting the room would delete the booking's event, and Graph will not
+    # take the online meeting off it, so calendar sync replaces the event.
+    test "hands the booking's event to calendar sync to replace, not to the provider" do
+      %{user: user} = create_user_with_profile()
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          video_provider: "teams",
+          video_room_id: "AAMk-booking-event",
+          provider_event_id: "AAMk-booking-event"
+        })
+
+      assert VideoSyncWorker.release(meeting) == {:ok, :calendar_event}
+      refute_enqueued(worker: VideoSyncWorker)
+
+      assert_enqueued(
+        worker: CalendarEventWorker,
+        args: %{
+          "action" => "replace",
+          "meeting_id" => meeting.id,
+          "event_id" => "AAMk-booking-event"
+        }
+      )
+    end
+
+    test "still releases a Teams room that is an event of its own" do
+      %{user: user} = create_user_with_profile()
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          video_provider: "teams",
+          video_room_id: "AAMk-own-event",
+          provider_event_id: "AAMk-booking-event"
+        })
+
+      assert {:ok, :scheduled} = VideoSyncWorker.release(meeting)
+
+      assert_enqueued(
+        worker: VideoSyncWorker,
+        args: %{"action" => "release", "room_id" => "AAMk-own-event"}
       )
     end
   end

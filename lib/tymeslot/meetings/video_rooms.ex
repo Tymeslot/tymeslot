@@ -19,22 +19,21 @@ defmodule Tymeslot.Meetings.VideoRooms do
   idempotency condition, so that a concurrent worker that already attached a room
   is detected and the second caller receives `{:ok, meeting}` without a duplicate
   provider call affecting the database. This prevents a slow video provider from
-  holding a database connection for the duration of the remote request.
+  holding a database connection for the duration of the remote request. That
+  write lives in `Tymeslot.Meetings.VideoRoomAttachment`.
   """
 
   require Logger
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Infrastructure.Logging.Redactor
-  alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
+  alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.MeetingContext
   alias Tymeslot.Integrations.Video.ProviderConfig
-  alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
-  alias Tymeslot.Repo
+  alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema, VideoRoomAttachment}
   alias Tymeslot.Security.UrlValidation
-  alias Tymeslot.Workers.VideoSyncWorker
 
   # The meeting has no reachable room to rebuild links for: the organiser or
   # the integration is gone, or the integration was switched off.
@@ -72,6 +71,8 @@ defmodule Tymeslot.Meetings.VideoRooms do
     - {:error, :organizer_not_found} if organizer lookup fails
     - {:error, :video_disabled} if video provider is set to "none"
     - {:error, :video_integration_missing} if no video integration configured
+    - {:error, :calendar_event_pending} if a Teams meeting is to be attached
+      to the booking's calendar event and that event is not written yet
     - {:error, :video_integration_inactive} if integration is disabled
     - {:error, :unknown_provider} if provider is unsupported
     - {:error, :incomplete_video_room} if the provider returned a room carrying
@@ -97,7 +98,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
          {:ok, :proceed} <- should_create_video_room(meeting, user_id),
          {:ok, meeting_context} <- create_provider_meeting_room(meeting, user_id),
          {:ok, video_room_attrs} <- build_video_room_attrs(meeting, meeting_context) do
-      persist_video_room(meeting, video_room_attrs)
+      VideoRoomAttachment.persist(meeting, video_room_attrs)
     else
       {:already_attached, meeting} -> {:ok, meeting}
       {:error, _reason} = error -> error
@@ -304,13 +305,45 @@ defmodule Tymeslot.Meetings.VideoRooms do
   @spec create_provider_meeting_room(MeetingSchema.t(), integer() | nil) ::
           {:ok, MeetingContext.t()} | {:error, term()}
   defp create_provider_meeting_room(meeting, user_id) do
-    Logger.info("Requesting video room from provider", meeting_id: meeting.id)
+    with {:ok, placement_opts} <- room_placement(meeting) do
+      Logger.info("Requesting video room from provider", meeting_id: meeting.id)
 
-    case video_module().create_meeting_room(user_id,
-           integration_id: meeting.video_integration_id,
-           meeting_id: meeting.id,
-           event_details: EventDetails.from_meeting(meeting)
-         ) do
+      user_id
+      |> video_module().create_meeting_room(
+        [
+          integration_id: meeting.video_integration_id,
+          meeting_id: meeting.id,
+          event_details: EventDetails.from_meeting(meeting)
+        ] ++ placement_opts
+      )
+      |> log_provider_failure(meeting)
+    end
+  end
+
+  # A Teams meeting that belongs on the booking's own calendar event waits for
+  # that event rather than creating a second one (see
+  # `MeetingProvisioning.teams_room_placement/1`). The wait is an ordinary
+  # retryable failure, so `Tymeslot.Workers.VideoRoomWorker` retries it and,
+  # should the event never arrive, announces the booking without a link.
+  defp room_placement(meeting) do
+    case MeetingProvisioning.teams_room_placement(meeting) do
+      {:calendar_event, event_id} ->
+        {:ok, [calendar_event_id: event_id]}
+
+      :awaiting_calendar_event ->
+        Logger.info("Teams meeting waits for the booking's calendar event",
+          meeting_id: meeting.id
+        )
+
+        {:error, :calendar_event_pending}
+
+      :own_event ->
+        {:ok, []}
+    end
+  end
+
+  defp log_provider_failure(result, meeting) do
+    case result do
       {:ok, meeting_context} ->
         {:ok, meeting_context}
 
@@ -355,28 +388,21 @@ defmodule Tymeslot.Meetings.VideoRooms do
          {:ok, attendee_url} <- create_secure_join_url(meeting, meeting_context, "participant") do
       expiry_time = DateTime.add(meeting.end_time, 1800, :second)
 
-      attrs = %{
-        meeting_url: meeting_url,
-        location: meeting_url,
-        video_room_id: room_id,
-        video_provider: provider_string(meeting_context.provider_type),
-        organizer_video_url: organizer_url,
-        attendee_video_url: attendee_url,
-        video_room_enabled: true,
-        video_room_created_at: DateTime.utc_now(),
-        video_room_expires_at: expiry_time
-      }
-
-      # If the video provider is Teams and we got a room_id (which is the Microsoft Event ID),
-      # update the meeting UID so subsequent calendar syncs target this same event.
-      attrs =
-        if meeting_context.provider_type == :teams and room_id do
-          Map.put(attrs, :uid, room_id)
-        else
-          attrs
-        end
-
-      {:ok, attrs}
+      # `uid` is deliberately absent. It is the booking's public identifier,
+      # already embedded in the cancel and reschedule links the attendee was
+      # sent, so no room may take it over, whatever the provider calls its room.
+      {:ok,
+       %{
+         meeting_url: meeting_url,
+         location: meeting_url,
+         video_room_id: room_id,
+         video_provider: provider_string(meeting_context.provider_type),
+         organizer_video_url: organizer_url,
+         attendee_video_url: attendee_url,
+         video_room_enabled: true,
+         video_room_created_at: DateTime.utc_now(),
+         video_room_expires_at: expiry_time
+       }}
     end
   end
 
@@ -388,144 +414,6 @@ defmodule Tymeslot.Meetings.VideoRooms do
 
   defp provider_string(provider_type) when is_atom(provider_type),
     do: Atom.to_string(provider_type)
-
-  # The room was created for the integration `meeting` named when it was read,
-  # before the provider call. A reschedule can move the meeting to another
-  # location while that call is in flight, and attaching the room anyway would
-  # hand an in-person meeting a join link. So the integration is re-checked
-  # under the lock too, and a room created for a location the meeting has left
-  # is released rather than attached.
-  @spec persist_video_room(MeetingSchema.t(), map()) ::
-          {:ok, MeetingSchema.t()} | {:error, term()}
-  defp persist_video_room(
-         %MeetingSchema{video_integration_id: integration_id} = meeting,
-         video_room_attrs
-       ) do
-    transaction_result =
-      Repo.transaction(fn ->
-        case MeetingQueries.get_meeting_for_update(meeting.id) do
-          {:ok, locked_meeting} ->
-            attach_to_locked(locked_meeting, integration_id, video_room_attrs)
-
-          {:error, :not_found} ->
-            Repo.rollback(:meeting_not_found)
-        end
-      end)
-
-    case transaction_result do
-      {:ok, {:attached, updated_meeting}} ->
-        # Schedule the calendar update only once we have definitively attached the
-        # video room in this call path.
-        case CalendarEventScheduler.schedule_calendar_update(updated_meeting.id) do
-          {:ok, _job} ->
-            :ok
-
-          {:error, reason} ->
-            Logger.warning("Failed to schedule calendar update after video room attachment",
-              meeting_id: updated_meeting.id,
-              reason: inspect(reason)
-            )
-        end
-
-        {:ok, updated_meeting}
-
-      {:ok, {:location_changed, moved_meeting}} ->
-        Logger.info("Meeting changed location while its video room was created; releasing it",
-          meeting_id: moved_meeting.id
-        )
-
-        release_unattached_room(meeting, video_room_attrs)
-        {:ok, moved_meeting}
-
-      {:ok, {:already_attached, existing_meeting}} ->
-        Logger.info(
-          "Video room already attached by a concurrent writer; discarding provider response",
-          meeting_id: existing_meeting.id
-        )
-
-        {:ok, existing_meeting}
-
-      {:error, reason} = error ->
-        # The one place a room id is logged in the clear, deliberately. The
-        # write that would have recorded it failed, so the room exists on the
-        # provider and nothing in the database points at it: without the id and
-        # URL here there is no way to find it again and delete it. Everywhere
-        # else the row is reachable by `meeting_id` and the logs carry
-        # `room_ref` instead.
-        Logger.error("Failed to persist video room attachment",
-          meeting_id: meeting.id,
-          reason: inspect(reason),
-          orphaned_video_room_id: Map.get(video_room_attrs, :video_room_id),
-          orphaned_meeting_url: Map.get(video_room_attrs, :meeting_url)
-        )
-
-        error
-    end
-  end
-
-  defp attach_to_locked(
-         %MeetingSchema{video_room_id: nil, video_integration_id: integration_id} = locked_meeting,
-         integration_id,
-         video_room_attrs
-       ) do
-    case update_meeting_with_video_room(locked_meeting, video_room_attrs) do
-      {:ok, updated_meeting} -> {:attached, updated_meeting}
-      {:error, reason} -> Repo.rollback(reason)
-    end
-  end
-
-  defp attach_to_locked(
-         %MeetingSchema{video_room_id: nil} = moved_meeting,
-         _integration_id,
-         _attrs
-       ),
-       do: {:location_changed, moved_meeting}
-
-  # Another worker won the race; keep the existing attachment.
-  defp attach_to_locked(%MeetingSchema{} = already_attached, _integration_id, _attrs),
-    do: {:already_attached, already_attached}
-
-  defp release_unattached_room(meeting, %{video_room_id: room_id} = video_room_attrs)
-       when is_binary(room_id) do
-    room = %{meeting | video_room_id: room_id, video_provider: video_room_attrs.video_provider}
-
-    case VideoSyncWorker.release(room) do
-      {:ok, _status} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to enqueue release of an unattached video room",
-          meeting_id: meeting.id,
-          orphaned_video_room_id: room_id,
-          reason: inspect(reason)
-        )
-    end
-  end
-
-  # A provider with no room id (a static custom link) has nothing to delete.
-  defp release_unattached_room(_meeting, _video_room_attrs), do: :ok
-
-  @spec update_meeting_with_video_room(MeetingSchema.t(), map()) ::
-          {:ok, MeetingSchema.t()} | {:error, :database_update_failed}
-  defp update_meeting_with_video_room(meeting, video_room_attrs) do
-    case MeetingQueries.update_meeting(meeting, video_room_attrs) do
-      {:ok, updated_meeting} ->
-        Logger.info("Video room added successfully",
-          meeting_id: meeting.id,
-          room_ref: Redactor.fingerprint(video_room_attrs.video_room_id)
-        )
-
-        {:ok, updated_meeting}
-
-      {:error, changeset} ->
-        Logger.error("Failed to update meeting with video room",
-          meeting_id: meeting.id,
-          errors: inspect(changeset.errors)
-        )
-
-        {:error, :database_update_failed}
-    end
-  end
 
   @spec create_secure_join_url(MeetingSchema.t(), MeetingContext.t(), String.t()) ::
           {:ok, String.t()} | {:error, :join_url_unavailable}

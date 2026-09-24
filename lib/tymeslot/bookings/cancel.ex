@@ -294,7 +294,7 @@ defmodule Tymeslot.Bookings.Cancel do
   # (e.g. Zoom) is deleted and doesn't linger in the organiser's account after
   # cancellation. Routed through Oban — not done inline — so a transient Zoom
   # 5xx/429 retries instead of leaving an orphaned meeting. Providers without a
-  # server-side meeting object (Google Meet, Teams, MiroTalk, Custom) resolve to
+  # server-side meeting object (Google Meet, MiroTalk, Custom) resolve to
   # :ok inside the job. Whether an integration can still reach the room is
   # decided inside the job by `IntegrationResolver`, not here: a severed
   # `video_integration_id` does not mean the room stopped existing. Never blocks

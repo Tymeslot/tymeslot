@@ -3,7 +3,10 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   LiveComponent for creating a poll.
 
   Owns the interactive create form: the meeting details and the candidate-slot
-  builder (each row a `datetime-local` input in the host's timezone).
+  builder (each row a `datetime-local` input in the host's timezone). A row
+  whose time falls inside the host's time off carries a warning; it does not
+  stop the poll being created, because confirmation is where time off is
+  enforced.
 
   On submit it converts the local datetime values to UTC and calls
   `Tymeslot.Polls.create_poll/2`. Success flashes via the parent LiveView and
@@ -34,6 +37,7 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        deadline: "",
        slots: [],
        slot_counter: 0,
+       time_off_keys: MapSet.new(),
        errors: %{}
      )}
   end
@@ -157,25 +161,39 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
             </span>
           </div>
 
-          <div :for={{slot, index} <- Enum.with_index(@slots)} class="flex items-center gap-2">
-            <div class="flex-1">
-              <.input
-                type="datetime-local"
-                name={"poll[slots][#{slot.key}]"}
-                value={slot.value}
-                aria-label={dgettext("dashboard_common", "Candidate time %{n}", n: index + 1)}
-              />
+          <div :for={{slot, index} <- Enum.with_index(@slots)} class="space-y-1">
+            <div class="flex items-center gap-2">
+              <div class="flex-1">
+                <.input
+                  type="datetime-local"
+                  name={"poll[slots][#{slot.key}]"}
+                  value={slot.value}
+                  aria-label={dgettext("dashboard_common", "Candidate time %{n}", n: index + 1)}
+                />
+              </div>
+              <button
+                type="button"
+                phx-click="remove_slot"
+                phx-value-key={slot.key}
+                phx-target={@myself}
+                class="p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                aria-label={dgettext("dashboard_common", "Remove time")}
+              >
+                <.icon name="hero-x-mark" class="w-4 h-4" />
+              </button>
             </div>
-            <button
-              type="button"
-              phx-click="remove_slot"
-              phx-value-key={slot.key}
-              phx-target={@myself}
-              class="p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-              aria-label={dgettext("dashboard_common", "Remove time")}
+            <p
+              :if={MapSet.member?(@time_off_keys, slot.key)}
+              data-testid="poll-slot-time-off-warning"
+              data-slot-key={slot.key}
+              class="flex items-center gap-1 text-token-xs text-amber-700"
             >
-              <.icon name="hero-x-mark" class="w-4 h-4" />
-            </button>
+              <.icon name="hero-exclamation-triangle-mini" class="w-4 h-4 shrink-0" />
+              {dgettext(
+                "dashboard_common",
+                "This time falls within your time off, so it can't be confirmed while that stays in place."
+              )}
+            </p>
           </div>
 
           <p :for={error <- error_list(@errors, :slots)} class="form-error">{error}</p>
@@ -217,7 +235,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     duration = resolve_duration(params, meeting_type_id, socket)
 
     {:noreply,
-     assign(socket,
+     socket
+     |> assign(
        title: Map.get(params, "title", socket.assigns.title),
        description: Map.get(params, "description", socket.assigns.description),
        meeting_type_id: meeting_type_id,
@@ -225,7 +244,8 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
        deadline: Map.get(params, "deadline", socket.assigns.deadline),
        timezone: Map.get(params, "timezone", socket.assigns.timezone),
        slots: merge_slot_values(socket.assigns.slots, Map.get(params, "slots", %{}))
-     )}
+     )
+     |> assign_time_off_keys()}
   end
 
   def handle_event("form_change", _params, socket), do: {:noreply, socket}
@@ -239,7 +259,13 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
   def handle_event("remove_slot", %{"key" => key}, socket) do
     key = String.to_integer(key)
     slots = Enum.reject(socket.assigns.slots, &(&1.key == key))
-    {:noreply, assign(socket, slots: slots, errors: Map.delete(socket.assigns.errors, :slots))}
+
+    {:noreply,
+     assign(socket,
+       slots: slots,
+       time_off_keys: MapSet.delete(socket.assigns.time_off_keys, key),
+       errors: Map.delete(socket.assigns.errors, :slots)
+     )}
   end
 
   @impl Phoenix.LiveComponent
@@ -278,6 +304,28 @@ defmodule TymeslotWeb.Dashboard.Polls.PollForm do
     Enum.map(slots, fn %{key: key} = slot ->
       %{slot | value: Map.get(values, Integer.to_string(key), slot.value)}
     end)
+  end
+
+  # The rows whose time the host is away for. Recomputed on every change
+  # because the time, the timezone it is read in and the duration all move it.
+  defp assign_time_off_keys(socket) do
+    %{slots: slots, timezone: timezone, duration: duration} = socket.assigns
+
+    starts =
+      for %{key: key, value: value} <- slots,
+          start_time = to_utc(value, timezone),
+          start_time != nil,
+          do: {key, start_time}
+
+    clashing =
+      Polls.starts_during_time_off(
+        socket.assigns.current_user.id,
+        Enum.map(starts, &elem(&1, 1)),
+        parse_duration(duration)
+      )
+
+    keys = for {key, start_time} <- starts, start_time in clashing, into: MapSet.new(), do: key
+    assign(socket, :time_off_keys, keys)
   end
 
   # --- Attribute building ---

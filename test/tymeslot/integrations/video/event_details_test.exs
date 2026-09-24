@@ -251,4 +251,72 @@ defmodule Tymeslot.Integrations.Video.EventDetailsTest do
              ]
     end
   end
+
+  describe "from_provider_config/1" do
+    @start ~U[2030-03-14 09:30:00Z]
+    @finish ~U[2030-03-14 10:15:00Z]
+
+    test "returns the attached event details as they are" do
+      details = %EventDetails{
+        summary: "Quarterly review",
+        description: "Agenda",
+        start_time: @start,
+        end_time: @finish,
+        attendees: [Attendee.new(email: "guest@example.com")]
+      }
+
+      assert EventDetails.from_provider_config(%{event_details: details}) == details
+    end
+
+    test "builds the struct from a plain map of event details" do
+      config = %{event_details: %{summary: "From a map", start_time: @start, end_time: @finish}}
+
+      assert %EventDetails{summary: "From a map", start_time: @start, end_time: @finish} =
+               EventDetails.from_provider_config(config)
+    end
+
+    test "reads the flat update keys when no event details are attached" do
+      config = %{
+        meeting_topic: "  Moved review  ",
+        meeting_start_time: @start,
+        meeting_end_time: @finish
+      }
+
+      assert %EventDetails{summary: "Moved review", start_time: @start, end_time: @finish} =
+               EventDetails.from_provider_config(config)
+    end
+
+    test "prefers the event details field by field, filling gaps from the flat keys" do
+      config = %{
+        event_details: %EventDetails{summary: "Booked title", start_time: @start},
+        meeting_topic: "Flat title",
+        meeting_start_time: ~U[2031-01-01 00:00:00Z],
+        meeting_end_time: @finish
+      }
+
+      assert %EventDetails{summary: "Booked title", start_time: @start, end_time: @finish} =
+               EventDetails.from_provider_config(config)
+    end
+
+    test "keeps every field of the event details over conflicting flat keys" do
+      config = %{
+        event_details: %EventDetails{
+          summary: "Booked title",
+          start_time: @start,
+          end_time: @finish
+        },
+        meeting_topic: "Flat title",
+        meeting_start_time: ~U[2031-01-01 00:00:00Z],
+        meeting_end_time: ~U[2031-01-01 01:00:00Z]
+      }
+
+      assert %EventDetails{summary: "Booked title", start_time: @start, end_time: @finish} =
+               EventDetails.from_provider_config(config)
+    end
+
+    test "leaves a field neither source carries nil rather than guessing it" do
+      assert %EventDetails{summary: nil, start_time: nil, end_time: nil} =
+               EventDetails.from_provider_config(%{meeting_topic: "   "})
+    end
+  end
 end

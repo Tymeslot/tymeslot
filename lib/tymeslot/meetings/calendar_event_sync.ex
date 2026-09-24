@@ -8,6 +8,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
   - the create→update fallback when a meeting already carries a provider mapping,
   - the update→create-on-404 recovery,
+  - replacing an event an update cannot correct (`replace/3`),
   - persistence of the resulting provider UID / event-id mapping back onto the
     meeting (via `Tymeslot.Meetings.MeetingQueries`),
   - sending an error notification to the calendar owner on persistent create
@@ -150,9 +151,97 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     end
   end
 
+  @doc """
+  Replaces the meeting's calendar event `event_id` with a new one written from
+  the meeting as it now stands, then deletes the old one.
+
+  For an event carrying something no update can take off it: a Microsoft
+  Teams meeting attached to the booking's own Outlook event, which Graph keeps
+  once `isOnlineMeeting` is set. A booking moved to another location would
+  otherwise keep offering the Teams link from the organiser's calendar.
+
+  The order is what keeps the booking alive. The new event is written and its
+  id persisted before the old one is deleted, so by the time inbound sync
+  hears of the deletion nothing links the old event to the meeting any more,
+  and it is not read as the booking having been deleted externally
+  (`Tymeslot.Meetings.ExternalCalendarChanges`). A retry after the new event
+  was recorded finds the meeting no longer on `event_id` and only deletes it.
+
+  Nothing is replaced when the meeting holds a room on `event_id` again (the
+  booking moved back to Teams before this ran), which is an ordinary update,
+  or when it no longer expects a calendar event, whose own delete job removes
+  the event.
+  """
+  @spec replace(term(), String.t(), pos_integer()) :: :ok | {:error, term()}
+  def replace(meeting_id, event_id, attempt) do
+    case MeetingQueries.get_meeting(meeting_id) do
+      {:ok, meeting} ->
+        Logger.metadata(user_id: meeting.organizer_user_id)
+        replace_event(meeting, event_id, attempt)
+
+      {:error, :not_found} ->
+        {:error, :meeting_not_found}
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # Internal orchestration
   # ---------------------------------------------------------------------------
+
+  defp replace_event(%{video_room_id: event_id} = meeting, event_id, attempt),
+    do: update(meeting.id, attempt)
+
+  defp replace_event(%{provider_event_id: event_id} = meeting, event_id, _attempt) do
+    if MeetingState.expects_calendar_event?(meeting) do
+      create_replacement(meeting, event_id)
+    else
+      Logger.info("Meeting no longer expects a calendar event, skipping replacement",
+        meeting_id: meeting.id
+      )
+
+      :ok
+    end
+  end
+
+  # Recorded on an earlier attempt: only the old event is left to delete.
+  defp replace_event(meeting, event_id, _attempt), do: delete_replaced_event(meeting, event_id)
+
+  defp create_replacement(meeting, event_id) do
+    Logger.info("Replacing calendar event", meeting_id: meeting.id)
+
+    event_data = CalendarEventBuilder.build_event_data(meeting)
+
+    # The old id is cleared in the same write that records the new event, so
+    # the meeting stops pointing at it whatever the new event is keyed by.
+    with {:ok, created} <- calendar_module().create_event(event_data, meeting),
+         :ok <- persist_or_compensate(meeting, created, %{provider_event_id: nil}) do
+      delete_replaced_event(meeting, event_id)
+    end
+  end
+
+  # `meeting` still names the calendar the old event lives in. Once it is
+  # gone, its cached copy goes too: nothing links it to the meeting now, so
+  # until inbound sync drops it the grid would show it beside the booking.
+  defp delete_replaced_event(meeting, event_id) do
+    case calendar_module().delete_event(event_id, meeting) do
+      result when result in [:ok, {:ok, :deleted}, {:error, :not_found}] ->
+        Logger.info("Replaced calendar event deleted", meeting_id: meeting.id)
+        forget_cached_event(meeting, event_id)
+
+      error ->
+        error
+    end
+  end
+
+  defp forget_cached_event(%{calendar_integration_id: integration_id} = meeting, event_id)
+       when is_integer(integration_id) do
+    ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, [event_id])
+    AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
+    SyncBroadcast.broadcast_cache_update(meeting.organizer_user_id, [])
+    :ok
+  end
+
+  defp forget_cached_event(_meeting, _event_id), do: :ok
 
   defp external_id?(nil), do: false
 
@@ -375,8 +464,10 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   # just-created event before surfacing the error, leaving the retry a clean
   # slate. CalDAV PUTs are idempotent on the caller-supplied UID, so a failed
   # delete there is harmless; the compensation primarily guards Google/Outlook.
-  defp persist_or_compensate(meeting, %CreatedEvent{} = created) do
-    case persist_calendar_mapping(meeting, created) do
+  #
+  # `base_attrs` go into the same write as the mapping.
+  defp persist_or_compensate(meeting, %CreatedEvent{} = created, base_attrs \\ %{}) do
+    case persist_calendar_mapping(meeting, created, base_attrs) do
       :ok ->
         :ok
 
@@ -476,32 +567,42 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
     end
   end
 
-  defp persist_calendar_mapping(meeting, created) do
-    # Persist which integration and calendar path were used for creation
+  # Persist which integration and calendar path were used for creation. With
+  # no integration to name, a plain create records nothing, as it always has;
+  # a write that carries `base_attrs` still records the new event, since a
+  # replacement must never leave the meeting on the event it is about to
+  # delete.
+  defp persist_calendar_mapping(meeting, created, base_attrs) do
     case calendar_module().get_booking_integration_info(meeting) do
       {:ok, %{integration_id: integration_id, calendar_path: calendar_path}} ->
-        attrs = %{
-          calendar_integration_id: integration_id,
-          calendar_path: calendar_path
-        }
+        attrs =
+          Map.merge(base_attrs, %{
+            calendar_integration_id: integration_id,
+            calendar_path: calendar_path
+          })
 
-        attrs = put_provider_mapping(attrs, created)
+        write_calendar_mapping(meeting, put_provider_mapping(attrs, created))
 
-        case MeetingQueries.update_meeting(meeting, attrs) do
-          {:ok, _updated} ->
-            :ok
-
-          {:error, changeset} ->
-            Logger.error("Failed to persist calendar mapping",
-              meeting_id: meeting.id,
-              error: inspect(changeset.errors)
-            )
-
-            {:error, :calendar_mapping_persistence_failed}
-        end
+      _no_integration_info when map_size(base_attrs) == 0 ->
+        :ok
 
       _no_integration_info ->
+        write_calendar_mapping(meeting, put_provider_mapping(base_attrs, created))
+    end
+  end
+
+  defp write_calendar_mapping(meeting, attrs) do
+    case MeetingQueries.update_meeting(meeting, attrs) do
+      {:ok, _updated} ->
         :ok
+
+      {:error, changeset} ->
+        Logger.error("Failed to persist calendar mapping",
+          meeting_id: meeting.id,
+          error: inspect(changeset.errors)
+        )
+
+        {:error, :calendar_mapping_persistence_failed}
     end
   end
 
