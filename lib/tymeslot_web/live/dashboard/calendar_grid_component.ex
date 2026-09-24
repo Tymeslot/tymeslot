@@ -319,6 +319,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: EventCrud.handle_add_create_attendee(params, socket)
 
   @impl Phoenix.LiveComponent
+  def handle_event("add_create_guest", params, socket),
+    do: EventCrud.handle_add_create_guest(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("remove_create_guest", params, socket),
+    do: EventCrud.handle_remove_create_guest(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_create_guest_input", params, socket),
+    do: EventCrud.handle_update_create_guest_input(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_create_message", params, socket),
+    do: EventCrud.handle_update_create_message(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_create_locale", params, socket),
+    do: EventCrud.handle_update_create_locale(params, socket)
+
+  @impl Phoenix.LiveComponent
   def handle_event("remove_create_attendee", params, socket),
     do: EventCrud.handle_remove_create_attendee(params, socket)
 

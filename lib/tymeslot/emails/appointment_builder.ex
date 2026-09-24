@@ -141,6 +141,10 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       attendee_name: meeting.attendee_name,
       attendee_email: meeting.attendee_email,
       attendee_message: meeting.attendee_message,
+      # A meeting with no type was created by the host from their dashboard, so
+      # the note on it is theirs rather than the attendee's.
+      message_from:
+        if(is_nil(Map.get(meeting, :meeting_type_id)), do: :organiser, else: :attendee),
       attendee_phone: meeting.attendee_phone,
       attendee_company: meeting.attendee_company
     }

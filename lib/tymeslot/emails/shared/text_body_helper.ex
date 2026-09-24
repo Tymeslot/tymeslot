@@ -79,6 +79,35 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
     end)
   end
 
+  # The plain-text half of the same distinction the HTML body makes: a note on
+  # a meeting the host created is theirs, and heading it "from attendee" tells
+  # them an attendee wrote what they wrote.
+  defp message_heading(%{message_from: :organiser}),
+    do: dgettext("emails", "MESSAGE FROM THE ORGANISER:")
+
+  defp message_heading(_details), do: dgettext("emails", "MESSAGE FROM ATTENDEE:")
+
+  @doc """
+  The host's own note about the meeting, for the plain-text half of the emails
+  their guests receive. Empty for a note left by the person booking: that one
+  goes to the organiser, inside the attendee information, not back to its
+  author or on to the other guests.
+  """
+  @spec format_organiser_note(map(), String.t()) :: String.t()
+  def format_organiser_note(%{message_from: :organiser} = details, locale) do
+    case details[:attendee_message] do
+      message when is_binary(message) and message != "" ->
+        Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+          "\n#{dgettext("emails", "MESSAGE FROM THE ORGANISER:")}\n\"#{message}\"\n"
+        end)
+
+      _absent ->
+        ""
+    end
+  end
+
+  def format_organiser_note(_details, _locale), do: ""
+
   @doc """
   Formats attendee information for text body.
   """
@@ -93,7 +122,7 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
 
       message_section =
         if appointment_details[:attendee_message] do
-          "\n\n#{dgettext("emails", "MESSAGE FROM ATTENDEE:")}\n\"#{appointment_details.attendee_message}\""
+          "\n\n#{message_heading(appointment_details)}\n\"#{appointment_details.attendee_message}\""
         else
           ""
         end
