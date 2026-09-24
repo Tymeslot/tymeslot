@@ -19,7 +19,7 @@ defmodule Tymeslot.Auth.PasswordReset do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Repo
-  alias Tymeslot.Security.{InputProcessor, Password, RateLimiter, SecurityLogger, Token}
+  alias Tymeslot.Security.{Password, RateLimiter, SecurityLogger, Token}
   alias Tymeslot.Utils.UrlBuilder
 
   @doc """
@@ -96,7 +96,7 @@ defmodule Tymeslot.Auth.PasswordReset do
   defp handle_password_reset_attempt({:ok, user}, _email), do: notify_no_password(user)
 
   defp validate_email_format(email) do
-    case InputProcessor.validate_field(email, :email) do
+    case Validation.validate_email(email) do
       {:ok, validated} -> {:ok, validated}
       {:error, msg} -> {:error, :invalid_input, msg}
     end
@@ -255,7 +255,11 @@ defmodule Tymeslot.Auth.PasswordReset do
           sessions_invalidated: true
         })
 
-        {:ok, updated_user, dgettext("auth", "Your password has been reset successfully")}
+        {:ok, updated_user,
+         dgettext(
+           "auth",
+           "Your password has been reset successfully. Please log in with your new password."
+         )}
 
       {:error, reason, message} ->
         {:error, reason, message}

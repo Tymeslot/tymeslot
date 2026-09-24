@@ -19,15 +19,13 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
   answers it without touching the database.
   """
 
-  use Gettext, backend: TymeslotWeb.Gettext
   use TymeslotWeb, :verified_routes
 
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
 
-  alias Tymeslot.Auth.AuthActions
-  alias Tymeslot.Security.InputProcessor
-  alias TymeslotWeb.AuthLive.SecurityHelper
+  alias Tymeslot.Auth
+  alias TymeslotWeb.AuthLive.{SecurityHelper, StateHelper}
   alias TymeslotWeb.Helpers.ClientIP
 
   @typedoc "A LiveView `handle_event/3` return value."
@@ -41,14 +39,14 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
   """
   @spec validate(map(), Phoenix.LiveView.Socket.t()) :: reply()
   def validate(params, socket) do
-    user_params = params["user"] || %{}
+    email = get_in(params, ["user", "email"]) || ""
     metadata = socket |> ClientIP.request_opts() |> Map.new()
-    form_data = Map.merge(socket.assigns[:form_data] || %{}, %{email: user_params["email"] || ""})
+    form_data = Map.merge(socket.assigns[:form_data] || %{}, %{email: email})
 
     errors =
-      case InputProcessor.validate_form(user_params, [{"email", :email}], metadata: metadata) do
+      case Auth.validate_email(email, metadata) do
         {:ok, _sanitized} -> %{}
-        {:error, errors} -> Map.take(errors, [:email])
+        {:error, message} -> %{email: message}
       end
 
     {:noreply, socket |> assign(:errors, errors) |> assign(:form_data, form_data)}
@@ -70,24 +68,33 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
   end
 
   defp register(socket, user_params) do
-    case AuthActions.register_user(user_params, ClientIP.request_opts(socket)) do
+    request_opts = ClientIP.request_opts(socket)
+    metadata = request_opts |> Map.new() |> Map.put(:source, "signup")
+
+    case Auth.register_user(user_params, [metadata: metadata] ++ request_opts) do
+      {:ok, user, message} ->
+        {:noreply, answer_signup(socket, message, user_params, %{id: user.id, email: user.email})}
+
+      {:existing_account, message} ->
+        {:noreply, answer_signup(socket, message, user_params, nil)}
+
       {:honeypot, message} ->
         pretend_registered(socket, message, user_params)
 
-      {:ok, new_state, message, pending} ->
-        socket =
-          socket
-          |> to_verify_email(new_state, message, user_params)
-          |> bind_pending_verification(pending)
-
-        {:noreply, socket}
-
-      {:error, :field_errors, errors} ->
+      {:error, :input, errors} when is_map(errors) ->
         {:noreply, SecurityHelper.set_errors(socket, errors)}
 
-      {:error, error_message} ->
-        {:noreply, SecurityHelper.set_errors(socket, %{general: error_message})}
+      {:error, _reason, message} ->
+        {:noreply, SecurityHelper.set_errors(socket, %{general: message})}
     end
+  end
+
+  # A new account and a taken address are answered identically; only the
+  # binding differs, and it never leaves this process.
+  defp answer_signup(socket, message, user_params, pending) do
+    socket
+    |> to_verify_email(:verify_email, message, user_params)
+    |> bind_pending_verification(pending)
   end
 
   # The domain has already spent the verification allowance a real sign-up's
@@ -122,7 +129,7 @@ defmodule TymeslotWeb.AuthLive.SignupEvents do
   # not the reload one (see `TymeslotWeb.AuthLive.VerificationEvents`).
   defp to_verify_email(socket, new_state, message, user_params) do
     socket
-    |> AuthActions.transition_state(new_state, :signup)
+    |> StateHelper.transition_state(new_state, :signup)
     |> put_flash(:info, message)
     |> assign(:form_data, %{email: user_params["email"]})
     |> assign(:signed_up_here, true)

@@ -50,6 +50,47 @@ defmodule Tymeslot.Auth.Validation do
   end
 
   @doc """
+  Validates an email address as every auth form does: universal
+  sanitisation, then the email rules. `metadata` (the client's `:ip` and
+  `:user_agent`) is recorded against any input the sanitiser blocks.
+
+  Returns the sanitised address, or the translated message to show.
+  """
+  @spec validate_email(term(), map()) :: {:ok, String.t()} | {:error, String.t()}
+  def validate_email(email, metadata \\ %{}),
+    do: InputProcessor.validate_field(email, :email, universal_opts: [metadata: metadata])
+
+  @doc """
+  Validates a sign-in form before any account is looked up: a well-formed
+  email, and a password that is present and within the length login hashes.
+
+  Returns `{:error, errors}` keyed by field (`:email`, `:password`), with
+  translated messages ready to show beside each field.
+  """
+  @spec validate_login_input(term(), term()) ::
+          :ok | {:error, %{optional(:email | :password) => String.t()}}
+  def validate_login_input(email, password) do
+    errors =
+      Map.merge(
+        email_errors(email),
+        case validate_current_password_input(password) do
+          :ok -> %{}
+          {:error, :missing_password} -> %{password: current_password_message(:missing_password)}
+          {:error, :invalid_password} -> %{password: dgettext("auth", "Password is too long")}
+        end
+      )
+
+    if errors == %{}, do: :ok, else: {:error, errors}
+  end
+
+  defp email_errors(email) do
+    case validate_email(email) do
+      {:ok, _sanitised} -> %{}
+      {:error, message} -> %{email: message}
+    end
+  end
+
+  @doc """
   Checks the current password a signed-in user re-enters to confirm a
   sensitive change (email or password).
 

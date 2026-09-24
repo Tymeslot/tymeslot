@@ -1,6 +1,6 @@
 defmodule Tymeslot.Auth.RegistrationVerificationRateLimitTest do
   @moduledoc """
-  `Verification.verify_user_email/3` may refuse to send, returning the
+  `Verification.send_verification_email/2` may refuse to send, returning the
   three-element `{:error, :rate_limited, message}` that
   `Tymeslot.Infrastructure.VerificationBehaviour` declares alongside the
   two-element form. `Registration` used to `case` over only the two-element

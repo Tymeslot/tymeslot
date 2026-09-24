@@ -7,7 +7,6 @@ defmodule TymeslotWeb.SessionController do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.{AuthActions, Authentication}
   alias Tymeslot.Infrastructure.Config
   alias TymeslotWeb.EmailLinkConfirmHTML
   alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
@@ -20,18 +19,8 @@ defmodule TymeslotWeb.SessionController do
   This is called by LiveView after successful authentication to establish HTTP session.
   """
   @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def create(conn, %{"email" => _email, "password" => _password} = params) do
-    if Config.password_auth_enabled?() do
-      do_create(conn, params)
-    else
-      conn
-      |> put_flash(:error, AuthActions.password_auth_disabled_message())
-      |> redirect(to: ~p"/auth/login")
-    end
-  end
-
-  defp do_create(conn, %{"email" => email, "password" => password} = params) do
-    case Authentication.authenticate_user(email, password, ClientIP.request_opts(conn)) do
+  def create(conn, %{"email" => email, "password" => password} = params) do
+    case Auth.authenticate_user(email, password, ClientIP.request_opts(conn)) do
       {:ok, user, message} ->
         handle_authenticated_user(conn, user, message, params)
 

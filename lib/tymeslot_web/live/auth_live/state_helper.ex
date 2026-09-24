@@ -7,9 +7,8 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView
-  alias Tymeslot.Auth.{AuthActions, PasswordReset}
-  alias Tymeslot.Infrastructure.Config
-  import Phoenix.Component, only: [assign: 3]
+  alias Tymeslot.Auth
+  import Phoenix.Component, only: [assign: 2, assign: 3]
   require Logger
 
   # Available authentication states
@@ -40,19 +39,35 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
     state = get_auth_state_from_uri(uri, params)
     socket = assign(socket, :current_state, state)
 
-    cond do
-      state == :signup and not Config.password_auth_enabled?() ->
-        redirect_to_login(socket, AuthActions.password_auth_disabled_message())
-
-      state in [:signup, :complete_registration] and not Config.registration_enabled?() ->
-        redirect_to_login(socket, AuthActions.registration_disabled_message())
-
-      state in @password_reset_states and not Config.password_auth_enabled?() ->
-        redirect_to_login(socket, AuthActions.password_auth_disabled_message())
-
-      true ->
-        socket
+    case check_state_open(state) do
+      :ok -> socket
+      {:error, _reason, message} -> redirect_to_login(socket, message)
     end
+  end
+
+  @doc """
+  Whether the screen for `state` is open on this deployment, with the
+  message to show when it is not. Password screens follow
+  `Tymeslot.Auth.check_password_flow/1`; completing a social sign-up needs
+  only registration, since it involves no password.
+  """
+  @spec check_state_open(atom()) :: :ok | {:error, atom(), String.t()}
+  def check_state_open(:signup), do: Auth.check_password_flow(:signup)
+
+  def check_state_open(state) when state in @password_reset_states,
+    do: Auth.check_password_flow(:reset)
+
+  def check_state_open(:complete_registration), do: Auth.check_registration_open()
+
+  def check_state_open(_state), do: :ok
+
+  @doc """
+  Moves the socket to `new_state`, remembering where it came from.
+  """
+  @spec transition_state(Phoenix.LiveView.Socket.t(), atom(), atom()) ::
+          Phoenix.LiveView.Socket.t()
+  def transition_state(socket, new_state, previous_state) do
+    assign(socket, current_state: new_state, previous_state: previous_state, loading: false)
   end
 
   defp redirect_to_login(socket, message) do
@@ -189,7 +204,7 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
       |> to_string()
       |> String.trim()
 
-    case PasswordReset.verify_token(sanitized_token) do
+    case Auth.verify_password_reset_token(sanitized_token) do
       {:ok, _reset, _message} ->
         socket
 

@@ -11,7 +11,6 @@ defmodule Tymeslot.AppSettingsTest do
   alias Tymeslot.Analytics
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.AuthActions
   alias Tymeslot.Infrastructure.AdminAlerts.EmailNotifier
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Locales
@@ -203,24 +202,19 @@ defmodule Tymeslot.AppSettingsTest do
       # No admin exists, so the lockout protection does not engage.
       {:ok, _settings} = AppSettings.update(%{password_auth_enabled: false})
 
-      socket = %Phoenix.LiveView.Socket{
-        assigns: %{client_ip: "127.0.0.1", user_agent: "AppSettingsTest/1.0"}
-      }
-
-      assert {:error, "Password authentication is currently disabled."} =
-               AuthActions.register_user(%{"email" => "new@example.com"}, socket)
+      assert {:error, :password_auth_disabled, "Password authentication is currently disabled."} =
+               Auth.register_user(
+                 %{"email" => "new@example.com"},
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
     test "disabling password_auth_enabled blocks password reset requests" do
       # No admin exists, so the lockout protection does not engage.
       {:ok, _settings} = AppSettings.update(%{password_auth_enabled: false})
 
-      socket = %Phoenix.LiveView.Socket{
-        assigns: %{client_ip: "127.0.0.1", user_agent: "AppSettingsTest/1.0"}
-      }
-
-      assert {:error, "Password authentication is currently disabled."} =
-               AuthActions.request_password_reset("new@example.com", socket)
+      assert {:error, :password_auth_disabled, "Password authentication is currently disabled."} =
+               Auth.request_password_reset("new@example.com", ClientIP.request_opts(%Plug.Conn{}))
     end
   end
 

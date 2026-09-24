@@ -7,9 +7,9 @@ defmodule Tymeslot.Auth.Authentication do
 
   alias Tymeslot.Auth.ErrorFormatter
   alias Tymeslot.Auth.Helpers.AccountLogging
-  alias Tymeslot.Auth.{RateLimit, UserQueries, Verification}
+  alias Tymeslot.Auth.{RateLimit, UserQueries, Validation, Verification}
   alias Tymeslot.Infrastructure.StructuredLogger
-  alias Tymeslot.Security.{InputProcessor, Password, RateLimiter, SecurityLogger}
+  alias Tymeslot.Security.{Password, RateLimiter, SecurityLogger}
 
   @doc """
   Authenticates a user with the given email and password.
@@ -35,7 +35,7 @@ defmodule Tymeslot.Auth.Authentication do
           | {:error, atom(), String.t()}
           | {:error, :invalid_input, map()}
   def authenticate_user(email, password, opts \\ []) do
-    case validate_login_params(email, password) do
+    case Validation.validate_login_input(email, password) do
       :ok ->
         check_rate_limit_and_authenticate(email, password, opts)
 
@@ -184,30 +184,6 @@ defmodule Tymeslot.Auth.Authentication do
       ip_address: opts[:ip],
       user_agent: opts[:user_agent]
     })
-  end
-
-  # Private functions
-
-  defp validate_login_params(email, password) do
-    errors =
-      case InputProcessor.validate_field(email, :email) do
-        {:ok, _sanitized} -> %{}
-        {:error, msg} -> %{email: msg}
-      end
-
-    errors =
-      cond do
-        is_nil(password) or password == "" ->
-          Map.put(errors, :password, "Password is required")
-
-        byte_size(password) > 1024 ->
-          Map.put(errors, :password, "Password is too long")
-
-        true ->
-          errors
-      end
-
-    if map_size(errors) == 0, do: :ok, else: {:error, errors}
   end
 
   # An account without a password (signed up through a social login) still

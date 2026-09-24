@@ -8,8 +8,9 @@ defmodule TymeslotWeb.OAuthController do
   use Gettext, backend: TymeslotWeb.Gettext
   require Logger
 
-  alias Tymeslot.Auth.{AuthActions, RateLimit, SocialAuthentication}
+  alias Tymeslot.Auth
   alias Tymeslot.Auth.OAuth.{Providers, SignupConfirmation}
+  alias Tymeslot.Auth.{RateLimit, SocialAuthentication}
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.AuthControllerHelpers
@@ -301,7 +302,7 @@ defmodule TymeslotWeb.OAuthController do
 
   defp completion_failed(conn, :registration_disabled, _pending) do
     conn
-    |> put_flash(:info, AuthActions.registration_disabled_message())
+    |> put_flash(:info, Auth.error_message(:registration_disabled))
     |> redirect(to: ~p"/auth/login")
   end
 
@@ -491,7 +492,7 @@ defmodule TymeslotWeb.OAuthController do
 
   defp respond_to_oauth_result({:error, :registration_disabled, _provider, flow_conn}, paths) do
     flow_conn
-    |> put_flash(:info, AuthActions.registration_disabled_message())
+    |> put_flash(:info, Auth.error_message(:registration_disabled))
     |> redirect(to: paths[:login_path])
   end
 

@@ -19,9 +19,9 @@ defmodule TymeslotWeb.OAuthFlow do
 
   alias Tymeslot.Auth.OAuth.{Client, Providers, UserProcessor, UserRegistration}
 
+  alias Tymeslot.Auth
   alias Tymeslot.Auth.Verification
   alias Tymeslot.Clock
-  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.OAuthFlow.State
@@ -242,15 +242,17 @@ defmodule TymeslotWeb.OAuthFlow do
   # with every field known: the account is created on explicit confirmation,
   # never silently.
   defp handle_new_user_registration(conn, provider, user) do
-    if Config.registration_enabled?() do
-      {:registration_required, conn, provider, build_registration_data(provider, user)}
-    else
-      log_social_auth(provider, false, conn, %{
-        email: Map.get(user, :email),
-        error_reason: "registration_disabled"
-      })
+    case Auth.check_registration_open() do
+      :ok ->
+        {:registration_required, conn, provider, build_registration_data(provider, user)}
 
-      {:error, :registration_disabled, provider, conn}
+      {:error, :registration_disabled, _message} ->
+        log_social_auth(provider, false, conn, %{
+          email: Map.get(user, :email),
+          error_reason: "registration_disabled"
+        })
+
+        {:error, :registration_disabled, provider, conn}
     end
   end
 

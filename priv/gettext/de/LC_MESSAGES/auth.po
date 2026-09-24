@@ -27,7 +27,6 @@ msgid "%{provider} authentication succeeded but session creation failed."
 msgstr "%{provider}-Authentifizierung erfolgreich, aber die Sitzung konnte nicht erstellt werden."
 
 #: lib/tymeslot/auth/registration.ex
-#: lib/tymeslot_web/live/auth_live/signup_events.ex
 #, elixir-autogen, elixir-format
 msgid "Account created successfully. Please check your email for verification instructions."
 msgstr "Konto erfolgreich erstellt. Bitte prüfen Sie Ihre E-Mails; dort finden Sie Anweisungen zur Verifizierung."
@@ -228,7 +227,6 @@ msgstr "Passwort erfolgreich zurückgesetzt"
 
 #: lib/tymeslot/auth/validation.ex
 #: lib/tymeslot/security/field_validators/password_validator.ex
-#: lib/tymeslot_web/live/auth_live.ex
 #, elixir-autogen, elixir-format
 msgid "Password is required"
 msgstr "Passwort ist erforderlich"
@@ -281,8 +279,7 @@ msgstr "Setzen Sie Ihr Passwort zurück"
 msgid "Return to login"
 msgstr "Zurück zur Anmeldung"
 
-#: lib/tymeslot_web/live/auth_live/password_reset_events.ex
-#: lib/tymeslot_web/live/auth_live/signup_events.ex
+#: lib/tymeslot_web/live/auth_live/security_helper.ex
 #, elixir-autogen, elixir-format
 msgid "Security validation failed. Please refresh the page."
 msgstr "Sicherheitsprüfung fehlgeschlagen. Bitte aktualisieren Sie die Seite."
@@ -474,7 +471,6 @@ msgstr "Datenschutzerklärung"
 msgid "terms"
 msgstr "Nutzungsbedingungen"
 
-#: lib/tymeslot/auth/error_formatter.ex
 #: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. Please try again."
@@ -550,7 +546,6 @@ msgstr "Melden Sie sich bei Ihrem Tymeslot-Konto an, um Buchungslinks, Verfügba
 msgid "This email address is already associated with another account. Please use a different email or sign in to your existing account."
 msgstr "Diese E-Mail-Adresse ist bereits mit einem anderen Konto verknüpft. Bitte verwenden Sie eine andere E-Mail-Adresse oder melden Sie sich bei Ihrem bestehenden Konto an."
 
-#: lib/tymeslot/auth/auth_actions.ex
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Too many attempts. Please try again later."
@@ -567,6 +562,7 @@ msgid "your.email@example.com"
 msgstr "your.email@example.com"
 
 #: lib/tymeslot_web/hooks/auth_live_session_hook.ex
+#: lib/tymeslot_web/plugs/redirect_if_authenticated.ex
 #, elixir-autogen, elixir-format
 msgid "You are already logged in."
 msgstr "Sie sind bereits angemeldet."
@@ -602,7 +598,7 @@ msgstr "Es existiert bereits ein Konto mit dieser E-Mail-Adresse. Bitte melden S
 msgid "The email address from your login provider is not valid. Please try a different account."
 msgstr "Die E-Mail-Adresse Ihres Anmeldeanbieters ist ungültig. Bitte versuchen Sie es mit einem anderen Konto."
 
-#: lib/tymeslot/auth/auth_actions.ex
+#: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "A server error occurred. Please try again"
 msgstr "Ein Serverfehler ist aufgetreten. Bitte versuchen Sie es erneut"
@@ -612,22 +608,17 @@ msgstr "Ein Serverfehler ist aufgetreten. Bitte versuchen Sie es erneut"
 msgid "Account created but profile creation failed: %{reason}"
 msgstr "Konto erstellt, aber das Profil konnte nicht angelegt werden: %{reason}"
 
-#: lib/tymeslot/auth/auth_actions.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid input provided"
-msgstr "Ungültige Eingabe"
-
-#: lib/tymeslot/auth/auth_actions.ex
+#: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid or expired token"
 msgstr "Ungültiges oder abgelaufenes Token"
 
-#: lib/tymeslot/auth/auth_actions.ex
+#: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid password"
 msgstr "Ungültiges Passwort"
 
-#: lib/tymeslot/auth/auth_actions.ex
+#: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Password authentication is currently disabled."
 msgstr "Die Anmeldung mit Passwort ist derzeit deaktiviert."
@@ -637,7 +628,7 @@ msgstr "Die Anmeldung mit Passwort ist derzeit deaktiviert."
 msgid "Please correct the following errors: %{errors}"
 msgstr "Bitte korrigieren Sie die folgenden Fehler: %{errors}"
 
-#: lib/tymeslot/auth/auth_actions.ex
+#: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "Registration is currently disabled."
 msgstr "Die Registrierung ist derzeit deaktiviert."
@@ -647,12 +638,12 @@ msgstr "Die Registrierung ist derzeit deaktiviert."
 msgid "Terms of service must be accepted"
 msgstr "Die Nutzungsbedingungen müssen akzeptiert werden"
 
-#: lib/tymeslot/auth/auth_actions.ex
+#: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
 msgid "This link has expired. Please request a new one"
 msgstr "Dieser Link ist abgelaufen. Bitte fordern Sie einen neuen an"
 
-#: lib/tymeslot/auth/auth_actions.ex
+#: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "Your password has been reset successfully. Please log in with your new password."
 msgstr "Ihr Passwort wurde erfolgreich zurückgesetzt. Bitte melden Sie sich mit Ihrem neuen Passwort an."
@@ -666,26 +657,6 @@ msgstr "Erfolgreich angemeldet."
 #, elixir-autogen, elixir-format
 msgid "%{operation} failed: %{reason}"
 msgstr "%{operation} fehlgeschlagen: %{reason}"
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "%{provider} authentication failed. Please try again."
-msgstr "Die %{provider}-Authentifizierung ist fehlgeschlagen. Bitte versuchen Sie es erneut."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "%{provider} authorization was denied. Please try again."
-msgstr "Die %{provider}-Autorisierung wurde abgelehnt. Bitte versuchen Sie es erneut."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Account created but email verification failed. Please contact support."
-msgstr "Konto erstellt, aber die E-Mail-Bestätigung ist fehlgeschlagen. Bitte wenden Sie sich an den Support."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Account created but profile setup failed. Please contact support."
-msgstr "Konto erstellt, aber die Profileinrichtung ist fehlgeschlagen. Bitte wenden Sie sich an den Support."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
@@ -707,22 +678,6 @@ msgstr "Diese E-Mail-Adresse wird bereits verwendet"
 msgid "Email changed successfully. Please sign in with your new email."
 msgstr "E-Mail-Adresse erfolgreich geändert. Bitte melden Sie sich mit Ihrer neuen Adresse an."
 
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to authenticate with %{provider}. Please try again."
-msgstr "Die Authentifizierung mit %{provider} ist fehlgeschlagen. Bitte versuchen Sie es erneut."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "If your email is registered, you will receive password reset instructions."
-msgstr "Falls Ihre E-Mail-Adresse registriert ist, erhalten Sie eine Anleitung zum Zurücksetzen des Passworts."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid input provided."
-msgstr "Ungültige Eingabe."
-
-#: lib/tymeslot/auth/error_formatter.ex
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid or expired password reset token."
@@ -732,11 +687,6 @@ msgstr "Ungültiges oder abgelaufenes Token zum Zurücksetzen des Passworts."
 #, elixir-autogen, elixir-format
 msgid "Invalid or expired verification link"
 msgstr "Ungültiger oder abgelaufener Bestätigungslink"
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Invalid response from %{provider}. Please try again."
-msgstr "Ungültige Antwort von %{provider}. Bitte versuchen Sie es erneut."
 
 #: lib/tymeslot/auth/email_change.ex
 #, elixir-autogen, elixir-format
@@ -755,28 +705,13 @@ msgstr "Das Passwort muss mindestens 8 Zeichen lang sein."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
-msgid "Password reset failed. Please try again."
-msgstr "Das Zurücksetzen des Passworts ist fehlgeschlagen. Bitte versuchen Sie es erneut."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
 msgid "Please enter a valid email address."
 msgstr "Bitte geben Sie eine gültige E-Mail-Adresse ein."
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
-msgid "Please verify your email address before logging in."
-msgstr "Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie sich anmelden."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
 msgid "Registration"
 msgstr "Registrierung"
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Registration failed. Please try again."
-msgstr "Die Registrierung ist fehlgeschlagen. Bitte versuchen Sie es erneut."
 
 #: lib/tymeslot/auth/signup_security.ex
 #, elixir-autogen, elixir-format
@@ -788,35 +723,10 @@ msgstr "Die Sicherheitsprüfung ist fehlgeschlagen. Bitte versuchen Sie es erneu
 msgid "Security verification unavailable. Please enable JavaScript and refresh the page, or contact support if the problem persists."
 msgstr "Die Sicherheitsprüfung ist nicht verfügbar. Bitte aktivieren Sie JavaScript und laden Sie die Seite neu, oder wenden Sie sich an den Support, falls das Problem weiterhin besteht."
 
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "The link has expired. Please request a new one."
-msgstr "Der Link ist abgelaufen. Bitte fordern Sie einen neuen an."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "The link is invalid or has expired. Please request a new one."
-msgstr "Der Link ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen an."
-
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "The password couldn't be updated. Please try again with a different password."
 msgstr "Das Passwort konnte nicht geändert werden. Bitte versuchen Sie es mit einem anderen Passwort."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "This email address is already in use. Please try with a different email."
-msgstr "Diese E-Mail-Adresse wird bereits verwendet. Bitte versuchen Sie es mit einer anderen Adresse."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "This email address is already registered. Please use a different email or try logging in."
-msgstr "Diese E-Mail-Adresse ist bereits registriert. Bitte verwenden Sie eine andere Adresse oder melden Sie sich an."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "This email is already registered. Please sign in instead."
-msgstr "Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich stattdessen an."
 
 #: lib/tymeslot_web/controllers/auth/helpers/controller_helpers.ex
 #, elixir-autogen, elixir-format
@@ -835,16 +745,6 @@ msgstr "Diese Angaben werden bereits verwendet. Bitte versuchen Sie es mit ander
 
 #: lib/tymeslot/auth/error_formatter.ex
 #, elixir-autogen, elixir-format
-msgid "Too many %{operation} attempts. Please try again in %{minutes} minute(s)."
-msgstr "Zu viele Versuche (%{operation}). Bitte versuchen Sie es in %{minutes} Minute(n) erneut."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Too many %{operation} attempts. Please try again in %{seconds} seconds."
-msgstr "Zu viele Versuche (%{operation}). Bitte versuchen Sie es in %{seconds} Sekunden erneut."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
 msgid "Too many %{operation} attempts. Please try again later."
 msgstr "Zu viele Versuche (%{operation}). Bitte versuchen Sie es später erneut."
 
@@ -853,25 +753,10 @@ msgstr "Zu viele Versuche (%{operation}). Bitte versuchen Sie es später erneut.
 msgid "Too many failed attempts. Please wait before trying again"
 msgstr "Zu viele fehlgeschlagene Versuche. Bitte warten Sie, bevor Sie es erneut versuchen"
 
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Too many login attempts. Please wait before trying again."
-msgstr "Zu viele Anmeldeversuche. Bitte warten Sie, bevor Sie es erneut versuchen."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Too many password reset attempts. Please try again later."
-msgstr "Zu viele Versuche, das Passwort zurückzusetzen. Bitte versuchen Sie es später erneut."
-
 #: lib/tymeslot/auth/signup_security.ex
 #, elixir-autogen, elixir-format
 msgid "Too many signup attempts. Please try again later."
 msgstr "Zu viele Registrierungsversuche. Bitte versuchen Sie es später erneut."
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Unable to reset password. Please try again."
-msgstr "Das Passwort konnte nicht zurückgesetzt werden. Bitte versuchen Sie es erneut."
 
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
@@ -883,16 +768,6 @@ msgstr "Die E-Mail zum Zurücksetzen des Passworts konnte nicht gesendet werden.
 msgid "Verification link has expired"
 msgstr "Der Bestätigungslink ist abgelaufen"
 
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "You cannot reset your password because your account is managed by an external authentication provider."
-msgstr "Sie können Ihr Passwort nicht zurücksetzen, da Ihr Konto von einem externen Authentifizierungsanbieter verwaltet wird."
-
-#: lib/tymeslot/auth/password_reset.ex
-#, elixir-autogen, elixir-format
-msgid "Your password has been reset successfully"
-msgstr "Ihr Passwort wurde erfolgreich zurückgesetzt"
-
 #: lib/tymeslot/auth/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "Your reset token has expired. Please request a new password reset."
@@ -902,11 +777,6 @@ msgstr "Ihr Token zum Zurücksetzen ist abgelaufen. Bitte fordern Sie das Zurüc
 #, elixir-autogen, elixir-format
 msgid "authentication"
 msgstr "Authentifizierung"
-
-#: lib/tymeslot/auth/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "login"
-msgstr "Anmeldung"
 
 #: lib/tymeslot/auth/email_change.ex
 #, elixir-autogen, elixir-format
@@ -1064,3 +934,8 @@ msgstr "Dieser Link ist nicht mehr gültig. Bitte melden Sie sich an, um fortzuf
 #, elixir-autogen, elixir-format
 msgid "We couldn't send the link to finish signing up just now. Please try again later."
 msgstr "Wir konnten den Link zum Abschließen der Registrierung gerade nicht senden. Bitte versuchen Sie es später erneut."
+
+#: lib/tymeslot/auth/validation.ex
+#, elixir-autogen, elixir-format
+msgid "Password is too long"
+msgstr "Passwort ist zu lang"

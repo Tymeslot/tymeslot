@@ -44,7 +44,8 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
 
-  alias Tymeslot.Auth.{SignupSecurity, Verification}
+  alias Tymeslot.Auth
+  alias Tymeslot.Auth.SignupSecurity
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
 
@@ -115,7 +116,7 @@ defmodule TymeslotWeb.AuthLive.VerificationEvents do
   # no bound user the domain still charges the address bucket and answers as
   # if an email went out, so the reply cannot tell anyone which case applied.
   defp attempt(socket) do
-    case Verification.resend_verification_email_by_email(
+    case Auth.resend_verification_email(
            bound_email(socket),
            ClientIP.get(socket)
          ) do

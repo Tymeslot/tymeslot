@@ -20,13 +20,10 @@ defmodule TymeslotWeb.AuthLive do
   """
 
   use TymeslotWeb, :live_view
-  use Gettext, backend: TymeslotWeb.Gettext
   import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
 
   alias Phoenix.Controller
-  alias Tymeslot.Auth.AuthActions
-  alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Security.InputProcessor
+  alias Tymeslot.Auth
   alias TymeslotWeb.AuthLive.PageMetaHelper
   alias TymeslotWeb.AuthLive.PasswordResetEvents
   alias TymeslotWeb.AuthLive.SignupEvents
@@ -85,16 +82,16 @@ defmodule TymeslotWeb.AuthLive do
   def handle_event("navigate_to", %{"state" => state}, socket) do
     Logger.info("AuthLive: navigate_to event received", state: state)
 
-    case blocked_reason(state) do
-      nil -> navigate(state, socket)
-      message -> {:noreply, put_flash(socket, :info, message)}
+    case check_navigation(state) do
+      :ok -> navigate(state, socket)
+      {:error, _reason, message} -> {:noreply, put_flash(socket, :info, message)}
     end
   end
 
   # Login's form posts directly to SessionController, so only validation runs
   # through this process.
   def handle_event("validate_login_email", %{"value" => email}, socket) do
-    errors = login_errors(%{"email" => email, "password" => ""})
+    errors = login_errors(email, "")
 
     {:noreply,
      socket
@@ -103,7 +100,7 @@ defmodule TymeslotWeb.AuthLive do
   end
 
   def handle_event("validate_login", %{"email" => email, "password" => password}, socket) do
-    {:noreply, assign(socket, :errors, login_errors(%{"email" => email, "password" => password}))}
+    {:noreply, assign(socket, :errors, login_errors(email, password))}
   end
 
   def handle_event("validate_signup", params, socket),
@@ -140,24 +137,12 @@ defmodule TymeslotWeb.AuthLive do
   # Catch-all event handler
   def handle_event(_event, _params, socket), do: {:noreply, socket}
 
-  # Both self-hosters and the managed offering can turn password auth or new
-  # registrations off, and the sidebar links stay visible either way, so the
-  # navigation itself has to refuse rather than land on a dead form.
-  defp blocked_reason("signup") do
-    cond do
-      not Config.password_auth_enabled?() -> AuthActions.password_auth_disabled_message()
-      not Config.registration_enabled?() -> AuthActions.registration_disabled_message()
-      true -> nil
-    end
-  end
-
-  defp blocked_reason("reset_password") do
-    if Config.password_auth_enabled?(),
-      do: nil,
-      else: AuthActions.password_auth_disabled_message()
-  end
-
-  defp blocked_reason(_state), do: nil
+  # A deployment can turn password auth or new registrations off, and the
+  # sidebar links stay visible either way, so the navigation itself has to
+  # refuse rather than land on a dead form.
+  defp check_navigation("signup"), do: Auth.check_password_flow(:signup)
+  defp check_navigation("reset_password"), do: Auth.check_password_flow(:reset)
+  defp check_navigation(_state), do: :ok
 
   # The verify-email screen shows the address its resend would go to.
   defp prefill_verification_email(
@@ -178,17 +163,12 @@ defmodule TymeslotWeb.AuthLive do
     end
   end
 
-  defp login_errors(params) do
-    errors =
-      case InputProcessor.validate_field(params["email"], :email) do
-        {:ok, _sanitized} -> %{}
-        {:error, message} -> %{email: message}
-      end
-
-    if params["password"] in [nil, ""] do
-      Map.put(errors, :password, dgettext("auth", "Password is required"))
-    else
-      errors
+  # The domain's own sign-in rules, so the instant feedback cannot drift from
+  # what the submit enforces.
+  defp login_errors(email, password) do
+    case Auth.validate_login(email, password) do
+      :ok -> %{}
+      {:error, errors} -> errors
     end
   end
 
