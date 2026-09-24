@@ -220,13 +220,19 @@ defmodule Tymeslot.Integrations.HealthCheck.AlertingTest do
       assert_received {:send_alert, :integration_health_failure, second_failure}
       assert_received {:send_alert, :integration_health_recovery, second_recovery}
 
-      refute dedup_key(:integration_health_failure, first_failure) ==
-               dedup_key(:integration_health_failure, second_failure)
+      refute AlertTypes.dedup_key(:integration_health_failure, PIIScrubber.scrub(first_failure)) ==
+               AlertTypes.dedup_key(
+                 :integration_health_failure,
+                 PIIScrubber.scrub(second_failure)
+               )
 
-      refute dedup_key(:integration_health_recovery, first_recovery) ==
-               dedup_key(:integration_health_recovery, second_recovery)
+      refute AlertTypes.dedup_key(:integration_health_recovery, PIIScrubber.scrub(first_recovery)) ==
+               AlertTypes.dedup_key(
+                 :integration_health_recovery,
+                 PIIScrubber.scrub(second_recovery)
+               )
 
-      assert dedup_key(:integration_health_recovery, first_recovery) ==
+      assert AlertTypes.dedup_key(:integration_health_recovery, PIIScrubber.scrub(first_recovery)) ==
                "integration_health_recovery:availability_refusals:" <>
                  DateTime.to_iso8601(DateTime.add(hour, 1, :hour))
     end
@@ -242,7 +248,7 @@ defmodule Tymeslot.Integrations.HealthCheck.AlertingTest do
       keys =
         for _n <- 1..3 do
           assert_received {:send_alert, :integration_health_failure, payload}
-          dedup_key(:integration_health_failure, payload)
+          AlertTypes.dedup_key(:integration_health_failure, PIIScrubber.scrub(payload))
         end
 
       assert [_one_key] = Enum.uniq(keys)
@@ -260,11 +266,11 @@ defmodule Tymeslot.Integrations.HealthCheck.AlertingTest do
       assert_received {:send_alert, :integration_health_failure, earlier}
       assert_received {:send_alert, :integration_health_failure, later}
 
-      assert dedup_key(:integration_health_failure, earlier) ==
+      assert AlertTypes.dedup_key(:integration_health_failure, PIIScrubber.scrub(earlier)) ==
                "integration_health_failure:availability_refusals:elevated"
 
-      assert dedup_key(:integration_health_failure, earlier) ==
-               dedup_key(:integration_health_failure, later)
+      assert AlertTypes.dedup_key(:integration_health_failure, PIIScrubber.scrub(earlier)) ==
+               AlertTypes.dedup_key(:integration_health_failure, PIIScrubber.scrub(later))
     end
   end
 
@@ -373,8 +379,6 @@ defmodule Tymeslot.Integrations.HealthCheck.AlertingTest do
       assert id == recent.id
     end
   end
-
-  defp dedup_key(type, payload), do: AlertTypes.dedup_key(type, PIIScrubber.scrub(payload))
 
   defp at(hour, offset_hours),
     do: hour |> DateTime.add(offset_hours, :hour) |> DateTime.add(5, :minute)

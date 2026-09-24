@@ -214,6 +214,25 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
     |> Repo.all()
   end
 
+  @doc """
+  Whether a cached calendar event other than `event` (addressed by its
+  `calendar_integration_id` and `uid`) carries the join link `video_link`
+  from the video integration `video_integration_id`.
+  """
+  @spec video_link_held_elsewhere?(pos_integer(), String.t(), %{
+          calendar_integration_id: pos_integer(),
+          uid: String.t()
+        }) :: boolean()
+  def video_link_held_elsewhere?(video_integration_id, video_link, %{
+        calendar_integration_id: calendar_integration_id,
+        uid: uid
+      }) do
+    ProviderCalendarEventSchema
+    |> where([e], e.video_integration_id == ^video_integration_id and e.video_link == ^video_link)
+    |> where([e], not (e.calendar_integration_id == ^calendar_integration_id and e.uid == ^uid))
+    |> Repo.exists?()
+  end
+
   defp for_integration(integration_id, scope, %DateTime{} = now) do
     EventVideoRoomSchema
     |> where([r], r.video_integration_id == ^integration_id)

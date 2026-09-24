@@ -37,9 +37,9 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscard do
 
   require Logger
 
+  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Infrastructure.Logging.Redactor
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Workers.VideoSyncWorker
 
@@ -99,7 +99,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscard do
     do: EventVideoRooms.rooms_on_integration(event, video_integration_id)
 
   defp discard_unrecorded(user_id, event, video_integration_id, {:link, link} = ref) do
-    if ProviderCalendarEventQueries.video_link_held_elsewhere?(video_integration_id, link, event) do
+    if EventVideoRoomQueries.video_link_held_elsewhere?(video_integration_id, link, event) do
       Logger.info("Video room left in place: another calendar event still uses it",
         video_integration_id: video_integration_id,
         room_ref: Redactor.fingerprint(link)
