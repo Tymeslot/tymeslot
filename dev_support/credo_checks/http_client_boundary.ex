@@ -20,10 +20,10 @@ defmodule CredoChecks.HttpClientBoundary do
       patterns such as `%Req.Response{}` are not call nodes so they never
       match in the first place.
     * A call on `HTTPoison.*`, `Tesla.*`, or the literal atom module
-      `:httpc`. All three are banned outright in application code: `:tesla`
-      ships transitively via `:oauth2` and `:httpoison` via Wallaby in test,
-      so both are resolvable dependencies, but neither may be called
-      directly, and neither may `:httpc`.
+      `:httpc`. All three are banned outright in application code: both
+      `:httpoison` and `:tesla` arrive with Wallaby in test (the latter via
+      `:web_driver_client`), so they are resolvable in the test build, but
+      neither may be called directly, and neither may `:httpc`.
 
   ## Excluded files
 
