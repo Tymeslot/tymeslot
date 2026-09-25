@@ -73,6 +73,27 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
   def expand(event, _range_start, _range_end, _opts), do: [event]
 
   @doc """
+  How many occurrences `rule` makes from `first`, the series' first start, up
+  to but not including `boundary`, counted exactly as `expand/4` generates
+  them. Excluded occurrences are not left out: RFC 5545 counts them towards
+  a `COUNT` all the same.
+
+  Splitting a series in two at `boundary` takes this many occurrences off the
+  second half's `COUNT`. `first` is a `Date` for an all-day series and a
+  `DateTime` in the series' own zone for a timed one, so the count steps on
+  its wall clock across a DST change.
+  """
+  @spec count_before(String.t(), Date.t() | DateTime.t(), Date.t() | DateTime.t()) ::
+          non_neg_integer()
+  def count_before(rule, first, boundary) do
+    last = boundary |> DateTimeUtils.to_datetime() |> DateTime.add(-1, :second)
+
+    %{start_time: first, end_time: first, recurrence_rule: rule}
+    |> expand(first, last)
+    |> length()
+  end
+
+  @doc """
   Parses an RRULE string into a structured map.
 
   Supported properties: FREQ, INTERVAL, UNTIL, COUNT, BYDAY.

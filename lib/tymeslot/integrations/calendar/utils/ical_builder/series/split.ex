@@ -121,11 +121,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split do
   # RFC 5545 counts an excluded occurrence towards COUNT all the same.
   defp count_before(dtstart, rule, start, slot, zone) do
     first = if Timing.date?(dtstart), do: NaiveDateTime.to_date(start), else: instant(start, zone)
-    last = slot |> instant(zone) |> DateTime.add(-1, :second)
-
-    %{start_time: first, end_time: first, recurrence_rule: rule}
-    |> RecurrenceExpander.expand(first, last)
-    |> length()
+    RecurrenceExpander.count_before(rule, first, instant(slot, zone))
   end
 
   # The head's rule ends before the slot, in the value type of DTSTART
@@ -178,7 +174,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split do
   defp head_line(line, plan) do
     case ContentLines.property_name(line) do
       "RRULE" -> {:ok, map_value(line, &RRule.end_before(&1, plan.boundary))}
-      name when name in @slot_lists -> keep_values(line, plan, :before)
+      name when name in @slot_lists -> keep_values(line, plan.slot, plan.zones, :before)
       _other -> {:ok, line}
     end
   end
@@ -208,7 +204,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split do
       "DTSTART" -> Shift.shift_line(line, plan.shift)
       "DTEND" -> Shift.shift_line(line, plan.shift)
       "RRULE" -> {:ok, map_value(line, &RRule.reduce_count(&1, plan.before))}
-      name when name in @slot_lists -> keep_values(line, plan, :from)
+      name when name in @slot_lists -> keep_values(line, plan.slot, plan.zones, :from)
       _other -> {:ok, line}
     end
   end
@@ -238,12 +234,24 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split do
     end
   end
 
-  # Keeps the values of an EXDATE or RDATE line on one side of the slot,
-  # `:before` it for the head and `:from` it on for the tail; a line left
-  # with none is dropped.
-  defp keep_values(line, plan, side) do
+  @doc """
+  Keeps the values of the `EXDATE` or `RDATE` property `line` on one side of
+  `slot`, a wall clock on the series' clock: `:before` it for the half of a
+  split series that ends there, `:from` it on for the half that starts
+  there. `zones` is the series' zone and the zone to read a `TZID` no time
+  zone database knows in. A line left with no value is `{:ok, :drop}`.
+
+  Used for the CalDAV halves here, and for the `recurrence` lines of a
+  Google series, which are the same properties.
+  """
+  @spec keep_values(
+          String.t(),
+          NaiveDateTime.t(),
+          {String.t() | nil, String.t() | nil},
+          :before | :from
+        ) :: {:ok, String.t() | :drop}
+  def keep_values(line, slot, {zone, timezone}, side) do
     {name_and_params, values} = ContentLines.split_value(line)
-    {zone, timezone} = plan.zones
 
     kept =
       values
@@ -253,7 +261,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split do
         start = value |> String.split("/") |> hd()
 
         case Shift.wall(name_and_params <> ":" <> start, zone, timezone) do
-          {:ok, wall} -> NaiveDateTime.compare(wall, plan.slot) == :lt == (side == :before)
+          {:ok, wall} -> NaiveDateTime.compare(wall, slot) == :lt == (side == :before)
           # Unreadable here is unreadable to the sync too: it stays with the
           # original resource rather than being carried.
           :error -> side == :before

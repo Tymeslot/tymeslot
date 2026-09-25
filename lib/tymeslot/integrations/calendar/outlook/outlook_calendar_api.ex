@@ -29,7 +29,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @token_url "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 
   # Fields the event-driven sync workers need to normalise a single event.
-  @event_sync_select_fields "id,subject,start,end,iCalUId,location,bodyPreview,attendees,recurrence,seriesMasterId,type,isAllDay,showAs"
+  @event_sync_select_fields "id,subject,start,end,iCalUId,location,bodyPreview,attendees,recurrence,seriesMasterId,type,originalStart,isAllDay,showAs"
 
   @type calendar_event :: %{
           id: String.t(),
@@ -197,6 +197,23 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
              ) do
         {:ok, List.first(convert_to_common_format([response]))}
       end
+    end)
+  end
+
+  @doc """
+  Creates `body`, a Graph event body written as it is, in `calendar_id`, or
+  in the signed-in user's default calendar when that is `nil`. Unlike
+  `create_event/2,3`, nothing is mapped or added, and the event is answered
+  as Graph returned it, with its `id` and `iCalUId`.
+  """
+  @impl CalendarAPIBehaviour
+  @spec insert_event(CalendarIntegrationSchema.t(), String.t() | nil, map()) ::
+          {:ok, map()} | api_error()
+  def insert_event(%CalendarIntegrationSchema{} = integration, calendar_id, body) do
+    path = if calendar_id, do: "/me/calendars/#{calendar_id}/events", else: "/me/events"
+
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      make_request_with_body(:post, path, token, body, headers: @silent_event_headers)
     end)
   end
 
@@ -540,7 +557,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
       "$orderby" => "start/dateTime",
       "$top" => "1000",
       "$select" =>
-        "id,iCalUId,subject,body,location,start,end,showAs,sensitivity,isCancelled,responseStatus,isAllDay,organizer,attendees,reminderMinutesBeforeStart,recurrence,seriesMasterId,originalStartTimeZone,originalEndTimeZone",
+        "id,iCalUId,subject,body,location,start,end,showAs,sensitivity,isCancelled,responseStatus,isAllDay,organizer,attendees,reminderMinutesBeforeStart,recurrence,seriesMasterId,type,originalStart,originalStartTimeZone,originalEndTimeZone",
       "$expand" =>
         "singleValueExtendedProperties($filter=id eq '#{TymeslotFingerprint.property_id()}')"
     }

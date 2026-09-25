@@ -87,7 +87,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   """
   @spec update_event(event_uid(), event_data(), context() | {integration_id(), user_id()}) ::
           :ok
-          | {:ok, %{required(:document) => String.t(), optional(:tail) => map()}}
+          | {:ok, %{optional(:document) => String.t(), optional(:tail) => map()}}
           | {:error, term()}
   def update_event(uid, event_data, context) do
     Metrics.time_operation(:update_event, %{uid: uid}, fn ->
@@ -222,6 +222,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   # with the document the series now lives in.
   defp written(:ok), do: {:written, :ok}
   defp written({:ok, %{document: _document}} = occurrence), do: {:written, occurrence}
+  defp written({:ok, %{tail: _tail}} = split), do: {:written, split}
   defp written(error), do: error
 
   defp deleted(:ok), do: {:deleted, :ok}

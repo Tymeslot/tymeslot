@@ -12,6 +12,9 @@ defmodule Tymeslot.CalendarGrid.Occurrence do
   alias Tymeslot.Integrations.Calendar.Recurrence.Series
   alias Tymeslot.Utils.MapKeys
 
+  # The original start Google ends an occurrence's uid and id with.
+  @google_stamp ~r/_(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})Z)?\z/
+
   @typedoc """
   How a series member's provider addresses part of a series:
 
@@ -58,4 +61,68 @@ defmodule Tymeslot.CalendarGrid.Occurrence do
       _unaddressable -> {:error, :unaddressable_occurrence}
     end
   end
+
+  @doc """
+  Where the series first put a Google or Outlook occurrence: its original
+  start, which the series' rule and exceptions name, whether or not the
+  occurrence was moved on its own since. A `Date` for an all-day
+  occurrence, the instant otherwise.
+
+    * Google caches an occurrence under a uid, and gives it an id, that end
+      in its original start (see `Google.EventNormaliser.cache_uid/1`):
+      `YYYYMMDDTHHMMSSZ` in UTC, or `YYYYMMDD` all-day.
+    * Outlook states it as the occurrence's `originalStart`; an occurrence
+      never edited on its own (`type` `occurrence`) starts where the series
+      put it.
+
+  `{:error, :unaddressable_occurrence}` when neither says, since a guess
+  could split the series on the wrong day.
+  """
+  @spec original_start(map()) ::
+          {:ok, Date.t() | DateTime.t()} | {:error, :unaddressable_occurrence}
+  def original_start(%{provider: provider} = stored) do
+    case to_string(provider) do
+      "google" -> google_original_start(stored)
+      "outlook" -> outlook_original_start(stored)
+      _other -> {:error, :unaddressable_occurrence}
+    end
+  end
+
+  defp google_original_start(stored) do
+    stamp =
+      Enum.find_value([Map.get(stored, :uid), Map.get(stored, :provider_event_id)], fn id ->
+        is_binary(id) and Regex.run(@google_stamp, id, capture: :all_but_first)
+      end)
+
+    with [y, m, d | time] <- stamp,
+         {:ok, date} <- Date.new(int(y), int(m), int(d)),
+         {:ok, start} <- stamp_start(date, time) do
+      {:ok, start}
+    else
+      _unstamped -> {:error, :unaddressable_occurrence}
+    end
+  end
+
+  defp stamp_start(date, []), do: {:ok, date}
+
+  defp stamp_start(date, [hh, mm, ss]) do
+    with {:ok, time} <- Time.new(int(hh), int(mm), int(ss)), do: DateTime.new(date, time)
+  end
+
+  defp outlook_original_start(stored) do
+    metadata = Map.get(stored, :provider_metadata) || %{}
+
+    with value when is_binary(value) <- MapKeys.get_binary(metadata, :originalStart),
+         {:ok, instant, _offset} <- DateTime.from_iso8601(value) do
+      {:ok, instant}
+    else
+      _unstated -> unmoved_start(MapKeys.get_binary(metadata, :type), stored)
+    end
+  end
+
+  defp unmoved_start("occurrence", %{all_day: true, start_date: %Date{} = date}), do: {:ok, date}
+  defp unmoved_start("occurrence", %{start_at: %DateTime{} = start}), do: {:ok, start}
+  defp unmoved_start(_type, _stored), do: {:error, :unaddressable_occurrence}
+
+  defp int(digits), do: String.to_integer(digits)
 end

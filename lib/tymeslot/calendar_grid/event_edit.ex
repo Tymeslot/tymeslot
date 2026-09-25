@@ -168,7 +168,8 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   @typedoc """
   Given what the provider answered a successful write: `:ok`, or
-  `{:ok, answer}` with the document a rewritten resource now holds.
+  `{:ok, answer}` with the document a rewritten resource now holds, or the
+  series a split made for the following occurrences (`:tail`).
   """
   @type answered :: (:ok | {:ok, map()} -> term())
 
@@ -299,6 +300,12 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
       {:ok, %{document: document}} = answer ->
         result = written(user_id, updated)
         share_document(event, payload, document)
+        answered.(answer)
+        result
+
+      # A split Google or Outlook series, which shares no document.
+      {:ok, %{tail: _tail}} = answer ->
+        result = written(user_id, updated)
         answered.(answer)
         result
 

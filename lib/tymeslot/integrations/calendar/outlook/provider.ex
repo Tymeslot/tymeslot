@@ -19,6 +19,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.EventNormaliser
   alias Tymeslot.Integrations.Calendar.Outlook.SeriesPatch
+  alias Tymeslot.Integrations.Calendar.Outlook.SeriesSplit
+  alias Tymeslot.Integrations.Calendar.Recurrence.SeriesSplit, as: RecurrenceSplit
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, MultiCalendarFetch, ProviderCommon}
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
 
@@ -140,17 +142,24 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   An `:occurrence` of scope `:all` in `event_attrs` (see
   `Recurrence.SeriesMove.edit/0`, naming the series master in `:master_id`)
   edits every occurrence of a recurring event instead: the master is read,
-  and patched with only what the edit changes (`Outlook.SeriesPatch`). A
+  and patched with only what the edit changes (`Outlook.SeriesPatch`). One
+  of scope `:following`, with the occurrence's original start in `:slot`,
+  splits the series there (`Outlook.SeriesSplit`): the following
+  occurrences are created as a new series in the event's calendar, which
+  takes the edit, then the master's range is ended before them, and if that
+  fails the new series is deleted again. The answer is then
+  `{:ok, %{tail: %{uid: uid, id: id}}}`, the new series' `iCalUId` and id;
+  an edit of the first occurrence is written as one of every occurrence. A
   refusal of the edit is answered before anything is written.
   """
   @spec call_update_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
           {:ok, map()} | {:error, atom(), String.t()} | {:error, term()}
-  def call_update_event(integration, _event_id, %{occurrence: %{scope: :all} = edit}) do
-    with {:ok, master} <- api_module().get_event(integration, edit.master_id),
-         {:ok, body} <- SeriesPatch.build(master, edit) do
-      if body == %{},
-        do: {:ok, master},
-        else: api_module().patch_event(integration, edit.master_id, body)
+  def call_update_event(integration, _event_id, %{occurrence: %{scope: scope} = edit} = attrs)
+      when scope in [:all, :following] do
+    with {:ok, master} <- api_module().get_event(integration, edit.master_id) do
+      if scope == :all,
+        do: patch_series(integration, master, edit),
+        else: split_series(integration, attrs[:calendar_id], master, edit)
     end
   end
 
@@ -163,6 +172,35 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
       api_module().update_event(integration, calendar_id, effective_id, event_attrs)
     else
       api_module().update_event(integration, effective_id, event_attrs)
+    end
+  end
+
+  defp patch_series(integration, master, edit) do
+    with {:ok, body} <- SeriesPatch.build(master, edit) do
+      if body == %{},
+        do: {:ok, master},
+        else: api_module().patch_event(integration, edit.master_id, body)
+    end
+  end
+
+  defp split_series(integration, calendar_id, master, edit) do
+    case SeriesSplit.build(master, edit) do
+      {:ok, %{tail: tail, head: head}} ->
+        api = api_module()
+
+        with {:ok, created} <-
+               RecurrenceSplit.write(
+                 fn -> api.insert_event(integration, calendar_id, tail) end,
+                 fn -> api.patch_event(integration, edit.master_id, head) end,
+                 &api.delete_event(integration, &1["id"])
+               ),
+             do: {:ok, %{tail: %{uid: created["iCalUId"], id: created["id"]}}}
+
+      :first_occurrence ->
+        patch_series(integration, master, edit)
+
+      error ->
+        error
     end
   end
 

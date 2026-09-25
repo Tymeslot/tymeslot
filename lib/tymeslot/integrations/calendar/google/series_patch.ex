@@ -96,7 +96,14 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesPatch do
 
   # --- Timing ---
 
-  defp master_timing(%{"start" => %{"date" => start}, "end" => %{"date" => finish}}) do
+  @doc """
+  The timing of `master` as Google returned it: whole days, or wall clocks
+  in its `timeZone`, with that zone (`nil` for an all-day series). A timed
+  master without a `timeZone` is `{:error, :unreadable_timing}`.
+  """
+  @spec master_timing(map()) ::
+          {:ok, SeriesMove.timing(), String.t() | nil} | {:error, :unreadable_timing}
+  def master_timing(%{"start" => %{"date" => start}, "end" => %{"date" => finish}}) do
     with {:ok, start} <- Date.from_iso8601(start),
          {:ok, finish} <- Date.from_iso8601(finish) do
       {:ok, {start, finish}, nil}
@@ -105,18 +112,18 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesPatch do
     end
   end
 
-  defp master_timing(%{
-         "start" => %{"dateTime" => start, "timeZone" => zone},
-         "end" => %{"dateTime" => finish}
-       })
-       when is_binary(zone) do
+  def master_timing(%{
+        "start" => %{"dateTime" => start, "timeZone" => zone},
+        "end" => %{"dateTime" => finish}
+      })
+      when is_binary(zone) do
     with {:ok, start} <- wall(start, zone),
          {:ok, finish} <- wall(finish, zone) do
       {:ok, {start, finish}, zone}
     end
   end
 
-  defp master_timing(_master), do: {:error, :unreadable_timing}
+  def master_timing(_master), do: {:error, :unreadable_timing}
 
   defp wall(value, zone) do
     with {:ok, instant, _offset} <- DateTime.from_iso8601(value),

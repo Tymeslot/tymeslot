@@ -224,13 +224,14 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   in `event_data`) answers `{:ok, %{document: document}}`, the document the
   series now lives in, which the caller needs to refresh its cache, with the
   resource made for the following occurrences under `:tail` when the edit
-  split the series. An edit
-  of every occurrence of a Google or Outlook series (an `:occurrence` of
-  scope `:all`) is written to the series' master and answers `:ok`.
+  split the series. An edit of every occurrence of a Google or Outlook
+  series (an `:occurrence` of scope `:all`) is written to the series' master
+  and answers `:ok`; one that split the series (scope `:following`) answers
+  `{:ok, %{tail: tail}}`, the series made for the following occurrences.
   """
   @spec update_event(adapter_client(), String.t(), map()) ::
           :ok
-          | {:ok, %{required(:document) => String.t(), optional(:tail) => map()}}
+          | {:ok, %{optional(:document) => String.t(), optional(:tail) => map()}}
           | {:error, atom(), term()}
           | {:error, term()}
   def update_event(adapter_client, uid, event_data) do
@@ -255,6 +256,12 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
                  (map_size(rewritten) == 2 and is_map_key(rewritten, :tail)) ->
             Logger.info("Successfully updated event occurrence", uid: uid)
             updated_occurrence
+
+          # A split Google or Outlook series: the series made for its
+          # following occurrences.
+          {:ok, %{tail: _tail} = split} = split_series when map_size(split) == 1 ->
+            Logger.info("Successfully split event series", uid: uid)
+            split_series
 
           {:ok, _updated} ->
             # Be tolerant of providers that return {:ok, event}

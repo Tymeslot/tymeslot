@@ -28,7 +28,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarBehaviour do
               | nil
             ) ::
               :ok
-              | {:ok, %{required(:document) => String.t(), optional(:tail) => map()}}
+              | {:ok, %{optional(:document) => String.t(), optional(:tail) => map()}}
               | {:error, any()}
   @callback delete_event(
               binary(),

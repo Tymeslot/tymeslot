@@ -187,7 +187,10 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   `:tail` (see `CalDAV.Events.split_series/4`). On Google and Outlook, an
   `:occurrence` of scope `:all` (see `Recurrence.SeriesMove.edit/0`, with the
   series' `:master_id`) edits every occurrence through the series' master,
-  and success is `:ok`.
+  and success is `:ok`; with `scope: :following` and the occurrence's
+  original start in `:slot`, it splits the series there, and success is
+  `{:ok, %{tail: %{uid: uid, id: id}}}`, the series made for the following
+  occurrences.
   """
   @spec update_event(
           String.t(),
@@ -195,7 +198,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
           pos_integer() | MeetingSchema.t() | {pos_integer(), pos_integer()} | nil
         ) ::
           :ok
-          | {:ok, %{required(:document) => String.t(), optional(:tail) => map()}}
+          | {:ok, %{optional(:document) => String.t(), optional(:tail) => map()}}
           | {:error, term()}
   def update_event(uid, event_data, context) do
     behaviour_module().update_event(uid, event_data, context)

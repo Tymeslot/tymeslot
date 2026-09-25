@@ -258,6 +258,29 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   end
 
   @doc """
+  Inserts `body`, a Google event body written as it is, into `calendar_id`.
+  Unlike `create_event/3`, nothing is mapped or added. A body carrying
+  `conferenceData` is sent with `conferenceDataVersion=1`, which copies the
+  conference it names (and would make a new one only for a `createRequest`).
+  Google's own notifications are suppressed, as on every write here.
+  """
+  @impl CalendarAPIBehaviour
+  @spec insert_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
+          {:ok, calendar_event()} | api_error()
+  def insert_event(%CalendarIntegrationSchema{} = integration, calendar_id, body) do
+    params =
+      if Map.has_key?(body, "conferenceData"),
+        do: %{"sendUpdates" => "none", "conferenceDataVersion" => "1"},
+        else: %{"sendUpdates" => "none"}
+
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      make_request_with_body(:post, "/calendars/#{URI.encode(calendar_id)}/events", token, body,
+        params: params
+      )
+    end)
+  end
+
+  @doc """
   Fetches one event of the specified calendar by its Google event id.
 
   A deleted event answers 404, or 410 once Google has purged it; one deleted

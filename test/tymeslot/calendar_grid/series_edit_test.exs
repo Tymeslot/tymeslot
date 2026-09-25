@@ -94,13 +94,41 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       assert captured_payload().provider_event_id == "series-1_20260601T090000Z"
     end
 
-    test "following on a Google occurrence is refused before anything is written", %{
+    test "following on a Google occurrence is addressed to a split at its original start", %{
+      user: user,
+      integration: integration
+    } do
+      # Moved on its own to 11:00 UTC; the series put it at 09:00 UTC.
+      event =
+        insert_event(integration, %{
+          uid: "series-1@google.com_20260601T090000Z",
+          provider_event_id: "series-1_20260601T090000Z",
+          start_at: ~U[2026-06-01 11:00:00.000000Z],
+          end_at: ~U[2026-06-01 12:00:00.000000Z]
+        })
+
+      expect_provider_update()
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
+                 recurrence_scope: :following
+               )
+
+      assert %{
+               scope: :following,
+               master_id: "series-1",
+               slot: ~U[2026-06-01 09:00:00Z],
+               start: ~U[2026-06-01 11:00:00.000000Z]
+             } = captured_payload().occurrence
+    end
+
+    test "following on a Google occurrence whose original start is unknown is refused", %{
       user: user,
       integration: integration
     } do
       event = insert_event(integration, %{})
 
-      assert {:error, %{reason: :unsupported_scope, retry: :not_queued}} =
+      assert {:error, %{reason: :unaddressable_occurrence, retry: :not_queued}} =
                CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
                  recurrence_scope: :following
                )
@@ -108,6 +136,20 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       refute_received {:provider_update, _uid, _payload, _context}
       {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
       assert row.summary == "Weekly sync"
+    end
+
+    test "following on a Google occurrence cannot take the repeat rule away", %{
+      user: user,
+      integration: integration
+    } do
+      event = insert_event(integration, %{provider_event_id: "series-1_20260601T090000Z"})
+
+      assert {:error, %{reason: :unsupported_scope, retry: :not_queued}} =
+               CalendarGrid.update_event(user.id, event, %{recurrence_rule: nil},
+                 recurrence_scope: :following
+               )
+
+      refute_received {:provider_update, _uid, _payload, _context}
     end
 
     test "all on a Google occurrence is addressed to its master, from where it shows now", %{

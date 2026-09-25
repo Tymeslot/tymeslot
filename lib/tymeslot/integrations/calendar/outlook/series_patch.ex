@@ -99,16 +99,24 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
 
   # --- Timing ---
 
-  # `zone` is the series' IANA zone (nil when unreadable) and the label its
-  # timing is written back with.
-  defp master_timing(%{"isAllDay" => true, "start" => start, "end" => finish}) do
+  @doc """
+  The timing of `master` as Graph returned it, on the series' own wall
+  clock: whole days, or wall clocks in the zone the series was created in.
+  Comes with `{zone, label}`: that zone as an IANA name (`nil` when it cannot
+  be read, and the timing is then read in UTC) and the label its timing is
+  written back with.
+  """
+  @spec master_timing(map()) ::
+          {:ok, SeriesMove.timing(), {String.t() | nil, String.t() | nil}}
+          | {:error, :unreadable_timing}
+  def master_timing(%{"isAllDay" => true, "start" => start, "end" => finish}) do
     with {:ok, start_date} <- date(start),
          {:ok, end_date} <- date(finish) do
       {:ok, {start_date, end_date}, {nil, Map.get(start, "timeZone") || "UTC"}}
     end
   end
 
-  defp master_timing(%{"start" => %{"dateTime" => _start} = start, "end" => finish} = master) do
+  def master_timing(%{"start" => %{"dateTime" => _start} = start, "end" => finish} = master) do
     label = master["originalStartTimeZone"]
     zone = known_zone(label)
 
@@ -118,7 +126,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
     end
   end
 
-  defp master_timing(_master), do: {:error, :unreadable_timing}
+  def master_timing(_master), do: {:error, :unreadable_timing}
 
   # `Timezones.sanitize/1` maps Graph's Windows names to IANA ones, and hands
   # back what it does not recognise as it was.
@@ -230,11 +238,15 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
 
   defp follow(_recurrence, _move, _start_date, _zone), do: {:error, :unreadable_rule}
 
-  # The pattern as an RRULE, with the week start Graph counts an
-  # every-other-week pattern from (Sunday unless stated), so that
-  # `RuleShift` refuses a turn that would cross it. A relative pattern has
-  # no RRULE form here and pins its occurrences.
-  defp pattern_rule(pattern, range) do
+  @doc """
+  The pattern and range of a Graph `recurrence` as an RRULE, with the week
+  start Graph counts an every-other-week pattern from (Sunday unless
+  stated), so that a turn or a count that would cross it can be refused. A
+  relative pattern (the second Monday of the month) has no RRULE form here
+  and pins its occurrences (`{:error, :rule_pins_occurrences}`).
+  """
+  @spec pattern_rule(map(), map()) :: {:ok, String.t()} | {:error, :rule_pins_occurrences}
+  def pattern_rule(pattern, range) do
     case RecurrenceConverter.outlook_to_rrule(%{"pattern" => pattern, "range" => range}) do
       nil -> {:error, :rule_pins_occurrences}
       rule -> {:ok, RRule.strip_prefix(rule) <> ";WKST=" <> week_start(pattern)}

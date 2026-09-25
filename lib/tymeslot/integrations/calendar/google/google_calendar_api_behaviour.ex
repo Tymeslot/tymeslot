@@ -32,6 +32,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour do
               {:ok, map()} | :ok | api_error()
   @callback patch_event(CalendarIntegrationSchema.t(), String.t(), String.t(), map()) ::
               {:ok, map()} | api_error()
+  @callback insert_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
+              {:ok, map()} | api_error()
   @callback get_event(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
               {:ok, map()} | api_error()
   @callback delete_event(CalendarIntegrationSchema.t(), String.t(), String.t()) ::

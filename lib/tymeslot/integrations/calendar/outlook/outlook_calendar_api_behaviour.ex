@@ -27,6 +27,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour do
   @callback get_event(CalendarIntegrationSchema.t(), String.t()) :: {:ok, map()} | api_error()
   @callback find_events_by_ical_uid(CalendarIntegrationSchema.t(), String.t()) ::
               {:ok, [map()]} | api_error()
+  @callback insert_event(CalendarIntegrationSchema.t(), String.t() | nil, map()) ::
+              {:ok, map()} | api_error()
   @callback patch_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
               {:ok, map()} | api_error()
   @callback delete_event(CalendarIntegrationSchema.t(), String.t()) ::

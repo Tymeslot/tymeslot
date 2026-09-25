@@ -14,8 +14,9 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
       of this event only is written to that id, exactly like an edit of a
       one-off event. An edit of all events is written to the series' master,
       named by the occurrence's `recurring_event_id` (see *What every Google
-      or Outlook occurrence can take*). "This and following" is refused with
-      `:unsupported_scope` until the writer can split the series.
+      or Outlook occurrence can take*), and an edit of this and every
+      following event splits the series in two there (see *What this and
+      every following Google or Outlook occurrence can take*).
     * **The CalDAV family** holds a whole series in one resource. An edit of
       this event only is written as the occurrence's `RECURRENCE-ID` override
       in that resource (see `Calendar.Events.update_event/3`), and every
@@ -88,6 +89,31 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   of the integration requested, the one the dashboard's Refresh asks for
   (`SyncGoogleCalendarWorker.enqueue/1`, `RefreshOutlookCalendarWorker.enqueue/1`).
 
+  ## What this and every following Google or Outlook occurrence can take
+
+  The same as every occurrence, applied to the occurrences from the edited
+  one on. The series is split at the occurrence's original start, where the
+  series put it (`Occurrence.original_start/1`): the occurrences from there
+  on are written as a new series, which takes the edit, and the master is
+  then ended before them (`Google.SeriesSplit`, `Outlook.SeriesSplit`). If
+  the master cannot be ended, the new series is deleted again and the edit
+  fails. An edit of the series' first occurrence is an edit of every
+  occurrence, and is written as one.
+
+  The new series is a copy of the master's own fields, not of the provider's
+  bookkeeping: Google's Meet link is copied as it is, while an Outlook
+  series' Teams meeting is not (creating one would make a new meeting),
+  though the join details in its description are. Occurrences edited or
+  deleted on their own from the split on do not carry over (Google's
+  excluded dates do), and a repeat count the grid cannot count as the
+  provider does, such as the second Monday of the month for ten months, is
+  refused (`:unsupported_rule`) before anything is written.
+
+  The series' rows are then deleted and a sync requested, as for an edit of
+  every occurrence, which brings back both halves; the series' recorded video
+  rooms move to the new series, whose occurrences carry its join link on
+  (`Tymeslot.CalendarGrid.EventVideoRooms.series_split/3`).
+
   ## Failure
 
   A failed write of a series member is never queued for offline replay. The
@@ -144,7 +170,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
 
   def update_event(user_id, event, stored, family, scope, changes, opts)
       when (family == :caldav and scope in [:this_only, :following, :all]) or
-             (family == :provider_ids and scope == :all) do
+             (family == :provider_ids and scope in [:following, :all]) do
     with :ok <- ensure_series_edit(stored, scope, changes) do
       EventEdit.write_edit(
         user_id,
@@ -206,7 +232,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
 
     case family do
       :caldav -> address_fields(payload, stored, scope, fields)
-      :provider_ids -> address_master(payload, stored, fields)
+      :provider_ids -> address_master(payload, stored, scope, fields)
     end
   end
 
@@ -239,32 +265,47 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
     do: {:error, :unaddressable_occurrence}
 
   # A row naming no master is the master itself, or an event the sync could
-  # not place in its series; neither says which series to edit.
-  defp address_master(payload, %{recurring_event_id: master_id} = stored, fields)
+  # not place in its series; neither says which series to edit. A split also
+  # needs the occurrence's original start, where the series is cut.
+  defp address_master(payload, %{recurring_event_id: master_id} = stored, scope, fields)
        when is_binary(master_id) and master_id != "" do
     occurrence = %{
-      scope: :all,
+      scope: scope,
       master_id: master_id,
       start: if(stored.all_day, do: stored.start_date, else: stored.start_at),
       end: if(stored.all_day, do: stored.end_date, else: stored.end_at),
       changes: Map.take(payload, [:start_time, :end_time | fields])
     }
 
-    {:ok, Map.put(payload, :occurrence, occurrence)}
+    with {:ok, occurrence} <- put_slot(occurrence, scope, stored),
+         do: {:ok, Map.put(payload, :occurrence, occurrence)}
   end
 
-  defp address_master(_payload, _stored, _fields), do: {:error, :unaddressable_occurrence}
+  defp address_master(_payload, _stored, _scope, _fields),
+    do: {:error, :unaddressable_occurrence}
+
+  defp put_slot(occurrence, :all, _stored), do: {:ok, occurrence}
+
+  defp put_slot(occurrence, :following, stored) do
+    with {:ok, slot} <- Occurrence.original_start(stored),
+         do: {:ok, Map.put(occurrence, :slot, slot)}
+  end
 
   # Runs once the provider accepted the write, with what it answered.
   defp after_write(:this_only, _user_id, _stored, _answer), do: :ok
   defp after_write(:all, user_id, stored, _answer), do: resync_series(user_id, stored)
 
   defp after_write(:following, user_id, stored, answer) do
-    with {:ok, %{tail: %{uid: uid, href: href}}} <- answer,
-         do: EventVideoRooms.series_split(stored, uid, href)
+    with {:ok, %{tail: %{uid: uid} = tail}} when is_binary(uid) <- answer,
+         do: EventVideoRooms.series_split(stored, uid, tail_address(tail))
 
     resync_series(user_id, stored)
   end
+
+  # How the provider addresses the series a split made: a CalDAV resource by
+  # its href, a Google or Outlook series by its id.
+  defp tail_address(%{href: href}), do: href
+  defp tail_address(%{id: id}), do: id
 
   # Every cached row of the series now names a slot the series may have left,
   # or, once split, an occurrence another resource now holds, so the rows are
