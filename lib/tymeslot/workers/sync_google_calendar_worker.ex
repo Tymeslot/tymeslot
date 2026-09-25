@@ -32,6 +32,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
@@ -47,9 +48,11 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
-        integration
-        |> sync_integration()
-        |> tap(&SyncHealth.record_outcome(integration, &1))
+        InvalidEventReport.collect(fn ->
+          integration
+          |> sync_integration()
+          |> tap(&SyncHealth.record_outcome(integration, &1))
+        end)
 
       {:error, :not_found} ->
         Logger.warning("Calendar integration not found, discarding sync job",

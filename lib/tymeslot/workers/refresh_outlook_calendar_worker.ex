@@ -35,6 +35,7 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.Outlook.DeltaSync, as: OutlookDeltaSync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
@@ -62,7 +63,7 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
 
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, %{provider: "outlook"} = integration} ->
-        refresh(integration, job)
+        InvalidEventReport.collect(fn -> refresh(integration, job) end)
 
       {:ok, %{provider: provider}} ->
         Logger.warning(

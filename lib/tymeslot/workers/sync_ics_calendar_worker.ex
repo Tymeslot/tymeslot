@@ -37,6 +37,7 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Ics.Feed
   alias Tymeslot.Integrations.Calendar.Ics.Provider
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.ProviderConfig
@@ -68,9 +69,11 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
-        integration
-        |> sync()
-        |> tap(&SyncHealth.record_outcome(integration, &1))
+        InvalidEventReport.collect(fn ->
+          integration
+          |> sync()
+          |> tap(&SyncHealth.record_outcome(integration, &1))
+        end)
 
       {:error, :not_found} ->
         Logger.warning("Calendar subscription not found, discarding sync job",

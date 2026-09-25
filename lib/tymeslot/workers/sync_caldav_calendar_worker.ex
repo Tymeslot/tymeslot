@@ -39,6 +39,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   alias Tymeslot.Integrations.Calendar.CalDAV.Errors, as: CalDAVErrors
   alias Tymeslot.Integrations.Calendar.CalDAV.Sync
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Workers.SyncHealth
 
@@ -51,10 +52,12 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
-        integration
-        |> Sync.run(force_full_fetch?)
-        |> handle_sync_result(integration)
-        |> tap(&SyncHealth.record_outcome(integration, &1))
+        InvalidEventReport.collect(fn ->
+          integration
+          |> Sync.run(force_full_fetch?)
+          |> handle_sync_result(integration)
+          |> tap(&SyncHealth.record_outcome(integration, &1))
+        end)
 
       {:error, :not_found} ->
         Logger.warning("CalDAV integration not found, discarding sync job",

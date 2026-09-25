@@ -33,6 +33,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     reconciliation_discrepancies: %{category: "Payment", severity: :warning},
     subscription_not_in_database: %{category: "Payment", severity: :warning},
     payment_event_enqueue_failed: %{category: "Payment", severity: :error},
+    payment_event_orphaned: %{category: "Payment", severity: :error},
     dunning_stalled: %{category: "Payment", severity: :error},
     analytics_tracking_anomaly: %{category: "Analytics", severity: :warning},
     recipient_email_rejected: %{category: "Email", severity: :warning}
@@ -104,17 +105,32 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     "analytics_tracking_anomaly:#{Map.get(metadata, :kind, "unknown")}"
   end
 
-  # The message embeds the offending event's id, so a feed carrying many events
-  # that are all malformed the same way would raise one alert per event. Dedup
-  # on the integration and reason instead: the operator needs to know that one
-  # integration is producing unusable events, not which ones. Matched on the
-  # shape the provider normalisers send, so other callers of this type keep the
-  # default message-based key.
+  # A sync run's batch (`Calendar.InvalidEventReport`) embeds a count and
+  # sample event ids that change from run to run, so dedup on the provider,
+  # integration and the run's most common reason instead: the operator needs
+  # to know that one integration keeps producing unusable events, and again
+  # when it starts failing in a new way, not on every run. Matched on the
+  # batch's shape, so other callers of this type (the calendar audit task)
+  # keep the default message-based key.
   def dedup_key(:invalid_calendar_event, %{calendar_integration_id: integration_id} = metadata) do
     provider = Map.get(metadata, :provider, "unknown")
-    reason = Map.get(metadata, :reason, "unknown")
 
-    "invalid_calendar_event:#{provider}:#{integration_id}:#{reason}"
+    "invalid_calendar_event:#{provider}:#{integration_id}:#{reason_text(metadata)}"
+  end
+
+  # One orphaned event is its own incident: another event whose referent never
+  # appeared is a second one the operator has to reconcile by hand, so key on
+  # the event rather than the message. Stripe's event id is the identity where
+  # the event carries one; otherwise the object it refers to, and failing that
+  # the job, which is unique to the event.
+  def dedup_key(:payment_event_orphaned, metadata) do
+    event_type = Map.get(metadata, :event_type, "unknown")
+
+    identity =
+      Map.get(metadata, :event_id) || Map.get(metadata, :referent_id) ||
+        "job #{Map.get(metadata, :job_id, "unknown")}"
+
+    "payment_event_orphaned:#{event_type}:#{identity}"
   end
 
   # Call sites identify the affected recipient through whichever id they have
@@ -193,6 +209,12 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   reaches Logger and the persisted Oban job args, so it reads masked keys
   (`owner_email_masked`) and relies on the scrubber's sweep of free-form
   strings rather than masking anything itself.
+
+  `dedup_key/2`'s message-based fallbacks (the default clause and
+  `:recipient_email_rejected` without an id) call this on raw, unscrubbed
+  metadata. That is safe only because the dedup key is SHA-256 hashed before
+  it is stored (`AdminAlertScheduler`); a key built that way must never be
+  logged raw.
   """
   @spec format_message(atom(), map()) :: String.t()
   def format_message(:unhandled_webhook, metadata) do
@@ -299,11 +321,31 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
       "auto-cancel guard, so it is never cancelled and still grants Pro; manual review required"
   end
 
-  def format_message(:invalid_calendar_event, metadata) do
+  # Discarded after the snooze cap because the subscription, customer or
+  # dispute it refers to never appeared. The ids are what the operator needs
+  # to find the event in Stripe and reconcile it by hand.
+  def format_message(:payment_event_orphaned, metadata) do
+    event_type = Map.get(metadata, :event_type, "unknown")
+    event_id = Map.get(metadata, :event_id) || "unknown"
+    referent = Map.get(metadata, :referent_id) || "unknown"
+    summary = Map.get(metadata, :summary, "its referent never appeared")
+
+    "Payment event #{event_type} (ID: #{event_id}, referent: #{referent}) discarded: " <>
+      "#{summary} (#{reason_text(metadata)})"
+  end
+
+  # One alert per integration and sync run (`Calendar.InvalidEventReport`).
+  def format_message(:invalid_calendar_event, %{count: count} = metadata) do
     provider = Map.get(metadata, :provider, "unknown")
-    reason = Map.get(metadata, :reason, "unknown")
-    event_id = Map.get(metadata, :event_id) || Map.get(metadata, :event_uid, "unknown")
-    "Invalid #{provider} calendar event (event_id: #{event_id}): #{reason}"
+    integration_id = Map.get(metadata, :calendar_integration_id, "unknown")
+    samples = Map.get(metadata, :sample_events, "unknown")
+
+    "#{count} invalid #{provider} calendar event(s) skipped for integration #{integration_id} " <>
+      "(most common reason: #{reason_text(metadata)}). First skipped: #{samples}"
+  end
+
+  def format_message(:invalid_calendar_event, metadata) do
+    Map.get(metadata, :summary, "Invalid calendar event: #{reason_text(metadata)}")
   end
 
   def format_message(:analytics_tracking_anomaly, metadata) do

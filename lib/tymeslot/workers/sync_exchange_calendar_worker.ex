@@ -176,6 +176,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Exchange.IntervalNormaliser
   alias Tymeslot.Integrations.Calendar.Exchange.ItemCache
   alias Tymeslot.Integrations.Calendar.Exchange.Provider
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
@@ -196,10 +197,12 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
 
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
-        integration
-        |> sync()
-        |> handle_result(integration)
-        |> tap(&SyncHealth.record_outcome(integration, &1))
+        InvalidEventReport.collect(fn ->
+          integration
+          |> sync()
+          |> handle_result(integration)
+          |> tap(&SyncHealth.record_outcome(integration, &1))
+        end)
 
       {:error, :not_found} ->
         Logger.warning("Exchange integration not found, discarding sync job",

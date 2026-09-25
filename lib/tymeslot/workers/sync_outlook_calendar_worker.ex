@@ -24,6 +24,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
@@ -59,7 +60,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
 
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
-        sync_event(integration, graph_resource_id)
+        InvalidEventReport.collect(fn -> sync_event(integration, graph_resource_id) end)
 
       {:error, :not_found} ->
         Logger.warning("Calendar integration not found, discarding sync job",

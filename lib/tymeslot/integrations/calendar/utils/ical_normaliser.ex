@@ -16,10 +16,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
 
   require Logger
 
-  alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.EventColour
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
   alias Tymeslot.Utils.MapKeys
 
@@ -32,8 +32,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   @doc """
   Expands and normalises `raw_events` into `CalendarEvent` structs.
 
-  Events that fail validation are skipped, logged, and reported through
-  `AdminAlerts`, so one malformed entry never costs a whole sync.
+  Events that fail validation are skipped, logged, and recorded with
+  `InvalidEventReport`, so one malformed entry never costs a whole sync and the
+  sync run raises one operator alert for all of them.
   """
   @spec normalise_events([map()], map(), atom()) :: {:ok, [CalendarEvent.t()]}
   def normalise_events(raw_events, context, provider) do
@@ -68,12 +69,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
       calendar_integration_id: context.calendar_integration_id
     )
 
-    AdminAlerts.send_alert(:invalid_calendar_event, %{
-      provider: provider,
-      event_uid: raw[:uid],
-      reason: reason,
-      calendar_integration_id: context.calendar_integration_id
-    })
+    InvalidEventReport.record(provider, context, raw[:uid], reason)
   end
 
   # ---------------------------------------------------------------------------

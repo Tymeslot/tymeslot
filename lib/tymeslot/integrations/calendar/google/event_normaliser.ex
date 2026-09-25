@@ -8,10 +8,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
 
   require Logger
 
-  alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.EventColour
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Timezones
 
   @spec normalise_events(list(map()), map()) :: {:ok, list(CalendarEvent.t())}
@@ -30,12 +30,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventNormaliser do
               calendar_integration_id: context.calendar_integration_id
             )
 
-            AdminAlerts.send_alert(:invalid_calendar_event, %{
-              provider: :google,
-              event_id: raw["id"],
-              reason: reason,
-              calendar_integration_id: context.calendar_integration_id
-            })
+            InvalidEventReport.record(:google, context, raw["id"], reason)
 
             acc
         end
