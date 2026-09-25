@@ -8,13 +8,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal do
   write honours a scope.
 
   The copy below promises per-occurrence behaviour, so the prompt must never
-  be shown for a provider that cannot deliver it. Two things keep that true:
-  it is gated on `recurring_event_id`, which only the Google and Outlook
-  normalisers set, and an edit the CalDAV writer could only apply to a
-  whole series is refused before it reaches here, by
-  `Tymeslot.CalendarGrid.EventEdit.ensure_editable/1`. Setting
-  `recurring_event_id` on a CalDAV occurrence would make this text a lie; the
-  provider write has to learn `RECURRENCE-ID` first.
+  be shown for a provider that cannot deliver it. It is gated on
+  `recurring_event_id`, which only the Google and Outlook normalisers set. A
+  CalDAV occurrence skips it and is written with the default scope, this
+  event only, which the CalDAV writer delivers as a `RECURRENCE-ID` override
+  (see `Tymeslot.CalendarGrid.SeriesEdit`).
   """
 
   use TymeslotWeb, :html

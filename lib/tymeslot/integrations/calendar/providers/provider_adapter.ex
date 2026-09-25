@@ -219,9 +219,13 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
 
   @doc """
   Updates an existing event in the calendar.
+
+  An edit of one occurrence of a CalDAV series (an `:occurrence` in
+  `event_data`) answers `{:ok, %{document: document}}`, the document the
+  series now lives in, which the caller needs to refresh its cache.
   """
   @spec update_event(adapter_client(), String.t(), map()) ::
-          :ok | {:error, atom(), term()} | {:error, term()}
+          :ok | {:ok, %{document: String.t()}} | {:error, atom(), term()} | {:error, term()}
   def update_event(adapter_client, uid, event_data) do
     Metrics.time_operation(
       :calendar_update_event,
@@ -236,6 +240,11 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
           :ok ->
             Logger.info("Successfully updated event", uid: uid)
             :ok
+
+          {:ok, %{document: _document} = rewritten} = updated_occurrence
+          when map_size(rewritten) == 1 ->
+            Logger.info("Successfully updated event occurrence", uid: uid)
+            updated_occurrence
 
           {:ok, _updated} ->
             # Be tolerant of providers that return {:ok, event}

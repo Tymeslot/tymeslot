@@ -48,10 +48,10 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
   setup do
     user = insert(:user)
 
-    # Google, so that the repeating fixture below stays editable: a CalDAV
-    # series is written through its master VEVENT and every edit of one
-    # occurrence is refused (`CalendarGrid.ensure_editable/1`). The one test
-    # that needs CalDAV's offline queue brings its own integration.
+    # Google, so that the repeating fixture below takes the ordinary write: an
+    # occurrence of a CalDAV series is written as an override of its own
+    # (`Tymeslot.CalendarGrid.SeriesEdit`). The one test that needs CalDAV's
+    # offline queue brings its own integration.
     integration = insert(:calendar_integration, user: user, provider: "google")
 
     video_integration = insert(:video_integration, user: user, provider: "mirotalk")

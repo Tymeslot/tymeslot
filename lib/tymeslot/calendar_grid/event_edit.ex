@@ -45,21 +45,15 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   sync never stores that master — it expands it into one cached row per
   occurrence, all sharing the series' href — and
   `ICalBuilder.Patcher.patch/2` applies the payload to the master and skips
-  every `RECURRENCE-ID` override. So the write for any one occurrence lands
-  on the whole series.
+  every `RECURRENCE-ID` override. The ordinary write would therefore land on
+  the whole series, and since the payload always carries the occurrence's
+  own `DTSTART`, even a rename would move the series onto that occurrence.
 
-  Nor is that limited to a reschedule. The payload is always the complete
-  event, so it always carries the occurrence's own `DTSTART` and `DTEND`:
-  renaming "this Tuesday" rewrites the master's start to that Tuesday and
-  drops every earlier occurrence, exactly as dragging it would. There is no
-  edit of a CalDAV occurrence that stays inside the occurrence, so
-  `SeriesEdit` and `ensure_editable/1` refuse all of them, the way
-  `Tymeslot.CalendarGrid.EventMove.ensure_movable/1` refuses the move.
-
-  They come back when the writer can author a `RECURRENCE-ID` override into
-  the series' document. Google and Outlook address an occurrence by its own
-  id and are unaffected, which is why the refusal is scoped to the provider
-  rather than to recurrence alone.
+  So an edit of one CalDAV occurrence does not take that write. `SeriesEdit`
+  hands `write_edit/7` an address that turns the payload into an override of
+  the occurrence (see `Calendar.Events.update_event/3`), and the provider
+  answers with the document the series now lives in, which every cached row
+  of the resource is given (see `ProviderCalendarResourceQueries`).
 
   ## Failure
 
@@ -79,6 +73,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarResourceQueries
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
 
@@ -124,9 +119,8 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   Returns `{:ok, updated_event}`, or `{:error, %{reason: reason, retry:
   :queued | :not_queued}}` where `:queued` means the edit is saved locally
   and will be replayed on the next sync. An edit of a series member is never
-  queued; a scope its provider cannot write is refused with
-  `:unsupported_scope`, and an edit of a CalDAV series occurrence with
-  `:recurring_event`, before anything is written (see
+  queued, and a scope its provider cannot write is refused with
+  `:unsupported_scope` before anything is written (see
   `Tymeslot.CalendarGrid.SeriesEdit`).
   """
   @spec update_event(pos_integer(), map(), changes(), keyword()) ::
@@ -161,6 +155,12 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     |> SeriesEdit.edit_scopes()
   end
 
+  @typedoc """
+  Turns the payload of a whole event into the write the provider is given,
+  or refuses it before anything is written.
+  """
+  @type address :: (map() -> {:ok, map()} | {:error, term()})
+
   @doc """
   The write every edit ends in, once it is known which event it lands on:
   applies `changes` to `event`, writes the whole updated event to the
@@ -168,21 +168,32 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   `retry` says what a failed write does: `:queue_recoverable` queues one a
   retry can recover (see the moduledoc), `:never_queue` reports every failure
-  as `:not_queued`. Called by `update_event/4` and by
-  `Tymeslot.CalendarGrid.SeriesEdit`; everything else goes through
-  `update_event/4`.
-  """
-  @spec write_edit(pos_integer(), map(), map() | nil, changes(), keyword(), retry_policy()) ::
-          {:ok, map()} | {:error, failure()}
-  def write_edit(user_id, event, stored, changes, opts, retry) do
-    with {:ok, updated} <- apply_changes(event, changes, opts),
-         {:ok, payload} <- ProviderPayload.from_event(updated) do
-      payload =
-        payload
-        |> maybe_put_conference(Keyword.get(opts, :conference_data))
-        |> put_stored_document(stored)
-        |> scope_attendees(event, changes)
+  as `:not_queued`. `address` gets the last word on the payload; by default
+  it is written as built. A provider that rewrote a resource the event shares
+  with others answers with its new document, and every cached row of the
+  resource is given it.
 
+  Called by `update_event/4` and by `Tymeslot.CalendarGrid.SeriesEdit`;
+  everything else goes through `update_event/4`.
+  """
+  @spec write_edit(
+          pos_integer(),
+          map(),
+          map() | nil,
+          changes(),
+          keyword(),
+          retry_policy(),
+          address()
+        ) :: {:ok, map()} | {:error, failure()}
+  def write_edit(user_id, event, stored, changes, opts, retry, address \\ &{:ok, &1}) do
+    with {:ok, updated} <- apply_changes(event, changes, opts),
+         {:ok, payload} <- ProviderPayload.from_event(updated),
+         {:ok, payload} <-
+           payload
+           |> maybe_put_conference(Keyword.get(opts, :conference_data))
+           |> put_stored_document(stored)
+           |> scope_attendees(event, changes)
+           |> address.() do
       write_to_provider(user_id, event, updated, payload, retry)
     else
       {:error, reason} -> {:error, %{reason: reason, retry: :not_queued}}
@@ -202,27 +213,16 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   end
 
   @doc """
-  Whether `event` may be edited from the grid: a CalDAV-family event that
-  belongs to a series may not, anything else may.
+  Whether `event` may be edited from the grid. Every event may: an edit of a
+  member of a series writes one occurrence by default, which every provider
+  family can address (see `Tymeslot.CalendarGrid.SeriesEdit`).
 
-  Every write for such an event is patched onto the series' master VEVENT,
-  and the payload always carries the occurrence's own timing, so no edit of
-  one occurrence can stay inside it (see the moduledoc). The test is the
-  series family deletes use too,
-  `Tymeslot.CalendarGrid.Occurrence.series_family/1`, whose provider half is
-  what keeps Google and Outlook, which address an occurrence by its own id,
-  editable.
-
-  Takes a cached row or a normalised event: the provider is read in either
-  its string or atom form, and the series markers in either key shape.
+  Kept as the gate the grid's edit handlers go through, so a family that
+  cannot write even one occurrence is refused in one place, before any
+  optimistic update, should one arrive.
   """
   @spec ensure_editable(map()) :: :ok | {:error, :recurring_event}
-  def ensure_editable(event) do
-    case Occurrence.series_family(event) do
-      :caldav -> {:error, :recurring_event}
-      _family -> :ok
-    end
-  end
+  def ensure_editable(_event), do: :ok
 
   defp stored_row(event) do
     case ProviderCalendarEventQueries.get_by_uid(event.calendar_integration_id, event.uid) do
@@ -270,16 +270,37 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   defp write_to_provider(user_id, event, updated, payload, retry) do
     case CalendarEvents.update_event(event.uid, payload, {event.calendar_integration_id, user_id}) do
       :ok ->
-        record_local_edit(user_id, updated)
-        # A no-op unless the event holds a recorded video room whose times the
-        # change moved.
-        EventVideoRooms.rescheduled(updated)
-        {:ok, updated}
+        written(user_id, updated)
+
+      {:ok, %{document: document}} ->
+        result = written(user_id, updated)
+        share_document(event, payload, document)
+        result
 
       {:error, reason} ->
         {:error, %{reason: reason, retry: queue_retry(retry, user_id, updated, payload, reason)}}
     end
   end
+
+  defp written(user_id, updated) do
+    record_local_edit(user_id, updated)
+    # A no-op unless the event holds a recorded video room whose times the
+    # change moved.
+    EventVideoRooms.rescheduled(updated)
+    {:ok, updated}
+  end
+
+  # The provider rewrote the resource at the payload's href, which other
+  # cached rows share (the rest of a CalDAV series). Each of them is given the
+  # new document with no ETag, so the next write to any of them starts from
+  # what the server now holds.
+  defp share_document(event, %{occurrence: %{href: href}}, document),
+    do:
+      ProviderCalendarResourceQueries.replace_document(
+        event.calendar_integration_id,
+        href,
+        document
+      )
 
   defp ensure_known_fields!(changes) do
     case Map.keys(changes) -- @editable_fields do

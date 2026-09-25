@@ -17,8 +17,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     sent; when only `If-Match: *` was sent the write is simply replayed
     unconditionally, since that condition guarded nothing. The write itself
     is `ConditionalWrite`'s.
-  - **Occurrence deletes**: one occurrence of a series is deleted by
-    rewriting the series' resource, see `delete_occurrence/4`.
+  - **Occurrence writes**: one occurrence of a series is deleted or edited
+    by rewriting the series' resource, see `delete_occurrence/4` and
+    `update_occurrence/4`.
   - **iCal construction**: builds valid RFC 5545 event payloads from domain maps.
   - **Per-operation retry policies**: reads retry on transient failures.
   - **Circuit breaker protection** for all operations.
@@ -387,7 +388,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
           required(:key) => String.t(),
           required(:timezone) => String.t() | nil,
           required(:document) => String.t() | nil,
-          required(:etag) => String.t() | nil
+          required(:etag) => String.t() | nil,
+          optional(:changes) => map()
         }
 
   @doc """
@@ -400,23 +402,72 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   server holds. A resource left with nothing in it is deleted.
 
   Returns `{:ok, %{document: String.t() | nil}}` with the document now on the
-  server (`nil` once the resource was deleted), or `{:error, reason}`.
+  server (`nil` once the resource was deleted, or when it was already gone),
+  or `{:error, reason}`.
   """
   @spec delete_occurrence(Base.client(), String.t() | nil, occurrence(), keyword()) ::
           {:ok, %{document: String.t() | nil}} | {:error, term()}
-  def delete_occurrence(client, calendar_path, %{href: href} = occurrence, opts) do
-    with_events_breaker(client, opts, fn ->
-      with {:ok, url} <- event_url(client, calendar_path, nil, href) do
-        exclude_and_write(client, url, occurrence, opts)
-      end
-    end)
+  def delete_occurrence(client, calendar_path, occurrence, opts) do
+    exclude = &Series.exclude_occurrence(&1, occurrence.key, occurrence.timezone)
+
+    case rewrite_series(client, calendar_path, occurrence, exclude, opts) do
+      # The whole series is already gone, and the occurrence with it.
+      {:ok, :gone} -> {:ok, %{document: nil}}
+      result -> result
+    end
   end
 
-  defp exclude_and_write(client, url, %{document: document, etag: etag} = occurrence, opts)
+  @doc """
+  Edits one occurrence of the series stored in the resource at
+  `occurrence.href`: `occurrence.changes`, in the provider payload vocabulary,
+  are written into the occurrence's override `VEVENT` (see
+  `ICalBuilder.Series.put_override/5`), which is made from the master when
+  the occurrence has none yet. The write is the one `delete_occurrence/4`
+  makes: the cached document under its ETag, one re-read on a 412.
+
+  Returns `{:ok, %{document: String.t()}}` with the document now on the
+  server, `{:error, :not_found}` when the series is gone, or
+  `{:error, reason}`, including the refusals of `Series.put_override/5`, which
+  are answered before anything is written.
+  """
+  @spec update_occurrence(Base.client(), String.t() | nil, occurrence(), keyword()) ::
+          {:ok, %{document: String.t()}} | {:error, term()}
+  def update_occurrence(client, calendar_path, %{changes: changes} = occurrence, opts) do
+    mode = Scheduling.attendee_mode(client)
+    override = &Series.put_override(&1, occurrence.key, changes, occurrence.timezone, mode)
+
+    case rewrite_series(client, calendar_path, occurrence, override, opts) do
+      {:ok, :gone} -> {:error, :not_found}
+      result -> result
+    end
+  end
+
+  # One rewrite of a series' resource: `fun` turns the document into the one
+  # to PUT back (`{:ok, document}`), into nothing (`:empty`, which deletes the
+  # resource), or refuses (`{:error, reason}`, and nothing is written).
+  #
+  # A refusal and a missing resource are answers about this series, not about
+  # the host, so they travel back through the breaker as successes and only
+  # become errors out here.
+  defp rewrite_series(client, calendar_path, %{href: href} = occurrence, fun, opts) do
+    result =
+      with_events_breaker(client, opts, fn ->
+        with {:ok, url} <- event_url(client, calendar_path, nil, href) do
+          rewrite_and_write(client, url, occurrence, fun, opts)
+        end
+      end)
+
+    case result do
+      {:ok, {:refused, reason}} -> {:error, reason}
+      other -> other
+    end
+  end
+
+  defp rewrite_and_write(client, url, %{document: document, etag: etag}, fun, opts)
        when is_binary(document) and document != "" and is_binary(etag) and etag != "" do
-    case write_exclusion(client, url, document, etag, occurrence, opts) do
+    case write_rewrite(client, url, document, etag, fun, opts) do
       {:error, reason} when reason in [:precondition_failed, :conditional_not_supported] ->
-        refresh_and_exclude(client, url, occurrence, opts)
+        refresh_and_rewrite(client, url, fun, opts)
 
       result ->
         result
@@ -425,30 +476,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
   # Without a cached ETag the cached document carries no precondition, so the
   # server's copy, which comes with one, is read instead.
-  defp exclude_and_write(client, url, occurrence, opts),
-    do: refresh_and_exclude(client, url, occurrence, opts)
+  defp rewrite_and_write(client, url, _occurrence, fun, opts),
+    do: refresh_and_rewrite(client, url, fun, opts)
 
   # One re-read, one more PUT: a second 412 means the resource is still
   # changing under us, and is reported rather than chased.
-  defp refresh_and_exclude(client, url, occurrence, opts) do
+  defp refresh_and_rewrite(client, url, fun, opts) do
     case ConditionalWrite.fetch_document(client, url, opts) do
-      {:ok, document, etag} ->
-        write_exclusion(client, url, document, etag, occurrence, opts)
-
-      # The whole series is already gone, and the occurrence with it.
-      {:error, reason} when reason in [:not_found, :gone] ->
-        {:ok, %{document: nil}}
-
-      {:error, reason} ->
-        {:error, reason}
+      {:ok, document, etag} -> write_rewrite(client, url, document, etag, fun, opts)
+      {:error, reason} when reason in [:not_found, :gone] -> {:ok, :gone}
+      {:error, reason} -> {:error, reason}
     end
   end
 
   # Always under the `:fail` policy: `:keep_local` would force a document
   # built on a stale copy over a concurrent change, and `:keep_server` would
-  # report an occurrence as deleted that is still on the calendar.
-  defp write_exclusion(client, url, document, etag, occurrence, opts) do
-    case Series.exclude_occurrence(document, occurrence.key, occurrence.timezone) do
+  # report a change as made that is not on the calendar.
+  defp write_rewrite(client, url, document, etag, fun, opts) do
+    case fun.(document) do
       {:ok, new_document} ->
         with :ok <- ConditionalWrite.put(client, url, new_document, etag, :fail, opts) do
           {:ok, %{document: new_document}}
@@ -456,6 +501,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
       :empty ->
         delete_resource(client, url, opts)
+
+      {:error, reason} ->
+        {:ok, {:refused, reason}}
     end
   end
 

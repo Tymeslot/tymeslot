@@ -176,13 +176,18 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   @doc """
   Update an event with optional target integration, meeting context, or user_id.
+
+  On a CalDAV-family calendar, an `:occurrence` in `event_data` (see
+  `Tymeslot.Integrations.Calendar.CalDAV.Events.occurrence/0`, with its
+  `:changes`) edits only that occurrence of a series; success is then
+  `{:ok, %{document: document}}` with the document the series now lives in.
   """
   @spec update_event(
           String.t(),
           map(),
           pos_integer() | MeetingSchema.t() | {pos_integer(), pos_integer()} | nil
         ) ::
-          :ok | {:error, term()}
+          :ok | {:ok, %{document: String.t()}} | {:error, term()}
   def update_event(uid, event_data, context) do
     behaviour_module().update_event(uid, event_data, context)
   end

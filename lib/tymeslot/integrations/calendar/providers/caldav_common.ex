@@ -338,9 +338,20 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   the `COLOR` property on the event's cached `raw_ical` rather than rebuilding
   the VEVENT from a reduced payload, which would silently drop
   RRULE/ATTENDEE/VALARM data.
+
+  When `event_data` carries an `:occurrence` (see `Events.occurrence/0`, with
+  its `:changes`), only that one occurrence of the series is edited, by
+  writing its override into the resource at its href
+  (`Events.update_occurrence/4`), and the answer is
+  `{:ok, %{document: document}}` with the document now on the server. The
+  rest of the payload is not read.
   """
-  @spec update_event(caldav_client(), String.t(), map(), keyword()) :: :ok | {:error, term()}
+  @spec update_event(caldav_client(), String.t(), map(), keyword()) ::
+          :ok | {:ok, %{document: String.t()}} | {:error, term()}
   def update_event(client, uid, event_data, opts \\ [])
+
+  def update_event(client, _uid, %{occurrence: %{} = occurrence}, opts),
+    do: Events.update_occurrence(client, primary_calendar_path(client), occurrence, opts)
 
   def update_event(client, uid, %{colour_only: true, colour: colour} = event_data, opts) do
     case primary_calendar_path(client) do

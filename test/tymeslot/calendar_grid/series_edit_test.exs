@@ -140,7 +140,26 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       assert row.summary == "Weekly sync"
     end
 
-    for scope <- [:this_only, :all] do
+    test "this_only on a CalDAV occurrence is addressed to the occurrence", %{user: user} do
+      caldav =
+        insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
+
+      event = insert_event(caldav, Map.merge(caldav_occurrence(), %{provider: "caldav"}))
+      expect_provider_update({:ok, %{document: "NEW DOCUMENT"}})
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
+                 recurrence_scope: :this_only
+               )
+
+      assert %{href: "/cal/weekly-sync.ics", key: "20260601T090000"} =
+               captured_payload().occurrence
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
+      assert row.summary == "Renamed"
+    end
+
+    for scope <- [:following, :all] do
       test "#{scope} on a CalDAV occurrence is refused before anything is written", %{
         user: user
       } do
@@ -149,7 +168,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
 
         event = insert_event(caldav, Map.merge(caldav_occurrence(), %{provider: "caldav"}))
 
-        assert {:error, %{reason: :recurring_event, retry: :not_queued}} =
+        assert {:error, %{reason: :unsupported_scope, retry: :not_queued}} =
                  CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
                    recurrence_scope: unquote(scope)
                  )
@@ -193,11 +212,11 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       assert CalendarGrid.edit_scopes(insert_event(integration, %{})) == {:ok, :series}
     end
 
-    test "an occurrence of a CalDAV series cannot be edited yet", %{user: user} do
+    test "an occurrence of a CalDAV series takes a scope", %{user: user} do
       caldav = insert(:calendar_integration, user: user, provider: "caldav")
       event = insert_event(caldav, Map.merge(caldav_occurrence(), %{provider: "caldav"}))
 
-      assert CalendarGrid.edit_scopes(event) == {:error, :recurring_event}
+      assert CalendarGrid.edit_scopes(event) == {:ok, :series}
     end
 
     test "an occurrence of an Exchange series takes no scope", %{user: user} do

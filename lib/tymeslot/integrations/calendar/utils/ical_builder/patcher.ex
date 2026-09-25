@@ -90,6 +90,24 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     |> ContentLines.join()
   end
 
+  @doc """
+  Applies the property changes `event_data` describes to one `VEVENT`, given
+  as the unfolded content lines between its `BEGIN:VEVENT` and `END:VEVENT`,
+  and returns its new lines. Unlike `patch/3` it patches the event it is
+  given whether or not that is an occurrence override: it is how
+  `ICalBuilder.Series` writes the fields of one occurrence.
+
+  Every key is serialised exactly as `patch/3` serialises it, timing
+  included, so a caller editing an override leaves `:start_time`,
+  `:end_time`, `:recurrence_rule` and `:recurrence_exceptions` out: those are
+  written here as the master of a series writes them, which an override must
+  not be.
+  """
+  @spec patch_vevent([String.t()], map(), Scheduling.mode()) :: [String.t()]
+  def patch_vevent(body, event_data, mode \\ :contact)
+      when is_list(body) and is_map(event_data),
+      do: apply_patch_set(body, build_patch_set(event_data, mode))
+
   # A patch set is the list of {properties it replaces, replacement lines} the
   # payload asks for, plus the reminders decision, computed once for the whole
   # document.
@@ -146,34 +164,33 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     {body, remaining} = ContentLines.take_until(rest, "END:VEVENT")
 
     ["BEGIN:VEVENT"] ++
-      patch_vevent(body, patch_set) ++
+      patch_master(body, patch_set) ++
       ["END:VEVENT"] ++ patch_components(remaining, patch_set)
   end
 
   defp patch_components([line | rest], patch_set),
     do: [line | patch_components(rest, patch_set)]
 
-  defp patch_vevent(body, patch_set) do
-    {properties, alarms} = split_alarms(body, [], [])
-
-    if override?(properties) do
-      body
-    else
-      entries = patch_set.entries ++ attendee_entries(properties, patch_set)
-      replaced = MapSet.new(Enum.flat_map(entries, fn {names, _lines} -> names end))
-
-      kept = Enum.reject(properties, &MapSet.member?(replaced, ContentLines.property_name(&1)))
-      added = Enum.flat_map(entries, fn {_names, lines} -> content_lines(lines) end)
-
-      kept ++ added ++ patched_alarms(alarms, patch_set.event_data)
-    end
-  end
-
   # An occurrence override carries the timing of its own instance; the payload
   # describes the series' master event, so applying it here would move every
   # exception onto the master's start.
-  defp override?(properties),
-    do: Enum.any?(properties, &(ContentLines.property_name(&1) == "RECURRENCE-ID"))
+  defp patch_master(body, patch_set) do
+    if Enum.any?(body, &(ContentLines.property_name(&1) == "RECURRENCE-ID")),
+      do: body,
+      else: apply_patch_set(body, patch_set)
+  end
+
+  defp apply_patch_set(body, patch_set) do
+    {properties, alarms} = split_alarms(body, [], [])
+
+    entries = patch_set.entries ++ attendee_entries(properties, patch_set)
+    replaced = MapSet.new(Enum.flat_map(entries, fn {names, _lines} -> names end))
+
+    kept = Enum.reject(properties, &MapSet.member?(replaced, ContentLines.property_name(&1)))
+    added = Enum.flat_map(entries, fn {_names, lines} -> content_lines(lines) end)
+
+    kept ++ added ++ patched_alarms(alarms, patch_set.event_data)
+  end
 
   # Both spellings are always replaced in a block of Tymeslot's own, never just
   # the one being written, so a document Tymeslot wrote under the other mode,

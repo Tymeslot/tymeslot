@@ -198,95 +198,168 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
     end
   end
 
-  describe "rescheduling one occurrence of a synced CalDAV series" do
-    # The occurrence the sync expanded out of the series below: it carries the
-    # master's RRULE, and its href is the series' resource, because on CalDAV
-    # there is only ever the one document.
-    @series_ical """
-    BEGIN:VCALENDAR\r
-    VERSION:2.0\r
-    BEGIN:VEVENT\r
-    UID:weekly-standup\r
-    DTSTAMP:20260901T090000Z\r
-    DTSTART:20260908T090000Z\r
-    DTEND:20260908T091500Z\r
-    RRULE:FREQ=WEEKLY;BYDAY=TU\r
-    SUMMARY:Weekly standup\r
-    END:VEVENT\r
-    END:VCALENDAR\r
-    """
+  describe "editing one occurrence of a synced CalDAV series" do
+    # The series as the server holds it: a Berlin master whose 29 September
+    # occurrence was deleted earlier, which is the EXDATE a write of the
+    # master's properties would rewrite in UTC.
+    @series_href "/cal/weekly-standup.ics"
+    @series_url "https://caldav.example.com/cal/weekly-standup.ics"
+    @series_master [
+      "BEGIN:VEVENT",
+      "UID:weekly-standup",
+      "DTSTAMP:20260901T090000Z",
+      "DTSTART;TZID=Europe/Berlin:20260908T090000",
+      "DTEND;TZID=Europe/Berlin:20260908T091500",
+      "RRULE:FREQ=WEEKLY;BYDAY=TU",
+      "EXDATE;TZID=Europe/Berlin:20260929T090000",
+      "SUMMARY:Weekly standup",
+      "END:VEVENT"
+    ]
+    @series_ical Enum.join(
+                   ["BEGIN:VCALENDAR", "VERSION:2.0"] ++ @series_master ++ ["END:VCALENDAR"],
+                   "\r\n"
+                 ) <> "\r\n"
 
     setup %{integration: integration} do
-      occurrence =
+      row = fn key, start_at ->
         insert(:provider_calendar_event,
           calendar_integration: integration,
-          uid: "weekly-standup_20260915T090000",
+          uid: "weekly-standup_#{key}",
           provider: "caldav",
           provider_calendar_id: "/cal/",
-          provider_event_id: "/cal/weekly-standup.ics",
+          provider_event_id: @series_href,
           summary: "Weekly standup",
-          start_at: ~U[2026-09-15 09:00:00.000000Z],
-          end_at: ~U[2026-09-15 09:15:00.000000Z],
+          start_at: start_at,
+          end_at: DateTime.add(start_at, 15, :minute),
           all_day: false,
+          timezone: "Europe/Berlin",
           recurrence_rule: "FREQ=WEEKLY;BYDAY=TU",
+          provider_metadata: %{"uid" => "weekly-standup"},
           etag: "\"etag-1\"",
           raw_ical: @series_ical,
           sync_state: "synced"
         )
+      end
 
-      %{occurrence: occurrence}
+      %{
+        occurrence: row.("20260915T090000", ~U[2026-09-15 07:00:00.000000Z]),
+        sibling: row.("20260922T090000", ~U[2026-09-22 07:00:00.000000Z])
+      }
     end
 
-    # No `expect`: under `verify_on_exit!` a PUT that reached the server would
-    # fail the test as an unexpected call. That is the assertion — the patcher
-    # would have rewritten the master's DTSTART and moved every Tuesday.
-    test "is refused before anything is written", %{user: user, occurrence: occurrence} do
-      assert {:error, %{reason: :recurring_event, retry: :not_queued}} =
+    defp expect_series_put do
+      test_pid = self()
+
+      expect(Tymeslot.HTTPClientMock, :put, fn url, body, headers, _opts ->
+        send(test_pid, {:put, url, body, headers})
+        {:ok, %Req.Response{status: 204, body: "", headers: %{}}}
+      end)
+    end
+
+    defp vevent_blocks(body) do
+      body
+      |> LineFolder.unfold_lines()
+      |> Enum.chunk_while(
+        nil,
+        fn
+          "BEGIN:VEVENT", nil -> {:cont, ["BEGIN:VEVENT"]}
+          "END:VEVENT", acc when is_list(acc) -> {:cont, Enum.reverse(["END:VEVENT" | acc]), nil}
+          line, acc when is_list(acc) -> {:cont, [line | acc]}
+          _line, nil -> {:cont, nil}
+        end,
+        fn _unterminated -> {:cont, nil} end
+      )
+    end
+
+    test "a reschedule PUTs the series with an override in the series' zone", %{
+      user: user,
+      occurrence: occurrence
+    } do
+      expect_series_put()
+
+      # 11:00 in Berlin (UTC+2) on 15 September.
+      assert {:ok, updated} =
                CalendarGrid.update_event(user.id, occurrence, %{
-                 start_at: ~U[2026-09-15 11:00:00.000000Z],
-                 end_at: ~U[2026-09-15 11:15:00.000000Z]
+                 start_at: ~U[2026-09-15 09:00:00.000000Z],
+                 end_at: ~U[2026-09-15 09:15:00.000000Z]
                })
+
+      assert updated.start_at == ~U[2026-09-15 09:00:00.000000Z]
+      assert_received {:put, @series_url, body, headers}
+      assert {"If-Match", "\"etag-1\""} in headers
+
+      [master, override] = vevent_blocks(body)
+      # The master goes back as the server wrote it, its EXDATE included.
+      assert master == @series_master
+
+      assert "RECURRENCE-ID;TZID=Europe/Berlin:20260915T090000" in override
+      assert "DTSTART;TZID=Europe/Berlin:20260915T110000" in override
+      assert "DTEND;TZID=Europe/Berlin:20260915T111500" in override
+      refute Enum.any?(override, &String.starts_with?(&1, ["RRULE", "EXDATE"]))
     end
 
-    test "leaves the cached occurrence at the time it was synced at", %{
+    test "the occurrence keeps its edit and the series' rows share the new document", %{
+      user: user,
+      integration: integration,
+      occurrence: occurrence,
+      sibling: sibling,
+      event: unrelated
+    } do
+      expect_series_put()
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup, moved"})
+
+      assert_received {:put, _url, body, _headers}
+      [_master, override] = vevent_blocks(body)
+      assert "SUMMARY:Standup\\, moved" in override
+      # A rename leaves the occurrence where it was.
+      assert "DTSTART;TZID=Europe/Berlin:20260915T090000" in override
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, occurrence.uid)
+      assert row.summary == "Standup, moved"
+
+      for uid <- [occurrence.uid, sibling.uid] do
+        {:ok, cached} = ProviderCalendarEventQueries.get_by_uid(integration.id, uid)
+        # The PUT came back without an ETag, so the next write re-reads first.
+        assert {cached.raw_ical, cached.etag} == {body, nil}
+      end
+
+      {:ok, sibling_row} = ProviderCalendarEventQueries.get_by_uid(integration.id, sibling.uid)
+      assert sibling_row.summary == "Weekly standup"
+
+      {:ok, other} = ProviderCalendarEventQueries.get_by_uid(integration.id, unrelated.uid)
+      assert {other.raw_ical, other.etag} == {@synced_ical, "\"etag-1\""}
+    end
+
+    test "a failed write is not queued and leaves the cache as it was", %{
       user: user,
       integration: integration,
       occurrence: occurrence
     } do
-      assert {:error, _failure} =
-               CalendarGrid.update_event(user.id, occurrence, %{
-                 start_at: ~U[2026-09-15 11:00:00.000000Z],
-                 end_at: ~U[2026-09-15 11:15:00.000000Z]
-               })
+      expect(Tymeslot.HTTPClientMock, :put, fn _url, _body, _headers, _opts ->
+        {:error, %Req.TransportError{reason: :econnrefused}}
+      end)
+
+      assert {:error, %{retry: :not_queued}} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup, moved"})
 
       {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, occurrence.uid)
-      assert row.start_at == ~U[2026-09-15 09:00:00.000000Z]
-      assert row.end_at == ~U[2026-09-15 09:15:00.000000Z]
+
+      assert {row.summary, row.sync_state, row.etag, row.raw_ical} ==
+               {"Weekly standup", "synced", "\"etag-1\"", @series_ical}
     end
 
-    test "is refused for an optimistic copy whose own timing already moved", %{
+    # No `expect`: under `verify_on_exit!` a PUT that reached the server would
+    # fail the test as an unexpected call.
+    test "every following occurrence cannot be written yet", %{
       user: user,
       occurrence: occurrence
     } do
-      # What the grid assigns while the drag is still in flight. The guard reads
-      # the cached row rather than this, so a caller cannot edit its way past it.
-      optimistic = %{occurrence | start_at: ~U[2026-09-15 11:00:00.000000Z]}
-
-      assert {:error, %{reason: :recurring_event}} =
-               CalendarGrid.update_event(user.id, optimistic, %{
-                 start_at: ~U[2026-09-15 11:00:00.000000Z],
-                 end_at: ~U[2026-09-15 11:15:00.000000Z]
-               })
-    end
-
-    # The payload is always the complete event, so a rename carries the
-    # occurrence's own DTSTART too: the patcher would write 15 September onto
-    # a series that starts on the 8th, dropping the first occurrence. No edit
-    # of an occurrence stays inside it, which is why the refusal is not
-    # limited to a reschedule.
-    test "a rename is refused for the same reason", %{user: user, occurrence: occurrence} do
-      assert {:error, %{reason: :recurring_event, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Daily standup"})
+      assert {:error, %{reason: :unsupported_scope, retry: :not_queued}} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Daily standup"},
+                 recurrence_scope: :following
+               )
     end
 
     test "the one-off event on the same calendar is still editable", %{
