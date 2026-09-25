@@ -344,7 +344,8 @@ defmodule Tymeslot.CalendarGrid do
 
   @doc """
   Moves an event to another calendar, creating it on the destination before
-  deleting the original. See `Tymeslot.CalendarGrid.EventMove.move_event/3`.
+  deleting the original; a member of a series moves the whole series. See
+  `Tymeslot.CalendarGrid.EventMove.move_event/3`.
   """
   @spec move_event(pos_integer(), map(), EventMove.destination()) ::
           {:ok, EventMove.moved()} | {:error, term()}
@@ -402,10 +403,11 @@ defmodule Tymeslot.CalendarGrid do
   defdelegate deletion_scopes(event), to: EventDeletion
 
   @doc """
-  Whether an event may be moved to another calendar. See
+  Whether an event may be moved to another calendar: on its own, with its
+  whole series, or not at all. See
   `Tymeslot.CalendarGrid.EventMove.ensure_movable/1`.
   """
-  @spec ensure_movable(map()) :: :ok | {:error, :recurring_event}
+  @spec ensure_movable(map()) :: :ok | {:ok, :series} | {:error, :recurring_event}
   defdelegate ensure_movable(event), to: EventMove
 
   @doc """

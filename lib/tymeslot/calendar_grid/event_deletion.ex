@@ -100,7 +100,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   """
   @spec deletion_scopes(map()) :: {:ok, :single | :series} | {:error, :recurring_event}
   def deletion_scopes(event) do
-    case event |> stored_event() |> Occurrence.series_family() do
+    case event |> Occurrence.cached_row() |> Occurrence.series_family() do
       :single -> {:ok, :single}
       :unsupported -> {:error, :recurring_event}
       _family -> {:ok, :series}
@@ -126,19 +126,12 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   @spec delete_event(pos_integer(), event(), scope()) :: {:ok, deleted()} | {:error, failure()}
   def delete_event(user_id, event, scope \\ :occurrence)
       when scope in [:occurrence, :series] do
-    stored = stored_event(event)
+    stored = Occurrence.cached_row(event)
 
     case Occurrence.series_family(stored) do
       :single -> delete_single_event(user_id, event, stored)
       :unsupported -> {:error, %{reason: :recurring_event, retry: :not_queued}}
       family -> delete_series_member(user_id, event, stored, family, scope)
-    end
-  end
-
-  defp stored_event(%{uid: uid, calendar_integration_id: integration_id} = event) do
-    case ProviderCalendarEventQueries.get_by_uid(integration_id, uid) do
-      {:ok, record} -> record
-      {:error, :not_found} -> event
     end
   end
 
@@ -203,23 +196,18 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   defp series_delete(:provider_ids, :occurrence, _stored),
     do: {:error, :unaddressable_occurrence}
 
-  defp series_delete(:provider_ids, :series, stored) do
-    case master_id(stored) do
-      nil -> {:error, :unaddressable_series}
-      master_id -> {:ok, provider_ids_opts(stored, master_id), {:series, master_id}}
-    end
+  # The whole series goes by the address that names it: the master's id, or
+  # the resource's href.
+  defp series_delete(_family, :series, stored) do
+    with {:ok, {_kind, id} = address} <- Occurrence.series_address(stored),
+         do: {:ok, provider_ids_opts(stored, id), address}
   end
 
-  defp series_delete(:caldav, scope, %{provider_event_id: href} = stored)
-       when is_binary(href) and href != "" do
-    case scope do
-      :series -> {:ok, provider_ids_opts(stored, href), {:resource, href}}
-      :occurrence -> caldav_occurrence_delete(stored, href)
-    end
-  end
+  defp series_delete(:caldav, :occurrence, %{provider_event_id: href} = stored)
+       when is_binary(href) and href != "",
+       do: caldav_occurrence_delete(stored, href)
 
   defp series_delete(:caldav, :occurrence, _stored), do: {:error, :unaddressable_occurrence}
-  defp series_delete(:caldav, :series, _stored), do: {:error, :unaddressable_series}
 
   defp caldav_occurrence_delete(stored, href) do
     with {:ok, key} <- Occurrence.occurrence_key(stored) do
@@ -242,15 +230,6 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
         calendar_id: Map.get(stored, :provider_calendar_id)
       )
 
-  defp master_id(%{recurring_event_id: master_id}) when is_binary(master_id) and master_id != "",
-    do: master_id
-
-  defp master_id(%{recurrence_rule: rule, provider_event_id: own_id})
-       when is_binary(rule) and rule != "" and is_binary(own_id) and own_id != "",
-       do: own_id
-
-  defp master_id(_stored), do: nil
-
   defp provider_delete(uid, context, opts, removal) do
     case CalendarEvents.delete_event(uid, context, opts) do
       :ok -> {:ok, removal}
@@ -268,8 +247,8 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   # `:single` or `:occurrence`, the event's own row;
   # `{:caldav_occurrence, href, document}`, the occurrence's row, with the
   # resource's new document on its siblings (all of them when `nil`, the
-  # resource having been deleted); `{:series, master_id}` and
-  # `{:resource, href}`, every row of the series.
+  # resource having been deleted); a series address (`{:master, master_id}`
+  # or `{:resource, href}`), every row of the series.
   #
   # Every step runs after the event has already gone from the calendar, so none
   # of them may turn a delete that happened into one the organiser is told to
@@ -334,14 +313,27 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
     ProviderCalendarResourceQueries.replace_document(integration_id, href, document)
   end
 
-  # The master's own row, when cached, alongside its occurrences.
-  defp purge_cached_rows(integration_id, _uid, {:series, master_id}) do
+  defp purge_cached_rows(integration_id, _uid, address),
+    do: delete_series_rows(integration_id, address)
+
+  @doc """
+  Deletes every cached row of the series at `address` in the integration
+  `integration_id`: a Google or Outlook master's occurrences and the master's
+  own row when cached, or every row of a CalDAV resource. Shared by every
+  write that leaves the cached series stale: a series-wide delete, edit or
+  move.
+  """
+  @spec delete_series_rows(pos_integer(), Occurrence.series_address()) :: :ok
+  def delete_series_rows(integration_id, {:master, master_id}) do
     ProviderCalendarEventQueries.delete_by_recurring_event_ids(integration_id, [master_id])
     ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, [master_id])
+    :ok
   end
 
-  defp purge_cached_rows(integration_id, _uid, {:resource, href}),
-    do: ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, [href])
+  def delete_series_rows(integration_id, {:resource, href}) do
+    ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, [href])
+    :ok
+  end
 
   defp after_delete(step, context, fun) do
     fun.()

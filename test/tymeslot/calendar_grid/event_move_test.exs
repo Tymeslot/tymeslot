@@ -414,7 +414,9 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
           series: quote(do: %{recurrence_rule: "FREQ=WEEKLY;BYDAY=MO"}),
           occurrence: quote(do: %{recurring_event_id: "series-1"})
         ] do
-      test "a recurring #{kind} is refused before anything is written", %{
+      # A member of a series moves the whole series, never itself as a
+      # one-off. No series writer exists yet, so the series move refuses.
+      test "a recurring #{kind} goes to the series move, never the one-off create", %{
         user: user,
         source: source,
         destination: destination
@@ -427,7 +429,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
 
         refute_delete()
 
-        assert {:error, :recurring_event} = move(user, event, destination)
+        assert {:error, :unsupported_scope} = move(user, event, destination)
         assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(source.id, event.uid)
       end
     end
@@ -436,10 +438,10 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
     # its own, and the sync now caches a row for each. An override's row carries
     # no repeat rule and names no series, yet its href is the whole series'
     # resource: deleting the "original" after the copy would delete every
-    # occurrence. The row is built by the sync's own parse, normalise and cache
-    # steps, so a change to any of them that loses the occurrence's marker turns
-    # this red.
-    test "an occurrence edited on its own is refused before anything is written", %{
+    # occurrence. It therefore goes to the series move like any other member.
+    # The row is built by the sync's own parse, normalise and cache steps, so a
+    # change to any of them that loses the occurrence's marker turns this red.
+    test "an occurrence edited on its own goes to the series move, never the one-off create", %{
       user: user,
       source: source,
       destination: destination
@@ -500,7 +502,7 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
 
       refute_delete()
 
-      assert {:error, :recurring_event} = move(user, event, destination)
+      assert {:error, :unsupported_scope} = move(user, event, destination)
       assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(source.id, event.uid)
     end
 

@@ -1,13 +1,16 @@
 defmodule Tymeslot.CalendarGrid.Occurrence do
   @moduledoc """
   What the grid needs to know about an event's place in a recurring series,
-  shared by every write that can be scoped to part of one (deletes and edits).
+  shared by every write that can take part or all of one (deletes, edits and
+  moves).
 
-  Both questions are asked of the cached row, which is the only copy that
-  reliably says which series and occurrence an event is: callers of the grid
-  writes often pass an address or an optimistic copy built from a form.
+  Every question is asked of the cached row (`cached_row/1`), which is the
+  only copy that reliably says which series and occurrence an event is:
+  callers of the grid writes often pass an address or an optimistic copy
+  built from a form.
   """
 
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Recurrence.Series
   alias Tymeslot.Utils.MapKeys
@@ -28,6 +31,27 @@ defmodule Tymeslot.CalendarGrid.Occurrence do
   """
   @type series_family :: :single | :provider_ids | :caldav | :unsupported
 
+  @typedoc """
+  How a provider addresses a whole series: Google and Outlook by the id of
+  its master event, the CalDAV family by the href of the resource holding it.
+  """
+  @type series_address :: {:master, String.t()} | {:resource, String.t()}
+
+  @doc """
+  The cached row of `event`, found by its integration and uid, or `event`
+  itself when it has none.
+  """
+  @spec cached_row(map()) :: map()
+  def cached_row(%{uid: uid, calendar_integration_id: integration_id} = event)
+      when is_binary(uid) and is_integer(integration_id) do
+    case ProviderCalendarEventQueries.get_by_uid(integration_id, uid) do
+      {:ok, row} -> row
+      {:error, :not_found} -> event
+    end
+  end
+
+  def cached_row(event), do: event
+
   @doc """
   Which family of scoped writes `event` takes. Reads the provider in either
   its string or atom form, and the series markers in either key shape.
@@ -43,6 +67,36 @@ defmodule Tymeslot.CalendarGrid.Occurrence do
       true -> :unsupported
     end
   end
+
+  @doc """
+  How the provider of `stored`, a member of a series, addresses the whole
+  series (see `t:series_address/0`).
+
+  A Google or Outlook occurrence names its master in `recurring_event_id`;
+  the master's own row carries a repeat rule and its id. A CalDAV member,
+  occurrence or master, is part of the resource its href names.
+  `{:error, :unaddressable_series}` when the row names neither, or its
+  provider has no series-wide write.
+  """
+  @spec series_address(map()) :: {:ok, series_address()} | {:error, :unaddressable_series}
+  def series_address(stored), do: series_address(series_family(stored), stored)
+
+  defp series_address(:provider_ids, stored), do: master_address(stored)
+
+  defp series_address(:caldav, %{provider_event_id: href}) when is_binary(href) and href != "",
+    do: {:ok, {:resource, href}}
+
+  defp series_address(_family, _stored), do: {:error, :unaddressable_series}
+
+  defp master_address(%{recurring_event_id: master_id})
+       when is_binary(master_id) and master_id != "",
+       do: {:ok, {:master, master_id}}
+
+  defp master_address(%{recurrence_rule: rule, provider_event_id: own_id})
+       when is_binary(rule) and rule != "" and is_binary(own_id) and own_id != "",
+       do: {:ok, {:master, own_id}}
+
+  defp master_address(_stored), do: {:error, :unaddressable_series}
 
   @doc """
   The key a CalDAV occurrence is cached under, after its series' UID.

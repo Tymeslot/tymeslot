@@ -25,7 +25,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   The record follows the event through the grid: moving the event moves the
   record's times, and the room's lobby, or its event, with them; splitting a
   series for an edit of one occurrence and every following one moves the
-  record to the series the following occurrences now live in;
+  record to the series the following occurrences now live in, and moving a
+  whole series to another calendar moves the record with it;
   replacing the event's video, deleting a one-off event, or deleting a whole
   series deletes the room.
 
@@ -195,7 +196,28 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   occurrences before the split, which all come earlier.
   """
   @spec series_split(map(), String.t(), String.t()) :: :ok
-  def series_split(event, tail_uid, tail_id) do
+  def series_split(event, tail_uid, tail_id),
+    do:
+      series_moved(
+        event,
+        event.calendar_integration_id,
+        tail_uid,
+        tail_id,
+        Map.get(event, :provider_calendar_id)
+      )
+
+  @doc """
+  Follows a whole series moved to another calendar, addressed from any one
+  of its rows on the calendar it left: it now lives on the integration
+  `to_integration_id`, in `provider_calendar_id`, as the series `new_uid`,
+  which the provider addresses as `new_id` (a CalDAV resource's href, a
+  Google or Outlook event's id). Every occurrence carries the series' join
+  link in the description the move copied, so the series' rooms go with
+  them. Unlike `moved/5`, which leaves the rooms of an occurrence with its
+  series, this takes the rooms whatever the row looks like.
+  """
+  @spec series_moved(map(), pos_integer(), String.t(), String.t(), String.t() | nil) :: :ok
+  def series_moved(event, to_integration_id, new_uid, new_id, provider_calendar_id) do
     case rooms_for(event, true) do
       [] ->
         :ok
@@ -203,10 +225,10 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
       rooms ->
         _count =
           EventVideoRoomQueries.move_to_event(Enum.map(rooms, & &1.id), %{
-            calendar_integration_id: event.calendar_integration_id,
-            event_uid: tail_uid,
-            provider_event_id: other_identifier(tail_id, tail_uid),
-            provider_calendar_id: Map.get(event, :provider_calendar_id)
+            calendar_integration_id: to_integration_id,
+            event_uid: new_uid,
+            provider_event_id: other_identifier(new_id, new_uid),
+            provider_calendar_id: provider_calendar_id
           })
 
         :ok

@@ -124,12 +124,12 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   as they were and requests no sync.
   """
 
+  alias Tymeslot.CalendarGrid.EventDeletion
   alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.RecurrenceScope
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
@@ -313,43 +313,45 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   # or, once split, an occurrence another resource now holds, so the rows are
   # dropped and a sync brings the series back as the server
   # holds it; what the write answered is not expanded here, the sync's job.
+  #
+  # The write addressed the series, so its address is known; it is read again
+  # here rather than threaded through, from the same row.
   defp resync_series(user_id, %{calendar_integration_id: integration_id} = stored) do
-    delete_series_rows(integration_id, stored)
-    AvailabilityCache.invalidate_for_user(user_id)
+    with {:ok, address} <- Occurrence.series_address(stored),
+         do: EventDeletion.delete_series_rows(integration_id, address)
 
-    case request_sync(to_string(stored.provider), integration_id) do
+    AvailabilityCache.invalidate_for_user(user_id)
+    request_sync(stored.provider, integration_id)
+  end
+
+  @doc """
+  Requests the sync the dashboard's Refresh asks for of the integration
+  `integration_id`, whose provider is `provider`, after a write that changed
+  a whole series: a full fetch for the CalDAV family, whose delta sync could
+  miss the change. A failure to enqueue is logged rather than returned, since
+  the write it follows has already happened.
+  """
+  @spec request_sync(String.t() | atom(), pos_integer()) :: :ok
+  def request_sync(provider, integration_id) do
+    case enqueue_sync(to_string(provider), integration_id) do
       {:ok, _job} ->
         :ok
 
       {:error, reason} ->
-        Logger.warning("Could not request a sync after editing a whole series",
+        Logger.warning("Could not request a sync after writing a whole series",
           calendar_integration_id: integration_id,
           reason: inspect(reason)
         )
     end
   end
 
-  # The occurrences name their master; the master's own row, when cached,
-  # carries its id. A CalDAV series is its resource's rows.
-  defp delete_series_rows(integration_id, %{recurring_event_id: master_id})
-       when is_binary(master_id) and master_id != "" do
-    ProviderCalendarEventQueries.delete_by_recurring_event_ids(integration_id, [master_id])
-    ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, [master_id])
-  end
-
-  defp delete_series_rows(integration_id, stored),
-    do:
-      ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, [
-        stored.provider_event_id
-      ])
-
-  defp request_sync("google", integration_id),
+  defp enqueue_sync("google", integration_id),
     do: SyncGoogleCalendarWorker.enqueue(integration_id)
 
-  defp request_sync("outlook", integration_id),
+  defp enqueue_sync("outlook", integration_id),
     do: RefreshOutlookCalendarWorker.enqueue(integration_id)
 
-  defp request_sync(_caldav, integration_id),
+  defp enqueue_sync(_caldav, integration_id),
     do: SyncCalDavCalendarWorker.enqueue_full_fetch(integration_id)
 
   defp refuse(reason), do: {:error, %{reason: reason, retry: :not_queued}}

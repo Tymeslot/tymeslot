@@ -359,6 +359,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     {:noreply, socket}
   end
 
+  # A series member's move takes the whole series, which the organiser has to
+  # confirm first. Until the grid asks for that confirmation, it is refused as
+  # a recurring event always was.
+  defp flash_move_error(socket, {:ok, :series}),
+    do: flash_move_error(socket, {:error, :recurring_event})
+
   defp flash_move_error(socket, {:error, :rate_limited, _message}) do
     send(
       self(),
