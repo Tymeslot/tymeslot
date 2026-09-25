@@ -194,12 +194,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
 
   # A path with no token yet: after the upgrade that introduced per-path
   # tokens, on a newly selected calendar, after a 410, and on every path after
-  # the daily forced full fetch clears them all. The initial sync-collection
-  # REPORT RFC 6578 offers for this returns the collection's entire history
-  # with every event body inline and no time range, which on a large calendar
-  # is enough to take the node down, and the token it would have produced is
-  # only stored after processing, so the same request then repeats every
-  # cycle. Reading the token as a property and fetching the sync window costs
+  # the daily forced full fetch clears them all. A path whose delta was too
+  # large to read restarts here too, with its old token still stored. The
+  # initial sync-collection REPORT RFC 6578 offers for this returns the
+  # collection's entire history with every event body inline and no time
+  # range, which on a large calendar is enough to take the node down, and the
+  # token it would have produced is only stored after processing, so the same
+  # request then repeats every cycle. Reading the token as a property and fetching the sync window costs
   # the same as a Tier 3 run.
   #
   # The token is read *before* the fetch. A change made while the fetch runs
@@ -259,6 +260,22 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
         )
 
         EventFetch.fetch_path(integration, client, path, [])
+
+      # A bulk change on the server produced a delta too large to parse, and
+      # it was abandoned mid-transfer. Keeping the token would ask for the same
+      # delta every cycle until the daily forced full fetch, so the path
+      # restarts from a token read now, as a tokenless path does. Nothing is
+      # lost: the fetch that follows reads the sync window as it stands, and a
+      # change made during it comes back in the next delta. The old token is
+      # not cleared first, so a failed restart leaves the path where it was.
+      {:error, :response_too_large} ->
+        Logger.warning("CalDAV sync-collection delta too large; restarting from a fresh token",
+          calendar_integration_id: integration.id,
+          calendar_path: path,
+          max_delta_bytes: SyncCollectionReport.max_delta_bytes()
+        )
+
+        tier1_initial(integration, client, path, calendar_url)
 
       {:error, :not_found} ->
         :not_found

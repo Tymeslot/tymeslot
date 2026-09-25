@@ -19,6 +19,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
   alias Tymeslot.Integrations.Calendar.CalDAV.Http, as: CalDAVHttp
   alias Tymeslot.Integrations.Calendar.Utils.XmlEscape
 
+  # A delta is parsed whole into an xmerl DOM, which holds text as charlists at
+  # sixteen bytes or more per character, so the DOM runs to many times the size
+  # of the XML. A routine delta is a few kilobytes; one past this budget comes
+  # from a bulk change on the server (an import, a migration, a script
+  # rewriting every event) and is abandoned mid-transfer, before any of it is
+  # parsed. The caller reads the calendar through the sync window instead.
+  @max_delta_bytes 4 * 1024 * 1024
+
   # ---------------------------------------------------------------------------
   # Sync-collection REPORT (Tier 1)
   # ---------------------------------------------------------------------------
@@ -31,6 +39,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
 
   Returns `{:ok, {events, deleted_hrefs, new_sync_token}}` on success,
   `{:error, :sync_token_expired}` when the server responds with 410 Gone,
+  `{:error, :response_too_large}` when the delta outgrows the byte budget,
   `{:error, :calendar_data_withheld}` when the server reported changes
   without inlining their calendar data (see `parse_response/1`), or
   `{:error, reason}` for other failures.
@@ -48,7 +57,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
     # it means something here that it does not mean on a calendar-query.
     case CalDAVHttp.report(calendar_url, client.username, client.password, report_body,
            depth: "0",
-           status_overrides: %{410 => :sync_token_expired}
+           status_overrides: %{410 => :sync_token_expired},
+           max_response_bytes: @max_delta_bytes
          ) do
       {:ok, %Req.Response{status: 207, body: body}} ->
         parse_response(body)
@@ -67,6 +77,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
         {:error, reason}
     end
   end
+
+  @doc """
+  The largest sync-collection response body `fetch/3` will read, in bytes.
+  """
+  @spec max_delta_bytes() :: pos_integer()
+  def max_delta_bytes, do: @max_delta_bytes
 
   @doc """
   Builds a sync-collection REPORT XML body requesting the delta since

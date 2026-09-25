@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   """
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.ResponseTooLargeError
   alias Tymeslot.Infrastructure.RetryLogic
   # Aliased as CalDAVBase to avoid shadowing Elixir's built-in Base module,
   # which is referenced by name in build_headers/3 for Base64 encoding.
@@ -123,6 +124,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     * `:status_overrides` — a `%{status => reason}` map applied before the
       shared table, for statuses that mean something specific to the report
       being sent (410 as an expired sync token, say).
+    * `:max_response_bytes` — a tighter body budget than the HTTP client's
+      default, for a report whose response has to be parsed whole. A body
+      that exceeds it is abandoned mid-transfer and answers
+      `{:error, :response_too_large}`.
   """
   @spec report(String.t(), String.t(), String.t(), String.t(), keyword()) ::
           {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
@@ -132,14 +137,17 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
       {"Depth", Keyword.get(opts, :depth, "1")}
     ]
 
-    timeout = Keyword.get(opts, :timeout, CalDAVBase.report_timeout_ms())
+    request_opts =
+      opts
+      |> Keyword.take([:max_response_bytes])
+      |> Keyword.merge(
+        receive_timeout: Keyword.get(opts, :timeout, CalDAVBase.report_timeout_ms()),
+        ssrf_protect: true
+      )
 
     result =
       authed_request("REPORT", url, username, password, extra_headers, fn headers ->
-        Config.http_client_module().request(:report, url, body, headers,
-          receive_timeout: timeout,
-          ssrf_protect: true
-        )
+        Config.http_client_module().request(:report, url, body, headers, request_opts)
       end)
 
     case result do
@@ -443,6 +451,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
 
   defp handle_read_transport_error(%Mint.HTTPError{reason: :timeout}, _method),
     do: {:error, :timeout}
+
+  # The HTTP client abandoned the body at its byte budget. Not a network
+  # failure: the server answered, and would answer the same way again.
+  defp handle_read_transport_error(%ResponseTooLargeError{}, _method),
+    do: {:error, :response_too_large}
 
   defp handle_read_transport_error(reason, method) do
     Logger.debug("CalDAV read network error", method: method, reason: inspect(reason))

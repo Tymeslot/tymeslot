@@ -19,6 +19,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.TierSyncTest do
   alias Plug.Conn
   alias Req.Test, as: ReqTest
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
 
@@ -201,6 +202,55 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.TierSyncTest do
     end
   end
 
+  # A bulk change on the server (an import, a migration) can return a delta
+  # whose DOM alone exhausts the node's memory. It is abandoned mid-transfer,
+  # and the path restarts from a fresh token rather than asking for the same
+  # delta every cycle.
+  describe "perform/1 - Tier 1 delta too large to read" do
+    setup do
+      path_a = path1()
+      path_b = path2()
+
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          is_active: true,
+          caldav_sync_tier: 1,
+          calendar_paths: [path_a, path_b],
+          caldav_sync_tokens: %{path_a => "token-a", path_b => "token-b"}
+        )
+
+      %{integration: integration, path_a: path_a, path_b: path_b}
+    end
+
+    test "fetches the sync window and stores a token read before it",
+         %{integration: integration, path_a: path_a, path_b: path_b} do
+      stub_tier1_server(%{path_a => {:delta, "token-a2"}, path_b => :too_large},
+        fresh_token: "token-b-fresh"
+      )
+
+      assert :ok = run_sync(integration)
+
+      assert requests_for(path_b) == [:sync_collection, :propfind_sync_token, :calendar_query]
+      assert "event-from-path2@test" in cached_uids(integration)
+
+      assert Repo.reload!(integration).caldav_sync_tokens ==
+               %{path_a => "token-a2", path_b => "token-b-fresh"}
+    end
+
+    test "keeps the old token when the fetch that follows fails",
+         %{integration: integration, path_a: path_a, path_b: path_b} do
+      stub_tier1_server(%{path_a => {:delta, "token-a2"}, path_b => :too_large},
+        fresh_token: "token-b-fresh",
+        calendar_query: :fail
+      )
+
+      run_sync(integration)
+
+      assert Repo.reload!(integration).caldav_sync_tokens[path_b] == "token-b"
+    end
+  end
+
   describe "perform/1 - all-day events" do
     test "caches multi-day all-day event with correct all_day flag and UTC-midnight timestamps" do
       integration =
@@ -373,7 +423,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.TierSyncTest do
 
   # A Tier 1 server for two paths. `paths` says how each path answers a
   # sync-collection REPORT: `{:delta, new_token}` with its event, `:gone` with
-  # a 410, or `:no_token` when the test expects none to be sent. The sync-token
+  # a 410, `:too_large` with a body past the delta budget, or `:no_token` when
+  # the test expects none to be sent. The sync-token
   # PROPFIND answers `opts[:fresh_token]`, or 500 with `token_probe: :fail`; a
   # calendar-query returns the path's event, or a 500 with
   # `calendar_query: :fail`. Every request is reported to the test process.
@@ -401,6 +452,9 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.TierSyncTest do
 
             :gone ->
               Conn.send_resp(conn, 410, "Gone")
+
+            :too_large ->
+              xml_resp(conn, oversized_delta())
           end
 
         true ->
@@ -434,4 +488,13 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.TierSyncTest do
   end
 
   defp event_ical(path), do: if(path == path1(), do: ical_path1(), else: ical_path2())
+
+  # A well-formed delta padded one byte past the budget, so only its size can
+  # make the sync refuse it.
+  defp oversized_delta do
+    xml = sync_collection_xml(event_href(path2()), event_ical(path2()), "token-b2")
+    comment = "<!--  -->"
+    padding = SyncCollectionReport.max_delta_bytes() - byte_size(xml) - byte_size(comment) + 1
+    xml <> "<!-- " <> String.duplicate("x", padding) <> " -->"
+  end
 end
