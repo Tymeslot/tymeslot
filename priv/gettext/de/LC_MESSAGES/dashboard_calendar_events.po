@@ -1043,11 +1043,6 @@ msgstr "Meetingraum erstellt."
 msgid "Your calendar could not be reached. The change is saved and will sync on the next attempt."
 msgstr "Ihr Kalender war nicht erreichbar. Die Änderung ist gespeichert und wird beim nächsten Versuch synchronisiert."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
-#, elixir-autogen, elixir-format
-msgid "Recurring events cannot be edited here yet. Please change this one in your calendar app."
-msgstr "Wiederkehrende Ereignisse können hier noch nicht bearbeitet werden. Bitte ändern Sie dieses Ereignis in Ihrer Kalender-App."
-
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."

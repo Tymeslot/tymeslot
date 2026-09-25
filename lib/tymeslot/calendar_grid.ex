@@ -409,13 +409,6 @@ defmodule Tymeslot.CalendarGrid do
   defdelegate ensure_movable(event), to: EventMove
 
   @doc """
-  Whether an event may be edited from the grid. See
-  `Tymeslot.CalendarGrid.EventEdit.ensure_editable/1`.
-  """
-  @spec ensure_editable(map()) :: :ok | {:error, :recurring_event}
-  defdelegate ensure_editable(event), to: EventEdit
-
-  @doc """
   How an event may be edited from the grid: on its own, in a scope, or, for
   a series whose provider has no scoped edit, as that one event only. See
   `Tymeslot.CalendarGrid.EventEdit.edit_scopes/1`.

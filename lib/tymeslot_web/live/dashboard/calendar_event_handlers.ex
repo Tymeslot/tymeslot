@@ -141,9 +141,6 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   # a recurring series refuse before anything is written, so each of their
   # reasons says what the organiser can do instead (see
   # `Tymeslot.CalendarGrid.SeriesEdit`).
-  defp update_failed_message(:recurring_event),
-    do: EditWorkflow.recurring_edit_refused_message()
-
   defp update_failed_message(:value_type_change) do
     dgettext(
       "dashboard_calendar_events",

@@ -235,18 +235,6 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     end
   end
 
-  @doc """
-  Whether `event` may be edited from the grid. Every event may: an edit of a
-  member of a series writes one occurrence by default, which every provider
-  family can address (see `Tymeslot.CalendarGrid.SeriesEdit`).
-
-  Kept as the gate the grid's edit handlers go through, so a family that
-  cannot write even one occurrence is refused in one place, before any
-  optimistic update, should one arrive.
-  """
-  @spec ensure_editable(map()) :: :ok | {:error, :recurring_event}
-  def ensure_editable(_event), do: :ok
-
   defp stored_row(event) do
     case ProviderCalendarEventQueries.get_by_uid(event.calendar_integration_id, event.uid) do
       {:ok, row} -> row
