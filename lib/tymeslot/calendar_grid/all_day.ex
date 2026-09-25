@@ -59,7 +59,7 @@ defmodule Tymeslot.CalendarGrid.AllDay do
 
   def toggle(%{all_day: true} = event, timezone) do
     start_date = event.start_date
-    last_day = inclusive_last_day(start_date, event.end_date)
+    last_day = last_day(start_date, event.end_date)
 
     %{
       event
@@ -91,12 +91,13 @@ defmodule Tymeslot.CalendarGrid.AllDay do
     DateTime.shift_zone!(local, "Etc/UTC")
   end
 
-  # The last day an all-day event actually covers, from its exclusive
-  # `end_date`. Guards against a stored `end_date` that is not after
-  # `start_date`, which would otherwise yield a last day before the event
-  # began.
-  @spec inclusive_last_day(Date.t(), Date.t()) :: Date.t()
-  defp inclusive_last_day(start_date, end_date) do
+  @doc """
+  The last day an all-day event actually covers, from its `start_date` and
+  exclusive `end_date`. Guards against a stored `end_date` that is not after
+  `start_date`, which would otherwise yield a last day before the event began.
+  """
+  @spec last_day(Date.t(), Date.t()) :: Date.t()
+  def last_day(start_date, end_date) do
     last_day = Date.add(end_date, -1)
     if Date.compare(last_day, start_date) == :lt, do: start_date, else: last_day
   end

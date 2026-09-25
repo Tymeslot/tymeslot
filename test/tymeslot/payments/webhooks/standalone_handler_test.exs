@@ -140,8 +140,10 @@ defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
         }
       }
 
-      assert {:error, :invalid_timestamp} =
+      assert {:error, :invalid_timestamp, message} =
                TrialWillEndHandler.process(event, event["data"]["object"])
+
+      assert message =~ "Invalid trial_end timestamp"
     end
 
     test "processes trial ending events when subscription exists" do

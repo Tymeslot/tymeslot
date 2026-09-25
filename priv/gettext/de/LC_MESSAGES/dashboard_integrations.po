@@ -120,20 +120,17 @@ msgstr "Alle Termine verwenden dieselbe Raum-URL"
 msgid "Are you sure you want to delete this %{type} integration?"
 msgstr "Möchten Sie diese %{type}-Integration wirklich löschen?"
 
-#: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex
-#: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed. Please try again."
 msgstr "Authentifizierung fehlgeschlagen. Bitte versuchen Sie es erneut."
 
-#: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex
-#: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication session mismatch. Please sign in and try again."
 msgstr "Authentifizierungssitzung stimmt nicht überein. Bitte melden Sie sich an und versuchen Sie es erneut."
 
-#: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex
-#: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Authorization was denied. Please try again."
 msgstr "Die Autorisierung wurde verweigert. Bitte versuchen Sie es erneut."
@@ -212,7 +209,7 @@ msgstr "Verbindungstest unerwartet fehlgeschlagen: %{reason}"
 msgid "Connection test failed: %{reason}"
 msgstr "Verbindungstest fehlgeschlagen: %{reason}"
 
-#: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Could not identify your Zoom account. Please try again."
 msgstr "Ihr Zoom-Konto konnte nicht identifiziert werden. Bitte versuchen Sie es erneut."
@@ -274,26 +271,6 @@ msgstr "Neuen API-Schlüssel eingeben"
 msgid "Enter your video meeting URL. Use {{meeting_id}} for unique rooms per meeting"
 msgstr "Geben Sie die URL Ihres Video-Meetings ein. Verwenden Sie {{meeting_id}} für eindeutige Räume pro Termin"
 
-#: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to connect Google Meet. Please try again."
-msgstr "Google Meet konnte nicht verbunden werden. Bitte versuchen Sie es erneut."
-
-#: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to connect Microsoft Teams. Please try again."
-msgstr "Microsoft Teams konnte nicht verbunden werden. Bitte versuchen Sie es erneut."
-
-#: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to connect Outlook Calendar. Please try again."
-msgstr "Outlook Calendar konnte nicht verbunden werden. Bitte versuchen Sie es erneut."
-
-#: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Failed to connect Zoom. Please try again."
-msgstr "Zoom konnte nicht verbunden werden. Bitte versuchen Sie es erneut."
-
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to delete integration"
@@ -345,7 +322,6 @@ msgid "Get your API key from your MiroTalk instance configuration"
 msgstr "Holen Sie sich Ihren API-Schlüssel aus der Konfiguration Ihrer MiroTalk-Instanz"
 
 #: lib/tymeslot/integrations/video/providers/google_meet_provider.ex
-#: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Google Meet connected successfully!"
 msgstr "Google Meet erfolgreich verbunden!"
@@ -390,8 +366,7 @@ msgstr "Integration erfolgreich aktualisiert"
 msgid "Integrations"
 msgstr "Integrationen"
 
-#: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex
-#: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid authentication response. Please try again."
 msgstr "Ungültige Authentifizierungsantwort. Bitte versuchen Sie es erneut."
@@ -428,7 +403,6 @@ msgid "Meeting types reordered"
 msgstr "Termintypen neu sortiert"
 
 #: lib/tymeslot/integrations/video/providers/teams_provider.ex
-#: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Microsoft Teams connected successfully!"
 msgstr "Microsoft Teams erfolgreich verbunden!"
@@ -473,7 +447,7 @@ msgstr "Fehlende schließende Klammern – sollte {{meeting_id}} sein"
 msgid "Missing opening brackets - should be {{meeting_id}}"
 msgstr "Fehlende öffnende Klammern – sollte {{meeting_id}} sein"
 
-#: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Missing required Microsoft Teams information. Please try again."
 msgstr "Erforderliche Microsoft-Teams-Informationen fehlen. Bitte versuchen Sie es erneut."
@@ -503,11 +477,6 @@ msgstr "Noch keine Video-Anbieter verbunden"
 #, elixir-autogen, elixir-format
 msgid "OAuth"
 msgstr "OAuth"
-
-#: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Outlook Calendar connected successfully!"
-msgstr "Outlook Calendar erfolgreich verbunden!"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
@@ -621,11 +590,6 @@ msgstr "Die vollständige URL, unter der Ihre MiroTalk-P2P-Instanz gehostet wird
 msgid "This action cannot be undone and will remove all associated %{data}."
 msgstr "Diese Aktion kann nicht rückgängig gemacht werden und entfernt alle zugehörigen %{data}."
 
-#: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex
-#, elixir-autogen, elixir-format
-msgid "Too many requests. Please try again later."
-msgstr "Zu viele Anfragen. Bitte versuchen Sie es später erneut."
-
 #: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown template variable. Only {{meeting_id}} is supported"
@@ -687,8 +651,7 @@ msgstr "Video-Integration"
 msgid "Video integration added successfully"
 msgstr "Video-Integration erfolgreich hinzugefügt"
 
-#: lib/tymeslot_web/controllers/auth/calendar_oauth_controller.ex
-#: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
 msgstr "Ihre Microsoft-Organisation erfordert eine Administratorgenehmigung, bevor Tymeslot verbunden werden kann. Bitte wenden Sie sich an Ihren IT-Administrator, damit dieser der App die Zustimmung erteilt."
@@ -704,7 +667,6 @@ msgid "Your Stripe account is restricted."
 msgstr "Ihr Stripe-Konto ist eingeschränkt."
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider.ex
-#: lib/tymeslot_web/controllers/auth/video_oauth_controller.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom connected successfully!"
 msgstr "Zoom erfolgreich verbunden!"
@@ -741,7 +703,7 @@ msgstr "⚠ Ungültige Syntax"
 msgid "✓ Valid Template"
 msgstr "✓ Gültige Vorlage"
 
-#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "%{service} connected successfully!"
 msgstr "%{service} erfolgreich verbunden!"
@@ -751,7 +713,7 @@ msgstr "%{service} erfolgreich verbunden!"
 msgid "API Key"
 msgstr "API-Schlüssel"
 
-#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to connect %{service}. Please try again."
 msgstr "%{service} konnte nicht verbunden werden. Bitte versuchen Sie es erneut."
@@ -850,7 +812,7 @@ msgid_plural "%{count} connections need attention - %{message}"
 msgstr[0] "%{count} Verbindung erfordert Aufmerksamkeit - %{message}"
 msgstr[1] "%{count} Verbindungen erfordern Aufmerksamkeit - %{message}"
 
-#: lib/tymeslot_web/controllers/auth/oauth_callback_handler.ex
+#: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" - Tymeslot needs this to create meetings and Google Meet links."
 msgstr "%{service} wurde nicht verbunden, weil die Kalenderberechtigung nicht erteilt wurde. Bitte versuchen Sie es erneut und aktivieren Sie das Kontrollkästchen für \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" - Tymeslot benötigt dies, um Termine und Google-Meet-Links zu erstellen."
@@ -953,7 +915,7 @@ msgstr "Zeitüberschreitung beim Aufruf der URL"
 msgid "Connection validation failed"
 msgstr "Die Überprüfung der Verbindung ist fehlgeschlagen"
 
-#: lib/tymeslot/integrations/video.ex
+#: lib/tymeslot/integrations/video/oauth_callback.ex
 #, elixir-autogen, elixir-format
 msgid "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
 msgstr "Ihr Konto konnte nicht identifiziert werden. Bitte versuchen Sie es erneut. Falls das Problem weiterhin besteht, entfernen Sie die Integration und fügen Sie sie erneut hinzu."
@@ -1610,3 +1572,18 @@ msgstr "kMeet ist der gehostete Dienst von Infomaniak und verwendet immer diese 
 #, elixir-autogen, elixir-format
 msgid "Each booking gets its own public Talk conversation, and guests join from its link without a Nextcloud account. To skip the lobby and moderate, sign in to Nextcloud in your browser as this login name first, with your usual password and any second factor; the app password works only for Tymeslot. Anyone else, other Nextcloud users included, waits in the lobby until the meeting starts. A conversation is deleted when its booking is cancelled, and about a week after the meeting ends."
 msgstr "Jede Buchung erhält eine eigene öffentliche Talk-Unterhaltung, und Gäste treten über deren Link ohne Nextcloud-Konto bei. Um die Lobby zu überspringen und zu moderieren, melden Sie sich zuerst im Browser mit diesem Anmeldenamen bei Nextcloud an, mit Ihrem üblichen Passwort und einem etwaigen zweiten Faktor; das App-Passwort funktioniert nur für Tymeslot. Alle anderen, auch andere Nextcloud-Nutzer, warten in der Lobby, bis das Meeting beginnt. Eine Unterhaltung wird gelöscht, wenn ihre Buchung abgesagt wird, und etwa eine Woche nach dem Ende des Meetings."
+
+#: lib/tymeslot/integrations/shared/input_validators.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the address on its own and put the username and password in their own fields."
+msgstr "Geben Sie nur die Adresse ein und tragen Sie Benutzername und Passwort in die dafür vorgesehenen Felder ein."
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid meeting link"
+msgstr "Ungültiger Meeting-Link"
+
+#: lib/tymeslot_web/live/dashboard/video_settings/components.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting link placeholder is invalid, so all bookings currently share one room. Edit the integration to fix it."
+msgstr "Der Platzhalter im Meeting-Link ist ungültig, daher teilen sich derzeit alle Buchungen einen Raum. Bearbeiten Sie die Integration, um das zu beheben."

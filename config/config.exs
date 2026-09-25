@@ -180,14 +180,27 @@ config :tymeslot, :oban_queues,
   # Video transcoding (responsive variant generation from uploaded videos)
   media_processing: 1
 
+# Aggregate calendar integration health alerting, evaluated hourly by
+# `Tymeslot.Workers.IntegrationHealthAlertWorker` and on each auto-pause run.
+# Alerts go through `AdminAlerts`, so they are only emailed when admin alerts
+# are enabled. See `Tymeslot.Integrations.HealthCheck.Alerting` for each signal.
+config :tymeslot, :integration_health_alerting,
+  # Length of the window each hourly evaluation covers
+  window_hours: 1,
+  # Availability refusals within the window before an organiser counts as
+  # affected (their booking page offered nothing because a calendar could not
+  # be read)
+  refusals_per_user: 5,
+  # Affected organisers within the window before alerting
+  affected_users_threshold: 1,
+  # Calendar integrations newly flagged `needs_reauth` within the window before
+  # alerting: a few a day is ordinary OAuth churn, a burst in one hour is not
+  reauth_flags_threshold: 10,
+  # Integrations paused by one daily auto-pause run before alerting
+  auto_pause_threshold: 1
+
 # Webhook configuration
 config :tymeslot, :webhook_base_url, nil
-
-config :tymeslot, :webhook_paths, [
-  "/webhooks/stripe",
-  "/webhooks/stripe/connect",
-  "/auth/zoom/deauthorize"
-]
 
 # Webhook idempotency cache TTLs
 config :tymeslot, :webhook_idempotency,
@@ -281,7 +294,7 @@ config :esbuild,
 
 # Configure tailwind
 config :tailwind,
-  version: "4.3.1",
+  version: "4.3.3",
   tymeslot: [
     args: ~w(
       --input=css/app.css

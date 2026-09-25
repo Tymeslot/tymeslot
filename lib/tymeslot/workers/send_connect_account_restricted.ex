@@ -9,6 +9,9 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
 
   Loads the row inside `perform/1` so the email reflects the committed
   account state, even if a follow-up event has already updated the row.
+
+  The send is claimed through `Tymeslot.Workers.DeliveryClaims`, so a job the
+  Oban lifeline rescues after the email went out does not send it again.
   """
 
   use Oban.Worker,
@@ -29,10 +32,11 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
   alias Tymeslot.Emails.Templates.ConnectAccountRestricted.RestrictionContext
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
+  alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.TransactionalEmailDelivery
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"connect_account_id" => id} = args}) do
+  def perform(%Oban.Job{args: %{"connect_account_id" => id} = args} = job) do
     case MeetingPayments.get_connect_account(id) do
       nil ->
         Logger.warning("Connect-restricted email skipped — connect_account not found",
@@ -49,7 +53,7 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
         {:discard, "missing user_id"}
 
       %ConnectAccountSchema{} = account ->
-        send_email(account, args)
+        send_email(account, args, job)
     end
   end
 
@@ -61,10 +65,10 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
     {:discard, "missing connect_account_id"}
   end
 
-  defp send_email(account, args) do
+  defp send_email(account, args, job) do
     case UserQueries.get_user(account.user_id) do
       {:ok, %UserSchema{email: email} = user} when is_binary(email) and email != "" ->
-        deliver(account, user, args)
+        DeliveryClaims.once(job, "restricted_email", fn -> deliver(account, user, args) end)
 
       {:ok, _user} ->
         Logger.warning("Connect-restricted email skipped — user has no email",

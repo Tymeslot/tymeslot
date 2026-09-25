@@ -5,6 +5,8 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.Zimbra.Provider
 
+  setup :verify_on_exit!
+
   setup do
     CalendarCircuitBreaker.reset(:zimbra)
     :ok

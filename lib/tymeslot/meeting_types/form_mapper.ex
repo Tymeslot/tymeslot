@@ -4,11 +4,10 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
 
   The form speaks in strings and UI state: a duration typed as text, a price in
   major units, reminders that arrive as a list, a map or a JSON string
-  depending on how the client serialised them, and a meeting mode that decides
-  whether a video integration applies at all. The schema wants integers, cents
-  and normalised structs. Everything needed to get from one to the other lives
-  here, so the context can compose a save without also owning the vocabulary of
-  a particular form.
+  depending on how the client serialised them, and a location list the schema
+  turns into embeds. The schema wants integers, cents and normalised structs.
+  Everything needed to get from one to the other lives here, so the context can
+  compose a save without also owning the vocabulary of a particular form.
 
   Money is the reason this is worth isolating. `parse_price_cents/2` is the
   single conversion from a typed price to the integer minor units that reach
@@ -31,9 +30,9 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   @doc """
   Builds schema attributes from raw form params and the form's UI state.
 
-  `custom_fields` is only included when the params carry the key, so a form
-  that does not render the questions editor cannot blank an existing question
-  list by omission.
+  `custom_fields` and `locations` are only included when the params carry the
+  key, so a form that does not render the questions editor (or the locations
+  editor) cannot blank an existing list by omission.
   """
   @spec build_attrs(map(), map()) :: {:ok, map()} | {:error, error()}
   def build_attrs(params, ui_state) do
@@ -48,11 +47,9 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         description: params["description"],
         icon: ui_state.selected_icon,
         is_active: params["is_active"] == "true",
-        allow_video: ui_state.meeting_mode == "video",
         allow_guests: params["allow_guests"] == "true",
         requires_approval: params["requires_approval"] == "true",
         approval_window_hours: approval_window_hours,
-        video_integration_id: video_integration_id(ui_state),
         calendar_integration_id: blank_to_nil(params["calendar_integration_id"]),
         availability_schedule_id: blank_to_nil(params["availability_schedule_id"]),
         target_calendar_id: blank_to_nil(params["target_calendar_id"]),
@@ -62,9 +59,11 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
       attrs =
         attrs
         |> Map.merge(booking_limits(params))
+        |> maybe_put_custom_fields(params)
+        |> maybe_put_locations(params)
         |> Map.merge(payment)
 
-      {:ok, maybe_put_custom_fields(attrs, params)}
+      {:ok, attrs}
     end
   end
 
@@ -110,14 +109,20 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
     ]
   end
 
-  defp video_integration_id(%{meeting_mode: "video"} = ui_state),
-    do: ui_state.selected_video_integration_id
-
-  defp video_integration_id(_ui_state), do: nil
-
   defp maybe_put_custom_fields(attrs, params) do
     if Map.has_key?(params, "custom_fields") do
       Map.put(attrs, :custom_fields, params["custom_fields"])
+    else
+      attrs
+    end
+  end
+
+  # `allow_video` and `video_integration_id` are deliberately absent from the
+  # attributes above: the schema projects them from this list, so mapping them
+  # here as well would give the same two columns two authors.
+  defp maybe_put_locations(attrs, params) do
+    if Map.has_key?(params, "locations") do
+      Map.put(attrs, :locations, params["locations"])
     else
       attrs
     end

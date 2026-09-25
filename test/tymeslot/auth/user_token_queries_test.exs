@@ -8,21 +8,21 @@ defmodule Tymeslot.Auth.UserTokenQueriesTest do
 
   alias Tymeslot.Auth.{UserSchema, UserTokenQueries}
   alias Tymeslot.Repo
-  alias Tymeslot.Security.Token
+  alias Tymeslot.Security.{Password, Token}
 
-  describe "get_user_by_reset_token_for_update/1" do
+  describe "get_user_by_token/3 for a reset token, locked" do
     test "returns {:ok, user} for a valid unconsumed token" do
       user = insert(:user)
-      {token, _value} = Token.generate_password_reset_token()
+      token = Token.generate_token()
       {:ok, _stored} = UserTokenQueries.set_reset_token(user, token)
 
-      assert {:ok, found} = UserTokenQueries.get_user_by_reset_token_for_update(token)
+      assert {:ok, found} = UserTokenQueries.get_user_by_token(:reset, token, lock: true)
       assert found.id == user.id
     end
 
     test "returns {:error, :not_found} when the token has already been consumed" do
       user = insert(:user)
-      {token, _value} = Token.generate_password_reset_token()
+      token = Token.generate_token()
       {:ok, _stored} = UserTokenQueries.set_reset_token(user, token)
 
       # Mark the token as consumed by setting reset_token_used_at
@@ -31,24 +31,24 @@ defmodule Tymeslot.Auth.UserTokenQueriesTest do
         set: [reset_token_used_at: DateTime.utc_now(:second)]
       )
 
-      assert {:error, :not_found} = UserTokenQueries.get_user_by_reset_token_for_update(token)
+      assert {:error, :not_found} = UserTokenQueries.get_user_by_token(:reset, token, lock: true)
     end
 
     test "returns {:error, :not_found} for an unknown token" do
       assert {:error, :not_found} =
-               UserTokenQueries.get_user_by_reset_token_for_update("unknown-token-value")
+               UserTokenQueries.get_user_by_token(:reset, "unknown-token-value", lock: true)
     end
 
     test "locks the row it reads, so a concurrent reset cannot consume the token twice" do
       user = insert(:user)
-      {token, _value} = Token.generate_password_reset_token()
+      token = Token.generate_token()
       {:ok, _stored} = UserTokenQueries.set_reset_token(user, token)
 
       token_hash = Token.hash_token(token)
 
       queries =
         capture_repo_queries(fn ->
-          assert {:ok, _found} = UserTokenQueries.get_user_by_reset_token_for_update(token)
+          assert {:ok, _found} = UserTokenQueries.get_user_by_token(:reset, token, lock: true)
         end)
 
       lookup =
@@ -60,6 +60,58 @@ defmodule Tymeslot.Auth.UserTokenQueriesTest do
 
       assert lookup =~ "FOR UPDATE",
              "expected the token lookup to take a row lock, got: #{lookup}"
+    end
+  end
+
+  describe "consume_verification_token/1" do
+    test "marks the user verified and clears the token so it cannot be reused" do
+      user = insert(:user, verified_at: nil, verification_token: "one-time-token")
+
+      assert {:ok, verified} = UserTokenQueries.consume_verification_token(user)
+
+      assert %DateTime{} = verified.verified_at
+      assert %DateTime{} = verified.verification_token_used_at
+      assert verified.verification_token == nil
+    end
+  end
+
+  describe "consume_reset_token/2" do
+    test "sets the password, marks the token used and revokes every credential token" do
+      user =
+        insert(:user,
+          reset_token_hash: "one-time-reset-hash",
+          reset_sent_at: DateTime.utc_now(:second),
+          pending_email: "pending@example.com",
+          email_change_token_hash: "email-change-hash",
+          email_change_sent_at: DateTime.utc_now(:second)
+        )
+
+      assert {:ok, updated} =
+               UserTokenQueries.consume_reset_token(user, %{
+                 password: "NewSecurePassword123!",
+                 password_confirmation: "NewSecurePassword123!"
+               })
+
+      assert Password.verify_password("NewSecurePassword123!", updated.password_hash)
+      assert %DateTime{} = updated.reset_token_used_at
+      assert updated.reset_token_hash == nil
+      assert updated.reset_sent_at == nil
+      assert updated.pending_email == nil
+      assert updated.email_change_token_hash == nil
+      assert updated.email_change_sent_at == nil
+    end
+
+    test "rejects a password that breaks the policy and leaves the token live" do
+      user = insert(:user, reset_token_hash: "one-time-reset-hash")
+
+      assert {:error, changeset} =
+               UserTokenQueries.consume_reset_token(user, %{
+                 password: "weak",
+                 password_confirmation: "weak"
+               })
+
+      refute changeset.valid?
+      assert Repo.get!(UserSchema, user.id).reset_token_hash == "one-time-reset-hash"
     end
   end
 

@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.OAuth do
   OAuth helper functions for calendar providers (Google, Outlook).
   """
 
+  alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.OAuthHelper, as: GoogleOAuthHelper
@@ -12,6 +13,14 @@ defmodule Tymeslot.Integrations.Calendar.OAuth do
 
   @type user_id :: pos_integer()
 
+  @typedoc "A calendar provider that authenticates over OAuth."
+  @type provider :: :google | :outlook
+
+  # The callback exchange goes to the concrete helpers rather than the
+  # injectable ones used for authorisation URLs: the test doubles configured
+  # for those implement only the URL half of the flow.
+  @callback_helpers %{google: GoogleOAuthHelper, outlook: OutlookOAuthHelper}
+
   @doc """
   Initiate Google Calendar OAuth flow and return authorization URL.
 
@@ -20,10 +29,8 @@ defmodule Tymeslot.Integrations.Calendar.OAuth do
   """
   @spec initiate_google_oauth(user_id(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
   def initiate_google_oauth(user_id, opts \\ []) when is_integer(user_id) do
-    redirect_uri = "#{Endpoint.url()}/auth/google/calendar/callback"
-
     authorization_url =
-      google_oauth_helper().authorization_url(user_id, redirect_uri, opts)
+      google_oauth_helper().authorization_url(user_id, redirect_uri(:google), opts)
 
     {:ok, authorization_url}
   rescue
@@ -38,14 +45,34 @@ defmodule Tymeslot.Integrations.Calendar.OAuth do
   """
   @spec initiate_outlook_oauth(user_id(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
   def initiate_outlook_oauth(user_id, opts \\ []) when is_integer(user_id) do
-    redirect_uri = "#{Endpoint.url()}/auth/outlook/calendar/callback"
-
     authorization_url =
-      outlook_oauth_helper().authorization_url(user_id, redirect_uri, opts)
+      outlook_oauth_helper().authorization_url(user_id, redirect_uri(:outlook), opts)
 
     {:ok, authorization_url}
   rescue
     error -> {:error, format_oauth_error(error, "Outlook")}
+  end
+
+  @doc """
+  Completes an OAuth callback: verifies the state, exchanges the code, and
+  creates or updates the user's calendar integration.
+
+  On success the user's cached dashboard integration status is invalidated, so
+  the dashboard reflects the new connection straight away rather than after the
+  cache expires.
+  """
+  @spec complete(provider(), String.t(), String.t()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, term()}
+  def complete(provider, code, state) do
+    with {:ok, integration} <-
+           Map.fetch!(@callback_helpers, provider).handle_callback(
+             code,
+             state,
+             redirect_uri(provider)
+           ) do
+      DashboardContext.invalidate_integration_status(integration.user_id)
+      {:ok, integration}
+    end
   end
 
   @doc """
@@ -113,6 +140,11 @@ defmodule Tymeslot.Integrations.Calendar.OAuth do
   defp format_oauth_config_message(:generic, provider, message) do
     "Failed to setup #{provider} OAuth: #{message}"
   end
+
+  # The authorisation request and the code exchange must name the same URI, so
+  # both are built here.
+  defp redirect_uri(provider) when is_map_key(@callback_helpers, provider),
+    do: "#{Endpoint.url()}/auth/#{provider}/calendar/callback"
 
   defp google_oauth_helper do
     Application.get_env(:tymeslot, :google_calendar_oauth_helper, GoogleOAuthHelper)

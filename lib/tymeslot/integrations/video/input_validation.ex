@@ -345,8 +345,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
              error_message: invalid_meeting_url_error(trimmed_url),
              validate_url_fn: &validate_video_url/1
            ),
-         :ok <- TemplateSyntax.validate(validated_url),
-         :ok <- validate_decoded_template(validated_url) do
+         :ok <- validate_meeting_url_template(validated_url) do
       {:ok, validated_url}
     else
       {:error, error} -> {:error, %{custom_meeting_url: error}}
@@ -356,6 +355,20 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   defp validate_meeting_url(_other, _metadata) do
     {:error,
      %{custom_meeting_url: dgettext("dashboard_integrations", "Meeting URL must be text")}}
+  end
+
+  @doc """
+  Checks the `{{meeting_id}}` placeholder of a custom meeting URL exactly as a
+  save does: on the URL as typed, and again on its percent-decoded reading.
+
+  Returns `:ok` for a static URL or a correctly written template, and
+  `{:error, message}` with the message the save form would show otherwise.
+  Only the template syntax is checked, not the URL's shape or host, so a
+  stored URL can be judged by the same rule the form enforces.
+  """
+  @spec validate_meeting_url_template(String.t()) :: :ok | {:error, String.t()}
+  def validate_meeting_url_template(url) when is_binary(url) do
+    with :ok <- TemplateSyntax.validate(url), do: validate_decoded_template(url)
   end
 
   # A URL that already names http or https and is still refused failed on its

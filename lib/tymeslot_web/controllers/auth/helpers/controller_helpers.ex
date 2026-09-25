@@ -13,7 +13,7 @@ defmodule TymeslotWeb.AuthControllerHelpers do
 
   import Phoenix.Controller
 
-  alias Tymeslot.Auth.AuthActions
+  alias Tymeslot.Auth
 
   @doc """
   Handles rate limited response with flash message and redirect.
@@ -63,7 +63,12 @@ defmodule TymeslotWeb.AuthControllerHelpers do
   def format_oauth_error_for_flash(:terms_not_accepted),
     do: dgettext("auth", "You must accept the terms to continue.")
 
-  def format_oauth_error_for_flash(error_message) when is_binary(error_message), do: error_message
+  def format_oauth_error_for_flash(:email_already_taken),
+    do:
+      dgettext("auth", "This email is already registered. Please use a different email address.")
+
+  def format_oauth_error_for_flash(_unknown_error),
+    do: dgettext("auth", "Authentication failed. Please try again.")
 
   # The changeset's email error carries an internal English diagnostic — either Ecto's
   # constraint message, or one of `EmailValidator`'s strings, which already begin with
@@ -91,14 +96,8 @@ defmodule TymeslotWeb.AuthControllerHelpers do
   def format_oauth_error_for_params(:email_required), do: "email_required"
   def format_oauth_error_for_params(:invalid_email), do: "invalid_email"
   def format_oauth_error_for_params(:terms_not_accepted), do: "terms_not_accepted"
-
-  def format_oauth_error_for_params(error_message) when is_binary(error_message) do
-    cond do
-      error_message =~ "already registered" -> "email_taken"
-      error_message =~ "Invalid email" -> "invalid_email"
-      true -> "unknown_error"
-    end
-  end
+  def format_oauth_error_for_params(:email_already_taken), do: "email_taken"
+  def format_oauth_error_for_params(_unknown_error), do: "unknown_error"
 
   @doc """
   Renders a flash error and redirects for a generic OAuth failure reason.
@@ -131,14 +130,17 @@ defmodule TymeslotWeb.AuthControllerHelpers do
         :terms_not_accepted ->
           dgettext("auth", "You must accept the terms to continue.")
 
+        # The provider vouched for this address, so the person reading this
+        # owns it: their account was made with a password or another
+        # provider, and they should be pointed back to it, not away from it.
         :email_already_taken ->
           dgettext(
             "auth",
-            "This email address is already associated with another account. Please use a different email or sign in to your existing account."
+            "An account with this email address already exists. Sign in with your password or with the service you originally signed up with. If you have forgotten your password, you can reset it from the sign-in page."
           )
 
         :registration_disabled ->
-          AuthActions.registration_disabled_message()
+          Auth.error_message(:registration_disabled)
 
         _unknown_error ->
           dgettext("auth", "Authentication failed. Please try again.")

@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   # what keeps it on the right date and on the right side of a DST transition.
   defp default_slot(now) do
     start_at = next_whole_hour(now)
-    end_at = DateTime.add(start_at, 1, :hour)
+    end_at = default_end(start_at)
 
     %{
       date: iso_date(start_at),
@@ -60,6 +60,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       end_hour: end_at.hour,
       end_minute: 0
     }
+  end
+
+  # An hour after the start, expressed as a wall-clock hour the form can hold.
+  # On the autumn DST night the wall clock repeats, so 02:00 CEST plus an hour
+  # is 02:00 CET and the end hour would equal the start hour, proposing a slot
+  # of no length that the save then refuses. Step to the next distinct hour
+  # there. The repeated hour remains valid as input, since a user really can
+  # book across it; it is only the default that must not land on it.
+  defp default_end(start_at) do
+    end_at = DateTime.add(start_at, 1, :hour)
+
+    if end_at.hour == start_at.hour, do: DateTime.add(end_at, 1, :hour), else: end_at
   end
 
   defp next_whole_hour(%DateTime{minute: 0} = now), do: now
@@ -215,10 +227,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
         {:noreply, socket}
 
       creating ->
-        updated = Map.put(creating, :all_day, not Map.get(creating, :all_day, false))
-        {:noreply, assign(socket, :creating_event, updated)}
+        {:noreply, assign(socket, :creating_event, toggle_all_day(creating))}
     end
   end
+
+  # Switching All-day on collapses the range to the start's day. The timed
+  # default gives both ends their own date, so a slot opened late in the
+  # evening already ends tomorrow; carried into an all-day event that reads as
+  # a deliberate two-day banner, which is never what ticking the box meant.
+  # The reverse direction is left alone: a user who widened an all-day event
+  # across several days and then unticks the box has said what they want.
+  defp toggle_all_day(%{all_day: true} = creating), do: %{creating | all_day: false}
+
+  defp toggle_all_day(%{date: date} = creating),
+    do: %{creating | all_day: true, end_date: date}
 
   @spec handle_add_create_reminder(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}

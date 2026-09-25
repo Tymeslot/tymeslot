@@ -39,12 +39,22 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.SnoozePolicy
   alias Tymeslot.Workers.VideoRoom.ErrorPolicy
+  alias Tymeslot.Workers.VideoSyncWorker
 
   require Logger
 
   @max_attempts 5
+
+  # What a booking keeps of a room that is gone: nothing.
+  @cleared_room %{
+    video_room_id: nil,
+    video_room_enabled: false,
+    organizer_video_url: nil,
+    attendee_video_url: nil
+  }
 
   # Overridable at runtime (rather than a plain module attribute) so tests can
   # drive the full-page retry path without inserting hundreds of meetings.
@@ -240,12 +250,49 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
     end
   end
 
+  # A room that is the booking's own calendar event (a Teams meeting on the
+  # same Microsoft account) is not the provider's to delete: deleting it would
+  # take the booking off the organiser's calendar and mail attendees a
+  # cancellation. It is released the way a location change releases it
+  # (`VideoSyncWorker.release/1`), which has calendar sync replace the event
+  # with one carrying no online meeting. Only upcoming bookings reach this, as
+  # Teams rooms are drained in the `:upcoming` scope, so no past event is
+  # rewritten. The room is cleared in the same transaction that schedules the
+  # replacement: the replacement is skipped for a meeting still holding a room
+  # on the event, and a cleared room is never listed for another pass.
+  defp delete_meeting_room(
+         _integration,
+         %{video_room_id: event_id, provider_event_id: event_id} = meeting
+       ) do
+    case Repo.transaction(fn -> release_attached_room(meeting) end) do
+      {:ok, :ok} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to release attached video room during disconnect",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        :error
+    end
+  end
+
   defp delete_meeting_room(integration, meeting),
     do:
       delete_room(integration, meeting.organizer_user_id, meeting.video_room_id,
         log: [meeting_id: meeting.id],
         on_deleted: fn -> clear_room(meeting) end
       )
+
+  defp release_attached_room(meeting) do
+    with {:ok, _updated} <- MeetingQueries.update_meeting(meeting, @cleared_room),
+         {:ok, _scheduled} <- VideoSyncWorker.release(meeting) do
+      :ok
+    else
+      {:error, reason} -> Repo.rollback(reason)
+    end
+  end
 
   # A grid event's room exists only as its record, so the record goes with it.
   defp delete_event_room(integration, room),
@@ -284,14 +331,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
   # refreshed so the attendee's invite stops advertising a URL that no longer
   # works.
   defp clear_room(meeting) do
-    attrs = %{
-      video_room_id: nil,
-      video_room_enabled: false,
-      organizer_video_url: nil,
-      attendee_video_url: nil
-    }
-
-    case MeetingQueries.update_meeting(meeting, attrs) do
+    case MeetingQueries.update_meeting(meeting, @cleared_room) do
       {:ok, updated} ->
         schedule_calendar_update(updated)
         :ok

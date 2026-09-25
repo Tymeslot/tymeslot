@@ -5,7 +5,9 @@ defmodule Tymeslot.Polls.ConfirmTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
+  alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
 
@@ -210,6 +212,89 @@ defmodule Tymeslot.Polls.ConfirmTest do
     test "returns :no_participants when the poll has no participants",
          %{user: user, poll: poll, slot: slot} do
       assert {:error, :no_participants} = Confirm.confirm(poll.id, slot.id, user.id)
+    end
+  end
+
+  describe "confirm/3 against the host's time off" do
+    # The host lives in Berlin, so every period below is wall-clock there and
+    # a slot's UTC instant lands on a different day near midnight.
+    setup do
+      user = insert(:user)
+      profile = insert(:profile, user: user, timezone: "Europe/Berlin")
+      poll = insert(:poll, user: user, status: :open, timezone: "Europe/Berlin")
+      participant = insert(:poll_participant, poll: poll, email: "voter@example.com")
+
+      %{user: user, profile: profile, poll: poll, participant: participant}
+    end
+
+    # A slot of `minutes` starting at `time` on `date`, Berlin wall-clock.
+    defp berlin_slot(poll, participant, date, time, minutes) do
+      start_time = date |> DateTime.new!(time, "Europe/Berlin") |> DateTime.shift_zone!("Etc/UTC")
+      slot_end = DateTime.add(start_time, minutes, :minute)
+      slot = insert(:poll_time_slot, poll: poll, start_time: start_time, end_time: slot_end)
+      insert(:poll_vote, participant: participant, time_slot: slot, response: :yes)
+      slot
+    end
+
+    defp day_off!(profile, date) do
+      {:ok, period} = TimeOff.create(profile.id, %{starts_on: date, ends_on: date})
+      period
+    end
+
+    defp meeting_count(user_id) do
+      Repo.aggregate(from(m in MeetingSchema, where: m.organizer_user_id == ^user_id), :count)
+    end
+
+    test "refuses a slot inside time off entered after the poll went out, and mints nothing",
+         %{user: user, profile: profile, poll: poll, participant: participant} do
+      day = Date.add(Date.utc_today(), 10)
+      slot = berlin_slot(poll, participant, day, ~T[10:00:00], 60)
+
+      # The poll and its votes exist before the host books the day off.
+      day_off!(profile, day)
+
+      assert {:error, :time_off} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert meeting_count(user.id) == 0
+
+      {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
+      assert reloaded.status == :open
+      assert reloaded.confirmed_meeting_id == nil
+    end
+
+    test "refuses a slot that only runs into time off after midnight in the host's timezone",
+         %{user: user, profile: profile, poll: poll, participant: participant} do
+      day = Date.add(Date.utc_today(), 10)
+      # 23:30 to 00:30 Berlin: on `day` in UTC throughout, yet its last half
+      # hour is on the day off.
+      slot = berlin_slot(poll, participant, day, ~T[23:30:00], 60)
+      day_off!(profile, Date.add(day, 1))
+
+      assert {:error, :time_off} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert meeting_count(user.id) == 0
+    end
+
+    test "refuses a slot inside part-day time off",
+         %{user: user, profile: profile, poll: poll, participant: participant} do
+      day = Date.add(Date.utc_today(), 10)
+      slot = berlin_slot(poll, participant, day, ~T[14:00:00], 30)
+
+      {:ok, _period} =
+        TimeOff.create(profile.id, %{starts_on: day, ends_on: day, start_time: ~T[13:00:00]})
+
+      assert {:error, :time_off} = Confirm.confirm(poll.id, slot.id, user.id)
+    end
+
+    test "confirms a slot that ends as the time off begins",
+         %{user: user, profile: profile, poll: poll, participant: participant} do
+      day = Date.add(Date.utc_today(), 10)
+      slot = berlin_slot(poll, participant, day, ~T[23:00:00], 60)
+      day_off!(profile, Date.add(day, 1))
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, slot.id, user.id)
+      assert DateTime.compare(meeting.start_time, slot.start_time) == :eq
+
+      {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
+      assert reloaded.status == :confirmed
     end
   end
 end

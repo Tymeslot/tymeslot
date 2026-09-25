@@ -7,7 +7,9 @@ defmodule Tymeslot.Emails.EmailScheduler do
 
   - `MeetingScheduler` — confirmation, cancellation, reminder, reschedule, and
     booking-approval emails
-  - `AuthScheduler` — email verification and password reset
+  - `AuthScheduler` — email verification, password reset, and the account
+    notices sent instead of an on-screen answer (no password to reset, a
+    sign-up attempt with a registered address)
   - `AccountScheduler` — email change verification and confirmations
   - `CalendarScheduler` — calendar invitations and event update notifications
   - `IntegrationScheduler` — integration health notifications and admin alerts
@@ -50,10 +52,13 @@ defmodule Tymeslot.Emails.EmailScheduler do
     to: AuthScheduler
 
   defdelegate schedule_password_reset(user_id, reset_url, token_hash), to: AuthScheduler
+  defdelegate schedule_no_password_to_reset(user_id), to: AuthScheduler
+  defdelegate schedule_signup_attempt_notice(user_id), to: AuthScheduler
+  defdelegate schedule_social_signup_confirmation(details), to: AuthScheduler
 
   # Account emails
 
-  defdelegate schedule_email_change_emails(user_id, new_email, verification_url),
+  defdelegate schedule_email_change_emails(user_id, new_email, verification_url, token_hash),
     to: AccountScheduler
 
   defdelegate schedule_email_change_confirmations(user_id, old_email, new_email),
@@ -89,11 +94,19 @@ defmodule Tymeslot.Emails.EmailScheduler do
     "send_booking_approval_nudge" => ["meeting_id"],
     "send_booking_request_outcome" => ["meeting_id", "variant"],
     "send_reschedule_request_expired" => ["meeting_id"],
-    "send_email_verification" => ["user_id", "verification_url"],
-    "send_password_reset" => ["user_id", "reset_url"],
+    "send_email_verification" => ["user_id", "verification_url_encrypted"],
+    "send_password_reset" => ["user_id", "reset_url_encrypted"],
+    "send_no_password_to_reset" => ["user_id"],
+    "send_signup_attempt_notice" => ["user_id"],
+    "send_social_signup_confirmation" => ["email", "provider", "confirm_url_encrypted"],
     "send_poll_deadline_reminders" => ["poll_id"],
     "send_poll_host_nudge" => ["poll_id", "variant"],
-    "send_email_change_verification" => ["user_id", "new_email", "verification_url"],
+    "send_email_change_verification" => [
+      "user_id",
+      "new_email",
+      "verification_url_encrypted",
+      "token_hash"
+    ],
     "send_email_change_notification" => ["user_id", "new_email"],
     "send_email_change_confirmations" => ["user_id", "old_email", "new_email"],
     "send_integration_unhealthy_notification" => [

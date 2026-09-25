@@ -309,6 +309,21 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
       refute changeset.valid?
       assert changeset.errors[:name]
     end
+
+    test "forgets the sync token of a calendar path the owner deselects" do
+      # Kept, the token would resume a later reselection from a delta that
+      # assumes the cache already holds everything before it.
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          calendar_paths: ["/cal/a/", "/cal/b/"],
+          caldav_sync_tokens: %{"/cal/a/" => "token-a", "/cal/b/" => "token-b"}
+        )
+
+      changeset = CalendarIntegrationSchema.changeset(integration, %{calendar_paths: ["/cal/a/"]})
+
+      assert get_change(changeset, :caldav_sync_tokens) == %{"/cal/a/" => "token-a"}
+    end
   end
 
   describe "CalendarEntry.cast/1 and dump/1" do

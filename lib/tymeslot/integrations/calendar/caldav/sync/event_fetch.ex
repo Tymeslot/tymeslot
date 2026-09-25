@@ -4,9 +4,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
   result, including paths that have disappeared from the server.
 
   This is the path every sync tier eventually funnels into: Tier 3 uses it
-  directly, Tier 2 falls back to it when the CTag moves, and Tier 1 uses it for
-  any calendar beyond the primary one (`sync-collection` is scoped to a single
-  collection).
+  directly, Tier 2 falls back to it for a calendar whose CTag moved, and Tier 1
+  for a calendar whose sync token expired or whose delta came without event
+  data. Every tier walks the configured paths through `each_path/3`, so a
+  missing calendar is handled the same way whichever tier found it.
 
   ## Missing paths
 
@@ -40,17 +41,31 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
   @type result :: :ok | {:error, term()}
 
   @doc """
-  Fetches each path in turn, then reconciles any that went missing.
-
-  Stops at the first hard error, but collects 404s across all paths so the
-  missing-path decision is made once with the full picture rather than per
-  path.
+  Fetches every configured path in full, then reconciles any that went
+  missing.
   """
-  @spec fetch_paths(struct(), map(), [String.t()]) :: result()
-  def fetch_paths(integration, client, paths) do
+  @spec fetch_paths(struct(), map()) :: result()
+  def fetch_paths(integration, client) do
+    each_path(integration, client, &fetch_path(integration, client, &1, []))
+  end
+
+  @doc """
+  Syncs each configured path in turn with `sync_path`, then reconciles any
+  that went missing.
+
+  `sync_path` returns `:ok`, `:not_found` for a collection the server no
+  longer has, or an error. The walk stops at the first error, but collects
+  404s across all paths so the missing-path decision is made once with the
+  full picture rather than per path.
+  """
+  @spec each_path(struct(), map(), (String.t() -> result() | :not_found)) :: result()
+  def each_path(_integration, %{calendar_paths: []}, _sync_path),
+    do: {:error, :no_calendar_paths}
+
+  def each_path(integration, client, sync_path) do
     {status, missing} =
-      Enum.reduce_while(paths, {:ok, []}, fn path, {:ok, missing} ->
-        case fetch_path(integration, client, path, []) do
+      Enum.reduce_while(client.calendar_paths, {:ok, []}, fn path, {:ok, missing} ->
+        case sync_path.(path) do
           :ok -> {:cont, {:ok, missing}}
           :not_found -> {:cont, {:ok, [path | missing]}}
           error -> {:halt, {error, missing}}
@@ -61,32 +76,20 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
   end
 
   @doc """
-  Fetches one path, treating a missing collection as the booking calendar
-  having disappeared.
+  Fetches and reconciles a single calendar path.
 
-  Used for the primary path, where a 404 always means user action is required
-  rather than that the path can be quietly dropped.
+  Returns the bare `:not_found` sentinel when the collection is missing, for
+  `each_path/3` to decide between dropping the path and flagging the
+  integration.
+
+  Options:
+
+    * `:new_ctag` — a `getctag` value to store as the path's sync token once
+      the events have been reconciled. Only written on success: a failed
+      reconciliation must not advance the token past changes it never applied.
   """
-  @spec fetch_primary(struct(), map(), String.t(), keyword()) :: result()
-  def fetch_primary(integration, client, primary_path, opts) do
-    case fetch_path(integration, client, primary_path, opts) do
-      :not_found -> {:error, :booking_calendar_missing}
-      other -> other
-    end
-  end
-
-  # Fetches and reconciles a single calendar path.
-  #
-  # Returns the bare `:not_found` sentinel when the collection is missing so
-  # callers can decide between dropping the path and flagging the integration.
-  #
-  # Options:
-  #
-  #   * `:new_ctag` — a `getctag` value to store as the sync token once the
-  #     events have been reconciled. Only written on success: a failed
-  #     reconciliation must not advance the token past changes it never applied.
   @spec fetch_path(struct(), map(), String.t(), keyword()) :: result() | :not_found
-  defp fetch_path(integration, client, calendar_path, opts) do
+  def fetch_path(integration, client, calendar_path, opts) do
     range_now = DateTime.utc_now()
     start_time = DateTime.add(range_now, -@sync_window_past_days, :day)
     end_time = DateTime.add(range_now, @sync_window_future_days, :day)
@@ -131,7 +134,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
            calendar_path
          ) do
       :ok ->
-        State.put(integration, sync_token_opt(opts))
+        State.put(integration, sync_token_opt(calendar_path, opts))
         :ok
 
       {:error, reason} ->
@@ -145,10 +148,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
     end
   end
 
-  defp sync_token_opt(opts) do
+  defp sync_token_opt(calendar_path, opts) do
     case Keyword.get(opts, :new_ctag) do
       nil -> []
-      ctag -> [sync_token: ctag]
+      ctag -> [sync_token: {calendar_path, ctag}]
     end
   end
 

@@ -132,6 +132,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   defp parse_reminder_method(_other), do: :error
 
   @doc """
+  The timezone a recurring event's UNTIL date ends its day in: the event's own,
+  falling back to the organiser's profile zone for an event that carries none.
+
+  A series belongs to the calendar it sits on, not to whoever is looking at it,
+  so reading the organiser's zone for both is only right while they agree. An
+  organiser in `Europe/Tallinn` ending an `America/Los_Angeles` series on 31
+  December otherwise gets an UNTIL at 13:59 Los Angeles time, cutting that day's
+  afternoon occurrences; west-to-east the mirror case adds one.
+
+  Creates pass the organiser's zone directly and do not call this: an event
+  being drawn on the grid has no zone of its own yet, and the grid's wall clock
+  is the organiser's.
+  """
+  @spec recurrence_timezone(map() | nil, String.t() | nil) :: String.t() | nil
+  def recurrence_timezone(event, user_timezone)
+  def recurrence_timezone(nil, user_timezone), do: user_timezone
+
+  def recurrence_timezone(event, user_timezone) do
+    case Map.get(event, :timezone) do
+      zone when is_binary(zone) and zone != "" -> zone
+      _none -> user_timezone
+    end
+  end
+
+  @doc """
   Composes a canonical RRULE string from the recurrence editor's raw form
   fields (`freq`, `interval`, `by_day[]`, `end_type`, `count`, `until`).
 
@@ -146,10 +171,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
     - `:all_day` — a boolean that controls UNTIL value-type: all-day recurring
       events must emit `UNTIL=YYYYMMDD` (RFC 5545 §3.3.10) rather than the
       default UTC date-time form.
-    - `:timezone` — the organiser's timezone. A timed event's UNTIL is an
-      instant, so the date the form supplies has to end its day in that zone
-      rather than in UTC, or the series ends a day early west of UTC and a day
-      late east of it.
+    - `:timezone` — the timezone whose day the UNTIL date ends, from
+      `recurrence_timezone/2`. A timed event's UNTIL is an instant, so the date
+      the form supplies has to end its day in a zone rather than in UTC, or the
+      series ends a day early west of UTC and a day late east of it.
 
   Returns `{:error, :until_before_start}` when `until` precedes `:start_date`.
   """

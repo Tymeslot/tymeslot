@@ -2,17 +2,17 @@ defmodule TymeslotWeb.OAuthControllerTest do
   use TymeslotWeb.ConnCase, async: false
   @moduletag :auth
 
-  import Mox
+  import Tymeslot.Factory, only: [insert: 2]
+  import Tymeslot.Test.OAuthProviderStub
 
   alias Phoenix.Flash
+  alias Plug.Conn
   alias Plug.Test
-  alias Tymeslot.Auth.OAuth.{HelperMock, UserRegistration}
-  alias Tymeslot.Factory
+  alias Req.Test, as: ReqTest
+  alias Tymeslot.Auth.Session
   alias Tymeslot.Infrastructure.DashboardCache
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Test.LogCapture
-
-  setup :verify_on_exit!
 
   setup do
     original_social_auth = Application.get_env(:tymeslot, :social_auth)
@@ -125,85 +125,61 @@ defmodule TymeslotWeb.OAuthControllerTest do
   end
 
   describe "GET /auth/:provider/callback" do
-    test "successful login: puts success flash and redirects", %{conn: conn} do
-      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
-                                                      %{
-                                                        code: "code",
-                                                        state: "state",
-                                                        provider: :github
-                                                      } ->
-        {:ok, conn, :github}
-      end)
+    setup :setup_providers
 
-      conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
+    test "successful login: puts success flash and redirects", %{conn: conn} do
+      insert(:user, provider: "github", github_user_id: "123")
+      stub_github(%{"id" => 123}, [])
+
+      conn = sign_in(conn, "github")
 
       assert Flash.get(conn.assigns.flash, :info) == "Successfully signed in with GitHub."
-      # Redirect goes to configured success path; verify it's a valid internal path.
-      assert String.starts_with?(redirected_to(conn), "/")
+      assert redirected_to(conn) == "/dashboard"
+      assert get_session(conn, :user_token)
     end
 
     test "registration required: stores data in session and redirects to /auth/complete-registration",
          %{conn: conn} do
-      registration_data = %{
-        provider: "github",
-        email: "user@example.com",
-        name: "Test User",
-        is_verified: true,
-        email_from_provider: true,
-        provider_uid: "",
-        github_user_id: 123,
-        google_user_id: nil
-      }
+      stub_github(%{"id" => 123, "name" => "Test User"}, [
+        %{"email" => "user@example.com", "primary" => true, "verified" => true}
+      ])
 
-      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
-                                                      %{
-                                                        code: "code",
-                                                        state: "state",
-                                                        provider: :github
-                                                      } ->
-        {:registration_required, conn, :github, registration_data}
-      end)
+      conn = sign_in(conn, "github", %{"registration_path" => "/custom/registration"})
 
-      conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
-
+      # A registration_path parameter is ignored.
       assert redirected_to(conn) == "/auth/complete-registration"
       assert session_data = get_session(conn, :pending_oauth_registration)
       assert session_data.provider == "github"
       assert session_data.email == "user@example.com"
-      assert session_data.github_user_id == 123
+      assert session_data.provider_uid == "123"
     end
 
-    test "registration_path query param is ignored; always redirects to /auth/complete-registration",
-         %{conn: conn} do
-      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
-                                                      %{
-                                                        code: "code",
-                                                        state: "state",
-                                                        provider: :github
-                                                      } ->
-        {:registration_required, conn, :github, %{provider: "github", email: "u@e.com"}}
-      end)
+    test "a provider switched off mid-flow signs no one in", %{conn: conn} do
+      insert(:user, provider: "github", github_user_id: "130")
+      stub_github(%{"id" => 130}, [])
+
+      start = get(conn, ~p"/auth/github")
+      %{"state" => state} = start |> redirected_to(302) |> authorise_params()
+
+      social_auth = Application.get_env(:tymeslot, :social_auth)
+
+      Application.put_env(
+        :tymeslot,
+        :social_auth,
+        Keyword.put(social_auth, :github_enabled, false)
+      )
 
       conn =
-        get(conn, ~p"/auth/github/callback", %{
-          "code" => "code",
-          "state" => "state",
-          "registration_path" => "/custom/registration"
-        })
+        start
+        |> recycle()
+        |> get(~p"/auth/github/callback", %{"code" => "code", "state" => state})
 
-      assert redirected_to(conn) == "/auth/complete-registration"
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :error) == "GitHub authentication is not available"
+      refute get_session(conn, :user_token)
     end
 
     test "invalid state: puts security error flash and redirects to login", %{conn: conn} do
-      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
-                                                      %{
-                                                        code: "code",
-                                                        state: "state",
-                                                        provider: :github
-                                                      } ->
-        {:error, :invalid_state, conn}
-      end)
-
       conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
 
       assert redirected_to(conn) == "/?auth=login"
@@ -213,53 +189,53 @@ defmodule TymeslotWeb.OAuthControllerTest do
     end
 
     test "OAuth error: puts provider error flash and redirects to login", %{conn: conn} do
-      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
-                                                      %{
-                                                        code: "code",
-                                                        state: "state",
-                                                        provider: :google
-                                                      } ->
-        {:error, :oauth_error, :google, conn}
-      end)
+      stub_provider(%{"/token" => &Conn.send_resp(&1, 400, ~s({"error":"invalid_grant"}))})
 
-      conn = get(conn, ~p"/auth/google/callback", %{"code" => "code", "state" => "state"})
+      conn = sign_in(conn, "google")
 
       assert redirected_to(conn) == "/?auth=login"
       assert Flash.get(conn.assigns.flash, :error) == "Failed to authenticate with Google."
     end
 
     test "general error: puts provider error flash and redirects to login", %{conn: conn} do
-      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
-                                                      %{
-                                                        code: "code",
-                                                        state: "state",
-                                                        provider: :github
-                                                      } ->
-        {:error, :general_error, :github, conn}
-      end)
+      stub_provider(%{
+        "/login/oauth/access_token" => &ReqTest.transport_error(&1, :timeout)
+      })
 
-      conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
+      conn = sign_in(conn, "github")
 
       assert redirected_to(conn) == "/?auth=login"
 
-      assert Flash.get(conn.assigns.flash, :error) =~
+      assert Flash.get(conn.assigns.flash, :error) ==
                "An error occurred during GitHub authentication."
     end
 
     test "session failed: puts session failure flash and redirects to login", %{conn: conn} do
-      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
-                                                      %{
-                                                        code: "code",
-                                                        state: "state",
-                                                        provider: :github
-                                                      } ->
-        {:error, :session_failed, :github, conn}
-      end)
+      insert(:user, provider: "github", github_user_id: "124")
+      stub_github(%{"id" => 124}, [])
 
-      conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
+      # Nothing a test can arrange makes a real session insert fail.
+      :meck.new(Session, [:passthrough])
+      on_exit(fn -> :meck.unload() end)
+      :meck.expect(Session, :create_session, fn _conn, _user -> {:error, :db_error, "failed"} end)
+
+      conn = sign_in(conn, "github")
 
       assert redirected_to(conn) == "/?auth=login"
       assert Flash.get(conn.assigns.flash, :error) =~ "session creation failed"
+    end
+
+    test "an unverified account is sent to the verify-email screen", %{conn: conn} do
+      insert(:user, provider: "github", github_user_id: "125", verified_at: nil)
+      stub_github(%{"id" => 125}, [])
+
+      conn = sign_in(conn, "github")
+
+      assert redirected_to(conn) == "/auth/verify-email"
+      refute get_session(conn, :user_token)
+
+      assert Flash.get(conn.assigns.flash, :info) ==
+               "Please verify your email address before signing in. We've sent you a new verification link."
     end
 
     test "rejects OAuth callback without authorization code", %{conn: conn} do
@@ -297,121 +273,82 @@ defmodule TymeslotWeb.OAuthControllerTest do
     test "redirects to login with info flash when registration is disabled for new user", %{
       conn: conn
     } do
-      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
-                                                      %{
-                                                        code: "code",
-                                                        state: "state",
-                                                        provider: :github
-                                                      } ->
-        {:error, :registration_disabled, :github, conn}
+      original = Application.get_env(:tymeslot, :registration_enabled)
+      Application.put_env(:tymeslot, :registration_enabled, false)
+
+      on_exit(fn ->
+        if is_nil(original),
+          do: Application.delete_env(:tymeslot, :registration_enabled),
+          else: Application.put_env(:tymeslot, :registration_enabled, original)
       end)
 
-      conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
+      stub_github(%{"id" => 126}, [])
+
+      conn = sign_in(conn, "github")
 
       assert redirected_to(conn) == "/?auth=login"
       assert Flash.get(conn.assigns.flash, :info) =~ "Registration is currently disabled"
     end
 
-    test "successful generic oauth callback redirects to dashboard", %{conn: conn} do
-      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
-                                                      %{
-                                                        code: "code",
-                                                        state: "state",
-                                                        provider: :oauth
-                                                      } ->
-        {:ok, conn, :oauth}
-      end)
+    test "redirects to login with an error when the email belongs to another sign-in method",
+         %{conn: conn} do
+      insert(:user, email: "taken@example.com", provider: "google", google_user_id: "g-1")
 
-      conn = get(conn, ~p"/auth/oauth/callback", %{"code" => "code", "state" => "state"})
+      stub_github(%{"id" => 127}, [
+        %{"email" => "taken@example.com", "primary" => true, "verified" => true}
+      ])
+
+      conn = sign_in(conn, "github")
+
+      assert redirected_to(conn) == "/?auth=login"
+
+      assert Flash.get(conn.assigns.flash, :error) =~
+               "Sign in with your password or with the service you originally signed up with"
+    end
+
+    test "successful generic oauth callback redirects to dashboard", %{conn: conn} do
+      insert(:user, provider: "oauth", provider_uid: "sub-1")
+      stub_sso(%{"sub" => "sub-1"})
+
+      conn = sign_in(conn, "oauth")
 
       assert Flash.get(conn.assigns.flash, :info) == "Successfully signed in with SSO."
-      assert String.starts_with?(redirected_to(conn), "/")
+      assert redirected_to(conn) == "/dashboard"
     end
 
     test "respects valid internal success_path", %{conn: conn} do
-      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
-                                                      %{
-                                                        code: "code",
-                                                        state: "state",
-                                                        provider: :github
-                                                      } ->
-        {:ok, conn, :github}
-      end)
+      insert(:user, provider: "github", github_user_id: "128")
+      stub_github(%{"id" => 128}, [])
 
-      conn =
-        get(conn, ~p"/auth/github/callback", %{
-          "code" => "code",
-          "state" => "state",
-          "success_path" => "/settings"
-        })
+      conn = sign_in(conn, "github", %{"success_path" => "/settings"})
 
       assert redirected_to(conn) == "/settings"
     end
 
-    test "rejects URL-encoded open redirect via success_path", %{conn: conn} do
-      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
-                                                      %{
-                                                        code: "code",
-                                                        state: "state",
-                                                        provider: :github
-                                                      } ->
-        {:ok, conn, :github}
-      end)
+    for evil <- ["/%2f%2fevil.com", "https://evil.com/steal", "//evil.com/steal"] do
+      test "rejects the open redirect #{evil} via success_path", %{conn: conn} do
+        insert(:user, provider: "github", github_user_id: "129")
+        stub_github(%{"id" => 129}, [])
 
-      conn =
-        get(conn, ~p"/auth/github/callback", %{
-          "code" => "code",
-          "state" => "state",
-          "success_path" => "/%2f%2fevil.com"
-        })
+        conn = sign_in(conn, "github", %{"success_path" => unquote(evil)})
 
-      redirect = redirected_to(conn)
-      refute redirect =~ "evil.com"
+        assert redirected_to(conn) == "/dashboard"
+      end
     end
 
-    test "rejects open redirect via success_path parameter", %{conn: conn} do
-      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
-                                                      %{
-                                                        code: "code",
-                                                        state: "state",
-                                                        provider: :github
-                                                      } ->
-        {:ok, conn, :github}
+    test "rejects a callback for an unknown provider before the rate limit or callback handler",
+         %{conn: conn} do
+      :meck.expect(RateLimiter, :check_oauth_callback_rate_limit, fn _ip ->
+        flunk("an unknown provider must be rejected before rate limiting")
       end)
 
       conn =
-        get(conn, ~p"/auth/github/callback", %{
-          "code" => "code",
-          "state" => "state",
-          "success_path" => "https://evil.com/steal"
-        })
+        get(conn, "/auth/unsupported/callback", %{"code" => "code", "state" => "state"})
 
-      # Should redirect to default success path, NOT to the evil URL
-      redirect = redirected_to(conn)
-      refute redirect =~ "evil.com"
-      assert String.starts_with?(redirect, "/")
-    end
+      assert redirected_to(conn) == "/auth/login"
 
-    test "rejects protocol-relative redirect via success_path", %{conn: conn} do
-      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
-                                                      %{
-                                                        code: "code",
-                                                        state: "state",
-                                                        provider: :github
-                                                      } ->
-        {:ok, conn, :github}
-      end)
-
-      conn =
-        get(conn, ~p"/auth/github/callback", %{
-          "code" => "code",
-          "state" => "state",
-          "success_path" => "//evil.com/steal"
-        })
-
-      redirect = redirected_to(conn)
-      refute redirect =~ "evil.com"
-      assert String.starts_with?(redirect, "/")
+      assert Flash.get(conn.assigns.flash, :error) ==
+               "Unsupported OAuth provider: unsupported"
     end
 
     test "generic oauth callback without code redirects with error", %{conn: conn} do
@@ -423,26 +360,6 @@ defmodule TymeslotWeb.OAuthControllerTest do
   end
 
   describe "POST /auth/complete social auth auditing" do
-    setup do
-      try do
-        :meck.unload(UserRegistration)
-      rescue
-        _other -> :ok
-      end
-
-      :meck.new(UserRegistration, [:passthrough])
-
-      on_exit(fn ->
-        try do
-          :meck.unload(UserRegistration)
-        rescue
-          _other -> :ok
-        end
-      end)
-
-      :ok
-    end
-
     defp social_auth_events do
       LogCapture.drain()
       |> Enum.map(&LogCapture.user_metadata/1)
@@ -450,21 +367,16 @@ defmodule TymeslotWeb.OAuthControllerTest do
     end
 
     test "first-time signup logs a social_auth_success entry", %{conn: conn} do
+      Application.put_env(:tymeslot, :social_auth, github_enabled: true)
+
       session_data = %{
         provider: "github",
         email: "new@example.com",
         name: "New User",
-        is_verified: true,
         email_from_provider: true,
-        provider_uid: "",
-        github_user_id: 12_345,
-        google_user_id: nil
+        github_user_id: "12345",
+        created_at: System.system_time(:second)
       }
-
-      :meck.expect(UserRegistration, :create_oauth_user, fn :github, _data, _profile, _opts ->
-        user = Factory.insert(:user, email: "new@example.com", provider: "github")
-        {:ok, user}
-      end)
 
       conn = Test.init_test_session(conn, %{pending_oauth_registration: session_data})
 

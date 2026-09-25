@@ -29,14 +29,40 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     * `VEVENT`s carrying a `RECURRENCE-ID`. Those are overrides of single
       occurrences with their own timing; only the master event of the series
       is patched.
-    * An `ATTENDEE` block the organiser's own calendar client wrote. Rewriting
-      it would reset each `PARTSTAT` that client is tracking, and on a
-      scheduling server that re-invites everyone. Tymeslot's own block is
-      rewritten, and is told apart by the `X-TYMESLOT-ATTENDEES` marker
-      `build_simple_event/3` emits beside it; a document with no `ATTENDEE` at
-      all is Tymeslot's too, whether it carries `CONTACT` lines or nothing.
-      Which property the rewrite uses is the caller's `mode`, not this
-      module's decision — see `CalDAV.Scheduling`.
+    * The attendee list, unless the payload carries `:attendees`. A payload
+      without the key has no opinion about who the event is with, and every
+      `ATTENDEE`, `CONTACT` and `X-TYMESLOT-ATTENDEES` line stays exactly as
+      the server returned it.
+
+  ## Attendees
+
+  A payload that carries `:attendees` states the complete new list, so a
+  guest removed in the grid is removed from the document too. It is merged
+  into the stored `ATTENDEE` lines rather than written over them:
+
+    * A guest who stays keeps their stored line verbatim, `PARTSTAT`, `ROLE`,
+      `RSVP`, `CN` and `SCHEDULE-AGENT` included. The cached attendee map does
+      not hold those parameters for CalDAV, so rebuilding the line from it
+      would reset every reply, which is how the original full rewrite lost
+      them.
+    * A guest who is gone loses their line. Addresses are compared without
+      regard to case, as the grid compares them.
+    * A guest who is new is written the way the caller's `mode` says (see
+      `CalDAV.Scheduling`): `ATTENDEE;SCHEDULE-AGENT=CLIENT` in `:attendee`
+      mode, so the server stores them without mailing them, since Tymeslot
+      sends its own invitation.
+    * An `ATTENDEE` whose address is not a `mailto:` URI (a room, a group, a
+      `urn:uuid:` principal) cannot be named by the payload's list, which the
+      sync builds from `mailto:` addresses only, and is kept.
+
+  Tymeslot's own block, told apart by the `X-TYMESLOT-ATTENDEES` marker
+  `build_simple_event/3` emits beside it or by the absence of any `ATTENDEE`
+  at all, also has its `CONTACT` lines rewritten. In `:contact` mode such a
+  block is rebuilt as `CONTACT` lines outright, so a document written under
+  the other mode converges on the current one. A block the organiser's own
+  client wrote keeps its `CONTACT` lines, and in `:contact` mode gains no new
+  ones either: a `CONTACT` added to a document whose `CONTACT` lines this
+  module does not own could never be taken away again.
   """
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Scheduling
@@ -155,31 +181,96 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   # exception onto the master's start.
   defp override?(properties), do: Enum.any?(properties, &(property_name(&1) == "RECURRENCE-ID"))
 
-  # Both spellings are always replaced, never just the one being written, so a
-  # document Tymeslot wrote under the other mode — or before this project
-  # emitted `ATTENDEE` at all — converges on the current one instead of
-  # carrying the attendee twice.
+  # Both spellings are always replaced in a block of Tymeslot's own, never just
+  # the one being written, so a document Tymeslot wrote under the other mode,
+  # or before this project emitted `ATTENDEE` at all, converges on the current
+  # one instead of carrying the attendee twice.
   @rewritten_attendee_properties ["CONTACT", "ATTENDEE", "X-TYMESLOT-ATTENDEES"]
 
-  defp attendee_entries(properties, patch_set) do
-    if Map.has_key?(patch_set.event_data, :attendees) and ours_to_rewrite?(properties) do
-      [{@rewritten_attendee_properties, attendee_block(patch_set)}]
-    else
-      []
+  # The same reading of an address as `ICalParser` applies when it builds the
+  # cached attendee list, so a line and the attendee the sync made of it are
+  # always recognised as one and the same.
+  @mailto ~r/:mailto:(.+)$/i
+
+  defp attendee_entries(properties, %{event_data: event_data, mode: mode}) do
+    case Map.fetch(event_data, :attendees) do
+      {:ok, attendees} when is_list(attendees) ->
+        [attendee_entry(properties, attendees, event_data, mode, ours?(properties))]
+
+      _no_opinion ->
+        []
     end
   end
 
-  defp attendee_block(%{event_data: event_data, mode: :attendee}) do
-    case Properties.build_attendee_lines(event_data, :attendee) do
+  defp attendee_entry(_properties, _attendees, event_data, :contact, true = _ours),
+    do: {@rewritten_attendee_properties, Properties.build_attendee_lines(event_data, :contact)}
+
+  defp attendee_entry(properties, attendees, _event_data, mode, ours) do
+    wanted = MapSet.new(attendees, &attendee_address/1)
+
+    kept =
+      Enum.filter(properties, fn line ->
+        property_name(line) == "ATTENDEE" and keep_attendee_line?(line, wanted)
+      end)
+
+    present = MapSet.new(kept, &line_address/1)
+
+    added =
+      attendees
+      |> Enum.reject(&(is_nil(attendee_address(&1)) or attendee_address(&1) in present))
+      |> Enum.uniq_by(&attendee_address/1)
+
+    lines = kept ++ added_lines(added, mode, ours)
+
+    {replaced_attendee_properties(ours), join_lines(lines ++ marker(lines, mode, ours))}
+  end
+
+  defp keep_attendee_line?(line, wanted) do
+    case line_address(line) do
+      nil -> true
+      address -> address in wanted
+    end
+  end
+
+  # See the moduledoc: a `CONTACT` is only ever added where this module owns
+  # the `CONTACT` lines, so a later removal can take it away again.
+  defp added_lines(_added, :contact, false = _ours), do: []
+
+  defp added_lines(added, mode, _ours),
+    do: content_lines(Properties.build_attendee_lines(%{attendees: added}, mode))
+
+  defp replaced_attendee_properties(true = _ours), do: @rewritten_attendee_properties
+  defp replaced_attendee_properties(false = _ours), do: ["ATTENDEE"]
+
+  defp marker(lines, :attendee, true = _ours) do
+    if Enum.any?(lines, &(property_name(&1) == "ATTENDEE")),
+      do: [ICalBuilder.attendee_marker()],
+      else: []
+  end
+
+  defp marker(_lines, _mode, _ours), do: []
+
+  defp join_lines([]), do: nil
+  defp join_lines(lines), do: Enum.join(lines, "\r\n")
+
+  defp line_address(line) do
+    case Regex.run(@mailto, line) do
+      [_match, address] -> address |> String.trim() |> String.downcase()
       nil -> nil
-      lines -> lines <> "\r\n" <> ICalBuilder.attendee_marker()
     end
   end
 
-  defp attendee_block(%{event_data: event_data, mode: :contact}),
-    do: Properties.build_attendee_lines(event_data, :contact)
+  defp attendee_address(%{"email" => email}), do: normalise_address(email)
+  defp attendee_address(%{email: email}), do: normalise_address(email)
+  defp attendee_address(email) when is_binary(email), do: normalise_address(email)
+  defp attendee_address(_other), do: nil
 
-  defp ours_to_rewrite?(properties) do
+  defp normalise_address(email) when is_binary(email) and email != "",
+    do: email |> String.trim() |> String.downcase()
+
+  defp normalise_address(_missing), do: nil
+
+  defp ours?(properties) do
     not advertises_attendees?(properties) or marked_ours?(properties)
   end
 

@@ -30,13 +30,23 @@ defmodule Tymeslot.Meetings do
 
   alias Tymeslot.Pagination.CursorPage
 
-  @doc "Looks up a guest by their RSVP token without mutating anything."
-  defdelegate get_guest_by_token(token), to: Guests, as: :get_by_token
+  @doc """
+  Looks up the open invitation behind a guest's RSVP token, with its meeting
+  preloaded. Returns `{:error, :meeting_closed}` once the meeting no longer
+  takes responses.
+  """
+  defdelegate get_guest_invitation(token), to: Guests, as: :get_open_invitation
 
   @doc """
-  Records a guest's RSVP (`"accepted"` / `"declined"`) from their token.
+  Records a guest's RSVP (`"accepted"` / `"declined"`) from their token and
+  notifies the organiser's dashboard.
   """
   defdelegate record_guest_rsvp(token, response), to: Guests, as: :record_rsvp
+
+  @doc "Subscribes the caller to guest RSVP updates on a user's meetings."
+  defdelegate subscribe_to_guest_rsvp_updates(user_id),
+    to: Guests,
+    as: :subscribe_to_rsvp_updates
 
   @doc "Aggregates RSVP counts for a list of guests."
   defdelegate guest_rsvp_summary(guests), to: Guests, as: :summarize
@@ -135,6 +145,11 @@ defmodule Tymeslot.Meetings do
         )
 
         {:error, :meeting_not_found}
+
+      # A Teams meeting waiting for the booking's own calendar event: the
+      # expected first outcome, which `VideoRooms` already logs as a wait.
+      {:error, :calendar_event_pending} = pending ->
+        pending
 
       {:error, reason} = error ->
         Logger.error("Failed to add video room", meeting_id: meeting_id, reason: inspect(reason))

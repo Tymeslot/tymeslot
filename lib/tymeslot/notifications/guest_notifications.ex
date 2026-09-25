@@ -19,7 +19,7 @@ defmodule Tymeslot.Notifications.GuestNotifications do
       reschedule email. A request that was never approved has guests who were
       never invited; the confirmation that follows its approval invites them
       as usual.
-    * **Cancelled, declined or expired** (`notify_cancelled/2`): every guest gets
+    * **Cancelled, declined or expired** (`notify_cancelled/3`): every guest gets
       a cancellation email, but only for a booking that was ever confirmed. A
       request that was never approved never invited anyone.
 
@@ -50,8 +50,8 @@ defmodule Tymeslot.Notifications.GuestNotifications do
       guests ->
         GuestQueries.reset_for_new_time(meeting_id)
 
-        send_to_guests(guests, content, meeting_id, "reschedule", fn email, details ->
-          Config.email_service_module().send_guest_reschedule(email, details)
+        send_to_guests(guests, content, meeting_id, "reschedule", fn guest, details ->
+          Config.email_service_module().send_guest_reschedule(guest.email, details)
         end)
     end
   end
@@ -88,8 +88,8 @@ defmodule Tymeslot.Notifications.GuestNotifications do
           AppointmentBuilder.from_meeting(meeting),
           meeting_id,
           "reschedule",
-          fn email, details ->
-            Config.email_service_module().send_guest_reschedule(email, details)
+          fn guest, details ->
+            Config.email_service_module().send_guest_reschedule(guest.email, details)
           end
         )
     end
@@ -99,22 +99,31 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   Sends each guest the cancellation email, for a booking that was confirmed at
   some point and so had invited them. `appointment_details` is the payload of
   `Tymeslot.Emails.AppointmentBuilder.from_meeting/1`.
-  """
-  @spec notify_cancelled(map(), map()) :: :ok
-  def notify_cancelled(%{first_announced_at: nil}, _appointment_details), do: :ok
 
-  def notify_cancelled(%{id: meeting_id}, appointment_details) do
+  `once` wraps each guest's send, given a key naming that guest and the send
+  itself. A job that must not mail a guest twice passes
+  `&Tymeslot.Workers.DeliveryClaims.once(job, &1, &2)`, so a rescued run
+  skips the guests already told and still reaches the rest.
+  """
+  @spec notify_cancelled(map(), map(), (String.t(), (-> term()) -> term())) :: :ok
+  def notify_cancelled(meeting, appointment_details, once \\ fn _key, send -> send.() end)
+
+  def notify_cancelled(%{first_announced_at: nil}, _appointment_details, _once), do: :ok
+
+  def notify_cancelled(%{id: meeting_id}, appointment_details, once) do
     meeting_id
     |> GuestQueries.list_for_meeting()
-    |> send_to_guests(appointment_details, meeting_id, "cancellation", fn email, details ->
-      Config.email_service_module().send_guest_cancellation(email, details)
+    |> send_to_guests(appointment_details, meeting_id, "cancellation", fn guest, details ->
+      once.("cancellation:guest:#{guest.id}", fn ->
+        Config.email_service_module().send_guest_cancellation(guest.email, details)
+      end)
     end)
   end
 
   @doc """
   Tells the guests of a held request the host declined, or that expired, that
   the booking is off. Only a request a reschedule sent back into the gate had
-  invited guests; `notify_cancelled/2` sends nothing for any other.
+  invited guests; `notify_cancelled/3` sends nothing for any other.
   """
   @spec notify_released(map()) :: :ok
   def notify_released(%{first_announced_at: nil}), do: :ok
@@ -138,8 +147,12 @@ defmodule Tymeslot.Notifications.GuestNotifications do
 
   defp send_to_guests(guests, appointment_details, meeting_id, kind, send_fun) do
     Enum.each(guests, fn guest ->
-      case send_fun.(guest.email, guest_details(appointment_details, guest)) do
+      case send_fun.(guest, guest_details(appointment_details, guest)) do
         {:ok, _result} ->
+          :ok
+
+        # Already sent by an earlier run of the same job (see `notify_cancelled/3`).
+        :ok ->
           :ok
 
         other ->

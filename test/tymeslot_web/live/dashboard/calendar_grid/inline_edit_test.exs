@@ -493,11 +493,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       |> element("#calendar-grid")
       |> render_hook("request_remove_attendee", %{"email" => "guest@example.com"})
 
+      test_pid = self()
+
+      Mox.stub(Tymeslot.CalendarMock, :update_event, fn uid, data, _context ->
+        send(test_pid, {:provider_update, uid, data})
+        :ok
+      end)
+
       lv
       |> element("#calendar-grid")
       |> render_hook("confirm_remove_attendee", %{})
 
       assert render(lv) =~ "Attendee removed and notified."
+
+      # The removal has to reach the provider as the shortened list: the guest
+      # is told the meeting is off, so leaving her on the server's copy would
+      # put her back in the grid on the next sync.
+      render_async(lv)
+      event_uid = event.uid
+      assert_receive {:provider_update, ^event_uid, %{attendees: []}}
 
       assert_enqueued(
         worker: EmailWorker,

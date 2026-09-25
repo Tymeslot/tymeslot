@@ -134,6 +134,47 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventMoveLiveViewTest do
     end
   end
 
+  describe "a move that fails once the new calendar has the event" do
+    test "says the event was copied and does not claim it stayed where it was", %{
+      conn: conn,
+      source: source,
+      destination: destination
+    } do
+      event = insert_all_day_event(source)
+
+      # The create lands, but its answer cannot be cached (PostgreSQL refuses
+      # the NUL byte), so the move raises after the copy exists.
+      stub_create(fn payload -> {:ok, CreatedEvent.new(payload.uid, etag: "bad\x00tag")} end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      move(lv, event, destination)
+
+      assert [{:create, _payload, _context}] = await_move(lv, 1)
+
+      html = render(lv)
+      assert html =~ "Event copied to the new calendar, but the move did not finish."
+      refute html =~ "It is still on its original calendar."
+    end
+
+    test "a crash before the new calendar answered still says nothing moved", %{
+      conn: conn,
+      source: source,
+      destination: destination
+    } do
+      event = insert_all_day_event(source)
+      stub_create(fn _payload -> raise "connection closed" end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      move(lv, event, destination)
+
+      assert [{:create, _payload, _context}] = await_move(lv, 1)
+
+      assert render(lv) =~ "Could not move the event. It is still on its original calendar."
+      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(source.id, event.uid)
+      assert row.calendar_integration_id == source.id
+    end
+  end
+
   describe "moving a recurring event" do
     for {kind, attrs} <- [
           {"a series", quote(do: %{recurrence_rule: "FREQ=WEEKLY;BYDAY=MO"})},

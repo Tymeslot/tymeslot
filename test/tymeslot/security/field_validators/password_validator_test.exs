@@ -67,21 +67,33 @@ defmodule Tymeslot.Security.FieldValidators.PasswordValidatorTest do
                PasswordValidator.validate("Sh0rt!")
     end
 
-    test "returns error for long password" do
-      long_password = String.duplicate("a", 81)
-
-      assert {:error, "Password must be at most 80 characters long"} =
-               PasswordValidator.validate(long_password)
+    # bcrypt reads only the first 72 bytes, so anything past them would be
+    # accepted but silently ignored when the password is checked.
+    test "accepts a password of exactly 72 bytes" do
+      assert :ok = PasswordValidator.validate("Aa1!" <> String.duplicate("a", 68))
     end
 
-    test "supports custom min_length and max_length options" do
+    test "rejects a password longer than 72 bytes" do
+      assert {:error, message} =
+               PasswordValidator.validate("Aa1!" <> String.duplicate("a", 69))
+
+      assert message =~ "at most 72 bytes"
+    end
+
+    test "counts the cap in bytes, not characters" do
+      # 40 characters, but "é" takes two bytes each: 4 + 36 * 2 = 76 bytes.
+      password = "Aa1!" <> String.duplicate("é", 36)
+      assert String.length(password) == 40
+
+      assert {:error, message} = PasswordValidator.validate(password)
+      assert message =~ "at most 72 bytes"
+    end
+
+    test "supports a custom min_length option" do
       assert :ok = PasswordValidator.validate("Sh0rt!", min_length: 5)
 
       assert {:error, "Password must be at least 15 characters long"} =
                PasswordValidator.validate("Sh0rt!", min_length: 15)
-
-      assert {:error, "Password must be at most 5 characters long"} =
-               PasswordValidator.validate("Long1!", max_length: 5, min_length: 1)
     end
 
     test "returns error for non-binary values" do

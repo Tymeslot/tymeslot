@@ -9,12 +9,13 @@ defmodule Tymeslot.Emails.Templates.ChargeDisputeOpened do
 
   import Swoosh.Email
 
+  alias Tymeslot.Emails.Shared.Cards
+
   alias Tymeslot.Emails.Shared.{
     Buttons,
     Formatting,
     MjmlEmail,
     Sanitise,
-    Styles,
     TemplateHelper,
     Text
   }
@@ -129,26 +130,7 @@ defmodule Tymeslot.Emails.Templates.ChargeDisputeOpened do
       |> Enum.reject(&is_nil/1)
       |> Enum.join("<br/>\n")
 
-    """
-    #{Text.section_title(label)}
-    <mj-section
-      background-color="#{Styles.canvas_soft()}"
-      border-radius="#{Styles.card_radius()}"
-      padding="20px 26px"
-      css-class="mobile-card email-canvas-soft"
-    >
-      <mj-column>
-        <mj-text
-          font-size="15px"
-          color="#{Styles.text_color(:primary)}"
-          line-height="1.7"
-          align="left"
-        >
-          #{lines}
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    """
+    Cards.details_card(label, lines)
   end
 
   defp text_body(context, amount, host_name) do

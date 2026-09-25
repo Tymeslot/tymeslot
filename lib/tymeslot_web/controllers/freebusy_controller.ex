@@ -14,16 +14,11 @@ defmodule TymeslotWeb.FreebusyController do
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Helpers.ClientIP
 
-  @rate_window_ms 60_000
-  @rate_limit 60
-
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def index(conn, %{"token" => token}) do
-    bucket_key = "freebusy:#{ClientIP.get(conn)}"
-
-    case RateLimiter.check_rate(bucket_key, @rate_window_ms, @rate_limit) do
-      {:allow, _count} -> serve(conn, token)
-      {:deny, _limit} -> conn |> put_resp_content_type("text/plain") |> send_resp(429, "")
+    case RateLimiter.check_freebusy_feed_rate_limit(ClientIP.get(conn)) do
+      :ok -> serve(conn, token)
+      {:error, :rate_limited} -> conn |> put_resp_content_type("text/plain") |> send_resp(429, "")
     end
   end
 

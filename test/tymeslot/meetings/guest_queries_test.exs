@@ -10,6 +10,7 @@ defmodule Tymeslot.Meetings.GuestQueriesTest do
 
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.GuestSchema
 
   describe "rsvp_summaries_for_user/1" do
     test "returns an empty map when the user has no meetings" do
@@ -117,9 +118,21 @@ defmodule Tymeslot.Meetings.GuestQueriesTest do
     # holds seconds, so before the email tiebreaker these lists came back in
     # whichever order Postgres felt like. That reached the recipients as a
     # non-deterministic send order, and the suite as an intermittent failure.
+    # The three inserts land in one second almost always, but not when the
+    # setup straddles a second boundary: `inserted_at` then differs, decides
+    # the order on its own, and the lists come back in insertion order. Stamp
+    # the rows to one instant so the premise these tests name is true by
+    # construction and the email tiebreaker is the only thing left to decide.
     setup do
       meeting = insert(:meeting)
       {:ok, _guests} = Guests.create_for_meeting(meeting.id, ~w(c@x.com a@x.com b@x.com))
+
+      {3, nil} =
+        Repo.update_all(
+          from(g in GuestSchema, where: g.meeting_id == ^meeting.id),
+          set: [inserted_at: ~N[2026-01-01 12:00:00]]
+        )
+
       %{meeting: meeting}
     end
 

@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
 
   @moduletag :integrations
 
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Google.EventMapper
   alias TymeslotWeb.Endpoint
 
@@ -256,17 +257,27 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
     end
 
     test "sends no reply for an attendee the edit just added" do
-      # The shape the grid builds for a newly typed address: no cached row, so
-      # no response to inherit from the attendee that preceded it.
+      # The grid builds a newly typed address with `Attendee.new/1`: no cached
+      # row, so no response to inherit from the attendee that preceded it.
       result =
         event_with([
           cached_attendee("ada@example.com", "accepted"),
-          %{"email" => "grace@example.com", "name" => nil, "status" => "needs_action"}
+          Attendee.new(email: "grace@example.com")
         ])
 
       assert [ada, grace] = result["attendees"]
       assert ada["responseStatus"] == "accepted"
       assert grace["email"] == "grace@example.com"
+      refute Map.has_key?(grace, "responseStatus")
+    end
+
+    test "sends no reply for an attendee the grid added before the canonical shape" do
+      # Rows written by the grid before `Attendee` existed carry a `status` key
+      # that no provider ever reported. It is not a reply and must not become one.
+      result =
+        event_with([%{"email" => "grace@example.com", "name" => nil, "status" => "accepted"}])
+
+      assert [grace] = result["attendees"]
       refute Map.has_key?(grace, "responseStatus")
     end
 

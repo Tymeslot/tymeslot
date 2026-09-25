@@ -4,7 +4,7 @@ defmodule Tymeslot.TestAffected.Selection do
 
   The engine behind `mix test.affected`. Pure: it takes the changed paths and
   an index of the suite, and returns a plan. All disk and git access lives in
-  the task.
+  `Tymeslot.TestAffected.Workspace`.
 
   ## Why paths and tags, and not the dependency graph
 

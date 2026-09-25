@@ -113,7 +113,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmailsTest do
     end
   end
 
-  describe "handle_event_update_notification/1" do
+  describe "handle_event_update_notification/2" do
     setup do
       user = insert(:user, name: "Organiser", email: "org@example.com")
       integration = insert(:calendar_integration, user: user)
