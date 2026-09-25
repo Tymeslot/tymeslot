@@ -28,6 +28,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     integration_health_recovery: %{category: "System", severity: :info},
     oban_queue_stuck: %{category: "Queue", severity: :error},
     oban_jobs_accumulating: %{category: "Queue", severity: :warning},
+    oban_jobs_force_discarded: %{category: "Queue", severity: :error},
     new_error: %{category: "Errors", severity: :error},
     error_regression: %{category: "Errors", severity: :error},
     reconciliation_discrepancies: %{category: "Payment", severity: :warning},
@@ -180,6 +181,13 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     ])
   end
 
+  # Every sweep that discards jobs is its own incident, but two sweeps that
+  # each discard one job of the same worker read the same, so key on the
+  # jobs themselves.
+  def dedup_key(:oban_jobs_force_discarded, metadata) do
+    "oban_jobs_force_discarded:#{Map.get(metadata, :discarded_by)}:#{Map.get(metadata, :job_ids)}"
+  end
+
   def dedup_key(type, metadata), do: format_message(type, metadata)
 
   defp health_key(parts), do: parts |> Enum.reject(&is_nil/1) |> Enum.join(":")
@@ -268,6 +276,13 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     queues = Map.get(metadata, :affected_queues, [])
     threshold = Map.get(metadata, :threshold, "unknown")
     "Oban job accumulation detected (threshold: #{threshold}): #{inspect(queues)}"
+  end
+
+  def format_message(:oban_jobs_force_discarded, metadata) do
+    count = Map.get(metadata, :count, "unknown")
+    discarded_by = Map.get(metadata, :discarded_by, "unknown")
+    jobs = Map.get(metadata, :jobs, "unknown")
+    "#{discarded_by} discarded #{count} Oban jobs that never finished: #{jobs}"
   end
 
   def format_message(type, metadata) when type in [:new_error, :error_regression] do

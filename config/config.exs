@@ -581,5 +581,154 @@ config :error_tracker,
 config :tymeslot, :error_tracking_resolve_after_days, 30
 config :tymeslot, :error_tracking_occurrences_kept, 50
 
+# Discards and cancels that are a job's expected end, so
+# `Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes` does not record them:
+# the work no longer applies (its meeting or integration is gone), only the
+# user can fix it (credentials to reconnect, their own endpoint refusing
+# deliveries), or the failure already raises its own admin alert. Anything
+# else a worker discards or cancels is recorded in ErrorTracker. Keyed by
+# worker module, or `:any_worker`; a reason matches by equality, or by
+# `{:prefix, text}`. A keyword list, so a deployment's config can add its
+# own workers' entries.
+config :tymeslot, :expected_job_outcomes, [
+  {:any_worker,
+   [
+     "Integration not found",
+     "Meeting not found",
+     "Meeting cancelled",
+     "Meeting already started",
+     "User not found",
+     "Integration or meeting not found",
+     "Integration is disabled",
+     "Insufficient plan",
+     "Credentials require reauthentication",
+     # Also raises its own `:recipient_email_rejected` alert.
+     "Recipient permanently undeliverable"
+   ]},
+  {Tymeslot.Workers.EmailWorker,
+   [
+     "Verification token superseded by a newer request",
+     "Reset token superseded by a newer request",
+     "Email change token superseded or revoked",
+     "host has no username",
+     "poll not found",
+     "poll not open",
+     "User or integration not found",
+     "Integration no longer needs reauth",
+     "Room creation error no longer recorded",
+     "Event or user not found",
+     "Cached event has no timing",
+     "Meeting not cancelled",
+     # The other leg was requeued, so nothing is lost.
+     {:prefix, "One booking request leg already sent"}
+   ]},
+  {Tymeslot.Workers.CalendarEventWorker,
+   [
+     "Conflicting server-side change; queued for offline replay"
+   ]},
+  {Tymeslot.Workers.WebhookWorker,
+   [
+     "Webhook or meeting not found",
+     "Webhook is disabled",
+     :blocked_by_ssrf,
+     :blocked_redirect,
+     :too_many_redirects,
+     :redirect_missing_location,
+     # A 4xx from the user's own endpoint, recorded against the webhook.
+     {:prefix, "HTTP 4"}
+   ]},
+  {Tymeslot.Workers.SlackWorker,
+   [
+     "token_revoked",
+     "account_inactive",
+     "channel_not_found",
+     "webhook_url_revoked"
+   ]},
+  {Tymeslot.Workers.TelegramWorker,
+   [
+     "Bot token missing",
+     # With the shared bot token this raises its own admin alert.
+     "Unauthorized",
+     "Bot blocked",
+     "Bot kicked",
+     "Chat unreachable"
+   ]},
+  {Tymeslot.Workers.VideoRoomWorker,
+   [
+     "Video integration missing",
+     "Video integration inactive",
+     "Account cannot host video meetings"
+   ]},
+  {Tymeslot.Workers.VideoSyncWorker,
+   [
+     "Calendar event video room not found",
+     "Video integration not found",
+     "No video integration can reach the provider room",
+     "No provider video room to sync",
+     "Video provider scope insufficient — reconnect required",
+     "Video provider refused the stored credentials: reconnect required",
+     "Video integration missing",
+     "Video integration inactive",
+     "Account cannot host video meetings"
+   ]},
+  {Tymeslot.Workers.VideoIntegrationDisconnectWorker,
+   [
+     "Integration already removed"
+   ]},
+  {Tymeslot.Workers.VideoTranscoder, ["Video source no longer present"]},
+  {Tymeslot.Workers.ColourWriteBackWorker,
+   [
+     :event_not_cached,
+     :raw_ical_never_synced,
+     :provider_has_no_event_colour
+   ]},
+  {Tymeslot.Meetings.Workers.ApprovalExpiryWorker, ["Request answered while expiring"]},
+  {Tymeslot.Workers.SendConnectAccountRestricted,
+   [
+     "connect_account not found",
+     "user not found"
+   ]},
+  {Tymeslot.Workers.SendChargeDisputeOpened, ["booking_payment not found"]},
+  {Tymeslot.Workers.SendBookingPaymentRefunded, ["booking_payment not found"]},
+  {Tymeslot.Workers.RenewWebhookChannelsWorker,
+   [
+     "Booking calendar not found — user action required"
+   ]},
+  {Tymeslot.Workers.RefreshOutlookCalendarWorker,
+   [
+     "Outlook sync failed transiently; the next scheduled sweep will retry"
+   ]},
+  {Tymeslot.Workers.SyncGoogleCalendarWorker,
+   [
+     "Booking calendar not found — user action required",
+     "Google rejected credentials — reauthentication required",
+     "Google Calendar not enabled for account: user action required"
+   ]},
+  {Tymeslot.Workers.SyncOutlookCalendarWorker,
+   [
+     "Microsoft Graph rejected credentials — reauthentication required"
+   ]},
+  {Tymeslot.Workers.SyncCalDavCalendarWorker,
+   [
+     "CalDAV server rejected credentials — reauthentication required",
+     "CalDAV booking calendar not found — user action required",
+     "CalDAV integration has no calendar selected — user action required",
+     "CalDAV server returned a server error; the next scheduled sync will retry"
+   ]},
+  {Tymeslot.Workers.SyncExchangeCalendarWorker,
+   [
+     "Exchange server rejected credentials — reauthentication required",
+     "Exchange integration has no addressable mailbox",
+     "Exchange server returned a server error; the next scheduled sync will retry",
+     {:prefix, "Exchange server refused the sync request: "}
+   ]},
+  # `invalid_grant` is the owner's account; any other code, such as
+  # `invalid_client`, points at the OAuth client registration and is recorded.
+  {Tymeslot.Integrations.Calendar.TokenRefreshJob,
+   [
+     {:prefix, "Credentials require reauthentication: invalid_grant"}
+   ]}
+]
+
 # Import environment specific config
 import_config "#{config_env()}.exs"

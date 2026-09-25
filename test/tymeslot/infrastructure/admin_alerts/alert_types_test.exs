@@ -156,6 +156,24 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
       assert msg =~ "100"
     end
 
+    test ":oban_jobs_force_discarded names who discarded how many jobs of which workers" do
+      metadata = %{
+        count: 2,
+        discarded_by: "Oban.Lifeline",
+        jobs: "Tymeslot.Workers.EmailWorker (emails): 2",
+        job_ids: "4, 7"
+      }
+
+      assert AlertTypes.format_message(:oban_jobs_force_discarded, metadata) ==
+               "Oban.Lifeline discarded 2 Oban jobs that never finished: " <>
+                 "Tymeslot.Workers.EmailWorker (emails): 2"
+
+      # Two sweeps that each discard different jobs of the same worker read
+      # the same, and must still raise two alerts.
+      refute AlertTypes.dedup_key(:oban_jobs_force_discarded, metadata) ==
+               AlertTypes.dedup_key(:oban_jobs_force_discarded, %{metadata | job_ids: "8, 9"})
+    end
+
     test ":new_error names the exception, its source and the reason" do
       msg =
         AlertTypes.format_message(:new_error, %{

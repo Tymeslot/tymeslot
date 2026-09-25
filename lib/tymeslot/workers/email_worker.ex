@@ -151,18 +151,37 @@ defmodule Tymeslot.Workers.EmailWorker do
         handle_result(result, job)
 
       nil ->
-        # A hard timeout is ambiguous — the message may already be on the wire.
-        # Discard rather than letting Oban retry, which would re-send a possibly
-        # delivered email. A genuinely lost mail can be re-requested by the user.
-        Logger.warning("Email job timed out; discarding to avoid duplicate sends",
-          action: action,
-          timeout_ms: timeout_ms,
-          job_id: job.id,
-          attempt: job.attempt
-        )
-
-        {:discard, "Email sending timed out"}
+        handle_timeout(action, timeout_ms, job)
     end
+  end
+
+  # An admin alert is the one email where a duplicate costs nothing and a
+  # loss costs the operator the incident. An SMTP outage often shows as a
+  # hang rather than a refusal, so a discard here would defeat the long retry
+  # schedule `AdminAlertScheduler` gives the alert: retry instead.
+  defp handle_timeout("send_admin_alert" = action, timeout_ms, job) do
+    Logger.warning("Admin alert email timed out; retrying",
+      action: action,
+      timeout_ms: timeout_ms,
+      job_id: job.id,
+      attempt: job.attempt
+    )
+
+    {:error, "Email sending timed out"}
+  end
+
+  # A hard timeout is ambiguous: the message may already be on the wire.
+  # Discard rather than letting Oban retry, which would re-send a possibly
+  # delivered email. A genuinely lost mail can be re-requested by the user.
+  defp handle_timeout(action, timeout_ms, job) do
+    Logger.warning("Email job timed out; discarding to avoid duplicate sends",
+      action: action,
+      timeout_ms: timeout_ms,
+      job_id: job.id,
+      attempt: job.attempt
+    )
+
+    {:discard, "Email sending timed out"}
   end
 
   defp email_timeout_ms do

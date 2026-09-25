@@ -28,6 +28,7 @@ defmodule Tymeslot.Application do
   }
 
   alias Tymeslot.Infrastructure.ErrorTracking.Alerter, as: ErrorAlerter
+  alias Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes
   alias Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber
   alias Tymeslot.Infrastructure.Logging.{FileSink, MetadataRedactor}
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
@@ -191,6 +192,12 @@ defmodule Tymeslot.Application do
           AdminAlerts.check_config()
 
           CrashReporter.attach()
+
+          # Record jobs a worker discards or cancels, and alert on jobs the
+          # Lifeline discards, neither of which ErrorTracker sees. Skipped
+          # in test for the same reason: every test job that discards on
+          # purpose would be reported. Tests attach it explicitly.
+          ObanOutcomes.attach()
 
           schedule_periodic_jobs()
           AdminBootstrap.warn_if_orphaned_install()

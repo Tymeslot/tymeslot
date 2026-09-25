@@ -32,6 +32,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
           | :integration_health_recovery
           | :oban_queue_stuck
           | :oban_jobs_accumulating
+          | :oban_jobs_force_discarded
           | :new_error
           | :error_regression
           | :pubsub_broadcast_failed
