@@ -20,15 +20,19 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Timing do
     * A `TZID` parameter: the wall clock in that zone, `YYYYMMDDTHHMMSS`.
     * Neither: a floating wall clock, `YYYYMMDDTHHMMSS`.
 
-  The zone a wall clock is read in is the series' IANA zone as the sync
-  resolved it, since a `TZID` may name a zone only its own `VTIMEZONE`
-  defines (`W. Europe Standard Time`); the parameter itself is used only when
-  no zone was resolved. A floating series without one is read in UTC, as the
-  sync reads it.
+  The zone a wall clock is read in is the reference's own `TZID`, cleaned the
+  way the sync's parser cleans it (`Tymeslot.Timezones.sanitize/1`, which
+  also maps Windows names), because the reference is the series' master and
+  its zone is the series' zone, whatever zone the row being edited carries.
+  Only a `TZID` no time zone database knows (one defined by the document's
+  own `VTIMEZONE` alone) falls back to the zone the caller resolved. A
+  reference with no `TZID` (UTC, floating or a date) has no zone, and a
+  floating wall clock is read in UTC, as the sync reads it.
   """
 
   alias Tymeslot.Integrations.Calendar.ICalBuilder.ContentLines
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
+  alias Tymeslot.Timezones
 
   @doc """
   Whether `reference`, a `DTSTART` line, names a date rather than a
@@ -43,8 +47,24 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Timing do
   end
 
   @doc """
+  The IANA zone of the series whose `DTSTART` is `reference`: its `TZID`,
+  sanitised, when a time zone database knows it, `fallback` for a `TZID`
+  only the document's `VTIMEZONE` defines, and `nil` when it has no `TZID`.
+  """
+  @spec zone(String.t(), String.t() | nil) :: String.t() | nil
+  def zone(reference, fallback) do
+    {name_and_params, _value} = ContentLines.split_value(reference)
+
+    case Enum.find_value(params(name_and_params), &tzid/1) do
+      nil -> nil
+      tzid -> known_zone(Timezones.sanitize(tzid)) || blank_to_nil(fallback)
+    end
+  end
+
+  @doc """
   The property `name` with `value` (a `Date` or a UTC `DateTime`) written in
-  the form of `reference`. `timezone` is the series' IANA zone, or `nil`.
+  the form of `reference`, a wall clock in `zone/2` of it. `timezone` is the
+  zone the caller resolved for the series, `zone/2`'s fallback.
 
   Returns `{:error, :value_type_change}` when `value` is a date and the
   reference a date-time, or the reverse, and `{:error, :unknown_timezone}`
@@ -56,7 +76,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Timing do
     {name_and_params, reference_value} = ContentLines.split_value(reference)
     params = params(name_and_params)
 
-    with {:ok, stamp} <- stamp(value, form(reference, params, reference_value), timezone) do
+    form = form(reference, params, reference_value)
+
+    with {:ok, stamp} <- stamp(value, form, zone(reference, timezone)) do
       {:ok, Enum.join([name | params], ";") <> ":" <> stamp}
     end
   end
@@ -75,7 +97,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Timing do
     cond do
       date?(reference) -> :date
       String.ends_with?(String.trim(value), ["Z", "z"]) -> :utc
-      tzid = Enum.find_value(params, &tzid/1) -> {:zoned, tzid}
+      Enum.find_value(params, &tzid/1) -> :zoned
       true -> :floating
     end
   end
@@ -87,11 +109,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Timing do
   defp stamp(%DateTime{} = datetime, :utc, _timezone),
     do: {:ok, Format.format_datetime(DateTime.shift_zone!(datetime, "Etc/UTC"))}
 
-  defp stamp(%DateTime{} = datetime, {:zoned, tzid}, timezone),
-    do: wall_clock(datetime, zone(timezone) || tzid)
-
-  defp stamp(%DateTime{} = datetime, :floating, timezone),
-    do: wall_clock(datetime, zone(timezone) || "Etc/UTC")
+  defp stamp(%DateTime{}, :zoned, nil), do: {:error, :unknown_timezone}
+  defp stamp(%DateTime{} = datetime, :zoned, zone), do: wall_clock(datetime, zone)
+  defp stamp(%DateTime{} = datetime, :floating, _zone), do: wall_clock(datetime, "Etc/UTC")
 
   defp wall_clock(datetime, zone) do
     case DateTime.shift_zone(datetime, zone) do
@@ -100,8 +120,17 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Timing do
     end
   end
 
-  defp zone(timezone) when is_binary(timezone) and timezone != "", do: timezone
-  defp zone(_none), do: nil
+  defp known_zone(zone) when is_binary(zone) do
+    case DateTime.shift_zone(~U[2020-06-15 12:00:00Z], zone) do
+      {:ok, _shifted} -> zone
+      {:error, _reason} -> nil
+    end
+  end
+
+  defp known_zone(_none), do: nil
+
+  defp blank_to_nil(zone) when is_binary(zone) and zone != "", do: zone
+  defp blank_to_nil(_none), do: nil
 
   defp params(name_and_params),
     do: name_and_params |> String.split(";") |> tl()

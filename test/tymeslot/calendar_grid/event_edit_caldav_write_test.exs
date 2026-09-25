@@ -21,7 +21,9 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
   import Mox
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
+  alias Tymeslot.Integrations.Calendar.ICalNormaliser
   alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
 
@@ -330,6 +332,97 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
 
       {:ok, other} = ProviderCalendarEventQueries.get_by_uid(integration.id, unrelated.uid)
       assert {other.raw_ical, other.etag} == {@synced_ical, "\"etag-1\""}
+    end
+
+    # The series as the grid's first edit of 15 September left it, read back
+    # by the sync: the override's cached row is whatever the normaliser makes
+    # of it, not a hand-built one.
+    defp synced_override_row(integration, recurrence_id) do
+      document =
+        Enum.join(
+          ["BEGIN:VCALENDAR", "VERSION:2.0"] ++
+            @series_master ++
+            [
+              "BEGIN:VEVENT",
+              "UID:weekly-standup",
+              "DTSTAMP:20260902T090000Z",
+              recurrence_id,
+              "DTSTART;TZID=Europe/Berlin:20260915T110000",
+              "DTEND;TZID=Europe/Berlin:20260915T111500",
+              "SUMMARY:Weekly standup, moved",
+              "END:VEVENT",
+              "END:VCALENDAR"
+            ],
+          "\r\n"
+        ) <> "\r\n"
+
+      {:ok, raws} = EventProcessor.parse_ical_events(document)
+
+      {:ok, events} =
+        ICalNormaliser.normalise_events(
+          Enum.map(raws, &Map.put(&1, :href, @series_href)),
+          %{
+            calendar_integration_id: integration.id,
+            provider_calendar_id: "/cal/",
+            synced_at: DateTime.utc_now()
+          },
+          :caldav
+        )
+
+      synced = Enum.find(events, &(&1.uid == "weekly-standup_20260915T090000"))
+
+      row =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: synced.uid,
+          provider: "caldav",
+          provider_calendar_id: "/cal/",
+          provider_event_id: @series_href,
+          summary: synced.summary,
+          start_at: synced.start_at,
+          end_at: synced.end_at,
+          all_day: false,
+          timezone: synced.timezone,
+          recurrence_rule: synced.recurrence_rule,
+          provider_metadata: synced.provider_metadata,
+          etag: "\"etag-2\"",
+          raw_ical: document,
+          sync_state: "synced"
+        )
+
+      {row, document}
+    end
+
+    for recurrence_id <- [
+          "RECURRENCE-ID;TZID=Europe/Berlin:20260915T090000",
+          "RECURRENCE-ID:20260915T070000Z"
+        ] do
+      test "a second edit keeps the occurrence in the series' zone (#{recurrence_id})", %{
+        user: user,
+        integration: integration,
+        occurrence: first_edit
+      } do
+        # The row the first edit left is gone once the sync has read the
+        # override back: it is replaced by the one the normaliser makes.
+        ProviderCalendarEventQueries.delete_by_uid(integration.id, first_edit.uid)
+        {occurrence, _document} = synced_override_row(integration, unquote(recurrence_id))
+        expect_series_put()
+
+        # 12:00 in Berlin (UTC+2) on 15 September.
+        assert {:ok, _updated} =
+                 CalendarGrid.update_event(user.id, occurrence, %{
+                   start_at: ~U[2026-09-15 10:00:00.000000Z],
+                   end_at: ~U[2026-09-15 10:15:00.000000Z]
+                 })
+
+        assert_received {:put, @series_url, body, _headers}
+        assert [master, override] = vevent_blocks(body)
+        assert master == @series_master
+        assert unquote(recurrence_id) in override
+        assert "DTSTART;TZID=Europe/Berlin:20260915T120000" in override
+        assert "DTEND;TZID=Europe/Berlin:20260915T121500" in override
+        assert "SUMMARY:Weekly standup, moved" in override
+      end
     end
 
     test "a failed write is not queued and leaves the cache as it was", %{

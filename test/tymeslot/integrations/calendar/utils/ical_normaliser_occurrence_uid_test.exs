@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliserOccurrenceUidTest do
 
   @moduletag :integrations
 
+  alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
 
   @context %{
@@ -97,6 +98,65 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliserOccurrenceUidTest do
     {:ok, [event]} = ICalNormaliser.normalise_events([single], @context, :caldav)
 
     assert event.uid == "D2B2CBB0-F8B5-4EA6-9B43-287EF45F4EC2"
+  end
+
+  describe "the zone a row records" do
+    # The parser hands every DTSTART over in UTC; the row has to record the
+    # zone the event was written in, or a later edit of it is placed in UTC.
+    defp normalised(vevents) do
+      document =
+        String.replace(
+          "BEGIN:VCALENDAR\nVERSION:2.0\n" <> vevents <> "END:VCALENDAR\n",
+          "\n",
+          "\r\n"
+        )
+
+      {:ok, raws} = EventProcessor.parse_ical_events(document)
+      {:ok, events} = ICalNormaliser.normalise_events(raws, @context, :caldav)
+      Map.new(events, &{&1.uid, &1})
+    end
+
+    test "a one-off event keeps its own zone, and its instant" do
+      events =
+        normalised("""
+        BEGIN:VEVENT
+        UID:one-off
+        DTSTAMP:20260901T090000Z
+        DTSTART;TZID=Europe/Berlin:20260915T090000
+        DTEND;TZID=Europe/Berlin:20260915T100000
+        SUMMARY:One-off
+        END:VEVENT
+        """)
+
+      assert %{timezone: "Europe/Berlin", start_at: ~U[2026-09-15 07:00:00Z]} = events["one-off"]
+    end
+
+    test "an occurrence override records its series' zone like every sibling" do
+      events =
+        normalised("""
+        BEGIN:VEVENT
+        UID:weekly
+        DTSTAMP:20260901T090000Z
+        DTSTART;TZID=Europe/Berlin:20260908T090000
+        DTEND;TZID=Europe/Berlin:20260908T091500
+        RRULE:FREQ=WEEKLY;COUNT=3
+        SUMMARY:Weekly
+        END:VEVENT
+        BEGIN:VEVENT
+        UID:weekly
+        DTSTAMP:20260901T090000Z
+        RECURRENCE-ID;TZID=Europe/Berlin:20260915T090000
+        DTSTART;TZID=Europe/Berlin:20260915T110000
+        DTEND;TZID=Europe/Berlin:20260915T111500
+        SUMMARY:Weekly, moved
+        END:VEVENT
+        """)
+
+      assert %{timezone: "Europe/Berlin", start_at: ~U[2026-09-15 09:00:00Z]} =
+               events["weekly_20260915T090000"]
+
+      assert events["weekly_20260922T090000"].timezone == "Europe/Berlin"
+    end
   end
 
   describe "occurrence_key/2" do

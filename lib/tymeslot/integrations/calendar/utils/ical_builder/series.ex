@@ -23,6 +23,11 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   `RECURRENCE-ID` is reduced to that key by `ICalNormaliser.occurrence_key/2`,
   the same rule the sync applies, so an override is recognised here exactly
   when the sync files it over the same occurrence.
+
+  The series' zone is the one its master's `DTSTART` names
+  (`ICalBuilder.Timing.zone/2`), as it is for the sync; the zone a caller
+  passes in stands in only where the document cannot say (a `TZID` defined
+  by the document's `VTIMEZONE` alone, or a resource with no master).
   """
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Scheduling
@@ -59,8 +64,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   Adds an `EXDATE` for it to the master, in the value type and zone of the
   master's `DTSTART` (RFC 5545 §3.8.5.1), unless one is already there, and
   drops any override `VEVENT` whose `RECURRENCE-ID` names the same slot.
-  `timezone` is the series' IANA zone (`nil` for UTC, floating or all-day),
-  used only to read a UTC `RECURRENCE-ID`.
+  A UTC `RECURRENCE-ID` is read in the series' zone (see *Occurrence keys*).
 
   Returns `{:ok, document}`, or `:empty` when nothing of the series would be
   left (a resource holding only that override), which the caller answers by
@@ -70,9 +74,11 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
           {:ok, String.t()} | :empty
   def exclude_occurrence(document, key, timezone)
       when is_binary(document) and is_binary(key) do
-    document
-    |> components()
-    |> Enum.reject(&override_for?(&1, key, timezone))
+    components = components(document)
+    zone = series_zone(components, timezone)
+
+    components
+    |> Enum.reject(&override_for?(&1, key, zone))
     |> Enum.map(&exclude_from_master(&1, key))
     |> serialise()
   end
@@ -106,20 +112,32 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   it, but servers disagree about it. A document with no master to copy from
   and no override for the slot is `{:error, :occurrence_not_found}`.
 
-  `timezone` is the series' IANA zone (`nil` for UTC, floating or all-day),
-  used to read a UTC `RECURRENCE-ID` and to place a wall clock.
+  A UTC `RECURRENCE-ID` is read, and a wall clock placed, in the series'
+  zone (see *Occurrence keys*).
   """
   @spec put_override(String.t(), String.t(), map(), String.t() | nil, Scheduling.mode()) ::
           {:ok, String.t()} | {:error, term()}
   def put_override(document, key, changes, timezone, mode \\ :contact)
       when is_binary(document) and is_binary(key) and is_map(changes) do
     components = components(document)
-    index = Enum.find_index(components, &override_for?(&1, key, timezone))
+    zone = series_zone(components, timezone)
+    index = Enum.find_index(components, &override_for?(&1, key, zone))
 
     with {:ok, reference} <- reference_start(components, index),
          {:ok, components} <-
            write_override(components, index, reference, key, changes, timezone, mode) do
       serialise(components)
+    end
+  end
+
+  # The series' zone is its master's DTSTART's (`Timing.zone/2`), not the
+  # zone of whichever cached row asked: an override's row carries the zone of
+  # its own DTSTART, which another client may have written in UTC or another
+  # zone. `timezone` stands in only where the document cannot say.
+  defp series_zone(components, timezone) do
+    case Enum.find(components, &master?/1) do
+      {:vevent, items} -> Timing.zone(ContentLines.find("DTSTART", properties(items)), timezone)
+      nil -> timezone
     end
   end
 
