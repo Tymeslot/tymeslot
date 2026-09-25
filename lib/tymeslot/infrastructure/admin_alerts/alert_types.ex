@@ -57,10 +57,11 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   into a single alert per dedup window, not one email per job.
 
   Unlike `format_message/2`, this takes the caller's raw, unscrubbed metadata:
-  masking collapses distinct addresses into one (`owner@` and `olivia@` both
-  become `o***@`), so a key built from scrubbed values would swallow a second
+  masking maps distinct addresses to one form (`owner@` and `olivia@` both
+  become `o***@`), so a key built from a masked message could swallow a second
   person's alert. The key is only ever persisted as a SHA-256 hash (see
-  `AdminAlertScheduler`), never in the clear.
+  `AdminAlertScheduler`), but a clause that picks its own fields should still
+  key on ids rather than personal data.
   """
   @spec dedup_key(atom(), map()) :: String.t()
   def dedup_key(:oban_job_failure, metadata) do
@@ -129,9 +130,18 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   end
 
   # The message names the owner only by masked address, which two owners can
-  # share, so key on the raw address the message was masked from.
+  # share, so key on the calendar integration that failed instead, falling
+  # back to the meeting: one alert per broken calendar and reason per window,
+  # with no personal data in the key.
   def dedup_key(:calendar_sync_error, metadata) do
-    "calendar_sync_error:#{Map.get(metadata, :owner_email, "unknown")}:#{reason_text(metadata)}"
+    source =
+      cond do
+        id = Map.get(metadata, :calendar_integration_id) -> "integration #{id}"
+        id = Map.get(metadata, :meeting_id) -> "meeting #{id}"
+        true -> "unknown"
+      end
+
+    "calendar_sync_error:#{source}:#{reason_text(metadata)}"
   end
 
   # The message embeds `days_past_due`, which the daily dunning run increments

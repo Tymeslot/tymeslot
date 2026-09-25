@@ -274,18 +274,34 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
       assert length(jobs) == 2
     end
 
-    # Both addresses mask to "o***@example.com"; keying on the masked headline
-    # would silently drop the second owner's alert for a day.
-    test "calendar sync errors for different owners with the same masked address both enqueue" do
-      for owner_email <- ["owner@example.com", "olivia@example.com"] do
+    # The key identifies the failing calendar, not its owner: one owner with
+    # two broken calendars gets an alert for each.
+    test "calendar sync errors from different calendars both enqueue" do
+      for integration_id <- [1, 2] do
         assert :ok =
                  AdminAlerts.send_alert(:calendar_sync_error, %{
-                   owner_email: owner_email,
+                   owner_email: "owner@example.com",
+                   calendar_integration_id: integration_id,
+                   meeting_id: integration_id,
                    reason_message: "boom"
                  })
       end
 
       assert length(all_enqueued(worker: EmailWorker)) == 2
+    end
+
+    test "repeat calendar sync errors from one calendar collapse into one alert" do
+      for meeting_id <- [1, 2] do
+        assert :ok =
+                 AdminAlerts.send_alert(:calendar_sync_error, %{
+                   owner_email: "owner@example.com",
+                   calendar_integration_id: 5,
+                   meeting_id: meeting_id,
+                   reason_message: "boom"
+                 })
+      end
+
+      assert length(all_enqueued(worker: EmailWorker)) == 1
     end
   end
 

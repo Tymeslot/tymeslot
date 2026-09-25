@@ -537,22 +537,21 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
       assert key == "analytics_tracking_anomaly:unknown"
     end
 
-    # Both addresses mask to "o***@example.com", so a key built from the
-    # masked headline would merge two owners' incidents into one alert.
-    test "calendar_sync_error differs across owners sharing a masked address" do
-      key_a =
-        AlertTypes.dedup_key(:calendar_sync_error, %{
-          owner_email: "owner@example.com",
-          reason_message: "boom"
-        })
+    # The headline names the owner by masked address, which two owners can
+    # share, so the key identifies the failing calendar, and never the owner.
+    test "calendar_sync_error keys on the integration, then the meeting, never the owner" do
+      base = %{owner_email: "owner@example.com", reason_message: "boom"}
+      with_meeting = Map.put(base, :meeting_id, 10)
+      with_integration = Map.put(with_meeting, :calendar_integration_id, 1)
 
-      key_b =
-        AlertTypes.dedup_key(:calendar_sync_error, %{
-          owner_email: "olivia@example.com",
-          reason_message: "boom"
-        })
+      assert AlertTypes.dedup_key(:calendar_sync_error, with_integration) ==
+               "calendar_sync_error:integration 1:boom"
 
-      refute key_a == key_b
+      assert AlertTypes.dedup_key(:calendar_sync_error, with_meeting) ==
+               "calendar_sync_error:meeting 10:boom"
+
+      assert AlertTypes.dedup_key(:calendar_sync_error, base) ==
+               "calendar_sync_error:unknown:boom"
     end
 
     # A rejected recipient's identity is the account it belongs to, not the
