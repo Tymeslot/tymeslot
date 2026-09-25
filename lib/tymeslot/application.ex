@@ -28,6 +28,7 @@ defmodule Tymeslot.Application do
   }
 
   alias Tymeslot.Infrastructure.ErrorTracking.Alerter, as: ErrorAlerter
+  alias Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber
   alias Tymeslot.Infrastructure.Logging.{FileSink, MetadataRedactor}
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Integrations.{HealthCheck, Telemetry}
@@ -70,6 +71,10 @@ defmodule Tymeslot.Application do
     # resolved one happens again, wherever it was raised (request, LiveView,
     # job or crashed process).
     ErrorAlerter.attach()
+
+    # Mask email addresses and credentials in the exception messages
+    # ErrorTracker stores, which its context Filter does not reach.
+    ReasonScrubber.attach()
 
     # Set up telemetry handlers for metrics
     Metrics.setup_handlers()

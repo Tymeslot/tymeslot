@@ -84,6 +84,13 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.AlerterTest do
       assert payload.request_path == "/jane/meeting/:id/cancel"
     end
 
+    test "an email or token in the message never reaches the alert" do
+      report("sync failed for jane.doe@example.com with token=s3cr3tT0ken")
+
+      assert_receive {:send_alert, :new_error, payload}
+      assert payload.reason_message == "sync failed for j***@example.com with token=[REDACTED]"
+    end
+
     test "every metadata value is a scalar the alert email can render" do
       report("bookings exploded", %{
         "live_view.view" => TymeslotWeb.DashboardLive,

@@ -25,10 +25,30 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueries do
 
   @doc """
   Returns true when the calling process is inside a transaction on the
-  repository ErrorTracker writes to.
+  repository ErrorTracker writes to, as configured under `:error_tracker,
+  :repo`.
   """
   @spec in_transaction?() :: boolean()
-  def in_transaction?, do: Repo.in_transaction?()
+  def in_transaction?, do: Application.fetch_env!(:error_tracker, :repo).in_transaction?()
+
+  @doc """
+  Replaces an error's stored reason with `scrubbed`, but only while it still
+  reads `raw`: a later occurrence's report cannot overwrite a newer value.
+  Returns `:ok` whether or not a row changed.
+  """
+  @spec replace_error_reason(pos_integer(), String.t(), String.t()) :: :ok
+  def replace_error_reason(id, raw, scrubbed),
+    do: replace_reason(from(e in Error, where: e.id == ^id and e.reason == ^raw), scrubbed)
+
+  @doc "As `replace_error_reason/3`, for one occurrence."
+  @spec replace_occurrence_reason(pos_integer(), String.t(), String.t()) :: :ok
+  def replace_occurrence_reason(id, raw, scrubbed),
+    do: replace_reason(from(o in Occurrence, where: o.id == ^id and o.reason == ^raw), scrubbed)
+
+  defp replace_reason(query, scrubbed) do
+    {_count, _rows} = Repo.update_all(query, set: [reason: scrubbed])
+    :ok
+  end
 
   @doc """
   Marks every unresolved error last seen before `cutoff` as resolved,

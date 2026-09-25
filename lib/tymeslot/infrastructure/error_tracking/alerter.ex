@@ -21,7 +21,8 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Alerter do
   correlation id, the request, the LiveView or the job. The context is read
   as stored, after `Tymeslot.Infrastructure.ErrorTracking.Filter` has
   redacted it, so a meeting uid or link token in the request path reaches
-  the alert as `:id`. Every value is a
+  the alert as `:id`. The reason is masked by
+  `Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber.scrub/1`. Every value is a
   scalar, since the alert email renders the metadata as a table.
 
   Telemetry detaches a handler that raises, which would switch alerting off
@@ -32,6 +33,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Alerter do
   alias ErrorTracker.Error
   alias ErrorTracker.Occurrence
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber
 
   require Logger
 
@@ -109,7 +111,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Alerter do
 
     AdminAlerts.report(type,
       summary: summary(type),
-      reason: occurrence.reason || error.reason,
+      reason: alert_reason(occurrence.reason || error.reason),
       context:
         Map.merge(occurrence_context(context), %{
           error_id: error.id,
@@ -120,6 +122,11 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Alerter do
         })
     )
   end
+
+  # The alert is raised before `ReasonScrubber` rewrites the stored rows, so
+  # the reason it quotes is masked here by the same rule.
+  defp alert_reason(reason) when is_binary(reason), do: ReasonScrubber.scrub(reason)
+  defp alert_reason(reason), do: reason
 
   defp summary(:new_error), do: "New error"
   defp summary(:error_regression), do: "Resolved error happened again"
