@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> LocalePlug.call([])
 
       assert conn.assigns.locale == "de"
-      assert get_session(conn, :locale) == "de"
+      assert get_session(conn, :chosen_locale) == "de"
       assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
     end
 
@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         conn
         |> Map.put(:params, %{})
         |> fetch_session()
-        |> put_session(:locale, "de")
+        |> put_session(:chosen_locale, "de")
         |> LocalePlug.call([])
 
       assert conn.assigns.locale == "de"
@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> LocalePlug.call([])
 
       assert conn.assigns.locale == "de"
-      assert get_session(conn, :locale) == "de"
+      assert get_session(conn, :chosen_locale) == nil
     end
 
     test "falls back to default locale when nothing is set", %{conn: conn} do
@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> LocalePlug.call([])
 
       assert conn.assigns.locale == "en"
-      assert get_session(conn, :locale) == "en"
+      assert get_session(conn, :chosen_locale) == nil
     end
 
     test "prioritizes query parameter over session", %{conn: _conn} do
@@ -62,12 +62,12 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> init_test_session(%{})
         |> Map.put(:params, %{"locale" => "de"})
         |> fetch_session()
-        |> put_session(:locale, "en")
+        |> put_session(:chosen_locale, "en")
         |> LocalePlug.call([])
 
       # de can only come from the query param, so it winning proves priority.
       assert conn.assigns.locale == "de"
-      assert get_session(conn, :locale) == "de"
+      assert get_session(conn, :chosen_locale) == "de"
     end
 
     test "prioritizes query parameter over Accept-Language header", %{conn: _conn} do
@@ -88,7 +88,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         conn
         |> Map.put(:params, %{})
         |> fetch_session()
-        |> put_session(:locale, "de")
+        |> put_session(:chosen_locale, "de")
         |> put_req_header("accept-language", "en")
         |> LocalePlug.call([])
 
@@ -103,13 +103,13 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> init_test_session(%{})
         |> Map.put(:params, %{"locale" => "es"})
         |> fetch_session()
-        |> put_session(:locale, "de")
+        |> put_session(:chosen_locale, "de")
         |> LocalePlug.call([])
 
       # es is a shape-valid but unsupported param — it must not short-circuit
       # past the valid "de" session locale and be coerced to the default.
       assert conn.assigns.locale == "de"
-      assert get_session(conn, :locale) == "de"
+      assert get_session(conn, :chosen_locale) == "de"
     end
   end
 
@@ -170,6 +170,30 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> LocalePlug.call([])
 
       # Should fall back to default
+      assert conn.assigns.locale == "en"
+    end
+
+    test "accepts whitespace around the weight separator", %{conn: conn} do
+      conn =
+        conn
+        |> Map.put(:params, %{})
+        |> fetch_session()
+        |> put_req_header("accept-language", "en; q=0.2, de ; q=0.8")
+        |> LocalePlug.call([])
+
+      # RFC 9110 allows optional whitespace around ";"; de only wins if both
+      # weights were read.
+      assert conn.assigns.locale == "de"
+    end
+
+    test "a zero-weighted language is not used even when it is the only one", %{conn: conn} do
+      conn =
+        conn
+        |> Map.put(:params, %{})
+        |> fetch_session()
+        |> put_req_header("accept-language", "de;q=0")
+        |> LocalePlug.call([])
+
       assert conn.assigns.locale == "en"
     end
 
@@ -269,8 +293,8 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> put_req_header("accept-language", header_with_bidi)
         |> LocalePlug.call([])
 
-      # Should strip control characters and recognize "de"
-      assert conn.assigns.locale == "de"
+      # Not a supported code once normalised, so it falls through to the default.
+      assert conn.assigns.locale == "en"
     end
   end
 
@@ -346,8 +370,9 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> fetch_session()
         |> LocalePlug.call([])
 
-      # Path components should be stripped, leaving just "de"
-      assert conn.assigns.locale == "de"
+      # Not a supported code, so it falls through to the default rather than
+      # being "cleaned" into one.
+      assert conn.assigns.locale == "en"
     end
 
     test "removes Unicode bidirectional override characters", %{conn: _conn} do
@@ -361,8 +386,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> fetch_session()
         |> LocalePlug.call([])
 
-      # Should strip the control character and result in "de"
-      assert conn.assigns.locale == "de"
+      assert conn.assigns.locale == "en"
     end
 
     test "removes control characters", %{conn: _conn} do
@@ -375,7 +399,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> fetch_session()
         |> LocalePlug.call([])
 
-      assert conn.assigns.locale == "de"
+      assert conn.assigns.locale == "en"
     end
   end
 
@@ -386,14 +410,16 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> init_test_session(%{})
         |> Map.put(:params, %{"locale" => "en"})
         |> fetch_session()
-        |> put_session(:locale, "en")
+        |> put_session(:chosen_locale, "en")
         |> put_req_header("accept-language", "en")
         |> assign(:path_locale, "de")
         |> LocalePlug.call([])
 
-      # de comes only from the path assign; every other source says en.
+      # de comes only from the path assign; every other source says en. The
+      # URL restates the path locale on every request, so it is not
+      # remembered; the explicit ?locale= choice is.
       assert conn.assigns.locale == "de"
-      assert get_session(conn, :locale) == "de"
+      assert get_session(conn, :chosen_locale) == "en"
       assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
     end
 
@@ -418,7 +444,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> init_test_session(%{})
         |> Map.put(:params, %{})
         |> fetch_session()
-        |> put_session(:locale, "de")
+        |> put_session(:chosen_locale, "de")
         |> assign(:path_locale, "xx")
         |> LocalePlug.call([])
 
@@ -438,8 +464,10 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> LocalePlug.call(prefer_user_locale: true)
 
       # de comes only from the saved user preference; the header would give en.
+      # The preference is re-read on every request, so it is never copied
+      # into the session.
       assert conn.assigns.locale == "de"
-      assert get_session(conn, :locale) == "de"
+      assert get_session(conn, :chosen_locale) == nil
       assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
     end
 
@@ -481,10 +509,10 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> fetch_session()
         |> LocalePlug.call([])
 
-      assert get_session(conn, :locale) == "de"
+      assert get_session(conn, :chosen_locale) == "de"
     end
 
-    test "persists detected locale from header to session", %{conn: conn} do
+    test "does not persist a locale detected from the header", %{conn: conn} do
       conn =
         conn
         |> Map.put(:params, %{})
@@ -492,7 +520,60 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> put_req_header("accept-language", "de")
         |> LocalePlug.call([])
 
-      assert get_session(conn, :locale) == "de"
+      assert conn.assigns.locale == "de"
+      assert get_session(conn, :chosen_locale) == nil
+    end
+
+    test "a later change of browser language takes effect in the same session", %{conn: conn} do
+      conn =
+        conn
+        |> Map.put(:params, %{})
+        |> fetch_session()
+        |> put_req_header("accept-language", "de")
+        |> LocalePlug.call([])
+
+      conn =
+        build_conn()
+        |> init_test_session(get_session(conn))
+        |> Map.put(:params, %{})
+        |> fetch_session()
+        |> put_req_header("accept-language", "fr")
+        |> LocalePlug.call([])
+
+      assert conn.assigns.locale == "fr"
+    end
+
+    test "an explicit choice is remembered across requests", %{conn: conn} do
+      conn =
+        conn
+        |> Map.put(:params, %{"locale" => "de"})
+        |> fetch_session()
+        |> LocalePlug.call([])
+
+      conn =
+        build_conn()
+        |> init_test_session(get_session(conn))
+        |> Map.put(:params, %{})
+        |> fetch_session()
+        |> put_req_header("accept-language", "fr")
+        |> LocalePlug.call([])
+
+      # fr would win from the header; de can only come from the remembered choice.
+      assert conn.assigns.locale == "de"
+    end
+
+    test "a locale stored under the retired :locale key no longer counts", %{conn: conn} do
+      conn =
+        conn
+        |> Map.put(:params, %{})
+        |> fetch_session()
+        |> put_session(:locale, "de")
+        |> put_req_header("accept-language", "fr")
+        |> LocalePlug.call([])
+
+      # Before explicit choices got their own key, :locale also held derived
+      # values; one of those must not be mistaken for a choice.
+      assert conn.assigns.locale == "fr"
     end
 
     test "updates Gettext locale for current process", %{conn: _conn} do
@@ -504,6 +585,39 @@ defmodule TymeslotWeb.Plugs.LocalePlugTest do
         |> LocalePlug.call([])
 
       assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
+    end
+  end
+
+  describe "live_session_data/1" do
+    test "carries the resolved, ambient and path locales to the LiveView session", %{conn: _conn} do
+      conn =
+        build_conn()
+        |> init_test_session(%{})
+        |> Map.put(:params, %{})
+        |> fetch_session()
+        |> assign(:current_user, %{locale: "fr"})
+        |> put_req_header("accept-language", "de")
+        |> LocalePlug.call(prefer_user_locale: true)
+
+      assert LocalePlug.live_session_data(conn) == %{
+               "resolved_locale" => "fr",
+               "ambient_locale" => "de"
+             }
+    end
+
+    test "includes a path locale when the route carries one", %{conn: conn} do
+      conn =
+        conn
+        |> Map.put(:params, %{})
+        |> fetch_session()
+        |> assign(:path_locale, "it")
+        |> LocalePlug.call([])
+
+      assert LocalePlug.live_session_data(conn) == %{
+               "resolved_locale" => "it",
+               "ambient_locale" => "it",
+               "path_locale" => "it"
+             }
     end
   end
 

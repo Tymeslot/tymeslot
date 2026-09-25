@@ -1,8 +1,13 @@
 defmodule TymeslotWeb.Hooks.LocaleHook do
   @moduledoc """
-  LiveView hook to handle locale assignment for scheduling pages.
-  Ensures the locale is set in Gettext and socket assigns from either
-  URL parameters or the session.
+  LiveView hook that sets the locale for public pages: booking, meeting
+  management, polls, payment return, and the auth pages.
+
+  The connected mount has no conn and no request headers, so it reuses what
+  `TymeslotWeb.Plugs.LocalePlug` resolved on the dead render, which the
+  live_session carries in as `"resolved_locale"` (see
+  `LocalePlug.live_session_data/1`). A `?locale=` param on the mount URL still
+  wins, so a locale switch applied by patching the URL is honoured.
   """
 
   import Phoenix.Component
@@ -11,20 +16,15 @@ defmodule TymeslotWeb.Hooks.LocaleHook do
   @spec on_mount(atom(), map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:cont, Phoenix.LiveView.Socket.t()}
   def on_mount(:default, params, session, socket) do
-    # Priority: 1. URL parameter, 2. Session, 3. Default. Each source is
-    # validated individually (`Locales.acceptable/1`), matching LocalePlug: an
-    # unacceptable candidate (e.g. an unsupported `?locale=` param) falls
-    # through to the next source instead of short-circuiting the chain and
-    # being coerced to the default.
     locale =
-      Locales.acceptable(params["locale"]) ||
-        Locales.acceptable(session["locale"]) ||
+      Locales.resolve(
+        [params["locale"], session["resolved_locale"]],
         Locales.booking_default_locale()
+      )
 
-    # Set for Gettext process dictionary (global — reaches every backend)
+    # Global: reaches every Gettext backend in this process, not just Core's.
     Gettext.put_locale(locale)
 
-    # Assign to socket
     {:cont, assign(socket, :locale, locale)}
   end
 end
