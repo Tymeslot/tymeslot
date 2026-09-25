@@ -222,7 +222,9 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
 
   An edit of one or every occurrence of a CalDAV series (an `:occurrence`
   in `event_data`) answers `{:ok, %{document: document}}`, the document the
-  series now lives in, which the caller needs to refresh its cache.
+  series now lives in, which the caller needs to refresh its cache. An edit
+  of every occurrence of a Google or Outlook series (an `:occurrence` of
+  scope `:all`) is written to the series' master and answers `:ok`.
   """
   @spec update_event(adapter_client(), String.t(), map()) ::
           :ok | {:ok, %{document: String.t()}} | {:error, atom(), term()} | {:error, term()}

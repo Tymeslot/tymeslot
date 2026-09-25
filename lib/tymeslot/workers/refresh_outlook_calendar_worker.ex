@@ -40,6 +40,19 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
 
+  @doc """
+  Enqueues a refresh of the Outlook integration `integration_id`, the one
+  the dashboard's Refresh asks for. A refresh already queued or running for
+  the integration answers in its place (the worker is unique per
+  integration).
+  """
+  @spec enqueue(pos_integer()) :: {:ok, Oban.Job.t()} | {:error, term()}
+  def enqueue(integration_id) do
+    %{"calendar_integration_id" => integration_id}
+    |> new()
+    |> Oban.insert()
+  end
+
   @impl Oban.Worker
   def backoff(%Oban.Job{attempt: attempt}) do
     # Progressive backoff: 30s, 90s, 240s, 480s. Graph returns transient 500s

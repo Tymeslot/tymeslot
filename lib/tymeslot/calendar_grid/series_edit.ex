@@ -12,9 +12,10 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
 
     * **Google and Outlook** give every occurrence an id of its own. An edit
       of this event only is written to that id, exactly like an edit of a
-      one-off event. "This and following" and "all events" need a write to
-      the series' master, and are refused with `:unsupported_scope` until
-      that write exists.
+      one-off event. An edit of all events is written to the series' master,
+      named by the occurrence's `recurring_event_id` (see *What every Google
+      or Outlook occurrence can take*). "This and following" is refused with
+      `:unsupported_scope` until the writer can split the series.
     * **The CalDAV family** holds a whole series in one resource. An edit of
       this event only is written as the occurrence's `RECURRENCE-ID` override
       in that resource (see `Calendar.Events.update_event/3`), and every
@@ -56,11 +57,30 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   (`Tymeslot.Workers.SyncCalDavCalendarWorker.enqueue_full_fetch/1`), which
   brings the series back as the server holds it.
 
+  ## What every Google or Outlook occurrence can take
+
+  The same as every CalDAV occurrence, written to the master the provider
+  keeps: the master is read, and patched with only what the edit changed,
+  never rewritten from the occurrence, which would take the master's
+  recurrence, reminders and zone with it (`Google.SeriesPatch`,
+  `Outlook.SeriesPatch`). A move of the occurrence, from where it shows now,
+  moves the master by as much on the wall clock of its own zone, and the
+  repeat rule and the dates the series excludes follow it. Occurrences
+  edited on their own in the provider are not moved; the provider keeps or
+  drops them. A master row, which names no master, is refused with
+  `:unaddressable_occurrence`, as its delete is.
+
+  The series' rows, the master's own included, are then deleted and a sync
+  of the integration requested, the one the dashboard's Refresh asks for
+  (`SyncGoogleCalendarWorker.enqueue/1`, `RefreshOutlookCalendarWorker.enqueue/1`).
+
   ## Failure
 
   A failed write of a series member is never queued for offline replay. The
   CalDAV offline queue refuses to replay a series member, so a queued edit
-  would sit in the queue for good while the grid showed it as saved.
+  would sit in the queue for good while the grid showed it as saved; Google
+  and Outlook have no offline queue. A failed write leaves the cached rows
+  as they were and requests no sync.
   """
 
   alias Tymeslot.CalendarGrid.EventEdit
@@ -68,11 +88,13 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   alias Tymeslot.CalendarGrid.RecurrenceScope
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
+  alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
   require Logger
 
-  # The fields of a CalDAV occurrence an edit can change, in the cache's
+  # The fields of a series member an edit can change, in the cache's
   # vocabulary, which the payload shares for these; timing is always written.
   @override_fields [:summary, :description, :location, :colour, :reminders, :attendees]
 
@@ -105,9 +127,10 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
         ) :: {:ok, map()} | {:error, EventEdit.failure()}
   def update_event(user_id, event, stored, family, scope, changes, opts)
 
-  def update_event(user_id, event, stored, :caldav, scope, changes, opts)
-      when scope in [:this_only, :all] do
-    with :ok <- ensure_caldav_edit(stored, scope, changes),
+  def update_event(user_id, event, stored, family, scope, changes, opts)
+      when (family == :caldav and scope in [:this_only, :all]) or
+             (family == :provider_ids and scope == :all) do
+    with :ok <- ensure_series_edit(stored, scope, changes),
          {:ok, updated} <-
            EventEdit.write_edit(
              user_id,
@@ -116,9 +139,9 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
              changes,
              opts,
              :never_queue,
-             &address(&1, stored, scope, changes)
+             &address(&1, family, stored, scope, changes)
            ) do
-      after_caldav_write(scope, user_id, stored)
+      after_write(scope, user_id, stored)
       {:ok, updated}
     end
   end
@@ -130,7 +153,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
       when scope in [:following, :all],
       do: refuse(:unsupported_scope)
 
-  defp ensure_caldav_edit(%{} = stored, scope, changes) do
+  defp ensure_series_edit(%{} = stored, scope, changes) do
     cond do
       Map.get(changes, :all_day, stored.all_day) != stored.all_day ->
         refuse(:value_type_change)
@@ -145,7 +168,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
 
   # Without its cached row nothing says which occurrence of which resource
   # the event is.
-  defp ensure_caldav_edit(nil, _scope, _changes), do: refuse(:unaddressable_occurrence)
+  defp ensure_series_edit(nil, _scope, _changes), do: refuse(:unaddressable_occurrence)
 
   # One occurrence cannot take a rule of its own: the rule is the series'.
   # Every occurrence can take a new rule, but not none: a series whose rule
@@ -159,12 +182,20 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   defp rule_changed?(stored, changes),
     do: Map.get(changes, :recurrence_rule, stored.recurrence_rule) != stored.recurrence_rule
 
-  # The payload of the whole occurrence becomes an edit of the series'
-  # resource: its href and the occurrence's key address it, the scope says
-  # whether the writer edits the occurrence's override or the master, and the
-  # cached document and ETag are what the writer rewrites.
-  defp address(payload, stored, scope, changes),
-    do: address_fields(payload, stored, scope, changed_fields(scope, stored, changes))
+  # The payload of the whole occurrence becomes an edit of the series. For
+  # CalDAV, its resource: its href and the occurrence's key address it, the
+  # scope says whether the writer edits the occurrence's override or the
+  # master, and the cached document and ETag are what the writer rewrites.
+  # For Google and Outlook, its master, named by the occurrence, with where
+  # the occurrence shows now, which is what a move of it is measured from.
+  defp address(payload, family, stored, scope, changes) do
+    fields = changed_fields(scope, stored, changes)
+
+    case family do
+      :caldav -> address_fields(payload, stored, scope, fields)
+      :provider_ids -> address_master(payload, stored, fields)
+    end
+  end
 
   defp changed_fields(:this_only, _stored, changes),
     do: Enum.filter(@override_fields, &Map.has_key?(changes, &1))
@@ -194,30 +225,67 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   defp address_fields(_payload, _stored, _scope, _fields),
     do: {:error, :unaddressable_occurrence}
 
-  defp after_caldav_write(:this_only, _user_id, _stored), do: :ok
-  defp after_caldav_write(:all, user_id, stored), do: resync_series(user_id, stored)
+  # A row naming no master is the master itself, or an event the sync could
+  # not place in its series; neither says which series to edit.
+  defp address_master(payload, %{recurring_event_id: master_id} = stored, fields)
+       when is_binary(master_id) and master_id != "" do
+    occurrence = %{
+      scope: :all,
+      master_id: master_id,
+      start: if(stored.all_day, do: stored.start_date, else: stored.start_at),
+      end: if(stored.all_day, do: stored.end_date, else: stored.end_at),
+      changes: Map.take(payload, [:start_time, :end_time | fields])
+    }
+
+    {:ok, Map.put(payload, :occurrence, occurrence)}
+  end
+
+  defp address_master(_payload, _stored, _fields), do: {:error, :unaddressable_occurrence}
+
+  defp after_write(:this_only, _user_id, _stored), do: :ok
+  defp after_write(:all, user_id, stored), do: resync_series(user_id, stored)
 
   # Every cached row of the series now names a slot the series may have left,
   # so the rows are dropped and a sync brings the series back as the server
-  # holds it; the write's document is not expanded here, the sync's job.
+  # holds it; what the write answered is not expanded here, the sync's job.
   defp resync_series(user_id, %{calendar_integration_id: integration_id} = stored) do
-    ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, [
-      stored.provider_event_id
-    ])
-
+    delete_series_rows(integration_id, stored)
     AvailabilityCache.invalidate_for_user(user_id)
 
-    case SyncCalDavCalendarWorker.enqueue_full_fetch(integration_id) do
+    case request_sync(to_string(stored.provider), integration_id) do
       {:ok, _job} ->
         :ok
 
       {:error, reason} ->
-        Logger.warning("Could not request a sync after editing a whole CalDAV series",
+        Logger.warning("Could not request a sync after editing a whole series",
           calendar_integration_id: integration_id,
           reason: inspect(reason)
         )
     end
   end
+
+  # The occurrences name their master; the master's own row, when cached,
+  # carries its id. A CalDAV series is its resource's rows.
+  defp delete_series_rows(integration_id, %{recurring_event_id: master_id})
+       when is_binary(master_id) and master_id != "" do
+    ProviderCalendarEventQueries.delete_by_recurring_event_ids(integration_id, [master_id])
+    ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, [master_id])
+  end
+
+  defp delete_series_rows(integration_id, stored),
+    do:
+      ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, [
+        stored.provider_event_id
+      ])
+
+  defp request_sync("google", integration_id),
+    do: SyncGoogleCalendarWorker.enqueue(integration_id)
+
+  defp request_sync("outlook", integration_id),
+    do: RefreshOutlookCalendarWorker.enqueue(integration_id)
+
+  defp request_sync(_caldav, integration_id),
+    do: SyncCalDavCalendarWorker.enqueue_full_fetch(integration_id)
 
   defp refuse(reason), do: {:error, %{reason: reason, retry: :not_queued}}
 end

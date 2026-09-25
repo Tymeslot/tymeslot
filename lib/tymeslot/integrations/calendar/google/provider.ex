@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.ConferenceData
   alias Tymeslot.Integrations.Calendar.Google.EventNormaliser
+  alias Tymeslot.Integrations.Calendar.Google.SeriesPatch
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
   alias Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch
@@ -143,8 +144,28 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     api_module().create_event(integration, calendar_id, event_attrs)
   end
 
+  @doc """
+  Writes `event_attrs` to the event.
+
+  An `:occurrence` of scope `:all` in `event_attrs` (see
+  `Recurrence.SeriesMove.edit/0`, naming the series in `:master_id`) edits
+  every occurrence of a recurring event instead: the master is read, and
+  patched with only what the edit changes (`Google.SeriesPatch`). A refusal
+  of the edit is answered before anything is written.
+  """
   @spec call_update_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
-          {:ok, map()} | {:error, atom(), String.t()}
+          {:ok, map()} | {:error, atom(), String.t()} | {:error, term()}
+  def call_update_event(integration, _event_id, %{occurrence: %{scope: :all} = edit} = attrs) do
+    calendar_id = attrs[:calendar_id] || integration.default_booking_calendar_id || "primary"
+
+    with {:ok, master} <- api_module().get_event(integration, calendar_id, edit.master_id),
+         {:ok, body} <- SeriesPatch.build(master, edit) do
+      if body == %{},
+        do: {:ok, master},
+        else: api_module().patch_event(integration, calendar_id, edit.master_id, body)
+    end
+  end
+
   def call_update_event(integration, event_id, %{colour_only: true} = event_attrs) do
     calendar_id =
       event_attrs[:calendar_id] || integration.default_booking_calendar_id || "primary"

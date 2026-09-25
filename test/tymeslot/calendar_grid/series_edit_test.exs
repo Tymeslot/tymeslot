@@ -94,22 +94,44 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       assert captured_payload().provider_event_id == "series-1_20260601T090000Z"
     end
 
-    for scope <- [:following, :all] do
-      test "#{scope} on a Google occurrence is refused before anything is written", %{
-        user: user,
-        integration: integration
-      } do
-        event = insert_event(integration, %{})
+    test "following on a Google occurrence is refused before anything is written", %{
+      user: user,
+      integration: integration
+    } do
+      event = insert_event(integration, %{})
 
-        assert {:error, %{reason: :unsupported_scope, retry: :not_queued}} =
-                 CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
-                   recurrence_scope: unquote(scope)
-                 )
+      assert {:error, %{reason: :unsupported_scope, retry: :not_queued}} =
+               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
+                 recurrence_scope: :following
+               )
 
-        refute_received {:provider_update, _uid, _payload, _context}
-        {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
-        assert row.summary == "Weekly sync"
-      end
+      refute_received {:provider_update, _uid, _payload, _context}
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+      assert row.summary == "Weekly sync"
+    end
+
+    test "all on a Google occurrence is addressed to its master, from where it shows now", %{
+      user: user,
+      integration: integration
+    } do
+      event = insert_event(integration, %{provider_event_id: "series-1_20260601T090000Z"})
+      expect_provider_update()
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
+                 recurrence_scope: :all
+               )
+
+      assert %{
+               scope: :all,
+               master_id: "series-1",
+               start: ~U[2026-06-01 09:00:00.000000Z],
+               end: ~U[2026-06-01 10:00:00.000000Z],
+               changes: changes
+             } = captured_payload().occurrence
+
+      assert Enum.sort(Map.keys(changes)) == [:end_time, :start_time, :summary]
+      assert changes.summary == "Renamed"
     end
 
     test "a scope that is not a RecurrenceScope raises before anything is written", %{

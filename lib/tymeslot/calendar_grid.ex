@@ -603,17 +603,11 @@ defmodule Tymeslot.CalendarGrid do
 
   defp stale_threshold_minutes(_integration), do: @webhook_stale_minutes
 
-  defp enqueue_sync_worker(%{provider: "google"} = integration) do
-    %{"calendar_integration_id" => integration.id}
-    |> SyncGoogleCalendarWorker.new()
-    |> Oban.insert()
-  end
+  defp enqueue_sync_worker(%{provider: "google"} = integration),
+    do: SyncGoogleCalendarWorker.enqueue(integration.id)
 
-  defp enqueue_sync_worker(%{provider: "outlook"} = integration) do
-    %{"calendar_integration_id" => integration.id}
-    |> RefreshOutlookCalendarWorker.new()
-    |> Oban.insert()
-  end
+  defp enqueue_sync_worker(%{provider: "outlook"} = integration),
+    do: RefreshOutlookCalendarWorker.enqueue(integration.id)
 
   defp enqueue_sync_worker(%{provider: "debug"} = integration) do
     %{"calendar_integration_id" => integration.id}

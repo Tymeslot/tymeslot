@@ -181,7 +181,10 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   `Tymeslot.Integrations.Calendar.CalDAV.Events.occurrence/0`, with its
   `:changes`) edits only that occurrence of a series, or with `scope: :all`
   every occurrence of it; success is then `{:ok, %{document: document}}` with
-  the document the series now lives in.
+  the document the series now lives in. On Google and Outlook, an
+  `:occurrence` of scope `:all` (see `Recurrence.SeriesMove.edit/0`, with the
+  series' `:master_id`) edits every occurrence through the series' master,
+  and success is `:ok`.
   """
   @spec update_event(
           String.t(),

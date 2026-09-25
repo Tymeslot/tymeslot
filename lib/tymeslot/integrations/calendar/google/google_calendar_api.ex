@@ -235,6 +235,29 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   end
 
   @doc """
+  Patches `event_id` with `body`, a Google event body carrying only the keys
+  to change: Google applies a `PATCH` to the fields present and leaves every
+  other one as it is, where `update_event/4`'s `PUT` replaces the event.
+  Google's own notifications are suppressed, as on every write here.
+  """
+  @impl CalendarAPIBehaviour
+  @spec patch_event(CalendarIntegrationSchema.t(), String.t(), String.t(), map()) ::
+          {:ok, calendar_event()} | api_error()
+  def patch_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_id, body) do
+    google_event_id = EventMapper.uuid_to_google_event_id(event_id)
+
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      make_request_with_body(
+        :patch,
+        "/calendars/#{URI.encode(calendar_id)}/events/#{google_event_id}",
+        token,
+        body,
+        params: %{"sendUpdates" => "none"}
+      )
+    end)
+  end
+
+  @doc """
   Fetches one event of the specified calendar by its Google event id.
 
   A deleted event answers 404, or 410 once Google has purged it; one deleted

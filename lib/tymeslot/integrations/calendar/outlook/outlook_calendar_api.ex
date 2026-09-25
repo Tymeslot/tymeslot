@@ -180,6 +180,27 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   end
 
   @doc """
+  Patches the event `event_id` of the signed-in user, whichever calendar
+  holds it, with `body` exactly as given: a Graph event body carrying only
+  the keys to change, which Graph merges into the event. Unlike
+  `update_event/3,4`, nothing is added to the body, so a key it leaves out
+  keeps its value on the event.
+  """
+  @impl CalendarAPIBehaviour
+  @spec patch_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
+          {:ok, calendar_event()} | api_error()
+  def patch_event(%CalendarIntegrationSchema{} = integration, event_id, body) do
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      with {:ok, response} <-
+             make_request_with_body(:patch, "/me/events/#{event_id}", token, body,
+               headers: @silent_event_headers
+             ) do
+        {:ok, List.first(convert_to_common_format([response]))}
+      end
+    end)
+  end
+
+  @doc """
   Fetches one event of the signed-in user by its Graph event id, whichever
   calendar holds it. A deleted event answers 404; a cancelled meeting can
   still come back with `"isCancelled" => true`.

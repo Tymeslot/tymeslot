@@ -41,6 +41,18 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   @sync_window_past_days ProviderConfig.sync_window_past_days()
   @sync_window_future_days ProviderConfig.sync_window_future_days()
 
+  @doc """
+  Enqueues a sync of the Google integration `integration_id`, the one the
+  dashboard's Refresh asks for. A sync already queued or running for the
+  integration answers in its place (the worker is unique per integration).
+  """
+  @spec enqueue(pos_integer()) :: {:ok, Oban.Job.t()} | {:error, term()}
+  def enqueue(integration_id) do
+    %{"calendar_integration_id" => integration_id}
+    |> new()
+    |> Oban.insert()
+  end
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
     Logger.metadata(calendar_integration_id: integration_id)

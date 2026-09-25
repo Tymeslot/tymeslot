@@ -36,7 +36,8 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   each scope writes, and which scopes are refused. Whichever it picks ends in
   `write_edit/6`, the same write a one-off event takes. Google and Outlook
   address an occurrence by its own id, so an edit of that one occurrence is
-  written like any other event.
+  written like any other event; an edit of all of them is addressed to the
+  series' master, which the provider patches with only what changed.
 
   ### The CalDAV family
 

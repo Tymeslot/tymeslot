@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.EventNormaliser
+  alias Tymeslot.Integrations.Calendar.Outlook.SeriesPatch
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, MultiCalendarFetch, ProviderCommon}
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
 
@@ -133,8 +134,26 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     end
   end
 
+  @doc """
+  Writes `event_attrs` to the event.
+
+  An `:occurrence` of scope `:all` in `event_attrs` (see
+  `Recurrence.SeriesMove.edit/0`, naming the series master in `:master_id`)
+  edits every occurrence of a recurring event instead: the master is read,
+  and patched with only what the edit changes (`Outlook.SeriesPatch`). A
+  refusal of the edit is answered before anything is written.
+  """
   @spec call_update_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
-          {:ok, map()} | {:error, atom(), String.t()}
+          {:ok, map()} | {:error, atom(), String.t()} | {:error, term()}
+  def call_update_event(integration, _event_id, %{occurrence: %{scope: :all} = edit}) do
+    with {:ok, master} <- api_module().get_event(integration, edit.master_id),
+         {:ok, body} <- SeriesPatch.build(master, edit) do
+      if body == %{},
+        do: {:ok, master},
+        else: api_module().patch_event(integration, edit.master_id, body)
+    end
+  end
+
   def call_update_event(integration, event_id, event_attrs) do
     calendar_id = event_attrs[:calendar_id] || integration.default_booking_calendar_id
     # Prefer the provider-native event ID when available (avoids iCalUID→ID conversion)
