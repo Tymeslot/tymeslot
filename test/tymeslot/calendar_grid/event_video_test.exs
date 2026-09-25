@@ -35,12 +35,10 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
 
   @new_url "https://video.example.com/join/room-123"
   @old_url "https://video.example.com/join/old-room"
-  # A custom video link, and one MiroTalk's "/join/" pattern claims: MiroTalk
-  # is listed first, so guessing the provider from the URL parses the room id
-  # as its last path segment. The custom provider derives it from the whole
-  # URL instead, and that digest is the id the room was created under.
+  # A custom video link, and one MiroTalk's "/join/" pattern also claims:
+  # MiroTalk is listed first, so guessing the provider from the URL would
+  # treat it as a MiroTalk room. The event's own integration names it custom.
   @custom_url "https://whereby.com/join/team-standup"
-  @custom_room_id "176c39fdfe37cdea"
   @reminders [%{"method" => "popup", "minutes_before" => 15}]
   @rrule "FREQ=WEEKLY;BYDAY=MO"
   @app_id "tymeslot"
