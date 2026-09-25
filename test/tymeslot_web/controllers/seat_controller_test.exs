@@ -5,6 +5,7 @@ defmodule TymeslotWeb.SeatControllerTest do
   @moduletag :bookings
 
   import Mox
+  import Tymeslot.AvailabilityTestHelpers, only: [open_schedule_for: 1]
   import Tymeslot.Factory
 
   alias Tymeslot.Bookings.Create
@@ -25,8 +26,10 @@ defmodule TymeslotWeb.SeatControllerTest do
 
     user = insert(:user, email: "organizer@example.com", name: "Test Organizer")
 
-    _profile =
+    profile =
       insert(:profile, user: user, timezone: "America/New_York", username: "test-organizer")
+
+    open_schedule_for(profile)
 
     meeting_type =
       insert(:meeting_type,

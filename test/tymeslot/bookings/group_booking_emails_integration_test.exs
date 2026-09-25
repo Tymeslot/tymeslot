@@ -22,6 +22,7 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
   use Oban.Testing, repo: Tymeslot.Repo
 
   import Mox
+  import Tymeslot.AvailabilityTestHelpers, only: [open_schedule_for: 1]
   import Tymeslot.Factory
 
   alias Tymeslot.Bookings.CancelSeat
@@ -45,7 +46,8 @@ defmodule Tymeslot.Bookings.GroupBookingEmailsIntegrationTest do
     end)
 
     user = insert(:user, email: "organizer@example.com", name: "Test Organizer")
-    _profile = insert(:profile, user: user, timezone: "America/New_York")
+    profile = insert(:profile, user: user, timezone: "America/New_York")
+    open_schedule_for(profile)
 
     meeting_type =
       insert(:meeting_type,

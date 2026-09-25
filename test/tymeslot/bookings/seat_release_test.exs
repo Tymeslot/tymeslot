@@ -19,6 +19,7 @@ defmodule Tymeslot.Bookings.SeatReleaseTest do
 
   import Mox
   import Tymeslot.AdminAlertsCaptureHelpers
+  import Tymeslot.AvailabilityTestHelpers, only: [open_schedule_for: 1]
   import Tymeslot.Factory
 
   alias Ecto.Changeset
@@ -41,7 +42,8 @@ defmodule Tymeslot.Bookings.SeatReleaseTest do
     end)
 
     user = insert(:user, email: "organizer@example.com", name: "Test Organizer")
-    _profile = insert(:profile, user: user, timezone: "Etc/UTC")
+    profile = insert(:profile, user: user, timezone: "Etc/UTC")
+    open_schedule_for(profile)
 
     meeting_type =
       insert(:meeting_type,
