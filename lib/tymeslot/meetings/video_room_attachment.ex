@@ -159,8 +159,17 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
 
   defp left_booking_event?(_locked_meeting, _meeting, _attrs), do: false
 
-  defp release_unattached_room(meeting, %{video_room_id: room_id} = video_room_attrs)
-       when is_binary(room_id) do
+  @doc """
+  Enqueues deletion of a provider room created for `meeting` that was never
+  attached to it, so nothing in the database points at it. `video_room_attrs`
+  carries the room's `:video_room_id` and `:video_provider`.
+
+  Best-effort: a failure to enqueue is logged with the room id in the clear,
+  the one way left to find the room again, and never returned.
+  """
+  @spec release_unattached_room(MeetingSchema.t(), map()) :: :ok
+  def release_unattached_room(meeting, %{video_room_id: room_id} = video_room_attrs)
+      when is_binary(room_id) do
     room = %{meeting | video_room_id: room_id, video_provider: video_room_attrs.video_provider}
 
     case VideoSyncWorker.release(room) do
@@ -177,7 +186,7 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
   end
 
   # A provider with no room id (a static custom link) has nothing to delete.
-  defp release_unattached_room(_meeting, _video_room_attrs), do: :ok
+  def release_unattached_room(_meeting, _video_room_attrs), do: :ok
 
   @spec update_meeting_with_video_room(MeetingSchema.t(), map()) ::
           {:ok, MeetingSchema.t()} | {:error, :database_update_failed}
