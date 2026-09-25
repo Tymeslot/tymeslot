@@ -573,5 +573,13 @@ config :error_tracker,
   filter: Tymeslot.Infrastructure.ErrorTracking.Filter,
   ignorer: Tymeslot.Infrastructure.ErrorTracking.Ignorer
 
+# ErrorTracker housekeeping, run daily by
+# `Tymeslot.Workers.ErrorTrackerMaintenanceWorker`: an error not seen for
+# this many days is marked resolved, deleted a further window later, and an
+# unresolved error's occurrences older than the window are trimmed down to
+# the newest `occurrences_kept`.
+config :tymeslot, :error_tracking_resolve_after_days, 30
+config :tymeslot, :error_tracking_occurrences_kept, 50
+
 # Import environment specific config
 import_config "#{config_env()}.exs"
