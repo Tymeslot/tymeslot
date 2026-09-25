@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Clock
+  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Security.UniversalSanitizer
@@ -84,6 +85,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
   defp iso_date(at), do: at |> DateTime.to_date() |> Date.to_iso8601()
 
+  defp writable?(socket) do
+    Selection.writable_integrations(socket.assigns.integrations) != []
+  end
+
   # Builds a `creating_event` map, filling defaults for any field the caller omits.
   defp base_creating(socket, overrides) do
     default_int_id = EditWorkflow.default_integration_id(socket)
@@ -98,9 +103,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       end_minute: 0,
       all_day: false,
       title: "",
-      # With no calendar connected there is nothing a provider event could be
-      # written to, so the form opens straight in meeting mode.
-      mode: if(socket.assigns.integrations == [], do: :meeting, else: :event),
+      # With no calendar that can be written to there is nothing a provider
+      # event could go into, so the form opens straight in meeting mode. A
+      # subscription counts as no calendar here: it can be read and never
+      # written.
+      mode: if(writable?(socket), do: :event, else: :meeting),
       guest_name: "",
       guest_email: "",
       guest_emails: [],
@@ -134,8 +141,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       is_nil(creating) or mode not in ~w(event meeting) ->
         {:noreply, socket}
 
-      # Event mode needs a connected calendar to write to.
-      mode == "event" and socket.assigns.integrations == [] ->
+      # Event mode needs a calendar that can be written to.
+      mode == "event" and not writable?(socket) ->
         {:noreply, socket}
 
       true ->

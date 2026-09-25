@@ -13,7 +13,6 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Locales
-  alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Profiles.ProfileQueries
@@ -194,23 +193,21 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
   # matches this flow's own semantics: the organiser picked the video
   # integration explicitly, so its presence alone decides whether a room is
   # created, the same as a paid checkout confirming a booking.
+  # `Activation` is the whole of it. A second, generic calendar invitation used
+  # to go out beside the confirmation, leaving the guest with two emails for
+  # one booking: the confirmation in their language, carrying the ICS file, the
+  # accept/decline links and the video link, and a bare "You're Invited" with
+  # none of those. It was not initialising anything either, whatever the
+  # comment here claimed — `AttendeeNotifications.event_created/2` only sends,
+  # and `last_notified_state` is written after a dispatch by the debounce
+  # worker, never on create. The baseline stays empty here exactly as it does
+  # for every other booking path, which `LastNotifiedState.to_event/2` is built
+  # to handle: the people on the event are the people this path already
+  # invited.
   defp handle_side_effects(meeting) do
     Activation.activate(meeting, with_video_room: true)
-
-    # Route the attendee-facing calendar invitation through
-    # AttendeeNotifications so last_notified_state / ical_sequence are
-    # initialised correctly. Ad-hoc meetings are edited from the same
-    # calendar-grid UI that created them, which is what needs this state.
-    {:ok, _job} = AttendeeNotifications.event_created(meeting, attendees_for(meeting))
-
     :ok
   end
-
-  defp attendees_for(%{attendee_email: email}) when is_binary(email) and email != "" do
-    [%{email: email}]
-  end
-
-  defp attendees_for(_meeting), do: []
 
   defp map_result({:ok, meeting}) do
     AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)

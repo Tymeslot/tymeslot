@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.MeetingTypes.ReminderValidation
@@ -31,6 +32,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
     assigns =
       assigns
       |> assign(:meeting_mode, assigns.creating_event[:mode] == :meeting)
+      # A subscribed calendar is no more a target than no calendar at all, so
+      # the mode toggle and the picker follow what can be written to, not what
+      # is connected.
+      |> assign(:targets, Selection.writable_integrations(assigns.integrations))
       |> assign(
         :reminder_picker,
         assigns.creating_event[:meeting_reminders] || ReminderPickerState.new()
@@ -52,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       <%!-- Mode toggle: a bare provider event vs an ad-hoc Tymeslot meeting.
             Hidden when no calendar is connected — the form is then fixed to
             meeting mode, the only kind that can exist without one. --%>
-      <div :if={@integrations != []} class="mb-4">
+      <div :if={@targets != []} class="mb-4">
         <div
           class="inline-flex rounded-token-lg border border-tymeslot-200 p-0.5 gap-0.5"
           role="tablist"
@@ -288,7 +293,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </div>
 
       <CalendarPicker.calendar_picker
-        :if={@integrations != []}
+        :if={@targets != []}
         integrations={@integrations}
         integration_colors={@integration_colors}
         selected_integration_id={@creating_event.integration_id}
