@@ -3,6 +3,8 @@ defmodule TymeslotWeb.Plugs.SetLoggerMetadata do
 
   @behaviour Plug
 
+  alias Tymeslot.Infrastructure.ErrorTracking
+
   @impl Plug
   @spec init(keyword()) :: keyword()
   def init(opts), do: opts
@@ -10,14 +12,15 @@ defmodule TymeslotWeb.Plugs.SetLoggerMetadata do
   @impl Plug
   @spec call(Plug.Conn.t(), keyword()) :: Plug.Conn.t()
   def call(conn, _opts) do
-    # Reset per-request keys so a reused Cowboy/Bandit worker cannot inherit
-    # the previous request's user_id.
-    Logger.metadata(user_id: nil)
+    # Always set, `nil` included, so a reused Cowboy/Bandit worker cannot
+    # inherit the previous request's user_id.
+    user_id =
+      case conn.assigns[:current_user] do
+        %{id: id} -> id
+        _no_user -> nil
+      end
 
-    if user = conn.assigns[:current_user] do
-      Logger.metadata(user_id: user.id)
-    end
-
+    ErrorTracking.put_context(user_id: user_id)
     conn
   end
 end

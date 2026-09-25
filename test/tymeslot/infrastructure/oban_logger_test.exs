@@ -10,6 +10,17 @@ defmodule Tymeslot.Infrastructure.ObanLoggerTest do
   alias Tymeslot.Infrastructure.CorrelationId
   alias Tymeslot.Infrastructure.ObanLogger
 
+  # Runs job:start in a fresh process, as Oban does, and returns the user_id
+  # it left in Logger metadata and in the ErrorTracker context.
+  defp start_context(job) do
+    Task.await(
+      Task.async(fn ->
+        ObanLogger.handle_event([:oban, :job, :start], %{system_time: 0}, %{job: job}, [])
+        {Logger.metadata()[:user_id], ErrorTracker.get_context()["user_id"]}
+      end)
+    )
+  end
+
   defp job do
     %Oban.Job{
       id: 123,
@@ -57,6 +68,20 @@ defmodule Tymeslot.Infrastructure.ObanLoggerTest do
         end
 
       assert length(Enum.uniq(ids)) == 10
+    end
+  end
+
+  describe "handle_event/4 - user_id on job:start" do
+    test "tags the job with the user its args name, as Logger metadata and error context" do
+      for {key, user_id} <- [{"user_id", 41}, {"organizer_user_id", 42}] do
+        job = %{job() | args: %{key => user_id}}
+
+        assert start_context(job) == {user_id, user_id}
+      end
+    end
+
+    test "sets no user_id for a job whose args name no user" do
+      assert start_context(job()) == {nil, nil}
     end
   end
 

@@ -43,6 +43,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     priority: 0
 
   alias Ecto.Changeset
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
@@ -107,7 +108,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
         backoff(meeting_id, execution)
 
         Logger.info("Starting video room creation",

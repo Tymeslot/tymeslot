@@ -9,9 +9,12 @@ defmodule Tymeslot.Infrastructure.CorrelationId do
   alias Phoenix.Component
   alias Phoenix.LiveView.Socket
   alias Plug.Conn
+  alias Tymeslot.Infrastructure.ErrorTracking
 
   @correlation_id_header "x-correlation-id"
   @correlation_id_key :correlation_id
+  # `Plug.RequestId`'s default response header.
+  @request_id_header "x-request-id"
 
   @doc """
   Generates a new correlation ID.
@@ -116,17 +119,6 @@ defmodule Tymeslot.Infrastructure.CorrelationId do
   end
 
   @doc """
-  Adds correlation ID to log metadata.
-
-  This should be called at the beginning of request processing to ensure
-  all subsequent log entries include the correlation ID.
-  """
-  @spec add_to_logger_metadata(String.t()) :: :ok
-  def add_to_logger_metadata(correlation_id) do
-    Logger.metadata(correlation_id: correlation_id)
-  end
-
-  @doc """
   Creates a plug for automatically handling correlation IDs.
 
   Add this to your endpoint or router pipeline:
@@ -142,16 +134,28 @@ defmodule Tymeslot.Infrastructure.CorrelationId do
     # the same reused worker process. A fresh correlation ID is derived from
     # the incoming headers/assigns below, never from the process dictionary.
     Process.delete(@correlation_id_key)
-    Logger.metadata(correlation_id: nil)
 
     {updated_conn, correlation_id} = ensure(conn)
 
-    # Add to logger metadata for this request
-    add_to_logger_metadata(correlation_id)
+    # Tag this request's log lines and any exception it raises. The request
+    # id is `Plug.RequestId`'s, which runs just before this plug in the
+    # endpoint; it keeps its own Logger metadata key, and is repeated here only
+    # so the error context carries it too.
+    ErrorTracking.put_context(
+      correlation_id: correlation_id,
+      request_id: request_id(updated_conn)
+    )
 
     # Also put in process dictionary for non-plug code
     put_in_process(correlation_id)
 
     updated_conn
+  end
+
+  defp request_id(conn) do
+    case Conn.get_resp_header(conn, @request_id_header) do
+      [request_id | _rest] -> request_id
+      [] -> nil
+    end
   end
 end

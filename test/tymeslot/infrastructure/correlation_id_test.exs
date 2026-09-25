@@ -5,6 +5,7 @@ defmodule Tymeslot.Infrastructure.CorrelationIdTest do
 
   alias Phoenix.LiveView.Socket
   alias Plug.Conn
+  alias Plug.RequestId
   alias Plug.Test, as: PlugTest
   alias Tymeslot.Infrastructure.CorrelationId
 
@@ -134,16 +135,6 @@ defmodule Tymeslot.Infrastructure.CorrelationIdTest do
     end
   end
 
-  describe "add_to_logger_metadata/1" do
-    test "sets :correlation_id in Logger metadata" do
-      id = CorrelationId.generate()
-
-      CorrelationId.add_to_logger_metadata(id)
-
-      assert Logger.metadata()[:correlation_id] == id
-    end
-  end
-
   describe "Plug behavior" do
     test "call/2 on a bare conn generates and sets correlation ID" do
       conn = CorrelationId.call(PlugTest.conn(:get, "/"), [])
@@ -165,6 +156,22 @@ defmodule Tymeslot.Infrastructure.CorrelationIdTest do
       # ensure/1 returns original conn when header exists (no assigns/resp_header set)
       # But the ID is available via get_from_conn which reads the request header
       assert CorrelationId.get_from_conn(conn) == existing_id
+    end
+
+    test "call/2 tags Logger metadata and the error context with the correlation and request ids" do
+      conn =
+        PlugTest.conn(:get, "/")
+        |> RequestId.call(RequestId.init([]))
+        |> CorrelationId.call([])
+
+      correlation_id = conn.assigns[:correlation_id]
+      [request_id] = Conn.get_resp_header(conn, "x-request-id")
+
+      assert Logger.metadata()[:correlation_id] == correlation_id
+      assert Logger.metadata()[:request_id] == request_id
+
+      assert %{"correlation_id" => ^correlation_id, "request_id" => ^request_id} =
+               ErrorTracker.get_context()
     end
   end
 end

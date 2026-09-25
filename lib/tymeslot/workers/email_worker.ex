@@ -48,8 +48,9 @@ defmodule Tymeslot.Workers.EmailWorker do
   """
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"action" => action} = args, attempt: attempt} = job) do
+    # `user_id` in the args is already Logger metadata and error context:
+    # `Tymeslot.Infrastructure.ObanLogger` sets it at job start.
     Logger.metadata(job_id: job.id, attempt: attempt)
-    if user_id = args["user_id"], do: Logger.metadata(user_id: user_id)
 
     execute_email_job_with_timeout(action, args, job)
   end

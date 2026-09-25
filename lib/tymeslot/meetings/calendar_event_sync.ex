@@ -28,6 +28,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
   alias Ecto.UUID
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Meetings.CalendarEventCache
@@ -49,7 +50,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   def create(meeting_id, attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
 
         # Another worker may already have created the event. OAuth providers
         # persist that mapping in provider_event_id; legacy flows may still
@@ -82,7 +83,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   def update(meeting_id, _attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
 
         Logger.info("Updating calendar event",
           meeting_id: meeting_id,
@@ -107,7 +108,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   def delete(meeting_id, _attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, %{calendar_integration_id: nil} = meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
 
         Logger.info("No calendar integration linked, skipping calendar deletion",
           meeting_id: meeting_id
@@ -116,7 +117,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
         :ok
 
       {:ok, meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
 
         if MeetingState.expects_calendar_event?(meeting) do
           # The meeting has become live again since this deletion was
@@ -176,7 +177,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   def replace(meeting_id, event_id, attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
         replace_event(meeting, event_id, attempt)
 
       {:error, :not_found} ->

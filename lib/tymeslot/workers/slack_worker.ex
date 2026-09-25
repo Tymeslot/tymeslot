@@ -31,6 +31,7 @@ defmodule Tymeslot.Workers.SlackWorker do
   require Logger
 
   alias Tymeslot.Features
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Meetings
   alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Slack
@@ -51,7 +52,7 @@ defmodule Tymeslot.Workers.SlackWorker do
     Logger.metadata(job_id: job.id, attempt: attempt)
 
     with {:ok, integration} <- SlackQueries.get_integration(integration_id),
-         :ok = Logger.metadata(user_id: integration.user_id),
+         :ok = ErrorTracking.put_context(user_id: integration.user_id),
          :ok <- check_feature_access(integration),
          :ok <- check_active(integration),
          {:ok, meeting} <- Meetings.get_meeting(meeting_id) do

@@ -30,6 +30,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
   require Logger
 
   alias Tymeslot.Features
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
@@ -98,7 +99,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
     feature = :automations_allowed
 
     with {:ok, webhook} <- WebhookQueries.get_webhook(webhook_id),
-         :ok = Logger.metadata(user_id: webhook.user_id),
+         :ok = ErrorTracking.put_context(user_id: webhook.user_id),
          :ok <- check_feature_access(webhook.user_id, webhook_id, event_type, feature),
          {:ok, meeting} <- fetch_meeting(meeting_id, args["snapshot"]),
          :ok <- deliver_once(webhook, event_type, meeting, job) do

@@ -1,6 +1,14 @@
 defmodule TymeslotWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :tymeslot
 
+  # Records exceptions raised outside the router: in an endpoint plug, or in a
+  # router pipeline plug, which Phoenix runs before its `router_dispatch`
+  # telemetry span (so ErrorTracker's Phoenix integration never sees them).
+  # An error the router integration has already recorded is not recorded
+  # again: both report through one function that marks the process once it
+  # has reported.
+  use ErrorTracker.Integrations.Plug
+
   alias Plug.Static
   alias Tymeslot.Infrastructure.StaticCompressors
   alias TymeslotWeb.Helpers.ClientIP

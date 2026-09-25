@@ -12,8 +12,10 @@ defmodule Tymeslot.Infrastructure.ObanLogger do
       *after* the default logger has already emitted `job:start`.
 
   This module instead owns the three job events directly. A single handler sets
-  a fresh `correlation_id` at job start (so every subsequent log line in the job
-  process is traceable, including the start line itself) and emits each event,
+  a fresh `correlation_id` at job start, and the `user_id` the job's args name,
+  as Logger metadata and error context (so every subsequent log line in the job
+  process, and any exception it raises, is traceable, including the start line
+  itself) and emits each event,
   logging `job:exception` at `:warning` while the job can still retry and at
   `:error` once it reaches a terminal state.
 
@@ -22,6 +24,7 @@ defmodule Tymeslot.Infrastructure.ObanLogger do
   """
 
   alias Tymeslot.Infrastructure.CorrelationId
+  alias Tymeslot.Infrastructure.ErrorTracking
 
   require Logger
 
@@ -38,6 +41,8 @@ defmodule Tymeslot.Infrastructure.ObanLogger do
   # metadata redactor cannot reach into the log message. Args are queryable in
   # the oban_jobs table via the logged job id when needed.
   @detail_keys [:attempt, :id, :max_attempts, :meta, :queue, :tags, :worker]
+
+  @user_id_arg_keys ["user_id", "organizer_user_id"]
 
   @doc """
   Attaches the telemetry handler for Oban job events. Call once during startup.
@@ -63,7 +68,8 @@ defmodule Tymeslot.Infrastructure.ObanLogger do
   defp do_handle(:start, measurements, metadata) do
     correlation_id = CorrelationId.generate()
     CorrelationId.put_in_process(correlation_id)
-    CorrelationId.add_to_logger_metadata(correlation_id)
+
+    ErrorTracking.put_context([correlation_id: correlation_id] ++ user_context(metadata[:job]))
 
     log_job_event(:info, "job:start", metadata, %{
       system_time: Map.get(measurements, :system_time)
@@ -87,6 +93,18 @@ defmodule Tymeslot.Infrastructure.ObanLogger do
         Exception.format_banner(metadata[:kind], metadata[:reason], metadata[:stacktrace] || [])
     })
   end
+
+  # A job acting for a user names them in its args: `user_id` by convention,
+  # `organizer_user_id` in the meeting-driven video jobs. Tagging the job's
+  # process with it here covers every worker at once, before `perform/1` runs.
+  defp user_context(%Oban.Job{args: args}) when is_map(args) do
+    case Enum.find_value(@user_id_arg_keys, &Map.get(args, &1)) do
+      nil -> []
+      user_id -> [user_id: user_id]
+    end
+  end
+
+  defp user_context(_job), do: []
 
   # A job that can still retry logs at :warning; a terminal failure (discarded,
   # cancelled) logs at :error so it stands out and can be alerted on.

@@ -30,6 +30,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
 
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Meetings
   alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Telegram
@@ -51,7 +52,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
     Logger.metadata(job_id: job.id, attempt: attempt)
 
     with {:ok, integration} <- TelegramQueries.get_integration(integration_id),
-         :ok = Logger.metadata(user_id: integration.user_id),
+         :ok = ErrorTracking.put_context(user_id: integration.user_id),
          :ok <- check_feature_access(integration.user_id),
          :ok <- check_active(integration),
          {:ok, meeting} <- Meetings.get_meeting(meeting_id),
