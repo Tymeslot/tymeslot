@@ -7,8 +7,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   CalDAV servers vary widely in their protocol support. The tier is probed once
   per integration and stored in `caldav_sync_tier`:
 
-  - **Tier 1** – Server supports `DAV:sync-token` (RFC 6578). After the first
-    full fetch, a sync-collection REPORT carrying only the stored token returns
+  - **Tier 1** – Server supports `DAV:sync-token` (RFC 6578). A path with no
+    token reads the current one as a property and fetches the sync window in
+    full; from then on, a sync-collection REPORT carrying that token returns
     just the delta since that point.
 
   - **Tier 2** – Server supports `cs:getctag` (Apple/Sabre extension). A
@@ -185,7 +186,47 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   defp tier1_path(integration, client, path) do
     calendar_url = UrlBuilder.build_calendar_url(client.base_url, path)
 
-    case SyncCollectionReport.fetch(client, calendar_url, State.sync_token(integration, path)) do
+    case State.sync_token(integration, path) do
+      nil -> tier1_initial(integration, client, path, calendar_url)
+      sync_token -> tier1_delta(integration, client, path, calendar_url, sync_token)
+    end
+  end
+
+  # A path with no token yet: after the upgrade that introduced per-path
+  # tokens, on a newly selected calendar, after a 410, and on every path after
+  # the daily forced full fetch clears them all. The initial sync-collection
+  # REPORT RFC 6578 offers for this returns the collection's entire history
+  # with every event body inline and no time range, which on a large calendar
+  # is enough to take the node down, and the token it would have produced is
+  # only stored after processing, so the same request then repeats every
+  # cycle. Reading the token as a property and fetching the sync window costs
+  # the same as a Tier 3 run.
+  #
+  # The token is read *before* the fetch. A change made while the fetch runs
+  # is then newer than the token and comes back in the next delta, where
+  # applying it again is harmless; read afterwards, that change would be
+  # skipped for good.
+  defp tier1_initial(integration, client, path, calendar_url) do
+    case SyncCollectionReport.fetch_sync_token(calendar_url, client) do
+      {:ok, sync_token} ->
+        EventFetch.fetch_path(integration, client, path, new_sync_token: sync_token)
+
+      {:error, :not_found} ->
+        :not_found
+
+      {:error, reason} when reason in [:unauthorized, :forbidden] ->
+        {:error, reason}
+
+      # The token is an optimisation: without one the path still syncs in
+      # full and asks again next cycle.
+      {:error, reason} ->
+        log_sync_error(integration, "Tier 1 sync token probe", reason)
+        EventFetch.fetch_path(integration, client, path, [])
+    end
+  end
+
+  defp tier1_delta(integration, client, path, calendar_url, sync_token) do
+    case SyncCollectionReport.fetch(client, calendar_url, sync_token) do
       {:ok, {events, deleted_hrefs, new_sync_token}} ->
         Logger.info("CalDAV Tier 1 sync fetched changes",
           calendar_integration_id: integration.id,
@@ -202,8 +243,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
           calendar_path: path
         )
 
+        # Cleared first, so a failed restart leaves the path tokenless rather
+        # than holding a token the server has already refused.
         State.put(integration, sync_token: {path, nil})
-        EventFetch.fetch_path(integration, client, path, [])
+        tier1_initial(integration, client, path, calendar_url)
 
       # The server named the changed resources but did not inline their
       # calendar data, so the delta cannot be applied on its own. The token is

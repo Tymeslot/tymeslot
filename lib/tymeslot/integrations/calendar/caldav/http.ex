@@ -76,6 +76,17 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     propfind(calendar_url, username, password, body: body, depth: "0")
   end
 
+  @doc """
+  Performs a PROPFIND request to fetch a calendar's current `DAV:sync-token`
+  (RFC 6578, Section 4) without listing any of its members.
+  """
+  @spec propfind_sync_token(String.t(), String.t(), String.t()) ::
+          {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
+  def propfind_sync_token(calendar_url, username, password) do
+    body = XmlHandler.build_propfind_request(properties: [:sync_token])
+    propfind(calendar_url, username, password, body: body, depth: "0")
+  end
+
   defp do_propfind(url, username, password, opts) do
     body = Keyword.get(opts, :body, XmlHandler.build_propfind_request())
     timeout = Keyword.get(opts, :timeout, Keyword.get(opts, :discovery_timeout, 10_000))

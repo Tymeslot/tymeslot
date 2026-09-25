@@ -52,8 +52,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.TierDemotionTest do
         provider_account_id: "http://localhost:65432||alice",
         is_active: true,
         needs_reauth: false,
-        # Detection has already run and believed the server's advertisement.
-        caldav_sync_tier: 1
+        # Detection has already run and believed the server's advertisement,
+        # and an earlier cycle stored a token, so this one asks for a delta.
+        caldav_sync_tier: 1,
+        caldav_sync_tokens: %{"/calendars/alice/default/" => "token-1"}
       )
 
     %{integration: integration}
@@ -156,7 +158,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.TierDemotionTest do
 
       integration =
         integration
-        |> Changeset.change(calendar_paths: [primary, extra])
+        |> Changeset.change(
+          calendar_paths: [primary, extra],
+          caldav_sync_tokens: %{primary => "token-1", extra => "token-2"}
+        )
         |> Repo.update!()
 
       ReqTest.stub(:tymeslot_http, fn conn ->

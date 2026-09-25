@@ -27,7 +27,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
   Fetches a sync-collection REPORT from the CalDAV server.
 
   Sends the collection's stored `sync_token` to request only changes since
-  the last sync. When the token is `nil` a full initial sync is requested.
+  the last sync.
 
   Returns `{:ok, {events, deleted_hrefs, new_sync_token}}` on success,
   `{:error, :sync_token_expired}` when the server responds with 410 Gone,
@@ -35,10 +35,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
   without inlining their calendar data (see `parse_response/1`), or
   `{:error, reason}` for other failures.
   """
-  @spec fetch(map(), String.t(), String.t() | nil) ::
+  @spec fetch(map(), String.t(), String.t()) ::
           {:ok, {list(map()), list(String.t()), String.t() | nil}}
           | {:error, term()}
-  def fetch(client, calendar_url, sync_token) do
+  def fetch(client, calendar_url, sync_token) when is_binary(sync_token) do
     report_body = build_report(sync_token)
 
     # RFC 6578, Section 3.2: the sync-collection report is defined only for
@@ -69,26 +69,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
   end
 
   @doc """
-  Builds a sync-collection REPORT XML body.
+  Builds a sync-collection REPORT XML body requesting the delta since
+  `sync_token`.
 
-  When `sync_token` is `nil`, requests a full initial sync. When a token
-  is provided, requests only the delta since that token.
+  There is deliberately no form for an empty token: see `fetch_sync_token/2`
+  for how a collection gets its first one.
   """
-  @spec build_report(String.t() | nil) :: String.t()
-  def build_report(nil) do
-    """
-    <?xml version="1.0" encoding="UTF-8"?>
-    <d:sync-collection xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
-      <d:sync-token/>
-      <d:sync-level>1</d:sync-level>
-      <d:prop>
-        <d:getetag/>
-        <c:calendar-data/>
-      </d:prop>
-    </d:sync-collection>
-    """
-  end
-
+  @spec build_report(String.t()) :: String.t()
   def build_report(sync_token) when is_binary(sync_token) do
     """
     <?xml version="1.0" encoding="UTF-8"?>
@@ -205,7 +192,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
   end
 
   # ---------------------------------------------------------------------------
-  # CTag fetching (Tier 2)
+  # Collection property probes (Tier 1 sync token, Tier 2 CTag)
   # ---------------------------------------------------------------------------
 
   @doc """
@@ -216,9 +203,42 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
   """
   @spec fetch_ctag(String.t(), map()) :: {:ok, String.t() | nil} | {:error, term()}
   def fetch_ctag(calendar_url, client) do
-    case CalDAVHttp.propfind_ctag(calendar_url, client.username, client.password) do
+    calendar_url
+    |> CalDAVHttp.propfind_ctag(client.username, client.password)
+    |> handle_property_response(&parse_ctag_response/1)
+  end
+
+  @doc """
+  Fetches a calendar's current `DAV:sync-token` via a Depth 0 PROPFIND.
+
+  This is how a collection with no stored token gets its first one. RFC 6578
+  also allows a sync-collection REPORT with an empty token for that, but the
+  server answers it with every member the collection has ever held, with its
+  calendar data inline and no time range, in a single response. Reading the
+  property instead costs a few hundred bytes whatever the calendar's size, and
+  the events come from the time-bounded full fetch.
+
+  Returns `{:ok, token}` where `token` may be `nil` if the server does not
+  expose the property, or `{:error, reason}` on transport or auth failure.
+  """
+  @spec fetch_sync_token(String.t(), map()) :: {:ok, String.t() | nil} | {:error, term()}
+  def fetch_sync_token(calendar_url, client) do
+    calendar_url
+    |> CalDAVHttp.propfind_sync_token(client.username, client.password)
+    |> handle_property_response(&parse_property(&1, :sync_token))
+  end
+
+  @doc """
+  Parses the CTag value from a PROPFIND response body.
+  """
+  @spec parse_ctag_response(String.t()) :: {:ok, String.t() | nil}
+  def parse_ctag_response(xml_body) when is_binary(xml_body),
+    do: parse_property(xml_body, :getctag)
+
+  defp handle_property_response(response, parse) do
+    case response do
       {:ok, %Req.Response{status: status, body: body}} when status in [200, 207] ->
-        parse_ctag_response(body)
+        parse.(body)
 
       {:ok, %Req.Response{status: 401}} ->
         {:error, :unauthorized}
@@ -229,32 +249,38 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
       {:ok, %Req.Response{status: status}} ->
         {:error, {:http_error, status}}
 
-      {:error, :unauthorized} ->
-        {:error, :unauthorized}
-
       {:error, reason} ->
         {:error, reason}
     end
   end
 
-  @doc """
-  Parses the CTag value from a PROPFIND response body.
-  """
-  @spec parse_ctag_response(String.t()) :: {:ok, String.t() | nil}
-  def parse_ctag_response(xml_body) when is_binary(xml_body) do
+  # A property that is absent or unparseable reads as `nil`: both probes are
+  # optimisations, and a caller without a value falls back to a full fetch.
+  defp parse_property(xml_body, property) do
     doc = SweetXml.parse(xml_body, namespace_conformant: true, dtd: :none)
 
-    raw_ctag = xpath(doc, ~x"//*[local-name()='getctag']/text()"s)
-    ctag = if raw_ctag == "", do: nil, else: raw_ctag
-
-    {:ok, ctag}
+    case xpath(doc, property_path(property)) do
+      "" -> {:ok, nil}
+      value -> {:ok, value}
+    end
   rescue
     e ->
-      Logger.warning("Failed to parse CTag response", error: inspect(e))
+      Logger.warning("Failed to parse CalDAV property response",
+        property: property,
+        error: inspect(e)
+      )
+
       {:ok, nil}
   catch
     :exit, reason ->
-      Logger.warning("Failed to parse CTag response", error: inspect(reason))
+      Logger.warning("Failed to parse CalDAV property response",
+        property: property,
+        error: inspect(reason)
+      )
+
       {:ok, nil}
   end
+
+  defp property_path(:getctag), do: ~x"//*[local-name()='getctag']/text()"s
+  defp property_path(:sync_token), do: ~x"//*[local-name()='sync-token']/text()"s
 end

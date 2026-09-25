@@ -87,7 +87,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.TierSyncTest do
                %{path_a => "token-a2", path_b => "token-b2"}
     end
 
-    test "an expired token on one path re-fetches that path alone and keeps the other's" do
+    test "an expired token on one path restarts that path alone and keeps the other's" do
       path_a = path1()
       path_b = path2()
 
@@ -100,40 +100,104 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.TierSyncTest do
           caldav_sync_tokens: %{path_a => "token-a", path_b => "stale-token-b"}
         )
 
-      test_pid = self()
+      stub_tier1_server(%{path_a => {:delta, "token-a2"}, path_b => :gone},
+        fresh_token: "token-b-fresh"
+      )
 
-      ReqTest.stub(:tymeslot_http, fn conn ->
-        {:ok, body, conn} = Conn.read_body(conn)
-        kind = if body =~ "sync-collection", do: :sync_collection, else: :calendar_query
-        send(test_pid, {kind, conn.request_path})
-
-        case {kind, conn.request_path} do
-          {:sync_collection, ^path_a} ->
-            conn
-            |> Conn.put_resp_header("content-type", "application/xml")
-            |> Conn.send_resp(
-              207,
-              sync_collection_xml("#{path_a}event1.ics", ical_path1(), "token-a2")
-            )
-
-          {:sync_collection, ^path_b} ->
-            Conn.send_resp(conn, 410, "Gone")
-
-          {:calendar_query, _path} ->
-            respond_to_dual_paths(conn)
-        end
-      end)
-
-      assert :ok =
-               perform_job(SyncCalDavCalendarWorker, %{
-                 "calendar_integration_id" => integration.id
-               })
+      assert :ok = run_sync(integration)
 
       assert_received {:calendar_query, ^path_b}
       refute_received {:calendar_query, ^path_a}
 
-      # Path B restarts from nothing next cycle; path A's advance survives.
+      # Path B restarted from a token read in the same cycle; path A's advance
+      # survives.
+      assert Repo.reload!(integration).caldav_sync_tokens ==
+               %{path_a => "token-a2", path_b => "token-b-fresh"}
+    end
+  end
+
+  # A path with no token used to send the initial sync-collection REPORT, which
+  # returns the collection's whole history with every event body inline and no
+  # time range. On a large calendar that response took the node down, and the
+  # token it would have produced was never stored, so it repeated every cycle.
+  describe "perform/1 - Tier 1 path with no sync token" do
+    setup do
+      path_a = path1()
+      path_b = path2()
+
+      # Path B is the upgrade case: per-path tokens only carried the old token
+      # across for the primary calendar.
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          is_active: true,
+          caldav_sync_tier: 1,
+          calendar_paths: [path_a, path_b],
+          caldav_sync_tokens: %{path_a => "token-a"}
+        )
+
+      %{integration: integration, path_a: path_a, path_b: path_b}
+    end
+
+    test "reads the token and fetches the sync window instead of the whole collection",
+         %{integration: integration, path_a: path_a, path_b: path_b} do
+      stub_tier1_server(%{path_a => {:delta, "token-a2"}, path_b => :no_token},
+        fresh_token: "token-b1"
+      )
+
+      assert :ok = run_sync(integration)
+
+      # The token was read before the events were fetched, and nothing asked
+      # path B for a sync-collection.
+      assert requests_for(path_b) == [:propfind_sync_token, :calendar_query]
+
+      assert "event-from-path2@test" in cached_uids(integration)
+
+      assert Repo.reload!(integration).caldav_sync_tokens ==
+               %{path_a => "token-a2", path_b => "token-b1"}
+    end
+
+    test "asks for the delta since the token it read on the next cycle",
+         %{integration: integration, path_a: path_a, path_b: path_b} do
+      stub_tier1_server(%{path_a => {:delta, "token-a2"}, path_b => :no_token},
+        fresh_token: "token-b1"
+      )
+
+      assert :ok = run_sync(integration)
+
+      stub_tier1_server(%{path_a => {:delta, "token-a3"}, path_b => {:delta, "token-b2"}})
+
+      assert :ok = run_sync(Repo.reload!(integration))
+
+      assert_received {:sync_collection, ^path_b, body}
+      assert body =~ "<d:sync-token>token-b1</d:sync-token>"
+      assert Repo.reload!(integration).caldav_sync_tokens[path_b] == "token-b2"
+    end
+
+    test "still syncs the path when the token cannot be read, and leaves it without one",
+         %{integration: integration, path_a: path_a, path_b: path_b} do
+      stub_tier1_server(%{path_a => {:delta, "token-a2"}, path_b => :no_token},
+        token_probe: :fail
+      )
+
+      assert :ok = run_sync(integration)
+
+      assert "event-from-path2@test" in cached_uids(integration)
       assert Repo.reload!(integration).caldav_sync_tokens == %{path_a => "token-a2"}
+    end
+
+    test "does not store the token it read when the fetch that follows fails",
+         %{integration: integration, path_a: path_a, path_b: path_b} do
+      # Storing it anyway would skip every event the failed fetch never
+      # delivered: the next delta starts after them.
+      stub_tier1_server(%{path_a => {:delta, "token-a2"}, path_b => :no_token},
+        fresh_token: "token-b1",
+        calendar_query: :fail
+      )
+
+      run_sync(integration)
+
+      refute Map.has_key?(Repo.reload!(integration).caldav_sync_tokens, path_b)
     end
   end
 
@@ -294,4 +358,80 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.TierSyncTest do
       end
     end
   end
+
+  defp run_sync(integration) do
+    perform_job(SyncCalDavCalendarWorker, %{"calendar_integration_id" => integration.id})
+  end
+
+  defp cached_uids(integration) do
+    Repo.all(
+      from e in ProviderCalendarEventSchema,
+        where: e.calendar_integration_id == ^integration.id,
+        select: e.uid
+    )
+  end
+
+  # A Tier 1 server for two paths. `paths` says how each path answers a
+  # sync-collection REPORT: `{:delta, new_token}` with its event, `:gone` with
+  # a 410, or `:no_token` when the test expects none to be sent. The sync-token
+  # PROPFIND answers `opts[:fresh_token]`, or 500 with `token_probe: :fail`; a
+  # calendar-query returns the path's event, or a 500 with
+  # `calendar_query: :fail`. Every request is reported to the test process.
+  defp stub_tier1_server(paths, opts \\ []) do
+    test_pid = self()
+
+    ReqTest.stub(:tymeslot_http, fn conn ->
+      {:ok, body, conn} = Conn.read_body(conn)
+      path = conn.request_path
+
+      cond do
+        conn.method == "PROPFIND" and body =~ "sync-token" ->
+          send(test_pid, {:propfind_sync_token, path})
+
+          if opts[:token_probe] == :fail,
+            do: Conn.send_resp(conn, 500, "Internal Server Error"),
+            else: xml_resp(conn, sync_token_propfind_xml(opts[:fresh_token]))
+
+        body =~ "sync-collection" ->
+          send(test_pid, {:sync_collection, path, body})
+
+          case Map.fetch!(paths, path) do
+            {:delta, new_token} ->
+              xml_resp(conn, sync_collection_xml(event_href(path), event_ical(path), new_token))
+
+            :gone ->
+              Conn.send_resp(conn, 410, "Gone")
+          end
+
+        true ->
+          send(test_pid, {:calendar_query, path})
+
+          if opts[:calendar_query] == :fail,
+            do: Conn.send_resp(conn, 500, "Internal Server Error"),
+            else: respond_to_dual_paths(conn)
+      end
+    end)
+  end
+
+  # The requests the stub reported for `path`, oldest first.
+  defp requests_for(path) do
+    receive do
+      {kind, ^path} -> [kind | requests_for(path)]
+      {kind, ^path, _body} -> [kind | requests_for(path)]
+    after
+      0 -> []
+    end
+  end
+
+  defp xml_resp(conn, xml) do
+    conn
+    |> Conn.put_resp_header("content-type", "application/xml")
+    |> Conn.send_resp(207, xml)
+  end
+
+  defp event_href(path) do
+    if path == path1(), do: "#{path}event1.ics", else: "#{path}event2.ics"
+  end
+
+  defp event_ical(path), do: if(path == path1(), do: ical_path1(), else: ical_path2())
 end
