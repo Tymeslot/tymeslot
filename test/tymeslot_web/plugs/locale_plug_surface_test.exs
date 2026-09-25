@@ -83,4 +83,36 @@ defmodule TymeslotWeb.Plugs.LocalePlugSurfaceTest do
       assert conn.assigns.locale == "de"
     end
   end
+
+  describe "a fallback is never remembered" do
+    test "the admin fallback does not leak into a booking page in the same session" do
+      admin = resolve(surface: :admin)
+      assert admin.assigns.locale == "de"
+
+      booking =
+        build_conn()
+        |> init_test_session(get_session(admin))
+        |> Map.put(:params, %{})
+        |> fetch_session()
+        |> LocalePlug.call(surface: :booking)
+
+      assert booking.assigns.locale == "fr"
+    end
+
+    test "a changed fallback reaches a session that already resolved the old one" do
+      conn = resolve(surface: :booking)
+      assert conn.assigns.locale == "fr"
+
+      Application.put_env(:tymeslot, :booking_default_locale, "it")
+
+      conn =
+        build_conn()
+        |> init_test_session(get_session(conn))
+        |> Map.put(:params, %{})
+        |> fetch_session()
+        |> LocalePlug.call(surface: :booking)
+
+      assert conn.assigns.locale == "it"
+    end
+  end
 end

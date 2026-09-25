@@ -51,26 +51,26 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
       }
 
       mjml_content = """
-      #{Text.centered_text(dgettext("emails", "Hi %{name} - our appointment has been cancelled. I'm sorry for the inconvenience.", name: appointment_details.attendee_name), padding: "8px 0 16px 0")}
+      #{Text.centered_text(dgettext("emails_booking", "Hi %{name} - our appointment has been cancelled. I'm sorry for the inconvenience.", name: appointment_details.attendee_name), padding: "8px 0 16px 0")}
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
       #{MeetingComponents.custom_answers_section(appointment_details)}
 
-      #{Text.centered_text(dgettext("emails", "Would you like to schedule a new appointment?"), padding: "24px 0 10px 0")}
-      #{Buttons.action_button(:confirmed, dgettext("emails", "Schedule New Appointment"), booking_url(appointment_details), full_width: true)}
+      #{Text.centered_text(dgettext("emails_booking", "Would you like to schedule a new appointment?"), padding: "24px 0 10px 0")}
+      #{Buttons.action_button(:confirmed, dgettext("emails_booking", "Schedule New Appointment"), booking_url(appointment_details), full_width: true)}
 
-      #{Text.system_footer_note(dgettext("emails", "This time slot is now available for booking again."))}
-      #{Text.system_footer_note(dgettext("emails", "If you have any questions, please don't hesitate to reach out."))}
+      #{Text.system_footer_note(dgettext("emails_booking", "This time slot is now available for booking again."))}
+      #{Text.system_footer_note(dgettext("emails_booking", "If you have any questions, please don't hesitate to reach out."))}
       """
 
       organizer_details =
         TemplateHelper.build_organizer_details(appointment_details,
           intent: @intent,
-          eyebrow: dgettext("emails", "Cancelled"),
-          stage_title: dgettext("emails", "Meeting cancelled"),
+          eyebrow: dgettext("emails_booking", "Cancelled"),
+          stage_title: dgettext("emails_booking", "Meeting cancelled"),
           stage_subtitle:
-            dgettext("emails", "with %{name}", name: appointment_details.organizer_name)
+            dgettext("emails_booking", "with %{name}", name: appointment_details.organizer_name)
         )
 
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
@@ -81,7 +81,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
       |> to({appointment_details.attendee_name, attendee_email})
       |> subject(
         Sanitise.sanitize_for_header(
-          dgettext("emails", "Meeting Cancelled - %{date} with %{name}",
+          dgettext("emails_booking", "Meeting Cancelled - %{date} with %{name}",
             date: date_short,
             name: appointment_details.organizer_name
           )
@@ -111,20 +111,20 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
       }
 
       mjml_content = """
-      #{Text.centered_text(dgettext("emails", "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to has been cancelled.", guest: guest_name, organizer: appointment_details.organizer_name, booker: appointment_details.attendee_name), padding: "8px 0 16px 0")}
+      #{Text.centered_text(dgettext("emails_booking", "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to has been cancelled.", guest: guest_name, organizer: appointment_details.organizer_name, booker: appointment_details.attendee_name), padding: "8px 0 16px 0")}
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
-      #{Text.system_footer_note(dgettext("emails", "You don't need to do anything. If you added the meeting to your calendar, the attached file marks it as cancelled there."))}
+      #{Text.system_footer_note(dgettext("emails_booking", "You don't need to do anything. If you added the meeting to your calendar, the attached file marks it as cancelled there."))}
       """
 
       organizer_details =
         TemplateHelper.build_organizer_details(appointment_details,
           intent: @intent,
-          eyebrow: dgettext("emails", "Cancelled"),
-          stage_title: dgettext("emails", "Meeting cancelled"),
+          eyebrow: dgettext("emails_booking", "Cancelled"),
+          stage_title: dgettext("emails_booking", "Meeting cancelled"),
           stage_subtitle:
-            dgettext("emails", "with %{name}", name: appointment_details.organizer_name)
+            dgettext("emails_booking", "with %{name}", name: appointment_details.organizer_name)
         )
 
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
@@ -134,7 +134,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
       |> to({guest_name, guest_email})
       |> subject(
         Sanitise.sanitize_for_header(
-          dgettext("emails", "Meeting Cancelled - %{date} with %{name}",
+          dgettext("emails_booking", "Meeting Cancelled - %{date} with %{name}",
             date: date_short,
             name: appointment_details.organizer_name
           )
@@ -151,7 +151,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
       refund_notice = RefundNotice.build(appointment_details)
 
       mjml_content = """
-      #{Text.centered_text(dgettext("emails", "The appointment with %{name} has been cancelled.", name: appointment_details.attendee_name), padding: "8px 0 16px 0")}
+      #{Text.centered_text(dgettext("emails_booking", "The appointment with %{name} has been cancelled.", name: appointment_details.attendee_name), padding: "8px 0 16px 0")}
 
       #{MeetingComponents.meeting_details_table(TemplateHelper.organizer_meeting_details(appointment_details), organizer_locale(appointment_details))}
 
@@ -159,16 +159,16 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
 
       #{RefundNotice.html(refund_notice)}
 
-      #{Text.system_footer_note(dgettext("emails", "The attendee has been notified of the cancellation."))}
+      #{Text.system_footer_note(dgettext("emails_booking", "The attendee has been notified of the cancellation."))}
       """
 
       organizer_details =
         TemplateHelper.build_organizer_details(appointment_details,
           intent: @intent,
-          eyebrow: dgettext("emails", "Cancelled"),
-          stage_title: dgettext("emails", "Meeting cancelled"),
+          eyebrow: dgettext("emails_booking", "Cancelled"),
+          stage_title: dgettext("emails_booking", "Meeting cancelled"),
           stage_subtitle:
-            dgettext("emails", "with %{name}", name: appointment_details.attendee_name)
+            dgettext("emails_booking", "with %{name}", name: appointment_details.attendee_name)
         )
 
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
@@ -177,7 +177,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
       |> to({appointment_details.organizer_name, organizer_email})
       |> subject(
         Sanitise.sanitize_for_header(
-          dgettext("emails", "Meeting Cancelled - %{date} with %{name}",
+          dgettext("emails_booking", "Meeting Cancelled - %{date} with %{name}",
             date:
               Formatting.format_date_short(
                 appointment_details.date,
@@ -197,22 +197,22 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
     custom_answers = TextBodyHelper.format_custom_answers(appointment_details, locale)
 
     """
-    #{dgettext("emails", "Meeting Cancelled")}
+    #{dgettext("emails_booking", "Meeting Cancelled")}
 
-    #{dgettext("emails", "Hi %{name},", name: appointment_details.attendee_name)}
+    #{dgettext("emails_booking", "Hi %{name},", name: appointment_details.attendee_name)}
 
-    #{dgettext("emails", "We're writing to confirm that your appointment has been cancelled.")}
+    #{dgettext("emails_booking", "We're writing to confirm that your appointment has been cancelled.")}
 
-    #{dgettext("emails", "CANCELLED APPOINTMENT DETAILS:")}
-    #{dgettext("emails", "Meeting with:")} #{appointment_details.organizer_name}
+    #{dgettext("emails_booking", "CANCELLED APPOINTMENT DETAILS:")}
+    #{dgettext("emails_booking", "Meeting with:")} #{appointment_details.organizer_name}
     #{meeting_details}#{custom_answers}
 
-    #{dgettext("emails", "This time slot is now available for booking again.")}
+    #{dgettext("emails_booking", "This time slot is now available for booking again.")}
 
-    #{dgettext("emails", "Would you like to schedule a new appointment?")}
-    #{dgettext("emails", "Visit:")} #{booking_url(appointment_details)}
+    #{dgettext("emails_booking", "Would you like to schedule a new appointment?")}
+    #{dgettext("emails_booking", "Visit:")} #{booking_url(appointment_details)}
 
-    #{dgettext("emails", "If you have any questions, please don't hesitate to reach out.")}
+    #{dgettext("emails_booking", "If you have any questions, please don't hesitate to reach out.")}
     """
   end
 
@@ -220,16 +220,16 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
     meeting_details = TextBodyHelper.format_meeting_details(appointment_details, locale)
 
     """
-    #{dgettext("emails", "Meeting Cancelled")}
+    #{dgettext("emails_booking", "Meeting Cancelled")}
 
-    #{dgettext("emails", "Hi %{guest},", guest: guest_name)}
+    #{dgettext("emails_booking", "Hi %{guest},", guest: guest_name)}
 
-    #{dgettext("emails", "The meeting with %{organizer} that %{booker} invited you to has been cancelled.", organizer: appointment_details.organizer_name, booker: appointment_details.attendee_name)}
+    #{dgettext("emails_booking", "The meeting with %{organizer} that %{booker} invited you to has been cancelled.", organizer: appointment_details.organizer_name, booker: appointment_details.attendee_name)}
 
-    #{dgettext("emails", "CANCELLED APPOINTMENT DETAILS:")}
+    #{dgettext("emails_booking", "CANCELLED APPOINTMENT DETAILS:")}
     #{meeting_details}
 
-    #{dgettext("emails", "You don't need to do anything. If you added the meeting to your calendar, the attached file marks it as cancelled there.")}
+    #{dgettext("emails_booking", "You don't need to do anything. If you added the meeting to your calendar, the attached file marks it as cancelled there.")}
     """
   end
 
@@ -281,14 +281,14 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
       )
 
     """
-    #{dgettext("emails", "Meeting Cancelled")}
+    #{dgettext("emails_booking", "Meeting Cancelled")}
 
-    #{dgettext("emails", "The appointment with %{name} has been cancelled.", name: appointment_details.attendee_name)}
+    #{dgettext("emails_booking", "The appointment with %{name} has been cancelled.", name: appointment_details.attendee_name)}
 
-    #{dgettext("emails", "CANCELLED APPOINTMENT DETAILS:")}
+    #{dgettext("emails_booking", "CANCELLED APPOINTMENT DETAILS:")}
     #{meeting_details}#{attendee_info}#{custom_answers}#{RefundNotice.text(refund_notice)}
 
-    #{dgettext("emails", "The attendee has been notified of the cancellation.")}
+    #{dgettext("emails_booking", "The attendee has been notified of the cancellation.")}
     """
   end
 end

@@ -86,10 +86,10 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
       organizer_details =
         TemplateHelper.build_organizer_details(details_for_organizer,
           intent: @intent,
-          eyebrow: dgettext("emails", "Updated"),
-          stage_title: dgettext("emails", "Event updated"),
+          eyebrow: dgettext("emails_booking", "Updated"),
+          stage_title: dgettext("emails_booking", "Event updated"),
           stage_subtitle:
-            dgettext("emails", "%{name} has updated an event you're attending.",
+            dgettext("emails_booking", "%{name} has updated an event you're attending.",
               name: details.organizer_name
             )
         )
@@ -117,7 +117,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
       |> to(attendee_email)
       |> subject(
         Sanitise.sanitize_for_header(
-          dgettext("emails", "Updated: %{title} - %{date}",
+          dgettext("emails_booking", "Updated: %{title} - %{date}",
             title: details.event_title,
             date: date_short
           )
@@ -176,11 +176,11 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
             """
           end)
 
-        change_section(dgettext("emails", "What changed"), """
+        change_section(dgettext("emails_booking", "What changed"), """
         <tr>
-          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails", "Field")}</th>
-          <th style="padding: 6px 12px; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails", "Before")}</th>
-          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails", "After")}</th>
+          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "Field")}</th>
+          <th style="padding: 6px 12px; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "Before")}</th>
+          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails_booking", "After")}</th>
         </tr>
         #{body_rows}
         """)
@@ -226,7 +226,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
   # nothing was ever recorded to put in it.
   defp build_details_table(changes, locale) do
     rows = Enum.map_join(changes, "\n", &detail_row(&1, locale))
-    change_section(dgettext("emails", "Current details"), rows)
+    change_section(dgettext("emails_booking", "Current details"), rows)
   end
 
   defp detail_row(change, locale) do
@@ -241,46 +241,48 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
     """
   end
 
-  defp detail_cells({:title, _from, to}, _locale), do: {dgettext("emails", "Title"), escape(to)}
+  defp detail_cells({:title, _from, to}, _locale),
+    do: {dgettext("emails_booking", "Title"), escape(to)}
 
   defp detail_cells({:location, _from, to}, _locale),
-    do: {dgettext("emails", "Location"), escape(to)}
+    do: {dgettext("emails_booking", "Location"), escape(to)}
 
   defp detail_cells({:description, _from, to}, _locale),
-    do: {dgettext("emails", "Description"), escape(Formatting.plain_excerpt(to))}
+    do: {dgettext("emails_booking", "Description"), escape(Formatting.plain_excerpt(to))}
 
   defp detail_cells({:time, _from, to}, locale),
-    do: {dgettext("emails", "Time"), escape(Formatting.format_time_short(to, locale))}
+    do: {dgettext("emails_booking", "Time"), escape(Formatting.format_time_short(to, locale))}
 
   defp change_to_row({:title, from, to}, _locale),
-    do: {dgettext("emails", "Title"), escape(from), escape(to)}
+    do: {dgettext("emails_booking", "Title"), escape(from), escape(to)}
 
   defp change_to_row({:location, from, to}, _locale),
-    do: {dgettext("emails", "Location"), escape(from), escape(to)}
+    do: {dgettext("emails_booking", "Location"), escape(from), escape(to)}
 
   defp change_to_row({:description, _from, _to}, _locale),
     do:
-      {dgettext("emails", "Description"), dgettext("emails", "(previous)"),
-       dgettext("emails", "(updated)")}
+      {dgettext("emails_booking", "Description"), dgettext("emails_booking", "(previous)"),
+       dgettext("emails_booking", "(updated)")}
 
   defp change_to_row({:time, from_start, to_start}, locale),
     do:
-      {dgettext("emails", "Time"), escape(Formatting.format_time_short(from_start, locale)),
+      {dgettext("emails_booking", "Time"),
+       escape(Formatting.format_time_short(from_start, locale)),
        escape(Formatting.format_time_short(to_start, locale))}
 
   defp change_to_row(_other, _locale), do: nil
 
-  defp escape(nil), do: dgettext("emails", "(none)")
+  defp escape(nil), do: dgettext("emails_booking", "(none)")
   defp escape(val), do: val |> to_string() |> Sanitise.sanitize_for_email()
 
   defp build_text_body(details, locale) do
     {changes_heading, changes_text} =
       if first_notification?(details),
         do:
-          {dgettext("emails", "Current Details"),
+          {dgettext("emails_booking", "Current Details"),
            TextBodyHelper.format_event_details(details.changes, locale)},
         else:
-          {dgettext("emails", "What Changed"),
+          {dgettext("emails_booking", "What Changed"),
            TextBodyHelper.format_event_changes(details.changes, locale)}
 
     meeting_details =
@@ -295,11 +297,11 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
       })
 
     """
-    #{dgettext("emails", "Event Updated")}
+    #{dgettext("emails_booking", "Event Updated")}
 
-    #{dgettext("emails", "%{name} has updated an event you're attending.", name: details.organizer_name)}
+    #{dgettext("emails_booking", "%{name} has updated an event you're attending.", name: details.organizer_name)}
 
-    #{dgettext("emails", "MEETING DETAILS:")}
+    #{dgettext("emails_booking", "MEETING DETAILS:")}
     #{TextBodyHelper.format_meeting_details(meeting_details, locale)}
 
     #{changes_heading}

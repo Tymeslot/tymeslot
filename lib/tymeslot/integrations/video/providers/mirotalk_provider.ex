@@ -113,7 +113,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   # provider shares, and its contract is `{:error, message}`. Only
   # `perform_connection_test/1` tags what it hands back.
   defp validate_base_url(url) when url in [nil, ""],
-    do: {:error, dgettext("dashboard_integrations", "Base URL is required")}
+    do: {:error, dgettext("dashboard_video", "Base URL is required")}
 
   defp validate_base_url(url) do
     UrlValidation.validate_http_url(url,
@@ -145,13 +145,13 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   defp handle_api_response({:error, error}), do: handle_http_error(error)
 
   defp handle_http_response(%Req.Response{status: 200}) do
-    {:ok, dgettext("dashboard_integrations", "Connection successful - API key is valid")}
+    {:ok, dgettext("dashboard_video", "Connection successful - API key is valid")}
   end
 
   defp handle_http_response(%Req.Response{status: 401, body: body}) do
     handle_auth_error(
       body,
-      dgettext("dashboard_integrations", "Authentication failed - Please check your API key")
+      dgettext("dashboard_video", "Authentication failed - Please check your API key")
     )
   end
 
@@ -161,7 +161,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     {:error,
      {:unreachable,
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "Access forbidden - API key may lack required permissions"
       )}}
   end
@@ -170,7 +170,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     {:error,
      {:unreachable,
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "API endpoint not found - Please verify the base URL is correct"
       )}}
   end
@@ -179,7 +179,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     {:error,
      {:unreachable,
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "Not Acceptable - The MiroTalk server rejected the request. Please verify your base URL and API configuration"
       )}}
   end
@@ -193,7 +193,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     {:error,
      {:unreachable,
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "MiroTalk server error (status %{status}) - Please try again later",
         status: status
       )}}
@@ -203,7 +203,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     {:error,
      {:unreachable,
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "Unexpected response (status %{status}) - Please verify your configuration",
         status: status
       )}}
@@ -212,8 +212,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   defp handle_auth_error(body, default_message) do
     if String.contains?(body || "", "Unauthorized") do
       {:error,
-       {:invalid_api_key,
-        dgettext("dashboard_integrations", "Invalid API key - Authentication failed")}}
+       {:invalid_api_key, dgettext("dashboard_video", "Invalid API key - Authentication failed")}}
     else
       {:error, {:invalid_api_key, default_message}}
     end
@@ -245,7 +244,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
       _other ->
         {:error,
          {:unreachable,
-          dgettext("dashboard_integrations", "Connection failed: %{reason}",
+          dgettext("dashboard_video", "Connection failed: %{reason}",
             reason: Exception.message(exception)
           )}}
     end
@@ -449,15 +448,15 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   def url_patterns, do: ["mirotalk", "/join/"]
 
   defp domain_not_found_message,
-    do: dgettext("dashboard_integrations", "Domain not found - Please check the URL")
+    do: dgettext("dashboard_video", "Domain not found - Please check the URL")
 
   defp connection_refused_message,
     do:
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "Connection refused - Server may be down or URL incorrect"
       )
 
   defp connection_timeout_message,
-    do: dgettext("dashboard_integrations", "Connection timeout - Server took too long to respond")
+    do: dgettext("dashboard_video", "Connection timeout - Server took too long to respond")
 end

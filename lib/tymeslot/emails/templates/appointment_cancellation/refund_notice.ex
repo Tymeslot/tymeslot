@@ -50,7 +50,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice do
 
   def html(%{amount: amount}) do
     """
-    #{Text.section_title(dgettext("emails", "Refund outstanding"))}
+    #{Text.section_title(dgettext("emails_booking", "Refund outstanding"))}
     #{Stack.spaced("""
       <mj-section
         background-color="#{Styles.canvas_soft()}"
@@ -65,7 +65,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice do
             line-height="1.7"
             align="left"
           >
-            #{dgettext("emails", "You still hold %{amount} for this booking.", amount: strong(amount))}
+            #{dgettext("emails_booking", "You still hold %{amount} for this booking.", amount: strong(amount))}
           </mj-text>
           <mj-text
             font-size="13px"
@@ -74,7 +74,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice do
             align="left"
             padding-top="12px"
           >
-            #{dgettext("emails", "Cancelling does not refund anything on its own. Issue or decline the refund under Payments in your dashboard.")}
+            #{dgettext("emails_booking", "Cancelling does not refund anything on its own. Issue or decline the refund under Payments in your dashboard.")}
           </mj-text>
         </mj-column>
       </mj-section>
@@ -89,9 +89,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation.RefundNotice do
   def text(%{amount: amount}) do
     """
 
-    #{dgettext("emails", "REFUND OUTSTANDING:")}
-    #{dgettext("emails", "You still hold %{amount} for this booking.", amount: amount)}
-    #{dgettext("emails", "Cancelling does not refund anything on its own. Issue or decline the refund under Payments in your dashboard.")}
+    #{dgettext("emails_booking", "REFUND OUTSTANDING:")}
+    #{dgettext("emails_booking", "You still hold %{amount} for this booking.", amount: amount)}
+    #{dgettext("emails_booking", "Cancelling does not refund anything on its own. Issue or decline the refund under Payments in your dashboard.")}
     """
   end
 
