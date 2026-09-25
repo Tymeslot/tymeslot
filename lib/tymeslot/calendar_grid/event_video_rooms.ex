@@ -24,7 +24,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
 
   The record follows the event through the grid: moving the event moves the
   record's times, and the room's lobby, or its event, with them; replacing the
-  event's video or deleting a one-off event deletes the room.
+  event's video, deleting a one-off event, or deleting a whole series deletes
+  the room.
 
   A Teams meeting attached to the grid event itself is never recorded. Its
   room id is the event's own Outlook id, so it moves and goes with the event
@@ -202,6 +203,15 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   end
 
   @doc """
+  Deletes the rooms of a series that was deleted as a whole, addressed from
+  any one of its rows. Unlike `event_deleted/1`, the series' rooms go whatever
+  the row looks like: a CalDAV occurrence edited on its own carries no repeat
+  rule, yet still shares its series' rooms.
+  """
+  @spec series_deleted(map()) :: :ok
+  def series_deleted(event), do: event |> rooms_for(true) |> discard()
+
+  @doc """
   The recorded rooms of `event` (or of its series) made on the video
   integration `video_integration_id`.
   """
@@ -341,19 +351,21 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   end
 
   # The rooms of the series an event belongs to, or of the event itself.
-  defp rooms_of_event(%{calendar_integration_id: calendar_integration_id} = event)
+  defp rooms_of_event(event), do: rooms_for(event, EventVideoRoomTimes.recurring?(event))
+
+  defp rooms_for(%{calendar_integration_id: calendar_integration_id} = event, series?)
        when is_integer(calendar_integration_id) do
     identifiers = event_identifiers(event)
 
     identifiers =
-      if EventVideoRoomTimes.recurring?(event),
+      if series?,
         do: Enum.uniq(identifiers ++ Enum.map(identifiers, &series_identifier/1)),
         else: identifiers
 
     EventVideoRoomQueries.list_for_identifiers(calendar_integration_id, identifiers)
   end
 
-  defp rooms_of_event(_event), do: []
+  defp rooms_for(_event, _series?), do: []
 
   defp one_off_rooms(event) do
     if EventVideoRoomTimes.recurring?(event), do: [], else: rooms_of_event(event)

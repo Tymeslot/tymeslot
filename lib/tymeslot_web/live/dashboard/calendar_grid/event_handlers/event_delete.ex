@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
 
       event ->
         with :ok <- EditWorkflow.assert_event_writable(socket, event),
-             :ok <- CalendarGrid.ensure_deletable(event) do
+             {:ok, :single} <- CalendarGrid.deletion_scopes(event) do
           linked_to_booking =
             CalendarEvents.event_linked_to_booking?(
               event.calendar_integration_id,
@@ -43,7 +43,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
           {:error, :read_only} = error ->
             Shared.flash_guard_error(socket, error)
 
-          {:error, :recurring_event} ->
+          # A series member's delete takes a scope the grid does not ask
+          # for yet, so it is refused like one without a scoped delete.
+          refused when refused in [{:ok, :series}, {:error, :recurring_event}] ->
             send(self(), {:flash, {:error, recurring_delete_refused_message()}})
             {:noreply, socket}
 

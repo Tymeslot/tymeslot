@@ -386,19 +386,20 @@ defmodule Tymeslot.CalendarGrid do
 
   @doc """
   Deletes an event from its calendar, cancels the Tymeslot meeting it was
-  booked as, and removes its cached row. See
-  `Tymeslot.CalendarGrid.EventDeletion.delete_event/2`.
+  booked as, and removes its cached row; for a member of a series, `scope`
+  says whether one occurrence or the whole series goes. See
+  `Tymeslot.CalendarGrid.EventDeletion.delete_event/3`.
   """
-  @spec delete_event(pos_integer(), EventDeletion.event()) ::
+  @spec delete_event(pos_integer(), EventDeletion.event(), EventDeletion.scope()) ::
           {:ok, EventDeletion.deleted()} | {:error, EventDeletion.failure()}
-  defdelegate delete_event(user_id, event), to: EventDeletion
+  defdelegate delete_event(user_id, event, scope \\ :occurrence), to: EventDeletion
 
   @doc """
-  Whether an event may be deleted from the grid. See
-  `Tymeslot.CalendarGrid.EventDeletion.ensure_deletable/1`.
+  How an event may be deleted from the grid: on its own, in a scope, or not
+  at all. See `Tymeslot.CalendarGrid.EventDeletion.deletion_scopes/1`.
   """
-  @spec ensure_deletable(map()) :: :ok | {:error, :recurring_event}
-  defdelegate ensure_deletable(event), to: EventDeletion
+  @spec deletion_scopes(map()) :: {:ok, :single | :series} | {:error, :recurring_event}
+  defdelegate deletion_scopes(event), to: EventDeletion
 
   @doc """
   Whether an event may be moved to another calendar. See

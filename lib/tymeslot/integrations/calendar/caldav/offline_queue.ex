@@ -41,10 +41,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   An update or delete of a row that belongs to a series is never sent. A
   CalDAV series lives in one resource, so the write for any one occurrence
   lands on all of them: an update is patched onto the master VEVENT and a
-  delete removes the resource. The grid refuses both before anything is
-  queued (`Tymeslot.CalendarGrid.EventEdit.ensure_editable/1`,
-  `Tymeslot.CalendarGrid.EventDeletion.ensure_deletable/1`), but a row queued
-  before those guards existed still reaches the queue, and replaying it would
+  delete removes the resource. The grid queues neither: it refuses the update
+  (`Tymeslot.CalendarGrid.EventEdit.ensure_editable/1`) and never queues a
+  failed delete of a series member
+  (`Tymeslot.CalendarGrid.EventDeletion.delete_event/3`). A row queued before
+  those guards existed still reaches the queue, though, and replaying it would
   change or remove a series nobody asked to touch.
 
   Such a row is skipped like any other that no retry can make sendable: it

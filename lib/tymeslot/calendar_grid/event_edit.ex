@@ -43,8 +43,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   drops every earlier occurrence, exactly as dragging it would. There is no
   edit of a CalDAV occurrence that stays inside the occurrence, so
   `ensure_editable/1` refuses all of them, the way
-  `Tymeslot.CalendarGrid.EventDeletion.ensure_deletable/1` refuses the delete
-  and `Tymeslot.CalendarGrid.EventMove.ensure_movable/1` refuses the move.
+  `Tymeslot.CalendarGrid.EventMove.ensure_movable/1` refuses the move.
 
   They come back when the writer can author a `RECURRENCE-ID` override into
   the series' document. Google and Outlook address an occurrence by its own
