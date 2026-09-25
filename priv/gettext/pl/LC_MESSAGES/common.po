@@ -1,0 +1,251 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: tymeslot\n"
+"Language: pl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex
+#, elixir-autogen, elixir-format
+msgid "No"
+msgstr "Nie"
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex
+#, elixir-autogen, elixir-format
+msgid "Yes"
+msgstr "Tak"
+
+#: lib/tymeslot/custom_fields/answer_renderer.ex
+#, elixir-autogen, elixir-format
+msgid "✓ Acknowledged (%{at})"
+msgstr "✓ Potwierdzono (%{at})"
+
+#: lib/tymeslot_web/components/core_components/flash.ex
+#, elixir-autogen, elixir-format
+msgid "Attempting to reconnect"
+msgstr "Próba ponownego połączenia"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Browser Not Supported"
+msgstr "Nieobsługiwana przeglądarka"
+
+#: lib/tymeslot_web/components/confirmation_modal.ex
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Anuluj"
+
+#: lib/tymeslot_web/components/language_switcher.ex
+#, elixir-autogen, elixir-format
+msgid "Change language"
+msgstr "Zmień język"
+
+#: lib/tymeslot_web/components/core_components/flash.ex
+#, elixir-autogen, elixir-format
+msgid "Close"
+msgstr "Zamknij"
+
+#: lib/tymeslot_web/components/core_components/modal.ex
+#, elixir-autogen, elixir-format
+msgid "Close modal"
+msgstr "Zamknij okno"
+
+#: lib/tymeslot_web/components/confirmation_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm"
+msgstr "Potwierdź"
+
+#: lib/tymeslot_web/components/core_components/flash.ex
+#, elixir-autogen, elixir-format
+msgid "Connection Lost"
+msgstr "Utracono połączenie"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "JavaScript Disabled"
+msgstr "JavaScript wyłączony"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Learn About Modern Browsers"
+msgstr "Poznaj nowoczesne przeglądarki"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "One lowercase letter"
+msgstr "Jedna mała litera"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "One number"
+msgstr "Jedna cyfra"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "One uppercase letter"
+msgstr "Jedna wielka litera"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "Password must contain:"
+msgstr "Hasło musi zawierać:"
+
+#: lib/tymeslot_web/components/confirmation_modal.ex
+#: lib/tymeslot_web/components/core_components/buttons.ex
+#: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
+#, elixir-autogen, elixir-format
+msgid "Processing..."
+msgstr "Przetwarzanie..."
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Refresh Page"
+msgstr "Odśwież stronę"
+
+#: lib/tymeslot_web/components/layouts/root.html.heex
+#, elixir-autogen, elixir-format
+msgid "Schedule a Meeting"
+msgstr "Zarezerwuj spotkanie"
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "Search cities, countries, or timezones..."
+msgstr "Szukaj miast, krajów lub stref czasowych..."
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "Select timezone"
+msgstr "Wybierz strefę czasową"
+
+#: lib/tymeslot_web/components/core_components/navigation.ex
+#, elixir-autogen, elixir-format
+msgid "Tabs"
+msgstr "Zakładki"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "This %{context} requires a modern browser with ES module support. Please upgrade to the latest version of Chrome, Firefox, Safari, or Edge."
+msgstr "Ta %{context} wymaga nowoczesnej przeglądarki z obsługą modułów ES. Zaktualizuj przeglądarkę Chrome, Firefox, Safari lub Edge do najnowszej wersji."
+
+#: lib/tymeslot_web/components/layouts/root.html.heex
+#, elixir-autogen, elixir-format
+msgid "This app requires JavaScript to function. Please enable it in your browser settings."
+msgstr "Ta aplikacja wymaga JavaScriptu. Włącz go w ustawieniach przeglądarki."
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "This timezone will be used for your availability and scheduling."
+msgstr "Ta strefa czasowa będzie używana przy Twojej dostępności i rezerwacjach."
+
+#: lib/tymeslot_web/components/core_components/brand.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot logo"
+msgstr "Logo Tymeslot"
+
+#: lib/tymeslot_web/components/core_components/layout.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot team"
+msgstr "zespół Tymeslot"
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "Your Timezone"
+msgstr "Twoja strefa czasowa"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "application"
+msgstr "aplikacja"
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "local time"
+msgstr "czas lokalny"
+
+#: lib/tymeslot_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "scheduling page"
+msgstr "strona rezerwacji"
+
+#: lib/tymeslot_web/components/core_components/layout.ex
+#, elixir-autogen, elixir-format
+msgid "Made with %{heart} by the %{team}"
+msgstr "Stworzone z %{heart} przez %{team}"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Dashboard"
+msgstr "Panel"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Get Started"
+msgstr "Zacznij teraz"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Login"
+msgstr "Zaloguj się"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Logout"
+msgstr "Wyloguj się"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Toggle menu"
+msgstr "Przełącz menu"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "Beautiful, on-brand meeting scheduling. No ads, no tracking."
+msgstr "Piękna rezerwacja spotkań w Twoim stylu. Bez reklam, bez śledzenia."
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "View on GitHub"
+msgstr "Zobacz na GitHubie"
+
+#: lib/tymeslot_web/components/site_components.ex
+#, elixir-autogen, elixir-format
+msgid "© %{year} Tymeslot. All rights reserved."
+msgstr "© %{year} Tymeslot. Wszelkie prawa zastrzeżone."
+
+#: lib/tymeslot_web/components/core_components/containers.ex
+#, elixir-autogen, elixir-format
+msgid "Saving changes..."
+msgstr "Zapisywanie zmian..."
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "At least %{count} characters"
+msgstr "Co najmniej %{count} znaków"
+
+#: lib/tymeslot_web/components/core_components/forms.ex
+#, elixir-autogen, elixir-format
+msgid "One special character"
+msgstr "Jeden znak specjalny"
+
+#: lib/tymeslot_web/components/core_components/navigation.ex
+#, elixir-autogen, elixir-format
+msgid "This tab contains errors"
+msgstr "Ta zakładka zawiera błędy"
+
+#: lib/tymeslot_web/components/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Pause background video"
+msgstr "Zatrzymaj wideo w tle"
+
+#: lib/tymeslot_web/components/background_motion_toggle.ex
+#, elixir-autogen, elixir-format
+msgid "Play background video"
+msgstr "Odtwórz wideo w tle"
+
+#: lib/tymeslot_web/components/timezone_dropdown.ex
+#, elixir-autogen, elixir-format
+msgid "Search timezones"
+msgstr "Szukaj stref czasowych"

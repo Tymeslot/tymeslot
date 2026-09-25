@@ -1,0 +1,349 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: tymeslot\n"
+"Language: pl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: Error Messages
+msgid "something_went_wrong"
+msgstr "Coś poszło nie tak"
+
+msgid "try_again_later"
+msgstr "Spróbuj ponownie później"
+
+msgid "invalid_meeting_link"
+msgstr "Nieprawidłowy link do spotkania"
+
+msgid "slot_no_longer_available"
+msgstr "Ten termin nie jest już dostępny"
+
+msgid "name_required"
+msgstr "Podaj imię i nazwisko"
+
+msgid "email_required"
+msgstr "Podaj adres e-mail"
+
+msgid "email_invalid"
+msgstr "Podaj prawidłowy adres e-mail"
+
+#: lib/tymeslot_web/themes/shared/components/error_component.ex
+#, elixir-autogen
+msgid "calendar_setup_required"
+msgstr "Ta strona rezerwacji nie jest jeszcze dostępna"
+
+#: lib/tymeslot_web/themes/shared/components/error_component.ex
+#, elixir-autogen
+msgid "connect_calendar_first"
+msgstr "Jeśli jesteś organizatorem, podłącz kalendarz w panelu."
+
+#: Status
+msgid "loading"
+msgstr "Wczytywanie"
+
+msgid "submitting"
+msgstr "Wysyłanie"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "are still associated with this entry"
+msgstr "są nadal powiązane z tym wpisem"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "can't be blank"
+msgstr "nie może być puste"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "does not exist"
+msgstr "nie istnieje"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "does not match confirmation"
+msgstr "nie zgadza się z potwierdzeniem"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "has already been taken"
+msgstr "jest już zajęte"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "has an invalid entry"
+msgstr "zawiera nieprawidłowy wpis"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "has invalid format"
+msgstr "ma nieprawidłowy format"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "is invalid"
+msgstr "jest nieprawidłowe"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "is reserved"
+msgstr "jest zarezerwowane"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "is still associated with this entry"
+msgstr "jest nadal powiązane z tym wpisem"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be accepted"
+msgstr "musi zostać zaakceptowane"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be equal to %{number}"
+msgstr "musi być równe %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be greater than %{number}"
+msgstr "musi być większe niż %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be greater than or equal to %{number}"
+msgstr "musi być większe lub równe %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be less than %{number}"
+msgstr "musi być mniejsze niż %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be less than or equal to %{number}"
+msgstr "musi być mniejsze lub równe %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "must be not equal to %{number}"
+msgstr "musi być różne od %{number}"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be %{count} byte(s)"
+msgid_plural "should be %{count} byte(s)"
+msgstr[0] "powinno mieć %{count} bajt"
+msgstr[1] "powinno mieć %{count} bajty"
+msgstr[2] "powinno mieć %{count} bajtów"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be %{count} character(s)"
+msgid_plural "should be %{count} character(s)"
+msgstr[0] "powinno mieć %{count} znak"
+msgstr[1] "powinno mieć %{count} znaki"
+msgstr[2] "powinno mieć %{count} znaków"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be at least %{count} byte(s)"
+msgid_plural "should be at least %{count} byte(s)"
+msgstr[0] "powinno mieć co najmniej %{count} bajt"
+msgstr[1] "powinno mieć co najmniej %{count} bajty"
+msgstr[2] "powinno mieć co najmniej %{count} bajtów"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be at least %{count} character(s)"
+msgid_plural "should be at least %{count} character(s)"
+msgstr[0] "powinno mieć co najmniej %{count} znak"
+msgstr[1] "powinno mieć co najmniej %{count} znaki"
+msgstr[2] "powinno mieć co najmniej %{count} znaków"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be at most %{count} byte(s)"
+msgid_plural "should be at most %{count} byte(s)"
+msgstr[0] "powinno mieć najwyżej %{count} bajt"
+msgstr[1] "powinno mieć najwyżej %{count} bajty"
+msgstr[2] "powinno mieć najwyżej %{count} bajtów"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should be at most %{count} character(s)"
+msgid_plural "should be at most %{count} character(s)"
+msgstr[0] "powinno mieć najwyżej %{count} znak"
+msgstr[1] "powinno mieć najwyżej %{count} znaki"
+msgstr[2] "powinno mieć najwyżej %{count} znaków"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should have %{count} item(s)"
+msgid_plural "should have %{count} item(s)"
+msgstr[0] "powinno zawierać %{count} element"
+msgstr[1] "powinno zawierać %{count} elementy"
+msgstr[2] "powinno zawierać %{count} elementów"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should have at least %{count} item(s)"
+msgid_plural "should have at least %{count} item(s)"
+msgstr[0] "powinno zawierać co najmniej %{count} element"
+msgstr[1] "powinno zawierać co najmniej %{count} elementy"
+msgstr[2] "powinno zawierać co najmniej %{count} elementów"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "should have at most %{count} item(s)"
+msgid_plural "should have at most %{count} item(s)"
+msgstr[0] "powinno zawierać najwyżej %{count} element"
+msgstr[1] "powinno zawierać najwyżej %{count} elementy"
+msgstr[2] "powinno zawierać najwyżej %{count} elementów"
+
+#: lib/tymeslot_web/gettext/ecto_error_msgids.ex
+#, elixir-autogen, elixir-format
+msgid "violates an exclusion constraint"
+msgstr "narusza ograniczenie wykluczające"
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
+#, elixir-autogen, elixir-format
+msgid "Error 404"
+msgstr "Błąd 404"
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
+#, elixir-autogen, elixir-format
+msgid "Go to Tymeslot"
+msgstr "Przejdź do Tymeslot"
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
+#: lib/tymeslot_web/live/scheduling/organizer_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "Page not found"
+msgstr "Nie znaleziono strony"
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
+#, elixir-autogen, elixir-format
+msgid "The link may be broken, or the page may have moved."
+msgstr "Link może być nieprawidłowy lub strona została przeniesiona."
+
+#: lib/tymeslot_web/controllers/error_html/404.html.heex
+#, elixir-autogen, elixir-format
+msgid "This page doesn't exist"
+msgstr "Ta strona nie istnieje"
+
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
+#: lib/tymeslot/integrations/video/video_integration_schema.ex
+#, elixir-autogen, elixir-format
+msgid "an integration for this account already exists"
+msgstr "integracja dla tego konta już istnieje"
+
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
+#: lib/tymeslot/integrations/video/video_integration_schema.ex
+#, elixir-autogen, elixir-format
+msgid "an integration for this provider already exists"
+msgstr "integracja dla tego dostawcy już istnieje"
+
+#: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
+#, elixir-autogen, elixir-format
+msgid "is not a valid colour"
+msgstr "nie jest prawidłowym kolorem"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be after the start time"
+msgstr "musi być po godzinie rozpoczęcia"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must not be before the start date"
+msgstr "nie może być wcześniejsza niż data rozpoczęcia"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must not be in the past"
+msgstr "nie może być w przeszłości"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "%{count} minutę"
+msgstr[1] "%{count} minuty"
+msgstr[2] "%{count} minut"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "This username is reserved"
+msgstr "Ta nazwa użytkownika jest zarezerwowana"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username is required"
+msgstr "Nazwa użytkownika jest wymagana"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be a text value"
+msgstr "Nazwa użytkownika musi być tekstem"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be at least %{count} character long"
+msgid_plural "Username must be at least %{count} characters long"
+msgstr[0] "Nazwa użytkownika musi mieć co najmniej %{count} znak"
+msgstr[1] "Nazwa użytkownika musi mieć co najmniej %{count} znaki"
+msgstr[2] "Nazwa użytkownika musi mieć co najmniej %{count} znaków"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must be at most %{count} character long"
+msgid_plural "Username must be at most %{count} characters long"
+msgstr[0] "Nazwa użytkownika może mieć najwyżej %{count} znak"
+msgstr[1] "Nazwa użytkownika może mieć najwyżej %{count} znaki"
+msgstr[2] "Nazwa użytkownika może mieć najwyżej %{count} znaków"
+
+#: lib/tymeslot/security/field_validators/username_validator.ex
+#, elixir-autogen, elixir-format
+msgid "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"
+msgstr "Nazwa użytkownika musi zaczynać się od litery lub cyfry i może zawierać tylko małe litery, cyfry, podkreślenia i myślniki"
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "You've reached the limit of %{limit} %{action} per %{window_minutes} minutes. Please try again in %{wait}."
+msgstr "Osiągnięto limit %{limit} %{action} na %{window_minutes} minut. Spróbuj ponownie za %{wait}."
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "a moment"
+msgstr "chwilę"
+
+#: lib/tymeslot/security/rate_limiter/integrations.ex
+#, elixir-autogen, elixir-format
+msgid "calendar lookups"
+msgstr "odczytów kalendarza"
+
+#: lib/tymeslot/security/rate_limiter/integrations.ex
+#, elixir-autogen, elixir-format
+msgid "calendar server checks"
+msgstr "sprawdzeń serwera kalendarza"
+
+#: lib/tymeslot/security/rate_limiter/integrations.ex
+#, elixir-autogen, elixir-format
+msgid "connection tests"
+msgstr "testów połączenia"
+
+#: lib/tymeslot/availability/time_off_period_schema.ex
+#, elixir-autogen, elixir-format
+msgid "must be within %{count} years"
+msgid_plural "must be within %{count} years"
+msgstr[0] "musi przypadać w ciągu %{count} roku"
+msgstr[1] "musi przypadać w ciągu %{count} lat"
+msgstr[2] "musi przypadać w ciągu %{count} lat"
+
+#: lib/tymeslot/security/rate_limiter/integrations.ex
+#, elixir-autogen, elixir-format
+msgid "video server checks"
+msgstr "sprawdzeń serwera wideo"
