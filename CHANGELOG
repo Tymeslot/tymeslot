@@ -1,4 +1,84 @@
 
+[1.18.0]
+* auth: Point social sign-in back to an account's own sign-in method
+* themes: Show a keyboard focus ring on Rhythm location choices
+* video: Send the notice when a reschedule repeats an earlier one
+* emails: Show the number to call for phone meetings in emails
+* booking: Include the join link when a booking is moved before its room exists
+* video: Stop quick back-and-forth Teams reschedules losing the join link
+* video: Keep a booking's calendar event when disconnecting Teams
+* calendar: Delete or move a dashboard event's separate Teams meeting with it
+* booking: Keep bookings working after their video integration is removed
+* auth: Reject an SSO userinfo reply that is not a JSON object
+* video: Stop Teams bookings confirming without their join link
+* booking: Drop the Teams link when a booking moves off Teams
+* calendar: Stop a Teams event on the grid appearing twice in Outlook
+* video: Keep Teams bookings on their own links, times and event
+* Improve the Ukrainian translations of the booking and sign-in pages
+* booking: Show the correct month form in booking dates
+* i18n: Say a reminder's lead time in the reader's language
+* auth: Create a social account for a typed email only once it is confirmed
+* emails: Point social accounts at their provider in the sign-up attempt email
+* auth: Count an IPv6 client's whole /64 as one source for sign-in limits
+* auth: Stop the social sign-up form revealing which addresses are registered
+* auth: Stop sign-in revealing unverified accounts, and let owners reclaim them
+* auth: Make every sign-up outcome spend the same verification allowance
+* auth: Keep signed-in users off the login and sign-up screens after a patch
+* emails: Give stacked blocks room to breathe
+* calendar: Stop the grid showing a Meet join line the calendar lacks
+* calendar: Clean up calendar event video rooms and inline Meet links
+* calendar: Stop a booking's calendar event getting a second video room
+* calendar: Stop moved events showing twice and misreporting failed moves
+* auth: Ask for sign-in when the verify-email page has no account to resend for
+* auth: Tighten social sign-in after review
+* auth: Stop the sign-up form revealing which addresses are registered
+* calendar: Stop Outlook sync crashing when Graph rejects a request
+* calendar: Renew Outlook push subscriptions in place
+* automation: Stop rescued jobs re-sending webhooks and chat posts
+* emails: Stop a recovered background job re-sending its emails
+* auth: Verify existing social accounts the provider vouches for
+* auth: Stop the verification resend revealing or spamming addresses
+* auth: Answer every password reset request the same way
+* auth: Keep a password change from missing an email change made after the page loaded
+* auth: Stop failed sign-ins from one address locking the owner out
+* auth: Keep session tokens out of pages and end the old session on re-login
+* auth: Disconnect open sessions when an account is deleted
+* auth: Make the first-user admin bootstrap a one-way latch
+* auth: Refuse admin role changes from anyone but a current admin
+* auth: Resolve the LiveView client address the same way as HTTP requests
+* auth: Require a verified email before social sign-in opens a session
+* auth: Revoke pending reset and email change links when credentials change
+* webhooks: Send meeting.rescheduled when a moved booking is re-approved
+* polls: Stop a poll being confirmed onto time off
+* video: Flag custom meeting links whose placeholder is invalid
+* calendar: Add the video link to approved bookings' calendar entries (#133)
+* auth: Stop OAuth sign-in from matching accounts by email
+* webhooks: Refuse Telegram webhooks when the secret is empty
+* payments: Stop resumed Stripe onboarding creating a second account
+* booking: Stop guests answering invitations to past or cancelled meetings
+* slack: Translate Slack connection messages
+* calendar: Show Outlook Calendar as connected straight away
+* auth: Show the right sign-up error in every language
+* auth: Stop the sign-in form revealing which emails have accounts
+* i18n: Say "Absagen" on the German cancel button (#131)
+* i18n: Write the host's calendar entry in the host's language
+* notifications: Send correct change emails for all-day and first edits
+* calendar: Keep guest lists and replies intact when editing events
+* caldav: Stop queued occurrence edits rewriting the whole series
+* calendar: Keep attendee names when editing synced events
+* calendar: End a recurring series on the date the organiser picked
+* integrations: Say what is actually wrong with a rejected server URL
+* availability: Stop offering a day that an override opened without hours
+* calendar: Stop notifying the organiser about their own event edit
+* calendar: Let an event colour reach a CalDAV server that has not synced yet
+* emails: Keep the meeting join link out of the debug log
+* calendar: Propose a usable range when quick add opens late or on a DST night
+* timezones: Add French overseas territories and accent-insensitive search
+* automation: Document the webhook delivery ID header
+* calendar: Alert admins when calendar integration health degrades
+* Let bookers choose where the meeting is held
+
+
 [1.17.0]
 * booking: Ask for a policy acknowledgement again when rescheduling
 * booking: Stop offering times the host has already booked
