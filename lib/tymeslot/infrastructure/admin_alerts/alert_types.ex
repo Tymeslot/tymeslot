@@ -191,8 +191,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
 
   def format_message(:dispute_created, metadata) do
     id = Map.get(metadata, :dispute_id, "unknown")
-    reason = Map.get(metadata, :reason, "unknown")
-    "New dispute created: #{id} (Reason: #{reason}) — Manual review required"
+    "New dispute created: #{id} (Reason: #{reason_text(metadata)}) — Manual review required"
   end
 
   def format_message(:dispute_lost, metadata) do
@@ -203,8 +202,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
 
   def format_message(:calendar_sync_error, metadata) do
     email = Map.get(metadata, :owner_email, "unknown")
-    reason = Map.get(metadata, :reason, "unknown")
-    "Calendar sync error for #{email}: #{format_reason(reason)}"
+    "Calendar sync error for #{email}: #{reason_text(metadata)}"
   end
 
   def format_message(:pubsub_broadcast_failed, metadata) do
@@ -245,8 +243,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   def format_message(:oban_job_failure, metadata) do
     worker = Map.get(metadata, :worker, "unknown")
     queue = Map.get(metadata, :queue, "unknown")
-    reason = Map.get(metadata, :reason_message) || Map.get(metadata, :reason_code, "unknown")
-    "Oban job #{worker} (queue: #{queue}) failed permanently: #{reason}"
+    "Oban job #{worker} (queue: #{queue}) failed permanently: #{reason_text(metadata)}"
   end
 
   def format_message(:reconciliation_discrepancies, metadata) do
@@ -328,7 +325,9 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
 
   defp mask_reason(reason), do: reason
 
-  defp format_reason(reason) when is_exception(reason), do: Exception.message(reason)
-  defp format_reason(reason) when is_binary(reason) or is_atom(reason), do: to_string(reason)
-  defp format_reason(reason), do: inspect(reason)
+  # The reason as `AdminAlerts.report/2` flattens it: the normalised message,
+  # falling back to the bare code for callers that set only that.
+  defp reason_text(metadata) do
+    Map.get(metadata, :reason_message) || Map.get(metadata, :reason_code, "unknown")
+  end
 end

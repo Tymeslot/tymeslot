@@ -4,9 +4,11 @@ defmodule Tymeslot.Infrastructure.AdminAlertsTest do
   @moduletag :infrastructure
   @moduletag :unit
 
+  import Tymeslot.AdminAlertsCaptureHelpers
   import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.AdminAlerts.AlertTypes
 
   defmodule TestNotifier do
     @behaviour Tymeslot.Infrastructure.AdminAlerts
@@ -85,6 +87,34 @@ defmodule Tymeslot.Infrastructure.AdminAlertsTest do
       )
 
       assert_received {:alert_sent, :calendar_sync_error, %{summary: "Explicit summary"}}
+    end
+  end
+
+  describe "report/2 headlines" do
+    setup :capture_admin_alerts
+
+    test ":dispute_created shows the Stripe dispute reason" do
+      AdminAlerts.report(:dispute_created,
+        summary: "New dispute created",
+        reason: {:dispute_created, "fraudulent"},
+        context: %{dispute_id: "dp_1"}
+      )
+
+      assert_receive {:send_alert, :dispute_created, metadata}
+      message = AlertTypes.format_message(:dispute_created, metadata)
+      assert message =~ "dp_1 (Reason: fraudulent)"
+    end
+
+    test ":calendar_sync_error shows the sync failure reason" do
+      AdminAlerts.report(:calendar_sync_error,
+        summary: "Calendar sync failed for meeting",
+        reason: {:api_error, "invalid_grant"},
+        context: %{owner_email: "owner@example.com"}
+      )
+
+      assert_receive {:send_alert, :calendar_sync_error, metadata}
+      message = AlertTypes.format_message(:calendar_sync_error, metadata)
+      assert message == "Calendar sync error for owner@example.com: invalid_grant"
     end
   end
 end

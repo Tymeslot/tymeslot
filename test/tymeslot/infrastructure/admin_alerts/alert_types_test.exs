@@ -55,7 +55,11 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
 
     test ":dispute_created includes dispute_id, reason, and manual review" do
       msg =
-        AlertTypes.format_message(:dispute_created, %{dispute_id: "dp_1", reason: "fraudulent"})
+        AlertTypes.format_message(:dispute_created, %{
+          dispute_id: "dp_1",
+          reason_code: :dispute_created,
+          reason_message: "fraudulent"
+        })
 
       assert msg =~ "dp_1"
       assert msg =~ "fraudulent"
@@ -72,11 +76,22 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
       msg =
         AlertTypes.format_message(:calendar_sync_error, %{
           owner_email: "a@b.com",
-          reason: :timeout
+          reason_code: :timeout,
+          reason_message: "timeout"
         })
 
       assert msg =~ "a@b.com"
       assert msg =~ "timeout"
+    end
+
+    test ":calendar_sync_error falls back to the reason code without a message" do
+      message =
+        AlertTypes.format_message(:calendar_sync_error, %{
+          owner_email: "a@b.com",
+          reason_code: :timeout
+        })
+
+      assert message == "Calendar sync error for a@b.com: timeout"
     end
 
     test ":pubsub_broadcast_failed includes event name" do

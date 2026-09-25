@@ -107,14 +107,14 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
 
     test "enqueued job carries the formatted message" do
       assert :ok =
-               AdminAlerts.send_alert(:dispute_created, %{
-                 dispute_id: "dp_006",
-                 reason: "fraudulent"
-               })
+               AdminAlerts.report(:dispute_created,
+                 summary: "New dispute created",
+                 reason: {:dispute_created, "fraudulent"},
+                 context: %{dispute_id: "dp_006"}
+               )
 
       [job] = all_enqueued(worker: EmailWorker)
-      assert job.args["message"] =~ "dp_006"
-      assert job.args["message"] =~ "fraudulent"
+      assert job.args["message"] =~ "dp_006 (Reason: fraudulent)"
       assert job.args["message"] =~ "Manual review"
     end
 
