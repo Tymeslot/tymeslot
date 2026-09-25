@@ -81,6 +81,7 @@ defmodule Tymeslot.Meetings.Approval do
   alias Tymeslot.Bookings.CalendarJobs
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
@@ -593,16 +594,14 @@ defmodule Tymeslot.Meetings.Approval do
         # module docs on ordering). The approval window can run up to 336
         # hours, so an expired request can plausibly fall outside Stripe's own
         # refund window; that, and any other Stripe-side failure, ends up
-        # here rather than crashing the caller. Logged only: no entry in
-        # `AdminAlerts.AlertTypes`'s registry describes a refund attempt that
-        # failed rather than one Stripe already completed, so this is
-        # reported to whoever reviews the logs until the registry gains one.
-        Logger.error("Failed to refund a released booking request",
+        # here rather than crashing the caller. The attendee has paid for a
+        # booking that will not happen, so it is recorded for the operator
+        # to refund by hand; a new error raises an admin alert.
+        ErrorTracking.report_error(reason, nil, %{
           meeting_id: meeting.id,
-          reason: inspect(reason)
-        )
-
-        :ok
+          payment_id: payment.id,
+          amount_cents: remaining_cents
+        })
     end
   end
 
@@ -637,12 +636,6 @@ defmodule Tymeslot.Meetings.Approval do
     fun.()
   rescue
     exception ->
-      Logger.error("Post-transition step failed",
-        step: step,
-        meeting_id: meeting.id,
-        error: Exception.format(:error, exception, __STACKTRACE__)
-      )
-
-      :ok
+      ErrorTracking.report_error(exception, __STACKTRACE__, %{step: step, meeting_id: meeting.id})
   end
 end
