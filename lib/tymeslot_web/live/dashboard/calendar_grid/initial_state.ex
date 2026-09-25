@@ -42,6 +42,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       creating_event: nil,
       recurrence_prompt: nil,
       confirm_delete_event: nil,
+      confirm_delete_scopes: :single,
       confirm_delete_linked_to_booking: false,
       saving_event: false,
       deleting_event: false,

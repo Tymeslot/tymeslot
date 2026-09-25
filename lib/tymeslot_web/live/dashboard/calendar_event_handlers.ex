@@ -328,22 +328,20 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       dgettext("dashboard_calendar_events", "Could not change the video link - changes reverted")
 
   @doc """
-  Deletes the event `payload` names in the background through
-  `Tymeslot.CalendarGrid.delete_event/2`, reporting back with
+  Deletes the event `payload` names, in the scope it names, in the background
+  through `Tymeslot.CalendarGrid.delete_event/3`, reporting back with
   `{:delete_event_result, result}`.
   """
   @spec handle_execute_delete_event(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_execute_delete_event(payload, socket) do
-    notify_on_delete = Map.get(payload, :notify_on_delete, false)
-
     socket
     |> EditWorkflow.run_async(
       :delete_event_result,
-      fn -> CalendarGrid.delete_event(payload.user_id, payload) end,
+      fn -> CalendarGrid.delete_event(payload.user_id, payload, payload.scope) end,
       {:error, %{reason: :crashed, retry: :not_queued}}
     )
-    |> assign(:pending_delete_notify, notify_on_delete)
+    |> assign(:pending_delete, Map.take(payload, [:notify_on_delete, :scope]))
     |> then(&{:noreply, &1})
   end
 

@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import Phoenix.Component, only: [assign: 3]
+  import Phoenix.Component, only: [assign: 2, assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
   alias Tymeslot.CalendarGrid
@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
 
       event ->
         with :ok <- EditWorkflow.assert_event_writable(socket, event),
-             {:ok, :single} <- CalendarGrid.deletion_scopes(event) do
+             {:ok, scopes} <- CalendarGrid.deletion_scopes(event) do
           linked_to_booking =
             CalendarEvents.event_linked_to_booking?(
               event.calendar_integration_id,
@@ -32,20 +32,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
               event.uid
             )
 
-          socket =
-            socket
-            |> assign(:selected_event, nil)
-            |> assign(:confirm_delete_event, event)
-            |> assign(:confirm_delete_linked_to_booking, linked_to_booking)
-
-          {:noreply, socket}
+          {:noreply,
+           assign(socket,
+             selected_event: nil,
+             confirm_delete_event: event,
+             confirm_delete_scopes: scopes,
+             confirm_delete_linked_to_booking: linked_to_booking
+           )}
         else
           {:error, :read_only} = error ->
             Shared.flash_guard_error(socket, error)
 
-          # A series member's delete takes a scope the grid does not ask
-          # for yet, so it is refused like one without a scoped delete.
-          refused when refused in [{:ok, :series}, {:error, :recurring_event}] ->
+          {:error, :recurring_event} ->
             send(self(), {:flash, {:error, recurring_delete_refused_message()}})
             {:noreply, socket}
 
@@ -67,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
 
   @spec handle_confirm_delete_event(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_confirm_delete_event(_params, socket) do
+  def handle_confirm_delete_event(params, socket) do
     case socket.assigns.confirm_delete_event do
       nil ->
         {:noreply, socket}
@@ -75,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
       event ->
         case Shared.check_edit_rate_limit(socket) do
           :ok ->
-            proceed_with_delete(socket, event)
+            proceed_with_delete(socket, event, parse_scope(params))
 
           {:error, :rate_limited, _message} ->
             send(
@@ -90,7 +88,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
     end
   end
 
-  defp proceed_with_delete(socket, event) do
+  # Only a series member's modal sends a scope; anything else deletes the
+  # event it was opened for, which is what `:occurrence` means outside a
+  # series.
+  defp parse_scope(%{"scope" => "series"}), do: :series
+  defp parse_scope(_params), do: :occurrence
+
+  defp proceed_with_delete(socket, event, scope) do
     attendees = normalise_attendees(event)
 
     case AttendeeNotifications.event_deleted(event, attendees) do
@@ -99,7 +103,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
 
         send(
           self(),
-          {:execute_delete_event, NotificationFlows.build_delete_payload(event, user_id, false)}
+          {:execute_delete_event,
+           NotificationFlows.build_delete_payload(event, user_id, false, scope)}
         )
 
         {:noreply,
@@ -115,7 +120,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
            kind: :delete,
            summary: nil,
            event: event,
-           attendees: attendees
+           attendees: attendees,
+           scope: scope
          })}
     end
   end
@@ -135,11 +141,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
       action: :event_deleted
     )
 
-    notify_on_delete = Map.get(socket.assigns, :pending_delete_notify, false)
+    pending = Map.get(socket.assigns, :pending_delete) || %{}
 
     socket
-    |> assign(:pending_delete_notify, false)
-    |> put_deleted_flash(linked_meeting, notify_on_delete)
+    |> assign(:pending_delete, nil)
+    |> put_deleted_flash(linked_meeting, pending)
     |> then(&{:noreply, &1})
   end
 
@@ -149,10 +155,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
       action: :event_delete_failed
     )
 
-    {:noreply, put_flash(socket, :error, delete_failed_message(failure))}
+    {:noreply,
+     socket
+     |> assign(:pending_delete, nil)
+     |> put_flash(:error, delete_failed_message(failure))}
   end
 
-  defp put_deleted_flash(socket, :cancelled, _notify_on_delete) do
+  defp put_deleted_flash(socket, :cancelled, _pending) do
     put_flash(
       socket,
       :info,
@@ -160,7 +169,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
     )
   end
 
-  defp put_deleted_flash(socket, :cancel_failed, _notify_on_delete) do
+  defp put_deleted_flash(socket, :cancel_failed, _pending) do
     put_flash(
       socket,
       :error,
@@ -171,8 +180,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
     )
   end
 
-  defp put_deleted_flash(socket, :none, notify_on_delete),
-    do: put_flash(socket, :info, delete_success_flash(notify_on_delete))
+  defp put_deleted_flash(socket, :none, pending) do
+    scope = Map.get(pending, :scope, :occurrence)
+    notified? = Map.get(pending, :notify_on_delete, false)
+    put_flash(socket, :info, delete_success_flash(scope, notified?))
+  end
 
   # A queued delete will be replayed on the next sync; anything else is final.
   defp delete_failed_message(%{retry: :queued}),
@@ -180,20 +192,41 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
 
   defp delete_failed_message(%{reason: :recurring_event}), do: recurring_delete_refused_message()
 
-  defp delete_failed_message(_failure),
-    do: dgettext("dashboard_calendar_events", "Failed to delete event")
-
-  defp recurring_delete_refused_message do
+  # The cached row does not say which occurrence or series the event is.
+  defp delete_failed_message(%{reason: reason})
+       when reason in [:unaddressable_occurrence, :unaddressable_series] do
     dgettext(
       "dashboard_calendar_events",
-      "Recurring events cannot be deleted here yet. Please delete this one in your calendar app."
+      "This event could not be deleted here. Please delete it in your calendar app."
     )
   end
 
-  defp delete_success_flash(true),
+  defp delete_failed_message(_failure),
+    do: dgettext("dashboard_calendar_events", "Failed to delete event")
+
+  # Exchange has no scoped delete, so none of its series can be deleted here.
+  defp recurring_delete_refused_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "Recurring Exchange events cannot be deleted here yet. Please delete this one in your calendar app."
+    )
+  end
+
+  defp delete_success_flash(:series, true),
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "Recurring event deleted. Attendees have been notified."
+      )
+
+  defp delete_success_flash(:series, false),
+    do: dgettext("dashboard_calendar_events", "Recurring event deleted.")
+
+  defp delete_success_flash(:occurrence, true),
     do: dgettext("dashboard_calendar_events", "Event deleted. Attendees have been notified.")
 
-  defp delete_success_flash(false), do: dgettext("dashboard_calendar_events", "Event deleted.")
+  defp delete_success_flash(:occurrence, false),
+    do: dgettext("dashboard_calendar_events", "Event deleted.")
 
   @spec handle_cancel_delete_event(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}

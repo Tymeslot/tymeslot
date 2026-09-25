@@ -1043,11 +1043,6 @@ msgstr "Meetingraum erstellt."
 msgid "Your calendar could not be reached. The change is saved and will sync on the next attempt."
 msgstr "Ihr Kalender war nicht erreichbar. Die Änderung ist gespeichert und wird beim nächsten Versuch synchronisiert."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
-#, elixir-autogen, elixir-format
-msgid "Recurring events cannot be deleted here yet. Please delete this one in your calendar app."
-msgstr "Wiederkehrende Ereignisse können hier noch nicht gelöscht werden. Bitte löschen Sie dieses Ereignis in Ihrer Kalender-App."
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This event is part of a repeating series. Your change applies to this event only, and the rest of the series stays as it is. To change the whole series, use your calendar app."
@@ -1077,3 +1072,48 @@ msgstr "Dieses Ereignis ist eine Buchung, daher gehört sein Videolink zur Buchu
 #, elixir-autogen, elixir-format
 msgid "Google Calendar added Google Meet to the event but has not returned its link yet. Choose Google Meet again to fetch it."
 msgstr "Google Kalender hat dem Ereignis Google Meet hinzugefügt, den Link aber noch nicht zurückgegeben. Wählen Sie Google Meet erneut, um ihn abzurufen."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{title} is part of a repeating series. Do you want to delete only this event, or every event in the series?"
+msgstr "%{title} gehört zu einer Serie. Möchten Sie nur dieses Ereignis oder alle Ereignisse der Serie löschen?"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete all events"
+msgstr "Alle Ereignisse löschen"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete recurring event"
+msgstr "Wiederkehrendes Ereignis löschen"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete this event"
+msgstr "Dieses Ereignis löschen"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted events are also removed from your calendar provider."
+msgstr "Gelöschte Ereignisse werden auch von Ihrem Kalenderanbieter entfernt."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring Exchange events cannot be deleted here yet. Please delete this one in your calendar app."
+msgstr "Wiederkehrende Exchange-Ereignisse können hier noch nicht gelöscht werden. Bitte löschen Sie dieses Ereignis in Ihrer Kalender-App."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring event deleted."
+msgstr "Wiederkehrendes Ereignis gelöscht."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring event deleted. Attendees have been notified."
+msgstr "Wiederkehrendes Ereignis gelöscht. Teilnehmer wurden benachrichtigt."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "This event could not be deleted here. Please delete it in your calendar app."
+msgstr "Dieses Ereignis konnte hier nicht gelöscht werden. Bitte löschen Sie es in Ihrer Kalender-App."

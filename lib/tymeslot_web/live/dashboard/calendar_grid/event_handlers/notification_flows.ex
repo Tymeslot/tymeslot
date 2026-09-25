@@ -46,14 +46,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
             {:noreply, assign(socket, :notify_prompt, nil)}
         end
 
-      %{kind: :delete, event: event, attendees: attendees} ->
+      %{kind: :delete, event: event, attendees: attendees, scope: scope} ->
         case AttendeeNotifications.event_deleted_confirm(event, attendees) do
           {:ok, :sent} ->
             user_id = socket.assigns.current_user.id
 
             send(
               self(),
-              {:execute_delete_event, build_delete_payload(event, user_id, true)}
+              {:execute_delete_event, build_delete_payload(event, user_id, true, scope)}
             )
 
             {:noreply,
@@ -88,12 +88,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
         send(self(), {:flash, {:info, dgettext("dashboard_calendar_events", "Changes saved.")}})
         {:noreply, assign(socket, :notify_prompt, nil)}
 
-      %{kind: :delete, event: event} ->
+      %{kind: :delete, event: event, scope: scope} ->
         user_id = socket.assigns.current_user.id
 
         send(
           self(),
-          {:execute_delete_event, build_delete_payload(event, user_id, false)}
+          {:execute_delete_event, build_delete_payload(event, user_id, false, scope)}
         )
 
         {:noreply,
@@ -126,9 +126,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
   @doc """
   Builds the payload used to dispatch `{:execute_delete_event, payload}` from
   either the rate-limit-gated confirm path or the notify-prompt branches.
+  `scope` is how much of a series the delete takes (see
+  `Tymeslot.CalendarGrid.delete_event/3`).
   """
-  @spec build_delete_payload(map(), integer(), boolean()) :: map()
-  def build_delete_payload(event, user_id, notify_on_delete) do
+  @spec build_delete_payload(map(), integer(), boolean(), :occurrence | :series) :: map()
+  def build_delete_payload(event, user_id, notify_on_delete, scope \\ :occurrence) do
     %{
       uid: event.uid,
       provider_event_id: event.provider_event_id,
@@ -137,7 +139,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
       recurring_event_id: Map.get(event, :recurring_event_id),
       recurrence_rule: Map.get(event, :recurrence_rule),
       user_id: user_id,
-      notify_on_delete: notify_on_delete
+      notify_on_delete: notify_on_delete,
+      scope: scope
     }
   end
 end

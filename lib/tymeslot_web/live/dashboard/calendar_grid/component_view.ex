@@ -179,6 +179,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
         <ConfirmDeleteModal.confirm_delete_modal
           :if={@confirm_delete_event}
           event={@confirm_delete_event}
+          scopes={@confirm_delete_scopes}
           deleting={@deleting_event}
           linked_to_booking={@confirm_delete_linked_to_booking}
           myself={@myself}
