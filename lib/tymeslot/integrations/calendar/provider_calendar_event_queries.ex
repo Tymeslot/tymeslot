@@ -470,48 +470,43 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   end
 
   @doc """
-  Bulk-deletes events for the integration whose uid is in `uids`, chunked so a
-  single statement never exceeds PostgreSQL's 65,535 bind-parameter limit.
-  Returns the number of rows deleted.
+  Bulk-deletes events for the integration whose uid is in `uids`. Returns the
+  number of rows deleted.
   """
   @spec delete_by_uids(integer(), [String.t()]) :: non_neg_integer()
-  def delete_by_uids(_calendar_integration_id, []), do: 0
+  def delete_by_uids(calendar_integration_id, uids),
+    do: delete_where_in(calendar_integration_id, :uid, uids)
 
-  def delete_by_uids(calendar_integration_id, uids) do
-    uids
-    |> Enum.chunk_every(@upsert_chunk_size)
-    |> Enum.reduce(0, fn chunk, acc ->
-      {count, _rows} =
-        ProviderCalendarEventSchema
-        |> where(
-          [e],
-          e.calendar_integration_id == ^calendar_integration_id and e.uid in ^chunk
-        )
-        |> Repo.delete_all()
-
-      acc + count
-    end)
-  end
+  @doc """
+  Bulk-deletes events for the integration whose recurring_event_id is in
+  `series_ids`: the cached occurrences of those series. Returns the number of
+  rows deleted.
+  """
+  @spec delete_by_recurring_event_ids(integer(), [String.t()]) :: non_neg_integer()
+  def delete_by_recurring_event_ids(calendar_integration_id, series_ids),
+    do: delete_where_in(calendar_integration_id, :recurring_event_id, series_ids)
 
   @doc """
   Bulk-deletes events for the integration whose provider_event_id is in
-  `provider_event_ids`, chunked so a single statement never exceeds
-  PostgreSQL's 65,535 bind-parameter limit. Returns the number of rows
-  deleted.
+  `provider_event_ids`. Returns the number of rows deleted.
   """
   @spec delete_by_provider_event_ids(integer(), [String.t()]) :: non_neg_integer()
-  def delete_by_provider_event_ids(_calendar_integration_id, []), do: 0
+  def delete_by_provider_event_ids(calendar_integration_id, provider_event_ids),
+    do: delete_where_in(calendar_integration_id, :provider_event_id, provider_event_ids)
 
-  def delete_by_provider_event_ids(calendar_integration_id, provider_event_ids) do
-    provider_event_ids
+  # Chunked so a single statement never exceeds PostgreSQL's 65,535
+  # bind-parameter limit.
+  defp delete_where_in(_calendar_integration_id, _field, []), do: 0
+
+  defp delete_where_in(calendar_integration_id, field, values) do
+    values
     |> Enum.chunk_every(@upsert_chunk_size)
     |> Enum.reduce(0, fn chunk, acc ->
       {count, _rows} =
         ProviderCalendarEventSchema
         |> where(
           [e],
-          e.calendar_integration_id == ^calendar_integration_id and
-            e.provider_event_id in ^chunk
+          e.calendar_integration_id == ^calendar_integration_id and field(e, ^field) in ^chunk
         )
         |> Repo.delete_all()
 

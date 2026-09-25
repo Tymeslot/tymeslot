@@ -386,6 +386,14 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     |> Enum.filter(&is_binary/1)
     |> then(&ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, &1))
 
+    # A deleted series master takes its occurrences with it: Google and
+    # Outlook cache each occurrence under its own uid, naming the master in
+    # `recurring_event_id`. CalDAV rows never carry one, so this is inert there.
+    refs
+    |> Enum.map(&Map.get(&1, :provider_event_id))
+    |> Enum.filter(&is_binary/1)
+    |> then(&ProviderCalendarEventQueries.delete_by_recurring_event_ids(integration_id, &1))
+
     :ok
   end
 
