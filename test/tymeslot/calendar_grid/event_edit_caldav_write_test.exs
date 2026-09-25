@@ -574,14 +574,14 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
       refute_enqueued(worker: SyncCalDavCalendarWorker)
     end
 
-    # No `expect`: under `verify_on_exit!` a PUT that reached the server would
-    # fail the test as an unexpected call.
-    test "a move off the weekday the rule names is refused before anything is written", %{
+    test "a move to another weekday turns the weekday of the rule with it", %{
       user: user,
-      integration: integration,
       occurrence: occurrence
     } do
-      assert {:error, %{reason: :rule_pins_occurrences, retry: :not_queued}} =
+      expect_series_put()
+
+      # Wednesday 16 September, still 09:00 in Berlin (UTC+2).
+      assert {:ok, _updated} =
                CalendarGrid.update_event(
                  user.id,
                  occurrence,
@@ -592,8 +592,11 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
                  recurrence_scope: :all
                )
 
-      assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(integration.id, occurrence.uid)
-      refute_enqueued(worker: SyncCalDavCalendarWorker)
+      assert_received {:put, @series_url, body, _headers}
+      assert [master] = vevent_blocks(body)
+      assert "RRULE:FREQ=WEEKLY;BYDAY=WE" in master
+      assert "DTSTART;TZID=Europe/Berlin:20260909T090000" in master
+      assert "EXDATE;TZID=Europe/Berlin:20260930T090000" in master
     end
   end
 end

@@ -282,32 +282,189 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesEditMasterTest do
              ) ==
                {:error, :rule_removal}
     end
+  end
 
-    test "refuses to move the series off the weekday its rule names" do
-      document =
+  describe "edit_master/4 moving a series to another weekday" do
+    # A Berlin series whose weekly rule is `rule`, from Monday 4 May 2026.
+    defp weekly(rule),
+      do:
         calendar(
           @vtimezone <>
             String.replace(
               master("DTSTART;TZID=Europe/Berlin:20260504T100000"),
               "RRULE:FREQ=WEEKLY",
-              "RRULE:FREQ=WEEKLY;BYDAY=MO"
+              "RRULE:" <> rule
             )
         )
 
-      next_day = %{start_time: ~U[2026-05-26 08:00:00Z], end_time: ~U[2026-05-26 08:30:00Z]}
-      later_that_day = %{start_time: ~U[2026-05-25 09:00:00Z], end_time: ~U[2026-05-25 09:30:00Z]}
+    # 25 May 2026 is a Monday, summer time in Berlin (UTC+2).
+    defp moved_to(%Date{} = date, hour) do
+      start =
+        date
+        |> DateTime.new!(Time.new!(hour, 0, 0), "Europe/Berlin")
+        |> DateTime.shift_zone!("Etc/UTC")
 
-      assert Series.edit_master(document, "20260525T100000", next_day, nil) ==
+      %{start_time: start, end_time: DateTime.add(start, 30, :minute)}
+    end
+
+    defp rule_after(rule, date, hour) do
+      assert {:ok, moved} =
+               Series.edit_master(weekly(rule), "20260525T100000", moved_to(date, hour), nil)
+
+      moved |> master_of() |> Enum.find(&String.starts_with?(&1, "RRULE"))
+    end
+
+    test "a Monday series moved to Tuesday, an hour earlier, repeats on Tuesdays" do
+      document =
+        calendar(
+          @vtimezone <>
+            String.replace(
+              master(
+                "DTSTART;TZID=Europe/Berlin:20260504T100000",
+                "EXDATE;TZID=Europe/Berlin:20260511T100000\n"
+              ),
+              "RRULE:FREQ=WEEKLY",
+              "RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=10"
+            ) <>
+            """
+            BEGIN:VEVENT
+            UID:weekly-sync@example.com
+            RECURRENCE-ID;TZID=Europe/Berlin:20260518T100000
+            DTSTART;TZID=Europe/Berlin:20260518T150000
+            DURATION:PT30M
+            END:VEVENT
+            """
+        )
+
+      result = edit!(document, "20260525T100000", moved_to(~D[2026-05-26], 9), nil)
+
+      master = master_of(result)
+      assert "RRULE:FREQ=WEEKLY;BYDAY=TU;COUNT=10" in master
+      assert "DTSTART;TZID=Europe/Berlin:20260505T090000" in master
+      assert "EXDATE;TZID=Europe/Berlin:20260512T090000" in master
+
+      [override] = overrides_of(result)
+      assert "RECURRENCE-ID;TZID=Europe/Berlin:20260519T090000" in override
+      assert "DTSTART;TZID=Europe/Berlin:20260519T140000" in override
+    end
+
+    test "every weekday of the rule turns by the same days, in the order written" do
+      assert rule_after("FREQ=WEEKLY;BYDAY=MO,WE,FR", ~D[2026-05-26], 10) ==
+               "RRULE:FREQ=WEEKLY;BYDAY=TU,TH,SA"
+
+      assert rule_after("FREQ=WEEKLY;BYDAY=FR,MO", ~D[2026-05-26], 10) ==
+               "RRULE:FREQ=WEEKLY;BYDAY=SA,TU"
+
+      assert rule_after("FREQ=WEEKLY;BYDAY=MO", ~D[2026-05-24], 10) ==
+               "RRULE:FREQ=WEEKLY;BYDAY=SU"
+    end
+
+    test "a move on the same day leaves the rule as written" do
+      assert rule_after("FREQ=WEEKLY;BYDAY=MO", ~D[2026-05-25], 11) ==
+               "RRULE:FREQ=WEEKLY;BYDAY=MO"
+    end
+
+    test "a Sunday weekday wraps to Monday in a weekly rule" do
+      # Monday to Tuesday moves the rule's Sunday past WKST, to Monday.
+      assert rule_after("FREQ=WEEKLY;BYDAY=MO,SU;WKST=MO", ~D[2026-05-26], 10) ==
+               "RRULE:FREQ=WEEKLY;BYDAY=TU,MO;WKST=MO"
+    end
+
+    test "an every-other-week rule is refused only when a weekday wraps past WKST" do
+      document = weekly("FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,SU;WKST=MO")
+
+      assert Series.edit_master(document, "20260525T100000", moved_to(~D[2026-05-26], 10), nil) ==
                {:error, :rule_pins_occurrences}
 
-      assert {:ok, moved} = Series.edit_master(document, "20260525T100000", later_that_day, nil)
-      assert "DTSTART;TZID=Europe/Berlin:20260504T110000" in master_of(moved)
+      assert rule_after("FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE;WKST=MO", ~D[2026-05-26], 10) ==
+               "RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=TU,TH;WKST=MO"
+    end
+
+    for rule <- [
+          "FREQ=MONTHLY;BYDAY=2MO",
+          "FREQ=MONTHLY;BYMONTHDAY=4",
+          "FREQ=YEARLY;BYMONTH=5",
+          "FREQ=WEEKLY;BYDAY=MO;BYSETPOS=1"
+        ] do
+      test "#{rule} cannot follow a move to another date" do
+        assert Series.edit_master(
+                 weekly(unquote(rule)),
+                 "20260525T100000",
+                 moved_to(~D[2026-05-26], 10),
+                 nil
+               ) == {:error, :rule_pins_occurrences}
+      end
+    end
+
+    test "a rule naming the hour refuses any move" do
+      assert Series.edit_master(
+               weekly("FREQ=WEEKLY;BYHOUR=10"),
+               "20260525T100000",
+               moved_to(~D[2026-05-25], 11),
+               nil
+             ) == {:error, :rule_pins_occurrences}
     end
   end
 
   describe "round trip through the sync's parser and normaliser" do
     defp berlin_instant(%Date{} = date, %Time{} = time),
       do: date |> DateTime.new!(time, "Europe/Berlin") |> DateTime.shift_zone!("Etc/UTC")
+
+    test "a Monday series moved to Tuesday shows every occurrence on a Tuesday" do
+      {winter, summer} = winter_and_summer_mondays()
+      excluded = Date.add(summer, -7)
+      overridden = Date.add(summer, 7)
+
+      document =
+        calendar(
+          @vtimezone <>
+            String.replace(
+              master(
+                "DTSTART;TZID=Europe/Berlin:#{stamp(winter)}T100000",
+                "EXDATE;TZID=Europe/Berlin:#{stamp(excluded)}T100000\n"
+              ),
+              "RRULE:FREQ=WEEKLY",
+              "RRULE:FREQ=WEEKLY;BYDAY=MO"
+            ) <>
+            """
+            BEGIN:VEVENT
+            UID:weekly-sync@example.com
+            RECURRENCE-ID;TZID=Europe/Berlin:#{stamp(overridden)}T100000
+            DTSTART;TZID=Europe/Berlin:#{stamp(overridden)}T150000
+            DURATION:PT30M
+            SUMMARY:Moved
+            END:VEVENT
+            """
+        )
+
+      # Monday 10:00 to Tuesday 09:00: a day, less an hour.
+      new_start = berlin_instant(Date.add(summer, 1), ~T[09:00:00])
+      changes = %{start_time: new_start, end_time: DateTime.add(new_start, 30, :minute)}
+
+      before = normalised_events(document)
+      events = normalised_events(edit!(document, "#{stamp(summer)}T100000", changes, nil))
+      uids = Enum.map(events, & &1.uid)
+      uid = &"weekly-sync@example.com_#{stamp(Date.add(&1, 1))}T090000"
+
+      assert before != []
+      assert length(events) == length(before)
+      assert Enum.uniq(uids) == uids
+
+      assert Enum.reject(events, &(berlin_weekday(&1.start_at) == 2 or &1.summary == "Moved")) ==
+               []
+
+      refute uid.(excluded) in uids
+      assert [override] = Enum.filter(events, &(&1.uid == uid.(overridden)))
+      assert override.summary == "Moved"
+
+      assert DateTime.compare(
+               override.start_at,
+               berlin_instant(Date.add(overridden, 1), ~T[14:00:00])
+             ) == :eq
+    end
+
+    defp berlin_weekday(instant),
+      do: instant |> DateTime.shift_zone!("Europe/Berlin") |> Date.day_of_week()
 
     test "a moved series keeps its exceptions excluded and each override over its own slot" do
       {winter, summer} = winter_and_summer_mondays()

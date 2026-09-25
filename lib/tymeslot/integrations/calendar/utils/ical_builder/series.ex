@@ -15,7 +15,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   document, the `VTIMEZONE` and each `VALARM` included, exactly as the server
   returned it. The document is read and written by `Series.Document`; an
   edit of every occurrence (`edit_master/5`) is carried out by
-  `Series.Master`, which moves timing with `Series.Shift`.
+  `Series.Master`, which moves timing with `Series.Shift` and the rule with
+  `Series.RuleShift`.
 
   ## Occurrence keys
 
@@ -152,14 +153,19 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
       refitted to the value type and zone of `DTSTART`
       (`Recurrence.RRule.retarget/2`); `EXDATE`s and `RDATE`s stay. A `nil`
       rule is `{:error, :rule_removal}`: that turns the series into one
-      event, which is not an edit of every occurrence.
+      event, which is not an edit of every occurrence. Without one, the
+      rule follows a move of the series (`Series.RuleShift`): the plain
+      weekdays of a weekly or daily `BYDAY` turn by the days it moved, so a
+      Monday series moved to Tuesday reads `BYDAY=TU`. A rule the edit
+      states is written as given.
     * `:recurrence_exceptions` belongs to the document and is ignored.
 
   Refused before anything is written: a change of value type
   (`{:error, :value_type_change}`), a move of a date by part of a day
-  (`{:error, :shift_not_whole_days}`), a move off the day (or time) a rule
-  part such as `BYDAY` pins its occurrences to
-  (`{:error, :rule_pins_occurrences}`), a resource with no master
+  (`{:error, :shift_not_whole_days}`), a move the rule cannot follow (an
+  ordinal `BYDAY` such as `2MO`, `BYMONTHDAY` and the like for a move to
+  another date, a time part for any move, or an every-other-week rule whose
+  weekday would cross `WKST`; `{:error, :rule_pins_occurrences}`), a resource with no master
   (`{:error, :master_not_found}`) and timing it cannot read
   (`{:error, :unreadable_timing}`).
   """

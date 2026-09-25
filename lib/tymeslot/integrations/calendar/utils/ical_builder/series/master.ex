@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Master do
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Patcher
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Properties
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Document
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.RuleShift
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Shift
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Timing
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
@@ -22,12 +23,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Master do
   # The lines that name a slot of the series or an occurrence's timing, which
   # move with the series; see `Series.Shift`.
   @moved_properties ["DTSTART", "DTEND", "RECURRENCE-ID", "EXDATE", "RDATE"]
-
-  # Rule parts that tie occurrences to a day (or a time of day) of their own:
-  # moving DTSTART past them would leave the occurrences where they were, and
-  # the exceptions and overrides naming slots the rule no longer makes.
-  @day_pinning_parts ~w(BYDAY BYMONTHDAY BYYEARDAY BYWEEKNO BYSETPOS BYMONTH)
-  @time_pinning_parts ~w(BYHOUR BYMINUTE BYSECOND)
 
   @doc "See `ICalBuilder.Series.edit_master/5`."
   @spec edit(String.t(), String.t(), map(), String.t() | nil, Scheduling.mode()) ::
@@ -42,7 +37,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Master do
          {:ok, move} <- plan_move(components, master, key, changes, zones),
          {:ok, components} <- move_series(components, move, key, zones),
          {:ok, components} <- edit_fields(components, changes, elem(zones, 0), mode),
-         :ok <- ensure_rule_follows(components, reference, move.shift, zones) do
+         {:ok, components} <- follow_rule(components, reference, move.shift, zones, changes) do
       Document.serialise(components)
     end
   end
@@ -195,36 +190,40 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Master do
 
   defp put_rule(items, _changes, _zone), do: {:ok, items}
 
-  defp ensure_rule_follows(_components, _reference, 0, _zones), do: :ok
+  # The rule follows the move (`Series.RuleShift`). A rule the edit itself
+  # states is the organiser's for the moved series, so it is written as they
+  # gave it: only a part pinning a time of day is refused.
+  defp follow_rule(components, _reference, 0, _zones, _changes), do: {:ok, components}
 
-  defp ensure_rule_follows(components, reference, shift, {zone, timezone}) do
-    {:ok, {:vevent, master}} = find_master(components)
+  defp follow_rule(components, reference, shift, zones, changes) do
+    index = Enum.find_index(components, &Document.master?/1)
+    {:vevent, items} = Enum.at(components, index)
 
-    pinning =
-      with {:ok, from} <- Shift.wall(reference, zone, timezone),
-           true <- same_day?(from, NaiveDateTime.add(from, shift)) do
-        @time_pinning_parts
-      else
-        _moves_the_day -> @day_pinning_parts ++ @time_pinning_parts
-      end
-
-    if Enum.any?(rule_parts(master), &(&1 in pinning)),
-      do: {:error, :rule_pins_occurrences},
-      else: :ok
+    with {:ok, days} <- days_moved(reference, shift, zones, changes),
+         {:ok, items} <- Document.map_ok(items, &follow_line(&1, shift, days)) do
+      {:ok, List.replace_at(components, index, {:vevent, items})}
+    end
   end
 
-  defp same_day?(from, to), do: NaiveDateTime.to_date(from) == NaiveDateTime.to_date(to)
+  # How many dates the master's DTSTART moved by, on the series' wall clock.
+  defp days_moved(_reference, _shift, _zones, %{recurrence_rule: _stated}), do: {:ok, 0}
 
-  defp rule_parts(items) do
-    items
-    |> Document.properties()
-    |> Enum.filter(&(ContentLines.property_name(&1) == "RRULE"))
-    |> Enum.flat_map(fn line ->
-      {_name, value} = ContentLines.split_value(line)
+  defp days_moved(reference, shift, {zone, timezone}, _changes) do
+    case Shift.wall(reference, zone, timezone) do
+      {:ok, from} ->
+        to = NaiveDateTime.add(from, shift)
+        {:ok, Date.diff(NaiveDateTime.to_date(to), NaiveDateTime.to_date(from))}
 
-      value
-      |> String.split(";", trim: true)
-      |> Enum.map(&(&1 |> String.split("=", parts: 2) |> hd() |> String.upcase()))
-    end)
+      :error ->
+        {:error, :unreadable_timing}
+    end
   end
+
+  defp follow_line(line, shift, days) when is_binary(line) do
+    if ContentLines.property_name(line) == "RRULE",
+      do: RuleShift.follow(line, shift, days),
+      else: {:ok, line}
+  end
+
+  defp follow_line(subcomponent, _shift, _days), do: {:ok, subcomponent}
 end

@@ -43,8 +43,10 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   The master takes the fields the edit changed, and a new repeat rule. A
   move of the occurrence moves the series by as much, on the wall clock of
   its zone, with every exception and override (see
-  `ICalBuilder.Series.edit_master/5`, which also lists what it refuses, such
-  as a move off the weekday a `BYDAY` rule names). Removing the repeat rule
+  `ICalBuilder.Series.edit_master/5`). A weekly rule's weekdays turn with a
+  move to another day; a rule that pins its occurrences in a way a move
+  cannot follow, such as the second Monday of the month, refuses it.
+  Removing the repeat rule
   is refused (`:unsupported_scope`), as is turning the series all-day or
   back (`:value_type_change`).
 
