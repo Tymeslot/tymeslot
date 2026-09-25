@@ -198,7 +198,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
           events,
           &Map.merge(&1, %{
             href: response.href,
-            etag: EventProcessor.clean_etag(response.etag)
+            etag: EventProcessor.clean_etag(response.etag),
+            # The whole resource, as the full fetch keeps it: the cached row's
+            # document, which a grid edit patches in place. Without it each
+            # incremental sync cleared the document the row already held.
+            raw_ical: response.calendar_data
           })
         )
 
