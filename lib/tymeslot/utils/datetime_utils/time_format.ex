@@ -30,7 +30,7 @@ defmodule Tymeslot.Utils.DateTimeUtils.TimeFormat do
 
   # The languages Tymeslot ships that write the time as "14:30". Everything
   # else, including an unknown or missing locale, reads as a 12-hour clock.
-  @twenty_four_hour_locales ~w(de fr it uk cs)
+  @twenty_four_hour_locales ~w(de fr it uk cs pt)
 
   @doc "The formats a preference may store, in the order they are offered."
   @spec formats() :: [String.t()]

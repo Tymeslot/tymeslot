@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   - en: January 15, 2026
   - de: 15. Januar 2026
   - uk: 15 січня 2026
+  - pt: 15 de janeiro de 2026
   """
   @spec format_date(Calendar.date(), String.t()) :: String.t()
   def format_date(date, locale) do
@@ -27,12 +28,14 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   - en: April 05, 2026
   - de/cs: 5. April 2026 / 5. dubna 2026
   - uk/fr/it: 5 квітня 2026 (day before month, no period)
+  - pt: 5 de abril de 2026 (the linking "de" is not optional)
   """
   @spec order_date_parts(String.t() | integer(), String.t(), integer(), String.t()) :: String.t()
   def order_date_parts(day, month_name, year, locale) do
     case locale do
       loc when loc in ["de", "cs"] -> "#{day}. #{month_name} #{year}"
       loc when loc in ["uk", "fr", "it"] -> "#{day} #{month_name} #{year}"
+      "pt" -> "#{day} de #{month_name} de #{year}"
       _other_locale -> "#{month_name} #{pad_day(day)}, #{year}"
     end
   end
@@ -46,6 +49,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   - en: April 10 – 12, 2026 / April 30 – May 2, 2026
   - de/cs: 10.–12. April 2026 / 30. April – 2. Mai 2026
   - uk/fr/it: 10–12 квітня 2026 / 30 квітня – 2 травня 2026 (day before month, no period)
+  - pt: 10–12 de abril de 2026 / 30 de abril – 2 de maio de 2026
   """
   @spec format_date_range(Calendar.date(), Calendar.date(), String.t()) :: String.t()
   def format_date_range(start_date, end_date, locale) do
@@ -59,6 +63,9 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       loc when loc in ["uk", "fr", "it"] ->
         day_first_range(start_date, start_month, end_date, end_month, "")
 
+      "pt" ->
+        portuguese_range(start_date, start_month, end_date, end_month)
+
       _other ->
         month_first_range(start_date, start_month, end_date, end_month)
     end
@@ -69,6 +76,16 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       "#{start_date.day}#{day_suffix}–#{end_date.day}#{day_suffix} #{end_month} #{end_date.year}"
     else
       "#{start_date.day}#{day_suffix} #{start_month} – #{end_date.day}#{day_suffix} #{end_month} #{end_date.year}"
+    end
+  end
+
+  # Portuguese links day, month and year with "de", so it cannot share
+  # `day_first_range/5`: "10–12 abril 2026" is ungrammatical.
+  defp portuguese_range(start_date, start_month, end_date, end_month) do
+    if start_date.month == end_date.month do
+      "#{start_date.day}–#{end_date.day} de #{end_month} de #{end_date.year}"
+    else
+      "#{start_date.day} de #{start_month} – #{end_date.day} de #{end_month} de #{end_date.year}"
     end
   end
 
@@ -126,6 +143,12 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       full:
         ~w(ledna února března dubna května června července srpna září října listopadu prosince),
       short: ~w(led úno bře dub kvě čvn čvc srp zář říj lis pro)
+    },
+    # Lowercase: Portuguese does not capitalise month names mid-sentence.
+    "pt" => %{
+      full:
+        ~w(janeiro fevereiro março abril maio junho julho agosto setembro outubro novembro dezembro),
+      short: ~w(jan fev mar abr mai jun jul ago set out nov dez)
     }
   }
 
@@ -170,6 +193,19 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       full: ["neděle", "pondělí", "úterý", "středa", "čtvrtek", "pátek", "sobota"],
       short: ["ne", "po", "út", "st", "čt", "pá", "so"],
       narrow: ["N", "P", "Ú", "S", "Č", "P", "S"]
+    },
+    "pt" => %{
+      full: [
+        "domingo",
+        "segunda-feira",
+        "terça-feira",
+        "quarta-feira",
+        "quinta-feira",
+        "sexta-feira",
+        "sábado"
+      ],
+      short: ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"],
+      narrow: ["D", "S", "T", "Q", "Q", "S", "S"]
     }
   }
 
@@ -234,14 +270,19 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
     weekday = format_weekday_name(Date.day_of_week(datetime), locale, :full)
     month = format_month_name(datetime.month, locale, :full)
 
-    "#{weekday}, #{datetime.day} #{month} #{datetime.year} · #{format_time(datetime, locale)}"
+    "#{weekday}, #{weekday_date(datetime.day, month, datetime.year, locale)} · #{format_time(datetime, locale)}"
   end
+
+  # Portuguese cannot drop the linking "de" ("5 abril 2026" is ungrammatical).
+  # Every other locale keeps the bare order this function has always rendered.
+  defp weekday_date(day, month, year, "pt"), do: "#{day} de #{month} de #{year}"
+  defp weekday_date(day, month, year, _locale), do: "#{day} #{month} #{year}"
 
   @doc """
   Formats a number according to locale conventions, to `decimals` decimal
   places.
   - en: 1,234.56
-  - de: 1.234,56
+  - de/pt: 1.234,56
   - uk: 1 234,56
   """
   @spec format_number(number(), String.t(), non_neg_integer()) :: String.t()
@@ -306,6 +347,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
   defp thousand_separator("de"), do: "."
   defp thousand_separator("it"), do: "."
+  defp thousand_separator("pt"), do: "."
   defp thousand_separator("uk"), do: @group_space
   defp thousand_separator("fr"), do: @group_space
   defp thousand_separator("cs"), do: @group_space
@@ -313,6 +355,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
   defp decimal_separator("de"), do: ","
   defp decimal_separator("it"), do: ","
+  defp decimal_separator("pt"), do: ","
   defp decimal_separator("uk"), do: ","
   defp decimal_separator("fr"), do: ","
   defp decimal_separator("cs"), do: ","
