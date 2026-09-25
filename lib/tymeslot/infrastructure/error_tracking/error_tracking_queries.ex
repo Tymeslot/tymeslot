@@ -24,6 +24,13 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueries do
   @occurrence_batch_size 1_000
 
   @doc """
+  Returns true when the calling process is inside a transaction on the
+  repository ErrorTracker writes to.
+  """
+  @spec in_transaction?() :: boolean()
+  def in_transaction?, do: Repo.in_transaction?()
+
+  @doc """
   Marks every unresolved error last seen before `cutoff` as resolved,
   muted ones included. Returns the number of errors resolved.
 
