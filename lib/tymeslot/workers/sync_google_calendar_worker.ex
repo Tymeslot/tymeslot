@@ -418,6 +418,11 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     }
   end
 
+  # An instance is cached under a uid built from its original start, which a
+  # cancellation may not carry; its own id addresses the row exactly.
+  defp cancelled_ref(%{"recurringEventId" => series_id} = event) when is_binary(series_id),
+    do: %{provider_event_id: event["id"], uid: nil}
+
   defp cancelled_ref(event), do: %{provider_event_id: event["id"], uid: event["iCalUID"]}
 
   defp persist_sync_state(integration, next_sync_token) do

@@ -197,5 +197,50 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerEventMappingTest do
 
       refute Repo.get(ProviderCalendarEventSchema, cached.id)
     end
+
+    test "deletes only the cancelled instance of a recurring series" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_sync_token: "valid-token"
+        )
+
+      cancelled =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: "series-uid@google.com_20260504T080000Z",
+          provider_event_id: "series1234_20260504T080000Z",
+          recurring_event_id: "series1234"
+        )
+
+      sibling =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: "series-uid@google.com_20260511T080000Z",
+          provider_event_id: "series1234_20260511T080000Z",
+          recurring_event_id: "series1234"
+        )
+
+      # The cancellation carries the series' iCalUID but no original start, so
+      # its uid would address neither row; only its own id does.
+      cancelled_event = %{
+        "id" => "series1234_20260504T080000Z",
+        "iCalUID" => "series-uid@google.com",
+        "recurringEventId" => "series1234",
+        "status" => "cancelled"
+      }
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:ok, %{events: [cancelled_event], next_sync_token: "new-token"}}
+      end)
+
+      assert :ok =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      refute Repo.get(ProviderCalendarEventSchema, cancelled.id)
+      assert Repo.get(ProviderCalendarEventSchema, sibling.id)
+    end
   end
 end

@@ -199,9 +199,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   def upsert_batch(events_attrs) do
     now = DateTime.utc_now(:microsecond)
 
-    # Deduplicate by the conflict key before inserting. Google (and potentially
-    # other providers) can return multiple instances of the same recurring event
-    # series in a single sync response — all sharing the same iCalUID. PostgreSQL
+    # Deduplicate by the conflict key before inserting. Recurring instances each
+    # carry their own uid (Google's are stamped with their original start), so
+    # this is only a guard against a response repeating one event. PostgreSQL
     # rejects an ON CONFLICT DO UPDATE that targets the same row twice in one
     # command, so we keep the last entry per (calendar_integration_id, uid).
     count =
@@ -368,7 +368,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   Matches `uid` *or* `provider_event_id`, because which of the two carries the
   link depends on the provider family: Google and Outlook agree with the
   meeting on `provider_event_id` while their cached `uid` is the provider's own
-  iCalUID, and the CalDAV family is the mirror image, keeping the mapping in
+  iCalUID (stamped with its original start for a Google recurring instance),
+  and the CalDAV family is the mirror image, keeping the mapping in
   `uid` and an href in `provider_event_id`. Testing one column alone therefore
   matches nothing for half the providers — see that module for the full rule.
 
