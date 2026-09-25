@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Hooks.AppLocaleHook do
   def on_mount(:default, _params, session, socket) do
     fallback = Locales.admin_default_locale()
     path_locale = session["path_locale"]
-    ambient = Locales.resolve([path_locale, session["ambient_locale"]], fallback)
+    ambient = Locales.resolve([path_locale, dead_render_ambient(session)], fallback)
     locale = Locales.resolve([path_locale, user_locale(socket), ambient], fallback)
 
     Gettext.put_locale(locale)
@@ -39,6 +39,13 @@ defmodule TymeslotWeb.Hooks.AppLocaleHook do
     # what the page is about to render.
     {:cont, assign(socket, locale: locale, ambient_locale: ambient)}
   end
+
+  # A page rendered before `live_session_data/1` existed reconnects after a
+  # deploy with a signed session that has no "ambient_locale". Reading the
+  # retired "locale" key for those alone keeps an open page in the language
+  # it was rendered in, instead of switching it to the default mid-visit.
+  defp dead_render_ambient(%{"ambient_locale" => locale}), do: locale
+  defp dead_render_ambient(session), do: session["locale"]
 
   defp user_locale(socket) do
     case socket.assigns[:current_user] do

@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Hooks.LocaleHook do
   def on_mount(:default, params, session, socket) do
     locale =
       Locales.resolve(
-        [params["locale"], session["resolved_locale"]],
+        [params["locale"], dead_render_locale(session)],
         Locales.booking_default_locale()
       )
 
@@ -27,4 +27,11 @@ defmodule TymeslotWeb.Hooks.LocaleHook do
 
     {:cont, assign(socket, :locale, locale)}
   end
+
+  # A page rendered before `live_session_data/1` existed reconnects after a
+  # deploy with a signed session that has no "resolved_locale". Reading the
+  # retired "locale" key for those alone keeps an open page in the language
+  # it was rendered in, instead of switching it to the default mid-visit.
+  defp dead_render_locale(%{"resolved_locale" => locale}), do: locale
+  defp dead_render_locale(session), do: session["locale"]
 end

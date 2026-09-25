@@ -37,11 +37,24 @@ defmodule TymeslotWeb.Hooks.LocaleHookTest do
       assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
     end
 
-    test "ignores the session's raw locale keys" do
+    test "ignores the retired locale key once the dead render has resolved one" do
       # Only the dead render's resolution counts; a stray session value (the
       # retired :locale key) must not be read as one.
-      {:cont, socket} = LocaleHook.on_mount(:default, %{}, %{"locale" => "de"}, socket())
+      {:cont, socket} =
+        LocaleHook.on_mount(
+          :default,
+          %{},
+          %{"resolved_locale" => "en", "locale" => "de"},
+          socket()
+        )
+
       assert socket.assigns.locale == "en"
+    end
+
+    test "keeps a page rendered before the resolved locale existed in its language" do
+      # A session signed before a deploy carries only the retired key.
+      {:cont, socket} = LocaleHook.on_mount(:default, %{}, %{"locale" => "de"}, socket())
+      assert socket.assigns.locale == "de"
     end
 
     test "an unsupported session locale with no other source falls back to the default" do

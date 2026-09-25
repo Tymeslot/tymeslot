@@ -44,6 +44,26 @@ defmodule TymeslotWeb.Hooks.AppLocaleHookTest do
       assert socket.assigns.locale == "en"
     end
 
+    test "ignores the retired locale key once the dead render has an ambient locale" do
+      {:cont, socket} =
+        AppLocaleHook.on_mount(
+          :default,
+          %{},
+          %{"ambient_locale" => "en", "locale" => "de"},
+          socket()
+        )
+
+      assert socket.assigns.locale == "en"
+    end
+
+    test "keeps a page rendered before the ambient locale existed in its language" do
+      # A session signed before a deploy carries only the retired key.
+      {:cont, socket} = AppLocaleHook.on_mount(:default, %{}, %{"locale" => "de"}, socket())
+
+      assert socket.assigns.locale == "de"
+      assert socket.assigns.ambient_locale == "de"
+    end
+
     test "an unsupported path locale with no other source falls back to the default" do
       {:cont, socket} = AppLocaleHook.on_mount(:default, %{}, %{"path_locale" => "xx"}, socket())
       assert socket.assigns.locale == "en"
