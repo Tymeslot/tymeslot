@@ -308,23 +308,42 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
     # reason the original did, its discard raises another alert, and so on. One
     # suppressed recipient once produced eighteen jobs and eighty-three failed
     # attempts this way.
-    test "an EmailWorker failure is logged but never enqueues another email" do
+    test "an error delivering an admin alert is logged but never enqueues another email" do
       assert :ok =
-               AdminAlerts.send_alert(:oban_job_failure, %{
-                 worker: "Tymeslot.Workers.EmailWorker",
-                 queue: "emails",
-                 job_id: 393_245
+               AdminAlerts.send_alert(:new_error, %{
+                 error_id: 12,
+                 job_worker: "Tymeslot.Workers.EmailWorker",
+                 job_action: "send_admin_alert"
+               })
+
+      assert :ok =
+               AdminAlerts.send_alert(:error_regression, %{
+                 error_id: 12,
+                 occurrence_id: 40,
+                 job_worker: "Tymeslot.Workers.EmailWorker",
+                 job_action: "send_admin_alert"
                })
 
       assert all_enqueued(worker: EmailWorker) == []
     end
 
-    test "a failure in any other worker still enqueues an alert email" do
+    test "an error in any other email the worker sends still enqueues an alert email" do
       assert :ok =
-               AdminAlerts.send_alert(:oban_job_failure, %{
-                 worker: "Tymeslot.Workers.WebhookWorker",
-                 queue: "webhooks",
-                 job_id: 393_246
+               AdminAlerts.send_alert(:new_error, %{
+                 error_id: 13,
+                 job_worker: "Tymeslot.Workers.EmailWorker",
+                 job_action: "send_booking_confirmation"
+               })
+
+      assert [_job] = all_enqueued(worker: EmailWorker)
+    end
+
+    test "an error in any other worker still enqueues an alert email" do
+      assert :ok =
+               AdminAlerts.send_alert(:new_error, %{
+                 error_id: 14,
+                 job_worker: "Tymeslot.Workers.WebhookWorker",
+                 job_action: "send_admin_alert"
                })
 
       assert [_job] = all_enqueued(worker: EmailWorker)
@@ -333,8 +352,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
     # The admin-alert email itself bouncing must not re-enqueue another
     # admin-alert email to the same dead recipient: that email would bounce
     # too, raising another :recipient_email_rejected report, forever. This is
-    # the same feedback loop as the EmailWorker case above, just reached
-    # through the recipient-rejected path instead of a permanent job failure.
+    # the same feedback loop as the delivery error case above, just reached
+    # through the recipient-rejected path instead of a recorded error.
     test "a rejected admin-alert recipient is logged but never enqueues another email" do
       assert :ok =
                AdminAlerts.send_alert(:recipient_email_rejected, %{

@@ -99,7 +99,7 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertSchedulerTest do
                  :error,
                  "Oban job MyWorker (queue: q) failed permanently: error for job 1",
                  %{},
-                 dedup_key: "oban_job_failure:MyWorker:q"
+                 dedup_key: "new_error:41"
                )
 
       assert :ok =
@@ -109,7 +109,7 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertSchedulerTest do
                  :error,
                  "Oban job MyWorker (queue: q) failed permanently: error for job 2",
                  %{},
-                 dedup_key: "oban_job_failure:MyWorker:q"
+                 dedup_key: "new_error:41"
                )
 
       assert [_only_one] = all_enqueued(worker: EmailWorker)
@@ -132,7 +132,7 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertSchedulerTest do
                  :error,
                  "Repeat alert",
                  %{},
-                 dedup_key: "oban_job_failure:MyWorker:q"
+                 dedup_key: "new_error:41"
                )
 
       log =
@@ -144,7 +144,7 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertSchedulerTest do
                      :error,
                      "Repeat alert",
                      %{},
-                     dedup_key: "oban_job_failure:MyWorker:q"
+                     dedup_key: "new_error:41"
                    )
         end)
 
@@ -164,7 +164,7 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertSchedulerTest do
                  :error,
                  "Oban job EmailWorker (queue: emails) failed permanently",
                  %{},
-                 dedup_key: "oban_job_failure:EmailWorker:emails"
+                 dedup_key: "new_error:42"
                )
 
       [job] = all_enqueued(worker: EmailWorker)
@@ -177,7 +177,7 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertSchedulerTest do
                  :error,
                  "Oban job EmailWorker (queue: emails) failed permanently, again",
                  %{},
-                 dedup_key: "oban_job_failure:EmailWorker:emails"
+                 dedup_key: "new_error:42"
                )
 
       assert Repo.aggregate(Oban.Job, :count) == 1

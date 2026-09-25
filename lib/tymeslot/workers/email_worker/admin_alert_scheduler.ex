@@ -16,11 +16,12 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
 
   # The terminal states are included deliberately. Oban's default omits
   # `:discarded` and `:cancelled`, so an alert job that exhausted its retries
-  # stopped holding the dedup slot the moment it discarded — and since a discard
-  # is itself what raises the next `oban_job_failure` alert, one email outage
-  # produced an unbounded chain of alert jobs instead of a single deduplicated
-  # one. The Pruner's `max_age` is a week in dev and production, comfortably
-  # longer than this window, so terminal jobs are still present to match against.
+  # stopped holding the dedup slot the moment it discarded, so the next
+  # identical alert enqueued a fresh job at once. When the alert jobs' own
+  # failures raised further alerts, one email outage produced an unbounded
+  # chain of alert jobs instead of a single deduplicated one. The Pruner's
+  # `max_age` is a week in dev and production, comfortably longer than this
+  # window, so terminal jobs are still present to match against.
   @dedup_states [
     :available,
     :scheduled,

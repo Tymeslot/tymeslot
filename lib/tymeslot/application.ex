@@ -18,7 +18,6 @@ defmodule Tymeslot.Application do
     IndexHealth,
     Metrics,
     ObanCron,
-    ObanFailureAlerter,
     ObanLogger,
     ObanQueues,
     ObanRescue,
@@ -26,6 +25,7 @@ defmodule Tymeslot.Application do
     ProxyCredentials
   }
 
+  alias Tymeslot.Infrastructure.ErrorTracking.Alerter, as: ErrorAlerter
   alias Tymeslot.Infrastructure.Logging.{FileSink, MetadataRedactor}
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Integrations.{HealthCheck, Telemetry}
@@ -64,8 +64,10 @@ defmodule Tymeslot.Application do
     # levels for every Oban job process.
     ObanLogger.attach()
 
-    # Raise an admin alert when a job fails permanently (exhausts its retries).
-    ObanFailureAlerter.attach()
+    # Raise an admin alert when ErrorTracker records a new error, or a
+    # resolved one happens again, wherever it was raised (request, LiveView,
+    # job or crashed process).
+    ErrorAlerter.attach()
 
     # Set up telemetry handlers for metrics
     Metrics.setup_handlers()

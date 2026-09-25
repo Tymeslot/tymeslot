@@ -28,7 +28,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     integration_health_recovery: %{category: "System", severity: :info},
     oban_queue_stuck: %{category: "Queue", severity: :error},
     oban_jobs_accumulating: %{category: "Queue", severity: :warning},
-    oban_job_failure: %{category: "Queue", severity: :error},
+    new_error: %{category: "Errors", severity: :error},
+    error_regression: %{category: "Errors", severity: :error},
     reconciliation_discrepancies: %{category: "Payment", severity: :warning},
     subscription_not_in_database: %{category: "Payment", severity: :warning},
     payment_event_enqueue_failed: %{category: "Payment", severity: :error},
@@ -64,10 +65,12 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   key on ids rather than personal data.
   """
   @spec dedup_key(atom(), map()) :: String.t()
-  def dedup_key(:oban_job_failure, metadata) do
-    worker = Map.get(metadata, :worker, "unknown")
-    queue = Map.get(metadata, :queue, "unknown")
-    "oban_job_failure:#{worker}:#{queue}"
+  # One alert per ErrorTracker error; a regression is a new incident each
+  # time the error comes back after being resolved.
+  def dedup_key(:new_error, metadata), do: "new_error:#{Map.get(metadata, :error_id)}"
+
+  def dedup_key(:error_regression, metadata) do
+    "error_regression:#{Map.get(metadata, :error_id)}:#{Map.get(metadata, :occurrence_id)}"
   end
 
   # Enqueue failures embed per-occurrence detail (attempt count, error text),
@@ -267,10 +270,10 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     "Oban job accumulation detected (threshold: #{threshold}): #{inspect(queues)}"
   end
 
-  def format_message(:oban_job_failure, metadata) do
-    worker = Map.get(metadata, :worker, "unknown")
-    queue = Map.get(metadata, :queue, "unknown")
-    "Oban job #{worker} (queue: #{queue}) failed permanently: #{reason_text(metadata)}"
+  def format_message(type, metadata) when type in [:new_error, :error_regression] do
+    kind = metadata |> Map.get(:kind, "unknown") |> to_string() |> String.trim_leading("Elixir.")
+    source = Map.get(metadata, :source_function, "unknown")
+    "#{Map.get(metadata, :summary)}: #{kind} in #{source}: #{reason_text(metadata)}"
   end
 
   def format_message(:reconciliation_discrepancies, metadata) do

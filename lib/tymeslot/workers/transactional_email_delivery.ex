@@ -17,10 +17,10 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
 
   A permanently rejected recipient is discarded for the matching reason: no
   number of retries can reach a dead address, and exhausting the attempts
-  would raise a permanent-failure alert for what is a recipient problem, not
-  an outage. The discard is reported to `AdminAlerts` directly instead, since
-  a discard never reaches `ObanFailureAlerter` (it emits `job:stop`, not
-  `job:exception`) and a dead recipient — a host's payouts restricted, a
+  would record every failed attempt as an error for what is a recipient
+  problem, not an outage. The discard is reported to `AdminAlerts` directly
+  instead, since a discard is never recorded by error tracking (it emits
+  `job:stop`, not `job:exception`) and a dead recipient — a host's payouts restricted, a
   dispute opened — is exactly the kind of silence an operator needs to know
   about.
   """

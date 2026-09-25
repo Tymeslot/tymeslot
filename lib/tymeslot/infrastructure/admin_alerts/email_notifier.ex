@@ -74,8 +74,15 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   # the underlying fault clears. The alert is still logged above at its registry
   # severity, so nothing is lost from the operator's view of the incident; only
   # the undeliverable email is skipped.
-  defp self_referential?(:oban_job_failure, %{worker: worker}),
-    do: to_string(worker) == email_worker_name()
+  #
+  # An error raised while delivering an admin alert email is one: its alert
+  # would travel the same broken delivery path. Only the admin alert action
+  # counts; an error in any other email the worker sends is alerted as usual.
+  # `ErrorTracking.Alerter` carries the job's worker and action from the
+  # occurrence context.
+  defp self_referential?(type, %{job_worker: worker, job_action: "send_admin_alert"})
+       when type in [:new_error, :error_regression],
+       do: worker == email_worker_name()
 
   # A rejected recipient alert about the admin-alert email itself (e.g. the
   # configured `:admin_alert_email` bounces) would otherwise re-enqueue

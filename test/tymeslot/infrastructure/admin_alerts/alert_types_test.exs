@@ -156,17 +156,16 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
       assert msg =~ "100"
     end
 
-    test ":oban_job_failure includes worker, queue, and reason" do
+    test ":new_error names the exception, its source and the reason" do
       msg =
-        AlertTypes.format_message(:oban_job_failure, %{
-          worker: "MyApp.SomeWorker",
-          queue: "calendar_events",
+        AlertTypes.format_message(:new_error, %{
+          summary: "New error",
+          kind: "Elixir.RuntimeError",
+          source_function: "Tymeslot.Bookings.create_booking/2",
           reason_message: "boom"
         })
 
-      assert msg =~ "MyApp.SomeWorker"
-      assert msg =~ "calendar_events"
-      assert msg =~ "boom"
+      assert msg == "New error: RuntimeError in Tymeslot.Bookings.create_booking/2: boom"
     end
 
     test ":reconciliation_discrepancies includes count" do
@@ -277,27 +276,20 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
   end
 
   describe "dedup_key/2" do
-    test "oban_job_failure is stable across different failure reasons" do
-      base = %{worker: "Tymeslot.Workers.SyncWorker", queue: "calendar_events", job_id: 1}
-
-      key_a = AlertTypes.dedup_key(:oban_job_failure, Map.put(base, :reason_message, "boom 1"))
-
-      key_b =
-        AlertTypes.dedup_key(
-          :oban_job_failure,
-          base |> Map.put(:reason_message, "boom 2") |> Map.put(:job_id, 2)
-        )
+    test "new_error is one key per ErrorTracker error, whatever the reason" do
+      key_a = AlertTypes.dedup_key(:new_error, %{error_id: 7, reason_message: "boom 1"})
+      key_b = AlertTypes.dedup_key(:new_error, %{error_id: 7, reason_message: "boom 2"})
 
       assert key_a == key_b
-      assert key_a =~ "Tymeslot.Workers.SyncWorker"
-      assert key_a =~ "calendar_events"
+      refute key_a == AlertTypes.dedup_key(:new_error, %{error_id: 8, reason_message: "boom 1"})
     end
 
-    test "oban_job_failure differs across workers" do
-      key_a = AlertTypes.dedup_key(:oban_job_failure, %{worker: "WorkerA", queue: "q"})
-      key_b = AlertTypes.dedup_key(:oban_job_failure, %{worker: "WorkerB", queue: "q"})
+    test "error_regression is one key per occurrence that brought the error back" do
+      key_a = AlertTypes.dedup_key(:error_regression, %{error_id: 7, occurrence_id: 40})
+      key_b = AlertTypes.dedup_key(:error_regression, %{error_id: 7, occurrence_id: 41})
 
       refute key_a == key_b
+      refute key_a == AlertTypes.dedup_key(:new_error, %{error_id: 7})
     end
 
     test "integration_health_failure for a signal ignores the live count" do

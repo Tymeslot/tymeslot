@@ -70,7 +70,7 @@ defmodule Tymeslot.Workers.SyncHealth do
   # Everything else is a cycle that did not sync: `{:error, _}` on its way to
   # an Oban retry, and the deliberate `{:discard, _}` for failures no retry
   # could help. The discards matter most — they emit `job:stop`, which
-  # `ObanFailureAlerter` ignores, so the streak is the only thing that makes
+  # error tracking does not record, so the streak is the only thing that makes
   # their quietness temporary. Reasons that also flag the integration for
   # reconnection simply reach the badge by two routes, which
   # `record_sync_failure/2` documents as safe.
