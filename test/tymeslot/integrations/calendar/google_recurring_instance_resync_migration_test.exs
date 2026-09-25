@@ -66,6 +66,32 @@ defmodule Tymeslot.Integrations.Calendar.GoogleRecurringInstanceResyncMigrationT
       assert Repo.get(ProviderCalendarEventSchema, caldav_occurrence.id)
     end
 
+    test "deletes a Google series cached as its unexpanded master" do
+      google = insert(:calendar_integration, provider: "google")
+      caldav = insert(:calendar_integration, provider: "caldav")
+
+      master =
+        insert(:provider_calendar_event,
+          calendar_integration: google,
+          provider: "google",
+          uid: "weekly789@google.com",
+          recurrence_rule: "FREQ=WEEKLY;BYDAY=MO"
+        )
+
+      caldav_series_row =
+        insert(:provider_calendar_event,
+          calendar_integration: caldav,
+          provider: "caldav",
+          uid: "def-456_20260907T090000",
+          recurrence_rule: "FREQ=WEEKLY;BYDAY=MO"
+        )
+
+      MigrationRunner.replay!(@version)
+
+      assert Repo.get(ProviderCalendarEventSchema, master.id) == nil
+      assert Repo.get(ProviderCalendarEventSchema, caldav_series_row.id)
+    end
+
     test "drops the Google sync token so the next sync bootstraps" do
       google = insert(:calendar_integration, provider: "google", google_sync_token: "tok-google")
 

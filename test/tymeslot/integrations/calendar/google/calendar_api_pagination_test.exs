@@ -172,6 +172,26 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIPaginationTest do
       assert Enum.map(events, & &1["id"]) == ["evt1", "evt2", "evt3", "evt4"]
     end
 
+    # A delta listing must repeat the parameters its sync token was issued
+    # under. Without `singleEvents` Google sends a recurring series changed
+    # since the bootstrap as its unexpanded master, which is cached as a
+    # single event standing in for every occurrence.
+    test "asks for single events on every page, as the bootstrap listing does",
+         %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, 2, fn :get, url, _body, _headers, _opts ->
+        assert String.contains?(url, "singleEvents=true")
+
+        if String.contains?(url, "pageToken=page2") do
+          sync_response([], %{"nextSyncToken" => "sync_final"})
+        else
+          sync_response([], %{"nextPageToken" => "page2"})
+        end
+      end)
+
+      assert {:ok, %{next_sync_token: "sync_final"}} =
+               CalendarAPI.list_events_incremental(integration)
+    end
+
     test "asks for a full page, as the bootstrap listing does", %{integration: integration} do
       # Both listings share one paginator precisely so this cannot drift: the
       # incremental path used to take Google's default of 250 per page while

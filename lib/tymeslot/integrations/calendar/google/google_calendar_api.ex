@@ -315,7 +315,16 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
       # `syncToken` and `pageToken` travel together through every page of a
       # delta listing. That is what Google's own incremental-sync sample does
       # and what this code has always done; it looks redundant and is not.
-      fetch_events_page(token, calendar_id, %{"syncToken" => sync_token}, nil, [])
+      # `singleEvents` repeats the bootstrap's, as a token requires: without
+      # it a series changed since the bootstrap arrives as its unexpanded
+      # master and is cached as one event in place of its occurrences.
+      fetch_events_page(
+        token,
+        calendar_id,
+        %{"syncToken" => sync_token, "singleEvents" => "true"},
+        nil,
+        []
+      )
     end)
   end
 

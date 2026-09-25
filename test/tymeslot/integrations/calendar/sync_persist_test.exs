@@ -73,6 +73,53 @@ defmodule Tymeslot.Integrations.Calendar.SyncPersistTest do
       assert event.uid in uids
     end
 
+    # A series cached as its master (the grid's own create, or a delta that
+    # arrived unexpanded) is replaced by its occurrences once they arrive,
+    # rather than showing its first occurrence twice beside them.
+    test "occurrences of a series replace the series' master row" do
+      integration = insert(:calendar_integration)
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "weekly@google.com",
+        provider_event_id: "master1",
+        recurrence_rule: "FREQ=WEEKLY"
+      )
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "single@google.com",
+        provider_event_id: "single1"
+      )
+
+      now = DateTime.utc_now(:microsecond)
+
+      occurrence =
+        CalendarEvent.new!(%{
+          uid: "weekly@google.com_20260504T080000Z",
+          calendar_integration_id: integration.id,
+          provider: :google,
+          provider_calendar_id: "primary",
+          provider_event_id: "master1_20260504T080000Z",
+          recurring_event_id: "master1",
+          all_day: false,
+          start_at: now,
+          end_at: DateTime.add(now, 3600, :second),
+          synced_at: now
+        })
+
+      assert :ok = Sync.persist_normalised_events(integration, [occurrence])
+
+      assert {:error, :not_found} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "weekly@google.com")
+
+      assert {:ok, _occurrence} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, occurrence.uid)
+
+      assert {:ok, _single} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "single@google.com")
+    end
+
     test "empty list returns :ok without side effects" do
       integration = insert(:calendar_integration)
       Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{integration.user_id}")

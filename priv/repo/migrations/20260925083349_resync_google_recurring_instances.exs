@@ -28,6 +28,11 @@ defmodule Tymeslot.Repo.Migrations.ResyncGoogleRecurringInstances do
     on the next sync too, so there is no reason to tell them apart. Single
     events and every other provider are untouched: CalDAV, ICS and Exchange
     occurrences have always carried their own UIDs.
+  * Deletes every cached Google row with a `recurrence_rule`: a series cached
+    as its unexpanded master. The incremental sync used to omit
+    `singleEvents`, so a series created or changed after the bootstrap
+    arrived that way, as did a series the grid created and cached itself. The
+    bootstrap brings its occurrences back in its place.
   * Drops the sync token of every Google integration. With no token,
     `SyncGoogleCalendarWorker` takes its bootstrap path, a full listing of the
     sync window, which caches every instance afresh and stores a new token.
@@ -59,7 +64,8 @@ defmodule Tymeslot.Repo.Migrations.ResyncGoogleRecurringInstances do
   def up do
     execute("""
     DELETE FROM provider_calendar_events
-    WHERE provider = 'google' AND recurring_event_id IS NOT NULL
+    WHERE provider = 'google'
+      AND (recurring_event_id IS NOT NULL OR recurrence_rule IS NOT NULL)
     """)
 
     execute("""
