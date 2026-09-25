@@ -18,7 +18,10 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Alerter do
 
   The alert carries the error's identity (id, kind, reason, source) and
   what the occurrence context says about where it happened: the user and
-  correlation id, the request, the LiveView or the job. Every value is a
+  correlation id, the request, the LiveView or the job. The context is read
+  as stored, after `Tymeslot.Infrastructure.ErrorTracking.Filter` has
+  redacted it, so a meeting uid or link token in the request path reaches
+  the alert as `:id`. Every value is a
   scalar, since the alert email renders the metadata as a table.
 
   Telemetry detaches a handler that raises, which would switch alerting off

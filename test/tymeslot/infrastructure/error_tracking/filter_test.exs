@@ -66,6 +66,40 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.FilterTest do
     end
   end
 
+  describe "sanitize/1 with capabilities in paths and query strings" do
+    @uid "0b7e1f3a-4c1d-4a8e-9f3b-2d6c8e1a5b7c"
+
+    test "scrubs OAuth parameters from a recorded query string" do
+      assert %{"request.query" => "code=[REDACTED]&state=[REDACTED]"} =
+               Filter.sanitize(%{"request.query" => "code=abc&state=xyz"})
+    end
+
+    test "masks a meeting uid in the recorded path and LiveView URI" do
+      context = %{
+        "request.path" => "/jane/meeting/#{@uid}/cancel",
+        "live_view.uri" => "https://book.example.com/jane/meeting/#{@uid}/reschedule"
+      }
+
+      assert Filter.sanitize(context) == %{
+               "request.path" => "/jane/meeting/:id/cancel",
+               "live_view.uri" => "https://book.example.com/jane/meeting/:id/reschedule"
+             }
+    end
+
+    test "scrubs a bearer token embedded in any string value" do
+      context = %{"job.args" => %{"note" => "sent with Bearer abc.def.ghi"}}
+
+      assert Filter.sanitize(context) == %{
+               "job.args" => %{"note" => "sent with Bearer [REDACTED]"}
+             }
+    end
+
+    test "keeps an ordinary path unchanged" do
+      assert Filter.sanitize(%{"request.path" => "/dashboard/settings"}) ==
+               %{"request.path" => "/dashboard/settings"}
+    end
+  end
+
   describe "sanitize_with/2 (the fail-closed guard sanitize/1 runs under)" do
     test "stores a placeholder instead of the raw context when redaction raises" do
       context = %{"password" => "hunter2", "note" => "ann@example.org"}

@@ -93,13 +93,22 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ContextIntegrationTest do
       # The crash takes the LiveView down and, through the test link, the
       # test process with it unless exits are trapped.
       Process.flag(:trap_exit, true)
-      {:ok, view, _html} = live(conn, ~p"/dashboard")
+      # The provider's OAuth helper fails while the video settings component
+      # handles the click: a crash inside a real event handler. A throw, since
+      # the URL builder turns a raised error into a flash.
+      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _uid, _uri, _scopes, _opts ->
+        throw(:google_exploded)
+      end)
 
-      # A client event without the `id` the handler matches on: a stale or
-      # tampered client, and a genuine crash in `DashboardLive`.
-      catch_exit(render_click(view, "onboarding:toggle", %{}))
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
 
-      context = occurrence_context!("Elixir.FunctionClauseError")
+      catch_exit(
+        view
+        |> element("button[phx-click='setup_provider'][phx-value-provider='google_meet']")
+        |> render_click()
+      )
+
+      context = occurrence_context!("throw")
       assert context["user_id"] == user.id
       assert context["correlation_id"] =~ @uuid
     end

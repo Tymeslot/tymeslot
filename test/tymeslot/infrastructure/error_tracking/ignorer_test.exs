@@ -63,6 +63,24 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.IgnorerTest do
       end)
     end
 
+    test "ignores an event no handle_event/3 clause of a LiveView matches" do
+      error = %Error{
+        kind: "Elixir.FunctionClauseError",
+        reason: "no function clause matching in TymeslotWeb.DashboardLive.handle_event/3"
+      }
+
+      assert Ignorer.ignore?(error, Map.put(@live_view, "live_view.event", "forged"))
+    end
+
+    test "tracks a function clause error raised inside a matched handle_event/3 clause" do
+      error = %Error{
+        kind: "Elixir.FunctionClauseError",
+        reason: "no function clause matching in Tymeslot.Onboarding.toggle/2"
+      }
+
+      refute Ignorer.ignore?(error, @live_view)
+    end
+
     test "tracks the error and logs a warning when the ignorer itself fails" do
       log =
         capture_log(fn ->

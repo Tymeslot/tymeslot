@@ -69,6 +69,15 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.AlerterTest do
       refute_receive {:send_alert, _type, _payload}
     end
 
+    test "a capability in the request path never reaches the alert" do
+      report("cancel exploded", %{
+        "request.path" => "/jane/meeting/0b7e1f3a-4c1d-4a8e-9f3b-2d6c8e1a5b7c/cancel"
+      })
+
+      assert_receive {:send_alert, :new_error, payload}
+      assert payload.request_path == "/jane/meeting/:id/cancel"
+    end
+
     test "every metadata value is a scalar the alert email can render" do
       report("bookings exploded", %{
         "live_view.view" => TymeslotWeb.DashboardLive,

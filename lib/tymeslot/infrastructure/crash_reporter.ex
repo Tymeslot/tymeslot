@@ -42,12 +42,13 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
       every crash as ErrorTracker itself reads it.
     * Orderly exits are not recorded. A LiveView or LiveComponent sent an
       event name none of its `handle_event/3` clauses matches is logged as a
-      warning instead: the client chooses both the event name and the
-      component it targets, so it is bad input, not a system fault.
+      warning instead, by the rule in
+      `Tymeslot.Infrastructure.ErrorTracking.UnmatchedEvent`.
   """
 
   alias String.Chars
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.ErrorTracking.UnmatchedEvent
 
   require Logger
 
@@ -157,7 +158,7 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
 
   defp handle_crash(kind, reason, stacktrace, meta) do
     cond do
-      unmatched_client_event?(reason, stacktrace) -> log_unmatched_client_event(stacktrace)
+      UnmatchedEvent.exception?(reason) -> log_unmatched_client_event(reason, stacktrace)
       not tracking_enabled?() -> :ok
       not reportable?(kind, reason) -> :ok
       already_recorded?(kind, reason, stacktrace) -> :ok
@@ -214,26 +215,22 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
     if Chars.impl_for(payload), do: to_string(payload), else: inspect(payload)
   end
 
-  # Only a miss on the dispatch head itself counts. When no clause matches, the
-  # BEAM reports the failing call as the top frame with its argument list in
-  # place of an arity; a `FunctionClauseError` raised by something the handler
-  # body calls names that other function instead, and must still be recorded.
-  defp unmatched_client_event?(
-         %FunctionClauseError{module: module, function: :handle_event, arity: 3},
-         [{module, :handle_event, [_event, _params, _socket], _location} | _frames]
-       ),
-       do: function_exported?(module, :__live__, 0)
-
-  defp unmatched_client_event?(_reason, _stacktrace), do: false
-
   # Logged from the handler process under our own domain, so it can never
-  # re-enter this handler.
-  defp log_unmatched_client_event([
-         {module, :handle_event, [event, _params, _socket], _location} | _frames
-       ]) do
+  # re-enter this handler. The event name is in the top frame when the BEAM
+  # reports the failed call with its arguments.
+  defp log_unmatched_client_event(%FunctionClauseError{module: module}, stacktrace) do
+    event =
+      case stacktrace do
+        [{_module, :handle_event, [event, _params, _socket], _location} | _frames] ->
+          event_name(event)
+
+        _other ->
+          nil
+      end
+
     Logger.warning("Client sent a LiveView event no handle_event/3 clause matches",
       live_module: inspect(module),
-      event: event_name(event),
+      event: event,
       domain: @own_domain
     )
   end

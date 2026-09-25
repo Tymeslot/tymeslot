@@ -3,16 +3,22 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Filter do
   Sanitises an ErrorTracker occurrence's context before it is stored.
 
   The context is whatever the integrations and `ErrorTracker.set_context/1`
-  gathered: request headers and params, LiveView params, Oban job args. Two
+  gathered: request headers and params, LiveView params, Oban job args. Three
   passes, each reusing the rule the rest of the system already applies:
 
   1. `Tymeslot.Infrastructure.Logging.MetadataRedactor.redact/1` blanks every
      value under a sensitive key (credentials, tokens, cookies, `*_email`),
      for atom and string keys alike.
-  2. `Tymeslot.Infrastructure.AdminAlerts.PIIScrubber.mask_emails/1` masks any
-     email address left in a string value.
+  2. `Tymeslot.Infrastructure.Logging.PathMasker.mask/1` masks capability
+     segments (meeting uids, link tokens) in the recorded `request.path` and
+     `live_view.uri`.
+  3. Every string value is scrubbed: `PIIScrubber.mask_emails/1` masks any
+     email address in it, and `Tymeslot.Infrastructure.Logging.Redactor`
+     blanks credentials embedded in text, such as `code=` and `state=` in a
+     recorded `request.query` or a bearer token in a message.
 
-  Both walk maps, lists and tuples to the redactor's depth bound. Keys are
+  The first and last walk maps, lists and tuples to the redactor's depth
+  bound. Keys are
   never rewritten, so the stored context keeps its shape.
 
   ## Failing closed
@@ -29,10 +35,15 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Filter do
 
   alias Tymeslot.Infrastructure.AdminAlerts.PIIScrubber
   alias Tymeslot.Infrastructure.Logging.MetadataRedactor
+  alias Tymeslot.Infrastructure.Logging.PathMasker
+  alias Tymeslot.Infrastructure.Logging.Redactor
 
   require Logger
 
   @failed_context %{"context_redaction_failed" => true}
+
+  # Paths ErrorTracker's integrations record, which can carry a capability.
+  @path_keys ["request.path", "live_view.uri"]
 
   @impl ErrorTracker.Filter
   def sanitize(context), do: sanitize_with(context, &redact/1)
@@ -55,31 +66,49 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Filter do
   defp redact(context) do
     context
     |> MetadataRedactor.redact()
-    |> mask_emails(MetadataRedactor.max_depth())
+    |> mask_paths()
+    |> scrub_strings(MetadataRedactor.max_depth())
+  end
+
+  defp mask_paths(context) when is_map(context) do
+    Enum.reduce(@path_keys, context, fn key, acc ->
+      case acc do
+        %{^key => path} -> Map.put(acc, key, PathMasker.mask(path))
+        _missing -> acc
+      end
+    end)
+  end
+
+  defp mask_paths(context), do: context
+
+  defp scrub_string(string) do
+    string
+    |> PIIScrubber.mask_emails()
+    |> Redactor.redact()
   end
 
   # Same traversal as MetadataRedactor.redact/1: bounded depth, list elements
   # as siblings, improper tails kept, tuples walked, structs kept intact.
-  defp mask_emails(term, depth) when depth <= 0, do: term
-  defp mask_emails(term, _depth) when is_binary(term), do: PIIScrubber.mask_emails(term)
+  defp scrub_strings(term, depth) when depth <= 0, do: term
+  defp scrub_strings(term, _depth) when is_binary(term), do: scrub_string(term)
 
-  defp mask_emails(term, depth) when is_map(term),
-    do: :maps.map(fn _key, value -> mask_emails(value, depth - 1) end, term)
+  defp scrub_strings(term, depth) when is_map(term),
+    do: :maps.map(fn _key, value -> scrub_strings(value, depth - 1) end, term)
 
-  defp mask_emails(term, depth) when is_list(term), do: mask_list(term, depth)
+  defp scrub_strings(term, depth) when is_list(term), do: scrub_list(term, depth)
 
-  defp mask_emails(term, depth) when is_tuple(term) do
+  defp scrub_strings(term, depth) when is_tuple(term) do
     term
     |> Tuple.to_list()
-    |> Enum.map(&mask_emails(&1, depth - 1))
+    |> Enum.map(&scrub_strings(&1, depth - 1))
     |> List.to_tuple()
   end
 
-  defp mask_emails(term, _depth), do: term
+  defp scrub_strings(term, _depth), do: term
 
-  defp mask_list([head | tail], depth),
-    do: [mask_emails(head, depth - 1) | mask_list(tail, depth)]
+  defp scrub_list([head | tail], depth),
+    do: [scrub_strings(head, depth - 1) | scrub_list(tail, depth)]
 
-  defp mask_list([], _depth), do: []
-  defp mask_list(improper_tail, depth), do: mask_emails(improper_tail, depth - 1)
+  defp scrub_list([], _depth), do: []
+  defp scrub_list(improper_tail, depth), do: scrub_strings(improper_tail, depth - 1)
 end

@@ -242,20 +242,22 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
     end
 
     # A real LiveView sent an event its handle_event/3 clauses do not match
-    # (`onboarding:toggle` without its `id`): the integration records it, and
-    # the crash log that follows is only a warning.
-    test "an unmatched event on a real LiveView is stored once", %{conn: conn} do
+    # (`onboarding:toggle` without its `id`): a forged or stale client. The
+    # integration's report is ignored, and the crash log that follows is only
+    # a warning. Nothing is stored, so nothing can alert.
+    test "an unmatched event on a real LiveView is not stored", %{conn: conn} do
       Process.flag(:trap_exit, true)
       {:ok, view, _html} = live(conn, ~p"/dashboard")
 
-      CaptureLog.capture_log(fn ->
-        catch_exit(render_click(view, "onboarding:toggle", %{}))
+      log =
+        CaptureLog.capture_log(fn ->
+          catch_exit(render_click(view, "onboarding:toggle", %{}))
+          refute_occurrence()
+        end)
 
-        await_occurrence!()
-        refute_occurrence()
-      end)
-
-      assert occurrence_count() == 1
+      assert log =~ "no handle_event/3 clause matches"
+      assert log =~ "onboarding:toggle"
+      assert occurrence_count() == 0
     end
 
     # No integration covers handle_info/2, so the crash log is the only record.
