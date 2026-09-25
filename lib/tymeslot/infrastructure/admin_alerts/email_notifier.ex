@@ -12,6 +12,10 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
     4. The Oban uniqueness constraint allows the job (i.e. an identical alert
        has not been enqueued within the last 24 hours)
 
+  The headline, the logged metadata and the job's metadata are all built from
+  a `PIIScrubber`-scrubbed copy of the caller's metadata; only the dedup key is
+  derived from the raw values, and it is persisted as a hash.
+
   Metadata is enriched with deployment context (`tymeslot_version`,
   `deployment_type`, `domain`, `hostname`, `timestamp`) before being passed to
   the template, so error reports include enough information to be actionable.
@@ -32,8 +36,9 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
     config = AlertTypes.get(type)
     category = if config, do: config.category, else: "General"
     severity = if config, do: config.severity, else: :warning
-    message = AlertTypes.format_message(type, metadata)
-    scrubbed_metadata = metadata |> Map.new() |> PIIScrubber.scrub()
+    metadata = Map.new(metadata)
+    scrubbed_metadata = PIIScrubber.scrub(metadata)
+    message = AlertTypes.format_message(type, scrubbed_metadata)
 
     Logger.log(severity, "ADMIN ALERT",
       event_type: type,
@@ -50,7 +55,10 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
         )
 
       alerts_enabled?() ->
-        dedup_key = AlertTypes.dedup_key(type, scrubbed_metadata)
+        # Keyed on the raw metadata: masking collapses distinct addresses
+        # ("owner@" and "olivia@" both become "o***@"), which would drop the
+        # second alert. The key only ever leaves as a SHA-256 hash.
+        dedup_key = AlertTypes.dedup_key(type, metadata)
         maybe_enqueue_email(category, severity, message, scrubbed_metadata, dedup_key)
 
       true ->

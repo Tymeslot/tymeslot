@@ -9,6 +9,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Repo
+  alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Endpoint
 
@@ -194,6 +195,50 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
     end
   end
 
+  # The headline is built from the alert's metadata, so it must be built from
+  # the scrubbed copy: formatting first put the organiser's raw address into
+  # the log line, the persisted job args and the alert email.
+  describe "personal data in the alert headline" do
+    setup do
+      setup_config(:tymeslot,
+        admin_alerts_enabled: true,
+        admin_alert_email: "ops@example.com"
+      )
+    end
+
+    test "a calendar sync error never carries the owner's raw address" do
+      LogCapture.with_capture(fn ->
+        assert :ok =
+                 AdminAlerts.send_alert(:calendar_sync_error, %{
+                   owner_email: "owner@example.com",
+                   reason_message: "boom",
+                   meeting_id: 1,
+                   calendar_integration_id: 5
+                 })
+      end)
+
+      log_event = LogCapture.await_log("ADMIN ALERT")
+      refute inspect(log_event) =~ "owner@example.com"
+
+      [job] = all_enqueued(worker: EmailWorker)
+      refute Jason.encode!(job.args) =~ "owner@example.com"
+      assert job.args["message"] == "Calendar sync error for o***@example.com: boom"
+    end
+
+    test "a rejected recipient's address in the provider reason is masked" do
+      assert :ok =
+               AdminAlerts.send_alert(:recipient_email_rejected, %{
+                 summary: "Recipient permanently undeliverable, email discarded",
+                 reason_message: "Found inactive addresses: jane.doe@example.com",
+                 meeting_id: 7
+               })
+
+      [job] = all_enqueued(worker: EmailWorker)
+      refute Jason.encode!(job.args) =~ "jane.doe@example.com"
+      assert job.args["message"] =~ "Found inactive addresses: j***@example.com"
+    end
+  end
+
   describe "deduplication" do
     setup do
       setup_config(:tymeslot,
@@ -227,6 +272,20 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
 
       jobs = all_enqueued(worker: EmailWorker)
       assert length(jobs) == 2
+    end
+
+    # Both addresses mask to "o***@example.com"; keying on the masked headline
+    # would silently drop the second owner's alert for a day.
+    test "calendar sync errors for different owners with the same masked address both enqueue" do
+      for owner_email <- ["owner@example.com", "olivia@example.com"] do
+        assert :ok =
+                 AdminAlerts.send_alert(:calendar_sync_error, %{
+                   owner_email: owner_email,
+                   reason_message: "boom"
+                 })
+      end
+
+      assert length(all_enqueued(worker: EmailWorker)) == 2
     end
   end
 

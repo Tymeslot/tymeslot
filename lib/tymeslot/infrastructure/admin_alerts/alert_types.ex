@@ -15,8 +15,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   format any incoming alert uniformly.
   """
 
-  alias Tymeslot.Infrastructure.AdminAlerts.PIIScrubber
-
   @registry %{
     unhandled_webhook: %{category: "Webhook", severity: :warning},
     refund_processed: %{category: "Payment", severity: :info},
@@ -57,6 +55,12 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   per-occurrence detail (ids, error text) that would defeat deduplication —
   a burst of permanently failed jobs from one broken worker should collapse
   into a single alert per dedup window, not one email per job.
+
+  Unlike `format_message/2`, this takes the caller's raw, unscrubbed metadata:
+  masking collapses distinct addresses into one (`owner@` and `olivia@` both
+  become `o***@`), so a key built from scrubbed values would swallow a second
+  person's alert. The key is only ever persisted as a SHA-256 hash (see
+  `AdminAlertScheduler`), never in the clear.
   """
   @spec dedup_key(atom(), map()) :: String.t()
   def dedup_key(:oban_job_failure, metadata) do
@@ -113,16 +117,21 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   end
 
   # Call sites identify the affected recipient through whichever id they have
-  # to hand (a Connect account, a booking payment, a meeting). The raw reason
-  # is not a safe dedup key on its own: Postmark's rejection payload often
-  # does carry the address (masked before it reaches `format_message/2`), so
-  # two different hosts' bounces in the same window raise two alerts, not
-  # one; falls back to the full (masked) message when no id is available.
+  # to hand (a Connect account, a booking payment, a meeting), so two different
+  # hosts' bounces in the same window raise two alerts, not one. Without an id
+  # the full message is the key; Postmark's rejection text usually names the
+  # address, which still tells two recipients apart.
   def dedup_key(:recipient_email_rejected, metadata) do
     case recipient_email_rejected_identifier(metadata) do
       nil -> format_message(:recipient_email_rejected, metadata)
       identifier -> "recipient_email_rejected:#{identifier}"
     end
+  end
+
+  # The message names the owner only by masked address, which two owners can
+  # share, so key on the raw address the message was masked from.
+  def dedup_key(:calendar_sync_error, metadata) do
+    "calendar_sync_error:#{Map.get(metadata, :owner_email, "unknown")}:#{reason_text(metadata)}"
   end
 
   # The message embeds `days_past_due`, which the daily dunning run increments
@@ -167,7 +176,14 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
 
   defp health_key(parts), do: parts |> Enum.reject(&is_nil/1) |> Enum.join(":")
 
-  @doc "Formats a human-readable message for the given alert type and metadata."
+  @doc """
+  Formats a human-readable message for the given alert type and metadata.
+
+  Expects metadata already passed through `PIIScrubber.scrub/1`: the message
+  reaches Logger and the persisted Oban job args, so it reads masked keys
+  (`owner_email_masked`) and relies on the scrubber's sweep of free-form
+  strings rather than masking anything itself.
+  """
   @spec format_message(atom(), map()) :: String.t()
   def format_message(:unhandled_webhook, metadata) do
     type = Map.get(metadata, :event_type, "unknown")
@@ -201,7 +217,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   end
 
   def format_message(:calendar_sync_error, metadata) do
-    email = Map.get(metadata, :owner_email, "unknown")
+    email = Map.get(metadata, :owner_email_masked, "unknown")
     "Calendar sync error for #{email}: #{reason_text(metadata)}"
   end
 
@@ -293,7 +309,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
 
   def format_message(:recipient_email_rejected, metadata) do
     summary = Map.get(metadata, :summary, "Recipient permanently undeliverable")
-    reason = metadata |> Map.get(:reason_message, "unknown") |> mask_reason()
+    reason = Map.get(metadata, :reason_message, "unknown")
 
     case recipient_email_rejected_identifier(metadata) do
       nil -> "#{summary}: #{reason}"
@@ -313,17 +329,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
       true -> nil
     end
   end
-
-  # The provider's raw rejection text can embed the recipient's own address
-  # (e.g. Postmark's inactive-address message), and this message is what
-  # reaches Logger and the persisted Oban job args (see `EmailNotifier`) — so
-  # it must be masked here, at render time, rather than relying on the
-  # caller to have scrubbed it first.
-  defp mask_reason(reason) when is_binary(reason) do
-    %{reason: reason} |> PIIScrubber.scrub() |> Map.fetch!(:reason)
-  end
-
-  defp mask_reason(reason), do: reason
 
   # The reason as `AdminAlerts.report/2` flattens it: the normalised message,
   # falling back to the bare code for callers that set only that.

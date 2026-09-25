@@ -72,26 +72,36 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
       assert msg =~ "99"
     end
 
-    test ":calendar_sync_error includes email and reason" do
+    test ":calendar_sync_error includes the masked email and reason" do
       msg =
         AlertTypes.format_message(:calendar_sync_error, %{
-          owner_email: "a@b.com",
+          owner_email_masked: "a***@b.com",
           reason_code: :timeout,
           reason_message: "timeout"
         })
 
-      assert msg =~ "a@b.com"
+      assert msg =~ "a***@b.com"
       assert msg =~ "timeout"
     end
 
     test ":calendar_sync_error falls back to the reason code without a message" do
       message =
         AlertTypes.format_message(:calendar_sync_error, %{
+          owner_email_masked: "a***@b.com",
+          reason_code: :timeout
+        })
+
+      assert message == "Calendar sync error for a***@b.com: timeout"
+    end
+
+    test ":calendar_sync_error never renders a raw owner_email key" do
+      message =
+        AlertTypes.format_message(:calendar_sync_error, %{
           owner_email: "a@b.com",
           reason_code: :timeout
         })
 
-      assert message == "Calendar sync error for a@b.com: timeout"
+      assert message == "Calendar sync error for unknown: timeout"
     end
 
     test ":pubsub_broadcast_failed includes event name" do
@@ -256,22 +266,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
         })
 
       assert msg =~ "meeting 99"
-    end
-
-    # The provider's rejection text can embed the recipient's own address
-    # (e.g. Postmark's inactive-address message); the message this function
-    # returns reaches Logger and the persisted Oban job args, so it must not
-    # carry the raw address.
-    test ":recipient_email_rejected masks an email address embedded in the reason" do
-      msg =
-        AlertTypes.format_message(:recipient_email_rejected, %{
-          summary: "Recipient permanently undeliverable, email discarded",
-          reason_message:
-            "{422, %{\"ErrorCode\" => 406, \"Message\" => \"Found inactive addresses: jane.doe@example.com\"}}"
-        })
-
-      refute msg =~ "jane.doe@example.com"
-      assert msg =~ "j***@example.com"
     end
   end
 
@@ -541,6 +535,24 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
     test "analytics_tracking_anomaly falls back to 'unknown' when :kind is absent" do
       key = AlertTypes.dedup_key(:analytics_tracking_anomaly, %{converting_visitors: 5})
       assert key == "analytics_tracking_anomaly:unknown"
+    end
+
+    # Both addresses mask to "o***@example.com", so a key built from the
+    # masked headline would merge two owners' incidents into one alert.
+    test "calendar_sync_error differs across owners sharing a masked address" do
+      key_a =
+        AlertTypes.dedup_key(:calendar_sync_error, %{
+          owner_email: "owner@example.com",
+          reason_message: "boom"
+        })
+
+      key_b =
+        AlertTypes.dedup_key(:calendar_sync_error, %{
+          owner_email: "olivia@example.com",
+          reason_message: "boom"
+        })
+
+      refute key_a == key_b
     end
 
     # A rejected recipient's identity is the account it belongs to, not the

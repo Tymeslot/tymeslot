@@ -9,6 +9,7 @@ defmodule Tymeslot.Infrastructure.AdminAlertsTest do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.AdminAlerts.AlertTypes
+  alias Tymeslot.Infrastructure.AdminAlerts.PIIScrubber
 
   defmodule TestNotifier do
     @behaviour Tymeslot.Infrastructure.AdminAlerts
@@ -113,8 +114,8 @@ defmodule Tymeslot.Infrastructure.AdminAlertsTest do
       )
 
       assert_receive {:send_alert, :calendar_sync_error, metadata}
-      message = AlertTypes.format_message(:calendar_sync_error, metadata)
-      assert message == "Calendar sync error for owner@example.com: invalid_grant"
+      message = AlertTypes.format_message(:calendar_sync_error, PIIScrubber.scrub(metadata))
+      assert message == "Calendar sync error for o***@example.com: invalid_grant"
     end
   end
 end
