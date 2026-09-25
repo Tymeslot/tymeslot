@@ -268,6 +268,20 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
       assert Formatting.format_location(%{location_type: :phone}) == "Phone Call"
     end
 
+    test "keeps the number a phone location carries" do
+      assert Formatting.format_location(%{
+               location_type: :phone,
+               location: "Phone call (+44 7700 900123)"
+             }) == "Phone call (+44 7700 900123)"
+    end
+
+    test "translates the bare phone literal older bookings stored" do
+      Gettext.with_locale(TymeslotWeb.Gettext, "de", fn ->
+        refute Formatting.format_location(%{location_type: :phone, location: "Phone Call"}) ==
+                 "Phone Call"
+      end)
+    end
+
     test "returns the raw location string for other location types" do
       assert Formatting.format_location(%{location: "Room 42"}) == "Room 42"
 

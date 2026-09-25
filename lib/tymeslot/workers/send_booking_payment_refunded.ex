@@ -13,6 +13,9 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   enqueued. Standard Oban retry semantics apply: up to five attempts on
   the `:emails` queue with the platform's CircuitBreaker handling
   upstream-mailer failures.
+
+  The send is claimed through `Tymeslot.Workers.DeliveryClaims`, so a job the
+  Oban lifeline rescues after the email went out does not send it again.
   """
 
   use Oban.Worker,
@@ -32,10 +35,11 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.TransactionalEmailDelivery
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"booking_payment_id" => booking_payment_id}}) do
+  def perform(%Oban.Job{args: %{"booking_payment_id" => booking_payment_id}} = job) do
     case MeetingPayments.get_payment(booking_payment_id) do
       nil ->
         Logger.warning("Refund email skipped — booking_payment not found",
@@ -52,7 +56,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
         :ok
 
       %BookingPaymentSchema{} = payment ->
-        send_email(payment)
+        send_email(payment, job)
     end
   end
 
@@ -64,10 +68,10 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
     {:discard, "missing booking_payment_id"}
   end
 
-  defp send_email(payment) do
+  defp send_email(payment, job) do
     case build_context(payment) do
       {:ok, context} ->
-        deliver(context, payment)
+        DeliveryClaims.once(job, "refund_email", fn -> deliver(context, payment) end)
 
       {:error, :missing_attendee_email} ->
         Logger.warning("Refund email skipped — booking_payment has no attendee_email",

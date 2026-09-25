@@ -9,6 +9,7 @@ defmodule Tymeslot.Emails.Shared.Callouts do
   """
 
   alias Tymeslot.Emails.Shared.Sanitise
+  alias Tymeslot.Emails.Shared.Stack
   alias Tymeslot.Emails.Shared.Styles
   alias Tymeslot.Emails.Shared.Styles.Tokens
 
@@ -53,7 +54,7 @@ defmodule Tymeslot.Emails.Shared.Callouts do
         ""
       end
 
-    """
+    Stack.spaced("""
     <mj-section
       padding="16px 18px"
       background-color="#{tokens.tint}"
@@ -73,6 +74,6 @@ defmodule Tymeslot.Emails.Shared.Callouts do
         </mj-text>
       </mj-column>
     </mj-section>
-    """
+    """)
   end
 end

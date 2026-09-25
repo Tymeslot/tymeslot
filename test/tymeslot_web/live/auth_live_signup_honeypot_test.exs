@@ -93,7 +93,12 @@ defmodule TymeslotWeb.AuthLiveSignupHoneypotTest do
 
     assert html =~ "reached the limit of 5 verification emails per hour"
 
-    assert_receive {:captured_log, %{meta: %{event_type: "rate_limit_violation"} = meta}}
-    assert meta.limit_type == "email_verification_honeypot"
+    assert_receive {:captured_log,
+                    %{
+                      meta: %{
+                        event_type: "rate_limit_violation",
+                        limit_type: "email_verification_honeypot"
+                      }
+                    }}
   end
 end

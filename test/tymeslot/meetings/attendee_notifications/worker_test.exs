@@ -12,6 +12,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Workers.EmailWorker
 
   setup do
     starts_at = ~U[2026-01-01 10:00:00.000000Z]
@@ -63,6 +64,33 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
       reloaded = Repo.get!(ProviderCalendarEventSchema, event.id)
       assert reloaded.ical_sequence == 1
       assert reloaded.last_notified_state["title"] == "new title"
+    end
+
+    # The dispatch (an EmailWorker insert) and the new baseline commit in one
+    # transaction, so a job the Oban lifeline re-runs after that commit diffs
+    # against the baseline it already wrote and finds nothing to send.
+    test "a rescued job dispatches the change notification once", %{event: event} do
+      {:ok, event} =
+        event
+        |> Changeset.change(summary: "new title")
+        |> Repo.update()
+
+      {:ok, job} =
+        %{"event_id" => event.id, "kind" => "provider_calendar_event", "action" => "update"}
+        |> Worker.new()
+        |> Oban.insert()
+
+      assert :ok = Worker.perform(job)
+      assert :ok = Worker.perform(job)
+
+      reloaded = Repo.get!(ProviderCalendarEventSchema, event.id)
+      assert reloaded.ical_sequence == 1
+
+      assert [_one] =
+               all_enqueued(
+                 worker: EmailWorker,
+                 args: %{"action" => "send_event_update_notification"}
+               )
     end
 
     test "no-ops when diff is empty (user reverted edits)", %{event: event} do

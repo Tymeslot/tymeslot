@@ -1,46 +1,78 @@
 defmodule TymeslotWeb.OutlookCalendarWebhookController do
   @moduledoc """
-  Handles incoming Microsoft Graph change notifications for Outlook Calendar.
+  Receives Microsoft Graph webhooks for Outlook Calendar subscriptions.
 
-  Microsoft Graph delivers notifications in two forms:
+  Each subscription carries two URLs, one per action here:
 
-    1. Validation challenge — a GET or POST with `?validationToken=...`. We must
-       respond with the token as plain text within 10 seconds to confirm ownership
-       of the endpoint before Graph will activate the subscription.
+    * `notification/2` (`POST /webhooks/outlook-calendar`) receives change
+      notifications: a JSON body whose `value` list names the subscription,
+      its `clientState` and the changed event.
 
-    2. Change notifications — a POST with a JSON body containing one or more
-       notification objects. Each notification identifies a subscription and
-       carries a `clientState` value. The controller hands the list to
-       `Tymeslot.Integrations.Calendar.Webhooks`, which verifies each one
-       against the stored secret and enqueues the sync.
+    * `lifecycle/2` (`POST /webhooks/outlook-lifecycle`) receives lifecycle
+      events: `reauthorizationRequired` when the subscription's grant needs
+      refreshing, and `subscriptionRemoved` when Graph has dropped it and it
+      has to be registered again.
 
-  Every change notification payload receives HTTP 202, whatever shape it
-  arrives in; validation challenges receive HTTP 200 with the token echoed
-  back. Invalid or unknown notifications are silently skipped. A source
-  address that floods the endpoint gets 429.
+  Graph validates both URLs with the same synchronous handshake, a POST
+  carrying `?validationToken=...`: the token has to come back verbatim as
+  plain text with 200 within seconds, or the whole subscription is rejected.
+  A token carrying non-printable bytes is refused with 400 rather than echoed.
+
+  Every other payload is handed to `Tymeslot.Integrations.Calendar.Webhooks`,
+  which verifies each entry against the stored secret and enqueues the work,
+  and is acknowledged with 202 whatever shape it arrives in, so Graph does
+  not retry. Invalid or unknown entries are skipped silently.
+
+  Both endpoints share the calendar push bucket per source address, sized so
+  that provider traffic never reaches it (see
+  `Tymeslot.Security.RateLimiter.Calendar.check_push_endpoint/1`). A source
+  that floods them gets 429, which Graph retries.
   """
 
   use TymeslotWeb, :controller
 
   alias Tymeslot.Integrations.Calendar.Webhooks, as: CalendarWebhooks
-  alias TymeslotWeb.Helpers.GraphWebhook
+  alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Helpers.ClientIP
 
   @doc """
   Receives a Microsoft Graph change notification or validation challenge.
   """
-  @spec webhook(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def webhook(conn, %{"validationToken" => token})
-      when is_binary(token) and byte_size(token) > 0 and byte_size(token) <= 256 do
-    GraphWebhook.answer_validation_challenge(conn, token)
+  @spec notification(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def notification(conn, params),
+    do: handle(conn, params, &CalendarWebhooks.handle_outlook_notifications/1)
+
+  @doc """
+  Receives a Microsoft Graph lifecycle notification or validation challenge.
+  """
+  @spec lifecycle(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def lifecycle(conn, params),
+    do: handle(conn, params, &CalendarWebhooks.handle_outlook_lifecycle_notifications/1)
+
+  defp handle(conn, params, handle_notifications) do
+    case RateLimiter.check_calendar_push_rate_limit(ClientIP.get(conn)) do
+      :ok -> respond(conn, params, handle_notifications)
+      {:error, :rate_limited} -> conn |> send_resp(429, "") |> halt()
+    end
   end
 
-  def webhook(conn, _params) do
-    GraphWebhook.with_rate_limit(conn, fn ->
-      conn.body_params
-      |> get_in(["value"])
-      |> CalendarWebhooks.handle_outlook_notifications()
+  defp respond(conn, %{"validationToken" => token}, _handle_notifications)
+       when is_binary(token) and byte_size(token) > 0 and byte_size(token) <= 256 do
+    if String.printable?(token) do
+      conn
+      |> put_resp_content_type("text/plain")
+      |> send_resp(200, token)
+      |> halt()
+    else
+      conn |> send_resp(400, "") |> halt()
+    end
+  end
 
-      conn |> send_resp(202, "") |> halt()
-    end)
+  defp respond(conn, _params, handle_notifications) do
+    conn.body_params
+    |> get_in(["value"])
+    |> handle_notifications.()
+
+    conn |> send_resp(202, "") |> halt()
   end
 end

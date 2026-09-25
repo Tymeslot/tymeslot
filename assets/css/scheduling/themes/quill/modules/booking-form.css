@@ -567,3 +567,131 @@
     margin-top: var(--space-xs);
   }
 }
+
+/* ===== Location picker ===== */
+/* The radio group the booker chooses a location from, shown only when the
+   meeting type offers more than one. Scoped to the Quill wrapper so it
+   inherits the theme's glass surfaces, radii and accent, exactly as the
+   guest field does. */
+
+.quill-theme-wrapper .location-field {
+  margin: 0 0 var(--space-sm);
+  padding: 0;
+  border: none;
+}
+
+.quill-theme-wrapper .location-field__label {
+  padding: 0;
+  margin-bottom: var(--space-xs);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-opacity-medium-high);
+}
+
+.quill-theme-wrapper .location-group {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+.quill-theme-wrapper .location-group + .location-group {
+  margin-top: var(--space-sm);
+}
+.quill-theme-wrapper .location-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3xs);
+  margin: 0;
+  padding: var(--space-3xs);
+  background: var(--option-tile-bg);
+  border: var(--border-width-thin) solid var(--option-tile-border);
+  border-radius: var(--input-border-radius);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+}
+.quill-theme-wrapper .location-option {
+  position: relative;
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-md);
+  color: var(--option-tile-text);
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.quill-theme-wrapper .location-option:hover {
+  background: var(--option-tile-bg-hover);
+  color: white;
+}
+.quill-theme-wrapper .location-option:has(.location-option__radio:focus-visible) {
+  box-shadow: 0 0 0 3px var(--theme-primary-focus);
+}
+.quill-theme-wrapper .location-option--selected,
+.quill-theme-wrapper .location-option--selected:hover {
+  background: var(--theme-primary-solid);
+  color: var(--theme-on-primary);
+}
+/* The native radio stays in the page for keyboard and screen-reader use;
+   the toggle it sits in is what the booker sees. */
+.quill-theme-wrapper .location-option__radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.quill-theme-wrapper .location-option__icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+}
+.quill-theme-wrapper .location-field__detail {
+  margin: var(--space-2xs) 0 0;
+  font-size: var(--theme-font-size-sm);
+  color: var(--text-opacity-subtle);
+}
+.quill-theme-wrapper .location-phone {
+  margin-top: var(--space-xs);
+}
+
+.quill-theme-wrapper .location-phone__label {
+  display: block;
+  margin-bottom: var(--space-3xs);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-opacity-medium-high);
+}
+
+.quill-theme-wrapper .location-phone__input {
+  width: 100%;
+  max-width: 100%;
+  padding: var(--input-padding);
+  border: var(--border-width-thin) solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--input-border-radius);
+  background: rgba(255, 255, 255, 0.92);
+  color: rgb(15, 23, 42);
+  font-size: var(--theme-font-size-base);
+  transition: var(--transition-normal);
+  box-sizing: border-box;
+}
+
+.quill-theme-wrapper .location-phone__input:focus {
+  outline: none;
+  background: white;
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 3px var(--theme-primary-focus);
+}
+
+.quill-theme-wrapper .location-field__error {
+  margin-top: var(--space-3xs);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-error-light);
+}

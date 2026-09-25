@@ -2,10 +2,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   @moduledoc """
   LiveComponent that renders and manages the Meeting Type form UI state.
 
-  It handles local UI events (validate, icon selection, meeting mode toggle,
-  provider selection). When editing an existing meeting type, each change
-  auto-saves via `MeetingTypeForm.Autosave`; when creating a new one, the
-  parent component handles the final "Create" submit/persist event.
+  It handles local UI events (validate, icon selection, calendar destination).
+  When editing an existing meeting type, each change auto-saves via
+  `MeetingTypeForm.Autosave`; when creating a new one, the parent component
+  handles the final "Create" submit/persist event.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.ApprovalWindow
   alias Tymeslot.Utils.ReminderUtils
+  alias TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
@@ -43,8 +44,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:form_errors, %{})
      |> assign(:form_data, %{})
      |> assign(:selected_icon, "none")
-     |> assign(:meeting_mode, "personal")
-     |> assign(:selected_video_integration_id, nil)
+     |> assign(:locations, [])
      |> assign(:selected_calendar_integration_id, nil)
      |> assign(:selected_target_calendar_id, nil)
      |> assign(:selected_availability_schedule_id, nil)
@@ -65,6 +65,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:save_status, :saved)
      |> assign(:editing_question, nil)
      |> assign(:editing_question_mode, :add)
+     |> assign(:editing_location, nil)
+     |> assign(:editing_location_mode, :add)
      |> assign(:custom_questions_allowed, true)
      |> assign(:payments_feature_enabled, false)
      |> assign(:payments_charges_enabled, false)
@@ -88,15 +90,16 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       |> assign(assigns)
       |> Init.maybe_initialize()
 
-    # Custom-question edits arrive here as a `send_update` carrying
-    # `:custom_fields` (add/edit/delete/reorder). Persist them like any other
-    # change so auto-save covers the question editor too.
+    # Custom-question and location edits arrive here as a `send_update`
+    # carrying `:custom_fields` or `:locations` (add/edit/delete/reorder).
+    # Persist them like any other change so auto-save covers both editors.
     #
     # Deferred autosave retries (throttle backoff) arrive as `trigger_autosave: true`.
     #
     # Other send_updates (calendar refresh, reminder-confirmation clearing) don't
     # carry either key and skip the autosave.
-    if Map.has_key?(assigns, :custom_fields) or Map.get(assigns, :trigger_autosave) == true do
+    if Map.has_key?(assigns, :custom_fields) or Map.has_key?(assigns, :locations) or
+         Map.get(assigns, :trigger_autosave) == true do
       {:ok, Autosave.maybe_run(socket)}
     else
       {:ok, socket}
@@ -151,40 +154,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("toggle_meeting_mode", %{"mode" => mode}, socket) do
-    socket =
-      socket
-      |> assign(:meeting_mode, mode)
-      |> assign(
-        :form_errors,
-        FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :video_integration)
-      )
-
-    {:noreply, Autosave.maybe_run(socket)}
-  end
-
-  @impl Phoenix.LiveComponent
   def handle_event("select_icon", %{"icon" => icon}, socket) do
     {:noreply, socket |> assign(:selected_icon, icon) |> Autosave.maybe_run()}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("select_video_integration", %{"id" => id}, socket) do
-    integration_id =
-      case id do
-        id when is_binary(id) -> String.to_integer(id)
-        id when is_integer(id) -> id
-      end
-
-    socket =
-      socket
-      |> assign(:selected_video_integration_id, integration_id)
-      |> assign(
-        :form_errors,
-        FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :video_integration)
-      )
-
-    {:noreply, Autosave.maybe_run(socket)}
   end
 
   @impl Phoenix.LiveComponent
@@ -404,7 +375,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
          |> assign(
            :reminder_confirmation,
            dgettext("dashboard_meeting_form", "Added %{label} before",
-             label: ReminderUtils.format_reminder_label(reminder.value, reminder.unit)
+             label: Reminders.reminder_label(reminder.value, reminder.unit)
            )
          )
          |> assign(:reminder_error, nil)
@@ -435,7 +406,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
            show_custom_reminder: false,
            reminder_confirmation:
              dgettext("dashboard_meeting_form", "Added %{label} before",
-               label: ReminderUtils.format_reminder_label(reminder.value, reminder.unit)
+               label: Reminders.reminder_label(reminder.value, reminder.unit)
              )
          )
          |> Autosave.maybe_run()}

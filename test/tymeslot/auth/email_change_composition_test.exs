@@ -25,6 +25,7 @@ defmodule Tymeslot.Auth.EmailChangeCompositionTest do
 
   alias Tymeslot.Auth.EmailChange
   alias Tymeslot.Auth.{UserQueries, UserSessionSchema}
+  alias Tymeslot.Emails.EmailScheduler.LinkArg
   alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
 
@@ -73,7 +74,7 @@ defmodule Tymeslot.Auth.EmailChangeCompositionTest do
           args: %{"action" => "send_email_change_verification", "user_id" => user.id}
         )
 
-      raw_token = extract_token_from_url(verification_job.args["verification_url"])
+      raw_token = extract_token_from_url(emailed_link(verification_job, "verification_url"))
 
       # Step 3: verify — swaps the email, clears pending state, invalidates
       # sessions, enqueues the post-change confirmation emails.
@@ -112,5 +113,11 @@ defmodule Tymeslot.Auth.EmailChangeCompositionTest do
   defp sessions_for(user_id) do
     import Ecto.Query
     Repo.all(from s in UserSessionSchema, where: s.user_id == ^user_id)
+  end
+
+  # The link is stored encrypted in the job args; read it back as the worker does.
+  defp emailed_link(job, key) do
+    {:ok, url} = LinkArg.fetch(job.args, key)
+    url
   end
 end

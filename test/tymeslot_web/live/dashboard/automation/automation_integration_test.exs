@@ -9,15 +9,15 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.TestFixtures
   import Tymeslot.Factory
-  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.ConfigTestHelpers
+  alias Tymeslot.Onboarding.OnboardingQueries
   alias Tymeslot.Webhooks
   alias Tymeslot.Workers.WebhookWorker
 
   setup %{conn: conn} do
     # Create a user and log them in
     user = create_user_fixture()
-    {:ok, user} = UserQueries.mark_onboarding_complete(user)
+    {:ok, user} = OnboardingQueries.mark_onboarding_complete(user)
 
     ConfigTestHelpers.setup_config(:tymeslot,
       feature_access_checker: Tymeslot.Features.DefaultAccessChecker

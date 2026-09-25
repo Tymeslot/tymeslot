@@ -1105,3 +1105,18 @@ msgstr "Мова всіх листів про цю зустріч — для г�
 #, elixir-autogen, elixir-format
 msgid "What the meeting is about, where to meet, anything they should bring..."
 msgstr "Про що йдеться, де зустрітися, що взяти із собою…"
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
+msgstr "Подію скопійовано в новий календар, але переміщення не завершено. Перевірте початковий календар і видаліть оригінал, якщо він там ще є."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "This event is a booking, so its video link belongs to the booking. Reschedule or cancel the booking to change it."
+msgstr "Ця подія є бронюванням, тому її відеопосилання належить бронюванню. Щоб змінити його, перенесіть або скасуйте бронювання."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Google Calendar added Google Meet to the event but has not returned its link yet. Choose Google Meet again to fetch it."
+msgstr "Google Календар додав Google Meet до події, але ще не повернув посилання. Виберіть Google Meet ще раз, щоб отримати його."

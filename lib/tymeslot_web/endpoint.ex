@@ -197,6 +197,7 @@ defmodule TymeslotWeb.Endpoint do
   @spec request_log_level(Plug.Conn.t()) :: Logger.level() | false
   def request_log_level(%Plug.Conn{path_info: ["auth", "verify-complete" | _rest]}), do: false
   def request_log_level(%Plug.Conn{path_info: ["auth", "reset-password", _token]}), do: false
+  def request_log_level(%Plug.Conn{path_info: ["auth", "oauth", "confirm", _token]}), do: false
   def request_log_level(%Plug.Conn{path_info: ["email-change", _token]}), do: false
   def request_log_level(%Plug.Conn{path_info: ["guest", _token, _response]}), do: false
   def request_log_level(%Plug.Conn{path_info: ["free-busy", _token]}), do: false

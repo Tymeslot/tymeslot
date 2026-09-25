@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Live.Scheduling.BookingConfig
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
+  alias TymeslotWeb.Themes.Shared.BookingLocation
 
   @type transition_fun :: (Phoenix.LiveView.Socket.t(), atom(), map() ->
                              Phoenix.LiveView.Socket.t())
@@ -38,35 +39,49 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
     if socket.assigns[:submitting] do
       {:noreply, socket}
     else
-      socket = assign(socket, :submitting, true)
-
-      case BookingSubmissionHandlerComponent.submit_booking(socket, booking_params) do
+      case BookingLocation.validate(socket) do
         {:ok, socket} ->
-          {:noreply, transition_fun.(socket, :confirmation, %{})}
+          dispatch_booking(socket, booking_params, transition_fun)
 
-        {:redirect, socket} ->
-          {:noreply, socket}
-
-        {:awaiting_payment, socket} ->
-          {:noreply, transition_fun.(socket, :awaiting_payment, %{})}
-
-        {:slot_taken, socket} ->
-          {:noreply, return_to_schedule_for_new_slot(socket, transition_fun)}
-
-        {:honeypot, socket} ->
-          {:noreply,
-           put_flash(
-             socket,
-             :info,
-             dgettext(
-               "booking",
-               "Booking submitted successfully! You'll receive a confirmation email shortly."
-             )
-           )}
-
+        # The chosen location asks the booker for something they have not
+        # given yet (a phone number to call them on). Surfaced inline on the
+        # picker rather than as a flash, and never dispatched, so no meeting
+        # is created half-addressed.
         {:error, socket} ->
           {:noreply, assign(socket, :submitting, false)}
       end
+    end
+  end
+
+  defp dispatch_booking(socket, booking_params, transition_fun) do
+    socket = assign(socket, :submitting, true)
+
+    case BookingSubmissionHandlerComponent.submit_booking(socket, booking_params) do
+      {:ok, socket} ->
+        {:noreply, transition_fun.(socket, :confirmation, %{})}
+
+      {:redirect, socket} ->
+        {:noreply, socket}
+
+      {:awaiting_payment, socket} ->
+        {:noreply, transition_fun.(socket, :awaiting_payment, %{})}
+
+      {:slot_taken, socket} ->
+        {:noreply, return_to_schedule_for_new_slot(socket, transition_fun)}
+
+      {:honeypot, socket} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :info,
+           dgettext(
+             "booking",
+             "Booking submitted successfully! You'll receive a confirmation email shortly."
+           )
+         )}
+
+      {:error, socket} ->
+        {:noreply, assign(socket, :submitting, false)}
     end
   end
 

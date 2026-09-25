@@ -1091,3 +1091,18 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "What the meeting is about, where to meet, anything they should bring..."
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "This event is a booking, so its video link belongs to the booking. Reschedule or cancel the booking to change it."
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Google Calendar added Google Meet to the event but has not returned its link yet. Choose Google Meet again to fetch it."
+msgstr ""

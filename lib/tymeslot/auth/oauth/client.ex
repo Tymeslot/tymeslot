@@ -1,155 +1,134 @@
 defmodule Tymeslot.Auth.OAuth.Client do
   @moduledoc """
-  OAuth2 client construction, token exchange, and authenticated requests.
-  Also contains provider configuration and header handling.
+  The HTTP side of social sign-in: the authorise URL, the code exchange, and
+  authenticated requests to the provider's API. What differs per provider
+  comes from `Tymeslot.Auth.OAuth.Providers`.
+
+  Requests go through `Tymeslot.Infrastructure.HTTPClient` directly rather
+  than the swappable `:http_client_module`: the provider is the boundary, and
+  tests stub it with `Req.Test`, which that client already routes to.
   """
 
-  @behaviour Tymeslot.Auth.OAuth.ClientBehaviour
+  alias Tymeslot.Auth.OAuth.Providers
+  alias Tymeslot.Infrastructure.HTTPClient
 
-  alias OAuth2.Client
+  require Logger
 
-  @type provider :: :github | :google | :oauth
+  @user_agent "Tymeslot-Scheduler"
+
+  @type provider :: Providers.provider()
+  @type error :: {:provider_rejected, term()} | {:transport, term()} | {:invalid_response, term()}
 
   @doc """
-  Build an OAuth2 client for a provider with redirect_uri and state.
+  The URL that starts the flow at the provider, carrying the state and the
+  PKCE code challenge.
   """
-  @spec build(provider, String.t(), String.t()) :: Client.t()
-  def build(provider, redirect_uri, state) do
-    config = provider_config(provider)
+  @spec authorize_url(provider(), String.t(), %{state: String.t(), code_challenge: String.t()}) ::
+          String.t()
+  def authorize_url(provider, redirect_uri, %{state: state, code_challenge: challenge}) do
+    config = Providers.config(provider)
 
-    Client.new(
-      strategy: OAuth2.Strategy.AuthCode,
-      client_id: config.client_id,
-      client_secret: config.client_secret,
-      redirect_uri: redirect_uri,
-      site: config.site,
-      authorize_url: config.authorize_url,
-      token_url: config.token_url,
-      headers: [{"User-Agent", app_user_agent()}],
-      params: %{"state" => state}
-    )
+    query =
+      Map.merge(Providers.fetch!(provider).authorize_params, %{
+        response_type: "code",
+        client_id: config.client_id,
+        redirect_uri: redirect_uri,
+        scope: config.scope,
+        state: state,
+        code_challenge: challenge,
+        code_challenge_method: "S256"
+      })
+
+    config.authorize_url <> "?" <> URI.encode_query(query)
   end
 
   @doc """
-  Exchange auth code for token.
+  Exchanges the authorisation code for an access token, proving possession
+  of the PKCE code verifier.
+
+  The client authenticates with HTTP Basic and also names itself in the
+  body, which every provider here accepts.
   """
-  @spec exchange_code_for_token(Client.t(), String.t()) :: {:ok, Client.t()} | {:error, any()}
-  def exchange_code_for_token(client, code) do
-    Client.get_token(client, code: code)
-  end
+  @spec exchange_code(provider(), String.t(), String.t(), String.t()) ::
+          {:ok, String.t()} | {:error, error()}
+  def exchange_code(provider, code, code_verifier, redirect_uri) do
+    config = Providers.config(provider)
 
-  @doc """
-  Add Authorization header to client based on provider.
-  """
-  @spec with_auth_header(Client.t(), provider) :: Client.t()
-  def with_auth_header(client, :github) do
-    access_token = parse_access_token(client.token.access_token)
+    body =
+      URI.encode_query(%{
+        grant_type: "authorization_code",
+        code: code,
+        redirect_uri: redirect_uri,
+        client_id: config.client_id,
+        code_verifier: code_verifier
+      })
 
-    %{
-      client
-      | headers: [{"User-Agent", app_user_agent()}, {"Authorization", "token #{access_token}"}]
-    }
-  end
+    headers = [
+      {"Authorization", "Basic " <> Base.encode64("#{config.client_id}:#{config.client_secret}")},
+      {"Content-Type", "application/x-www-form-urlencoded"}
+    ]
 
-  def with_auth_header(client, provider) when provider in [:google, :oauth] do
-    access_token = parse_access_token(client.token.access_token)
+    case request(:post, config.token_url, body, headers) do
+      {:ok, %{"access_token" => token}} when is_binary(token) and token != "" ->
+        {:ok, token}
 
-    %{
-      client
-      | headers: [{"User-Agent", app_user_agent()}, {"Authorization", "Bearer #{access_token}"}]
-    }
-  end
+      # GitHub answers a bad or reused code with 200 and an `error` field.
+      {:ok, %{} = response} ->
+        {:error, {:provider_rejected, Map.get(response, "error", :no_access_token)}}
 
-  @doc """
-  Fetches user information from the provider.
-  """
-  @spec get_user_info(Client.t(), provider) :: {:ok, map()} | {:error, any()}
-  def get_user_info(client, provider) do
-    client = with_auth_header(client, provider)
-    url = user_info_url(provider)
+      {:ok, _not_an_object} ->
+        {:error, {:invalid_response, :not_an_object}}
 
-    case Client.get(client, url) do
-      {:ok, %OAuth2.Response{body: body}} -> decode_oauth_body(body)
-      err -> err
+      {:error, _reason} = error ->
+        error
     end
   end
 
-  defp user_info_url(:github), do: "https://api.github.com/user"
-  defp user_info_url(:google), do: "https://www.googleapis.com/oauth2/v1/userinfo"
-
-  defp user_info_url(:oauth) do
-    config = Application.get_env(:tymeslot, :oauth_provider, [])
-    Keyword.fetch!(config, :userinfo_url)
-  end
-
-  defp decode_oauth_body(body) when is_binary(body), do: Jason.decode(body)
-  defp decode_oauth_body(body) when is_map(body), do: {:ok, body}
-  defp decode_oauth_body(other), do: {:error, {:unexpected_body, other}}
-
-  # Parse access token from JSON or return as-is.
-  @spec parse_access_token(String.t()) :: String.t()
-  defp parse_access_token(json_string) do
-    case Jason.decode(json_string) do
-      {:ok, %{"access_token" => token}} -> token
-      _other -> json_string
+  @doc """
+  The signed-in user's profile from the provider's userinfo endpoint.
+  """
+  @spec fetch_userinfo(provider(), String.t()) :: {:ok, map()} | {:error, error()}
+  def fetch_userinfo(provider, token) do
+    case get(provider, Providers.config(provider).userinfo_url, token) do
+      {:ok, %{} = user_info} -> {:ok, user_info}
+      {:ok, _not_an_object} -> {:error, {:invalid_response, :not_an_object}}
+      {:error, _reason} = error -> error
     end
   end
 
-  defp provider_config(:github), do: github_oauth_config()
-  defp provider_config(:google), do: google_oauth_config()
-  defp provider_config(:oauth), do: generic_oauth_config()
-
-  # Provider configuration
-
-  defp github_oauth_config do
-    %{
-      client_id: System.get_env("GITHUB_CLIENT_ID"),
-      client_secret: System.get_env("GITHUB_CLIENT_SECRET"),
-      site: "https://github.com",
-      authorize_url: "https://github.com/login/oauth/authorize",
-      token_url: "https://github.com/login/oauth/access_token"
-    }
+  @doc """
+  An authenticated GET against the provider's API, decoded from JSON.
+  """
+  @spec get(provider(), String.t(), String.t()) :: {:ok, term()} | {:error, error()}
+  def get(provider, url, token) do
+    authorization = "#{Providers.fetch!(provider).auth_scheme} #{token}"
+    request(:get, url, "", [{"Authorization", authorization}])
   end
 
-  defp google_oauth_config do
-    %{
-      client_id: System.get_env("GOOGLE_CLIENT_ID"),
-      client_secret: System.get_env("GOOGLE_CLIENT_SECRET"),
-      site: "https://accounts.google.com",
-      authorize_url: "https://accounts.google.com/o/oauth2/v2/auth",
-      token_url: "https://oauth2.googleapis.com/token"
-    }
-  end
+  defp request(method, url, body, headers) do
+    headers = [{"User-Agent", @user_agent}, {"Accept", "application/json"} | headers]
 
-  defp generic_oauth_config do
-    config = Application.get_env(:tymeslot, :oauth_provider, [])
+    case HTTPClient.request(method, url, body, headers) do
+      {:ok, %{status: status, body: body}} when status in 200..299 ->
+        decode(body)
 
-    required_keys = [:client_id, :client_secret, :site, :authorize_url, :token_url]
+      {:ok, %{status: status}} ->
+        Logger.warning("OAuth provider refused a request",
+          origin: HTTPClient.log_safe_origin(url),
+          status: status
+        )
 
-    missing =
-      Enum.filter(required_keys, fn key ->
-        case Keyword.fetch(config, key) do
-          {:ok, val} when val != nil -> false
-          _missing_or_nil -> true
-        end
-      end)
+        {:error, {:provider_rejected, status}}
 
-    if missing != [] do
-      raise "Generic OAuth config incomplete — missing keys: #{inspect(missing)}. " <>
-              "Set the corresponding OAUTH_* environment variables."
+      {:error, reason} ->
+        {:error, {:transport, reason}}
     end
-
-    %{
-      client_id: Keyword.fetch!(config, :client_id),
-      client_secret: Keyword.fetch!(config, :client_secret),
-      site: Keyword.fetch!(config, :site),
-      authorize_url: Keyword.fetch!(config, :authorize_url),
-      token_url: Keyword.fetch!(config, :token_url)
-    }
   end
 
-  defp app_user_agent do
-    # User agent for OAuth requests
-    "Tymeslot-Scheduler"
+  defp decode(body) do
+    case Jason.decode(body) do
+      {:ok, decoded} -> {:ok, decoded}
+      {:error, _decode_error} -> {:error, {:invalid_response, :not_json}}
+    end
   end
 end

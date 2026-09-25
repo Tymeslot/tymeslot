@@ -1104,3 +1104,18 @@ msgstr "Jazyk všech e-mailů o této schůzce – pro hosta i pro všechny dal�
 #, elixir-autogen, elixir-format
 msgid "What the meeting is about, where to meet, anything they should bring..."
 msgstr "O čem to bude, kde se sejdete, co si vzít s sebou…"
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
+msgstr "Událost byla zkopírována do nového kalendáře, ale přesun se nedokončil. Zkontrolujte prosím původní kalendář a smažte původní událost, pokud tam stále je."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "This event is a booking, so its video link belongs to the booking. Reschedule or cancel the booking to change it."
+msgstr "Tato událost je rezervace, takže její odkaz na video patří k rezervaci. Chcete-li jej změnit, přeplánujte nebo zrušte rezervaci."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Google Calendar added Google Meet to the event but has not returned its link yet. Choose Google Meet again to fetch it."
+msgstr "Kalendář Google přidal k události Google Meet, ale zatím nevrátil jeho odkaz. Vyberte Google Meet znovu, abyste jej získali."

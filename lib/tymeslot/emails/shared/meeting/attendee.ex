@@ -7,7 +7,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Attendee do
   matches the surrounding stage band.
   """
 
-  alias Tymeslot.Emails.Shared.{Sanitise, Styles}
+  alias Tymeslot.Emails.Shared.{Sanitise, Stack, Styles}
   alias Tymeslot.Emails.Shared.Styles.Tokens
   alias Tymeslot.Security.UniversalSanitizer
 
@@ -83,7 +83,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Attendee do
 
     tokens = Styles.intent(intent)
 
-    """
+    Stack.spaced("""
     <mj-section
       padding="14px 18px"
       background-color="#{tokens.tint}"
@@ -113,7 +113,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Attendee do
         </mj-text>
       </mj-column>
     </mj-section>
-    """
+    """)
   end
 
   def attendee_message_box(intent, _message, _from) when is_atom(intent), do: ""

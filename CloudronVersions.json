@@ -3787,6 +3787,53 @@
       },
       "publishState": "published",
       "ts": "Tue, 22 Sep 2026 14:06:16 GMT"
+    },
+    "1.18.0": {
+      "creationDate": "Fri, 25 Sep 2026 07:21:32 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "Bookers can now choose where a meeting is held, sign-in and sign-up are hardened so they no longer reveal which email addresses have accounts, and Microsoft Teams bookings keep their join links.\n* The booking page can let guests choose where to meet: in person, by phone, or on one of several video services\n* Guests can switch to another meeting location when they reschedule, instead of cancelling and booking again\n* Microsoft Teams bookings no longer confirm without a join link, or lose it when moved back and forth\n* For self-hosters: admin alerts now warn when calendar connections start failing across many accounts\n* The timezone picker adds France's overseas territories and finds cities typed without their accents",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:1.18.0",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!\n\nSet PHX_HOST to your app domain, either on the Environment tab or by editing /app/data/.env, which is pre-filled with every supported variable, commented out (cloudron exec --app <domain> -- vi /app/data/.env). Values set on the Environment tab take precedence over that file. Restart the app after editing it.\n\nThe first user to register becomes the admin.",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "1.18.0",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Fri, 25 Sep 2026 07:21:32 GMT"
     }
   }
 }

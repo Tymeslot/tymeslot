@@ -11,14 +11,14 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
   import Tymeslot.Factory
   import Tymeslot.TestHelpers.Eventually
 
-  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.ConfigTestHelpers
+  alias Tymeslot.Onboarding.OnboardingQueries
   alias Tymeslot.Telegram
   alias Tymeslot.Telegram.TelegramQueries
 
   setup %{conn: conn} do
     user = create_user_fixture()
-    {:ok, user} = UserQueries.mark_onboarding_complete(user)
+    {:ok, user} = OnboardingQueries.mark_onboarding_complete(user)
 
     ConfigTestHelpers.setup_config(:tymeslot,
       telegram_notifications_allowed: true,

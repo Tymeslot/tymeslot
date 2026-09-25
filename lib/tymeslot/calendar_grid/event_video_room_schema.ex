@@ -1,8 +1,10 @@
 defmodule Tymeslot.CalendarGrid.EventVideoRoomSchema do
   @moduledoc """
-  A video room made for an event created on the dashboard calendar grid, kept
-  for providers whose rooms stay on the organiser's server until something
-  deletes them (`ProviderConfig.rooms_deleted_after_meeting/0`).
+  A video room made for an event on the dashboard calendar grid, kept for the
+  providers whose rooms have to follow their event
+  (`ProviderConfig.rooms_recorded_for_grid_events/0`): those whose rooms stay
+  on the organiser's server until something deletes them, and a Teams meeting
+  held as a separate Outlook event.
 
   The event is addressed within `calendar_integration_id` by `event_uid`, the
   uid Tymeslot generated for it, and `provider_event_id`, the identifier the

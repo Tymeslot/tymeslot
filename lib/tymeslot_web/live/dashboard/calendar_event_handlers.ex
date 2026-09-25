@@ -174,6 +174,16 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
      )}
   end
 
+  # Something failed once the new calendar had accepted the event, so it is
+  # there, and whether the original is too cannot be said.
+  defp moved_flash(:unknown) do
+    {:warning,
+     dgettext(
+       "dashboard_calendar_events",
+       "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
+     )}
+  end
+
   defp move_failed_message(:recurring_event), do: EditWorkflow.recurring_move_refused_message()
 
   defp move_failed_message(_reason) do
@@ -285,6 +295,16 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
 
     {:noreply, put_flash(socket, :error, video_failed_message(payload[:reason]))}
   end
+
+  defp video_failed_message(:meet_link_pending) do
+    dgettext(
+      "dashboard_calendar_events",
+      "Google Calendar added Google Meet to the event but has not returned its link yet. Choose Google Meet again to fetch it."
+    )
+  end
+
+  defp video_failed_message(:linked_to_booking),
+    do: EditWorkflow.booking_video_refused_message()
 
   defp video_failed_message(:missing_meeting_url) do
     dgettext(

@@ -32,6 +32,8 @@ defmodule Tymeslot.Application do
   alias Tymeslot.Mailer.HealthCheck, as: MailerHealthCheck
   alias Tymeslot.Telegram.BotSetup
   alias TymeslotWeb.Endpoint
+  alias TymeslotWeb.Plugs.AdditionalDashboardPlugs
+  alias TymeslotWeb.Router
 
   @impl Application
   def start(_type, _args) do
@@ -227,6 +229,11 @@ defmodule Tymeslot.Application do
 
     # Validate database connection pool configuration
     validate_db_pool_config!()
+
+    # The additional dashboard hooks and plugs are deployment gates: refuse to
+    # start with one that could not run, rather than failing at first use.
+    Router.validate_additional_hooks!()
+    AdditionalDashboardPlugs.validate_config!()
   end
 
   # The startup checks that only work once the rest of the tree is up: the
