@@ -207,8 +207,19 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   # is then newer than the token and comes back in the next delta, where
   # applying it again is harmless; read afterwards, that change would be
   # skipped for good.
+  #
+  # A server that answers the probe without a token has no sync-collection to
+  # offer, whatever its property list advertised: `TierDetector` takes the
+  # element's presence at face value, and a server that does not support it
+  # lists it under a 404 propstat all the same. Fetching without a token would
+  # leave the path tokenless for good, and every cycle would repeat this full
+  # fetch where Tier 2 costs one CTag PROPFIND. Before the probe existed the
+  # REPORT's refusal did the demoting; the empty probe has to do it now.
   defp tier1_initial(integration, client, path, calendar_url) do
     case SyncCollectionReport.fetch_sync_token(calendar_url, client) do
+      {:ok, nil} ->
+        {:error, {:sync_collection_refused, :no_sync_token}}
+
       {:ok, sync_token} ->
         EventFetch.fetch_path(integration, client, path, new_sync_token: sync_token)
 
