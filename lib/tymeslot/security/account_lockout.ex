@@ -19,10 +19,21 @@ defmodule Tymeslot.Security.AccountLockout do
     failures, so the counter freezes at the threshold and a higher one is
     unreachable by sequential brute force.
   - Making it reachable would mean recording attempts the pre-check already
-    rejected. The counter is keyed on the email address alone, in a node-local
-    table, so that hands anyone who knows a victim's address a way to lock
-    that account out at will. A throttle that re-opens hourly degrades an
+    rejected, which turns the throttle into a lock anyone who can reach the
+    login form can set off. A throttle that re-opens hourly degrades an
     attacker; a hard lock triggered the same way degrades the account owner.
+
+  ## Keyed on the email and the client address
+
+  `Tymeslot.Security.RateLimiter.Auth` passes an identifier of the form
+  `"email|ip"` (for IPv6 the client's /64, which one host can rotate
+  through freely), so failures from one address throttle only that address
+  against that account, and the owner can still sign in from anywhere else.
+  Keyed on the email alone, ten wrong guesses from anywhere locked the owner
+  out of their own account for up to an hour. A run spread across many
+  addresses is caught instead by the rate limiter's per-email ceiling (50
+  attempts per 30 minutes, whatever the address), which only trips under a
+  distributed attack. This module itself treats the identifier as opaque.
 
   A previous revision defined a 20-failure tier returning `:account_locked`
   with a flat four-hour duration. It was removed rather than repaired: it never

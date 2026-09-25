@@ -1098,3 +1098,18 @@ msgid "Add up to %{count} reminder email for this meeting. The guest and anyone 
 msgid_plural "Add up to %{count} reminder emails for this meeting. The guest and anyone else invited receive it."
 msgstr[0] "Aggiungi fino a %{count} email di promemoria per questa riunione. La riceveranno l’ospite e tutti gli altri invitati."
 msgstr[1] "Aggiungi fino a %{count} email di promemoria per questa riunione. Le riceveranno l’ospite e tutti gli altri invitati."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
+msgstr "Evento copiato nel nuovo calendario, ma lo spostamento non è stato completato. Controlla il suo calendario di origine ed elimina l'originale se è ancora presente."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "This event is a booking, so its video link belongs to the booking. Reschedule or cancel the booking to change it."
+msgstr "Questo evento è una prenotazione, quindi il suo link video appartiene alla prenotazione. Riprogramma o annulla la prenotazione per modificarlo."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Google Calendar added Google Meet to the event but has not returned its link yet. Choose Google Meet again to fetch it."
+msgstr "Google Calendar ha aggiunto Google Meet all'evento ma non ha ancora restituito il link. Scegli di nuovo Google Meet per recuperarlo."

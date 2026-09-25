@@ -5,13 +5,15 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
   provider event and the cached row.
 
   The video provider is reached through its real adapter with HTTP stubbed at
-  `Tymeslot.HTTPClientMock` (MiroTalk for creation, Zoom where a room has to
-  be deleted); the calendar write is stubbed at `Tymeslot.CalendarMock`.
+  `Tymeslot.HTTPClientMock` (MiroTalk for creation, Zoom where the queued
+  delete of a room is run); the calendar write is stubbed at
+  `Tymeslot.CalendarMock`.
   """
 
   # Not async: provider failures here are witnessed by the application-wide
   # video circuit breakers, which DataCase only resets between non-async modules.
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :calendar
   @moduletag :video
@@ -27,6 +29,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
   alias Tymeslot.Integrations.Video.Providers.LinkRoom
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Test.LogCapture
+  alias Tymeslot.Workers.VideoSyncWorker
 
   setup :verify_on_exit!
 
@@ -310,7 +313,10 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       assert row.colour == "tomato"
     end
 
-    test "deletes the room it no longer uses", %{user: user, integration: integration} do
+    test "queues the delete of the Zoom room it no longer uses, by the meeting id", %{
+      user: user,
+      integration: integration
+    } do
       zoom = insert_zoom_integration(user)
       zoom_url = "https://zoom.us/j/86360699337"
 
@@ -322,6 +328,19 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
         })
 
       expect_provider_update(:ok)
+
+      assert {:ok, nil} = CalendarGrid.change_event_video(user.id, event, nil)
+      assert_received {:provider_update, _uid, %{description: ""}}
+
+      args = %{
+        "user_id" => user.id,
+        "video_integration_id" => zoom.id,
+        "room_id" => "86360699337",
+        "action" => "delete"
+      }
+
+      assert_enqueued(worker: VideoSyncWorker, args: args)
+
       stub(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
 
       expect(Tymeslot.HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
@@ -329,8 +348,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
         {:ok, %Req.Response{status: 204, body: ""}}
       end)
 
-      assert {:ok, nil} = CalendarGrid.change_event_video(user.id, event, nil)
-      assert_received {:provider_update, _uid, %{description: ""}}
+      assert :ok = perform_job(VideoSyncWorker, args)
     end
 
     test "deletes nothing when no provider recognises the link it drops", %{
@@ -364,10 +382,11 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
 
       assert {:ok, nil} = CalendarGrid.change_event_video(user.id, event, nil)
       refute_received {:room_deleted, _url}
+      refute_enqueued(worker: VideoSyncWorker)
       assert reload(event).video_link == nil
     end
 
-    test "deletes the room under the id its own provider parses, not the URL's last segment", %{
+    test "leaves a custom link's room alone, naming it only by a fingerprint", %{
       user: user,
       integration: integration
     } do
@@ -382,18 +401,16 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
 
       expect_provider_update(:ok)
 
-      # The custom provider has no room object to delete, so the delete is a
-      # no-op at the provider; the id it was issued with is what this pins.
       log_event =
         LogCapture.with_capture([logger_level: :info], fn ->
           assert {:ok, nil} = CalendarGrid.change_event_video(user.id, event, nil)
-          LogCapture.await_log("Deleting meeting room")
+          LogCapture.await_log("Video room left in place")
         end)
 
       meta = LogCapture.user_metadata(log_event)
-      assert meta.provider == :custom
-      assert meta.room_ref == Redactor.fingerprint(@custom_room_id)
-      refute meta.room_ref == Redactor.fingerprint("team-standup")
+      assert meta.provider == "custom"
+      assert meta.room_ref == Redactor.fingerprint(@custom_url)
+      refute_enqueued(worker: VideoSyncWorker)
     end
   end
 

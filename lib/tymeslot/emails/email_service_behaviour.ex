@@ -54,6 +54,11 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
 
   @callback send_email_verification(user_map(), String.t()) :: {:ok, any()} | {:error, any()}
   @callback send_password_reset(user_map(), String.t()) :: {:ok, any()} | {:error, any()}
+  @callback send_no_password_to_reset(user_map(), String.t()) :: {:ok, any()} | {:error, any()}
+  @callback send_signup_attempt_notice(user_map(), String.t(), String.t()) ::
+              {:ok, any()} | {:error, any()}
+  @callback send_social_signup_confirmation(user_map(), String.t(), String.t()) ::
+              {:ok, any()} | {:error, any()}
   @callback send_email_change_verification(user_map(), String.t(), String.t()) ::
               {:ok, any()} | {:error, any()}
   @callback send_email_change_notification(user_map(), String.t()) ::

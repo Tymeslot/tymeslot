@@ -13,6 +13,7 @@ defmodule Tymeslot.Workers.PollEmailsTest do
 
   import Swoosh.TestAssertions
   import Tymeslot.Factory
+  import Tymeslot.WorkerTestHelpers
 
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
@@ -176,6 +177,30 @@ defmodule Tymeslot.Workers.PollEmailsTest do
       refute_receive {:email, _other}, 200
     end
 
+    test "a rescued job re-mails none of the participants it already reached" do
+      user = insert(:user)
+      _profile = insert(:profile, user: user, username: "hostname")
+      poll = insert(:poll, status: :open, user: user, deadline_at: in_hours(48))
+      insert(:poll_participant, poll: poll, name: "First", email: "first@example.com")
+      insert(:poll_participant, poll: poll, name: "Second", email: "second@example.com")
+
+      job =
+        persisted_job(EmailWorker, %{
+          "action" => "send_poll_deadline_reminders",
+          "poll_id" => poll.id
+        })
+
+      assert :ok = EmailWorker.perform(job)
+      assert :ok = EmailWorker.perform(job)
+
+      assert_receive {:email, first}, 1000
+      assert_receive {:email, second}, 1000
+      refute_receive {:email, _duplicate}, 200
+
+      assert Enum.sort(recipients(first) ++ recipients(second)) ==
+               ["first@example.com", "second@example.com"]
+    end
+
     test "discards when the poll is not open" do
       user = insert(:user)
       _profile = insert(:profile, user: user)
@@ -222,6 +247,26 @@ defmodule Tymeslot.Workers.PollEmailsTest do
 
       assert_receive {:email, email}, 1000
       assert user.email in recipients(email)
+    end
+
+    test "a rescued job does not nudge the host twice" do
+      user = insert(:user)
+      _profile = insert(:profile, user: user)
+      poll = insert(:poll, status: :open, user: user)
+
+      job =
+        persisted_job(EmailWorker, %{
+          "action" => "send_poll_host_nudge",
+          "poll_id" => poll.id,
+          "variant" => "all_voted"
+        })
+
+      assert :ok = EmailWorker.perform(job)
+      assert :ok = EmailWorker.perform(job)
+
+      assert_receive {:email, email}, 1000
+      assert user.email in recipients(email)
+      refute_receive {:email, _duplicate}, 200
     end
 
     test "discards on a confirmed poll" do

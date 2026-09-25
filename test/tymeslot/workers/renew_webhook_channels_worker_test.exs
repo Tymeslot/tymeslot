@@ -7,7 +7,9 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorkerTest do
   use Oban.Testing, repo: Tymeslot.Repo
   import Mox
   import Tymeslot.Factory
+  import Tymeslot.WorkerTestHelpers
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Repo
   alias Tymeslot.Workers.RenewWebhookChannelsWorker
@@ -146,6 +148,64 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorkerTest do
                  "calendar_integration_id" => integration.id,
                  "provider" => "outlook"
                })
+    end
+
+    # A run the Oban lifeline repeats after the renewal was stored finds the
+    # channel no longer due and leaves it alone, rather than opening another.
+    test "a rescued Google renewal does not register a second channel" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_channel_id: "renewal-target",
+          google_channel_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
+        )
+
+      expect(GoogleCalendarAPIMock, :register_push_channel, 1, fn integration ->
+        integration
+        |> Changeset.change(
+          google_channel_id: "renewed-channel",
+          google_channel_expires_at: DateTime.add(DateTime.utc_now(:second), 7, :day)
+        )
+        |> Repo.update()
+      end)
+
+      job =
+        persisted_job(RenewWebhookChannelsWorker, %{
+          "calendar_integration_id" => integration.id,
+          "provider" => "google"
+        })
+
+      assert :ok = RenewWebhookChannelsWorker.perform(job)
+      assert :ok = RenewWebhookChannelsWorker.perform(job)
+
+      assert Repo.get!(CalendarIntegrationSchema, integration.id).google_channel_id ==
+               "renewed-channel"
+    end
+
+    test "a rescued Outlook renewal does not renew the subscription again" do
+      integration =
+        insert(:calendar_integration,
+          provider: "outlook",
+          graph_subscription_id: "renewal-target",
+          graph_subscription_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
+        )
+
+      expect(OutlookCalendarAPIMock, :register_graph_subscription, 1, fn integration ->
+        integration
+        |> Changeset.change(
+          graph_subscription_expires_at: DateTime.add(DateTime.utc_now(:second), 3, :day)
+        )
+        |> Repo.update()
+      end)
+
+      job =
+        persisted_job(RenewWebhookChannelsWorker, %{
+          "calendar_integration_id" => integration.id,
+          "provider" => "outlook"
+        })
+
+      assert :ok = RenewWebhookChannelsWorker.perform(job)
+      assert :ok = RenewWebhookChannelsWorker.perform(job)
     end
 
     test "returns :ok when WEBHOOK_BASE_URL is not configured for Google" do

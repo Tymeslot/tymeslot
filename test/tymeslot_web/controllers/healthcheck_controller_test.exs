@@ -1,6 +1,10 @@
 defmodule TymeslotWeb.HealthcheckControllerTest do
+  # async: false: the rate-limit test clears the shared Hammer table, and the
+  # unhealthy test replaces `Oban` globally with :meck.
   use TymeslotWeb.ConnCase, async: false
-  @moduletag :utils
+
+  @moduletag :infrastructure
+  @moduletag :controllers
 
   alias Tymeslot.Security.RateLimiter
 
@@ -22,6 +26,24 @@ defmodule TymeslotWeb.HealthcheckControllerTest do
       # Verify checks are included
       assert body["checks"]["database"] == "ok"
       assert body["checks"]["oban"] == "ok"
+    end
+
+    test "returns 503 unhealthy when the job queues are paused", %{conn: conn} do
+      # Every check is essential: a paused Oban queue means bookings stop
+      # sending mail and syncing calendars, so the orchestrator must see a
+      # failing probe rather than a 200.
+      :meck.new(Oban, [:passthrough])
+      :meck.expect(Oban, :check_all_queues, fn -> [%{queue: "default", paused: true}] end)
+
+      body =
+        try do
+          conn |> get(~p"/healthcheck") |> json_response(503)
+        after
+          :meck.unload(Oban)
+        end
+
+      assert body["status"] == "unhealthy"
+      assert body["checks"] == %{"database" => "ok", "oban" => "paused"}
     end
 
     test "is rate limited", %{conn: conn} do

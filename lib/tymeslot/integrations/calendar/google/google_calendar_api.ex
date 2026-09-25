@@ -21,11 +21,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   alias Tymeslot.Integrations.Common.OAuth.ErrorParser
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
+  alias Tymeslot.Integrations.Google.Endpoints
 
   import ErrorParser, only: [is_oauth_error_status: 1]
 
   @base_url "https://www.googleapis.com/calendar/v3"
-  @token_url "https://oauth2.googleapis.com/token"
 
   # Google's own maximum per page.
   @max_results "2500"
@@ -114,7 +114,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
       |> EventMapper.format_event_data()
       |> EventMapper.add_tymeslot_fingerprint()
 
-    params = create_event_params(event_data)
+    params = write_params(event_data)
     conference_requested? = EventMapper.requires_conference_data_version?(event_data)
 
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
@@ -152,7 +152,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
          get_in(create_request, ["status", "statusCode"]) == "pending")
   end
 
-  defp create_event_params(event_data) do
+  # Conference data is ignored on a write without `conferenceDataVersion=1`,
+  # which is what keeps an ordinary edit's `PUT` from touching the event's
+  # conference. Only a write that carries a conference change sends it.
+  defp write_params(event_data) do
     base = %{"sendUpdates" => "none"}
 
     if EventMapper.requires_conference_data_version?(event_data) do
@@ -164,6 +167,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
 
   @doc """
   Updates an existing event in the specified calendar.
+
+  The event's conference is left as it is unless `event_data` carries a
+  conference change (`:conference_data`): a `createRequest` gives the event a
+  new Meet conference, and `ConferenceData.remove/0` takes it off. Either is
+  sent with `conferenceDataVersion=1`.
   """
   @impl CalendarAPIBehaviour
   @spec update_event(CalendarIntegrationSchema.t(), String.t(), String.t(), map()) ::
@@ -182,7 +190,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
         "/calendars/#{calendar_id}/events/#{google_event_id}",
         token,
         body,
-        params: %{"sendUpdates" => "none"}
+        params: write_params(event_data)
       )
     end)
   end
@@ -406,7 +414,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
         "client_secret" => client_secret
       }
 
-      case TokenExchange.refresh_access_token(@token_url, body,
+      case TokenExchange.refresh_access_token(Endpoints.token_url(), body,
              fallback_refresh_token: integration.refresh_token,
              log_context: [
                integration_id: integration.id,

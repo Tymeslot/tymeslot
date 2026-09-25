@@ -7,9 +7,10 @@ defmodule TymeslotWeb.SessionController do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.{AuthActions, Authentication, Session, Verification}
   alias Tymeslot.Infrastructure.Config
+  alias TymeslotWeb.EmailLinkConfirmHTML
   alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
+  alias TymeslotWeb.UserAuth
 
   require Logger
 
@@ -18,35 +19,10 @@ defmodule TymeslotWeb.SessionController do
   This is called by LiveView after successful authentication to establish HTTP session.
   """
   @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def create(conn, %{"email" => _email, "password" => _password} = params) do
-    if Config.password_auth_enabled?() do
-      do_create(conn, params)
-    else
-      conn
-      |> put_flash(:error, AuthActions.password_auth_disabled_message())
-      |> redirect(to: ~p"/auth/login")
-    end
-  end
-
-  defp do_create(conn, %{"email" => email, "password" => password} = params) do
-    ip = ClientIP.get(conn)
-    user_agent = List.first(get_req_header(conn, "user-agent"))
-
-    case Authentication.authenticate_user(email, password,
-           calling_app: :auth,
-           ip_address: ip,
-           user_agent: user_agent
-         ) do
+  def create(conn, %{"email" => email, "password" => password} = params) do
+    case Auth.authenticate_user(email, password, ClientIP.request_opts(conn)) do
       {:ok, user, message} ->
         handle_authenticated_user(conn, user, message, params)
-
-      {:error, :email_not_verified, message} ->
-        conn
-        |> put_session(:unverified_user_id, get_unverified_user_id(email))
-        |> put_session(:unverified_user_email, email)
-        |> put_session(:unverified_session_timestamp, DateTime.to_unix(DateTime.utc_now()))
-        |> put_flash(:error, message)
-        |> redirect(to: ~p"/auth/verify-email")
 
       {:error, :invalid_input, _errors} ->
         conn
@@ -61,7 +37,7 @@ defmodule TymeslotWeb.SessionController do
   end
 
   defp handle_authenticated_user(conn, user, message, params) do
-    case Session.create_session(conn, user) do
+    case UserAuth.create_session(conn, user) do
       {:ok, updated_conn, _token} ->
         redirect_path =
           RedirectSanitizer.sanitize(params["redirect_to"], get_success_redirect_path())
@@ -85,61 +61,96 @@ defmodule TymeslotWeb.SessionController do
   @spec delete(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def delete(conn, _params) do
     conn
-    |> Auth.delete_session()
-    |> clear_unverified_session()
+    |> UserAuth.delete_session()
+    |> UserAuth.clear_unverified_user()
     |> put_flash(:info, dgettext("auth", "Logged out successfully."))
     |> redirect(to: ~p"/")
   end
 
   @doc """
-  Completes email verification and creates session for auto-login if IP matches.
+  Landing page for the emailed verification link. Renders a confirmation
+  button only: opening the link must not consume the token, or a mail scanner
+  prefetching it would verify the address (and burn the link) on the user's
+  behalf.
+  """
+  @spec confirm_verification(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def confirm_verification(conn, %{"token" => token}) do
+    conn
+    |> put_layout(html: false)
+    |> put_view(html: EmailLinkConfirmHTML)
+    |> render(:confirm,
+      action: ~p"/auth/verify-complete/#{token}",
+      icon: "hero-envelope",
+      title: dgettext("auth", "Confirm your email address"),
+      body: dgettext("auth", "Press the button below to finish verifying your email address."),
+      button: dgettext("auth", "Verify email address")
+    )
+  end
+
+  @doc """
+  Completes email verification, signing the user in when the context allows
+  it (see `Tymeslot.Auth.verify_email_and_maybe_login/2`).
   """
   @spec verify_and_login(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def verify_and_login(conn, %{"token" => token}) do
-    current_ip = extract_request_ip(conn)
+    case Auth.verify_email_and_maybe_login(token, ClientIP.request_opts(conn)) do
+      {:ok, user, :auto_login} ->
+        auto_login(conn, user)
 
-    # First, get the user with the token to check the IP before it's cleared
-    case Config.user_token_queries_module().get_user_by_verification_token(token) do
-      {:error, :not_found} ->
+      {:ok, user, :manual} ->
+        Logger.info("Auto-login denied - IP mismatch", user_id: user.id)
+        redirect_to_login_verified(conn)
+
+      {:error, {:rate_limited, message}} ->
+        conn
+        |> put_flash(:error, message)
+        |> redirect(to: ~p"/auth/login")
+
+      {:error, :token_expired} ->
+        conn
+        |> put_flash(:error, link_expired_message())
+        |> redirect(to: ~p"/auth/login")
+
+      {:error, reason} ->
+        Logger.warning("Email verification link rejected", reason: inspect(reason))
+
         conn
         |> put_flash(:error, link_superseded_message())
         |> redirect(to: ~p"/auth/login")
-
-      {:ok, user_before_verification} ->
-        # Check if IP matches to decide whether to auto-login after verification.
-        should_auto_login = check_ip_match(user_before_verification, current_ip)
-
-        # Now verify the user
-        case verification_module().verify_user_token(token) do
-          {:ok, verified_user} ->
-            handle_verified_user(
-              conn,
-              verified_user,
-              should_auto_login,
-              user_before_verification,
-              current_ip
-            )
-
-          {:error, :token_expired} ->
-            Logger.warning("Email verification token expired")
-
-            conn
-            |> put_flash(:error, link_expired_message())
-            |> redirect(to: ~p"/auth/login")
-
-          {:error, reason} ->
-            Logger.error("Invalid email verification token", reason: inspect(reason))
-
-            conn
-            |> put_flash(:error, link_superseded_message())
-            |> redirect(to: ~p"/auth/login")
-        end
     end
   end
 
   # Private functions
 
-  # Shown when a verification link's token is no longer in the database — most
+  defp auto_login(conn, user) do
+    Logger.info("Auto-login approved - IP match confirmed", user_id: user.id)
+
+    case UserAuth.create_session(conn, user) do
+      {:ok, updated_conn, _token} ->
+        updated_conn
+        |> UserAuth.clear_unverified_user()
+        |> put_flash(
+          :success,
+          dgettext("auth", "Your email has been successfully verified! You're now logged in.")
+        )
+        |> redirect(to: get_success_redirect_path())
+
+      {:error, _reason, details} ->
+        Logger.error("Failed to create session after verification", details: details)
+        redirect_to_login_verified(conn)
+    end
+  end
+
+  defp redirect_to_login_verified(conn) do
+    conn
+    |> put_flash(
+      :info,
+      dgettext("auth", "Your email has been successfully verified! Please log in to continue.")
+    )
+    |> redirect(to: ~p"/auth/login")
+  end
+
+  # Shown when a verification link's token is no longer in the database: most
   # commonly because a newer verification email was requested (each request
   # rotates the token), but also for already-used or malformed links.
   defp link_superseded_message do
@@ -157,102 +168,7 @@ defmodule TymeslotWeb.SessionController do
     )
   end
 
-  defp verification_module,
-    do: Application.get_env(:tymeslot, :verification_module, Verification)
-
   defp get_success_redirect_path do
     Config.success_redirect_path()
-  end
-
-  defp get_unverified_user_id(email) do
-    case Config.user_queries_module().get_user_by_email(email) do
-      {:ok, user} -> user.id
-      {:error, :not_found} -> nil
-      # Backward compatibility with implementations that still return user or nil
-      nil -> nil
-      user when is_map(user) -> Map.get(user, :id)
-      _other -> nil
-    end
-  end
-
-  defp clear_unverified_session(conn) do
-    conn
-    |> delete_session(:unverified_user_id)
-    |> delete_session(:unverified_user_email)
-    |> delete_session(:unverified_session_timestamp)
-  end
-
-  defp extract_request_ip(conn) do
-    ClientIP.get(conn)
-  end
-
-  defp check_ip_match(user, current_ip) do
-    case user.signup_ip do
-      nil ->
-        false
-
-      signup_ip ->
-        # Normalize localhost variations
-        normalized_signup = normalize_localhost_ip(signup_ip)
-        normalized_current = normalize_localhost_ip(current_ip)
-
-        normalized_signup == normalized_current
-    end
-  end
-
-  defp normalize_localhost_ip(ip) do
-    case ip do
-      "127.0.0.1" -> "localhost"
-      # IPv6 localhost
-      "::1" -> "localhost"
-      # IPv6 localhost expanded
-      "0:0:0:0:0:0:0:1" -> "localhost"
-      other -> other
-    end
-  end
-
-  defp handle_verified_user(
-         conn,
-         verified_user,
-         should_auto_login,
-         _user_before_verification,
-         _current_ip
-       ) do
-    if should_auto_login do
-      Logger.info("Auto-login approved - IP match confirmed", user_id: verified_user.id)
-
-      case Session.create_session(conn, verified_user) do
-        {:ok, updated_conn, _token} ->
-          updated_conn
-          |> clear_unverified_session()
-          |> put_flash(
-            :success,
-            dgettext("auth", "Your email has been successfully verified! You're now logged in.")
-          )
-          |> redirect(to: get_success_redirect_path())
-
-        {:error, _reason, details} ->
-          Logger.error("Failed to create session after verification", details: details)
-
-          conn
-          |> put_flash(
-            :info,
-            dgettext(
-              "auth",
-              "Your email has been successfully verified! Please log in to continue."
-            )
-          )
-          |> redirect(to: ~p"/auth/login")
-      end
-    else
-      Logger.info("Auto-login denied - IP mismatch", user_id: verified_user.id)
-
-      conn
-      |> put_flash(
-        :info,
-        dgettext("auth", "Your email has been successfully verified! Please log in to continue.")
-      )
-      |> redirect(to: ~p"/auth/login")
-    end
   end
 end

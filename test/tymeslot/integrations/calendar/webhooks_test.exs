@@ -251,6 +251,23 @@ defmodule Tymeslot.Integrations.Calendar.WebhooksTest do
       assert job.args["graph_resource_id"] == "event-1"
     end
 
+    test "acts on the notifications in a payload that also carries non-string subscription ids",
+         %{integration: integration} do
+      # The subscription-id lookup cannot cast a number or a map, so these
+      # used to raise an Ecto.Query.CastError out of the public endpoint.
+      notification = change_notification(integration, %{"resourceData" => %{"id" => "event-1"}})
+
+      assert :ok =
+               Webhooks.handle_outlook_notifications([
+                 %{"subscriptionId" => 1, "clientState" => "x"},
+                 %{"subscriptionId" => %{"id" => "a"}},
+                 notification
+               ])
+
+      assert [job] = all_enqueued(worker: SyncOutlookCalendarWorker)
+      assert job.args["graph_resource_id"] == "event-1"
+    end
+
     test "ignores a notification value that is not a list", %{integration: integration} do
       assert :ok = Webhooks.handle_outlook_notifications("not-a-list")
 
@@ -360,6 +377,20 @@ defmodule Tymeslot.Integrations.Calendar.WebhooksTest do
         worker: ReregisterOutlookSubscriptionWorker,
         args: %{"calendar_integration_id" => integration.id}
       )
+    end
+
+    @tag capture_log: true
+    test "acts on the events in a payload that also carries non-string subscription ids",
+         %{integration: integration} do
+      assert :ok =
+               Webhooks.handle_outlook_lifecycle_notifications([
+                 %{"subscriptionId" => 1, "lifecycleEvent" => "subscriptionRemoved"},
+                 %{"subscriptionId" => ["a"], "lifecycleEvent" => "subscriptionRemoved"},
+                 lifecycle_event(integration, "subscriptionRemoved")
+               ])
+
+      assert [reregistration] = all_enqueued(worker: ReregisterOutlookSubscriptionWorker)
+      assert reregistration.args == %{"calendar_integration_id" => integration.id}
     end
 
     test "ignores a lifecycle value that is not a list" do

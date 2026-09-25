@@ -40,8 +40,8 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
 
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
-  alias Tymeslot.Notifications.Events
   alias Tymeslot.Utils.ReminderUtils
+  alias Tymeslot.Workers.VideoRoom.Announcement
 
   require Logger
 
@@ -72,14 +72,23 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
   def recovering?(execution, announce), do: announce and execution >= @fallback_attempt
 
   @doc """
+  Whether a job at this execution has already announced its meeting without a
+  room: recovery does so on entry, and only an execution that failed there can
+  be followed by another.
+  """
+  @spec announced_without_room?(pos_integer()) :: boolean()
+  def announced_without_room?(execution), do: execution > @fallback_attempt
+
+  @doc """
   Enters recovery for a meeting and returns the resulting Oban decision.
 
-  On the first recovery attempt this also announces the booking without a join
-  link, so the attendees are not left waiting on an email that may never come.
-  `cause` is logged to distinguish a failing provider from a hanging one.
+  On the first recovery attempt this also raises the job's announcement
+  without a join link, so the attendees are not left waiting on an email that
+  may never come. `cause` is logged to distinguish a failing provider from a
+  hanging one.
   """
-  @spec enter(String.t(), pos_integer(), String.t()) :: decision()
-  def enter(meeting_id, execution, cause) do
+  @spec enter(String.t(), pos_integer(), String.t(), Announcement.t()) :: decision()
+  def enter(meeting_id, execution, cause, announcement) do
     if execution == @fallback_attempt do
       Logger.warning("Video room creation entering recovery, announcing without a room",
         meeting_id: meeting_id,
@@ -87,34 +96,32 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
         cause: cause
       )
 
-      send_fallback_notifications(meeting_id)
+      send_fallback_notifications(meeting_id, announcement, execution)
     end
 
     decide(meeting_id, execution - @fallback_attempt + 1)
   end
 
   @doc """
-  Announces the meeting without a video room link.
+  Raises the job's announcement without a video room link.
 
   Used both on entering recovery and when the failure is already known to be
-  unrecoverable, so the attendees still receive their confirmation and anything
-  subscribed to `meeting.created` still learns about the booking.
+  unrecoverable, so the attendees still receive their confirmation (or their
+  reschedule notice) and anything subscribed to the event still learns of it.
 
-  Recovery keeps retrying the room after this, and a late success announces the
-  booking on its own account. `Events.meeting_created/1` claims the event once
-  per meeting, so whichever of the two gets there first is the only one that
-  fans out.
+  Recovery keeps retrying the room after this, and a late success is no reason
+  to announce the meeting a second time; `Announcement.deliver/3` is what
+  makes sure it does not, given `execution`.
   """
-  @spec send_fallback_notifications(String.t()) :: :ok
-  def send_fallback_notifications(meeting_id) do
+  @spec send_fallback_notifications(String.t(), Announcement.t(), pos_integer()) :: :ok
+  def send_fallback_notifications(meeting_id, announcement, execution) do
     Logger.info("Announcing the meeting without a video room after creation failed",
       meeting_id: meeting_id
     )
 
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        Events.meeting_created(meeting)
-        :ok
+        Announcement.deliver(announcement, meeting, announced_without_room?(execution))
 
       {:error, _reason} ->
         Logger.error("Could not fetch meeting for fallback announcement",

@@ -1,151 +1,50 @@
 defmodule TymeslotWeb.StripeWebhookController do
-  use TymeslotWeb, :controller
-  require Logger
+  @moduledoc """
+  Receives Stripe webhooks on two endpoints with distinct signing secrets:
 
-  alias Tymeslot.Payments.Errors.WebhookError
-  alias Tymeslot.Payments.Webhooks.{IdempotencyCache, WebhookProcessor}
+    * `webhook/2` (`/webhooks/stripe`): platform events such as
+      subscriptions and invoices, verified with `STRIPE_WEBHOOK_SECRET` and
+      processed by `Tymeslot.Payments.Webhooks.Delivery`.
+    * `connect/2` (`/webhooks/stripe/connect`): Connect events for booking
+      payments, verified with `STRIPE_CONNECT_WEBHOOK_SECRET` and processed by
+      `Tymeslot.MeetingPayments.process_webhook/2`.
 
-  @typedoc "Webhook processing result status"
-  @type webhook_status :: atom()
+  Both run behind `TymeslotWeb.Plugs.StripeWebhookPlug` (rate limiting) and
+  share one deduplication policy, `Tymeslot.Payments.Webhooks.Idempotency`,
+  so this controller only maps the domain outcome to a status. Every response
+  has an empty body; the reason is in the logs, never sent to the caller.
 
-  # Webhook plug is now in the router pipeline, not here
-
-  @doc """
-  Handles incoming Stripe webhook events.
+    * 200: processed, a duplicate, or failed permanently (acknowledged so
+      Stripe stops redelivering an event that cannot succeed)
+    * 400: signature or payload rejected
+    * 503: transient failure or missing signing secret; Stripe retries
   """
-  @spec webhook(term(), map()) :: term()
-  def webhook(conn, params) do
-    # Log the incoming webhook request
-    Logger.info("Stripe webhook received",
-      request_path: conn.request_path,
-      method: conn.method,
-      params_keys: Map.keys(params),
-      headers: stripe_headers(conn)
-    )
 
-    case conn.assigns[:stripe_event] do
-      nil ->
-        # No event was assigned by the plug (likely an error occurred)
-        Logger.error("No Stripe event assigned by plug")
-        send_resp(conn, 400, "Invalid webhook payload")
+  use TymeslotWeb, :controller
 
-      event ->
-        start_time = System.monotonic_time(:millisecond)
-        result = WebhookProcessor.process_event(event)
-        processing_time = System.monotonic_time(:millisecond) - start_time
+  alias Tymeslot.MeetingPayments
+  alias Tymeslot.Payments.Webhooks.Delivery
 
-        # Handle the result, ensuring backward compatibility
-        normalized_result = normalize_result(result)
-        event_type = Map.get(event, :type) || Map.get(event, "type")
-        event_id = Map.get(event, :id) || Map.get(event, "id")
+  @spec webhook(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def webhook(conn, _params),
+    do: respond(conn, Delivery.process(raw_body(conn), signature(conn)))
 
-        case normalized_result do
-          {:ok, status} ->
-            log_processing_result({:ok, status}, event_type, processing_time)
+  @spec connect(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def connect(conn, _params),
+    do: respond(conn, MeetingPayments.process_webhook(raw_body(conn), signature(conn)))
 
-            # Mark as processed in cache and database to prevent duplicate processing
-            if event_id do
-              IdempotencyCache.mark_processed(event_id, event_type, event)
-            end
+  # `WebhookBodyCachePlug` caches the raw body for the configured webhook
+  # paths; without it there is nothing a signature can verify against.
+  defp raw_body(conn), do: conn.assigns[:raw_body] || ""
 
-            # Always return 200 to acknowledge receipt
-            send_resp(conn, 200, "")
+  defp signature(conn), do: conn |> get_req_header("stripe-signature") |> List.first()
 
-          {:error, :retry_later, message} ->
-            log_processing_result({:error, :retry_later}, event_type, processing_time)
+  defp respond(conn, {:ok, _processed_or_duplicate}), do: send_resp(conn, 200, "")
+  defp respond(conn, {:error, :permanent}), do: send_resp(conn, 200, "")
 
-            # Return 503 so Stripe retries this specific event
-            # This is used for race conditions (e.g. invoice arrives before subscription record is created)
-            # We DON'T mark it as processed here so it can be retried
-            if event_id do
-              IdempotencyCache.release(event_id)
-            end
+  defp respond(conn, {:error, reason}) when reason in [:invalid_signature, :invalid_payload],
+    do: send_resp(conn, 400, "")
 
-            send_resp(conn, 503, message || "Service Unavailable")
-
-          {:error, error, _message} ->
-            log_processing_result({:error, error}, event_type, processing_time)
-
-            # Mark as processed even on error if it's not a retryable error
-            # This prevents infinite retries for errors we can't fix
-            if event_id do
-              IdempotencyCache.mark_processed(event_id, event_type, event)
-            end
-
-            # Always return 200 to Stripe for other errors
-            send_resp(conn, 200, "")
-        end
-    end
-  end
-
-  # Private functions
-
-  # Normalize result to a single error shape and ok atom for controller handling
-  @type webhook_error :: atom() | Exception.t()
-  @spec normalize_result(term()) ::
-          {:ok, webhook_status()} | {:error, webhook_error, String.t() | nil}
-  defp normalize_result({:ok, status}) when is_atom(status), do: {:ok, status}
-
-  defp normalize_result({:error, reason, message}) when is_binary(message) or is_nil(message),
-    do: {:error, reason, message}
-
-  # A handler returned a result shape that doesn't match the
-  # `WebhookHandler` behaviour's contract. Treat it as a non-retryable
-  # error rather than crashing: crashing here leaves the idempotency lock
-  # held and Stripe retrying (and re-crashing) the same malformed event
-  # until it gives up, days later.
-  defp normalize_result(other) do
-    Logger.error("Webhook handler returned an unexpected result shape", result: inspect(other))
-    {:error, :invalid_handler_result, "Unexpected handler result: #{inspect(other)}"}
-  end
-
-  @spec log_processing_result(
-          {:ok, webhook_status()} | {:error, term()},
-          String.t(),
-          non_neg_integer()
-        ) :: :ok
-  defp log_processing_result(result, event_type, processing_time) do
-    case result do
-      {:ok, status} ->
-        Logger.info("Webhook processed successfully",
-          event_type: event_type,
-          status: status,
-          processing_time_ms: processing_time
-        )
-
-      {:error, %WebhookError.ProcessingError{} = error} ->
-        Logger.error("Webhook processing error",
-          event_type: event_type,
-          error_reason: error.reason,
-          error_message: error.message,
-          processing_time_ms: processing_time
-        )
-
-      {:error, %WebhookError.ValidationError{} = error} ->
-        Logger.error("Webhook validation error",
-          event_type: event_type,
-          error_reason: error.reason,
-          error_message: error.message,
-          processing_time_ms: processing_time
-        )
-
-      {:error, error} ->
-        Logger.error("Webhook error",
-          event_type: event_type,
-          error: inspect(error),
-          processing_time_ms: processing_time
-        )
-    end
-
-    :ok
-  end
-
-  defp stripe_headers(conn) do
-    conn.req_headers
-    |> Enum.filter(fn {k, _value} -> String.contains?(k, "stripe") end)
-    |> Enum.map(fn
-      {"stripe-signature", _value} -> {"stripe-signature", "[redacted]"}
-      header -> header
-    end)
-  end
+  defp respond(conn, {:error, reason}) when reason in [:retry_later, :not_configured],
+    do: send_resp(conn, 503, "")
 end

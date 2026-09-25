@@ -5,9 +5,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEditVideo do
   Its own handler rather than one more field in
   `TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit`: choosing a
   provider is not a text edit but a room being created on someone else's
-  server, and it carries two guards the other inline edits have no use for.
+  server, and it carries guards the other inline edits have no use for: the
+  video integration must be the organiser's, and the event must not be the
+  calendar copy of a booking, whose room belongs to the meeting.
   """
 
+  alias Tymeslot.CalendarGrid
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
 
@@ -30,6 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEditVideo do
         with {:ok, new_id} <- parse_video_choice(params["video_integration_id"]),
              false <- already_chosen?(event, new_id),
              :ok <- EditWorkflow.assert_event_editable(socket, event),
+             :ok <- CalendarGrid.ensure_video_changeable(event),
              :ok <- assert_owns_video_integration(socket, new_id),
              :ok <- Shared.check_edit_rate_limit(socket) do
           optimistic_event = Map.put(event, :video_integration_id, new_id)
@@ -46,6 +50,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEditVideo do
 
           {:error, reason} = error when reason in [:unauthorized, :read_only, :recurring_event] ->
             Shared.flash_guard_error(socket, error)
+
+          {:error, :linked_to_booking} ->
+            send(self(), {:flash, {:error, EditWorkflow.booking_video_refused_message()}})
+            {:noreply, socket}
 
           {:error, :rate_limited, _message} = error ->
             Shared.flash_guard_error(socket, error)

@@ -1,13 +1,10 @@
 defmodule Tymeslot.Auth.SignupRateLimitTest do
   @moduledoc """
-  Confirms the LiveView signup path consumes exactly one signup
-  rate-limit token per attempt.
+  Confirms a signup consumes exactly one signup rate-limit token per attempt.
 
-  `SignupSecurity.gate/2` performs the counting rate-limit check before
-  reCAPTCHA verification. `Registration.register_user/3` — invoked via
-  `Tymeslot.Auth.AuthActions.register_user/2` on that same LiveView path
-  with `rate_limit_checked: true` — must skip its own check rather than
-  charging the same attempt a second time.
+  `Registration.register_user/2` runs `SignupSecurity.gate/2`, which performs
+  the counting rate-limit check before reCAPTCHA verification, and nothing
+  else on the path charges the same attempt a second time.
   """
 
   use Tymeslot.DataCase, async: false
@@ -19,8 +16,9 @@ defmodule Tymeslot.Auth.SignupRateLimitTest do
   alias Tymeslot.Auth.{Registration, SignupSecurity}
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Test.LogCapture
+  alias TymeslotWeb.Helpers.ClientIP
 
-  @meta %{ip: "203.0.113.9", user_agent: "signup-rate-limit-test/1.0"}
+  @opts [ip: "203.0.113.9", user_agent: "signup-rate-limit-test/1.0"]
 
   setup do
     RateLimiter.clear_all()
@@ -37,29 +35,22 @@ defmodule Tymeslot.Auth.SignupRateLimitTest do
     }
   end
 
-  test "gate/2 followed by register_user/3(rate_limit_checked: true) counts one hit per attempt" do
+  test "register_user/2 counts one hit per attempt" do
     # @signup_limits' tightest window allows 5 signups per 10 minutes per IP.
-    # Simulating the exact LiveView sequence — gate, then a
-    # `rate_limit_checked: true` registration — for 5 distinct emails from
-    # the same IP must consume exactly 5 tokens, not 10.
+    # Five registrations for distinct emails from the same IP must consume
+    # exactly 5 tokens, not 10.
     for i <- 1..5 do
-      params = signup_params(i)
-
-      assert :ok = SignupSecurity.gate(params, @meta)
-
-      assert {:ok, _user, _message} =
-               Registration.register_user(params, %Plug.Conn{}, rate_limit_checked: true)
+      assert {:ok, _user, _message} = Registration.register_user(signup_params(i), @opts)
     end
 
-    # A 6th attempt on the same IP is the first rejection. If
-    # `register_user/3` had also charged its own hit for each of the 5
-    # prior attempts, this bucket would already have tripped after the
-    # 3rd.
-    assert {:error, :rate_limited, _message} = SignupSecurity.gate(signup_params(6), @meta)
+    # A 6th attempt on the same IP is the first rejection. Had anything on the
+    # path charged a second hit per attempt, the bucket would already have
+    # tripped after the 3rd.
+    assert {:error, :rate_limited, _message} = SignupSecurity.gate(signup_params(6), @opts)
   end
 
-  test "register_user/3 records an audit entry when it rejects on its own rate limit" do
-    conn = %Plug.Conn{remote_ip: {203, 0, 113, 9}}
+  test "register_user/2 records an audit entry when it rejects on its own rate limit" do
+    conn = ClientIP.request_opts(%Plug.Conn{remote_ip: {203, 0, 113, 9}})
 
     for i <- 11..15 do
       assert {:ok, _user, _message} = Registration.register_user(signup_params(i), conn)
@@ -96,14 +87,14 @@ defmodule Tymeslot.Auth.SignupRateLimitTest do
     # Exhaust the per-email bucket (5 per 10 minutes) with the trimmed form,
     # from a distinct IP each time so only the per-email bucket accumulates.
     for i <- 1..5 do
-      conn = %Plug.Conn{remote_ip: {203, 0, 113, 100 + i}}
+      conn = ClientIP.request_opts(%Plug.Conn{remote_ip: {203, 0, 113, 100 + i}})
       Registration.register_user(params.(email), conn)
     end
 
     # A padded variant of the same address, from yet another fresh IP, must
     # still be rejected: if the limiter bucketed on the raw untrimmed value
     # it would get its own fresh bucket and succeed instead.
-    conn = %Plug.Conn{remote_ip: {203, 0, 113, 200}}
+    conn = ClientIP.request_opts(%Plug.Conn{remote_ip: {203, 0, 113, 200}})
 
     assert {:error, :rate_limited, _message} =
              Registration.register_user(params.("  " <> email <> "  "), conn)

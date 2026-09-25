@@ -26,9 +26,10 @@ defmodule TymeslotWeb.WebhookCompositionTest do
   Dropped from the plan with rationale:
 
     * Validation token > 256 bytes → 400 — the premise is contradicted
-      by production code. The first `webhook/2` clause guards
-      `byte_size(token) <= 256`; an oversize token fails the guard,
-      falls through to the `_params` clause, and returns 202 (the
+      by production code. The validation clause of
+      `OutlookCalendarWebhookController` guards `byte_size(token) <= 256`;
+      an oversize token fails the guard, falls through to the
+      notification clause, and returns 202 (the
       notification-batch arm with no notifications to process). Graph
       does not treat 202 as a validation response, so subscription
       activation fails — the correct security outcome, just not a 400.
@@ -44,11 +45,10 @@ defmodule TymeslotWeb.WebhookCompositionTest do
       which needs `async: false` around the module that does it.
 
     * Outlook lifecycle missing `subscriptionId` / `lifecycleEvent` →
-      202, no enqueue — covered at
-      `outlook_lifecycle_controller_test.exs` ("missing value key" and
-      "missing required fields" scenarios). Catch-all at
-      `outlook_lifecycle_controller.ex:88` makes this a no-op that
-      returns 202, already asserted.
+      202, no enqueue — covered in
+      `outlook_calendar_webhook_controller_lifecycle_test.exs` and by
+      `webhooks_test.exs`, where entries without a string
+      `subscriptionId` are dropped before any lookup.
 
     * Google webhook concurrent deliveries for same channel_id → at
       most one sync enqueued per delivery — the premise is confused.
@@ -61,7 +61,7 @@ defmodule TymeslotWeb.WebhookCompositionTest do
 
     * Telegram webhook when `telegram_webhook_secret` is nil →
       consistent 403 — covered at `telegram_webhook_controller_test.exs`
-      (nil/missing/mismatched secret → 403) together with the
+      (nil/empty/missing/mismatched secret → 403) together with the
       `telegram_enabled?` / `shared_bot_mode?` 404 path.
   """
 

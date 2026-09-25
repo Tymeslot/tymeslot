@@ -140,7 +140,7 @@ defmodule Tymeslot.Workers.EmailWorker do
 
     task =
       Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
-        EmailWorkerHandlers.execute_email_action(action, args)
+        EmailWorkerHandlers.execute_email_action(action, args, job.id)
       end)
 
     case Task.yield(task, timeout_ms) || Task.shutdown(task) do

@@ -73,6 +73,7 @@ msgid "Calendar availability"
 msgstr "Dostupnost v kalendáři"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -140,6 +141,7 @@ msgid "Date"
 msgstr "Datum"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr "Smazat"
@@ -186,6 +188,7 @@ msgid "Earliest time the booker may choose."
 msgstr "Nejdřívější čas, který lze zvolit."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/custom_questions_section.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr "Upravit"
@@ -235,6 +238,7 @@ msgstr "Ikona"
 msgid "In-Person"
 msgstr "Osobně"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Label"
@@ -312,6 +316,7 @@ msgid "No custom questions yet"
 msgstr "Zatím žádné vlastní otázky"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "No video integrations configured."
 msgstr "Není nastavena žádná videointegrace."
@@ -410,6 +415,7 @@ msgid "Select Video Provider"
 msgstr "Vyberte poskytovatele videa"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Set up video integration"
 msgstr "Nastavit integraci pro video"
@@ -462,6 +468,7 @@ msgstr "Otázka, která se zobrazí při rezervaci."
 msgid "Time"
 msgstr "Čas"
 
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/question_editor_component.ex
 #, elixir-autogen, elixir-format
 msgid "Type"
@@ -630,6 +637,7 @@ msgid "Hide from public booking page"
 msgstr "Skrýt z veřejné rezervační stránky"
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/components/booking_components.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
 #, elixir-autogen, elixir-format
 msgid "Location"
 msgstr "Místo"
@@ -785,3 +793,147 @@ msgstr "Kalendář, do kterého tento typ schůzky rezervuje, je nyní jen pro �
 #, elixir-autogen, elixir-format
 msgid "The price of %{amount} is kept and applies again once Stripe is connected."
 msgstr "Cena %{amount} zůstává uložena a začne znovu platit po připojení Stripe."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "12 High Street, London EC1A 1BB"
+msgstr "Hlavní 12, 110 00 Praha"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#, elixir-autogen, elixir-format
+msgid "Add location"
+msgstr "Přidat místo"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Address"
+msgstr "Adresa"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Anything the booker needs to know to get there"
+msgstr "Vše, co je potřeba vědět, aby se tam dalo dojít"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Ask the booker for their number"
+msgstr "Zeptat se rezervujícího na jeho číslo"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#, elixir-autogen, elixir-format
+msgid "Bookers will be asked to choose one of these."
+msgstr "Rezervující budou požádáni, aby si jedno z těchto míst vybrali."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Decides what happens when a booker picks this."
+msgstr "Určuje, co se stane, když si rezervující vybere toto místo."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Details (optional)"
+msgstr "Podrobnosti (nepovinné)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Edit location"
+msgstr "Upravit místo"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/init.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#, elixir-autogen, elixir-format
+msgid "In person"
+msgstr "Osobně"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#, elixir-autogen, elixir-format
+msgid "No details"
+msgstr "Žádné podrobnosti"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Number to call"
+msgstr "Číslo, na které volat"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call"
+msgstr "Telefonát"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#, elixir-autogen, elixir-format
+msgid "Phone call: the booker gives their number"
+msgstr "Telefonát: číslo uvede rezervující"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Pick one or more. With several, the booker chooses which one the room is created on."
+msgstr "Vyberte jednoho nebo více. Pokud jich je více, rezervující osoba zvolí, u kterého se místnost vytvoří."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Save location"
+msgstr "Uložit místo"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Shown to the booker and written into the calendar invitation."
+msgstr "Zobrazí se rezervujícímu a zapíše se do pozvánky v kalendáři."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Something else"
+msgstr "Něco jiného"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Somewhere else"
+msgstr "Někde jinde"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#, elixir-autogen, elixir-format
+msgid "The booker picks: %{providers}"
+msgstr "Rezervující osoba vybírá: %{providers}"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Video call"
+msgstr "Videohovor"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#, elixir-autogen, elixir-format
+msgid "Video call: integration no longer available"
+msgstr "Videohovor: integrace již není dostupná"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Video provider"
+msgstr "Poskytovatel videa"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "Video providers"
+msgstr "Poskytovatelé videa"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "What the booker sees in the list of locations."
+msgstr "Co rezervující vidí v seznamu míst."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/locations_section.ex
+#, elixir-autogen, elixir-format
+msgid "Where this meeting is held. Add a second location and bookers will be asked to choose."
+msgstr "Kde se tato schůzka koná. Přidejte druhé místo a rezervující budou požádáni, aby si vybrali."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "You call them. Leave this off to publish a number for them to call instead."
+msgstr "Voláte vy. Nechte vypnuté, chcete-li místo toho zveřejnit číslo, na které mají volat."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
+#, elixir-autogen, elixir-format
+msgid "e.g., Our London office"
+msgstr "např. Naše pražská kancelář"

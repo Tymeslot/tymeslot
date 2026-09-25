@@ -6,7 +6,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   supervised Task. Responsibilities:
 
     * build iCal event data from the dashboard create form,
-    * plan and attach video-conference data (inline Google Meet or a
+    * plan and attach video-conference data (inline Google Meet, a Teams
+      meeting attached to the Outlook event once it is written, or a
       separately-provisioned room),
     * call the calendar provider via `Calendar.Events`, queueing a failed
       create for offline retry,
@@ -90,7 +91,9 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     # itself (avoiding a duplicate event) when both the calendar and video
     # integrations point at the same Google account. The "separate" strategy
     # falls back to provisioning a Meet via the video provider, which writes
-    # its own event to Google Calendar and surfaces the URL up-front.
+    # its own event to Google Calendar and surfaces the URL up-front. The
+    # "attach" strategy is Teams on the Outlook calendar's own Microsoft
+    # account: the meeting is switched on for the event once it is written.
     plan =
       MeetingProvisioning.plan(creating.integration_id, creating[:video_integration_id], user_id)
 
@@ -124,7 +127,9 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
       start_at: start_at,
       end_at: end_at,
       plan: plan,
-      video_context: video_context
+      video_context: video_context,
+      event_details: event_details,
+      grid_event: grid_event
     })
   end
 
@@ -205,6 +210,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
             created.calendar_id || written_calendar_id(ctx.creating)
           )
 
+    ctx = attach_video_room(ctx, created)
+
     case MeetingProvisioning.finalise(ctx.video_context, created, ctx.plan) do
       {:ok, video_context} ->
         build_create_success(
@@ -281,9 +288,49 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   defp provision_video_room_for_plan({:inline, _video_id}, _event_details, _grid_event),
     do: %{}
 
+  # Made in `attach_video_room/2`, once the calendar has named the event.
+  defp provision_video_room_for_plan({:attach, _video_id}, _event_details, _grid_event),
+    do: %{}
+
   defp provision_video_room_for_plan({:separate, video_id}, event_details, grid_event) do
     provision_video_room(video_id, event_details, grid_event)
   end
+
+  # Teams on the Outlook calendar's own Microsoft account: the meeting is
+  # switched on for the event just written, addressed by the id Outlook gave
+  # it, so the organiser's calendar holds the event once rather than beside a
+  # second one carrying the meeting. The link lives on the event's own online
+  # meeting, as a Meet link Google makes lives on its conference, so the
+  # description written to the calendar carries no line for it.
+  defp attach_video_room(%{plan: {:attach, video_id}} = ctx, %CreatedEvent{
+         provider_event_id: event_id
+       })
+       when is_binary(event_id) and event_id != "" do
+    video_context =
+      provision_video_room(
+        video_id,
+        ctx.event_details,
+        Map.put(ctx.grid_event, :provider_event_id, event_id),
+        calendar_event_id: event_id
+      )
+
+    %{ctx | video_context: video_context}
+  end
+
+  # Outlook answered without naming the event: nothing to attach the meeting
+  # to, and a meeting on an event of its own now could not be written into the
+  # description already sent. The event keeps its integration with no link,
+  # from which choosing Teams again provisions one.
+  defp attach_video_room(%{plan: {:attach, video_id}} = ctx, _created) do
+    Logger.warning("Outlook did not name the event it created; no Teams meeting attached",
+      user_id: ctx.user_id,
+      video_integration_id: video_id
+    )
+
+    ctx
+  end
+
+  defp attach_video_room(ctx, _created), do: ctx
 
   defp build_create_success(
          %CreatedEvent{} = created,
@@ -293,7 +340,10 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
          end_at,
          video_context
        ) do
-    uid = CreatedEvent.local_uid(created)
+    # The key the provider's sync caches the event under: Google and Outlook
+    # report an iCalendar UID of their own, and a row cached under their event
+    # id instead would be joined by a second one on the next sync.
+    uid = CreatedEvent.cache_uid(created)
 
     {provider, default_booking_calendar_id, reauth_required?} =
       lookup_integration_metadata(creating.integration_id)
@@ -369,13 +419,19 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
     end
   end
 
-  defp provision_video_room(integration_id, event_details, %{user_id: user_id} = grid_event)
+  defp provision_video_room(
+         integration_id,
+         event_details,
+         %{user_id: user_id} = grid_event,
+         extra_opts \\ []
+       )
        when is_integer(integration_id) do
-    opts = [
-      integration_id: integration_id,
-      event_details: event_details,
-      meeting_id: grid_event.uid
-    ]
+    opts =
+      [
+        integration_id: integration_id,
+        event_details: event_details,
+        meeting_id: grid_event.uid
+      ] ++ extra_opts
 
     case VideoRooms.create_meeting_room(user_id, opts) do
       {:ok, %{room_data: room_data} = meeting_context} ->

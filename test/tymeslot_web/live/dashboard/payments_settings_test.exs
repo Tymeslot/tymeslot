@@ -286,7 +286,29 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       # Operational sections are meaningless until onboarding is submitted.
       refute html =~ "Default currency"
       refute html =~ "Recent payments"
-      refute html =~ "Disconnect Stripe"
+    end
+
+    test "lets the host disconnect an account that never finished onboarding", %{conn: conn} do
+      # An account Stripe closed or rejected can never finish onboarding, so
+      # Continue onboarding fails every time; disconnecting is the way out.
+      user = create_onboarded_user()
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_dead",
+        charges_enabled: false,
+        payouts_enabled: false,
+        details_submitted: false
+      )
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
+
+      view |> element("button[phx-click=open_disconnect_modal]") |> render_click()
+      view |> element("#disconnect-modal button[phx-click=disconnect]") |> render_click()
+
+      refute ConnectAccountQueries.live_for_user(user.id)
+      assert has_element?(view, "#stripe-connect-form")
     end
   end
 
