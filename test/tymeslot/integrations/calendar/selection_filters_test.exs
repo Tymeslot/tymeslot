@@ -69,6 +69,53 @@ defmodule Tymeslot.Integrations.Calendar.SelectionFiltersTest do
   end
 
   # =====================================
+  # writable_integrations/1
+  # =====================================
+
+  describe "writable_integrations/1" do
+    test "drops a connection whose calendars are all read-only" do
+      # What a subscribed ICS feed looks like: one synthetic entry, read-only.
+      feed = %{id: 1, calendar_list: entries([%{id: "ics", selected: true, read_only: true}])}
+
+      account = %{
+        id: 2,
+        calendar_list: entries([%{id: "main", selected: true, read_only: false}])
+      }
+
+      assert [%{id: 2}] = Selection.writable_integrations([feed, account])
+    end
+
+    test "keeps a connection whose calendars have not been discovered yet" do
+      # An empty list means "not discovered", not "nothing writable": the
+      # provider's own default is written to instead.
+      assert [%{id: 1}, %{id: 2}] =
+               Selection.writable_integrations([
+                 %{id: 1, calendar_list: nil},
+                 %{id: 2, calendar_list: []}
+               ])
+    end
+
+    test "keeps a connection with one writable calendar among read-only ones" do
+      mixed =
+        entries([
+          %{id: "shared", selected: true, read_only: true},
+          %{id: "mine", selected: true, read_only: false}
+        ])
+
+      assert [%{id: 1}] = Selection.writable_integrations([%{id: 1, calendar_list: mixed}])
+    end
+
+    test "drops a connection whose only writable calendar is deselected" do
+      # A calendar the host has switched off is not a place to put an event.
+      list = entries([%{id: "off", selected: false, read_only: false}])
+
+      assert Selection.writable_integrations([%{id: 1, calendar_list: list}]) == []
+    end
+  end
+
+  defp entries(maps), do: Enum.map(maps, &CalendarEntry.normalize/1)
+
+  # =====================================
   # find_calendar_by_path/2
   # =====================================
 

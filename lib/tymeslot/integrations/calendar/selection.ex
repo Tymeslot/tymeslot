@@ -222,6 +222,35 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   end
 
   @doc """
+  Restricts a list of integrations to those that can take a new event.
+
+  An integration whose calendars are all read-only is not a possible target,
+  and offering it is worse than leaving it out: the pickers make it look
+  selectable, and the write then fails with `{:error, :read_only}`. A
+  subscribed ICS feed is the clearest case — `Ics.Provider` returns a single
+  synthetic entry flagged `read_only: true` precisely so it stays out of every
+  booking-target picker.
+
+  An integration with **no** calendar list is kept. That means "not discovered
+  yet", not "nothing writable": a CalDAV account before its first discovery, or
+  a provider that exposes one implicit calendar, both belong in the list and
+  are written to through the provider's own default.
+  """
+  @spec writable_integrations([map()]) :: [map()]
+  def writable_integrations(integrations) when is_list(integrations) do
+    Enum.filter(integrations, &writable_target?/1)
+  end
+
+  @doc """
+  Whether `integration` can take a new event. See `writable_integrations/1`.
+  """
+  @spec writable_target?(map()) :: boolean()
+  def writable_target?(%{calendar_list: list}) when is_list(list) and list != [],
+    do: writable_calendars(list) != []
+
+  def writable_target?(_integration), do: true
+
+  @doc """
   Finds the calendar entry with the given id.
   """
   @spec find_calendar_by_id([CalendarEntry.t()], String.t() | nil) :: CalendarEntry.t() | nil
