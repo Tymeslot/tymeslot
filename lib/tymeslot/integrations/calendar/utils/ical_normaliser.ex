@@ -378,12 +378,14 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   # same wall-clock stamp `occurrence_suffix/1` builds from an expanded
   # occurrence, so an override lines up with the occurrence it replaces
   # whichever of the three forms the server wrote.
+  # The UTC marker's group always takes part in a timed match, so a value
+  # without one captures it as "" rather than leaving it out.
   @recurrence_id ~r/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z?))?$/
 
   defp recurrence_id_suffix(value, timezone) when is_binary(value) do
     case Regex.run(@recurrence_id, String.trim(value)) do
       [_all, y, m, d] -> y <> m <> d
-      [_all, y, m, d, hh, mm, ss] -> "#{y}#{m}#{d}T#{hh}#{mm}#{ss}"
+      [_all, y, m, d, hh, mm, ss, ""] -> "#{y}#{m}#{d}T#{hh}#{mm}#{ss}"
       [_all, y, m, d, hh, mm, ss, "Z"] -> utc_suffix_in_zone([y, m, d, hh, mm, ss], timezone)
       _unrecognised -> nil
     end
