@@ -11,6 +11,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   require Logger
 
   alias Tymeslot.Features
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
@@ -187,7 +188,8 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
       {:ok, :skipped} ->
         :skipped
 
-      {:error, _reason} ->
+      {:error, reason} ->
+        ErrorTracking.report_error(reason, nil, %{booking_payment_id: payment.id})
         :skipped
     end
   end

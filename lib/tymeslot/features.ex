@@ -7,6 +7,8 @@ defmodule Tymeslot.Features do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.ErrorTracking
+
   @type access_error ::
           :insufficient_plan
           | :feature_disabled
@@ -61,13 +63,10 @@ defmodule Tymeslot.Features do
       end
     rescue
       exception ->
-        Logger.error("Feature access checker raised",
+        ErrorTracking.report_error(exception, __STACKTRACE__, %{
           user_id: user_id,
-          feature: feature,
-          exception: exception,
-          kind: :error,
-          stacktrace: __STACKTRACE__
-        )
+          feature: feature
+        })
 
         {:error, :feature_access_checker_failed}
     end

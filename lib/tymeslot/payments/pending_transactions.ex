@@ -3,6 +3,7 @@ defmodule Tymeslot.Payments.PendingTransactions do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Payments.Config
   alias Tymeslot.Payments.PaymentQueries
   alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
@@ -17,7 +18,7 @@ defmodule Tymeslot.Payments.PendingTransactions do
         {:ok, transactions}
 
       {:error, reason} ->
-        Logger.error("Failed to fetch pending transactions", error: inspect(reason))
+        ErrorTracking.report_error(reason, nil, %{user_id: user_id})
         {:error, :transaction_lookup_failed}
     end
   end

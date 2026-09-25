@@ -39,12 +39,11 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   `:cancel_failed`.
   """
 
-  require Logger
-
   alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.CalendarGrid.EventVideoDiscard
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
 
@@ -155,7 +154,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
          %{uid: uid, calendar_integration_id: integration_id} = event,
          stored
        ) do
-    context = [user_id: user_id, calendar_integration_id: integration_id, uid: uid]
+    context = %{user_id: user_id, calendar_integration_id: integration_id}
 
     after_delete("delete the event's video rooms", context, fn ->
       :ok = EventVideoRooms.event_deleted(event)
@@ -182,12 +181,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
     :ok
   rescue
     error ->
-      Logger.error(
-        "Calendar grid delete: local cleanup failed after the event was deleted",
-        [step: step, error: Exception.format(:error, error, __STACKTRACE__)] ++ context
-      )
-
-      :ok
+      ErrorTracking.report_error(error, __STACKTRACE__, Map.put(context, :step, step))
   end
 
   defp linked_meeting(%{meeting_attendee_email: _email, reconcile_result: :ok}), do: :cancelled

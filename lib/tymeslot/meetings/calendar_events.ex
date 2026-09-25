@@ -6,6 +6,7 @@ defmodule Tymeslot.Meetings.CalendarEvents do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
 
   @doc """
@@ -30,20 +31,10 @@ defmodule Tymeslot.Meetings.CalendarEvents do
         :ok
 
       {:error, reason} ->
-        Logger.error("Failed to schedule calendar event deletion",
-          meeting_id: meeting.id,
-          reason: inspect(reason)
-        )
-
-        :ok
+        ErrorTracking.report_error(reason, nil, %{meeting_id: meeting.id})
     end
   rescue
     error ->
-      Logger.warning("Exception while scheduling calendar event cancellation",
-        meeting_id: meeting.id,
-        error: inspect(error)
-      )
-
-      :ok
+      ErrorTracking.report_error(error, __STACKTRACE__, %{meeting_id: meeting.id})
   end
 end
