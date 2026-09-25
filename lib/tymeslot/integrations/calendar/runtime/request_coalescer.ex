@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
   use GenServer
   require Logger
 
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Integrations.Calendar.CalDAV.Base
 
   # Client API
@@ -163,6 +164,14 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
             fetch_fn.()
           rescue
             e ->
+              # Recorded by module alone: the fetch runs with decrypted
+              # credentials in scope, which an exception message can carry.
+              ErrorTracking.report_error(
+                {:raised, e.__struct__},
+                __STACKTRACE__,
+                key_context(key)
+              )
+
               {:error, {:task_failed, Exception.format(:error, e, __STACKTRACE__)}}
           catch
             :exit, {:timeout, _details} -> {:error, :timeout}
@@ -175,4 +184,9 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
     ref = Process.monitor(pid)
     %{pid: pid, ref: ref}
   end
+
+  defp key_context({user_id, _start_date, _end_date}) when is_integer(user_id),
+    do: %{user_id: user_id}
+
+  defp key_context(_key), do: %{}
 end

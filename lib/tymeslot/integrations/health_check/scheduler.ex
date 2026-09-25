@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
   alias Tymeslot.Infrastructure.{
     CalendarCircuitBreaker,
     CircuitBreakerHelpers,
+    ErrorTracking,
     VideoCircuitBreaker
   }
 
@@ -78,14 +79,11 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
     do_schedule_if_due(type, integration, now, force)
   rescue
     e ->
-      Logger.error("Failed to schedule integration health check, skipping row",
+      ErrorTracking.report_error(e, __STACKTRACE__, %{
         type: type,
         integration_id: integration.id,
-        provider: integration.provider,
-        error: Exception.format(:error, e, __STACKTRACE__)
-      )
-
-      :ok
+        provider: integration.provider
+      })
   end
 
   defp do_schedule_if_due(type, integration, now, force) do

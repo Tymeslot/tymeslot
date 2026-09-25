@@ -103,6 +103,12 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
   as `"error.reason"`; ids and other variable data belong in `context` too,
   never in a message.
 
+  ErrorTracker stores an exception's message as it is, unredacted, and many
+  messages embed the term that failed (`KeyError`, `MatchError`,
+  `FunctionClauseError`). Where that term can hold a decrypted credential,
+  report `{:raised, exception.__struct__}` with the exception's stacktrace
+  instead, so the error is known by its module alone.
+
   `stacktrace` is the rescued exception's `__STACKTRACE__`, or `nil` where
   there is none, in which case the caller's own stacktrace is used so the
   call site is still the error's source. ErrorTracker's source is a file and

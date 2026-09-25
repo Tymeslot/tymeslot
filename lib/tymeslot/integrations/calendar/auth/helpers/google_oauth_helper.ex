@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
@@ -118,13 +119,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
     :ok
   rescue
     error ->
-      Logger.warning(
-        "Failed to enqueue pending video room retries after calendar reconnect",
-        user_id: user_id,
-        error: inspect(error)
-      )
-
-      :ok
+      ErrorTracking.report_error(error, __STACKTRACE__, %{user_id: user_id})
   end
 
   @doc """

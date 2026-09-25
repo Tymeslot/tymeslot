@@ -22,6 +22,8 @@ defmodule Tymeslot.Infrastructure.CacheStore do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.ErrorTracking
+
   @typedoc """
   One in-flight computation: the monitor on the process leading it, and the
   callers blocked on its result. The leader is not among the waiters — it
@@ -260,8 +262,9 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   # A failing computation resolves to `{:error, :computation_failed}` in every
   # environment. It used to re-raise under test, which meant the logging and
   # the failure value the callers actually receive in production were reached
-  # by no test at all; the warning below carries the exception message, so a
-  # test whose cached computation blows up still says so in the log.
+  # by no test at all. A raise is recorded as an unexpected error, which is
+  # also logged with the exception, so a test whose cached computation blows
+  # up still says so in the log.
   @spec compute_and_store(atom(), any(), (-> any()), integer(), keyword()) :: any()
   def compute_and_store(table_name, key, fun, ttl, opts \\ []) do
     result =
@@ -281,16 +284,7 @@ defmodule Tymeslot.Infrastructure.CacheStore do
         value
 
       {:raised, exception, stacktrace} ->
-        Logger.warning("Cache computation raised an exception",
-          table: table_name,
-          key: inspect(key),
-          exception: Exception.message(exception)
-        )
-
-        Logger.debug("Cache computation stacktrace",
-          stacktrace: Exception.format_stacktrace(stacktrace)
-        )
-
+        ErrorTracking.report_error(exception, stacktrace, %{table: table_name})
         {:error, :computation_failed}
 
       {:caught, kind, reason, stacktrace} ->

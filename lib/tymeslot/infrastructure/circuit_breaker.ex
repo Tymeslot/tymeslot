@@ -35,6 +35,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   use GenServer, restart: :transient
   require Logger
   alias Tymeslot.Infrastructure.BreakerOutcome
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Metrics
 
   @typedoc """
@@ -412,7 +413,11 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       # An exception out of our own code is not evidence the provider is
       # down, so it is never classified `:failure` — but it must still be
       # reported (as `:ignore`) so the breaker isn't left blind.
-      Logger.error("Circuit breaker caught exception", error: inspect(error))
+      #
+      # Recorded by module alone: the protected function is typically a
+      # provider call with decrypted credentials in scope, and an exception
+      # message can carry them.
+      ErrorTracking.report_error({:raised, error.__struct__}, __STACKTRACE__, %{})
       {{:error, error}, :ignore}
   end
 
