@@ -11,22 +11,46 @@ defmodule TymeslotWeb.EndpointTest do
   alias TymeslotWeb.Endpoint
 
   describe "request_log_level/1" do
-    test "disables request logging for token-bearing paths" do
+    test "disables request logging for paths carrying a capability token" do
       for path_info <- [
             ["auth", "verify-complete", "secret-token"],
             ["auth", "reset-password", "secret-token"],
+            ["auth", "oauth", "confirm", "secret-token"],
             ["email-change", "secret-token"],
-            ["free-busy", "abc"]
+            ["guest", "secret-token", "accept"],
+            ["free-busy", "abc"],
+            ["meeting-request", "secret-token"],
+            ["alice", "poll", "secret-token"],
+            ["alice", "meeting", "secret-uid", "cancel"],
+            ["alice", "meeting", "secret-uid", "cancel-confirmed"],
+            ["alice", "meeting", "secret-uid", "reschedule"],
+            ["alice", "meeting", "secret-uid", "calendar.ics"]
           ] do
-        conn = %Plug.Conn{path_info: path_info}
-        assert Endpoint.request_log_level(conn) == false
+        assert {path_info, Endpoint.request_log_level(%Plug.Conn{path_info: path_info})} ==
+                 {path_info, false}
       end
     end
 
-    test "keeps :info logging for ordinary paths" do
-      for path_info <- [[], ["dashboard"], ["auth", "login"], ["email-change"]] do
-        conn = %Plug.Conn{path_info: path_info}
-        assert Endpoint.request_log_level(conn) == :info
+    test "demotes healthcheck requests to :debug" do
+      assert Endpoint.request_log_level(%Plug.Conn{path_info: ["healthcheck"]}) == :debug
+    end
+
+    test "keeps :info logging for ordinary paths, including look-alikes" do
+      for path_info <- [
+            [],
+            ["dashboard"],
+            ["auth", "login"],
+            ["auth", "reset-password"],
+            ["auth", "reset-password-sent"],
+            ["email-change"],
+            ["meeting-request"],
+            ["alice", "poll"],
+            # A meeting type slugged "meeting" has its booking page here.
+            ["alice", "meeting", "book"],
+            ["dashboard", "meetings"]
+          ] do
+        assert {path_info, Endpoint.request_log_level(%Plug.Conn{path_info: path_info})} ==
+                 {path_info, :info}
       end
     end
   end

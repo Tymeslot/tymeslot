@@ -17,6 +17,11 @@ config :tymeslot,
   enable_admin_ui: true,
   # Controls whether users must accept T&C/Privacy during registration
   enforce_legal_agreements: false,
+  # Extra `{path_pattern, level}` request log rules for routes an overlay adds,
+  # appended to the endpoint's own. A pattern is a list of path segments, `:_`
+  # matching any one, matched as a prefix; `false` keeps the request out of the
+  # log entirely (routes carrying a capability token in the path).
+  extra_request_log_suppressed_paths: [],
   # Whether meeting payments (booker pays at booking time) is enabled.
   # Self-hosters opt in by setting :meeting_payments_enabled to true.
   # A downstream overlay may override this in its own config.
