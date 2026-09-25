@@ -10,6 +10,7 @@ defmodule Tymeslot.Infrastructure.AdminAlertsTest do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.AdminAlerts.AlertTypes
   alias Tymeslot.Infrastructure.AdminAlerts.PIIScrubber
+  alias Tymeslot.Test.LogCapture
 
   defmodule TestNotifier do
     @behaviour Tymeslot.Infrastructure.AdminAlerts
@@ -117,5 +118,36 @@ defmodule Tymeslot.Infrastructure.AdminAlertsTest do
       message = AlertTypes.format_message(:calendar_sync_error, PIIScrubber.scrub(metadata))
       assert message == "Calendar sync error for o***@example.com: invalid_grant"
     end
+  end
+
+  describe "check_config/0" do
+    for {label, recipient} <- [nil: nil, malformed: "not-an-email"] do
+      test "logs one error naming the fix when enabled with a #{label} recipient" do
+        with_config(:tymeslot, admin_alerts_enabled: true, admin_alert_email: unquote(recipient))
+
+        assert [%{level: :error, msg: msg}] = check_config_events()
+        assert LogCapture.message_text(msg) =~ "ADMIN_ALERT_EMAIL"
+        assert LogCapture.message_text(msg) =~ "Admin alert recipient"
+      end
+    end
+
+    test "logs nothing when alerts are disabled, even without a recipient" do
+      with_config(:tymeslot, admin_alerts_enabled: false, admin_alert_email: nil)
+
+      assert check_config_events() == []
+    end
+
+    test "logs nothing when enabled with a valid recipient" do
+      with_config(:tymeslot, admin_alerts_enabled: true, admin_alert_email: "ops@example.com")
+
+      assert check_config_events() == []
+    end
+  end
+
+  defp check_config_events do
+    LogCapture.with_capture(fn ->
+      assert :ok = AdminAlerts.check_config()
+      LogCapture.drain()
+    end)
   end
 end

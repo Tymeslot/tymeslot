@@ -42,6 +42,7 @@ defmodule Tymeslot.AppSettings do
   alias Ecto.Changeset
   alias Tymeslot.AppSettings.{AppSettingsQueries, AppSettingsSchema, Env}
   alias Tymeslot.AppSettings.LockoutPolicy
+  alias Tymeslot.Infrastructure.AdminAlerts
 
   @type setting_key ::
           :registration_enabled
@@ -212,6 +213,7 @@ defmodule Tymeslot.AppSettings do
       {:ok, settings} ->
         Env.flush_overrides(settings)
         Logger.info("App settings updated", keys: Map.keys(attrs))
+        AdminAlerts.check_config()
         {:ok, settings}
 
       {:error, :would_lock_out} = error ->

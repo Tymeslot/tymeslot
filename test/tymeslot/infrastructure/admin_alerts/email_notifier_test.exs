@@ -43,45 +43,36 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
     end
   end
 
+  # SaaS forces the flag on and relies on ADMIN_ALERT_EMAIL; a self-hoster can
+  # switch it on in the admin settings. Either way, an enabled flag with no
+  # usable recipient drops every alert email, so each drop is logged at :error.
   describe "when feature flag is enabled but email is missing or invalid" do
     setup do
       setup_config(:tymeslot, admin_alerts_enabled: true)
     end
 
-    test "does not enqueue when admin_alert_email is nil" do
-      with_config(:tymeslot, admin_alert_email: nil)
+    for {label, recipient} <- [nil: nil, empty: "", malformed: "not-an-email"] do
+      test "logs the dropped email at :error when admin_alert_email is #{label}" do
+        with_config(:tymeslot, admin_alert_email: unquote(recipient))
 
-      assert :ok =
-               AdminAlerts.send_alert(:unhandled_webhook, %{
-                 event_type: "charge.failed",
-                 event_id: "evt_no_email_002"
-               })
+        events =
+          LogCapture.with_capture(fn ->
+            assert :ok =
+                     AdminAlerts.send_alert(:unhandled_webhook, %{
+                       event_type: "charge.failed",
+                       event_id: "evt_no_recipient_#{unquote(label)}"
+                     })
 
-      assert all_enqueued(worker: EmailWorker) == []
-    end
+            LogCapture.drain()
+          end)
 
-    test "does not enqueue when admin_alert_email is an empty string" do
-      with_config(:tymeslot, admin_alert_email: "")
+        assert all_enqueued(worker: EmailWorker) == []
 
-      assert :ok =
-               AdminAlerts.send_alert(:unhandled_webhook, %{
-                 event_type: "charge.failed",
-                 event_id: "evt_empty_003"
-               })
-
-      assert all_enqueued(worker: EmailWorker) == []
-    end
-
-    test "does not enqueue when admin_alert_email is malformed" do
-      with_config(:tymeslot, admin_alert_email: "not-an-email")
-
-      assert :ok =
-               AdminAlerts.send_alert(:unhandled_webhook, %{
-                 event_type: "charge.failed",
-                 event_id: "evt_malformed_004"
-               })
-
-      assert all_enqueued(worker: EmailWorker) == []
+        assert [%{level: :warning}] = logged(events, "ADMIN ALERT")
+        assert [%{level: :error} = dropped] = logged(events, "no valid recipient")
+        assert LogCapture.message_text(dropped.msg) =~ "ADMIN_ALERT_EMAIL"
+        assert LogCapture.message_text(dropped.msg) =~ "Admin alert recipient"
+      end
     end
   end
 
@@ -398,4 +389,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
       refute AdminAlerts.valid_email?(123)
     end
   end
+
+  defp logged(events, text),
+    do: Enum.filter(events, &(LogCapture.message_text(&1.msg) =~ text))
 end

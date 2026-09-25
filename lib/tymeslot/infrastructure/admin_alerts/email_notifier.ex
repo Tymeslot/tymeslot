@@ -54,7 +54,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
           category: category
         )
 
-      alerts_enabled?() ->
+      AdminAlerts.enabled?() ->
         # Keyed on the raw metadata: masking collapses distinct addresses
         # ("owner@" and "olivia@" both become "o***@"), which would drop the
         # second alert. The key only ever leaves as a SHA-256 hash.
@@ -66,10 +66,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
     end
 
     :ok
-  end
-
-  defp alerts_enabled? do
-    Application.get_env(:tymeslot, :admin_alerts_enabled, false) == true
   end
 
   # An alert about the email pipeline cannot be delivered by the email pipeline.
@@ -99,7 +95,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   defp email_worker_name, do: inspect(Tymeslot.Workers.EmailWorker)
 
   defp maybe_enqueue_email(category, severity, message, metadata, dedup_key) do
-    recipient = Application.get_env(:tymeslot, :admin_alert_email)
+    recipient = AdminAlerts.recipient()
 
     if AdminAlerts.valid_email?(recipient) do
       enriched = enrich_metadata(metadata)
@@ -108,9 +104,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
         dedup_key: dedup_key
       )
     else
-      Logger.debug("Admin alert email not delivered: no valid recipient configured",
-        category: category
-      )
+      AdminAlerts.log_missing_recipient(category: category)
     end
   end
 

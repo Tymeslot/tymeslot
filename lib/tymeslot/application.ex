@@ -12,6 +12,7 @@ defmodule Tymeslot.Application do
   alias Tymeslot.Auth.AdminBootstrap
 
   alias Tymeslot.Infrastructure.{
+    AdminAlerts,
     CrashReporter,
     FinchPool,
     IndexHealth,
@@ -179,6 +180,9 @@ defmodule Tymeslot.Application do
         # are off wastes per-crash work (rate-limit ETS writes, task spawns,
         # formatting) and emits spurious "ADMIN ALERT" log lines.
         if Application.get_env(:tymeslot, :environment) != :test do
+          # After load!/0, so a recipient set only in the admin settings counts.
+          AdminAlerts.check_config()
+
           if Application.get_env(:tymeslot, :admin_alerts_enabled, false) do
             CrashReporter.attach()
           end
