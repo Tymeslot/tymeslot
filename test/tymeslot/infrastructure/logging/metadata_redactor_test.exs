@@ -286,9 +286,21 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
     end
   end
 
+  defp primary_filter(id),
+    do: :logger.get_primary_config() |> Map.fetch!(:filters) |> Keyword.get(id)
+
+  defp restore_primary_filter(id, previous) do
+    _removed = :logger.remove_primary_filter(id)
+    if previous, do: :ok = :logger.add_primary_filter(id, previous)
+    :ok
+  end
+
   describe "attach/0" do
     test "is idempotent and survives repeated calls" do
-      on_exit(fn -> :logger.remove_primary_filter(:tymeslot_metadata_redactor) end)
+      # The application installs this filter at boot and other tests rely on
+      # it, so put back exactly what was there rather than removing it.
+      previous = primary_filter(:tymeslot_metadata_redactor)
+      on_exit(fn -> restore_primary_filter(:tymeslot_metadata_redactor, previous) end)
 
       assert :ok = MetadataRedactor.attach()
       assert :ok = MetadataRedactor.attach()
