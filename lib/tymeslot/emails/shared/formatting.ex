@@ -216,7 +216,17 @@ defmodule Tymeslot.Emails.Shared.Formatting do
           optional(atom()) => term()
         }) :: String.t()
   def format_location(%{location_type: :video}), do: dgettext("emails", "Video Call")
-  def format_location(%{location_type: :phone}), do: dgettext("emails", "Phone Call")
+  # A phone location chosen from a meeting type's list stores the host's label
+  # with the number to call ("Phone call (+44 20 7946 0000)"), and that number
+  # is the whole point of the line. Only the bare English literal older
+  # releases wrote, or no string at all, falls back to the translated label.
+  def format_location(%{location_type: :phone} = details) do
+    case details[:location] do
+      location when is_binary(location) and location not in ["", "Phone Call"] -> location
+      _other -> dgettext("emails", "Phone Call")
+    end
+  end
+
   def format_location(details), do: details[:location] || dgettext("emails", "TBD")
 
   @doc """

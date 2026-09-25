@@ -12,7 +12,7 @@ msgid "try_again_later"
 msgstr "Спробуйте пізніше"
 
 msgid "invalid_meeting_link"
-msgstr "Посилання на зустріч недійсне"
+msgstr "Недійсне посилання на зустріч"
 
 msgid "slot_no_longer_available"
 msgstr "Цей часовий слот більше недоступний"
@@ -21,7 +21,7 @@ msgid "name_required"
 msgstr "Вкажіть ім'я"
 
 msgid "email_required"
-msgstr "Вкажіть електронну пошту"
+msgstr "Вкажіть адресу електронної пошти"
 
 msgid "email_invalid"
 msgstr "Введіть коректну електронну адресу"
@@ -29,7 +29,7 @@ msgstr "Введіть коректну електронну адресу"
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
 msgid "calendar_setup_required"
-msgstr "Ми поки що не можемо показати цю сторінку планування"
+msgstr "Ця сторінка бронювання поки що недоступна"
 
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
@@ -51,7 +51,7 @@ msgstr "досі пов'язані з цим записом"
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "can't be blank"
-msgstr "не може бути порожнім"
+msgstr "є обов'язковим полем"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
@@ -86,7 +86,7 @@ msgstr "має некоректне значення"
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "is reserved"
-msgstr "зарезервовано"
+msgstr "містить зарезервоване значення"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
@@ -106,22 +106,22 @@ msgstr "має дорівнювати %{number}"
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "must be greater than %{number}"
-msgstr "має бути більшим за %{number}"
+msgstr "має бути більше за %{number}"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "must be greater than or equal to %{number}"
-msgstr "має бути більшим або дорівнювати %{number}"
+msgstr "має бути щонайменше %{number}"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "must be less than %{number}"
-msgstr "має бути меншим за %{number}"
+msgstr "має бути менше за %{number}"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "must be less than or equal to %{number}"
-msgstr "має бути меншим або дорівнювати %{number}"
+msgstr "має бути щонайбільше %{number}"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
@@ -132,49 +132,49 @@ msgstr "не може дорівнювати %{number}"
 #, elixir-autogen, elixir-format
 msgid "should be %{count} byte(s)"
 msgid_plural "should be %{count} byte(s)"
-msgstr[0] "має бути %{count} байт"
-msgstr[1] "має бути %{count} байти"
-msgstr[2] "має бути %{count} байтів"
+msgstr[0] "має займати %{count} байт"
+msgstr[1] "має займати %{count} байти"
+msgstr[2] "має займати %{count} байтів"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "should be %{count} character(s)"
 msgid_plural "should be %{count} character(s)"
-msgstr[0] "має бути %{count} символ"
-msgstr[1] "має бути %{count} символи"
-msgstr[2] "має бути %{count} символів"
+msgstr[0] "має містити %{count} символ"
+msgstr[1] "має містити %{count} символи"
+msgstr[2] "має містити %{count} символів"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "should be at least %{count} byte(s)"
 msgid_plural "should be at least %{count} byte(s)"
-msgstr[0] "має бути щонайменше %{count} байт"
-msgstr[1] "має бути щонайменше %{count} байти"
-msgstr[2] "має бути щонайменше %{count} байтів"
+msgstr[0] "має займати щонайменше %{count} байт"
+msgstr[1] "має займати щонайменше %{count} байти"
+msgstr[2] "має займати щонайменше %{count} байтів"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "should be at least %{count} character(s)"
 msgid_plural "should be at least %{count} character(s)"
-msgstr[0] "має бути щонайменше %{count} символ"
-msgstr[1] "має бути щонайменше %{count} символи"
-msgstr[2] "має бути щонайменше %{count} символів"
+msgstr[0] "має містити щонайменше %{count} символ"
+msgstr[1] "має містити щонайменше %{count} символи"
+msgstr[2] "має містити щонайменше %{count} символів"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "should be at most %{count} byte(s)"
 msgid_plural "should be at most %{count} byte(s)"
-msgstr[0] "має бути щонайбільше %{count} байт"
-msgstr[1] "має бути щонайбільше %{count} байти"
-msgstr[2] "має бути щонайбільше %{count} байтів"
+msgstr[0] "має займати щонайбільше %{count} байт"
+msgstr[1] "має займати щонайбільше %{count} байти"
+msgstr[2] "має займати щонайбільше %{count} байтів"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
 msgid "should be at most %{count} character(s)"
 msgid_plural "should be at most %{count} character(s)"
-msgstr[0] "має бути щонайбільше %{count} символ"
-msgstr[1] "має бути щонайбільше %{count} символи"
-msgstr[2] "має бути щонайбільше %{count} символів"
+msgstr[0] "має містити щонайбільше %{count} символ"
+msgstr[1] "має містити щонайбільше %{count} символи"
+msgstr[2] "має містити щонайбільше %{count} символів"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
@@ -246,7 +246,7 @@ msgstr "інтеграція для цього провайдера вже іс�
 #: lib/tymeslot/integrations/calendar/calendar_integration_schema.ex
 #, elixir-autogen, elixir-format
 msgid "is not a valid colour"
-msgstr "не є дійсним кольором"
+msgstr "не є коректним кольором"
 
 #: lib/tymeslot/availability/time_off_period_schema.ex
 #, elixir-autogen, elixir-format
@@ -279,7 +279,7 @@ msgstr "Це ім'я користувача зарезервоване"
 #: lib/tymeslot/security/field_validators/username_validator.ex
 #, elixir-autogen, elixir-format
 msgid "Username is required"
-msgstr "Ім'я користувача обов'язкове"
+msgstr "Потрібно вказати ім'я користувача"
 
 #: lib/tymeslot/security/field_validators/username_validator.ex
 #, elixir-autogen, elixir-format
@@ -384,7 +384,7 @@ msgstr[2] "%{count} годин"
 #: lib/tymeslot/security/rate_limiter/helpers.ex
 #, elixir-autogen, elixir-format
 msgid "You've reached the limit of %{limit} %{action} per %{window}. Please try again in %{wait}."
-msgstr "Перевищено ліміт %{action}: %{limit} за %{window}. Спробуйте ще раз через %{wait}."
+msgstr "Досягнуто ліміту %{action}: %{limit} за %{window}. Спробуйте ще раз через %{wait}."
 
 #: lib/tymeslot/security/rate_limiter/helpers.ex
 #, elixir-autogen, elixir-format

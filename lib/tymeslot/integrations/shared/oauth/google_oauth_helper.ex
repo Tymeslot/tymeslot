@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
 
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Common.OAuth.{ErrorParser, IdToken, State, TokenExchange}
+  alias Tymeslot.Integrations.Google.Endpoints
   alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
   alias Tymeslot.Integrations.Shared.OAuth.TokenFlow
 
@@ -20,8 +21,6 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
     calendar: "https://www.googleapis.com/auth/calendar",
     meet: "https://www.googleapis.com/auth/meetings.space.created"
   }
-
-  @token_url "https://oauth2.googleapis.com/token"
 
   @doc """
   Generates the OAuth authorization URL for Google services.
@@ -69,7 +68,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
       |> Enum.into(base_params)
 
     ProviderHelpers.build_authorization_url(
-      "https://accounts.google.com/o/oauth2/v2/auth",
+      Endpoints.authorize_url(),
       params,
       login_hint
     )
@@ -96,7 +95,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
       grant_type: "authorization_code"
     }
 
-    case TokenFlow.exchange_code(@token_url, body, log_context: [provider: :google]) do
+    case TokenFlow.exchange_code(Endpoints.token_url(), body, log_context: [provider: :google]) do
       {:ok, response} ->
         tokens = build_token_map(response)
 
@@ -154,7 +153,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
 
     # No second log line here: `TokenExchange` already logs the status and the
     # redacted body, and now names the provider too.
-    case TokenExchange.refresh_access_token(@token_url, body,
+    case TokenExchange.refresh_access_token(Endpoints.token_url(), body,
            fallback_refresh_token: refresh_token,
            fallback_scope: current_scope,
            log_context: Keyword.merge(Keyword.get(opts, :log_context, []), provider: :google)
@@ -188,6 +187,16 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   end
 
   def validate_state(_invalid), do: {:error, "Invalid state parameter"}
+
+  @doc """
+  Returns the secret used to sign and verify Google OAuth `state` parameters.
+  """
+  @spec state_secret() :: String.t()
+  def state_secret do
+    Application.get_env(:tymeslot, :google_oauth)[:state_secret] ||
+      System.get_env("GOOGLE_STATE_SECRET") ||
+      raise "Google State Secret not configured"
+  end
 
   # Private functions
 
@@ -243,11 +252,5 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
     Application.get_env(:tymeslot, :google_oauth)[:client_secret] ||
       System.get_env("GOOGLE_CLIENT_SECRET") ||
       raise "Google Client Secret not configured"
-  end
-
-  defp state_secret do
-    Application.get_env(:tymeslot, :google_oauth)[:state_secret] ||
-      System.get_env("GOOGLE_STATE_SECRET") ||
-      raise "Google State Secret not configured"
   end
 end

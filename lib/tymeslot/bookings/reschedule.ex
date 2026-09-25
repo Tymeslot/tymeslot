@@ -30,7 +30,17 @@ defmodule Tymeslot.Bookings.Reschedule do
   require Logger
 
   alias Tymeslot.Availability.Offer
-  alias Tymeslot.Bookings.{CalendarCheck, CalendarJobs, Errors, Policy, ScheduleCheck, Validation}
+
+  alias Tymeslot.Bookings.{
+    CalendarCheck,
+    CalendarJobs,
+    Errors,
+    Policy,
+    RescheduleLocation,
+    ScheduleCheck,
+    Validation
+  }
+
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.Approval
@@ -49,12 +59,20 @@ defmodule Tymeslot.Bookings.Reschedule do
   `duration` is accepted for shape-compatibility with the booking form but is
   never used: the rescheduled meeting keeps the original meeting's persisted
   duration (see `prepare_new_times/3`), never the request's.
+
+  `location_option_id`, `location_phone` and `location_video_integration_id`
+  are the booker's location choice, applied only when it differs from the meeting's current location (see
+  `Tymeslot.Bookings.RescheduleLocation`).
   """
   @type reschedule_params :: %{
           required(:date) => String.t(),
           required(:time) => String.t(),
           required(:duration) => integer() | String.t(),
-          required(:user_timezone) => String.t()
+          required(:user_timezone) => String.t(),
+          optional(:location_option_id) => String.t() | nil,
+          optional(:location_phone) => String.t() | nil,
+          optional(:location_video_integration_id) => integer() | String.t() | nil,
+          optional(atom()) => term()
         }
 
   @doc """
@@ -65,9 +83,13 @@ defmodule Tymeslot.Bookings.Reschedule do
      connected calendars
   2. Cancelling the original calendar event
   3. Updating meeting times with conflict checking, together with any video
-     join URLs that are only valid relative to the meeting time
+     join URLs that are only valid relative to the meeting time, and the
+     location when the booker chose a new one
   4. Creating new calendar event
-  5. Sending rescheduling notifications
+  5. Deleting a video room the new location no longer uses, and creating one
+     it does
+  6. Sending rescheduling notifications, which a room being created sends
+     instead once its join link exists
 
   The `organizer_user_id` is required. The meeting lookup is scoped to that
   owner, preventing IDOR attacks from the public booking flow.
@@ -100,10 +122,13 @@ defmodule Tymeslot.Bookings.Reschedule do
            prepare_new_times(new_params, original_meeting, meeting_type, config),
          :ok <- verify_calendar_free(original_meeting, new_times, config),
          {:ok, updated_meeting} <-
-           apply_time_update_and_schedule_job(original_meeting, new_times, meeting_type) do
-      AvailabilityCache.invalidate_for_user(updated_meeting.organizer_user_id)
-      sync_provider_video_room(updated_meeting)
-      announce(updated_meeting, original_meeting)
+           apply_time_update_and_schedule_job(
+             original_meeting,
+             new_times,
+             meeting_type,
+             RescheduleLocation.attributes(original_meeting, meeting_type, new_params)
+           ) do
+      after_commit(updated_meeting, original_meeting)
       {:ok, updated_meeting}
     else
       {:error, :not_found} -> {:error, :meeting_not_found}
@@ -113,10 +138,21 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   # Private functions
 
+  # Everything a committed reschedule sets off outside the meeting row: fresh
+  # availability, the provider side of any room the move left behind or
+  # moved, and the emails.
+  defp after_commit(updated_meeting, original_meeting) do
+    AvailabilityCache.invalidate_for_user(updated_meeting.organizer_user_id)
+    RescheduleLocation.release_abandoned_room(updated_meeting, original_meeting)
+    sync_provider_video_room(updated_meeting)
+    announce(updated_meeting, original_meeting)
+  end
+
   defp apply_time_update_and_schedule_job(
          meeting,
          %{start_time: start_dt, end_time: end_dt, duration_minutes: _dur},
-         meeting_type
+         meeting_type,
+         location_attrs
        ) do
     # Booking a new time settles any pending organizer reschedule request, so
     # the slot becomes live again — clear the timestamp.
@@ -124,6 +160,9 @@ defmodule Tymeslot.Bookings.Reschedule do
     # Reminder sent-tracking is reset too: the reminder(s) already sent were
     # pinned to the old time, so they must not suppress the re-pinned
     # reminder jobs scheduled for the new time.
+    #
+    # The location lands in the same write as the times, so the calendar job
+    # scheduled below already carries it.
     #
     # Join links that expire relative to the meeting time (Jitsi tokens) are
     # rebuilt for the new time here, before the write, rather than in
@@ -161,6 +200,7 @@ defmodule Tymeslot.Bookings.Reschedule do
       }
       |> Map.merge(gate_attributes(meeting_type, start_dt, meeting))
       |> Map.merge(VideoRooms.refreshed_join_url_attrs(meeting, start_dt))
+      |> Map.merge(location_attrs)
 
     case Repo.transaction(fn ->
            with {:ok, updated} <- update_meeting(meeting, attrs),
@@ -192,13 +232,15 @@ defmodule Tymeslot.Bookings.Reschedule do
   # `announced_at` would leave `Events.meeting_created/1`'s once-per-meeting
   # claim (`MeetingQueries.claim_announcement/1`) already spent — the host's
   # second approval would then win the DB transition but lose the fan-out,
-  # so the invitee gets no confirmation email, no reminders and no
-  # `meeting.created` webhook for the new time. Clearing it costs nothing that
-  # is needed later: `first_announced_at` keeps the permanent record that this
+  # so the invitee gets no reminders for the new time and the integration
+  # channels never hear that it moved. Clearing it costs nothing that is
+  # needed later: `first_announced_at` keeps the permanent record that this
   # booking was once a live meeting, which is what `Approval` reads when it
-  # decides whether releasing the request refunds it. The deadline is computed
-  # from now and capped at the new start time, exactly as an original
-  # booking's is.
+  # decides whether releasing the request refunds it, and what the claim reads
+  # to announce the approval to webhooks, Telegram and Slack as
+  # `meeting.rescheduled` rather than a second `meeting.created`. The
+  # deadline is computed from now and capped at the new start time, exactly
+  # as an original booking's is.
   #
   # A meeting type can also stop requiring approval while one of its bookings
   # is still held. Moving that booking must not leave it stranded in the
@@ -330,7 +372,18 @@ defmodule Tymeslot.Bookings.Reschedule do
     Approval.activate_confirmed(updated)
   end
 
-  defp announce(updated, original), do: send_reschedule_notifications(updated, original)
+  # A room on a newly chosen video integration, or one still on its way when
+  # the reschedule came, is scheduled here rather than alongside the release,
+  # because only this path confirms nothing on its own: the two clauses above
+  # leave room creation to the approval that confirms the booking. When a room
+  # is on its way, its job sends these notifications once the join link
+  # exists.
+  defp announce(updated, original) do
+    case RescheduleLocation.create_room(updated, original) do
+      :scheduled -> :ok
+      :not_scheduled -> send_reschedule_notifications(updated, original)
+    end
+  end
 
   # A booking confirmed before (`first_announced_at`) is being moved, and its
   # request emails say so; showing the time it was moved from needs the
@@ -497,6 +550,9 @@ defmodule Tymeslot.Bookings.Reschedule do
   # reach the room is decided inside the job by `IntegrationResolver`, so a
   # meeting whose integration was disconnected is still synced rather than left
   # advertising the old time.
+  #
+  # A room the reschedule detached for a new location has no `video_room_id`
+  # left on `updated`, so it is skipped here; `RescheduleLocation` releases it.
   defp sync_provider_video_room(%{video_room_id: nil}), do: :ok
   defp sync_provider_video_room(%{organizer_user_id: nil}), do: :ok
 

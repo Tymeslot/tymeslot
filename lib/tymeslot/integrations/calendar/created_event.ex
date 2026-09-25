@@ -19,6 +19,13 @@ defmodule Tymeslot.Integrations.Calendar.CreatedEvent do
       it is known there from the create onwards. `nil` for the providers that
       mint an identifier of their own and never report an iCalendar UID; those
       answer through `:provider_event_id` instead.
+    * `:ical_uid`: the iCalendar UID a provider that mints its own id reports
+      alongside it (Google's `iCalUID`, Outlook's `iCalUId`). It is what
+      that provider's sync keys the cached row by, and it cannot be derived:
+      Google assigns its own even to an event created under an id Tymeslot
+      chose. Kept apart from `:uid` because it is not how the event is
+      addressed. `nil` for the CalDAV family, whose `:uid` already is that
+      key, and for a response that does not carry one.
     * `:provider_event_id`: the provider's own handle on the resource, and what
       the cached grid row's column of the same name holds. A server-root-
       relative CalDAV href, or a Google, Outlook or Exchange event id. `nil`
@@ -46,7 +53,8 @@ defmodule Tymeslot.Integrations.Calendar.CreatedEvent do
   `Meetings.CalendarEventSync` needs exactly that: a meeting is keyed by its
   iCalendar UID, and writing a provider-minted id into that column would key it
   by a value no sync ever produces. Callers that simply need "whatever this
-  event is known by here" ask for `local_uid/1`.
+  event is known by here" ask for `local_uid/1`; callers writing the event's
+  cached row ask for `cache_uid/1`, the key the next sync will look it up by.
 
   Deliberately does not carry the created document: `raw_ical` on a cached row
   means "the server's copy", and echoing back what Tymeslot submitted would
@@ -55,10 +63,11 @@ defmodule Tymeslot.Integrations.Calendar.CreatedEvent do
   until a read fills it.
   """
 
-  defstruct [:uid, :provider_event_id, :calendar_id, :etag, :raw]
+  defstruct [:uid, :ical_uid, :provider_event_id, :calendar_id, :etag, :raw]
 
   @type t :: %__MODULE__{
           uid: String.t() | nil,
+          ical_uid: String.t() | nil,
           provider_event_id: String.t() | nil,
           calendar_id: String.t() | nil,
           etag: String.t() | nil,
@@ -82,15 +91,15 @@ defmodule Tymeslot.Integrations.Calendar.CreatedEvent do
   @doc """
   Builds a result for a provider that mints its own identifier.
 
-  Answers with `:uid` unset, because none of these providers reports an
-  iCalendar UID on create: Google and Outlook carry one on the response but
-  under a key Tymeslot does not yet read, and EWS ignores a `t:UID` sent on
-  create outright.
+  Answers with `:uid` unset, because none of these providers addresses the
+  event by an iCalendar UID: Google and Outlook report one, which `:ical_uid`
+  carries, and EWS ignores a `t:UID` sent on create outright.
   """
   @spec provider_minted(String.t(), keyword()) :: t()
   def provider_minted(id, opts \\ []) when is_binary(id) do
     %__MODULE__{
       uid: nil,
+      ical_uid: Keyword.get(opts, :ical_uid),
       provider_event_id: id,
       etag: Keyword.get(opts, :etag),
       raw: Keyword.get(opts, :raw)
@@ -102,15 +111,18 @@ defmodule Tymeslot.Integrations.Calendar.CreatedEvent do
 
   Used by the OAuth providers, which answer a create with the event they made.
   `:raw` keeps that response for the caller that needs a conference link out of
-  it. A response naming the event in no way at all yields a result with both
+  it, and the `:ical_uid` the converted event carries is kept as the result's
+  own. A response naming the event in no way at all yields a result with both
   identifiers unset rather than an error, since the event was nonetheless
   created.
   """
   @spec from_provider_event(map()) :: t()
   def from_provider_event(%{} = event) do
+    ical_uid = reported_ical_uid(event)
+
     case identifier(event) do
-      nil -> %__MODULE__{raw: event}
-      id -> provider_minted(id, raw: event)
+      nil -> %__MODULE__{ical_uid: ical_uid, raw: event}
+      id -> provider_minted(id, raw: event, ical_uid: ical_uid)
     end
   end
 
@@ -124,6 +136,23 @@ defmodule Tymeslot.Integrations.Calendar.CreatedEvent do
   @spec local_uid(t()) :: String.t() | nil
   def local_uid(%__MODULE__{uid: uid}) when is_binary(uid), do: uid
   def local_uid(%__MODULE__{provider_event_id: id}), do: id
+
+  @doc """
+  The uid the event's cached row is written under: the one the provider's
+  sync keys it by, so that the next sync updates the row rather than adding a
+  second one beside it.
+
+  The iCalendar UID the provider reported where it minted its own id,
+  otherwise `local_uid/1`.
+  """
+  @spec cache_uid(t()) :: String.t() | nil
+  def cache_uid(%__MODULE__{ical_uid: ical_uid}) when is_binary(ical_uid), do: ical_uid
+  def cache_uid(%__MODULE__{} = created), do: local_uid(created)
+
+  # The providers' converted events carry it as `:ical_uid`, whichever spelling
+  # the raw response used.
+  defp reported_ical_uid(%{ical_uid: uid}) when is_binary(uid) and uid != "", do: uid
+  defp reported_ical_uid(_event), do: nil
 
   # Providers spell their identifier either as the `:id` of a raw response or
   # as the `:uid` of a converted one, in string- or atom-keyed form depending

@@ -281,8 +281,9 @@ defmodule Tymeslot.Meetings.Approval do
   `Bookings.Activation`, which creates the video room before composing the
   confirmation so the join link is in the invitee's first email rather than a
   later correction. A booking confirmed before a reschedule sent it back into
-  the gate is announced as rescheduled instead
-  (`Orchestrator.send_reapproval_notifications/1`).
+  the gate is announced as rescheduled instead, to the invitee and to every
+  integration (`Orchestrator.send_reapproval_notifications/1`,
+  `Notifications.Events.meeting_created/1`).
 
   Each step is best-effort. The row is committed before this runs, so no
   failure here may turn a real confirmation into an error the caller has to
@@ -528,7 +529,7 @@ defmodule Tymeslot.Meetings.Approval do
 
   It has to be `first_announced_at` and not `announced_at`: the re-gating
   reschedule clears `announced_at` on purpose, so that the host's second
-  approval can claim the `meeting.created` fan-out for the new time
+  approval can claim the announcement fan-out for the new time
   (`Bookings.Reschedule`), and reading the claim here would therefore find it
   empty on exactly the meetings this rule is about.
 

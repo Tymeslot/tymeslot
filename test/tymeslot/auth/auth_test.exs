@@ -19,6 +19,7 @@ defmodule Tymeslot.AuthTest do
   alias Tymeslot.Infrastructure.PubSub
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
+  alias TymeslotWeb.Helpers.ClientIP
 
   import Tymeslot.Factory
 
@@ -31,11 +32,19 @@ defmodule Tymeslot.AuthTest do
 
       # Wrong password
       assert {:error, :invalid_password, _reason} =
-               Auth.authenticate_user(user.email, "WrongPassword")
+               Auth.authenticate_user(
+                 user.email,
+                 "WrongPassword",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       # Non-existent user
       assert {:error, :not_found, _reason} =
-               Auth.authenticate_user("fake@example.com", "Password123!")
+               Auth.authenticate_user(
+                 "fake@example.com",
+                 "Password123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
   end
 
@@ -47,14 +56,24 @@ defmodule Tymeslot.AuthTest do
         )
 
       # Wrong password blocks change
-      assert {:error, {:current_password, "Current password is incorrect"}} =
-               Auth.request_email_change(user, "new@example.com", "WrongPassword")
+      assert {:error, %{current_password: "Current password is incorrect"}} =
+               Auth.request_email_change(
+                 user,
+                 "new@example.com",
+                 "WrongPassword",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       # Duplicate email blocked
       insert(:user, email: "taken@example.com")
 
-      assert {:error, {:new_email, "Email address is already in use"}} =
-               Auth.request_email_change(user, "taken@example.com", "CurrentPassword123!")
+      assert {:error, %{new_email: "Email address is already in use"}} =
+               Auth.request_email_change(
+                 user,
+                 "taken@example.com",
+                 "CurrentPassword123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
   end
 
@@ -74,7 +93,8 @@ defmodule Tymeslot.AuthTest do
           user,
           "CurrentPassword123!",
           "NewPassword123!",
-          "NewPassword123!"
+          "NewPassword123!",
+          ClientIP.request_opts(%Plug.Conn{})
         )
 
       # The pre-change session is revoked, so the old cookie no longer resolves
@@ -83,11 +103,16 @@ defmodule Tymeslot.AuthTest do
       refute UserSessionQueries.get_user_by_session_token(old_session.token)
 
       # Verify new password works
-      assert {:ok, _user, _conn} = Auth.authenticate_user(user.email, "NewPassword123!")
+      assert {:ok, _user, _conn} =
+               Auth.authenticate_user(
+                 user.email,
+                 "NewPassword123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
   end
 
-  describe "register_user/3" do
+  describe "register_user/2" do
     test "prevents duplicate registrations" do
       insert(:user, email: "taken@example.com")
 
@@ -99,14 +124,16 @@ defmodule Tymeslot.AuthTest do
         "terms_accepted" => "true"
       }
 
-      assert {:error, :auth, _reason} = Auth.register_user(params, %Plug.Conn{})
+      # Answered exactly as a free address would be; no second account.
+      assert {:existing_account, _message} =
+               Auth.register_user(params, ClientIP.request_opts(%Plug.Conn{}))
     end
   end
 
   describe "verify_user_email/1" do
     test "verifies the email without re-broadcasting :user_registered" do
       user = insert(:unverified_user)
-      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      token = Token.generate_token()
       {:ok, _updated} = UserTokenQueries.set_verification_token(user, token)
 
       assert :ok = Auth.subscribe_to_user_registrations()

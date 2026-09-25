@@ -13,13 +13,27 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     spent, pacing the remaining attempts against the moment the attendees
     actually need the link and announcing the booking without one meanwhile.
 
-  When the caller asks for `announce`, it has deferred the whole
-  `meeting_created` event to this job rather than only its emails, so that every
-  notification carries the join link. This job is therefore what raises that
-  event for any booking with a video room.
+  When the caller hands this job an announcement, it has deferred the whole
+  event to it rather than only its emails, so that every notification carries
+  the join link. This job is therefore what raises `meeting_created` for any
+  booking with a video room, and `meeting_rescheduled` for a reschedule that
+  moved a meeting onto one (`Tymeslot.Workers.VideoRoom.Announcement`).
 
   What is left here is the job itself: fetch the meeting, run the call under a
   timeout, and report the outcome.
+
+  ## Waiting for the booking's calendar event
+
+  A Teams meeting on the same Microsoft account as the booking's Outlook
+  calendar is attached to the booking's own event, which the calendar job
+  writes alongside this one. Until it exists, the job hands over to a fresh
+  copy of itself a few seconds later rather than snoozing. A snooze counts as
+  an execution, and `Recovery` measures executions: a wait of a dozen seconds
+  would otherwise enter recovery and announce the booking without its link.
+  The wait is bounded by the meeting, not the job:
+  `Tymeslot.Integrations.MeetingProvisioning.teams_room_placement/1` stops
+  asking for it two minutes after the booking, and the meeting gets a Teams
+  event of its own instead.
   """
 
   use Oban.Worker,
@@ -32,16 +46,19 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.Notifications.Events
+  alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.Workers.SnoozePolicy
-  alias Tymeslot.Workers.VideoRoom.{ErrorPolicy, Recovery}
+  alias Tymeslot.Workers.VideoRoom.{Announcement, ErrorPolicy, Recovery}
 
   require Logger
 
   # What the provider call may spend beyond waiting on the provider itself:
   # reading and writing the meeting, and asking the circuit breaker.
   @local_work_margin_ms 10_000
+
+  # How long a Teams meeting waits between looks for the booking's calendar
+  # event; see "Waiting for the booking's calendar event" above.
+  @calendar_event_wait_seconds 3
 
   @backoff_base_ms 1_000
   @backoff_cap_ms 16_000
@@ -58,13 +75,25 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     :unauthorized
   ]
 
-  # Deduplicate identical jobs within five minutes, so a retried booking step
-  # cannot queue a second room creation for the same meeting.
-  @unique [period: 300, fields: [:args, :queue], keys: [:meeting_id, :announce]]
+  # Deduplicate identical jobs while one is still pending, so a retried booking
+  # step cannot queue a second room creation for the same meeting. Only
+  # in-flight jobs count: a finished one has nothing left to deduplicate
+  # against, and counting it would swallow a later reschedule whose args
+  # happen to repeat an earlier one (Zoom to Teams and back within the window,
+  # or A to B, back to A, and to B again), leaving that reschedule with no
+  # room and no announcement. A second job for a meeting that already has its
+  # room is harmless: `VideoRooms` finds the room attached and creates none,
+  # and `Announcement.deliver/3` claims a booking's announcement only once.
+  @unique [
+    period: 300,
+    fields: [:args, :queue],
+    keys: [:meeting_id, :announce, :previous_start_time, :start_time],
+    states: [:available, :scheduled, :executing, :retryable]
+  ]
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"meeting_id" => meeting_id} = args, attempt: attempt} = job) do
-    announce = announce?(args)
+    announcement = Announcement.from_args(args)
     # Downstream specs take the id as a string, whatever the job args hold.
     meeting_id = to_string(meeting_id)
 
@@ -83,10 +112,10 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
         Logger.info("Starting video room creation",
           meeting_id: meeting_id,
-          announce: announce
+          announce: Announcement.owed?(announcement)
         )
 
-        create_room(meeting, announce, execution)
+        create_room(meeting, announcement, execution, args)
 
       {:error, :not_found} ->
         Logger.warning("Meeting not found, discarding video room job", meeting_id: meeting_id)
@@ -98,7 +127,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   Schedules video room creation for a meeting already announced without a room.
   """
   @spec schedule_video_room_creation(String.t()) :: :ok | {:error, String.t()}
-  def schedule_video_room_creation(meeting_id), do: schedule(meeting_id, false)
+  def schedule_video_room_creation(meeting_id), do: schedule(meeting_id, :none)
 
   @doc """
   Schedules video room creation, holding the booking's announcement until it
@@ -110,22 +139,41 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   """
   @spec schedule_video_room_creation_with_announcement(String.t()) ::
           :ok | {:error, String.t()}
-  def schedule_video_room_creation_with_announcement(meeting_id), do: schedule(meeting_id, true)
+  def schedule_video_room_creation_with_announcement(meeting_id),
+    do: schedule(meeting_id, :created)
 
-  defp announce?(%{"announce" => announce}), do: announce
-  defp announce?(_args), do: false
+  @doc """
+  Schedules video room creation for a meeting a reschedule moved onto a video
+  location, holding the reschedule's announcement until it finishes.
 
-  defp schedule(meeting_id, announce) do
-    %{"meeting_id" => meeting_id, "announce" => announce}
+  `updated` and `original` are the meeting after and before the reschedule.
+  `meeting.rescheduled` is raised once the room exists, or without a link if
+  creation ultimately fails, and not at all if the meeting is rescheduled again
+  first: that reschedule announces itself.
+  """
+  @spec schedule_video_room_creation_with_reschedule_announcement(
+          MeetingSchema.t(),
+          MeetingSchema.t()
+        ) :: :ok | {:error, String.t()}
+  def schedule_video_room_creation_with_reschedule_announcement(
+        %MeetingSchema{} = updated,
+        %MeetingSchema{} = original
+      ),
+      do: schedule(updated.id, Announcement.rescheduled(updated, original))
+
+  defp schedule(meeting_id, announcement) do
+    announcement
+    |> Announcement.to_args()
+    |> Map.put("meeting_id", meeting_id)
     |> new(queue: :video_rooms, priority: 0, unique: @unique)
     |> Oban.insert()
-    |> handle_insert(meeting_id, announce)
+    |> handle_insert(meeting_id, announcement)
   end
 
-  defp handle_insert({:ok, _job}, meeting_id, announce) do
+  defp handle_insert({:ok, _job}, meeting_id, announcement) do
     Logger.info("Video room creation job scheduled",
       meeting_id: meeting_id,
-      announce: announce
+      announce: Announcement.owed?(announcement)
     )
 
     :ok
@@ -201,7 +249,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
   # The provider call runs in a supervised task so a hung connection cannot pin
   # the queue's worker for longer than the timeout.
-  defp create_room(meeting, announce, execution) do
+  defp create_room(meeting, announcement, execution, args) do
     meeting_id = meeting.id
     timeout_ms = creation_timeout_ms(meeting)
 
@@ -212,11 +260,14 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
     case Task.yield(task, timeout_ms) || Task.shutdown(task) do
       {:ok, {:ok, meeting}} ->
-        handle_success(meeting, announce)
+        handle_success(meeting, announcement, execution)
+
+      {:ok, {:error, :calendar_event_pending}} ->
+        wait_for_calendar_event(meeting_id, args)
 
       {:ok, {:error, reason}} ->
         reason
-        |> handle_failure(meeting_id, announce, execution)
+        |> handle_failure(meeting_id, announcement, execution)
         |> to_oban_result(execution)
 
       {:ok, other} ->
@@ -228,29 +279,47 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
           timeout_ms: timeout_ms
         )
 
-        handle_timeout(meeting_id, announce, execution)
+        handle_timeout(meeting_id, announcement, execution)
     end
   end
 
-  defp handle_success(meeting, announce) do
+  # A fresh job starts its execution count again, which is the point. The
+  # uniqueness window is deliberately not applied: it would match this job.
+  defp wait_for_calendar_event(meeting_id, args) do
+    case args
+         |> new(queue: :video_rooms, priority: 0, schedule_in: @calendar_event_wait_seconds)
+         |> Oban.insert() do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule the wait for the booking's calendar event",
+          meeting_id: meeting_id,
+          error: format_insert_error(reason)
+        )
+
+        {:error, "Failed to schedule job"}
+    end
+  end
+
+  # A room that arrives after recovery has already announced the meeting
+  # without one must not announce it again; `Announcement.deliver/3` sees to
+  # that.
+  defp handle_success(meeting, announcement, execution) do
     Logger.info("Video room created successfully",
       meeting_id: Map.get(meeting, :id),
       room_ref: Redactor.fingerprint(Map.get(meeting, :video_room_id))
     )
 
-    # A room that arrives after recovery has already announced the booking
-    # without one must not announce it again; `meeting_created/1` claims the
-    # event once per meeting, so this call is a no-op in that case.
-    if announce and Map.get(meeting, :id) do
-      Logger.info("Announcing the meeting now its room exists", meeting_id: meeting.id)
-      Events.meeting_created(meeting)
-    end
-
-    :ok
+    Announcement.deliver(
+      announcement,
+      meeting,
+      Recovery.announced_without_room?(execution)
+    )
   end
 
-  defp handle_failure(reason, meeting_id, announce, execution) do
-    Logger.error("Failed to create video room", meeting_id: meeting_id, reason: inspect(reason))
+  defp handle_failure(reason, meeting_id, announcement, execution) do
+    log_failure(reason, meeting_id)
 
     {:error, categorized} = ErrorPolicy.categorize(reason)
 
@@ -260,20 +329,26 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
       # the booking without one. Reaching `Recovery` instead would spend ten
       # attempts and a permanent-failure alert to arrive at the same place.
       categorized in @announce_without_room ->
-        if announce, do: Recovery.send_fallback_notifications(meeting_id)
+        if Announcement.owed?(announcement),
+          do: Recovery.send_fallback_notifications(meeting_id, announcement, execution)
+
         {:discard, ErrorPolicy.discard_reason(categorized)}
 
-      Recovery.recovering?(execution, announce) ->
-        Recovery.enter(meeting_id, execution, "creation failed: #{inspect(reason)}")
+      Recovery.recovering?(execution, Announcement.owed?(announcement)) ->
+        Recovery.enter(meeting_id, execution, "creation failed: #{inspect(reason)}", announcement)
 
       true ->
         {:error, categorized}
     end
   end
 
-  defp handle_timeout(meeting_id, announce, execution) do
-    if Recovery.recovering?(execution, announce) do
-      Recovery.enter(meeting_id, execution, "creation timed out")
+  defp log_failure(reason, meeting_id),
+    do:
+      Logger.error("Failed to create video room", meeting_id: meeting_id, reason: inspect(reason))
+
+  defp handle_timeout(meeting_id, announcement, execution) do
+    if Recovery.recovering?(execution, Announcement.owed?(announcement)) do
+      Recovery.enter(meeting_id, execution, "creation timed out", announcement)
     else
       {:error, "Video room creation timed out"}
     end

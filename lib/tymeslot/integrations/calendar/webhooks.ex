@@ -23,11 +23,11 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
 
   require Logger
 
-  alias Plug.Crypto
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Security.SharedSecret
   alias Tymeslot.Workers.ReregisterOutlookSubscriptionWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
   alias Tymeslot.Workers.SyncOutlookCalendarWorker
@@ -69,7 +69,8 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
   enqueues a `SyncOutlookCalendarWorker` job for the event in its
   `resourceData` and records the notification time. Only the first
   #{@max_notifications_per_batch} notifications are considered, and a payload
-  that is not a list of objects is dropped rather than raised on.
+  that is not a list of objects carrying a string `subscriptionId` is dropped
+  rather than raised on.
   """
   @spec handle_outlook_notifications(term()) :: :ok
   def handle_outlook_notifications(notifications) do
@@ -78,7 +79,6 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
     integrations_by_subscription_id =
       notifications
       |> Enum.map(& &1["subscriptionId"])
-      |> Enum.reject(&is_nil/1)
       |> Enum.uniq()
       |> load_integrations_by_subscription_id()
 
@@ -90,7 +90,8 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
 
   Only the first event per subscription is acted on, and only the first
   #{@max_notifications_per_batch} events are considered. A payload that is not
-  a list of objects is dropped rather than raised on. See the module
+  a list of objects carrying a string `subscriptionId` is dropped rather than
+  raised on. See the module
   documentation for what each lifecycle event enqueues.
   """
   @spec handle_outlook_lifecycle_notifications(term()) :: :ok
@@ -104,7 +105,7 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
   # Google
 
   defp verify_google_token(integration, channel_id, channel_token) do
-    if valid_secret?(channel_token, integration.google_channel_secret) do
+    if SharedSecret.matches?(channel_token, integration.google_channel_secret) do
       :ok
     else
       Logger.warning("Google Calendar webhook: token verification failed",
@@ -232,19 +233,20 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
 
   # Shared
 
-  # Graph sends a list of notification objects. The endpoints are public, so
-  # anything else can arrive too, and every payload is acknowledged either
-  # way: drop what does not fit that shape rather than raise past the
-  # `Access` reads the handlers make on each entry.
+  # Graph sends a list of notification objects, each naming its subscription.
+  # The endpoints are public, so anything else can arrive too, and every
+  # payload is acknowledged either way: drop what does not fit that shape
+  # rather than raise past the `Access` reads the handlers make on each entry,
+  # or past the subscription-id lookup, which cannot cast a number or a map.
   defp accepted_notifications(notifications, endpoint) when is_list(notifications) do
     case notifications
          |> Enum.take(@max_notifications_per_batch)
-         |> Enum.split_with(&is_map/1) do
+         |> Enum.split_with(&names_subscription?/1) do
       {accepted, []} ->
         accepted
 
       {accepted, rejected} ->
-        Logger.debug("Calendar webhook: dropped notification entries that are not objects",
+        Logger.debug("Calendar webhook: dropped notification entries without a subscription id",
           endpoint: endpoint,
           dropped_count: length(rejected)
         )
@@ -261,8 +263,11 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
     []
   end
 
+  defp names_subscription?(%{"subscriptionId" => id}) when is_binary(id), do: true
+  defp names_subscription?(_entry), do: false
+
   defp verify_client_state(integration, notification, failure_message) do
-    if valid_secret?(notification["clientState"], integration.graph_client_state) do
+    if SharedSecret.matches?(notification["clientState"], integration.graph_client_state) do
       :ok
     else
       Logger.warning(failure_message,
@@ -273,15 +278,6 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
       {:error, :invalid_client_state}
     end
   end
-
-  # Timing-safe; an absent or empty secret on either side never matches.
-  defp valid_secret?(received, expected)
-       when is_binary(received) and is_binary(expected) and byte_size(received) > 0 and
-              byte_size(expected) > 0 do
-    Crypto.secure_compare(received, expected)
-  end
-
-  defp valid_secret?(_received, _expected), do: false
 
   defp check_rate_limit(integration, message) do
     case RateLimiter.check_calendar_webhook_rate_limit(integration.id) do

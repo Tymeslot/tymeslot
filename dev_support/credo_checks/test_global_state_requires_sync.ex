@@ -38,14 +38,23 @@ defmodule CredoChecks.TestGlobalStateRequiresSync do
       options contain a `:logger_level` key.
     * Asserts the *absence* of a log: `refute_receive` or `refute_received`
       whose pattern mentions `:captured_log`.
+    * Adds or removes a `:logger` handler: `:logger.add_handler/3` or
+      `:logger.remove_handler/1`. `:logger`'s server computes the handler list
+      for a removal when the request arrives but writes it back later, so a
+      removal racing another process's add or remove can drop a handler from
+      the list or list one twice. `ExUnit.CaptureServer` adds and removes its
+      handler throughout every run, so an async module doing the same corrupts
+      `capture_log` for the rest of the suite. `Tymeslot.Test.LogCapture`
+      explains the race.
 
   ## The deliberate carve-out
 
   A module that calls `LogCapture.attach()` with **no** options, and only
   asserts a log's *presence* (`assert_receive {:captured_log, _}`), is safe
-  and stays `async: true`. Attaching a handler is cheap and per-caller; only
-  lowering the primary level or asserting on absence reaches outside the
-  calling test.
+  and stays `async: true`. Attaching adds no `:logger` handler (the one
+  handler is installed once for the suite) and only registers the calling
+  process; only lowering the primary level or asserting on absence reaches
+  outside the calling test.
 
   ## Inheriting through a case template
 
@@ -148,8 +157,9 @@ defmodule CredoChecks.TestGlobalStateRequiresSync do
       A test module that mutates node-wide runtime state must declare
       async: false.
 
-      Mox global mode, lowering the primary Logger level, and asserting on
-      the absence of a log all reach past the calling test's own process: an
+      Mox global mode, lowering the primary Logger level, asserting on the
+      absence of a log, and adding or removing a :logger handler all reach
+      past the calling test's own process: an
       async module doing any of them corrupts every test running alongside
       it. The failure surfaces in an unrelated module and only in a full run.
 
@@ -274,6 +284,7 @@ defmodule CredoChecks.TestGlobalStateRequiresSync do
       call = mox_global_call(body) -> {:ok, {:mox_global, call}}
       call = lowered_log_level_call(body) -> {:ok, {:log_capture, call}}
       macro = refute_absence_call(body) -> {:ok, {:refute_absence, macro}}
+      call = logger_handler_call(body) -> {:ok, {:logger_handler, call}}
       true -> :none
     end
   end
@@ -372,6 +383,22 @@ defmodule CredoChecks.TestGlobalStateRequiresSync do
     found
   end
 
+  @logger_handler_functions [:add_handler, :remove_handler]
+
+  defp logger_handler_call(body) do
+    {_ast, found} =
+      Macro.prewalk(body, nil, fn
+        {{:., _dot, [:logger, fun]}, _meta, _args} = node, nil
+        when fun in @logger_handler_functions ->
+          {node, ":logger.#{fun}"}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    found
+  end
+
   defp captured_log_pattern?(args) do
     {_ast, found} =
       Macro.prewalk(args, false, fn
@@ -423,6 +450,18 @@ defmodule CredoChecks.TestGlobalStateRequiresSync do
           ":logger handler is global — a concurrent test's log can satisfy or defeat the " <>
           "assertion. Declare async: false, or opt out with " <>
           "`# credo:global-state-safe — <reason>`.",
+      line_no: line_no,
+      trigger: "async: true"
+    )
+  end
+
+  defp build_issue(issue_meta, line_no, {:logger_handler, call}) do
+    format_issue(issue_meta,
+      message:
+        "Test module is async: true and calls #{call}. Adding or removing a :logger handler " <>
+          "while other tests run can list ExUnit's capture handler twice, doubling every " <>
+          "captured log line for the rest of the suite. Use Tymeslot.Test.LogCapture, declare " <>
+          "async: false, or opt out with `# credo:global-state-safe — <reason>`.",
       line_no: line_no,
       trigger: "async: true"
     )

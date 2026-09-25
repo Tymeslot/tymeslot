@@ -244,24 +244,41 @@ defmodule Tymeslot.Meetings.MeetingQueries do
 
   The claim is a single conditional UPDATE rather than a read followed by a
   write, so two callers racing on the same meeting cannot both win it.
+
+  A winning claim also says whether the booking has been announced before:
+  `{:ok, :re_announcement}` when a reschedule sent a confirmed booking back
+  into the approval gate (which clears `announced_at` but never
+  `first_announced_at`) and the host has now approved the new time,
+  `{:ok, :first_announcement}` otherwise. The answer is read from the row the
+  UPDATE locks, in the same statement, rather than from the caller's struct,
+  so a stale struct cannot turn a first announcement into a repeat or the
+  other way round.
   """
-  @spec claim_announcement(term()) :: :ok | :already_announced
+  @spec claim_announcement(term()) ::
+          {:ok, :first_announcement | :re_announcement} | :already_announced
   def claim_announcement(meeting_id) do
     case UUID.cast(meeting_id) do
       {:ok, uuid} -> claim_announcement_for(uuid)
       # Nothing to dedupe against, so let the caller announce rather than
       # swallow an event on the strength of an id we cannot look up.
-      :error -> :ok
+      :error -> {:ok, :first_announcement}
     end
   end
 
   defp claim_announcement_for(uuid) do
     now = DateTime.utc_now(:second)
 
-    {claimed, _rows} =
+    # The self-join exposes the row as it stood before this UPDATE: RETURNING
+    # on the target itself would only show the COALESCE result, which is
+    # `now` for a first announcement and indistinguishable from an earlier
+    # stamp taken within the same second.
+    {claimed, previous} =
       Repo.update_all(
         from(m in Meeting,
+          join: before in Meeting,
+          on: before.id == m.id,
           where: m.id == ^uuid and is_nil(m.announced_at),
+          select: before.first_announced_at,
           update: [
             set: [
               announced_at: ^now,
@@ -277,11 +294,12 @@ defmodule Tymeslot.Meetings.MeetingQueries do
       )
 
     cond do
-      claimed == 1 -> :ok
+      claimed == 1 and previous == [nil] -> {:ok, :first_announcement}
+      claimed == 1 -> {:ok, :re_announcement}
       Repo.exists?(from(m in Meeting, where: m.id == ^uuid)) -> :already_announced
       # The meeting is gone, or was never persisted. Either way there is no
       # stamp to read, and refusing to announce would be the worse failure.
-      true -> :ok
+      true -> {:ok, :first_announcement}
     end
   end
 

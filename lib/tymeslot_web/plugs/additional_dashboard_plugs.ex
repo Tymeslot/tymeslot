@@ -32,26 +32,61 @@ defmodule TymeslotWeb.Plugs.AdditionalDashboardPlugs do
   defp run({module, opts}, conn), do: module.call(conn, module.init(opts))
   defp run(module, conn) when is_atom(module), do: module.call(conn, module.init([]))
 
+  @doc """
+  Boot-time check of `:dashboard_additional_plugs`: on top of the shape check
+  every request repeats, each plug module must be loadable and export
+  `init/1` and `call/2`, so a misspelt module name stops the application
+  starting instead of surfacing at the first gated request.
+  """
+  @spec validate_config!() :: :ok
+  def validate_config! do
+    Enum.each(configured_plugs(), fn plug ->
+      module = plug_module(plug)
+
+      unless Code.ensure_loaded?(module) and function_exported?(module, :init, 1) and
+               function_exported?(module, :call, 2) do
+        raise ArgumentError,
+              ":dashboard_additional_plugs entry #{inspect(plug)} names " <>
+                "#{inspect(module)}, which is not a module plug"
+      end
+    end)
+  end
+
+  defp plug_module({module, _opts}), do: module
+  defp plug_module(module), do: module
+
+  # These plugs are deployment gates, so a configuration they cannot be run
+  # from raises rather than being skipped: a typo must not quietly switch a
+  # gate off. Every entry is checked before any plug runs.
   @spec configured_plugs() :: list()
   defp configured_plugs do
-    case Application.get_env(:tymeslot, :dashboard_additional_plugs, []) do
-      plugs when is_list(plugs) ->
-        plugs
+    :tymeslot
+    |> Application.get_env(:dashboard_additional_plugs, [])
+    |> normalise()
+    |> Enum.map(&validate!/1)
+  end
 
-      plug when is_tuple(plug) or is_atom(plug) ->
-        Logger.warning(
-          "Expected :dashboard_additional_plugs to be a list, received a single plug. Wrapping."
-        )
+  defp normalise(plugs) when is_list(plugs), do: plugs
 
-        [plug]
+  defp normalise(plug) when is_tuple(plug) or is_atom(plug) do
+    Logger.warning(
+      "Expected :dashboard_additional_plugs to be a list, received a single plug. Wrapping."
+    )
 
-      other ->
-        Logger.warning(
-          "Expected :dashboard_additional_plugs to be a list; ignoring invalid value",
-          value: inspect(other)
-        )
+    [plug]
+  end
 
-        []
-    end
+  defp normalise(other) do
+    raise ArgumentError,
+          "expected :dashboard_additional_plugs to be a list of plugs, got: #{inspect(other)}"
+  end
+
+  defp validate!({module, _opts} = plug) when is_atom(module), do: plug
+  defp validate!(module) when is_atom(module), do: module
+
+  defp validate!(other) do
+    raise ArgumentError,
+          "unrecognised :dashboard_additional_plugs entry #{inspect(other)}; " <>
+            "expected a module or a {module, opts} tuple"
   end
 end

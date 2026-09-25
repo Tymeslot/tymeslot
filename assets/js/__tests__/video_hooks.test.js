@@ -281,10 +281,10 @@ describe('video hooks honour a stopped background', () => {
       removeEventListener() {},
     }));
     // jsdom ships neither of these; Rhythm's visibility pause needs the first.
-    window.IntersectionObserver = vi.fn(() => ({
-      observe() {},
-      disconnect() {},
-    }));
+    window.IntersectionObserver = class {
+      observe() {}
+      disconnect() {}
+    };
   });
 
   test('Quill pauses the background when the visitor has stopped it', () => {

@@ -116,6 +116,37 @@ defmodule Tymeslot.Bookings.CalendarJobsTest do
     end
   end
 
+  describe "CalendarEventScheduler.schedule_calendar_replacement/2" do
+    # A running replacement may already have read the meeting back on Teams
+    # and chosen to update the event; a reschedule away from Teams since then
+    # needs a replacement of its own.
+    test "enqueues while a replacement of the same event is executing" do
+      meeting = insert(:meeting)
+
+      assert {:ok, _job} =
+               CalendarEventScheduler.schedule_calendar_replacement(meeting.id, "teams-event")
+
+      start_running(meeting, "replace")
+
+      assert {:ok, job} =
+               CalendarEventScheduler.schedule_calendar_replacement(meeting.id, "teams-event")
+
+      refute job.conflict?
+    end
+
+    test "collapses into a replacement of the same event that has not started yet" do
+      meeting = insert(:meeting)
+
+      assert {:ok, _job} =
+               CalendarEventScheduler.schedule_calendar_replacement(meeting.id, "teams-event")
+
+      assert {:ok, job} =
+               CalendarEventScheduler.schedule_calendar_replacement(meeting.id, "teams-event")
+
+      assert job.conflict?
+    end
+  end
+
   # Oban's uniqueness looks at the rows in the table, so moving the job to
   # `executing` is what the next insert actually meets.
   defp start_running(meeting, action) do

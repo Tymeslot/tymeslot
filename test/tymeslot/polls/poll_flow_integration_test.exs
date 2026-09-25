@@ -23,6 +23,7 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
 
   alias Ecto.Changeset
   alias Phoenix.ConnTest
+  alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Polls
@@ -294,6 +295,49 @@ defmodule Tymeslot.Polls.PollFlowIntegrationTest do
       {:ok, still_open} = Polls.get_poll_for_host(poll.id, user.id)
       assert still_open.status == :open
       assert still_open.confirmed_meeting_id == nil
+    end
+  end
+
+  describe "time off entered after the poll went out" do
+    test "stops the host confirming into it, and the poll stays open for another time" do
+      %{user: user, profile: profile} = seed_booking_account("1", "away-host", "Etc/UTC")
+
+      start_time = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
+      end_time = DateTime.add(start_time, 30, :minute)
+      later_start = DateTime.add(start_time, 2, :day)
+
+      poll = insert(:poll, user: user, status: :open)
+      away_slot = insert(:poll_time_slot, poll: poll, start_time: start_time, end_time: end_time)
+
+      other_slot =
+        insert(:poll_time_slot,
+          poll: poll,
+          start_time: later_start,
+          end_time: DateTime.add(later_start, 30, :minute)
+        )
+
+      {:ok, loaded} = Polls.get_poll_for_voting(poll.token)
+
+      {:ok, participant} =
+        Voting.register_participant(loaded, %{name: "Eve", email: "eve@example.com"})
+
+      assert {:ok, _vote} =
+               Voting.cast_votes(loaded, participant.token, %{
+                 away_slot.id => "yes",
+                 other_slot.id => "yes"
+               })
+
+      # Votes are in; only now does the host book the winning day off.
+      away_day = DateTime.to_date(start_time)
+      {:ok, _period} = TimeOff.create(profile.id, %{starts_on: away_day, ends_on: away_day})
+
+      assert {:error, :time_off} = Confirm.confirm(poll.id, away_slot.id, user.id)
+
+      {:ok, still_open} = Polls.get_poll_for_host(poll.id, user.id)
+      assert still_open.status == :open
+
+      assert {:ok, meeting} = Confirm.confirm(poll.id, other_slot.id, user.id)
+      assert DateTime.compare(meeting.start_time, later_start) == :eq
     end
   end
 

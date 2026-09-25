@@ -6,6 +6,9 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpened do
   Enqueued from the `charge.dispute.created` webhook handler after the
   `booking_payment` row has been transitioned to `disputed`. Loads a fresh
   booking-payment row inside `perform/1` to avoid acting on stale data.
+
+  The send is claimed through `Tymeslot.Workers.DeliveryClaims`, so a job the
+  Oban lifeline rescues after the email went out does not send it again.
   """
 
   use Oban.Worker,
@@ -25,10 +28,11 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpened do
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.TransactionalEmailDelivery
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"booking_payment_id" => booking_payment_id} = args}) do
+  def perform(%Oban.Job{args: %{"booking_payment_id" => booking_payment_id} = args} = job) do
     case MeetingPayments.get_payment(booking_payment_id) do
       nil ->
         Logger.warning("Dispute email skipped — booking_payment not found",
@@ -46,7 +50,7 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpened do
         {:discard, "missing host_email"}
 
       %BookingPaymentSchema{} = payment ->
-        send_email(payment, args)
+        DeliveryClaims.once(job, "dispute_email", fn -> send_email(payment, args) end)
     end
   end
 

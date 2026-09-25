@@ -5,10 +5,29 @@ defmodule TymeslotWeb.Helpers.ClientIP do
 
   Handles various scenarios including:
   - Direct connections
-  - Reverse proxy headers (CF-Connecting-IP, X-Real-IP, X-Forwarded-For)
-  - Cloudflare deployments (CF-Connecting-IP takes highest precedence)
+  - Reverse proxy headers (X-Forwarded-For, X-Real-IP)
   - LiveView socket assigns
   - Fallback to "unknown" when IP cannot be determined
+
+  ## One resolution rule for both paths
+
+  The conn path is resolved by the endpoint's `RemoteIp` plug: the entries of
+  `X-Forwarded-For` and `X-Real-IP` are read in the order the headers arrived,
+  and the rightmost one that is not a proxy hop names the visitor. The socket
+  path (`get_from_mount/1`) applies the same rule to the same two headers, so
+  neither header outranks the other. Giving `X-Real-IP` precedence on the
+  socket alone let one visitor resolve to two addresses, and therefore two
+  rate-limit buckets, depending on whether a request arrived over HTTP or the
+  LiveView socket.
+
+  Because the rightmost entry across both headers wins, a proxy that sets
+  only `X-Real-IP` but passes a client-supplied `X-Forwarded-For` through
+  unchanged lets the client choose its own address whenever that header
+  arrives after `X-Real-IP`. Operators must have the proxy strip or
+  overwrite `X-Forwarded-For` (nginx: `proxy_set_header X-Forwarded-For
+  $proxy_add_x_forwarded_for;` appends the real peer, which is then the
+  rightmost entry). The same holds for the conn path, which `RemoteIp`
+  resolves the same way.
   """
 
   alias Phoenix.LiveView
@@ -17,6 +36,10 @@ defmodule TymeslotWeb.Helpers.ClientIP do
 
   # The ranges `trusted_peer?/1` matches, in the CIDR form `RemoteIp` takes.
   @private_client_blocks ~w[127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 ::1/128 fc00::/7]
+
+  # The forwarded headers the socket path reads: the same two, and only those,
+  # that the endpoint's `RemoteIp` plug is configured with.
+  @forwarded_headers ~w[x-forwarded-for x-real-ip]
 
   @doc """
   The `clients:` list for the endpoint's `RemoteIp` plug: the conn path's half
@@ -85,8 +108,8 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   only during mount/3 of the root LiveView. Typical usage is to read the value
   and immediately store it in socket assigns for later usage.
 
-  IMPORTANT: Checks forwarded headers FIRST (x-forwarded-for, x-real-ip) before
-  falling back to peer_data. This is critical when behind a reverse proxy like
+  IMPORTANT: Checks forwarded headers FIRST (x-forwarded-for and x-real-ip,
+  resolved as the moduledoc describes) before falling back to peer_data. This is critical when behind a reverse proxy like
   Cloudron, Nginx, etc., where peer_data would return the proxy's internal IP.
   """
   @spec get_from_mount(Phoenix.LiveView.Socket.t()) :: String.t()
@@ -134,6 +157,21 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   end
 
   def get_user_agent(_other), do: "unknown"
+
+  @doc """
+  The request context a domain function records against an action: the
+  client's IP and user agent, as keyword options (`ip:`, `user_agent:`).
+
+  Domain modules never read a conn or socket themselves; the web layer
+  extracts this once and passes it in. Safe to call wherever `get/1` is.
+  """
+  @spec request_opts(Plug.Conn.t() | Phoenix.LiveView.Socket.t()) :: [
+          ip: String.t(),
+          user_agent: String.t()
+        ]
+  def request_opts(conn_or_socket) do
+    [ip: get(conn_or_socket), user_agent: get_user_agent(conn_or_socket)]
+  end
 
   @doc """
   Reads user-agent from LiveView connect params (headers). Call only during mount/3
@@ -361,18 +399,23 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   end
 
   defp extract_forwarded_ip_from_tuples(headers, trust_private_clients?) do
-    # Headers are [{name, value}, ...] tuples from :x_headers connect_info.
-    # Phoenix's :x_headers collects only headers whose name starts with "x-",
-    # so CF-Connecting-IP (no "x-" prefix) is never present on the socket path.
-    # Resolution uses x-real-ip (trusted upstream proxy, e.g. Nginx) then
-    # x-forwarded-for. Only called when the direct peer is a trusted
-    # private/loopback address (see get_forwarded_from_socket/1).
-    real_ip = headers |> find_header("x-real-ip") |> usable_forwarded_ip(trust_private_clients?)
-
-    forwarded_for =
-      headers |> find_header("x-forwarded-for") |> rightmost_usable_hop(trust_private_clients?)
-
-    real_ip || forwarded_for || "unknown"
+    # Headers are [{name, value}, ...] tuples from :x_headers connect_info, in
+    # the order the request carried them. Phoenix's :x_headers collects only
+    # headers whose name starts with "x-", so CF-Connecting-IP (no "x-" prefix)
+    # is never present on the socket path. Only called when the direct peer is
+    # a trusted private/loopback address (see get_forwarded_from_socket/1).
+    #
+    # Mirrors `RemoteIp`: the entries of both headers are concatenated in
+    # header order and the rightmost usable one wins, so x-real-ip does not
+    # outrank x-forwarded-for (see the moduledoc).
+    headers
+    |> Enum.flat_map(fn
+      {name, value} when name in @forwarded_headers and is_binary(value) -> [value]
+      _other -> []
+    end)
+    |> Enum.join(",")
+    |> rightmost_usable_hop(trust_private_clients?)
+    |> Kernel.||("unknown")
   end
 
   # A forwarded header may only name a *client*, never another hop.
@@ -469,16 +512,11 @@ defmodule TymeslotWeb.Helpers.ClientIP do
     |> Enum.find_value(&usable_forwarded_ip(&1, trust_private_clients?))
   end
 
-  defp find_header(headers, name) do
-    case List.keyfind(headers, name, 0) do
-      {^name, value} -> value
-      _other -> nil
-    end
-  end
-
   defp extract_forwarded_ip_from_map(headers, trust_private_clients?) do
-    # Check for various header formats (headers might be lowercase).
-    # Same precedence and same hop filtering as extract_forwarded_ip_from_tuples/2.
+    # Check for various header formats (headers might be lowercase). A map
+    # carries no header order, so x-forwarded-for is consulted before x-real-ip,
+    # the order `RemoteIp` lands on when a proxy appends both. Same hop
+    # filtering as extract_forwarded_ip_from_tuples/2.
     connecting_ip =
       headers |> Map.get("cf-connecting-ip") |> usable_forwarded_ip(trust_private_clients?)
 
@@ -487,7 +525,7 @@ defmodule TymeslotWeb.Helpers.ClientIP do
     forwarded_for =
       headers |> Map.get("x-forwarded-for") |> rightmost_usable_hop(trust_private_clients?)
 
-    connecting_ip || real_ip || forwarded_for
+    connecting_ip || forwarded_for || real_ip
   end
 
   # Private functions for User Agent extraction

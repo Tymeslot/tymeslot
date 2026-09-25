@@ -50,11 +50,6 @@ msgstr "Zabezpečení účtu"
 msgid "Account Settings"
 msgstr "Nastavení účtu"
 
-#: lib/tymeslot_web/live/account_live/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "An unexpected error occurred"
-msgstr "Došlo k neočekávané chybě"
-
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "At least 8 characters"
@@ -174,11 +169,6 @@ msgstr "Požadovaná změna na:"
 #, elixir-autogen, elixir-format
 msgid "Sent %{time}"
 msgstr "Odesláno %{time}"
-
-#: lib/tymeslot_web/live/account_live/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Too many attempts. Please try again later."
-msgstr "Příliš mnoho pokusů. Zkuste to prosím později."
 
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format

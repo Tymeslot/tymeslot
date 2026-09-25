@@ -35,6 +35,7 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
           email_logo_path: String.t() | nil,
           admin_default_locale: String.t() | nil,
           booking_default_locale: String.t() | nil,
+          admin_bootstrapped_at: DateTime.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -112,6 +113,10 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
     field(:email_logo_path, :string)
     field(:admin_default_locale, :string)
     field(:booking_default_locale, :string)
+
+    # Not admin-editable: set once, by `Tymeslot.Auth.AdminBootstrap`, when the
+    # first-user-becomes-admin bootstrap closes. Never cast from params.
+    field(:admin_bootstrapped_at, :utc_datetime)
 
     timestamps(type: :utc_datetime_usec)
   end

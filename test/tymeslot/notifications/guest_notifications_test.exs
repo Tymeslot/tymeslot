@@ -26,8 +26,11 @@ defmodule Tymeslot.Notifications.GuestNotificationsTest do
     {:ok, [accepted, declined]} =
       Guests.create_for_meeting(meeting.id, ["yes@example.com", "no@example.com"])
 
-    {:ok, _guest} = Guests.record_rsvp(accepted.rsvp_token, "accepted")
-    {:ok, _guest} = Guests.record_rsvp(declined.rsvp_token, "declined")
+    # Written directly: the meeting is often in a state (cancelled, awaiting
+    # approval) that no longer takes responses, but the guests answered while
+    # it still did.
+    {:ok, _guest} = GuestQueries.update_rsvp(accepted, %{status: "accepted"})
+    {:ok, _guest} = GuestQueries.update_rsvp(declined, %{status: "declined"})
 
     for guest <- [accepted, declined] do
       {:ok, _guest} = GuestQueries.mark_confirmation_sent(guest, DateTime.utc_now(:second))

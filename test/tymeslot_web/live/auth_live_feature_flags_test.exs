@@ -13,7 +13,7 @@ defmodule TymeslotWeb.AuthLiveFeatureFlagsTest do
   use TymeslotWeb.LiveCase, async: false
   @moduletag :auth
 
-  alias Tymeslot.Auth.AuthActions
+  alias Tymeslot.Auth
 
   describe "Registration disabled" do
     setup do
@@ -27,14 +27,14 @@ defmodule TymeslotWeb.AuthLiveFeatureFlagsTest do
       assert {:error, {:live_redirect, %{to: "/auth/login", flash: flash}}} =
                live(conn, ~p"/auth/signup")
 
-      assert flash["info"] =~ AuthActions.registration_disabled_message()
+      assert flash["info"] =~ Auth.error_message(:registration_disabled)
     end
 
     test "redirects /auth/complete-registration to login with flash", %{conn: conn} do
       assert {:error, {:live_redirect, %{to: "/auth/login", flash: flash}}} =
                live(conn, ~p"/auth/complete-registration")
 
-      assert flash["info"] =~ AuthActions.registration_disabled_message()
+      assert flash["info"] =~ Auth.error_message(:registration_disabled)
     end
 
     test "hides sign up link on login page", %{conn: conn} do
@@ -63,14 +63,14 @@ defmodule TymeslotWeb.AuthLiveFeatureFlagsTest do
       assert {:error, {:live_redirect, %{to: "/auth/login", flash: flash}}} =
                live(conn, ~p"/auth/signup")
 
-      assert flash["info"] =~ AuthActions.password_auth_disabled_message()
+      assert flash["info"] =~ Auth.error_message(:password_auth_disabled)
     end
 
     test "redirects /auth/reset-password to login with flash", %{conn: conn} do
       assert {:error, {:live_redirect, %{to: "/auth/login", flash: flash}}} =
                live(conn, ~p"/auth/reset-password")
 
-      assert flash["info"] =~ AuthActions.password_auth_disabled_message()
+      assert flash["info"] =~ Auth.error_message(:password_auth_disabled)
     end
 
     test "redirects /auth/reset-password?token=... (reset form) to login with flash", %{
@@ -79,14 +79,14 @@ defmodule TymeslotWeb.AuthLiveFeatureFlagsTest do
       assert {:error, {:live_redirect, %{to: "/auth/login", flash: flash}}} =
                live(conn, "/auth/reset-password?token=sometoken")
 
-      assert flash["info"] =~ AuthActions.password_auth_disabled_message()
+      assert flash["info"] =~ Auth.error_message(:password_auth_disabled)
     end
 
     test "redirects /auth/reset-password-sent to login with flash", %{conn: conn} do
       assert {:error, {:live_redirect, %{to: "/auth/login", flash: flash}}} =
                live(conn, ~p"/auth/reset-password-sent")
 
-      assert flash["info"] =~ AuthActions.password_auth_disabled_message()
+      assert flash["info"] =~ Auth.error_message(:password_auth_disabled)
     end
 
     test "login page shows no password form", %{conn: conn} do

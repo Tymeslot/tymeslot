@@ -15,7 +15,17 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   A failed delete after a successful create cannot lose anything either: the
   event exists on the destination, and the original is either queued for
   deletion on the next sync (the CalDAV family, whose offline queue replays
-  deletes) or left in place for the organiser to remove.
+  deletes) or left in place for the organiser to remove. Anything that raises
+  once the create has succeeded is reported as that, never as a move that did
+  not happen, since the event is on the destination by then.
+
+  ## Which uid the moved row gets
+
+  The one the destination's sync will key the event by, so the next sync
+  updates the row rather than adding a second one beside it. For the CalDAV
+  family that is the uid the create was written under; Google and Outlook
+  report an iCalendar UID of their own on the create, which is what their
+  syncs key by (`CreatedEvent.cache_uid/1`).
 
   ## What travels with the event
 
@@ -72,7 +82,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   @type moved :: %{
           required(:uid) => String.t(),
           required(:integration_id) => pos_integer(),
-          optional(:source) => :queued_delete | :left_behind
+          optional(:source) => :queued_delete | :left_behind | :unknown
         }
 
   @doc """
@@ -96,8 +106,10 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   destination and gone from the source. When the source delete failed, the
   result also carries `:source`: `:queued_delete` when the delete will be
   replayed on the next sync, `:left_behind` when the original is still on its
-  calendar. Returns `{:error, reason}`, with nothing written anywhere, when
-  the event cannot be moved or the destination refused it, including
+  calendar, and `:unknown` when something failed after the destination accepted
+  the event, which is then there while the original may or may not be. Returns
+  `{:error, reason}`, with nothing written anywhere, when the event cannot be
+  moved or the destination refused it, including
   `{:error, :no_destination_calendar}` when the destination integration has no
   calendar to write to.
   """
@@ -110,37 +122,69 @@ defmodule Tymeslot.CalendarGrid.EventMove do
          :ok <- ensure_destination(moved),
          {:ok, payload} <- ProviderPayload.from_event(moved),
          {:ok, created} <- create_on_destination(user_id, moved, payload) do
-      provider_uid = created_uid(created, moved.uid)
-
-      # The event keeps its description, and with it the join link, so its
-      # video rooms follow it to the new identity. `moved.uid` is the uid the
-      # create was written with; `provider_uid` is what the provider answered
-      # with, which is the same except where the provider assigns its own. The
-      # calendar is the one the destination actually wrote to, the same one the
-      # cached row below is filed under.
-      :ok =
-        EventVideoRooms.moved(
-          event,
-          integration.id,
-          moved.uid,
-          provider_uid,
-          created.calendar_id || moved.provider_calendar_id
-        )
-
-      moved = %{moved | uid: provider_uid}
-      cache_destination(moved, created)
-      result = %{uid: moved.uid, integration_id: integration.id}
-
-      result =
-        case remove_source(user_id, event) do
-          :removed -> result
-          left -> Map.put(result, :source, left)
-        end
-
-      AvailabilityCache.invalidate_for_user(user_id)
-      {:ok, result}
+      settle_move(user_id, event, moved, created)
     end
   end
+
+  # Everything after the create. The event now exists on the destination, so
+  # nothing from here on may report that it was not moved: a raise past this
+  # point is reported as `source: :unknown`, since the original may or may not
+  # have been deleted by then. A raise before the create returned escapes to
+  # the caller as before, where "nothing moved" is the truth.
+  defp settle_move(user_id, event, moved, %CreatedEvent{} = created) do
+    integration_id = moved.calendar_integration_id
+    cached_uid = CreatedEvent.cache_uid(created) || moved.uid
+
+    try do
+      finish_move(user_id, event, moved, created, cached_uid)
+    catch
+      kind, reason ->
+        Logger.error("Calendar event move failed after the destination accepted it",
+          calendar_integration_id: integration_id,
+          kind: kind,
+          reason: failure_label(kind, reason)
+        )
+
+        AvailabilityCache.invalidate_for_user(user_id)
+        {:ok, %{uid: cached_uid, integration_id: integration_id, source: :unknown}}
+    end
+  end
+
+  defp finish_move(user_id, event, moved, created, cached_uid) do
+    # The event keeps its description, and with it the join link, so its
+    # video rooms follow it to the new identity. `moved.uid` is the uid the
+    # create was written with; the provider's answer is how it addresses the
+    # event, which is the same except where the provider assigns its own. The
+    # calendar is the one the destination actually wrote to, the same one the
+    # cached row below is filed under.
+    :ok =
+      EventVideoRooms.moved(
+        event,
+        moved.calendar_integration_id,
+        moved.uid,
+        CreatedEvent.local_uid(created) || moved.uid,
+        created.calendar_id || moved.provider_calendar_id
+      )
+
+    # Cached under the key the destination's sync will look the event up by,
+    # so the next sync updates this row instead of adding a second one.
+    cache_destination(%{moved | uid: cached_uid}, created)
+    result = %{uid: cached_uid, integration_id: moved.calendar_integration_id}
+
+    result =
+      case remove_source(user_id, event) do
+        :removed -> result
+        left -> Map.put(result, :source, left)
+      end
+
+    AvailabilityCache.invalidate_for_user(user_id)
+    {:ok, result}
+  end
+
+  # The exception's type, never its message: a failed match carries the row
+  # it failed on, event details included.
+  defp failure_label(:error, %{__exception__: true, __struct__: module}), do: inspect(module)
+  defp failure_label(kind, _reason), do: Atom.to_string(kind)
 
   # The event as it will exist on the destination. The uid is generated here
   # so that the create and the cache row address the same event.
@@ -188,11 +232,6 @@ defmodule Tymeslot.CalendarGrid.EventMove do
 
     CalendarEvents.create_event(payload, {moved.calendar_integration_id, user_id})
   end
-
-  # CalDAV answers with the uid it was given; the OAuth providers with an id of
-  # their own, which is the one they will know the event by.
-  defp created_uid(%CreatedEvent{} = created, fallback_uid),
-    do: CreatedEvent.local_uid(created) || fallback_uid
 
   # The destination's answer carries the event's identity there, which is the
   # one thing the moved row cannot inherit from the source: the href and ETag
