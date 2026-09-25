@@ -118,7 +118,7 @@ defmodule Tymeslot.Infrastructure.CacheStoreTest do
         assert Task.await(waiter) == {:error, :computation_failed}
       end)
 
-    assert log =~ "Handled an unexpected error"
+    assert log =~ "Cache computation raised an exception"
 
     # The failure was not cached: the next caller computes again.
     assert TestCache.get_or_compute(key, fn -> :recovered end) == :recovered
