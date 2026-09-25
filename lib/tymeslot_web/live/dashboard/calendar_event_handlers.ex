@@ -83,16 +83,25 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   end
 
   @doc """
-  Handles the result of an event update: nothing to do on success; on
-  failure, keeps the edit when it was queued to sync later and reverts it
-  otherwise.
+  Handles the result of an event update: on failure, keeps the edit when it
+  was queued to sync later and reverts it otherwise. Either way the grid is
+  told the write has answered, so the next write to the same event can start
+  (see `TymeslotWeb.Dashboard.CalendarGrid.EventWrites`).
   """
-  @spec handle_event_update_result(:ok | {:error, keyword()}, Phoenix.LiveView.Socket.t()) ::
+  @spec handle_event_update_result(
+          {:ok, keyword()} | {:error, keyword()},
+          Phoenix.LiveView.Socket.t()
+        ) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_event_update_result(:ok, socket), do: {:noreply, socket}
+  def handle_event_update_result({:ok, payload}, socket) do
+    settle_write(payload[:write], {:ok, payload[:updated_event]})
+    {:noreply, socket}
+  end
 
   def handle_event_update_result({:error, payload}, socket) do
     if payload[:retry] == :queued do
+      settle_write(payload[:write], :queued)
+
       {:noreply,
        put_flash(
          socket,
@@ -107,10 +116,20 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     end
   end
 
+  defp settle_write(write, outcome) do
+    send_update(CalendarGridComponent,
+      id: "calendar",
+      action: :event_write_settled,
+      write: write,
+      outcome: outcome
+    )
+  end
+
   defp revert_failed_update(payload, socket) do
     send_update(CalendarGridComponent,
       id: "calendar",
       action: :revert_event,
+      write: payload[:write],
       original_event: payload[:original_event]
     )
 
@@ -265,10 +284,13 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   discarded.
   """
   @spec handle_event_video_result(
-          {:ok, :unchanged | keyword()} | {:error, keyword()},
+          {:ok | :unchanged | :error, keyword()},
           Phoenix.LiveView.Socket.t()
         ) :: {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_event_video_result({:ok, :unchanged}, socket), do: {:noreply, socket}
+  def handle_event_video_result({:unchanged, payload}, socket) do
+    settle_write(payload[:write], :unchanged)
+    {:noreply, socket}
+  end
 
   def handle_event_video_result({:ok, result}, socket) do
     updated_event = result[:updated_event]
@@ -277,6 +299,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       send_update(CalendarGridComponent,
         id: "calendar",
         action: :video_link_updated,
+        write: result[:write],
         original_event: result[:original_event],
         updated_event: updated_event
       )
@@ -290,6 +313,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     send_update(CalendarGridComponent,
       id: "calendar",
       action: :revert_event,
+      write: payload[:write],
       original_event: payload[:original_event]
     )
 

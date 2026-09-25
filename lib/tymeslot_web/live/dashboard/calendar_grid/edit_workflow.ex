@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventWrites
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   require Logger
@@ -180,78 +181,33 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   @doc """
   Writes `changes` to `event` in the background through
-  `Tymeslot.CalendarGrid.update_event/4` and reports back with
-  `{:event_update_result, :ok}` or `{:event_update_result, {:error, payload}}`,
-  where `payload` carries `:original_event`, `:reason` and `:retry`
-  (`:queued` when the edit is saved locally and will sync, `:not_queued`
-  otherwise).
+  `Tymeslot.CalendarGrid.update_event/4`, after any write to the same event
+  still in flight. See `TymeslotWeb.Dashboard.CalendarGrid.EventWrites`, which
+  also describes the `{:event_update_result, result}` message it answers with.
 
   `opts` are passed through to `CalendarGrid.update_event/4`.
   """
   @spec update_event_async(Phoenix.LiveView.Socket.t(), map(), map(), keyword()) ::
           Phoenix.LiveView.Socket.t()
-  def update_event_async(socket, event, changes, opts \\ []) do
-    user_id = socket.assigns.current_user.id
-
-    run_async(
-      socket,
-      :event_update_result,
-      fn ->
-        case CalendarGrid.update_event(user_id, event, changes, opts) do
-          {:ok, _updated} -> :ok
-          {:error, %{reason: reason, retry: retry}} -> update_failure(event, reason, retry)
-        end
-      end,
-      update_failure(event, :crashed, :not_queued)
-    )
-  end
-
-  defp update_failure(event, reason, retry),
-    do: {:error, original_event: event, reason: reason, retry: retry}
+  def update_event_async(socket, event, changes, opts \\ []),
+    do: EventWrites.update(socket, event, changes, opts)
 
   @doc """
   Gives `event` a room on the video integration `video_integration_id`, or
   removes its video link when that is `nil`, in the background through
-  `Tymeslot.CalendarGrid.change_event_video/3`.
+  `Tymeslot.CalendarGrid.change_event_video/3`, after any write to the same
+  event still in flight.
 
-  Reports back with `{:event_video_result, {:ok, original_event: event,
-  updated_event: event}}`, where the updated event carries the new link, its
-  integration and the description the calendar was given, so the result
-  handler can diff the two for the attendee-notification decision. A choice
-  that changed nothing reports `{:event_video_result, {:ok, :unchanged}}`, and
-  a failure `{:event_video_result, {:error, original_event: event, reason:
-  reason}}`.
+  Reports back with `{:event_video_result, result}`; a successful change
+  carries the updated event, with the new link, its integration and the
+  description the calendar was given, so the result handler can diff it
+  against the original for the attendee-notification decision. See
+  `TymeslotWeb.Dashboard.CalendarGrid.EventWrites`.
   """
   @spec change_event_video_async(Phoenix.LiveView.Socket.t(), map(), pos_integer() | nil) ::
           Phoenix.LiveView.Socket.t()
-  def change_event_video_async(socket, event, video_integration_id) do
-    user_id = socket.assigns.current_user.id
-
-    run_async(
-      socket,
-      :event_video_result,
-      fn ->
-        case CalendarGrid.change_event_video(user_id, event, video_integration_id) do
-          {:ok, :unchanged} ->
-            {:ok, :unchanged}
-
-          # The event as the change wrote it, so the grid shows what the
-          # calendar has and the notification diff sees exactly what the
-          # attendees' invitation will carry.
-          {:ok, url} ->
-            {:ok,
-             original_event: event,
-             updated_event: CalendarGrid.changed_event(user_id, event, video_integration_id, url)}
-
-          {:error, reason} ->
-            video_failure(event, reason)
-        end
-      end,
-      video_failure(event, :crashed)
-    )
-  end
-
-  defp video_failure(event, reason), do: {:error, original_event: event, reason: reason}
+  def change_event_video_async(socket, event, video_integration_id),
+    do: EventWrites.change_video(socket, event, video_integration_id)
 
   @doc "The message shown once an event's video room has been changed."
   @spec video_changed_message(String.t() | nil) :: String.t()

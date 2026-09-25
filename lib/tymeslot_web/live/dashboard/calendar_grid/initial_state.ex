@@ -45,6 +45,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       confirm_delete_scopes: :single,
       confirm_delete_linked_to_booking: false,
       saving_event: false,
+      # Writes to existing events, serialised per event; see `EventWrites`.
+      event_writes: %{},
+      event_write_seq: 0,
       deleting_event: false,
       video_integrations: [],
       confirm_remove_attendee: nil,
