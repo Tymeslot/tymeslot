@@ -117,9 +117,16 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
 
   For a bug or an outage the caller recovered from (a rescued exception, an
   `{:error, reason}` nothing anticipated), not for expected failures such as
-  invalid input or a provider refusing a request for a known reason. Inside an
-  Oban job, a failure the job returns as `{:error, reason}` is already recorded
-  by ErrorTracker's Oban integration and must not be reported here as well.
+  invalid input or a provider refusing a request for a known reason.
+
+  Inside an Oban job, ErrorTracker's Oban integration records a job that
+  raises or returns `{:error, reason}`, as the job's outcome: without the
+  stacktrace of the code that failed. A failure reported here that then also
+  fails the job is therefore recorded twice, as two separate errors: this
+  report, with the failing call site, and the job's, with none. Report here
+  when the job goes on to succeed (the integration then records nothing), or
+  when the call site is worth the second record; do not report a failure the
+  job is about to return or raise for no other reason.
 
   `exception_or_reason` is either an exception, reported as itself, or any
   other term, wrapped in `Tymeslot.Infrastructure.ErrorTracking.HandledError`.

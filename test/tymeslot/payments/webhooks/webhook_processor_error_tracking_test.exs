@@ -22,9 +22,9 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessorErrorTrackingTest do
     :ok
   end
 
-  test "a handler that raises is recorded with the event it was processing" do
+  test "a handler that raises is recorded by exception module, with the event it was processing" do
     expect(Tymeslot.Payments.StripeMock, :get_charge, fn _charge_id ->
-      raise "stripe client bug"
+      raise "stripe client bug for cus_secret"
     end)
 
     event = %{
@@ -45,10 +45,11 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessorErrorTrackingTest do
       assert {:error, %{reason: :handler_exception}, nil} = WebhookProcessor.process_event(event)
     end)
 
-    assert [%Error{kind: "Elixir.RuntimeError", reason: "stripe client bug"} = error] =
+    assert [%Error{reason: "{:raised, RuntimeError}"} = error] =
              Error |> Repo.all() |> Repo.preload(:occurrences)
 
-    assert [%{context: context}] = error.occurrences
+    assert [%{context: context} = occurrence] = error.occurrences
+    refute inspect(occurrence) =~ "cus_secret"
     assert context["event_id"] == "evt_handler_raise"
     assert context["event_type"] == "charge.dispute.created"
   end
