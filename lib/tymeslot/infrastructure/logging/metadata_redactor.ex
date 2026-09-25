@@ -108,6 +108,13 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   @spec redact(term()) :: term()
   def redact(term), do: redact_term(term, @max_depth)
 
+  @doc """
+  The nesting depth `redact/1` walks to. Terms nested deeper are left as they
+  are, so a pathologically nested term cannot make redaction expensive.
+  """
+  @spec max_depth() :: pos_integer()
+  def max_depth, do: @max_depth
+
   @doc false
   @spec filter(:logger.log_event(), term()) :: :logger.filter_return()
   def filter(event, _extra) when is_map(event) do

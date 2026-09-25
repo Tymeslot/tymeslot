@@ -13,6 +13,33 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
 
   defp event(meta), do: %{level: :info, msg: {:string, "test"}, meta: meta}
 
+  describe "redact/1" do
+    test "redacts sensitive keys at any depth, under atom and string keys, inside lists and tuples" do
+      term = %{
+        "request" => %{"headers" => %{"authorization" => "Bearer x", "accept" => "*/*"}},
+        job: [%{api_key: "sk-1", user_id: 7}],
+        pair: {:ok, %{"password" => "pw"}}
+      }
+
+      assert MetadataRedactor.redact(term) == %{
+               "request" => %{"headers" => %{"authorization" => "[REDACTED]", "accept" => "*/*"}},
+               job: [%{api_key: "[REDACTED]", user_id: 7}],
+               pair: {:ok, %{"password" => "[REDACTED]"}}
+             }
+    end
+
+    test "stops at max_depth/0, leaving deeper terms as they are" do
+      nest = fn levels, inner -> Enum.reduce(1..levels, inner, &%{"n#{&1}" => &2}) end
+      max = MetadataRedactor.max_depth()
+
+      assert MetadataRedactor.redact(nest.(max - 1, %{"password" => "pw"})) ==
+               nest.(max - 1, %{"password" => "[REDACTED]"})
+
+      deepest = nest.(max, %{"password" => "pw"})
+      assert MetadataRedactor.redact(deepest) == deepest
+    end
+  end
+
   describe "filter/2" do
     test "redacts sensitive atom keys" do
       filtered =

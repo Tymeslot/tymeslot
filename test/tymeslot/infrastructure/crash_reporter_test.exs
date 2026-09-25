@@ -19,12 +19,13 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
   end
 
   describe "reportable?/2" do
-    test "exceptions not in the ignore list are reportable" do
+    test "server-error exceptions are reportable" do
       assert CrashReporter.reportable?(:error, %RuntimeError{message: "boom"})
     end
 
-    test "ignored (4xx) exceptions are not reportable" do
+    test "client-error (4xx) exceptions are not reportable" do
       refute CrashReporter.reportable?(:error, %Ecto.NoResultsError{message: "none"})
+      refute CrashReporter.reportable?(:error, %Plug.CSRFProtection.InvalidCSRFTokenError{})
     end
 
     test "normal exits are not reportable" do

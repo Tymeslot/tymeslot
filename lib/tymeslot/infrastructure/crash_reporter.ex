@@ -38,6 +38,7 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   """
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.ErrorTracking.ClientError
   alias Tymeslot.Security.RateLimiter
 
   require Logger
@@ -98,15 +99,10 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   def reportable?(:exit, reason) when reason in @normal_exits, do: false
   def reportable?(:exit, {:shutdown, _reason}), do: false
 
-  def reportable?(_kind, reason) when is_exception(reason) do
-    reason.__struct__ not in ignored_exceptions()
-  end
+  def reportable?(_kind, reason) when is_exception(reason),
+    do: not ClientError.client_error?(reason)
 
   def reportable?(_kind, _reason), do: true
-
-  defp ignored_exceptions do
-    Application.get_env(:tymeslot, :ignored_exceptions, [])
-  end
 
   # :logger handler callback. Return value is ignored by :logger.
   # Clauses are ordered: exception, then throw, then the catch-all exit.

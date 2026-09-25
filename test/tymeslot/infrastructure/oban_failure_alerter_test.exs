@@ -16,7 +16,12 @@ defmodule Tymeslot.Infrastructure.ObanFailureAlerterTest do
       state: state,
       kind: :error,
       reason: %RuntimeError{message: "boom"},
-      stacktrace: [],
+      # Non-empty on purpose: ErrorTracker's own Oban handler also receives
+      # this event, and for an empty stacktrace it resolves the worker name
+      # with String.to_existing_atom/1, which raises for this made-up worker.
+      # Telemetry then detaches that handler for the rest of the run, and
+      # every later test relying on Oban errors being recorded fails.
+      stacktrace: [{__MODULE__, :perform, 1, []}],
       job: %Oban.Job{
         id: 99,
         worker: "MyApp.SomeWorker",
