@@ -179,9 +179,12 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   On a CalDAV-family calendar, an `:occurrence` in `event_data` (see
   `Tymeslot.Integrations.Calendar.CalDAV.Events.occurrence/0`, with its
-  `:changes`) edits only that occurrence of a series, or with `scope: :all`
-  every occurrence of it; success is then `{:ok, %{document: document}}` with
-  the document the series now lives in. On Google and Outlook, an
+  `:changes`) edits only that occurrence of a series, with `scope: :all`
+  every occurrence of it, and with `scope: :following` it and every later
+  one, by splitting the series in two; success is then
+  `{:ok, %{document: document}}` with the document the series now lives in,
+  and for a split the resource made for the following occurrences under
+  `:tail` (see `CalDAV.Events.split_series/4`). On Google and Outlook, an
   `:occurrence` of scope `:all` (see `Recurrence.SeriesMove.edit/0`, with the
   series' `:master_id`) edits every occurrence through the series' master,
   and success is `:ok`.
@@ -191,7 +194,9 @@ defmodule Tymeslot.Integrations.Calendar.Events do
           map(),
           pos_integer() | MeetingSchema.t() | {pos_integer(), pos_integer()} | nil
         ) ::
-          :ok | {:ok, %{document: String.t()}} | {:error, term()}
+          :ok
+          | {:ok, %{required(:document) => String.t(), optional(:tail) => map()}}
+          | {:error, term()}
   def update_event(uid, event_data, context) do
     behaviour_module().update_event(uid, event_data, context)
   end

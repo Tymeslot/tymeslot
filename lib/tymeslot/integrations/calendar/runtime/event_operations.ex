@@ -86,7 +86,9 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   Accepts optional context (MeetingSchema, user_id, or {integration_id, user_id}) to use specific calendar.
   """
   @spec update_event(event_uid(), event_data(), context() | {integration_id(), user_id()}) ::
-          :ok | {:ok, %{document: String.t()}} | {:error, term()}
+          :ok
+          | {:ok, %{required(:document) => String.t(), optional(:tail) => map()}}
+          | {:error, term()}
   def update_event(uid, event_data, context) do
     Metrics.time_operation(:update_event, %{uid: uid}, fn ->
       Logger.info("Updating calendar event", uid: uid)

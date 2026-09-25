@@ -17,9 +17,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     sent; when only `If-Match: *` was sent the write is simply replayed
     unconditionally, since that condition guarded nothing. The write itself
     is `ConditionalWrite`'s.
-  - **Series writes**: one occurrence of a series is deleted or edited, or
-    every occurrence edited, by rewriting the series' resource, see
-    `delete_occurrence/4`, `update_occurrence/4` and `update_series/4`.
+  - **Series writes**: one occurrence of a series is deleted or edited,
+    every occurrence edited, or the series split in two for an edit of one
+    occurrence and every following one, by rewriting the series' resource,
+    see `delete_occurrence/4`, `update_occurrence/4`, `update_series/4` and
+    `split_series/4` (carried out by `CalDAV.SeriesWrites`).
   - **iCal construction**: builds valid RFC 5545 event payloads from domain maps.
   - **Per-operation retry policies**: reads retry on transient failures.
   - **Circuit breaker protection** for all operations.
@@ -36,13 +38,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     EventProcessor,
     Http,
     Scheduling,
+    SeriesWrites,
     UrlBuilder,
     XmlHandler
   }
 
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ICalBuilder
-  alias Tymeslot.Integrations.Calendar.ICalBuilder.Series
 
   require Logger
 
@@ -383,15 +385,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   end
 
   @typedoc "One occurrence of the series stored at `href`, keyed as the cache keys it."
-  @type occurrence :: %{
-          required(:href) => String.t(),
-          required(:key) => String.t(),
-          required(:timezone) => String.t() | nil,
-          required(:document) => String.t() | nil,
-          required(:etag) => String.t() | nil,
-          optional(:changes) => map(),
-          optional(:scope) => :this_only | :all
-        }
+  @type occurrence :: SeriesWrites.occurrence()
 
   @doc """
   Deletes one occurrence of the series stored in the resource at
@@ -408,15 +402,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   """
   @spec delete_occurrence(Base.client(), String.t() | nil, occurrence(), keyword()) ::
           {:ok, %{document: String.t() | nil}} | {:error, term()}
-  def delete_occurrence(client, calendar_path, occurrence, opts) do
-    exclude = &Series.exclude_occurrence(&1, occurrence.key, occurrence.timezone)
-
-    case rewrite_series(client, calendar_path, occurrence, exclude, opts) do
-      # The whole series is already gone, and the occurrence with it.
-      {:ok, :gone} -> {:ok, %{document: nil}}
-      result -> result
-    end
-  end
+  defdelegate delete_occurrence(client, calendar_path, occurrence, opts), to: SeriesWrites
 
   @doc """
   Edits one occurrence of the series stored in the resource at
@@ -433,15 +419,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   """
   @spec update_occurrence(Base.client(), String.t() | nil, occurrence(), keyword()) ::
           {:ok, %{document: String.t()}} | {:error, term()}
-  def update_occurrence(client, calendar_path, %{changes: changes} = occurrence, opts) do
-    mode = Scheduling.attendee_mode(client)
-    override = &Series.put_override(&1, occurrence.key, changes, occurrence.timezone, mode)
-
-    case rewrite_series(client, calendar_path, occurrence, override, opts) do
-      {:ok, :gone} -> {:error, :not_found}
-      result -> result
-    end
-  end
+  defdelegate update_occurrence(client, calendar_path, occurrence, opts), to: SeriesWrites
 
   @doc """
   Edits every occurrence of the series stored in the resource at
@@ -459,87 +437,37 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   """
   @spec update_series(Base.client(), String.t() | nil, occurrence(), keyword()) ::
           {:ok, %{document: String.t()}} | {:error, term()}
-  def update_series(client, calendar_path, %{changes: changes} = occurrence, opts) do
-    mode = Scheduling.attendee_mode(client)
-    edit = &Series.edit_master(&1, occurrence.key, changes, occurrence.timezone, mode)
+  defdelegate update_series(client, calendar_path, occurrence, opts), to: SeriesWrites
 
-    case rewrite_series(client, calendar_path, occurrence, edit, opts) do
-      {:ok, :gone} -> {:error, :not_found}
-      result -> result
-    end
-  end
+  @doc """
+  Edits the occurrence `occurrence.key` names and every one after it, by
+  splitting the series stored at `occurrence.href` in two there (see
+  `ICalBuilder.Series.split/5`): `occurrence.changes` apply to the second
+  half only.
 
-  # One rewrite of a series' resource: `fun` turns the document into the one
-  # to PUT back (`{:ok, document}`), into nothing (`:empty`, which deletes the
-  # resource), or refuses (`{:error, reason}`, and nothing is written).
-  #
-  # A refusal and a missing resource are answers about this series, not about
-  # the host, so they travel back through the breaker as successes and only
-  # become errors out here.
-  defp rewrite_series(client, calendar_path, %{href: href} = occurrence, fun, opts) do
-    result =
-      with_events_breaker(client, opts, fn ->
-        with {:ok, url} <- event_url(client, calendar_path, nil, href) do
-          rewrite_and_write(client, url, occurrence, fun, opts)
-        end
-      end)
+  The second half, the tail, is created first, as a new resource beside the
+  series in the same collection (`<collection><tail uid>.ics`, under
+  `If-None-Match: *`); a tail that cannot be created leaves the series as it
+  was. The series' own resource is then ended before the occurrence, under
+  `If-Match`, the way `update_series/4` writes: the cached document under its
+  ETag, else the server's copy, and one re-read on a 412. If that fails, the
+  tail is deleted again and the failure reported, so the series is never
+  left showing its following occurrences twice.
 
-    case result do
-      {:ok, {:refused, reason}} -> {:error, reason}
-      other -> other
-    end
-  end
+  An occurrence the rule makes nothing before is the series' first, and the
+  edit is written as `update_series/4` writes it.
 
-  defp rewrite_and_write(client, url, %{document: document, etag: etag}, fun, opts)
-       when is_binary(document) and document != "" and is_binary(etag) and etag != "" do
-    case write_rewrite(client, url, document, etag, fun, opts) do
-      {:error, reason} when reason in [:precondition_failed, :conditional_not_supported] ->
-        refresh_and_rewrite(client, url, fun, opts)
-
-      result ->
-        result
-    end
-  end
-
-  # Without a cached ETag the cached document carries no precondition, so the
-  # server's copy, which comes with one, is read instead.
-  defp rewrite_and_write(client, url, _occurrence, fun, opts),
-    do: refresh_and_rewrite(client, url, fun, opts)
-
-  # One re-read, one more PUT: a second 412 means the resource is still
-  # changing under us, and is reported rather than chased.
-  defp refresh_and_rewrite(client, url, fun, opts) do
-    case ConditionalWrite.fetch_document(client, url, opts) do
-      {:ok, document, etag} -> write_rewrite(client, url, document, etag, fun, opts)
-      {:error, reason} when reason in [:not_found, :gone] -> {:ok, :gone}
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  # Always under the `:fail` policy: `:keep_local` would force a document
-  # built on a stale copy over a concurrent change, and `:keep_server` would
-  # report a change as made that is not on the calendar.
-  defp write_rewrite(client, url, document, etag, fun, opts) do
-    case fun.(document) do
-      {:ok, new_document} ->
-        with :ok <- ConditionalWrite.put(client, url, new_document, etag, :fail, opts) do
-          {:ok, %{document: new_document}}
-        end
-
-      :empty ->
-        delete_resource(client, url, opts)
-
-      {:error, reason} ->
-        {:ok, {:refused, reason}}
-    end
-  end
-
-  defp delete_resource(client, url, opts) do
-    case Http.delete_event(url, client.username, client.password, Keyword.take(opts, [:timeout])) do
-      {:ok, %Req.Response{}} -> {:ok, %{document: nil}}
-      {:error, reason} -> {:error, reason}
-    end
-  end
+  Returns `{:ok, %{document: head, tail: %{uid:, href:, document:}}}` with
+  the documents now on the server, `{:ok, %{document: document}}` for an
+  edit of the first occurrence, `{:error, :not_found}` when the series is
+  gone, or `{:error, reason}`, including the refusals of `Series.split/5`,
+  which are answered before anything is written.
+  """
+  @spec split_series(Base.client(), String.t() | nil, occurrence(), keyword()) ::
+          {:ok, %{document: String.t(), tail: SeriesWrites.tail()}}
+          | {:ok, %{document: String.t()}}
+          | {:error, term()}
+  defdelegate split_series(client, calendar_path, occurrence, opts), to: SeriesWrites
 
   @doc """
   Fetches one event resource: `href` when known, otherwise the resource

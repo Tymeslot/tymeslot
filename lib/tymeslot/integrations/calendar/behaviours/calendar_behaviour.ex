@@ -27,7 +27,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarBehaviour do
               | {pos_integer(), pos_integer()}
               | nil
             ) ::
-              :ok | {:ok, %{document: String.t()}} | {:error, any()}
+              :ok
+              | {:ok, %{required(:document) => String.t(), optional(:tail) => map()}}
+              | {:error, any()}
   @callback delete_event(
               binary(),
               pos_integer()

@@ -220,14 +220,19 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   @doc """
   Updates an existing event in the calendar.
 
-  An edit of one or every occurrence of a CalDAV series (an `:occurrence`
+  An edit of one or more occurrences of a CalDAV series (an `:occurrence`
   in `event_data`) answers `{:ok, %{document: document}}`, the document the
-  series now lives in, which the caller needs to refresh its cache. An edit
+  series now lives in, which the caller needs to refresh its cache, with the
+  resource made for the following occurrences under `:tail` when the edit
+  split the series. An edit
   of every occurrence of a Google or Outlook series (an `:occurrence` of
   scope `:all`) is written to the series' master and answers `:ok`.
   """
   @spec update_event(adapter_client(), String.t(), map()) ::
-          :ok | {:ok, %{document: String.t()}} | {:error, atom(), term()} | {:error, term()}
+          :ok
+          | {:ok, %{required(:document) => String.t(), optional(:tail) => map()}}
+          | {:error, atom(), term()}
+          | {:error, term()}
   def update_event(adapter_client, uid, event_data) do
     Metrics.time_operation(
       :calendar_update_event,
@@ -243,8 +248,11 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
             Logger.info("Successfully updated event", uid: uid)
             :ok
 
+          # A rewritten CalDAV series, and for a split the resource made
+          # for its following occurrences.
           {:ok, %{document: _document} = rewritten} = updated_occurrence
-          when map_size(rewritten) == 1 ->
+          when map_size(rewritten) == 1 or
+                 (map_size(rewritten) == 2 and is_map_key(rewritten, :tail)) ->
             Logger.info("Successfully updated event occurrence", uid: uid)
             updated_occurrence
 

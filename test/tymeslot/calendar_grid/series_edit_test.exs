@@ -181,22 +181,42 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       assert row.summary == "Renamed"
     end
 
-    test "following on a CalDAV occurrence is refused before anything is written", %{
+    test "following on a CalDAV occurrence is addressed to a split of the series", %{
       user: user
     } do
       caldav =
         insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
 
       event = insert_event(caldav, Map.merge(caldav_occurrence(), %{provider: "caldav"}))
+      expect_provider_update({:ok, %{document: "NEW DOCUMENT"}})
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(
+                 user.id,
+                 event,
+                 %{summary: "Renamed", recurrence_rule: "FREQ=WEEKLY;BYDAY=TU"},
+                 recurrence_scope: :following
+               )
+
+      assert %{scope: :following, href: "/cal/weekly-sync.ics", key: "20260601T090000"} =
+               occurrence = captured_payload().occurrence
+
+      assert %{summary: "Renamed", recurrence_rule: "FREQ=WEEKLY;BYDAY=TU"} = occurrence.changes
+      assert Map.has_key?(occurrence.changes, :start_time)
+    end
+
+    test "following on a CalDAV occurrence cannot take the repeat rule away", %{user: user} do
+      caldav =
+        insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
+
+      event = insert_event(caldav, Map.merge(caldav_occurrence(), %{provider: "caldav"}))
 
       assert {:error, %{reason: :unsupported_scope, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
+               CalendarGrid.update_event(user.id, event, %{recurrence_rule: nil},
                  recurrence_scope: :following
                )
 
       refute_received {:provider_update, _uid, _payload, _context}
-      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
-      assert {row.summary, row.sync_state} == {"Weekly sync", "synced"}
     end
 
     test "all on a CalDAV occurrence is addressed to the series with its new rule", %{

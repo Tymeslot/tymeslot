@@ -343,16 +343,24 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   its `:changes`), only that one occurrence of the series is edited, by
   writing its override into the resource at its href
   (`Events.update_occurrence/4`); with `scope: :all` every occurrence is
-  edited through the series' master instead (`Events.update_series/4`). The
-  answer is then `{:ok, %{document: document}}` with the document now on the
-  server, and the rest of the payload is not read.
+  edited through the series' master instead (`Events.update_series/4`), and
+  with `scope: :following` the series is split in two at the occurrence and
+  the edit written to the second half (`Events.split_series/4`). The answer
+  is then `{:ok, %{document: document}}` with the document now on the
+  server, and for a split the new resource under `:tail`; the rest of the
+  payload is not read.
   """
   @spec update_event(caldav_client(), String.t(), map(), keyword()) ::
-          :ok | {:ok, %{document: String.t()}} | {:error, term()}
+          :ok
+          | {:ok, %{required(:document) => String.t(), optional(:tail) => map()}}
+          | {:error, term()}
   def update_event(client, uid, event_data, opts \\ [])
 
   def update_event(client, _uid, %{occurrence: %{scope: :all} = occurrence}, opts),
     do: Events.update_series(client, primary_calendar_path(client), occurrence, opts)
+
+  def update_event(client, _uid, %{occurrence: %{scope: :following} = occurrence}, opts),
+    do: Events.split_series(client, primary_calendar_path(client), occurrence, opts)
 
   def update_event(client, _uid, %{occurrence: %{} = occurrence}, opts),
     do: Events.update_occurrence(client, primary_calendar_path(client), occurrence, opts)

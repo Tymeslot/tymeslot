@@ -16,7 +16,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   returned it. The document is read and written by `Series.Document`; an
   edit of every occurrence (`edit_master/5`) is carried out by
   `Series.Master`, which moves timing with `Series.Shift` and the rule with
-  `Series.RuleShift`.
+  `Series.RuleShift`, and a split for an edit of one occurrence and every
+  following one (`split/5`) by `Series.Split`.
 
   ## Occurrence keys
 
@@ -38,6 +39,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Patcher
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Document
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Master
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Timing
 
   # Where a new EXDATE goes in the master, in order of preference: after the
@@ -174,6 +176,57 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   def edit_master(document, key, changes, timezone, mode \\ :contact)
       when is_binary(document) and is_binary(key) and is_map(changes) do
     Master.edit(document, key, changes, timezone, mode)
+  end
+
+  @doc """
+  Splits the series in `document` in two at the occurrence named by `key`,
+  for an edit of that occurrence and every one after it: `changes`, in the
+  payload vocabulary of `edit_master/5`, apply to the second half only.
+
+    * **The head** is the original resource, ended just before the slot:
+      its `RRULE` takes an `UNTIL` in place of its `COUNT` or `UNTIL`, in the
+      value type RFC 5545 §3.3.10 requires (a date for an all-day series, a
+      UTC instant for a zoned or UTC one, a floating wall clock for a
+      floating one; see `Recurrence.RRule.end_before/2`). Its overrides,
+      `EXDATE`s and `RDATE`s at or after the slot go.
+    * **The tail** is a new resource under a new `UID` (`tail_uid`): the
+      master with its `DTSTART` and `DTEND` moved to the slot, each in its
+      own form, its `COUNT` less the occurrences the rule makes before the
+      slot (excluded ones included, as RFC 5545 counts them), its `UNTIL`
+      kept, and the overrides, `EXDATE`s and `RDATE`s at or after the slot,
+      under the new `UID`. Every other line, `VTIMEZONE`, `VALARM`s,
+      attendees and `X-` properties included, is copied as written. The
+      tail is then edited as a whole by `edit_master/5`, whose rules and
+      refusals it follows: the tail is a series whose first occurrence is
+      the slot.
+
+  Returns `{:ok, %{head: head, tail: tail, tail_uid: uid}}`, or
+  `:first_occurrence` when the rule makes no occurrence before the slot,
+  which is an edit of every occurrence (`edit_master/5`). Refused before
+  anything is written: a resource with no master (`{:error,
+  :master_not_found}`) or no `RRULE` (`{:error, :not_recurring}`), timing
+  it cannot read (`{:error, :unreadable_timing}`), and every refusal of
+  `edit_master/5`.
+  """
+  @spec split(String.t(), String.t(), map(), String.t() | nil, Scheduling.mode()) ::
+          {:ok, %{head: String.t(), tail: String.t(), tail_uid: String.t()}}
+          | :first_occurrence
+          | {:error, term()}
+  def split(document, key, changes, timezone, mode \\ :contact)
+      when is_binary(document) and is_binary(key) and is_map(changes) do
+    Split.split(document, key, changes, timezone, mode)
+  end
+
+  @doc """
+  The head of `split/5` alone: the series in `document` ended just before
+  the occurrence `key` names, with its overrides and exceptions from there
+  on removed. What a writer applies to the server's copy when it re-reads
+  the series after creating the tail. `{:error, :first_occurrence}` when
+  nothing of the series comes before the slot.
+  """
+  @spec truncate(String.t(), String.t(), String.t() | nil) :: {:ok, String.t()} | {:error, term()}
+  def truncate(document, key, timezone) when is_binary(document) and is_binary(key) do
+    Split.truncate(document, key, timezone)
   end
 
   # --- Writing an override ---

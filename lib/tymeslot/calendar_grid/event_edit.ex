@@ -51,12 +51,13 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   own `DTSTART`, even a rename would move the series onto that occurrence.
 
   So an edit of one CalDAV occurrence does not take that write. `SeriesEdit`
-  hands `write_edit/7` an address that turns the payload into an override of
+  hands `write_edit/8` an address that turns the payload into an override of
   the occurrence (see `Calendar.Events.update_event/3`), and the provider
   answers with the document the series now lives in, which every cached row
   of the resource is given (see `ProviderCalendarResourceQueries`). An edit
   of all of them is addressed the same way and written to the series'
-  master; `SeriesEdit` then drops the series' rows and has the sync bring
+  master, and an edit of it and every following one to a split of the
+  series; `SeriesEdit` then drops the series' rows and has the sync bring
   them back.
 
   ## Failure
@@ -165,6 +166,12 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   """
   @type address :: (map() -> {:ok, map()} | {:error, term()})
 
+  @typedoc """
+  Given what the provider answered a successful write: `:ok`, or
+  `{:ok, answer}` with the document a rewritten resource now holds.
+  """
+  @type answered :: (:ok | {:ok, map()} -> term())
+
   @doc """
   The write every edit ends in, once it is known which event it lands on:
   applies `changes` to `event`, writes the whole updated event to the
@@ -175,7 +182,8 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   as `:not_queued`. `address` gets the last word on the payload; by default
   it is written as built. A provider that rewrote a resource the event shares
   with others answers with its new document, and every cached row of the
-  resource is given it.
+  resource is given it. `answered` is handed the provider's answer once the
+  write succeeded, before the result is returned; by default it is ignored.
 
   Called by `update_event/4` and by `Tymeslot.CalendarGrid.SeriesEdit`;
   everything else goes through `update_event/4`.
@@ -187,9 +195,19 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
           changes(),
           keyword(),
           retry_policy(),
-          address()
+          address(),
+          answered()
         ) :: {:ok, map()} | {:error, failure()}
-  def write_edit(user_id, event, stored, changes, opts, retry, address \\ &{:ok, &1}) do
+  def write_edit(
+        user_id,
+        event,
+        stored,
+        changes,
+        opts,
+        retry,
+        address \\ &{:ok, &1},
+        answered \\ fn _answer -> :ok end
+      ) do
     with {:ok, updated} <- apply_changes(event, changes, opts),
          {:ok, payload} <- ProviderPayload.from_event(updated),
          {:ok, payload} <-
@@ -198,7 +216,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
            |> put_stored_document(stored)
            |> scope_attendees(event, changes)
            |> address.() do
-      write_to_provider(user_id, event, updated, payload, retry)
+      write_to_provider(user_id, event, updated, payload, retry, answered)
     else
       {:error, reason} -> {:error, %{reason: reason, retry: :not_queued}}
     end
@@ -271,14 +289,17 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   defp merges_attendees?(_provider, _payload), do: false
 
-  defp write_to_provider(user_id, event, updated, payload, retry) do
+  defp write_to_provider(user_id, event, updated, payload, retry, answered) do
     case CalendarEvents.update_event(event.uid, payload, {event.calendar_integration_id, user_id}) do
       :ok ->
-        written(user_id, updated)
+        result = written(user_id, updated)
+        answered.(:ok)
+        result
 
-      {:ok, %{document: document}} ->
+      {:ok, %{document: document}} = answer ->
         result = written(user_id, updated)
         share_document(event, payload, document)
+        answered.(answer)
         result
 
       {:error, reason} ->

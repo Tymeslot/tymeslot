@@ -22,8 +22,9 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
       cached row of the resource is given the document the server now holds.
       An edit of all events is written to the series' master, and moves the
       whole series when the occurrence moved (see *What every CalDAV
-      occurrence can take*). "This and following" is refused with
-      `:unsupported_scope` until the writer can split the series.
+      occurrence can take*). An edit of this and every following event
+      splits the series in two there (see *What this and every following
+      CalDAV occurrence can take*).
     * **Exchange** has no scoped write. An edit of this event is written to
       the item's own id, as it always has been; the wider scopes are refused
       with `:unsupported_scope`.
@@ -57,6 +58,19 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   (`Tymeslot.Workers.SyncCalDavCalendarWorker.enqueue_full_fetch/1`), which
   brings the series back as the server holds it.
 
+  ## What this and every following CalDAV occurrence can take
+
+  The same as every occurrence, applied to the occurrences from the edited
+  one on. The series is split in two there (`CalDAV.Events.split_series/4`):
+  the occurrences from the edited one on move to a new resource in the same
+  calendar, which takes the edit, and the series' own resource ends before
+  them. An edit of the series' first occurrence is an edit of every
+  occurrence, and is written as one. The series' rows are then deleted and a
+  full sync requested, as for an edit of every occurrence, which brings back
+  both halves; the series' recorded video rooms move to the new resource,
+  whose occurrences carry its join link on
+  (`Tymeslot.CalendarGrid.EventVideoRooms.series_split/3`).
+
   ## What every Google or Outlook occurrence can take
 
   The same as every CalDAV occurrence, written to the master the provider
@@ -84,6 +98,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   """
 
   alias Tymeslot.CalendarGrid.EventEdit
+  alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.RecurrenceScope
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -128,21 +143,19 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   def update_event(user_id, event, stored, family, scope, changes, opts)
 
   def update_event(user_id, event, stored, family, scope, changes, opts)
-      when (family == :caldav and scope in [:this_only, :all]) or
+      when (family == :caldav and scope in [:this_only, :following, :all]) or
              (family == :provider_ids and scope == :all) do
-    with :ok <- ensure_series_edit(stored, scope, changes),
-         {:ok, updated} <-
-           EventEdit.write_edit(
-             user_id,
-             event,
-             stored,
-             changes,
-             opts,
-             :never_queue,
-             &address(&1, family, stored, scope, changes)
-           ) do
-      after_write(scope, user_id, stored)
-      {:ok, updated}
+    with :ok <- ensure_series_edit(stored, scope, changes) do
+      EventEdit.write_edit(
+        user_id,
+        event,
+        stored,
+        changes,
+        opts,
+        :never_queue,
+        &address(&1, family, stored, scope, changes),
+        &after_write(scope, user_id, stored, &1)
+      )
     end
   end
 
@@ -176,7 +189,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   # slots that no longer exist.
   defp rule_refused?(:this_only, stored, changes), do: rule_changed?(stored, changes)
 
-  defp rule_refused?(:all, _stored, changes),
+  defp rule_refused?(scope, _stored, changes) when scope in [:following, :all],
     do: Map.has_key?(changes, :recurrence_rule) and is_nil(changes.recurrence_rule)
 
   defp rule_changed?(stored, changes),
@@ -200,7 +213,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   defp changed_fields(:this_only, _stored, changes),
     do: Enum.filter(@override_fields, &Map.has_key?(changes, &1))
 
-  defp changed_fields(:all, stored, changes) do
+  defp changed_fields(scope, stored, changes) when scope in [:following, :all] do
     fields = changed_fields(:this_only, stored, changes)
     if rule_changed?(stored, changes), do: [:recurrence_rule | fields], else: fields
   end
@@ -242,11 +255,20 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
 
   defp address_master(_payload, _stored, _fields), do: {:error, :unaddressable_occurrence}
 
-  defp after_write(:this_only, _user_id, _stored), do: :ok
-  defp after_write(:all, user_id, stored), do: resync_series(user_id, stored)
+  # Runs once the provider accepted the write, with what it answered.
+  defp after_write(:this_only, _user_id, _stored, _answer), do: :ok
+  defp after_write(:all, user_id, stored, _answer), do: resync_series(user_id, stored)
+
+  defp after_write(:following, user_id, stored, answer) do
+    with {:ok, %{tail: %{uid: uid, href: href}}} <- answer,
+         do: EventVideoRooms.series_split(stored, uid, href)
+
+    resync_series(user_id, stored)
+  end
 
   # Every cached row of the series now names a slot the series may have left,
-  # so the rows are dropped and a sync brings the series back as the server
+  # or, once split, an occurrence another resource now holds, so the rows are
+  # dropped and a sync brings the series back as the server
   # holds it; what the write answered is not expanded here, the sync's job.
   defp resync_series(user_id, %{calendar_integration_id: integration_id} = stored) do
     delete_series_rows(integration_id, stored)

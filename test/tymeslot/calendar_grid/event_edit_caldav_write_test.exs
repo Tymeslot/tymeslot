@@ -447,18 +447,6 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
                {"Weekly standup", "synced", "\"etag-1\"", @series_ical}
     end
 
-    # No `expect`: under `verify_on_exit!` a PUT that reached the server would
-    # fail the test as an unexpected call.
-    test "every following occurrence cannot be written yet", %{
-      user: user,
-      occurrence: occurrence
-    } do
-      assert {:error, %{reason: :unsupported_scope, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Daily standup"},
-                 recurrence_scope: :following
-               )
-    end
-
     test "the one-off event on the same calendar is still editable", %{
       user: user,
       event: event

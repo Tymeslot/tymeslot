@@ -23,9 +23,11 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
       neither the nightly clean-up nor a disconnect deletes it.
 
   The record follows the event through the grid: moving the event moves the
-  record's times, and the room's lobby, or its event, with them; replacing the
-  event's video, deleting a one-off event, or deleting a whole series deletes
-  the room.
+  record's times, and the room's lobby, or its event, with them; splitting a
+  CalDAV series for an edit of one occurrence and every following one moves
+  the record to the resource the following occurrences now live in;
+  replacing the event's video, deleting a one-off event, or deleting a whole
+  series deletes the room.
 
   A Teams meeting attached to the grid event itself is never recorded. Its
   room id is the event's own Outlook id, so it moves and goes with the event
@@ -175,6 +177,35 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
             provider_calendar_id: provider_calendar_id,
             # Learnt afresh from the destination's cache.
             event_ical_uid: nil
+          })
+
+        :ok
+    end
+  end
+
+  @doc """
+  Follows a CalDAV series that was split in two at one of its occurrences,
+  addressed from any one of its rows: the occurrences from there on now live
+  in a new resource, `tail_uid` at `tail_href`, and carry the series' join
+  link with them. The series' rooms move to that resource, since its
+  occurrences are the last the rooms serve: they are found from its rows,
+  follow them when they move, go when it is deleted as a whole, and are
+  judged over only once it is. The original resource keeps the occurrences
+  before the split, which all come earlier.
+  """
+  @spec series_split(map(), String.t(), String.t()) :: :ok
+  def series_split(event, tail_uid, tail_href) do
+    case rooms_for(event, true) do
+      [] ->
+        :ok
+
+      rooms ->
+        _count =
+          EventVideoRoomQueries.move_to_event(Enum.map(rooms, & &1.id), %{
+            calendar_integration_id: event.calendar_integration_id,
+            event_uid: tail_uid,
+            provider_event_id: other_identifier(tail_href, tail_uid),
+            provider_calendar_id: Map.get(event, :provider_calendar_id)
           })
 
         :ok

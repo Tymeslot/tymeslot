@@ -417,4 +417,39 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRuleTest do
       assert once == twice
     end
   end
+
+  describe "end_before/2" do
+    test "an all-day rule ends the day before, as a date" do
+      assert RRule.end_before("FREQ=WEEKLY;COUNT=10", ~D[2026-01-26]) ==
+               "FREQ=WEEKLY;UNTIL=20260125"
+    end
+
+    test "a zoned or UTC rule ends a second before the instant, in UTC" do
+      boundary = DateTime.new!(~D[2026-01-26], ~T[10:00:00], "Europe/Berlin")
+
+      assert RRule.end_before("FREQ=WEEKLY;UNTIL=20261231T225959Z;BYDAY=MO", boundary) ==
+               "FREQ=WEEKLY;UNTIL=20260126T085959Z;BYDAY=MO"
+    end
+
+    test "a floating rule ends a second before the wall clock, with no zone" do
+      assert RRule.end_before("RRULE:FREQ=DAILY", ~N[2026-01-26 10:00:00]) ==
+               "RRULE:FREQ=DAILY;UNTIL=20260126T095959"
+    end
+
+    test "a rule stating both ends keeps one" do
+      assert RRule.end_before("FREQ=DAILY;COUNT=3;INTERVAL=2;UNTIL=20270101", ~D[2026-02-01]) ==
+               "FREQ=DAILY;UNTIL=20260131;INTERVAL=2"
+    end
+  end
+
+  describe "reduce_count/2" do
+    test "takes the occurrences off the COUNT, in place" do
+      assert RRule.reduce_count("FREQ=WEEKLY;COUNT=10;BYDAY=MO", 3) ==
+               "FREQ=WEEKLY;COUNT=7;BYDAY=MO"
+    end
+
+    test "leaves a rule with no COUNT as it is" do
+      assert RRule.reduce_count("FREQ=WEEKLY;UNTIL=20261231", 3) == "FREQ=WEEKLY;UNTIL=20261231"
+    end
+  end
 end
