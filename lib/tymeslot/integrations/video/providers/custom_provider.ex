@@ -132,7 +132,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
     if uri.fragment && String.contains?(uri.fragment, TemplateConfig.template_variable()) do
       {:error,
        dgettext(
-         "dashboard_integrations",
+         "dashboard_video",
          "Template variable cannot be used in URL fragment (#). Fragments are not sent to the server, so all meetings would use the same room. Use the template in the path instead: https://example.com/{{meeting_id}}"
        )}
     else
@@ -229,7 +229,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
             else:
               {:error,
                dgettext(
-                 "dashboard_integrations",
+                 "dashboard_video",
                  "Invalid URL format. Please provide a valid HTTP/HTTPS URL."
                )}
         end
@@ -237,7 +237,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   end
 
   defp custom_url_required_message,
-    do: dgettext("dashboard_integrations", "Custom meeting URL is required")
+    do: dgettext("dashboard_video", "Custom meeting URL is required")
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def capabilities, do: @capabilities

@@ -4,44 +4,15 @@ msgstr ""
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: Error Messages
-msgid "something_went_wrong"
-msgstr "Ein Fehler ist aufgetreten"
-
-msgid "try_again_later"
-msgstr "Bitte versuchen Sie es später noch einmal"
-
-msgid "invalid_meeting_link"
-msgstr "Ungültiger Link"
-
-msgid "slot_no_longer_available"
-msgstr "Dieses Zeitfenster ist leider nicht mehr verfügbar"
-
-msgid "name_required"
-msgstr "Name erforderlich"
-
-msgid "email_required"
-msgstr "E-Mail erforderlich"
-
-msgid "email_invalid"
-msgstr "Bitte geben Sie eine gültige E-Mail-Adresse ein"
-
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
-msgid "calendar_setup_required"
+msgid "We can't show this scheduling page yet"
 msgstr "Diese Buchungsseite ist noch nicht verfügbar"
 
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
-msgid "connect_calendar_first"
+msgid "If you are the organizer, please connect a calendar in your dashboard."
 msgstr "Falls Sie der Gastgeber sind: Bitte verknüpfen Sie einen Kalender in Ihrem Dashboard."
-
-#: Status
-msgid "loading"
-msgstr "Lädt…"
-
-msgid "submitting"
-msgstr "Wird gesendet…"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format

@@ -43,10 +43,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
         <ProviderIcon.provider_icon provider="jitsi" type="video" size="large" />
         <div>
           <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-            {dgettext("dashboard_integrations", "Jitsi Meet")}
+            {dgettext("dashboard_video", "Jitsi Meet")}
           </h3>
           <p class="text-token-sm text-tymeslot-500 font-medium">
-            {dgettext("dashboard_integrations", "Your own Jitsi Meet server")}
+            {dgettext("dashboard_video", "Your own Jitsi Meet server")}
           </p>
         </div>
       </div>
@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <SharedForm.integration_name_field
             form_errors={@form_errors}
-            value={Map.get(@form_values, "name", dgettext("dashboard_integrations", "My Jitsi"))}
+            value={Map.get(@form_values, "name", dgettext("dashboard_video", "My Jitsi"))}
             target={@target}
           />
 
@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
             phx-target={@target}
             class="btn-secondary"
           >
-            {dgettext("dashboard_integrations", "Cancel")}
+            {dgettext("dashboard_video", "Cancel")}
           </button>
           <UIComponents.form_submit_button saving={@saving} />
         </div>
@@ -119,16 +119,16 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
     <SharedForm.url_field
       id={@id}
       name="integration[base_url]"
-      label={dgettext("dashboard_integrations", "Server URL")}
+      label={dgettext("dashboard_video", "Server URL")}
       value={@value}
-      placeholder={dgettext("dashboard_integrations", "https://meet.example.com")}
+      placeholder={dgettext("dashboard_video", "https://meet.example.com")}
       form_errors={@form_errors}
       error_key={:base_url}
       target={@target}
       validate_on_blur={false}
       helper_text={
         dgettext(
-          "dashboard_integrations",
+          "dashboard_video",
           "The address of your Jitsi server. The public meet.jit.si requires whoever hosts the meeting to sign in before it starts, so a server you run works better for scheduled bookings."
         )
       }
@@ -170,7 +170,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
       name="integration[client_id]"
       type="text"
       icon="hero-identification"
-      label={dgettext("dashboard_integrations", "App ID (optional)")}
+      label={dgettext("dashboard_video", "App ID (optional)")}
       value={Map.get(@form_values, "client_id", @stored_client_id)}
       describedby={"#{@id_prefix}_credentials_help"}
       disabled={@removing}
@@ -182,7 +182,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
       name="integration[client_secret]"
       type="password"
       icon="hero-key"
-      label={dgettext("dashboard_integrations", "App secret (optional)")}
+      label={dgettext("dashboard_video", "App secret (optional)")}
       describedby={
         if @stored_credentials and not @removing,
           do: "#{@id_prefix}_client_secret_keep #{@id_prefix}_credentials_help",
@@ -196,7 +196,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
         id={"#{@id_prefix}_client_secret_keep"}
         class="mt-2 text-token-xs text-tymeslot-500"
       >
-        {dgettext("dashboard_integrations", "Leave blank to keep the current secret.")}
+        {dgettext("dashboard_video", "Leave blank to keep the current secret.")}
       </p>
     </SharedForm.credential_input>
 
@@ -205,7 +205,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
       class="md:col-span-2 -mt-1 text-token-xs text-tymeslot-500"
     >
       {dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "Set both if your server requires token authentication; the secret must be at least 32 characters. Each person then gets a link to this meeting's room only, and only yours is marked as moderator. Jitsi honours that marking only when the server has the token_affiliation module enabled and automatic moderator assignment switched off; otherwise a standard install makes whoever joins first the moderator, and a Docker install makes everyone with a link a moderator. Leave both blank for a server that lets anyone in."
       )}
     </p>
@@ -223,11 +223,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.JitsiConfig do
       />
       <div class="flex-1">
         <div class="font-bold text-tymeslot-900">
-          {dgettext("dashboard_integrations", "Remove token authentication")}
+          {dgettext("dashboard_video", "Remove token authentication")}
         </div>
         <div class="text-token-sm text-tymeslot-600 font-medium">
           {dgettext(
-            "dashboard_integrations",
+            "dashboard_video",
             "Deletes the stored App ID and App secret. Links then open the room without a token, which only works on a server that lets anyone in."
           )}
         </div>
