@@ -74,7 +74,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ContextIntegrationTest do
       :ok
     end
 
-    test "is recorded once, with the request and correlation ids", %{conn: conn} do
+    test "is recorded once, with the request id doubling as the correlation id", %{conn: conn} do
       request_id = "context-integration-request-0002"
 
       conn = put_req_header(conn, "x-request-id", request_id)
@@ -83,7 +83,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ContextIntegrationTest do
 
       context = occurrence_context!("Elixir.RuntimeError")
       assert context["request_id"] == request_id
-      assert context["correlation_id"] =~ @uuid
+      assert context["correlation_id"] == request_id
       assert context["request.path"] == "/anything"
     end
   end

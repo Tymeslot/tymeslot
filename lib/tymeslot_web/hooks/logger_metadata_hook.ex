@@ -28,7 +28,8 @@ defmodule TymeslotWeb.Hooks.LoggerMetadataHook do
     # On the initial HTTP (dead) render the LiveView mounts in the same process
     # as the Plug pipeline, where `CorrelationId` has already set a correlation
     # id in the process dictionary. Adopt it so the request's start and stop log
-    # lines share one id.
+    # lines share one id. The adopted id is checked against the same format the
+    # plug enforces, so nothing that fails it can reach the socket or the logs.
     #
     # On a live (connected) WebSocket mount we always mint a fresh id — even if
     # the process dictionary already holds one from a prior mount. The channel
@@ -40,10 +41,7 @@ defmodule TymeslotWeb.Hooks.LoggerMetadataHook do
       if connected?(socket) do
         CorrelationId.ensure(socket)
       else
-        case CorrelationId.get_from_process() do
-          nil -> CorrelationId.ensure(socket)
-          existing -> {CorrelationId.put_in_socket(socket, existing), existing}
-        end
+        adopt_request_correlation_id(socket)
       end
 
     CorrelationId.put_in_process(correlation_id)
@@ -53,6 +51,16 @@ defmodule TymeslotWeb.Hooks.LoggerMetadataHook do
     ErrorTracking.put_context(correlation_id: correlation_id, user_id: user_id(socket))
 
     {:cont, socket}
+  end
+
+  defp adopt_request_correlation_id(socket) do
+    existing = CorrelationId.get_from_process()
+
+    if CorrelationId.valid?(existing) do
+      {CorrelationId.put_in_socket(socket, existing), existing}
+    else
+      CorrelationId.ensure(socket)
+    end
   end
 
   defp user_id(socket) do
