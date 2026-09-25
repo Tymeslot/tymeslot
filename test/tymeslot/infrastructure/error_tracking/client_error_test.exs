@@ -17,43 +17,35 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ClientErrorTest do
   @live_view %{"live_view.view" => "TymeslotWeb.DashboardLive", "user_id" => 7}
   @job %{"job.worker" => "Tymeslot.Workers.WebhookWorker", "job.id" => 1}
 
-  describe "client_error?/2" do
+  describe "client_error_kind?/2" do
     test "is true for a 4xx exception raised serving a request or a LiveView" do
-      assert ClientError.client_error?(%Plug.Parsers.ParseError{exception: nil}, @request)
-      assert ClientError.client_error?(%Phoenix.Router.MalformedURIError{message: "x"}, @request)
-      assert ClientError.client_error?(%Plug.Conn.InvalidQueryError{message: "x"}, @request)
-      assert ClientError.client_error?(%Ecto.NoResultsError{message: "none"}, @live_view)
+      assert ClientError.client_error_kind?("Elixir.Plug.Parsers.ParseError", @request)
+      assert ClientError.client_error_kind?("Elixir.Phoenix.Router.MalformedURIError", @request)
+      assert ClientError.client_error_kind?("Elixir.Plug.Conn.InvalidQueryError", @request)
+      assert ClientError.client_error_kind?("Elixir.Ecto.NoResultsError", @live_view)
     end
 
     test "is false for a 4xx exception raised outside a request" do
-      refute ClientError.client_error?(%Ecto.NoResultsError{message: "none"}, @job)
-      refute ClientError.client_error?(%Ecto.NoResultsError{message: "none"}, %{})
+      refute ClientError.client_error_kind?("Elixir.Ecto.NoResultsError", @job)
+      refute ClientError.client_error_kind?("Elixir.Ecto.NoResultsError", %{})
     end
 
     test "is false for a job context even when request keys are present" do
-      refute ClientError.client_error?(
-               %Ecto.NoResultsError{message: "none"},
+      refute ClientError.client_error_kind?(
+               "Elixir.Ecto.NoResultsError",
                Map.merge(@request, @job)
              )
     end
 
-    test "is false for an exception rendered as a 5xx" do
-      refute ClientError.client_error?(%RuntimeError{message: "boom"}, @request)
-    end
-
     test "is false, with a warning, when the status cannot be resolved" do
       log =
-        capture_log(fn -> refute ClientError.client_error?(%MisconfiguredError{}, @request) end)
+        capture_log(fn ->
+          refute ClientError.client_error_kind?(Atom.to_string(MisconfiguredError), @request)
+        end)
 
       assert log =~ "Could not tell whether an exception is a client error"
     end
 
-    test "is false for a value that is not an exception" do
-      refute ClientError.client_error?(:not_found, @request)
-    end
-  end
-
-  describe "client_error_kind?/2" do
     test "resolves the exception module from its name" do
       assert ClientError.client_error_kind?("Elixir.Plug.BadRequestError", @request)
       refute ClientError.client_error_kind?("Elixir.Plug.BadRequestError", @job)

@@ -17,14 +17,14 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ClientError do
      the process: its Plug and Phoenix integrations record `"request.*"` and
      `"live_view.*"` keys, its Oban integration `"job.*"` keys.
 
-  Both `Tymeslot.Infrastructure.CrashReporter` (no admin alert) and
-  `Tymeslot.Infrastructure.ErrorTracking.Ignorer` (not stored) ask this
-  module, so the two cannot disagree about what counts as noise.
+  `Tymeslot.Infrastructure.ErrorTracking.Ignorer` asks this module for
+  every report, whether it comes from an integration or from
+  `Tymeslot.Infrastructure.CrashReporter`, so what counts as noise is decided
+  in one place.
 
-  Both callers run inside a `:logger` handler or a telemetry handler, where
-  a raise detaches the handler, so every function here is total: anything
-  unexpected is logged as a warning and answers `false`, which means
-  "report it".
+  The Ignorer runs inside telemetry handlers, where a raise detaches the
+  handler, so every function here is total: anything unexpected is logged as a warning and
+  answers `false`, which means "record it".
   """
 
   require Logger
@@ -33,17 +33,11 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ClientError do
   @job_prefix "job."
 
   @doc """
-  Returns true when `exception` maps to a 4xx response and `context` (an
-  ErrorTracker context) shows it arose serving a request or a LiveView.
-  """
-  @spec client_error?(Exception.t(), map()) :: boolean()
-  def client_error?(exception, context),
-    do: request_origin?(context) and client_status?(exception)
-
-  @doc """
-  Like `client_error?/2`, for an exception known only by its module name as
-  a string (`"Elixir.Phoenix.Router.NoRouteError"`), which is how ErrorTracker
-  records it. The status is taken from the exception's default struct.
+  Returns true when the exception, known by its module name as a string
+  (`"Elixir.Phoenix.Router.NoRouteError"`, which is how ErrorTracker records
+  it), maps to a 4xx response and `context` (an ErrorTracker context) shows
+  it arose serving a request or a LiveView. The status is taken from the
+  exception's default struct.
 
   An unknown module, a non-exception kind (`"exit"`, `"throw"`) or any
   failure resolving it answers `false`. Never creates an atom.
@@ -66,19 +60,11 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ClientError do
 
   def request_origin?(_context), do: false
 
-  defp client_status?(exception) when is_exception(exception) do
-    Plug.Exception.status(exception) < 500
-  rescue
-    error -> unresolved(error, inspect(exception.__struct__))
-  end
-
-  defp client_status?(_other), do: false
-
   defp client_status_kind?(kind) when is_binary(kind) do
     module = String.to_existing_atom(kind)
 
     Code.ensure_loaded?(module) and function_exported?(module, :exception, 1) and
-      client_status?(module.__struct__())
+      Plug.Exception.status(module.__struct__()) < 500
   rescue
     error -> unresolved(error, kind)
   end

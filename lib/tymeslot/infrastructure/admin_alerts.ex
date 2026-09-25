@@ -42,7 +42,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
           | :payment_event_orphaned
           | :dunning_stalled
           | :analytics_tracking_anomaly
-          | :unhandled_crash
           | atom()
 
   @callback send_alert(alert_type(), map()) :: :ok | {:error, any()}

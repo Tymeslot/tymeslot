@@ -29,7 +29,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     oban_queue_stuck: %{category: "Queue", severity: :error},
     oban_jobs_accumulating: %{category: "Queue", severity: :warning},
     oban_job_failure: %{category: "Queue", severity: :error},
-    unhandled_crash: %{category: "System", severity: :error},
     reconciliation_discrepancies: %{category: "Payment", severity: :warning},
     subscription_not_in_database: %{category: "Payment", severity: :warning},
     payment_event_enqueue_failed: %{category: "Payment", severity: :error},
@@ -69,26 +68,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     worker = Map.get(metadata, :worker, "unknown")
     queue = Map.get(metadata, :queue, "unknown")
     "oban_job_failure:#{worker}:#{queue}"
-  end
-
-  # Crash alerts carry stable crash-identity fields (reason_code + the top
-  # stacktrace frame). Dedup on those rather than the rendered message so a
-  # crash storm with per-occurrence detail (e.g. a user id in the message)
-  # collapses into a single alert per 24h window instead of one email each.
-  # The stacktrace is a multi-line string; only the first line is used so
-  # frame counts that drift over time don't fragment the key.
-  def dedup_key(:unhandled_crash, metadata) do
-    reason_code = Map.get(metadata, :reason_code)
-    stacktrace = Map.get(metadata, :stacktrace)
-
-    if reason_code && stacktrace do
-      top_frame =
-        stacktrace |> to_string() |> String.split("\n") |> List.first("") |> String.trim()
-
-      "unhandled_crash:#{reason_code}:#{top_frame}"
-    else
-      format_message(:unhandled_crash, metadata)
-    end
   end
 
   # Enqueue failures embed per-occurrence detail (attempt count, error text),
@@ -351,12 +330,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   def format_message(:analytics_tracking_anomaly, metadata) do
     kind = Map.get(metadata, :kind, "unknown")
     "Booking analytics tracking anomaly: #{kind}"
-  end
-
-  def format_message(:unhandled_crash, metadata) do
-    kind = Map.get(metadata, :kind, "error")
-    detail = Map.get(metadata, :reason_message) || Map.get(metadata, :summary, "unknown")
-    "Unhandled #{kind} crash: #{detail}"
   end
 
   def format_message(:recipient_email_rejected, metadata) do

@@ -170,22 +170,18 @@ defmodule Tymeslot.Application do
         # has all nils on a fresh test DB, so load!/0 is effectively a no-op).
         AppSettings.load!()
 
-        # Forward every unhandled process crash (web, LiveView, GenServer, Task)
-        # to AdminAlerts. Attached only after the supervision tree is up, since
-        # the handler depends on Tymeslot.Security.RateLimit (ETS) and
-        # Tymeslot.TaskSupervisor. Skipped in test, where intentionally-crashed
-        # processes would otherwise generate alert noise; tests attach it
-        # explicitly. Also skipped when admin alerts are disabled — the handler's
-        # only purpose is forwarding to AdminAlerts, so attaching it when alerts
-        # are off wastes per-crash work (rate-limit ETS writes, task spawns,
-        # formatting) and emits spurious "ADMIN ALERT" log lines.
+        # Record every process crash ErrorTracker's integrations do not see
+        # (GenServers, Tasks, bare processes) in ErrorTracker. Attached only
+        # after the supervision tree is up, since the handler offloads to
+        # Tymeslot.TaskSupervisor. It reads ErrorTracker's `enabled` switch on
+        # every crash, so switching error tracking off stops it without a
+        # restart. Skipped in test, where deliberately crashed processes would
+        # otherwise be recorded; tests attach it explicitly.
         if Application.get_env(:tymeslot, :environment) != :test do
           # After load!/0, so a recipient set only in the admin settings counts.
           AdminAlerts.check_config()
 
-          if Application.get_env(:tymeslot, :admin_alerts_enabled, false) do
-            CrashReporter.attach()
-          end
+          CrashReporter.attach()
 
           schedule_periodic_jobs()
           AdminBootstrap.warn_if_orphaned_install()

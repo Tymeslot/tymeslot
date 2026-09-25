@@ -103,11 +103,6 @@ config :tymeslot,
   admin_alerts_enabled: false,
   admin_alert_email: nil,
 
-  # Global cap on crash alerts to survive a crash storm without flooding the
-  # logging subsystem or the email queue. Tune per deployment traffic.
-  crash_reporter_rate_limit_max: 20,
-  crash_reporter_rate_limit_window_ms: 60_000,
-
   # Dashboard Extensions
   dashboard_sidebar_extensions: [],
   dashboard_action_components: %{},
