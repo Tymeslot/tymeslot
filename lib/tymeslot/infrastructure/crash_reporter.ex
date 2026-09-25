@@ -105,7 +105,7 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   def reportable?(_kind, _reason), do: true
 
   defp ignored_exceptions do
-    Application.get_env(:tymeslot, :crash_reporter_ignored_exceptions, [])
+    Application.get_env(:tymeslot, :ignored_exceptions, [])
   end
 
   # :logger handler callback. Return value is ignored by :logger.

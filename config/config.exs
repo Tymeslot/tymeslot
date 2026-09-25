@@ -103,9 +103,10 @@ config :tymeslot,
   admin_alerts_enabled: false,
   admin_alert_email: nil,
 
-  # Crashes whose exception maps to a client (4xx) error are routine request
-  # noise, not operator-actionable — never raise an admin alert for them.
-  crash_reporter_ignored_exceptions: [
+  # Exceptions that map to a client (4xx) error are routine request noise, not
+  # operator-actionable: never raise an admin alert for them, and never store
+  # them in ErrorTracker (Tymeslot.Infrastructure.ErrorTracking.Ignorer).
+  ignored_exceptions: [
     Phoenix.Router.NoRouteError,
     Ecto.NoResultsError,
     Plug.Parsers.UnsupportedMediaTypeError,
@@ -576,6 +577,17 @@ config :tymeslot, :analytics_salt_secret, nil
 # already shipped and run against real databases, so re-litigating them would
 # be noise rather than safety. Anything strictly after this timestamp is checked.
 config :excellent_migrations, start_after: "20260716094322"
+
+# ErrorTracker stores every exception in the application database, grouped by
+# fingerprint. Occurrence context passes through the Filter (credential and
+# email redaction) before it is written; the Ignorer drops client-error noise.
+# `enabled` is read on every report, so a test can switch it on locally.
+config :error_tracker,
+  repo: Tymeslot.Repo,
+  otp_app: :tymeslot,
+  enabled: true,
+  filter: Tymeslot.Infrastructure.ErrorTracking.Filter,
+  ignorer: Tymeslot.Infrastructure.ErrorTracking.Ignorer
 
 # Import environment specific config
 import_config "#{config_env()}.exs"

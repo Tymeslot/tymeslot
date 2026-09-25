@@ -102,6 +102,10 @@ config :tymeslot, Oban,
   pruner: [max_age: {1, :hour}],
   testing: :manual
 
+# ErrorTracker stays off in tests: a test that exercises it switches it on
+# for itself (and must then be async: false).
+config :error_tracker, enabled: false
+
 # In test we don't send emails
 config :tymeslot, Tymeslot.Mailer, adapter: Swoosh.Adapters.Test
 

@@ -97,6 +97,17 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
     :ok = :logger.add_primary_filter(@filter_id, {&__MODULE__.filter/2, []})
   end
 
+  @doc """
+  Replaces the value of every sensitive key in `term` with `"[REDACTED]"`,
+  walking maps, lists and tuples to the same bounded depth as the logger
+  filter. Atom and string keys are matched alike.
+
+  Other stores that persist arbitrary diagnostic context (ErrorTracker
+  occurrences) use this so they share one definition of "sensitive".
+  """
+  @spec redact(term()) :: term()
+  def redact(term), do: redact_term(term, @max_depth)
+
   @doc false
   @spec filter(:logger.log_event(), term()) :: :logger.filter_return()
   def filter(event, _extra) when is_map(event) do
