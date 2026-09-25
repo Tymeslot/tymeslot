@@ -12,7 +12,8 @@ defmodule Tymeslot.Infrastructure.Tasks do
 
   Every task in the application is spawned through this module;
   `CredoChecks.TaskSpawnBoundary` flags a direct `Task` or `Task.Supervisor`
-  spawn anywhere else under `lib/`. Awaiting, yielding and shutting a task
+  spawn anywhere else under `lib/`, and a LiveView `start_async` whose
+  function is not wrapped in `with_context/1`. Awaiting, yielding and shutting a task
   down are unchanged, so `Task.await/2`, `Task.yield/2` and `Task.shutdown/2`
   are still called directly.
 
@@ -26,6 +27,19 @@ defmodule Tymeslot.Infrastructure.Tasks do
   @doc "`Task.async/1`, carrying the caller's context."
   @spec async((-> any())) :: Task.t()
   def async(fun) when is_function(fun, 0), do: Task.async(with_caller_context(fun))
+
+  @doc "`Task.start/1`, carrying the caller's context."
+  @spec start((-> any())) :: {:ok, pid()}
+  def start(fun) when is_function(fun, 0), do: Task.start(with_caller_context(fun))
+
+  @doc """
+  Returns `fun` wrapped to run with the caller's context, for a process this
+  module does not spawn: a LiveView's `start_async/3`, or a server that runs
+  a function on behalf of the process that handed it over. The context is
+  captured here, in the caller, not where the function eventually runs.
+  """
+  @spec with_context((-> result)) :: (-> result) when result: var
+  def with_context(fun) when is_function(fun, 0), do: with_caller_context(fun)
 
   @doc "`Task.Supervisor.async/2`, carrying the caller's context."
   @spec async(Supervisor.supervisor(), (-> any())) :: Task.t()

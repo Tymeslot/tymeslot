@@ -1,6 +1,7 @@
 defmodule CredoChecks.TaskSpawnBoundary do
   @moduledoc """
-  Flags tasks spawned without `Tymeslot.Infrastructure.Tasks`.
+  Flags tasks spawned without `Tymeslot.Infrastructure.Tasks`, and LiveView
+  async work that runs without its caller's context.
 
   A task is a new process and starts with no Logger metadata and no
   ErrorTracker context. `Tymeslot.Infrastructure.Tasks` carries the
@@ -9,12 +10,18 @@ defmodule CredoChecks.TaskSpawnBoundary do
   them silently, so its log lines no longer tie back to the request or job
   that started it and its crashes are recorded with no user attached.
 
-  Flagged under `lib/` only: the spawning functions of `Task` (`async`,
-  `async_stream`, `start`, `start_link`) and of `Task.Supervisor` (`async`,
-  `async_nolink`, `async_stream`, `async_stream_nolink`, `start_child`),
-  including function captures such as `&Task.async/1`. Functions that only
-  work with a task already spawned (`Task.await/2`, `Task.yield/2`,
-  `Task.shutdown/2` and the like) are not flagged.
+  Flagged under `lib/` only:
+
+    * the spawning functions of `Task` (`async`, `async_stream`, `start`) and
+      of `Task.Supervisor` (`async`, `async_nolink`, `async_stream`,
+      `async_stream_nolink`, `start_child`), including function captures
+      such as `&Task.async/1`. Functions that only work with a task already
+      spawned (`Task.await/2`, `Task.yield/2`, `Task.shutdown/2` and the
+      like) are not flagged.
+    * a LiveView `start_async` or `assign_async` whose function is not
+      wrapped in `Tasks.with_context/1`. LiveView runs the function in a
+      process it spawns itself, so the wrapper is the only way the LiveView's
+      correlation id reaches it.
 
   ## Excluded files
 
@@ -34,6 +41,12 @@ defmodule CredoChecks.TaskSpawnBoundary do
 
       # Good
       Tasks.start_child(Tymeslot.TaskSupervisor, fn -> notify(user) end)
+
+      # Bad: the async function runs without the LiveView's correlation id
+      start_async(socket, :load, fn -> load(user) end)
+
+      # Good
+      start_async(socket, :load, Tasks.with_context(fn -> load(user) end))
   """
 
   use Credo.Check,
@@ -45,7 +58,8 @@ defmodule CredoChecks.TaskSpawnBoundary do
       Tasks must be spawned through `Tymeslot.Infrastructure.Tasks`, which
       carries the caller's correlation id, user and error context into the
       task. A task spawned with `Task` or `Task.Supervisor` directly runs
-      without them.
+      without them, and so does a LiveView `start_async` or `assign_async`
+      function not wrapped in `Tasks.with_context/1`.
       """,
       params: [
         allowed: "List of filename substrings allowed to spawn tasks directly."
@@ -57,8 +71,10 @@ defmodule CredoChecks.TaskSpawnBoundary do
   alias Credo.IssueMeta
   alias Credo.SourceFile
 
-  @task_spawns [:async, :async_stream, :start, :start_link]
+  @task_spawns [:async, :async_stream, :start]
   @supervisor_spawns [:async, :async_nolink, :async_stream, :async_stream_nolink, :start_child]
+  @live_view_asyncs [:start_async, :assign_async]
+  @definitions [:def, :defp]
 
   @doc false
   @impl Credo.Check
@@ -111,7 +127,67 @@ defmodule CredoChecks.TaskSpawnBoundary do
     {ast, [issue(issue_meta, meta[:line], "Task.Supervisor.#{function}") | issues]}
   end
 
+  # A definition named like a LiveView async function is not a call to one:
+  # its head is dropped so the walk does not mistake it for a call.
+  defp traverse({definition, meta, [head | body]}, issues, _issue_meta)
+       when definition in @definitions do
+    if defines_live_view_async?(head),
+      do: {{definition, meta, [nil | body]}, issues},
+      else: {{definition, meta, [head | body]}, issues}
+  end
+
+  defp traverse({function, meta, args} = ast, issues, issue_meta)
+       when function in @live_view_asyncs and is_list(args) do
+    {ast, live_view_async_issues(issue_meta, meta, function, args, issues)}
+  end
+
+  defp traverse(
+         {{:., _, [{:__aliases__, _, [_ | _] = parts}, function]}, meta, args} = ast,
+         issues,
+         issue_meta
+       )
+       when function in @live_view_asyncs and is_list(args) do
+    if List.last(parts) == :LiveView,
+      do: {ast, live_view_async_issues(issue_meta, meta, function, args, issues)},
+      else: {ast, issues}
+  end
+
   defp traverse(ast, issues, _issue_meta), do: {ast, issues}
+
+  defp defines_live_view_async?({:when, _, [head | _guards]}), do: defines_live_view_async?(head)
+  defp defines_live_view_async?({name, _, _args}), do: name in @live_view_asyncs
+  defp defines_live_view_async?(_head), do: false
+
+  defp live_view_async_issues(issue_meta, meta, function, args, issues) do
+    if with_context?(async_function(args)),
+      do: issues,
+      else: [live_view_async_issue(issue_meta, meta[:line], function) | issues]
+  end
+
+  # The function is the last argument, or the one before a trailing options
+  # list.
+  defp async_function(args) do
+    case Enum.reverse(args) do
+      [options, function | _rest] when is_list(options) -> function
+      [function | _rest] -> function
+      [] -> nil
+    end
+  end
+
+  defp with_context?({{:., _, [{:__aliases__, _, parts}, :with_context]}, _, [_fun]}),
+    do: List.last(parts) == :Tasks
+
+  defp with_context?(_function), do: false
+
+  defp live_view_async_issue(issue_meta, line_no, function) do
+    format_issue(issue_meta,
+      message:
+        "`#{function}` runs its function without the LiveView's correlation id and error " <>
+          "context. Wrap the function in `Tymeslot.Infrastructure.Tasks.with_context/1`.",
+      line_no: line_no,
+      trigger: Atom.to_string(function)
+    )
+  end
 
   defp issue(issue_meta, line_no, trigger) do
     format_issue(issue_meta,

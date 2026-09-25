@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingState
   alias TymeslotWeb.Live.Shared.Flash
@@ -62,7 +63,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagement.RequestActions do
     socket
     |> assign(:answering_request, meeting.id)
     |> assign(:answering_opts, Map.put(socket.assigns.answering_opts, meeting.id, opts))
-    |> start_async({:answer_request, meeting.id}, fn -> action.(meeting) end)
+    |> start_async({:answer_request, meeting.id}, Tasks.with_context(fn -> action.(meeting) end))
   end
 
   @doc """

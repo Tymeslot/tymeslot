@@ -222,19 +222,22 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
             {:noreply,
              socket
              |> assign(:is_refreshing, true)
-             |> start_async(:refresh_calendars, fn ->
-               Tymeslot.TaskSupervisor
-               |> Tasks.async_stream_nolink(
-                 active,
-                 fn integration ->
-                   {integration.name, Calendar.refresh_integration(integration)}
-                 end,
-                 max_concurrency: 5,
-                 timeout: 30_000,
-                 on_timeout: :kill_task
-               )
-               |> Enum.to_list()
-             end)}
+             |> start_async(
+               :refresh_calendars,
+               Tasks.with_context(fn ->
+                 Tymeslot.TaskSupervisor
+                 |> Tasks.async_stream_nolink(
+                   active,
+                   fn integration ->
+                     {integration.name, Calendar.refresh_integration(integration)}
+                   end,
+                   max_concurrency: 5,
+                   timeout: 30_000,
+                   on_timeout: :kill_task
+                 )
+                 |> Enum.to_list()
+               end)
+             )}
           end
       end
     end

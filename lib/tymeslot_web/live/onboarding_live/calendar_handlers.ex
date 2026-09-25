@@ -12,6 +12,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Auth
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias TymeslotWeb.OnboardingLive.StepConfig
@@ -188,9 +189,10 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
        |> Component.assign(:caldav_discovering, true)
        |> Component.assign(:caldav_form_data, form_data)
        |> Component.assign(:caldav_form_errors, %{})
-       |> LiveView.start_async(:discover_caldav, fn ->
-         run_caldav_discovery(user_id, form_data)
-       end)}
+       |> LiveView.start_async(
+         :discover_caldav,
+         Tasks.with_context(fn -> run_caldav_discovery(user_id, form_data) end)
+       )}
     end
   end
 

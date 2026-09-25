@@ -4,9 +4,11 @@ defmodule Tymeslot.Infrastructure.ObanEngineTest do
   @moduletag :infrastructure
   @moduletag :workers
 
+  alias Ecto.Multi
   alias Tymeslot.Infrastructure.CorrelationId
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.ObanEngine
+  alias Tymeslot.Repo
 
   @queue :oban_engine_test
 
@@ -72,6 +74,19 @@ defmodule Tymeslot.Infrastructure.ObanEngineTest do
         )
 
       assert job.meta == %{"correlation_id" => "explicit-id", "source" => "test", "user_id" => 7}
+    end
+
+    test "carries it through an Ecto.Multi insert" do
+      Logger.metadata(correlation_id: "abc12345", user_id: 7)
+
+      {:ok, %{job: job}} =
+        Multi.new()
+        |> Oban.insert(:job, ContextWorker.new(%{}))
+        |> Repo.transaction()
+
+      Logger.reset_metadata()
+
+      assert job.meta == %{"correlation_id" => "abc12345", "user_id" => 7}
     end
 
     test "carries it through insert_all" do

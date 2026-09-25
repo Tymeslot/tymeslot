@@ -37,6 +37,12 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
   def coalesce(user_id, start_date, end_date, fetch_fn) when is_function(fetch_fn, 0) do
     key = {user_id, start_date, end_date}
 
+    # The fetch runs in a task the server starts, so it is wrapped here, in
+    # the caller, to carry the caller's correlation id and error context
+    # rather than the server's. Waiters that join an in-flight fetch share the
+    # first caller's.
+    fetch_fn = Tasks.with_context(fetch_fn)
+
     GenServer.call(__MODULE__, {:coalesce, key, fetch_fn}, Base.coalescer_call_timeout_ms())
   end
 

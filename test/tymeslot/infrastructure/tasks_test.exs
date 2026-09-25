@@ -81,6 +81,25 @@ defmodule Tymeslot.Infrastructure.TasksTest do
       assert sorted(context) == sorted(@expected)
     end
 
+    test "start/1" do
+      test_pid = self()
+
+      {:ok, _pid} = Tasks.start(fn -> send(test_pid, {:context, observed_context()}) end)
+
+      assert_receive {:context, context}
+      assert sorted(context) == sorted(@expected)
+    end
+
+    test "with_context/1, in a process spawned by something else" do
+      test_pid = self()
+      fun = Tasks.with_context(fn -> send(test_pid, {:context, observed_context()}) end)
+
+      spawn(fun)
+
+      assert_receive {:context, context}
+      assert sorted(context) == sorted(@expected)
+    end
+
     test "async_stream/3, in every task" do
       contexts =
         [1, 2] |> Tasks.async_stream(fn _n -> sorted(observed_context()) end) |> Enum.to_list()
