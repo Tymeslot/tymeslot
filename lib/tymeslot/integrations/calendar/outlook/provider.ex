@@ -145,7 +145,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   and patched with only what the edit changes (`Outlook.SeriesPatch`). One
   of scope `:following`, with the occurrence's original start in `:slot`,
   splits the series there (`Outlook.SeriesSplit`): the following
-  occurrences are created as a new series in the event's calendar, which
+  occurrences are created as a new series in the calendar Graph says holds
+  the master, which
   takes the edit, then the master's range is ended before them, and if that
   fails the new series is deleted again. The answer is then
   `{:ok, %{tail: %{uid: uid, id: id}}}`, the new series' `iCalUId` and id;
@@ -154,12 +155,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   """
   @spec call_update_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
           {:ok, map()} | {:error, atom(), String.t()} | {:error, term()}
-  def call_update_event(integration, _event_id, %{occurrence: %{scope: scope} = edit} = attrs)
+  def call_update_event(integration, _event_id, %{occurrence: %{scope: scope} = edit})
       when scope in [:all, :following] do
     with {:ok, master} <- api_module().get_event(integration, edit.master_id) do
       if scope == :all,
         do: patch_series(integration, master, edit),
-        else: split_series(integration, attrs[:calendar_id], master, edit)
+        else: split_series(integration, master, edit)
     end
   end
 
@@ -183,12 +184,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     end
   end
 
-  defp split_series(integration, calendar_id, master, edit) do
+  # The tail goes into the calendar Graph says holds the master: the cached
+  # row's calendar can read "primary" for a series in another calendar, and
+  # a tail created there would move the following occurrences with it. A
+  # calendar that cannot be read refuses the split before anything is
+  # written.
+  defp split_series(integration, master, edit) do
     case SeriesSplit.build(master, edit) do
       {:ok, %{tail: tail, head: head}} ->
         api = api_module()
 
-        with {:ok, created} <-
+        with {:ok, calendar_id} <- api.get_event_calendar_id(integration, edit.master_id),
+             {:ok, created} <-
                RecurrenceSplit.write(
                  fn -> api.insert_event(integration, calendar_id, tail) end,
                  fn -> api.patch_event(integration, edit.master_id, head) end,

@@ -361,20 +361,39 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
       integration =
         insert_integration(user, "outlook", "https://graph.microsoft.com/Calendars.ReadWrite")
 
-      rows = insert_rows(integration, "outlook", "master-1", %{"type" => "occurrence"})
+      # The delta sync caches every Outlook row as on "primary", whichever
+      # calendar holds its series; this one lives in another.
+      rows =
+        integration
+        |> insert_rows("outlook", "master-1", %{"type" => "occurrence"})
+        |> Map.new(fn {name, row} ->
+          {name, row |> Changeset.change(provider_calendar_id: "primary") |> Repo.update!()}
+        end)
+
       Map.put(rows, :integration, integration)
     end
 
-    defp outlook(patch_status) do
+    @master_calendar {200, %{"id" => "team-calendar"}}
+
+    defp outlook(patch_status, calendar \\ @master_calendar) do
       fn
-        :get, _url -> {200, @outlook_master}
-        :post, _url -> {201, @outlook_tail}
-        :patch, _url -> {patch_status, if(patch_status == 200, do: @outlook_master, else: %{})}
-        :delete, _url -> {204, nil}
+        :get, url ->
+          if String.contains?(url, "/master-1/calendar"),
+            do: calendar,
+            else: {200, @outlook_master}
+
+        :post, _url ->
+          {201, @outlook_tail}
+
+        :patch, _url ->
+          {patch_status, if(patch_status == 200, do: @outlook_master, else: %{})}
+
+        :delete, _url ->
+          {204, nil}
       end
     end
 
-    test "creates the tail in the series' calendar, then ends the master's range", %{
+    test "creates the tail in the calendar Graph says holds the master, then ends its range", %{
       user: user,
       integration: integration,
       occurrence: occurrence
@@ -390,6 +409,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
 
       assert [
                {:get, @graph <> "/me/events/master-1", _get},
+               {:get, @graph <> "/me/events/master-1/calendar" <> _select, _calendar},
                {:post, @graph <> "/me/calendars/team-calendar/events", _tail},
                {:patch, @graph <> "/me/events/master-1", _head}
              ] = sent
@@ -432,8 +452,30 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
                )
 
       sent = requests()
-      assert methods(sent) == [:get, :post, :patch, :delete]
+      assert methods(sent) == [:get, :get, :post, :patch, :delete]
       assert {:delete, @graph <> "/me/events/tail-1", _body} = List.last(sent)
+
+      assert {:ok, %{summary: "Weekly sync"}} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, occurrence.uid)
+
+      refute_enqueued(worker: RefreshOutlookCalendarWorker)
+    end
+
+    test "is refused before anything is written when the master's calendar cannot be read", %{
+      user: user,
+      integration: integration,
+      occurrence: occurrence
+    } do
+      for calendar <- [{200, %{}}, {404, %{"error" => %{"code" => "ErrorItemNotFound"}}}] do
+        serve(outlook(200, calendar))
+
+        assert {:error, %{retry: :not_queued}} =
+                 CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+                   recurrence_scope: :following
+                 )
+
+        assert methods(requests()) == [:get, :get]
+      end
 
       assert {:ok, %{summary: "Weekly sync"}} =
                ProviderCalendarEventQueries.get_by_uid(integration.id, occurrence.uid)

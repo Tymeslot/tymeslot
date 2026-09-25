@@ -201,19 +201,37 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   end
 
   @doc """
-  Creates `body`, a Graph event body written as it is, in `calendar_id`, or
-  in the signed-in user's default calendar when that is `nil`. Unlike
-  `create_event/2,3`, nothing is mapped or added, and the event is answered
-  as Graph returned it, with its `id` and `iCalUId`.
+  Creates `body`, a Graph event body written as it is, in the calendar
+  `calendar_id`. Unlike `create_event/2,3`, nothing is mapped or added, and
+  the event is answered as Graph returned it, with its `id` and `iCalUId`.
   """
   @impl CalendarAPIBehaviour
-  @spec insert_event(CalendarIntegrationSchema.t(), String.t() | nil, map()) ::
+  @spec insert_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
           {:ok, map()} | api_error()
-  def insert_event(%CalendarIntegrationSchema{} = integration, calendar_id, body) do
-    path = if calendar_id, do: "/me/calendars/#{calendar_id}/events", else: "/me/events"
-
+  def insert_event(%CalendarIntegrationSchema{} = integration, calendar_id, body)
+      when is_binary(calendar_id) do
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      make_request_with_body(:post, path, token, body, headers: @silent_event_headers)
+      make_request_with_body(:post, "/me/calendars/#{calendar_id}/events", token, body,
+        headers: @silent_event_headers
+      )
+    end)
+  end
+
+  @doc """
+  The id of the calendar that holds the event `event_id` of the signed-in
+  user, as Graph states it. An answer without one is
+  `{:error, :unknown_calendar}`.
+  """
+  @impl CalendarAPIBehaviour
+  @spec get_event_calendar_id(CalendarIntegrationSchema.t(), String.t()) ::
+          {:ok, String.t()} | {:error, :unknown_calendar} | api_error()
+  def get_event_calendar_id(%CalendarIntegrationSchema{} = integration, event_id) do
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      case make_request(:get, "/me/events/#{event_id}/calendar", token, %{"$select" => "id"}) do
+        {:ok, %{"id" => id}} when is_binary(id) and id != "" -> {:ok, id}
+        {:ok, _no_id} -> {:error, :unknown_calendar}
+        error -> error
+      end
     end)
   end
 
