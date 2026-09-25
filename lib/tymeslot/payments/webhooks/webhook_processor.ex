@@ -6,6 +6,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
   require Logger
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Payments.Errors.WebhookError
   alias Tymeslot.Payments.Webhooks.WebhookRegistry
 
@@ -24,7 +25,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
     exception ->
       event_type = get_field(event, :type) || "unknown"
 
-      map_transient_errors(handle_exception(exception, event_type, __STACKTRACE__))
+      map_transient_errors(handle_exception(exception, event, event_type, __STACKTRACE__))
   end
 
   defp map_transient_errors({:error, :retry_later, _message} = result), do: result
@@ -70,12 +71,11 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
      }, nil}
   end
 
-  defp handle_exception(exception, event_type, stacktrace) do
-    Logger.error("Error processing webhook event",
+  defp handle_exception(exception, event, event_type, stacktrace) do
+    ErrorTracking.report_error(exception, stacktrace, %{
       event_type: event_type,
-      error: inspect(exception),
-      stacktrace: stacktrace
-    )
+      event_id: get_field(event, :id)
+    })
 
     {:error,
      %WebhookError.ProcessingError{
@@ -160,11 +160,11 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
     handler.process(normalized_event, object)
   rescue
     exception ->
-      Logger.error("Handler error",
-        error: inspect(exception),
-        handler: handler,
-        stacktrace: __STACKTRACE__
-      )
+      ErrorTracking.report_error(exception, __STACKTRACE__, %{
+        handler: inspect(handler),
+        event_type: get_field(event, :type),
+        event_id: get_field(event, :id)
+      })
 
       {:error,
        %WebhookError.ProcessingError{

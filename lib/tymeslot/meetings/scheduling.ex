@@ -12,6 +12,7 @@ defmodule Tymeslot.Meetings.Scheduling do
 
   alias Ecto.Changeset
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Meetings.BookingLimits
   alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.Meetings.MeetingConflictQueries
@@ -78,7 +79,10 @@ defmodule Tymeslot.Meetings.Scheduling do
     end
   rescue
     error ->
-      handle_database_error(error, "atomic meeting creation", __STACKTRACE__)
+      handle_database_error(error, __STACKTRACE__, %{
+        operation: "create",
+        organizer_user_id: MapKeys.get(attrs, :organizer_user_id)
+      })
   end
 
   @doc """
@@ -116,11 +120,7 @@ defmodule Tymeslot.Meetings.Scheduling do
     end
   rescue
     error ->
-      handle_database_error(
-        error,
-        "atomic meeting update (meeting_id=#{meeting.id})",
-        __STACKTRACE__
-      )
+      handle_database_error(error, __STACKTRACE__, %{operation: "update", meeting_id: meeting.id})
   end
 
   # Private functions
@@ -240,9 +240,8 @@ defmodule Tymeslot.Meetings.Scheduling do
     Logger.info("Meeting time conflict detected during booking attempt", log_attrs)
   end
 
-  defp handle_database_error(error, operation, stacktrace) do
-    formatted = Exception.format(:error, error, stacktrace)
-    Logger.error("Database error during #{operation}\n" <> formatted)
+  defp handle_database_error(error, stacktrace, context) do
+    :ok = ErrorTracking.report_error(error, stacktrace, context)
     {:error, :database_error}
   end
 
