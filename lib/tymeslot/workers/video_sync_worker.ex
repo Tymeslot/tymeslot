@@ -25,10 +25,8 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   `Tymeslot.CalendarGrid.EventVideoRooms` and enqueued with
   `enqueue_event_room/2`; a delete removes the record once the room is gone.
   Such a room's integration is resolved as a meeting's is, from its recorded
-  provider when the link is gone. An `"expire"` job asks the calendar again
-  whether the event is really over before deleting
-  (`Tymeslot.CalendarGrid.check_event_video_room_expired/1`), since the event
-  may have moved in between.
+  provider when the link is gone. An `"expire"` or `"orphan"` job first asks
+  the calendar whether the event is really over, or gone: it may have moved.
 
   A room no record holds at all is deleted by its provider id through
   `enqueue_room_delete/3`: the Zoom meeting a calendar grid event's video
@@ -98,12 +96,13 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   id of its `Tymeslot.CalendarGrid.EventVideoRoomSchema` record.
 
   `action` is `"update"` (the event moved), `"delete"` (the event was
-  deleted) or `"expire"` (the room seems to have outlived its event, which the
-  job confirms before deleting it).
+  deleted), `"expire"` (the room seems to have outlived its event) or
+  `"orphan"` (the event seems deleted in a calendar client); the job confirms
+  either before deleting the room.
   """
   @spec enqueue_event_room(pos_integer(), String.t()) :: {:ok, atom()} | {:error, term()}
   def enqueue_event_room(room_id, action)
-      when is_integer(room_id) and action in ["update", "delete", "expire"],
+      when is_integer(room_id) and action in ["update", "delete", "expire", "orphan"],
       do: insert_job(%{"event_room_id" => room_id, "action" => action}, [:event_room_id, :action])
 
   @doc """
@@ -378,17 +377,18 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     end
   end
 
-  defp dispatch_event_room("expire", room, executions) do
-    case CalendarGrid.confirm_event_video_room_expired(room) do
-      :expired ->
-        dispatch_event_room("delete", room, executions)
+  defp dispatch_event_room(action, room, executions) when action in ["expire", "orphan"] do
+    confirmed =
+      if action == "expire",
+        do: CalendarGrid.confirm_event_video_room_expired(room),
+        else: CalendarGrid.confirm_event_video_room_gone(room)
 
-      :kept ->
-        Logger.info("Calendar event still uses its video room, keeping it",
-          calendar_event_video_room_id: room.id
-        )
-
-        :ok
+    if confirmed == :kept do
+      Logger.info("Calendar event still uses its video room, keeping it",
+        calendar_event_video_room_id: room.id
+      )
+    else
+      dispatch_event_room("delete", room, executions)
     end
   end
 
