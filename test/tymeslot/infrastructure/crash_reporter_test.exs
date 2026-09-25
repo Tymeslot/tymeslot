@@ -18,14 +18,40 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
     %{level: :error, msg: {:string, "crash"}, meta: %{crash_reason: crash_reason}}
   end
 
-  describe "reportable?/2" do
+  describe "reportable?/3" do
+    @live_view_context %{"live_view.view" => "TymeslotWeb.DashboardLive"}
+
     test "server-error exceptions are reportable" do
-      assert CrashReporter.reportable?(:error, %RuntimeError{message: "boom"})
+      assert CrashReporter.reportable?(:error, %RuntimeError{message: "boom"}, @live_view_context)
     end
 
-    test "client-error (4xx) exceptions are not reportable" do
-      refute CrashReporter.reportable?(:error, %Ecto.NoResultsError{message: "none"})
-      refute CrashReporter.reportable?(:error, %Plug.CSRFProtection.InvalidCSRFTokenError{})
+    test "4xx exceptions raised serving a request or a LiveView are not reportable" do
+      refute CrashReporter.reportable?(
+               :error,
+               %Ecto.NoResultsError{message: "none"},
+               @live_view_context
+             )
+
+      refute CrashReporter.reportable?(
+               :error,
+               %Plug.CSRFProtection.InvalidCSRFTokenError{},
+               %{"request.path" => "/"}
+             )
+    end
+
+    test "4xx exceptions raised in a job or a bare process are reportable" do
+      assert CrashReporter.reportable?(
+               :error,
+               %Ecto.NoResultsError{message: "none"},
+               %{"job.worker" => "Tymeslot.Workers.WebhookWorker"}
+             )
+
+      assert CrashReporter.reportable?(:error, %Ecto.StaleEntryError{message: "stale"}, %{})
+    end
+
+    test "defaults to the calling process's ErrorTracker context" do
+      refute Map.has_key?(ErrorTracker.get_context(), "live_view.view")
+      assert CrashReporter.reportable?(:error, %Ecto.NoResultsError{message: "none"})
     end
 
     test "normal exits are not reportable" do
@@ -71,7 +97,8 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
       refute_receive {:send_alert, :unhandled_crash, _payload}, 200
     end
 
-    test "an ignored (4xx) exception does not report" do
+    test "a 4xx exception in a LiveView process does not report" do
+      ErrorTracker.set_context(%{"live_view.view" => "TymeslotWeb.DashboardLive"})
       CrashReporter.log(crash_event({%Ecto.NoResultsError{message: "none"}, []}), %{})
       refute_receive {:send_alert, :unhandled_crash, _payload}, 200
     end
@@ -164,6 +191,43 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
         assert_receive {:send_alert, :unhandled_crash, payload}, 2_000
         assert payload.kind == :error
         assert payload.reason_message =~ "integration boom"
+      end)
+    end
+  end
+
+  describe "4xx exceptions crashing a real process" do
+    setup do
+      :ok = CrashReporter.attach()
+      on_exit(&CrashReporter.detach/0)
+      :ok
+    end
+
+    # The handler runs in the process that crashed, so it reads that process's
+    # ErrorTracker context, not the test's. The crash reaches the handler
+    # through :logger, so the code under test is invoked by the runtime.
+    # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
+    test "raised by a background task, it alerts" do
+      CaptureLog.capture_log(fn ->
+        Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+          raise Ecto.NoResultsError, queryable: "users"
+        end)
+
+        assert_receive {:send_alert, :unhandled_crash, payload}, 2_000
+        assert payload.reason_message =~ "expected at least one result"
+      end)
+    end
+
+    test "raised by a process serving a LiveView, it does not alert" do
+      CaptureLog.capture_log(fn ->
+        {:ok, pid} =
+          Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+            ErrorTracker.set_context(%{"live_view.view" => "TymeslotWeb.DashboardLive"})
+            raise Ecto.NoResultsError, queryable: "users"
+          end)
+
+        ref = Process.monitor(pid)
+        assert_receive {:DOWN, ^ref, :process, ^pid, _reason}, 2_000
+        refute_receive {:send_alert, :unhandled_crash, _payload}, 300
       end)
     end
   end

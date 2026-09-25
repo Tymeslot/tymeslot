@@ -38,6 +38,7 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   """
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.ErrorTracking.ClientError
   alias Tymeslot.Security.RateLimiter
 
@@ -92,17 +93,26 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   @doc """
   Returns true if a crash of this kind/reason should raise an admin alert.
 
-  Orderly exits (`:normal`, `:shutdown`, `{:shutdown, _}`) and client-error (4xx)
-  exceptions are not reportable. Public for testing.
+  Orderly exits (`:normal`, `:shutdown`, `{:shutdown, _}`) are not reportable,
+  and neither are client errors: 4xx exceptions raised while serving a request
+  or a LiveView (`Tymeslot.Infrastructure.ErrorTracking.ClientError`). The same
+  exception in a job, GenServer or Task is a bug and is reported.
+
+  `context` defaults to the ErrorTracker context of the calling process. The
+  `:logger` handler runs in the process that logged the crash, which for a
+  crash report is the process that crashed, so the default is that process's
+  own context. Public for testing.
   """
-  @spec reportable?(atom(), term()) :: boolean()
-  def reportable?(:exit, reason) when reason in @normal_exits, do: false
-  def reportable?(:exit, {:shutdown, _reason}), do: false
+  @spec reportable?(atom(), term(), map()) :: boolean()
+  def reportable?(kind, reason, context \\ ErrorTracking.current_context())
 
-  def reportable?(_kind, reason) when is_exception(reason),
-    do: not ClientError.client_error?(reason)
+  def reportable?(:exit, reason, _context) when reason in @normal_exits, do: false
+  def reportable?(:exit, {:shutdown, _reason}, _context), do: false
 
-  def reportable?(_kind, _reason), do: true
+  def reportable?(_kind, reason, context) when is_exception(reason),
+    do: not ClientError.client_error?(reason, context)
+
+  def reportable?(_kind, _reason, _context), do: true
 
   # :logger handler callback. Return value is ignored by :logger.
   # Clauses are ordered: exception, then throw, then the catch-all exit.

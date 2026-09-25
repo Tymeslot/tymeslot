@@ -1,7 +1,9 @@
 defmodule Tymeslot.Infrastructure.ErrorTracking.Ignorer do
   @moduledoc """
-  Keeps client-error (4xx) exceptions out of ErrorTracker, by the rule in
-  `Tymeslot.Infrastructure.ErrorTracking.ClientError`.
+  Keeps client errors out of ErrorTracker: 4xx exceptions raised while
+  serving a request or a LiveView, by the rule in
+  `Tymeslot.Infrastructure.ErrorTracking.ClientError`. The same exception
+  raised in a job or any other process is tracked.
 
   ErrorTracker calls this without a rescue, from telemetry handlers that
   telemetry detaches on the first raise, so a bug here must never escape: it
@@ -16,8 +18,8 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Ignorer do
   require Logger
 
   @impl ErrorTracker.Ignorer
-  def ignore?(error, _context) do
-    ClientError.client_error_kind?(error.kind)
+  def ignore?(error, context) do
+    ClientError.client_error_kind?(error.kind, context)
   rescue
     exception ->
       Logger.warning("ErrorTracker ignorer failed; tracking the error",

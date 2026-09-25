@@ -34,4 +34,12 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
 
     :ok
   end
+
+  @doc """
+  Returns the ErrorTracker context of the current process: the keys set by
+  `put_context/1` and by ErrorTracker's own integrations (`"request.*"`,
+  `"live_view.*"`, `"job.*"`).
+  """
+  @spec current_context() :: map()
+  def current_context, do: ErrorTracker.get_context()
 end

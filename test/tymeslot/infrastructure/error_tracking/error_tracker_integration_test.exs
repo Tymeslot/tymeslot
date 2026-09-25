@@ -26,11 +26,19 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ErrorTrackerIntegrationTest do
     assert context == %{"password" => "[REDACTED]", "user_id" => 7}
   end
 
-  test "does not store an ignored client error" do
+  test "does not store a client error raised while serving a request" do
     {exception, stacktrace} = raise_and_capture(Ecto.NoResultsError, queryable: "users")
 
-    assert ErrorTracker.report(exception, stacktrace, %{}) == :noop
+    assert ErrorTracker.report(exception, stacktrace, %{"request.path" => "/jane"}) == :noop
     assert Repo.all(Error) == []
+  end
+
+  test "stores the same exception when it was raised in an Oban job" do
+    {exception, stacktrace} = raise_and_capture(Ecto.NoResultsError, queryable: "users")
+
+    ErrorTracker.report(exception, stacktrace, %{"job.worker" => "Tymeslot.Workers.WebhookWorker"})
+
+    assert [%Error{kind: "Elixir.Ecto.NoResultsError"}] = Repo.all(Error)
   end
 
   defp raise_and_capture(module \\ RuntimeError, opts \\ [message: "boom"]) do

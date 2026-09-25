@@ -12,45 +12,78 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ClientErrorTest do
     defexception message: "bad status", plug_status: :not_a_status
   end
 
-  describe "client_error?/1" do
-    test "is true for an exception rendered as a 4xx" do
-      assert ClientError.client_error?(%Plug.Parsers.ParseError{exception: nil})
-      assert ClientError.client_error?(%Phoenix.Router.MalformedURIError{message: "bad"})
-      assert ClientError.client_error?(%Plug.Conn.InvalidQueryError{message: "bad"})
+  # The context shapes ErrorTracker's integrations record.
+  @request %{"request.path" => "/jane/30min", "request.method" => "GET"}
+  @live_view %{"live_view.view" => "TymeslotWeb.DashboardLive", "user_id" => 7}
+  @job %{"job.worker" => "Tymeslot.Workers.WebhookWorker", "job.id" => 1}
+
+  describe "client_error?/2" do
+    test "is true for a 4xx exception raised serving a request or a LiveView" do
+      assert ClientError.client_error?(%Plug.Parsers.ParseError{exception: nil}, @request)
+      assert ClientError.client_error?(%Phoenix.Router.MalformedURIError{message: "x"}, @request)
+      assert ClientError.client_error?(%Plug.Conn.InvalidQueryError{message: "x"}, @request)
+      assert ClientError.client_error?(%Ecto.NoResultsError{message: "none"}, @live_view)
+    end
+
+    test "is false for a 4xx exception raised outside a request" do
+      refute ClientError.client_error?(%Ecto.NoResultsError{message: "none"}, @job)
+      refute ClientError.client_error?(%Ecto.NoResultsError{message: "none"}, %{})
+    end
+
+    test "is false for a job context even when request keys are present" do
+      refute ClientError.client_error?(
+               %Ecto.NoResultsError{message: "none"},
+               Map.merge(@request, @job)
+             )
     end
 
     test "is false for an exception rendered as a 5xx" do
-      refute ClientError.client_error?(%RuntimeError{message: "boom"})
+      refute ClientError.client_error?(%RuntimeError{message: "boom"}, @request)
     end
 
     test "is false, with a warning, when the status cannot be resolved" do
-      log = capture_log(fn -> refute ClientError.client_error?(%MisconfiguredError{}) end)
+      log =
+        capture_log(fn -> refute ClientError.client_error?(%MisconfiguredError{}, @request) end)
 
       assert log =~ "Could not tell whether an exception is a client error"
     end
 
     test "is false for a value that is not an exception" do
-      refute ClientError.client_error?(:not_found)
+      refute ClientError.client_error?(:not_found, @request)
     end
   end
 
-  describe "client_error_kind?/1" do
+  describe "client_error_kind?/2" do
     test "resolves the exception module from its name" do
-      assert ClientError.client_error_kind?("Elixir.Plug.BadRequestError")
-      refute ClientError.client_error_kind?("Elixir.RuntimeError")
+      assert ClientError.client_error_kind?("Elixir.Plug.BadRequestError", @request)
+      refute ClientError.client_error_kind?("Elixir.Plug.BadRequestError", @job)
+      refute ClientError.client_error_kind?("Elixir.RuntimeError", @request)
     end
 
     test "is false for a module that is not an exception" do
-      refute ClientError.client_error_kind?("Elixir.Enum")
+      refute ClientError.client_error_kind?("Elixir.Enum", @request)
     end
 
-    test "is false for a name that is not an existing atom" do
+    test "is false, with a warning, for a name that is not an existing atom" do
       log =
         capture_log(fn ->
-          refute ClientError.client_error_kind?("Elixir.Tymeslot.NoSuchModuleEverDefined")
+          refute ClientError.client_error_kind?(
+                   "Elixir.Tymeslot.NoSuchModuleEverDefined",
+                   @request
+                 )
         end)
 
       assert log =~ "Could not tell whether an exception is a client error"
+    end
+  end
+
+  describe "request_origin?/1" do
+    test "is true for request and LiveView contexts only" do
+      assert ClientError.request_origin?(@request)
+      assert ClientError.request_origin?(@live_view)
+      refute ClientError.request_origin?(@job)
+      refute ClientError.request_origin?(%{"user_id" => 7})
+      refute ClientError.request_origin?(%{})
     end
   end
 end
