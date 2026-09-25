@@ -192,8 +192,15 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   `opts` reach the provider unchanged; pass `provider_event_id:` when the
   event is addressed by its provider-native id rather than its iCal UID.
+
+  On a CalDAV-family calendar, `occurrence:` (see
+  `Tymeslot.Integrations.Calendar.CalDAV.Events.occurrence/0`) deletes only
+  that occurrence of a series; success is then `{:ok, %{document: document}}`
+  with the document the rest of the series now lives in, `nil` once nothing
+  of it was left and the resource was deleted.
   """
-  @spec delete_event(String.t(), write_context(), keyword()) :: :ok | {:error, term()}
+  @spec delete_event(String.t(), write_context(), keyword()) ::
+          :ok | {:ok, %{document: String.t() | nil}} | {:error, term()}
   def delete_event(uid, context \\ nil, opts \\ []) do
     behaviour_module().delete_event(uid, context, opts)
   end
@@ -208,6 +215,8 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   Returns `{:ok, result}` where `result` carries `:uid`, `:integration_id`,
   `:reconcile_result` and, when a meeting was linked, `:meeting_attendee_email`.
+  A delete of one occurrence (the `occurrence:` option of `delete_event/3`)
+  also carries `:document`, the document the rest of the series now lives in.
 
   An `{:error, _}` return means the provider refused the delete and the event
   is still on the calendar. A reconciliation that fails once the event is
@@ -229,9 +238,15 @@ defmodule Tymeslot.Integrations.Calendar.Events do
       ) do
     linked_meeting = Sync.find_meeting(integration_id, provider_event_id, uid)
 
-    with :ok <- delete_event(uid, context, opts) do
+    with {:ok, deleted} <- deleted(delete_event(uid, context, opts)) do
       reconcile_result = reconcile_deleted(integration_id, provider_event_id, uid)
-      result = %{uid: uid, integration_id: integration_id, reconcile_result: reconcile_result}
+
+      result =
+        Map.merge(deleted, %{
+          uid: uid,
+          integration_id: integration_id,
+          reconcile_result: reconcile_result
+        })
 
       case linked_meeting do
         {:ok, meeting} -> {:ok, Map.put(result, :meeting_attendee_email, meeting.attendee_email)}
@@ -239,6 +254,10 @@ defmodule Tymeslot.Integrations.Calendar.Events do
       end
     end
   end
+
+  defp deleted(:ok), do: {:ok, %{}}
+  defp deleted({:ok, %{document: document}}), do: {:ok, %{document: document}}
+  defp deleted(error), do: error
 
   # The event is already off the calendar by the time this runs, so a raise
   # here must not escape as a failed delete: the caller would report an event

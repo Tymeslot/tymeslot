@@ -288,7 +288,10 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   Deletes an event from the calendar.
   """
   @spec delete_event(adapter_client(), String.t(), keyword()) ::
-          :ok | {:error, atom(), term()} | {:error, term()}
+          :ok
+          | {:ok, %{document: String.t() | nil}}
+          | {:error, atom(), term()}
+          | {:error, term()}
   def delete_event(adapter_client, uid, opts \\ []) do
     Metrics.time_operation(
       :calendar_delete_event,
@@ -317,6 +320,12 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
           :ok ->
             Logger.info("Successfully deleted event", uid: uid)
             :ok
+
+          # One occurrence of a series went, and the rest of the series is
+          # what the resource now holds: the caller refreshes its cache from it.
+          {:ok, %{document: _document}} = deleted_occurrence ->
+            Logger.info("Successfully deleted event occurrence", uid: uid)
+            deleted_occurrence
 
           {:ok, _deleted} ->
             # Be tolerant of providers that return {:ok, payload}

@@ -15,7 +15,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     semantics of each value. A server that answers a conditional PUT with
     `409` instead of `412` follows the same policy when a real ETag was
     sent; when only `If-Match: *` was sent the write is simply replayed
-    unconditionally, since that condition guarded nothing.
+    unconditionally, since that condition guarded nothing. The write itself
+    is `ConditionalWrite`'s.
+  - **Occurrence deletes**: one occurrence of a series is deleted by
+    rewriting the series' resource, see `delete_occurrence/4`.
   - **iCal construction**: builds valid RFC 5545 event payloads from domain maps.
   - **Per-operation retry policies**: reads retry on transient failures.
   - **Circuit breaker protection** for all operations.
@@ -27,6 +30,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
   alias Tymeslot.Integrations.Calendar.CalDAV.{
     Base,
+    ConditionalWrite,
     ConflictResolution,
     EventProcessor,
     Http,
@@ -37,6 +41,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ICalBuilder
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Series
 
   require Logger
 
@@ -154,7 +159,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     CreatedEvent.new(uid,
       provider_event_id: href_path(url),
       calendar_id: calendar_path,
-      etag: EventProcessor.clean_etag(etag_from_headers(headers))
+      etag: EventProcessor.clean_etag(ConditionalWrite.etag_from_headers(headers))
     )
   end
 
@@ -229,7 +234,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   defp patch_and_put(client, url, uid, raw_ical, etag, event_data, policy, opts) do
     ical_data = document_to_put(client, raw_ical, uid, event_data)
 
-    case do_conditional_put(client, url, ical_data, etag, :fail, opts) do
+    case ConditionalWrite.put(client, url, ical_data, etag, :fail, opts) do
       {:error, reason} when reason in [:precondition_failed, :conditional_not_supported] ->
         resolve_stale_patch(client, url, uid, event_data, policy, opts)
 
@@ -251,10 +256,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   # own leaves it a version behind, so this is the ordinary second write of an
   # event rather than an exceptional path.
   defp refresh_and_put(client, url, uid, event_data, policy, opts) do
-    case fetch_event_document(client, url, opts) do
+    case ConditionalWrite.fetch_document(client, url, opts) do
       {:ok, raw_ical, etag} ->
         ical_data = document_to_put(client, raw_ical, uid, event_data)
-        do_conditional_put(client, url, ical_data, etag, policy, opts)
+        ConditionalWrite.put(client, url, ical_data, etag, policy, opts)
 
       {:error, :not_found} ->
         rebuild_and_put(client, url, uid, event_data, policy, opts)
@@ -266,7 +271,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
   defp rebuild_and_put(client, url, uid, event_data, policy, opts) do
     ical_data = rebuild_document(client, uid, event_data)
-    do_conditional_put(client, url, ical_data, resolve_etag(url, client, opts), policy, opts)
+
+    ConditionalWrite.put(
+      client,
+      url,
+      ical_data,
+      ConditionalWrite.resolve_etag(url, client, opts),
+      policy,
+      opts
+    )
   end
 
   defp cached_document(event_data) do
@@ -296,23 +309,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
       Map.put(event_data, :uid, uid),
       Scheduling.attendee_mode(client)
     )
-  end
-
-  defp fetch_event_document(client, url, opts) do
-    get_opts = Keyword.put(opts, :timeout, Keyword.get(opts, :read_timeout, 30_000))
-
-    case Http.get_event(url, client.username, client.password, get_opts) do
-      {:ok, %Req.Response{body: body, headers: headers}} when is_binary(body) and body != "" ->
-        {:ok, body, etag_from_headers(headers)}
-
-      # A 200 with nothing in it describes no event, so there is nothing to
-      # preserve: treat it as the absent resource it looks like.
-      {:ok, %Req.Response{}} ->
-        {:error, :not_found}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
   end
 
   @doc """
@@ -349,99 +345,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
       with_events_breaker(client, opts, fn ->
         with {:ok, url} <- event_url(client, calendar_path, uid, opts[:provider_event_id]) do
           ical_data = ICalBuilder.replace_colour_property(raw_ical, colour)
-          etag = resolve_etag(url, client, opts)
+          etag = ConditionalWrite.resolve_etag(url, client, opts)
 
-          do_conditional_put(client, url, ical_data, etag, policy, opts)
+          ConditionalWrite.put(client, url, ical_data, etag, policy, opts)
         end
       end)
     else
       {:error, :invalid_conflict_resolution_policy}
-    end
-  end
-
-  defp do_conditional_put(client, url, ical_data, etag, policy, opts) do
-    base_put_opts =
-      if etag, do: [operation: :update, if_match: etag], else: [operation: :update]
-
-    put_opts = Keyword.merge(base_put_opts, Keyword.take(opts, [:timeout]))
-
-    put_fun = fn ->
-      Http.put_event(url, client.username, client.password, ical_data, put_opts)
-    end
-
-    # If-Match PUTs (with a specific ETag or with *) are safe to retry: the
-    # server will either apply the write or reject it with 412. The
-    # duplicate-creation risk only applies to If-None-Match: * creates, which
-    # go through put_ical/5, not this function. So we always apply retry here,
-    # regardless of whether we have a specific ETag or fell back to If-Match: *.
-    retry_opts = Keyword.get(opts, :retry_opts, Base.default_retry_opts())
-    raw_result = RetryLogic.with_retry(put_fun, retry_opts)
-
-    case raw_result do
-      {:ok, %Req.Response{status: status}} when status in [200, 201, 204] ->
-        :ok
-
-      # With no ETag all we sent was `If-Match: *`, which asserts nothing but
-      # that the resource exists (RFC 7232 §3.1). A 412 against it therefore
-      # means the event is absent from the server, not that someone else
-      # changed it — so report it as such. `CalendarEventSync` recreates a
-      # missing event on `:not_found`, whereas none of the conflict policies
-      # can: each assumes a server copy to reconcile against. Without this a
-      # booking whose event never landed (or was deleted in the organiser's
-      # client) could never be restored — every later update re-sent the same
-      # doomed conditional PUT and the calendar stayed empty.
-      {:error, :precondition_failed} when is_nil(etag) ->
-        Logger.info("CalDAV event absent on conditional update, reporting as not found")
-        {:error, :not_found}
-
-      {:error, :precondition_failed} ->
-        handle_precondition_failed(client, url, ical_data, policy, opts)
-
-      # The server rejected the conditional PUT with a 409. When all we sent
-      # was `If-Match: *` there was no ETag and therefore no lost-update
-      # protection to preserve — the condition asserted only that the event
-      # exists — so replaying it unconditionally loses nothing and gets the
-      # write through on servers that mishandle the conditional form.
-      {:error, :conditional_not_supported} when is_nil(etag) ->
-        Logger.warning("CalDAV server rejected If-Match: *, retrying unconditionally")
-        force_put(client, url, ical_data, opts)
-
-      # With a real ETag the condition did carry a guarantee, so treat the 409
-      # as the precondition failure the server meant it to be and let the
-      # configured policy decide.
-      {:error, :conditional_not_supported} ->
-        handle_precondition_failed(client, url, ical_data, policy, opts)
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  # :fail — surface the conflict to the caller.
-  defp handle_precondition_failed(_client, _url, _ical, :fail, _opts),
-    do: {:error, :precondition_failed}
-
-  # :keep_server — silently accept the server's version; next sync will
-  # refresh the local cache.
-  defp handle_precondition_failed(_client, _url, _ical, :keep_server, _opts),
-    do: :ok
-
-  # :keep_local — force-overwrite by repeating the PUT unconditionally.
-  defp handle_precondition_failed(client, url, ical_data, :keep_local, opts),
-    do: force_put(client, url, ical_data, opts)
-
-  # An overwrite carrying no conditional header at all. `If-Match: *` is not a
-  # substitute: it still asserts the resource exists, so a server is entitled
-  # to refuse it.
-  defp force_put(client, url, ical_data, opts) do
-    put_opts = Keyword.merge([operation: :force_update], Keyword.take(opts, [:timeout]))
-
-    case Http.put_event(url, client.username, client.password, ical_data, put_opts) do
-      {:ok, %Req.Response{status: status}} when status in [200, 201, 204] ->
-        :ok
-
-      {:error, reason} ->
-        {:error, reason}
     end
   end
 
@@ -469,6 +379,91 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
         end
       end
     end)
+  end
+
+  @typedoc "One occurrence of the series stored at `href`, keyed as the cache keys it."
+  @type occurrence :: %{
+          required(:href) => String.t(),
+          required(:key) => String.t(),
+          required(:timezone) => String.t() | nil,
+          required(:document) => String.t() | nil,
+          required(:etag) => String.t() | nil
+        }
+
+  @doc """
+  Deletes one occurrence of the series stored in the resource at
+  `occurrence.href`, by rewriting the resource (see
+  `ICalBuilder.Series.exclude_occurrence/3`) and PUTting it back under
+  `If-Match`. Starts from `occurrence.document` and `occurrence.etag` when the
+  cache holds both; otherwise, or when the server answers 412 because the
+  resource moved on, re-reads it once and applies the exclusion to what the
+  server holds. A resource left with nothing in it is deleted.
+
+  Returns `{:ok, %{document: String.t() | nil}}` with the document now on the
+  server (`nil` once the resource was deleted), or `{:error, reason}`.
+  """
+  @spec delete_occurrence(Base.client(), String.t() | nil, occurrence(), keyword()) ::
+          {:ok, %{document: String.t() | nil}} | {:error, term()}
+  def delete_occurrence(client, calendar_path, %{href: href} = occurrence, opts) do
+    with_events_breaker(client, opts, fn ->
+      with {:ok, url} <- event_url(client, calendar_path, nil, href) do
+        exclude_and_write(client, url, occurrence, opts)
+      end
+    end)
+  end
+
+  defp exclude_and_write(client, url, %{document: document, etag: etag} = occurrence, opts)
+       when is_binary(document) and document != "" and is_binary(etag) and etag != "" do
+    case write_exclusion(client, url, document, etag, occurrence, opts) do
+      {:error, reason} when reason in [:precondition_failed, :conditional_not_supported] ->
+        refresh_and_exclude(client, url, occurrence, opts)
+
+      result ->
+        result
+    end
+  end
+
+  # Without a cached ETag the cached document carries no precondition, so the
+  # server's copy, which comes with one, is read instead.
+  defp exclude_and_write(client, url, occurrence, opts),
+    do: refresh_and_exclude(client, url, occurrence, opts)
+
+  # One re-read, one more PUT: a second 412 means the resource is still
+  # changing under us, and is reported rather than chased.
+  defp refresh_and_exclude(client, url, occurrence, opts) do
+    case ConditionalWrite.fetch_document(client, url, opts) do
+      {:ok, document, etag} ->
+        write_exclusion(client, url, document, etag, occurrence, opts)
+
+      # The whole series is already gone, and the occurrence with it.
+      {:error, reason} when reason in [:not_found, :gone] ->
+        {:ok, %{document: nil}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  # Always under the `:fail` policy: `:keep_local` would force a document
+  # built on a stale copy over a concurrent change, and `:keep_server` would
+  # report an occurrence as deleted that is still on the calendar.
+  defp write_exclusion(client, url, document, etag, occurrence, opts) do
+    case Series.exclude_occurrence(document, occurrence.key, occurrence.timezone) do
+      {:ok, new_document} ->
+        with :ok <- ConditionalWrite.put(client, url, new_document, etag, :fail, opts) do
+          {:ok, %{document: new_document}}
+        end
+
+      :empty ->
+        delete_resource(client, url, opts)
+    end
+  end
+
+  defp delete_resource(client, url, opts) do
+    case Http.delete_event(url, client.username, client.password, Keyword.take(opts, [:timeout])) do
+      {:ok, %Req.Response{}} -> {:ok, %{document: nil}}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   @doc """
@@ -533,35 +528,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   # carries the same DAV path.
   defp event_url(client, calendar_path, uid, href),
     do: UrlBuilder.resolve_event_url(client.base_url, calendar_path, uid, href)
-
-  # Prefer the caller-supplied ETag (cached on provider_calendar_events.etag).
-  # Fall back to a HEAD probe only when the caller does not know the current
-  # ETag — typically for legacy paths or ad-hoc scripts.
-  defp resolve_etag(url, client, opts) do
-    case Keyword.get(opts, :etag) do
-      etag when is_binary(etag) and etag != "" -> etag
-      _missing -> fetch_current_etag(url, client, opts)
-    end
-  end
-
-  # HEAD → extract ETag for conditional PUT. Short timeout since ETag is optional:
-  # if HEAD times out we proceed without it rather than failing the entire update.
-  defp fetch_current_etag(url, client, opts) do
-    head_timeout = Keyword.get(opts, :head_timeout, 15_000)
-    head_opts = Keyword.put(opts, :timeout, head_timeout)
-
-    case Http.head_event(url, client.username, client.password, head_opts) do
-      {:ok, %{headers: headers}} -> etag_from_headers(headers)
-      _error -> nil
-    end
-  end
-
-  defp etag_from_headers(headers) do
-    case Map.get(headers, "etag") do
-      [etag | _rest] -> etag
-      _other -> nil
-    end
-  end
 
   defp with_events_breaker(client, opts, fun) when is_function(fun, 0) do
     provider = Map.get(client, :provider, :caldav)

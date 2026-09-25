@@ -373,12 +373,20 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   directly — required when the event lives on a calendar other than the first
   configured path. Otherwise falls back to the primary calendar path and
   constructs the URL from the UID.
+
+  When `opts[:occurrence]` is set (see `Events.occurrence/0`), only that one
+  occurrence of the series is deleted, by rewriting the resource at its href
+  (`Events.delete_occurrence/4`), and the answer is
+  `{:ok, %{document: document}}` with the document now on the server, `nil`
+  once nothing of the series was left and the resource was deleted.
   """
-  @spec delete_event(caldav_client(), String.t(), keyword()) :: :ok | {:error, term()}
+  @spec delete_event(caldav_client(), String.t(), keyword()) ::
+          :ok | {:ok, %{document: String.t() | nil}} | {:error, term()}
   def delete_event(client, uid, opts \\ []) do
-    case primary_calendar_path(client) do
-      nil -> :ok
-      path -> Events.delete_calendar_event(client, path, uid, opts)
+    case {opts[:occurrence], primary_calendar_path(client)} do
+      {%{} = occurrence, path} -> Events.delete_occurrence(client, path, occurrence, opts)
+      {nil, nil} -> :ok
+      {nil, path} -> Events.delete_calendar_event(client, path, uid, opts)
     end
   end
 
