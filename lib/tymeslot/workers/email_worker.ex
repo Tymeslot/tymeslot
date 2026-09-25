@@ -23,6 +23,7 @@ defmodule Tymeslot.Workers.EmailWorker do
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Workers.EmailWorker.AdminAlertScheduler
   alias Tymeslot.Workers.EmailWorkerHandlers
   alias Tymeslot.Workers.SnoozePolicy
   alias Tymeslot.Workers.TransactionalEmailDelivery
@@ -173,7 +174,12 @@ defmodule Tymeslot.Workers.EmailWorker do
     round(min(@backoff_base_ms * :math.pow(2, attempt - 1), 16_000))
   end
 
+  # Admin alerts retry on their own, much longer schedule; see
+  # `AdminAlertScheduler` for why.
   @impl Oban.Worker
+  def backoff(%Oban.Job{args: %{"action" => "send_admin_alert"}} = job),
+    do: AdminAlertScheduler.backoff(job)
+
   def backoff(%Oban.Job{attempt: attempt}) do
     # convert ms to seconds for Oban backoff
     div(calculate_backoff(attempt), 1_000)

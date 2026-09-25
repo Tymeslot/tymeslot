@@ -184,6 +184,61 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertSchedulerTest do
     end
   end
 
+  describe "retry policy" do
+    # An alert is most needed during the outage that stops it being delivered.
+    # The default EmailWorker policy spends its five attempts in about half a
+    # minute, and a discarded alert keeps holding the 24-hour dedup slot, so
+    # an SMTP outage of any length lost the alert and every repeat of it.
+    test "an admin alert job retries for at least 12 hours, one capped step at a time" do
+      assert :ok =
+               AdminAlertScheduler.schedule("ops@example.com", "Queue", :error, "Outage", %{})
+
+      [job] = all_enqueued(worker: EmailWorker)
+      assert job.max_attempts == 20
+
+      backoffs = Enum.map(1..(job.max_attempts - 1), &EmailWorker.backoff(%{job | attempt: &1}))
+
+      assert Enum.sum(backoffs) >= 12 * 3_600
+      assert Enum.max(backoffs) <= 2 * 3_600
+    end
+
+    # The whole retry span sits inside the dedup window, so a repeat of the
+    # alert raised while the job is still retrying never slips past the slot.
+    test "an admin alert job's whole retry span fits inside the dedup window" do
+      assert :ok =
+               AdminAlertScheduler.schedule("ops@example.com", "Queue", :error, "Outage", %{})
+
+      [job] = all_enqueued(worker: EmailWorker)
+      backoffs = Enum.map(1..(job.max_attempts - 1), &EmailWorker.backoff(%{job | attempt: &1}))
+
+      assert Enum.sum(backoffs) < 86_400
+    end
+
+    test "other email jobs keep five attempts and the seconds-scale backoff" do
+      job = %Oban.Job{args: %{"action" => "send_confirmation_emails", "meeting_id" => 1}}
+
+      changeset = EmailWorker.new(job.args)
+      assert Changeset.get_field(changeset, :max_attempts) == 5
+
+      assert Enum.map(1..6, &EmailWorker.backoff(%{job | attempt: &1})) ==
+               [1, 2, 4, 8, 16, 16]
+    end
+
+    test "a repeat of an alert that is still retrying is deduplicated" do
+      assert :ok =
+               AdminAlertScheduler.schedule("ops@example.com", "Queue", :error, "Outage", %{})
+
+      [job] = all_enqueued(worker: EmailWorker)
+      job |> Changeset.change(state: "retryable", attempt: 3) |> Repo.update!()
+
+      assert :ok =
+               AdminAlertScheduler.schedule("ops@example.com", "Queue", :error, "Outage", %{})
+
+      assert [%Oban.Job{id: id, state: "retryable"}] = Repo.all(Oban.Job)
+      assert id == job.id
+    end
+  end
+
   describe "build_args/5" do
     test "serialises atom metadata values to strings" do
       args =

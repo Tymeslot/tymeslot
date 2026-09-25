@@ -31,6 +31,19 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
     :cancelled
   ]
 
+  # Holding the slot through a discard is only safe because an alert job
+  # outlasts a realistic mail outage: the worker-wide policy spends its five
+  # attempts in about half a minute, which lost an alert raised during an SMTP
+  # outage, and every repeat of it for the rest of the day. 20 attempts on a
+  # backoff doubling from a minute up to an hour span about 14 hours, and stay
+  # inside the dedup window, so the job holds the slot for its whole life and
+  # a repeat raised while it retries is still deduplicated. A rejected
+  # recipient still discards at once and an open breaker still snoozes (a
+  # snooze costs no attempt), exactly as for every other email.
+  @max_attempts 20
+  @backoff_base_seconds 60
+  @backoff_cap_seconds 3_600
+
   @doc """
   Builds the args map for an admin alert job, including the SHA-256 dedup hash.
 
@@ -62,6 +75,16 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
   end
 
   @doc """
+  Seconds to wait before retrying an admin alert job after its `attempt`th
+  failure. `Tymeslot.Workers.EmailWorker.backoff/1` delegates here for the
+  admin alert action only.
+  """
+  @spec backoff(Oban.Job.t()) :: pos_integer()
+  def backoff(%Oban.Job{attempt: attempt}) do
+    min(@backoff_base_seconds * Integer.pow(2, attempt - 1), @backoff_cap_seconds)
+  end
+
+  @doc """
   Inserts an admin alert job into Oban with a 24-hour dedup window.
 
   Identical alerts (same recipient + category + dedup hash) within the
@@ -84,6 +107,7 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
       |> EmailWorker.new(
         queue: :emails,
         priority: 3,
+        max_attempts: @max_attempts,
         unique: [
           period: @dedup_period_seconds,
           fields: [:args, :queue],
