@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Clock
-  alias Tymeslot.Integrations.Calendar.Selection
+  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -83,7 +83,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   defp iso_date(at), do: at |> DateTime.to_date() |> Date.to_iso8601()
 
   defp writable?(socket) do
-    Selection.writable_integrations(socket.assigns.integrations) != []
+    Calendar.writable_integrations(socket.assigns.integrations) != []
   end
 
   # Builds a `creating_event` map, filling defaults for any field the caller omits.

@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
-  alias Tymeslot.Integrations.Calendar.Selection
+  alias Tymeslot.Integrations.Calendar
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       # A subscribed calendar is no more a target than no calendar at all, so
       # the mode toggle and the picker follow what can be written to, not what
       # is connected.
-      |> assign(:targets, Selection.writable_integrations(assigns.integrations))
+      |> assign(:targets, Calendar.writable_integrations(assigns.integrations))
 
     ~H"""
     <.modal

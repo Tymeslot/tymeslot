@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     # all of them pre-selected read-only ones — a subscribed ICS feed sorting
     # ahead of a writable account left the form pointing at a calendar whose
     # provider answers `{:error, :read_only}`.
-    case Selection.writable_integrations(socket.assigns.integrations) do
+    case Calendar.writable_integrations(socket.assigns.integrations) do
       [first | _rest] -> first.id
       [] -> nil
     end
