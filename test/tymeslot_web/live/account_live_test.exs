@@ -14,9 +14,9 @@ defmodule TymeslotWeb.AccountLiveTest do
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
-  alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Security.{Password, RateLimiter}
   alias Tymeslot.Test.LogCapture
-  alias TymeslotWeb.AccountLive.ErrorFormatter
+  alias TymeslotWeb.Helpers.ClientIP
 
   setup %{conn: conn} do
     RateLimiter.clear_all()
@@ -113,10 +113,36 @@ defmodule TymeslotWeb.AccountLiveTest do
       assert has_element?(view, ~s(input[name="email_form[current_password]"][aria-invalid]))
     end
 
+    test "accepts a current password set under an older, weaker policy", %{
+      conn: conn,
+      user: user
+    } do
+      set_legacy_password(user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      view |> element("button", "Change Email") |> render_click()
+
+      view
+      |> form("form[phx-submit='update_email']", %{
+        "email_form" => %{
+          "new_email" => "legacy-user@example.com",
+          "current_password" => "legacypassword1"
+        }
+      })
+      |> render_submit()
+
+      assert Repo.get(UserSchema, user.id).pending_email == "legacy-user@example.com"
+    end
+
     test "can cancel a pending email change", %{conn: conn, user: user} do
       # Setup pending email change
       {:ok, user, _email_change_token} =
-        Auth.request_email_change(user, "pending@example.com", "Password123!")
+        Auth.request_email_change(
+          user,
+          "pending@example.com",
+          "Password123!",
+          ClientIP.request_opts(%Plug.Conn{})
+        )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 
@@ -181,6 +207,28 @@ defmodule TymeslotWeb.AccountLiveTest do
       assert meta.user_id == user.id
       assert meta.ip_address == "127.0.0.1"
       assert meta.user_agent == "TymeslotTestAgent/1.0"
+    end
+
+    test "accepts a current password set under an older, weaker policy", %{
+      conn: conn,
+      user: user
+    } do
+      set_legacy_password(user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      view |> element("button", "Change Password") |> render_click()
+
+      view
+      |> form("form[phx-submit='update_password']", %{
+        "password_form" => %{
+          "current_password" => "legacypassword1",
+          "new_password" => "NewPassword123!",
+          "new_password_confirmation" => "NewPassword123!"
+        }
+      })
+      |> render_submit()
+
+      assert_redirect(view, ~p"/auth/login")
     end
 
     test "shows error for password mismatch", %{conn: conn} do
@@ -296,9 +344,10 @@ defmodule TymeslotWeb.AccountLiveTest do
 
   describe "Rate Limiting" do
     setup %{user: user} do
-      # Exhaust the auth rate limit bucket (10 per 30 minutes) before each test
-      Enum.each(1..10, fn _i ->
-        RateLimiter.check_rate("login:#{user.email}", 1_800_000, 10)
+      # Exhaust the account-wide auth ceiling (50 per 30 minutes) before each
+      # test; it applies whatever address the request comes from.
+      Enum.each(1..50, fn _i ->
+        RateLimiter.check_rate("login:#{user.email}", 1_800_000, 50)
       end)
 
       :ok
@@ -508,41 +557,19 @@ defmodule TymeslotWeb.AccountLiveTest do
     end
   end
 
-  describe "Error Formatter" do
-    test "formats various error types" do
-      assert ErrorFormatter.format(:rate_limited) == %{
-               base: ["Too many attempts. Please try again later."]
-             }
-
-      assert ErrorFormatter.format({:error, :rate_limited, "Rate limited"}) == %{
-               base: ["Rate limited"]
-             }
-
-      assert ErrorFormatter.format({:error, "some other error"}) == %{base: ["some other error"]}
-      assert ErrorFormatter.format(%{field: "error"}) == %{field: ["error"]}
-      assert ErrorFormatter.format(nil) == %{base: ["An unexpected error occurred"]}
-    end
-
-    test "places a field-tagged error under its field whatever the message says" do
-      assert ErrorFormatter.format({:current_password, "Das aktuelle Passwort ist falsch"}) ==
-               %{current_password: ["Das aktuelle Passwort ist falsch"]}
-
-      # A message that the old wording-based placement would have misfiled.
-      assert ErrorFormatter.format({:new_password, "email must match"}) ==
-               %{new_password: ["email must match"]}
-    end
-
-    test "leaves a field-tagged error from the email form under its field" do
-      assert ErrorFormatter.format({:new_email, "Email address is already in use"}) ==
-               %{new_email: ["Email address is already in use"]}
-    end
-  end
-
   # The user dropdown renders its panel (Sign Out, Admin Settings, …) only while
   # open, so tests that assert on menu items must open it first.
   defp open_user_menu(view) do
     view
     |> element("#user-menu button[aria-haspopup='menu']")
     |> render_click()
+  end
+
+  # A password that met the policy of its day but lacks the uppercase letter
+  # and symbol today's policy requires of a new one.
+  defp set_legacy_password(user) do
+    user
+    |> Changeset.change(%{password_hash: Password.hash_password("legacypassword1")})
+    |> Repo.update!()
   end
 end

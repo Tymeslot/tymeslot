@@ -33,6 +33,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   @type calendar_event :: %{
           id: String.t(),
+          ical_uid: String.t() | nil,
           summary: String.t() | nil,
           description: String.t() | nil,
           location: String.t() | nil,
@@ -515,6 +516,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     Enum.map(outlook_events, fn event ->
       %{
         id: event["id"],
+        ical_uid: event["iCalUId"],
         summary: event["subject"],
         description: get_in(event, ["body", "content"]),
         location: get_in(event, ["location", "displayName"]),

@@ -89,9 +89,24 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
       assert msg =~ "7"
     end
 
-    test ":integration_health_recovery includes integration_id" do
-      msg = AlertTypes.format_message(:integration_health_recovery, %{integration_id: 7})
-      assert msg =~ "7"
+    test ":integration_health_failure for an aggregate signal is its summary alone" do
+      msg =
+        AlertTypes.format_message(:integration_health_failure, %{
+          signal: "reauth_flags",
+          summary: "12 calendar integration(s) newly flagged"
+        })
+
+      assert msg == "12 calendar integration(s) newly flagged"
+    end
+
+    test ":integration_health_recovery is the summary it was raised with" do
+      msg =
+        AlertTypes.format_message(:integration_health_recovery, %{
+          signal: "reauth_flags",
+          summary: "Calendar reconnection flags back under threshold"
+        })
+
+      assert msg == "Calendar reconnection flags back under threshold"
     end
 
     test ":oban_queue_stuck includes queues and state" do
@@ -302,6 +317,52 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
       key_b = AlertTypes.dedup_key(:oban_job_failure, %{worker: "WorkerB", queue: "q"})
 
       refute key_a == key_b
+    end
+
+    test "integration_health_failure for a signal ignores the live count" do
+      base = %{signal: "reauth_flags", band: "elevated", threshold: 10}
+
+      key_a =
+        AlertTypes.dedup_key(
+          :integration_health_failure,
+          Map.merge(base, %{count: 11, summary: "11 flagged"})
+        )
+
+      key_b =
+        AlertTypes.dedup_key(
+          :integration_health_failure,
+          Map.merge(base, %{count: 42, summary: "42 flagged"})
+        )
+
+      assert key_a == key_b
+      assert key_a == "integration_health_failure:reauth_flags:elevated"
+    end
+
+    test "integration_health_failure for a signal differs by band, signal and run date" do
+      key = &AlertTypes.dedup_key(:integration_health_failure, &1)
+      elevated = key.(%{signal: "auto_pause", band: "elevated", run_date: "2026-09-22"})
+
+      refute elevated == key.(%{signal: "auto_pause", band: "severe", run_date: "2026-09-22"})
+      refute elevated == key.(%{signal: "auto_pause", band: "elevated", run_date: "2026-09-23"})
+      refute elevated == key.(%{signal: "reauth_flags", band: "elevated"})
+    end
+
+    test "integration_health_failure without a signal keeps its message-based key" do
+      metadata = %{summary: "Shared Telegram bot token rejected", integration_id: 3}
+
+      assert AlertTypes.dedup_key(:integration_health_failure, metadata) ==
+               AlertTypes.format_message(:integration_health_failure, metadata)
+    end
+
+    test "integration_health_recovery ignores the live count" do
+      assert AlertTypes.dedup_key(:integration_health_recovery, %{
+               signal: "availability_refusals",
+               count: 0
+             }) ==
+               AlertTypes.dedup_key(:integration_health_recovery, %{
+                 signal: "availability_refusals",
+                 count: 3
+               })
     end
 
     test "other types fall back to the formatted message" do

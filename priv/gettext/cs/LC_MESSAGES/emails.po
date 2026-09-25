@@ -637,7 +637,9 @@ msgstr "Nastavte si nové heslo a můžete pokračovat."
 msgid "A verification email has been sent to the new address"
 msgstr "Na novou adresu jsme odeslali ověřovací e-mail"
 
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
 #: lib/tymeslot/emails/templates/password_reset.ex
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Account Security"
 msgstr "Zabezpečení účtu"
@@ -648,6 +650,7 @@ msgid "Account Update"
 msgstr "Změna účtu"
 
 #: lib/tymeslot/emails/templates/email_verification.ex
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Account Verification"
 msgstr "Ověření účtu"
@@ -953,7 +956,9 @@ msgid "Saturday"
 msgstr "sobota"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
 #: lib/tymeslot/emails/templates/password_reset.ex
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Security"
 msgstr "Zabezpečení"
@@ -1138,6 +1143,7 @@ msgid "Wednesday"
 msgstr "středa"
 
 #: lib/tymeslot/emails/templates/email_verification.ex
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Welcome"
 msgstr "Vítejte"
@@ -2681,3 +2687,135 @@ msgstr "Zpráva od účastníka:"
 #, elixir-autogen, elixir-format
 msgid "Message from the organiser:"
 msgstr "Zpráva od pořadatele:"
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Forgot your password? Reset it here."
+msgstr "Zapomněli jste heslo? Obnovte si ho zde."
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "If it wasn't you, you can ignore this email. No new account was created and nothing about your account has changed."
+msgstr "Pokud jste to nebyli vy, můžete tento e-mail ignorovat. Žádný nový účet nebyl vytvořen a na vašem účtu se nic nezměnilo."
+
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
+#, elixir-autogen, elixir-format
+msgid "If you didn't ask to reset your password, you can ignore this email. Nothing about your account has changed."
+msgstr "Pokud jste o obnovení hesla nežádali, můžete tento e-mail ignorovat. Na vašem účtu se nic nezměnilo."
+
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
+#, elixir-autogen, elixir-format
+msgid "No password to reset"
+msgstr "Není co obnovit"
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Reset your password:"
+msgstr "Obnovení hesla:"
+
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Sign In to Tymeslot"
+msgstr "Přihlásit se do Tymeslotu"
+
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Sign In to Tymeslot:"
+msgstr "Přihlásit se do Tymeslotu:"
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Sign in instead of signing up."
+msgstr "Přihlaste se místo nové registrace."
+
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Someone asked to reset the password for your Tymeslot account, but your account signs in with %{provider}, so it has no password to reset. Use the button below and choose %{provider} to sign in."
+msgstr "Někdo požádal o obnovení hesla k vašemu účtu Tymeslot, ale váš účet se přihlašuje přes %{provider}, takže žádné heslo k obnovení nemá. Použijte tlačítko níže a pro přihlášení zvolte %{provider}."
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Someone just tried to create a new Tymeslot account with this email address, which already has an account. If it was you, sign in below, or reset your password if you can't remember it."
+msgstr "Někdo se právě pokusil vytvořit nový účet Tymeslot s touto e-mailovou adresou, ke které už účet existuje. Pokud jste to byli vy, přihlaste se níže, nebo si obnovte heslo, pokud si ho nepamatujete."
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Someone tried to sign up with your email address."
+msgstr "Někdo se pokusil zaregistrovat s vaší e-mailovou adresou."
+
+#: lib/tymeslot/emails/email_service/auth_emails.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a Tymeslot account"
+msgstr "Účet Tymeslot už máte"
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "You already have an account"
+msgstr "Účet už máte"
+
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
+#, elixir-autogen, elixir-format
+msgid "You sign in with %{provider}."
+msgstr "Přihlašujete se přes %{provider}."
+
+#: lib/tymeslot/emails/email_service/auth_emails.ex
+#, elixir-autogen, elixir-format
+msgid "Your Tymeslot account has no password"
+msgstr "Váš účet Tymeslot nemá heslo"
+
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Your Tymeslot account has no password to reset."
+msgstr "Váš účet Tymeslot nemá žádné heslo k obnovení."
+
+#: lib/tymeslot/emails/shared/sign_in_provider.ex
+#, elixir-autogen, elixir-format
+msgid "single sign-on"
+msgstr "jednotné přihlášení"
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Someone just tried to create a new Tymeslot account with this email address, which already has an account. If it was you, sign in with %{provider} below."
+msgstr "Někdo se právě pokusil vytvořit nový účet Tymeslot s touto e-mailovou adresou, ke které už účet existuje. Pokud jste to byli vy, přihlaste se níže přes %{provider}."
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm Email & Finish Signing Up"
+msgstr "Potvrdit e-mail a dokončit registraci"
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm Email & Finish Signing Up:"
+msgstr "Potvrdit e-mail a dokončit registraci:"
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your email and your account is ready."
+msgstr "Potvrďte e-mail a váš účet je připraven."
+
+#: lib/tymeslot/emails/email_service/auth_emails.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your email to finish signing up"
+msgstr "Potvrďte e-mail a dokončete registraci"
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your email to finish signing up for Tymeslot."
+msgstr "Potvrďte e-mail a dokončete registraci do Tymeslotu."
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "One step to go"
+msgstr "Zbývá jeden krok"
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "This link expires in 24 hours. If you didn't sign up for Tymeslot, you can ignore this email and no account will be created."
+msgstr "Platnost odkazu vyprší za 24 hodin. Pokud jste se do Tymeslotu neregistrovali, můžete tento e-mail ignorovat a žádný účet nebude vytvořen."
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "You're signing up for Tymeslot with %{provider}. Confirm this email address to create your account and sign in."
+msgstr "Registrujete se do Tymeslotu přes %{provider}. Potvrďte tuto e-mailovou adresu, abyste si vytvořili účet a přihlásili se."

@@ -25,8 +25,6 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
     m4 \
     libncurses5-dev \
     libssl-dev \
-    nodejs \
-    npm \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -59,12 +57,6 @@ RUN for i in 1 2 3 4 5; do \
         echo "Attempt $i: Installing tailwind and esbuild" && \
         mix do tailwind.install + esbuild.install && break || sleep 5; \
     done  
-
-# Install node_modules for the heroicons plugin — the standalone tailwind
-# binary bundles @tailwindcss/forms but not the tailwindcss runtime that
-# assets/heroicons.js needs via require("tailwindcss/plugin"), so it resolves
-# them from the assets dir's node_modules.
-RUN npm ci --prefix assets
 
 # Compile assets
 RUN mix assets.deploy

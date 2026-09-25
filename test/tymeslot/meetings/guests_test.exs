@@ -87,6 +87,91 @@ defmodule Tymeslot.Meetings.GuestsTest do
     test "rejects an invalid response", %{guest: guest} do
       assert {:error, :invalid_response} = Guests.record_rsvp(guest.rsvp_token, "maybe")
     end
+
+    for status <-
+          ~w(cancelled expired completed awaiting_payment awaiting_approval reschedule_requested) do
+      test "refuses a #{status} meeting and leaves the guest pending" do
+        guest = guest_for(status: unquote(status))
+
+        assert {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+        assert {:ok, %{status: "pending"}} = GuestQueries.get_by_token(guest.rsvp_token)
+      end
+    end
+
+    test "refuses a meeting whose organiser has asked to reschedule it" do
+      # The time the guest would be answering for no longer holds.
+      guest = guest_for(reschedule_requested_at: DateTime.utc_now(:second))
+
+      assert {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+      assert {:ok, %{status: "pending"}} = GuestQueries.get_by_token(guest.rsvp_token)
+    end
+
+    test "refuses a meeting that has already started" do
+      guest = guest_for(started_meeting_attrs())
+
+      assert {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, "declined")
+      assert {:ok, %{status: "pending"}} = GuestQueries.get_by_token(guest.rsvp_token)
+    end
+
+    test "notifies the organiser's subscribers" do
+      user = insert(:user)
+      meeting = insert(:meeting, organizer_user: user)
+      {:ok, [guest]} = Guests.create_for_meeting(meeting.id, ["guest@example.com"])
+      :ok = Guests.subscribe_to_rsvp_updates(user.id)
+
+      {:ok, _guest} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+
+      meeting_id = meeting.id
+      assert_receive {:guest_rsvp_updated, ^meeting_id}
+    end
+
+    test "does not notify on a refused response" do
+      user = insert(:user)
+      guest = guest_for(organizer_user: user, status: "cancelled")
+      :ok = Guests.subscribe_to_rsvp_updates(user.id)
+
+      {:error, :meeting_closed} = Guests.record_rsvp(guest.rsvp_token, "accepted")
+
+      refute_receive {:guest_rsvp_updated, _meeting_id}
+    end
+  end
+
+  describe "get_open_invitation/1" do
+    test "returns the guest with its meeting for an open invitation" do
+      meeting = insert(:meeting)
+      {:ok, [guest]} = Guests.create_for_meeting(meeting.id, ["guest@example.com"])
+
+      assert {:ok, found} = Guests.get_open_invitation(guest.rsvp_token)
+      assert found.id == guest.id
+      assert found.meeting.id == meeting.id
+    end
+
+    test "rejects an unknown token" do
+      assert {:error, :not_found} = Guests.get_open_invitation("nope")
+    end
+
+    test "rejects a cancelled meeting" do
+      guest = guest_for(status: "cancelled")
+
+      assert {:error, :meeting_closed} = Guests.get_open_invitation(guest.rsvp_token)
+    end
+
+    test "rejects a meeting that has already started" do
+      guest = guest_for(started_meeting_attrs())
+
+      assert {:error, :meeting_closed} = Guests.get_open_invitation(guest.rsvp_token)
+    end
+  end
+
+  defp guest_for(meeting_attrs) do
+    meeting = insert(:meeting, meeting_attrs)
+    {:ok, [guest]} = Guests.create_for_meeting(meeting.id, ["guest@example.com"])
+    guest
+  end
+
+  defp started_meeting_attrs do
+    start_time = DateTime.utc_now() |> DateTime.add(-5, :minute) |> DateTime.truncate(:second)
+    [start_time: start_time, end_time: DateTime.add(start_time, 60, :minute)]
   end
 
   describe "summarize/1" do

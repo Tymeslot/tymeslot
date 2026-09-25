@@ -116,6 +116,29 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
     end
   end
 
+  describe "perform/1 - rescued jobs" do
+    # `expect_http_success/0` allows exactly one post.
+    test "sends the message once across a rescue" do
+      user = insert(:user)
+      integration = insert(:telegram_integration, user: user)
+      meeting = insert(:meeting, organizer_user_id: user.id)
+
+      expect_http_success()
+
+      job =
+        persisted_job(TelegramWorker, %{
+          "integration_id" => integration.id,
+          "event_type" => "meeting.created",
+          "meeting_id" => meeting.id
+        })
+
+      assert :ok = TelegramWorker.perform(job)
+      assert :ok = TelegramWorker.perform(job)
+
+      assert Repo.aggregate(TelegramDeliverySchema, :count) == 1
+    end
+  end
+
   describe "perform/1 - error handling" do
     setup do
       user = insert(:user)

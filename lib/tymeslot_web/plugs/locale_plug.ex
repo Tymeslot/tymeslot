@@ -17,9 +17,13 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
       `:admin` or `:booking`. Defaults to `:booking`: the plug is mounted on
       public pipelines as well as the authenticated one, and a public visitor
       getting the booking fallback is the safe way to be wrong.
+    * `:session` - read and persist the locale in the session (source 3
+      above). Defaults to `true`; pass `false` on pipelines that do not fetch
+      the session, such as pages only ever rendered in a cross-site iframe,
+      where the browser withholds the session cookie anyway.
 
   The selected locale is stored in the session for persistence across requests
-  and set in Gettext for translation rendering.
+  (unless `session: false`) and set in Gettext for translation rendering.
 
   Security: All locale inputs are sanitized and validated to prevent:
   - Path traversal attacks
@@ -46,16 +50,18 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
     # Each source is validated individually (`Locales.acceptable/1`) so an
     # unacceptable candidate falls through to the next source instead of
     # short-circuiting the chain and being coerced to the default.
+    session? = Keyword.get(opts, :session, true)
+
     locale =
       Locales.acceptable(get_locale_from_path(conn)) ||
         Locales.acceptable(user_locale) ||
         Locales.acceptable(get_locale_from_params(conn)) ||
-        Locales.acceptable(get_locale_from_session(conn)) ||
+        (session? && Locales.acceptable(get_locale_from_session(conn))) ||
         get_locale_from_header(conn) ||
         surface_default(opts)
 
     # Store in session for persistence
-    conn = put_session(conn, :locale, locale)
+    conn = if session?, do: put_session(conn, :locale, locale), else: conn
 
     # Set for Gettext (global — reaches every backend for this process)
     Gettext.put_locale(locale)

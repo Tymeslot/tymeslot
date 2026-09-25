@@ -36,7 +36,9 @@ defmodule Tymeslot.Telegram.BotSetup do
 
         {:error, :missing_config}
 
-      is_nil(webhook_secret) ->
+      # An empty secret would register a webhook whose every update the
+      # controller then refuses, so it counts as missing.
+      webhook_secret in [nil, ""] ->
         Logger.error(
           "Telegram bot webhook registration skipped — TELEGRAM_WEBHOOK_SECRET not configured"
         )

@@ -1,9 +1,11 @@
 defmodule TymeslotWeb.AuthLive.RateLimitingTest do
   use TymeslotWeb.LiveCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
   @moduletag :auth
 
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Test.LogCapture
+  alias Tymeslot.Workers.EmailWorker
 
   import Tymeslot.Factory
 
@@ -131,7 +133,8 @@ defmodule TymeslotWeb.AuthLive.RateLimitingTest do
       :ok
     end
 
-    test "resend_verification is blocked after exhausting the per-user rate limit", %{conn: conn} do
+    test "an account at its per-user cap sees the ordinary confirmation and gets no email",
+         %{conn: conn} do
       user = insert(:unverified_user)
 
       # Exhaust the 1-hour per-user bucket (limit: 5)
@@ -139,18 +142,26 @@ defmodule TymeslotWeb.AuthLive.RateLimitingTest do
         RateLimiter.check_verification_rate_limit(user.id, "test-rate-limit-ip")
       end
 
-      conn =
-        init_test_session(conn, %{
-          "unverified_user_id" => user.id,
-          "unverified_user_email" => user.email,
-          "unverified_session_timestamp" => DateTime.to_unix(DateTime.utc_now())
-        })
+      {:ok, view, _html} = live(bind_unverified(conn, user), ~p"/auth/verify-email")
 
-      {:ok, view, _html} = live(conn, ~p"/auth/verify-email")
+      render_hook(view, "resend_verification", %{})
+
+      # The cap is the account's, so saying so would tell whoever is looking that
+      # the account exists and is unverified.
+      assert render(view) =~ "Verification email sent! Please check your inbox."
+      assert [] = all_enqueued(worker: EmailWorker)
+    end
+
+    test "the address limit, which says nothing about any account, is shown", %{conn: conn} do
+      for _i <- 1..5, do: RateLimiter.check_verification_ip_rate_limit("127.0.0.1")
+
+      user = insert(:unverified_user)
+      {:ok, view, _html} = live(bind_unverified(conn, user), ~p"/auth/verify-email")
 
       render_hook(view, "resend_verification", %{})
 
       assert render(view) =~ "reached the limit of 5 verification emails per hour"
+      assert [] = all_enqueued(worker: EmailWorker)
     end
 
     test "resend_verification disables the button with a live cooldown countdown",
@@ -224,5 +235,115 @@ defmodule TymeslotWeb.AuthLive.RateLimitingTest do
       assert html =~ "Resend available in 55s"
       refute html =~ "Resend available in 60s"
     end
+  end
+
+  describe "resend verification can't probe or spam an address" do
+    setup do
+      on_exit(fn -> RateLimiter.clear_all() end)
+      :ok
+    end
+
+    test "a session-bound unverified account is sent a fresh link", %{conn: conn} do
+      user = insert(:unverified_user)
+      {:ok, view, _html} = live(bind_unverified(conn, user), ~p"/auth/verify-email")
+
+      render_hook(view, "resend_verification", %{})
+
+      assert render(view) =~ "Verification email sent! Please check your inbox."
+      assert [job] = all_enqueued(worker: EmailWorker)
+      assert job.args["user_id"] == user.id
+    end
+
+    test "an address typed into the login form is never the resend target", %{conn: conn} do
+      victim = insert(:unverified_user)
+
+      {:ok, view, _html} = live(conn, ~p"/auth/login")
+      render_hook(view, "validate_login_email", %{"value" => victim.email})
+      render_patch(view, ~p"/auth/verify-email")
+
+      render_hook(view, "resend_verification", %{})
+
+      # No email to the address; the visitor is asked to sign in instead.
+      assert render(view) =~ "Sign in to receive a new verification link."
+      assert [] = all_enqueued(worker: EmailWorker)
+    end
+
+    test "outside the verify-email screen the event does nothing", %{conn: conn} do
+      user = insert(:unverified_user)
+      {:ok, view, _html} = live(bind_unverified(conn, user), ~p"/auth/login")
+
+      html = render_hook(view, "resend_verification", %{})
+
+      refute html =~ "Verification email sent"
+      refute html =~ "Resend available in"
+      assert [] = all_enqueued(worker: EmailWorker)
+    end
+
+    test "a session-bound account verified since is sent nothing, and told the same",
+         %{conn: conn} do
+      user = insert(:user)
+      {:ok, view, _html} = live(bind_unverified(conn, user), ~p"/auth/verify-email")
+
+      render_hook(view, "resend_verification", %{})
+
+      assert render(view) =~ "Verification email sent! Please check your inbox."
+      assert [] = all_enqueued(worker: EmailWorker)
+    end
+
+    test "after a sign-up with a taken address the address bucket is still charged", %{
+      conn: conn
+    } do
+      owner = insert(:unverified_user)
+
+      {:ok, view, _html} = live(conn, ~p"/auth/signup")
+
+      view
+      |> form("#signup-form", %{
+        "user" => %{"email" => owner.email, "password" => "ValidPassword123!", "website" => ""}
+      })
+      |> render_submit()
+
+      assert_patch(view, ~p"/auth/verify-email")
+
+      # The sign-up spent one of the five, exactly as a new account's
+      # verification email would have, so four resends remain.
+      for _i <- 1..4 do
+        render_hook(view, "resend_verification", %{})
+        assert render(view) =~ "Verification email sent! Please check your inbox."
+        refute render(view) =~ "reached the limit"
+        for _tick <- 1..60, do: send(view.pid, :resend_cooldown_tick)
+      end
+
+      render_hook(view, "resend_verification", %{})
+
+      assert render(view) =~ "reached the limit of 5 verification emails per hour"
+
+      assert [] =
+               all_enqueued(worker: EmailWorker, args: %{"action" => "send_email_verification"})
+    end
+
+    test "with nothing bound and no sign-up here, it sends the visitor to sign in", %{
+      conn: conn
+    } do
+      # A reload loses the account a sign-up bound, and a direct visit never had
+      # one. Nothing about any account is known, so the answer says so plainly
+      # rather than claiming an email went out.
+      {:ok, view, _html} = live(conn, ~p"/auth/verify-email")
+
+      render_hook(view, "resend_verification", %{})
+
+      assert_patch(view, ~p"/auth/login")
+      assert render(view) =~ "Sign in to receive a new verification link."
+      refute render(view) =~ "Verification email sent"
+      assert [] = all_enqueued(worker: EmailWorker)
+    end
+  end
+
+  defp bind_unverified(conn, user) do
+    init_test_session(conn, %{
+      "unverified_user_id" => user.id,
+      "unverified_user_email" => user.email,
+      "unverified_session_timestamp" => DateTime.to_unix(DateTime.utc_now())
+    })
   end
 end

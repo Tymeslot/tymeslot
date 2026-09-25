@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Video.AccessTokenTest do
   @moduletag :integrations
   @moduletag :video
 
+  import Mox
   import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.Integrations.Video
@@ -32,6 +33,8 @@ defmodule Tymeslot.Integrations.Video.AccessTokenTest do
       )
     )
   end
+
+  setup :verify_on_exit!
 
   setup do
     %{user: insert(:user)}
@@ -68,6 +71,40 @@ defmodule Tymeslot.Integrations.Video.AccessTokenTest do
       # Persisted, so the next caller does not spend the refresh token again.
       {:ok, reloaded} = VideoIntegrationQueries.get_for_user(integration.id, user.id)
       assert Encryption.decrypt(reloaded.access_token_encrypted) == "freshly-minted"
+    end
+
+    test "mints a Teams token through the provider's own refresh path", %{user: user} do
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Teams",
+          provider: "teams",
+          access_token: "expired",
+          refresh_token: "refresh-me",
+          token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second),
+          tenant_id: "tenant",
+          teams_user_id: "teams-user",
+          oauth_scope: "Calendars.ReadWrite"
+        })
+
+      stub(Tymeslot.TeamsOAuthHelperMock, :validate_token, fn _config -> {:ok, :needs_refresh} end)
+
+      expect(Tymeslot.TeamsOAuthHelperMock, :refresh_access_token, fn "refresh-me",
+                                                                      _scope,
+                                                                      _opts ->
+        {:ok,
+         %{
+           access_token: "fresh-teams-token",
+           refresh_token: "refresh-me",
+           expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+           scope: "Calendars.ReadWrite"
+         }}
+      end)
+
+      assert {:ok, "fresh-teams-token"} = Video.access_token(integration.id, user.id)
+
+      {:ok, reloaded} = VideoIntegrationQueries.get_for_user(integration.id, user.id)
+      assert Encryption.decrypt(reloaded.access_token_encrypted) == "fresh-teams-token"
     end
 
     test "refuses a provider that holds no OAuth grant", %{user: user} do

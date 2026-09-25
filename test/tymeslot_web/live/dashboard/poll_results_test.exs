@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
+  alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Meetings
   alias Tymeslot.Polls
   alias Tymeslot.Polls.Confirm
@@ -382,6 +383,38 @@ defmodule TymeslotWeb.Dashboard.PollResultsTest do
         |> render_click()
 
       assert html =~ "This time is no longer free"
+
+      {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
+      assert reloaded.status == :open
+      assert reloaded.confirmed_meeting_id == nil
+    end
+
+    test "confirming a slot inside time off explains the refusal and keeps the poll open", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      %{poll: poll, slot1: slot1} = open_poll_with_votes(user)
+
+      # The host books the slot's days off after the poll has gone out.
+      local_date = &(&1 |> DateTime.shift_zone!("Europe/Tallinn") |> DateTime.to_date())
+
+      {:ok, _period} =
+        TimeOff.create(profile.id, %{
+          starts_on: local_date.(slot1.start_time),
+          ends_on: local_date.(slot1.end_time)
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      select_poll(view, poll)
+
+      view
+      |> element("#poll-slot-#{slot1.id} button[phx-click='confirm_slot']")
+      |> render_click()
+
+      assert view
+             |> element("#poll-slot-#{slot1.id}")
+             |> render() =~ "This time falls within your time off."
 
       {:ok, reloaded} = Polls.get_poll_for_host(poll.id, user.id)
       assert reloaded.status == :open

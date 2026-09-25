@@ -210,6 +210,17 @@ defmodule TymeslotWeb.Dashboard.Polls.PollsComponent do
 
         {:noreply, socket}
 
+      {:error, :time_off} ->
+        {:noreply,
+         put_slot_error(
+           socket,
+           slot_id,
+           dgettext(
+             "dashboard_common",
+             "This time falls within your time off. Change or remove the time off to confirm it."
+           )
+         )}
+
       {:error, :not_open} ->
         {:noreply, poll_no_longer_open(socket)}
 

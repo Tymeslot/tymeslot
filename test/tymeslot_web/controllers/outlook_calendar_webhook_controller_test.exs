@@ -14,7 +14,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.SyncOutlookCalendarWorker
 
-  describe "webhook/2 - validation challenge" do
+  describe "notification/2 - validation challenge" do
     test "returns 200 with the validationToken as plain text body", %{conn: conn} do
       conn =
         conn
@@ -50,7 +50,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
     end
   end
 
-  describe "webhook/2 - valid change notification" do
+  describe "notification/2 - valid change notification" do
     test "enqueues SyncOutlookCalendarWorker and returns 202 for a valid notification", %{
       conn: conn
     } do
@@ -112,7 +112,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
     end
   end
 
-  describe "webhook/2 - invalid clientState" do
+  describe "notification/2 - invalid clientState" do
     test "returns 202 without enqueuing a job when clientState is wrong", %{conn: conn} do
       integration =
         insert(:calendar_integration,
@@ -167,7 +167,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
     end
   end
 
-  describe "webhook/2 - unknown subscription" do
+  describe "notification/2 - unknown subscription" do
     test "returns 202 without enqueuing a job for an unknown subscriptionId", %{conn: conn} do
       payload = %{
         "value" => [
@@ -199,7 +199,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
     end
   end
 
-  describe "webhook/2 - batch notifications" do
+  describe "notification/2 - batch notifications" do
     test "enqueues jobs only for valid integrations and skips unknown subscriptions", %{
       conn: conn
     } do
@@ -260,7 +260,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
     end
   end
 
-  describe "webhook/2 - payloads Graph never sends" do
+  describe "notification/2 - payloads Graph never sends" do
     # The endpoint is public, so anyone can post these. They must be
     # acknowledged like any other payload rather than raising into a 500.
     test "returns 202 for a value that is not a list", %{conn: conn} do
@@ -283,6 +283,23 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
       refute_enqueued(worker: SyncOutlookCalendarWorker)
     end
 
+    test "returns 202 for notifications whose subscriptionId is not a string", %{conn: conn} do
+      # The subscription-id lookup cannot cast these; they used to raise an
+      # Ecto.Query.CastError into a 500.
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/webhooks/outlook-calendar", %{
+          "value" => [
+            %{"subscriptionId" => 1, "clientState" => "x"},
+            %{"subscriptionId" => ["a"], "clientState" => "x"}
+          ]
+        })
+
+      assert conn.status == 202
+      refute_enqueued(worker: SyncOutlookCalendarWorker)
+    end
+
     test "returns 202 for a payload carrying no value at all", %{conn: conn} do
       conn =
         conn
@@ -294,7 +311,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
     end
   end
 
-  describe "webhook/2 - source address flood" do
+  describe "notification/2 - source address flood" do
     test "returns 429 once the calendar push bucket is exhausted", %{conn: conn} do
       # A source address of its own keeps this bucket clear of every other
       # test posting to the calendar webhooks from 127.0.0.1.

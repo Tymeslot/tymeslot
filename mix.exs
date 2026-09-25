@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "1.17.0",
+      version: "1.18.0",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -120,14 +120,13 @@ defmodule Tymeslot.MixProject do
       {:tz, "~> 0.28"},
       {:uuid, "~> 1.1"},
       {:bcrypt_elixir, "~> 3.2"},
-      {:oauth2, "~> 2.1"},
       {:mox, "~> 1.0", only: :test},
       {:meck, "~> 1.1", only: :test},
       {:ex_machina, "~> 2.8", only: :test},
       {:stripity_stripe, "~> 3.3"},
       # Pinned to 4.x, which every remaining requirement accepts: Swoosh
-      # and Tesla declare it optional, Wallaby's httpoison and
-      # web_driver_client are test-only, and stripity_stripe uses hackney
+      # declares it optional, Wallaby's httpoison and web_driver_client (and
+      # the Tesla it pulls in) are test-only, and stripity_stripe uses hackney
       # as its non-optional HTTP client for every Stripe API call.
       # hackney 4.x has two real runtime consumers: Swoosh's Postmark
       # adapter (config :swoosh, :api_client, Swoosh.ApiClient.Hackney,
