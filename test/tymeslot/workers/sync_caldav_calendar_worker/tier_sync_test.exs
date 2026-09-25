@@ -18,8 +18,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.TierSyncTest do
 
   alias Plug.Conn
   alias Req.Test, as: ReqTest
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
 
