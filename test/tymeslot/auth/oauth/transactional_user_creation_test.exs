@@ -3,6 +3,8 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
 
   @moduletag :auth
 
+  import Tymeslot.Test.AdminBootstrapHelpers, only: [reopen_admin_bootstrap: 1]
+
   use ExUnitProperties
 
   alias Tymeslot.Auth.OAuth.TransactionalUserCreation
@@ -16,7 +18,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
   import Tymeslot.Factory
 
   describe "find_or_create_oauth_user/4" do
-    test "creates new user if not found by provider id or email" do
+    test "creates new user if not found by provider id" do
       auth_params = %{
         "email" => "fresh@example.com",
         "github_user_id" => "111",
@@ -46,7 +48,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
       assert user.id == existing_user.id
     end
 
-    test "links provider to existing user by email" do
+    test "never links a login to an existing account by email, even a verified one" do
       existing_user = insert(:user, email: "link@example.com", provider: "local")
 
       auth_params = %{
@@ -56,15 +58,16 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
         "is_verified" => true
       }
 
-      assert {:ok, %{user: user, created: false}} =
+      assert {:error, %Ecto.Changeset{}} =
                TransactionalUserCreation.find_or_create_oauth_user(:google, auth_params)
 
-      assert user.id == existing_user.id
-      assert user.google_user_id == "333"
+      assert Repo.get!(UserSchema, existing_user.id).google_user_id == nil
     end
   end
 
   describe "admin bootstrap" do
+    setup :reopen_admin_bootstrap
+
     test "the first user created via OAuth is promoted to admin" do
       auth_params = %{
         "email" => "first-oauth@example.com",
@@ -129,7 +132,12 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
     end
 
     test "creates profile and default schedule for existing user without a profile" do
-      existing_user = insert(:user, email: "no-profile@example.com", provider: "local")
+      existing_user =
+        insert(:user,
+          email: "no-profile@example.com",
+          provider: "google",
+          google_user_id: "google-uid-no-profile"
+        )
 
       auth_params = %{
         "email" => "no-profile@example.com",
@@ -155,8 +163,8 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
 
     test "rolls back weekly schedule rows when user creation fails" do
       # Pre-insert a user with a known email so a second creation attempt with the
-      # same address (unverified, to skip the link-by-email path) triggers a DB
-      # unique-constraint violation and rolls the whole transaction back.
+      # same address triggers a DB unique-constraint violation and rolls the
+      # whole transaction back.
       existing_user = insert(:user, email: "rollback-test@example.com")
 
       user_count_before =
@@ -188,8 +196,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
         "email" => rollback_email,
         "github_user_id" => "github-uid-rollback-test",
         "provider" => "github",
-        # Unverified so the email-link path is skipped and a new user insert is attempted
-        "is_verified" => false
+        "is_verified" => true
       }
 
       assert {:error, _reason} =
@@ -235,7 +242,8 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
 
         assert user1.id == user2.id
 
-        # Third call with same email but different provider links to same user
+        # Third call with same email but a different provider is refused,
+        # never linked onto the first account
         other_provider = if provider == :github, do: :google, else: :github
         other_provider_id = "#{provider_id}_other"
 
@@ -246,13 +254,11 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
           "is_verified" => true
         }
 
-        assert {:ok, %{user: user3, created: false}} =
+        assert {:error, %Ecto.Changeset{}} =
                  TransactionalUserCreation.find_or_create_oauth_user(
                    other_provider,
                    other_auth_params
                  )
-
-        assert user1.id == user3.id
 
         # Count users in DB for this email - should be exactly 1
         assert Repo.aggregate(

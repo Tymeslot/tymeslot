@@ -6,9 +6,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
   decided by the parent `MeetingTypeForm` (feature flag + Stripe charges
   enabled); this component only reflects the `charges_enabled` flag it is
   given — disabling the toggle and showing a connect-Stripe hint when the
-  host cannot yet accept charges. Payments and group bookings are mutually
-  exclusive — while group bookings is enabled the toggle renders disabled
-  with a hint.
+  host cannot yet accept charges. A type that is already paid keeps its price
+  in that state, so the stored amount is stated in words where the price input
+  cannot be rendered. Payments and group bookings are mutually exclusive —
+  while group bookings is enabled the toggle renders disabled with a hint.
 
   The toggle and price input dispatch `toggle_payment_required` and
   `change_payment_price` events back to the parent form component
@@ -78,6 +79,21 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
         </span>
       </label>
 
+      <%!-- The price is kept while the host cannot take charges, so it resumes
+            when they reconnect rather than being cleared behind their back.
+            The price input is hidden in that state, so without this the host
+            has no way to see what is still stored. --%>
+      <p
+        :if={not @charges_enabled and @payment_required}
+        class="text-token-sm text-tymeslot-600"
+      >
+        {dgettext(
+          "dashboard_meeting_form",
+          "The price of %{amount} is kept and applies again once Stripe is connected.",
+          amount: stored_price(@payment_price, @currency)
+        )}
+      </p>
+
       <div :if={@charges_enabled and @payment_required} class="max-w-xs">
         <.input
           type="number"
@@ -118,6 +134,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.PaymentsSection 
     </div>
     """
   end
+
+  defp stored_price("", currency), do: String.upcase(currency)
+  defp stored_price(price, currency), do: "#{currency_symbol(currency)}#{price}"
 
   defp format_minimum(cents, currency) do
     "#{String.upcase(currency)} #{:erlang.float_to_binary(cents / 100, decimals: 2)}"

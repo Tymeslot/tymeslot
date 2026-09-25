@@ -166,6 +166,123 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiringTest do
     end
   end
 
+  describe "tag/3 — what a partial write must leave alone" do
+    # `{:replace, …}` on an upsert replaces with EXCLUDED, which for a column
+    # the insert omits is NULL. The queue tag used to name every content
+    # column in that list while supplying a third of them, so tagging an event
+    # destroyed the identity and content of the row it was about to replay.
+    test "a queued delete keeps the cached row's identity and content" do
+      integration = caldav_integration()
+
+      row =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: "keeps-identity",
+          provider: "caldav",
+          provider_calendar_id: "/cal/other/",
+          provider_event_id: "/cal/other/keeps-identity.ics",
+          etag: "\"server-etag\"",
+          raw_ical: "BEGIN:VCALENDAR\r\nEND:VCALENDAR",
+          summary: "Standup",
+          recurrence_rule: "FREQ=WEEKLY;BYDAY=MO",
+          attendees: [%{"email" => "sam@example.com"}],
+          reminders: [%{"minutes_before" => 10}],
+          start_at: ~U[2026-05-01 10:00:00.000000Z],
+          end_at: ~U[2026-05-01 11:00:00.000000Z],
+          synced_at: ~U[2026-05-01 00:00:00.000000Z]
+        )
+
+      assert :ok =
+               QueueWiring.tag(build_meeting(integration, "keeps-identity"), :delete, %{})
+
+      {:ok, reloaded} = ProviderCalendarEventQueries.get_by_uid(integration.id, "keeps-identity")
+
+      assert reloaded.sync_state == "locally_deleted"
+
+      assert reloaded.provider_event_id == row.provider_event_id
+      assert reloaded.etag == row.etag
+      assert reloaded.raw_ical == row.raw_ical
+      assert reloaded.provider_calendar_id == row.provider_calendar_id
+      assert reloaded.summary == row.summary
+      assert reloaded.recurrence_rule == row.recurrence_rule
+      assert reloaded.attendees == row.attendees
+      assert reloaded.reminders == row.reminders
+      assert reloaded.start_at == row.start_at
+      assert reloaded.end_at == row.end_at
+    end
+
+    test "an update writes the fields it carries and keeps the ones it does not" do
+      integration = caldav_integration()
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        uid: "partial-update",
+        provider: "caldav",
+        provider_event_id: "/cal/partial-update.ics",
+        etag: "\"server-etag\"",
+        summary: "Old title",
+        attendees: [%{"email" => "sam@example.com"}],
+        start_at: ~U[2026-05-01 10:00:00.000000Z],
+        end_at: ~U[2026-05-01 11:00:00.000000Z],
+        synced_at: ~U[2026-05-01 00:00:00.000000Z]
+      )
+
+      assert :ok =
+               QueueWiring.tag(build_meeting(integration, "partial-update"), :update, %{
+                 summary: "New title"
+               })
+
+      {:ok, reloaded} = ProviderCalendarEventQueries.get_by_uid(integration.id, "partial-update")
+
+      assert reloaded.summary == "New title"
+      assert reloaded.attendees == [%{"email" => "sam@example.com"}]
+      assert reloaded.provider_event_id == "/cal/partial-update.ics"
+      assert reloaded.etag == "\"server-etag\""
+    end
+  end
+
+  describe "tag/3 — timing shapes" do
+    # `resolve_timing/1` only understood `%DateTime{}`, so an all-day edit or a
+    # payload that had been through JSON wrote no timing at all and
+    # `OfflineQueue.sendable_event_data/1` then refused the row forever.
+    test "an all-day change is stored as dates, not as null timestamps" do
+      integration = caldav_integration()
+
+      assert :ok =
+               QueueWiring.tag(build_meeting(integration, "all-day"), :update, %{
+                 summary: "Offsite",
+                 start_time: ~D[2026-05-01],
+                 end_time: ~D[2026-05-02]
+               })
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, "all-day")
+
+      assert row.all_day == true
+      assert row.start_date == ~D[2026-05-01]
+      assert row.end_date == ~D[2026-05-02]
+      assert row.start_at == nil
+      assert row.end_at == nil
+    end
+
+    test "ISO-8601 strings from a JSON round-trip are stored as timestamps" do
+      integration = caldav_integration()
+
+      assert :ok =
+               QueueWiring.tag(build_meeting(integration, "from-json"), :update, %{
+                 "summary" => "Round-tripped",
+                 "start_time" => "2026-05-01T10:00:00Z",
+                 "end_time" => "2026-05-01T11:00:00Z"
+               })
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, "from-json")
+
+      assert row.all_day == false
+      assert row.start_at == ~U[2026-05-01 10:00:00.000000Z]
+      assert row.end_at == ~U[2026-05-01 11:00:00.000000Z]
+      assert row.summary == "Round-tripped"
+    end
+  end
+
   describe "clear/2" do
     test "flips a tagged row back to synced and persists etag" do
       integration = caldav_integration()

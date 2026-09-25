@@ -74,6 +74,12 @@ msgstr "Бронювання підтверджено. Гостя повідом
 msgid "Booking requests you haven't answered yet will appear here."
 msgstr "Тут з'являтимуться запити на бронювання, на які ви ще не відповіли."
 
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_panels.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Скасувати"
+
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel Meeting"
@@ -83,13 +89,6 @@ msgstr "Скасувати зустріч"
 #, elixir-autogen, elixir-format
 msgid "Cancel without refund."
 msgstr "Скасувати без повернення коштів."
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_panels.ex
-#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel"
-msgstr "Скасувати"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
@@ -132,6 +131,11 @@ msgstr "Власні відповіді"
 msgid "Date & Time"
 msgstr "Дата й час"
 
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Decline"
+msgstr "Відхилити"
+
 #: lib/tymeslot_web/components/dashboard/meetings/decline_request_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Decline request"
@@ -141,11 +145,6 @@ msgstr "Відхилити запит"
 #, elixir-autogen, elixir-format
 msgid "Decline the request from %{name} for %{when}?"
 msgstr "Відхилити запит від %{name} на %{when}?"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Decline"
-msgstr "Відхилити"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
@@ -372,6 +371,12 @@ msgstr "Запит відхилено. Час знову вільний."
 msgid "Requests"
 msgstr "Запити"
 
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_panels.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule"
+msgstr "Перенести"
+
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule Requested"
@@ -381,12 +386,6 @@ msgstr "Запит на перенесення"
 #, elixir-autogen, elixir-format
 msgid "Reschedule request sent to %{attendee_name}"
 msgstr "Запит на перенесення надіслано учаснику %{attendee_name}"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_panels.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule"
-msgstr "Перенести"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
 #, elixir-autogen, elixir-format

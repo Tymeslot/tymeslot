@@ -7,6 +7,7 @@ defmodule Tymeslot.Availability.SchedulesTest do
 
   alias Tymeslot.Availability.AvailabilityOverrideQueries
   alias Tymeslot.Availability.AvailabilityScheduleQueries
+  alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -118,7 +119,7 @@ defmodule Tymeslot.Availability.SchedulesTest do
     end
   end
 
-  describe "duplicate/2" do
+  describe "duplicate/1 copying" do
     test "copies the weekly pattern and policy but not the date overrides", %{profile: profile} do
       {:ok, source} = Schedules.create_default(profile.id)
       {:ok, source} = Schedules.update_policy(source, %{buffer_minutes: 45})
@@ -131,7 +132,7 @@ defmodule Tymeslot.Availability.SchedulesTest do
           reason: "Holiday"
         })
 
-      {:ok, copy} = Schedules.duplicate(source, "Copy of working hours")
+      {:ok, copy} = Schedules.duplicate(source)
 
       source_days = WeeklyAvailabilityQueries.get_weekly_schedule_with_breaks(source.id)
       copy_days = WeeklyAvailabilityQueries.get_weekly_schedule_with_breaks(copy.id)
@@ -146,6 +147,48 @@ defmodule Tymeslot.Availability.SchedulesTest do
                ~D[2026-12-01],
                ~D[2026-12-31]
              ) == []
+    end
+  end
+
+  describe "duplicate/1" do
+    test "names the copy after its source", %{profile: profile} do
+      {:ok, source} = Schedules.create_default(profile.id)
+
+      assert {:ok, %{name: "Working hours (copy)"}} = Schedules.duplicate(source)
+    end
+
+    test "numbers each further copy of the same source", %{profile: profile} do
+      {:ok, source} = Schedules.create_default(profile.id)
+
+      {:ok, first} = Schedules.duplicate(source)
+      {:ok, second} = Schedules.duplicate(source)
+      {:ok, third} = Schedules.duplicate(source)
+
+      assert [first.name, second.name, third.name] ==
+               ["Working hours (copy)", "Working hours (copy) 2", "Working hours (copy) 3"]
+    end
+
+    test "shortens a source name at the length limit so every copy stays distinct and valid",
+         %{profile: profile} do
+      max = AvailabilityScheduleSchema.name_max_length()
+      {:ok, source} = Schedules.create(profile.id, %{name: String.duplicate("a", max)})
+
+      task =
+        Task.async(fn ->
+          for _copy <- 1..(Schedules.max_schedules() - 1), do: Schedules.duplicate(source)
+        end)
+
+      results = Task.await(task, 5_000)
+      names = Enum.map(results, fn {:ok, copy} -> copy.name end)
+
+      assert names == [
+               String.duplicate("a", max - 7) <> " (copy)",
+               String.duplicate("a", max - 9) <> " (copy) 2",
+               String.duplicate("a", max - 9) <> " (copy) 3",
+               String.duplicate("a", max - 9) <> " (copy) 4"
+             ]
+
+      assert Enum.all?(names, &(String.length(&1) <= max))
     end
   end
 

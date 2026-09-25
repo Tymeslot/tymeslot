@@ -46,6 +46,11 @@ defmodule Mix.Tasks.SetVersion do
     "../tymeslot-saas/priv/changelog_highlights.json"
   ]
 
+  # A curated highlight marked as applying only to the managed offering. It is
+  # the one value the `surface` field takes; its absence means the line is about
+  # the product itself, which is what a Cloudron operator is running.
+  @cloud_surface "cloud"
+
   # Shown in the Cloudron update prompt when a release carries no Core-facing
   # changes at all (no Core commits and no curated summary), for example a
   # SaaS-only release. An empty changelog makes Cloudron treat the version as
@@ -96,13 +101,13 @@ defmodule Mix.Tasks.SetVersion do
 
   Operators see this in the self-hosted update prompt, so it mirrors the public
   web changelog: `[BREAKING]` lines (always shown, parsed from the raw commit
-  section) followed by the curated summary and highlights. SaaS-scoped
+  section) followed by the curated summary and highlights. Cloud-only
   highlights are dropped, since Cloudron is the Core product. When a release
-  has no curated Core highlights it falls back to the raw commit section
+  has no curated product highlights it falls back to the raw commit section
   verbatim, which keeps the Core commit list in front of operators rather than
   replacing it with a summary written about a SaaS-only release.
 
-  A release with no Core commits at all has no such fallback (the raw section
+  A release with no product commits at all has no such fallback (the raw section
   is empty), so the curated summary is the only thing an operator can be told.
   Without it the update prompt would render blank.
 
@@ -113,12 +118,12 @@ defmodule Mix.Tasks.SetVersion do
   def build_cloudron_changelog(raw_section, nil), do: raw_section
 
   def build_cloudron_changelog(raw_section, %{summary: summary, highlights: highlights}) do
-    core_bullets =
+    product_bullets =
       highlights
-      |> Enum.reject(fn {scope, _text} -> scope == "saas" end)
-      |> Enum.map(fn {_scope, text} -> "* #{text}" end)
+      |> Enum.reject(fn {surface, _text} -> surface == @cloud_surface end)
+      |> Enum.map(fn {_surface, text} -> "* #{text}" end)
 
-    case {core_bullets, String.trim(raw_section)} do
+    case {product_bullets, String.trim(raw_section)} do
       {[], ""} ->
         summary || ""
 
@@ -389,7 +394,7 @@ defmodule Mix.Tasks.SetVersion do
       highlights =
         entry
         |> Map.get("highlights", [])
-        |> Enum.map(fn h -> {h["scope"], h["text"]} end)
+        |> Enum.map(fn h -> {h["surface"], h["text"]} end)
 
       %{summary: entry["summary"], highlights: highlights}
     else

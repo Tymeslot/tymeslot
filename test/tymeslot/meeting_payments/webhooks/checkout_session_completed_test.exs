@@ -5,6 +5,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
   @moduletag :payments
   @moduletag :integration
 
+  import Mox, only: [verify_on_exit!: 1]
   import Tymeslot.Factory
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
@@ -14,6 +15,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
   alias Tymeslot.Repo
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
+
+  setup :verify_on_exit!
 
   describe "handle/1" do
     test "marks the booking_payment paid and the meeting confirmed" do

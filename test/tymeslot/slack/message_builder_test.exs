@@ -9,7 +9,7 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
   @meeting %{
     attendee_name: "John Smith",
     attendee_email: "john@example.com",
-    attendee_timezone: "UTC",
+    attendee_timezone: "America/New_York",
     start_time: ~U[2026-03-10 14:00:00Z],
     end_time: ~U[2026-03-10 14:30:00Z],
     event_type: %{name: "30-minute intro call"},
@@ -17,9 +17,13 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
     cancellation_reason: nil
   }
 
-  describe "build_blocks/2 — meeting.created" do
+  # The organiser's timezone, deliberately different from the attendee's: these
+  # messages land in the organiser's channel, so every time below is theirs.
+  @timezone "UTC"
+
+  describe "build_blocks/3 — meeting.created" do
     test "includes a header block, summary, details, and an action button" do
-      blocks = MessageBuilder.build_blocks("meeting.created", @meeting)
+      blocks = MessageBuilder.build_blocks("meeting.created", @meeting, @timezone)
 
       assert [
                %{"type" => "header", "text" => %{"text" => "New booking"}},
@@ -39,10 +43,10 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
     end
   end
 
-  describe "build_blocks/2 — meeting.cancelled" do
+  describe "build_blocks/3 — meeting.cancelled" do
     test "includes the cancellation reason in a quote block" do
       meeting = %{@meeting | cancellation_reason: "Schedule conflict"}
-      blocks = MessageBuilder.build_blocks("meeting.cancelled", meeting)
+      blocks = MessageBuilder.build_blocks("meeting.cancelled", meeting, @timezone)
       json = Jason.encode!(blocks)
       assert json =~ "Booking cancelled"
       assert json =~ "Schedule conflict"
@@ -50,23 +54,23 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
     end
 
     test "falls back to 'No reason given' when cancellation_reason is missing" do
-      blocks = MessageBuilder.build_blocks("meeting.cancelled", @meeting)
+      blocks = MessageBuilder.build_blocks("meeting.cancelled", @meeting, @timezone)
       assert Jason.encode!(blocks) =~ "No reason given"
     end
 
     test "truncates cancellation reasons longer than 500 chars with ellipsis" do
       long_reason = String.duplicate("a", 600)
       meeting = %{@meeting | cancellation_reason: long_reason}
-      blocks = MessageBuilder.build_blocks("meeting.cancelled", meeting)
+      blocks = MessageBuilder.build_blocks("meeting.cancelled", meeting, @timezone)
       json = Jason.encode!(blocks)
       assert json =~ "aaa..."
       refute String.contains?(json, String.duplicate("a", 600))
     end
   end
 
-  describe "build_blocks/2 — meeting.rescheduled" do
+  describe "build_blocks/3 — meeting.rescheduled" do
     test "includes the new time and an action button" do
-      blocks = MessageBuilder.build_blocks("meeting.rescheduled", @meeting)
+      blocks = MessageBuilder.build_blocks("meeting.rescheduled", @meeting, @timezone)
       json = Jason.encode!(blocks)
       assert json =~ "Booking rescheduled"
       assert json =~ "New time"
@@ -75,10 +79,10 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
     end
   end
 
-  describe "build_blocks/2 — meeting.requested" do
+  describe "build_blocks/3 — meeting.requested" do
     test "includes the deadline and an action button" do
       meeting = Map.put(@meeting, :approval_deadline_at, ~U[2026-03-12 14:00:00Z])
-      blocks = MessageBuilder.build_blocks("meeting.requested", meeting)
+      blocks = MessageBuilder.build_blocks("meeting.requested", meeting, @timezone)
 
       assert [
                %{"type" => "header", "text" => %{"text" => "New booking request"}},
@@ -98,15 +102,15 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
 
     test "omits the deadline field when the request has no deadline" do
       meeting = Map.put(@meeting, :approval_deadline_at, nil)
-      blocks = MessageBuilder.build_blocks("meeting.requested", meeting)
+      blocks = MessageBuilder.build_blocks("meeting.requested", meeting, @timezone)
       refute Jason.encode!(blocks) =~ "Respond by"
     end
   end
 
-  describe "build_blocks/2 — meeting.declined" do
+  describe "build_blocks/3 — meeting.declined" do
     test "includes the host's decline reason in a quote block" do
       meeting = Map.put(@meeting, :decline_reason, "Not available that day")
-      blocks = MessageBuilder.build_blocks("meeting.declined", meeting)
+      blocks = MessageBuilder.build_blocks("meeting.declined", meeting, @timezone)
 
       assert [
                %{"type" => "header", "text" => %{"text" => "Booking request declined"}},
@@ -123,23 +127,23 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
 
     test "falls back to 'No reason given' when decline_reason is missing" do
       meeting = Map.put(@meeting, :decline_reason, nil)
-      blocks = MessageBuilder.build_blocks("meeting.declined", meeting)
+      blocks = MessageBuilder.build_blocks("meeting.declined", meeting, @timezone)
       assert Jason.encode!(blocks) =~ "No reason given"
     end
 
     test "truncates decline reasons longer than 500 chars with ellipsis" do
       long_reason = String.duplicate("a", 600)
       meeting = Map.put(@meeting, :decline_reason, long_reason)
-      blocks = MessageBuilder.build_blocks("meeting.declined", meeting)
+      blocks = MessageBuilder.build_blocks("meeting.declined", meeting, @timezone)
       json = Jason.encode!(blocks)
       assert json =~ "aaa..."
       refute String.contains?(json, String.duplicate("a", 600))
     end
   end
 
-  describe "build_blocks/2 — meeting.request_expired" do
+  describe "build_blocks/3 — meeting.request_expired" do
     test "explains that nobody responded before the deadline" do
-      blocks = MessageBuilder.build_blocks("meeting.request_expired", @meeting)
+      blocks = MessageBuilder.build_blocks("meeting.request_expired", @meeting, @timezone)
 
       assert [
                %{"type" => "header", "text" => %{"text" => "Booking request expired"}},
@@ -155,10 +159,27 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
     end
   end
 
+  describe "build_blocks/3 — timezone" do
+    test "renders times in the organiser's timezone, not the attendee's" do
+      blocks = MessageBuilder.build_blocks("meeting.created", @meeting, "Europe/Tallinn")
+      json = Jason.encode!(blocks)
+      assert json =~ "16:00"
+      assert json =~ "Europe/Tallinn"
+      refute json =~ "America/New_York"
+    end
+
+    test "renders the approval deadline in the organiser's timezone" do
+      meeting = Map.put(@meeting, :approval_deadline_at, ~U[2026-03-12 14:00:00Z])
+      blocks = MessageBuilder.build_blocks("meeting.requested", meeting, "Europe/Tallinn")
+      json = Jason.encode!(blocks)
+      assert json =~ "12 Mar 2026, 16:00 (Europe/Tallinn)"
+    end
+  end
+
   describe "escaping" do
     test "escapes Slack mrkdwn special characters in attendee_name" do
       meeting = %{@meeting | attendee_name: "<script>alert('xss')</script>"}
-      blocks = MessageBuilder.build_blocks("meeting.created", meeting)
+      blocks = MessageBuilder.build_blocks("meeting.created", meeting, @timezone)
       json = Jason.encode!(blocks)
       refute json =~ "<script>"
       assert json =~ "&lt;script&gt;"
@@ -166,7 +187,7 @@ defmodule Tymeslot.Slack.MessageBuilderTest do
 
     test "falls back to attendee_email when attendee_name is nil" do
       meeting = %{@meeting | attendee_name: nil}
-      blocks = MessageBuilder.build_blocks("meeting.created", meeting)
+      blocks = MessageBuilder.build_blocks("meeting.created", meeting, @timezone)
       assert Jason.encode!(blocks) =~ "john@example.com"
     end
   end

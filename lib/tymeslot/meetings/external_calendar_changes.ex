@@ -44,11 +44,25 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   def apply_change(calendar_integration_id, provider_event_id, uid, signal) do
     case find_linked_meeting(calendar_integration_id, provider_event_id, uid) do
       {:ok, meeting} ->
-        apply_status_change(meeting, status_for(signal), signal)
+        apply_change_to_meeting(meeting, signal)
 
       {:error, :not_found} ->
         :ok
     end
+  end
+
+  @doc """
+  Applies an external calendar change signal to a meeting already in hand.
+
+  The same work `apply_change/4` does once it has resolved its identifiers,
+  for callers that resolved the meeting themselves. A batch reconciling many
+  deletions matches them all in one query (see
+  `Tymeslot.Meetings.list_meetings_by_calendar_identifiers/2`) rather than
+  paying two lookups per event to learn that most of them link to nothing.
+  """
+  @spec apply_change_to_meeting(Meeting.t(), signal()) :: :ok | {:error, term()}
+  def apply_change_to_meeting(%Meeting{} = meeting, signal) do
+    apply_status_change(meeting, status_for(signal), signal)
   end
 
   @doc """

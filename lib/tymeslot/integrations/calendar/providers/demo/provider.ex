@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.DemoCalendarProvider do
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
   # Reuse most functionality from debug provider
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.DebugCalendarProvider
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -19,7 +20,7 @@ defmodule Tymeslot.Integrations.Calendar.DemoCalendarProvider do
   @impl Tymeslot.Integrations.Calendar.Provider
   def create_event(_client, _event_data) do
     # Demo mode: pretend to create the event but don't actually do anything
-    {:ok, %{uid: "demo-event-#{:rand.uniform(999_999)}"}}
+    {:ok, CreatedEvent.provider_minted("demo-event-#{:rand.uniform(999_999)}")}
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider

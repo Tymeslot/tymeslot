@@ -285,7 +285,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
 
   defp item_clients(integration), do: Provider.item_client_configs(integration)
 
-  defp folder_of(client), do: client[:calendar_id] || :calendar
+  defp folder_of(client), do: client.calendar_id || :calendar
 
   defp folder_key(client), do: to_string(folder_of(client))
 

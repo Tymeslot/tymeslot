@@ -18,6 +18,8 @@
       requires: [
         # Tag taxonomy must be loaded first so the check can call TagTaxonomy.all()
         "test/support/tag_taxonomy.ex",
+        # Same: the check reads its template list from this module.
+        "test/support/global_config_templates.ex",
         "dev_support/credo_checks/**/*.ex"
       ],
       strict: false,
@@ -29,11 +31,7 @@
           ## Consistency Checks
           #
           {Credo.Check.Consistency.ExceptionNames, []},
-          {Credo.Check.Consistency.LineEndings, []},
           {Credo.Check.Consistency.ParameterPatternMatching, []},
-          {Credo.Check.Consistency.SpaceAroundOperators, []},
-          {Credo.Check.Consistency.SpaceInParentheses, []},
-          {Credo.Check.Consistency.TabsOrSpaces, []},
 
           #
           ## Design Checks
@@ -42,7 +40,11 @@
            [priority: :normal, if_nested_deeper_than: 1, if_called_more_often_than: 0]},
           {Credo.Check.Design.TagFIXME, []},
           {Credo.Check.Design.TagTODO, [exit_status: 2]},
-          {Credo.Check.Design.DuplicatedCode, [nodes_threshold: 2, mass_threshold: 40]},
+          # Whole-project and the slowest single check; scoped to production
+          # code, where a duplicated body is a drift risk rather than a
+          # readable arrange/act/assert block, which halves its cost.
+          {Credo.Check.Design.DuplicatedCode,
+           [nodes_threshold: 2, mass_threshold: 40, files: %{excluded: ["test/"]}]},
 
           #
           ## Readability Checks
@@ -59,12 +61,7 @@
           {Credo.Check.Readability.PipeIntoAnonymousFunctions, []},
           {Credo.Check.Readability.PredicateFunctionNames, []},
           {Credo.Check.Readability.PreferImplicitTry, []},
-          {Credo.Check.Readability.RedundantBlankLines, []},
-          {Credo.Check.Readability.Semicolons, []},
-          {Credo.Check.Readability.SpaceAfterCommas, []},
           {Credo.Check.Readability.StringSigils, []},
-          {Credo.Check.Readability.TrailingBlankLine, []},
-          {Credo.Check.Readability.TrailingWhiteSpace, []},
           {Credo.Check.Readability.UnnecessaryAliasExpansion, []},
           {Credo.Check.Readability.VariableNames, []},
           {Credo.Check.Readability.WithSingleClause, []},
@@ -105,15 +102,30 @@
           {CredoChecks.RequireDashboardSectionHeader, [priority: :low]},
           {CredoChecks.Phoenix.RequireComponentAttrs, [priority: :high]},
           {CredoChecks.TestModuleTagRequired, [priority: :high]},
+          {CredoChecks.TestGlobalConfigRequiresSync, [priority: :high]},
           # Logger hygiene: violations are :low while being cleared; raise to :high after Phase 3-4
           {CredoChecks.NoStringInterpolationInLogger, [priority: :high]},
           {CredoChecks.NoMapMetadataInLogger, [priority: :high]},
           {CredoChecks.MigrationConstraintSafety, [priority: :high, enforce_after: "20260329"]},
           {CredoChecks.RepoCallBoundary, [priority: :normal]},
+          {CredoChecks.WebLayerBoundary, [priority: :normal]},
           {CredoChecks.RateLimiterBoundary, [priority: :normal]},
           {CredoChecks.ConnectionProbeBoundary, [priority: :normal]},
           {CredoChecks.ClockUsage,
-           [priority: :normal, paths: ["/tymeslot/bookings/", "/tymeslot/availability/"]]},
+           [
+             priority: :normal,
+             paths: [
+               "/tymeslot/bookings/",
+               "/tymeslot/availability/",
+               "/tymeslot/security/",
+               "/tymeslot/integrations/shared/oauth/",
+               # No trailing slash: also covers the top-level context module
+               # beside the directory, which `String.contains?` would miss.
+               "/tymeslot/analytics",
+               "/tymeslot/integrations/health_check",
+               "/tymeslot_web/live/dashboard/calendar_grid/event_handlers/"
+             ]
+           ]},
           {CredoChecks.GettextDomainBoundary, [priority: :high]},
           {CredoChecks.NoUnsafeSanitizeMerge, [priority: :normal]},
           # The three below mechanise rules that CLAUDE.md's prefer/avoid table
@@ -133,6 +145,20 @@
           {CredoChecks.NoSwallowedException, [priority: :normal]},
           {CredoChecks.NoInlineCaldavList, [priority: :normal]},
           {CredoChecks.AttendeeNotificationsBoundary, []},
+          # The block below mechanises rules that were previously enforced by
+          # review alone. All are at zero findings and gated: they are
+          # regression guards for failure modes this codebase has either
+          # already paid for once or cannot detect at runtime, since every one
+          # of them fails silently rather than raising.
+          {CredoChecks.PhantomLiveCallback, [priority: :high]},
+          {CredoChecks.PutFlashInLiveComponent, [priority: :normal]},
+          {CredoChecks.HttpClientBoundary, [priority: :normal]},
+          {CredoChecks.NoSaasReferenceInCore, [priority: :high]},
+          {CredoChecks.NoMixEnvInCoreLib, [priority: :high]},
+          {CredoChecks.PreloadOrderThroughAssociation, [priority: :normal]},
+          {CredoChecks.ObanQueueDeclared, [priority: :high]},
+          {CredoChecks.TestGlobalStateRequiresSync, [priority: :high]},
+          {CredoChecks.MoxExpectRequiresVerify, [priority: :low]},
 
           #
           ## Test Quality Checks (jump_credo_checks)
@@ -213,6 +239,25 @@
           {Credo.Check.Warning.MixEnv, []}
         ],
         disabled: [
+          #
+          # Whitespace and layout checks that `mix format --check-formatted`
+          # already enforces: the formatter rewrites every violation these
+          # report, over a superset of the files credo reads, and the gate
+          # runs it first. Dropping them roughly halved the credo step, and
+          # they could report nothing the formatter would let through.
+          #
+          {Credo.Check.Consistency.LineEndings, []},
+          {Credo.Check.Consistency.SpaceAroundOperators, []},
+          {Credo.Check.Consistency.SpaceInParentheses, []},
+          {Credo.Check.Consistency.TabsOrSpaces, []},
+          {Credo.Check.Readability.RedundantBlankLines, []},
+          {Credo.Check.Readability.Semicolons, []},
+          {Credo.Check.Readability.SpaceAfterCommas, []},
+          {Credo.Check.Readability.TrailingBlankLine, []},
+          {Credo.Check.Readability.TrailingWhiteSpace, []},
+          #
+          # Other disabled checks.
+          #
           {Credo.Check.Consistency.MultiAliasImportRequireUse, []},
           {Credo.Check.Readability.AliasAs, []},
           {Credo.Check.Readability.MultiAlias, []},

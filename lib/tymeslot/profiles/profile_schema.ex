@@ -96,12 +96,15 @@ defmodule Tymeslot.Profiles.ProfileSchema do
       :primary_calendar_integration_id
     ])
     |> validate_required([:user_id])
+    # The column is a varchar(255); a longer name must fail here, not at insert.
+    |> validate_length(:full_name, max: 255)
     |> validate_username()
     |> validate_timezone()
     |> validate_booking_theme()
     |> validate_embed_domains()
     |> validate_booking_limits(:profiles)
     |> unique_constraint(:username)
+    |> foreign_key_constraint(:primary_calendar_integration_id)
   end
 
   @doc """
@@ -189,7 +192,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
 
       username ->
         if username in Profiles.reserved_paths() do
-          add_error(changeset, :username, "is reserved")
+          add_error(changeset, :username, "is reserved", validation: :reserved)
         else
           changeset
         end

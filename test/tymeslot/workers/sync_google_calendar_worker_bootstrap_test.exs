@@ -10,10 +10,13 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerBootstrapTest do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Repo
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
   setup :verify_on_exit!
+
+  defp health(integration), do: Monitor.get_state(:calendar, integration.id, integration.user_id)
 
   describe "perform/1 - booking calendar no longer exists (HTTP 404)" do
     test "flags the integration for reconnection and discards on incremental 404" do
@@ -59,6 +62,109 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerBootstrapTest do
 
       {:ok, refreshed} = CalendarIntegrationQueries.get(integration.id)
       assert refreshed.needs_reauth == true
+    end
+  end
+
+  describe "perform/1 - Google account has no Google Calendar (403 notACalendarUser)" do
+    # Retrying this can never succeed. Returning {:error, _} let Oban exhaust
+    # five attempts, raise a permanent-failure admin alert, and the stale
+    # refresh enqueue a fresh job straight away: an alert every two minutes.
+    test "flags for reconnection, emails the owner and discards on bootstrap" do
+      integration = insert(:calendar_integration, provider: "google", google_sync_token: nil)
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:error, :no_sync_token}
+      end)
+
+      expect(GoogleCalendarAPIMock, :bootstrap_sync, fn _integration ->
+        {:error, :not_a_calendar_user, "The user must be signed up for Google Calendar."}
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      {:ok, refreshed} = CalendarIntegrationQueries.get(integration.id)
+      assert refreshed.needs_reauth == true
+      assert refreshed.sync_error =~ "doesn't have Google Calendar enabled"
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{
+          "action" => "send_integration_reauth_notification",
+          "user_id" => integration.user_id,
+          "integration_id" => integration.id,
+          "integration_type" => "calendar"
+        }
+      )
+    end
+
+    test "flags for reconnection and discards on incremental sync" do
+      integration =
+        insert(:calendar_integration, provider: "google", google_sync_token: "valid-token")
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:error, :not_a_calendar_user, "The user must be signed up for Google Calendar."}
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      {:ok, refreshed} = CalendarIntegrationQueries.get(integration.id)
+      assert refreshed.needs_reauth == true
+    end
+  end
+
+  describe "perform/1 - pagination cap exceeded during bootstrap" do
+    test "discards the job instead of retrying when bootstrap listing exceeds the page cap" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_sync_token: nil
+        )
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:error, :no_sync_token}
+      end)
+
+      expect(GoogleCalendarAPIMock, :bootstrap_sync, fn _integration ->
+        {:error, :too_many_pages, "Event listing exceeded 200 pages of 2500 events"}
+      end)
+
+      assert {:discard, reason} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert reason =~ "exceeded 200 pages"
+    end
+
+    test "records the cap hit against the integration's health, same as the incremental path" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_sync_token: nil
+        )
+
+      assert health(integration).consecutive_sync_failures == 0
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:error, :no_sync_token}
+      end)
+
+      expect(GoogleCalendarAPIMock, :bootstrap_sync, fn _integration ->
+        {:error, :too_many_pages, "Event listing exceeded 200 pages of 2500 events"}
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert health(integration).consecutive_sync_failures == 1
     end
   end
 
@@ -174,7 +280,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerBootstrapTest do
                })
     end
 
-    test "bootstrap tolerates unauthorised errors without crashing" do
+    test "bootstrap discards on unauthorised errors without crashing" do
       integration =
         insert(:calendar_integration,
           provider: "google",
@@ -189,7 +295,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerBootstrapTest do
         {:error, :unauthorized, "Token revoked"}
       end)
 
-      assert :ok =
+      assert {:discard, _reason} =
                perform_job(SyncGoogleCalendarWorker, %{
                  "calendar_integration_id" => integration.id
                })

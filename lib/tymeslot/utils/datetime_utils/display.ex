@@ -52,7 +52,8 @@ defmodule Tymeslot.Utils.DateTimeUtils.Display do
   end
 
   @doc """
-  Determines the time period for a given time slot.
+  The period of day a slot string falls in: "Early Morning", "Morning",
+  "Afternoon", "Evening" or "Late Night", or "Unknown" when it does not parse.
   """
   @spec get_time_period(String.t()) :: String.t()
   def get_time_period(slot_string) do

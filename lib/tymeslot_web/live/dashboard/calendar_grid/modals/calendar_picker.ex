@@ -85,36 +85,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
   @doc """
   Derives which calendar ID within an integration an event belongs to.
 
-  For Google: matches organizer email from provider_metadata against calendar list IDs.
-  For CalDAV: matches the calendar path prefix in provider_event_id.
-  Falls back to default_booking_calendar_id or first calendar.
+  Resolves the calendar the event was synced from through
+  `Calendar.calendar_for_event/2`, the same match that decides whether the
+  event is visible or writable, and falls back to the integration's default
+  calendar when no entry matches.
   """
   @spec derive_event_calendar_id(map(), map() | nil) :: String.t() | nil
   def derive_event_calendar_id(_event, nil), do: nil
 
   def derive_event_calendar_id(event, integration) do
-    calendars = integration.calendar_list || []
-
-    derived =
-      cond do
-        is_map(event.provider_metadata) && is_map(event.provider_metadata["organizer"]) ->
-          match =
-            Calendar.find_calendar_by_id(
-              calendars,
-              event.provider_metadata["organizer"]["email"]
-            )
-
-          match && match.id
-
-        is_binary(event.provider_event_id) ->
-          match = Calendar.find_calendar_by_path(calendars, event.provider_event_id)
-          match && match.id
-
-        true ->
-          nil
-      end
-
-    derived || EditWorkflow.default_calendar_id_for(integration)
+    case Calendar.calendar_for_event(event, integration.calendar_list) do
+      %{id: id} -> id
+      nil -> EditWorkflow.default_calendar_id_for(integration)
+    end
   end
 
   defp calendar_selected?(cal_id, selected_id, default_id) do

@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistTest do
 
   import Phoenix.LiveViewTest
 
+  alias Tymeslot.Onboarding
   alias TymeslotWeb.Dashboard.OnboardingChecklist
 
   @no_integrations %{has_meeting_types: true, has_calendar: false, has_video: false}
@@ -37,16 +38,26 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistTest do
     end
   end
 
-  describe "toggleable_item?/1" do
-    test "allows manual recommendations but never deterministic provider items" do
-      assert OnboardingChecklist.toggleable_item?("theme")
-      assert OnboardingChecklist.toggleable_item?("share")
-      assert OnboardingChecklist.toggleable_item?("meeting_types")
+  describe "hand-tickable items" do
+    test "render a checkbox for exactly the items the context accepts, and none for providers" do
+      html =
+        render_component(&OnboardingChecklist.onboarding_checklist/1,
+          integration_status: @no_integrations,
+          current_user: user(),
+          profile: profile()
+        )
 
-      # Connecting a calendar/video provider is deterministic — not hand-tickable.
-      refute OnboardingChecklist.toggleable_item?("calendar")
-      refute OnboardingChecklist.toggleable_item?("video")
-      refute OnboardingChecklist.toggleable_item?("bogus")
+      toggle_ids =
+        html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(~s(button[phx-click="onboarding:toggle"]))
+        |> LazyHTML.attribute("phx-value-id")
+
+      # The widget and the context would otherwise drift apart silently: a
+      # checkbox the context refuses does nothing when clicked.
+      assert Enum.sort(toggle_ids) == Enum.sort(Onboarding.manual_dashboard_setup_items())
+      refute "calendar" in toggle_ids
+      refute "video" in toggle_ids
     end
   end
 

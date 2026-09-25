@@ -30,7 +30,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
 
   defdelegate handle_request_delete_event(params, socket), to: EventDelete
   defdelegate handle_confirm_delete_event(params, socket), to: EventDelete
-  defdelegate run_delete_event(payload), to: EventDelete
   defdelegate handle_delete_result(result, socket), to: EventDelete
   defdelegate handle_cancel_delete_event(params, socket), to: EventDelete
 

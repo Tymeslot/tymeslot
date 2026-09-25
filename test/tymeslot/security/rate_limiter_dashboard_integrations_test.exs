@@ -117,7 +117,7 @@ defmodule Tymeslot.Security.RateLimiterDashboardIntegrationsTest do
                RateLimiter.check_webhook_token_regen_rate_limit(user_id)
 
       assert message =~ "10"
-      assert message =~ "60 minutes"
+      assert message =~ "per hour"
       assert message =~ "webhook token regeneration"
     end
 

@@ -40,10 +40,6 @@ Mox.defmock(Tymeslot.OutlookOAuthHelperMock,
 )
 
 # --- Video ---
-Mox.defmock(Tymeslot.MiroTalkAPIMock,
-  for: Tymeslot.Integrations.Video.MiroTalk.MiroTalkClientBehaviour
-)
-
 Mox.defmock(Tymeslot.TeamsOAuthHelperMock,
   for: Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperBehaviour
 )
@@ -61,11 +57,6 @@ Mox.defmock(Tymeslot.Media.TranscoderMock, for: Tymeslot.Media.TranscoderBehavio
 Mox.defmock(Tymeslot.Integrations.HealthCheckMock,
   for: Tymeslot.Integrations.HealthCheck.HealthCheckBehaviour
 )
-
-Mox.defmock(Tymeslot.Auth.OAuth.ClientMock, for: Tymeslot.Auth.OAuth.ClientBehaviour)
-Mox.defmock(Tymeslot.Auth.OAuth.HelperMock, for: Tymeslot.Auth.OAuth.HelperBehaviour)
-Mox.defmock(Tymeslot.Auth.SessionMock, for: Tymeslot.Infrastructure.SessionBehaviour)
-Mox.defmock(Tymeslot.Auth.VerificationMock, for: Tymeslot.Infrastructure.VerificationBehaviour)
 
 # --- Payments ---
 Mox.defmock(Tymeslot.Payments.StripeMock, for: Tymeslot.Payments.Behaviours.StripeProvider)

@@ -35,91 +35,22 @@ defmodule Mix.Tasks.Test.Affected do
 
   use Mix.Task
 
-  alias Tymeslot.Test.TagTaxonomy
   alias Tymeslot.TestAffected.Selection
+  alias Tymeslot.TestAffected.Workspace
 
-  @compile {:no_warn_undefined, TagTaxonomy}
-
-  @taxonomy_paths ["test/support/tag_taxonomy.ex", "../tymeslot/test/support/tag_taxonomy.ex"]
   @switches [base: :string, explain: :boolean]
 
   @impl Mix.Task
   def run(argv) do
     {opts, passthrough} = OptionParser.parse!(argv, strict: @switches)
 
-    changed = changed_files(opts[:base])
-    index = build_index()
+    changed = Workspace.changed_files(opts[:base])
+    index = Workspace.index()
     plan = Selection.plan(changed, index)
 
     report(changed, plan, index)
 
     if opts[:explain], do: :ok, else: execute(plan, passthrough)
-  end
-
-  ## Changes
-
-  defp changed_files(nil), do: working_tree_changes()
-
-  defp changed_files(base) do
-    {out, 0} = System.cmd("git", ["diff", "--name-only", "#{base}...HEAD"], env: [])
-    Enum.uniq(String.split(out, "\n", trim: true) ++ working_tree_changes())
-  end
-
-  # `--porcelain` rather than `diff`, so staged, unstaged and untracked changes
-  # are all seen. An unstaged new test file is exactly the thing you want run.
-  defp working_tree_changes do
-    {out, 0} = System.cmd("git", ["status", "--porcelain", "--untracked-files=all"], env: [])
-
-    out
-    |> String.split("\n", trim: true)
-    |> Enum.map(&entry_path/1)
-    |> Enum.reject(&is_nil/1)
-  end
-
-  defp entry_path(line) do
-    case line |> String.slice(3..-1//1) |> String.split(" -> ") do
-      [_old, new] -> unquote_path(new)
-      [path] -> unquote_path(path)
-    end
-  end
-
-  defp unquote_path(path), do: path |> String.trim() |> String.trim(~s("))
-
-  ## Index
-
-  defp build_index do
-    # The taxonomy is resolved first because `tags_in/2` filters what it finds
-    # against it, rather than the other way round.
-    domain_tags = domain_tags()
-    test_files = "test" |> Path.join("**/*_test.exs") |> Path.wildcard() |> MapSet.new()
-
-    %{
-      test_files: test_files,
-      tags: Map.new(test_files, &{&1, tags_in(&1, domain_tags)}),
-      domain_tags: domain_tags
-    }
-  end
-
-  defp tags_in(file, domain_tags),
-    do: Selection.tags_in_source(File.read!(file), domain_tags)
-
-  # Core compiles the taxonomy into `:test`; the SaaS build does not, because a
-  # path dependency is compiled without its owner's test paths. Load it from
-  # the sibling checkout there, the same file Credo is pointed at.
-  defp domain_tags do
-    unless Code.ensure_loaded?(TagTaxonomy) do
-      case Enum.find(@taxonomy_paths, &File.exists?/1) do
-        nil ->
-          Mix.raise(
-            "cannot find tag_taxonomy.ex; expected one of: #{Enum.join(@taxonomy_paths, ", ")}"
-          )
-
-        path ->
-          Code.require_file(path)
-      end
-    end
-
-    TagTaxonomy.by_category() |> Map.fetch!(:domain) |> MapSet.new()
   end
 
   ## Reporting

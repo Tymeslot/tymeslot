@@ -3,7 +3,6 @@ defmodule TymeslotWeb.TelegramWebhookController do
 
   require Logger
 
-  alias Plug.Crypto
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Telegram
   alias TymeslotWeb.Helpers.ClientIP
@@ -32,14 +31,9 @@ defmodule TymeslotWeb.TelegramWebhookController do
   end
 
   defp verify_secret(conn) do
-    expected = Application.get_env(:tymeslot, :telegram_webhook_secret)
     received = List.first(get_req_header(conn, "x-telegram-bot-api-secret-token"))
 
-    if expected && received && Crypto.secure_compare(expected, received) do
-      :ok
-    else
-      {:error, :invalid_secret}
-    end
+    if Telegram.valid_webhook_secret?(received), do: :ok, else: {:error, :invalid_secret}
   end
 
   defp handle_update(conn, %{"message" => %{"text" => text, "chat" => %{"id" => chat_id}}}) do

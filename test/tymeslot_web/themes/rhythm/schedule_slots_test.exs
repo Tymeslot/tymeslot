@@ -20,8 +20,7 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
   # generic page reads live in Tymeslot.SlotPickerTestHelpers, but the assertions
   # stay inline: they are the subject of these tests, and folding them into a
   # helper taking per-theme selectors would trade the thing worth reading for
-  # indirection. Credo counts the two copies as duplication; that is the trade.
-  # credo:disable-for-this-file Credo.Check.Design.DuplicatedCode
+  # indirection.
 
   use TymeslotWeb.LiveCase, async: false
 
@@ -222,6 +221,42 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
       assert times |> Enum.map(&TimeSlots.parse_time_slot(&1).hour) |> Enum.uniq() |> length() > 1,
              "expected the flat grid to show every hour's slots at once"
     end
+
+    @tag :capture_log
+    test "selecting the chosen time again clears it", %{conn: conn, profile: profile} do
+      view = reach_loaded_slots(conn, profile)
+      chosen = view |> rendered_times() |> List.first()
+
+      view |> element(slot_selector(chosen)) |> render_click()
+      assert has_element?(view, "button.time-slot.selected[data-time='#{chosen}']")
+      refute has_element?(view, "button[data-testid='next-step'][disabled]")
+
+      view |> element(slot_selector(chosen)) |> render_click()
+      refute has_element?(view, "button.time-slot.selected")
+      assert has_element?(view, "button[data-testid='next-step'][disabled]")
+    end
+
+    @tag :capture_log
+    test "choosing another day moves the selection and clears the chosen time",
+         %{conn: conn, profile: profile} do
+      view = reach_loaded_slots(conn, profile)
+      chosen = view |> rendered_times() |> List.first()
+      view |> element(slot_selector(chosen)) |> render_click()
+
+      [first_day] =
+        view |> document() |> Floki.attribute("button.calendar-day.selected", "phx-value-date")
+
+      other_day = another_bookable_day(view, first_day)
+
+      assert is_binary(other_day) and other_day != first_day
+
+      view |> element("button.calendar-day[phx-value-date='#{other_day}']") |> render_click()
+
+      assert has_element?(view, "button.calendar-day.selected[phx-value-date='#{other_day}']")
+      refute has_element?(view, "button.calendar-day.selected[phx-value-date='#{first_day}']")
+      refute has_element?(view, "button.time-slot.selected")
+      wait_until(fn -> has_element?(view, "button.time-slot") end)
+    end
   end
 
   # Rhythm's calendar is a week strip rather than Quill's month grid, so
@@ -250,6 +285,29 @@ defmodule TymeslotWeb.Themes.Rhythm.ScheduleSlotsTest do
     wait_until(fn -> has_element?(view, "button.time-slot") end)
 
     view
+  end
+
+  # A bookable day other than `day`, from the rendered week or else the next.
+  # The selected day is tomorrow, which on a Saturday is the last day of the
+  # strip; late on a Saturday today has nothing left either, so the only other
+  # bookable days are in the following week.
+  defp another_bookable_day(view, day) do
+    in_view = fn ->
+      view
+      |> document()
+      |> Floki.attribute("button.calendar-day:not([disabled])", "phx-value-date")
+      |> Enum.find(&(&1 != day))
+    end
+
+    case in_view.() do
+      nil ->
+        view |> element("button[phx-click='next_week']") |> render_click()
+        wait_until(fn -> in_view.() != nil end)
+        in_view.()
+
+      other ->
+        other
+    end
   end
 
   # Hour buttons carry no `data-time`, so this is exactly the minute slots.

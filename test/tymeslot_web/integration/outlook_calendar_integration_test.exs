@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
       # translates that into a reauth-worthy :unauthorized rather than a
       # retryable network error.
       assert CalendarAPI.refresh_token(expired) ==
-               {:error, :unauthorized, "Token refresh failed"}
+               {:error, :unauthorized, "Token refresh failed: invalid_grant"}
     end
   end
 

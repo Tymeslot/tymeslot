@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { installAnalytics, installEventBridge, installClickTracking, AnalyticsView } from "../analytics";
+import {
+  installAnalytics,
+  installEventBridge,
+  installClickTracking,
+  AnalyticsView,
+  scrubAnalyticsUrl,
+  scrubAnalyticsPayload,
+  BEFORE_SEND_GLOBAL,
+} from "../analytics";
 
 describe("installAnalytics", () => {
   beforeEach(() => { delete window.analytics; delete window.umami; });
@@ -161,5 +169,55 @@ describe("installEventBridge", () => {
     installEventBridge();
     window.dispatchEvent(new CustomEvent("phx:ts:analytics", { detail: { name: "x" } }));
     expect(window.umami.track).toHaveBeenCalledWith("x", {});
+  });
+});
+
+describe("scrubAnalyticsUrl", () => {
+  test("removes the meeting uid from cancel and reschedule links", () => {
+    const uid = "8f14e45f-ceea-4e67-a7a5-6b1e2c3d4f50";
+    expect(scrubAnalyticsUrl(`https://tymeslot.app/luka/meeting/${uid}/cancel`)).toBe(
+      "https://tymeslot.app/luka/meeting/:uid/cancel",
+    );
+    expect(scrubAnalyticsUrl(`/luka/meeting/${uid}/reschedule`)).toBe("/luka/meeting/:uid/reschedule");
+  });
+
+  test("drops identifying query parameters but keeps campaign tags", () => {
+    expect(
+      scrubAnalyticsUrl(
+        "https://tymeslot.app/luka?reschedule_meeting_uid=abc&email=a%40b.c&name=Ann&utm_source=newsletter#slot",
+      ),
+    ).toBe("https://tymeslot.app/luka?utm_source=newsletter");
+  });
+
+  test("leaves ordinary addresses alone", () => {
+    expect(scrubAnalyticsUrl("https://tymeslot.app/pricing")).toBe("https://tymeslot.app/pricing");
+    expect(scrubAnalyticsUrl("/luka/30min")).toBe("/luka/30min");
+    expect(scrubAnalyticsUrl("")).toBe("");
+    expect(scrubAnalyticsUrl(undefined)).toBe(undefined);
+  });
+});
+
+describe("scrubAnalyticsPayload", () => {
+  test("scrubs both the page address and the referrer", () => {
+    const payload = {
+      website: "abc",
+      title: "Cancel meeting",
+      url: "https://tymeslot.app/luka/meeting/secret-uid/cancel",
+      referrer: "/luka?reschedule_meeting_uid=secret-uid",
+    };
+
+    expect(scrubAnalyticsPayload("event", payload)).toEqual({
+      website: "abc",
+      title: "Cancel meeting",
+      url: "https://tymeslot.app/luka/meeting/:uid/cancel",
+      referrer: "/luka",
+    });
+  });
+
+  test("installAnalytics publishes the scrubber under the name the loader hands to Umami", () => {
+    const target = { addEventListener: () => {} };
+    installAnalytics(target);
+    expect(target[BEFORE_SEND_GLOBAL]).toBe(scrubAnalyticsPayload);
+    expect(BEFORE_SEND_GLOBAL).toBe("tymeslotAnalyticsBeforeSend");
   });
 });

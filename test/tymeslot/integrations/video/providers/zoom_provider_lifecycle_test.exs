@@ -184,7 +184,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderLifecycleTest do
 
       expect(ZoomOAuthHelperMock, :validate_token, fn ^config -> {:ok, :needs_refresh} end)
 
-      expect(ZoomOAuthHelperMock, :refresh_access_token, fn "valid_refresh", nil ->
+      expect(ZoomOAuthHelperMock, :refresh_access_token, fn "valid_refresh", nil, opts ->
+        assert opts[:log_context][:integration_id] == integration.id
+        assert opts[:log_context][:user_id] == user.id
+
         {:ok,
          %{
            access_token: "new_token",
@@ -254,7 +257,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderLifecycleTest do
       expect(ZoomOAuthHelperMock, :validate_token, fn ^config -> {:ok, :needs_refresh} end)
 
       # Zoom returned a new access token but no fresh refresh token (nil).
-      expect(ZoomOAuthHelperMock, :refresh_access_token, fn "original_refresh", nil ->
+      expect(ZoomOAuthHelperMock, :refresh_access_token, fn "original_refresh", nil, _opts ->
         {:ok,
          %{
            access_token: "new_access_token",
@@ -290,7 +293,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderLifecycleTest do
 
       expect(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :needs_refresh} end)
 
-      expect(ZoomOAuthHelperMock, :refresh_access_token, fn _refresh, nil ->
+      expect(ZoomOAuthHelperMock, :refresh_access_token, fn _refresh, nil, _opts ->
         {:ok,
          %{
            access_token: "fresh_token",
@@ -398,7 +401,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderLifecycleTest do
 
       # Refresh IS called because the integration vanished and we can't
       # double-check.
-      expect(ZoomOAuthHelperMock, :refresh_access_token, fn "ref", _scope ->
+      expect(ZoomOAuthHelperMock, :refresh_access_token, fn "ref", _scope, _opts ->
         {:ok,
          %{
            access_token: "after-refresh",

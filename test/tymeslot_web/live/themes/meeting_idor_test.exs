@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Live.Themes.MeetingIdorTest do
   """
   use TymeslotWeb.LiveCase, async: true
   @moduletag :security
+  @moduletag :cross_tenant
 
   import Tymeslot.Factory
 

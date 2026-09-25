@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
 
   @moduletag :integrations
 
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Outlook.EventMapper
 
   describe "format_event_data/1 — all-day events" do
@@ -242,6 +243,116 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapperTest do
       result = EventMapper.format_event_data(event_data)
 
       refute Map.has_key?(result, "recurrence")
+    end
+  end
+
+  # Graph's PATCH replaces the attendee collection with the one it is sent and
+  # ignores `status` on a write, so any attendee array in an update body resets
+  # every reply. The array is sent only when the caller supplied a list.
+  describe "format_event_data/1 — attendees" do
+    defp timed_event(extra) do
+      Map.merge(
+        %{
+          summary: "Sprint review",
+          start_time: ~U[2026-06-01 09:00:00Z],
+          end_time: ~U[2026-06-01 10:00:00Z],
+          timezone: "UTC"
+        },
+        extra
+      )
+    end
+
+    test "an edit that says nothing about attendees sends no attendees key" do
+      result = EventMapper.format_event_data(timed_event(%{summary: "Renamed"}))
+
+      refute Map.has_key?(result, "attendees")
+    end
+
+    test "a supplied list is sent as required attendees" do
+      result =
+        EventMapper.format_event_data(
+          timed_event(%{
+            attendees: [
+              %{"email" => "ada@example.com", "name" => "Ada"},
+              %{email: "bob@example.com"}
+            ]
+          })
+        )
+
+      assert result["attendees"] == [
+               %{
+                 "emailAddress" => %{"address" => "ada@example.com", "name" => "Ada"},
+                 "type" => "required"
+               },
+               %{
+                 "emailAddress" => %{"address" => "bob@example.com", "name" => "bob@example.com"},
+                 "type" => "required"
+               }
+             ]
+    end
+
+    # The removal of the last guest, which has to reach Graph as an empty
+    # collection rather than as no opinion.
+    test "a supplied empty list is sent as an empty collection" do
+      result = EventMapper.format_event_data(timed_event(%{attendees: []}))
+
+      assert result["attendees"] == []
+    end
+
+    test "a nil attendee list is no opinion and sends no attendees key" do
+      result = EventMapper.format_event_data(timed_event(%{attendees: nil}))
+
+      refute Map.has_key?(result, "attendees")
+    end
+
+    test "the ad-hoc meeting's single attendee is still sent" do
+      result =
+        EventMapper.format_event_data(
+          timed_event(%{attendee_email: "ada@example.com", attendee_name: "Ada"})
+        )
+
+      assert [%{"emailAddress" => %{"address" => "ada@example.com", "name" => "Ada"}}] =
+               result["attendees"]
+    end
+
+    test "keeps a cached attendee's label rather than replacing it with the address" do
+      result =
+        EventMapper.format_event_data(
+          timed_event(%{
+            attendees: [
+              %{
+                "email" => "ada@example.com",
+                "display_name" => "Ada Lovelace",
+                "response_status" => "accepted",
+                "optional" => false
+              }
+            ]
+          })
+        )
+
+      assert [%{"emailAddress" => %{"address" => "ada@example.com", "name" => "Ada Lovelace"}}] =
+               result["attendees"]
+    end
+
+    test "labels an attendee with no name by their address" do
+      result =
+        EventMapper.format_event_data(
+          timed_event(%{attendees: [Attendee.new(email: "ada@example.com")]})
+        )
+
+      assert [%{"emailAddress" => %{"address" => "ada@example.com", "name" => "ada@example.com"}}] =
+               result["attendees"]
+    end
+
+    test "drops an attendee with no address" do
+      result =
+        EventMapper.format_event_data(
+          timed_event(%{
+            attendees: [Attendee.new(email: "ada@example.com"), %{"display_name" => "Nobody"}]
+          })
+        )
+
+      assert [%{"emailAddress" => %{"address" => "ada@example.com"}}] = result["attendees"]
     end
   end
 end

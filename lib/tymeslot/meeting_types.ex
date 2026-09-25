@@ -2,18 +2,127 @@ defmodule Tymeslot.MeetingTypes do
   @moduledoc """
   Context for managing meeting types.
   """
+  alias Ecto.UUID
   alias Tymeslot.BookingPage.Publication
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes.Duration
   alias Tymeslot.MeetingTypes.FormMapper
   alias Tymeslot.MeetingTypes.FormValidation
+  alias Tymeslot.MeetingTypes.LocationOption
+  alias Tymeslot.MeetingTypes.LocationSelection
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.MeetingTypes.Slugs
   alias Tymeslot.Repo
+  alias Tymeslot.Utils.UriUtils
   require Logger
+
+  @doc """
+  The locations this meeting type offers, in the host's order.
+
+  See `Tymeslot.MeetingTypes.LocationSelection` for what a meeting type
+  with no stored list falls back to.
+  """
+  @spec location_options(map() | nil) :: [LocationOption.t()]
+  defdelegate location_options(meeting_type), to: LocationSelection, as: :options
+
+  @doc "Whether the booking page must ask the booker to choose a location."
+  @spec location_choice_required?(map() | nil) :: boolean()
+  defdelegate location_choice_required?(meeting_type),
+    to: LocationSelection,
+    as: :choice_required?
+
+  @doc """
+  Resolves the location option id a booker submitted, with the provider
+  they picked within a video option, into the meeting fields that follow
+  from it.
+
+  A video location can outlive an integration it names: the host
+  disconnected it, and the location keeps its id until the host next edits
+  the meeting type. Such an id is resolved as if the location did not list
+  it, so the meeting lands on the location's next listed integration, or on
+  none, and is booked without a room, just as a booking on a deactivated
+  integration is. A deactivated integration still resolves: the room job
+  checks it when it runs, and it may be switched back on by then.
+  """
+  @spec resolve_location(
+          map() | nil,
+          String.t() | nil,
+          String.t() | nil,
+          integer() | String.t() | nil
+        ) :: LocationSelection.resolution()
+  def resolve_location(meeting_type, option_id, guest_phone, video_integration_id \\ nil) do
+    meeting_type
+    |> without_removed_video_integrations()
+    |> LocationSelection.resolve(option_id, guest_phone, video_integration_id)
+  end
+
+  # Only a stored list can name a removed integration: the option a meeting
+  # type without one derives comes from its `video_integration_id`, which the
+  # foreign key nils when the integration goes.
+  defp without_removed_video_integrations(
+         %{user_id: user_id, locations: [_first | _rest] = locations} = meeting_type
+       )
+       when is_integer(user_id) do
+    if Enum.any?(locations, &(&1.video_integration_ids != [])) do
+      held = user_id |> Video.list_integrations() |> MapSet.new(& &1.id)
+
+      locations =
+        Enum.map(locations, fn location ->
+          %{
+            location
+            | video_integration_ids: Enum.filter(location.video_integration_ids, &(&1 in held))
+          }
+        end)
+
+      %{meeting_type | locations: locations}
+    else
+      meeting_type
+    end
+  end
+
+  defp without_removed_video_integrations(meeting_type), do: meeting_type
+
+  @doc """
+  The video providers the booker can pick between, per video location:
+  a map from option id to the host's active integrations that option
+  lists, in the host's order.
+
+  An integration the host has since deactivated or deleted is left out, so
+  the booker is never offered a provider that cannot create a room. A
+  location left with nothing active is absent from the map.
+  """
+  @spec location_video_choices(map() | nil) :: %{
+          String.t() => [%{id: integer(), name: String.t(), provider: String.t()}]
+        }
+  def location_video_choices(%{user_id: user_id} = meeting_type) when is_integer(user_id) do
+    video_options =
+      meeting_type |> LocationSelection.options() |> Enum.filter(&(&1.kind == "video"))
+
+    if video_options == [] do
+      %{}
+    else
+      active =
+        user_id
+        |> Video.list_integrations()
+        |> Enum.filter(& &1.is_active)
+        |> Map.new(&{&1.id, %{id: &1.id, name: &1.name, provider: &1.provider}})
+
+      for option <- video_options,
+          choices =
+            option.video_integration_ids |> Enum.map(&active[&1]) |> Enum.reject(&is_nil/1),
+          choices != [],
+          into: %{},
+          do: {option.id, choices}
+    end
+  end
+
+  def location_video_choices(_meeting_type), do: %{}
 
   @doc """
   Gets all active meeting types for a user, creating defaults if none exist.
@@ -190,6 +299,66 @@ defmodule Tymeslot.MeetingTypes do
     MeetingTypeQueries.reorder_meeting_types(user_id, meeting_type_ids)
   end
 
+  @typedoc """
+  The health of a meeting type's stored booking target, as of the last
+  calendar list refresh.
+  """
+  @type target_calendar_status :: :ok | :read_only | :missing
+
+  @doc """
+  Reports whether the calendar a meeting type books into can still take a
+  booking.
+
+  A meeting type may override where its bookings land
+  (`calendar_integration_id` plus `target_calendar_id`), and the override is
+  chosen once and then used for every booking of that type. The provider can
+  withdraw write access at any point afterwards: a shared Google calendar
+  downgraded to "see all event details", a CalDAV collection made read-only,
+  a calendar deleted outright. Saving the meeting type again would be
+  rejected (`Tymeslot.MeetingTypes.FormValidation`), but nothing forces the
+  host to save it again, so the dashboard uses this to say so unprompted.
+
+  Returns:
+
+    * `:ok` — the target is still writable, or there is nothing to check:
+      no override, or an integration whose `calendar_list` has never been
+      populated, which `FormValidation` likewise treats as unverifiable
+    * `:read_only` — the calendar is still on the account but the host can no
+      longer write to it
+    * `:missing` — the calendar is gone from the account altogether
+
+  The answer is only as fresh as the last calendar list refresh, so it is a
+  warning for the host, never a booking-time gate: see
+  `Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver`.
+  """
+  @spec target_calendar_status(MeetingTypeSchema.t() | map()) :: target_calendar_status()
+  def target_calendar_status(%{calendar_integration: %{calendar_list: calendar_list}} = type),
+    do: target_calendar_status(calendar_list, type.target_calendar_id)
+
+  def target_calendar_status(_meeting_type), do: :ok
+
+  @doc """
+  The same check against a raw calendar list and target id, for callers
+  holding the two apart from a persisted meeting type (the meeting type
+  editor, whose selection changes before anything is saved).
+
+  Ids are compared with `Tymeslot.Utils.UriUtils.uri_safe_match?/2`, as
+  `FormValidation` does: CalDAV ids are URLs whose percent-encoding varies
+  between listings, and `==` would report healthy calendars as `:missing`.
+  """
+  @spec target_calendar_status([CalendarEntry.t()] | nil, String.t() | nil) ::
+          target_calendar_status()
+  def target_calendar_status([_entry | _rest] = calendar_list, target_calendar_id)
+      when is_binary(target_calendar_id) and target_calendar_id != "" do
+    case Enum.find(calendar_list, &UriUtils.uri_safe_match?(&1.id, target_calendar_id)) do
+      nil -> :missing
+      %{read_only: true} -> :read_only
+      _writable -> :ok
+    end
+  end
+
+  def target_calendar_status(_calendar_list, _target_calendar_id), do: :ok
+
   # Slug resolution and custom-slug management live in the focused sibling
   # module Tymeslot.MeetingTypes.Slugs; these delegations keep the context's
   # public API stable.
@@ -206,12 +375,13 @@ defmodule Tymeslot.MeetingTypes do
   defdelegate validate_duration_selection(duration, available_types), to: Duration
 
   @doc """
-  Gets a meeting type by ID, raising if not found.
+  The maximum number of reminders one meeting type may carry.
+
+  The rule itself lives in `Tymeslot.MeetingTypes.ReminderValidation`; it is
+  exposed here so callers outside the domain, the form UI in particular, offer
+  exactly the number the save path enforces.
   """
-  @spec get_meeting_type!(integer()) :: Ecto.Schema.t()
-  def get_meeting_type!(id) do
-    MeetingTypeQueries.get_meeting_type!(id)
-  end
+  defdelegate max_reminders(), to: ReminderValidation
 
   @doc """
   Creates a meeting type from form parameters with validation.
@@ -296,6 +466,7 @@ defmodule Tymeslot.MeetingTypes do
         sort_order: 0,
         is_active: true,
         allow_video: false,
+        locations: [default_in_person_location()],
         calendar_integration_id: calendar_integration_id,
         target_calendar_id: target_calendar_id,
         reminder_config: [%{value: 30, unit: "minutes"}],
@@ -311,6 +482,7 @@ defmodule Tymeslot.MeetingTypes do
         sort_order: 1,
         is_active: true,
         allow_video: false,
+        locations: [default_in_person_location()],
         calendar_integration_id: calendar_integration_id,
         target_calendar_id: target_calendar_id,
         reminder_config: [%{value: 30, unit: "minutes"}],
@@ -318,5 +490,17 @@ defmodule Tymeslot.MeetingTypes do
         updated_at: now
       }
     ]
+  end
+
+  # These templates are bulk-inserted, so they bypass the changeset. Ecto
+  # still dumps the embed on the way to the database and refuses anything but
+  # the struct, so the struct is what the template carries.
+  defp default_in_person_location do
+    %LocationOption{
+      id: UUID.generate(),
+      kind: "in_person",
+      label: "In person",
+      position: 0
+    }
   end
 end

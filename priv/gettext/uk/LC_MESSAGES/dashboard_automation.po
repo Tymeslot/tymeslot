@@ -668,3 +668,13 @@ msgstr "Спрацьовує, коли ви відхиляєте запит на
 #, elixir-autogen, elixir-format
 msgid "Triggers on this event"
 msgstr "Спрацьовує для цієї події"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Delivery ID"
+msgstr "Ідентифікатор доставки"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "The delivery ID is the same on every retry of one delivery and different for every other delivery. A failed or timed-out delivery can be retried, so your endpoint may receive the same event twice: record the delivery ID and ignore a request whose ID you have already processed."
+msgstr "Ідентифікатор доставки однаковий для всіх повторних спроб однієї доставки й відрізняється для будь-якої іншої доставки. Невдалу доставку або доставку, що перевищила час очікування, може бути повторено, тому ваш endpoint може отримати ту саму подію двічі: зберігайте ідентифікатор доставки та ігноруйте запити з ідентифікатором, який ви вже обробили."

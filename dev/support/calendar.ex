@@ -36,6 +36,8 @@ defmodule Tymeslot.Dev.Calendar do
 
   @behaviour Tymeslot.Integrations.Calendar.CalendarBehaviour
 
+  alias Tymeslot.Integrations.Calendar.CalendarBehaviour
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.DebugSchedule
   alias Tymeslot.Integrations.Calendar.DebugStore
   alias Tymeslot.Profiles.ProfileQueries
@@ -75,7 +77,7 @@ defmodule Tymeslot.Dev.Calendar do
 
   # --- CalendarBehaviour -----------------------------------------------------
 
-  @impl true
+  @impl CalendarBehaviour
   def get_events_for_range_fresh(user_id, %Date{} = start_date, %Date{} = end_date) do
     timezone = timezone_for(user_id)
     range_start = day_start(start_date, timezone)
@@ -83,38 +85,33 @@ defmodule Tymeslot.Dev.Calendar do
     {:ok, generate(user_id, range_start, range_end, timezone)}
   end
 
-  @impl true
-  def get_event(uid, _user_id) do
-    case DebugStore.fetch_event(uid) do
-      {:ok, event} -> {:ok, event}
-      :error -> {:error, :not_found}
-    end
-  end
-
   # Records the event in-memory so a booking made in-app immediately shows as
   # busy on the debug calendar. Keyed by the meeting uid carried in event_data,
   # so later update/delete target the same entry.
-  @impl true
+  @impl CalendarBehaviour
   def create_event(event_data, _context) do
     case record_event(event_data) do
-      {:ok, uid} -> {:ok, %{uid: uid}}
-      :ignore -> {:ok, %{uid: "dev-stub-event"}}
+      {:ok, uid} -> {:ok, CreatedEvent.new(uid)}
+      :ignore -> {:ok, CreatedEvent.new("dev-stub-event")}
     end
   end
 
-  @impl true
+  @impl CalendarBehaviour
   def update_event(uid, event_data, _context) do
     record_event(Map.put(event_data, :uid, uid))
     :ok
   end
 
-  @impl true
+  @impl CalendarBehaviour
   def delete_event(uid, _context) do
     DebugStore.delete_event(uid)
     :ok
   end
 
-  @impl true
+  @impl CalendarBehaviour
+  def delete_event(uid, context, _opts), do: delete_event(uid, context)
+
+  @impl CalendarBehaviour
   def get_booking_integration_info(_context), do: {:error, :no_integration}
 
   # --- Helpers ---------------------------------------------------------------

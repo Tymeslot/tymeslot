@@ -119,6 +119,41 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduledTest do
       refute email.html_body =~ "Reminders Scheduled"
     end
 
+    test "tells the attendee the join link is unchanged when it is" do
+      details = build_reschedule_details()
+      details = Map.put(details, :original_attendee_video_url, details.attendee_video_url)
+
+      email = AppointmentRescheduled.render(:attendee, "attendee@example.com", details)
+
+      assert email.html_body =~ "Same link, new time"
+      refute email.html_body =~ "New link for the new time"
+    end
+
+    # Jitsi with token authentication signs each join link for the meeting's
+    # time, so a reschedule sends a different link from the one first sent.
+    test "tells the attendee the join link changed when it did" do
+      details =
+        build_reschedule_details(%{
+          original_attendee_video_url: "https://meet.example.com/room?jwt=old-token"
+        })
+
+      email = AppointmentRescheduled.render(:attendee, "attendee@example.com", details)
+
+      assert email.html_body =~ "New link for the new time"
+      assert email.html_body =~ details.attendee_video_url
+      refute email.html_body =~ "Same link, new time"
+    end
+
+    test "makes no claim about the join link when the previous one is unknown" do
+      details = Map.delete(build_reschedule_details(), :original_attendee_video_url)
+
+      email = AppointmentRescheduled.render(:attendee, "attendee@example.com", details)
+
+      assert email.html_body =~ details.attendee_video_url
+      refute email.html_body =~ "Same link, new time"
+      refute email.html_body =~ "New link for the new time"
+    end
+
     test "renders without the previously-scheduled line when no original slot is given" do
       details =
         Map.drop(build_appointment_details(), [
@@ -134,13 +169,15 @@ defmodule Tymeslot.Emails.Templates.AppointmentRescheduledTest do
       refute email.text_body =~ "Previously scheduled for"
     end
 
-    test "attaches an ICS whose SEQUENCE supersedes the invitation already sent" do
+    test "attaches an ICS carrying the revision the reschedule advanced the meeting to" do
+      # `Bookings.Reschedule` moves `ical_sequence` on before this email is
+      # built, so the stored value is already the new revision's SEQUENCE.
       details = build_reschedule_details(%{ical_sequence: 3})
       email = AppointmentRescheduled.render(:attendee, "attendee@example.com", details)
 
       assert ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
       assert ics.filename =~ details.uid
-      assert ics.data =~ "SEQUENCE:4"
+      assert ics.data =~ "SEQUENCE:3"
     end
 
     test "ICS starts at SEQUENCE 1 for a meeting that has never been updated" do

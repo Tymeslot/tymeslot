@@ -69,8 +69,9 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
-  alias Tymeslot.Availability.Breaks
+  alias Tymeslot.Availability.AvailabilityBreakSchema
   alias Tymeslot.Availability.WeeklySchedule
+  alias Tymeslot.Repo
 
   setup :setup_dashboard_user
 
@@ -91,6 +92,9 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
 
     Map.merge(ctx, %{user: user, profile: profile, schedule: schedule})
   end
+
+  defp breaks_for_day(day_id),
+    do: Repo.all_by(AvailabilityBreakSchema, weekly_availability_id: day_id)
 
   describe "add_break — end-before-start bypass" do
     @tag :capture_log
@@ -119,7 +123,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
       assert html =~ "End time must be after start time"
 
       day = WeeklySchedule.get_day_availability(schedule.id, 1)
-      assert Breaks.get_breaks_for_day(day.id) == []
+      assert breaks_for_day(day.id) == []
     end
   end
 
@@ -152,7 +156,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
       assert html =~ "Break label must be 50 characters or less"
 
       day = WeeklySchedule.get_day_availability(schedule.id, 1)
-      assert Breaks.get_breaks_for_day(day.id) == []
+      assert breaks_for_day(day.id) == []
     end
   end
 
@@ -201,7 +205,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
       assert html =~ "Break must start within this day&#39;s working hours"
 
       day = WeeklySchedule.get_day_availability(schedule.id, 1)
-      assert Breaks.get_breaks_for_day(day.id) == []
+      assert breaks_for_day(day.id) == []
     end
   end
 
@@ -237,7 +241,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
       refute html =~ "Break added"
       assert html =~ "This break overlaps an existing break"
 
-      assert [%{label: "Lunch"}] = Breaks.get_breaks_for_day(day.id)
+      assert [%{label: "Lunch"}] = breaks_for_day(day.id)
     end
   end
 end

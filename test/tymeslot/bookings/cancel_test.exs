@@ -200,8 +200,6 @@ defmodule Tymeslot.Bookings.CancelTest do
       )
     end
 
-    # No `expect/3` is set on StripeAdapterMock, so Mox raises if the
-    # cancellation reaches Stripe at all.
     test "does not touch Stripe when the request was never paid for" do
       %{user: user} = create_user_with_profile()
 
@@ -212,8 +210,20 @@ defmodule Tymeslot.Bookings.CancelTest do
           status: "awaiting_approval"
         })
 
+      test_pid = self()
+
+      # A stub rather than a missing expectation: the withdrawal runs its
+      # refund step inside a rescue, so an unexpected Mox call would be
+      # swallowed and this test would pass over the refund it exists to catch.
+      stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
+        send(test_pid, :refund_attempted)
+        {:ok, %{id: "re_unexpected"}}
+      end)
+
       assert {:ok, cancelled} = Cancel.execute(meeting.uid)
       assert cancelled.status == "cancelled"
+
+      refute_received :refund_attempted
       refute_enqueued(worker: SendBookingPaymentRefunded)
     end
 
@@ -253,10 +263,21 @@ defmodule Tymeslot.Bookings.CancelTest do
           first_announced_at: DateTime.utc_now(:second)
         })
 
-      # No `expect/3` is set on StripeAdapterMock, so Mox raises if the
-      # withdrawal reaches Stripe at all.
+      test_pid = self()
+
+      # A stub rather than a missing expectation: the withdrawal runs its
+      # refund step inside a rescue, so an unexpected Mox call would be
+      # swallowed and every assertion below would still pass over a refund
+      # that had just gone out.
+      stub(StripeAdapterMock, :create_refund, fn _params, _opts ->
+        send(test_pid, :refund_attempted)
+        {:ok, %{id: "re_unexpected"}}
+      end)
+
       assert {:ok, cancelled} = Cancel.execute(meeting.uid)
       assert cancelled.status == "cancelled"
+
+      refute_received :refund_attempted
 
       reloaded = BookingPaymentQueries.by_meeting_id(meeting.id)
       assert reloaded.status == "paid"

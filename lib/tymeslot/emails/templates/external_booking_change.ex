@@ -24,7 +24,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     TimezoneHelper
   }
 
-  alias Tymeslot.Locales
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Utils.UrlBuilder
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -43,7 +43,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   @spec render(Meeting.t(), String.t(), discrepancy(), String.t()) :: Swoosh.Email.t()
   def render(%Meeting{} = meeting, organizer_email, discrepancy, owner_timezone)
       when discrepancy in [:deleted, :modified] do
-    locale = organizer_locale()
+    locale = RecipientLocale.locale_for_user_id(meeting.organizer_user_id)
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       owner_time = TimezoneHelper.convert_to_timezone(meeting.start_time, owner_timezone)
@@ -219,10 +219,6 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   # ---------------------------------------------------------------------------
   # Helpers
   # ---------------------------------------------------------------------------
-
-  # Organizer locale — currently the system default. When per-user locale
-  # preferences are added, resolve from the meeting's organizer_user_id.
-  defp organizer_locale, do: Locales.admin_default_locale()
 
   defp email_subject(:deleted, title, date_short),
     do:

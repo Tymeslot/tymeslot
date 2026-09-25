@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityRangeCacheTest do
   @moduledoc """
   Pins what the availability layer asks the host's calendar provider for.
 
-  The fetch behind `get_range_availability/7` is window-shaped, not
+  The fetch behind `Offer.days_in_range/4` is window-shaped, not
   month-shaped: it always returns `today .. today + advance_booking_days`,
   whatever date it is handed. Every rendered month therefore folds the
   *same* event list, and anything that walks the calendar — month arrows,
@@ -22,10 +22,9 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityRangeCacheTest do
   import Mox
   import Tymeslot.Factory
 
-  alias Tymeslot.Availability.Calculate
+  alias Tymeslot.Availability.{Calculate, Offer}
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.TestMocks
-  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
 
   setup :verify_on_exit!
 
@@ -62,7 +61,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityRangeCacheTest do
   end
 
   test "walking the calendar forward fetches the provider once, not once per month",
-       %{user: user, profile: profile} do
+       %{profile: profile} do
     test_pid = self()
 
     stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
@@ -81,15 +80,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityRangeCacheTest do
 
     Enum.each(ranges, fn {start_date, end_date} ->
       assert {:ok, map} =
-               AvailabilityHelpers.get_range_availability(
-                 user.id,
-                 start_date,
-                 end_date,
-                 "America/New_York",
-                 profile,
-                 context(profile),
-                 30
-               )
+               Offer.days_in_range(request(profile), start_date, end_date, 30)
 
       assert map != %{}
     end)
@@ -102,7 +93,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityRangeCacheTest do
   end
 
   test "a failed fetch is not cached, so the next window retries it",
-       %{user: user, profile: profile} do
+       %{profile: profile} do
     test_pid = self()
 
     stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
@@ -117,15 +108,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityRangeCacheTest do
       {start_date, end_date} = Calculate.display_range(date.year, date.month)
 
       assert {:error, :all_calendars_unavailable} =
-               AvailabilityHelpers.get_range_availability(
-                 user.id,
-                 start_date,
-                 end_date,
-                 "America/New_York",
-                 profile,
-                 context(profile),
-                 30
-               )
+               Offer.days_in_range(request(profile), start_date, end_date, 30)
     end
 
     # Caching the failure would pin an empty calendar for the whole TTL,
@@ -146,15 +129,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityRangeCacheTest do
     {start_date, end_date} = Calculate.display_range(today.year, today.month)
 
     fetch = fn ->
-      AvailabilityHelpers.get_range_availability(
-        user.id,
-        start_date,
-        end_date,
-        "America/New_York",
-        profile,
-        context(profile),
-        30
-      )
+      Offer.days_in_range(request(profile), start_date, end_date, 30)
     end
 
     assert {:ok, _map} = fetch.()
@@ -170,13 +145,8 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityRangeCacheTest do
     assert provider_fetch_count() == 1
   end
 
-  defp context(profile) do
-    %{
-      demo_mode: false,
-      organizer_profile: profile,
-      meeting_type: nil,
-      debug_calendar_module: nil
-    }
+  defp request(profile) do
+    %{profile: profile, user_timezone: "America/New_York", meeting_type: nil}
   end
 
   # Drains and counts the fetch notifications the stub sent, so the count is

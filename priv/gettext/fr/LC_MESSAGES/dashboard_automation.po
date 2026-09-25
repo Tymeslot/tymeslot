@@ -667,3 +667,13 @@ msgstr "Se déclenche lorsque vous refusez une demande de réservation"
 #, elixir-autogen, elixir-format
 msgid "Triggers on this event"
 msgstr "Se déclenche pour cet événement"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "Delivery ID"
+msgstr "Identifiant de livraison"
+
+#: lib/tymeslot_web/live/dashboard/automation/webhook_documentation.ex
+#, elixir-autogen, elixir-format
+msgid "The delivery ID is the same on every retry of one delivery and different for every other delivery. A failed or timed-out delivery can be retried, so your endpoint may receive the same event twice: record the delivery ID and ignore a request whose ID you have already processed."
+msgstr "L'identifiant de livraison est le même à chaque nouvelle tentative d'une même livraison et différent pour toute autre livraison. Une livraison échouée ou expirée peut être retentée, votre point de terminaison peut donc recevoir deux fois le même événement : enregistrez l'identifiant de livraison et ignorez toute requête dont vous avez déjà traité l'identifiant."

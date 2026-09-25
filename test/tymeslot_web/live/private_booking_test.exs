@@ -11,6 +11,7 @@ defmodule TymeslotWeb.PrivateBookingTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.BookingTestHelpers
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -146,7 +147,7 @@ defmodule TymeslotWeb.PrivateBookingTest do
   defp book_selected_slot(view, attendee_email) do
     today = @timezone |> DateTime.now!() |> DateTime.to_date()
     target_date = Date.add(today, 1)
-    target_date = maybe_advance_calendar_to_month(view, today, target_date)
+    BookingTestHelpers.show_month(view, target_date)
     date_str = Date.to_string(target_date)
 
     wait_until(fn ->
@@ -184,15 +185,5 @@ defmodule TymeslotWeb.PrivateBookingTest do
       }
     })
     |> render_submit()
-  end
-
-  defp maybe_advance_calendar_to_month(view, today, target_date) do
-    if {target_date.year, target_date.month} != {today.year, today.month} do
-      view
-      |> element("button[phx-click='next_month']")
-      |> render_click()
-    end
-
-    target_date
   end
 end

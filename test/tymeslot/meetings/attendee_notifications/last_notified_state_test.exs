@@ -52,4 +52,32 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.LastNotifiedStateTest do
       assert pseudo.attendees == [%{email: "a@x.com"}]
     end
   end
+
+  describe "all-day dates" do
+    test "round-trip through serialise/2 and to_event/1" do
+      state =
+        LastNotifiedState.serialise(
+          %{title: "Offsite", start_date: ~D[2026-10-12], end_date: ~D[2026-10-15]},
+          []
+        )
+
+      assert {state["start_date"], state["end_date"]} == {"2026-10-12", "2026-10-15"}
+      assert state["starts_at"] == nil
+
+      pseudo = LastNotifiedState.to_event(state)
+      assert {pseudo.start_date, pseudo.end_date} == {~D[2026-10-12], ~D[2026-10-15]}
+    end
+
+    test "a baseline recorded before dates were restores them as nil" do
+      pseudo = LastNotifiedState.to_event(%{"title" => "old", "starts_at" => nil})
+      assert {pseudo.start_date, pseudo.end_date} == {nil, nil}
+    end
+  end
+
+  describe "empty?/1" do
+    test "is true only for a state that was never recorded" do
+      assert LastNotifiedState.empty?(%{})
+      refute LastNotifiedState.empty?(LastNotifiedState.serialise(%{title: "t"}, []))
+    end
+  end
 end

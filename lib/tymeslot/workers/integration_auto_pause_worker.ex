@@ -4,7 +4,8 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorker do
   unhealthy long enough that continuing to probe them is wasted work.
   Pausing sets `is_active: false` on the integration so the scheduled probe
   loop stops enqueueing work for it, and sends a one-off "paused"
-  notification email.
+  notification email. Each run raises at most one aggregate admin alert
+  through `Tymeslot.Integrations.HealthCheck.Alerting.report_auto_pauses/2`.
 
   ## Triggers (dual threshold)
 
@@ -57,6 +58,7 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorker do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.HealthCheck.Alerting
   alias Tymeslot.Integrations.HealthCheck.HealthStatus
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
@@ -78,20 +80,25 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorker do
     Logger.info("IntegrationAutoPauseWorker pass complete",
       cutoff_days: cutoff_days,
       hard_failure_count: hard_failure_count,
-      paused_calendar: paused_calendar,
-      paused_video: paused_video
+      paused_calendar: length(paused_calendar),
+      paused_video: length(paused_video)
     )
+
+    # One alert for the whole run, however many were paused: each owner is
+    # already emailed, and the operator needs the count, not a message each.
+    Alerting.report_auto_pauses(%{calendar: paused_calendar, video: paused_video})
 
     :ok
   end
 
+  # The ids of the integrations this run actually paused.
   defp pause_type(type, calendar_cutoff, hard_failure_count, cutoff_days) do
-    rows =
-      IntegrationHealthStateQueries.list_pausable(type, calendar_cutoff, hard_failure_count)
-
-    Enum.count(rows, fn row ->
-      pause_one(type, row, calendar_cutoff, hard_failure_count, cutoff_days) == :ok
-    end)
+    type
+    |> IntegrationHealthStateQueries.list_pausable(calendar_cutoff, hard_failure_count)
+    |> Enum.filter(
+      &(pause_one(type, &1, calendar_cutoff, hard_failure_count, cutoff_days) == :ok)
+    )
+    |> Enum.map(& &1.integration_id)
   end
 
   defp pause_one(type, row, calendar_cutoff, hard_failure_count, cutoff_days) do

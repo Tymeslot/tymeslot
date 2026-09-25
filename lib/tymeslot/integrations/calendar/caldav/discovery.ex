@@ -53,7 +53,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   # authenticated user must not be able to drive server-side requests at
   # internal hosts (169.254.169.254, 10.x, loopback, link-local) during
   # Discover/Test any more than they can save such a URL. Plain HTTP for public
-  # hosts is still rejected via `enforce_https_for_public`.
+  # hosts is still rejected via `enforce_https_for_public`, except for a host on
+  # an internal name once private addresses are allowed.
   #
   # `opts[:allow_private_ips]` lets a trusted in-process caller (e.g. the live
   # CalDAV integration test against a local Baikal container) bypass the
@@ -67,7 +68,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
     allow_private = Keyword.get(opts, :allow_private_ips, SsrfGuard.allow_private_for_calendar?())
 
     if allow_private do
-      Keyword.put(base, :block_private_ips, false)
+      Keyword.merge(base, block_private_ips: false, internal_names_local: true)
     else
       base
     end

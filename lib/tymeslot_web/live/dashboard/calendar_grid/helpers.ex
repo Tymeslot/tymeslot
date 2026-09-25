@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   defdelegate load_integrations(socket), to: DataLoading
   defdelegate load_events(socket), to: DataLoading
   defdelegate precompute_derived(socket), to: DataLoading
+  defdelegate assign_timezone(socket), to: DataLoading
 
   # Event positioning
 
@@ -45,6 +46,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
 
   defdelegate col_count(assigns), to: PreferenceHelpers
   defdelegate day_header_class(day, timezone), to: PreferenceHelpers
+  defdelegate today(timezone), to: PreferenceHelpers
   defdelegate period_label(assigns), to: PreferenceHelpers
   defdelegate view_label(view), to: PreferenceHelpers
   defdelegate navigate_month(date, delta), to: PreferenceHelpers

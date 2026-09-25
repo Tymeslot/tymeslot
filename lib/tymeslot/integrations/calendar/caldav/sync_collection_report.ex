@@ -26,9 +26,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
   @doc """
   Fetches a sync-collection REPORT from the CalDAV server.
 
-  Uses the integration's stored `caldav_sync_token` to request only
-  changes since the last sync. When the token is `nil` a full initial
-  sync is requested.
+  Sends the collection's stored `sync_token` to request only changes since
+  the last sync. When the token is `nil` a full initial sync is requested.
 
   Returns `{:ok, {events, deleted_hrefs, new_sync_token}}` on success,
   `{:error, :sync_token_expired}` when the server responds with 410 Gone,
@@ -36,11 +35,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
   without inlining their calendar data (see `parse_response/1`), or
   `{:error, reason}` for other failures.
   """
-  @spec fetch(map(), map(), String.t()) ::
+  @spec fetch(map(), String.t(), String.t() | nil) ::
           {:ok, {list(map()), list(String.t()), String.t() | nil}}
           | {:error, term()}
-  def fetch(integration, client, calendar_url) do
-    sync_token = integration.caldav_sync_token
+  def fetch(client, calendar_url, sync_token) do
     report_body = build_report(sync_token)
 
     # RFC 6578, Section 3.2: the sync-collection report is defined only for
@@ -153,10 +151,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
     {changed, withheld} = Enum.split_with(present, &(&1.calendar_data != ""))
 
     if withheld == [] do
-      events =
-        changed
-        |> Enum.map(&parse_event/1)
-        |> Enum.reject(&is_nil/1)
+      events = Enum.flat_map(changed, &parse_event/1)
 
       {:ok, {events, Enum.map(removed, & &1.href), new_sync_token}}
     else
@@ -188,16 +183,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
   # An event whose iCalendar body fails to parse is dropped rather than
   # failing the batch: it is malformed at the source, so re-fetching it in
   # full would produce the same result every cycle.
+  #
+  # One resource yields one event per `VEVENT` in it, not one event: a
+  # recurring event's resource carries the master and one `VEVENT` per
+  # occurrence edited on its own. They share the resource's href and ETag,
+  # because that is what those identify.
   defp parse_event(response) do
-    case EventProcessor.parse_ical_from_string(response.calendar_data) do
-      {:ok, event} ->
-        Map.merge(event, %{
-          href: response.href,
-          etag: EventProcessor.clean_etag(response.etag)
-        })
+    case EventProcessor.parse_ical_events(response.calendar_data) do
+      {:ok, events} ->
+        Enum.map(
+          events,
+          &Map.merge(&1, %{
+            href: response.href,
+            etag: EventProcessor.clean_etag(response.etag)
+          })
+        )
 
       {:error, _reason} ->
-        nil
+        []
     end
   end
 

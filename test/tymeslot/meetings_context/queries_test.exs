@@ -1,7 +1,7 @@
 defmodule Tymeslot.MeetingsContext.QueriesTest do
   @moduledoc """
   Behaviour tests for the Meetings context covering read paths:
-  upcoming/past/cancelled listings and cursor pagination.
+  upcoming listings and cursor pagination.
   """
 
   use Tymeslot.DataCase, async: true
@@ -12,7 +12,6 @@ defmodule Tymeslot.MeetingsContext.QueriesTest do
 
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Listing
-  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.TestMocks
   import Tymeslot.MeetingTestHelpers
   import Tymeslot.CursorPaginationTestCases
@@ -53,44 +52,6 @@ defmodule Tymeslot.MeetingsContext.QueriesTest do
       meetings = Meetings.list_upcoming_meetings_for_user(user.email)
 
       assert meetings == []
-    end
-  end
-
-  describe "when viewing past meetings" do
-    test "returns only past meetings" do
-      %{user: user} = create_user_with_profile()
-
-      past =
-        insert_meeting_for_user(user, %{
-          status: "completed",
-          start_offset: -86_400,
-          duration: 3_600
-        })
-
-      _upcoming = insert_meeting_for_user(user)
-
-      meetings = MeetingListQueries.list_past_meetings_for_user(user.email)
-
-      assert length(meetings) == 1
-      assert hd(meetings).id == past.id
-    end
-  end
-
-  describe "when viewing cancelled meetings" do
-    test "returns only cancelled meetings" do
-      %{user: user} = create_user_with_profile()
-
-      cancelled =
-        insert_meeting_for_user(user, %{
-          status: "cancelled"
-        })
-
-      _confirmed = insert_meeting_for_user(user)
-
-      meetings = MeetingListQueries.list_cancelled_meetings_for_user(user.email, [])
-
-      assert length(meetings) == 1
-      assert hd(meetings).id == cancelled.id
     end
   end
 

@@ -4,12 +4,31 @@ defmodule Tymeslot.Security.SsrfBlockedError do
   user-supplied host is refused by `Tymeslot.Security.SsrfGuard`.
   """
 
+  # The refused URL can carry a secret in its path — a Nextcloud Talk room
+  # token is both the conversation's id and its join link — and this struct
+  # travels to callers that log it with `inspect/1`, which does not go through
+  # `message/1`. Dropping the field from the inspect output is what keeps the
+  # two paths consistent; `message/1` reduces it to an origin for the same
+  # reason.
+  @derive {Inspect, except: [:url]}
   defexception [:url, :reason]
 
   @impl Exception
   def message(%__MODULE__{url: url, reason: reason}) do
-    "outbound request to #{inspect(url)} blocked by SSRF protection: #{inspect(reason)}"
+    "outbound request to #{origin(url)} blocked by SSRF protection: #{inspect(reason)}"
   end
+
+  defp origin(url) when is_binary(url) do
+    case URI.parse(url) do
+      %URI{scheme: scheme, host: host} when is_binary(scheme) and is_binary(host) ->
+        "#{scheme}://#{host}"
+
+      _other ->
+        "unknown"
+    end
+  end
+
+  defp origin(_url), do: "unknown"
 end
 
 defmodule Tymeslot.Security.SsrfGuard do
@@ -44,8 +63,25 @@ defmodule Tymeslot.Security.SsrfGuard do
     * video — `config :tymeslot, :allow_private_ips_for_video, true`
       (`ALLOW_PRIVATE_IPS_FOR_VIDEO=true`), read by `allow_private_for_video?/0`
 
+  The calendar switch also satisfies video, but only while the video one is
+  left unset; `ALLOW_PRIVATE_IPS_FOR_VIDEO=false` is an answer about video and
+  is not overruled by it. See `allow_private_for_video?/0`.
+
   Both bypasses are honoured at save time as well as at request time, so a URL
   the operator is allowed to reach is also a URL they are allowed to store.
+
+  ## Plain http to an internal name
+
+  With private addresses allowed, a server on an internal name (a single label
+  such as a Docker service name, or a name under `.local`, `.lan`, `.internal`
+  or `.home.arpa`) may be saved with plain `http://`, decided from the name's
+  shape alone (see `Tymeslot.Security.UrlValidation`). The shape can be wrong:
+  a resolver search domain can complete a single label to a public name, and
+  nothing reserves `.lan`. Such requests carry credentials in clear text, so
+  the opt-out does not skip resolution for them: the name must resolve only to
+  private, loopback or link-local addresses, and the request is pinned to one
+  of them, or it is refused before anything is sent. `https://`, `localhost`
+  and address literals are unaffected.
   """
 
   alias Tymeslot.Security.{DnsResolution, UrlValidation}
@@ -77,24 +113,33 @@ defmodule Tymeslot.Security.SsrfGuard do
   hostname and then letting Finch resolve it again leaves the DNS-rebinding
   window this module's moduledoc describes.
 
-  An empty list means no address was resolved because none needed to be — the
-  environment or an operator opt-out permitted the request on syntax alone —
-  and there is correspondingly nothing to pin to.
+  An empty list means no address was resolved because none needed to be (the
+  environment or an operator opt-out permitted the request on syntax alone),
+  and there is correspondingly nothing to pin to. The one exception to the
+  opt-out is plain http to an internal name, described in the moduledoc.
   """
   @spec validate_pinned(String.t(), keyword()) ::
           {:ok, [:inet.ip_address()]} | {:error, atom() | String.t()}
   def validate_pinned(url, opts \\ []) do
     cond do
-      Keyword.get(opts, :allow_private, allow_private_for_calendar?()) ->
-        {:ok, []}
-
       not production?() ->
         {:ok, []}
+
+      Keyword.get(opts, :allow_private, allow_private_for_calendar?()) ->
+        validate_private_allowed(url)
 
       true ->
         with :ok <- UrlValidation.validate_http_url(url, block_private_ips: true) do
           resolve_public(dns_resolver(), url)
         end
+    end
+  end
+
+  defp validate_private_allowed(url) do
+    if UrlValidation.http_to_internal_name?(url) do
+      resolve_internal(dns_resolver(), url)
+    else
+      {:ok, []}
     end
   end
 
@@ -109,6 +154,18 @@ defmodule Tymeslot.Security.SsrfGuard do
       resolver.resolve_public(url, [])
     else
       with :ok <- resolver.check_private_ip(url, []), do: {:ok, []}
+    end
+  end
+
+  # Fails closed: a resolver that cannot confirm the name is internal leaves
+  # nothing to vouch for sending credentials over plain http.
+  @spec resolve_internal(module(), String.t()) ::
+          {:ok, [:inet.ip_address()]} | {:error, atom() | String.t()}
+  defp resolve_internal(resolver, url) do
+    if Code.ensure_loaded?(resolver) and function_exported?(resolver, :resolve_internal, 2) do
+      resolver.resolve_internal(url, [])
+    else
+      {:error, :internal_name_unverified}
     end
   end
 
@@ -135,15 +192,26 @@ defmodule Tymeslot.Security.SsrfGuard do
 
   Video is its own subsystem: a self-hoster running MiroTalk or their own
   meeting server on an internal network should not have to relax calendar SSRF
-  to reach it. `ALLOW_PRIVATE_IPS_FOR_CALENDAR` nevertheless still satisfies
-  video, because it shipped documented as covering both and revoking that would
-  silently break the deployments already relying on it.
+  to reach it. The key therefore carries three states rather than two.
+
+  Left unset, `ALLOW_PRIVATE_IPS_FOR_CALENDAR` still satisfies video, because it
+  shipped documented as covering both and revoking that would silently break the
+  deployments already relying on it. Set, it decides alone: an operator who
+  writes `ALLOW_PRIVATE_IPS_FOR_VIDEO=false` has answered for video, and a
+  calendar switch set for the calendar's sake must not quietly overrule them.
+
+  `config/runtime.exs` is what keeps the two apart: it leaves the key absent for
+  an unset or blank environment variable and writes the boolean for any other
+  value.
   """
   @spec allow_private_for_video?() :: boolean()
   def allow_private_for_video? do
-    Application.get_env(:tymeslot, :allow_private_ips_for_video, false) or
-      allow_private_for_calendar?()
+    video_opt_out(Application.get_env(:tymeslot, :allow_private_ips_for_video))
   end
+
+  # Only an absent key defers to calendar; any configured value is the answer.
+  defp video_opt_out(nil), do: allow_private_for_calendar?()
+  defp video_opt_out(allowed), do: allowed == true
 
   defp production? do
     Application.get_env(:tymeslot, :environment) == :prod

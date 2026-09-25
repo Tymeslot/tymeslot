@@ -27,9 +27,11 @@ defmodule Tymeslot.Auth.PasswordResetCompositionTest do
 
   alias Tymeslot.Auth.PasswordReset
   alias Tymeslot.Auth.{UserQueries, UserSchema, UserSessionSchema}
+  alias Tymeslot.Emails.EmailScheduler.LinkArg
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, RateLimiter}
   alias Tymeslot.Workers.EmailWorker
+  alias TymeslotWeb.Helpers.ClientIP
 
   setup do
     RateLimiter.clear_all()
@@ -63,13 +65,18 @@ defmodule Tymeslot.Auth.PasswordResetCompositionTest do
                  args: %{"action" => "send_password_reset", "user_id" => user.id}
                )
 
-      raw_token = extract_token_from_url(reset_job.args["reset_url"])
+      raw_token = extract_token_from_url(emailed_link(reset_job, "reset_url"))
 
       # --- reset ---
       new_password = "BrandNewPassword456!"
 
       assert {:ok, _user_map, _message} =
-               PasswordReset.reset_password(raw_token, new_password, new_password)
+               PasswordReset.reset_password(
+                 raw_token,
+                 new_password,
+                 new_password,
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       # Password actually changed.
       {:ok, final_user} = UserQueries.get_user_by_email(user.email)
@@ -83,10 +90,15 @@ defmodule Tymeslot.Auth.PasswordResetCompositionTest do
 
       # Token is now single-use; a second attempt with the same token is rejected.
       assert {:error, :invalid_token, _message} =
-               PasswordReset.reset_password(raw_token, new_password, new_password)
+               PasswordReset.reset_password(
+                 raw_token,
+                 new_password,
+                 new_password,
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
-    test "OAuth user rejection short-circuits before any email is scheduled" do
+    test "a social account is told by email, never on screen, and gets no reset link" do
       oauth_user =
         insert(:user,
           provider: "google",
@@ -94,13 +106,20 @@ defmodule Tymeslot.Auth.PasswordResetCompositionTest do
           email: "oauth-#{System.unique_integer([:positive])}@example.com"
         )
 
-      assert {:error, :oauth_user, _message} = PasswordReset.initiate_reset(oauth_user.email)
+      assert {:ok, :reset_initiated, _message} = PasswordReset.initiate_reset(oauth_user.email)
 
-      # Nothing was enqueued for this user.
+      refute Repo.get!(UserSchema, oauth_user.id).reset_token_hash
+
       assert [] =
                all_enqueued(
                  worker: EmailWorker,
                  args: %{"action" => "send_password_reset", "user_id" => oauth_user.id}
+               )
+
+      assert [_notice] =
+               all_enqueued(
+                 worker: EmailWorker,
+                 args: %{"action" => "send_no_password_to_reset", "user_id" => oauth_user.id}
                )
     end
   end
@@ -111,5 +130,11 @@ defmodule Tymeslot.Auth.PasswordResetCompositionTest do
 
   defp extract_token_from_url(url) do
     url |> URI.parse() |> Map.fetch!(:path) |> String.split("/") |> List.last()
+  end
+
+  # The link is stored encrypted in the job args; read it back as the worker does.
+  defp emailed_link(job, key) do
+    {:ok, url} = LinkArg.fetch(job.args, key)
+    url
   end
 end

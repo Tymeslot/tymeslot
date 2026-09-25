@@ -14,6 +14,7 @@ defmodule Tymeslot.Meetings.Scheduling do
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Meetings.BookingLimits
   alias Tymeslot.Meetings.BookingLimits.Checker
+  alias Tymeslot.Meetings.GroupMeetingQueries
   alias Tymeslot.Meetings.MeetingConflictQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
@@ -262,7 +263,7 @@ defmodule Tymeslot.Meetings.Scheduling do
   end
 
   defp create_group_meeting_in_transaction(attrs) do
-    case MeetingQueries.create_group_meeting(attrs) do
+    case GroupMeetingQueries.create_group_meeting(attrs) do
       {:ok, meeting} -> meeting
       {:error, changeset} -> Repo.rollback({:validation_error, changeset})
     end

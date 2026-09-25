@@ -10,6 +10,8 @@ defmodule Tymeslot.Meetings.MeetingStateTest do
   @moduletag :meetings
   @moduletag :unit
 
+  import Tymeslot.Test.ClockHelpers
+
   alias Tymeslot.Meetings.MeetingState
 
   describe "active?/1" do
@@ -27,6 +29,21 @@ defmodule Tymeslot.Meetings.MeetingStateTest do
       refute MeetingState.active?(%{status: "completed"})
       refute MeetingState.active?(%{status: "awaiting_payment"})
       refute MeetingState.active?(%{status: "expired"})
+    end
+  end
+
+  describe "released_status?/1" do
+    test "true for a cancelled booking and an expired request" do
+      assert MeetingState.released_status?("cancelled")
+      assert MeetingState.released_status?("expired")
+    end
+
+    test "false for every status that may still take place, and for none" do
+      for status <- ["pending", "awaiting_payment", "awaiting_approval", "confirmed", "completed"] do
+        refute MeetingState.released_status?(status), status
+      end
+
+      refute MeetingState.released_status?(nil)
     end
   end
 
@@ -140,6 +157,36 @@ defmodule Tymeslot.Meetings.MeetingStateTest do
 
     test "false for a meeting with no pending request" do
       refute MeetingState.awaiting_new_time?(%{status: "confirmed", reschedule_requested_at: nil})
+    end
+  end
+
+  describe "approval_deadline_passed?/2" do
+    @deadline ~U[2026-03-10 12:00:00.000000Z]
+
+    test "true exactly at the deadline" do
+      assert MeetingState.approval_deadline_passed?(%{approval_deadline_at: @deadline}, @deadline)
+    end
+
+    test "false one microsecond before the deadline" do
+      now = DateTime.add(@deadline, -1, :microsecond)
+
+      refute MeetingState.approval_deadline_passed?(%{approval_deadline_at: @deadline}, now)
+    end
+
+    test "true after the deadline" do
+      now = DateTime.add(@deadline, 1, :second)
+
+      assert MeetingState.approval_deadline_passed?(%{approval_deadline_at: @deadline}, now)
+    end
+
+    test "false when the meeting has no deadline" do
+      refute MeetingState.approval_deadline_passed?(%{approval_deadline_at: nil}, @deadline)
+    end
+
+    test "reads the clock when no time is given" do
+      freeze_clock(@deadline)
+
+      assert MeetingState.approval_deadline_passed?(%{approval_deadline_at: @deadline})
     end
   end
 end

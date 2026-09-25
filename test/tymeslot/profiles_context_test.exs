@@ -104,11 +104,6 @@ defmodule Tymeslot.ProfilesContextTest do
       assert updated.max_bookings_per_day == 5
       assert updated.full_name == "Test User"
     end
-
-    test "update_field updates a single profile field", %{profile: profile} do
-      assert {:ok, updated} = ProfileQueries.update_field(profile, :timezone, "Europe/London")
-      assert updated.timezone == "Europe/London"
-    end
   end
 
   # =====================================
@@ -144,6 +139,19 @@ defmodule Tymeslot.ProfilesContextTest do
       assert {:ok, _result} = Profiles.update_username(profile, new_username, user.id)
     end
 
+    test "update_username does not use up a change on a username it rejects" do
+      user = insert(:user)
+      profile = insert(:profile, user: user, username: "sarah")
+
+      # Six refusals, the whole two-hour allowance, must leave it untouched.
+      for _attempt <- 1..6 do
+        assert {:error, reason} = Profiles.update_username(profile, "admin", user.id)
+        assert reason =~ "reserved"
+      end
+
+      assert {:ok, %{username: "sarah-r"}} = Profiles.update_username(profile, "sarah-r", user.id)
+    end
+
     test "username validation rejects invalid formats" do
       reserved = [reserved_words: ReservedPaths.list()]
 
@@ -169,6 +177,12 @@ defmodule Tymeslot.ProfilesContextTest do
 
       assert {:error, reason} = Profiles.update_username(profile, "admin", user.id)
       assert reason =~ "reserved"
+    end
+
+    test "every reserved path is written in lowercase" do
+      # Usernames must be lowercase, so an entry with a capital letter can never
+      # match one and reserves nothing.
+      assert Enum.reject(ReservedPaths.list(), &(&1 == String.downcase(&1))) == []
     end
 
     test "every supported locale code is a reserved path" do
@@ -243,6 +257,16 @@ defmodule Tymeslot.ProfilesContextTest do
 
       assert Profiles.avatar_url(nil) =~ "data:image/svg+xml"
       assert Profiles.avatar_url(%{profile | avatar: nil}) =~ "data:image/svg+xml"
+    end
+
+    test "uploaded_avatar_url is absolute for an upload and nil otherwise, never a data URI" do
+      profile = insert(:profile, avatar: "test.jpg")
+
+      assert Profiles.uploaded_avatar_url(profile) ==
+               "http://localhost:4002/uploads/avatars/#{profile.id}/test.jpg"
+
+      assert Profiles.uploaded_avatar_url(%{profile | avatar: nil}) == nil
+      assert Profiles.uploaded_avatar_url(nil) == nil
     end
 
     test "update_avatar validates image content" do
@@ -442,6 +466,40 @@ defmodule Tymeslot.ProfilesContextTest do
       # Custom timezone is not the default, so should_use_detected? returns false.
       # The profile's existing timezone is returned unchanged.
       assert result.timezone == "Asia/Tokyo"
+    end
+  end
+
+  describe "ensure_timezone/2" do
+    test "never overwrites a timezone the profile already has" do
+      profile = insert(:profile, timezone: "Asia/Tokyo")
+
+      assert {:ok, ensured} = Profiles.ensure_timezone(profile, "America/Chicago")
+      assert ensured.timezone == "Asia/Tokyo"
+      assert Repo.reload!(profile).timezone == "Asia/Tokyo"
+    end
+
+    test "persists the detected timezone when the profile has none" do
+      profile = insert(:profile, timezone: nil)
+
+      assert {:ok, ensured} = Profiles.ensure_timezone(profile, "America/Chicago")
+      assert ensured.timezone == "America/Chicago"
+      assert Repo.reload!(profile).timezone == "America/Chicago"
+    end
+
+    test "persists the default instead of an unrecognised detected timezone" do
+      profile = insert(:profile, timezone: nil)
+
+      assert {:ok, ensured} = Profiles.ensure_timezone(profile, "Etc/Unknown")
+      assert ensured.timezone == Profiles.get_default_timezone()
+      assert Repo.reload!(profile).timezone == Profiles.get_default_timezone()
+    end
+
+    test "persists the default when no timezone was detected" do
+      profile = insert(:profile, timezone: nil)
+
+      assert {:ok, ensured} = Profiles.ensure_timezone(profile, nil)
+      assert ensured.timezone == Profiles.get_default_timezone()
+      assert Repo.reload!(profile).timezone == Profiles.get_default_timezone()
     end
   end
 

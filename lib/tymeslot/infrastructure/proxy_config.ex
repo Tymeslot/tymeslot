@@ -14,12 +14,20 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
   - Special: `*` (bypass proxy for all hosts)
   """
 
+  alias Tymeslot.Infrastructure.ProxyCredentials
+
   @type proxy_config :: %{
           host: String.t(),
           port: integer(),
-          auth: {String.t(), String.t()} | nil,
+          auth: ProxyCredentials.t() | nil,
           scheme: String.t()
         }
+
+  # Budget for reaching the proxy: the TCP/TLS connect to it, and the CONNECT
+  # handshake on a tunnelled request. Stated rather than inherited because a
+  # proxy is the one hop where a stall is somebody else's infrastructure and
+  # not the destination's.
+  @proxy_connect_timeout 10_000
 
   @type t :: %{
           http_proxy: proxy_config() | nil,
@@ -28,12 +36,96 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
         }
 
   @doc """
+  Builds the proxy configuration from `HTTP_PROXY`, `HTTPS_PROXY` and
+  `NO_PROXY` (uppercase winning over lowercase), or `nil` when neither proxy
+  variable is set.
+
+  `config/runtime.exs` stores the result under `config :tymeslot, :http_proxy`.
+  Credentials in a proxy URL's userinfo come back as a `ProxyCredentials`
+  struct, so the password is masked from the moment it enters the application
+  environment: `Application.get_all_env(:tymeslot)`, observer and a remote
+  console all inspect that struct rather than a raw tuple.
+
+  Raises when a proxy URL has no host, so a malformed variable stops boot
+  rather than silently disabling the proxy.
+  """
+  @spec from_env(%{optional(String.t()) => String.t()}) :: t() | nil
+  def from_env(env) when is_map(env) do
+    http_proxy_url = env["HTTP_PROXY"] || env["http_proxy"]
+    https_proxy_url = env["HTTPS_PROXY"] || env["https_proxy"]
+
+    if http_proxy_url || https_proxy_url do
+      %{
+        http_proxy: parse_proxy_url(http_proxy_url),
+        https_proxy: parse_proxy_url(https_proxy_url),
+        no_proxy: parse_no_proxy(env["NO_PROXY"] || env["no_proxy"] || "")
+      }
+    end
+  end
+
+  defp parse_proxy_url(nil), do: nil
+  defp parse_proxy_url(""), do: nil
+
+  defp parse_proxy_url(proxy_url) do
+    uri = URI.parse(proxy_url)
+
+    %{
+      host:
+        uri.host ||
+          raise("Proxy URL must include a valid host (check HTTP_PROXY/HTTPS_PROXY format)"),
+      port: uri.port || 8080,
+      auth: uri.userinfo |> parse_userinfo() |> ProxyCredentials.new(),
+      scheme: uri.scheme || "http"
+    }
+  end
+
+  defp parse_userinfo(nil), do: nil
+
+  defp parse_userinfo(userinfo) do
+    case String.split(userinfo, ":", parts: 2) do
+      [user, pass] -> {URI.decode(user), URI.decode(pass)}
+      [user] -> {URI.decode(user), ""}
+    end
+  end
+
+  defp parse_no_proxy(raw) do
+    raw
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  @doc """
   Loads proxy configuration from application environment.
+
+  `from_env/1` already stores credentials as a `ProxyCredentials` struct. This
+  still normalises the `auth:` slot, because a `{username, password}` tuple
+  can arrive by another route (a hand-written `config :tymeslot, :http_proxy`,
+  or a test), and a tuple is a shape no keyed redaction can reach.
+  `ProxyCredentials.new/1` passes a struct through unchanged, so normalising
+  twice is harmless.
   """
   @spec load() :: t() | nil
   def load do
-    Application.get_env(:tymeslot, :http_proxy)
+    case Application.get_env(:tymeslot, :http_proxy) do
+      nil -> nil
+      config -> normalise_credentials(config)
+    end
   end
+
+  # `Map.update/4` rather than the struct-update syntax: the value is a plain
+  # map from config, and a key that is simply absent should stay absent-shaped
+  # (nil) rather than raise.
+  defp normalise_credentials(config) do
+    config
+    |> Map.update(:http_proxy, nil, &normalise_proxy_credentials/1)
+    |> Map.update(:https_proxy, nil, &normalise_proxy_credentials/1)
+  end
+
+  defp normalise_proxy_credentials(nil), do: nil
+
+  defp normalise_proxy_credentials(proxy),
+    do: Map.update(proxy, :auth, nil, &ProxyCredentials.new/1)
 
   @doc """
   Determines the appropriate proxy for a given URL.
@@ -179,7 +271,13 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
     do: <<a::16, b::16, c::16, d::16, e::16, f::16, g::16, h::16>>
 
   @doc """
-  Builds Req-compatible proxy options from proxy config.
+  Builds Req-compatible proxy options from proxy config, for a request to
+  `target_url`.
+
+  The target URL is not decoration: mint picks a different proxying strategy
+  from the *target's* scheme, and the two strategies need opposite socket
+  options. See `build_req_proxy_options/2`'s inline notes and the
+  "Proxy socket options" section below.
 
   ## Critical Structure for Mint.TunnelProxy
 
@@ -191,7 +289,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
   ```elixir
   [
     connect_options: [
-      proxy: {:http, host, port, []},
+      proxy: {:http, host, port, [...]},
       proxy_headers: [{"Proxy-Authorization", "Basic ..."}]
     ]
   ]
@@ -210,16 +308,31 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
   `connect_options` keyword list during the CONNECT handshake, not from
   the proxy tuple options.
 
+  ## Proxy socket options
+
+  The proxy tuple's fourth element holds the options for the socket mint opens
+  to the *proxy*, and what belongs there depends on the target's scheme:
+
+  | Target | mint module | Socket options |
+  |---|---|---|
+  | `http://` | `Mint.UnsafeProxy` | `mode: :passive` (required) |
+  | `https://` | `Mint.TunnelProxy` | `tunnel_timeout` only — **never** `mode: :passive` |
+
   See: https://hexdocs.pm/mint/Mint.TunnelProxy.html
   """
-  @spec build_req_proxy_options(proxy_config() | nil) :: keyword()
-  def build_req_proxy_options(nil), do: []
+  @spec build_req_proxy_options(proxy_config() | nil, String.t()) :: keyword()
+  def build_req_proxy_options(proxy_config, target_url)
 
-  def build_req_proxy_options(proxy_config) do
+  def build_req_proxy_options(nil, _target_url), do: []
+
+  def build_req_proxy_options(proxy_config, target_url) do
     scheme = parse_scheme(proxy_config.scheme)
 
-    # Build proxy tuple WITHOUT headers (they go at connect_options level)
-    proxy_tuple = {scheme, proxy_config.host, proxy_config.port, []}
+    # Build proxy tuple WITHOUT headers (they go at connect_options level) and
+    # WITH the socket options that the target's scheme requires.
+    proxy_tuple =
+      {scheme, proxy_config.host, proxy_config.port,
+       proxy_socket_options(target_scheme(target_url))}
 
     # Build connect_options with proxy_headers at the correct level. These are
     # the connection options `Infrastructure.FinchPool` builds the request's
@@ -227,18 +340,80 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
     # rather than inherited because a proxy is the one hop where a stall is
     # somebody else's infrastructure and not the destination's.
     connect_opts =
-      case proxy_config.auth do
-        {user, password} when is_binary(user) and user != "" ->
-          # Proxy-Authorization header must be at connect_options level, not in proxy tuple
-          # This is required for Mint.TunnelProxy to properly send auth during CONNECT handshake
-          auth_header = {"Proxy-Authorization", "Basic " <> Base.encode64("#{user}:#{password}")}
-          [proxy: proxy_tuple, proxy_headers: [auth_header], timeout: 10_000]
-
-        _other ->
-          [proxy: proxy_tuple, timeout: 10_000]
+      case proxy_auth_header(proxy_config.auth) do
+        # Proxy-Authorization header must be at connect_options level, not in the
+        # proxy tuple. This is required for Mint.TunnelProxy to send auth during
+        # the CONNECT handshake.
+        nil -> [proxy: proxy_tuple, timeout: @proxy_connect_timeout]
+        header -> [proxy: proxy_tuple, proxy_headers: [header], timeout: @proxy_connect_timeout]
       end
 
     [connect_options: connect_opts]
+  end
+
+  # Credentials reach here as a struct because `load/0` converts them at the
+  # boundary. The raw-tuple clause is the anti-drift guard: without it a caller
+  # still passing a `{username, password}` tuple would fall through to "no
+  # credentials" and every proxied request would quietly start failing with a
+  # 407 instead of saying why.
+  @spec proxy_auth_header(ProxyCredentials.t() | nil) :: {String.t(), String.t()} | nil
+  defp proxy_auth_header(%ProxyCredentials{username: username, password: password})
+       when username != "" do
+    {"Proxy-Authorization", "Basic " <> Base.encode64("#{username}:#{password}")}
+  end
+
+  defp proxy_auth_header(%ProxyCredentials{}), do: nil
+  defp proxy_auth_header(nil), do: nil
+
+  defp proxy_auth_header(credentials) when is_tuple(credentials) do
+    raise ArgumentError,
+          "proxy credentials reached build_req_proxy_options/2 as a raw tuple. " <>
+            "Build them with ProxyCredentials.new/1: a tuple has no key for any " <>
+            "redaction to match, so the password would print in the clear."
+  end
+
+  # Socket options for the connection mint opens to the proxy itself. These two
+  # clauses are deliberately different, and collapsing them into one shared list
+  # breaks proxied requests — in opposite directions, which is why the pair has
+  # to be read together.
+  #
+  # `:http` target — mint routes it through `Mint.UnsafeProxy`, which forwards
+  # the request over the proxy socket with no handshake and then hands that
+  # socket to Finch. Finch calls `recv/3` on it, so it must be passive. mint
+  # 1.10.0 stopped forwarding the caller's options to the proxy socket on this
+  # path (1.9.3 did `Keyword.merge(opts, proxy_opts)` before calling
+  # `Mint.UnsafeProxy.connect/3`; 1.10.0 opens the socket from the proxy tuple's
+  # own options alone), so Finch's own `mode: :passive` no longer arrives and
+  # this tuple is the only place left that reaches it. Without it every
+  # proxied `http://` request raises
+  # "can't use recv/3 to synchronously receive data when the mode is :active".
+  #
+  # `:https` target — mint routes it through `Mint.TunnelProxy`, which performs
+  # the CONNECT handshake itself before anything is handed to Finch, and it
+  # does that by waiting on `{:tcp, socket, data}` messages. That needs the
+  # socket in mint's default *active* mode. `mode: :passive` here silences those
+  # messages, the handshake blocks until `tunnel_timeout` and every proxied
+  # `https://` request fails with `{:proxy, :tunnel_timeout}` (the regression in
+  # #97, shipped in 1.15.3). Finch's passive mode still applies to the tunnelled
+  # connection: it is rebuilt from the *host* options after the upgrade.
+  #
+  # `tunnel_timeout` is stated so a stalled CONNECT is bounded by the same
+  # budget as the connect itself, rather than mint's 30s default.
+  @spec proxy_socket_options(:http | :https) :: keyword()
+  defp proxy_socket_options(:http), do: [mode: :passive]
+  defp proxy_socket_options(:https), do: [tunnel_timeout: @proxy_connect_timeout]
+
+  # Which mint proxying strategy the request will take. mint dispatches on the
+  # *target's* scheme, not the proxy's, so that is what this reads. Anything
+  # that is not plain HTTP is treated as tunnelled: `get_proxy_for_url/1` falls
+  # back to a configured proxy for a URL whose scheme it does not recognise,
+  # and a needless CONNECT is a better failure than a socket Finch cannot read.
+  @spec target_scheme(String.t()) :: :http | :https
+  defp target_scheme(target_url) do
+    case URI.parse(target_url) do
+      %URI{scheme: "http"} -> :http
+      %URI{} -> :https
+    end
   end
 
   defp parse_scheme("https"), do: :https

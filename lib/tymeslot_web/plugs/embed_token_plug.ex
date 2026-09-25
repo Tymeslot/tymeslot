@@ -6,9 +6,18 @@ defmodule TymeslotWeb.Plugs.EmbedTokenPlug do
   LiveView hooks via the router's session function, enabling WebSocket
   connections that work without session cookies.
 
-  The session cookie is also dropped for embed requests: it would be
-  blocked by the browser anyway (SameSite=Lax in a cross-site iframe),
-  and auth for embedded pages is handled entirely by the embed token.
+  No session cookie is written back for embed requests: the browser would
+  reject it anyway (SameSite=Lax in a cross-site iframe), and auth for
+  embedded pages is handled entirely by the embed token.
+
+  That is `ignore: true`, never `drop: true`. The two read alike and are
+  opposites: `:ignore` discards the *outgoing* write and leaves the request's
+  cookie untouched, while `:drop` deletes the cookie the caller already has.
+  Because the booking page is public and same-origin with the dashboard, the
+  live preview's iframe sends the organiser's session cookie with the request,
+  so `:drop` answered it with a site-wide `Set-Cookie: _tymeslot_key=;
+  expires=1970; path=/` and logged the organiser out of their own dashboard on
+  the next navigation (issue #96).
   """
 
   @behaviour Plug
@@ -28,9 +37,10 @@ defmodule TymeslotWeb.Plugs.EmbedTokenPlug do
     conn = fetch_query_params(conn)
 
     if conn.query_params["embed"] == "1" do
-      # Drop the session for embed requests so the browser doesn't receive a
-      # Set-Cookie header it would reject (SameSite=Lax in a cross-site iframe).
-      conn = configure_session(conn, drop: true)
+      # Write no session cookie for embed requests: the browser would reject it
+      # (SameSite=Lax in a cross-site iframe). `:ignore` drops the write only;
+      # `:drop` would delete the cookie the caller sent us. See the moduledoc.
+      conn = configure_session(conn, ignore: true)
 
       case PathUtils.extract_username_from_path(conn.request_path) do
         nil ->

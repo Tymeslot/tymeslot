@@ -7,7 +7,7 @@ defmodule Tymeslot.Auth.UserTokenQueries do
   require Logger
 
   alias Ecto.Changeset
-  alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Auth.{AccountTokens, UserSchema}
   alias Tymeslot.Repo
   alias Tymeslot.Security.IPNormaliser
   alias Tymeslot.Security.Token
@@ -37,30 +37,11 @@ defmodule Tymeslot.Auth.UserTokenQueries do
   end
 
   @doc """
-  Gets a user by verification token, only if not already used.
-  Returns {:ok, user} if found, {:error, :not_found} otherwise.
-  """
-  @spec get_user_by_verification_token(String.t()) :: {:ok, UserSchema.t()} | {:error, :not_found}
-  def get_user_by_verification_token(token) when is_binary(token) do
-    token_hash = Token.hash_token(token)
-
-    case UserSchema
-         |> where(
-           [u],
-           u.verification_token == ^token_hash and is_nil(u.verification_token_used_at)
-         )
-         |> Repo.one() do
-      nil -> {:error, :not_found}
-      user -> {:ok, user}
-    end
-  end
-
-  @doc """
   Sets password reset token for a user.
   """
-  @spec set_reset_token(UserSchema.t(), String.t() | nil) ::
+  @spec set_reset_token(UserSchema.t(), String.t()) ::
           {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  # Set a new reset token (issue new link): clear any previous used_at marker
+  # Issuing a new link clears any previous used_at marker.
   def set_reset_token(%UserSchema{} = user, token) when is_binary(token) do
     token_hash = Token.hash_token(token)
 
@@ -89,64 +70,101 @@ defmodule Tymeslot.Auth.UserTokenQueries do
     end
   end
 
-  # Clear token (after successful reset): do not touch used_at so audit remains intact
-  def set_reset_token(%UserSchema{} = user, nil) do
-    result =
-      user
-      |> Changeset.change(
-        reset_token_hash: nil,
-        reset_sent_at: nil
-      )
-      |> Repo.update()
-
-    case result do
-      {:ok, updated} ->
-        Logger.info("Cleared reset token", user_id: updated.id)
-        {:ok, updated}
-
-      {:error, reason} ->
-        Logger.error("Failed to clear reset token",
-          user_id: user.id,
-          reason: inspect(reason)
-        )
-
-        {:error, reason}
-    end
-  end
-
   @doc """
-  Gets a user by reset token, only if not already used.
-  Returns {:ok, user} if found, {:error, :not_found} otherwise.
-  """
-  @spec get_user_by_reset_token(String.t()) :: {:ok, UserSchema.t()} | {:error, :not_found}
-  def get_user_by_reset_token(token) when is_binary(token) do
-    token_hash = Token.hash_token(token)
+  Gets the user holding a live token of the given purpose.
 
-    case UserSchema
-         |> where([u], u.reset_token_hash == ^token_hash and is_nil(u.reset_token_used_at))
-         |> Repo.one() do
-      nil -> {:error, :not_found}
-      user -> {:ok, user}
-    end
-  end
+  A token is live while its hash is stored and it has not been consumed:
+  reset and verification tokens are stamped `*_used_at` when used, and an
+  email change token only means something while a `pending_email` waits for
+  it. Expiry is not checked here; that is a business rule owned by
+  `Tymeslot.Auth.AccountTokens`.
 
-  @doc """
-  Same as `get_user_by_reset_token/1` but takes a row-level lock (`FOR UPDATE`)
-  so concurrent consumers serialise on the token row. Must be called inside
-  a `Repo.transaction/1`.
+  Pass `lock: true` to take a row lock (`FOR UPDATE`) so concurrent consumers
+  of the same token serialise; the call must then run inside a transaction.
   """
-  @spec get_user_by_reset_token_for_update(String.t()) ::
+  @spec get_user_by_token(AccountTokens.purpose(), String.t(), keyword()) ::
           {:ok, UserSchema.t()} | {:error, :not_found}
-  def get_user_by_reset_token_for_update(token) when is_binary(token) do
+  def get_user_by_token(purpose, token, opts \\ []) when is_binary(token) do
     token_hash = Token.hash_token(token)
 
-    case UserSchema
-         |> where([u], u.reset_token_hash == ^token_hash and is_nil(u.reset_token_used_at))
-         |> lock("FOR UPDATE")
-         |> Repo.one() do
+    query =
+      purpose
+      |> live_token_query(token_hash)
+      |> maybe_lock(Keyword.get(opts, :lock, false))
+
+    case Repo.one(query) do
       nil -> {:error, :not_found}
       user -> {:ok, user}
     end
+  end
+
+  defp live_token_query(:reset, hash) do
+    where(UserSchema, [u], u.reset_token_hash == ^hash and is_nil(u.reset_token_used_at))
+  end
+
+  defp live_token_query(:verification, hash) do
+    where(
+      UserSchema,
+      [u],
+      u.verification_token == ^hash and is_nil(u.verification_token_used_at)
+    )
+  end
+
+  defp live_token_query(:email_change, hash) do
+    where(UserSchema, [u], u.email_change_token_hash == ^hash and not is_nil(u.pending_email))
+  end
+
+  defp maybe_lock(query, true), do: lock(query, "FOR UPDATE")
+  defp maybe_lock(query, false), do: query
+
+  @doc """
+  Consumes a password reset token: sets the new password, marks the token used
+  and, through `UserSchema.password_reset_changeset/2`, revokes every other
+  outstanding credential token.
+  """
+  @spec consume_reset_token(UserSchema.t(), map()) ::
+          {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def consume_reset_token(%UserSchema{} = user, attrs) do
+    now = DateTime.utc_now(:second)
+
+    user
+    |> UserSchema.password_reset_changeset(attrs)
+    |> Changeset.put_change(:reset_token_used_at, now)
+    |> verify_through_reset(user, now)
+    |> Repo.update()
+    |> UserSchema.drop_plaintext_password()
+  end
+
+  # The reset link was delivered to the account's address, so following it
+  # proves the mailbox just as the verification link would. Verifying here is
+  # what lets an address's owner reclaim an account someone else signed up
+  # with it: the reset replaces the stranger's password and makes it theirs.
+  defp verify_through_reset(changeset, %UserSchema{verified_at: nil}, now) do
+    Changeset.change(changeset,
+      verified_at: now,
+      verification_token: nil,
+      verification_token_used_at: now
+    )
+  end
+
+  defp verify_through_reset(changeset, _verified_user, _now), do: changeset
+
+  @doc """
+  Consumes a verification token: marks the user verified and the token used.
+  Intentionally keeps `signup_ip` for the audit trail and fraud detection.
+  """
+  @spec consume_verification_token(UserSchema.t()) ::
+          {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def consume_verification_token(%UserSchema{} = user) do
+    now = DateTime.utc_now(:second)
+
+    user
+    |> Changeset.change(
+      verified_at: now,
+      verification_token_used_at: now,
+      verification_token: nil
+    )
+    |> Repo.update()
   end
 
   @doc """
@@ -164,24 +182,6 @@ defmodule Tymeslot.Auth.UserTokenQueries do
       email_change_token_hash: token_hash
     })
     |> Repo.update()
-  end
-
-  @doc """
-  Gets a user by email change token.
-  Returns {:ok, user} if found and token not expired, {:error, :not_found} otherwise.
-  """
-  @spec get_user_by_email_change_token(String.t()) ::
-          {:ok, UserSchema.t()} | {:error, :not_found}
-  def get_user_by_email_change_token(token_raw) when is_binary(token_raw) do
-    token_hash = Token.hash_token(token_raw)
-
-    case UserSchema
-         |> where([u], u.email_change_token_hash == ^token_hash)
-         |> where([u], not is_nil(u.pending_email))
-         |> Repo.one() do
-      nil -> {:error, :not_found}
-      user -> {:ok, user}
-    end
   end
 
   @doc """

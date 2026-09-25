@@ -4,7 +4,16 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
 
   Validates username format, length, and character restrictions
   for creating public scheduling URLs.
+
+  Every message returned here is shown to the person choosing their public
+  booking URL, in the onboarding wizard and again on the dashboard settings
+  page, so each one resolves through the `errors` gettext domain at call time.
+  They are built inside the functions rather than held in module attributes
+  on purpose: a `dgettext/2` call in an attribute would freeze at the
+  compile-time locale.
   """
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   @username_min_length 3
   @username_max_length 30
@@ -40,12 +49,15 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
 
       iex> validate("john@smith")
       {:error, "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"}
+
+  The messages above are the English ones; each is translated into the
+  caller's locale.
   """
   @spec validate(any(), keyword()) :: :ok | {:error, String.t()}
   def validate(username, opts \\ [])
 
-  def validate(nil, _opts), do: {:error, "Username is required"}
-  def validate("", _opts), do: {:error, "Username is required"}
+  def validate(nil, _opts), do: {:error, dgettext("errors", "Username is required")}
+  def validate("", _opts), do: {:error, dgettext("errors", "Username is required")}
 
   def validate(username, opts) when is_binary(username) do
     min_length = Keyword.get(opts, :min_length, @username_min_length)
@@ -61,7 +73,7 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
   end
 
   def validate(_username, _opts) do
-    {:error, "Username must be a text value"}
+    {:error, dgettext("errors", "Username must be a text value")}
   end
 
   # Private helper functions
@@ -71,10 +83,22 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
 
     cond do
       length < min_length ->
-        {:error, "Username must be at least #{min_length} characters long"}
+        {:error,
+         dngettext(
+           "errors",
+           "Username must be at least %{count} character long",
+           "Username must be at least %{count} characters long",
+           min_length
+         )}
 
       length > max_length ->
-        {:error, "Username must be at most #{max_length} characters long"}
+        {:error,
+         dngettext(
+           "errors",
+           "Username must be at most %{count} character long",
+           "Username must be at most %{count} characters long",
+           max_length
+         )}
 
       true ->
         :ok
@@ -86,7 +110,10 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
       :ok
     else
       {:error,
-       "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"}
+       dgettext(
+         "errors",
+         "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"
+       )}
     end
   end
 
@@ -96,7 +123,7 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
     lowercase_username = String.downcase(username)
 
     if lowercase_username in reserved_words do
-      {:error, "This username is reserved"}
+      {:error, dgettext("errors", "This username is reserved")}
     else
       :ok
     end

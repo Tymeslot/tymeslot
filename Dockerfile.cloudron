@@ -14,8 +14,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
     curl \
-    nodejs \
-    npm \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -43,11 +41,6 @@ COPY . .
 RUN rm -rf priv/static/assets/
 RUN mix compile
 RUN mix assets.setup
-# Install node_modules for the heroicons plugin — the standalone tailwind
-# binary bundles @tailwindcss/forms but not the tailwindcss runtime that
-# assets/heroicons.js needs via require("tailwindcss/plugin"), so it resolves
-# them from the assets dir's node_modules.
-RUN npm ci --prefix assets
 RUN mix assets.deploy
 
 # Create the release, then copy runtime config into it.
@@ -81,6 +74,9 @@ RUN mkdir -p /data/logs /app/data/uploads && \
 # Copy your start script and ensure it's executable
 COPY start.sh ./
 RUN chmod +x start.sh
+
+# The .env reader start.sh sources, shared with the Docker entrypoint.
+COPY scripts/dotenv-reader.sh ./dotenv-reader.sh
 
 # The annotated variable reference. start.sh seeds /app/data/.env from it on
 # first boot, so operators can configure the app by editing a file instead of

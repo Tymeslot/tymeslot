@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
+  import Phoenix.HTML, only: [raw: 1]
   import TymeslotWeb.Components.CoreComponents
 
   attr :provider, :string, required: true
@@ -146,7 +147,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
             <.password_field
               id="discovery_password"
               name="integration[password]"
-              label={dgettext("dashboard_calendar_providers", "Password / App Password")}
+              label={password_label(@provider)}
               value={Map.get(@form_values, "password", "")}
               placeholder={
                 @password_placeholder || dgettext("dashboard_calendar_providers", "Password")
@@ -172,6 +173,45 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
         </form>
       <% end %>
     </div>
+    """
+  end
+
+  @doc """
+  Label for the credential field of a CalDAV-family provider.
+
+  Nextcloud is the exception: its login password stops working for CalDAV as
+  soon as the account enables two-factor authentication, so the field asks for
+  an app password outright. Radicale, Baïkal, Zimbra and generic CalDAV servers
+  take an ordinary login password, so they keep the neutral label.
+  """
+  @spec password_label(String.t() | atom()) :: String.t()
+  def password_label(provider) when provider in ["nextcloud", :nextcloud],
+    do: dgettext("dashboard_calendar_providers", "App password")
+
+  def password_label(_provider),
+    do: dgettext("dashboard_calendar_providers", "Password / App Password")
+
+  @doc """
+  Guidance telling a Nextcloud user where to create an app password.
+
+  Shown by both the Nextcloud connect form and the CalDAV reconnect modal, so
+  the two cannot drift apart.
+  """
+  @spec nextcloud_app_password_hint(map()) :: Phoenix.LiveView.Rendered.t()
+  def nextcloud_app_password_hint(assigns) do
+    ~H"""
+    <p class="text-sm text-tymeslot-600 leading-relaxed">
+      {raw(
+        dgettext(
+          "dashboard_calendar_providers",
+          "Create an app password in Nextcloud under %{location} and enter it below together with your login name. A login password stops working here once two-factor authentication is switched on.",
+          location:
+            ~s(<span class="font-semibold">) <>
+              dgettext("dashboard_calendar_providers", "Personal settings → Security") <>
+              ~s(</span>)
+        )
+      )}
+    </p>
     """
   end
 

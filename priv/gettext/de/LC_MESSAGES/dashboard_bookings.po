@@ -73,6 +73,12 @@ msgstr "Buchung bestätigt. Der Gast wurde benachrichtigt."
 msgid "Booking requests you haven't answered yet will appear here."
 msgstr "Buchungsanfragen, die Sie noch nicht beantwortet haben, erscheinen hier."
 
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_panels.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Absagen"
+
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel Meeting"
@@ -82,13 +88,6 @@ msgstr "Termin absagen"
 #, elixir-autogen, elixir-format
 msgid "Cancel without refund."
 msgstr "Ohne Rückerstattung absagen."
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_panels.ex
-#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel"
-msgstr "Abbrechen"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
@@ -131,6 +130,11 @@ msgstr "Benutzerdefinierte Antworten"
 msgid "Date & Time"
 msgstr "Datum & Uhrzeit"
 
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Decline"
+msgstr "Ablehnen"
+
 #: lib/tymeslot_web/components/dashboard/meetings/decline_request_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Decline request"
@@ -140,11 +144,6 @@ msgstr "Anfrage ablehnen"
 #, elixir-autogen, elixir-format
 msgid "Decline the request from %{name} for %{when}?"
 msgstr "Anfrage von %{name} für %{when} ablehnen?"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Decline"
-msgstr "Ablehnen"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
@@ -371,6 +370,12 @@ msgstr "Anfrage abgelehnt. Der Termin ist wieder frei."
 msgid "Requests"
 msgstr "Anfragen"
 
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_panels.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule"
+msgstr "Verschieben"
+
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule Requested"
@@ -380,12 +385,6 @@ msgstr "Verschiebung angefragt"
 #, elixir-autogen, elixir-format
 msgid "Reschedule request sent to %{attendee_name}"
 msgstr "Verschiebungsanfrage an %{attendee_name} gesendet"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_panels.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule"
-msgstr "Verschieben"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
 #, elixir-autogen, elixir-format

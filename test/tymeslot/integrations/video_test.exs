@@ -6,16 +6,50 @@ defmodule Tymeslot.Integrations.VideoTest do
 
   import Mox
   import Tymeslot.Factory
+  import Tymeslot.MeetingTestHelpers
 
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Repo
+  alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.IntegrationHealthWorker
   alias Tymeslot.Workers.VideoIntegrationDisconnectWorker
+  alias Tymeslot.Workers.VideoSyncWorker
 
   setup :verify_on_exit!
+
+  describe "handle_reauth_required/2" do
+    test "flags the integration and emails its owner on the false → true transition" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, needs_reauth: false)
+
+      assert {:discard, _reason} = Video.handle_reauth_required(integration)
+
+      reloaded = Repo.reload!(integration)
+      assert reloaded.needs_reauth
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_reauth_notification",
+          "user_id" => user.id,
+          "integration_id" => integration.id,
+          "integration_type" => "video"
+        }
+      )
+    end
+
+    test "does not email again for an integration already flagged" do
+      integration = insert(:video_integration, needs_reauth: true, sync_error: "Old reason.")
+
+      assert {:discard, _reason} = Video.handle_reauth_required(integration)
+
+      refute_enqueued(worker: EmailWorker)
+    end
+  end
 
   describe "list_integrations/1" do
     test "lists all integrations for a user" do
@@ -122,6 +156,92 @@ defmodule Tymeslot.Integrations.VideoTest do
     end
   end
 
+  describe "rooms_deleted_on_disconnect/2" do
+    setup do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "zoom")
+      %{user: user, integration: integration}
+    end
+
+    # Each booking gets its own slot: confirmed bookings share a per-organiser
+    # uniqueness constraint on start time.
+    defp room_booking(user, integration, hours_ahead, attrs \\ %{}) do
+      insert_meeting_for_user(
+        user,
+        Map.merge(
+          %{
+            start_offset: hours_ahead * 3_600,
+            video_integration_id: integration.id,
+            video_provider: "zoom",
+            video_room_id: "room-#{hours_ahead}"
+          },
+          attrs
+        )
+      )
+    end
+
+    test "counts the owner's upcoming bookings holding a room from the integration",
+         %{user: user, integration: integration} do
+      room_booking(user, integration, 24)
+      room_booking(user, integration, 48)
+
+      assert %{scope: :upcoming, count: 2} =
+               Video.rooms_deleted_on_disconnect(user.id, integration.id)
+    end
+
+    test "counts exactly the bookings the room cleanup drains",
+         %{user: user, integration: integration} do
+      room_booking(user, integration, 24)
+      room_booking(user, integration, -24)
+      room_booking(user, integration, 72, %{status: "cancelled"})
+
+      drained =
+        MeetingListQueries.list_with_video_room_for_integration(
+          integration.id,
+          :upcoming,
+          DateTime.utc_now(),
+          500
+        )
+
+      assert length(drained) == 1
+
+      assert %{count: count} = Video.rooms_deleted_on_disconnect(user.id, integration.id)
+      assert count == length(drained)
+    end
+
+    test "is 0 for an integration the user does not own", %{integration: integration} do
+      owner = Repo.preload(integration, :user).user
+      room_booking(owner, integration, 24)
+      stranger = insert(:user)
+
+      assert %{count: 0} = Video.rooms_deleted_on_disconnect(stranger.id, integration.id)
+    end
+
+    test "leaves out past, cancelled, room-less and voided bookings, and other integrations",
+         %{user: user, integration: integration} do
+      other = insert(:video_integration, user: user, provider: "zoom")
+
+      room_booking(user, integration, -24)
+      room_booking(user, integration, 24, %{status: "cancelled"})
+      room_booking(user, integration, 48, %{video_room_id: nil})
+      room_booking(user, integration, 72, %{reschedule_requested_at: DateTime.utc_now()})
+      room_booking(user, other, 96)
+      room_booking(user, integration, 120)
+
+      assert %{count: 1} = Video.rooms_deleted_on_disconnect(user.id, integration.id)
+    end
+
+    test "counts a Talk integration's past rooms too, which stay on the organiser's server",
+         %{user: user} do
+      talk = insert(:video_integration, user: user, provider: "nextcloud_talk")
+
+      room_booking(user, talk, -24, %{video_provider: "nextcloud_talk"})
+      room_booking(user, talk, 24, %{video_provider: "nextcloud_talk"})
+
+      assert %{scope: :all, count: 2} = Video.rooms_deleted_on_disconnect(user.id, talk.id)
+    end
+  end
+
   describe "toggle_integration/2" do
     test "toggles active status" do
       user = insert(:user)
@@ -218,6 +338,28 @@ defmodule Tymeslot.Integrations.VideoTest do
         worker: IntegrationHealthWorker,
         args: %{"type" => "video", "integration_id" => integration.id}
       )
+    end
+
+    # Only a reconnect proven against the provider re-sends reschedules: a
+    # credential that merely replaces the stored one may still be refused.
+    test "an unproven credential that clears the reconnect flag queues no room update" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, provider: "zoom", needs_reauth: true)
+      start_time = DateTime.add(DateTime.utc_now(:second), 2, :day)
+
+      insert(:meeting,
+        organizer_user_id: user.id,
+        video_integration_id: integration.id,
+        video_room_id: "zoom-room",
+        start_time: start_time,
+        end_time: DateTime.add(start_time, 30, :minute)
+      )
+
+      assert {:ok, updated} =
+               Video.update_integration(user.id, integration.id, %{api_key: "replaced-key"})
+
+      refute updated.needs_reauth
+      refute_enqueued(worker: VideoSyncWorker)
     end
 
     test "returns {:error, :not_found} for an integration belonging to another user" do

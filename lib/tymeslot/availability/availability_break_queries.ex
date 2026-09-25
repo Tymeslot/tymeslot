@@ -14,17 +14,6 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueries do
   def get_break(id), do: Repo.get(AvailabilityBreakSchema, id)
 
   @doc """
-  Gets all breaks for a weekly availability.
-  """
-  @spec get_breaks_by_weekly_availability(integer()) :: [AvailabilityBreakSchema.t()]
-  def get_breaks_by_weekly_availability(weekly_availability_id) do
-    AvailabilityBreakSchema
-    |> where([b], b.weekly_availability_id == ^weekly_availability_id)
-    |> order_by(asc: :sort_order)
-    |> Repo.all()
-  end
-
-  @doc """
   Creates an availability break.
   """
   @spec create_break(map()) :: {:ok, AvailabilityBreakSchema.t()} | {:error, Ecto.Changeset.t()}
@@ -97,20 +86,6 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueries do
   end
 
   @doc """
-  Updates all breaks for a weekly availability with new sort orders.
-  """
-  @spec reorder_breaks(integer(), [integer()]) :: {:ok, any()} | {:error, any()}
-  def reorder_breaks(weekly_availability_id, break_ids) when is_list(break_ids) do
-    Repo.transaction(fn ->
-      Enum.with_index(break_ids, fn break_id, index ->
-        AvailabilityBreakSchema
-        |> where([b], b.id == ^break_id and b.weekly_availability_id == ^weekly_availability_id)
-        |> Repo.update_all(set: [sort_order: index])
-      end)
-    end)
-  end
-
-  @doc """
   Inserts a changeset directly.
   Used when validation has been performed in the calling module.
   """
@@ -118,15 +93,5 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueries do
           {:ok, AvailabilityBreakSchema.t()} | {:error, Ecto.Changeset.t()}
   def insert_changeset(changeset) do
     Repo.insert(changeset)
-  end
-
-  @doc """
-  Updates a changeset directly.
-  Used when validation has been performed in the calling module.
-  """
-  @spec update_changeset(Ecto.Changeset.t()) ::
-          {:ok, AvailabilityBreakSchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_changeset(changeset) do
-    Repo.update(changeset)
   end
 end

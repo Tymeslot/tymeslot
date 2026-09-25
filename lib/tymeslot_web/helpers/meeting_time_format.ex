@@ -25,13 +25,6 @@ defmodule TymeslotWeb.Helpers.MeetingTimeFormat do
     end
   end
 
-  defp format_datetime(dt) do
-    locale = Gettext.get_locale(TymeslotWeb.Gettext)
-    weekday = LocaleFormat.format_weekday_name(Date.day_of_week(dt), locale, :full)
-    month = LocaleFormat.format_month_name(dt.month, locale, :full)
-
-    # A guest is an attendee: the weekday and month already follow their
-    # language, so the clock beside them does too rather than staying 24-hour.
-    "#{weekday}, #{dt.day} #{month} #{dt.year} · #{LocaleFormat.format_time(dt, locale)}"
-  end
+  defp format_datetime(dt),
+    do: LocaleFormat.format_weekday_datetime(dt, Gettext.get_locale(TymeslotWeb.Gettext))
 end

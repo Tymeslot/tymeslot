@@ -15,8 +15,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderSsrfTest do
     site in `mirotalk_provider.ex`)
   - `JoinUrlBuilder.create_join_url_via_api/5` (the `/api/v1/join` POST call
     site in `join_url_builder.ex`)
-  - `JoinUrlBuilder.create_join_url_legacy/4` (the legacy `/api/v1/join` call
-    site in `join_url_builder.ex`)
   """
 
   use ExUnit.Case, async: false
@@ -93,24 +91,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderSsrfTest do
                  "Alice",
                  "alice@example.com",
                  "attendee"
-               )
-    end
-  end
-
-  describe "JoinUrlBuilder.create_join_url_legacy/4 call site threads ssrf_protect: true" do
-    test "blocks the legacy join URL API call when the MiroTalk host resolves to a private address" do
-      ReqTest.stub(:tymeslot_http, fn _conn ->
-        flunk(
-          "network request must not reach the MiroTalk server — ssrf_protect: true is missing"
-        )
-      end)
-
-      assert {:error, %SsrfBlockedError{}} =
-               JoinUrlBuilder.create_join_url_legacy(
-                 @config,
-                 "room-abc",
-                 "Alice",
-                 "alice@example.com"
                )
     end
   end

@@ -59,7 +59,10 @@
         "This scheduling page requires JavaScript to book meetings. Please enable it to continue."
       )
     } />
-    <.flash_group flash={@flash} id="scheduling-flash-group" />
+    <%!-- No flash group here: the `app` layout inside `@inner_content` owns the
+    only one. A root layout is never diffed after the initial response, so a
+    group at this level would render every flash a second time and still miss
+    every flash raised while the page is live. --%>
     <main>
       {@inner_content}
     </main>

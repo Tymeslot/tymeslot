@@ -12,8 +12,13 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
 
   alias Tymeslot.Profiles
   alias TymeslotWeb.Helpers.PathUtils
+  alias TymeslotWeb.Plugs.SecurityHeaders.Hsts
 
   @local_hosts ~w(localhost 127.0.0.1 ::1)
+
+  # Built once at compile time because this plug runs on every response. See
+  # `Hsts` for why the two reaching directives default off.
+  @hsts_header Hsts.header(Application.compile_env(:tymeslot, :hsts, []))
 
   @impl Plug
   @spec init(keyword()) :: keyword()
@@ -52,10 +57,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
       |> put_resp_header("x-content-type-options", "nosniff")
       |> put_resp_header("referrer-policy", "strict-origin-when-cross-origin")
       |> put_resp_header("permissions-policy", permissions_policy())
-      |> put_resp_header(
-        "strict-transport-security",
-        "max-age=31536000; includeSubDomains; preload"
-      )
+      |> put_resp_header("strict-transport-security", @hsts_header)
 
     cond do
       allow_embedding == :any ->

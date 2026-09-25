@@ -8,6 +8,8 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
 
   import Swoosh.Email
 
+  alias Tymeslot.Emails.Shared.Stack
+
   alias Tymeslot.Emails.Shared.{
     Formatting,
     MeetingComponents,
@@ -29,36 +31,49 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
 
   ## Parameters
 
-    - `attendee_email` — recipient email address (string)
-    - `details` — map with event details:
-      - `:event_title` — current event title
-      - `:event_uid` — stable UID used across invitations
-      - `:start_time` — updated start time (`DateTime`)
-      - `:end_time` — updated end time (`DateTime`)
-      - `:date` — event date (`Date`)
-      - `:duration` — duration in minutes
-      - `:location` — location string or nil
-      - `:description` — description string or nil
-      - `:organizer_name` — organiser display name
-      - `:organizer_email` — organiser email address
-      - `:changes` — list of `{field, old_value, new_value}` tuples
-      - `:attendee_locale` — optional locale string (default: `"en"`)
+    - `attendee_email`: recipient email address (string)
+    - `details`: map with event details:
+      - `:event_title`: current event title
+      - `:event_uid`: stable UID used across invitations
+      - `:all_day`: whether the event is all-day (optional, default false)
+      - `:start_time`: updated start time (`DateTime`; nil for an all-day event)
+      - `:end_time`: updated end time (`DateTime`; nil for an all-day event)
+      - `:date`: event date (`Date`), the first day of an all-day event
+      - `:duration`: duration in minutes (nil for an all-day event)
+      - `:start_date`, `:end_date`: an all-day event's first day and
+        exclusive end date, for the ICS attachment
+      - `:last_date`: an all-day event's inclusive last day, for display
+      - `:location`: location string or nil
+      - `:description`: description string or nil
+      - `:organizer_name`: organiser display name
+      - `:organizer_email`: organiser email address
+      - `:changes`: list of `{field, old_value, new_value}` tuples
+      - `:first_notification`: true when no previous state was ever
+        recorded; the changes then carry nil old values and render as the
+        event's current details rather than a before/after diff (optional)
+      - `:attendee_locale`: optional locale string (default: `"en"`)
   """
   @spec render(String.t(), map()) :: Swoosh.Email.t()
   def render(attendee_email, details) do
     locale = Map.get(details, :attendee_locale, "en")
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      meeting_details = %{
-        date: details.date,
-        start_time: details.start_time,
-        duration: details.duration,
-        location: details.location,
-        location_type: if(details.location, do: :in_person),
-        meeting_type: details.event_title
-      }
+      meeting_details =
+        details
+        |> Map.take([:all_day, :last_date])
+        |> Map.merge(%{
+          date: details.date,
+          start_time: details.start_time,
+          duration: details.duration,
+          location: details.location,
+          location_type: if(details.location, do: :in_person),
+          meeting_type: details.event_title
+        })
 
-      changes_table = build_changes_table(details.changes, locale)
+      changes_table =
+        if first_notification?(details),
+          do: build_details_table(details.changes, locale),
+          else: build_changes_table(details.changes, locale)
 
       mjml_content = """
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
@@ -84,6 +99,9 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
       date_short = Formatting.format_date_short(details.date, locale)
 
       ics_details = %{
+        all_day: Map.get(details, :all_day, false),
+        start_date: Map.get(details, :start_date),
+        end_date: Map.get(details, :end_date),
         title: details.event_title,
         start_time: details.start_time,
         end_time: details.end_time,
@@ -144,8 +162,6 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
         ""
 
       _rows ->
-        tint = Styles.intent(@intent).tint
-        accent = Styles.intent_accent(@intent)
         accent_ink = Styles.intent(@intent).accent_ink
         hairline = Styles.border_color(:subtle)
 
@@ -160,37 +176,81 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
             """
           end)
 
-        """
-        <mj-section
-          background-color="#{tint}"
-          border-radius="#{Styles.card_radius()}"
-          padding="18px 22px"
-          css-class="mobile-card"
-        >
-          <mj-column>
-            <mj-text
-              font-size="11px"
-              font-weight="700"
-              color="#{accent_ink}"
-              letter-spacing="0.14em"
-              text-transform="uppercase"
-              padding="0 0 10px 0"
-            >
-              #{dgettext("emails", "What changed")}
-            </mj-text>
-            <mj-table border-left="3px solid #{accent}">
-              <tr>
-                <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails", "Field")}</th>
-                <th style="padding: 6px 12px; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails", "Before")}</th>
-                <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails", "After")}</th>
-              </tr>
-              #{body_rows}
-            </mj-table>
-          </mj-column>
-        </mj-section>
-        """
+        change_section(dgettext("emails", "What changed"), """
+        <tr>
+          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails", "Field")}</th>
+          <th style="padding: 6px 12px; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails", "Before")}</th>
+          <th style="padding: 6px 12px 6px 0; font-size: 10px; font-weight: 700; color: #{Styles.ink_whisper()}; letter-spacing: 0.1em; text-transform: uppercase; text-align: left;">#{dgettext("emails", "After")}</th>
+        </tr>
+        #{body_rows}
+        """)
     end
   end
+
+  # The tinted card both change tables sit in.
+  defp change_section(heading, table_rows) do
+    tint = Styles.intent(@intent).tint
+    accent = Styles.intent_accent(@intent)
+    accent_ink = Styles.intent(@intent).accent_ink
+
+    Stack.spaced("""
+    <mj-section
+      background-color="#{tint}"
+      border-radius="#{Styles.card_radius()}"
+      padding="18px 22px"
+      css-class="mobile-card"
+    >
+      <mj-column>
+        <mj-text
+          font-size="11px"
+          font-weight="700"
+          color="#{accent_ink}"
+          letter-spacing="0.14em"
+          text-transform="uppercase"
+          padding="0 0 10px 0"
+        >
+          #{heading}
+        </mj-text>
+        <mj-table border-left="3px solid #{accent}">
+          #{table_rows}
+        </mj-table>
+      </mj-column>
+    </mj-section>
+    """)
+  end
+
+  defp first_notification?(details), do: Map.get(details, :first_notification) == true
+
+  # The first-notification variant of the change table: the event's current
+  # details, one row per populated field, with no "before" column, because
+  # nothing was ever recorded to put in it.
+  defp build_details_table(changes, locale) do
+    rows = Enum.map_join(changes, "\n", &detail_row(&1, locale))
+    change_section(dgettext("emails", "Current details"), rows)
+  end
+
+  defp detail_row(change, locale) do
+    {label, value_html} = detail_cells(change, locale)
+    hairline = Styles.border_color(:subtle)
+
+    """
+    <tr>
+      <td style="padding: 10px 12px 10px 0; font-size: 11px; font-weight: 700; color: #{Styles.ink_muted()}; letter-spacing: 0.1em; text-transform: uppercase; vertical-align: top; border-bottom: 1px solid #{hairline}; width: 110px;">#{label}</td>
+      <td style="padding: 10px 12px; color: #{Styles.intent(@intent).accent_ink}; font-size: 14px; font-weight: 600; vertical-align: top; border-bottom: 1px solid #{hairline};">#{value_html}</td>
+    </tr>
+    """
+  end
+
+  defp detail_cells({:title, _from, to}, _locale), do: {dgettext("emails", "Title"), escape(to)}
+
+  defp detail_cells({:location, _from, to}, _locale),
+    do: {dgettext("emails", "Location"), escape(to)}
+
+  defp detail_cells({:description, _from, to}, _locale),
+    do: {dgettext("emails", "Description"), escape(Formatting.plain_excerpt(to))}
+
+  defp detail_cells({:time, _from, to}, locale),
+    do: {dgettext("emails", "Time"), escape(Formatting.format_time_short(to, locale))}
 
   defp change_to_row({:title, from, to}, _locale),
     do: {dgettext("emails", "Title"), escape(from), escape(to)}
@@ -214,7 +274,25 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
   defp escape(val), do: val |> to_string() |> Sanitise.sanitize_for_email()
 
   defp build_text_body(details, locale) do
-    changes_text = TextBodyHelper.format_event_changes(details.changes, locale)
+    {changes_heading, changes_text} =
+      if first_notification?(details),
+        do:
+          {dgettext("emails", "Current Details"),
+           TextBodyHelper.format_event_details(details.changes, locale)},
+        else:
+          {dgettext("emails", "What Changed"),
+           TextBodyHelper.format_event_changes(details.changes, locale)}
+
+    meeting_details =
+      details
+      |> Map.take([:all_day, :last_date])
+      |> Map.merge(%{
+        date: details.date,
+        start_time: details.start_time,
+        duration: details.duration,
+        location: details.location,
+        meeting_type: details.event_title
+      })
 
     """
     #{dgettext("emails", "Event Updated")}
@@ -222,9 +300,9 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
     #{dgettext("emails", "%{name} has updated an event you're attending.", name: details.organizer_name)}
 
     #{dgettext("emails", "MEETING DETAILS:")}
-    #{TextBodyHelper.format_meeting_details(%{date: details.date, start_time: details.start_time, duration: details.duration, location: details.location, meeting_type: details.event_title}, locale)}
+    #{TextBodyHelper.format_meeting_details(meeting_details, locale)}
 
-    #{dgettext("emails", "What Changed")}
+    #{changes_heading}
     #{changes_text}
 
     #{details.organizer_name}

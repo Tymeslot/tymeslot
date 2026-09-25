@@ -18,10 +18,8 @@ defmodule Tymeslot.Emails.DeliveryTest do
                              "You tried to send to recipient(s) that have been marked as inactive."
                          }}
 
-  # Swoosh.Adapters.Test sends the {:email, email} message to whichever process
-  # calls Mailer.deliver/1 — here that is the CircuitBreaker GenServer, not the
-  # test process — so assert_email_sent/1 cannot be used. Happy-path tests
-  # assert only on the tagged-tuple return value.
+  # Happy-path tests assert only on the tagged-tuple return value; the real
+  # SMTP session is exercised in `Tymeslot.Emails.SMTPDeliveryTest`.
 
   defp valid_email(overrides \\ []) do
     Email.new(
@@ -162,6 +160,35 @@ defmodule Tymeslot.Emails.DeliveryTest do
     end
   end
 
+  describe "permanent_rejection?/1 for SMTP replies" do
+    test "recognises an enhanced status code describing the address itself" do
+      for code <- ["5.1.1", "5.1.2", "5.1.3", "5.1.10", "5.2.1"] do
+        reply = "550 #{code} <guest@example.com>: rejected\r\n"
+        assert Delivery.permanent_rejection?({:send, {:permanent_failure, ~c"host", reply}}), code
+      end
+    end
+
+    test "does not treat relay policy or sender rejections as a dead recipient" do
+      refute Delivery.permanent_rejection?(
+               {:send, {:permanent_failure, ~c"host", "554 5.7.1 Relay access denied\r\n"}}
+             )
+
+      refute Delivery.permanent_rejection?(
+               {:send, {:permanent_failure, ~c"host", "553 5.7.1 Sender address rejected\r\n"}}
+             )
+
+      refute Delivery.permanent_rejection?(
+               {:send, {:permanent_failure, ~c"host", "550 mailbox unavailable\r\n"}}
+             )
+    end
+
+    test "does not treat a failed login as a dead recipient" do
+      refute Delivery.permanent_rejection?(
+               {:no_more_hosts, {:permanent_failure, ~c"host", :auth_failed}}
+             )
+    end
+  end
+
   describe "timeout_error?/1" do
     test "recognises a bare :timeout atom" do
       assert Delivery.timeout_error?(:timeout)
@@ -171,8 +198,25 @@ defmodule Tymeslot.Emails.DeliveryTest do
       assert Delivery.timeout_error?("connection Timeout while sending")
     end
 
-    test "recognises the nested tuple shapes gen_smtp produces" do
-      assert Delivery.timeout_error?({:retries_exceeded, {:network_failure, ~c"host", :timeout}})
+    test "recognises a timeout gen_smtp reports mid-transaction, when the message may have left" do
+      assert Delivery.timeout_error?({:send, {:network_failure, ~c"host", {:error, :timeout}}})
+    end
+
+    test "recognises the send deadline being exceeded" do
+      assert Delivery.timeout_error?({:send_deadline_exceeded, 20_000})
+    end
+
+    # Opening the session happens before any message data is sent, so a
+    # timeout there means the email certainly did not leave. Reporting it as
+    # delivered silently dropped every email behind a firewalled relay.
+    test "does not treat a timeout while opening the session as possibly delivered" do
+      refute Delivery.timeout_error?(
+               {:retries_exceeded, {:network_failure, ~c"10.255.255.1", {:error, :timeout}}}
+             )
+
+      refute Delivery.timeout_error?(
+               {:no_more_hosts, {:permanent_failure, ~c"host", "421 timeout"}}
+             )
     end
 
     test "does not classify unrelated failures as timeouts" do

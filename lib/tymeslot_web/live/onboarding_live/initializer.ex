@@ -91,17 +91,8 @@ defmodule TymeslotWeb.OnboardingLive.Initializer do
   defp load_profile(socket, user) do
     if connected?(socket) do
       {:ok, loaded} = Onboarding.get_or_create_profile(user.id)
-      detected_timezone = get_connect_params(socket)["timezone"]
-      prefilled_profile = Profiles.prefill_timezone(loaded, detected_timezone)
-
-      if prefilled_profile.timezone != loaded.timezone do
-        case Profiles.update_timezone(loaded, prefilled_profile.timezone) do
-          {:ok, updated} -> updated
-          {:error, _reason} -> prefilled_profile
-        end
-      else
-        loaded
-      end
+      {:ok, profile} = Profiles.ensure_timezone(loaded, get_connect_params(socket)["timezone"])
+      profile
     else
       nil
     end

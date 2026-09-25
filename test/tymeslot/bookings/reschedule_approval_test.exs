@@ -35,6 +35,10 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
 
   setup do
     TestMocks.setup_email_mocks()
+    # The reschedule submit re-reads the host's connected calendars
+    # (`Tymeslot.Bookings.CalendarCheck`); these tests are about a host with
+    # nothing else in their diary.
+    TestMocks.stub_no_calendar_events()
     :ok
   end
 
@@ -193,6 +197,134 @@ defmodule Tymeslot.Bookings.RescheduleApprovalTest do
       assert_enqueued(
         worker: EmailWorker,
         args: %{"action" => "send_reminder_emails", "meeting_id" => confirmed.id}
+      )
+    end
+
+    test "reserves the calendar revision the approval's reschedule notice announces" do
+      %{meeting: meeting, params: params} = gated_booking(true)
+
+      assert meeting.ical_sequence == 0
+
+      assert {:ok, rescheduled} =
+               Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      # The request email carries no calendar attachment, so this revision is
+      # reserved rather than announced: the reschedule notice the host's
+      # approval sends is what spends it, and it has to sit above the
+      # invitation the attendee's calendar already holds.
+      assert rescheduled.ical_sequence == 1
+
+      assert {:ok, confirmed} = Approval.approve(reload(meeting))
+
+      assert confirmed.ical_sequence == 1
+    end
+
+    test "passes the time the booking was moved from on to the request emails" do
+      announced_at = DateTime.utc_now(:second)
+
+      %{meeting: meeting, params: params} =
+        gated_booking(true, %{announced_at: announced_at, first_announced_at: announced_at})
+
+      Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_booking_request_emails",
+          "meeting_id" => meeting.id,
+          "previous_start_time" => DateTime.to_iso8601(meeting.start_time)
+        }
+      )
+    end
+
+    test "approving the new time tells both sides the booking moved" do
+      # The booking was confirmed and announced before; the confirmation it
+      # already had is not sent again, so without this nobody would hear
+      # that the host accepted the new time.
+      announced_at = DateTime.utc_now(:second)
+      test_pid = self()
+
+      %{meeting: meeting, params: params} =
+        gated_booking(true, %{announced_at: announced_at, first_announced_at: announced_at})
+
+      {:ok, rescheduled} = Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      expect(Tymeslot.EmailServiceMock, :send_reschedule_emails, fn details ->
+        send(test_pid, {:reschedule_emails, details})
+        {{:ok, :sent}, {:ok, :sent}}
+      end)
+
+      assert {:ok, _confirmed} = Approval.approve(reload(meeting))
+
+      assert_received {:reschedule_emails, details}
+      assert details.is_rescheduled
+      assert DateTime.compare(details.start_time, rescheduled.start_time) == :eq
+    end
+
+    test "approving a first-time request sends no reschedule notice" do
+      %{meeting: meeting} =
+        gated_booking(true, %{
+          status: "awaiting_approval",
+          approval_requested_at: DateTime.add(DateTime.utc_now(:second), -1, :hour),
+          approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 11, :hour)
+        })
+
+      expect(Tymeslot.EmailServiceMock, :send_reschedule_emails, 0, fn _details ->
+        {{:ok, :sent}, {:ok, :sent}}
+      end)
+
+      assert {:ok, _confirmed} = Approval.approve(reload(meeting))
+    end
+
+    test "tells the host when the request to move a confirmed booking lapses" do
+      # Letting the request lapse cancels the booking; nobody declined it, so
+      # without this the host would only find a meeting missing.
+      announced_at = DateTime.utc_now(:second)
+
+      %{meeting: meeting, params: params} =
+        gated_booking(true, %{announced_at: announced_at, first_announced_at: announced_at})
+
+      {:ok, _rescheduled} =
+        Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      assert {:ok, _expired} = Approval.expire(reload(meeting))
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_reschedule_request_expired", "meeting_id" => meeting.id}
+      )
+    end
+
+    test "a lapsed first-time request costs the host no booking and sends them nothing" do
+      %{meeting: meeting} =
+        gated_booking(true, %{
+          status: "awaiting_approval",
+          approval_requested_at: DateTime.add(DateTime.utc_now(:second), -1, :hour),
+          approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 11, :hour)
+        })
+
+      assert {:ok, _expired} = Approval.expire(reload(meeting))
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_reschedule_request_expired", "meeting_id" => meeting.id}
+      )
+    end
+
+    test "a declined reschedule sends the host nothing extra: they made the decision" do
+      announced_at = DateTime.utc_now(:second)
+
+      %{meeting: meeting, params: params} =
+        gated_booking(true, %{announced_at: announced_at, first_announced_at: announced_at})
+
+      {:ok, _rescheduled} =
+        Reschedule.execute(meeting.uid, params, %{}, meeting.organizer_user_id)
+
+      assert {:ok, _declined} = Approval.decline(reload(meeting))
+
+      refute_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_reschedule_request_expired", "meeting_id" => meeting.id}
       )
     end
 

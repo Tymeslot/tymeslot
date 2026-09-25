@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpersTest do
   @moduletag :unit
   @moduletag :calendar
 
+  import Tymeslot.Test.ClockHelpers
+
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
 
   # The extremes of the timezone map: UTC+14 and UTC-12 are 26 hours apart, so
@@ -56,6 +58,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpersTest do
 
       assert PreferenceHelpers.day_header_class(behind_today, @behind_tz) =~ "turquoise"
       refute PreferenceHelpers.day_header_class(behind_today, @ahead_tz) =~ "turquoise"
+    end
+  end
+
+  # ── today/1 ───────────────────────────────────────────────────────────
+
+  describe "today/1" do
+    test "is the user's local date when it is already tomorrow there" do
+      # Sunday evening in UTC is Monday morning in Tallinn, and the next week.
+      freeze_clock(~U[2026-09-13 21:27:00Z])
+
+      assert PreferenceHelpers.today("Europe/Tallinn") == ~D[2026-09-14]
+      assert PreferenceHelpers.today("Etc/UTC") == ~D[2026-09-13]
+    end
+
+    test "is the user's local date when it is still yesterday there" do
+      freeze_clock(~U[2026-09-14 02:00:00Z])
+
+      assert PreferenceHelpers.today("America/New_York") == ~D[2026-09-13]
     end
   end
 

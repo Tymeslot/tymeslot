@@ -14,8 +14,9 @@ defmodule Tymeslot.Emails.EmailScheduler.IntegrationScheduler do
 
   Uses a 30-day uniqueness window per user + integration + type so that a
   re-occurring flap does not immediately re-send after a cooldown expires.
-  The ResponseHandler also tracks `notification_sent_at` in the DB for the same
-  reason; the Oban uniqueness is a belt-and-suspenders safeguard.
+  The ResponseHandler also honours the `notification_sent_at` the email worker
+  stamps after delivery, for the same reason; the Oban uniqueness is a
+  belt-and-suspenders safeguard.
   """
   @spec schedule_integration_unhealthy_notification(
           entity_with_id(),
@@ -125,6 +126,48 @@ defmodule Tymeslot.Emails.EmailScheduler.IntegrationScheduler do
         Logger.error("Failed to schedule integration reauth notification",
           user_id: user.id,
           integration_id: integration.id,
+          error: Helpers.format_insert_error(reason)
+        )
+
+        {:error, "Failed to schedule job"}
+    end
+  end
+
+  @doc """
+  Schedules the email telling an owner that their video provider refuses to
+  create rooms for an integration, with the refusal's `code`.
+
+  Carries no uniqueness of its own: `Tymeslot.Integrations.Video.RoomCreationError`
+  claims each code once per integration before calling this, inside the same
+  transaction, which is the guarantee that the owner is emailed about it once.
+  """
+  @spec schedule_video_room_creation_error_notification(pos_integer(), pos_integer(), atom()) ::
+          :ok | {:error, String.t()}
+  def schedule_video_room_creation_error_notification(user_id, integration_id, code) do
+    result =
+      %{
+        "action" => "send_video_room_creation_error_notification",
+        "user_id" => user_id,
+        "integration_id" => integration_id,
+        "error_code" => Atom.to_string(code)
+      }
+      |> EmailWorker.new(queue: :emails, priority: 2)
+      |> Oban.insert()
+
+    case result do
+      {:ok, _job} ->
+        Logger.info("Video room creation error notification job scheduled",
+          user_id: user_id,
+          integration_id: integration_id,
+          code: code
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule video room creation error notification",
+          user_id: user_id,
+          integration_id: integration_id,
           error: Helpers.format_insert_error(reason)
         )
 

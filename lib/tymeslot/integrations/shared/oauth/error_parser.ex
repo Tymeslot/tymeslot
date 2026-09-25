@@ -15,6 +15,15 @@ defmodule Tymeslot.Integrations.Common.OAuth.ErrorParser do
   @oauth_error_statuses [400, 401]
 
   @doc """
+  Whether `status` is one a token endpoint uses for an OAuth protocol-level
+  failure, so the body should be read for an error code rather than the
+  status treated as a transport problem. Google and Microsoft both answer
+  `invalid_client` with a 401, not a 400, so a client that only reads 400
+  bodies retries a dead credential instead of reporting it.
+  """
+  defguard is_oauth_error_status(status) when status in @oauth_error_statuses
+
+  @doc """
   Builds a human-readable error message from an HTTP error response.
 
   For 400/401 responses whose body contains a JSON `{"error": "..."}` field,
@@ -38,7 +47,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.ErrorParser do
       "Token refresh failed: HTTP 400 (see logs for details)"
   """
   @spec build_message(String.t(), integer(), term()) :: String.t()
-  def build_message(prefix, status, body) when status in @oauth_error_statuses do
+  def build_message(prefix, status, body) when is_oauth_error_status(status) do
     case parse_oauth_error_type(body) do
       nil -> "#{prefix}: HTTP #{status} (see logs for details)"
       error_type -> "#{prefix}: #{error_type}"

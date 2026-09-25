@@ -11,9 +11,7 @@ defmodule Tymeslot.Auth.SessionTest do
   alias Tymeslot.Security.Token
   alias TymeslotWeb.Endpoint
 
-  import Plug.Conn, only: [get_session: 2, put_session: 3]
   import Tymeslot.Factory
-  import Phoenix.ConnTest
 
   # The real socket topic is derived from the token *hash*, so pass the plaintext
   # token here and hash it to reconstruct the same topic.
@@ -32,29 +30,19 @@ defmodule Tymeslot.Auth.SessionTest do
   end
 
   describe "create_session/2" do
-    test "stores session token in conn session" do
+    test "stores the session and returns its token" do
       user = insert(:user)
-      {:ok, conn, _token} = Session.create_session(init_test_session(build_conn(), %{}), user)
-
-      assert get_session(conn, :user_token)
-    end
-
-    test "stores session token in database" do
-      user = insert(:user)
-      {:ok, _conn, token} = Session.create_session(init_test_session(build_conn(), %{}), user)
+      {:ok, token} = Session.create_session(user.id)
 
       assert String.length(token) > 0
-      assert UserSessionQueries.get_user_by_session_token(token)
+      assert %{id: user_id} = UserSessionQueries.get_user_by_session_token(token)
+      assert user_id == user.id
     end
 
     test "a session still resolves after 23 hours but no longer after 25" do
       user = insert(:user)
-
-      {:ok, _conn, recent_token} =
-        Session.create_session(init_test_session(build_conn(), %{}), user)
-
-      {:ok, _conn, stale_token} =
-        Session.create_session(init_test_session(build_conn(), %{}), user)
+      {:ok, recent_token} = Session.create_session(user.id)
+      {:ok, stale_token} = Session.create_session(user.id)
 
       age_session(recent_token, 23)
       age_session(stale_token, 25)
@@ -63,44 +51,73 @@ defmodule Tymeslot.Auth.SessionTest do
       assert nil == UserSessionQueries.get_user_by_session_token(stale_token)
     end
 
+    test "revokes the session it replaces and disconnects its socket" do
+      user = insert(:user)
+      {:ok, old_token} = Session.create_session(user.id)
+
+      Endpoint.subscribe(live_socket_topic(old_token))
+
+      {:ok, new_token} = Session.create_session(user.id, replacing: old_token)
+
+      assert nil == UserSessionQueries.get_user_by_session_token(old_token)
+      assert_receive %Broadcast{event: "disconnect"}
+      assert %{id: _id} = UserSessionQueries.get_user_by_session_token(new_token)
+    end
+
+    test "leaves the user's other sessions alone" do
+      user = insert(:user)
+      {:ok, other_token} = Session.create_session(user.id)
+      {:ok, _token} = Session.create_session(user.id)
+
+      assert UserSessionQueries.get_user_by_session_token(other_token)
+    end
+
     test "records the login as the user's last activity" do
       user = insert(:user)
       assert is_nil(user.last_active_at)
 
-      {:ok, _conn, _token} = Session.create_session(init_test_session(build_conn(), %{}), user)
+      {:ok, _token} = Session.create_session(user.id)
 
       assert %DateTime{} = Repo.reload!(user).last_active_at
     end
   end
 
-  describe "delete_session/1" do
-    test "removes token from database" do
-      user = insert(:user)
-      {:ok, conn, token} = Session.create_session(init_test_session(build_conn(), %{}), user)
+  describe "live_socket_id/1" do
+    test "is the topic revoking the session broadcasts on" do
+      {:ok, token} = Session.create_session(insert(:user).id)
 
-      Session.delete_session(conn)
-
-      assert nil == UserSessionQueries.get_user_by_session_token(token)
+      assert Session.live_socket_id(token) == live_socket_topic(token)
     end
+  end
 
-    test "clears conn session" do
-      user = insert(:user)
-      {:ok, conn, _token} = Session.create_session(init_test_session(build_conn(), %{}), user)
-
-      updated_conn = Session.delete_session(conn)
-
-      assert nil == Session.get_current_user_id(updated_conn)
-    end
-
-    test "force-disconnects the live socket bound to the revoked token" do
-      user = insert(:user)
-      {:ok, conn, token} = Session.create_session(init_test_session(build_conn(), %{}), user)
-
+  describe "delete_session/2" do
+    test "removes the session and disconnects its socket" do
+      {:ok, token} = Session.create_session(insert(:user).id)
       Endpoint.subscribe(live_socket_topic(token))
 
-      Session.delete_session(conn)
+      assert :ok == Session.delete_session(token)
 
+      assert nil == UserSessionQueries.get_user_by_session_token(token)
       assert_receive %Broadcast{event: "disconnect"}
+    end
+
+    test "is a no-op without a token" do
+      assert :ok == Session.delete_session(nil)
+    end
+  end
+
+  describe "get_user_by_token/1" do
+    test "returns the user for a live session token" do
+      user = insert(:user)
+      {:ok, token} = Session.create_session(user.id)
+
+      assert %{id: user_id} = Session.get_user_by_token(token)
+      assert user_id == user.id
+    end
+
+    test "returns nil for an unknown or missing token" do
+      assert nil == Session.get_user_by_token("nonexistent-token")
+      assert nil == Session.get_user_by_token(nil)
     end
   end
 
@@ -145,102 +162,6 @@ defmodule Tymeslot.Auth.SessionTest do
 
       refute_receive %Broadcast{event: "disconnect"}
       assert UserSessionQueries.get_user_by_session_token("theirs")
-    end
-  end
-
-  describe "get_current_user_id/1" do
-    test "returns user ID for valid session" do
-      user = insert(:user)
-      {:ok, conn, _token} = Session.create_session(init_test_session(build_conn(), %{}), user)
-
-      assert Session.get_current_user_id(conn) == user.id
-    end
-
-    test "returns nil for unauthenticated sessions" do
-      conn = init_test_session(build_conn(), %{})
-
-      assert Session.get_current_user_id(conn) == nil
-    end
-
-    test "returns nil for expired session token" do
-      user = insert(:user)
-
-      _expired_session =
-        insert(:user_session,
-          user: user,
-          token_hash: Token.hash_token("expired-token-value"),
-          expires_at: DateTime.add(DateTime.utc_now(), -1, :hour)
-        )
-
-      conn =
-        build_conn()
-        |> init_test_session(%{})
-        |> put_session(:user_token, "expired-token-value")
-
-      assert Session.get_current_user_id(conn) == nil
-    end
-  end
-
-  describe "get_unverified_user_from_session/1" do
-    test "returns user data when valid and within 30 min" do
-      timestamp = DateTime.to_unix(DateTime.utc_now())
-
-      session = %{
-        "unverified_user_id" => 123,
-        "unverified_user_email" => "test@example.com",
-        "unverified_session_timestamp" => timestamp
-      }
-
-      result = Session.get_unverified_user_from_session(session)
-
-      assert result.id == 123
-      assert result.email == "test@example.com"
-      assert result.timestamp == timestamp
-    end
-
-    test "returns nil when expired (>30 min)" do
-      old_timestamp = DateTime.to_unix(DateTime.utc_now()) - 1900
-
-      session = %{
-        "unverified_user_id" => 123,
-        "unverified_user_email" => "test@example.com",
-        "unverified_session_timestamp" => old_timestamp
-      }
-
-      assert nil == Session.get_unverified_user_from_session(session)
-    end
-
-    test "returns nil when missing fields" do
-      assert nil == Session.get_unverified_user_from_session(%{})
-      assert nil == Session.get_unverified_user_from_session(%{"unverified_user_id" => 123})
-
-      assert nil ==
-               Session.get_unverified_user_from_session(%{
-                 "unverified_user_id" => 123,
-                 "unverified_user_email" => "test@example.com"
-               })
-    end
-  end
-
-  describe "session_valid?/1" do
-    test "returns true for recent timestamp" do
-      timestamp = DateTime.to_unix(DateTime.utc_now())
-      assert Session.session_valid?(timestamp)
-    end
-
-    test "returns false for expired timestamp" do
-      timestamp = DateTime.to_unix(DateTime.utc_now()) - 1801
-      refute Session.session_valid?(timestamp)
-    end
-
-    test "boundary: exactly 1800 seconds is still invalid" do
-      timestamp = DateTime.to_unix(DateTime.utc_now()) - 1800
-      refute Session.session_valid?(timestamp)
-    end
-
-    test "boundary: 1799 seconds is still valid" do
-      timestamp = DateTime.to_unix(DateTime.utc_now()) - 1799
-      assert Session.session_valid?(timestamp)
     end
   end
 end

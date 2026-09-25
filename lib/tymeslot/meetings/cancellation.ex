@@ -24,6 +24,12 @@ defmodule Tymeslot.Meetings.Cancellation do
   is a cancelled meeting with no refund, which is visible to the host and can
   be settled manually from Stripe — hence the distinct `:refund_failed` reason,
   so callers can say so rather than reporting a failed cancellation.
+
+  The cancellation is announced third, once the refund has settled either
+  way. The host's cancellation email tells them what they still hold for the
+  booking, and it reads the payment when it is built: announced before the
+  refund, it would report the full amount as outstanding for a refund that
+  went through a moment later.
   """
 
   alias Tymeslot.Bookings.Cancel
@@ -86,31 +92,51 @@ defmodule Tymeslot.Meetings.Cancellation do
   @doc """
   Cancels the meeting, then issues the resolved refund.
 
+  `acting_user_id` is whoever asked for the cancellation. Anyone the caller
+  allows to cancel may cancel without a refund, but a refund moves the host's
+  money, so only the host who took the payment may ask for one. Anyone else
+  asking for a refund gets `{:error, :not_found}`, returned before the meeting
+  is touched: a refusal is not a failed refund, and must not leave a cancelled
+  meeting behind.
+
   A refund failure is reported as `{:error, {:refund_failed, reason}}` and
   leaves the meeting cancelled; see the module docs on ordering.
   """
-  @spec cancel(struct() | String.t(), map() | nil, refund_action()) ::
-          {:ok, struct()} | {:error, {:refund_failed, term()}} | {:error, term()}
-  def cancel(meeting_or_uid, payment, refund_action) do
-    # `caller: :organizer` is what lets this cancel a group meeting outright.
-    # The public, participant-facing cancel link resolves through
-    # `Meetings.cancel_meeting/1` instead, which passes no opts and is
-    # therefore refused for a group slot: one booker must not be able to
-    # cancel everyone else's seats. This path is only ever reached from the
-    # authenticated dashboard, where cancelling the whole meeting is the
-    # host's own decision.
-    with {:ok, cancelled} <- Cancel.execute(meeting_or_uid, caller: :organizer),
-         :ok <- issue_refund(payment, refund_action) do
-      {:ok, cancelled}
+  @spec cancel(struct(), integer(), refund_action()) ::
+          {:ok, struct()}
+          | {:error, :not_found}
+          | {:error, {:refund_failed, term()}}
+          | {:error, term()}
+  def cancel(meeting, _acting_user_id, :none), do: Cancel.execute(meeting, caller: :organizer)
+
+  def cancel(%{id: meeting_id} = meeting, acting_user_id, {:refund, amount_cents}) do
+    case MeetingPayments.payment_for_meeting(meeting_id, acting_user_id) do
+      nil -> {:error, :not_found}
+      payment -> cancel_and_refund(meeting, payment, acting_user_id, amount_cents)
     end
   end
 
-  defp issue_refund(_payment, :none), do: :ok
-
-  defp issue_refund(payment, {:refund, amount_cents}) do
-    case MeetingPayments.issue_refund(payment, amount_cents) do
-      {:ok, _payment} -> :ok
-      {:error, reason} -> {:error, {:refund_failed, reason}}
+  # `caller: :organizer` is what lets this cancel a group meeting outright.
+  # The public, participant-facing cancel link resolves through
+  # `Meetings.cancel_meeting/1` instead, which passes no `:caller` and is
+  # therefore refused for a group slot: one booker must not be able to cancel
+  # everyone else's seats. This module is only ever reached from the
+  # authenticated dashboard, where cancelling the whole meeting is the host's
+  # own decision.
+  #
+  # The announcement waits for the refund, whichever way it went: the host's
+  # cancellation email reports what they still hold for the booking, read from
+  # the payment when the email is built.
+  defp cancel_and_refund(meeting, payment, host_user_id, amount_cents) do
+    with {:ok, cancelled} <- Cancel.execute(meeting, caller: :organizer, announce: false) do
+      try do
+        case MeetingPayments.refund_payment_for_host(payment.id, host_user_id, amount_cents) do
+          {:ok, _payment} -> {:ok, cancelled}
+          {:error, reason} -> {:error, {:refund_failed, reason}}
+        end
+      after
+        Cancel.announce(cancelled)
+      end
     end
   end
 end

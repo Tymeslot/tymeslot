@@ -28,9 +28,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Views.AllDayRow do
     ~H"""
     <details class="group border-l border-tymeslot-200 p-0.5 min-h-[1.5rem] [&>summary::-webkit-details-marker]:hidden">
       <summary class="flex flex-col gap-0.5 list-none cursor-default">
+        <%!-- An all-day event covering several days is rendered in each of
+              its cells, so the id names the day as well. --%>
         <div
           :for={event <- @shown}
-          id={"allday-event-#{event.id}"}
+          id={"allday-event-#{event.id}-#{@day}"}
           phx-hook="StopClickPropagation"
           class={"rounded px-1 text-token-xs font-medium text-white truncate cursor-pointer #{Helpers.color_for_event(@assigns_ref, event)}"}
           phx-click="show_event"

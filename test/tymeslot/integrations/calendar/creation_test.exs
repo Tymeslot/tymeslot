@@ -277,6 +277,24 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
     end
   end
 
+  @propfind_calendar_response """
+  <D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+    <D:response>
+      <D:href>/calendars/testuser/personal/</D:href>
+      <D:propstat>
+        <D:prop>
+          <D:displayname>Personal</D:displayname>
+          <D:resourcetype>
+            <D:collection/>
+            <C:calendar/>
+          </D:resourcetype>
+        </D:prop>
+        <D:status>HTTP/1.1 200 OK</D:status>
+      </D:propstat>
+    </D:response>
+  </D:multistatus>
+  """
+
   describe "create_with_validation/3" do
     setup do
       user = insert(:user)
@@ -288,8 +306,11 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       # promotion below is a silent no-op.
       insert(:profile, user: user)
 
+      # A real PROPFIND body, not an empty one: a CalDAV connection that
+      # discovers no calendars is now refused rather than saved, so an empty
+      # 207 would never reach the promotion this test is about.
       stub(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 207, body: ""}}
+        {:ok, %Req.Response{status: 207, body: @propfind_calendar_response}}
       end)
 
       params = %{

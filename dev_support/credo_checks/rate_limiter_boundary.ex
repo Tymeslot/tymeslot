@@ -1,6 +1,6 @@
 defmodule CredoChecks.RateLimiterBoundary do
   @moduledoc """
-  Flags direct calls to `RateLimiter.check_connection_test_rate_limit/2` from
+  Flags direct calls to `RateLimiter.check_connection_test_rate_limit/2,3` from
   outside its one legitimate caller.
 
   `Tymeslot.Integrations.Shared.ConnectionProbe` is the single choke point
@@ -13,7 +13,7 @@ defmodule CredoChecks.RateLimiterBoundary do
 
   ## Scoping decision
 
-  Only `check_connection_test_rate_limit/2` is flagged, not every
+  Only `check_connection_test_rate_limit/2,3` is flagged, not every
   `Tymeslot.Security.RateLimiter.*` function. The web layer has legitimate,
   non-connection-test rate limiting of its own (e.g.
   `check_integration_write_rate_limit/1` in dashboard LiveComponents), and
@@ -63,7 +63,7 @@ defmodule CredoChecks.RateLimiterBoundary do
       check: """
       Connection-test rate limiting must go through
       `Tymeslot.Integrations.Shared.ConnectionProbe`, not
-      `RateLimiter.check_connection_test_rate_limit/2` directly.
+      `RateLimiter.check_connection_test_rate_limit/2,3` directly.
       """,
       params: [
         allowed: "List of filename substrings allowed to call the limiter directly."
@@ -75,7 +75,9 @@ defmodule CredoChecks.RateLimiterBoundary do
   alias Credo.SourceFile
 
   @flagged_function :check_connection_test_rate_limit
-  @flagged_arity 2
+  # The action label a caller supplies is optional, so the same call appears at
+  # both arities; both are equally a bypass.
+  @flagged_arities [2, 3]
 
   @doc false
   @impl Credo.Check
@@ -119,7 +121,7 @@ defmodule CredoChecks.RateLimiterBoundary do
          issue_meta
        )
        when is_list(aliases) and is_list(args) do
-    if func_name == @flagged_function and length(args) == @flagged_arity and
+    if func_name == @flagged_function and length(args) in @flagged_arities and
          rate_limiter_reference?(aliases) do
       module_prefix = aliases |> Enum.map(&Atom.to_string/1) |> Enum.join(".")
       trigger = "#{module_prefix}.#{func_name}"
@@ -127,7 +129,7 @@ defmodule CredoChecks.RateLimiterBoundary do
       issue =
         format_issue(issue_meta,
           message:
-            "`#{trigger}/#{@flagged_arity}` should only be called through " <>
+            "`#{trigger}/#{length(args)}` should only be called through " <>
               "`Tymeslot.Integrations.Shared.ConnectionProbe`.",
           line_no: meta[:line],
           trigger: trigger

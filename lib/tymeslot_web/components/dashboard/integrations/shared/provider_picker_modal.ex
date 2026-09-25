@@ -79,7 +79,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ProviderPickerMod
             </button>
             <div>
               <h2 class="text-token-lg font-semibold text-tymeslot-800">{@title}</h2>
-              <p :if={@subtitle && !@config_active} class="mt-1 text-token-sm text-tymeslot-500">
+              <%!-- The modal renders its :header slot inside the .modal-title heading, so the
+                   subtitle has to reset the heading's weight and tracking explicitly. --%>
+              <p
+                :if={@subtitle && !@config_active}
+                class="mt-1 text-token-sm font-normal tracking-normal text-tymeslot-500"
+              >
                 {@subtitle}
               </p>
             </div>

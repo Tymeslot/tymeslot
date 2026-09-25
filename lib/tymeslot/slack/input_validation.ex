@@ -125,10 +125,10 @@ defmodule Tymeslot.Slack.InputValidation do
   # value" (we never pre-fill the secret). A non-blank value is still
   # format-validated exactly like create.
   @spec validate_webhook_url_optional(String.t() | nil, map()) :: {String.t() | nil, map()}
-  def validate_webhook_url_optional(nil, errors), do: {nil, errors}
-  def validate_webhook_url_optional("", errors), do: {nil, errors}
+  defp validate_webhook_url_optional(nil, errors), do: {nil, errors}
+  defp validate_webhook_url_optional("", errors), do: {nil, errors}
 
-  def validate_webhook_url_optional(url, errors) when is_binary(url) do
+  defp validate_webhook_url_optional(url, errors) when is_binary(url) do
     if String.trim(url) == "" do
       {nil, errors}
     else

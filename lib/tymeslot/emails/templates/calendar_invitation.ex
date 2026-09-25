@@ -4,6 +4,11 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
 
   Simpler than booking confirmations — no reschedule/cancel URLs, video sections,
   or reminders. Includes event details and an ICS calendar attachment.
+
+  An all-day event (`all_day: true`) carries `:start_date`, an exclusive
+  `:end_date` and an inclusive `:last_date` instead of `:start_time`,
+  `:end_time` and `:duration`; the body then shows its days rather than a
+  clock time, and the attachment uses date-only DTSTART/DTEND.
   """
 
   import Swoosh.Email
@@ -36,14 +41,17 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
     locale = Map.get(invitation_details, :attendee_locale, "en")
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      meeting_details = %{
-        date: invitation_details.date,
-        start_time: invitation_details.start_time,
-        duration: invitation_details.duration,
-        location: invitation_details.location,
-        location_type: if(invitation_details.location, do: :in_person),
-        meeting_type: invitation_details.event_title
-      }
+      meeting_details =
+        invitation_details
+        |> Map.take([:all_day, :last_date])
+        |> Map.merge(%{
+          date: invitation_details.date,
+          start_time: invitation_details.start_time,
+          duration: invitation_details.duration,
+          location: invitation_details.location,
+          location_type: if(invitation_details.location, do: :in_person),
+          meeting_type: invitation_details.event_title
+        })
 
       mjml_content = """
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
@@ -68,6 +76,9 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
       date_short = Formatting.format_date_short(invitation_details.date, locale)
 
       ics_details = %{
+        all_day: Map.get(invitation_details, :all_day, false),
+        start_date: Map.get(invitation_details, :start_date),
+        end_date: Map.get(invitation_details, :end_date),
         title: invitation_details.event_title,
         start_time: invitation_details.start_time,
         end_time: invitation_details.end_time,
@@ -102,13 +113,16 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
   end
 
   defp build_text_body(invitation_details, locale) do
-    text_details = %{
-      date: invitation_details.date,
-      start_time: invitation_details.start_time,
-      duration: invitation_details.duration,
-      location: invitation_details.location,
-      meeting_type: invitation_details.event_title
-    }
+    text_details =
+      invitation_details
+      |> Map.take([:all_day, :last_date])
+      |> Map.merge(%{
+        date: invitation_details.date,
+        start_time: invitation_details.start_time,
+        duration: invitation_details.duration,
+        location: invitation_details.location,
+        meeting_type: invitation_details.event_title
+      })
 
     meeting_details = TextBodyHelper.format_meeting_details(text_details, locale)
 

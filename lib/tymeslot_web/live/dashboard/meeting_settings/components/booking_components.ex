@@ -209,6 +209,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
   attr :refreshing_calendars, :boolean, required: true
   attr :available_calendars, :list, required: true
   attr :no_writable_calendars, :boolean, required: true
+  attr :target_calendar_status, :atom, default: :ok, values: [:ok, :read_only, :missing]
   attr :selected_target_calendar_id, :any, required: true
   attr :form_errors, :map, required: true
   attr :myself, :any, required: true
@@ -295,6 +296,28 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
             <label class="label text-token-sm">
               {dgettext("dashboard_meeting_form", "2. Select Specific Calendar")}
             </label>
+            <%!-- Suppressed when the account has no writable calendar at all:
+                  the notice below already says so, and says what to do about
+                  it, whereas "choose another calendar" would be impossible
+                  advice. --%>
+            <div
+              :if={@target_calendar_status != :ok and not @no_writable_calendars}
+              class="mb-2 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-token-lg"
+            >
+              <p class="text-token-sm text-yellow-700">
+                <%= if @target_calendar_status == :read_only do %>
+                  {dgettext(
+                    "dashboard_meeting_form",
+                    "The calendar this meeting type books into is now read-only. Choose another calendar."
+                  )}
+                <% else %>
+                  {dgettext(
+                    "dashboard_meeting_form",
+                    "The calendar this meeting type books into is no longer on this account. Choose another calendar."
+                  )}
+                <% end %>
+              </p>
+            </div>
             <%= if @refreshing_calendars do %>
               <div class="flex items-center space-x-2 p-4 bg-tymeslot-50 rounded-token-lg">
                 <.spinner class="h-4 w-4 text-turquoise-600" />

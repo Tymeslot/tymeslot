@@ -1,16 +1,20 @@
 defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   @moduledoc """
-  Handles OAuth user creation with proper transaction support to prevent race conditions.
+  Finds or creates the account for an OAuth identity, together with its
+  profile and default schedule, in one transaction.
 
-  This module ensures that checking for existing users and creating new users
-  happens atomically within a database transaction.
+  The lookup and the insert are not atomic: two requests for the same new
+  identity (a double-submitted completion form) can both miss the lookup.
+  The unique index on the provider ID lets only one insert through; the loser
+  re-reads the winner's account and returns it, so both requests end with the
+  same user.
   """
 
   import Ecto.Query, warn: false
   require Logger
 
-  alias Ecto.Changeset
   alias Tymeslot.Auth.{AdminBootstrap, UserQueries, UserSchema}
+  alias Tymeslot.Auth.OAuth.Providers
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
@@ -21,23 +25,22 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   @doc """
   Finds or creates an OAuth user within a transaction.
 
-  This is useful when you want to either get an existing user or create a new one
-  atomically. Prevents duplicate user creation in high-concurrency scenarios.
+  Returns the existing account when one already carries this provider ID,
+  including one a concurrent request inserted first.
 
   ## Parameters
-  - provider: The OAuth provider (:github or :google)
+  - provider: The OAuth provider (:github, :google or :oauth)
   - auth_params: Map containing user authentication parameters
 
   ## Returns
   - {:ok, %{user: user, created: boolean}} where created indicates if user was newly created
   - {:error, reason} on failure
   """
-  @spec find_or_create_oauth_user(atom(), oauth_auth_params(), oauth_profile_params(), keyword()) ::
+  @spec find_or_create_oauth_user(atom(), oauth_auth_params(), oauth_profile_params()) ::
           {:ok, %{user: UserSchema.t(), created: boolean()}}
           | {:error, any()}
-  def find_or_create_oauth_user(provider, auth_params, profile_params \\ %{}, _opts \\ []) do
-    provider_field = provider_uid_field(provider)
-    provider_uid = auth_params[provider_field]
+  def find_or_create_oauth_user(provider, auth_params, profile_params \\ %{}) do
+    provider_uid = auth_params[Atom.to_string(Providers.fetch!(provider).uid_field)]
 
     result =
       Repo.transaction(fn ->
@@ -55,6 +58,9 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
       {:ok, {user, created}} ->
         {:ok, %{user: user, created: created}}
 
+      {:error, {:find_or_create, %Ecto.Changeset{} = changeset}} ->
+        recover_from_concurrent_insert(provider, provider_uid, changeset)
+
       {:error, {operation, reason}} ->
         Logger.error("OAuth find_or_create failed", operation: operation, reason: inspect(reason))
         {:error, reason}
@@ -62,6 +68,24 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   end
 
   # Private functions
+
+  # The failed insert aborted the transaction, so the re-read happens outside
+  # it. Found: another request created the account first. Not found: the
+  # changeset failed for its own reasons (a taken email, say).
+  defp recover_from_concurrent_insert(provider, provider_uid, changeset) do
+    case find_user_by_provider(Repo, provider, provider_uid) do
+      {:ok, user} ->
+        {:ok, %{user: user, created: false}}
+
+      {:error, :not_found} ->
+        Logger.error("OAuth find_or_create failed",
+          operation: :find_or_create,
+          reason: inspect(changeset)
+        )
+
+        {:error, changeset}
+    end
+  end
 
   defp ensure_profile(repo, user, true, profile_params) do
     create_profile(repo, user, profile_params)
@@ -110,44 +134,21 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
     end
   end
 
+  # An account is only ever matched by the provider's own stable user ID, never
+  # by email. Each account belongs to the sign-in method that created it; an
+  # email match would let anyone controlling that address at another provider
+  # (or at the same provider, after the address changes hands) sign straight
+  # into it. A new login whose email is already registered fails on the email
+  # unique constraint instead.
   defp find_or_create_by_provider(repo, provider, provider_uid, auth_params) do
     case find_user_by_provider(repo, provider, provider_uid) do
-      {:error, :not_found} ->
-        handle_user_not_found_by_provider(repo, provider, provider_uid, auth_params)
-
-      {:ok, user} ->
-        {:ok, {user, false}}
+      {:ok, user} -> {:ok, {user, false}}
+      {:error, :not_found} -> create_new_user(repo, auth_params)
     end
   end
 
-  defp find_user_by_provider(repo, provider, provider_uid) do
-    case provider do
-      :github -> UserQueries.get_user_by_github_id(provider_uid, repo)
-      :google -> UserQueries.get_user_by_google_id(provider_uid, repo)
-      :oauth -> UserQueries.get_user_by_provider("oauth", provider_uid, repo)
-      _other -> {:error, :not_found}
-    end
-  end
-
-  defp handle_user_not_found_by_provider(repo, provider, provider_uid, auth_params) do
-    email = auth_params["email"]
-    email_verified = auth_params["is_verified"] == true
-
-    # Only link to an existing account by email when the provider has verified the
-    # address. Trusting an unverified email could let an attacker claim any address
-    # and silently take over the matching account.
-    if email_verified do
-      case UserQueries.get_user_by_email(email, repo) do
-        {:error, :not_found} ->
-          create_new_user(repo, auth_params)
-
-        {:ok, existing_user} ->
-          link_provider_to_existing_user(repo, existing_user, provider, provider_uid)
-      end
-    else
-      create_new_user(repo, auth_params)
-    end
-  end
+  defp find_user_by_provider(repo, provider, provider_uid),
+    do: Providers.find_user(provider, provider_uid, repo)
 
   defp create_new_user(repo, auth_params) do
     with {:ok, user} <- UserQueries.create_social_user(auth_params, repo),
@@ -157,29 +158,4 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
       {:error, %Ecto.Changeset{} = changeset} -> {:error, {:find_or_create, changeset}}
     end
   end
-
-  defp link_provider_to_existing_user(repo, user, provider, provider_uid) do
-    update_attrs = build_provider_update_attrs(provider, provider_uid)
-
-    changeset = Changeset.change(user, update_attrs)
-
-    case UserQueries.update_changeset(changeset, repo) do
-      {:ok, updated_user} -> {:ok, {updated_user, false}}
-      {:error, changeset} -> {:error, {:find_or_create, changeset}}
-    end
-  end
-
-  defp build_provider_update_attrs(provider, provider_uid) do
-    case provider do
-      :github -> %{github_user_id: provider_uid}
-      :google -> %{google_user_id: provider_uid}
-      :oauth -> %{provider: "oauth", provider_uid: provider_uid}
-      _other -> %{}
-    end
-  end
-
-  defp provider_uid_field(:github), do: "github_user_id"
-  defp provider_uid_field(:google), do: "google_user_id"
-  defp provider_uid_field(:oauth), do: "provider_uid"
-  defp provider_uid_field(_arg), do: nil
 end

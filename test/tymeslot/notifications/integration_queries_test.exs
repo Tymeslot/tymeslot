@@ -4,7 +4,6 @@ defmodule Tymeslot.Notifications.IntegrationQueriesTest do
   @moduletag :notifications
   @moduletag :queries
 
-  import Ecto.Query, only: [from: 2]
   import Tymeslot.Factory
 
   alias Tymeslot.Notifications.IntegrationQueries
@@ -196,62 +195,6 @@ defmodule Tymeslot.Notifications.IntegrationQueriesTest do
         assert is_nil(enabled.disabled_reason)
         assert enabled.failure_count == 0
       end
-    end
-  end
-
-  describe "delete_stubs_older_than/2" do
-    test "deletes slack stubs older than the TTL" do
-      user = insert(:user)
-      now = DateTime.utc_now(:second)
-
-      stale =
-        insert(:slack_integration,
-          user: user,
-          channel_id: nil,
-          inserted_at: DateTime.add(now, -120 * 60, :second)
-        )
-
-      fresh =
-        insert(:slack_integration,
-          user: user,
-          channel_id: nil,
-          inserted_at: now
-        )
-
-      query =
-        from(i in SlackIntegrationSchema, where: i.user_id == ^user.id and is_nil(i.channel_id))
-
-      assert {1, _rows} = IntegrationQueries.delete_stubs_older_than(query, 30)
-
-      assert {:error, :not_found} = IntegrationQueries.get(SlackIntegrationSchema, stale.id)
-      assert {:ok, _row} = IntegrationQueries.get(SlackIntegrationSchema, fresh.id)
-    end
-
-    test "deletes telegram stubs older than the TTL" do
-      user = insert(:user)
-      now = DateTime.utc_now(:second)
-
-      stale =
-        insert(:telegram_integration,
-          user: user,
-          chat_id: nil,
-          inserted_at: DateTime.add(now, -120 * 60, :second)
-        )
-
-      fresh =
-        insert(:telegram_integration,
-          user: user,
-          chat_id: nil,
-          inserted_at: now
-        )
-
-      query =
-        from(i in TelegramIntegrationSchema, where: i.user_id == ^user.id and is_nil(i.chat_id))
-
-      assert {1, _rows} = IntegrationQueries.delete_stubs_older_than(query, 30)
-
-      assert {:error, :not_found} = IntegrationQueries.get(TelegramIntegrationSchema, stale.id)
-      assert {:ok, _row} = IntegrationQueries.get(TelegramIntegrationSchema, fresh.id)
     end
   end
 

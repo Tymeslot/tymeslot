@@ -36,14 +36,14 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCompositionTest do
   import Tymeslot.TestFixtures
 
   alias Plug.Test, as: PlugTest
-  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.ConfigTestHelpers
+  alias Tymeslot.Onboarding.OnboardingQueries
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Webhooks
 
   setup %{conn: conn} do
     user = create_user_fixture()
-    {:ok, user} = UserQueries.mark_onboarding_complete(user)
+    {:ok, user} = OnboardingQueries.mark_onboarding_complete(user)
 
     ConfigTestHelpers.setup_config(:tymeslot,
       feature_access_checker: Tymeslot.Features.DefaultAccessChecker,

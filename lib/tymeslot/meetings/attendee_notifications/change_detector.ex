@@ -6,7 +6,18 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeDetector do
 
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
 
-  @notifiable_fields [:title, :starts_at, :ends_at, :location, :description, :video_link]
+  # `start_date`/`end_date` are an all-day event's timing, which carries no
+  # instants: without them, moving one to other days would read as no change.
+  @notifiable_fields [
+    :title,
+    :starts_at,
+    :ends_at,
+    :start_date,
+    :end_date,
+    :location,
+    :description,
+    :video_link
+  ]
 
   @spec diff(map, map, keyword) :: ChangeSummary.t()
   def diff(old, new, opts) do
@@ -34,6 +45,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeDetector do
 
   defp field_changed?(:starts_at, a, b), do: not same_instant?(a, b)
   defp field_changed?(:ends_at, a, b), do: not same_instant?(a, b)
+  defp field_changed?(:start_date, a, b), do: not same_date?(a, b)
+  defp field_changed?(:end_date, a, b), do: not same_date?(a, b)
 
   defp field_changed?(:description, a, b),
     do: normalise_description(a) != normalise_description(b)
@@ -44,6 +57,9 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeDetector do
   defp same_instant?(nil, _other), do: false
   defp same_instant?(_other, nil), do: false
   defp same_instant?(%DateTime{} = a, %DateTime{} = b), do: DateTime.compare(a, b) == :eq
+
+  defp same_date?(%Date{} = a, %Date{} = b), do: Date.compare(a, b) == :eq
+  defp same_date?(a, b), do: a == b
 
   defp normalise_text(nil), do: ""
   defp normalise_text(v) when is_binary(v), do: v |> String.trim() |> String.downcase()

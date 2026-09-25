@@ -60,6 +60,14 @@ defmodule Tymeslot.Telegram.BotSetupTest do
       assert BotSetup.register_webhook() == {:error, :missing_config}
     end
 
+    test "returns :missing_config when the webhook secret is empty" do
+      # TELEGRAM_WEBHOOK_SECRET="" passes a presence check, but every update
+      # would then be refused. verify_on_exit! fails on any Telegram call.
+      Application.put_env(:tymeslot, :telegram_webhook_secret, "")
+
+      assert BotSetup.register_webhook() == {:error, :missing_config}
+    end
+
     test "never calls Telegram when configuration is incomplete" do
       Application.delete_env(:tymeslot, :telegram_bot_token)
 

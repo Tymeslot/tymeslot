@@ -17,7 +17,19 @@ defmodule Tymeslot.Security.DnsResolutionBehaviour do
   @callback resolve_public(String.t(), keyword()) ::
               {:ok, [:inet.ip_address()]} | {:error, String.t()}
 
-  @optional_callbacks resolve_public: 2
+  @doc """
+  The inverse check, for a request that is only allowed because its host is
+  meant to be on a private network: returns every address the hostname
+  resolves to when all of them are private, loopback or link-local, and an
+  error when any is public or nothing resolves.
+
+  Optional: a resolver that does not implement it cannot confirm that a name
+  is internal, so the requests that depend on the confirmation are refused.
+  """
+  @callback resolve_internal(String.t(), keyword()) ::
+              {:ok, [:inet.ip_address()]} | {:error, String.t()}
+
+  @optional_callbacks resolve_public: 2, resolve_internal: 2
 end
 
 defmodule Tymeslot.Security.DnsResolution do
@@ -46,6 +58,7 @@ defmodule Tymeslot.Security.DnsResolution do
   alias Tymeslot.Security.{PrivateIPv4, PrivateIPv6}
 
   @default_error "URL resolves to a private or local network address"
+  @public_address_error "Plain http to an internal name must resolve to a private network address"
 
   @impl Tymeslot.Security.DnsResolutionBehaviour
   @spec check_private_ip(String.t(), keyword()) :: :ok | {:error, String.t()}
@@ -75,6 +88,36 @@ defmodule Tymeslot.Security.DnsResolution do
       nil -> {:error, error_message}
       "" -> {:error, error_message}
       host -> resolve_and_check(to_charlist(host), error_message)
+    end
+  end
+
+  @doc """
+  Resolves `url`'s hostname and returns every address, IPv4 first, only when
+  all of them are private, loopback or link-local.
+
+  Used for plain-http requests to a name accepted as internal by its shape
+  alone (a single label a resolver search domain can complete to a public
+  name, or `.lan`, which nothing reserves): the request carries credentials in
+  clear text, so it may only go ahead when the name really stays on the
+  private network.
+  """
+  @impl Tymeslot.Security.DnsResolutionBehaviour
+  @spec resolve_internal(String.t(), keyword()) ::
+          {:ok, [:inet.ip_address()]} | {:error, String.t()}
+  def resolve_internal(url, opts) do
+    error_message = Keyword.get(opts, :error_message, @public_address_error)
+
+    with host when is_binary(host) and host != "" <- URI.parse(url).host,
+         host_charlist = to_charlist(host),
+         ipv4_addrs = getaddrs(host_charlist, :inet),
+         ipv6_addrs = getaddrs(host_charlist, :inet6),
+         addresses when addresses != [] <- ipv4_addrs ++ ipv6_addrs,
+         true <-
+           Enum.all?(ipv4_addrs, &PrivateIPv4.private?/1) and
+             Enum.all?(ipv6_addrs, &PrivateIPv6.private?/1) do
+      {:ok, addresses}
+    else
+      _public_or_unresolved -> {:error, error_message}
     end
   end
 

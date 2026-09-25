@@ -150,9 +150,14 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
 
   @doc """
   Refreshes an access token using the refresh token.
+
+  `opts` takes a `:log_context`, forwarded to
+  `TokenExchange.refresh_access_token/3`. Callers holding the integration ids
+  should pass them: without them a failure line names only the provider.
   """
-  @spec refresh_access_token(String.t(), String.t() | nil) :: {:ok, map()} | {:error, String.t()}
-  def refresh_access_token(refresh_token, current_scope \\ nil) do
+  @spec refresh_access_token(String.t(), String.t() | nil, keyword()) ::
+          {:ok, map()} | {:error, String.t()}
+  def refresh_access_token(refresh_token, current_scope \\ nil, opts \\ []) do
     scope = current_scope || @teams_scope
 
     body = %{
@@ -163,23 +168,20 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
       scope: scope
     }
 
+    # No second log line here: `TokenExchange` already logs the status and the
+    # redacted body, and now names the provider too.
     case TokenExchange.refresh_access_token(@token_url, body,
            fallback_refresh_token: refresh_token,
-           fallback_scope: scope
+           fallback_scope: scope,
+           log_context: Keyword.merge(Keyword.get(opts, :log_context, []), provider: :teams)
          ) do
       {:ok, tokens} ->
         {:ok, tokens}
 
       {:error, {:http_error, status, body}} ->
-        Logger.error("Teams OAuth token refresh failed",
-          status: status,
-          response_body: Redactor.redact_and_truncate(body)
-        )
-
         {:error, ErrorParser.build_message("Token refresh failed", status, body)}
 
       {:error, {:network_error, reason}} ->
-        Logger.error("Network error during Teams token refresh", reason: inspect(reason))
         {:error, "Network error during token refresh: #{inspect(reason)}"}
     end
   end

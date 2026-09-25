@@ -23,9 +23,6 @@ defmodule Tymeslot.Polls.PollVoteSchema do
     timestamps(type: :utc_datetime)
   end
 
-  @spec responses() :: [atom()]
-  def responses, do: @responses
-
   @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
   def changeset(vote, attrs) do
     vote

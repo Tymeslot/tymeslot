@@ -166,6 +166,64 @@ defmodule Tymeslot.MeetingTypes.ReminderValidationTest do
   end
 
   # ---------------------------------------------------------------------------
+  # check_policy/1
+  # ---------------------------------------------------------------------------
+
+  describe "check_policy/1" do
+    test "accepts a list within every limit" do
+      assert ReminderValidation.check_policy([%{value: 365, unit: "days"}]) == :ok
+    end
+
+    test "rejects more reminders than the maximum" do
+      reminders =
+        for minutes <- 1..(ReminderValidation.max_reminders() + 1),
+            do: %{value: minutes, unit: "minutes"}
+
+      assert ReminderValidation.check_policy(reminders) == {:error, :too_many}
+    end
+
+    test "accepts exactly the maximum number of reminders" do
+      reminders =
+        for minutes <- 1..ReminderValidation.max_reminders(),
+            do: %{value: minutes, unit: "minutes"}
+
+      assert ReminderValidation.check_policy(reminders) == :ok
+    end
+
+    test "rejects equivalent reminders expressed in different units" do
+      reminders = [%{value: 60, unit: "minutes"}, %{value: 1, unit: "hours"}]
+
+      assert ReminderValidation.check_policy(reminders) == {:error, :duplicate}
+    end
+
+    test "rejects a reminder more than one year in advance" do
+      assert ReminderValidation.check_policy([%{value: 366, unit: "days"}]) ==
+               {:error, :exceeds_max}
+    end
+
+    # The year limit is newer than some stored reminders, so it judges what a
+    # change adds and leaves alone what the meeting type already held.
+    test "accepts a reminder over a year that the meeting type already held" do
+      held = [%{value: 400, unit: "days"}]
+
+      assert ReminderValidation.check_policy(held ++ [%{value: 1, unit: "hours"}], held) == :ok
+    end
+
+    test "still rejects a new reminder over a year beside a held one" do
+      held = [%{value: 400, unit: "days"}]
+
+      assert ReminderValidation.check_policy(held ++ [%{value: 500, unit: "days"}], held) ==
+               {:error, :exceeds_max}
+    end
+
+    test "holds the other rules against held reminders too" do
+      held = [%{value: 400, unit: "days"}]
+
+      assert ReminderValidation.check_policy(held ++ held, held) == {:error, :duplicate}
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # validate_reminder_config/2
   # ---------------------------------------------------------------------------
 

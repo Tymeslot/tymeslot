@@ -58,14 +58,20 @@ defmodule Tymeslot.Profiles.EmbedDomainsTest do
       assert length(updated_profile.allowed_embed_domains) == 2
     end
 
-    test "allows empty list to clear domains", %{profile: profile} do
-      # First set some domains
+    test "an empty list disables embedding, the same as an empty string", %{profile: profile} do
       {:ok, profile} =
         Profiles.update_allowed_embed_domains(profile, ["example.com", "test.org"])
 
-      # Then clear them
       assert {:ok, updated_profile} = Profiles.update_allowed_embed_domains(profile, [])
-      assert updated_profile.allowed_embed_domains == []
+      assert updated_profile.allowed_embed_domains == ["none"]
+
+      assert {:ok, from_string} = Profiles.update_allowed_embed_domains(profile, "")
+      assert from_string.allowed_embed_domains == ["none"]
+    end
+
+    test "a list holding only blanks disables embedding", %{profile: profile} do
+      assert {:ok, updated_profile} = Profiles.update_allowed_embed_domains(profile, ["", ""])
+      assert updated_profile.allowed_embed_domains == ["none"]
     end
 
     test "strips protocols and extracts the host", %{profile: profile} do

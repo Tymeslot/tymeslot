@@ -16,7 +16,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
   alias Tymeslot.Integrations.Calendar.Exchange.Creation, as: ExchangeCreation
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
   alias Tymeslot.Integrations.Calendar.ProviderConfig
-  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
   alias Tymeslot.Utils.SanitizeMerge
   alias TymeslotWeb.Dashboard.CalendarSettings.Components
@@ -139,50 +138,39 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
     end
   end
 
+  # No write-limit check here, and that is not an omission: the creation entry
+  # points charge it themselves, immediately after their own form validation
+  # (`Calendar.Creation.check_write_budget/1`). Charging here charged it before
+  # validation, so every mistyped field cost a token for a submission that was
+  # refused in-process and wrote nothing.
   def handle_event("add_subscription", %{"integration" => params}, socket) do
     user_id = socket.assigns.current_user.id
+    metadata = socket.assigns.security_metadata
 
-    case RateLimiter.check_integration_write_rate_limit(user_id) do
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
+    socket =
+      socket
+      |> assign(is_saving: true, form_values: params)
+      |> start_async(:create_subscription, fn ->
+        Calendar.create_subscription_with_validation(user_id, params, metadata: metadata)
+      end)
 
-      :ok ->
-        metadata = socket.assigns.security_metadata
-
-        socket =
-          socket
-          |> assign(is_saving: true, form_values: params)
-          |> start_async(:create_subscription, fn ->
-            Calendar.create_subscription_with_validation(user_id, params, metadata: metadata)
-          end)
-
-        {:noreply, socket}
-    end
+    {:noreply, socket}
   end
 
   def handle_event("add_integration", %{"integration" => params} = full_params, socket) do
     user_id = socket.assigns.current_user.id
+    socket = assign(socket, is_saving: true, form_values: params)
 
-    case RateLimiter.check_integration_write_rate_limit(user_id) do
-      {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, socket}
+    result =
+      create_integration(
+        normalize_provider(params["provider"] || socket.assigns.selected_provider),
+        user_id,
+        params,
+        full_params,
+        socket
+      )
 
-      :ok ->
-        socket = assign(socket, is_saving: true, form_values: params)
-
-        result =
-          create_integration(
-            normalize_provider(params["provider"] || socket.assigns.selected_provider),
-            user_id,
-            params,
-            full_params,
-            socket
-          )
-
-        handle_create_integration_result(result, socket)
-    end
+    handle_create_integration_result(result, socket)
   end
 
   # Exchange goes through its own creation entry point, so the CalDAV-shaped

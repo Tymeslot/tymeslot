@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   """
 
   alias Phoenix.Component
-  alias Tymeslot.Availability.{Calculate, Schedules}
+  alias Tymeslot.Availability.{Calculate, Offer, Schedules}
   alias Tymeslot.Demo
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
@@ -339,29 +339,28 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
 
   # The month grid and the week strip fallback answer the same availability
   # question, so both build their `availability_config` from this single
-  # place rather than carrying their own copy of the policy keys.
+  # place, on the scheduling rules `Schedules.config/2` assembles for the real
+  # availability path and the booking submit alike.
   #
   # `owner_timezone` falls back to `Profiles.get_default_timezone()` for a
-  # profile with none set — the same fallback the enforcement path applies in
-  # `Tymeslot.Bookings.Policy.scheduling_config/2` and the real availability
-  # path applies in `AvailabilityHelpers.get_owner_timezone/1`, so a nil
-  # profile timezone resolves to the same zone everywhere.
+  # profile with none set, as `Tymeslot.Availability.Offer` and
+  # `Tymeslot.Bookings.Policy.scheduling_config/2` do, so a nil profile
+  # timezone resolves to the same zone everywhere.
   @spec availability_config(map() | nil, map(), map() | nil) :: %{
           required(:schedule_id) => integer() | nil,
           required(:max_advance_booking_days) => pos_integer(),
           required(:min_advance_hours) => non_neg_integer(),
           required(:buffer_minutes) => non_neg_integer(),
+          required(:slot_interval_minutes) => pos_integer() | nil,
           required(:duration_minutes) => pos_integer(),
           required(:owner_timezone) => String.t()
         }
   defp availability_config(schedule, organizer_profile, meeting_type) do
-    %{
-      schedule_id: schedule && schedule.id,
-      max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days),
-      min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
-      buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
-      duration_minutes: (meeting_type && meeting_type.duration_minutes) || 30,
+    schedule
+    |> Schedules.config(meeting_type)
+    |> Map.merge(%{
+      duration_minutes: Offer.duration_minutes(meeting_type, nil),
       owner_timezone: organizer_profile.timezone || Profiles.get_default_timezone()
-    }
+    })
   end
 end

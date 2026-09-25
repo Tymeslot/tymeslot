@@ -1,31 +1,8 @@
 defmodule Tymeslot.Integrations.Calendar.TokenUtils do
   @moduledoc """
   Utility functions for managing OAuth tokens across calendar providers.
-  Handles token expiry calculations, formatting, and status checks.
+  Handles token expiry checks and relative-time formatting.
   """
-
-  @doc """
-  Formats token expiry information for display.
-  Returns a tuple with status and human-readable message.
-  """
-  @spec format_token_expiry(map() | nil) ::
-          {:no_expiry | :expired | :valid | :unknown, String.t()}
-  def format_token_expiry(integration) do
-    case integration do
-      %{token_expires_at: nil} ->
-        {:no_expiry, "No expiry"}
-
-      %{token_expires_at: expires_at} ->
-        if token_expired?(integration) do
-          {:expired, "Expired #{relative_time(expires_at)}"}
-        else
-          {:valid, "Expires #{relative_time(expires_at)}"}
-        end
-
-      _other ->
-        {:unknown, "Unknown"}
-    end
-  end
 
   @doc """
   Checks if a token is expired.

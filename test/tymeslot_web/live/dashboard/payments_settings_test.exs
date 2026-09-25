@@ -286,7 +286,29 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       # Operational sections are meaningless until onboarding is submitted.
       refute html =~ "Default currency"
       refute html =~ "Recent payments"
-      refute html =~ "Disconnect Stripe"
+    end
+
+    test "lets the host disconnect an account that never finished onboarding", %{conn: conn} do
+      # An account Stripe closed or rejected can never finish onboarding, so
+      # Continue onboarding fails every time; disconnecting is the way out.
+      user = create_onboarded_user()
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_dead",
+        charges_enabled: false,
+        payouts_enabled: false,
+        details_submitted: false
+      )
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
+
+      view |> element("button[phx-click=open_disconnect_modal]") |> render_click()
+      view |> element("#disconnect-modal button[phx-click=disconnect]") |> render_click()
+
+      refute ConnectAccountQueries.live_for_user(user.id)
+      assert has_element?(view, "#stripe-connect-form")
     end
   end
 
@@ -297,21 +319,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       defaults = %{
         host_user_id: user.id,
         host_email: user.email,
-        stripe_account_id: "acct_REFUND",
-        stripe_charge_id: "ch_REFUND_#{System.unique_integer([:positive])}",
-        amount_cents: 5000,
-        application_fee_cents: 25,
-        currency: "eur",
-        status: "paid",
-        paid_at: DateTime.utc_now(:second),
-        refunded_amount_cents: 0,
-        attendee_email: "alice@example.com",
-        attendee_name: "Alice",
-        meeting_type_name: "Consult",
-        booking_theme_id: "1"
+        stripe_account_id: "acct_REFUND"
       }
 
-      insert(:booking_payment, Map.merge(defaults, Map.new(attrs)))
+      insert(:paid_booking_payment, Map.merge(defaults, Map.new(attrs)))
     end
 
     test "renders refund button for refundable payments only", %{conn: conn} do
@@ -417,30 +428,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsTest do
       assert reloaded.refunded_amount_cents == 1500
     end
 
-    test "another host's payment cannot be refunded via crafted id", %{conn: conn} do
-      attacker = create_onboarded_user()
-      victim = create_onboarded_user()
-
-      insert(:connect_account,
-        user: attacker,
-        stripe_account_id: "acct_ATTACK",
-        charges_enabled: true,
-        payouts_enabled: true,
-        details_submitted: true
-      )
-
-      victim_payment = paid_payment_for(victim, %{stripe_account_id: "acct_VICTIM"})
-
-      conn = log_in_user(conn, attacker)
-      {:ok, view, _html} = live(conn, "/dashboard/integrations?tab=payments")
-
-      # Drive the component event directly with a crafted id; no rendered
-      # button exists for a payment the attacker does not own.
-      view
-      |> with_target("#payments-settings")
-      |> render_click("open_refund_modal", %{"id" => victim_payment.id})
-
-      refute render(view) =~ "Refund payment"
-    end
+    # Refusing another host's payment id now lives in
+    # `TymeslotWeb.Dashboard.PaymentsSettingsCrossTenantTest`, together with the
+    # submit and async-refund halves of the same guarantee, so the whole refund
+    # authorization story can be run as one `--only cross_tenant` slice.
   end
 end

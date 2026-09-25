@@ -32,6 +32,11 @@ defmodule Tymeslot.Profiles.EmbedDomains do
   @doc """
   Validates and normalizes the allowed embed domains for a profile.
 
+  Accepts a comma-separated string or a list. An input that leaves no domain,
+  whether empty, blank or only the `"none"` keyword, disables embedding and is
+  stored as `["none"]`, so a cleared whitelist has one representation however
+  it was cleared.
+
   Returns `{:ok, attrs}` where `attrs` is a map ready to be passed to
   `Profiles.update_profile/2`, or `{:error, changeset}` on validation failure.
   """
@@ -42,32 +47,23 @@ defmodule Tymeslot.Profiles.EmbedDomains do
       domains
       |> String.split(",")
       |> Enum.map(&String.trim/1)
-      |> Enum.reject(&(&1 == ""))
 
-    # If the user explicitly cleared the field or entered "none", we treat it as disabled.
-    # We allow "none" as a literal string here to support the "Disable" button flow.
-    domain_list = if domain_list == [], do: ["none"], else: domain_list
     validate_and_normalize(profile, domain_list)
   end
 
   def validate_and_normalize(%ProfileSchema{} = profile, domains) when is_list(domains) do
-    # If the only domain is "none", we skip normalization to preserve the keyword.
-    if domains == ["none"] do
-      {:ok, %{allowed_embed_domains: ["none"]}}
-    else
-      case Security.validate_domains(domains) do
-        {:ok, validated} ->
-          normalized = validated |> Enum.reject(&(&1 == "none")) |> Enum.uniq()
-          {:ok, %{allowed_embed_domains: normalized}}
+    case Security.validate_domains(domains) do
+      {:ok, validated} ->
+        normalized = validated |> Enum.reject(&(&1 == "none")) |> Enum.uniq()
+        {:ok, %{allowed_embed_domains: disabled_when_empty(normalized)}}
 
-        {:error, error_msg} ->
-          changeset =
-            profile
-            |> Changeset.change()
-            |> Changeset.add_error(:allowed_embed_domains, error_msg)
+      {:error, error_msg} ->
+        changeset =
+          profile
+          |> Changeset.change()
+          |> Changeset.add_error(:allowed_embed_domains, error_msg)
 
-          {:error, changeset}
-      end
+        {:error, changeset}
     end
   end
 
@@ -80,6 +76,9 @@ defmodule Tymeslot.Profiles.EmbedDomains do
     |> Enum.reject(&(&1 == ""))
     |> Enum.uniq()
   end
+
+  defp disabled_when_empty([]), do: ["none"]
+  defp disabled_when_empty(domains), do: domains
 
   defp validate_non_empty_input([]), do: {:error, :empty_input}
   defp validate_non_empty_input(_domains), do: :ok

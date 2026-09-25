@@ -31,6 +31,19 @@ defmodule TymeslotWeb.Components.Icons.ProviderIconTest do
       assert html =~ ~s(src="/icons/providers/calendar/compact/caldav.webp")
     end
 
+    test "Nextcloud Talk shows the neutral video icon and is named in text, not by a logo" do
+      html =
+        render_component(&ProviderIcon.provider_icon/1,
+          provider: "nextcloud_talk",
+          type: "video",
+          size: "medium"
+        )
+
+      assert html =~ ~s(src="/icons/providers/video/generic.svg")
+      assert html =~ ~s(alt="Nextcloud Talk icon")
+      refute html =~ "nextcloud_talk.webp"
+    end
+
     test "icons defer loading and reserve their box before the stylesheet lands" do
       html =
         render_component(&ProviderIcon.provider_icon/1, provider: "zoom", type: "video")

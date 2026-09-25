@@ -10,6 +10,8 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
 
   import Swoosh.Email
 
+  alias Tymeslot.Emails.Shared.Stack
+
   alias Tymeslot.Emails.Shared.{
     Formatting,
     MjmlEmail,
@@ -205,23 +207,25 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
 
     """
     #{Text.section_title(label)}
-    <mj-section
-      background-color="#{Styles.canvas_soft()}"
-      border-radius="#{Styles.card_radius()}"
-      padding="20px 26px"
-      css-class="mobile-card email-canvas-soft"
-    >
-      <mj-column>
-        <mj-text
-          font-size="15px"
-          color="#{Styles.text_color(:primary)}"
-          line-height="1.7"
-          align="center"
-        >
-          #{body_lines}
-        </mj-text>
-      </mj-column>
-    </mj-section>
+    #{Stack.spaced("""
+      <mj-section
+        background-color="#{Styles.canvas_soft()}"
+        border-radius="#{Styles.card_radius()}"
+        padding="20px 26px"
+        css-class="mobile-card email-canvas-soft"
+      >
+        <mj-column>
+          <mj-text
+            font-size="15px"
+            color="#{Styles.text_color(:primary)}"
+            line-height="1.7"
+            align="center"
+          >
+            #{body_lines}
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    """)}
     """
   end
 

@@ -27,9 +27,11 @@ defmodule TymeslotWeb.E2E.SignupTest do
     # with text "Log in", not "Back to Login")
     session = assert_has(session, css("button", text: "Back to Login"))
 
-    # Verify programmatically (simulating clicking the email link)
+    # Verify programmatically with a freshly issued link token (simulating
+    # clicking the email link)
     user = Repo.get_by!(UserSchema, email: email)
-    {:ok, _user} = Verification.verify_user(user.id)
+    {:ok, _user, token} = Verification.issue_verification_token(user.id)
+    {:ok, _user} = Verification.verify_user(token)
 
     # Mark onboarding complete so we can reach dashboard
     Onboarding.mark_onboarding_complete(user)

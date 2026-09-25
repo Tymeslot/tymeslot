@@ -22,7 +22,7 @@ jobs:
       # actionlint_1.7.7_checksums.txt.
       ACTIONLINT_SHA256: "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install actionlint
         run: |
           curl -sSfL -o /tmp/actionlint.tar.gz \

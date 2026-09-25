@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   """
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.EventsRead
   alias Tymeslot.Integrations.Calendar.Exchange.FreeBusy
   alias Tymeslot.Integrations.Calendar.Exchange.Provider, as: ExchangeProvider
@@ -29,10 +30,11 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   @doc """
   Creates an event on the integration's calendar provider.
 
-  Returns `{:ok, event_id}` where `event_id` is a string identifier, or
-  `{:error, reason}`.
+  Returns `{:ok, %CreatedEvent{}}` carrying the event's identity as the
+  provider reported it, or `{:error, reason}`.
   """
-  @spec create_provider_event(integration(), map()) :: {:ok, any()} | {:error, any()}
+  @spec create_provider_event(integration(), map()) ::
+          {:ok, CreatedEvent.t()} | {:error, any()}
   def create_provider_event(%CalendarIntegrationSchema{} = integration, event_attrs) do
     with {:ok, adapter_client} <- ProviderAdapter.new_client_from_integration(integration) do
       adapter_client.provider_module.create_event(
@@ -52,7 +54,7 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   Not intended for application use.
   """
   @spec put_raw_caldav_ical(integration(), String.t(), String.t()) ::
-          {:ok, String.t()} | {:error, any()}
+          {:ok, CreatedEvent.t()} | {:error, any()}
   def put_raw_caldav_ical(
         %CalendarIntegrationSchema{provider: provider} = integration,
         uid,
@@ -361,7 +363,7 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
   end
 
   defp fetch_exchange_folder(integration, client, range_start, range_end) do
-    calendar_id = client[:calendar_id]
+    calendar_id = client.calendar_id
 
     context = %{
       calendar_integration_id: integration.id,

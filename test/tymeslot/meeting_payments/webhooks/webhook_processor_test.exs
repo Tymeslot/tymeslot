@@ -12,17 +12,48 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessorTest do
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.MeetingPayments.Webhooks.WebhookProcessor
+  alias Tymeslot.Payments.Webhooks.IdempotencyCache
 
   setup :verify_on_exit!
 
-  describe "process/3" do
-    test "normalises signature verification failures to :signature_failure" do
+  setup do
+    Application.put_env(:tymeslot, :stripe_connect_webhook_secret, "whsec_secret")
+    IdempotencyCache.clear_all()
+
+    on_exit(fn -> Application.delete_env(:tymeslot, :stripe_connect_webhook_secret) end)
+    :ok
+  end
+
+  describe "process/2" do
+    test "returns :not_configured without verifying when the Connect secret is unset" do
+      Application.delete_env(:tymeslot, :stripe_connect_webhook_secret)
+
+      # No mock expectation: verification must not be attempted.
+      assert {:error, :not_configured} = WebhookProcessor.process("{}", "t=1,v1=GOOD")
+    end
+
+    test "verifies with the configured Connect secret" do
+      expect(StripeAdapterMock, :construct_webhook_event, fn _payload, _sig, "whsec_secret" ->
+        {:ok, %{"id" => "evt_SECRET", "type" => "ping.event"}}
+      end)
+
+      assert {:ok, :processed} = WebhookProcessor.process("{}", "t=1,v1=GOOD")
+    end
+
+    test "normalises signature verification failures to :invalid_signature" do
       expect(StripeAdapterMock, :construct_webhook_event, fn _payload, _sig, _secret ->
         {:error, "bad signature"}
       end)
 
-      assert {:error, :signature_failure} =
-               WebhookProcessor.process("{}", "t=1,v1=BAD", "whsec_secret")
+      assert {:error, :invalid_signature} = WebhookProcessor.process("{}", "t=1,v1=BAD")
+    end
+
+    test "rejects a verified event without an id as :invalid_payload" do
+      expect(StripeAdapterMock, :construct_webhook_event, fn _payload, _sig, _secret ->
+        {:ok, %{"type" => "ping.event"}}
+      end)
+
+      assert {:error, :invalid_payload} = WebhookProcessor.process("{}", "t=1,v1=GOOD")
     end
 
     test "accepts events older than 5 minutes (Stripe retry semantics)" do
@@ -36,7 +67,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessorTest do
         {:ok, %{"id" => "evt_OLD", "type" => "ping.event", "created" => old_created}}
       end)
 
-      assert :ok = WebhookProcessor.process(~s({}), "t=1,v1=GOOD", "whsec_secret")
+      assert {:ok, :processed} = WebhookProcessor.process(~s({}), "t=1,v1=GOOD")
     end
 
     test "returns :ok and ignores events that have no registered handler" do
@@ -46,7 +77,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessorTest do
         {:ok, %{"id" => "evt_X", "type" => "ping.event", "created" => now}}
       end)
 
-      assert :ok = WebhookProcessor.process(~s({}), "t=1,v1=GOOD", "whsec_secret")
+      assert {:ok, :processed} = WebhookProcessor.process(~s({}), "t=1,v1=GOOD")
     end
 
     test "dispatches to the registered handler when type is known" do
@@ -83,7 +114,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessorTest do
          }}
       end)
 
-      assert :ok = WebhookProcessor.process(~s({}), "t=1,v1=GOOD", "whsec_secret")
+      assert {:ok, :processed} = WebhookProcessor.process(~s({}), "t=1,v1=GOOD")
 
       reloaded = Repo.get!(ConnectAccountSchema, account.id)
 
@@ -102,7 +133,16 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessorTest do
         {:ok, %{"id" => "evt_NO_CREATED", "type" => "ping.event"}}
       end)
 
-      assert :ok = WebhookProcessor.process(~s({}), "t=1,v1=GOOD", "whsec_secret")
+      assert {:ok, :processed} = WebhookProcessor.process(~s({}), "t=1,v1=GOOD")
+    end
+
+    test "a handler's :invalid_event is a permanent failure, recorded so Stripe stops redelivering" do
+      expect(StripeAdapterMock, :construct_webhook_event, fn _payload, _sig, _secret ->
+        {:ok, %{"id" => "evt_MALFORMED", "type" => "account.updated"}}
+      end)
+
+      assert {:error, :permanent} = WebhookProcessor.process(~s({}), "t=1,v1=GOOD")
+      assert IdempotencyCache.check_idempotency("evt_MALFORMED") == {:ok, :already_processed}
     end
   end
 end

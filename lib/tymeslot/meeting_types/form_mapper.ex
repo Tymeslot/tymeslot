@@ -4,11 +4,10 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
 
   The form speaks in strings and UI state: a duration typed as text, a price in
   major units, reminders that arrive as a list, a map or a JSON string
-  depending on how the client serialised them, and a meeting mode that decides
-  whether a video integration applies at all. The schema wants integers, cents
-  and normalised structs. Everything needed to get from one to the other lives
-  here, so the context can compose a save without also owning the vocabulary of
-  a particular form.
+  depending on how the client serialised them, and a location list the schema
+  turns into embeds. The schema wants integers, cents and normalised structs.
+  Everything needed to get from one to the other lives here, so the context can
+  compose a save without also owning the vocabulary of a particular form.
 
   Money is the reason this is worth isolating. `parse_price_cents/2` is the
   single conversion from a typed price to the integer minor units that reach
@@ -32,17 +31,15 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   @doc """
   Builds schema attributes from raw form params and the form's UI state.
 
-  `custom_fields` is only included when the params carry the key, so a form
-  that does not render the questions editor cannot blank an existing question
-  list by omission.
+  `custom_fields` and `locations` are only included when the params carry the
+  key, so a form that does not render the questions editor (or the locations
+  editor) cannot blank an existing list by omission.
   """
   @spec build_attrs(map(), map()) :: {:ok, map()} | {:error, error()}
   def build_attrs(params, ui_state) do
-    payment_required = params["payment_required"] == "true"
-
     with {:ok, duration_minutes} <- parse_duration(params["duration"]),
          {:ok, reminder_config} <- normalize_reminder_config(params["reminder_config"]),
-         {:ok, price_cents} <- parse_price_cents(payment_required, params["price"]),
+         {:ok, payment} <- payment_attrs(params),
          {:ok, max_participants} <- parse_max_participants(params["max_participants"]),
          {:ok, approval_window_hours} <- ApprovalWindow.parse(params["approval_window_hours"]) do
       attrs = %{
@@ -52,23 +49,59 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         description: params["description"],
         icon: ui_state.selected_icon,
         is_active: params["is_active"] == "true",
-        allow_video: ui_state.meeting_mode == "video",
         allow_guests: params["allow_guests"] == "true",
         requires_approval: params["requires_approval"] == "true",
         approval_window_hours: approval_window_hours,
-        video_integration_id: video_integration_id(ui_state),
         calendar_integration_id: blank_to_nil(params["calendar_integration_id"]),
         availability_schedule_id: blank_to_nil(params["availability_schedule_id"]),
         target_calendar_id: blank_to_nil(params["target_calendar_id"]),
         reminder_config: reminder_config,
-        payment_required: payment_required,
-        price_cents: price_cents,
         max_participants: max_participants
       }
 
-      attrs = Map.merge(attrs, booking_limits(params))
+      attrs =
+        attrs
+        |> Map.merge(booking_limits(params))
+        |> maybe_put_custom_fields(params)
+        |> maybe_put_locations(params)
+        |> Map.merge(payment)
+        |> unpaid_when_group()
 
-      {:ok, maybe_put_custom_fields(attrs, params)}
+      {:ok, attrs}
+    end
+  end
+
+  # Payments and group bookings are mutually exclusive. A host who cannot take
+  # charges posts no payment fields at all (see `payment_attrs/1`), so turning
+  # group bookings on for a paid type has to switch the payment off here or
+  # the save is refused with no control left to fix it. The stored price is
+  # kept, exactly as it is while charges are unavailable.
+  defp unpaid_when_group(%{max_participants: limit} = attrs) when limit > 1,
+    do: Map.put(attrs, :payment_required, false)
+
+  defp unpaid_when_group(attrs), do: attrs
+
+  # A form that cannot render the payment controls does not post them, and an
+  # absent key is not a request to make the meeting type free. Both
+  # `MeetingTypeForm.Submission` and its hidden inputs omit the pair whenever
+  # the host cannot accept charges, so reading the absence as `false` cleared
+  # the stored price on the next unrelated save — a rename, a new duration —
+  # with nothing said to the host, who then had to re-enter every price after
+  # reconnecting Stripe. Same shape, and the same reason, as
+  # `maybe_put_custom_fields/2` below.
+  defp payment_attrs(params) do
+    if Map.has_key?(params, "payment_required") do
+      payment_required = params["payment_required"] == "true"
+
+      case parse_price_cents(payment_required, params["price"]) do
+        {:ok, price_cents} ->
+          {:ok, %{payment_required: payment_required, price_cents: price_cents}}
+
+        {:error, _reason} = error ->
+          error
+      end
+    else
+      {:ok, %{}}
     end
   end
 
@@ -81,7 +114,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
   """
   @spec payment_opts(integer()) :: keyword()
   def payment_opts(user_id) do
-    currency = host_currency(user_id)
+    currency = MeetingPayments.host_currency(user_id)
 
     [
       host_charges_enabled: MeetingPayments.charges_enabled_for_user?(user_id),
@@ -90,14 +123,20 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
     ]
   end
 
-  defp video_integration_id(%{meeting_mode: "video"} = ui_state),
-    do: ui_state.selected_video_integration_id
-
-  defp video_integration_id(_ui_state), do: nil
-
   defp maybe_put_custom_fields(attrs, params) do
     if Map.has_key?(params, "custom_fields") do
       Map.put(attrs, :custom_fields, params["custom_fields"])
+    else
+      attrs
+    end
+  end
+
+  # `allow_video` and `video_integration_id` are deliberately absent from the
+  # attributes above: the schema projects them from this list, so mapping them
+  # here as well would give the same two columns two authors.
+  defp maybe_put_locations(attrs, params) do
+    if Map.has_key?(params, "locations") do
+      Map.put(attrs, :locations, params["locations"])
     else
       attrs
     end
@@ -162,20 +201,6 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value
-
-  # The host's pricing currency is their Connect account's default currency.
-  # When no account exists yet, fall back to the first entry of the currency
-  # allowlist (defaulting to "usd"), matching the default the payments
-  # dashboard surfaces.
-  defp host_currency(user_id) do
-    case MeetingPayments.get_connect_account_for_user(user_id) do
-      %{default_currency: currency} when is_binary(currency) and currency != "" ->
-        currency
-
-      _other ->
-        List.first(MeetingPayments.currency_allowlist()) || "usd"
-    end
-  end
 
   # Converts the major-unit price string from the form into integer cents.
   # When payment is not required the price is irrelevant and stored as nil.

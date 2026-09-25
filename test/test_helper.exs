@@ -23,6 +23,11 @@ end
 
 # Start Ecto sandbox - ensure Repo is ready first
 {:ok, _result} = Application.ensure_all_started(:tymeslot)
+
+# Run the suite as an established install, so sign-ups skip the first-user
+# admin bootstrap's lock (see Tymeslot.Test.AdminBootstrapHelpers).
+Tymeslot.Test.AdminBootstrapHelpers.close!()
+
 Ecto.Adapters.SQL.Sandbox.mode(Tymeslot.Repo, :manual)
 
 # Mox mocks are defined once, at compile time, in
@@ -36,6 +41,7 @@ Tymeslot.Test.SuiteConfig.setup_analytics_completeness(
 )
 
 Tymeslot.Test.SuiteConfig.cleanup_uploads_after_suite()
+Tymeslot.Test.SuiteConfig.setup_log_capture()
 
 ExUnit.start()
 
@@ -52,5 +58,17 @@ ExUnit.configure(exunit_config)
 # Start Wallaby for E2E browser tests
 if System.get_env("E2E") == "true" do
   Application.put_env(:wallaby, :base_url, TymeslotWeb.Endpoint.url())
+
+  # The browser console goes to a file rather than stdout. LiveView turns its
+  # own client-side debug logging on whenever the page is served from
+  # localhost, so every mount and every diff is echoed through Wallaby's
+  # logger, burying the ExUnit output (and the failure it is there to show)
+  # under thousands of "received diff - Object" lines. Severe JS errors do not
+  # go through this logger at all: they raise `Wallaby.JSError` and fail the
+  # test, so nothing diagnostic is lost by moving the stream off the terminal.
+  console_log_path = Path.join(System.tmp_dir!(), "tymeslot-e2e-console.log")
+  Application.put_env(:wallaby, :js_logger, File.open!(console_log_path, [:write, :utf8]))
+  IO.puts("E2E browser console: #{console_log_path}")
+
   {:ok, _apps} = Application.ensure_all_started(:wallaby)
 end

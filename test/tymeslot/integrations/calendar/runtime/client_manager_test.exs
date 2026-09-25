@@ -348,6 +348,45 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManagerTest do
     end
   end
 
+  describe "get_booking_integration_info/1 — falling back from a flagged integration" do
+    test "answers the fallback's own calendar rather than the flagged integration's target", %{
+      user: user
+    } do
+      healthy =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          is_active: true,
+          calendar_paths: ["/calendars/healthy/"]
+        )
+
+      flagged =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          is_active: true,
+          needs_reauth: true,
+          default_booking_calendar_id: "primary"
+        )
+
+      insert(:profile, user: user, primary_calendar_integration_id: healthy.id)
+
+      meeting_type = %MeetingTypeSchema{
+        user_id: user.id,
+        calendar_integration_id: flagged.id,
+        target_calendar_id: "primary"
+      }
+
+      # "primary" names a calendar in the flagged Google account. Recorded on
+      # the booking next to the CalDAV integration's id, the calendar event
+      # job would try to write to a path that does not exist there.
+      assert {:ok, %{integration_id: id, calendar_path: "/calendars/healthy/"}} =
+               ClientManager.get_booking_integration_info(meeting_type)
+
+      assert id == healthy.id
+    end
+  end
+
   describe "resolve_client/1" do
     test "resolves a Meeting's integration directly when stored", %{user: user} do
       integration =

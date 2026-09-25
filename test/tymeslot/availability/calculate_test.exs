@@ -278,45 +278,15 @@ defmodule Tymeslot.Availability.CalculateTest do
       # All dates should be unavailable since they're beyond 7 days
       assert Enum.all?(availability_map, fn {_date, available} -> available == false end)
     end
-  end
 
-  describe "month_availability/6" do
-    test "returns availability map for a month" do
-      assert {:ok, availability_map} =
-               Calculate.month_availability(
-                 2025,
-                 6,
-                 "America/New_York",
-                 "America/New_York",
-                 [],
-                 %{}
-               )
-
-      # June has 30 days
-      assert map_size(availability_map) == 30
-    end
-
-    test "marks all dates in the past as unavailable" do
-      assert {:ok, availability_map} =
-               Calculate.month_availability(
-                 2020,
-                 6,
-                 "America/New_York",
-                 "America/New_York",
-                 [],
-                 %{}
-               )
-
-      # All dates in June 2020 should be false (past)
-      assert Enum.all?(availability_map, fn {_date, available} -> available == false end)
-    end
-
-    test "handles events parameter" do
+    test "a day-long blocking event removes only the day it covers" do
       timezone = "America/New_York"
 
-      # A month wholly in the past is unavailable whatever the events say, so
+      # A range wholly in the past is unavailable whatever the events say, so
       # the blocked day has to sit inside the booking window to prove anything.
       blocked = next_weekday(Date.add(Date.utc_today(), 10))
+      range_start = Date.add(blocked, -5)
+      range_end = Date.add(blocked, 5)
 
       events = [
         CalendarEvent.new!(%{
@@ -333,19 +303,12 @@ defmodule Tymeslot.Availability.CalculateTest do
       ]
 
       assert {:ok, without_events} =
-               Calculate.month_availability(
-                 blocked.year,
-                 blocked.month,
-                 timezone,
-                 timezone,
-                 [],
-                 %{}
-               )
+               Calculate.range_availability(range_start, range_end, timezone, timezone, [], %{})
 
       assert {:ok, with_events} =
-               Calculate.month_availability(
-                 blocked.year,
-                 blocked.month,
+               Calculate.range_availability(
+                 range_start,
+                 range_end,
                  timezone,
                  timezone,
                  events,
@@ -362,26 +325,6 @@ defmodule Tymeslot.Availability.CalculateTest do
 
       # Nothing but the covered day may change.
       assert Map.delete(with_events, key) == Map.delete(without_events, key)
-    end
-
-    test "respects max_advance_booking_days in config" do
-      config = %{max_advance_booking_days: 7}
-
-      # Check a month far in the future
-      future_year = Date.utc_today().year + 1
-
-      assert {:ok, availability_map} =
-               Calculate.month_availability(
-                 future_year,
-                 6,
-                 "America/New_York",
-                 "America/New_York",
-                 [],
-                 config
-               )
-
-      # All dates should be unavailable since they're beyond 7 days
-      assert Enum.all?(availability_map, fn {_date, available} -> available == false end)
     end
   end
 

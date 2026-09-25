@@ -77,7 +77,7 @@ Instructions and prompts take the **2nd-person-plural imperative** (`Вибер�
 | **disconnect** | **від'єднати** / **від'єднано** **[DECIDED]** — never `відключити` (which reads as *switch off*; `вимкнути` is the word for *disable*) |
 | **invalid** (a malformed value, ID, format, request) | **некоректний** **[DECIDED]** |
 | **invalid** (a link or token with no force) | **недійсний** — reserved for exactly this sense |
-| — never | `неправильний` for *invalid*. Eliminated |
+| — never | `неправильний` for *invalid*. Eliminated. Exception: *wrong credentials* (`Неправильний пароль`), where the value is well-formed but does not match |
 | **valid** | **коректний** — never `дійсне число` (that is *a real number* in maths) |
 | `is invalid` (Ecto field error) | **має некоректне значення** — a gender-neutral construction; Ecto appends it to field labels of arbitrary gender, so no adjective can agree |
 | subscription | **підписка** |
@@ -102,6 +102,50 @@ Instructions and prompts take the **2nd-person-plural imperative** (`Вибер�
 | staff | **працівники** |
 | Agenda (calendar view) | **Розклад** |
 | Weekly Schedule (availability) | **Тижневий розклад** |
+
+### Sessions, no-shows, deposits and other marketing terms
+
+These recur across the `/for` profession pages and the marketing catalogues. They were drifting
+between two or three renderings each; the calls below are settled.
+
+| English | Ukrainian |
+|---|---|
+| **session** (health, body and beauty work: therapy, massage, physical therapy, chiropractic, tattoo, photo shoot) | **сеанс** **[DECIDED]** |
+| **session** (coaching, psychology, consulting conversations) | **сесія** **[DECIDED]** — `коуч-сесія` is the established Ukrainian term |
+| **session / lesson / class** (tutoring, language and music lessons, speech therapy (`логопедичне заняття`), yoga, pilates, personal training) | **заняття** **[DECIDED]** |
+| **session** (a login session, in product UI) | **сеанс** |
+| **session** (generic product copy for a booked appointment, e.g. the shared ROI calculator) | **зустріч** |
+| **consultation** (lawyers, accountants, advisers, doctors, vets) | **консультація** / **прийом** (clinical) |
+| **no-show** (noun) | **неявка** **[DECIDED]**; as a clause, **клієнт не прийшов** |
+| **deposit** (a payment taken at booking) | **передоплата** **[DECIDED]** — never `завдаток`, which is a specific legal instrument in Ukrainian civil law (ЦК України, ст. 570). A non-refundable one is **передоплата, що не повертається** |
+| **expired** (link, token, code) | **термін дії минув** / **строк дії закінчився** |
+| **expired** (trial, subscription) | **завершився** / **закінчився** |
+| **seat** (a paid user licence) | **користувач** — `10 $/користувача/міс.`, `5 користувачів`. Never `місце`, which is already *location* |
+| **white-label** | **під вашим брендом** / **без брендингу Tymeslot**. Never Latin `white-label` |
+| **fork** (a code fork, noun / verb) | **форк** / **створити форк** — naturalised in Ukrainian developer usage |
+| **physiotherapist / physiotherapy** | **фізичний терапевт** / **фізична терапія** **[DECIDED]** — the regulated Ukrainian titles. Never `фізіотерапевт`, which in Ukraine names a doctor of physical-agent treatment (фізіотерапія), a different profession |
+| **psychotherapist** | **психотерапевт** — never bare `терапевт`, which is a general practitioner |
+
+**English in brackets.** Do not gloss a Ukrainian term with its English original in brackets
+(`передоплата (deposit)`) in marketing copy. The only Latin text in a Ukrainian sentence is a
+brand, product or third-party name from §5. An abbreviation from §5 may follow its Ukrainian expansion once (`Єдиний вхід (SSO)`); drop other glosses only where the Ukrainian term is clear on its own, otherwise rephrase.
+
+**Personal names.** The founder's name stays in Latin script, **Luka Breitig**, matching the
+byline and the author page in every locale. Customer and sample names in examples are
+localised (`Олена`, `Андрій`).
+
+### Money on Ukrainian pages
+
+Every figure on a Ukrainian page is in **гривнях**, written `1 200 грн` (non-breaking or plain
+space as the thousands separator, `грн` postfix, no full stop). Never `£`, `фунтів стерлінгів`,
+or a Ukrainian page quoting a UK price. The `/for` pages' prose figures must agree with that
+page's own calculator defaults (`calculator: %{hourly_rate: …}` in `priv/professions/uk/*.exs`,
+which is already in hryvnia), and every derived total must be arithmetic the reader could redo.
+Product prices (`29 $`, `9 €`) stay in the currency Tymeslot actually charges.
+
+UK-only institutions do not belong on a Ukrainian page either: replace them with the Ukrainian
+counterpart where one exists (UTR → **РНОКПП**, HMRC → **податкова** / **ДПС**) or drop the
+reference.
 
 ### A note on `провайдер` vs `постачальник`
 
@@ -231,7 +275,7 @@ For the **adjectival** sense — `Default` as an option name or badge — use **
 **Tymeslot**, Stripe, Stripe Checkout, Stripe Connect, reCAPTCHA, Google, Google Calendar,
 Google Meet, GitHub, Outlook, Microsoft Teams, Zoom, CalDAV, Nextcloud, iCloud, Fastmail,
 Zimbra, Radicale, mailbox.org, MiroTalk, Keycloak, Authentik, Lemonldap, JavaScript, OAuth,
-OIDC, SSO, Oban, UTM, Cloudron, Quill, Rhythm, Docker, PostgreSQL, Railway, AGPLv3.
+OIDC, SSO, SLA, DPA, Oban, UTM, Cloudron, Quill, Rhythm, Docker, PostgreSQL, Railway, AGPLv3.
 
 **Environment-variable and config names, always verbatim:** `REGISTRATION_ENABLED`,
 `PASSWORD_AUTH_ENABLED`, `STRIPE_SECRET_KEY`, `RECAPTCHA_SITE_KEY`, `GITHUB_CLIENT_ID`,
@@ -274,7 +318,12 @@ checkmarks `✓`, emoji, `\n` paragraph separators.
 
 **Typography:**
 - Quotation marks: Ukrainian guillemets **`«…»`**
-- Em dash **`—`** (space-padded) for parenthetical asides and subject-line separators
+- Dash: the space-padded hyphen **` - `**, never `—` or `–`, and only where Ukrainian grammar
+  requires one (omitted copula `Tymeslot - це…`, separators like `%{name} - %{title}`).
+  A decorative dash carried over from English (an aside, an appended clause) becomes a comma,
+  colon, brackets or a full stop. Check the sentence still has a verb after splitting it.
+- Numeric ranges take an **unspaced en dash**: `30–50 %`, `15–20 хвилин`, `3 000–5 000 грн`.
+  This is the only place `–` is allowed; `від 30 до 50` is equally fine in running prose.
 - Ellipsis `…`
 - Decimal **comma**: `0.0 and 1.0` → `від 0,0 до 1,0`
 - Currency **postfix**, per Ukrainian convention: `29 $`, `10 $/користувача/міс.`, `0 €` —
@@ -329,4 +378,4 @@ Formal lowercase **ви**. **обліковий запис** (never акаунт
 (vendor) · **подання** (calendar view) · **від'єднати** · **слот** · **некоректний** (bad value)
 vs **недійсний** (dead link) · **журнали** · **перевірка** · **електронна пошта** (never Latin
 `email`). Three plural forms, always. Keep **Tymeslot / brand names / env vars / `%{…}`**
-verbatim. Use `«…»`, `—`, `…`, decimal comma, postfix currency.
+verbatim. Use `«…»`, ` - `, `…`, decimal comma, postfix currency, гривні on Ukrainian pages.

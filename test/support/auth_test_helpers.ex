@@ -15,17 +15,18 @@ defmodule Tymeslot.AuthTestHelpers do
   alias Phoenix.ConnTest
   alias Plug.Conn
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.Session
   alias Tymeslot.Factory
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.Token
+  alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.UserAuth
 
   @doc """
   Logs in a user for controller/LiveView tests.
   """
   @spec log_in_user(Conn.t(), term()) :: Conn.t()
   def log_in_user(conn, user) do
-    assert {:ok, conn, _token} = Session.create_session(conn, user)
+    assert {:ok, conn, _token} = UserAuth.create_session(conn, user)
     conn
   end
 
@@ -46,23 +47,6 @@ defmodule Tymeslot.AuthTestHelpers do
   def assert_not_logged_in(conn) do
     refute get_session(conn, :user_token)
     refute conn.assigns[:current_user]
-  end
-
-  @doc """
-  Sets up common state for OAuth `authorize_url/2` tests.
-
-  Creates a test conn, binds `redirect_uri`, and registers the
-  `generate_and_store_state` mock expectation. Returns `{conn, redirect_uri}`.
-  """
-  @spec setup_oauth_authorize_url(Conn.t()) :: {Conn.t(), String.t()}
-  def setup_oauth_authorize_url(conn) do
-    redirect_uri = "http://callback"
-
-    Mox.expect(Tymeslot.Auth.OAuth.HelperMock, :generate_and_store_state, 1, fn ^conn ->
-      {conn, "state123"}
-    end)
-
-    {conn, redirect_uri}
   end
 
   @doc """
@@ -161,7 +145,7 @@ defmodule Tymeslot.AuthTestHelpers do
   def trigger_account_lockout(user) do
     # Make multiple failed login attempts
     for _attempt <- 1..5 do
-      Auth.authenticate_user(user.email, "wrong_password")
+      Auth.authenticate_user(user.email, "wrong_password", ClientIP.request_opts(%Plug.Conn{}))
     end
   end
 

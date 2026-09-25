@@ -1,10 +1,21 @@
 defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpersTest do
-  use ExUnit.Case, async: true
+  # async: false — the cleartext-retry tests move the global private-address
+  # switches, which every concurrently running test would otherwise see.
+  use ExUnit.Case, async: false
 
   @moduletag :integrations
   @moduletag :unit
 
+  import Tymeslot.ConfigTestHelpers, only: [with_config: 3]
+
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
+
+  setup do
+    with_config(:tymeslot, :allow_private_ips_for_calendar, false)
+    # `nil` is the unset switch, as `config/runtime.exs` leaves it.
+    with_config(:tymeslot, :allow_private_ips_for_video, nil)
+    :ok
+  end
 
   describe "force_https/1" do
     test "rewrites an HTTP URL to HTTPS" do
@@ -43,7 +54,8 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpersTest do
       assert {:ok, ^resp} = HttpHelpers.try_https_then_http("http://example.com", "/api", fun)
     end
 
-    test "falls back to original URL when HTTPS call raises a connection exception" do
+    test "retries on the base URL's scheme when private addresses are allowed for video" do
+      with_config(:tymeslot, :allow_private_ips_for_video, true)
       resp = %Req.Response{status: 200, body: "ok", headers: %{}}
 
       fun = fn url ->
@@ -55,7 +67,8 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpersTest do
       assert {:ok, ^resp} = HttpHelpers.try_https_then_http("http://example.com", "/api", fun)
     end
 
-    test "returns error when HTTPS fails with an exception and fallback also fails with an exception" do
+    test "returns the retry's error when both schemes fail and the retry was allowed" do
+      with_config(:tymeslot, :allow_private_ips_for_video, true)
       https_err = %Mint.TransportError{reason: :econnrefused}
       http_err = %Mint.TransportError{reason: :timeout}
 
@@ -81,6 +94,37 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpersTest do
                HttpHelpers.try_https_then_http("http://example.com", "/api", fun)
 
       assert :counters.get(calls, 1) == 1
+    end
+
+    test "does not retry in the clear when private addresses are not allowed for video" do
+      https_err = %Mint.TransportError{reason: :econnrefused}
+      calls = :counters.new(1, [:atomics])
+
+      fun = fn url ->
+        :counters.add(calls, 1, 1)
+
+        if String.starts_with?(url, "https://"),
+          do: {:error, https_err},
+          else: flunk("retried over #{url}, which would send the API key in the clear")
+      end
+
+      assert {:error, ^https_err} =
+               HttpHelpers.try_https_then_http("http://example.com", "/api", fun)
+
+      assert :counters.get(calls, 1) == 1
+    end
+
+    test "the calendar switch alone still permits the retry, as it shipped covering video" do
+      with_config(:tymeslot, :allow_private_ips_for_calendar, true)
+      resp = %Req.Response{status: 200, body: "ok", headers: %{}}
+
+      fun = fn url ->
+        if String.starts_with?(url, "https://"),
+          do: {:error, %Mint.TransportError{reason: :econnrefused}},
+          else: {:ok, resp}
+      end
+
+      assert {:ok, ^resp} = HttpHelpers.try_https_then_http("http://example.com", "/api", fun)
     end
 
     test "appends path to the URL" do

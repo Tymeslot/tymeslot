@@ -12,24 +12,51 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueQueries do
   `CalDAV.OfflineQueue` and `CalDAV.QueueWiring` alone, so it lives here rather
   than in `ProviderCalendarEventQueries`.
 
-  Both modules write the same table. The content columns a write may replace
-  are defined once, by `ProviderCalendarEventQueries.replace_fields/0`.
+  Both modules write the same table, but not the same way. A server-sourced
+  sync replaces the fixed set of content columns
+  `ProviderCalendarEventQueries.replace_fields/0` names, because it has just
+  read the whole event. A queue tag has not: it knows only the fields the local
+  change carried, so it replaces exactly those and leaves the rest of the row
+  alone. See `upsert_queue_entry/1`.
   """
 
   import Ecto.Query, warn: false
 
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
+
+  # Columns that identify the row rather than describe it, and so are written
+  # once at insert and never replaced. `:uid` and `:calendar_integration_id`
+  # are the conflict target. `:provider` and `:provider_calendar_id` are
+  # insert-time identity for the reason `ProviderCalendarEventQueries`
+  # withholds them: a queue tag only knows the integration's first configured
+  # path, which is not the collection an event on any other calendar lives in.
+  @identity_fields [
+    :uid,
+    :calendar_integration_id,
+    :provider,
+    :provider_calendar_id,
+    :inserted_at
+  ]
 
   @doc """
   Upserts a row to tag it for the offline write queue.
 
-  Unlike `ProviderCalendarEventQueries.upsert_batch/1`, this helper also
-  updates the queue-tracking columns (`sync_state`, `sync_attempts`,
-  `sync_last_attempt_at`, `sync_last_error`) on conflict. Used exclusively by
-  `CalDAV.QueueWiring.tag/3` when a local write has failed and needs
-  to be replayed later — the caller's latest intent must take effect.
+  **Replaces exactly the columns `attrs` carries.** `{:replace, …}` on an
+  upsert replaces with `EXCLUDED`, which for a column the insert omits is
+  NULL — so a replace list naming more columns than the write supplies is a
+  list of columns the write silently blanks. That is what used to happen here:
+  the list was `ProviderCalendarEventQueries.replace_fields/0` plus the
+  bookkeeping columns, while `CalDAV.QueueWiring.build_attrs/4` supplied a
+  third of it, so tagging an event for retry nulled its `etag`,
+  `provider_event_id`, `raw_ical`, `attendees`, `reminders` and RRULE. A
+  queued delete, which carries no event data at all, destroyed the identity of
+  the very row it was about to retry the delete for.
+
+  Deriving the list from the attrs instead makes that shape impossible: a
+  field the caller did not supply is not in the list, so the existing value
+  stands. `CalDAV.QueueWiring` is the only caller, and it supplies a field
+  only when the local change actually carried one.
 
   Regular server-sourced upserts go through
   `ProviderCalendarEventQueries.upsert_batch/1`, which deliberately protects
@@ -51,7 +78,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueQueries do
       Repo.insert_all(
         ProviderCalendarEventSchema,
         [entry],
-        on_conflict: {:replace, queue_entry_replace_fields()},
+        on_conflict: {:replace, replace_fields_for(entry)},
         conflict_target: [:calendar_integration_id, :uid]
       )
 
@@ -145,12 +172,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueQueries do
   defp maybe_put_etag(set, nil), do: set
   defp maybe_put_etag(set, etag) when is_binary(etag), do: Keyword.put(set, :etag, etag)
 
-  # Queue-entry upserts update the same content columns as
-  # `ProviderCalendarEventQueries.replace_fields/0` PLUS the sync_state
-  # bookkeeping columns, because the caller (CalDAV.QueueWiring) is declaring a
-  # new local intent and the latest tag must win over any stale queue marker.
-  defp queue_entry_replace_fields do
-    ProviderCalendarEventQueries.replace_fields() ++
-      [:sync_state, :sync_attempts, :sync_last_attempt_at, :sync_last_error, :created_by_tymeslot]
+  defp replace_fields_for(entry) do
+    entry |> Map.keys() |> Enum.reject(&(&1 in @identity_fields))
   end
 end

@@ -27,6 +27,17 @@ defmodule Tymeslot.Timezones.Data do
     "beijing" => "Asia/Shanghai",
     "peking" => "Asia/Shanghai",
     "cape town" => "Africa/Johannesburg",
+    # Départements et collectivités d'outre-mer : la façon dont un agent les
+    # nomme (« la Réunion », « les Antilles ») ou les numérote ne correspond à
+    # aucun libellé de la liste, qui porte le chef-lieu.
+    "la reunion" => "Indian/Reunion",
+    "974" => "Indian/Reunion",
+    "976" => "Indian/Mayotte",
+    "971" => "America/Guadeloupe",
+    "972" => "America/Martinique",
+    "973" => "America/Cayenne",
+    "guyane" => "America/Cayenne",
+    "antilles" => "America/Martinique",
     "saigon" => "Asia/Ho_Chi_Minh",
     # Vietnam and Alberta each have a single IANA zone; the second city is an
     # alias rather than an entry, so the picker can't offer a fictional id.
@@ -93,21 +104,31 @@ defmodule Tymeslot.Timezones.Data do
   # Lookup maps
   @timezone_to_country Map.new(@all_entries, fn e -> {e.timezone_id, e.country_alpha3} end)
   @timezone_to_label Map.new(@all_entries, fn e -> {e.timezone_id, e.label} end)
-  # Zones the picker can render as "City, Country" with a flag. This is a
-  # presentation list, not a validity list — see `valid?/1` vs `offered?/1`.
-  @offered_ids MapSet.new(@all_entries, fn e -> e.timezone_id end)
 
   # Search index: lowercase label → entry, plus aliases
   @search_index (
                   entry_by_id = Map.new(@all_entries, fn e -> {e.timezone_id, e} end)
 
+                  # Les clés sont repliées sans diacritiques : un prospect français tape
+                  # « Réunion » ou « Pointe-à-Pitre », et la liste, elle, est écrite sans
+                  # accents (« Sao Paulo », « Reunion »). Sans ce repli, la recherche ne
+                  # renvoyait rien pour ces deux saisies.
+                  plier = fn texte ->
+                    texte
+                    |> String.downcase()
+                    |> String.normalize(:nfd)
+                    |> String.replace(~r/[\x{0300}-\x{036f}]/u, "")
+                  end
+
                   label_index =
                     Enum.flat_map(@all_entries, fn entry ->
                       # Index both "city, country" and "country" separately
-                      [
+                      Enum.uniq([
                         {String.downcase(entry.label), entry},
-                        {String.downcase(entry.country_name), entry}
-                      ]
+                        {String.downcase(entry.country_name), entry},
+                        {plier.(entry.label), entry},
+                        {plier.(entry.country_name), entry}
+                      ])
                     end)
 
                   alias_index =
@@ -180,7 +201,7 @@ defmodule Tymeslot.Timezones.Data do
   def search(""), do: @popular_options
 
   def search(term) do
-    search_lower = String.downcase(term)
+    search_lower = fold_diacritics(term)
 
     @search_index
     |> Enum.filter(fn {key, _entry} -> String.contains?(key, search_lower) end)
@@ -189,6 +210,14 @@ defmodule Tymeslot.Timezones.Data do
       {entry.label, entry.timezone_id, Formatting.utc_offset(entry.timezone_id)}
     end)
     |> Enum.take(50)
+  end
+
+  # Même repli que celui appliqué aux clés de l'index, au moment de la construction.
+  defp fold_diacritics(texte) do
+    texte
+    |> String.downcase()
+    |> String.normalize(:nfd)
+    |> String.replace(~r/[\x{0300}-\x{036f}]/u, "")
   end
 
   @spec country_code(String.t()) :: atom() | nil
@@ -300,8 +329,10 @@ defmodule Tymeslot.Timezones.Data do
   curated entry (`America/Detroit`) and fixed offsets (`Etc/GMT+5`, which
   `sanitize/1` itself emits) are all valid.
 
-  Callers asking "may I accept and store this value?" want this. Callers asking
-  "can the picker render this as a City, Country entry?" want `offered?/1`.
+  Callers asking "may I accept and store this value?" want this. It says nothing
+  about whether the picker can render the zone as a "City, Country" entry: a
+  valid zone with no curated entry falls back to its city segment in
+  `display_name/1`, and `country_code/1` returns nil for it.
   """
   @spec valid?(term()) :: boolean()
   def valid?(timezone_id) when is_binary(timezone_id) do
@@ -309,24 +340,6 @@ defmodule Tymeslot.Timezones.Data do
   end
 
   def valid?(_other), do: false
-
-  @doc """
-  Returns true when `timezone_id` has a curated entry, so the picker can render
-  it with a "City, Country" label and a flag.
-
-  A zone can be valid without being offered: `display_name/1` falls back to the
-  city segment of the id and `country_code/1` returns nil, which the selector
-  renders with a globe instead of a flag.
-  """
-  @spec offered?(term()) :: boolean()
-  def offered?(timezone_id) when is_binary(timezone_id) do
-    MapSet.member?(@offered_ids, timezone_id)
-  end
-
-  def offered?(_other), do: false
-
-  @spec offered_ids() :: MapSet.t(String.t())
-  def offered_ids, do: @offered_ids
 
   @spec flag_exists?(term()) :: boolean()
   def flag_exists?(nil), do: false

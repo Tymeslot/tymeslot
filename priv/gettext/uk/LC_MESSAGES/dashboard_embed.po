@@ -415,3 +415,28 @@ msgstr "Встановіть офіційний плагін Tymeslot, щоб д
 #, elixir-autogen, elixir-format
 msgid "Updates every snippet below. Defaults work for most embeds - adjust when your site needs them."
 msgstr "Оновлює всі фрагменти коду нижче. Стандартні налаштування підходять для більшості сайтів - змінюйте їх лише за потреби."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Preview"
+msgstr "Попередній перегляд бронювання"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Booking widget is still loading. Please try again in a second."
+msgstr "Віджет бронювання ще завантажується. Спробуйте ще раз за секунду."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Click to test the booking modal"
+msgstr "Натисніть, щоб перевірити вікно бронювання"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Preview only: this link opens in test mode and stops working after an hour. Copy the link to share from the Embed Options tab."
+msgstr "Лише попередній перегляд: це посилання відкривається в тестовому режимі й перестає працювати через годину. Скопіюйте посилання для поширення на вкладці «Параметри вбудовування»."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "The preview is disabled because your booking link is currently deactivated."
+msgstr "Попередній перегляд вимкнено, оскільки ваше посилання для бронювання наразі деактивовано."

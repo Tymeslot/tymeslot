@@ -93,3 +93,65 @@
   text-decoration: underline;
   margin-left: 0.25rem;
 }
+
+/* Readiness notice — shown in place of the booking flow when the organiser
+   has no bookable calendar. Theme-agnostic for the same reason as the
+   awaiting-payment view: it replaces the whole booker, so it cannot borrow a
+   theme's card and must not borrow app.css, which the theme bundles exclude. */
+.readiness-notice-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 2rem 1rem;
+  flex: 1 1 auto;
+}
+
+/* Opaque enough to carry body text over Rhythm's background video, which the
+   awaiting-payment card never has to do: that one sits inside the theme's own
+   surface, whereas this replaces it. */
+.readiness-notice-card {
+  width: 100%;
+  max-width: 32rem;
+  padding: 2rem;
+  border-radius: var(--radius-2xl);
+  background: linear-gradient(135deg, rgba(20, 20, 35, 0.86) 0%, rgba(15, 15, 25, 0.78) 100%);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 1.25rem 2.5rem rgba(0, 0, 0, 0.35);
+  text-align: center;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.readiness-notice-icon {
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 1.25rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.readiness-notice-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.readiness-notice-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+  color: white;
+}
+
+.readiness-notice-message {
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0 0 1.25rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.readiness-notice-hint {
+  font-size: 0.875rem;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+}

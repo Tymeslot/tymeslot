@@ -26,6 +26,13 @@ defmodule Tymeslot.Bookings.Cancel do
   3. Deleting pending reminder email jobs
   4. Sending cancellation emails
 
+  ## Options
+
+    * `:announce` - `false` cancels without step 4, for a caller whose
+      announcement depends on something it has yet to do (a refund the
+      cancellation email reports on). That caller owes an `announce/1` once it
+      has settled. Defaults to `true`.
+
   Returns {:ok, meeting} or {:error, reason}
 
   Accepts the same `opts` as `validate_cancellation/2`; see there for
@@ -33,7 +40,7 @@ defmodule Tymeslot.Bookings.Cancel do
   """
   @spec execute(String.t() | Meeting.t(), keyword()) ::
           {:ok, Meeting.t()} | {:error, atom() | String.t()}
-  def execute(meeting_or_uid, opts \\ [])
+  def execute(meeting_or_id, opts \\ [])
 
   def execute(meeting_id, opts) when is_binary(meeting_id) do
     case MeetingQueries.get_meeting_by_uid(meeting_id) do
@@ -54,10 +61,20 @@ defmodule Tymeslot.Bookings.Cancel do
   def execute(%Meeting{} = meeting, opts) do
     # Validation covers the Policy time checks plus the group-meeting guard.
     case validate_cancellation(meeting, opts) do
-      :ok -> execute_permitted(meeting)
+      :ok -> execute_permitted(meeting, Keyword.get(opts, :announce, true))
       {:error, reason} -> policy_blocked(meeting, reason)
     end
   end
+
+  @doc """
+  Tells everyone a meeting was cancelled: the cancellation emails, the
+  reminder clean-up, and the webhook, Telegram and Slack notifications. A
+  failure is logged and never fails the cancellation.
+
+  `execute/2` does this itself unless it was asked not to.
+  """
+  @spec announce(Meeting.t()) :: :ok
+  def announce(%Meeting{} = meeting), do: send_cancellation_notifications(meeting)
 
   # A held request is not a confirmed booking being called off — it is the
   # invitee withdrawing before the host ever agreed to it. That transition
@@ -66,22 +83,25 @@ defmodule Tymeslot.Bookings.Cancel do
   # a request that never became a meeting. Only the notification stays here:
   # `Approval.withdraw/2` does not send one, since decline and expire each
   # need their own wording and withdrawal needs neither.
-  defp execute_permitted(meeting) do
+  defp execute_permitted(meeting, announce?) do
     if MeetingState.awaiting_approval?(meeting) do
-      withdraw_held_request(meeting)
+      withdraw_held_request(meeting, announce?)
     else
-      cancel_confirmed_meeting(meeting)
+      cancel_confirmed_meeting(meeting, announce?)
     end
   end
 
-  defp withdraw_held_request(meeting) do
+  defp maybe_announce(meeting, true), do: send_cancellation_notifications(meeting)
+  defp maybe_announce(_meeting, false), do: :ok
+
+  defp withdraw_held_request(meeting, announce?) do
     Logger.info("Withdrawing held booking request",
       meeting_id: meeting.id,
       uid: meeting.uid
     )
 
     with {:ok, released} <- Approval.withdraw(meeting),
-         :ok <- send_cancellation_notifications(released) do
+         :ok <- maybe_announce(released, announce?) do
       {:ok, released}
     else
       {:error, reason} = error ->
@@ -94,7 +114,7 @@ defmodule Tymeslot.Bookings.Cancel do
     end
   end
 
-  defp cancel_confirmed_meeting(meeting) do
+  defp cancel_confirmed_meeting(meeting, announce?) do
     Logger.info("Cancelling meeting",
       meeting_id: meeting.id,
       uid: meeting.uid
@@ -103,7 +123,7 @@ defmodule Tymeslot.Bookings.Cancel do
     with {:ok, updated_meeting} <- update_meeting_status(meeting),
          :ok <- Meetings.cancel_calendar_event(updated_meeting),
          :ok <- delete_provider_video_room(updated_meeting),
-         :ok <- send_cancellation_notifications(updated_meeting) do
+         :ok <- maybe_announce(updated_meeting, announce?) do
       {:ok, updated_meeting}
     else
       {:error, reason} = error ->
@@ -351,7 +371,7 @@ defmodule Tymeslot.Bookings.Cancel do
   # (e.g. Zoom) is deleted and doesn't linger in the organiser's account after
   # cancellation. Routed through Oban — not done inline — so a transient Zoom
   # 5xx/429 retries instead of leaving an orphaned meeting. Providers without a
-  # server-side meeting object (Google Meet, Teams, MiroTalk, Custom) resolve to
+  # server-side meeting object (Google Meet, MiroTalk, Custom) resolve to
   # :ok inside the job. Whether an integration can still reach the room is
   # decided inside the job by `IntegrationResolver`, not here: a severed
   # `video_integration_id` does not mean the room stopped existing. Never blocks

@@ -19,8 +19,8 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
   import Tymeslot.TestFixtures
   import Tymeslot.Factory
 
-  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.ConfigTestHelpers
+  alias Tymeslot.Onboarding.OnboardingQueries
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Slack
 
@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackStateActionsTest do
 
   setup %{conn: conn} do
     user = create_user_fixture()
-    {:ok, user} = UserQueries.mark_onboarding_complete(user)
+    {:ok, user} = OnboardingQueries.mark_onboarding_complete(user)
 
     ConfigTestHelpers.setup_config(:tymeslot,
       slack_notifications_allowed: true,

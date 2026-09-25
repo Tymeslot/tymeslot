@@ -8,6 +8,8 @@ defmodule Tymeslot.Analytics.Fingerprint do
   Plausible and similar privacy-friendly analytics products.
   """
 
+  alias Tymeslot.Clock
+
   @doc """
   Computes a daily-rotated visitor hash from the network identity (IP +
   user agent).
@@ -57,7 +59,7 @@ defmodule Tymeslot.Analytics.Fingerprint do
   end
 
   defp daily_salt do
-    day = Date.to_iso8601(Date.utc_today())
+    day = Date.to_iso8601(Clock.utc_today())
     secret = Application.get_env(:tymeslot, :analytics_salt_secret) || dev_fallback_salt()
     Base.encode16(:crypto.hash(:sha256, day <> secret), case: :lower)
   end

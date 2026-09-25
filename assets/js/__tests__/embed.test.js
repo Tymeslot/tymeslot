@@ -30,10 +30,20 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  // embed.js holds the page's pre-modal overflow at module scope and releases
+  // it only when a close() runs to completion. Ripping the node out below would
+  // strand that lock, so a test that leaves a modal open carries it into the
+  // next test. Drive a real close on fake timers to release it deterministically.
+  if (document.getElementById('tymeslot-modal')) {
+    vi.useFakeTimers()
+    window.TymeslotBooking.close()
+    vi.runAllTimers()
+  }
+  vi.useRealTimers()
+
   // Clean up any modals or floating buttons left over by tests
   document.getElementById('tymeslot-modal')?.remove()
   document.getElementById('tymeslot-floating-button')?.remove()
-  vi.useRealTimers()
 })
 
 describe('Public API', () => {
@@ -174,6 +184,59 @@ describe('close()', () => {
     window.TymeslotBooking.close()
     await vi.runAllTimersAsync()
 
+    expect(document.body.style.overflow).toBe('scroll')
+  })
+
+  test('restores page scroll after the popup is reopened', async () => {
+    vi.useFakeTimers()
+
+    document.body.style.overflow = 'scroll'
+    window.TymeslotBooking.open('alice')
+    // Reopening (a second Book button, or the same one twice) used to capture
+    // the locked 'hidden' as the page's own value, so closing restored 'hidden'
+    // and left the embedder's page permanently unscrollable.
+    window.TymeslotBooking.open('bob')
+    await vi.runAllTimersAsync()
+
+    window.TymeslotBooking.close()
+    await vi.runAllTimersAsync()
+
+    expect(document.body.style.overflow).toBe('scroll')
+  })
+
+  test('keeps page scroll locked while a reopened modal is still open', async () => {
+    vi.useFakeTimers()
+
+    document.body.style.overflow = 'scroll'
+    window.TymeslotBooking.open('alice')
+    window.TymeslotBooking.open('bob')
+    // The superseded modal's deferred teardown must not fire and hand scrolling
+    // back to the page while the replacement modal is on screen.
+    await vi.runAllTimersAsync()
+
+    expect(document.body.style.overflow).toBe('hidden')
+  })
+
+  test('leaves only one modal in the DOM when reopened', () => {
+    vi.useFakeTimers()
+
+    window.TymeslotBooking.open('alice')
+    window.TymeslotBooking.open('bob')
+
+    expect(document.querySelectorAll('#tymeslot-modal').length).toBe(1)
+  })
+
+  test('releases the page scroll when a reopen is rejected for a missing username', async () => {
+    vi.useFakeTimers()
+
+    document.body.style.overflow = 'scroll'
+    window.TymeslotBooking.open('alice')
+    // The existing modal is torn down before the username is validated, so the
+    // rejected call still owns the scroll lock and has to hand it back.
+    window.TymeslotBooking.open('')
+    await vi.runAllTimersAsync()
+
+    expect(document.getElementById('tymeslot-modal')).toBeNull()
     expect(document.body.style.overflow).toBe('scroll')
   })
 
@@ -954,6 +1017,68 @@ describe('parameter allowlist enforcement', () => {
     const url = new URL(iframe.src)
 
     expect(url.searchParams.get('layout')).toBe('column')
+  })
+
+  test('previewToken emits BOTH halves of the owner-preview contract', () => {
+    const container = document.createElement('div')
+    container.id = 'preview-token-test'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#preview-token-test', 'alice', {
+      previewToken: 'test-token.fake-preview-payload.test_signature'
+    })
+
+    const iframe = container.querySelector('iframe')
+    const url = new URL(iframe.src)
+
+    // Without the token the server persists the meeting and mails the
+    // attendee; without the display claim the dashboard iframe is refused by
+    // CSP frame-ancestors. Neither half is useful alone, so both are appended
+    // from one option or not at all.
+    expect(url.searchParams.get('preview_token')).toBe('test-token.fake-preview-payload.test_signature')
+    expect(url.searchParams.get('preview')).toBe('true')
+  })
+
+  test('omits both preview params when no previewToken is given', () => {
+    const container = document.createElement('div')
+    container.id = 'no-preview-token-test'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#no-preview-token-test', 'alice', { layout: 'column' })
+
+    const iframe = container.querySelector('iframe')
+    const url = new URL(iframe.src)
+
+    expect(url.searchParams.get('preview')).toBeNull()
+    expect(url.searchParams.get('preview_token')).toBeNull()
+  })
+
+  test('rejects a previewToken that is not a three-segment signed token', () => {
+    const container = document.createElement('div')
+    container.id = 'preview-token-reject'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#preview-token-reject', 'alice', {
+      previewToken: 'true&preview_token=../../evil'
+    })
+
+    const iframe = container.querySelector('iframe')
+    const url = new URL(iframe.src)
+
+    expect(url.searchParams.get('preview_token')).toBeNull()
+    expect(url.searchParams.get('preview')).toBeNull()
+  })
+
+  test('carries the preview contract into the popup modal iframe', () => {
+    window.TymeslotBooking.open('alice', {
+      previewToken: 'test-token.fake-preview-payload.test_signature'
+    })
+
+    const iframe = document.querySelector('#tymeslot-modal iframe')
+    const url = new URL(iframe.src)
+
+    expect(url.searchParams.get('preview')).toBe('true')
+    expect(url.searchParams.get('preview_token')).toBe('test-token.fake-preview-payload.test_signature')
   })
 
   test('rejects layout values outside the allowlist', () => {

@@ -128,8 +128,14 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
         msg = assigns[:theme_error_message] || ErrorBoundary.format_error(error_context)
         render_error(assigns, msg)
 
-      msg = assigns[:scheduling_error_message] ->
-        render_error(assigns, msg)
+      # An organiser who has not connected a calendar yet is a configuration
+      # state, not a crash, so it goes to the theme, which shows it in the
+      # organiser's own branding via `Shared.Components.ErrorComponent`. The
+      # notice replaces the whole booker, poll route included, so it is decided
+      # here rather than per action. `render_error/2` stays reserved for a theme
+      # that could not be loaded or that raised inside a callback.
+      assigns[:scheduling_error_message] ->
+        render_scheduling_component(assigns)
 
       true ->
         action = assigns[:live_action]

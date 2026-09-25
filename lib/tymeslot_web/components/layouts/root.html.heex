@@ -62,6 +62,10 @@
         "This app requires JavaScript to function. Please enable it in your browser settings."
       )
     } />
+    <%!-- No flash group here: the `app` layout inside `@inner_content` owns the
+    only one. A root layout is never diffed after the initial response, so a
+    group at this level would render every flash a second time and still miss
+    every flash raised while the page is live. --%>
     {@inner_content}
   </body>
 </html>

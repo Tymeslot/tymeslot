@@ -5,12 +5,14 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
   import ExUnit.CaptureLog
 
   alias Tymeslot.Mailer.HealthCheck
+  alias Tymeslot.Mailer.SMTPConfig
+  alias Tymeslot.Test.FakeSmtpRelay
 
   describe "validate_startup_config/1 for SMTP" do
     test "validates complete and valid SMTP configuration" do
       # Use empty list for cacerts in test (since :castore module may not be loaded)
       config = [
-        adapter: Swoosh.Adapters.SMTP,
+        adapter: Tymeslot.Mailer.SMTPAdapter,
         relay: "smtp.example.com",
         port: 587,
         username: "user@example.com",
@@ -34,9 +36,24 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
       end)
     end
 
+    test "accepts a relay that needs no login" do
+      relay = FakeSmtpRelay.start()
+
+      config =
+        [host: "localhost", port: 25]
+        |> SMTPConfig.build()
+        |> Keyword.put(:port, relay.port)
+
+      capture_log(fn -> assert :ok = HealthCheck.validate_startup_config(config) end)
+
+      # Structure validation used to demand credentials and stop before the
+      # probe ever reached the relay.
+      assert_receive {:smtp_relay, :ehlo}
+    end
+
     test "logs error but returns :ok when SMTP host (relay) is missing" do
       config = [
-        adapter: Swoosh.Adapters.SMTP,
+        adapter: Tymeslot.Mailer.SMTPAdapter,
         relay: nil,
         port: 587,
         username: "user",
@@ -54,7 +71,7 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
 
     test "logs error but returns :ok when SMTP host is empty string" do
       config = [
-        adapter: Swoosh.Adapters.SMTP,
+        adapter: Tymeslot.Mailer.SMTPAdapter,
         relay: "",
         port: 587,
         username: "user",
@@ -72,7 +89,7 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
 
     test "logs error but returns :ok when SMTP username is missing" do
       config = [
-        adapter: Swoosh.Adapters.SMTP,
+        adapter: Tymeslot.Mailer.SMTPAdapter,
         relay: "smtp.example.com",
         port: 587,
         username: nil,
@@ -90,7 +107,7 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
 
     test "logs error but returns :ok when SMTP username is empty string" do
       config = [
-        adapter: Swoosh.Adapters.SMTP,
+        adapter: Tymeslot.Mailer.SMTPAdapter,
         relay: "smtp.example.com",
         port: 587,
         username: "",
@@ -108,7 +125,7 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
 
     test "logs error but returns :ok when SMTP password is missing" do
       config = [
-        adapter: Swoosh.Adapters.SMTP,
+        adapter: Tymeslot.Mailer.SMTPAdapter,
         relay: "smtp.example.com",
         port: 587,
         username: "user",
@@ -126,7 +143,7 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
 
     test "logs error but returns :ok when SMTP password is empty string" do
       config = [
-        adapter: Swoosh.Adapters.SMTP,
+        adapter: Tymeslot.Mailer.SMTPAdapter,
         relay: "smtp.example.com",
         port: 587,
         username: "user",
@@ -144,7 +161,7 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
 
     test "logs error but returns :ok when SMTP port is not an integer" do
       config = [
-        adapter: Swoosh.Adapters.SMTP,
+        adapter: Tymeslot.Mailer.SMTPAdapter,
         relay: "smtp.example.com",
         port: "not_an_int",
         username: "user",
@@ -162,7 +179,7 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
 
     test "logs error but returns :ok when SMTP port is out of valid range (too low)" do
       config = [
-        adapter: Swoosh.Adapters.SMTP,
+        adapter: Tymeslot.Mailer.SMTPAdapter,
         relay: "smtp.example.com",
         port: 0,
         username: "user",
@@ -180,7 +197,7 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
 
     test "logs error but returns :ok when SMTP port is out of valid range (too high)" do
       config = [
-        adapter: Swoosh.Adapters.SMTP,
+        adapter: Tymeslot.Mailer.SMTPAdapter,
         relay: "smtp.example.com",
         port: 99_999,
         username: "user",
@@ -400,7 +417,7 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
     test "structure validation catches all required field issues" do
       # Missing all fields
       config = [
-        adapter: Swoosh.Adapters.SMTP,
+        adapter: Tymeslot.Mailer.SMTPAdapter,
         relay: nil,
         port: nil,
         username: nil,

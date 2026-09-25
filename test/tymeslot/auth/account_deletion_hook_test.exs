@@ -12,9 +12,12 @@ defmodule Tymeslot.Auth.AccountDeletionHookTest do
 
   import Tymeslot.Factory
 
+  alias Phoenix.Socket.Broadcast
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Auth.{UserSchema, UserSessionQueries}
   alias Tymeslot.Repo
+  alias Tymeslot.Security.Token
+  alias TymeslotWeb.Endpoint
 
   defmodule OkHook do
     @behaviour Tymeslot.Auth.Behaviours.AccountDeletionHook
@@ -56,5 +59,18 @@ defmodule Tymeslot.Auth.AccountDeletionHookTest do
 
     assert {:error, :subscription_cancel_failed} = Auth.delete_account(user)
     assert Repo.get(UserSchema, user.id), "user must survive when external cleanup fails"
+  end
+
+  test "leaves the user's sessions connected when the hook fails" do
+    Application.put_env(:tymeslot, :account_deletion_hook, FailingHook)
+    user = insert(:user)
+    token = "kept-session-#{System.unique_integer([:positive])}"
+    insert(:user_session, user: user, token_hash: Token.hash_token(token))
+    Endpoint.subscribe("users_sessions:#{Base.url_encode64(Token.hash_token(token))}")
+
+    assert {:error, :subscription_cancel_failed} = Auth.delete_account(user)
+
+    refute_receive %Broadcast{event: "disconnect"}
+    assert UserSessionQueries.get_user_by_session_token(token)
   end
 end

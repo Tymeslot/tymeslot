@@ -1,12 +1,13 @@
 defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
   use TymeslotWeb.LiveCase, async: true
   @moduletag :utils
+  @moduletag :video
 
   import Mox
   import Tymeslot.Factory
   import Tymeslot.AuthTestHelpers
-  import Tymeslot.TestHelpers.Eventually
 
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
 
@@ -33,6 +34,40 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       for provider <- ~w(google_meet teams zoom mirotalk custom) do
         assert html =~ ~s(phx-value-provider="#{provider}")
       end
+    end
+
+    test "groups the provider picker by hosting model", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      document = Floki.parse_document!(html)
+
+      headings =
+        document |> Floki.find("h3") |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+
+      assert "Hosted services" in headings
+      assert "Self-hosted" in headings
+      assert "Other" in headings
+
+      groups =
+        document
+        # Each picker group renders as its own "space-y-3" div holding the
+        # heading and the provider grid as siblings.
+        |> Floki.find("div.space-y-3")
+        |> Enum.filter(&(Floki.find(&1, "h3") != []))
+        |> Map.new(fn group ->
+          label = group |> Floki.find("h3") |> Floki.text() |> String.trim()
+
+          providers =
+            group
+            |> Floki.find("[phx-value-provider]")
+            |> Enum.map(&(&1 |> Floki.attribute("phx-value-provider") |> List.first()))
+
+          {label, providers}
+        end)
+
+      assert groups["Hosted services"] == ~w(google_meet teams zoom kmeet)
+      assert groups["Self-hosted"] == ~w(mirotalk jitsi nextcloud_talk)
+      assert groups["Other"] == ~w(custom)
     end
 
     test "renders the Zoom option in the provider picker", %{conn: conn} do
@@ -92,9 +127,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       |> element("button[phx-click='test_connection'][phx-value-id='#{integration.id}']")
       |> render_click()
 
-      eventually(fn ->
-        assert render(view) =~ "MiroTalk connection verified"
-      end)
+      # The probe runs in a `start_async` task whose result reaches the parent
+      # LiveView as a flash message. Waiting on the task rather than polling
+      # for a fixed second keeps this green on a loaded machine, and the
+      # `render/1` after it is queued behind that flash message.
+      render_async(view, 10_000)
+      assert render(view) =~ "MiroTalk connection verified"
     end
 
     test "navigates to setup form for mirotalk", %{conn: conn} do
@@ -106,6 +144,26 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
 
       assert render(view) =~ "MiroTalk P2P"
       assert has_element?(view, "input[name='integration[base_url]']")
+    end
+
+    test "the server URL field can accept an address typed without its scheme", %{conn: conn} do
+      # `type="url"` stays on the field, so the browser still blocks a submit
+      # and every other `required` in the form keeps its native check. The
+      # hook is what lets a bare `cloud.example.com` through, and what
+      # replaces "Please enter a URL" when the address is still wrong.
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='mirotalk']")
+      |> render_click()
+
+      assert has_element?(
+               view,
+               "input[name='integration[base_url]'][type='url'][phx-hook='ServerUrlField']"
+             )
+
+      assert render(view) =~
+               "Enter a full address starting with https://, for example https://cloud.example.com"
     end
 
     test "adds a new mirotalk integration", %{conn: conn} do
@@ -154,6 +212,32 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       assert render(view) =~ "Integration name is required"
     end
 
+    test "ties a URL field's error to its input", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='mirotalk']")
+      |> render_click()
+
+      view
+      |> form("#mirotalk-config-modal form", %{
+        "integration" => %{
+          "name" => "New MiroTalk",
+          "base_url" => "not-a-url",
+          "api_key" => "secret-key-long-enough"
+        }
+      })
+      |> render_submit()
+
+      assert has_element?(
+               view,
+               "#mirotalk_base_url[aria-invalid='true'][aria-describedby='mirotalk_base_url-error']"
+             )
+
+      assert has_element?(view, "#mirotalk_base_url-error p.form-error")
+      refute has_element?(view, "#mirotalk_base_url-help")
+    end
+
     test "shows a message when adding a duplicate custom video integration", %{
       conn: conn,
       user: user
@@ -182,6 +266,200 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
         |> render_submit()
 
       assert html =~ "A video integration with this configuration already exists"
+    end
+
+    test "refuses a custom video link with a malformed meeting ID placeholder", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='custom']")
+      |> render_click()
+
+      view
+      |> form("#custom-video-config-modal form", %{
+        "integration" => %{
+          "name" => "Per-booking Jitsi",
+          "custom_meeting_url" => "https://meet.jit.si/{meeting_id}"
+        }
+      })
+      |> render_submit()
+
+      assert has_element?(
+               view,
+               "#custom-video-config-modal p.form-error",
+               "Use double curly brackets: {{meeting_id}} not {meeting_id}"
+             )
+
+      assert Repo.all(VideoIntegrationSchema) == []
+    end
+
+    test "still adds a custom video link that is a static room", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='custom']")
+      |> render_click()
+
+      view
+      |> form("#custom-video-config-modal form", %{
+        "integration" => %{
+          "name" => "Team Room",
+          "custom_meeting_url" => "https://meet.jit.si/my-room"
+        }
+      })
+      |> render_submit()
+
+      assert [%{custom_meeting_url: "https://meet.jit.si/my-room"}] =
+               Repo.all(VideoIntegrationSchema)
+    end
+
+    test "connects kMeet without asking for a URL", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='kmeet']")
+      |> render_click()
+
+      assert has_element?(view, "#kmeet-video-integration-form")
+
+      refute has_element?(
+               view,
+               "#kmeet-video-integration-form input[name^='integration[']:not([name='integration[name]']):not([type='hidden'])"
+             )
+
+      assert has_element?(view, "#kmeet_host[readonly][value='https://kmeet.infomaniak.com']")
+
+      assert has_element?(
+               view,
+               "#kmeet_host[aria-describedby='kmeet_host-tooltip kmeet_host-help']"
+             )
+
+      assert has_element?(view, "#kmeet_host-help")
+      refute has_element?(view, "#kmeet-video-integration-form [tabindex]")
+
+      view
+      |> form("#kmeet-video-integration-form", integration: %{name: "My kMeet"})
+      |> render_submit()
+
+      assert render(view) =~ "Video integration added successfully"
+      assert render(view) =~ "My kMeet"
+      assert render(view) =~ "kmeet.infomaniak.com · rooms created automatically"
+      assert [%{provider: "kmeet", name: "My kMeet"}] = Video.list_integrations(user.id)
+    end
+
+    test "stores only the kMeet form's own fields when the browser sends more", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='kmeet']")
+      |> render_click()
+
+      view
+      |> element("#kmeet-video-integration-form")
+      |> render_submit(%{
+        integration: %{name: "My kMeet", base_url: "https://elsewhere.example.com"}
+      })
+
+      assert [%{provider: "kmeet", base_url: nil}] = Video.list_integrations(user.id)
+    end
+
+    test "renames kMeet without storing extra fields sent from the edit dialog", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, integration} = Video.create_integration(user.id, :kmeet, %{name: "My kMeet"})
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element(
+        "button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#edit-video-modal']"
+      )
+      |> render_click()
+
+      view
+      |> element("#edit-video-integration-form")
+      |> render_submit(%{
+        integration: %{name: "Team kMeet", custom_meeting_url: "https://elsewhere.example.com"}
+      })
+
+      row = Repo.get!(VideoIntegrationSchema, integration.id)
+      assert row.name == "Team kMeet"
+      assert is_nil(row.custom_meeting_url)
+    end
+
+    test "marks kMeet as connected and refuses a second kMeet with a clear message", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, _first} = Video.create_integration(user.id, :kmeet, %{name: "My kMeet"})
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      assert view
+             |> element("button[phx-value-provider='kmeet']")
+             |> render() =~ "Connected"
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='kmeet']")
+      |> render_click()
+
+      html =
+        view
+        |> form("#kmeet-video-integration-form", integration: %{name: "Second kMeet"})
+        |> render_submit()
+
+      assert html =~ "This provider is already connected"
+      assert [%{name: "My kMeet"}] = Video.list_integrations(user.id)
+    end
+
+    test "renames a kMeet integration through the edit dialog", %{conn: conn, user: user} do
+      {:ok, integration} = Video.create_integration(user.id, :kmeet, %{name: "My kMeet"})
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element(
+        "button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#edit-video-modal']"
+      )
+      |> render_click()
+
+      assert has_element?(
+               view,
+               "#edit-video-integration-form #edit_kmeet_host[readonly][value='https://kmeet.infomaniak.com']"
+             )
+
+      view
+      |> form("#edit-video-integration-form", integration: %{name: "Team kMeet"})
+      |> render_submit()
+
+      assert render(view) =~ "Integration updated successfully"
+      assert Repo.get!(VideoIntegrationSchema, integration.id).name == "Team kMeet"
+    end
+
+    test "stores a custom video link exactly as the organiser typed it", %{conn: conn} do
+      # Every segment here used to be rewritten on the way to the database:
+      # `team--sync` was truncated at the double hyphen, `0xdeadbeef` was
+      # dropped as a hex literal, and `%23` was decoded into a fragment. Each
+      # save still succeeded, so every booking got a link to a different room.
+      url = "https://meet.jit.si/team--sync/0xdeadbeef/room%23a"
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='custom']")
+      |> render_click()
+
+      view
+      |> form("#custom-video-config-modal form", %{
+        "integration" => %{"name" => "Team Room", "custom_meeting_url" => url}
+      })
+      |> render_submit()
+
+      assert [%{custom_meeting_url: ^url}] = Repo.all(VideoIntegrationSchema)
     end
 
     test "initiates google meet oauth", %{conn: conn} do
@@ -237,6 +515,73 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
                view,
                "button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']"
              )
+    end
+
+    test "shows why a flagged video integration needs reconnecting", %{conn: conn, user: user} do
+      insert(:video_integration,
+        user: user,
+        provider: "google_meet",
+        is_active: true,
+        needs_reauth: true,
+        sync_error: "Stored credentials could not be decrypted."
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      assert html =~ "Stored credentials could not be decrypted."
+    end
+
+    # sync_error also carries transient failures, which are not the owner's to
+    # fix, so an unflagged row must keep the stored text to itself.
+    test "keeps a stored sync error to itself while a video integration is not flagged", %{
+      conn: conn,
+      user: user
+    } do
+      insert(:video_integration,
+        user: user,
+        provider: "google_meet",
+        is_active: true,
+        needs_reauth: false,
+        sync_error: "Timed out talking to the server."
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      refute html =~ "Timed out talking to the server."
+    end
+
+    # The state Reconnect exists to resolve: credentials encrypted under a key
+    # that is no longer on the keyring. `Video.get_integration/2` answers with a
+    # third tuple shape for it, which the handler used to leave unmatched.
+    test "reconnects an integration whose stored credentials no longer decrypt", %{
+      conn: conn,
+      user: user
+    } do
+      expect(Tymeslot.ZoomOAuthHelperMock, :authorization_url, fn _uid, _uri, _opts ->
+        "https://zoom.us/oauth/authorize"
+      end)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "zoom",
+          is_active: true,
+          needs_reauth: true,
+          access_token_encrypted: :crypto.strong_rand_bytes(40)
+        )
+
+      # Anchors the fixture: undecryptable bytes, not a flag, are what put the
+      # row in this state, so the handler is driven with the real thing.
+      assert {:error, :requires_reencryption, _stale} =
+               Video.get_integration(user.id, integration.id)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
+      assert_redirect(view, "https://zoom.us/oauth/authorize")
     end
 
     # NOTE: the end-to-end click → OAuth-redirect for a *reconnect* is not

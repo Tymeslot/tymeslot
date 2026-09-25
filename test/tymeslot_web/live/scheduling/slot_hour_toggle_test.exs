@@ -23,6 +23,7 @@ defmodule TymeslotWeb.Live.Scheduling.SlotHourToggleTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.BookingTestHelpers
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
@@ -244,9 +245,7 @@ defmodule TymeslotWeb.Live.Scheduling.SlotHourToggleTest do
     today = timezone |> DateTime.now!() |> DateTime.to_date()
     target = Date.add(today, 1)
 
-    if target.month != today.month do
-      view |> element("button[phx-click='next_month']") |> render_click()
-    end
+    BookingTestHelpers.show_month(view, target)
 
     date = Date.to_string(target)
 

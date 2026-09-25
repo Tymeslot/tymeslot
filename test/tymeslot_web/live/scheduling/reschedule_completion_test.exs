@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
   @moduledoc """
   Journey coverage for a booker completing a reschedule through the public
-  scheduling page.
+  scheduling page, and for what the confirmation screen lets them do next.
 
   What already existed was the two ends of the journey and nothing in
   between: `Tymeslot.Bookings.RescheduleTest` covers the domain function,
@@ -18,8 +18,14 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
   books a second meeting and leaves the original in place. The attendee sees
   a confirmation either way, so nothing surfaces the fault.
 
-  Hence the load-bearing assertion in each test below: the organiser still
-  owns exactly one meeting afterwards.
+  Hence the load-bearing assertion in most tests below: the organiser still
+  owns exactly one meeting afterwards. The exception is the "Schedule Another
+  Meeting" test, which is about the opposite failure, the reschedule context
+  outliving the reschedule, and so counts two.
+
+  `RescheduleEntryTest` covers the half of the journey before the submit:
+  which day the page opens on and which meeting type it offers. Both share
+  `Tymeslot.RescheduleTestSetup`.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -37,192 +43,15 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
-  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
-  alias Tymeslot.TestMocks
+  alias Tymeslot.RescheduleTestSetup
   alias Tymeslot.Workers.CalendarEventWorker
 
   setup :verify_on_exit!
 
   setup tags do
-    Mox.set_mox_from_context(tags)
-    AvailabilityCache.clear_all()
-    TestMocks.setup_all_mocks()
-
-    timezone = "UTC"
-    user = insert(:user, name: "Test Organizer")
-
-    profile =
-      insert(:profile,
-        user: user,
-        username: "reschedule-host",
-        booking_theme: "1",
-        timezone: timezone
-      )
-
-    schedule =
-      insert(:availability_schedule,
-        profile: profile,
-        is_default: true,
-        advance_booking_days: 30,
-        min_advance_hours: 0,
-        buffer_minutes: 0
-      )
-
-    meeting_type =
-      insert(:meeting_type,
-        user: user,
-        duration_minutes: 30,
-        name: "Quick Chat",
-        is_active: true
-      )
-
-    Enum.each(1..7, fn day_of_week ->
-      insert(:weekly_availability,
-        schedule: schedule,
-        day_of_week: day_of_week,
-        is_available: true,
-        start_time: ~T[09:00:00],
-        end_time: ~T[17:00:00]
-      )
-    end)
-
-    _integration = insert(:calendar_integration, user: user, is_active: true)
-
-    # The meeting being moved: far enough out that Policy's "already started"
-    # and "already occurred" guards both pass. Truncated to the second because
-    # `start_time` is `:utc_datetime` — without this the round-tripped value
-    # never equals the one held here, and every "did it move?" assertion
-    # passes whether or not anything moved.
-    original_start =
-      DateTime.utc_now() |> DateTime.add(7, :day) |> DateTime.truncate(:second)
-
-    meeting =
-      insert(:meeting,
-        organizer_user_id: user.id,
-        organizer_name: user.name,
-        meeting_type_id: meeting_type.id,
-        attendee_name: "Test Attendee",
-        attendee_email: "attendee@example.com",
-        attendee_timezone: timezone,
-        start_time: original_start,
-        end_time: DateTime.add(original_start, 30, :minute),
-        duration: 30,
-        status: "confirmed"
-      )
-
-    %{
-      user: user,
-      profile: profile,
-      meeting_type: meeting_type,
-      meeting: meeting,
-      original_start: original_start
-    }
-  end
-
-  describe "the day a reschedule opens on" do
-    @tag :capture_log
-    test "the schedule step opens on a bookable day with its times listed", %{
-      conn: conn,
-      profile: profile,
-      meeting: meeting
-    } do
-      # The auto-selection used to stand down for the whole reschedule journey:
-      # it treated `is_rescheduling` as a deliberate choice of day, on the
-      # belief that a reschedule link carried a date. It carries only the uid,
-      # so nothing was being preserved — the rescheduler simply got the empty
-      # grid, and does so against the calendar that was full enough to force
-      # the move in the first place.
-      #
-      # This walks the real entry rather than setting the assign, because the
-      # two disagree on ordering: `do_handle_schedule_entry/2` runs before
-      # `handle_params/3` on the connected mount, so `is_rescheduling` is not
-      # yet on the socket at the moment a synchronous fetch resolves. A unit
-      # test on the assign cannot see that; this does.
-      {:ok, view, _html} =
-        live(
-          conn,
-          "/#{profile.username}?timezone=#{profile.timezone}&reschedule_meeting_uid=#{meeting.uid}"
-        )
-
-      view |> element("button[data-testid='duration-option']") |> render_click()
-      view |> element("button[data-testid='next-step']") |> render_click()
-
-      wait_until(fn -> has_element?(view, "button.time-slot-button") end)
-
-      state = :sys.get_state(view.pid).socket.assigns
-
-      assert state.is_rescheduling,
-             "the reschedule context must survive the step transition, or this proves nothing"
-
-      assert {:ok, %Date{}} = Date.from_iso8601(state.selected_date)
-
-      document = view |> render() |> Floki.parse_document!()
-
-      assert Floki.find(document, "button.calendar-day--selected") != [],
-             "expected the reschedule to open on a day painted as selected"
-
-      assert Floki.attribute(document, "button.time-slot-button", "phx-value-time") != [],
-             "expected that day's times to be listed"
-
-      # The hour stays the rescheduler's decision, exactly as for a new booking.
-      assert state.selected_time == nil
-    end
-  end
-
-  describe "the schedule a reschedule is offered against" do
-    @tag :capture_log
-    test "comes from the meeting's own type, not a duration match", %{
-      conn: conn,
-      user: user,
-      profile: profile,
-      meeting: meeting
-    } do
-      # A reschedule link carries only the meeting uid, and the type used to be
-      # re-picked from the duration in the URL — which resolves against slugs,
-      # so it matched nothing and the page fell back to the profile's default
-      # schedule. Slots were then offered from the default while the submit was
-      # validated against the meeting's own type, which is the one way left to
-      # break "if it is offered, it can be booked".
-      long_schedule =
-        insert(:availability_schedule,
-          profile: profile,
-          is_default: false,
-          name: "Long lead time",
-          advance_booking_days: 180,
-          min_advance_hours: 0,
-          buffer_minutes: 0
-        )
-
-      pinned_type =
-        insert(:meeting_type,
-          user: user,
-          duration_minutes: 30,
-          name: "Pinned Chat",
-          is_active: true,
-          availability_schedule_id: long_schedule.id
-        )
-
-      {:ok, _updated} =
-        meeting
-        |> Changeset.change(%{meeting_type_id: pinned_type.id})
-        |> Repo.update()
-
-      {:ok, view, _html} =
-        live(conn, "/#{profile.username}?timezone=UTC&reschedule_meeting_uid=#{meeting.uid}")
-
-      # Picking the *other* type's card: even that must not move the reschedule
-      # off the type it is committed to.
-      view
-      |> element("button[data-testid='duration-option'][phx-value-duration='quick-chat']")
-      |> render_click()
-
-      assigns = :sys.get_state(view.pid).socket.assigns
-
-      assert assigns.meeting_type.id == pinned_type.id
-      assert assigns.booking_window_days == 180
-    end
+    RescheduleTestSetup.reschedule_journey(tags)
   end
 
   describe "completing a reschedule from the public scheduling page" do
@@ -380,6 +209,145 @@ defmodule TymeslotWeb.Live.Scheduling.RescheduleCompletionTest do
         worker: CalendarEventWorker,
         args: %{"action" => "update", "meeting_id" => meeting.id}
       )
+    end
+  end
+
+  describe "\"Schedule Another Meeting\" after a reschedule" do
+    # The organiser's other public type, on the same default schedule as the
+    # first. It needs no window of its own: the reschedule has taken one of
+    # that schedule's slots, the page no longer offers it, and the walk below
+    # simply lands on the next one.
+    defp second_type(user) do
+      insert(:meeting_type,
+        user: user,
+        duration_minutes: 45,
+        name: "Deep Dive",
+        is_active: true
+      )
+    end
+
+    @tag :capture_log
+    test "books a new meeting instead of moving the one just rescheduled", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      meeting_type: meeting_type,
+      meeting: meeting,
+      original_start: original_start
+    } do
+      # The reschedule context used to outlive the reschedule. Nothing cleared
+      # `reschedule_meeting_uid`: `handle_param_updates/2` only assigns it when
+      # the param is a binary, and the confirmation step is reached in place, so
+      # `handle_params/3` never ran again to drop it. The booker who took the
+      # button at its word moved the meeting they had just moved, lost the time
+      # they had just confirmed, and was told it had been rescheduled.
+      #
+      # A second public type, so that the pin lifting is observable: a
+      # reschedule replaces `:meeting_types` with the one type being moved.
+      second_type(user)
+
+      view =
+        navigate_to_booking_form(conn, profile, meeting_type, reschedule_meeting_uid: meeting.uid)
+
+      view
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{
+          "name" => "Test Attendee",
+          "email" => "attendee@example.com",
+          "message" => "Something came up"
+        }
+      })
+      |> render_submit()
+
+      wait_until(fn ->
+        Repo.get!(MeetingSchema, meeting.id).start_time != original_start
+      end)
+
+      moved_start = Repo.get!(MeetingSchema, meeting.id).start_time
+
+      view |> element("[data-testid='schedule-another']") |> render_click()
+
+      cards =
+        view
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.find("[data-testid='duration-option']")
+
+      assert length(cards) == 2,
+             "the flow has restarted, so the organiser's full catalogue is the choice again"
+
+      # Deliberately the *other* type: the second booking is a free choice, and
+      # booking it proves the page is no longer pinned to the moved meeting's.
+      view = walk_to_booking_form(view, profile.timezone, "deep-dive")
+
+      view
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{
+          "name" => "Test Attendee",
+          "email" => "attendee@example.com",
+          "message" => "And one more, please"
+        }
+      })
+      |> render_submit()
+
+      wait_until(fn -> meeting_count_for(user) == 2 end)
+
+      kept = Repo.get!(MeetingSchema, meeting.id)
+
+      assert DateTime.compare(kept.start_time, moved_start) == :eq,
+             "the second booking must leave the rescheduled meeting where the reschedule put it"
+    end
+  end
+
+  describe "a reschedule on a day at the host's booking limit" do
+    # The host takes one booking a day and the booker's meeting is that day's
+    # one. The submit does not count the meeting being moved against the cap,
+    # so any other time that day is a valid move; the page used to count it
+    # anyway, greying the whole day out and leaving the booker nothing to pick.
+    @tag :capture_log
+    test "offers the rest of the meeting's own day, and moving to it succeeds", %{
+      conn: conn,
+      user: user,
+      profile: profile,
+      meeting_type: meeting_type,
+      meeting: meeting
+    } do
+      profile |> Changeset.change(%{max_bookings_per_day: 1}) |> Repo.update!()
+
+      # The booking helper walks to tomorrow, so that is where the meeting sits.
+      tomorrow = Date.add(Date.utc_today(), 1)
+      original_start = DateTime.new!(tomorrow, ~T[14:00:00], "Etc/UTC")
+
+      meeting
+      |> Changeset.change(%{
+        start_time: original_start,
+        end_time: DateTime.add(original_start, 30, :minute)
+      })
+      |> Repo.update!()
+
+      # Flunks unless tomorrow is selectable and lists at least one time.
+      view =
+        navigate_to_booking_form(conn, profile, meeting_type, reschedule_meeting_uid: meeting.uid)
+
+      view
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{
+          "name" => "Test Attendee",
+          "email" => "attendee@example.com",
+          "message" => "Earlier the same day suits better"
+        }
+      })
+      |> render_submit()
+
+      wait_until(fn ->
+        Repo.get!(MeetingSchema, meeting.id).start_time != original_start
+      end)
+
+      moved = Repo.get!(MeetingSchema, meeting.id)
+
+      assert DateTime.to_date(moved.start_time) == tomorrow
+      assert DateTime.compare(moved.start_time, original_start) != :eq
+      assert meeting_count_for(user) == 1
     end
   end
 

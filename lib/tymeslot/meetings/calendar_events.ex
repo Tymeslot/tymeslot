@@ -1,40 +1,12 @@
 defmodule Tymeslot.Meetings.CalendarEvents do
   @moduledoc """
-  Async calendar event orchestration for meetings — creation and cancellation
-  via Oban workers.
+  Async calendar event orchestration for meetings: cancellation via Oban
+  workers.
   """
 
   require Logger
 
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
-
-  @doc """
-  Creates a calendar event asynchronously.
-
-  Schedules calendar event creation through an Oban worker. Does not fail the
-  broader meeting creation workflow if scheduling fails — errors are logged and
-  `:ok` is returned regardless.
-  """
-  @spec create_calendar_event_async(Ecto.Schema.t()) :: :ok
-  def create_calendar_event_async(meeting) do
-    case CalendarEventScheduler.schedule_calendar_creation(meeting.id) do
-      :ok ->
-        Logger.info("Calendar event creation scheduled",
-          meeting_id: meeting.id,
-          uid: meeting.uid
-        )
-
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Failed to schedule calendar event creation",
-          meeting_id: meeting.id,
-          reason: inspect(reason)
-        )
-
-        :ok
-    end
-  end
 
   @doc """
   Cancels the calendar event associated with a meeting.

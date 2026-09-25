@@ -68,6 +68,41 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
   end
 
   @doc """
+  Starts `reconnect/3` for one of `user_id`'s own integrations, looked up by
+  id. An integration that is not theirs is `{:error, :not_found}`, so the id
+  can be taken from the browser.
+  """
+  @spec reconnect_for_user(pos_integer(), pos_integer(), params()) ::
+          reconnect_ok() | {:error, :not_found} | reconnect_error()
+  def reconnect_for_user(user_id, integration_id, params)
+      when is_integer(user_id) and is_integer(integration_id) and is_map(params) do
+    with {:ok, integration} <-
+           CalendarManagement.get_calendar_integration(integration_id, user_id) do
+      reconnect(integration, params)
+    end
+  end
+
+  @doc """
+  Finishes the account-change branch for one of `user_id`'s own integrations,
+  scoped as `reconnect_for_user/3` is. See `finalise_account_change/3`.
+  """
+  @spec finalise_for_user(pos_integer(), pos_integer(), %{
+          required(:payload) => map(),
+          required(:selected_paths) => [String.t()]
+        }) ::
+          {:ok, integration()}
+          | {:error, :not_found}
+          | {:error, :no_calendars_selected}
+          | {:error, {:changeset, Ecto.Changeset.t()}}
+  def finalise_for_user(user_id, integration_id, %{payload: payload, selected_paths: paths})
+      when is_integer(user_id) and is_integer(integration_id) do
+    with {:ok, integration} <-
+           CalendarManagement.get_calendar_integration(integration_id, user_id) do
+      finalise_account_change(integration, payload, paths)
+    end
+  end
+
+  @doc """
   Persist the new URL, credentials, and calendar selection picked by the
   user. Returns `{:error, :no_calendars_selected}` if the selection is
   empty.

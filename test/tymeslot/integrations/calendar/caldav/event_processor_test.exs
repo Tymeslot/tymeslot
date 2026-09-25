@@ -31,7 +31,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
     end
   end
 
-  describe "parse_ical_from_string/1" do
+  describe "parse_ical_events/1" do
     @valid_ical """
     BEGIN:VCALENDAR
     VERSION:2.0
@@ -45,22 +45,22 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
     END:VCALENDAR
     """
 
-    test "parses a valid iCalendar string and returns the first event" do
-      assert {:ok, event} = EventProcessor.parse_ical_from_string(@valid_ical)
+    test "parses a valid iCalendar string" do
+      assert {:ok, [event]} = EventProcessor.parse_ical_events(@valid_ical)
       assert Map.get(event, :uid) == "test-uid-001@example.com"
       assert Map.get(event, :summary) == "Team Meeting"
     end
 
     test "returns {:error, :empty_data} for nil" do
-      assert EventProcessor.parse_ical_from_string(nil) == {:error, :empty_data}
+      assert EventProcessor.parse_ical_events(nil) == {:error, :empty_data}
     end
 
     test "returns {:error, :empty_data} for empty string" do
-      assert EventProcessor.parse_ical_from_string("") == {:error, :empty_data}
+      assert EventProcessor.parse_ical_events("") == {:error, :empty_data}
     end
 
     test "returns {:error, :empty_data} for non-binary input" do
-      assert EventProcessor.parse_ical_from_string(42) == {:error, :empty_data}
+      assert EventProcessor.parse_ical_events(42) == {:error, :empty_data}
     end
 
     test "parses attendees from an iCalendar string" do
@@ -79,7 +79,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       END:VCALENDAR
       """
 
-      assert {:ok, event} = EventProcessor.parse_ical_from_string(ical)
+      assert {:ok, [event]} = EventProcessor.parse_ical_events(ical)
       assert [alice, bob] = Map.get(event, :attendees)
       assert alice["email"] == "alice@example.com"
       assert alice["name"] == "Alice"
@@ -103,7 +103,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       END:VCALENDAR
       """
 
-      assert {:ok, event} = EventProcessor.parse_ical_from_string(ical)
+      assert {:ok, [event]} = EventProcessor.parse_ical_events(ical)
       assert Map.get(event, :recurrence_rule) == "FREQ=WEEKLY;INTERVAL=1"
     end
 
@@ -122,7 +122,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       END:VCALENDAR
       """
 
-      assert {:ok, event} = EventProcessor.parse_ical_from_string(ical)
+      assert {:ok, [event]} = EventProcessor.parse_ical_events(ical)
       assert Map.get(event, :transparency) == "transparent"
     end
   end
@@ -498,7 +498,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       END:VCALENDAR
       """
 
-      assert {:ok, raw} = EventProcessor.parse_ical_from_string(ical)
+      assert {:ok, [raw]} = EventProcessor.parse_ical_events(ical)
 
       assert {:ok, [%CalendarEvent{} = event]} =
                EventProcessor.normalise_events([raw], @roundtrip_context)
@@ -520,7 +520,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       END:VCALENDAR
       """
 
-      assert {:ok, raw} = EventProcessor.parse_ical_from_string(ical)
+      assert {:ok, [raw]} = EventProcessor.parse_ical_events(ical)
 
       assert {:ok, [%CalendarEvent{} = event]} =
                EventProcessor.normalise_events([raw], @roundtrip_context)
@@ -566,7 +566,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       END:VCALENDAR
       """
 
-      assert {:ok, raw} = EventProcessor.parse_ical_from_string(ical)
+      assert {:ok, [raw]} = EventProcessor.parse_ical_events(ical)
       assert {:ok, events} = EventProcessor.normalise_events([raw], @dst_context)
 
       assert length(events) == 3
@@ -591,7 +591,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
   # `normalise_events/2` expands within ±365 days of now, so a hard-coded
   # transition date would quietly fall out of that window as time passes. Every
   # observing zone has one within a few months, so the next one is found rather
-  # than named.
+  # than named. The search range is sized on the longer of a zone's two gaps:
+  # northern-hemisphere zones run roughly 210 days from the spring transition to
+  # the autumn one, so anything narrower finds nothing for the months after each
+  # spring change. The consumer only expands to `transition + 7`, well inside the
+  # expander's window, so searching further costs nothing.
   defp next_dst_transition(zone) do
     today = Date.utc_today()
 
@@ -601,7 +605,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
     end
 
     days =
-      Enum.find(1..200, fn day ->
+      Enum.find(1..300, fn day ->
         date = Date.add(today, day)
         offset.(date) != offset.(Date.add(date, -1))
       end)

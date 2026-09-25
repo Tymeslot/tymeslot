@@ -8,36 +8,29 @@ defmodule TymeslotWeb.OAuthController do
   use Gettext, backend: TymeslotWeb.Gettext
   require Logger
 
-  alias Tymeslot.Auth.{AuthActions, Session, Verification}
-  alias Tymeslot.Auth.OAuth.{FlowHandler, GenericOAuth, GitHub, Google}
-  alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
-  alias Tymeslot.Auth.OAuth.{URLs, UserRegistration}
+  alias Tymeslot.Auth
+  alias Tymeslot.Auth.OAuth.Providers
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Security.{RateLimiter, SecurityLogger}
   alias TymeslotWeb.AuthControllerHelpers
+  alias TymeslotWeb.EmailLinkConfirmHTML
   alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
+  alias TymeslotWeb.OAuthFlow
+
+  @type provider :: Providers.provider()
 
   @doc """
   Generic OAuth request handler that dispatches to provider-specific functions.
   Checks if social authentication is enabled for the provider when used for auth.
   """
   @spec request(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def request(conn, %{"provider" => "github"} = params),
-    do: dispatch_request(conn, :github, params)
-
-  def request(conn, %{"provider" => "google"} = params),
-    do: dispatch_request(conn, :google, params)
-
-  def request(conn, %{"provider" => "oauth"} = params),
-    do: dispatch_request(conn, :oauth, params)
-
   def request(conn, %{"provider" => provider}) do
-    conn
-    |> put_flash(
-      :error,
-      dgettext("auth", "Unsupported OAuth provider: %{provider}", provider: provider)
-    )
-    |> redirect(to: ~p"/auth/login")
+    case validate_oauth_provider(provider) do
+      {:ok, provider_atom} ->
+        dispatch_request(conn, provider_atom)
+
+      {:error, :unsupported_oauth_provider} ->
+        unsupported_provider(conn, provider, ~p"/auth/login")
+    end
   end
 
   def request(conn, _params) do
@@ -46,54 +39,55 @@ defmodule TymeslotWeb.OAuthController do
     |> redirect(to: ~p"/auth/login")
   end
 
-  defp dispatch_request(conn, provider_atom, params) do
-    if social_auth_enabled?(provider_atom) do
-      do_provider_auth(conn, provider_atom, params)
+  defp dispatch_request(conn, provider) do
+    if social_auth_enabled?(provider) do
+      with_rate_limit(conn, :initiation, fn -> do_provider_auth(conn, provider) end)
     else
-      disabled_redirect(conn, provider_atom)
+      disabled_redirect(conn, provider)
     end
   end
 
-  defp social_auth_enabled?(provider_atom) do
-    social_auth_config = Application.get_env(:tymeslot, :social_auth, [])
+  defp social_auth_enabled?(provider), do: Providers.enabled?(provider)
 
-    case provider_atom do
-      :github -> Keyword.get(social_auth_config, :github_enabled, false)
-      :google -> Keyword.get(social_auth_config, :google_enabled, false)
-      :oauth -> Keyword.get(social_auth_config, :oauth_enabled, false)
-    end
+  defp do_provider_auth(conn, provider) do
+    {updated_conn, authorize_url} = OAuthFlow.authorize(conn, provider)
+    redirect(updated_conn, external: authorize_url)
   end
 
-  defp do_provider_auth(conn, provider, _params) do
-    case RateLimiter.check_oauth_initiation_rate_limit(ClientIP.get(conn)) do
+  defp unsupported_provider(conn, provider, redirect_path) do
+    conn
+    |> put_flash(
+      :error,
+      dgettext("auth", "Unsupported OAuth provider: %{provider}", provider: provider)
+    )
+    |> redirect(to: redirect_path)
+  end
+
+  # Every public entry point is rate limited by IP; the violation is logged
+  # and answered the same way, so a new action cannot apply half the gate.
+  defp with_rate_limit(conn, action, on_allowed) do
+    case Auth.check_social_rate_limit(action, ClientIP.request_opts(conn)) do
       :ok ->
-        redirect_uri = URLs.callback_url(conn, URLs.callback_path(provider))
-
-        {updated_conn, authorize_url} =
-          provider_module(provider).authorize_url(conn, redirect_uri)
-
-        redirect(updated_conn, external: authorize_url)
+        on_allowed.()
 
       {:error, :rate_limited, _message} ->
-        SecurityLogger.log_rate_limit_violation(ClientIP.get(conn), "oauth_initiation", %{
-          ip_address: ClientIP.get(conn),
-          user_agent: ClientIP.get_user_agent(conn)
-        })
-
-        AuthControllerHelpers.handle_rate_limited(
-          conn,
-          dgettext("auth", "Too many OAuth attempts. Please try again later."),
-          ~p"/auth/login"
-        )
+        {message, redirect_path} = rate_limited_reply(action, conn)
+        AuthControllerHelpers.handle_rate_limited(conn, message, redirect_path)
     end
   end
 
-  defp oauth_callback_module,
-    do: Application.get_env(:tymeslot, :oauth_callback_module, OAuthHelper)
+  defp rate_limited_reply(:initiation, _conn) do
+    {dgettext("auth", "Too many OAuth attempts. Please try again later."), ~p"/auth/login"}
+  end
 
-  defp provider_module(:github), do: GitHub
-  defp provider_module(:google), do: Google
-  defp provider_module(:oauth), do: GenericOAuth
+  defp rate_limited_reply(:callback, conn) do
+    {dgettext("auth", "Too many authentication attempts. Please try again later."),
+     get_login_path(conn)}
+  end
+
+  defp rate_limited_reply(:completion, _conn) do
+    {dgettext("auth", "Too many registration attempts. Please try again later."), ~p"/auth/login"}
+  end
 
   defp disabled_redirect(conn, provider_atom) do
     conn
@@ -114,15 +108,18 @@ defmodule TymeslotWeb.OAuthController do
   def callback(conn, %{"provider" => provider, "code" => code, "state" => state}) do
     case validate_oauth_provider(provider) do
       {:ok, provider_atom} ->
-        handle_provider_callback(conn, provider_atom, code, state)
+        # Checked again here, not only when the flow starts: a flow begun
+        # before an admin switched the provider off must not still sign in.
+        if social_auth_enabled?(provider_atom) do
+          with_rate_limit(conn, :callback, fn ->
+            handle_provider_callback(conn, provider_atom, code, state)
+          end)
+        else
+          disabled_redirect(conn, provider_atom)
+        end
 
       {:error, :unsupported_oauth_provider} ->
-        conn
-        |> put_flash(
-          :error,
-          dgettext("auth", "Unsupported OAuth provider: %{provider}", provider: provider)
-        )
-        |> redirect(to: get_login_path(conn))
+        unsupported_provider(conn, provider, get_login_path(conn))
     end
   end
 
@@ -141,12 +138,7 @@ defmodule TymeslotWeb.OAuthController do
         |> redirect(to: ~p"/?auth=login")
 
       {:error, :unsupported_oauth_provider} ->
-        conn
-        |> put_flash(
-          :error,
-          dgettext("auth", "Unsupported OAuth provider: %{provider}", provider: provider)
-        )
-        |> redirect(to: get_login_path(conn))
+        unsupported_provider(conn, provider, get_login_path(conn))
     end
   end
 
@@ -161,267 +153,231 @@ defmodule TymeslotWeb.OAuthController do
   """
   @spec complete(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def complete(conn, params) do
-    case RateLimiter.check_oauth_completion_rate_limit(ClientIP.get(conn)) do
-      :ok ->
-        process_oauth_completion(conn, params)
-
-      {:error, :rate_limited, _message} ->
-        SecurityLogger.log_rate_limit_violation(ClientIP.get(conn), "oauth_completion", %{
-          ip_address: ClientIP.get(conn),
-          user_agent: ClientIP.get_user_agent(conn)
-        })
-
-        AuthControllerHelpers.handle_rate_limited(
-          conn,
-          dgettext("auth", "Too many registration attempts. Please try again later."),
-          ~p"/auth/login"
-        )
-    end
+    with_rate_limit(conn, :completion, fn -> process_oauth_completion(conn, params) end)
   end
 
   # Private helper functions
 
   defp handle_provider_callback(conn, provider, code, state) do
-    case RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)) do
-      :ok ->
-        paths = get_redirect_paths(conn)
+    paths = get_redirect_paths(conn)
 
-        conn
-        |> delete_session(:oauth_intent)
-        |> oauth_callback_module().handle_oauth_callback(%{
-          code: code,
-          state: state,
-          provider: provider
-        })
-        |> respond_to_oauth_result(paths)
-
-      {:error, :rate_limited, _message} ->
-        SecurityLogger.log_rate_limit_violation(ClientIP.get(conn), "oauth_callback", %{
-          ip_address: ClientIP.get(conn),
-          user_agent: ClientIP.get_user_agent(conn)
-        })
-
-        AuthControllerHelpers.handle_rate_limited(
-          conn,
-          dgettext("auth", "Too many authentication attempts. Please try again later."),
-          get_login_path(conn)
-        )
-    end
+    conn
+    |> OAuthFlow.handle_oauth_callback(%{
+      code: code,
+      state: state,
+      provider: provider
+    })
+    |> respond_to_oauth_result(paths)
   end
 
   defp process_oauth_completion(conn, params) do
-    if Config.registration_enabled?() do
-      do_process_oauth_completion(conn, params)
-    else
-      conn
-      |> put_flash(:info, AuthActions.registration_disabled_message())
-      |> redirect(to: ~p"/auth/login")
-    end
-  end
+    pending = get_session(conn, :pending_oauth_registration)
 
-  defp do_process_oauth_completion(conn, params) do
-    case get_session(conn, :pending_oauth_registration) do
-      nil ->
-        FlowHandler.log_social_auth("unknown", false, conn, %{
-          error_reason: "missing_pending_registration"
-        })
-
-        conn
-        |> put_flash(
-          :error,
-          dgettext("auth", "Missing OAuth provider information. Please try again.")
-        )
-        |> redirect(to: ~p"/auth/login")
-
-      session_data ->
-        oauth_data = build_oauth_data_from_session(session_data, params)
-        profile_params = build_profile_params(params)
-        handle_oauth_with_provider(conn, oauth_data, params, profile_params)
-    end
-  end
-
-  defp handle_oauth_with_provider(conn, oauth_data, params, profile_params) do
-    case validate_oauth_provider(oauth_data.provider) do
-      {:ok, provider} ->
-        metadata = %{
-          ip: ClientIP.get(conn),
-          user_agent: ClientIP.get_user_agent(conn),
-          source: "oauth_signup",
-          terms_accepted: oauth_data.terms_accepted
-        }
-
-        case UserRegistration.validate_completion_data(oauth_data) do
-          :ok ->
-            case UserRegistration.create_oauth_user(provider, oauth_data, profile_params,
-                   metadata: metadata
-                 ) do
-              {:ok, user} ->
-                handle_oauth_user_creation(conn, user, oauth_data)
-
-              {:error, reason} ->
-                FlowHandler.log_social_auth(provider, false, conn, %{
-                  email: oauth_data.email,
-                  error_reason: "creation_failed"
-                })
-
-                handle_oauth_creation_error(conn, reason, params)
-            end
-
-          {:error, validation_error} ->
-            FlowHandler.log_social_auth(provider, false, conn, %{
-              email: oauth_data.email,
-              error_reason: "validation_failed"
-            })
-
-            handle_oauth_validation_error(conn, validation_error, params)
-        end
-
-      {:error, :unsupported_oauth_provider} ->
-        FlowHandler.log_social_auth(oauth_data.provider, false, conn, %{
-          email: oauth_data.email,
-          error_reason: "unsupported_provider"
-        })
-
+    case Auth.complete_social_registration(pending, params, ClientIP.request_opts(conn)) do
+      # An address typed into the form, taken or free: nothing was created,
+      # and both are answered with the same page, flash and session.
+      {:ok, provider, :check_email, delivery} ->
         conn
         |> delete_session(:pending_oauth_registration)
-        |> put_flash(:error, dgettext("auth", "Unsupported OAuth provider."))
-        |> redirect(to: ~p"/auth/login")
+        |> check_your_email(provider, delivery)
+
+      {:ok, provider, user, :created} ->
+        conn
+        |> delete_session(:pending_oauth_registration)
+        |> OAuthFlow.sign_in(user, provider)
+        |> respond_to_completion()
+
+      # The account already existed (the form was submitted twice): this is a
+      # sign-in, and says so.
+      {:ok, provider, user, :existing} ->
+        conn
+        |> delete_session(:pending_oauth_registration)
+        |> OAuthFlow.sign_in(user, provider)
+        |> respond_to_oauth_result(success_path: ~p"/dashboard", login_path: ~p"/auth/login")
+
+      {:error, reason} ->
+        completion_failed(conn, reason, pending)
     end
   end
 
-  @spec build_oauth_data_from_session(map(), map()) :: map()
-  defp build_oauth_data_from_session(session_data, params) do
-    # User-editable fields come from the form submission; everything else from the session
-    email =
-      if session_data[:email_from_provider] do
-        session_data[:email]
-      else
-        get_in(params, ["auth", "email"]) || session_data[:email]
+  defp check_your_email(conn, provider, delivery) do
+    message =
+      case delivery do
+        :sent ->
+          dgettext(
+            "auth",
+            "Check your email: we've sent a link to finish signing up with %{provider}.",
+            provider: provider_name(provider)
+          )
+
+        :rate_limited ->
+          dgettext(
+            "auth",
+            "We couldn't send the link to finish signing up just now. Please try again later."
+          )
       end
 
-    %{
-      provider: session_data[:provider],
-      email: email,
-      is_verified: session_data[:is_verified] == true,
-      email_from_provider: session_data[:email_from_provider] == true,
-      github_user_id: session_data[:github_user_id],
-      google_user_id: session_data[:google_user_id],
-      provider_uid: session_data[:provider_uid],
-      name: session_data[:name] || "",
-      terms_accepted: get_terms_accepted(params)
-    }
+    conn
+    |> put_flash(:info, message)
+    |> redirect(to: ~p"/auth/verify-email")
   end
 
-  @spec build_profile_params(map()) :: map()
-  defp build_profile_params(params) do
-    profile_data = params["profile"] || %{}
-
-    %{
-      full_name: profile_data["full_name"]
-    }
+  @doc """
+  Landing page for the link that finishes a social sign-up with a typed
+  address. Renders a confirmation button only: opening the link must not
+  create the account, or a mail scanner prefetching it would.
+  """
+  @spec confirm_signup(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def confirm_signup(conn, %{"token" => token}) do
+    conn
+    |> put_layout(html: false)
+    |> put_view(html: EmailLinkConfirmHTML)
+    |> render(:confirm,
+      action: ~p"/auth/oauth/confirm/#{token}",
+      icon: "hero-envelope",
+      title: dgettext("auth", "Finish signing up"),
+      body:
+        dgettext(
+          "auth",
+          "Press the button below to confirm your email address and create your account."
+        ),
+      button: dgettext("auth", "Create my account")
+    )
   end
 
-  @spec handle_oauth_user_creation(Plug.Conn.t(), map(), map()) :: Plug.Conn.t()
-  defp handle_oauth_user_creation(conn, user, oauth_data) do
-    conn = delete_session(conn, :pending_oauth_registration)
+  @doc """
+  Finishes a social sign-up from its emailed link: creates the account,
+  verified, and signs the owner in.
+  """
+  @spec finish_signup(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def finish_signup(conn, %{"token" => token}) do
+    with_rate_limit(conn, :completion, fn ->
+      case Auth.confirm_social_signup(token, ClientIP.request_opts(conn)) do
+        {:ok, provider, user} ->
+          conn
+          |> OAuthFlow.sign_in(user, provider)
+          |> respond_to_completion()
 
-    if Map.get(user, :needs_email_verification, false) do
-      handle_email_verification_flow(conn, user, oauth_data)
-    else
-      create_session_and_redirect(
-        conn,
-        user,
-        oauth_data.provider,
-        get_welcome_message(oauth_data.provider)
-      )
-    end
-  end
-
-  @spec handle_email_verification_flow(Plug.Conn.t(), map(), map()) :: Plug.Conn.t()
-  defp handle_email_verification_flow(conn, user, oauth_data) do
-    case Verification.verify_user_email(conn, user, %{}) do
-      {:ok, _updated_user} ->
-        message =
-          dgettext(
-            "auth",
-            "Welcome! You've successfully signed up with %{provider}. Please check your email to verify your account.",
-            provider: String.capitalize(oauth_data.provider)
+        {:error, :invalid_link} ->
+          conn
+          |> put_flash(
+            :error,
+            dgettext("auth", "This link is no longer valid. Please sign in to continue.")
           )
-
-        create_session_and_redirect(conn, user, oauth_data.provider, message)
-
-      {:error, :rate_limited, _rate_limit_message} ->
-        FlowHandler.log_social_auth(oauth_data.provider, false, conn, %{
-          email: Map.get(user, :email),
-          error_reason: "verification_rate_limited"
-        })
-
-        handle_rate_limited_error(conn)
-
-      {:error, _error_reason} ->
-        message =
-          dgettext(
-            "auth",
-            "Welcome! You've successfully signed up with %{provider}. Verification email could not be sent - please contact support if needed.",
-            provider: String.capitalize(oauth_data.provider)
-          )
-
-        create_session_and_redirect(conn, user, oauth_data.provider, message)
-    end
+          |> redirect(to: ~p"/auth/login")
+      end
+    end)
   end
 
-  @spec create_session_and_redirect(Plug.Conn.t(), map(), String.t(), String.t()) ::
-          Plug.Conn.t()
-  defp create_session_and_redirect(conn, user, provider, success_message) do
-    case Session.create_session(conn, user) do
-      {:ok, updated_conn, _session_token} ->
-        # Account creation itself is audited by the caller; this closes the
-        # loop with the social-auth success entry FlowHandler.create_user_session/3
-        # already emits for returning-user OAuth logins.
-        FlowHandler.log_social_auth(provider, true, updated_conn, %{
-          email: Map.get(user, :email),
-          oauth_state_valid: true
-        })
-
-        updated_conn
-        |> put_flash(:info, success_message)
-        |> redirect(to: ~p"/dashboard")
-
-      {:error, _error_reason, _error_details} ->
-        # Mirrors the failure entry FlowHandler.create_user_session/3 emits
-        # for the returning-user login path.
-        FlowHandler.log_social_auth(provider, false, conn, %{
-          email: Map.get(user, :email),
-          error_reason: "session_failed"
-        })
-
-        conn
-        |> put_flash(:error, dgettext("auth", "Failed to create session. Please try again."))
-        |> redirect(to: ~p"/auth/login")
-    end
+  defp respond_to_completion({:ok, authed_conn, provider}) do
+    authed_conn
+    |> put_flash(:info, get_welcome_message(provider))
+    |> redirect(to: ~p"/dashboard")
   end
 
-  @spec handle_oauth_creation_error(Plug.Conn.t(), any(), map()) :: Plug.Conn.t()
-  defp handle_oauth_creation_error(conn, reason, params) do
+  defp respond_to_completion({:error, :session_failed, _provider, conn}) do
+    conn
+    |> put_flash(:error, dgettext("auth", "Failed to create session. Please try again."))
+    |> redirect(to: ~p"/auth/login")
+  end
+
+  # Only an account created with an unproved email awaits verification, and
+  # neither completion path creates one any more; one made before that change
+  # is answered as a provider sign-in to it would be.
+  defp respond_to_completion({:verification_required, _conn, _provider, _delivery} = result),
+    do: respond_to_oauth_result(result, success_path: ~p"/dashboard", login_path: ~p"/auth/login")
+
+  defp completion_failed(conn, :registration_disabled, _pending) do
+    conn
+    |> put_flash(:info, Auth.error_message(:registration_disabled))
+    |> redirect(to: ~p"/auth/login")
+  end
+
+  defp completion_failed(conn, :missing_pending_registration, _pending) do
+    log_social_auth("unknown", false, conn, %{
+      error_reason: "missing_pending_registration"
+    })
+
+    conn
+    |> put_flash(
+      :error,
+      dgettext("auth", "Missing OAuth provider information. Please try again.")
+    )
+    |> redirect(to: ~p"/auth/login")
+  end
+
+  defp completion_failed(conn, :unsupported_provider, pending) do
+    log_completion_failure(conn, pending, "unsupported_provider")
+
+    conn
+    |> delete_session(:pending_oauth_registration)
+    |> put_flash(:error, dgettext("auth", "Unsupported OAuth provider."))
+    |> redirect(to: ~p"/auth/login")
+  end
+
+  defp completion_failed(conn, {:provider_disabled, provider}, pending) do
+    log_completion_failure(conn, pending, "provider_disabled")
+
+    conn
+    |> delete_session(:pending_oauth_registration)
+    |> disabled_redirect(provider)
+  end
+
+  defp completion_failed(conn, :registration_expired, pending) do
+    log_completion_failure(conn, pending, "registration_expired")
+
+    conn
+    |> delete_session(:pending_oauth_registration)
+    |> put_flash(
+      :error,
+      dgettext("auth", "Your sign-up session has expired. Please sign in again.")
+    )
+    |> redirect(to: ~p"/auth/login")
+  end
+
+  defp completion_failed(conn, reason, pending)
+       when is_atom(reason) and
+              reason in [
+                :email_required,
+                :invalid_email,
+                :terms_not_accepted,
+                :email_already_taken
+              ] do
+    log_completion_failure(conn, pending, "validation_failed")
+    redirect_to_registration_with_error(conn, reason)
+  end
+
+  defp completion_failed(conn, reason, pending) do
+    log_completion_failure(conn, pending, "creation_failed")
+    handle_oauth_creation_error(conn, reason)
+  end
+
+  defp log_completion_failure(conn, pending, error_reason) do
+    log_social_auth(pending[:provider], false, conn, %{
+      email: pending[:email],
+      error_reason: error_reason
+    })
+  end
+
+  defp log_social_auth(provider, success, conn, details),
+    do: Auth.log_social_auth(provider, success, details, ClientIP.request_opts(conn))
+
+  @spec handle_oauth_creation_error(Plug.Conn.t(), any()) :: Plug.Conn.t()
+  defp handle_oauth_creation_error(conn, reason) do
     Logger.error("Failed to create user from OAuth completion", reason: inspect(reason))
 
     # If this is a validation error, redirect back to registration with the data
     case reason do
       %Ecto.Changeset{} ->
-        redirect_to_registration_with_error(conn, reason, params)
+        redirect_to_registration_with_error(conn, reason)
 
       _other_error ->
         AuthControllerHelpers.oauth_error_response(conn, reason, ~p"/auth/login")
     end
   end
 
-  @spec handle_oauth_validation_error(Plug.Conn.t(), atom() | String.t(), map()) :: Plug.Conn.t()
-  defp handle_oauth_validation_error(conn, validation_error, params) do
-    redirect_to_registration_with_error(conn, validation_error, params)
-  end
-
-  @spec redirect_to_registration_with_error(Plug.Conn.t(), any(), map()) :: Plug.Conn.t()
-  defp redirect_to_registration_with_error(conn, error, _params) do
+  @spec redirect_to_registration_with_error(Plug.Conn.t(), any()) :: Plug.Conn.t()
+  defp redirect_to_registration_with_error(conn, error) do
     query_params = %{"error" => AuthControllerHelpers.format_oauth_error_for_params(error)}
 
     conn
@@ -429,24 +385,15 @@ defmodule TymeslotWeb.OAuthController do
     |> redirect(to: ~p"/auth/complete-registration?#{query_params}")
   end
 
-  @spec handle_rate_limited_error(Plug.Conn.t()) :: Plug.Conn.t()
-  defp handle_rate_limited_error(conn) do
-    AuthControllerHelpers.handle_rate_limited(
-      conn,
-      dgettext("auth", "Too many verification attempts. Please try again later."),
-      ~p"/auth/login"
-    )
-  end
-
-  @spec get_welcome_message(String.t()) :: String.t()
+  @spec get_welcome_message(provider()) :: String.t()
   defp get_welcome_message(provider) do
     dgettext("auth", "Welcome! You've successfully signed up with %{provider}.",
-      provider: String.capitalize(provider)
+      provider: provider_name(provider)
     )
   end
 
   @spec respond_to_oauth_result(
-          Tymeslot.Auth.OAuth.HelperBehaviour.flow_result(),
+          OAuthFlow.flow_result(),
           keyword()
         ) :: Plug.Conn.t()
   defp respond_to_oauth_result({:ok, authed_conn, provider}, paths) do
@@ -458,6 +405,32 @@ defmodule TymeslotWeb.OAuthController do
       )
     )
     |> redirect(to: paths[:success_path])
+  end
+
+  defp respond_to_oauth_result({:verification_required, conn, _provider, delivery}, _paths) do
+    {level, message} =
+      case delivery do
+        :sent ->
+          {:info,
+           dgettext(
+             "auth",
+             "Please verify your email address before signing in. We've sent you a new verification link."
+           )}
+
+        :rate_limited ->
+          {:error, dgettext("auth", "Too many verification attempts. Please try again later.")}
+
+        :failed ->
+          {:error,
+           dgettext(
+             "auth",
+             "Please verify your email address before signing in. We could not send a new verification link; please try again later."
+           )}
+      end
+
+    conn
+    |> put_flash(level, message)
+    |> redirect(to: ~p"/auth/verify-email")
   end
 
   defp respond_to_oauth_result({:registration_required, state_conn, _provider, data}, _paths) do
@@ -509,13 +482,21 @@ defmodule TymeslotWeb.OAuthController do
 
   defp respond_to_oauth_result({:error, :registration_disabled, _provider, flow_conn}, paths) do
     flow_conn
-    |> put_flash(:info, AuthActions.registration_disabled_message())
+    |> put_flash(:info, Auth.error_message(:registration_disabled))
     |> redirect(to: paths[:login_path])
   end
 
-  defp provider_name(:github), do: "GitHub"
-  defp provider_name(:google), do: "Google"
-  defp provider_name(:oauth), do: "SSO"
+  defp respond_to_oauth_result({:error, :email_already_taken, _provider, flow_conn}, paths) do
+    AuthControllerHelpers.oauth_error_response(
+      flow_conn,
+      :email_already_taken,
+      paths[:login_path]
+    )
+  end
+
+  @spec provider_name(provider() | String.t()) :: String.t()
+
+  defp provider_name(provider), do: Providers.name(provider)
 
   @spec get_redirect_paths(Plug.Conn.t()) :: keyword()
   defp get_redirect_paths(conn) do
@@ -534,23 +515,10 @@ defmodule TymeslotWeb.OAuthController do
     RedirectSanitizer.sanitize(conn.params["login_path"], ~p"/auth/login")
   end
 
-  @spec validate_oauth_provider(String.t() | nil) ::
-          {:ok, :github | :google | :oauth} | {:error, :unsupported_oauth_provider}
   defp validate_oauth_provider(provider) do
-    case provider do
-      "github" -> {:ok, :github}
-      "google" -> {:ok, :google}
-      "oauth" -> {:ok, :oauth}
-      _unsupported -> {:error, :unsupported_oauth_provider}
-    end
-  end
-
-  defp get_terms_accepted(params) do
-    case get_in(params, ["auth", "terms_accepted"]) || params["terms_accepted"] do
-      true -> true
-      "true" -> true
-      "on" -> true
-      _not_accepted -> false
+    case Providers.parse(provider) do
+      {:ok, provider_atom} -> {:ok, provider_atom}
+      {:error, :unsupported_provider} -> {:error, :unsupported_oauth_provider}
     end
   end
 end

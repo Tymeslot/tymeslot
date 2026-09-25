@@ -3,9 +3,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.Clock
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
+  alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @spec handle_show_create_form(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -35,27 +37,54 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   # No time params (e.g. the `c` keyboard shortcut): open the create modal at the
   # next whole hour from "now" in the user's timezone, for a one-hour slot.
   def handle_show_create_form(_params, socket) do
-    now = DateTime.shift_zone!(DateTime.utc_now(), socket.assigns.user_timezone)
-    start_hour = if now.minute == 0, do: now.hour, else: rem(now.hour + 1, 24)
-    today = Date.to_iso8601(DateTime.to_date(now))
+    now = DateTime.shift_zone!(Clock.utc_now(), socket.assigns.user_timezone)
 
-    creating =
-      base_creating(socket, %{
-        date: today,
-        end_date: today,
-        start_hour: start_hour,
-        start_minute: 0,
-        end_hour: rem(start_hour + 1, 24),
-        end_minute: 0
-      })
+    creating = base_creating(socket, default_slot(now))
 
     {:noreply, assign(socket, :creating_event, creating)}
   end
 
+  # The next whole hour, for an hour. Both ends carry their own date, so a slot
+  # that runs into midnight simply ends on the following one. Deriving the end
+  # by adding an hour to the start, rather than to the start's hour number, is
+  # what keeps it on the right date and on the right side of a DST transition.
+  defp default_slot(now) do
+    start_at = next_whole_hour(now)
+    end_at = default_end(start_at)
+
+    %{
+      date: iso_date(start_at),
+      end_date: iso_date(end_at),
+      start_hour: start_at.hour,
+      start_minute: 0,
+      end_hour: end_at.hour,
+      end_minute: 0
+    }
+  end
+
+  # An hour after the start, expressed as a wall-clock hour the form can hold.
+  # On the autumn DST night the wall clock repeats, so 02:00 CEST plus an hour
+  # is 02:00 CET and the end hour would equal the start hour, proposing a slot
+  # of no length that the save then refuses. Step to the next distinct hour
+  # there. The repeated hour remains valid as input, since a user really can
+  # book across it; it is only the default that must not land on it.
+  defp default_end(start_at) do
+    end_at = DateTime.add(start_at, 1, :hour)
+
+    if end_at.hour == start_at.hour, do: DateTime.add(end_at, 1, :hour), else: end_at
+  end
+
+  defp next_whole_hour(%DateTime{minute: 0} = now), do: now
+
+  defp next_whole_hour(%DateTime{minute: minute} = now),
+    do: DateTime.add(now, 60 - minute, :minute)
+
+  defp iso_date(at), do: at |> DateTime.to_date() |> Date.to_iso8601()
+
   # Builds a `creating_event` map, filling defaults for any field the caller omits.
   defp base_creating(socket, overrides) do
     default_int_id = EditWorkflow.default_integration_id(socket)
-    today = Date.to_iso8601(Date.utc_today())
+    today = Date.to_iso8601(Helpers.today(socket.assigns.user_timezone))
 
     defaults = %{
       date: today,
@@ -198,10 +227,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
         {:noreply, socket}
 
       creating ->
-        updated = Map.put(creating, :all_day, not Map.get(creating, :all_day, false))
-        {:noreply, assign(socket, :creating_event, updated)}
+        {:noreply, assign(socket, :creating_event, toggle_all_day(creating))}
     end
   end
+
+  # Switching All-day on collapses the range to the start's day. The timed
+  # default gives both ends their own date, so a slot opened late in the
+  # evening already ends tomorrow; carried into an all-day event that reads as
+  # a deliberate two-day banner, which is never what ticking the box meant.
+  # The reverse direction is left alone: a user who widened an all-day event
+  # across several days and then unticks the box has said what they want.
+  defp toggle_all_day(%{all_day: true} = creating), do: %{creating | all_day: false}
+
+  defp toggle_all_day(%{date: date} = creating),
+    do: %{creating | all_day: true, end_date: date}
 
   @spec handle_add_create_reminder(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -251,7 +290,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
         {:noreply, socket}
 
       creating ->
-        rule = Shared.compose_recurrence_rule(params)
+        # The event's all-day flag and start date can still change before the
+        # form is saved, so only the timezone is fixed enough to compose with;
+        # `CreateExecution` refits the rest to the event that is saved.
+        rule =
+          Shared.compose_recurrence_rule(params, %{timezone: socket.assigns.user_timezone})
+
         {:noreply, assign(socket, :creating_event, Map.put(creating, :recurrence_rule, rule))}
     end
   end

@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Availability.AvailabilityScheduleSchema
   alias Tymeslot.Availability.Schedules
 
   setup :setup_dashboard_user
@@ -51,6 +52,50 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ScheduleSwitcherTest do
       view |> element("[phx-click='duplicate_schedule']") |> render_click()
 
       assert render(view) =~ "date overrides were not copied"
+    end
+  end
+
+  describe "duplicating a schedule whose name is at the length limit" do
+    test "copies it twice under distinct names that fit the limit", %{
+      conn: conn,
+      profile: profile
+    } do
+      max = AvailabilityScheduleSchema.name_max_length()
+      long_name = String.duplicate("a", max)
+      {:ok, source} = Schedules.create(profile.id, %{name: long_name})
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/availability?schedule=#{source.id}")
+
+      # Bounded, so a naming loop fails this test instead of hanging the suite.
+      duplicate_source = fn ->
+        Task.await(
+          Task.async(fn ->
+            view |> element("#tab-#{source.id}") |> render_click()
+            view |> element("[phx-click='toggle_schedule_menu']") |> render_click()
+            view |> element("[phx-click='duplicate_schedule']") |> render_click()
+          end),
+          5_000
+        )
+      end
+
+      duplicate_source.()
+      duplicate_source.()
+
+      assert render(view) =~ "Schedule duplicated"
+
+      copies =
+        profile.id
+        |> Schedules.list_for_profile()
+        |> Enum.map(& &1.name)
+        |> Enum.reject(&(&1 in [long_name, "Working hours"]))
+
+      assert MapSet.new(copies) ==
+               MapSet.new([
+                 String.duplicate("a", max - 7) <> " (copy)",
+                 String.duplicate("a", max - 9) <> " (copy) 2"
+               ])
+
+      assert length(copies) == 2
     end
   end
 

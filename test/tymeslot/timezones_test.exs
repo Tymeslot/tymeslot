@@ -211,32 +211,6 @@ defmodule Tymeslot.TimezonesTest do
     end
   end
 
-  describe "offered?/1" do
-    test "returns true for zones with a curated city entry" do
-      assert Timezones.offered?("Europe/Brussels")
-      assert Timezones.offered?("Asia/Kathmandu")
-    end
-
-    test "returns false for real zones with no curated entry" do
-      refute Timezones.offered?("America/Detroit")
-      refute Timezones.offered?("Etc/UTC")
-    end
-
-    test "returns false for non-string input" do
-      refute Timezones.offered?(nil)
-    end
-  end
-
-  describe "offered_ids/0" do
-    test "returns a MapSet" do
-      ids = Timezones.offered_ids()
-      assert %MapSet{} = ids
-      assert MapSet.member?(ids, "Europe/Brussels")
-      assert MapSet.member?(ids, "Europe/Amsterdam")
-      refute MapSet.member?(ids, "Fake/Zone")
-    end
-  end
-
   describe "format/1" do
     test "formats known timezone as 'City, Country'" do
       assert Timezones.format("America/New_York") == "New York, United States"
@@ -266,21 +240,21 @@ defmodule Tymeslot.TimezonesTest do
     test "returns UTC for invalid timezone" do
       assert Timezones.utc_offset("Fake/Zone") == "UTC"
     end
-  end
 
-  describe "format_utc_offset/1" do
-    test "formats zero offset" do
-      assert Timezones.format_utc_offset(0) == "UTC±0"
+    # Zones without daylight saving time, so the expected offset is the same
+    # whenever the test runs.
+    test "formats a zero offset" do
+      assert Timezones.utc_offset("Etc/UTC") == "UTC±0"
     end
 
-    test "formats positive offset" do
-      assert Timezones.format_utc_offset(3600) == "UTC+1"
-      assert Timezones.format_utc_offset(19_800) == "UTC+5:30"
+    test "formats whole-hour and half-hour positive offsets" do
+      assert Timezones.utc_offset("Asia/Tokyo") == "UTC+9"
+      assert Timezones.utc_offset("Asia/Kolkata") == "UTC+5:30"
     end
 
-    test "formats negative offset" do
-      assert Timezones.format_utc_offset(-18_000) == "UTC-5"
-      assert Timezones.format_utc_offset(-12_600) == "UTC-3:30"
+    test "formats whole-hour and half-hour negative offsets" do
+      assert Timezones.utc_offset("Etc/GMT+5") == "UTC-5"
+      assert Timezones.utc_offset("Pacific/Marquesas") == "UTC-9:30"
     end
   end
 

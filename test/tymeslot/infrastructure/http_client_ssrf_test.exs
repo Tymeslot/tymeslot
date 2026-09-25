@@ -73,6 +73,64 @@ defmodule Tymeslot.Infrastructure.HTTPClientSsrfTest do
              HTTPClient.request(:get, "https://rebind.example.com/", "", [])
   end
 
+  describe "plain http to an internal name with private addresses allowed" do
+    setup do
+      Application.put_env(:tymeslot, :allow_private_ips_for_calendar, true)
+      :ok
+    end
+
+    test "is sent when the name resolves to a private address" do
+      Application.put_env(:tymeslot, :dns_resolver_module, HttpClientInternalResolver)
+      test = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        send(test, {:sent, conn.scheme, conn.host})
+        Conn.send_resp(conn, 207, "<xml/>")
+      end)
+
+      assert {:ok, %Req.Response{status: 207}} =
+               HTTPClient.request(:propfind, "http://nextcloud/remote.php/dav", "", [],
+                 ssrf_protect: true
+               )
+
+      assert_received {:sent, :http, "nextcloud"}
+    end
+
+    test "is refused before anything is sent when the name resolves to a public address" do
+      Application.put_env(:tymeslot, :dns_resolver_module, HttpClientPublicInternalResolver)
+
+      ReqTest.stub(:tymeslot_http, fn _conn ->
+        flunk("credentials went over plain http to a name that resolves to a public address")
+      end)
+
+      assert {:error, %SsrfBlockedError{}} =
+               HTTPClient.request(
+                 :propfind,
+                 "http://nextcloud/remote.php/dav",
+                 "",
+                 [{"Authorization", "Basic b3JnYW5pc2VyOnNlY3JldA=="}],
+                 ssrf_protect: true
+               )
+
+      assert {:error, %SsrfBlockedError{}} =
+               HTTPClient.request(:get, "http://talk.lan/ocs/v2.php/cloud/capabilities", "", [],
+                 ssrf_protect: true,
+                 ssrf_allow_private: true
+               )
+    end
+
+    test "leaves https to the same name to the opt-out" do
+      Application.put_env(:tymeslot, :dns_resolver_module, HttpClientPublicInternalResolver)
+
+      ReqTest.stub(:tymeslot_http, fn conn -> Conn.send_resp(conn, 207, "<xml/>") end)
+
+      assert {:ok, %Req.Response{status: 207}} =
+               HTTPClient.request(:propfind, "https://nextcloud/remote.php/dav", "", [],
+                 ssrf_protect: true
+               )
+    end
+  end
+
   # Gap H — redirect: false must remain on the guarded path.
   #
   # A 3xx from a public host must NOT be followed when ssrf_protect: true is
@@ -127,4 +185,27 @@ defmodule HttpClientPrivateResolver do
   @impl Tymeslot.Security.DnsResolutionBehaviour
   def check_private_ip(_url, _opts),
     do: {:error, "URL resolves to a private or local network address"}
+end
+
+defmodule HttpClientInternalResolver do
+  @moduledoc false
+  @behaviour Tymeslot.Security.DnsResolutionBehaviour
+
+  @impl Tymeslot.Security.DnsResolutionBehaviour
+  def check_private_ip(_url, _opts), do: :ok
+
+  @impl Tymeslot.Security.DnsResolutionBehaviour
+  def resolve_internal(_url, _opts), do: {:ok, [{172, 18, 0, 5}]}
+end
+
+defmodule HttpClientPublicInternalResolver do
+  @moduledoc false
+  @behaviour Tymeslot.Security.DnsResolutionBehaviour
+
+  @impl Tymeslot.Security.DnsResolutionBehaviour
+  def check_private_ip(_url, _opts), do: :ok
+
+  @impl Tymeslot.Security.DnsResolutionBehaviour
+  def resolve_internal(_url, _opts),
+    do: {:error, "Plain http to an internal name must resolve to a private network address"}
 end

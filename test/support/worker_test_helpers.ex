@@ -9,10 +9,26 @@ defmodule Tymeslot.WorkerTestHelpers do
   alias Ecto.UUID
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+
+  @doc """
+  Inserts a job for `worker` and returns it as a running execution would see
+  it: persisted, so it has the id a lifeline rescue keeps, and on its first
+  attempt.
+
+  Calling the worker's `perform/1` twice with the returned job is how a test
+  simulates a rescue: the same job, run again after its first run finished
+  its side effect but before Oban recorded the outcome.
+  """
+  @spec persisted_job(module(), map()) :: Oban.Job.t()
+  def persisted_job(worker, args) do
+    {:ok, job} = args |> worker.new() |> Oban.insert()
+    %{job | attempt: 1}
+  end
 
   @doc """
   Inserts an `unhealthy` integration health state row for the given user and
@@ -144,7 +160,7 @@ defmodule Tymeslot.WorkerTestHelpers do
   def expect_calendar_create_success(integration_id, returned_uid \\ "remote-uid-123") do
     # Mock the event creation
     expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
-      {:ok, returned_uid}
+      {:ok, CreatedEvent.new(returned_uid)}
     end)
 
     # Mock the post-creation integration info fetch (called by persist_calendar_mapping)

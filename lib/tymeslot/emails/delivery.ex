@@ -19,13 +19,29 @@ defmodule Tymeslot.Emails.Delivery do
   # operational problems still surface as retryable failures.
   @permanent_rejection_codes [300, 406]
 
+  # The SMTP counterpart: RFC 3463 enhanced status codes that describe the
+  # address itself (bad mailbox, bad domain, bad syntax, domain accepts no
+  # mail, mailbox disabled). Reply codes alone cannot be used: a 550 or 553
+  # equally means "relaying denied" or "sender not owned", which are
+  # configuration problems every email hits.
+  @smtp_permanent_rejection ~r/\b5\.1\.(1|2|3|10)\b|\b5\.2\.1\b/
+
+  # gen_smtp waits a fixed 20 minutes for each reply once connected, and Oban
+  # workers kill a job that outlives their own budget from the outside,
+  # where neither the breaker nor the retry policy sees it. Bounding each send
+  # here, inside the breaker, turns a hung relay into an ordinary timeout;
+  # `EmailWorker` sizes its budget from this deadline. It must stay above
+  # `Tymeslot.Mailer.SMTPAdapter`'s 15-second session deadline, which is what
+  # reports a relay that hung before any message data was sent as retryable.
+  @default_send_deadline_ms 20_000
+
   @doc """
   Delivers an email using the configured mailer, wrapped in a circuit breaker.
 
   Retries are delegated to Oban (a single retry authority) rather than retried
   here — re-sending the same message on a flaky transport is what produces
   duplicate emails. A client-side timeout is treated as delivered for the same
-  reason (see `do_deliver/1`).
+  reason (see `timeout_error?/1`).
 
   Returns `{:error, {:recipient_rejected, reason}}` when the provider rejects
   the address permanently; callers should give up rather than retry.
@@ -40,7 +56,7 @@ defmodule Tymeslot.Emails.Delivery do
 
       CircuitBreaker.call(
         CircuitBreakerSupervisor.email_breaker_name(),
-        fn -> do_deliver(email) end,
+        fn -> email |> deliver_within_deadline() |> handle_delivery_result(email) end,
         classify: &classify_outcome/1
       )
     end
@@ -51,7 +67,7 @@ defmodule Tymeslot.Emails.Delivery do
   # (Postmark, SendGrid, Mailgun, AhaSend, SMTP) whose error reasons don't
   # share one shape (Postmark's is a bare `{status, body}`, not the
   # `{:http_error, status, body}` tuple the default classifier looks for).
-  # `do_deliver/1` already sorts every failure into permanent/timeout/transient
+  # `handle_delivery_error/2` already sorts every failure into permanent/timeout/transient
   # via `classify/1` before it gets here, so that triage is reused directly
   # instead of guessing again from the raw reason.
   defp classify_outcome({:error, {:recipient_rejected, _reason}}), do: :ignore
@@ -64,20 +80,45 @@ defmodule Tymeslot.Emails.Delivery do
   defp classify_outcome({:ok, :assumed_delivered}), do: :failure
   defp classify_outcome(_other), do: :success
 
-  defp do_deliver(email) do
-    case Mailer.deliver(email) do
-      {:ok, _email} = result ->
-        Logger.info("Email delivered successfully",
-          to: email.to,
-          subject: email.subject
-        )
+  # The adapter runs in its own process so the deadline can stop it: the
+  # socket belongs to that process and closes with it. Unlinked, so an
+  # adapter crash comes back here as an exit to re-raise rather than killing
+  # the caller before the breaker has seen it.
+  defp deliver_within_deadline(email) do
+    deadline_ms = send_deadline_ms()
+    task = Task.Supervisor.async_nolink(Tymeslot.TaskSupervisor, fn -> Mailer.deliver(email) end)
 
+    case Task.yield(task, deadline_ms) || Task.shutdown(task, :brutal_kill) do
+      {:ok, result} ->
         result
 
-      {:error, reason} ->
-        handle_delivery_error(email, reason)
+      {:exit, {exception, stacktrace}} when is_exception(exception) ->
+        reraise exception, stacktrace
+
+      {:exit, reason} ->
+        exit(reason)
+
+      nil ->
+        {:error, {:send_deadline_exceeded, deadline_ms}}
     end
   end
+
+  @doc "The longest a single `deliver/1` call may take before it gives up."
+  @spec send_deadline_ms() :: pos_integer()
+  def send_deadline_ms do
+    Application.get_env(:tymeslot, :email_send_deadline_ms, @default_send_deadline_ms)
+  end
+
+  defp handle_delivery_result({:ok, _receipt} = result, email) do
+    Logger.info("Email delivered successfully",
+      to: email.to,
+      subject: email.subject
+    )
+
+    result
+  end
+
+  defp handle_delivery_result({:error, reason}, email), do: handle_delivery_error(email, reason)
 
   defp handle_delivery_error(email, reason),
     do: handle_delivery_error(classify(reason), email, reason)
@@ -146,16 +187,32 @@ defmodule Tymeslot.Emails.Delivery do
       do: true
 
   def permanent_rejection?({:recipient_rejected, _reason}), do: true
+
+  def permanent_rejection?({:send, {:permanent_failure, _host, message}}) when is_binary(message),
+    do: message =~ @smtp_permanent_rejection
+
   def permanent_rejection?(_reason), do: false
 
   @doc """
-  Returns true when a delivery error reason represents a (client-side) timeout.
+  Returns true when a delivery error reason is a client-side timeout that may
+  have happened after the message was handed over.
 
-  Matches any reason shape — bare `:timeout`, a string mentioning "timeout", or
-  the nested tuples gen_smtp produces — by inspecting the term, so new adapter
+  Only such a timeout is ambiguous. gen_smtp reports failures while opening
+  the session (connecting, greeting, TLS, authentication) as
+  `{:retries_exceeded, _}` or `{:no_more_hosts, _}`, before any message data
+  is sent, so a timeout there means the email certainly did not leave and
+  must stay retryable. Treating it as delivered is how an unreachable relay
+  silently swallowed every email.
+
+  Other reason shapes are matched by inspecting the term, so new adapter
   error shapes don't silently slip through as retriable failures.
   """
   @spec timeout_error?(term()) :: boolean()
+  def timeout_error?({phase, _failure}) when phase in [:retries_exceeded, :no_more_hosts],
+    do: false
+
+  def timeout_error?({:send_deadline_exceeded, _deadline_ms}), do: true
+
   def timeout_error?(reason) do
     reason
     |> inspect()

@@ -221,7 +221,7 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
       })
 
       dump =
-        LogCapture.dump(LogCapture.await_log("Invalid Google Calendar OAuth callback params"))
+        LogCapture.dump(LogCapture.await_log("Invalid OAuth callback params"))
 
       refute dump =~ @secret_code
       refute dump =~ @secret_id_token
@@ -238,7 +238,7 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
       })
 
       dump =
-        LogCapture.dump(LogCapture.await_log("Invalid Outlook Calendar OAuth callback params"))
+        LogCapture.dump(LogCapture.await_log("Invalid OAuth callback params"))
 
       refute dump =~ @secret_code
       refute dump =~ @secret_id_token
@@ -253,7 +253,7 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
         "unknown" => "visible"
       })
 
-      dump = LogCapture.dump(LogCapture.await_log("Invalid Google Meet OAuth callback params"))
+      dump = LogCapture.dump(LogCapture.await_log("Invalid OAuth callback params"))
 
       refute dump =~ @secret_code
       refute dump =~ @secret_id_token
@@ -267,7 +267,8 @@ defmodule TymeslotWeb.OAuthCSRFProtectionTest do
         "id_token" => @secret_id_token
       })
 
-      dump = LogCapture.dump(LogCapture.await_log("Invalid Teams OAuth callback params"))
+      dump =
+        LogCapture.dump(LogCapture.await_log("Invalid OAuth callback params"))
 
       refute dump =~ @secret_state
       refute dump =~ @secret_id_token

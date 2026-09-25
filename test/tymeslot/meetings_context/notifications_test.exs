@@ -1,8 +1,8 @@
 defmodule Tymeslot.MeetingsContext.NotificationsTest do
   @moduledoc """
   Behaviour tests for the Meetings context covering notifications and
-  async calendar-event side effects: reminder lookups, reschedule requests,
-  and the async calendar-event cancellation path.
+  async calendar-event side effects: reschedule requests and the async
+  calendar-event cancellation path.
   """
 
   use Tymeslot.DataCase, async: true
@@ -11,7 +11,6 @@ defmodule Tymeslot.MeetingsContext.NotificationsTest do
   import Mox
 
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.Listing
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.TestMocks
   import Tymeslot.MeetingTestHelpers
@@ -25,31 +24,6 @@ defmodule Tymeslot.MeetingsContext.NotificationsTest do
     TestMocks.setup_calendar_mocks()
 
     :ok
-  end
-
-  describe "when checking meetings needing reminders" do
-    test "returns meetings starting within the next hour that haven't been reminded" do
-      %{user: user} = create_user_with_profile()
-
-      meeting_soon =
-        insert_meeting_for_user(user, %{
-          start_offset: 1800,
-          duration: 3_600,
-          reminder_email_sent: false
-        })
-
-      _meeting_later =
-        insert_meeting_for_user(user, %{
-          start_offset: 7200,
-          duration: 3_600,
-          reminder_email_sent: false
-        })
-
-      meetings = Listing.meetings_needing_reminders()
-
-      meeting_ids = Enum.map(meetings, & &1.id)
-      assert meeting_soon.id in meeting_ids
-    end
   end
 
   describe "when sending reschedule request" do

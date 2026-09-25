@@ -73,6 +73,12 @@ msgstr "Prenotazione confermata. L'invitato è stato avvisato."
 msgid "Booking requests you haven't answered yet will appear here."
 msgstr "Le richieste di prenotazione a cui non hai ancora risposto appariranno qui."
 
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_panels.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Annulla"
+
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel Meeting"
@@ -82,13 +88,6 @@ msgstr "Annulla riunione"
 #, elixir-autogen, elixir-format
 msgid "Cancel without refund."
 msgstr "Annulla senza rimborso."
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_panels.ex
-#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel"
-msgstr "Annulla"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
@@ -131,6 +130,11 @@ msgstr "Risposte personalizzate"
 msgid "Date & Time"
 msgstr "Data e ora"
 
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Decline"
+msgstr "Rifiuta"
+
 #: lib/tymeslot_web/components/dashboard/meetings/decline_request_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Decline request"
@@ -140,11 +144,6 @@ msgstr "Rifiuta la richiesta"
 #, elixir-autogen, elixir-format
 msgid "Decline the request from %{name} for %{when}?"
 msgstr "Rifiutare la richiesta di %{name} per %{when}?"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Decline"
-msgstr "Rifiuta"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
@@ -371,6 +370,12 @@ msgstr "Richiesta rifiutata. L'orario è di nuovo libero."
 msgid "Requests"
 msgstr "Richieste"
 
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_panels.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule"
+msgstr "Riprogramma"
+
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule Requested"
@@ -380,12 +385,6 @@ msgstr "Riprogrammazione richiesta"
 #, elixir-autogen, elixir-format
 msgid "Reschedule request sent to %{attendee_name}"
 msgstr "Richiesta di riprogrammazione inviata a %{attendee_name}"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_panels.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule"
-msgstr "Riprogramma"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
 #, elixir-autogen, elixir-format

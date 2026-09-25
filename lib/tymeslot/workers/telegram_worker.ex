@@ -4,6 +4,11 @@ defmodule Tymeslot.Workers.TelegramWorker do
 
   Resolves the bot token at execution time — never from job args.
   Handles Telegram API error codes per REQ-006.
+
+  The send is claimed through `Tymeslot.Workers.DeliveryClaims` before it is
+  made, so a job the Oban lifeline rescues after the message reached Telegram
+  does not send it to the chat a second time. Only a successful send keeps
+  the claim; every retry, snooze and discard path releases it.
   """
 
   use Oban.Worker,
@@ -26,8 +31,10 @@ defmodule Tymeslot.Workers.TelegramWorker do
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Meetings
+  alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Telegram
   alias Tymeslot.Telegram.{API, MessageBuilder, TelegramIntegrationSchema, TelegramQueries}
+  alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.SnoozePolicy
 
   @impl Oban.Worker
@@ -49,9 +56,13 @@ defmodule Tymeslot.Workers.TelegramWorker do
          :ok <- check_active(integration),
          {:ok, meeting} <- Meetings.get_meeting(meeting_id),
          {:ok, token} <- Telegram.resolve_bot_token(integration) do
-      message = MessageBuilder.build_message(event_type, meeting)
-      result = send_message(token, integration.chat_id, message)
-      handle_result(integration, event_type, meeting_id, message, job, result)
+      timezone = Recipients.get_organizer_timezone(meeting)
+      message = MessageBuilder.build_message(event_type, meeting, timezone)
+
+      DeliveryClaims.once(job, "telegram_message", fn ->
+        result = send_message(token, integration.chat_id, message)
+        handle_result(integration, event_type, meeting_id, message, job, result)
+      end)
     else
       {:error, :not_found} ->
         {:discard, "Integration or meeting not found"}

@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliser do
   require Logger
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter
   alias Tymeslot.Integrations.Calendar.Outlook.TymeslotFingerprint
@@ -112,12 +113,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliser do
 
   defp map_attendees(attendees) when is_list(attendees) do
     Enum.map(attendees, fn a ->
-      %{
+      Attendee.new(
         email: get_in(a, ["emailAddress", "address"]),
         display_name: get_in(a, ["emailAddress", "name"]),
         response_status: map_response_status(get_in(a, ["status", "response"])),
         optional: a["type"] == "optional"
-      }
+      )
     end)
   end
 

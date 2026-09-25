@@ -525,6 +525,38 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolverTest 
       assert result.default_booking_calendar_id == "/calendars/mt/target/"
     end
 
+    test "keeps the stored target even once the calendar list flags it read-only", %{user: user} do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          is_active: true,
+          calendar_paths: ["/calendars/mt/"],
+          default_booking_calendar_id: "/calendars/mt/",
+          calendar_list: [
+            %{"id" => "/calendars/mt/", "selected" => true, "read_only" => false},
+            %{"id" => "/calendars/mt/target/", "selected" => true, "read_only" => true}
+          ]
+        )
+
+      insert(:profile, user: user, primary_calendar_integration_id: integration.id)
+
+      meeting_type = %MeetingTypeSchema{
+        user_id: user.id,
+        calendar_integration_id: integration.id,
+        target_calendar_id: "/calendars/mt/target/"
+      }
+
+      result = BookingIntegrationResolver.resolve(meeting_type)
+
+      # `read_only` is a cached snapshot from the last calendar list refresh,
+      # so the booking path deliberately does not reroute on it: the host is
+      # warned in the dashboard and the provider's own rejection of the write
+      # stays the authoritative signal.
+      assert result.id == integration.id
+      assert result.default_booking_calendar_id == "/calendars/mt/target/"
+    end
+
     test "falls back to user's primary when meeting type's integration is inactive", %{user: user} do
       primary =
         insert(:calendar_integration,

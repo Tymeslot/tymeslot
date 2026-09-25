@@ -25,13 +25,22 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
+  alias Tymeslot.Integrations.Video.NeedsReauth
   alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.OAuthCredentials
   alias Tymeslot.Integrations.Video.RoomData
+
+  # Room creation's requests to the provider's API. `request_timeout` caps each
+  # whole response, so the budget below is a real bound; a create answers with
+  # one small JSON body, so the cap waits no less than the receive timeout
+  # alone did in practice. The API never redirects these requests, and one
+  # that did would get a fresh budget, so redirects are refused.
+  @create_request_options [receive_timeout: 45_000, request_timeout: 45_000, redirect: false]
 
   @capabilities Capabilities.new!(
                   recording: true,
@@ -124,7 +133,10 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   def finish_create_meeting_room(valid_token, _config) do
     with {:ok, space} <- create_meet_space(valid_token),
          {:ok, room_data} <- extract_space_data(space) do
-      Logger.info("Successfully created Google Meet space", room_id: room_data.room_id)
+      Logger.info("Successfully created Google Meet space",
+        room_ref: Redactor.fingerprint(room_data.room_id)
+      )
+
       {:ok, room_data}
     else
       {:error, reason} = error ->
@@ -152,9 +164,19 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
       else: {:provider_error, reason}
   end
 
+  # The slowest creation refreshes the token (through the shared OAuth client,
+  # at the HTTP client's default timeouts) and creates the space.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def room_creation_budget_ms,
+    do:
+      HTTPClient.request_budget_ms(:post) +
+        HTTPClient.request_budget_ms(:post, @create_request_options)
+
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def delete_meeting_room(space_id, config) when is_binary(space_id) and space_id != "" do
-    Logger.info("Ending active Google Meet conference on cancellation", room_id: space_id)
+    Logger.info("Ending active Google Meet conference on cancellation",
+      room_ref: Redactor.fingerprint(space_id)
+    )
 
     case ensure_valid_token(config) do
       {:ok, valid_token} -> end_active_conference(valid_token, space_id)
@@ -164,33 +186,18 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   def delete_meeting_room(_space_id, _config), do: :ok
 
+  # Every participant gets the plain meeting URL. Google Meet has no per-person
+  # join link: `uname` and `role` are not Meet parameters, and `authuser` only
+  # selects a signed-in Google account, so a participant not signed in under
+  # exactly that address is sent to a sign-in or account chooser instead of the
+  # room. It would also put their email address into a forwardable link.
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def create_join_url(room_data, participant_name, participant_email, role, _meeting_time) do
-    base_url = room_data.meeting_url
+  def create_join_url(%{meeting_url: meeting_url}, _name, _email, _role, _meeting_time)
+      when is_binary(meeting_url) and meeting_url != "",
+      do: {:ok, meeting_url}
 
-    if base_url do
-      # Add participant info as URL parameters
-      params = %{
-        "authuser" => participant_email,
-        "uname" => participant_name
-      }
-
-      params = if role == "organizer", do: Map.put(params, "role", "host"), else: params
-
-      query_string = URI.encode_query(params)
-      join_url = "#{base_url}?#{query_string}"
-
-      Logger.debug("Created Google Meet join URL",
-        participant: participant_name,
-        role: role,
-        room_id: room_data.room_id
-      )
-
-      {:ok, join_url}
-    else
-      {:error, "Missing meeting URL in room data"}
-    end
-  end
+  def create_join_url(_room_data, _name, _email, _role, _meeting_time),
+    do: {:error, "Missing meeting URL in room data"}
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def extract_room_id(meeting_url) when is_binary(meeting_url) and meeting_url != "" do
@@ -254,7 +261,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   def handle_meeting_event(event, room_data, additional_data) do
     Logger.info("Handling Google Meet event",
       event: event,
-      room_id: room_data.room_id,
+      room_ref: Redactor.fingerprint(room_data.room_id),
       additional_data: additional_data
     )
 
@@ -369,7 +376,15 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     current_scope = Map.get(config, :oauth_scope)
 
     try do
-      case google_oauth_helper().refresh_access_token(refresh_token, current_scope) do
+      # The ids matter more here than anywhere else: the calendar refresh logs
+      # `provider: :google` too, so the integration id is the only thing that
+      # tells a Meet failure apart from a Calendar one.
+      case google_oauth_helper().refresh_access_token(refresh_token, current_scope,
+             log_context: [
+               integration_id: Map.get(config, :integration_id),
+               user_id: Map.get(config, :user_id)
+             ]
+           ) do
         {:ok, new_tokens} ->
           updated_config =
             Map.merge(config, %{
@@ -424,7 +439,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
     url = "https://meet.googleapis.com/v2/spaces"
 
-    case Config.http_client_module().request(:post, url, "{}", headers, []) do
+    case Config.http_client_module().request(:post, url, "{}", headers, @create_request_options) do
       {:ok, %Req.Response{status: 200, body: response_body}} ->
         case Jason.decode(response_body) do
           {:ok, space} -> {:ok, space}
@@ -500,7 +515,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
         # 400: no active conference. 403/404: space not addressable (e.g. a
         # legacy meeting-code id) or already gone. Nothing to tear down.
         Logger.debug("No active Google Meet conference to end; treating as success",
-          room_id: space_id,
+          room_ref: Redactor.fingerprint(space_id),
           status: status
         )
 
@@ -508,7 +523,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
       {:ok, %Req.Response{status: status, body: body}} ->
         Logger.warning("Google Meet endActiveConference failed",
-          room_id: space_id,
+          room_ref: Redactor.fingerprint(space_id),
           status: status,
           body: Redactor.redact_and_truncate(body)
         )
@@ -530,11 +545,11 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   # surfaces this via the "Reconnect required" badge on the video row. Purely
   # additive: it does not touch token validation or the OAuthTokenManager flow.
   defp flag_revoked_token(config) do
-    OAuthTokenManager.flag_needs_reauth(config,
+    NeedsReauth.flag(config,
       label: "Google Meet",
       event: "google_meet_token_revoked",
       message:
-        dgettext(
+        dgettext_noop(
           "dashboard_integrations",
           "Google Meet access was revoked. Please reconnect your Google account."
         )

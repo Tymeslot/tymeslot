@@ -10,6 +10,7 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
 
   import Ecto.Query, warn: false
 
+  alias Ecto.Changeset
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Repo
@@ -100,6 +101,46 @@ defmodule Tymeslot.Meetings.GroupMeetingQueries do
     |> where([m], not is_nil(m.attendee_email) and m.attendee_email != "")
     |> Repo.all()
   end
+
+  @doc "Creates a group meeting (bookers live in meeting_participants, not attendee_* fields)."
+  @spec create_group_meeting(map()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def create_group_meeting(attrs) when is_map(attrs) do
+    %Meeting{}
+    |> Meeting.group_changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  The `uid`s of the organiser's meetings that are group bookings
+  (`capacity > 1`).
+
+  Keyed by `uid` rather than id because the consumer is the calendar grid,
+  which knows provider events, and a Tymeslot booking's provider event
+  carries the meeting's `uid`.
+  """
+  @spec group_booking_uids_for_user(integer()) :: MapSet.t(String.t())
+  def group_booking_uids_for_user(user_id) do
+    Meeting
+    |> where([m], m.organizer_user_id == ^user_id and m.capacity > 1)
+    |> select([m], m.uid)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  @doc """
+  Whether the meeting behind `uid` is a group booking (`capacity > 1`).
+
+  The authoritative form of `group_booking_uids_for_user/1`, for guards that
+  must not act on a set assigned when the page was loaded.
+  """
+  @spec group_booking_uid?(term()) :: boolean()
+  def group_booking_uid?(uid) when is_binary(uid) do
+    Meeting
+    |> where([m], m.uid == ^uid and m.capacity > 1)
+    |> Repo.exists?()
+  end
+
+  def group_booking_uid?(_uid), do: false
 
   defp live_at_query(meeting_type_id, start_time) do
     Meeting

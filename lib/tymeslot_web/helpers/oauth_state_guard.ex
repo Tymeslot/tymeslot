@@ -13,11 +13,17 @@ defmodule TymeslotWeb.Helpers.OAuthStateGuard do
   require Logger
 
   alias Tymeslot.Integrations.Common.OAuth.State
+  alias Tymeslot.Integrations.Google.GoogleOAuthHelper
+  alias Tymeslot.Integrations.Shared.{MicrosoftConfig, ZoomConfig}
 
   @type provider :: :google | :outlook | :zoom
   @type failure_reason :: :invalid_state | :unauthenticated | :state_user_mismatch
 
   @sensitive_callback_keys ~w(code state id_token)
+
+  # The domain modules that own each provider's state secret; the guard must
+  # verify against exactly the secret the provider's helper signed with.
+  @secret_sources %{google: GoogleOAuthHelper, outlook: MicrosoftConfig, zoom: ZoomConfig}
 
   @doc """
   Drops sensitive OAuth callback parameters from a map before logging.
@@ -32,12 +38,19 @@ defmodule TymeslotWeb.Helpers.OAuthStateGuard do
 
   def redact_callback_params(other), do: other
 
-  @spec enforce_user_match(Plug.Conn.t(), any(), provider()) :: :ok | {:error, failure_reason()}
+  @doc """
+  Validates `state` and checks it was issued to the signed-in user.
+
+  Returns the validated state, so callers read anything embedded in it (such as
+  `return_to`) only once it is known to be authentic.
+  """
+  @spec enforce_user_match(Plug.Conn.t(), any(), provider()) ::
+          {:ok, State.validated()} | {:error, failure_reason()}
   def enforce_user_match(conn, state, provider)
       when is_binary(state) and provider in [:google, :outlook, :zoom] do
     case State.validate(state, provider_secret(provider)) do
-      {:ok, %{user_id: state_user_id}} ->
-        check_current_user(conn, state_user_id, provider)
+      {:ok, %{user_id: state_user_id} = validated} ->
+        with :ok <- check_current_user(conn, state_user_id, provider), do: {:ok, validated}
 
       {:error, reason} ->
         Logger.warning("OAuth callback rejected: invalid or tampered state",
@@ -81,21 +94,5 @@ defmodule TymeslotWeb.Helpers.OAuthStateGuard do
     end
   end
 
-  defp provider_secret(:google) do
-    Application.get_env(:tymeslot, :google_oauth)[:state_secret] ||
-      System.get_env("GOOGLE_STATE_SECRET") ||
-      raise "Google OAuth state secret not configured"
-  end
-
-  defp provider_secret(:outlook) do
-    Application.get_env(:tymeslot, :outlook_oauth)[:state_secret] ||
-      System.get_env("OUTLOOK_STATE_SECRET") ||
-      raise "Outlook OAuth state secret not configured"
-  end
-
-  defp provider_secret(:zoom) do
-    Application.get_env(:tymeslot, :zoom_oauth)[:state_secret] ||
-      System.get_env("ZOOM_STATE_SECRET") ||
-      raise "Zoom OAuth state secret not configured"
-  end
+  defp provider_secret(provider), do: Map.fetch!(@secret_sources, provider).state_secret()
 end

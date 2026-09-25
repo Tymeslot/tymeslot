@@ -16,27 +16,29 @@ defmodule Tymeslot.Profiles.Timezone do
   Rules:
   - If the current profile timezone is nil or empty, use the detected
     timezone (normalized).
-  - If detected is nil/empty, fall back to the business default.
+  - If detected is nil, empty, or not a zone the time-zone database knows
+    (it comes from the browser, so it can be anything), fall back to the
+    business default.
   - Otherwise, keep the existing profile timezone unchanged.
   """
   @spec prefill_timezone(String.t() | nil, String.t() | nil) :: String.t()
   def prefill_timezone(current_profile_timezone, detected_timezone) do
     default = Profiles.get_default_timezone()
 
-    if should_use_detected?(current_profile_timezone, default) do
+    if should_use_detected?(current_profile_timezone) do
       detected_timezone
-      |> fallback_default(default)
       |> Timezones.normalize()
+      |> valid_or_default(default)
     else
       current_profile_timezone
     end
   end
 
-  defp should_use_detected?(current, _default) do
-    is_nil(current) or current == ""
-  end
+  defp should_use_detected?(nil), do: true
+  defp should_use_detected?(""), do: true
+  defp should_use_detected?(_current), do: false
 
-  defp fallback_default(nil, default), do: default
-  defp fallback_default("", default), do: default
-  defp fallback_default(tz, _default), do: tz
+  defp valid_or_default(timezone, default) do
+    if Timezones.valid?(timezone), do: timezone, else: default
+  end
 end

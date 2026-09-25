@@ -3,9 +3,11 @@ defmodule Tymeslot.Onboarding do
   Context module for onboarding business logic.
   """
 
-  alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Onboarding.OnboardingQueries
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
+
+  @manual_dashboard_setup_items ~w(theme meeting_types share)
 
   @spec create_dev_profile() :: map()
   defp create_dev_profile do
@@ -59,7 +61,7 @@ defmodule Tymeslot.Onboarding do
   @spec mark_onboarding_complete(Ecto.Schema.t()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def mark_onboarding_complete(user) do
-    UserQueries.mark_onboarding_complete(user)
+    OnboardingQueries.mark_onboarding_complete(user)
   end
 
   @doc """
@@ -78,7 +80,7 @@ defmodule Tymeslot.Onboarding do
     if dashboard_tour_seen?(user) do
       {:ok, user}
     else
-      UserQueries.mark_dashboard_tour_seen(user)
+      OnboardingQueries.mark_dashboard_tour_seen(user)
     end
   end
 
@@ -90,15 +92,27 @@ defmodule Tymeslot.Onboarding do
   def dashboard_tour_seen?(_user), do: true
 
   @doc """
-  Toggles a dashboard setup item's manually-done state and persists the result.
+  The dashboard setup items a host ticks off by hand. The provider items
+  (calendar, video) are deliberately absent: they complete only from a real
+  connection.
   """
-  @spec toggle_dashboard_setup_item(Ecto.Schema.t(), String.t()) ::
-          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
-  def toggle_dashboard_setup_item(user, key) when is_binary(key) do
-    items = user.dashboard_setup_done_items || []
-    next = if key in items, do: List.delete(items, key), else: [key | items]
-    UserQueries.set_dashboard_setup_done_items(user, next)
-  end
+  @spec manual_dashboard_setup_items() :: [String.t()]
+  def manual_dashboard_setup_items, do: @manual_dashboard_setup_items
+
+  @doc """
+  Toggles a hand-tickable dashboard setup item and returns the user with the
+  stored list.
+
+  The flip is decided by what is stored rather than by the given struct, so a
+  tick made from another tab is never overwritten by a stale copy. Any key
+  outside `manual_dashboard_setup_items/0` is refused.
+  """
+  @spec toggle_dashboard_setup_item(Ecto.Schema.t(), term()) ::
+          {:ok, Ecto.Schema.t()} | {:error, :unknown_item | :not_found}
+  def toggle_dashboard_setup_item(user, key) when key in @manual_dashboard_setup_items,
+    do: OnboardingQueries.toggle_dashboard_setup_done_item(user, key)
+
+  def toggle_dashboard_setup_item(_user, _key), do: {:error, :unknown_item}
 
   @doc """
   Permanently closes the dashboard onboarding widget for the host. Idempotent.
@@ -109,7 +123,7 @@ defmodule Tymeslot.Onboarding do
     if dashboard_setup_dismissed?(user) do
       {:ok, user}
     else
-      UserQueries.mark_dashboard_setup_dismissed(user)
+      OnboardingQueries.mark_dashboard_setup_dismissed(user)
     end
   end
 

@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ReminderHandlers
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Utils.ReminderUtils
+  alias TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{Autosave, Validation}
 
   @spec update_reminder_input(map(), Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
@@ -57,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ReminderHandlers
         |> assign(
           :reminder_confirmation,
           dgettext("dashboard_meeting_form", "Added %{label} before",
-            label: ReminderUtils.format_reminder_label(reminder.value, reminder.unit)
+            label: Reminders.reminder_label(reminder.value, reminder.unit)
           )
         )
         |> assign(:reminder_error, nil)
@@ -87,7 +88,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ReminderHandlers
           show_custom_reminder: false,
           reminder_confirmation:
             dgettext("dashboard_meeting_form", "Added %{label} before",
-              label: ReminderUtils.format_reminder_label(reminder.value, reminder.unit)
+              label: Reminders.reminder_label(reminder.value, reminder.unit)
             )
         )
         |> Autosave.maybe_run()

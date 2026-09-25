@@ -138,7 +138,7 @@ defmodule Tymeslot.Emails.Shared.Styles.CSS do
       .mobile-text    { font-size: 15px !important; line-height: 1.55 !important; }
       .mobile-eyebrow { font-size: 10px !important; letter-spacing: 0.12em !important; }
       .mobile-button  { width: 100% !important; padding: 16px 24px !important; }
-      .mobile-card    { margin: 10px 0 !important; padding: 18px !important; }
+      .mobile-card    { padding: 18px !important; }
       .stage-band     { padding: 24px 22px !important; }
       .stage-band-eyebrow { font-size: 10px !important; }
     }

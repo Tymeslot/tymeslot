@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsRateLimitTest do
 
     # Exhaust the per-user rate limit (10 updates per hour)
     for _i <- 1..10 do
-      RateLimiter.check_rate("embed_domain_update:#{user.id}", 60_000 * 60, 10)
+      assert :ok = RateLimiter.check_embed_domain_update_rate_limit(user.id)
     end
 
     # The next UI update must be rejected by the rate limiter

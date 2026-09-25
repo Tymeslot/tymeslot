@@ -14,7 +14,7 @@
 
   # `Tymeslot.Test.TagTaxonomy` lives in `test/support`, so it exists in the
   # `:test` build `mix test.affected` runs in (see `preferred_envs` in mix.exs)
-  # and not in the `:dev` build Dialyzer analyses. Same reasoning as the
-  # `@compile {:no_warn_undefined, TagTaxonomy}` on the task itself.
-  {"lib/mix/tasks/test.affected.ex", :unknown_function}
+  # and not in the `:dev` build Dialyzer analyses; the module loads it from
+  # source there. Same reasoning as its `@compile {:no_warn_undefined, TagTaxonomy}`.
+  {"lib/tymeslot/test_affected/workspace.ex", :unknown_function}
 ]

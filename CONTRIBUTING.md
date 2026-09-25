@@ -341,12 +341,18 @@ test(bookings): add integration tests for meeting creation
 refactor(themes): extract common theme utilities
 ```
 
+The scope is optional and names the **domain** the change is about, as in the examples above. Leave it off when no single domain fits:
+
+```
+feat: add Baikal CalDAV calendar integration
+```
+
 Sign off every commit with the `-s` flag (`git commit -s`); see [Signing off your commits](#signing-off-your-commits).
 
 The changelog is auto-generated from `feat` and `fix` commits. To exclude a `feat` or `fix` commit from the changelog (e.g. internal test fixes, Dialyzer suppressions), add a `Changelog: skip` footer:
 
 ```
-fix(core): unwrap tuple in OAuth session test
+fix(auth): unwrap tuple in OAuth session test
 
 Changelog: skip
 ```
@@ -454,6 +460,12 @@ The managed cloud offering (tymeslot.app) is built in a separate, private reposi
 2. **Domain Logic**: Business rules live in domain modules, not controllers or LiveViews.
 3. **Repository Pattern**: All database access through dedicated `*_queries.ex` modules.
 4. **No queries in `mount/3`**: Defer data loading to `handle_params/3` to avoid double-loading.
+5. **The web layer calls contexts only**: Everything under `lib/tymeslot_web/` (LiveViews, LiveComponents, controllers, handler and helper modules, function components, themes) is the presentation layer. It calls context functions, never `*_queries.ex` modules, Oban workers or `Oban.insert`, or runtime adapter modules. `CredoChecks.WebLayerBoundary` enforces this.
+6. **Contexts enforce ownership** (convention; reviewed by hand, no check): A context function that acts on a user-owned resource checks ownership itself: it takes the acting user or is scoped by them, and returns `{:error, :not_found}` for an id the user does not own. A check in a LiveView is never the only guard. The scoping belongs in the query, so that an id from another account simply misses; a function that loads by id and only then compares owners has already read someone else's row, and the error tuple it returns afterwards is no proof the rule was kept. This is the rule cross-tenant leaks are made of, so a pull request adding a context function that takes a resource id should say how that resource is scoped to the acting user.
+7. **Async work stays in the domain** (convention; reviewed by hand, no check): Write it as a synchronous context function; the LiveView runs it asynchronously with `start_async/3` or a task.
+8. **UI pre-validation reuses the domain rule** (convention; reviewed by hand, no check): When the UI validates before submitting, it calls the context's predicate rather than restating the rule.
+
+Two of these rules have a build-failing check behind them: `CredoChecks.RepoCallBoundary` for rule 3 and `CredoChecks.WebLayerBoundary` for rule 5. The rest are caught by review, and rule 6 is the one worth slowing down for, since it is an authorisation rule and nothing will fail the build when it is broken.
 
 ### Security First
 

@@ -5,9 +5,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmailsTest do
 
   import Mox
   import Tymeslot.Factory
+  alias Tymeslot.Emails.EmailScheduler.LinkArg
   alias Tymeslot.Emails.Templates.PasswordReset
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Workers.EmailWorkerHandlers
+  alias TymeslotWeb.Endpoint
 
   setup :verify_on_exit!
 
@@ -54,6 +56,106 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmailsTest do
 
       assert_receive {:password_reset_recipient, recipient}
       assert PasswordReset.render_text(recipient, reset_url) =~ "Hi Ada from GitHub,"
+    end
+  end
+
+  describe "account notices" do
+    test "the no-password notice goes to the account with a sign-in link" do
+      user = insert(:user, provider: "google", password_hash: nil)
+      parent = self()
+
+      expect(EmailServiceMock, :send_no_password_to_reset, fn recipient, sign_in_url ->
+        send(parent, {:notice, recipient.id, sign_in_url})
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_no_password_to_reset", %{
+                 "user_id" => user.id
+               })
+
+      assert_receive {:notice, user_id, sign_in_url}
+      assert user_id == user.id
+      assert sign_in_url == Endpoint.url() <> "/auth/login"
+    end
+
+    test "the sign-up attempt notice links to sign in and to the reset form" do
+      user = insert(:user)
+      parent = self()
+
+      expect(EmailServiceMock, :send_signup_attempt_notice, fn recipient, sign_in, reset ->
+        send(parent, {:notice, recipient.id, sign_in, reset})
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_signup_attempt_notice", %{
+                 "user_id" => user.id
+               })
+
+      assert_receive {:notice, user_id, sign_in, reset}
+      assert user_id == user.id
+      assert sign_in == Endpoint.url() <> "/auth/login"
+      assert reset == Endpoint.url() <> "/auth/reset-password"
+    end
+
+    test "a notice for an account deleted since is discarded" do
+      assert {:discard, _reason} =
+               EmailWorkerHandlers.execute_email_action("send_signup_attempt_notice", %{
+                 "user_id" => -1
+               })
+    end
+
+    test "a failed send is retried" do
+      user = insert(:user)
+
+      expect(EmailServiceMock, :send_no_password_to_reset, fn _user, _url ->
+        {:error, :timeout}
+      end)
+
+      assert {:error, _reason} =
+               EmailWorkerHandlers.execute_email_action("send_no_password_to_reset", %{
+                 "user_id" => user.id
+               })
+    end
+  end
+
+  describe "sign-up confirmation" do
+    test "decrypts the link and sends it to the typed address in the form's locale" do
+      parent = self()
+      url = "https://example.com/auth/oauth/confirm/token"
+
+      expect(EmailServiceMock, :send_social_signup_confirmation, fn recipient, provider, link ->
+        send(parent, {:confirmation, recipient, provider, link})
+        {:ok, "sent"}
+      end)
+
+      args =
+        LinkArg.put(
+          %{
+            "email" => "typed@example.com",
+            "name" => "Ada",
+            "provider" => "github",
+            "locale" => "fr"
+          },
+          "confirm_url",
+          url
+        )
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_social_signup_confirmation", args)
+
+      assert_receive {:confirmation, recipient, "github", ^url}
+      assert recipient.email == "typed@example.com"
+      assert recipient.locale == "fr"
+    end
+
+    test "a job whose link cannot be read is discarded" do
+      assert {:discard, _reason} =
+               EmailWorkerHandlers.execute_email_action("send_social_signup_confirmation", %{
+                 "email" => "typed@example.com",
+                 "provider" => "github"
+               })
     end
   end
 end

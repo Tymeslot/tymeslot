@@ -8,8 +8,8 @@ defmodule Tymeslot.Test.LogCapture do
   Every other key the code under test attached (`event_type`, `path`,
   `email_masked`, the structured keys JSON logging ships in production) is
   dropped before the string exists, so a `capture_log` assertion can neither see
-  them nor prove they are absent. This handler is attached instead: it receives
-  the raw `:logger` event, metadata intact, and sends it on as
+  them nor prove they are absent. This handler receives the raw `:logger` event
+  instead, metadata intact, and sends it on to every attached test process as
   `{:captured_log, event}`.
 
       alias Tymeslot.Test.LogCapture
@@ -26,14 +26,32 @@ defmodule Tymeslot.Test.LogCapture do
         assert meta.path == "/calendar/v3/calendars/:id/events"
       end
 
-  Use `with_capture/2` where the handler must come off again before the test
-  body ends (for instance because something else has to be restored around it).
+  Use `with_capture/2` where capturing must stop again before the test body
+  ends (for instance because something else has to be restored around it).
+
+  ## One handler for the whole suite
+
+  `install/0` adds the handler once, from `test_helper.exs`, and nothing removes
+  it. `attach/1` only registers the calling process in an ETS table the handler
+  reads, and detaching deletes that row; neither touches `:logger`'s handler
+  list.
+
+  That is deliberate: adding and removing handlers while other processes do the
+  same is unsafe. `:logger`'s server computes the new handler list for a
+  `remove_handler` when the request arrives but writes it back only after the
+  queue of earlier handler operations has drained, so a stale list can undo a
+  concurrent change. When the undone change is `ExUnit.CaptureServer` removing
+  its own handler, the next `capture_log` adds that handler a second time, and
+  every captured line is written twice for the rest of the run. Attaching a
+  handler per test from async modules triggered exactly that. The race is in
+  OTP itself (`logger_server`, unchanged as of OTP 29.1), so a test must never
+  add or remove a `:logger` handler while other tests run.
 
   ## Isolation
 
-  A `:logger` handler is global: it sees events from every process, so a handler
-  attached by one test also receives whatever concurrently running async tests
-  log. Two consequences, both of which are the caller's responsibility:
+  A `:logger` handler is global: it sees events from every process, so a test
+  that attaches also receives whatever concurrently running async tests log.
+  Two consequences, both of which are the caller's responsibility:
 
   - A module that lowers the primary Logger level (`:logger_level`) or asserts
     on the *absence* of a log (`refute_receive {:captured_log, _}`) must be
@@ -41,9 +59,6 @@ defmodule Tymeslot.Test.LogCapture do
   - A module that only asserts on the presence of its own event may stay async,
     but must match tightly enough not to trip over a foreign event. Match on a
     distinctive metadata key, or pull events until the expected one arrives.
-
-  Each `attach/1` gets its own handler id unless one is passed, so two modules
-  can never collide on the id itself.
   """
 
   alias ExUnit.Assertions
@@ -66,40 +81,49 @@ defmodule Tymeslot.Test.LogCapture do
     :time
   ]
 
+  @handler_id :tymeslot_log_capture
+
   @type opt ::
-          {:id, atom()}
-          | {:level, :logger.level() | :all | :none}
+          {:level, :logger.level() | :all | :none}
           | {:logger_level, Logger.level()}
 
   @doc """
-  Attaches a capture handler that forwards log events to the calling test
-  process, and detaches it when the test exits. Returns the handler id.
+  Adds the suite-wide capture handler and creates the table `attach/1` registers
+  in. Call once from `test_helper.exs`, before `ExUnit.start/1`; the calling
+  process owns the table, so it must live as long as the suite does.
+  """
+  @spec install() :: :ok
+  def install do
+    :ets.new(__MODULE__, [:named_table, :public, :set, read_concurrency: true])
+    :ok = :logger.add_handler(@handler_id, __MODULE__, %{level: :all})
+  end
+
+  @doc """
+  Forwards log events to the calling test process until the test exits.
 
   Options:
 
-  - `:id` - handler id to use. Defaults to a fresh unique id.
-  - `:level` - handler-level threshold. Defaults to `:all`; the primary Logger
-    level still applies on top of it.
+  - `:level` - the least severe level forwarded. Defaults to `:all`; the
+    primary Logger level still applies on top of it.
   - `:logger_level` - lower the *primary* Logger level for the duration, and
     restore it afterwards. Needed for events emitted below the level
     `config/test.exs` pins. Global: only for `async: false` modules.
   """
-  @spec attach([opt()]) :: atom()
+  @spec attach([opt()]) :: :ok
   def attach(opts \\ []) do
-    {id, restore} = start_capture(self(), opts)
-    Callbacks.on_exit(restore)
-    id
+    opts |> start_capture() |> Callbacks.on_exit()
+    :ok
   end
 
   @doc """
-  Runs `fun` with a capture handler attached, then detaches it and restores any
-  `:logger_level` override. Returns `fun`'s result.
+  Runs `fun` while forwarding log events to the calling process, then stops
+  forwarding and restores any `:logger_level` override. Returns `fun`'s result.
 
   Takes the same options as `attach/1`.
   """
   @spec with_capture([opt()], (-> result)) :: result when result: var
   def with_capture(opts \\ [], fun) do
-    {_id, restore} = start_capture(self(), opts)
+    restore = start_capture(opts)
 
     try do
       fun.()
@@ -170,10 +194,17 @@ defmodule Tymeslot.Test.LogCapture do
 
   @doc false
   @spec log(:logger.log_event(), :logger.handler_config()) :: :ok
-  def log(event, %{config: %{pid: pid}}) do
-    send(pid, {:captured_log, event})
+  def log(%{level: level} = event, _config) do
+    for {_ref, pid, min_level} <- :ets.tab2list(__MODULE__), forwards?(level, min_level) do
+      send(pid, {:captured_log, event})
+    end
+
     :ok
   end
+
+  defp forwards?(_level, :all), do: true
+  defp forwards?(_level, :none), do: false
+  defp forwards?(level, min_level), do: :logger.compare_levels(level, min_level) != :lt
 
   @spec drain([:logger.log_event()]) :: [:logger.log_event()]
   defp drain(acc) do
@@ -184,34 +215,20 @@ defmodule Tymeslot.Test.LogCapture do
     end
   end
 
-  @spec start_capture(pid(), [opt()]) :: {atom(), (-> :ok)}
-  defp start_capture(pid, opts) do
-    id = Keyword.get_lazy(opts, :id, &unique_id/0)
+  @spec start_capture([opt()]) :: (-> :ok)
+  defp start_capture(opts) do
+    ref = make_ref()
     original_level = Logger.level()
     logger_level = Keyword.get(opts, :logger_level)
 
     if logger_level, do: Logger.configure(level: logger_level)
 
-    :ok =
-      :logger.add_handler(id, __MODULE__, %{
-        level: Keyword.get(opts, :level, :all),
-        config: %{pid: pid}
-      })
+    true = :ets.insert_new(__MODULE__, {ref, self(), Keyword.get(opts, :level, :all)})
 
-    restore = fn ->
-      :logger.remove_handler(id)
+    fn ->
+      :ets.delete(__MODULE__, ref)
       if logger_level, do: Logger.configure(level: original_level)
       :ok
     end
-
-    {id, restore}
-  end
-
-  @spec unique_id() :: atom()
-  defp unique_id do
-    # Handler ids must be atoms, and each attach needs its own so that two
-    # modules can never collide. Bounded by the number of capturing tests.
-    # credo:disable-for-next-line Credo.Check.Warning.UnsafeToAtom
-    String.to_atom("log_capture_#{System.unique_integer([:positive])}")
   end
 end

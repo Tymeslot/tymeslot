@@ -8,7 +8,7 @@ defmodule Tymeslot.Emails.Shared.TemplateHelper do
   """
 
   alias Tymeslot.Emails.Branding
-  alias Tymeslot.Emails.Shared.{AvatarHelper, Layouts, MjmlEmail}
+  alias Tymeslot.Emails.Shared.{Layouts, MjmlEmail}
   alias Tymeslot.Emails.Shared.Styles.Tokens
 
   @type organizer_details :: %{
@@ -57,7 +57,7 @@ defmodule Tymeslot.Emails.Shared.TemplateHelper do
     base = %{
       name: appointment_details.organizer_name,
       email: appointment_details.organizer_email,
-      avatar_url: AvatarHelper.generate_avatar_url(appointment_details),
+      avatar_url: Map.get(appointment_details, :organizer_avatar_url),
       title: appointment_details.organizer_title || Branding.brand_name()
     }
 

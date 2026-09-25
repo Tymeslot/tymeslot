@@ -9,6 +9,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.MailboxOrgCrudTest do
     XmlHandler
   }
 
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
+
   # ---------------------------------------------------------------------------
   # mailbox.org / Open-Xchange CRUD wire-format tests
   #
@@ -355,7 +357,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.MailboxOrgCrudTest do
         Conn.send_resp(conn, 201, "")
       end)
 
-      assert {:ok, "new-uid"} =
+      assert {:ok, %CreatedEvent{uid: "new-uid"}} =
                Events.create_calendar_event(
                  client(),
                  @calendar_path,

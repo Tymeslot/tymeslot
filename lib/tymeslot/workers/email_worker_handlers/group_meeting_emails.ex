@@ -25,7 +25,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   Split out of `Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails`, which
   still owns the solo-meeting paths and the meeting-level bookkeeping
   (`process_email_results/4`), and shares its `with_meeting/3` lookup and
-  `send_guest_confirmations/4` send loop with this module.
+  `GuestEmails.send_confirmations/4` send loop with it.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -42,6 +42,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Meetings.Recipient
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
+  alias Tymeslot.Workers.EmailWorkerHandlers.GuestEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails
 
   # Bounds how many per-seat `Oban.insert/1` calls `dispatch_seat_jobs/2` runs
@@ -515,13 +516,13 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails do
     )
   end
 
-  # Same send loop `MeetingEmails.send_guest_confirmations/4` uses for a
+  # Same send loop `GuestEmails.send_confirmations/4` uses for a
   # solo booking's guests; only the query scoping it to one participant's
   # guests differs, so that loop is shared rather than copied.
   defp send_participant_guest_confirmations(meeting, recipient, details, email_service) do
     recipient.participant_id
     |> GuestQueries.list_unsent_for_participant()
-    |> MeetingEmails.send_guest_confirmations(meeting, details, email_service)
+    |> GuestEmails.send_confirmations(meeting, details, email_service)
   end
 
   defp meeting_started?(meeting) do

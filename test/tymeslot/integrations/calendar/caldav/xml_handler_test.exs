@@ -503,6 +503,56 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandlerTest do
       assert meeting.etag == "etag-abc-123"
     end
 
+    # A recurring event's resource holds the master VEVENT plus one per
+    # occurrence edited on its own. Keeping only the first dropped whichever
+    # the server listed second, and RFC 5545 fixes no order between them.
+    test "keeps every VEVENT of a resource, not just the first" do
+      xml = """
+      <?xml version="1.0" encoding="utf-8"?>
+      <D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+        <D:response>
+          <D:href>/calendars/user/personal/standup.ics</D:href>
+          <D:propstat>
+            <D:prop>
+              <D:getetag>"etag-standup"</D:getetag>
+              <C:calendar-data>BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:standup@example.com
+      DTSTART:20261005T090000Z
+      DTEND:20261005T093000Z
+      RRULE:FREQ=WEEKLY;COUNT=3
+      SUMMARY:Weekly standup
+      END:VEVENT
+      BEGIN:VEVENT
+      UID:standup@example.com
+      RECURRENCE-ID:20261012T090000Z
+      DTSTART:20261012T140000Z
+      DTEND:20261012T143000Z
+      SUMMARY:Weekly standup (moved)
+      END:VEVENT
+      END:VCALENDAR</C:calendar-data>
+            </D:prop>
+            <D:status>HTTP/1.1 200 OK</D:status>
+          </D:propstat>
+        </D:response>
+      </D:multistatus>
+      """
+
+      assert {:ok, [master, override]} = XmlHandler.parse_calendar_query(xml)
+
+      assert master.recurrence_rule == "FREQ=WEEKLY;COUNT=3"
+      assert master.recurrence_id == nil
+      assert override.recurrence_id == "20261012T090000Z"
+      assert override.summary == "Weekly standup (moved)"
+
+      # The href, ETag and raw document identify the resource, so both VEVENTs
+      # carry the same three.
+      assert override.href == "/calendars/user/personal/standup.ics"
+      assert override.etag == "etag-standup"
+      assert override.raw_ical == master.raw_ical
+    end
+
     test "returns empty list when calendar has no events" do
       assert {:ok, []} = XmlHandler.parse_calendar_query(@empty_calendar_query_xml)
     end

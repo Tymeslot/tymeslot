@@ -11,6 +11,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
   alias Ecto.UUID
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
@@ -219,7 +220,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
 
       # When not found, it tries to create
       expect(Tymeslot.CalendarMock, :create_event, fn _data, _user_id ->
-        {:ok, "new-uid"}
+        {:ok, CreatedEvent.new("new-uid")}
       end)
 
       # persist_calendar_mapping is called after create — no integration so it returns error
@@ -262,7 +263,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
       # Falls back to creating new event
       expect(Tymeslot.CalendarMock, :create_event, fn _data, id ->
         assert id == user.id
-        {:ok, "new-uid"}
+        {:ok, CreatedEvent.new("new-uid")}
       end)
 
       # persist_calendar_mapping is called after create to save the new UID
@@ -333,7 +334,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
 
       # First call: switches from UUID to external ID
       expect(Tymeslot.CalendarMock, :create_event, 1, fn _event_data, _user_id ->
-        {:ok, "remote-uid-123"}
+        {:ok, CreatedEvent.new("remote-uid-123")}
       end)
 
       expect(Tymeslot.CalendarMock, :get_booking_integration_info, 1, fn _user_id ->
@@ -372,7 +373,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
 
       # Initial creation
       expect(Tymeslot.CalendarMock, :create_event, 1, fn _event_data, _user_id ->
-        {:ok, "remote-uid-future"}
+        {:ok, CreatedEvent.new("remote-uid-future")}
       end)
 
       expect(Tymeslot.CalendarMock, :get_booking_integration_info, 1, fn _user_id ->
@@ -473,11 +474,16 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
     test "a 412 on a create retries instead of discarding" do
       meeting = insert(:meeting)
 
-      # On a create the 412 comes from `If-None-Match: *` finding an event
-      # already at the UID. The offline queue replays creates without a
-      # conflict policy, so discarding here would loop silently forever;
-      # the ordinary retry path must keep the job (and its exhaustion alert).
+      # `If-None-Match: *` found an event already at the UID, so the create
+      # switches to an update, and here that update conflicts too. The offline
+      # queue replays creates without a conflict policy, so discarding here
+      # would loop silently forever; the ordinary retry path must keep the job
+      # (and its exhaustion alert).
       expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _user_id ->
+        {:error, :precondition_failed}
+      end)
+
+      expect(Tymeslot.CalendarMock, :update_event, fn _uid, _event_data, _meeting ->
         {:error, :precondition_failed}
       end)
 
@@ -595,15 +601,6 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
   end
 
   describe "scheduling" do
-    test "schedule_calendar_creation/1 enqueues job" do
-      assert :ok = CalendarEventScheduler.schedule_calendar_creation(123)
-
-      assert_enqueued(
-        worker: CalendarEventWorker,
-        args: %{"action" => "create", "meeting_id" => 123}
-      )
-    end
-
     test "schedule_calendar_update/1 enqueues job" do
       assert {:ok, _result} = CalendarEventScheduler.schedule_calendar_update(123)
 

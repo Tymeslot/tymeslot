@@ -30,6 +30,10 @@ defmodule Tymeslot.Bookings.OrchestratorIdorTest do
 
   setup do
     TestMocks.setup_email_mocks()
+    # The reschedule submit re-reads the host's connected calendars
+    # (`Tymeslot.Bookings.CalendarCheck`); these tests are about a host with
+    # nothing else in their diary.
+    TestMocks.stub_no_calendar_events()
     :ok
   end
 

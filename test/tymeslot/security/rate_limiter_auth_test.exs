@@ -2,7 +2,6 @@ defmodule Tymeslot.Security.RateLimiterAuthTest do
   use Tymeslot.DataCase, async: false
   @moduletag :security
 
-  alias Tymeslot.Security.AccountLockout
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Test.LogCapture
 
@@ -100,6 +99,96 @@ defmodule Tymeslot.Security.RateLimiterAuthTest do
     end
   end
 
+  describe "check_auth_rate_limit/2 — per-account buckets are keyed on email and IP" do
+    test "exhausting the account budget from one address leaves another usable" do
+      email = "targeted-#{System.unique_integer([:positive])}@example.com"
+
+      for _i <- 1..10, do: assert(:ok = RateLimiter.check_auth_rate_limit(email, "198.51.100.1"))
+
+      assert {:error, :rate_limited, _msg} =
+               RateLimiter.check_auth_rate_limit(email, "198.51.100.1")
+
+      assert :ok = RateLimiter.check_auth_rate_limit(email, "198.51.100.2")
+    end
+
+    test "failures recorded from one address throttle only that address" do
+      email = "lockout-pair-#{System.unique_integer([:positive])}@example.com"
+
+      for _i <- 1..10, do: RateLimiter.record_auth_attempt(email, "198.51.100.3", false)
+
+      assert {:error, :rate_limited, message} =
+               RateLimiter.check_auth_rate_limit(email, "198.51.100.3")
+
+      assert message =~ "Too many failed attempts"
+      assert :ok = RateLimiter.check_auth_rate_limit(email, "198.51.100.4")
+    end
+
+    test "a success from one address clears only that address's failures" do
+      email = "lockout-clear-#{System.unique_integer([:positive])}@example.com"
+
+      for ip <- ["198.51.100.5", "198.51.100.6"], _i <- 1..10 do
+        RateLimiter.record_auth_attempt(email, ip, false)
+      end
+
+      RateLimiter.record_auth_attempt(email, "198.51.100.5", true)
+
+      assert :ok = RateLimiter.check_auth_rate_limit(email, "198.51.100.5")
+
+      assert {:error, :rate_limited, _msg} =
+               RateLimiter.check_auth_rate_limit(email, "198.51.100.6")
+    end
+
+    test "a distributed run against one account trips the per-email ceiling at 50" do
+      email = "distributed-#{System.unique_integer([:positive])}@example.com"
+
+      for i <- 1..50 do
+        assert :ok = RateLimiter.check_auth_rate_limit(email, "198.51.101.#{i}")
+      end
+
+      assert {:error, :rate_limited, message} =
+               RateLimiter.check_auth_rate_limit(email, "198.51.102.1")
+
+      assert message =~ "50"
+    end
+  end
+
+  describe "IPv6 clients are keyed on their /64" do
+    test "failures from one address throttle the rest of its /64" do
+      email = "v6-lockout-#{System.unique_integer([:positive])}@example.com"
+
+      for _i <- 1..10, do: RateLimiter.record_auth_attempt(email, "2001:db8:1:2::1", false)
+
+      assert {:error, :rate_limited, _msg} =
+               RateLimiter.check_auth_rate_limit(email, "2001:db8:1:2:ffff::9")
+
+      assert :ok = RateLimiter.check_auth_rate_limit(email, "2001:db8:1:3::1")
+    end
+
+    test "rotating addresses inside one /64 shares the per-address budget" do
+      for i <- 1..50 do
+        assert :ok =
+                 RateLimiter.check_auth_rate_limit(
+                   "v6-ip-#{i}@example.com",
+                   "2001:db8:9:9::#{Integer.to_string(i, 16)}"
+                 )
+      end
+
+      assert {:error, :rate_limited, _msg} =
+               RateLimiter.check_auth_rate_limit(
+                 "v6-ip-overflow@example.com",
+                 "2001:db8:9:9::ffff"
+               )
+    end
+
+    test "IPv4 addresses stay keyed individually" do
+      email = "v4-#{System.unique_integer([:positive])}@example.com"
+
+      for _i <- 1..10, do: RateLimiter.record_auth_attempt(email, "198.51.100.90", false)
+
+      assert :ok = RateLimiter.check_auth_rate_limit(email, "198.51.100.91")
+    end
+  end
+
   describe "AccountLockout integration with check_auth_rate_limit/2" do
     # Isolated AccountLockout behaviour (thresholds, durations, counts) is tested in
     # account_lockout_test.exs. This block covers only the integration point where
@@ -108,7 +197,7 @@ defmodule Tymeslot.Security.RateLimiterAuthTest do
       email = "lockout-hammer-#{System.unique_integer([:positive])}@example.com"
 
       for _i <- 1..10 do
-        AccountLockout.check_and_record_attempt(email, false)
+        RateLimiter.record_auth_attempt(email, nil, false)
       end
 
       assert {:error, :rate_limited, message} = RateLimiter.check_auth_rate_limit(email, nil)
@@ -119,10 +208,9 @@ defmodule Tymeslot.Security.RateLimiterAuthTest do
     # escalates the account to a different, harder rejection.
     test "far more failures than the threshold still surface as the throttle" do
       email = "lockout-escalation-#{System.unique_integer([:positive])}@example.com"
-      on_exit(fn -> AccountLockout.clear_failed_attempts(email) end)
 
       for _i <- 1..40 do
-        AccountLockout.check_and_record_attempt(email, false)
+        RateLimiter.record_auth_attempt(email, nil, false)
       end
 
       assert {:error, :rate_limited, message} = RateLimiter.check_auth_rate_limit(email, nil)
@@ -173,31 +261,28 @@ defmodule Tymeslot.Security.RateLimiterAuthTest do
     end
   end
 
-  describe "record_auth_attempt/2" do
-    test "success clears the lockout counter for the email" do
-      email = "clear-on-success@example.com"
+  describe "record_auth_attempt/3" do
+    test "success clears the failures recorded for that email and address" do
+      email = "clear-on-success-#{System.unique_integer([:positive])}@example.com"
+      ip = "198.51.100.20"
 
-      for _i <- 1..5 do
-        AccountLockout.check_and_record_attempt(email, false)
-      end
+      for _i <- 1..10, do: RateLimiter.record_auth_attempt(email, ip, false)
+      assert {:error, :rate_limited, _msg} = RateLimiter.check_auth_rate_limit(email, ip)
 
-      assert AccountLockout.get_failed_attempt_count(email) == 5
+      RateLimiter.record_auth_attempt(email, ip, true)
 
-      RateLimiter.record_auth_attempt(email, true)
-
-      assert AccountLockout.get_failed_attempt_count(email) == 0
+      assert :ok = RateLimiter.check_auth_rate_limit(email, ip)
     end
 
-    test "failure increments the failed attempt counter" do
-      email = "increment@example.com"
+    test "the tenth failure is the one that throttles" do
+      email = "increment-#{System.unique_integer([:positive])}@example.com"
+      ip = "198.51.100.21"
 
-      assert AccountLockout.get_failed_attempt_count(email) == 0
+      for _i <- 1..9, do: RateLimiter.record_auth_attempt(email, ip, false)
+      assert :ok = RateLimiter.check_auth_rate_limit(email, ip)
 
-      RateLimiter.record_auth_attempt(email, false)
-      assert AccountLockout.get_failed_attempt_count(email) == 1
-
-      RateLimiter.record_auth_attempt(email, false)
-      assert AccountLockout.get_failed_attempt_count(email) == 2
+      assert {:error, :account_throttled, _msg} =
+               RateLimiter.record_auth_attempt(email, ip, false)
     end
   end
 
@@ -210,10 +295,8 @@ defmodule Tymeslot.Security.RateLimiterAuthTest do
       base = "lockout-case-#{System.unique_integer([:positive])}@example.com"
       mixed_case = String.upcase(base)
 
-      on_exit(fn -> AccountLockout.clear_failed_attempts(base) end)
-
       # Simulate the server-side recording path (uses the DB-normalised email).
-      for _i <- 1..10, do: RateLimiter.record_auth_attempt(base, false)
+      for _i <- 1..10, do: RateLimiter.record_auth_attempt(base, nil, false)
 
       # The attacker now tries with the original mixed-case value.
       assert {:error, :rate_limited, message} = RateLimiter.check_auth_rate_limit(mixed_case, nil)

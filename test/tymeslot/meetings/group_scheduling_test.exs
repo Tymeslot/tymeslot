@@ -8,6 +8,7 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
 
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Ecto.UUID
   alias Tymeslot.Meetings.GroupScheduling
   alias Tymeslot.Meetings.MeetingSchema
@@ -215,22 +216,33 @@ defmodule Tymeslot.Meetings.GroupSchedulingTest do
     end
   end
 
-  describe "book_seat/2 — first-booker unique-index retry" do
-    test "gives up after one retry when the slot is occupied only at index level", ctx do
-      insert(:meeting,
-        organizer_user_id: ctx.user.id,
-        start_time: ctx.start_time,
-        end_time: DateTime.add(ctx.start_time, 30, :minute),
-        status: "confirmed",
-        reschedule_requested_at: DateTime.utc_now(:second)
-      )
+  # The retry itself cannot be staged from a single process any more: the
+  # unique index and the conflict check now agree on which rows hold a slot,
+  # so only a genuinely concurrent first booker reaches the index. What is
+  # pinned here is the recognition the retry turns on.
+  describe "lost_first_booker_race?/1" do
+    test "recognises the slot's unique index" do
+      changeset =
+        %MeetingSchema{}
+        |> Changeset.change()
+        |> Changeset.add_error(:organizer_user_id, "has already been taken",
+          constraint: :unique,
+          constraint_name: "unique_confirmed_meeting_per_organizer_at_time"
+        )
 
-      attrs = meeting_attrs(ctx.user, ctx.meeting_type, ctx.start_time)
+      assert GroupScheduling.lost_first_booker_race?(changeset)
+    end
 
-      assert {:error, %Ecto.Changeset{} = changeset} =
-               GroupScheduling.book_seat(attrs, seat_request("racer@example.com"))
+    test "ignores any other unique constraint" do
+      changeset =
+        %MeetingSchema{}
+        |> Changeset.change()
+        |> Changeset.add_error(:uid, "has already been taken",
+          constraint: :unique,
+          constraint_name: "meetings_uid_index"
+        )
 
-      assert changeset.errors[:organizer_user_id]
+      refute GroupScheduling.lost_first_booker_race?(changeset)
     end
   end
 

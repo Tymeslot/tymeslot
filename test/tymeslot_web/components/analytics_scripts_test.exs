@@ -68,6 +68,15 @@ defmodule TymeslotWeb.AnalyticsScriptsTest do
       assert render_scripts() =~ "tymeslot:analytics-ready"
     end
 
+    test "hands the tracker the URL scrubber and refuses to load it without one" do
+      configure_umami()
+
+      html = render_scripts()
+
+      assert html =~ ~s(setAttribute("data-before-send", "tymeslotAnalyticsBeforeSend"\))
+      assert html =~ ~s(typeof window.tymeslotAnalyticsBeforeSend !== "function"\) return;)
+    end
+
     test "applies the CSP nonce to the inline loader" do
       configure_umami()
 

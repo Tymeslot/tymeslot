@@ -32,10 +32,33 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistry do
   end
 
   @doc """
-  Checks if a provider type is supported (centralized).
+  How long room creation on `provider_type` can wait on the network, in
+  milliseconds: the `room_creation_budget_ms/0` it declares, or 0 for a
+  provider that builds its room without a network call.
+
+  Without a provider, or for one this registry does not know, the largest
+  budget any registered provider declares.
   """
-  @spec valid_provider?(atom()) :: boolean()
-  defdelegate valid_provider?(provider), to: ProviderConfig
+  @spec room_creation_budget_ms(atom() | nil) :: non_neg_integer()
+  def room_creation_budget_ms(provider_type \\ nil) do
+    case get_provider(provider_type) do
+      {:ok, module} -> declared_budget_ms(module)
+      {:error, _unknown} -> largest_budget_ms()
+    end
+  end
+
+  defp largest_budget_ms do
+    list_providers()
+    |> Enum.map(&(&1 |> get_provider!() |> declared_budget_ms()))
+    |> Enum.max(fn -> 0 end)
+  end
+
+  defp declared_budget_ms(module) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :room_creation_budget_ms, 0),
+      # credo:disable-for-next-line Credo.Check.Refactor.Apply
+      do: apply(module, :room_creation_budget_ms, []),
+      else: 0
+  end
 
   @doc """
   Validates and normalizes a provider type.
@@ -55,27 +78,5 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistry do
       Map.get(capabilities, capability, false)
     end)
     |> Enum.map(fn provider_metadata -> provider_metadata.type end)
-  end
-
-  @doc """
-  Returns the best provider for a given set of requirements.
-
-  This can be used to automatically select the most appropriate provider
-  based on meeting requirements (e.g., number of participants, recording needs, etc.).
-  """
-  @spec recommend_provider(map()) :: atom()
-  def recommend_provider(requirements \\ %{}) do
-    # For now, just return the default provider
-    # In the future, this could implement intelligent provider selection
-    # based on requirements like:
-    # - participant_count
-    # - recording_required
-    # - screen_sharing_required
-    # - waiting_room_required
-    # - etc.
-
-    # Suppress unused variable warning
-    _requirements = requirements
-    default_provider()
   end
 end

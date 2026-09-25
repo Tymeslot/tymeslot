@@ -56,18 +56,18 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.DeletionsTest do
       """
     end
 
-    test "full fetch of extra calendar path does not delete cached events from primary path" do
-      # Tier 1: primary path gets incremental sync (no detect_deletions),
-      # extra paths get full fetch (with detect_deletions). The bug was that
-      # detect_deletions on the extra path queried ALL cached events for the
-      # integration, incorrectly flagging primary-path events as "missing."
+    test "full fetch of one calendar path does not delete cached events from another" do
+      # Tier 2: the primary's CTag is unchanged so it is skipped, while the
+      # extra path's moved and gets a full fetch (with detect_deletions). The
+      # bug was that detect_deletions on the extra path queried ALL cached
+      # events for the integration, flagging primary-path events as "missing."
       integration =
         insert(:calendar_integration,
           provider: "caldav",
           is_active: true,
-          caldav_sync_tier: 1,
+          caldav_sync_tier: 2,
           calendar_paths: [path1(), path2()],
-          caldav_sync_token: "existing-sync-token"
+          caldav_sync_tokens: %{path1() => "ctag-a", path2() => "ctag-b"}
         )
 
       insert(:provider_calendar_event,
@@ -84,30 +84,32 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.DeletionsTest do
           DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:microsecond)
       )
 
-      ical1 = future_ical("path1-delta@test", "Path1 Delta Event")
       ical2 = future_ical("path2-event@test", "Path2 Meeting")
       path_a = path1()
       path_b = path2()
 
-      # path1 (primary): incremental sync returns a delta event + new sync token
-      # path2 (extra): full fetch returns its event — detect_deletions runs here
+      # path1 (primary): CTag unchanged, so no fetch at all
+      # path2 (extra): CTag moved, full fetch returns its event and
+      # detect_deletions runs here
       ReqTest.stub(:tymeslot_http, fn conn ->
-        case conn.request_path do
-          ^path_a ->
+        case {conn.method, conn.request_path} do
+          {"PROPFIND", ^path_a} ->
             conn
             |> Conn.put_resp_header("content-type", "application/xml")
-            |> Conn.send_resp(
-              207,
-              sync_collection_xml("#{path_a}delta.ics", ical1, "updated-sync-token")
-            )
+            |> Conn.send_resp(207, ctag_xml("ctag-a"))
 
-          ^path_b ->
+          {"PROPFIND", ^path_b} ->
+            conn
+            |> Conn.put_resp_header("content-type", "application/xml")
+            |> Conn.send_resp(207, ctag_xml("ctag-b2"))
+
+          {"REPORT", ^path_b} ->
             conn
             |> Conn.put_resp_header("content-type", "application/xml")
             |> Conn.send_resp(207, caldav_report_xml("#{path_b}event2.ics", ical2))
 
-          other ->
-            Conn.send_resp(conn, 404, "unexpected path: #{other}")
+          {method, other} ->
+            Conn.send_resp(conn, 404, "unexpected #{method} #{other}")
         end
       end)
 
@@ -124,9 +126,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.DeletionsTest do
             order_by: e.uid
         )
 
-      # All three events must survive: the pre-existing path1 event must NOT be
-      # deleted by detect_deletions running on path2's full fetch.
-      assert "path1-delta@test" in cached_uids
+      # The pre-existing path1 event must NOT be deleted by detect_deletions
+      # running on path2's full fetch.
       assert "path2-event@test" in cached_uids
       assert "pre-existing-path1@test" in cached_uids
     end

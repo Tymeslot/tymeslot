@@ -11,11 +11,12 @@ defmodule Tymeslot.Mailer.HealthCheck do
 
   1. **Structure validation** (fast, always runs): every key the adapter
      requires is present, a string, and non-empty. SMTP additionally checks
-     the port is an integer in range.
+     the port is an integer in range, and that credentials come as a pair.
 
   2. **Credential test** (1-5 seconds, always runs): SMTP opens a connection
-     via `Tymeslot.Mailer.SmtpProbe`; the API providers call one cheap
-     endpoint via `Tymeslot.Mailer.ApiProbe`. Neither sends mail.
+     via `Tymeslot.Mailer.SmtpProbe`, including the TLS handshake a send
+     would make; the API providers call one cheap endpoint via
+     `Tymeslot.Mailer.ApiProbe`. Neither sends mail.
 
   **Not tested:** SMTP authentication, which is validated on first email send.
 
@@ -140,11 +141,11 @@ defmodule Tymeslot.Mailer.HealthCheck do
       is_nil(config[:relay]) or config[:relay] == "" ->
         {:error, "SMTP host (relay) is required and cannot be empty"}
 
-      is_nil(config[:username]) or config[:username] == "" ->
-        {:error, "SMTP username is required and cannot be empty"}
-
-      is_nil(config[:password]) or config[:password] == "" ->
-        {:error, "SMTP password is required and cannot be empty"}
+      # Credentials are optional (a relay may authorise by network), but a
+      # login needs both halves.
+      config[:auth] != :never and
+          (config[:username] in [nil, ""] or config[:password] in [nil, ""]) ->
+        {:error, "SMTP username and password must both be set when authentication is used"}
 
       not is_integer(config[:port]) ->
         {:error, "SMTP port must be an integer"}

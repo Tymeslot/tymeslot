@@ -18,6 +18,27 @@ defmodule Tymeslot.PollsTest do
   defp slot(start_time), do: %{start_time: start_time}
   defp slot(start_time, end_time), do: %{start_time: start_time, end_time: end_time}
 
+  describe "starts_during_time_off/3" do
+    test "names the start times whose meeting would run into time off", %{user: user} do
+      profile = insert(:profile, user: user, timezone: "Etc/UTC")
+      day = Date.add(Date.utc_today(), 10)
+      insert(:time_off_period, profile: profile, starts_on: day, ends_on: day)
+
+      inside = DateTime.new!(day, ~T[10:00:00], "Etc/UTC")
+      runs_into_it = DateTime.new!(Date.add(day, -1), ~T[23:45:00], "Etc/UTC")
+      clear_of_it = DateTime.new!(Date.add(day, -1), ~T[23:00:00], "Etc/UTC")
+
+      assert Polls.starts_during_time_off(user.id, [clear_of_it, runs_into_it, inside], 30) ==
+               [runs_into_it, inside]
+    end
+
+    test "names nothing when the host has no time off", %{user: user, future: future} do
+      insert(:profile, user: user)
+
+      assert Polls.starts_during_time_off(user.id, [future], 30) == []
+    end
+  end
+
   describe "create_poll/2 without a meeting type" do
     test "inserts the poll and its slots with 0-based positions, preloaded", %{
       user: user,

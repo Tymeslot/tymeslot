@@ -11,8 +11,26 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.Shared.ErrorMessages
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Security.SsrfGuard
   alias Tymeslot.Security.UrlValidation
+
+  @doc """
+  The reason a connection test reports when an OAuth provider refused the
+  stored credentials, given the calendar client's error message.
+
+  A revoked or expired grant becomes `:token_expired`, anything else
+  `:unauthorized`. Both are permanent credential failures, but only the first
+  tells the owner to look in their provider account, and the health check can
+  tell them apart only if the distinction survives this far as an atom.
+  """
+  @spec unauthorized_reason(String.t()) :: :token_expired | :unauthorized
+  def unauthorized_reason(message) do
+    case ReauthHandling.rejection_cause(message) do
+      :expired_grant -> :token_expired
+      :rejected_credentials -> :unauthorized
+    end
+  end
 
   @doc """
   Ensures all required fields are present in the config map.
@@ -46,7 +64,9 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   in `opts`, or for the whole deployment by the operator's
   `ALLOW_PRIVATE_IPS_FOR_CALENDAR` opt-out, read via
   `Tymeslot.Security.SsrfGuard.allow_private_for_calendar?/0`. The production default is
-  `false` in both cases.
+  `false` in both cases. Lifting it also lets plain HTTP reach a server on an
+  internal name (a single label such as a Docker service name, or a name under
+  `.local`, `.lan`, `.internal` or `.home.arpa`).
   """
   @spec validate_url(String.t(), keyword()) :: :ok | {:error, String.t()}
   def validate_url(url, opts \\ []) do
@@ -63,6 +83,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       invalid_message: invalid_message,
       disallowed_protocol_error: invalid_message,
       enforce_https_for_public: true,
+      internal_names_local: allow_private,
       block_private_ips: not allow_private,
       https_error_message:
         dgettext("dashboard_calendar_providers", "Use HTTPS for non-local calendar servers"),
@@ -100,9 +121,19 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   This helper encapsulates the common pattern used by CalDAV-based providers
   (Radicale, Zimbra, Nextcloud, etc.) for testing connections.
 
+  Refused credentials are the one failure reported as a reason rather than as
+  copy: `{:error, :unauthorized}`, exactly as the generic CalDAV provider
+  reports it. The scheduled health probe classifies what comes back
+  (`HealthCheck.ErrorAnalysis.classify_error/1`), and it recognises the atom as
+  a permanent failure but not a sentence about app-specific passwords, which
+  falls through its string branch and is recorded as transient. That leaves
+  `consecutive_hard_failures` at zero for ever and puts the auto-pause fast
+  trigger out of reach, so the distinction has to survive this far as an atom.
+  The sentence the account owner reads is written once in
+  `Shared.ErrorHandler.sanitize_error_message/2`, on the paths that show one.
+
   ## Options
     * `:success_message` - Message to return on successful connection
-    * `:unauthorized_message` - Message to return on authentication failure
     * `:not_found_message` - Message to return when server not found
     * `:error_formatter` - Function to format other errors (receives reason, returns string)
   """
@@ -116,28 +147,29 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
           },
           keyword()
         ) ::
-          {:ok, String.t()} | {:error, String.t()}
+          {:ok, String.t()} | {:error, term()}
   def test_caldav_provider_connection(integration, opts) do
     success_msg = Keyword.fetch!(opts, :success_message)
-    unauthorized_msg = Keyword.fetch!(opts, :unauthorized_message)
     not_found_msg = Keyword.fetch!(opts, :not_found_message)
     error_formatter = Keyword.fetch!(opts, :error_formatter)
 
-    client = %{
-      base_url: integration.base_url,
-      username: integration.username,
-      password: integration.password,
-      calendar_paths: integration.calendar_paths || [],
-      verify_ssl: true,
-      provider: normalize_provider(integration.provider)
-    }
+    client =
+      CaldavCommon.build_client(
+        %{
+          base_url: integration.base_url,
+          username: integration.username,
+          password: integration.password,
+          calendar_paths: integration.calendar_paths || []
+        },
+        provider: normalize_provider(integration.provider)
+      )
 
     case CaldavCommon.test_connection(client) do
       {:ok, _response} ->
         {:ok, success_msg}
 
-      {:error, :unauthorized} ->
-        {:error, unauthorized_msg}
+      {:error, :unauthorized} = refused ->
+        refused
 
       {:error, :forbidden} ->
         {:error, error_formatter.(:forbidden)}
@@ -216,8 +248,13 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   @spec caldav_build_booking_client_config(map()) :: map() | nil
   def caldav_build_booking_client_config(integration) do
     case CalendarPathResolver.resolve(integration) do
-      nil -> nil
-      path -> caldav_path_config(integration, path)
+      nil ->
+        nil
+
+      path ->
+        integration
+        |> caldav_path_config(path)
+        |> Map.put(:writable_calendar_paths, caldav_selected_paths(integration))
     end
   end
 

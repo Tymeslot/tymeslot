@@ -36,13 +36,21 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter do
 
   The `start_date` supplies the range `startDate` and anchors monthly/yearly
   patterns (and a weekly pattern that omits `BYDAY`).
-  """
-  @spec rrule_to_outlook(String.t() | nil, Date.t()) :: map() | nil
-  def rrule_to_outlook(nil, _start_date), do: nil
-  def rrule_to_outlook("", _start_date), do: nil
 
-  def rrule_to_outlook(rrule, %Date{} = start_date) when is_binary(rrule) do
-    parsed = RRule.parse(rrule)
+  `timezone` is the event's own zone, and it is what makes the range's
+  `endDate` right. A timed rule's UNTIL is an instant in UTC, while Graph reads
+  `endDate` as a *local* date in the event's timezone (Graph's own default when
+  no `recurrenceTimeZone` is sent, which this converter never sends). Parsing
+  without the zone reads the UNTIL as a UTC date, so an organiser west of UTC
+  had the series written one day late and Graph generated an extra occurrence.
+  """
+  @spec rrule_to_outlook(String.t() | nil, Date.t(), String.t() | nil) :: map() | nil
+  def rrule_to_outlook(rrule, start_date, timezone \\ nil)
+  def rrule_to_outlook(nil, _start_date, _timezone), do: nil
+  def rrule_to_outlook("", _start_date, _timezone), do: nil
+
+  def rrule_to_outlook(rrule, %Date{} = start_date, timezone) when is_binary(rrule) do
+    parsed = RRule.parse(rrule, timezone: timezone)
 
     case Map.get(parsed, :freq) do
       nil ->

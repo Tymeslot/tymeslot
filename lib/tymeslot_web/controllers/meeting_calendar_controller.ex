@@ -18,16 +18,11 @@ defmodule TymeslotWeb.MeetingCalendarController do
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Helpers.ClientIP
 
-  @rate_window_ms 60_000
-  @rate_limit 60
-
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def show(conn, %{"username" => username, "meeting_uid" => uid}) do
-    bucket_key = "meeting_ics:#{ClientIP.get(conn)}"
-
-    case RateLimiter.check_rate(bucket_key, @rate_window_ms, @rate_limit) do
-      {:allow, _count} -> serve(conn, username, uid)
-      {:deny, _limit} -> send_status(conn, 429)
+    case RateLimiter.check_meeting_calendar_feed_rate_limit(ClientIP.get(conn)) do
+      :ok -> serve(conn, username, uid)
+      {:error, :rate_limited} -> send_status(conn, 429)
     end
   end
 

@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
 
   require Logger
 
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -32,7 +33,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
   """
   @spec schedule_all(keyword()) :: :ok
   def schedule_all(opts \\ []) do
-    now = DateTime.utc_now()
+    now = Clock.utc_now()
     force = Keyword.get(opts, :force, false)
 
     Enum.each(CalendarIntegrationQueries.list_all_active(), fn int ->
@@ -65,7 +66,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
   @spec scheduled_at_with_jitter() :: DateTime.t()
   def scheduled_at_with_jitter do
     jitter_ms = :rand.uniform(@max_jitter_ms + 1) - 1
-    DateTime.add(DateTime.utc_now(), jitter_ms, :millisecond)
+    DateTime.add(Clock.utc_now(), jitter_ms, :millisecond)
   end
 
   # Private Functions

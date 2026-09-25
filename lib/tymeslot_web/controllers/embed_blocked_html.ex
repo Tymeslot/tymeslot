@@ -20,7 +20,7 @@ defmodule TymeslotWeb.EmbedBlockedHTML do
   def index(assigns) do
     ~H"""
     <!DOCTYPE html>
-    <html lang="en">
+    <html lang={Gettext.get_locale(TymeslotWeb.Gettext)}>
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

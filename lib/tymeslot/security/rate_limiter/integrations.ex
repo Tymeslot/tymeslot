@@ -1,6 +1,8 @@
 defmodule Tymeslot.Security.RateLimiter.Integrations do
   @moduledoc false
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   require Logger
 
   alias Tymeslot.Security.RateLimiter.Helpers
@@ -8,10 +10,11 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
   @connection_test_limit 20
   @connection_test_window_ms 600_000
 
-  # The custom video provider and ICS subscriptions both probe an arbitrary
-  # user-supplied host (raw URL, redirects followed), unlike the other buckets
-  # which only ever reach a server the operator configured. Give them the
-  # tightest budget of the bunch, over the same window as everything else.
+  # The custom video provider, Jitsi, Nextcloud Talk and ICS subscriptions all
+  # probe an arbitrary user-supplied host (raw URL, redirects followed), unlike
+  # the other buckets which only ever reach a server the operator configured or
+  # one fixed provider host. Give them the tightest budget of the bunch, over
+  # the same window as everything else.
   @arbitrary_host_connection_test_limit 5
 
   # Unchanged from when discovery was keyed on an IP — only the key changed,
@@ -41,16 +44,40 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
   same window), it just isn't tied to any one provider's own bucket.
   """
   @type connection_bucket ::
-          :caldav | :nextcloud | :mirotalk | :custom | :ics_url | :oauth | :discovery
+          :caldav
+          | :nextcloud
+          | :mirotalk
+          | :custom
+          | :kmeet
+          | :jitsi
+          | :nextcloud_talk
+          | :ics_url
+          | :oauth
+          | :discovery
+
+  @typedoc """
+  What the person did to reach a connection-test bucket, which is not the same
+  question as which bucket they reached.
+
+  One bucket meters several actions: the `:custom` bucket is drawn on by the
+  "Test connection" button *and* by saving a self-hosted server's address, and
+  an organiser who pressed "Add" never knowingly ran a connection test. The
+  caller says which action it is, so the refusal can name the thing they did
+  rather than the bucket it happened to land in.
+  """
+  @type connection_action :: :connection_test | :video_setup | :calendar_setup | :discovery
 
   @doc """
   Rate limit a provider's connection-test attempts, in the bucket it draws
   its budget from. The bucket key string and operation label for each
   bucket are resolved here, in the one place that has to know them.
+
+  `action` names what the person did (see `t:connection_action/0`); the bucket's
+  own label stays in the log line, where naming the bucket is the point.
   """
-  @spec check_connection_test(connection_bucket(), connection_scope() | nil) ::
+  @spec check_connection_test(connection_bucket(), connection_scope() | nil, connection_action()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :unattributable}
-  def check_connection_test(bucket, scope) do
+  def check_connection_test(bucket, scope, action) do
     {bucket_key, operation} = bucket_info(bucket)
 
     case scope_key(scope) do
@@ -60,7 +87,8 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
           bucket_limit(bucket),
           @connection_test_window_ms,
           operation,
-          key
+          key,
+          action_label(action)
         )
 
       :error ->
@@ -76,15 +104,30 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
     end
   end
 
+  # Plural noun phrases: they are read inside "the limit of 5 …". Each names an
+  # action an organiser would recognise having performed, never the bucket.
+  defp action_label(:connection_test), do: dgettext("errors", "connection tests")
+  defp action_label(:video_setup), do: dgettext("errors", "video server checks")
+  defp action_label(:calendar_setup), do: dgettext("errors", "calendar server checks")
+  defp action_label(:discovery), do: dgettext("errors", "calendar lookups")
+
   defp bucket_info(:caldav), do: {"caldav_connection", "CalDAV connection test"}
   defp bucket_info(:nextcloud), do: {"nextcloud_connection", "Nextcloud connection test"}
   defp bucket_info(:mirotalk), do: {"mirotalk_connection", "MiroTalk connection test"}
   defp bucket_info(:custom), do: {"custom_video_connection", "Custom video connection test"}
+  defp bucket_info(:kmeet), do: {"kmeet_connection", "kMeet connection test"}
+  defp bucket_info(:jitsi), do: {"jitsi_connection", "Jitsi connection test"}
+
+  defp bucket_info(:nextcloud_talk),
+    do: {"nextcloud_talk_connection", "Nextcloud Talk connection test"}
+
   defp bucket_info(:ics_url), do: {"ics_url_connection", "Calendar subscription test"}
   defp bucket_info(:oauth), do: {"oauth_connection", "OAuth connection test"}
   defp bucket_info(:discovery), do: {"calendar_discovery", "calendar discovery"}
 
   defp bucket_limit(:custom), do: @arbitrary_host_connection_test_limit
+  defp bucket_limit(:jitsi), do: @arbitrary_host_connection_test_limit
+  defp bucket_limit(:nextcloud_talk), do: @arbitrary_host_connection_test_limit
   defp bucket_limit(:ics_url), do: @arbitrary_host_connection_test_limit
   defp bucket_limit(:discovery), do: @discovery_limit
   defp bucket_limit(_bucket), do: @connection_test_limit

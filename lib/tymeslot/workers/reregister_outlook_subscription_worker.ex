@@ -37,12 +37,14 @@ defmodule Tymeslot.Workers.ReregisterOutlookSubscriptionWorker do
 
             :ok
 
-          {:error, reason} ->
-            Logger.error("Outlook Graph subscription re-registration failed",
-              integration_id: integration.id,
-              reason: inspect(reason)
-            )
+          # A Graph error status arrives as `{:error, type, message}`, every
+          # other failure as `{:error, reason}`; both are worth a retry.
+          {:error, type, message} ->
+            log_failure(integration, {type, message})
+            {:error, type}
 
+          {:error, reason} ->
+            log_failure(integration, reason)
             {:error, reason}
         end
 
@@ -56,5 +58,12 @@ defmodule Tymeslot.Workers.ReregisterOutlookSubscriptionWorker do
       {:error, :requires_reencryption, integration} ->
         CalendarManagement.handle_reauth_required(integration)
     end
+  end
+
+  defp log_failure(integration, reason) do
+    Logger.error("Outlook Graph subscription re-registration failed",
+      integration_id: integration.id,
+      reason: inspect(reason)
+    )
   end
 end

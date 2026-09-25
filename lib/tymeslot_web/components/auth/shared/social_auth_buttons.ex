@@ -2,58 +2,35 @@ defmodule TymeslotWeb.Shared.SocialAuthButtons do
   @moduledoc """
   Social authentication buttons component for OAuth login/signup flows.
 
-  Provides styled Google and GitHub authentication buttons with consistent
-  design and behavior across login and signup forms.
+  Provides styled buttons for each enabled sign-in provider, consistent
+  across the login and signup forms.
   """
   use TymeslotWeb, :html
 
+  alias Tymeslot.Auth.OAuth.Providers
   alias TymeslotWeb.Components.Icons.ProviderIcon
 
   @doc """
   Renders the social authentication buttons section with a divider.
-  Only shows buttons for providers that are enabled in the configuration.
+  Only shows buttons for the providers an admin has switched on.
   Usage:
     <.social_auth_buttons /> # For signup or login page
   """
   @spec social_auth_buttons(map()) :: Phoenix.LiveView.Rendered.t()
   def social_auth_buttons(assigns) do
-    social_auth_config = Application.get_env(:tymeslot, :social_auth, [])
-    google_enabled = Keyword.get(social_auth_config, :google_enabled, false)
-    github_enabled = Keyword.get(social_auth_config, :github_enabled, false)
-    oauth_enabled = Keyword.get(social_auth_config, :oauth_enabled, false)
-    any_enabled = google_enabled || github_enabled || oauth_enabled
-
-    enabled_count =
-      Enum.count([google_enabled, github_enabled, oauth_enabled], & &1)
+    providers = Providers.enabled()
 
     assigns =
-      assigns
-      |> assign(:google_enabled, google_enabled)
-      |> assign(:github_enabled, github_enabled)
-      |> assign(:oauth_enabled, oauth_enabled)
-      |> assign(:any_enabled, any_enabled)
-      |> assign(:grid_cols, determine_grid_cols(enabled_count))
+      assign(assigns, providers: providers, grid_cols: determine_grid_cols(length(providers)))
 
     ~H"""
-    <div :if={@any_enabled} class="space-y-4">
+    <div :if={@providers != []} class="space-y-4">
       <div class={"grid grid-cols-1 gap-4 #{@grid_cols}"}>
         <.social_auth_button
-          :if={@google_enabled}
-          provider="google"
-          label="Google"
-          href={~p"/auth/google"}
-        />
-        <.social_auth_button
-          :if={@github_enabled}
-          provider="github"
-          label="GitHub"
-          href={~p"/auth/github"}
-        />
-        <.social_auth_button
-          :if={@oauth_enabled}
-          provider="oauth"
-          label="SSO"
-          href={~p"/auth/oauth"}
+          :for={provider <- @providers}
+          provider={provider.slug}
+          label={provider.name}
+          href={~p"/auth/#{provider.slug}"}
         />
       </div>
     </div>

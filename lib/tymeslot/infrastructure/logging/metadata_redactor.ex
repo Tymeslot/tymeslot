@@ -1,16 +1,32 @@
 defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   @moduledoc """
-  Erlang `:logger` primary filter that scrubs sensitive keys from inline
-  Logger metadata before they reach any handler or formatter.
+  Erlang `:logger` primary filter that scrubs sensitive keys out of a log
+  event before it reaches any handler or formatter.
 
-  This is defence in depth on top of `Tymeslot.Infrastructure.Logging.Redactor`
-  (which scrubs message strings on opt-in). Even a careless
+  Two parts of the event are scrubbed, both by key name:
+
+  * `meta` — inline Logger metadata, the keys a call site passes itself.
+  * `msg` — the message term, when it is a report (`Logger.info(%{...})`, and
+    every OTP report) or a `{format, args}` pair. These are walked to any
+    depth, because the terms that leak are nested: an OTP task-termination
+    report carries the crashed function's arguments verbatim, and a calendar
+    client sitting in those arguments carries the integration's decrypted
+    CalDAV password. No application code authors those lines, so no call site
+    has the chance to redact them.
+
+  `{:string, _}` messages are deliberately left alone: there are no keys to
+  match on, and scrubbing them means regex-matching every log line in the
+  system. Message strings are `Tymeslot.Infrastructure.Logging.Redactor`'s job,
+  at the call site that builds them.
+
+  So a careless
 
       Logger.error("oauth failed", api_key: secret, password: pw)
 
-  ships `[REDACTED]` to stdout instead of leaking the secret.
+  ships `[REDACTED]` to stdout, and so does a crash report that happens to
+  carry a credential in a nested argument.
 
-  Sensitive keys are matched case-insensitively against the metadata key name
+  Sensitive keys are matched case-insensitively against the key name
   (atom or string). Substring matching catches variants like `stripe_api_key`,
   `refresh_token`, `set_cookie`, `x_authorization`.
 
@@ -25,10 +41,12 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   defence — this filter only catches what a call site forgot.
   """
 
-  # `calendar_id` and `calendar_path` are personal identifiers, not secrets:
-  # Google calendar ids are email addresses and CalDAV paths can embed the
-  # account username. Redacting by key keeps them out of structured logs;
-  # `calendar_integration_id` (not matched) remains for correlation.
+  # `calendar_id`, `calendar_path` and `feed_url` are personal identifiers,
+  # not secrets: Google calendar ids are email addresses, CalDAV paths can
+  # embed the account username, and an ICS feed URL is a capability URL that
+  # grants anyone holding it read access to the calendar. Redacting by key
+  # keeps them out of structured logs; `calendar_integration_id` (not matched)
+  # remains for correlation.
   @sensitive_substrings ~w(
     password
     passcode
@@ -46,6 +64,7 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
     session_id
     calendar_id
     calendar_path
+    feed_url
   )
 
   # Matched on the whole key or on a `_`-anchored suffix, never as a bare
@@ -62,6 +81,11 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   @redacted "[REDACTED]"
   @filter_id :tymeslot_metadata_redactor
 
+  # Deep enough for the report shapes that actually carry credentials (the
+  # leak that prompted this sat four levels down) with room to spare, but
+  # bounded so a pathologically nested term cannot make logging expensive.
+  @max_depth 12
+
   @doc """
   Installs the redactor as a primary `:logger` filter.
 
@@ -75,11 +99,70 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
 
   @doc false
   @spec filter(:logger.log_event(), term()) :: :logger.filter_return()
-  def filter(%{meta: meta} = event, _extra) when is_map(meta) do
-    %{event | meta: redact_meta(meta)}
+  def filter(event, _extra) when is_map(event) do
+    event
+    |> redact_event_meta()
+    |> redact_event_msg()
   end
 
   def filter(event, _extra), do: event
+
+  defp redact_event_meta(%{meta: meta} = event) when is_map(meta),
+    do: %{event | meta: redact_meta(meta)}
+
+  defp redact_event_meta(event), do: event
+
+  defp redact_event_msg(%{msg: {:report, report}} = event),
+    do: %{event | msg: {:report, redact_term(report, @max_depth)}}
+
+  defp redact_event_msg(%{msg: {:string, _chardata}} = event), do: event
+
+  defp redact_event_msg(%{msg: {format, args}} = event) when is_list(args),
+    do: %{event | msg: {format, redact_term(args, @max_depth)}}
+
+  defp redact_event_msg(event), do: event
+
+  defp redact_term(term, depth) when depth <= 0, do: term
+
+  defp redact_term(term, depth) when is_map(term), do: redact_map(term, depth)
+
+  defp redact_term(term, depth) when is_list(term), do: redact_list(term, depth)
+
+  defp redact_term({key, value}, depth) do
+    if sensitive_key?(key), do: {key, @redacted}, else: {key, redact_term(value, depth - 1)}
+  end
+
+  defp redact_term(term, depth) when is_tuple(term) do
+    term
+    |> Tuple.to_list()
+    |> Enum.map(&redact_term(&1, depth - 1))
+    |> List.to_tuple()
+  end
+
+  defp redact_term(term, _depth), do: term
+
+  # Hand-rolled rather than `Enum.map/2` so that an improper list — chardata
+  # is routinely one — keeps its tail instead of raising inside the logger,
+  # and so that list elements are siblings rather than each one level deeper.
+  defp redact_list([head | tail], depth),
+    do: [redact_term(head, depth - 1) | redact_list(tail, depth)]
+
+  defp redact_list([], _depth), do: []
+
+  defp redact_list(improper_tail, depth), do: redact_term(improper_tail, depth - 1)
+
+  # `:maps.map/2` rather than `Map.new/2` because a struct is a map that does
+  # not implement `Enumerable`: an exception or a `%Req.Request{}` nested in a
+  # crash report would raise here. It also keeps every key it was given,
+  # `__struct__` included, so a struct stays the struct it was.
+  defp redact_map(term, depth) do
+    :maps.map(
+      fn key, value ->
+        if sensitive_key?(key), do: @redacted, else: redact_term(value, depth - 1)
+      end,
+      term
+    )
+  end
 
   defp redact_meta(meta) do
     if Enum.any?(meta, fn {k, _v} -> sensitive_key?(k) end) do

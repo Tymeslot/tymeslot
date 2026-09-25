@@ -134,12 +134,15 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
   # Best-effort persistence: if we have a schema struct, write to DB; otherwise
   # return the updated map.
   defp persist_and_return(%CalendarIntegrationSchema{} = integration, access, refresh, expires_at) do
-    attrs = %{
-      access_token: access,
-      refresh_token: refresh,
-      token_expires_at: expires_at,
-      sync_error: nil
-    }
+    attrs =
+      maybe_clear_sync_error(
+        %{
+          access_token: access,
+          refresh_token: refresh,
+          token_expires_at: expires_at
+        },
+        integration
+      )
 
     case CalendarIntegrationQueries.update(integration, attrs) do
       {:ok, updated} ->
@@ -163,4 +166,12 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
        token_expires_at: expires_at
      })}
   end
+
+  # A successful refresh only means the token is valid again; it says nothing
+  # about whatever flagged the integration for reauth in the first place (a
+  # deleted booking calendar, no calendar selected). Clearing `sync_error`
+  # here while `needs_reauth` is still true would erase the reason the
+  # dashboard notice and reauth email depend on.
+  defp maybe_clear_sync_error(attrs, %{needs_reauth: true}), do: attrs
+  defp maybe_clear_sync_error(attrs, _integration), do: Map.put(attrs, :sync_error, nil)
 end

@@ -4,16 +4,55 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
 
   import Mox
   alias Tymeslot.Integrations.Video.ProviderConfig
+  alias Tymeslot.Integrations.Video.Providers.GoogleMeetProvider
+  alias Tymeslot.Integrations.Video.Providers.MiroTalkProvider
+  alias Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
   alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
+  alias Tymeslot.Integrations.Video.Providers.TeamsProvider
+  alias Tymeslot.Integrations.Video.Providers.ZoomProvider
 
   setup :verify_on_exit!
 
   describe "list_providers/0" do
     test "returns list of all registered video providers" do
       assert Enum.sort(ProviderRegistry.list_providers()) ==
-               [:custom, :google_meet, :mirotalk, :teams, :zoom]
+               [:custom, :google_meet, :jitsi, :kmeet, :mirotalk, :nextcloud_talk, :teams, :zoom]
 
-      assert ProviderRegistry.provider_count() == 5
+      assert ProviderRegistry.provider_count() == 8
+    end
+  end
+
+  describe "room_creation_budget_ms/1" do
+    test "answers the budget the provider itself declares" do
+      for module <- [
+            GoogleMeetProvider,
+            MiroTalkProvider,
+            NextcloudTalkProvider,
+            TeamsProvider,
+            ZoomProvider
+          ] do
+        assert ProviderRegistry.room_creation_budget_ms(module.provider_type()) ==
+                 module.room_creation_budget_ms()
+      end
+    end
+
+    test "answers nothing to wait for on providers that build their link without a network call" do
+      for type <- [:custom, :jitsi, :kmeet] do
+        assert ProviderRegistry.room_creation_budget_ms(type) == 0
+      end
+    end
+
+    test "answers the largest declared budget without a provider, or for an unknown one" do
+      budgets =
+        Enum.map(ProviderRegistry.list_providers(), &ProviderRegistry.room_creation_budget_ms/1)
+
+      assert ProviderRegistry.room_creation_budget_ms() == Enum.max(budgets)
+      assert ProviderRegistry.room_creation_budget_ms(:unknown) == Enum.max(budgets)
+    end
+
+    test "a provider's own budget can be well below the largest" do
+      assert ProviderRegistry.room_creation_budget_ms(:nextcloud_talk) <
+               ProviderRegistry.room_creation_budget_ms()
     end
   end
 
@@ -80,24 +119,6 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
     end
   end
 
-  describe "valid_provider?/1" do
-    test "returns true for valid video providers" do
-      assert ProviderRegistry.valid_provider?(:mirotalk)
-      assert ProviderRegistry.valid_provider?(:google_meet)
-      assert ProviderRegistry.valid_provider?(:custom)
-      # Teams provider may not be available in all environments
-    end
-
-    test "returns true for :zoom" do
-      assert ProviderRegistry.valid_provider?(:zoom)
-    end
-
-    test "returns false for invalid video providers" do
-      refute ProviderRegistry.valid_provider?(:invalid)
-      refute ProviderRegistry.valid_provider?(:unknown)
-    end
-  end
-
   describe "test_provider_connection/2" do
     test "tests mirotalk connection with valid config" do
       config = %{
@@ -155,6 +176,25 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
       assert Enum.sort(Map.keys(mirotalk.config_schema)) == [:api_key, :base_url]
     end
 
+    test "every provider carries a loadable module, a display name and a config schema" do
+      providers = ProviderRegistry.list_providers_with_metadata()
+
+      assert Enum.sort(Enum.map(providers, & &1.type)) ==
+               [:custom, :google_meet, :jitsi, :kmeet, :mirotalk, :nextcloud_talk, :teams, :zoom]
+
+      # kMeet is the one deliberate exception: it has a fixed host and nothing
+      # for the user to configure, so its config_schema is legitimately empty.
+      zero_config = [:kmeet]
+
+      assert Enum.reject(providers, &Code.ensure_loaded?(&1.module)) == []
+      assert Enum.reject(providers, &(String.length(&1.display_name) > 0)) == []
+
+      assert Enum.reject(
+               providers,
+               &(&1.type in zero_config or map_size(&1.config_schema) > 0)
+             ) == []
+    end
+
     test "includes capabilities metadata for video providers" do
       providers = ProviderRegistry.list_providers_with_metadata()
 
@@ -186,42 +226,14 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
 
   describe "providers_with_capability/1" do
     test "filters providers by specific capability" do
-      # MiroTalk, Google Meet, Teams and Zoom declare screen_sharing; only the
-      # custom provider does not.
+      # MiroTalk, Google Meet, Teams, Zoom, kMeet, Jitsi and Nextcloud Talk
+      # declare screen_sharing; only the custom provider does not.
       assert Enum.sort(ProviderRegistry.providers_with_capability(:screen_sharing)) ==
-               [:google_meet, :mirotalk, :teams, :zoom]
+               [:google_meet, :jitsi, :kmeet, :mirotalk, :nextcloud_talk, :teams, :zoom]
     end
 
     test "returns empty list for non-existent capability" do
       assert ProviderRegistry.providers_with_capability(:nonexistent_feature) == []
-    end
-  end
-
-  describe "recommend_provider/1" do
-    test "ignores the requirements it is given and returns the default" do
-      # Requirement-aware selection is not implemented: the argument is
-      # discarded. Pinning the answer keeps this honest — a membership check
-      # would pass just as happily once the behaviour does change, hiding the
-      # moment this test needs revisiting.
-      requirements = %{
-        participant_count: 10,
-        recording_required: false
-      }
-
-      assert ProviderRegistry.recommend_provider(requirements) == :mirotalk
-      assert ProviderRegistry.recommend_provider(%{participant_count: 500}) == :mirotalk
-    end
-
-    test "returns default provider when no requirements specified" do
-      provider = ProviderRegistry.recommend_provider(%{})
-
-      assert provider == ProviderRegistry.default_provider()
-    end
-
-    test "returns default provider when called without arguments" do
-      provider = ProviderRegistry.recommend_provider()
-
-      assert provider == :mirotalk
     end
   end
 

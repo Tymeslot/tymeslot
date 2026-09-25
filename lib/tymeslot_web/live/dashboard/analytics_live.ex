@@ -62,7 +62,13 @@ defmodule TymeslotWeb.Dashboard.AnalyticsLive do
     end
   end
 
-  defp analytics_allowed?(socket), do: Map.get(socket.assigns, :analytics_allowed, true)
+  # The assign is always set by FeatureAssignsHook, which every dashboard route
+  # runs, so the fallback is only reached if that chain is bypassed. A missing
+  # assign means the entitlement is unknown, and unknown must not read as
+  # allowed — this is the last check in front of the data, with no server-side
+  # gate behind it. Core's own default remains `true`, set in config, so a
+  # self-hosted deployment is unaffected.
+  defp analytics_allowed?(socket), do: Map.get(socket.assigns, :analytics_allowed, false)
 
   @impl Phoenix.LiveView
   def handle_event("set_range", %{"range" => range}, socket) when is_map_key(@ranges, range) do

@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
   @moduletag :meeting_types
 
   alias Tymeslot.Integrations.Calendar.CalendarEntry
+  alias Tymeslot.MeetingTypes.LocationOption
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init
 
   describe "build_form_data/1" do
@@ -101,47 +102,29 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
     end
   end
 
-  describe "get_meeting_mode/1" do
-    test "returns personal for nil" do
-      assert Init.get_meeting_mode(nil) == "personal"
+  describe "get_locations/1" do
+    test "opens a new meeting type on a single in-person location" do
+      assert [location] = Init.get_locations(nil)
+      assert location.kind == "in_person"
+      assert location.position == 0
+      refute location.id in [nil, ""]
     end
 
-    test "returns video when allow_video is true" do
-      assert Init.get_meeting_mode(%{allow_video: true}) == "video"
+    test "returns the meeting type's own locations, in the host's order" do
+      type = %{
+        locations: [
+          %LocationOption{id: "b", kind: "phone", label: "Ring us", details: "+44", position: 1},
+          %LocationOption{id: "a", kind: "in_person", label: "The office", position: 0}
+        ]
+      }
+
+      assert ["The office", "Ring us"] = Enum.map(Init.get_locations(type), & &1.label)
     end
 
-    test "returns personal when allow_video is false" do
-      assert Init.get_meeting_mode(%{allow_video: false}) == "personal"
-    end
+    test "falls back to one video location for a type saved before the list existed" do
+      type = %{locations: [], allow_video: true, video_integration_id: 42}
 
-    test "returns personal when allow_video is not set" do
-      assert Init.get_meeting_mode(%{}) == "personal"
-    end
-  end
-
-  describe "get_video_integration_id/1" do
-    test "returns nil for nil" do
-      assert Init.get_video_integration_id(nil) == nil
-    end
-
-    test "returns nil when video_integration_id is nil" do
-      assert Init.get_video_integration_id(%{video_integration_id: nil}) == nil
-    end
-
-    test "returns integer id directly" do
-      assert Init.get_video_integration_id(%{video_integration_id: 42}) == 42
-    end
-
-    test "parses binary id to integer" do
-      assert Init.get_video_integration_id(%{video_integration_id: "42"}) == 42
-    end
-
-    test "returns nil for non-parseable binary id" do
-      assert Init.get_video_integration_id(%{video_integration_id: "abc"}) == nil
-    end
-
-    test "returns nil when key is missing" do
-      assert Init.get_video_integration_id(%{}) == nil
+      assert [%{kind: "video", video_integration_ids: [42]}] = Init.get_locations(type)
     end
   end
 
@@ -309,6 +292,31 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
 
     test "is false when no integration matches" do
       refute Init.all_selected_read_only?(999, [])
+    end
+  end
+
+  describe "target_calendar_status/3" do
+    setup do
+      calendars =
+        Enum.map(
+          [
+            %{id: "cal-1", name: "Work", selected: true, read_only: false},
+            %{id: "cal-2", name: "Shared (view only)", selected: true, read_only: true}
+          ],
+          &CalendarEntry.normalize/1
+        )
+
+      %{integrations: [%{id: 1, calendar_list: calendars}]}
+    end
+
+    test "reports the stored target's writability", %{integrations: integrations} do
+      assert Init.target_calendar_status(1, "cal-1", integrations) == :ok
+      assert Init.target_calendar_status(1, "cal-2", integrations) == :read_only
+      assert Init.target_calendar_status(1, "cal-gone", integrations) == :missing
+    end
+
+    test "is :ok when no integration matches", %{integrations: integrations} do
+      assert Init.target_calendar_status(999, "cal-2", integrations) == :ok
     end
   end
 end

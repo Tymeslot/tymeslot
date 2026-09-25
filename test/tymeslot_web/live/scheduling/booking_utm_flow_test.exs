@@ -19,9 +19,11 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.BookingTestHelpers
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Meetings.MeetingListQueries
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.Slugs
+  alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
 
@@ -116,7 +118,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
 
     _drain = :sys.get_state(view.pid)
 
-    [meeting] = MeetingListQueries.list_meetings_by_attendee_email("utm-user@example.com")
+    [meeting] = Repo.all_by(MeetingSchema, attendee_email: "utm-user@example.com")
 
     assert meeting.utm_source == "linkedin"
     assert meeting.utm_medium == "social"
@@ -153,7 +155,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
 
     _drain = :sys.get_state(view.pid)
 
-    [meeting] = MeetingListQueries.list_meetings_by_attendee_email("no-utm-user@example.com")
+    [meeting] = Repo.all_by(MeetingSchema, attendee_email: "no-utm-user@example.com")
 
     assert is_nil(meeting.utm_source)
     assert is_nil(meeting.utm_medium)
@@ -191,9 +193,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingUtmFlowTest do
     target_date = Date.add(today, 1)
     date_str = Date.to_string(target_date)
 
-    if target_date.month != today.month || target_date.year != today.year do
-      view |> element("button[phx-click='next_month']") |> render_click()
-    end
+    BookingTestHelpers.show_month(view, target_date)
 
     wait_until(fn ->
       has_element?(view, "button.calendar-day[phx-value-date='#{date_str}']:not([disabled])")

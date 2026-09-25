@@ -25,6 +25,7 @@ defmodule Tymeslot.BookingTestHelpers do
   # made every Rhythm walk raise on the last day of a month: the one day where
   # tomorrow falls outside the range already on screen.
   @next_month "button[phx-click='next_month']"
+  @prev_month "button[phx-click='prev_month']"
   @month_label ".calendar-month-label"
   @next_week "button[phx-click='next_week']"
 
@@ -69,8 +70,25 @@ defmodule Tymeslot.BookingTestHelpers do
     query = URI.encode_query([{"timezone", timezone} | Enum.to_list(query_params)])
     {:ok, view, _html} = live(conn, "/#{profile.username}?#{query}")
 
-    # Select the first meeting type
-    view |> element(@duration_option) |> render_click()
+    walk_to_booking_form(view, timezone)
+  end
+
+  @doc """
+  Walks an already-mounted scheduling view from the overview step through to
+  the booking form, which is what `navigate_to_booking_form/4` does once it has
+  mounted one of its own.
+
+  Public because the flow can restart without a mount to hang off: "Schedule
+  Another Meeting" returns the same LiveView to the overview step in place, and
+  the walk that follows has to start from the view already on screen.
+
+  `duration_slug` names the card to book, defaulting to whichever the overview
+  lists first.
+  """
+  @spec walk_to_booking_form(Phoenix.LiveViewTest.View.t(), String.t(), String.t() | nil) ::
+          Phoenix.LiveViewTest.View.t()
+  def walk_to_booking_form(view, timezone, duration_slug \\ nil) do
+    select_meeting_type(view, duration_slug)
 
     # Navigate to date/time selection
     view |> element(@next_step) |> render_click()
@@ -79,7 +97,7 @@ defmodule Tymeslot.BookingTestHelpers do
     today = timezone |> DateTime.now!() |> DateTime.to_date()
     target_date = Date.add(today, 1)
 
-    advance_calendar_to(view, today, target_date)
+    advance_calendar_to(view, target_date)
 
     wait_until(fn -> has_element?(view, "#{day_selector(target_date)}:not([disabled])") end)
 
@@ -105,34 +123,87 @@ defmodule Tymeslot.BookingTestHelpers do
     view
   end
 
+  # Picking by slug rather than by `element(@duration_option)`: an organiser
+  # offering more than one type renders more than one card, and an ambiguous
+  # selector is refused outright rather than resolved to the first match.
+  defp select_meeting_type(view, nil) do
+    slug =
+      view
+      |> render()
+      |> Floki.parse_document!()
+      |> Floki.attribute(@duration_option, "phx-value-duration")
+      |> List.first() ||
+        flunk("Expected at least one meeting type card on the overview step")
+
+    select_meeting_type(view, slug)
+  end
+
+  defp select_meeting_type(view, duration_slug) do
+    view
+    |> element("#{@duration_option}[phx-value-duration='#{duration_slug}']")
+    |> render_click()
+  end
+
   # Bring `target_date` into the displayed range, driving whichever control the
   # rendered theme actually offers.
-  defp advance_calendar_to(view, today, target_date) do
+  defp advance_calendar_to(view, target_date) do
     wait_until(fn -> has_element?(view, @calendar_day) end)
 
     cond do
-      has_element?(view, @next_month) -> advance_month(view, today, target_date)
+      has_element?(view, @next_month) -> show_month(view, target_date, :next)
       has_element?(view, @next_week) -> advance_week(view, target_date)
       true -> :ok
     end
   end
 
-  # Quill's month grid pads with the neighbouring month's days and disables
-  # them, so a rendered cell is no proof the date is bookable here: the month
-  # itself is what has to move.
-  #
-  # Read the month the calendar is actually showing rather than assuming it
-  # opened on today's. The schedule step opens on the next available day, which
-  # is not always in today's month -- on the last day of a month it is already
-  # showing the next one, and advancing again would leave the target behind and
-  # land on a month the booking window forbids.
-  defp advance_month(view, _today, target_date) do
-    unless showing_month?(view, target_date) do
-      view |> element(@next_month) |> render_click()
+  @doc """
+  Brings `date`'s month onto Quill's month grid, stepping one month towards
+  `direction` (`:next` or `:prev`) only if the grid is not showing it already.
+
+  The only way to move the month in a booking test. The schedule step opens on
+  the first bookable day, so whether the grid still shows today's month depends
+  on the hour and the day of the month the suite happens to run on; see
+  `showing_month?/2` for what goes wrong when the step is computed instead.
+  Two directions because two questions get asked: a walk towards a later date
+  steps forward, and a test about today's own cell steps back to it.
+
+  Asserts the month is on screen afterwards, so an overshoot or a step the
+  wrong way fails here, by name, rather than as a five-second `wait_until`
+  timeout further down.
+  """
+  @spec show_month(Phoenix.LiveViewTest.View.t(), Date.t(), :next | :prev) :: :ok
+  def show_month(view, %Date{} = date, direction \\ :next) when direction in [:next, :prev] do
+    unless showing_month?(view, date) do
+      view |> element(month_arrow(direction)) |> render_click()
     end
+
+    assert showing_month?(view, date),
+           "expected the calendar to show #{Calendar.strftime(date, "%B %Y")} " <>
+             "after at most one step #{direction}"
+
+    :ok
   end
 
-  defp showing_month?(view, %Date{} = date) do
+  defp month_arrow(:next), do: @next_month
+  defp month_arrow(:prev), do: @prev_month
+
+  @doc """
+  Whether the month grid is currently displaying `date`'s month.
+
+  Public because every booking walk needs this question answered, and answering
+  it by arithmetic is wrong. The schedule step opens on the first bookable day,
+  so on the last day of a month, once today's cutoff has passed, the grid is
+  already showing the next month before any navigation happens. A guard written
+  as `if target.month != today.month` then advances a calendar that has moved
+  itself: either the arrow is disabled at the far edge of the booking window and
+  the click raises, or it succeeds and overshoots, leaving the target behind.
+
+  Quill's grid pads with the neighbouring month's days and disables them, so a
+  rendered day cell proves nothing about which month is on screen. The month
+  label does, which is what this reads.
+  """
+  @spec showing_month?(Phoenix.LiveViewTest.View.t(), Date.t()) :: boolean()
+  def showing_month?(view, %Date{} = date) do
     has_element?(
       view,
       @month_label,

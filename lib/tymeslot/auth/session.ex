@@ -1,86 +1,47 @@
 defmodule Tymeslot.Auth.Session do
   @moduledoc """
-  Handles session token creation, storage, and Plug.Conn session management.
+  Sign-in sessions as the domain sees them: the session token and its row,
+  who it belongs to, and revoking it (including disconnecting any live socket
+  still bound to it).
+
+  Carrying the token in the browser (the Plug session and its
+  `live_socket_id`) is the web layer's job; see `TymeslotWeb.UserAuth`.
   """
-  @behaviour Tymeslot.Infrastructure.SessionBehaviour
 
   require Logger
-  alias Phoenix.Component
-  alias Plug.Conn
-  alias Tymeslot.Auth.{UserQueries, UserSessionQueries}
+  alias Tymeslot.Auth.{UserQueries, UserSchema, UserSessionQueries}
   alias Tymeslot.Security.{SecurityLogger, Token}
   alias TymeslotWeb.Endpoint
 
-  @user_token_key :user_token
-
-  @type user_minimal :: %{required(:id) => pos_integer(), optional(atom()) => term()}
-  @type unverified_user_session :: %{
-          required(:id) => pos_integer(),
-          required(:email) => String.t(),
-          required(:timestamp) => integer()
-        }
+  @session_ttl_hours 24
 
   @doc """
-  Creates a session for the given user, stores the session token in the database.
-  For Plug.Conn: also stores in the connection session.
-  For LiveView sockets: stores in socket assigns.
-  Returns {:ok, conn_or_socket, token} on success, or {:error, reason, details} on failure.
-  """
-  @spec create_session(Conn.t() | Phoenix.LiveView.Socket.t(), user_minimal()) ::
-          {:ok, Conn.t() | Phoenix.LiveView.Socket.t(), String.t()} | {:error, atom(), any()}
-  def create_session(conn_or_socket, user) do
-    token = Token.generate_session_token()
-    # The socket's disconnect topic is derived from the token *hash*, so it can
-    # be reconstructed at revocation time (which only has the stored hash).
-    # This hash is baked into `live_socket_id` below and stored, unrecomputed,
-    # in the signed cookie for the session's entire life — see the caveat on
-    # `live_socket_topic/1` for the resulting pre-deploy live-socket gap.
-    token_hash = Token.hash_token(token)
-    expires_at = DateTime.truncate(DateTime.add(DateTime.utc_now(), 24, :hour), :second)
+  Creates a session for `user_id`: stores a fresh token's row, records the
+  sign-in as the user's latest activity, audits it, and returns the token.
 
-    case UserSessionQueries.create_session(user.id, token, expires_at) do
+  ## Options
+    - `:replacing` - the token of a session the same browser already
+      carries. It is revoked first (row deleted, live socket disconnected), so
+      signing in again never leaves the previous token usable until it
+      expires.
+    - `:ip`, `:user_agent` - the client, for the audit entry
+  """
+  @spec create_session(pos_integer(), keyword()) ::
+          {:ok, String.t()} | {:error, :session_creation_failed, String.t()}
+  def create_session(user_id, opts \\ []) do
+    revoke_token(opts[:replacing])
+
+    token = Token.generate_session_token()
+
+    expires_at =
+      DateTime.truncate(DateTime.add(DateTime.utc_now(), @session_ttl_hours, :hour), :second)
+
+    case UserSessionQueries.create_session(user_id, token, expires_at) do
       {:ok, _session} ->
         # Record login as the user's most recent activity (inactivity tracking).
-        UserQueries.touch_last_active_at(user.id)
-
-        result =
-          case conn_or_socket do
-            %Conn{} = conn ->
-              updated_conn =
-                conn
-                |> Conn.put_session(@user_token_key, token)
-                |> Conn.put_session(:live_socket_id, live_socket_topic(token_hash))
-                |> Conn.configure_session(renew: true)
-
-              # Log session creation for Plug.Conn
-              SecurityLogger.log_session_event("created", user.id, token, %{
-                ip_address: get_peer_data(conn)[:address],
-                user_agent: List.first(Conn.get_req_header(conn, "user-agent"))
-              })
-
-              {:ok, updated_conn, token}
-
-            %Phoenix.LiveView.Socket{} = socket ->
-              updated_socket = %{
-                socket
-                | assigns:
-                    Map.merge(socket.assigns, %{
-                      user_token: token,
-                      current_user: user,
-                      live_socket_id: live_socket_topic(token_hash)
-                    })
-              }
-
-              # Log session creation for LiveView socket
-              SecurityLogger.log_session_event("created", user.id, token, %{
-                ip_address: socket.assigns[:client_ip] || "unknown",
-                user_agent: "liveview"
-              })
-
-              {:ok, updated_socket, token}
-          end
-
-        result
+        UserQueries.touch_last_active_at(user_id)
+        SecurityLogger.log_session_event("created", user_id, token, audit_details(opts))
+        {:ok, token}
 
       {:error, changeset} ->
         Logger.error("Failed to create session", error: inspect(changeset))
@@ -89,33 +50,50 @@ defmodule Tymeslot.Auth.Session do
   end
 
   @doc """
-  Deletes the session token from the Plug.Conn session.
-  Returns the updated conn.
+  The `live_socket_id` topic a browser carrying `token` joins, so revoking the
+  session can force its socket closed.
+
+  It is derived from the token *hash*, so it can be reconstructed at
+  revocation time, which only has the stored hash. The web layer writes it
+  into the signed session cookie once, when the session is created, and never
+  recomputes it; see the caveat on `live_socket_topic/1` for the resulting
+  pre-deploy live-socket gap.
   """
-  @spec delete_session(Conn.t()) :: Conn.t()
-  def delete_session(conn) do
-    user_token = Conn.get_session(conn, @user_token_key)
+  @spec live_socket_id(String.t()) :: String.t()
+  def live_socket_id(token) when is_binary(token),
+    do: token |> Token.hash_token() |> live_socket_topic()
 
-    if user_token do
-      # Log session deletion before removing it
-      case UserSessionQueries.get_user_by_session_token(user_token) do
-        %{id: user_id} ->
-          SecurityLogger.log_session_event("deleted", user_id, user_token, %{
-            ip_address: get_peer_data(conn)[:address],
-            user_agent: List.first(Conn.get_req_header(conn, "user-agent"))
-          })
+  @doc """
+  The user a session token belongs to, or `nil` when it no longer maps to a
+  live session row (expired, revoked, or never valid).
+  """
+  @spec get_user_by_token(String.t() | nil) :: UserSchema.t() | nil
+  def get_user_by_token(token) when is_binary(token),
+    do: UserSessionQueries.get_user_by_session_token(token)
 
-        _other ->
-          nil
-      end
+  def get_user_by_token(_token), do: nil
 
-      UserSessionQueries.delete_session_by_token(user_token)
-      disconnect_session_hash(Token.hash_token(user_token))
+  @doc """
+  Ends the session `token` names: audits it, deletes its row and disconnects
+  any live socket bound to it. A `nil` token is a no-op.
+
+  `opts` carries the client (`:ip`, `:user_agent`) for the audit entry.
+  """
+  @spec delete_session(String.t() | nil, keyword()) :: :ok
+  def delete_session(token, opts \\ [])
+
+  def delete_session(nil, _opts), do: :ok
+
+  def delete_session(token, opts) when is_binary(token) do
+    case UserSessionQueries.get_user_by_session_token(token) do
+      %{id: user_id} ->
+        SecurityLogger.log_session_event("deleted", user_id, token, audit_details(opts))
+
+      _other ->
+        nil
     end
 
-    conn
-    |> Conn.configure_session(drop: true)
-    |> Conn.clear_session()
+    revoke_token(token)
   end
 
   @doc """
@@ -150,75 +128,12 @@ defmodule Tymeslot.Auth.Session do
     :ok
   end
 
-  @doc """
-  Retrieves the current user ID from the session token in Plug.Conn session.
-  Returns the user ID or nil if not found or invalid.
-  """
-  @spec get_current_user_id(Conn.t()) :: integer() | nil
-  def get_current_user_id(conn) do
-    with token when is_binary(token) <- Conn.get_session(conn, @user_token_key),
-         %{id: id} <- UserSessionQueries.get_user_by_session_token(token) do
-      id
-    else
-      _other -> nil
-    end
-  end
+  # Deletes one session row and disconnects any live socket bound to it.
+  defp revoke_token(nil), do: :ok
 
-  @doc """
-  Get unverified user from session data.
-  Used during email verification flow to track incomplete registrations.
-  """
-  @spec get_unverified_user_from_session(map()) :: unverified_user_session() | nil
-  def get_unverified_user_from_session(session) do
-    # Check if session has unverified user data and it's not expired (30 min)
-    with user_id when is_integer(user_id) <- session["unverified_user_id"],
-         email when is_binary(email) <- session["unverified_user_email"],
-         timestamp when is_integer(timestamp) <- session["unverified_session_timestamp"],
-         true <- session_valid?(timestamp) do
-      %{
-        id: user_id,
-        email: email,
-        timestamp: timestamp
-      }
-    else
-      _other -> nil
-    end
-  end
-
-  @doc """
-  Check if unverified session is still valid (30 minutes).
-  """
-  @spec session_valid?(integer()) :: boolean()
-  def session_valid?(timestamp) do
-    current_time = DateTime.to_unix(DateTime.utc_now())
-    # 30 minutes = 1800 seconds
-    current_time - timestamp < 1800
-  end
-
-  @doc """
-  Populate unverified user data in socket assigns if in verify_email state.
-  """
-  @spec populate_unverified_user_data(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def populate_unverified_user_data(socket) do
-    if socket.assigns.current_state == :verify_email && socket.assigns.unverified_user do
-      Component.assign(socket, :form_data, %{email: socket.assigns.unverified_user.email})
-    else
-      socket
-    end
-  end
-
-  @doc """
-  Get verification email from either unverified session or form_data.
-  """
-  @spec get_verification_email(Phoenix.LiveView.Socket.t()) :: String.t() | nil
-  def get_verification_email(socket) do
-    # First check unverified user from session
-    if socket.assigns[:unverified_user] do
-      socket.assigns.unverified_user.email
-    else
-      # Fall back to form_data (signup flow)
-      get_in(socket.assigns, [:form_data, :email])
-    end
+  defp revoke_token(token) when is_binary(token) do
+    UserSessionQueries.delete_session_by_token(token)
+    disconnect_session_hash(Token.hash_token(token))
   end
 
   # The `live_socket_id` topic a connected socket is subscribed to, derived from
@@ -226,35 +141,16 @@ defmodule Tymeslot.Auth.Session do
   # reconstruct the same topic. Broadcasting "disconnect" here closes the socket.
   #
   # DEPLOY-WINDOW CAVEAT: `live_socket_id` is written into the signed session
-  # cookie once, at `create_session/2`, and is never recomputed for the life of
+  # cookie once, at sign-in, and is never recomputed for the life of
   # that cookie. Sessions issued *before* this hash-based topic shipped carry a
   # `live_socket_id` computed from the old (plaintext-derived) scheme, so
   # broadcasting to the new hash topic will not reach their sockets — a
   # password/email change or logout won't force-close them. Those stale
   # sessions still get cleared correctly on their *next* HTTP request once
-  # their `user_sessions` row is revoked (`get_current_user_id/1` will fail to
+  # their `user_sessions` row is revoked (`get_user_by_token/1` will fail to
   # resolve the deleted row), so the gap is a live-socket-disconnect miss only,
   # bounded by the 24h session validity window, not a permanent security hole.
   defp live_socket_topic(token_hash), do: "users_sessions:#{Base.url_encode64(token_hash)}"
 
-  # Helper function to safely get peer data
-  defp get_peer_data(conn) do
-    peer_data = Conn.get_peer_data(conn)
-
-    # Dialyzer tells us peer_data always has :address field with tuple value
-    address =
-      case peer_data.address do
-        addr when is_tuple(addr) and tuple_size(addr) in [4, 8] ->
-          to_string(:inet.ntoa(addr))
-
-        _other ->
-          "unknown"
-      end
-
-    %{address: address}
-  rescue
-    error ->
-      Logger.error("Unexpected error getting peer data", error: inspect(error))
-      %{address: "unknown"}
-  end
+  defp audit_details(opts), do: %{ip_address: opts[:ip], user_agent: opts[:user_agent]}
 end

@@ -79,6 +79,34 @@ defmodule TymeslotWeb.Hooks.EmbedAuthCompositionTest do
                live(conn)
     end
 
+    test "connected mount rejection forwards the booking page's locale to the notice",
+         %{conn: conn} do
+      user = insert(:user)
+
+      insert(:profile,
+        user: user,
+        username: "strictlocale",
+        allowed_embed_domains: ["trusted.com"],
+        booking_theme: "1"
+      )
+
+      insert(:meeting_type, user: user, is_active: true)
+
+      conn =
+        conn
+        |> put_req_header("referer", "https://attacker.com/evil-page")
+        |> get(~p"/strictlocale?embed=1&locale=de")
+
+      assert {:error, {:redirect, %{to: to}}} = live(conn)
+
+      assert %URI{path: "/embed-unavailable", query: query} = URI.parse(to)
+
+      assert URI.decode_query(query) == %{
+               "parent-origin" => "https://attacker.com",
+               "locale" => "de"
+             }
+    end
+
     test "connected mount succeeds when the embed request Referer is in the profile's allowlist",
          %{conn: conn} do
       user = insert(:user)

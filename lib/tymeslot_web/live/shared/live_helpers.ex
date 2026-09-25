@@ -5,29 +5,8 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
   """
   import Phoenix.Component
 
-  alias Tymeslot.Auth.Authentication
   alias Tymeslot.Security.Security
   alias Tymeslot.Timezones
-
-  # ========== USER HELPERS ==========
-
-  @doc """
-  Assigns the current user to the socket based on session token.
-
-  If a valid user_token exists in the session, fetches and assigns the user.
-  Otherwise, assigns nil to current_user.
-  """
-  @spec assign_current_user(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
-  def assign_current_user(socket, session) do
-    case session do
-      %{"user_token" => user_token} when is_binary(user_token) ->
-        user = Authentication.get_user_by_session_token(user_token)
-        assign(socket, :current_user, user)
-
-      _other ->
-        assign(socket, :current_user, nil)
-    end
-  end
 
   # ========== TIMEZONE HELPERS ==========
 

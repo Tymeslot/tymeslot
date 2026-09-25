@@ -16,13 +16,13 @@ defmodule Tymeslot.Auth.AuthenticationLockoutAuditTest do
   import Tymeslot.Factory
 
   @password "ValidPass123!"
-  @opts [ip_address: "203.0.113.7", user_agent: "curl/8.0"]
+  @opts [ip: "203.0.113.7", user_agent: "curl/8.0"]
 
   # The lockout tracker lives in ETS and outlives the sandbox transaction, so
   # each test clears its own account's attempts on the way out.
   setup do
     user = insert(:user, password_hash: Password.hash_password(@password))
-    on_exit(fn -> AccountLockout.clear_failed_attempts(user.email) end)
+    on_exit(fn -> AccountLockout.clear_all() end)
     {:ok, user: user}
   end
 
@@ -33,7 +33,9 @@ defmodule Tymeslot.Auth.AuthenticationLockoutAuditTest do
   # Nine recorded failures leave the account one short of the throttle
   # threshold, so the next real failed login is the attempt that crosses it.
   defp prime_failures(email, count) do
-    Enum.each(1..count, fn _n -> RateLimiter.record_auth_attempt(email, false) end)
+    Enum.each(1..count, fn _n ->
+      RateLimiter.record_auth_attempt(email, @opts[:ip], false)
+    end)
   end
 
   describe "account lockout auditing" do

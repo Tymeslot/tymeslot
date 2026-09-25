@@ -10,8 +10,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
     reference, and a link to the Stripe-hosted receipt. Rendered in the
     booker's locale.
   - the **organiser summary** — gross, platform fee, and net payout. Rendered
-    in the instance's default locale: `AppointmentConfirmation.organizer_locale/1`
-    returns it unconditionally rather than reading anything off the organiser.
+    in the organiser's locale (`RecipientLocale.organizer_locale/1`).
 
   Both are built from the `:booking_payment` snapshot embedded in
   `appointment_details`, and both builders return `nil` for a free booking or a
@@ -26,7 +25,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   should call it.
   """
 
-  alias Tymeslot.Emails.Shared.{Formatting, Sanitise, Styles, Text}
+  alias Tymeslot.Emails.Shared.{Formatting, Sanitise, Stack, Styles, Text}
   alias Tymeslot.MeetingPayments
 
   require Logger
@@ -137,24 +136,26 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
 
     """
     #{Text.section_title(title)}
-    <mj-section
-      background-color="#{Styles.canvas_soft()}"
-      border-radius="#{Styles.card_radius()}"
-      padding="20px 26px"
-      css-class="mobile-card email-canvas-soft"
-    >
-      <mj-column>
-        <mj-text
-          font-size="15px"
-          color="#{Styles.text_color(:primary)}"
-          line-height="1.7"
-          align="center"
-        >
-          #{body_lines}
-        </mj-text>
-        #{receipt_button(receipt)}
-      </mj-column>
-    </mj-section>
+    #{Stack.spaced("""
+      <mj-section
+        background-color="#{Styles.canvas_soft()}"
+        border-radius="#{Styles.card_radius()}"
+        padding="20px 26px"
+        css-class="mobile-card email-canvas-soft"
+      >
+        <mj-column>
+          <mj-text
+            font-size="15px"
+            color="#{Styles.text_color(:primary)}"
+            line-height="1.7"
+            align="center"
+          >
+            #{body_lines}
+          </mj-text>
+          #{receipt_button(receipt)}
+        </mj-column>
+      </mj-section>
+    """)}
     """
   end
 
@@ -203,32 +204,34 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
 
     """
     #{Text.section_title(title)}
-    <mj-section
-      background-color="#{Styles.canvas_soft()}"
-      border-radius="#{Styles.card_radius()}"
-      padding="20px 26px"
-      css-class="mobile-card email-canvas-soft"
-    >
-      <mj-column>
-        <mj-text
-          font-size="15px"
-          color="#{Styles.text_color(:primary)}"
-          line-height="1.7"
-          align="left"
-        >
-          #{body_lines}
-        </mj-text>
-        <mj-text
-          font-size="13px"
-          color="#{Styles.text_color(:muted)}"
-          line-height="1.55"
-          align="left"
-          padding-top="12px"
-        >
-          #{dgettext("emails", "Funds will arrive on your usual Stripe payout schedule.")}
-        </mj-text>
-      </mj-column>
-    </mj-section>
+    #{Stack.spaced("""
+      <mj-section
+        background-color="#{Styles.canvas_soft()}"
+        border-radius="#{Styles.card_radius()}"
+        padding="20px 26px"
+        css-class="mobile-card email-canvas-soft"
+      >
+        <mj-column>
+          <mj-text
+            font-size="15px"
+            color="#{Styles.text_color(:primary)}"
+            line-height="1.7"
+            align="left"
+          >
+            #{body_lines}
+          </mj-text>
+          <mj-text
+            font-size="13px"
+            color="#{Styles.text_color(:muted)}"
+            line-height="1.55"
+            align="left"
+            padding-top="12px"
+          >
+            #{dgettext("emails", "Funds will arrive on your usual Stripe payout schedule.")}
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    """)}
     """
   end
 

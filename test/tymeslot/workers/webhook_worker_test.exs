@@ -64,6 +64,59 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
     end
   end
 
+  describe "perform/1 - rescued jobs" do
+    # A job the Oban lifeline re-runs after its post went out must not post
+    # again; the Mox expectation fails the test on a second request.
+    test "posts once across a rescue, carrying the job id as the delivery id" do
+      meeting = insert(:meeting)
+      webhook = insert(:webhook)
+
+      job =
+        persisted_job(WebhookWorker, %{
+          "webhook_id" => webhook.id,
+          "event_type" => "meeting.created",
+          "meeting_id" => meeting.id
+        })
+
+      expected_id = Integer.to_string(job.id)
+
+      expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, headers, _opts ->
+        assert {"X-Tymeslot-Delivery-Id", ^expected_id} =
+                 List.keyfind(headers, "X-Tymeslot-Delivery-Id", 0)
+
+        {:ok, %Req.Response{status: 200, body: "OK"}}
+      end)
+
+      assert :ok = WebhookWorker.perform(job)
+      assert :ok = WebhookWorker.perform(job)
+    end
+
+    test "a retry after a failed post sends the same delivery id again" do
+      meeting = insert(:meeting)
+      webhook = insert(:webhook)
+      test_pid = self()
+
+      job =
+        persisted_job(WebhookWorker, %{
+          "webhook_id" => webhook.id,
+          "event_type" => "meeting.created",
+          "meeting_id" => meeting.id
+        })
+
+      expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, headers, _opts ->
+        send(test_pid, {:delivery_id, List.keyfind(headers, "X-Tymeslot-Delivery-Id", 0)})
+        {:ok, %Req.Response{status: 503, body: "busy"}}
+      end)
+
+      assert {:error, {:http_error, 503}} = WebhookWorker.perform(job)
+      assert {:error, {:http_error, 503}} = WebhookWorker.perform(%{job | attempt: 2})
+
+      expected = {"X-Tymeslot-Delivery-Id", Integer.to_string(job.id)}
+      assert_received {:delivery_id, ^expected}
+      assert_received {:delivery_id, ^expected}
+    end
+  end
+
   describe "perform/1 - successful delivery" do
     test "delivers webhook successfully and records the outcome" do
       meeting = insert(:meeting)

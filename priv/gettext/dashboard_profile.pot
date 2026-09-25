@@ -273,3 +273,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "your booking page and every event link on it"
 msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "This username is already taken"
+msgstr ""
+
+#: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
+#, elixir-autogen, elixir-format
+msgid "This username is reserved"
+msgstr ""

@@ -87,4 +87,33 @@ defmodule Tymeslot.Meetings.CalendarEventLinkTest do
              )
     end
   end
+
+  describe "reject_mirrors/2" do
+    test "drops only the events mirroring the given meeting" do
+      meeting = %{provider_event_id: "evt-1", uid: "tymeslot-generated@tymeslot.com"}
+
+      events = [
+        %{provider_event_id: nil, uid: "evt-1", summary: "the meeting itself, via Google"},
+        %{provider_event_id: nil, uid: "tymeslot-generated@tymeslot.com", summary: "via CalDAV"},
+        %{provider_event_id: nil, uid: "unrelated@example.com", summary: "someone else's"}
+      ]
+
+      assert CalendarEventLink.reject_mirrors(events, meeting) == [
+               %{provider_event_id: nil, uid: "unrelated@example.com", summary: "someone else's"}
+             ]
+    end
+
+    test "keeps everything when there is nothing to exclude" do
+      events = [%{provider_event_id: "evt-1", uid: "evt-1@google.com"}]
+
+      assert CalendarEventLink.reject_mirrors(events, nil) == events
+    end
+
+    test "keeps everything for a meeting carrying no usable identifier" do
+      events = [%{provider_event_id: "evt-1", uid: "evt-1@google.com"}]
+
+      assert CalendarEventLink.reject_mirrors(events, %{provider_event_id: nil, uid: "  "}) ==
+               events
+    end
+  end
 end

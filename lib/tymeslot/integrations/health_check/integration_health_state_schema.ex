@@ -55,7 +55,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
   # runtime-derived writer (`Monitor.put_state/3`) writes through
   # `IntegrationHealthStateQueries.update_fields/3`, a raw `update_all` that
   # never builds a changeset, so this inclusion check only binds the seed
-  # (`get_or_init/3`) and test-only (`upsert/3`) callers; the
+  # (`get_or_init/3`) caller; the
   # `status_must_be_known` database constraint is what closes the value set
   # for every writer.
   @valid_error_classes ~w(transient hard)
@@ -80,34 +80,6 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
       :notification_sent_at
     ])
     |> validate_required([:integration_type, :integration_id, :user_id, :status])
-    |> validate_inclusion(:status, HealthStatus.strings())
-    |> validate_inclusion(:last_error_class, @valid_error_classes)
-    |> unique_constraint([:integration_type, :integration_id])
-  end
-
-  @doc """
-  Changeset for upsert operations (conflict updates).
-  Does not require `user_id` or `status` since only specific fields are replaced.
-  """
-  @spec upsert_changeset(t(), map()) :: Ecto.Changeset.t()
-  def upsert_changeset(struct, attrs) do
-    struct
-    |> cast(attrs, [
-      :integration_type,
-      :integration_id,
-      :user_id,
-      :status,
-      :failures,
-      :consecutive_hard_failures,
-      :consecutive_sync_failures,
-      :successes,
-      :backoff_ms,
-      :last_check_at,
-      :last_error_class,
-      :became_unhealthy_at,
-      :notification_sent_at
-    ])
-    |> validate_required([:integration_type, :integration_id])
     |> validate_inclusion(:status, HealthStatus.strings())
     |> validate_inclusion(:last_error_class, @valid_error_classes)
     |> unique_constraint([:integration_type, :integration_id])

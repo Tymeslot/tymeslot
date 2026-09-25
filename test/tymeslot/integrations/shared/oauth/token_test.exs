@@ -3,6 +3,8 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenTest do
   use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
+  import Tymeslot.Test.ClockHelpers
+
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Common.OAuth.Token
@@ -21,6 +23,34 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenTest do
     test "returns false if token expires within buffer" do
       expires_at = DateTime.add(DateTime.utc_now(), 200, :second)
       refute Token.valid?(%{token_expires_at: expires_at}, 300)
+    end
+  end
+
+  # The refresh buffer is what every provider call funnels through, and its
+  # edge is a second wide, so it can only be pinned against a clock that does
+  # not move between computing the expiry and reading "now".
+  describe "valid?/2 at the buffer boundary" do
+    setup do
+      now = ~U[2026-09-20 12:00:00Z]
+      freeze_clock(now)
+      {:ok, now: now}
+    end
+
+    test "a token expiring one second past the buffer is still valid", %{now: now} do
+      assert Token.valid?(%{token_expires_at: DateTime.add(now, 301, :second)}, 300)
+    end
+
+    test "a token expiring exactly on the buffer is not", %{now: now} do
+      refute Token.valid?(%{token_expires_at: DateTime.add(now, 300, :second)}, 300)
+    end
+
+    test "a token expiring one second inside the buffer is not", %{now: now} do
+      refute Token.valid?(%{token_expires_at: DateTime.add(now, 299, :second)}, 300)
+    end
+
+    test "the documented default buffer is five minutes", %{now: now} do
+      assert Token.valid?(%{token_expires_at: DateTime.add(now, 301, :second)})
+      refute Token.valid?(%{token_expires_at: DateTime.add(now, 300, :second)})
     end
   end
 

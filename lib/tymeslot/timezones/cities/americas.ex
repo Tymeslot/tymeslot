@@ -35,7 +35,10 @@ defmodule Tymeslot.Timezones.Cities.Americas do
       {"America/Jamaica", "Kingston", "Jamaica", "JM"},
       {"America/Port_of_Spain", "Port of Spain", "Trinidad and Tobago", "TT"},
       {"America/Puerto_Rico", "San Juan", "Puerto Rico", "PR"},
+      {"America/Guadeloupe", "Pointe-a-Pitre", "Guadeloupe", "GP"},
+      {"America/Martinique", "Fort-de-France", "Martinique", "MQ"},
       # South America
+      {"America/Cayenne", "Cayenne", "French Guiana", "GF"},
       {"America/Bogota", "Bogota", "Colombia", "CO"},
       {"America/Lima", "Lima", "Peru", "PE"},
       {"America/Caracas", "Caracas", "Venezuela", "VE"},

@@ -10,7 +10,9 @@ defmodule Tymeslot.Integrations.CalendarTest do
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.ColourWriteBackWorker
+  alias Tymeslot.Workers.SyncIcsCalendarWorker
 
   setup :verify_on_exit!
 
@@ -103,13 +105,25 @@ defmodule Tymeslot.Integrations.CalendarTest do
     end
 
     test "falls back to Operations when configured module does not exist" do
-      # Set to a non-existent module
       Application.put_env(:tymeslot, :calendar_module, NonExistentModule)
 
-      # We don't need to mock Operations because we just want to see if it's called
-      # If it falls back to Operations, it will try to call Operations.get_event.
-      # Since no integrations are set up in this test context, it should return an error.
-      assert {:error, _reason} = CalendarEvents.get_event("some-uid")
+      user = insert(:user)
+      insert(:calendar_integration, user: user, provider: "google", is_active: true)
+
+      # Only the real Operations path reaches the provider API; calling the
+      # configured module instead would raise `UndefinedFunctionError`.
+      expect(GoogleCalendarAPIMock, :list_primary_events, fn _int, _start, _end ->
+        {:ok, [%{"id" => "fallback-event", "summary" => "Fallback Event"}]}
+      end)
+
+      assert {:ok, [event]} =
+               CalendarEvents.get_events_for_range_fresh(
+                 user.id,
+                 ~D[2026-01-05],
+                 ~D[2026-01-06]
+               )
+
+      assert event.uid == "fallback-event"
     end
   end
 
@@ -286,7 +300,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
     end
   end
 
-  describe "confirmed_booking_calendar/1" do
+  describe "booking_target/1" do
     test "returns the entry matching default_booking_calendar_id" do
       calendars =
         Enum.map(
@@ -296,7 +310,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
 
       integration = %{calendar_list: calendars, default_booking_calendar_id: "cal-2"}
 
-      assert %{id: "cal-2"} = Calendar.confirmed_booking_calendar(integration)
+      assert {:ok, %{id: "cal-2"}} = Calendar.booking_target(integration)
     end
 
     test "falls back to the provider-primary entry when no id is set" do
@@ -308,26 +322,26 @@ defmodule Tymeslot.Integrations.CalendarTest do
 
       integration = %{calendar_list: calendars, default_booking_calendar_id: nil}
 
-      assert %{id: "cal-2"} = Calendar.confirmed_booking_calendar(integration)
+      assert {:ok, %{id: "cal-2"}} = Calendar.booking_target(integration)
     end
 
-    test "returns nil rather than guessing the first calendar" do
+    test "returns :none rather than guessing the first calendar" do
       calendars = Enum.map([%{id: "cal-1"}, %{id: "cal-2"}], &CalendarEntry.normalize/1)
       integration = %{calendar_list: calendars, default_booking_calendar_id: nil}
 
-      assert Calendar.confirmed_booking_calendar(integration) == nil
+      assert Calendar.booking_target(integration) == :none
     end
 
-    test "does not confirm a booking id that now matches a read-only entry" do
+    test "tags a booking id that now matches a read-only entry" do
       calendars =
         Enum.map(
-          [%{id: "cal-1", read_only: true}],
+          [%{id: "cal-1", read_only: true}, %{id: "cal-2", primary: true}],
           &CalendarEntry.normalize/1
         )
 
       integration = %{calendar_list: calendars, default_booking_calendar_id: "cal-1"}
 
-      assert Calendar.confirmed_booking_calendar(integration) == nil
+      assert {:read_only, %{id: "cal-1"}} = Calendar.booking_target(integration)
     end
   end
 
@@ -419,6 +433,78 @@ defmodule Tymeslot.Integrations.CalendarTest do
           "colour" => "blueberry"
         }
       )
+    end
+  end
+
+  describe "refresh_integration/1" do
+    defp insert_subscription(user) do
+      insert(:calendar_integration,
+        user: user,
+        provider: "ics_url",
+        base_url: "https://feeds.example.com",
+        username_encrypted: nil,
+        password_encrypted: nil,
+        subscription_url_encrypted: Encryption.encrypt("https://feeds.example.com/feed.ics")
+      )
+    end
+
+    test "a subscription is refreshed by enqueueing a feed sync, not by discovery" do
+      user = insert(:user)
+      subscription = insert_subscription(user)
+
+      assert {:ok, :feed_sync_enqueued} = Calendar.refresh_integration(subscription)
+
+      assert_enqueued(
+        worker: SyncIcsCalendarWorker,
+        args: %{"calendar_integration_id" => subscription.id}
+      )
+    end
+
+    test "refreshing a subscription twice queues one sync and succeeds both times" do
+      user = insert(:user)
+      subscription = insert_subscription(user)
+
+      assert {:ok, :feed_sync_enqueued} = Calendar.refresh_integration(subscription)
+      assert {:ok, :feed_sync_enqueued} = Calendar.refresh_integration(subscription)
+
+      assert [_one] = all_enqueued(worker: SyncIcsCalendarWorker)
+    end
+
+    test "any other provider re-runs discovery and persists the discovered list" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, provider: "google")
+
+      expect(GoogleCalendarAPIMock, :list_calendars, fn _integration ->
+        {:ok, [%{"id" => "rediscovered", "summary" => "Rediscovered"}]}
+      end)
+
+      assert {:ok, :calendars_rediscovered} = Calendar.refresh_integration(integration)
+
+      refute_enqueued(worker: SyncIcsCalendarWorker)
+      {:ok, reloaded} = Calendar.get_integration(integration.id, user.id)
+      assert [%CalendarEntry{id: "rediscovered"}] = reloaded.calendar_list
+    end
+
+    test "an Exchange mailbox takes discovery, never the feed worker" do
+      user = insert(:user)
+
+      exchange =
+        insert(:calendar_integration,
+          user: user,
+          provider: "exchange",
+          base_url: "https://exchange.example.com/EWS/Exchange.asmx"
+        )
+
+      refute match?({:ok, :feed_sync_enqueued}, Calendar.refresh_integration(exchange))
+      refute_enqueued(worker: SyncIcsCalendarWorker)
+    end
+
+    test "an integration deleted since it was loaded returns the discovery path's not-found error" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, provider: "google")
+      Repo.delete!(integration)
+
+      assert {:error, :not_found} = Calendar.refresh_integration(integration)
     end
   end
 end

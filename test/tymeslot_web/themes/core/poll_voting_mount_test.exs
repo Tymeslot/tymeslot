@@ -82,9 +82,14 @@ defmodule TymeslotWeb.Themes.Core.PollVotingMountTest do
       poll = insert(:poll, user: user)
       insert(:poll_time_slot, poll: poll)
 
-      {:ok, _view, html} = live(conn, poll_path(profile.username, poll.token))
+      {:ok, view, html} = live(conn, poll_path(profile.username, poll.token))
 
       assert html =~ "connected a calendar"
+
+      # The notice belongs to the theme, in the host's own branding, not to the
+      # dispatcher's last-resort crash card.
+      assert has_element?(view, "[data-testid='readiness-notice']")
+      refute html =~ "Theme Error"
     end
   end
 

@@ -126,13 +126,67 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPickerTest do
       assert CalendarPicker.derive_event_calendar_id(%{}, nil) == nil
     end
 
-    test "derives Google calendar ID from organizer email" do
+    test "derives the calendar a synced event was tagged with" do
       event = %{
         provider_metadata: %{"organizer" => %{"email" => "meetings@gmail.com"}},
-        provider_event_id: nil
+        provider_event_id: "google-event-1",
+        provider_calendar_id: "meetings@gmail.com"
       }
 
       assert CalendarPicker.derive_event_calendar_id(event, @integration) == "meetings@gmail.com"
+    end
+
+    test "derives a Google invitation's calendar, not the organiser's address" do
+      # Someone else organised the meeting; it sits on the secondary calendar.
+      event = %{
+        provider_metadata: %{"organizer" => %{"email" => "someone@example.com"}},
+        provider_event_id: "google-event-2",
+        provider_calendar_id: "meetings@gmail.com"
+      }
+
+      assert CalendarPicker.derive_event_calendar_id(event, @integration) == "meetings@gmail.com"
+    end
+
+    test "derives an Outlook event's calendar despite the organiser's address shape" do
+      integration = %{
+        id: 3,
+        provider: :outlook,
+        default_booking_calendar_id: nil,
+        calendar_list: [
+          %CalendarEntry{id: "outlook-default", selected: true, primary: true, name: "Calendar"},
+          %CalendarEntry{id: "outlook-team", selected: true, primary: false, name: "Team"}
+        ]
+      }
+
+      event = %{
+        provider_metadata: %{
+          "organizer" => %{"emailAddress" => %{"address" => "me@example.com"}}
+        },
+        provider_event_id: "AAMkAG-event",
+        provider_calendar_id: "outlook-team"
+      }
+
+      assert CalendarPicker.derive_event_calendar_id(event, integration) == "outlook-team"
+    end
+
+    test "derives a CalDAV event's collection even when it carries an organiser" do
+      integration = %{
+        id: 1,
+        provider: :caldav,
+        calendar_list: [
+          %CalendarEntry{id: "/caldav/work/", path: "/caldav/work/", selected: true},
+          %CalendarEntry{id: "/caldav/personal/", path: "/caldav/personal/", selected: true}
+        ],
+        default_booking_calendar_id: "/caldav/work/"
+      }
+
+      event = %{
+        provider_metadata: %{"organizer" => %{"email" => "me@example.com"}},
+        provider_event_id: "/caldav/personal/booking-123.ics",
+        provider_calendar_id: "/caldav/work/"
+      }
+
+      assert CalendarPicker.derive_event_calendar_id(event, integration) == "/caldav/personal/"
     end
 
     test "derives CalDAV calendar ID from provider_event_id path" do

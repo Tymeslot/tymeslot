@@ -15,6 +15,7 @@ defmodule Tymeslot.Meetings.MeetingState do
 
   import Ecto.Query, warn: false
 
+  alias Tymeslot.Clock
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
   @active_statuses ["confirmed", "pending", "awaiting_approval", "reschedule_requested"]
@@ -26,6 +27,10 @@ defmodule Tymeslot.Meetings.MeetingState do
   @occupying_statuses ["confirmed", "pending", "awaiting_payment", "awaiting_approval"]
 
   @awaiting_approval "awaiting_approval"
+
+  # Statuses a booking is released in without taking place: cancelled, or a
+  # request that expired unanswered. Releasing one deletes its video room.
+  @released_statuses ["cancelled", "expired"]
 
   @doc """
   Whether the meeting still represents a live booking a user should be able
@@ -114,6 +119,25 @@ defmodule Tymeslot.Meetings.MeetingState do
   def awaiting_approval?(_meeting), do: false
 
   @doc """
+  Whether a held request's answer deadline has passed at `now`.
+
+  The deadline itself counts as passed: a request is answerable strictly
+  before `approval_deadline_at` and no longer at it, matching the expiry
+  sweep's `approval_deadline_at <= now`. A meeting without a deadline never
+  lapses by this predicate.
+
+  Deliberately not used by `Tymeslot.Meetings.Workers.ApprovalExpiryWorker`,
+  which releases a request whose deadline is missing rather than keeping it.
+  """
+  @spec approval_deadline_passed?(Meeting.t() | map(), DateTime.t()) :: boolean()
+  def approval_deadline_passed?(meeting, now \\ Clock.utc_now())
+
+  def approval_deadline_passed?(%{approval_deadline_at: nil}, _now), do: false
+
+  def approval_deadline_passed?(%{approval_deadline_at: %DateTime{} = deadline}, now),
+    do: DateTime.compare(now, deadline) != :lt
+
+  @doc """
   Status-string counterpart of `awaiting_approval?/1`.
 
   For callers that hold the status alone rather than a meeting — the themes'
@@ -124,6 +148,13 @@ defmodule Tymeslot.Meetings.MeetingState do
   @spec awaiting_approval_status?(String.t() | nil) :: boolean()
   def awaiting_approval_status?(@awaiting_approval), do: true
   def awaiting_approval_status?(_status), do: false
+
+  @doc """
+  Whether a meeting with `status` was released without taking place, so its
+  video room is to be deleted rather than kept in step with the booking.
+  """
+  @spec released_status?(String.t() | nil) :: boolean()
+  def released_status?(status), do: status in @released_statuses
 
   @doc """
   Query-side counterpart of `awaiting_approval?/1`.

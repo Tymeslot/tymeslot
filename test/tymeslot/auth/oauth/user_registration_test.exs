@@ -3,8 +3,9 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
   @moduletag :auth
 
   alias Tymeslot.Auth.OAuth.UserRegistration
-  alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Auth.{UserQueries, UserSchema}
   alias Tymeslot.Factory
+  alias Tymeslot.Repo
 
   describe "find_existing_user/2" do
     test ":oauth finds user by provider and provider_uid" do
@@ -13,34 +14,34 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
       assert {:ok, found} =
                UserRegistration.find_existing_user(:oauth, %{
                  provider_uid: "sub-abc",
-                 email: "other@example.com",
-                 is_verified: true
+                 email: "other@example.com"
                })
 
       assert found.id == user.id
     end
 
-    test ":oauth falls back to email when provider_uid not found and email is verified" do
-      user = Factory.insert(:user, email: "existing@example.com")
-
-      assert {:ok, found} =
-               UserRegistration.find_existing_user(:oauth, %{
-                 provider_uid: "non-existent-uid",
-                 email: "existing@example.com",
-                 is_verified: true
-               })
-
-      assert found.id == user.id
-    end
-
-    test ":oauth does NOT fall back to email when is_verified is false" do
+    test ":oauth never signs in by email; a registered email is reported as taken" do
       _user = Factory.insert(:user, email: "existing@example.com")
 
-      assert {:error, :not_found} =
+      assert {:error, :email_already_taken} =
                UserRegistration.find_existing_user(:oauth, %{
                  provider_uid: "non-existent-uid",
-                 email: "existing@example.com",
-                 is_verified: false
+                 email: "existing@example.com"
+               })
+    end
+
+    test ":github does not sign into an account created with Google" do
+      _google_account =
+        Factory.insert(:user,
+          email: "google-user@example.com",
+          provider: "google",
+          google_user_id: "google-id"
+        )
+
+      assert {:error, :email_already_taken} =
+               UserRegistration.find_existing_user(:github, %{
+                 provider_uid: "4242",
+                 email: "google-user@example.com"
                })
     end
 
@@ -48,13 +49,12 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
       assert {:error, :not_found} =
                UserRegistration.find_existing_user(:oauth, %{
                  provider_uid: "unknown-uid",
-                 email: "nonexistent@example.com",
-                 is_verified: true
+                 email: "nonexistent@example.com"
                })
     end
   end
 
-  describe "check_oauth_account_linking/3 via create_oauth_user" do
+  describe "create_oauth_user/2 for an existing identity" do
     test ":oauth links account when provider_uid matches existing user" do
       existing =
         Factory.insert(:user,
@@ -67,7 +67,6 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
         email: "sso@example.com",
         provider_uid: "uid-match",
         name: "SSO User",
-        is_verified: true,
         email_from_provider: true
       }
 
@@ -75,7 +74,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
       assert user.id == existing.id
     end
 
-    test ":oauth links account by email when provider_uid differs but email is verified" do
+    test ":oauth does NOT link account by email even when the email is verified" do
       existing =
         Factory.insert(:user,
           email: "sso@example.com",
@@ -87,14 +86,11 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
         email: "sso@example.com",
         provider_uid: "uid-different",
         name: "SSO User",
-        is_verified: true,
         email_from_provider: true
       }
 
-      # TransactionalUserCreation updates the existing user's provider_uid when linking
-      assert {:ok, user} = UserRegistration.create_oauth_user(:oauth, oauth_user)
-      assert user.id == existing.id
-      assert user.provider_uid == "uid-different"
+      assert {:error, _reason} = UserRegistration.create_oauth_user(:oauth, oauth_user)
+      assert Repo.get!(UserSchema, existing.id).provider_uid == "uid-old"
     end
 
     test ":oauth does NOT link account by email when email is unverified" do
@@ -109,19 +105,17 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
         email: "sso@example.com",
         provider_uid: "uid-different",
         name: "SSO User",
-        is_verified: false,
         email_from_provider: false
       }
 
-      # With unverified email and different provider_uid, the system skips
-      # email-based linking and tries to create a new user — which correctly
-      # fails on the email uniqueness constraint, preventing account takeover.
+      # A different provider_uid means a different account: creating it fails
+      # on the email uniqueness constraint, preventing account takeover.
       assert {:error, _changeset} = UserRegistration.create_oauth_user(:oauth, oauth_user)
     end
   end
 
   describe "account linking for GitHub/Google via create_oauth_user" do
-    test ":github links account by email and updates github_user_id" do
+    test ":github does NOT link a different GitHub account by email" do
       existing =
         Factory.insert(:user,
           email: "gh@example.com",
@@ -131,18 +125,16 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
 
       oauth_user = %{
         email: "gh@example.com",
-        github_user_id: "222",
+        provider_uid: "222",
         name: "Other User",
-        is_verified: true,
         email_from_provider: true
       }
 
-      assert {:ok, user} = UserRegistration.create_oauth_user(:github, oauth_user)
-      assert user.id == existing.id
-      assert user.github_user_id == "222"
+      assert {:error, _reason} = UserRegistration.create_oauth_user(:github, oauth_user)
+      assert Repo.get!(UserSchema, existing.id).github_user_id == "111"
     end
 
-    test ":google links account by email and updates google_user_id" do
+    test ":google does NOT link a different Google account by email" do
       existing =
         Factory.insert(:user,
           email: "goog@example.com",
@@ -152,15 +144,13 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
 
       oauth_user = %{
         email: "goog@example.com",
-        google_user_id: "bbb",
+        provider_uid: "bbb",
         name: "Other User",
-        is_verified: true,
         email_from_provider: true
       }
 
-      assert {:ok, user} = UserRegistration.create_oauth_user(:google, oauth_user)
-      assert user.id == existing.id
-      assert user.google_user_id == "bbb"
+      assert {:error, _reason} = UserRegistration.create_oauth_user(:google, oauth_user)
+      assert Repo.get!(UserSchema, existing.id).google_user_id == "aaa"
     end
 
     test ":github links account when github_user_id matches" do
@@ -173,9 +163,8 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
 
       oauth_user = %{
         email: "gh@example.com",
-        github_user_id: "111",
+        provider_uid: "111",
         name: "Same User",
-        is_verified: true,
         email_from_provider: true
       }
 
@@ -193,9 +182,8 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
 
       oauth_user = %{
         email: "gh@example.com",
-        github_user_id: "222",
+        provider_uid: "222",
         name: "Attacker",
-        is_verified: false,
         email_from_provider: false
       }
 
@@ -203,16 +191,26 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
     end
   end
 
-  describe "normalize_github_id (via find_existing_user)" do
-    test "handles non-integer string GitHub ID gracefully" do
-      # The function should not crash on "abc" — it returns nil, leading to email fallback
-      result =
-        UserRegistration.find_existing_user(:github, %{
-          email: "nobody@example.com",
-          github_user_id: "abc"
-        })
+  describe "create_oauth_user/2 with a taken email" do
+    test "returns the email changeset error rather than another account" do
+      Factory.insert(:user, email: "taken@example.com", provider: "google", google_user_id: "g-9")
 
-      assert {:error, :not_found} = result
+      identity = %{email: "taken@example.com", provider_uid: "fresh-9", email_from_provider: true}
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               UserRegistration.create_oauth_user(:github, identity)
+
+      assert {"has already been taken", _opts} = changeset.errors[:email]
+      assert Repo.aggregate(UserSchema, :count) == 1
+    end
+  end
+
+  describe "create_oauth_user/2 verification" do
+    test "records a provider-vouched email as verified" do
+      identity = %{email: "v@example.com", provider_uid: "301", email_from_provider: true}
+
+      assert {:ok, user} = UserRegistration.create_oauth_user(:github, identity)
+      assert %DateTime{} = user.verified_at
     end
   end
 

@@ -10,7 +10,6 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
   alias Ecto.UUID
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.Meetings.Guests
-  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias TymeslotWeb.Endpoint
 
@@ -230,7 +229,7 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
       assert {:error, _reason} = CreateAdHoc.execute(params)
 
       # No meeting persisted (transaction rolled back), so no guests either
-      assert MeetingListQueries.list_upcoming_meetings() == []
+      assert Repo.aggregate(MeetingSchema, :count) == 0
     end
 
     test "returns error when attendee_email is missing", %{base_params: params} do

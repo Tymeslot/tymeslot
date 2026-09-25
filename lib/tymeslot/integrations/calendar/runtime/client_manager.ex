@@ -104,7 +104,12 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
         {:ok,
          %{
            integration_id: integration.id,
-           calendar_path: meeting.calendar_path || CalendarPathResolver.resolve(integration)
+           calendar_path:
+             booking_calendar_path(
+               meeting.calendar_integration_id,
+               meeting.calendar_path,
+               integration
+             )
          }}
     end
   end
@@ -118,7 +123,8 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
         {:ok,
          %{
            integration_id: integration.id,
-           calendar_path: mt.target_calendar_id || CalendarPathResolver.resolve(integration)
+           calendar_path:
+             booking_calendar_path(mt.calendar_integration_id, mt.target_calendar_id, integration)
          }}
     end
   end
@@ -177,6 +183,17 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   end
 
   # --- Private Implementation ---
+
+  # The calendar a meeting or meeting type recorded belongs to the integration
+  # it recorded. Once resolution has fallen through to another integration,
+  # that calendar id names nothing there, so the fallback's own booking
+  # calendar is used instead of carrying a foreign id onto it.
+  defp booking_calendar_path(stored_id, stored_path, %{id: stored_id})
+       when is_binary(stored_path),
+       do: stored_path
+
+  defp booking_calendar_path(_stored_id, _stored_path, integration),
+    do: CalendarPathResolver.resolve(integration)
 
   defp create_clients_from_integration(integration) do
     with {:ok, provider} <- ProviderConfig.parse_known(integration.provider),

@@ -245,6 +245,7 @@ defmodule Tymeslot.Timezones.CountryCodes do
     "WF" => :wlf,
     "WS" => :wsm,
     "YE" => :yem,
+    "YT" => :myt,
     "ZA" => :zaf,
     "ZM" => :zmb,
     "ZW" => :zwe

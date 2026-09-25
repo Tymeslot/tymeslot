@@ -55,6 +55,24 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeDetectorTest do
     refute ChangeSummary.any_changes?(s)
   end
 
+  test "an all-day event moved to other days is notifiable" do
+    all_day =
+      event(%{starts_at: nil, ends_at: nil, start_date: ~D[2026-10-05], end_date: ~D[2026-10-06]})
+
+    moved = %{all_day | start_date: ~D[2026-10-12], end_date: ~D[2026-10-13]}
+
+    s = ChangeDetector.diff(all_day, moved, current_sequence: 0)
+    assert s.changed_fields == [:start_date, :end_date]
+  end
+
+  test "an all-day event on the same days is not a change" do
+    all_day =
+      event(%{starts_at: nil, ends_at: nil, start_date: ~D[2026-10-05], end_date: ~D[2026-10-06]})
+
+    s = ChangeDetector.diff(all_day, all_day, current_sequence: 0)
+    refute ChangeSummary.any_changes?(s)
+  end
+
   test "video link change is notifiable" do
     s =
       ChangeDetector.diff(

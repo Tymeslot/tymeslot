@@ -7,16 +7,9 @@ defmodule Tymeslot.Integrations.Shared.OAuth.ProviderHelpers do
   focused on their own config and flow.
   """
 
-  @doc """
-  Conditionally adds a `login_hint` key to an OAuth params map.
-
-  Returns `params` unchanged when `hint` is `nil`; otherwise inserts
-  `{:login_hint, hint}`. Used when building authorization URLs to pre-fill
-  the identity provider's account-selection UI.
-  """
   @spec maybe_put_login_hint(map(), String.t() | nil) :: map()
-  def maybe_put_login_hint(params, nil), do: params
-  def maybe_put_login_hint(params, hint), do: Map.put(params, :login_hint, hint)
+  defp maybe_put_login_hint(params, nil), do: params
+  defp maybe_put_login_hint(params, hint), do: Map.put(params, :login_hint, hint)
 
   @doc """
   Builds a complete OAuth authorization URL.

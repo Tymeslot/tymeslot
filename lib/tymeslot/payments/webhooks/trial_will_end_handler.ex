@@ -66,7 +66,7 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
           trial_end: inspect(trial_end)
         )
 
-        {:error, :invalid_timestamp}
+        {:error, :invalid_timestamp, "Invalid trial_end timestamp: #{inspect(trial_end)}"}
     end
   end
 

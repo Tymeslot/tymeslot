@@ -100,11 +100,6 @@ msgstr "Smazat typ schůzky"
 msgid "Edit"
 msgstr "Upravit"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
-#, elixir-autogen, elixir-format
-msgid "In-person"
-msgstr "Osobně"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Types"
@@ -124,11 +119,6 @@ msgstr "Tuto akci nelze vzít zpět a tento typ schůzky bude z vašeho účtu
 #, elixir-autogen, elixir-format
 msgid "Toggle %{name} availability"
 msgstr "Přepnout dostupnost: %{name}"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
-#, elixir-autogen, elixir-format
-msgid "Video"
-msgstr "Video"
 
 #: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
 #, elixir-autogen, elixir-format
@@ -180,3 +170,31 @@ msgstr "Za měsíc"
 #, elixir-autogen, elixir-format
 msgid "Per week"
 msgstr "Za týden"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar gone"
+msgstr "Kalendář chybí"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "Read-only"
+msgstr "Jen pro čtení"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "The calendar this meeting type books into is no longer on the connected account. Edit it and choose another calendar."
+msgstr "Kalendář, do kterého tento typ schůzky rezervuje, už v připojeném účtu není. Upravte jej a zvolte jiný kalendář."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type books into a calendar you can no longer write to. Edit it and choose another calendar."
+msgstr "Tento typ schůzky rezervuje do kalendáře, do kterého už nemůžete zapisovat. Upravte jej a zvolte jiný kalendář."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} location"
+msgid_plural "%{count} locations"
+msgstr[0] "%{count} místo"
+msgstr[1] "%{count} místa"
+msgstr[2] "%{count} míst"

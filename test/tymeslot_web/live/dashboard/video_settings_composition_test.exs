@@ -136,6 +136,46 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
     end
   end
 
+  describe "add_integration: integration-write rate limit" do
+    @tag :capture_log
+    test "a form the validator rejects leaves the write budget untouched", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element("button[phx-click='setup_provider'][phx-value-provider='mirotalk']")
+      |> render_click()
+
+      # More submissions than the write budget holds (30 per 30 minutes), each
+      # blank-named and so refused by the validator before anything is written.
+      for _i <- 1..35 do
+        html =
+          view
+          |> form("#mirotalk-config-modal form", %{
+            "integration" => %{
+              "name" => "",
+              "base_url" => "https://miro.test",
+              "api_key" => "secret-key-long-enough"
+            }
+          })
+          |> render_submit()
+
+        refute html =~ "Video integration added successfully"
+      end
+
+      # The budget meters writes, and nothing above wrote anything: an organiser
+      # correcting a typo must not be locked out of saving by their corrections.
+      for _i <- 1..30 do
+        assert :ok = RateLimiter.check_integration_write_rate_limit(user.id)
+      end
+
+      assert {:error, :rate_limited, _message} =
+               RateLimiter.check_integration_write_rate_limit(user.id)
+    end
+  end
+
   describe "edit modal — credential preservation" do
     @tag :capture_log
     test "blanking the api_key surfaces an error without wiping the stored secret", %{
@@ -180,6 +220,50 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
       # keeps working on subsequent calls.
       fresh = Repo.get!(VideoIntegrationSchema, integration.id)
       assert fresh.api_key_encrypted == original_api_key_ciphertext
+    end
+  end
+
+  describe "edit modal — custom meeting URL template syntax" do
+    @tag :capture_log
+    test "saving a malformed meeting ID placeholder is refused and keeps the stored link", %{
+      conn: conn,
+      user: user
+    } do
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "custom",
+          name: "Per-booking Jitsi",
+          base_url: nil,
+          custom_meeting_url: "https://meet.jit.si/{{meeting_id}}",
+          provider_account_id: "https://meet.jit.si/{{meeting_id}}"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/integrations?tab=video")
+
+      view
+      |> element(
+        "button[phx-click='show'][phx-value-id='#{integration.id}'][phx-target='#edit-video-modal']"
+      )
+      |> render_click()
+
+      view
+      |> form("#edit-video-integration-form", %{
+        "integration" => %{
+          "name" => "Per-booking Jitsi",
+          "custom_meeting_url" => "https://meet.jit.si/{{Meeting_ID}}"
+        }
+      })
+      |> render_submit()
+
+      assert has_element?(
+               view,
+               "#edit-video-integration-form p.form-error",
+               "Use lowercase: {{meeting_id}} not {{MEETING_ID}} or {{Meeting_Id}}"
+             )
+
+      assert Repo.get!(VideoIntegrationSchema, integration.id).custom_meeting_url ==
+               "https://meet.jit.si/{{meeting_id}}"
     end
   end
 

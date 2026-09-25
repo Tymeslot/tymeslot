@@ -34,7 +34,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommonTest do
       assert {:ok, "Radicale OK"} =
                ProviderCommon.test_caldav_provider_connection(integration,
                  success_message: "Radicale OK",
-                 unauthorized_message: "unauth",
                  not_found_message: "not found",
                  error_formatter: &inspect/1
                )
@@ -61,7 +60,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommonTest do
       assert {:ok, _msg} =
                ProviderCommon.test_caldav_provider_connection(integration,
                  success_message: "ok",
-                 unauthorized_message: "unauth",
                  not_found_message: "not found",
                  error_formatter: &inspect/1
                )
@@ -105,6 +103,27 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommonTest do
       refute message =~ "formatter said"
     end
 
+    test "refused credentials come back as :unauthorized, not as copy" do
+      # The scheduled health probe classifies this return value, and
+      # `ErrorAnalysis.classify_error/1` reads `:unauthorized` as a permanent
+      # failure but a sentence about passwords as transient. Flattening it to
+      # copy here is what kept `consecutive_hard_failures` at zero for every
+      # CalDAV-family provider, so the reason must survive the probe.
+      Mox.stub(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 401, body: ""}}
+      end)
+
+      integration = %{
+        base_url: "https://caldav.example.com/dav",
+        username: "alice",
+        password: "wrong",
+        calendar_paths: [],
+        provider: :apple
+      }
+
+      assert {:error, :unauthorized} = connection_test(integration)
+    end
+
     test "a reason with no specific copy still reaches the formatter" do
       Mox.stub(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 429, body: ""}}
@@ -125,7 +144,6 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommonTest do
   defp connection_test(integration) do
     ProviderCommon.test_caldav_provider_connection(integration,
       success_message: "ok",
-      unauthorized_message: "unauth",
       not_found_message: "not found",
       error_formatter: fn reason -> "formatter said: #{inspect(reason)}" end
     )

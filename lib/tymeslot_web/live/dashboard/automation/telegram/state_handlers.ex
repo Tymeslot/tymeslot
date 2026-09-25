@@ -94,6 +94,10 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.StateHandlers do
             )
 
             {:noreply, socket}
+
+          {:error, :not_found} ->
+            Flash.error(dgettext("dashboard_automation_chat", "Integration not found"))
+            {:noreply, AutomationHelpers.maybe_load_telegram(socket)}
         end
 
       {:error, _reason} ->
@@ -114,7 +118,11 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.StateHandlers do
         case Telegram.reconnect_integration(integration) do
           {:ok, updated, deep_link} ->
             timer_ref =
-              Process.send_after(self(), {:telegram_link_expired, updated.id}, :timer.minutes(10))
+              Process.send_after(
+                self(),
+                {:telegram_link_expired, updated.id},
+                Telegram.link_token_ttl_ms()
+              )
 
             {:noreply,
              socket
@@ -136,6 +144,17 @@ defmodule TymeslotWeb.Dashboard.Automation.Telegram.StateHandlers do
 
           {:error, :own_bot_mode} ->
             Flash.error(dgettext("dashboard_automation_chat", "Cannot reconnect in own-bot mode"))
+            {:noreply, socket}
+
+          {:error, :not_found} ->
+            Flash.error(dgettext("dashboard_automation_chat", "Integration not found"))
+            {:noreply, AutomationHelpers.maybe_load_telegram(socket)}
+
+          {:error, _reason} ->
+            Flash.error(
+              dgettext("dashboard_automation_chat", "Failed to generate link. Please try again.")
+            )
+
             {:noreply, socket}
         end
 

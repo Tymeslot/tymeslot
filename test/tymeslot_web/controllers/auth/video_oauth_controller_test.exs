@@ -3,6 +3,7 @@ defmodule TymeslotWeb.VideoOAuthControllerTest do
   @moduletag :utils
 
   alias Phoenix.Flash
+  alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Factory
   alias Tymeslot.Infrastructure.DashboardCache
   alias Tymeslot.Integrations.Common.OAuth.State
@@ -281,12 +282,12 @@ defmodule TymeslotWeb.VideoOAuthControllerTest do
         {:ok, existing}
       end)
 
-      :meck.expect(VideoIntegrationQueries, :update_credentials, fn ^existing, attrs ->
+      :meck.expect(VideoIntegrationQueries, :reconnect, fn ^existing, attrs ->
         assert attrs.access_token == "new_at"
         assert attrs.refresh_token == "new_rt"
         refute Map.has_key?(attrs, :user_id)
         refute Map.has_key?(attrs, :provider)
-        {:ok, %{existing | access_token: attrs.access_token}}
+        {:ok, %{existing | access_token: attrs.access_token}, false}
       end)
 
       conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => "state"})
@@ -366,14 +367,14 @@ defmodule TymeslotWeb.VideoOAuthControllerTest do
         {:ok, existing}
       end)
 
-      :meck.expect(VideoIntegrationQueries, :update_credentials, fn ^existing, attrs ->
+      :meck.expect(VideoIntegrationQueries, :reconnect, fn ^existing, attrs ->
         assert attrs.access_token == "new_at"
         assert attrs.refresh_token == "new_rt"
         assert attrs.tenant_id == "new-tenant-id"
         assert attrs.teams_user_id == "new-teams-user-id"
         refute Map.has_key?(attrs, :user_id)
         refute Map.has_key?(attrs, :provider)
-        {:ok, %{existing | access_token: attrs.access_token}}
+        {:ok, %{existing | access_token: attrs.access_token}, false}
       end)
 
       conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => "state"})
@@ -480,6 +481,37 @@ defmodule TymeslotWeb.VideoOAuthControllerTest do
 
       assert Flash.get(conn.assigns.flash, :error) =~
                "Missing required Microsoft Teams information"
+    end
+  end
+
+  describe "dashboard integration status after connecting" do
+    test "a Google Meet connect refreshes the cached status", %{conn: conn} do
+      user = Factory.insert(:user)
+      user_id = user.id
+      conn = log_in_user(conn, user)
+      :meck.expect(State, :validate, fn _state, _secret -> {:ok, %{user_id: user_id}} end)
+      assert %{has_video: false} = DashboardContext.get_integration_status(user_id)
+
+      :meck.expect(GoogleOAuthHelper, :exchange_code_for_tokens, fn _code, _uri, _state ->
+        {:ok,
+         %{
+           user_id: user_id,
+           access_token: "at",
+           refresh_token: "rt",
+           expires_at: DateTime.utc_now(),
+           scope: "scope",
+           provider_account_id: "google-account"
+         }}
+      end)
+
+      :meck.expect(VideoIntegrationQueries, :create, fn attrs ->
+        {:ok, Factory.insert(:video_integration, user: user, provider: attrs.provider)}
+      end)
+
+      conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => "state"})
+
+      assert Flash.get(conn.assigns.flash, :info) =~ "Google Meet connected successfully"
+      assert %{has_video: true} = DashboardContext.get_integration_status(user_id)
     end
   end
 

@@ -23,6 +23,8 @@ defmodule Tymeslot.Emails.Shared.Formatting do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  @excerpt_length 280
+
   @doc """
   Formats a date according to locale conventions.
   Delegates to LocaleFormat for locale-aware formatting.
@@ -111,16 +113,60 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   two instants, so a stable, unambiguous rendering matters more than local
   convention. Only the month abbreviation is localised.
   Example (en): "25 Jun 2026, 14:30 UTC", (de): "25 Jun 2026, 14:30 UTC"
-  Falls back to `to_string/1` for non-DateTime values.
+  An all-day event's timing is a `Date.Range` of the days it covers and
+  renders as a date range, since it has no clock time to show.
+  Falls back to `to_string/1` for other values.
   """
-  @spec format_time_short(DateTime.t() | term(), String.t()) :: String.t()
+  @spec format_time_short(DateTime.t() | Date.Range.t() | term(), String.t()) :: String.t()
   def format_time_short(%DateTime{} = dt, locale) do
     month = LocaleFormat.format_month_name(dt.month, locale, :short)
     day = dt.day |> to_string() |> String.pad_leading(2, "0")
     "#{day} #{month} #{dt.year}, #{Calendar.strftime(dt, "%H:%M")} UTC"
   end
 
+  def format_time_short(%Date.Range{} = days, locale), do: format_date_range(days, locale)
+
   def format_time_short(val, _locale), do: to_string(val)
+
+  @doc """
+  Formats the inclusive range of days an all-day event covers: one date for a
+  single day, otherwise the locale's range form.
+  Example (en): "September 22, 2026", "September 22 – 24, 2026"
+  """
+  @spec format_date_range(Date.Range.t(), String.t()) :: String.t()
+  def format_date_range(%Date.Range{first: first, last: first}, locale),
+    do: format_date(first, locale)
+
+  def format_date_range(%Date.Range{first: first, last: last}, locale),
+    do: LocaleFormat.format_date_range(first, last, locale)
+
+  @doc """
+  Formats the time line of an all-day event, which has no clock time: "All
+  day" for a single day, or naming the inclusive last day when it spans more.
+  """
+  @spec format_all_day(Date.t(), Date.t(), String.t()) :: String.t()
+  def format_all_day(%Date{} = first, %Date{} = first, locale) do
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn -> dgettext("emails", "All day") end)
+  end
+
+  def format_all_day(%Date{} = _first, %Date{} = last, locale) do
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      dgettext("emails", "All day, until %{date}", date: format_date(last, locale))
+    end)
+  end
+
+  @doc """
+  Formats how many days an all-day event covers, from its first and inclusive
+  last day. Example (en): "1 day", "3 days"
+  """
+  @spec format_day_count(Date.t(), Date.t(), String.t()) :: String.t()
+  def format_day_count(%Date{} = first, %Date{} = last, locale) do
+    count = Date.diff(last, first) + 1
+
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      dngettext("emails", "%{count} day", "%{count} days", count)
+    end)
+  end
 
   @doc """
   Formats a complete datetime, locale-aware.
@@ -170,7 +216,17 @@ defmodule Tymeslot.Emails.Shared.Formatting do
           optional(atom()) => term()
         }) :: String.t()
   def format_location(%{location_type: :video}), do: dgettext("emails", "Video Call")
-  def format_location(%{location_type: :phone}), do: dgettext("emails", "Phone Call")
+  # A phone location chosen from a meeting type's list stores the host's label
+  # with the number to call ("Phone call (+44 20 7946 0000)"), and that number
+  # is the whole point of the line. Only the bare English literal older
+  # releases wrote, or no string at all, falls back to the translated label.
+  def format_location(%{location_type: :phone} = details) do
+    case details[:location] do
+      location when is_binary(location) and location not in ["", "Phone Call"] -> location
+      _other -> dgettext("emails", "Phone Call")
+    end
+  end
+
   def format_location(details), do: details[:location] || dgettext("emails", "TBD")
 
   @doc """
@@ -224,6 +280,21 @@ defmodule Tymeslot.Emails.Shared.Formatting do
     else
       String.slice(text, 0, max_length - 3) <> "..."
     end
+  end
+
+  @doc """
+  A description as a short plain-text excerpt: markup stripped, whitespace
+  collapsed, and truncated so an email states it without reproducing it.
+  """
+  @spec plain_excerpt(String.t() | nil) :: String.t()
+  def plain_excerpt(nil), do: ""
+
+  def plain_excerpt(text) when is_binary(text) do
+    text
+    |> HtmlSanitizeEx.strip_tags()
+    |> String.replace(~r/\s+/, " ")
+    |> String.trim()
+    |> truncate(@excerpt_length)
   end
 
   # Private functions

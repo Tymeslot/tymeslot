@@ -69,11 +69,6 @@ defmodule Tymeslot.Integrations.Common.OAuth.StateTest do
   end
 
   describe "return_to functionality" do
-    test "generate/4 with return_to embeds path that peek_return_to/1 can extract" do
-      state = State.generate(123, @secret, nil, return_to: "/dashboard/onboarding")
-      assert State.peek_return_to(state) == "/dashboard/onboarding"
-    end
-
     test "validate/3 on state with return_to includes return_to in result" do
       state = State.generate(123, @secret, nil, return_to: "/dashboard/onboarding")
 
@@ -88,35 +83,45 @@ defmodule Tymeslot.Integrations.Common.OAuth.StateTest do
                State.validate(state, @secret)
     end
 
-    test "peek_return_to/1 returns nil for state without return_to" do
+    test "validate/3 returns a nil return_to for state without one" do
       state = State.generate(123, @secret)
-      assert State.peek_return_to(state) == nil
+      assert {:ok, %{return_to: nil}} = State.validate(state, @secret)
     end
 
-    test "peek_return_to/1 returns nil for invalid state" do
-      assert State.peek_return_to("not-a-valid-state") == nil
-    end
-
-    test "peek_return_to/1 returns nil for tampered state" do
-      state = State.generate(123, @secret, nil, return_to: "/dashboard/onboarding")
-      [_data, sig] = String.split(state, ".")
-      tampered = "tampered.#{sig}"
-      assert State.peek_return_to(tampered) == nil
-    end
-
-    test "peek_return_to/1 returns nil for non-binary input" do
-      assert State.peek_return_to(nil) == nil
-      assert State.peek_return_to(123) == nil
-    end
-
-    test "peek_return_to/1 rejects paths not starting with /" do
+    test "generate/4 drops a return_to not starting with /" do
       state = State.generate(123, @secret, nil, return_to: "https://evil.example.com")
-      assert State.peek_return_to(state) == nil
+      assert {:ok, %{return_to: nil}} = State.validate(state, @secret)
     end
 
-    test "peek_return_to/1 rejects paths starting with //" do
+    test "generate/4 drops a return_to starting with //" do
       state = State.generate(123, @secret, nil, return_to: "//evil.example.com")
-      assert State.peek_return_to(state) == nil
+      assert {:ok, %{return_to: nil}} = State.validate(state, @secret)
     end
+
+    # Browsers treat a backslash as a slash, so `/\evil.example.com` resolves
+    # to the protocol-relative `//evil.example.com`.
+    test "generate/4 drops a backslash-prefixed return_to" do
+      state = State.generate(123, @secret, nil, return_to: "/\\evil.example.com")
+
+      assert {:ok, %{return_to: nil}} = State.validate(state, @secret)
+    end
+
+    test "validate/3 rejects a signed backslash-prefixed return_to" do
+      # Signed directly, as a state minted before the stricter check would be.
+      state = sign("123:#{System.system_time(:second)}|/\\evil.example.com")
+
+      assert {:ok, %{user_id: 123, return_to: nil}} = State.validate(state, @secret)
+    end
+
+    test "validate/3 rejects a signed return_to that decodes to a protocol-relative URL" do
+      state = sign("123:#{System.system_time(:second)}|/%2F%2Fevil.example.com")
+
+      assert {:ok, %{return_to: nil}} = State.validate(state, @secret)
+    end
+  end
+
+  defp sign(data) do
+    signature = :crypto.mac(:hmac, :sha256, @secret, data)
+    "#{Base.url_encode64(data)}.#{Base.url_encode64(signature)}"
   end
 end

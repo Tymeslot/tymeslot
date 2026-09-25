@@ -47,11 +47,6 @@ msgstr "Kontosicherheit"
 msgid "Account Settings"
 msgstr "Kontoeinstellungen"
 
-#: lib/tymeslot_web/live/account_live/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "An unexpected error occurred"
-msgstr "Ein unerwarteter Fehler ist aufgetreten"
-
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "At least 8 characters"
@@ -147,11 +142,6 @@ msgstr "Neue E-Mail-Adresse"
 msgid "New Password"
 msgstr "Neues Passwort"
 
-#: lib/tymeslot_web/live/account_live/handlers.ex
-#, elixir-autogen, elixir-format
-msgid "New password must be different from current password"
-msgstr "Das neue Passwort muss sich vom aktuellen Passwort unterscheiden"
-
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Password"
@@ -176,11 +166,6 @@ msgstr "Ausstehende Änderung zu:"
 #, elixir-autogen, elixir-format
 msgid "Sent %{time}"
 msgstr "Gesendet %{time}"
-
-#: lib/tymeslot_web/live/account_live/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Too many attempts. Please try again later."
-msgstr "Zu viele Versuche. Bitte versuchen Sie es später erneut."
 
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format

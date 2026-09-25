@@ -155,7 +155,7 @@ defmodule Tymeslot.Mailer.ProvidersTest do
         ],
         fn ->
           assert {:ok, config} = Providers.build("smtp")
-          assert config[:adapter] == Swoosh.Adapters.SMTP
+          assert config[:adapter] == Tymeslot.Mailer.SMTPAdapter
           assert config[:relay] == "smtp.example.com"
           assert config[:port] == 587
         end
@@ -207,6 +207,52 @@ defmodule Tymeslot.Mailer.ProvidersTest do
       )
     end
 
+    test "SMTP_TLS_MIDDLEBOX_COMPAT=true restores the TLS 1.3 compatibility mode" do
+      with_env(
+        [
+          {"SMTP_HOST", "smtp.example.com"},
+          {"SMTP_USERNAME", "user@example.com"},
+          {"SMTP_PASSWORD", "secret"},
+          {"SMTP_TLS_MIDDLEBOX_COMPAT", "true"}
+        ],
+        fn ->
+          assert {:ok, config} = Providers.build("smtp")
+          assert config[:tls_options][:middlebox_comp_mode] == true
+        end
+      )
+    end
+
+    test "the compatibility mode stays off when SMTP_TLS_MIDDLEBOX_COMPAT is unset" do
+      with_env(
+        [
+          {"SMTP_HOST", "smtp.example.com"},
+          {"SMTP_USERNAME", "user@example.com"},
+          {"SMTP_PASSWORD", "secret"},
+          {"SMTP_TLS_MIDDLEBOX_COMPAT", nil}
+        ],
+        fn ->
+          assert {:ok, config} = Providers.build("smtp")
+          assert config[:tls_options][:middlebox_comp_mode] == false
+        end
+      )
+    end
+
+    test "raises on an unrecognised SMTP_TLS_MIDDLEBOX_COMPAT" do
+      with_env(
+        [
+          {"SMTP_HOST", "smtp.example.com"},
+          {"SMTP_USERNAME", "user@example.com"},
+          {"SMTP_PASSWORD", "secret"},
+          {"SMTP_TLS_MIDDLEBOX_COMPAT", "sometimes"}
+        ],
+        fn ->
+          assert_raise ArgumentError, ~r/Invalid SMTP_TLS_MIDDLEBOX_COMPAT/, fn ->
+            Providers.build("smtp")
+          end
+        end
+      )
+    end
+
     test "raises on an unrecognised SMTP_TLS_VERIFY" do
       with_env(
         [
@@ -219,6 +265,52 @@ defmodule Tymeslot.Mailer.ProvidersTest do
           assert_raise ArgumentError, ~r/Invalid SMTP_TLS_VERIFY/, fn ->
             Providers.build("smtp")
           end
+        end
+      )
+    end
+
+    # The Docker entrypoint exports both credentials as empty strings when the
+    # operator leaves them out, so blank has to mean "no login".
+    test "blank credentials configure a relay that needs no login" do
+      with_env(
+        [
+          {"SMTP_HOST", "relay.internal"},
+          {"SMTP_USERNAME", ""},
+          {"SMTP_PASSWORD", "  "}
+        ],
+        fn ->
+          assert {:ok, config} = Providers.build("smtp")
+          assert config[:auth] == :never
+          refute Keyword.has_key?(config, :username)
+        end
+      )
+    end
+
+    test "SMTP_SSL=true forces implicit TLS on a non-465 port" do
+      with_env(
+        [
+          {"SMTP_HOST", "smtp.example.com"},
+          {"SMTP_USERNAME", "user@example.com"},
+          {"SMTP_PASSWORD", "secret"},
+          {"SMTP_PORT", "2465"},
+          {"SMTP_SSL", "true"}
+        ],
+        fn ->
+          assert {:ok, config} = Providers.build("smtp")
+          assert config[:ssl] == true
+          assert config[:tls] == :never
+        end
+      )
+    end
+
+    test "raises on an unrecognised SMTP_SSL" do
+      with_env(
+        [
+          {"SMTP_HOST", "smtp.example.com"},
+          {"SMTP_SSL", "yes"}
+        ],
+        fn ->
+          assert_raise ArgumentError, ~r/Invalid SMTP_SSL/, fn -> Providers.build("smtp") end
         end
       )
     end
@@ -343,7 +435,7 @@ defmodule Tymeslot.Mailer.ProvidersTest do
     end
 
     test "providers without tracking options are left alone" do
-      assert Providers.tracking_options(Swoosh.Adapters.SMTP, :marketing) == []
+      assert Providers.tracking_options(Tymeslot.Mailer.SMTPAdapter, :marketing) == []
       assert Providers.tracking_options(Swoosh.Adapters.Test, :lifecycle) == []
     end
   end

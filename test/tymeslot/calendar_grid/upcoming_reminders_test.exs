@@ -56,7 +56,8 @@ defmodule Tymeslot.CalendarGrid.UpcomingRemindersTest do
       reminders: [%{"method" => "popup", "minutes_before" => 10}]
     )
 
-    result = CalendarGrid.list_upcoming_events_with_reminders([integration.id], @now)
+    result =
+      CalendarGrid.list_upcoming_events_with_reminders([integration.id], @now, [integration])
 
     assert [%{id: id, summary: "keep", reminders: [%{method: :popup, minutes_before: 10}]}] =
              result
@@ -70,6 +71,93 @@ defmodule Tymeslot.CalendarGrid.UpcomingRemindersTest do
       reminders: [%{"method" => "popup", "minutes_before" => 10}]
     )
 
-    assert CalendarGrid.list_upcoming_events_with_reminders([], @now) == []
+    assert CalendarGrid.list_upcoming_events_with_reminders([], @now, []) == []
+  end
+
+  test "a deselected calendar's rows do not crowd a selected match out of the feed", %{
+    integration: integration
+  } do
+    deselected_integration =
+      insert(:calendar_integration,
+        is_active: true,
+        provider: "caldav",
+        calendar_paths: [],
+        calendar_list: [%{"id" => "/cal/team/", "path" => "/cal/team/", "selected" => false}]
+      )
+
+    # More than the (batch-sized) limit of older, deselected-calendar rows,
+    # all starting before the one selected-calendar match.
+    for n <- 1..3 do
+      insert(:provider_calendar_event,
+        calendar_integration: deselected_integration,
+        all_day: false,
+        start_at: DateTime.add(@now, n, :hour),
+        provider_event_id: "/cal/team/evt-#{n}.ics",
+        reminders: [%{"method" => "popup", "minutes_before" => 10}]
+      )
+    end
+
+    kept =
+      event(integration,
+        summary: "keep",
+        all_day: false,
+        start_at: DateTime.add(@now, 10, :hour),
+        reminders: [%{"method" => "popup", "minutes_before" => 10}]
+      )
+
+    result =
+      CalendarGrid.list_upcoming_events_with_reminders(
+        [integration.id, deselected_integration.id],
+        @now,
+        [integration, deselected_integration],
+        limit: 3
+      )
+
+    assert [%{id: id}] = result
+    assert id == kept.id
+  end
+
+  test "an unbounded run of deselected-calendar rows still can't crowd a selected match out", %{
+    integration: integration
+  } do
+    deselected_integration =
+      insert(:calendar_integration,
+        is_active: true,
+        provider: "caldav",
+        calendar_paths: [],
+        calendar_list: [%{"id" => "/cal/team/", "path" => "/cal/team/", "selected" => false}]
+      )
+
+    # More than four times the limit of older, deselected-calendar rows: a
+    # paged fetch capped at a fixed number of extra pages would give up
+    # before ever reaching the selected match.
+    for n <- 1..13 do
+      insert(:provider_calendar_event,
+        calendar_integration: deselected_integration,
+        all_day: false,
+        start_at: DateTime.add(@now, n, :hour),
+        provider_event_id: "/cal/team/evt-#{n}.ics",
+        reminders: [%{"method" => "popup", "minutes_before" => 10}]
+      )
+    end
+
+    kept =
+      event(integration,
+        summary: "keep",
+        all_day: false,
+        start_at: DateTime.add(@now, 20, :hour),
+        reminders: [%{"method" => "popup", "minutes_before" => 10}]
+      )
+
+    result =
+      CalendarGrid.list_upcoming_events_with_reminders(
+        [integration.id, deselected_integration.id],
+        @now,
+        [integration, deselected_integration],
+        limit: 3
+      )
+
+    assert [%{id: id}] = result
+    assert id == kept.id
   end
 end

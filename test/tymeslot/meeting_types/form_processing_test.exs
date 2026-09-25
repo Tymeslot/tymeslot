@@ -52,25 +52,25 @@ defmodule Tymeslot.MeetingTypes.FormProcessingTest do
       assert meeting_type.allow_video == false
     end
 
-    test "fails when video mode selected but no video integration" do
+    test "fails when a video location names no integration" do
       user = insert(:user)
 
       form_params = %{
         "name" => "Video Call",
         "duration" => "30",
         "description" => "Video meeting",
-        "is_active" => "true"
+        "is_active" => "true",
+        "locations" => [
+          %{"kind" => "video", "label" => "Zoom", "position" => "0"}
+        ]
       }
 
-      ui_state = %{
-        meeting_mode: "video",
-        selected_icon: "hero-phone",
-        selected_video_integration_id: nil
-      }
+      result =
+        MeetingTypes.create_meeting_type_from_form(user.id, form_params, %{
+          selected_icon: "hero-phone"
+        })
 
-      result = MeetingTypes.create_meeting_type_from_form(user.id, form_params, ui_state)
-
-      assert {:error, :video_integration_required} = result
+      assert {:error, :invalid_location} = result
     end
 
     test "creates video meeting type with valid video integration" do
@@ -81,19 +81,25 @@ defmodule Tymeslot.MeetingTypes.FormProcessingTest do
         "name" => "Video Consultation",
         "duration" => "45",
         "description" => "Video consultation session",
-        "is_active" => "true"
-      }
-
-      ui_state = %{
-        meeting_mode: "video",
-        selected_icon: "hero-phone",
-        selected_video_integration_id: video_integration.id
+        "is_active" => "true",
+        "locations" => [
+          %{
+            "kind" => "video",
+            "label" => "Zoom",
+            "video_integration_ids" => [to_string(video_integration.id)],
+            "position" => "0"
+          }
+        ]
       }
 
       assert {:ok, meeting_type} =
-               MeetingTypes.create_meeting_type_from_form(user.id, form_params, ui_state)
+               MeetingTypes.create_meeting_type_from_form(user.id, form_params, %{
+                 selected_icon: "hero-phone"
+               })
 
       assert meeting_type.name == "Video Consultation"
+      assert [%{kind: "video", label: "Zoom"}] = meeting_type.locations
+      # `allow_video` / `video_integration_id` are projected from the list.
       assert meeting_type.allow_video == true
       assert meeting_type.video_integration_id == video_integration.id
     end
@@ -586,17 +592,21 @@ defmodule Tymeslot.MeetingTypes.FormProcessingTest do
         "name" => "Cross-User Video",
         "duration" => "30",
         "description" => "Should fail",
-        "is_active" => "true"
-      }
-
-      ui_state = %{
-        meeting_mode: "video",
-        selected_icon: "hero-phone",
-        selected_video_integration_id: video_integration.id
+        "is_active" => "true",
+        "locations" => [
+          %{
+            "kind" => "video",
+            "label" => "Zoom",
+            "video_integration_ids" => [to_string(video_integration.id)],
+            "position" => "0"
+          }
+        ]
       }
 
       assert {:error, :invalid_video_integration} =
-               MeetingTypes.create_meeting_type_from_form(user_b.id, form_params, ui_state)
+               MeetingTypes.create_meeting_type_from_form(user_b.id, form_params, %{
+                 selected_icon: "hero-phone"
+               })
     end
   end
 

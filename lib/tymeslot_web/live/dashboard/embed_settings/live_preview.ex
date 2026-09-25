@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Scheduling.LinkAccessPolicy
+  alias TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers
 
   @doc """
   Renders the live preview section.
@@ -13,6 +14,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview do
   attr :selected_embed_type, :string, required: true
   attr :username, :string, required: true
   attr :base_url, :string, required: true
+  attr :preview_token, :string, required: true
   attr :embed_script_url, :string, required: true
   attr :embed_layout, :string, default: "column"
   attr :embed_locale, :string, default: ""
@@ -81,12 +83,16 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview do
           </div>
         </div>
 
-        <%!-- The actual booking widget will be loaded here via JavaScript --%>
+        <%!-- The actual booking widget will be loaded here via JavaScript. The
+             hook builds its own markup, so every string it shows arrives here
+             already translated: the snippet labels in the embed's language, the
+             rest in the dashboard's. --%>
         <div
           id="live-preview-container"
           phx-hook="EmbedPreview"
           data-username={@username}
           data-base-url={@base_url}
+          data-preview-token={@preview_token}
           data-embed-script-url={@embed_script_url}
           data-embed-type={@selected_embed_type}
           data-is-ready={to_string(@is_ready)}
@@ -94,6 +100,28 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview do
           data-locale={@embed_locale}
           data-initial-height={@initial_height}
           data-max-width={@max_width}
+          data-popup-label={Helpers.snippet_label("popup", %{locale: @embed_locale})}
+          data-link-label={Helpers.snippet_label("link", %{locale: @embed_locale})}
+          data-popup-hint={dgettext("dashboard_embed", "Click to test the booking modal")}
+          data-link-hint={
+            dgettext(
+              "dashboard_embed",
+              "Preview only: this link opens in test mode and stops working after an hour. Copy the link to share from the Embed Options tab."
+            )
+          }
+          data-loading-message={
+            dgettext(
+              "dashboard_embed",
+              "Booking widget is still loading. Please try again in a second."
+            )
+          }
+          data-deactivated-message={
+            dgettext(
+              "dashboard_embed",
+              "The preview is disabled because your booking link is currently deactivated."
+            )
+          }
+          data-iframe-title={dgettext("dashboard_embed", "Booking Preview")}
           class="min-h-[400px] border-2 border-dashed border-tymeslot-200 rounded-token-lg flex items-center justify-center bg-tymeslot-50 overflow-hidden"
         >
         </div>

@@ -116,9 +116,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                         Profiles.display_name(@organizer_profile)
                       )}
                     </h1>
+                    <%!-- Greeting and instruction are separate settings, often
+                         separate thoughts; each starts on its own line, as the
+                         Rhythm theme shows them. --%>
                     <p class="overview-description text-glass-primary">
                       <%= if greeting = BookingText.greeting(@organizer_profile, Profiles.display_name(@organizer_profile)) do %>
-                        {greeting}
+                        {greeting}<br />
                       <% end %>
                       {BookingText.instruction(@organizer_profile)}
                     </p>

@@ -56,6 +56,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.NextcloudConfig
         </a>
       </div>
 
+      <SharedForm.nextcloud_app_password_hint />
+
       <SharedForm.config_form
         provider="nextcloud"
         show_calendar_selection={@show_calendar_selection}

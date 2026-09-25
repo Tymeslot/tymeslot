@@ -9,15 +9,15 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.TestFixtures
   import Tymeslot.Factory
-  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.ConfigTestHelpers
+  alias Tymeslot.Onboarding.OnboardingQueries
   alias Tymeslot.Webhooks
   alias Tymeslot.Workers.WebhookWorker
 
   setup %{conn: conn} do
     # Create a user and log them in
     user = create_user_fixture()
-    {:ok, user} = UserQueries.mark_onboarding_complete(user)
+    {:ok, user} = OnboardingQueries.mark_onboarding_complete(user)
 
     ConfigTestHelpers.setup_config(:tymeslot,
       feature_access_checker: Tymeslot.Features.DefaultAccessChecker
@@ -140,7 +140,9 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
 
       # The errors are returned from WebhookInputProcessor via AutomationSettingsComponent
       assert render(view) =~ "Name cannot be empty"
-      assert render(view) =~ "Only HTTP and HTTPS URLs are allowed"
+
+      assert render(view) =~
+               "Enter a full address starting with https://, for example https://example.com"
     end
   end
 

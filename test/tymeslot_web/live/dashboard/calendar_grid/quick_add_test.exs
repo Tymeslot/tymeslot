@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.QuickAddTest do
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    _profile = insert(:profile, user: user)
+    _profile = insert(:profile, user: user, timezone: "Etc/UTC")
     insert(:calendar_integration, user: user, is_active: true)
     conn = conn |> Test.init_test_session(%{}) |> fetch_session()
     conn = log_in_user(conn, user)

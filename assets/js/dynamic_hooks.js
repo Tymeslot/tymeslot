@@ -82,11 +82,24 @@ export function lazyHook(name, loader) {
           return;
         }
 
-        // Validate loaded hook
-        const actualHook = typeof hook === 'function' ? new hook() : hook;
-        if (!actualHook || typeof actualHook !== 'object') {
-          throw new Error(`Invalid hook module for "${name}": expected object, got ${typeof actualHook}`);
+        // Validate the export before adopting it. This has to happen on the
+        // export itself: cloning a primitive below would box it into an
+        // object and the check would stop firing.
+        if (!hook || (typeof hook !== 'object' && typeof hook !== 'function')) {
+          throw new Error(`Invalid hook module for "${name}": expected object, got ${typeof hook}`);
         }
+
+        // Give this element its own copy. `loadedHooks` caches the module
+        // export, which is one object shared by every element carrying the
+        // hook; adopting it directly meant the `Object.assign` below pointed
+        // the previous element's hook at this element's DOM and LiveView
+        // context, and clobbered any per-instance state parked on `this`.
+        // `Object.create` + `Object.assign` keeps the prototype, so this is
+        // correct whether the export is an object literal or a class
+        // instance. The fetch still happens once per hook.
+        const actualHook = typeof hook === 'function'
+          ? new hook()
+          : Object.assign(Object.create(Object.getPrototypeOf(hook)), hook);
 
         this.__actualHook = actualHook;
 

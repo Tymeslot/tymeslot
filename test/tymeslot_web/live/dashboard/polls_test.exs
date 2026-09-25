@@ -99,6 +99,44 @@ defmodule TymeslotWeb.Dashboard.PollsTest do
       assert length(poll.time_slots) == 2
     end
 
+    test "warns about a candidate time inside time off without refusing the poll", %{
+      conn: conn,
+      user: user,
+      profile: profile
+    } do
+      day_off = Date.add(Date.utc_today(), 7)
+      insert(:time_off_period, profile: profile, starts_on: day_off, ends_on: day_off)
+      working_day = day_off |> Date.add(1) |> Date.to_iso8601()
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/polls")
+      view |> element("button", "New poll") |> render_click()
+      view |> element("button", "Add time") |> render_click()
+      view |> element("button", "Add time") |> render_click()
+
+      params = %{
+        "poll" => %{
+          "title" => "Offsite",
+          "duration" => "30",
+          "timezone" => profile.timezone,
+          "slots" => %{"0" => "#{Date.to_iso8601(day_off)}T10:00", "1" => "#{working_day}T10:00"}
+        }
+      }
+
+      view |> form("form[phx-submit='create_poll']", params) |> render_change()
+
+      # Only the first row, the one on the day off, carries the warning.
+      assert view
+             |> element("[data-testid='poll-slot-time-off-warning'][data-slot-key='0']")
+             |> render() =~ "This time falls within your time off"
+
+      refute has_element?(view, "[data-testid='poll-slot-time-off-warning'][data-slot-key='1']")
+
+      view |> form("form[phx-submit='create_poll']", params) |> render_submit()
+
+      assert [poll] = Polls.list_polls(user.id)
+      assert length(poll.time_slots) == 2
+    end
+
     test "shows an error and creates nothing when submitted with no slots", %{
       conn: conn,
       user: user

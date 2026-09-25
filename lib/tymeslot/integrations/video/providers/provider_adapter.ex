@@ -5,14 +5,26 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   This module provides a unified interface for all video providers,
   handling common concerns like error handling, logging, metrics, and
   provider lifecycle management.
+
+  ## Room ids are never logged
+
+  For every link-based provider the room id *is* the join link, so a log sink
+  holding it hands whoever can read it a way into the call. The rule is
+  provider-wide rather than per-provider, because a per-provider rule is one the
+  next provider added here forgets: log `Redactor.fingerprint(room_id)` under a
+  `room_ref` key, never the id itself. Nothing in these logs needs the real
+  value; `meeting_id` and `integration_id` correlate with the database, and the
+  fingerprint ties lines about one room together.
   """
 
   require Logger
   alias Tymeslot.Infrastructure.CircuitBreakerHelpers
+  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
   alias Tymeslot.Integrations.Video.MeetingContext
   alias Tymeslot.Integrations.Video.ProviderConfig
+  alias Tymeslot.Integrations.Video.Providers.LinkRoom
   alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
 
   @doc """
@@ -30,7 +42,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
            {:ok, room_data} <- create_room(provider_type, provider_module, config) do
         Logger.info("Successfully created meeting room",
           provider: provider_type,
-          room_id: room_data.room_id || "unknown"
+          room_ref: Redactor.fingerprint(room_data.room_id)
         )
 
         # Handle meeting created event
@@ -71,10 +83,13 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
     } = meeting_context
 
     Metrics.time_operation(:video_create_join_url, %{provider: provider_type}, fn ->
+      # The role and room say whose link this is without copying the
+      # participant's name into the log sink, where it outlives the account it
+      # belongs to.
       Logger.debug("Creating join URL for participant",
         provider: provider_type,
-        participant: participant_name,
-        role: role
+        role: role,
+        room_ref: Redactor.fingerprint(room_data.room_id)
       )
 
       case provider_module.create_join_url(
@@ -87,7 +102,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
         {:ok, join_url} ->
           Logger.debug("Successfully created join URL",
             provider: provider_type,
-            participant: participant_name
+            role: role,
+            room_ref: Redactor.fingerprint(room_data.room_id)
           )
 
           {:ok, join_url}
@@ -95,7 +111,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
         {:error, reason} = error ->
           Logger.error("Failed to create join URL",
             provider: provider_type,
-            participant: participant_name,
+            role: role,
+            room_ref: Redactor.fingerprint(room_data.room_id),
             reason: inspect(reason)
           )
 
@@ -105,30 +122,107 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   end
 
   @doc """
-  Extracts room ID from a meeting URL.
+  The context's join URL for a recipient it cannot name — a booking's guests,
+  and a calendar event's description — as
+  `ProviderBehaviour.shared_join_url/2` describes it.
+
+  Providers that do not implement the optional callback answer with the
+  room's own URL, which is what they handed out before it existed, so a
+  provider whose links carry no credential is unaffected by construction
+  rather than by the caller remembering to ask first.
+  """
+  @spec shared_join_url(MeetingContext.t(), DateTime.t() | nil) ::
+          {:ok, String.t() | nil} | {:error, term()}
+  def shared_join_url(
+        %MeetingContext{provider_module: provider_module, room_data: room_data},
+        meeting_time
+      ) do
+    if callback_exported?(provider_module, :shared_join_url, 2) do
+      # Optional callback resolved at runtime via the guard above; apply/3
+      # keeps the static type checker from flagging providers that omit it.
+      # credo:disable-for-next-line Credo.Check.Refactor.Apply
+      apply(provider_module, :shared_join_url, [room_data, meeting_time])
+    else
+      {:ok, room_data.meeting_url}
+    end
+  end
+
+  @doc """
+  Whether the context's join URLs stop working some time after the meeting
+  time they were built for, so a reschedule has to build them again.
+
+  Providers that do not implement the optional `time_bound_join_urls?/1`
+  callback answer `false`.
+  """
+  @spec time_bound_join_urls?(MeetingContext.t()) :: boolean()
+  def time_bound_join_urls?(%MeetingContext{
+        provider_module: provider_module,
+        room_data: room_data
+      }) do
+    if callback_exported?(provider_module, :time_bound_join_urls?, 1) do
+      # Optional callback resolved at runtime via the guard above; apply/3
+      # keeps the static type checker from flagging providers that omit it.
+      # credo:disable-for-next-line Credo.Check.Refactor.Apply
+      apply(provider_module, :time_bound_join_urls?, [room_data.provider_config || %{}])
+    else
+      false
+    end
+  end
+
+  @doc """
+  Extracts the room id from a meeting URL, guessing which provider the link
+  belongs to.
+
+  **Best-effort only.** The provider is guessed by testing the URL against each
+  provider's `url_patterns/0` substrings in `ProviderConfig.all_providers_with_dev/0`
+  order, and the first provider to claim the link wins. Two providers whose URLs
+  share a substring therefore resolve to the earlier one, silently, and the room
+  id comes back parsed by the wrong provider's rules.
+
+  Use this only where a bare link is genuinely all there is, for instance
+  naming the service behind a URL a user has just pasted. **A caller holding an
+  integration must not use it**: it already knows the provider, so it should
+  call `extract_room_id/2` and get an answer that cannot be mis-attributed.
   """
   @spec extract_room_id(String.t()) :: String.t() | nil
   def extract_room_id(meeting_url) do
-    # Try to detect provider from URL and extract room ID
     case detect_provider_from_url(meeting_url) do
       {:ok, provider_type} ->
-        case ProviderRegistry.get_provider(provider_type) do
-          {:ok, provider_module} ->
-            provider_module.extract_room_id(meeting_url)
-
-          {:error, _reason} ->
-            Logger.warning("Failed to get provider for room ID extraction",
-              provider_type: provider_type
-            )
-
-            nil
-        end
+        extract_room_id(meeting_url, provider_type)
 
       {:error, _reason} ->
-        Logger.warning("Could not detect provider from URL", url: meeting_url)
+        # For kMeet, Jitsi and custom links the meeting URL is the join link,
+        # so only its scheme and host go to the log; that is also the part
+        # worth seeing when provider detection has failed.
+        Logger.warning("Could not detect provider from URL", url: LinkRoom.mask_url(meeting_url))
         nil
     end
   end
+
+  @doc """
+  Extracts the room id from a meeting URL using `provider_type`'s own rules.
+
+  Dispatches straight to the named provider, so a URL another provider would
+  have claimed by substring is still parsed by the one that actually issued it.
+  Accepts the atom or the string form, since persisted integrations carry the
+  string. Returns `nil` for an unknown provider or a non-binary URL.
+  """
+  @spec extract_room_id(String.t(), atom() | String.t()) :: String.t() | nil
+  def extract_room_id(meeting_url, provider_type) when is_binary(meeting_url) do
+    with {:ok, type} <- ProviderConfig.parse_known(provider_type),
+         {:ok, provider_module} <- ProviderRegistry.get_provider(type) do
+      provider_module.extract_room_id(meeting_url)
+    else
+      {:error, _reason} ->
+        Logger.warning("Failed to get provider for room ID extraction",
+          provider_type: provider_type
+        )
+
+        nil
+    end
+  end
+
+  def extract_room_id(_meeting_url, _provider_type), do: nil
 
   @doc """
   Validates if a URL is a valid meeting URL.
@@ -184,7 +278,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   @spec update_meeting_room(atom(), String.t(), map()) :: :ok | {:error, term()}
   def update_meeting_room(provider_type, room_id, config) do
     Metrics.time_operation(:video_update_room, %{provider: provider_type}, fn ->
-      Logger.info("Updating meeting room", provider: provider_type, room_id: room_id)
+      Logger.info("Updating meeting room",
+        provider: provider_type,
+        room_ref: Redactor.fingerprint(room_id)
+      )
 
       case ProviderRegistry.get_provider(provider_type) do
         {:ok, provider_module} ->
@@ -218,7 +315,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   @spec delete_meeting_room(atom(), String.t(), map()) :: :ok | {:error, term()}
   def delete_meeting_room(provider_type, room_id, config) do
     Metrics.time_operation(:video_delete_room, %{provider: provider_type}, fn ->
-      Logger.info("Deleting meeting room", provider: provider_type, room_id: room_id)
+      Logger.info("Deleting meeting room",
+        provider: provider_type,
+        room_ref: Redactor.fingerprint(room_id)
+      )
 
       case ProviderRegistry.get_provider(provider_type) do
         {:ok, provider_module} ->
@@ -258,7 +358,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
     Logger.info("Handling meeting event",
       provider: provider_type,
       event: event,
-      room_id: room_data.room_id || "unknown"
+      room_ref: Redactor.fingerprint(room_data.room_id)
     )
 
     case provider_module.handle_meeting_event(event, room_data, additional_data) do

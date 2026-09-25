@@ -95,11 +95,17 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
   end
 
   describe "submit_booking/2 — new booking with video room" do
-    test "routes through the video-room branch and enqueues VideoRoomWorker", %{
-      user: user,
-      meeting_type: meeting_type
-    } do
+    test "routes through the video-room branch and enqueues VideoRoomWorker", %{user: user} do
       video_integration = insert(:video_integration, user: user, provider: "mirotalk")
+
+      # The chosen location is what decides a room gets created, so the type
+      # has to offer one; `meeting_type` from setup is in-person only.
+      video_type =
+        insert(:meeting_type,
+          user: user,
+          name: "Video Call",
+          locations: [video_location(video_integration)]
+        )
 
       params = %{
         form_data: %{
@@ -113,8 +119,7 @@ defmodule Tymeslot.Bookings.OrchestratorCompositionTest do
           duration: "30min",
           user_timezone: "Europe/Berlin",
           organizer_user_id: user.id,
-          meeting_type_id: meeting_type.id,
-          video_integration_id: video_integration.id,
+          meeting_type_id: video_type.id,
           with_video_room: true
         }
       }

@@ -5,6 +5,18 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   single batched notification email reflecting the aggregated delta or no-ops
   if the effective diff is empty.
 
+  Nothing seeds `last_notified_state` when an event is created or synced, so
+  the first run for any event diffs against an empty baseline.
+  `LastNotifiedState.to_event/2` owns what that means (see its docs), and
+  the baseline is written only *after* a successful dispatch, never before
+  the diff that decides who to notify.
+
+  An empty baseline is fine for *deciding* to notify and useless for
+  *describing* the change, since every `before_*` value comes out nil. The
+  dispatch therefore flags it as a first notification, so the email states
+  the event's current details instead of announcing, say, a title changed
+  from nothing.
+
   On successful dispatch, the event's `last_notified_state` is updated to the
   current serialised snapshot and `ical_sequence` is bumped via
   `ChangeSummary.next_sequence`. The whole read/dispatch/persist path runs
@@ -14,6 +26,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
 
   use Oban.Worker, queue: :emails, max_attempts: 5
 
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.EmailScheduler.CalendarScheduler
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
@@ -67,7 +80,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
     with {:ok, event} <- load_event(id, kind) do
       action_atom = String.to_existing_atom(action)
       current = current_event_map(event)
-      baseline = LastNotifiedState.to_event(event.last_notified_state)
+      baseline = LastNotifiedState.to_event(event.last_notified_state, current)
       summary = ChangeDetector.diff(baseline, current, current_sequence: event.ical_sequence)
 
       if ChangeSummary.any_changes?(summary) do
@@ -105,6 +118,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
 
   # Normalises both single-attendee meetings and multi-attendee provider events
   # into the shape ChangeDetector expects: `:title`, `:starts_at`, `:ends_at`,
+  # `:start_date`, `:end_date` (an all-day event's timing; meetings have none),
   # `:location`, `:description`, `:video_link`, and an `:attendees` list of
   # `%{email: ...}` maps.
   defp current_event_map(event) do
@@ -112,6 +126,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
       title: Map.get(event, :summary) || Map.get(event, :title),
       starts_at: Map.get(event, :start_at) || Map.get(event, :start_time),
       ends_at: Map.get(event, :end_at) || Map.get(event, :end_time),
+      start_date: Map.get(event, :start_date),
+      end_date: Map.get(event, :end_date),
       location: Map.get(event, :location),
       description: Map.get(event, :description),
       video_link: Map.get(event, :video_link) || Map.get(event, :attendee_video_url),
@@ -137,28 +153,42 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
     {method, sequence} =
       IcalMethod.for(ical_action(action_atom), current_sequence: event.ical_sequence)
 
-    declined = declined_emails(event)
+    excluded = MapSet.union(declined_emails(event), owner_emails(event))
 
-    recipients =
+    recipient_emails =
       summary
       |> recipients_for(action_atom)
-      |> Enum.reject(fn attendee -> recipient_email(attendee) in declined end)
+      |> Enum.reject(fn attendee -> recipient_email(attendee) in excluded end)
+      |> Enum.map(&Map.get(&1, :email))
+      |> Enum.reject(&is_nil/1)
 
-    Enum.each(recipients, fn attendee ->
-      CalendarScheduler.schedule_event_update_notification(%{
-        user_id: user_id_for(event),
-        event_uid: event.uid,
-        integration_id: integration_id_for(event),
-        attendee_emails: [Map.get(attendee, :email)],
-        before_title: last_state_string(event, "title"),
-        before_location: last_state_string(event, "location"),
-        before_description: last_state_string(event, "description"),
-        before_start_at: last_state_datetime(event, "starts_at"),
-        before_end_at: last_state_datetime(event, "ends_at"),
-        method: method,
-        sequence: sequence
-      })
-    end)
+    dispatch_to(recipient_emails, event, method, sequence)
+  end
+
+  # One job for the whole recipient list, which is what the handler on the
+  # other end expects (`attendee_emails` is a list it maps over) and what the
+  # scheduler's uniqueness key requires: it is keyed on action + event_uid +
+  # method and deliberately not on the recipients, so a job per attendee
+  # collapses into the first one and everybody else is silently dropped.
+  defp dispatch_to([], _event, _method, _sequence), do: :ok
+
+  defp dispatch_to(recipient_emails, event, method, sequence) do
+    CalendarScheduler.schedule_event_update_notification(%{
+      user_id: user_id_for(event),
+      event_uid: event.uid,
+      integration_id: integration_id_for(event),
+      attendee_emails: recipient_emails,
+      before_title: last_state_string(event, "title"),
+      before_location: last_state_string(event, "location"),
+      before_description: last_state_string(event, "description"),
+      before_start_at: last_state_datetime(event, "starts_at"),
+      before_end_at: last_state_datetime(event, "ends_at"),
+      before_start_date: last_state_string(event, "start_date"),
+      before_end_date: last_state_string(event, "end_date"),
+      first_notification: LastNotifiedState.empty?(event.last_notified_state),
+      method: method,
+      sequence: sequence
+    })
 
     :ok
   end
@@ -186,6 +216,24 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   end
 
   defp declined_emails(_event), do: MapSet.new()
+
+  # The address of the user whose integration owns this event, lower-cased to
+  # match `recipient_email/1`. Google and Outlook both list the organiser as an
+  # attendee of events created in their own UI, so without this the person who
+  # made the edit is emailed about their own edit, with an ICS attached.
+  #
+  # Deliberately the *owner's* address, not the event's `organizer` field: a
+  # user can be an attendee of someone else's event that syncs into their grid,
+  # and editing that one must still notify the real organiser.
+  defp owner_emails(event) do
+    with id when is_integer(id) <- user_id_for(event),
+         {:ok, user} <- UserQueries.get_user(id),
+         email when is_binary(email) <- user.email do
+      MapSet.new([email |> String.trim() |> String.downcase()])
+    else
+      _no_owner -> MapSet.new()
+    end
+  end
 
   defp declined?(attendee) do
     status = Map.get(attendee, :response_status) || Map.get(attendee, "response_status")

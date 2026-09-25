@@ -1,8 +1,10 @@
 defmodule TymeslotWeb.AuthLive.SecurityHelper do
   @moduledoc """
-  Security utilities for AuthLive including CSRF validation and client metadata extraction.
+  Security utilities for AuthLive: CSRF validation and its failure message.
   Extracted from AuthLive to separate security concerns and improve maintainability.
   """
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.Component
   alias Plug.Crypto
@@ -35,10 +37,7 @@ defmodule TymeslotWeb.AuthLive.SecurityHelper do
       SecurityLogger.log_csrf_violation(
         get_current_user_id(socket),
         "form_submission",
-        %{
-          ip_address: ClientIP.get(socket),
-          user_agent: ClientIP.get_user_agent(socket)
-        }
+        %{ip_address: ClientIP.get(socket), user_agent: ClientIP.get_user_agent(socket)}
       )
 
       {:error, :invalid_csrf}
@@ -46,27 +45,11 @@ defmodule TymeslotWeb.AuthLive.SecurityHelper do
   end
 
   @doc """
-  Extract client metadata for security logging and rate limiting.
+  The message a form shows when `validate_csrf_token/2` rejects it.
   """
-  @spec extract_client_metadata(Phoenix.LiveView.Socket.t()) :: map()
-  def extract_client_metadata(socket) do
-    %{
-      ip: ClientIP.get(socket),
-      user_agent: ClientIP.get_user_agent(socket)
-    }
-  end
-
-  @doc """
-  The IP to key a rate limit on, from metadata produced by
-  `extract_client_metadata/1`.
-
-  An unattributable request still needs a stable key: keying it on `nil` would
-  give every such request its own bucket, which is no limit at all. They share
-  one instead.
-  """
-  @spec rate_limit_ip(map()) :: String.t()
-  def rate_limit_ip(%{ip: ip}) when ip in [nil, ""], do: "unknown"
-  def rate_limit_ip(%{ip: ip}), do: ip
+  @spec csrf_message() :: String.t()
+  def csrf_message,
+    do: dgettext("auth", "Security validation failed. Please refresh the page.")
 
   @spec get_current_user_id(Phoenix.LiveView.Socket.t()) :: integer() | nil
   defp get_current_user_id(socket) do

@@ -84,6 +84,32 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.FormInput do
 
   def integration_id(_other), do: nil
 
+  @doc """
+  Whether a login copied from a Nextcloud calendar connection still describes
+  the submitted form: the same server and login name, ignoring surrounding
+  whitespace and a trailing slash.
+
+  The copied app password is only ever sent with the account it was copied
+  from, so a form whose server or login name has since been changed takes a
+  typed app password instead.
+  """
+  @spec copied_login_applies?(
+          %{:server_url => String.t(), :username => String.t(), optional(atom()) => term()}
+          | nil,
+          map()
+        ) :: boolean()
+  def copied_login_applies?(%{server_url: server_url, username: username}, %{} = params) do
+    server(params["base_url"]) == server(server_url) and
+      trimmed(params["client_id"]) == trimmed(username)
+  end
+
+  def copied_login_applies?(_copied_login, _params), do: false
+
+  defp server(url), do: url |> trimmed() |> String.trim_trailing("/")
+
+  defp trimmed(value) when is_binary(value), do: String.trim(value)
+  defp trimmed(_value), do: ""
+
   defp existing_atom(key) do
     String.to_existing_atom(key)
   rescue

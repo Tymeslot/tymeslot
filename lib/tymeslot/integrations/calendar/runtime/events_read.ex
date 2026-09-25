@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
+  alias Tymeslot.Utils.DateTimeUtils
 
   @doc """
   Fetches events for the given client with a fallback to full list filtering when needed.
@@ -57,18 +58,18 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
   defp fallback_list_events_for_client(client, start_utc, end_utc, _original_error) do
     case ProviderAdapter.get_events(client) do
       {:ok, all_events} ->
+        # Normalise before filtering, exactly as the primary path does. Google
+        # and Outlook return raw string-keyed API maps here, on which every
+        # `event[:start_time]` below is nil: without this the fallback filters
+        # every event out and reports `{:ok, []}`, which the availability path
+        # cannot distinguish from a genuinely empty calendar and so offers
+        # slots straight over the host's real conflicts.
+        normalized = normalize_events(client, all_events)
+
         # Expand recurring events first so their occurrences can be range-filtered
-        expanded = expand_recurring_events(all_events, start_utc, end_utc)
+        expanded = expand_recurring_events(normalized, start_utc, end_utc)
 
-        filtered =
-          Enum.filter(expanded, fn event ->
-            start_time = Map.get(event, :start_time)
-            end_time = Map.get(event, :end_time)
-
-            start_time && end_time &&
-              DateTime.compare(start_time, end_utc) == :lt &&
-              DateTime.compare(end_time, start_utc) == :gt
-          end)
+        filtered = Enum.filter(expanded, &overlaps_range?(&1, start_utc, end_utc))
 
         Logger.info("Fallback filtering applied",
           calendar_path: get_calendar_path(client),
@@ -156,6 +157,30 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
 
   defp parse_exdates(exdates) when is_list(exdates), do: exdates
   defp parse_exdates(_other), do: []
+
+  # All-day events carry bare `%Date{}` values the whole way down this path:
+  # the iCal parser emits them for DATE-form DTSTART/DTEND, `RecurrenceExpander`
+  # preserves them for all-day occurrences, and `Availability.Events` matches on
+  # them downstream. So the range check has to coerce before comparing rather
+  # than assume `%DateTime{}`, and it must leave the event itself untouched.
+  defp overlaps_range?(event, start_utc, end_utc) do
+    case {to_utc(Map.get(event, :start_time)), to_utc(Map.get(event, :end_time))} do
+      {%DateTime{} = starts_at, %DateTime{} = ends_at} ->
+        DateTime.compare(starts_at, end_utc) == :lt and
+          DateTime.compare(ends_at, start_utc) == :gt
+
+      _incomplete ->
+        false
+    end
+  end
+
+  # Total by design: this runs over unvalidated provider output, so anything
+  # that is neither a `Date` nor a `DateTime` (a missing time, a shape a new
+  # provider invents) drops the event from the range rather than raising and
+  # killing the whole fetch.
+  defp to_utc(%DateTime{} = datetime), do: datetime
+  defp to_utc(%Date{} = date), do: DateTimeUtils.to_datetime(date)
+  defp to_utc(_other), do: nil
 
   defp wrap_events_result(client, result, _log_level \\ nil)
 

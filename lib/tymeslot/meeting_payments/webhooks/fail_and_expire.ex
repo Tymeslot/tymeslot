@@ -15,6 +15,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Telemetry
@@ -80,11 +81,24 @@ defmodule Tymeslot.MeetingPayments.Webhooks.FailAndExpire do
 
     case result do
       {:ok, :ok} ->
+        # An `awaiting_payment` booking holds its slot on the booking page as
+        # well as at the submit, so expiring it has to release the cached
+        # offer, exactly as confirming the payment does.
+        release_cached_availability(payment.meeting_id)
         broadcast_expired(payment.meeting_id)
         :ok
 
       {:error, rollback_reason} ->
         {:error, rollback_reason}
+    end
+  end
+
+  defp release_cached_availability(nil), do: :ok
+
+  defp release_cached_availability(meeting_id) do
+    case MeetingQueries.get_meeting(meeting_id) do
+      {:ok, meeting} -> AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
+      {:error, :not_found} -> :ok
     end
   end
 

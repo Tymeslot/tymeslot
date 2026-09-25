@@ -2,63 +2,57 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventScheduler do
   @moduledoc """
   Schedules calendar event jobs via Oban.
 
-  This module is the single point of entry for enqueueing calendar event
-  creation, update, and deletion jobs. Each function constructs the
-  appropriate Oban job via `Tymeslot.Workers.CalendarEventWorker.new/2`
-  and inserts it into the database. Uniqueness constraints on each job
+  Enqueues calendar event update, deletion and replacement jobs. Creation jobs are
+  enqueued by `Tymeslot.Bookings.CalendarJobs.schedule_job/2` instead. Each
+  function constructs the appropriate Oban job via
+  `Tymeslot.Workers.CalendarEventWorker.new/2` and inserts it into the
+  database. Uniqueness constraints on each job
   type prevent duplicate operations within the configured windows.
 
   Callers should reference this module directly — no delegation functions
   exist on `Tymeslot.Workers.CalendarEventWorker`.
   """
 
-  alias Ecto.Changeset
   alias Tymeslot.Workers.CalendarEventWorker
 
-  require Logger
+  # A job that is still waiting will read the meeting when it runs, so a second
+  # one for the same work would only repeat it. A job that is already
+  # *executing* has read it, and nothing it learns afterwards can reach the
+  # event it is writing.
+  #
+  # For a create or a delete that costs nothing: the outcome does not depend on
+  # what changed in between. An update carries the meeting's current state, so
+  # collapsing one into a running job silently drops whatever prompted it. That
+  # is how a video link goes missing from the host's calendar entry: approving a
+  # booking enqueues an update, the video room is created moments later while
+  # that update is still in flight, and the update `Meetings.VideoRooms` then
+  # enqueues to carry the link is dropped as a duplicate of the one that has
+  # already read the meeting without it.
+  #
+  # A replacement is the same case. It decides between replacing the event and
+  # only updating it on the meeting it reads, so one collapsed into a running
+  # replacement that has already chosen to update is lost: a booking moved
+  # back to Teams and then away again while that update is on the wire keeps
+  # the Teams meeting on its event. A second replacement of the same event
+  # costs nothing when it follows one that did replace it: it finds the
+  # meeting on the new event and only deletes the old one, which is gone.
+  #
+  # Enqueuing it is half the fix. `Workers.CalendarEventWorker` holds the new
+  # job behind the one in flight, so the two do not write at once — the server
+  # would refuse the second conditional PUT, and the write that carries the
+  # link would be the one refused.
+  @update_unique_states [:available, :scheduled, :retryable]
+  @exclusive_unique_states [:available, :scheduled, :executing, :retryable]
 
   @doc """
-  Schedules calendar event creation to happen asynchronously with high priority.
+  The Oban `unique` states a calendar job of `action` may be collapsed into.
+
+  Exposed so `Tymeslot.Bookings.CalendarJobs.schedule_job/2`, which enqueues
+  the same worker, cannot drift from the rule here.
   """
-  @spec schedule_calendar_creation(integer()) :: :ok | {:error, String.t()}
-  def schedule_calendar_creation(meeting_id) do
-    result =
-      %{"action" => "create", "meeting_id" => meeting_id}
-      |> CalendarEventWorker.new(
-        queue: :calendar_events,
-        # Highest priority for calendar sync
-        priority: 0,
-        unique: [
-          # 5 minutes uniqueness window
-          period: 300,
-          fields: [:args, :queue],
-          keys: [:action, :meeting_id],
-          states: [:available, :scheduled, :executing, :retryable]
-        ]
-      )
-      |> Oban.insert()
-
-    case result do
-      {:ok, _job} ->
-        Logger.info("Calendar event creation job scheduled", meeting_id: meeting_id)
-        :ok
-
-      {:error, %Changeset{errors: [unique: _details]}} ->
-        Logger.info("Calendar event creation job already exists, skipping duplicate",
-          meeting_id: meeting_id
-        )
-
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to schedule calendar event creation",
-          meeting_id: meeting_id,
-          error: format_insert_error(reason)
-        )
-
-        {:error, "Failed to schedule job"}
-    end
-  end
+  @spec unique_states(String.t()) :: [atom()]
+  def unique_states(action) when action in ["update", "replace"], do: @update_unique_states
+  def unique_states(_action), do: @exclusive_unique_states
 
   @doc """
   Schedules calendar event update with medium priority.
@@ -75,7 +69,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventScheduler do
         period: 300,
         fields: [:args, :queue],
         keys: [:action, :meeting_id],
-        states: [:available, :scheduled, :executing, :retryable]
+        states: unique_states("update")
       ]
     )
     |> Oban.insert()
@@ -96,17 +90,39 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventScheduler do
         period: 300,
         fields: [:args, :queue],
         keys: [:action, :meeting_id],
-        states: [:available, :scheduled, :executing, :retryable]
+        states: unique_states("delete")
       ]
     )
     |> Oban.insert()
   end
 
-  # Private helpers
+  @doc """
+  Schedules the replacement of a meeting's calendar event `event_id` with a
+  fresh one written from the meeting as it now stands.
 
-  defp format_insert_error(%Changeset{} = changeset) do
-    Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
+  For an event that carries something an update cannot take off it: a
+  Microsoft Teams meeting attached to the booking's own Outlook event, which
+  Graph keeps for good once set (see
+  `Tymeslot.Meetings.CalendarEventSync.replace/3`). The event's id travels in
+  the args, so a retry after the new event was written still knows which one
+  to delete, and a later replacement of that new event is its own job rather
+  than a duplicate of this one.
+  """
+  @spec schedule_calendar_replacement(String.t(), String.t()) ::
+          {:ok, Oban.Job.t()} | {:error, Ecto.Changeset.t()}
+  def schedule_calendar_replacement(meeting_id, event_id)
+      when is_binary(meeting_id) and is_binary(event_id) do
+    %{"action" => "replace", "meeting_id" => meeting_id, "event_id" => event_id}
+    |> CalendarEventWorker.new(
+      queue: :calendar_events,
+      priority: 2,
+      unique: [
+        period: 300,
+        fields: [:args, :queue],
+        keys: [:action, :meeting_id, :event_id],
+        states: unique_states("replace")
+      ]
+    )
+    |> Oban.insert()
   end
-
-  defp format_insert_error(other), do: inspect(other)
 end

@@ -3,16 +3,15 @@ defmodule Tymeslot.Meetings.Listing do
   Listing, filtering, and cursor pagination for a user's meetings.
 
   Owns the read-side presentation concerns of the Meetings context: turning a
-  filter string into query options, paging results with an opaque cursor, and
-  selecting the meetings that still need a reminder email. The query mechanics
-  live in `MeetingListQueries`; this module orchestrates them into pages and lists
-  the dashboard and notification workers consume.
+  filter string into query options and paging results with an opaque cursor. The
+  query mechanics live in `MeetingListQueries`; this module orchestrates them into
+  the pages the dashboard consumes.
   """
 
   require Logger
 
   alias Tymeslot.Auth.UserQueries
-  alias Tymeslot.Meetings.{MeetingListQueries, MeetingSchema}
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Pagination.CursorPage
 
   @doc """
@@ -125,23 +124,6 @@ defmodule Tymeslot.Meetings.Listing do
       {:error, :failed_to_list_meetings}
   end
 
-  @doc """
-  Returns meetings that need reminder emails sent.
-
-  Finds confirmed meetings starting within the next hour that still have
-  unsent reminders.
-  """
-  @spec meetings_needing_reminders() :: [MeetingSchema.t()]
-  def meetings_needing_reminders do
-    now = DateTime.utc_now()
-    one_hour_from_now = DateTime.add(now, 1, :hour)
-
-    Enum.filter(
-      MeetingListQueries.list_meetings_needing_reminders(now, one_hour_from_now),
-      &needs_reminder?/1
-    )
-  end
-
   defp list_user_meetings_internal(user_email, opts) do
     per_page = Keyword.get(opts, :per_page, 20)
     status = Keyword.get(opts, :status)
@@ -188,22 +170,5 @@ defmodule Tymeslot.Meetings.Listing do
       page_size: per_page,
       has_more: has_more
     }
-  end
-
-  defp needs_reminder?(meeting) do
-    case meeting.reminders do
-      nil ->
-        not meeting.reminder_email_sent
-
-      [] ->
-        false
-
-      reminders when is_list(reminders) ->
-        reminders_sent = meeting.reminders_sent || []
-        length(reminders) > length(reminders_sent)
-
-      _other ->
-        true
-    end
   end
 end

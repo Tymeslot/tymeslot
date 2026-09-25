@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents,
     as: SharedForm
 
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -189,6 +190,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
         <%= case @phase do %>
           <% :credentials -> %>
             <.credentials_form
+              provider={@integration.provider}
               form_values={@form_values}
               form_errors={@form_errors}
               is_submitting={@is_submitting}
@@ -209,6 +211,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
     """
   end
 
+  attr :provider, :string, required: true
   attr :form_values, :map, required: true
   attr :form_errors, :map, required: true
   attr :is_submitting, :boolean, required: true
@@ -230,6 +233,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
         )}
       </p>
 
+      <SharedForm.nextcloud_app_password_hint :if={@provider == "nextcloud"} />
+
       <%= if @locked_url do %>
         <SharedForm.locked_url_field
           value={@locked_url.url}
@@ -246,6 +251,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
           required
           icon="hero-globe-alt"
           errors={FormValidationHelpers.field_errors(@form_errors, :url)}
+          {UIComponents.server_url_attrs()}
         />
       <% end %>
 
@@ -264,7 +270,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
         id="reconnect_password"
         name="reconnect[password]"
         type="password"
-        label={dgettext("dashboard_calendar_providers", "Password / App Password")}
+        label={SharedForm.password_label(@provider)}
         value={@form_values["password"]}
         required
         icon="hero-lock-closed"

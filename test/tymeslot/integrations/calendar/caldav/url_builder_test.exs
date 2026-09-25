@@ -127,4 +127,124 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.UrlBuilderTest do
              ) == "https://caldav.icloud.com/"
     end
   end
+
+  describe "resolve_event_url/4" do
+    # Regression: the caller-side resolver used to glue a cached href onto the
+    # whole base_url. Nextcloud's base_url is normalised to the DAV root and
+    # the href starts with that same root, so every write to a synced event
+    # went to /remote.php/dav/remote.php/dav/... and 404ed.
+    test "joins a root-relative href to the base origin, not the base path" do
+      assert UrlBuilder.resolve_event_url(
+               "https://cloud.example.com/remote.php/dav",
+               "/remote.php/dav/calendars/me/personal/",
+               "abc",
+               "/remote.php/dav/calendars/me/personal/abc.ics"
+             ) ==
+               {:ok, "https://cloud.example.com/remote.php/dav/calendars/me/personal/abc.ics"}
+    end
+
+    test "joins a root-relative href for a subfolder install" do
+      assert UrlBuilder.resolve_event_url(
+               "https://example.com/nextcloud/remote.php/dav",
+               "/nextcloud/remote.php/dav/calendars/me/personal/",
+               "abc",
+               "/nextcloud/remote.php/dav/calendars/me/personal/abc.ics"
+             ) ==
+               {:ok, "https://example.com/nextcloud/remote.php/dav/calendars/me/personal/abc.ics"}
+    end
+
+    test "ignores a trailing slash on base_url" do
+      assert UrlBuilder.resolve_event_url(
+               "https://cloud.example.com/remote.php/dav/",
+               "/remote.php/dav/calendars/me/personal/",
+               "abc",
+               "/remote.php/dav/calendars/me/personal/abc.ics"
+             ) ==
+               {:ok, "https://cloud.example.com/remote.php/dav/calendars/me/personal/abc.ics"}
+    end
+
+    test "pins an absolute href to the validated base origin" do
+      assert UrlBuilder.resolve_event_url(
+               "https://caldav.icloud.com",
+               "/19428228001/calendars/home/",
+               "abc",
+               "https://p110-caldav.icloud.com/19428228001/calendars/home/abc.ics"
+             ) == {:ok, "https://caldav.icloud.com/19428228001/calendars/home/abc.ics"}
+    end
+
+    test "falls back to calendar_path + uid when no href is cached" do
+      assert UrlBuilder.resolve_event_url(
+               "https://cloud.example.com/remote.php/dav",
+               "/remote.php/dav/calendars/me/personal/",
+               "abc",
+               nil
+             ) ==
+               {:ok, "https://cloud.example.com/remote.php/dav/calendars/me/personal/abc.ics"}
+    end
+
+    test "treats an empty href as absent" do
+      assert UrlBuilder.resolve_event_url(
+               "https://cloud.example.com/remote.php/dav",
+               "/remote.php/dav/calendars/me/personal/",
+               "abc",
+               ""
+             ) ==
+               {:ok, "https://cloud.example.com/remote.php/dav/calendars/me/personal/abc.ics"}
+    end
+
+    test "reports :unaddressable when neither an href nor a path and uid are known" do
+      assert UrlBuilder.resolve_event_url("https://cloud.example.com", nil, nil, nil) ==
+               {:error, :unaddressable}
+
+      assert UrlBuilder.resolve_event_url(
+               "https://cloud.example.com",
+               "/calendars/me/personal/",
+               "",
+               nil
+             ) == {:error, :unaddressable}
+    end
+  end
+
+  describe "resolve_href/2 — server-supplied hrefs" do
+    # A CalDAV href is server-root-relative, so it resolves against the origin
+    # of `base_url`, never against the whole of it. `base_url` may already
+    # carry the CalDAV path — a Nextcloud subpath install, or a DAV URL pasted
+    # from Nextcloud's own settings — and concatenating the two doubled that
+    # path into a URL the server answers with 404. Because a CalDAV DELETE
+    # counts 404 as success, the delete of a just-created event reported
+    # success without deleting anything.
+    @href "/remote.php/dav/calendars/alice/personal/abc-123.ics"
+
+    test "a base_url carrying a path does not double it" do
+      assert UrlBuilder.resolve_href("https://cloud.example.com/remote.php/dav", @href) ==
+               "https://cloud.example.com#{@href}"
+    end
+
+    test "resolves identically whether or not base_url carries the path" do
+      assert UrlBuilder.resolve_href("https://cloud.example.com/remote.php/dav", @href) ==
+               UrlBuilder.resolve_href("https://cloud.example.com", @href)
+    end
+
+    test "a deeper subpath install does not double either" do
+      assert UrlBuilder.resolve_href("https://host.example.com/nextcloud/remote.php/dav", @href) ==
+               "https://host.example.com#{@href}"
+    end
+
+    test "keeps a non-default port" do
+      assert UrlBuilder.resolve_href("https://cloud.example.com:8443/dav", @href) ==
+               "https://cloud.example.com:8443#{@href}"
+    end
+
+    test "pins an absolute href to the validated host" do
+      assert UrlBuilder.resolve_href(
+               "https://cloud.example.com/remote.php/dav",
+               "https://p110-caldav.icloud.com/123/calendars/home/x.ics"
+             ) == "https://cloud.example.com/123/calendars/home/x.ics"
+    end
+
+    test "appends a relative href to base_url" do
+      assert UrlBuilder.resolve_href("https://cloud.example.com/remote.php/dav", "personal/x.ics") ==
+               "https://cloud.example.com/remote.php/dav/personal/x.ics"
+    end
+  end
 end

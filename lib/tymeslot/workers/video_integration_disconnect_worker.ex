@@ -10,7 +10,17 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
   credentials away before they had been used.
 
   Only *upcoming* bookings are touched. Past bookings are history, and their
-  provider rooms have usually expired on their own.
+  provider rooms have usually expired on their own. The exception is a provider
+  whose rooms stay on the organiser's server until something deletes them
+  (`ProviderConfig.rooms_deleted_after_meeting/0`): every room such an
+  integration still holds is deleted, ended and cancelled meetings included,
+  because once the row is purged nothing has the credentials to reach them.
+  `Tymeslot.Integrations.Video.disconnect_room_scope/1` makes that choice, for
+  the disconnect modal's count as much as for this drain.
+
+  The rooms drained are those of bookings and those made for events on the
+  dashboard calendar grid, whose records (`Tymeslot.CalendarGrid.EventVideoRooms`)
+  are removed as their rooms go.
 
   This runs only when the user explicitly asked for the rooms to be deleted.
   Disconnecting on its own leaves them alone, because their join URLs are
@@ -23,22 +33,31 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
     max_attempts: 5,
     priority: 2
 
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.SnoozePolicy
   alias Tymeslot.Workers.VideoRoom.ErrorPolicy
+  alias Tymeslot.Workers.VideoSyncWorker
 
   require Logger
 
   @max_attempts 5
 
-  # Matches `MeetingListQueries.list_upcoming_with_video_room_for_integration/3`'s
-  # own default. Overridable at runtime (rather than a plain module attribute)
-  # so tests can drive the full-page retry path without inserting hundreds of
-  # meetings.
+  # What a booking keeps of a room that is gone: nothing.
+  @cleared_room %{
+    video_room_id: nil,
+    video_room_enabled: false,
+    organizer_video_url: nil,
+    attendee_video_url: nil
+  }
+
+  # Overridable at runtime (rather than a plain module attribute) so tests can
+  # drive the full-page retry path without inserting hundreds of meetings.
   @default_drain_page_limit 500
 
   @doc """
@@ -126,15 +145,14 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
   defp drain(integration, executions) do
     limit = drain_page_limit()
 
-    meetings =
-      MeetingListQueries.list_upcoming_with_video_room_for_integration(
-        integration.id,
-        DateTime.utc_now(),
-        limit
-      )
+    {meetings, event_rooms} = rooms_to_drain(integration, limit)
 
-    results = Enum.map(meetings, &delete_room(integration, &1))
+    results =
+      Enum.map(meetings, &delete_meeting_room(integration, &1)) ++
+        Enum.map(event_rooms, &delete_event_room(integration, &1))
+
     failures = Enum.count(results, &(&1 in [:error, :circuit_open]))
+    total = length(results)
 
     cond do
       :circuit_open in results and executions < @max_attempts ->
@@ -146,21 +164,29 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
         # forever the way an unconditional snooze would.
         ErrorPolicy.to_result(:circuit_open, executions, integration.provider)
 
-      length(meetings) == limit ->
-        # A full page: more upcoming meetings on this integration than one
-        # pass covers. `clear_room/1` removed every drained meeting from the
-        # result set, so retrying re-queries the next page rather than
-        # purging with the rest silently orphaned.
+      length(meetings) == limit or length(event_rooms) == limit ->
+        # A full page: more rooms on this integration than one pass covers.
+        # `clear_room/1` removed every drained meeting from the result set, so
+        # retrying re-queries the next page rather than purging with the rest
+        # silently orphaned.
         Logger.warning("Video room drain page full, more meetings likely remain",
           integration_id: integration.id,
-          drained_this_pass: length(meetings) - failures
+          drained_this_pass: total - failures
         )
 
         {:error, :more_rooms_to_drain}
 
       true ->
-        finish(integration, executions, length(meetings), failures)
+        finish(integration, executions, total, failures)
     end
+  end
+
+  defp rooms_to_drain(integration, limit) do
+    scope = Video.disconnect_room_scope(integration.provider)
+    now = DateTime.utc_now()
+
+    {MeetingListQueries.list_with_video_room_for_integration(integration.id, scope, now, limit),
+     CalendarGrid.list_event_video_rooms_for_integration(integration.id, scope, now, limit)}
   end
 
   defp drain_page_limit,
@@ -224,27 +250,76 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
     end
   end
 
-  defp delete_room(integration, meeting) do
-    result =
-      Video.delete_meeting_room(meeting.organizer_user_id,
-        integration_id: integration.id,
-        room_id: meeting.video_room_id
+  # A room that is the booking's own calendar event (a Teams meeting on the
+  # same Microsoft account) is not the provider's to delete: deleting it would
+  # take the booking off the organiser's calendar and mail attendees a
+  # cancellation. It is released the way a location change releases it
+  # (`VideoSyncWorker.release/1`), which has calendar sync replace the event
+  # with one carrying no online meeting. Only upcoming bookings reach this, as
+  # Teams rooms are drained in the `:upcoming` scope, so no past event is
+  # rewritten. The room is cleared in the same transaction that schedules the
+  # replacement: the replacement is skipped for a meeting still holding a room
+  # on the event, and a cleared room is never listed for another pass.
+  defp delete_meeting_room(
+         _integration,
+         %{video_room_id: event_id, provider_event_id: event_id} = meeting
+       ) do
+    case Repo.transaction(fn -> release_attached_room(meeting) end) do
+      {:ok, :ok} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to release attached video room during disconnect",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        :error
+    end
+  end
+
+  defp delete_meeting_room(integration, meeting),
+    do:
+      delete_room(integration, meeting.organizer_user_id, meeting.video_room_id,
+        log: [meeting_id: meeting.id],
+        on_deleted: fn -> clear_room(meeting) end
       )
+
+  defp release_attached_room(meeting) do
+    with {:ok, _updated} <- MeetingQueries.update_meeting(meeting, @cleared_room),
+         {:ok, _scheduled} <- VideoSyncWorker.release(meeting) do
+      :ok
+    else
+      {:error, reason} -> Repo.rollback(reason)
+    end
+  end
+
+  # A grid event's room exists only as its record, so the record goes with it.
+  defp delete_event_room(integration, room),
+    do:
+      delete_room(integration, room.user_id, room.room_id,
+        log: [calendar_event_video_room_id: room.id],
+        on_deleted: fn -> CalendarGrid.forget_event_video_room(room) end
+      )
+
+  defp delete_room(integration, user_id, room_id, opts) do
+    result =
+      Video.delete_meeting_room(user_id, integration_id: integration.id, room_id: room_id)
 
     case result do
       :ok ->
-        clear_room(meeting)
+        opts[:on_deleted].()
 
       {:error, :meeting_not_found} ->
-        clear_room(meeting)
+        opts[:on_deleted].()
 
       {:error, :circuit_open} ->
         :circuit_open
 
       {:error, reason} ->
-        Logger.warning("Failed to delete provider room during disconnect",
-          meeting_id: meeting.id,
-          reason: inspect(reason)
+        Logger.warning(
+          "Failed to delete provider room during disconnect",
+          opts[:log] ++ [reason: inspect(reason)]
         )
 
         :error
@@ -256,14 +331,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
   # refreshed so the attendee's invite stops advertising a URL that no longer
   # works.
   defp clear_room(meeting) do
-    attrs = %{
-      video_room_id: nil,
-      video_room_enabled: false,
-      organizer_video_url: nil,
-      attendee_video_url: nil
-    }
-
-    case MeetingQueries.update_meeting(meeting, attrs) do
+    case MeetingQueries.update_meeting(meeting, @cleared_room) do
       {:ok, updated} ->
         schedule_calendar_update(updated)
         :ok

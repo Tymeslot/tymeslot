@@ -273,18 +273,15 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
     |> resolve_in_zone(dt.time_zone)
   end
 
-  # Resolves a naive wall-time into `zone`, mirroring the DST policy used when
-  # the user first picks a time (see EventHandlers.Shared.to_utc/4):
-  #   - spring-forward gap  → the first valid instant after the gap
-  #   - fall-back ambiguity → the earlier (pre-transition) instant
-  # On any other error fall back to UTC so an occurrence is never silently lost.
+  # Resolves a naive wall-time into `zone` by the shared DST rule
+  # (`DateTimeUtils.resolve_local/3`), falling back to UTC on an unknown zone
+  # so an occurrence is never silently lost.
   defp resolve_in_zone(naive, zone) do
-    case DateTime.from_naive(naive, zone) do
-      {:ok, dt} -> dt
-      {:gap, _just_before, just_after} -> just_after
-      {:ambiguous, first, _second} -> first
-      {:error, _reason} -> DateTime.from_naive!(naive, "Etc/UTC")
-    end
+    DateTimeUtils.create_datetime_safe(
+      NaiveDateTime.to_date(naive),
+      NaiveDateTime.to_time(naive),
+      zone
+    )
   end
 
   defp shift_months(date, months) do

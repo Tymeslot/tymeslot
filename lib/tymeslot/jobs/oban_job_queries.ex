@@ -237,6 +237,36 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
     )
   end
 
+  @doc """
+  Whether another job of `worker` for `meeting_id` started executing before
+  `job` did and is executing still.
+
+  "Before" is the order the jobs were fetched in, `attempted_at` with the id as
+  a tie-break, not the order they were enqueued in. Enqueue order is not start
+  order: priorities differ by action, a retry runs again under its old id, and
+  a job snoozed behind a third one can wake after a newer job has begun. The
+  order is strict, so of any two executing jobs exactly one sees the other,
+  and the queue cannot wedge with both sides waiting.
+
+  Oban's `unique` cannot express this: it decides whether a job is inserted at
+  all, whereas this is about when an inserted job may run.
+  """
+  @spec earlier_job_executing?(module() | String.t(), term(), Job.t()) :: boolean()
+  def earlier_job_executing?(worker, meeting_id, %Job{id: id, attempted_at: %DateTime{} = started})
+      when is_integer(id) do
+    worker_name = normalize_worker_name(worker)
+
+    Repo.exists?(
+      from(j in Job,
+        where: j.id != ^id,
+        where: j.state == "executing",
+        where: j.worker == ^worker_name,
+        where: fragment("?->>'meeting_id' = ?", j.args, ^to_string(meeting_id)),
+        where: j.attempted_at < ^started or (j.attempted_at == ^started and j.id < ^id)
+      )
+    )
+  end
+
   # Oban stores worker names without the "Elixir." prefix; `Worker.to_string/1`
   # normalises a module into that form so a match against `j.worker` can't
   # silently miss every job. Callers that already hold the stored name (e.g. a

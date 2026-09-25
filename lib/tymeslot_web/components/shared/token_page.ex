@@ -6,13 +6,12 @@ defmodule TymeslotWeb.Components.Shared.TokenPage do
   Two controllers render these: `TymeslotWeb.GuestRsvpController` (a guest
   answering an invitation) and `TymeslotWeb.SeatController` (a group-booking
   participant managing their own seat). Both are a single centred card on a
-  plain background, and both end in the same two dead ends when the token no
-  longer resolves or the visitor has been rate limited, so the card and those
-  two pages live here rather than once per controller.
+  plain background and share the rate-limited dead end, so the card and that
+  page live here rather than once per controller.
 
-  `invalid/1` takes its body copy as an attribute because the two flows name
-  the link differently ("this link" against "the invitation link"); everything
-  else about the page is shared.
+  `invalid/1` is the seat flow's spent-link page and takes its body copy as an
+  attribute; the guest flow has its own, since it tells an unknown link apart
+  from a meeting that no longer takes responses.
   """
 
   use TymeslotWeb, :html

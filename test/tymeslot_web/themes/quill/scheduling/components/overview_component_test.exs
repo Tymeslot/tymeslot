@@ -77,6 +77,30 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponentTest d
       refute html =~ "Pick an option below."
     end
 
+    test "starts the instruction on its own line below the greeting" do
+      profile =
+        build(:profile,
+          full_name: "Sarah Rodriguez",
+          booking_text_enabled: true,
+          booking_heading: "Book a call",
+          booking_greeting: "Feel free to book an appointment.",
+          booking_instruction: "Please select a meeting type."
+        )
+
+      html = render_overview(organizer_profile: profile)
+
+      assert html =~
+               ~r/Feel free to book an appointment\.\s*<br\s*\/?>\s*Please select a meeting type\./
+    end
+
+    test "does not open with an empty line when there is no greeting" do
+      profile = build(:profile, full_name: nil, user: build(:user, name: nil))
+
+      html = render_overview(organizer_profile: profile)
+
+      refute html =~ ~r/overview-description[^>]*>\s*<br/
+    end
+
     test "keeps the theme's wording when the organiser has switched the customisation off" do
       profile =
         build(:profile,

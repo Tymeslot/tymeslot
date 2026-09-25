@@ -79,6 +79,39 @@ defmodule TymeslotWeb.ZoomDeauthControllerTest do
 
       assert %{"error" => "invalid_signature"} = json_response(conn, 401)
     end
+
+    test "rejects a timestamp header with trailing characters even when signed", %{conn: conn} do
+      zoom_user_id = "z9-trailing-timestamp"
+
+      integration =
+        insert(:video_integration,
+          provider: "zoom",
+          provider_account_id: zoom_user_id,
+          is_active: true
+        )
+
+      payload =
+        Jason.encode!(%{
+          event: "app_deauthorized",
+          payload: %{user_id: zoom_user_id, client_id: @client_id}
+        })
+
+      # A fresh epoch followed by junk: `Integer.parse/1` alone reads the
+      # leading digits and would accept it.
+      timestamp = fresh_timestamp() <> "abc"
+      signature = sign(payload, timestamp)
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("x-zm-signature", signature)
+        |> put_req_header("x-zm-request-timestamp", timestamp)
+        |> assign(:raw_body, payload)
+        |> post(@path, payload)
+
+      assert %{"error" => "invalid_signature"} = json_response(conn, 401)
+      assert {:ok, _row} = VideoIntegrationQueries.get(integration.id)
+    end
   end
 
   describe "POST /auth/zoom/deauthorize — URL validation challenge" do

@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   separated from primary calendar logic and discovery operations.
   """
 
+  alias Tymeslot.Emails.EmailScheduler.IntegrationScheduler
   alias Tymeslot.Integrations.Calendar.BookingEligibility
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -99,9 +100,15 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   @doc """
   Creates a new calendar integration.
   Automatically sets as primary if it's the user's first calendar.
+
+  A CalDAV-family integration is refused with `{:error, %{discovery: message}}`
+  when there is nothing for it to sync — see
+  `Tymeslot.Integrations.Calendar.Discovery.maybe_discover_calendars/1`, which
+  resolves the calendar selection before anything is written.
   """
   @spec create_calendar_integration(integration_attrs()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, CalendarIntegrationSchema.t()}
+          | {:error, Ecto.Changeset.t() | %{discovery: String.t()}}
   def create_calendar_integration(attrs) do
     with {:ok, discovered_attrs} <- Discovery.maybe_discover_calendars(attrs),
          {:ok, integration} <-
@@ -232,30 +239,63 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   should return, for failures only the owner can resolve: a deleted booking
   calendar, or credentials the provider now rejects.
 
-  `message` is the translated explanation shown on the dashboard;
+  `message` is the explanation shown on the dashboard, passed as its
+  untranslated msgid (mark it with `dgettext_noop/2` in the
+  `dashboard_calendar_providers` or `dashboard_integrations` domain) so the
+  dashboard can translate it into the viewer's locale;
   `discard_reason` is the operator-facing reason recorded on the job.
 
   Discarding rather than returning `{:error, _}` is the point. Retrying re-asks
   a question already answered, and an exhausted retry chain raises a
   permanent-failure admin alert about a condition no operator can fix.
-  A failed *flag write* is worth retrying, though: without it the dashboard
-  never tells the owner why their calendar stopped syncing.
+  A failed *flag write* is worth retrying, though: without it the owner is
+  never told why their calendar stopped syncing.
+
+  The first flag also emails the owner a reconnection notice carrying
+  `message`; re-flagging an integration already awaiting reconnection does not.
   """
   @spec flag_for_reconnection(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
           {:discard, String.t()} | {:error, String.t()}
   def flag_for_reconnection(%CalendarIntegrationSchema{} = integration, message, discard_reason) do
-    case mark_needs_reauth(integration, message) do
+    case flag_and_notify(integration, message) do
       {:ok, _updated} -> {:discard, discard_reason}
       {:error, _changeset} -> {:error, "Failed to flag integration: #{discard_reason}"}
     end
   end
 
-  # Shared helper: delegates to ReauthHandling.flag/2 with calendar-specific opts.
+  # Only a false → true transition is news. Re-flagging an integration the owner
+  # has already been told about would email them again about a problem they are
+  # already looking at; the scheduler's uniqueness window is a backstop for
+  # that, not the place to decide it.
+  defp flag_and_notify(%{needs_reauth: true} = integration, message),
+    do: mark_needs_reauth(integration, message)
+
+  # The badge alone reaches only owners who open the dashboard. Everyone else
+  # discovers a dead calendar when a booking needs it, which is too late, so
+  # flagging and notifying are one step and cannot come apart.
+  defp flag_and_notify(integration, message) do
+    with {:ok, updated} = result <- mark_needs_reauth(integration, message) do
+      IntegrationScheduler.schedule_integration_reauth_notification(
+        %{id: updated.user_id},
+        updated,
+        :calendar
+      )
+
+      result
+    end
+  end
+
+  # Shared helper: delegates to ReauthHandling.flag/2 with calendar-specific
+  # opts. `mark_needs_reauth` is wired to `flag_and_notify/2` rather than the
+  # bare DB write, so that every path ending in "the owner has to reconnect",
+  # this one included and not just `flag_for_reconnection/3`, sends the reauth
+  # email on the false to true transition. See the deferred ticket this closed
+  # for why the two calendar entry points used to disagree on that.
   defp flag_for_reauth(integration, opts \\ []) do
     ReauthHandling.flag(
       integration,
       Keyword.merge(
-        [mark_needs_reauth: &mark_needs_reauth/2, log_prefix: "Calendar"],
+        [mark_needs_reauth: &flag_and_notify/2, log_prefix: "Calendar"],
         opts
       )
     )

@@ -14,7 +14,7 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Test.LogCapture
 
-  @meta %{ip: "203.0.113.5", user_agent: "tymeslot-test/1.0"}
+  @meta [ip: "203.0.113.5", user_agent: "tymeslot-test/1.0"]
 
   setup do
     RateLimiter.clear_all()
@@ -70,7 +70,10 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
       for _i <- 1..5, do: SignupSecurity.gate(params, @meta)
 
       assert {:error, :rate_limited, message} = SignupSecurity.gate(params, @meta)
-      assert message == "Too many signup attempts. Please try again later."
+
+      assert message ==
+               "You've reached the limit of 5 signup attempts per 10 minutes. " <>
+                 "Please try again in 10 minutes."
     end
 
     test "records a signup rate-limit audit entry naming the account and origin" do
@@ -119,6 +122,15 @@ defmodule Tymeslot.Auth.SignupSecurityTest do
       params = %{"email" => "no-token@example.com"}
       assert {:error, :recaptcha_failed, message} = SignupSecurity.gate(params, @meta)
       assert message == "Security verification failed. Please try again."
+    end
+
+    test "bot_checks: false skips reCAPTCHA and the honeypot but not the rate limit" do
+      params = %{"email" => "server-side@example.com", "website" => "filled"}
+      opts = [bot_checks: false] ++ @meta
+
+      for _i <- 1..5, do: assert(:ok = SignupSecurity.gate(params, opts))
+
+      assert {:error, :rate_limited, _message} = SignupSecurity.gate(params, opts)
     end
   end
 

@@ -151,4 +151,70 @@ defmodule Tymeslot.Workers.ColourWriteBackWorkerTest do
                })
     end
   end
+
+  describe "perform/1 before a sync has filled raw_ical" do
+    # A CalDAV event created from the grid is cached with raw_ical NULL by
+    # design, for the first read to fill. A colour set before that sync has no
+    # document to patch, which is recoverable rather than a failure: spending
+    # the attempts against a column only a sync can fill discards the write.
+    test "snoozes rather than erroring", %{user: user, integration: integ} do
+      cached_event(integ, uid: "uid-1", raw_ical: nil)
+
+      expect(Tymeslot.CalendarMock, :update_event, fn "uid-1", _event_data, _context ->
+        {:error, :raw_ical_unavailable}
+      end)
+
+      assert {:snooze, seconds} =
+               perform_job(ColourWriteBackWorker, %{
+                 "integration_id" => integ.id,
+                 "uid" => "uid-1",
+                 "user_id" => user.id,
+                 "colour" => "blueberry"
+               })
+
+      # Longer than the slowest CalDAV sync cadence (Tier 3, 3600s), or the
+      # snooze lands before anything could have filled the column.
+      assert seconds > 3600
+    end
+
+    test "gives up once the snoozes have covered a full day", %{user: user, integration: integ} do
+      cached_event(integ, uid: "uid-1", raw_ical: nil)
+
+      expect(Tymeslot.CalendarMock, :update_event, fn "uid-1", _event_data, _context ->
+        {:error, :raw_ical_unavailable}
+      end)
+
+      assert {:discard, :raw_ical_never_synced} =
+               perform_job(
+                 ColourWriteBackWorker,
+                 %{
+                   "integration_id" => integ.id,
+                   "uid" => "uid-1",
+                   "user_id" => user.id,
+                   "colour" => "blueberry"
+                 },
+                 meta: %{"snoozed" => 16}
+               )
+    end
+
+    test "writes through once a sync has populated the column", %{
+      user: user,
+      integration: integ
+    } do
+      cached_event(integ, uid: "uid-1", raw_ical: "BEGIN:VEVENT\nUID:uid-1\nEND:VEVENT")
+
+      expect(Tymeslot.CalendarMock, :update_event, fn "uid-1", event_data, _context ->
+        assert event_data.raw_ical =~ "UID:uid-1"
+        :ok
+      end)
+
+      assert :ok =
+               perform_job(ColourWriteBackWorker, %{
+                 "integration_id" => integ.id,
+                 "uid" => "uid-1",
+                 "user_id" => user.id,
+                 "colour" => "blueberry"
+               })
+    end
+  end
 end

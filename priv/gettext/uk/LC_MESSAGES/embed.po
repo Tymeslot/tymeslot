@@ -17,4 +17,4 @@ msgstr "Організатор не дозволив цьому вебсайту
 #: lib/tymeslot_web/controllers/embed_blocked_html.ex
 #, elixir-autogen, elixir-format
 msgid "This booking page can’t be embedded here"
-msgstr "Цю сторінку бронювання не можна вбудувати тут"
+msgstr "Цю сторінку бронювання не можна тут вбудувати"

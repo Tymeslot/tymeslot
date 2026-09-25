@@ -2,6 +2,7 @@ defmodule TymeslotWeb.EmbedBlockedControllerTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :security
+  @moduletag :i18n
 
   describe "GET /embed-unavailable" do
     test "renders the notice and is universally frameable", %{conn: conn} do
@@ -49,6 +50,43 @@ defmodule TymeslotWeb.EmbedBlockedControllerTest do
 
       refute body =~ "tymeslot-embed-blocked"
       refute body =~ "data-parent-origin"
+    end
+  end
+
+  describe "GET /embed-unavailable — locale" do
+    test "renders in the visitor's language and declares it", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("accept-language", "de-DE,de;q=0.9")
+        |> get(~p"/embed-unavailable")
+
+      body = html_response(conn, 200)
+
+      assert body =~ ~s(<html lang="de">)
+      assert body =~ "Buchung nicht verfügbar"
+    end
+
+    test "honours the locale forwarded from the refused booking page", %{conn: conn} do
+      conn = get(conn, ~p"/embed-unavailable?#{%{"locale" => "de"}}")
+
+      body = html_response(conn, 200)
+
+      assert body =~ ~s(<html lang="de">)
+      assert body =~ "Buchung nicht verfügbar"
+    end
+
+    test "sets no session cookie, since it is framed cross-site", %{conn: conn} do
+      conn = get(conn, ~p"/embed-unavailable?#{%{"locale" => "de"}}")
+
+      assert html_response(conn, 200)
+      refute Map.has_key?(conn.resp_cookies, "_tymeslot_key")
+      assert get_resp_header(conn, "set-cookie") == []
+    end
+
+    test "falls back to English without a preference", %{conn: conn} do
+      conn = get(conn, ~p"/embed-unavailable")
+
+      assert html_response(conn, 200) =~ ~s(<html lang="en">)
     end
   end
 end

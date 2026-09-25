@@ -62,6 +62,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.AgendaViewTest do
       assert html =~ "calendar-agenda"
     end
 
+    test "lists an event running past midnight under both days", %{conn: conn, user: user} do
+      # Each day's row needs its own DOM id: with the event id alone the two
+      # rows collided, and LiveView refused to render the page.
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      day = Date.add(Date.utc_today(), 2)
+
+      event =
+        insert_event(integration, %{
+          summary: "Night Shift",
+          start_at: DateTime.new!(day, ~T[23:30:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.add(day, 1), ~T[00:30:00], "Etc/UTC"),
+          all_day: false
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("#calendar-grid") |> render_hook("set_view", %{"view" => "agenda"})
+
+      assert has_element?(lv, "#agenda-event-#{event.id}-#{Date.to_iso8601(day)}")
+      assert has_element?(lv, "#agenda-event-#{event.id}-#{Date.to_iso8601(Date.add(day, 1))}")
+    end
+
     test "renders all-day events with an 'All day' label", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
       day = Date.add(Date.utc_today(), 3)

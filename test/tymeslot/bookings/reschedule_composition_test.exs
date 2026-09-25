@@ -43,6 +43,14 @@ defmodule Tymeslot.Bookings.RescheduleCompositionTest do
 
     TestMocks.setup_email_mocks()
 
+    # The reschedule submit re-reads the host's connected calendars
+
+    # (`Tymeslot.Bookings.CalendarCheck`); these tests are about a host with
+
+    # nothing else in their diary.
+
+    TestMocks.stub_no_calendar_events()
+
     user = insert(:user)
     profile = insert(:profile, user: user, timezone: "Europe/Berlin")
 
@@ -50,8 +58,8 @@ defmodule Tymeslot.Bookings.RescheduleCompositionTest do
       insert(:availability_schedule, profile: profile, is_default: true, buffer_minutes: 15)
 
     # Reschedule now refuses a time the organiser's schedule doesn't offer
-    # (mirroring booking creation), so these job-chain tests — which pick
-    # `future_datetime/2`, an arbitrary time of day — need a schedule that
+    # (mirroring booking creation), so these job-chain tests, which pick
+    # `future_datetime/2` (a fixed mid-day time), need a schedule that
     # offers every hour of every day.
     for day_of_week <- 1..7 do
       {:ok, _day} =
@@ -215,19 +223,20 @@ defmodule Tymeslot.Bookings.RescheduleCompositionTest do
     )
   end
 
-  # Floored to the half hour: the open schedule's slots are generated in
-  # 30-minute steps from local midnight, so an unaligned current-time
-  # minute/second would land between slots and the reschedule's own
-  # schedule check (`Bookings.ScheduleCheck`) would refuse it.
+  # Only the date comes from the clock; the time of day is pinned. The open
+  # schedule's slots are a fixed grid generated in 30-minute steps from local
+  # midnight, and only a start with room for the full duration is offered, so
+  # the 00:00-23:59 window yields 00:00 to 23:00 and 23:30 is never available.
+  # Deriving the time of day from `DateTime.utc_now()` therefore missed the
+  # grid twice over: on an unaligned minute or second, and whenever the run
+  # fell in the last half hour of the target's local day. Both make the
+  # reschedule's own schedule check (`Bookings.ScheduleCheck`) refuse the
+  # target with `{:error, :slot_taken}`. A pinned mid-day time is independent
+  # of the grid's shape, so no fixture change can reintroduce either.
   defp future_datetime(amount, unit) do
-    DateTime.utc_now()
-    |> DateTime.add(amount, unit)
-    |> DateTime.truncate(:second)
-    |> floor_to_half_hour()
-  end
+    future = DateTime.add(DateTime.utc_now(), amount, unit)
 
-  defp floor_to_half_hour(%DateTime{minute: minute} = dt) do
-    %{dt | minute: minute - rem(minute, 30), second: 0, microsecond: {0, 0}}
+    %{future | hour: 10, minute: 0, second: 0, microsecond: {0, 0}}
   end
 
   defp reschedule_params_for(%DateTime{} = target_utc) do

@@ -10,9 +10,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
   alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
   alias Tymeslot.Integrations.Calendar.PrimarySelection
   alias Tymeslot.Integrations.CalendarManagement
@@ -140,9 +140,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   Refreshes an access token using a refresh token.
   """
   @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
-  @spec refresh_access_token(String.t(), String.t() | nil) :: {:ok, map()} | {:error, term()}
-  def refresh_access_token(refresh_token, current_scope \\ nil) do
-    GoogleOAuthHelper.refresh_access_token(refresh_token, current_scope)
+  @spec refresh_access_token(String.t(), String.t() | nil, keyword()) ::
+          {:ok, map()} | {:error, term()}
+  def refresh_access_token(refresh_token, current_scope \\ nil, opts \\ []) do
+    GoogleOAuthHelper.refresh_access_token(refresh_token, current_scope, opts)
   end
 
   # Private functions
@@ -280,20 +281,27 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
 
       _url ->
         Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
-          case GoogleCalendarAPI.register_push_channel(integration) do
+          case Config.google_calendar_api_module().register_push_channel(integration) do
             {:ok, _updated} ->
               Logger.info("Google push channel registered",
                 integration_id: integration.id
               )
 
             {:error, reason} ->
-              Logger.error("Google push channel registration failed",
-                integration_id: integration.id,
-                reason: inspect(reason)
-              )
+              log_push_channel_failure(integration, reason)
+
+            {:error, type, message} ->
+              log_push_channel_failure(integration, {type, message})
           end
         end)
     end
+  end
+
+  defp log_push_channel_failure(integration, reason) do
+    Logger.error("Google push channel registration failed",
+      integration_id: integration.id,
+      reason: inspect(reason)
+    )
   end
 
   defp enqueue_initial_sync(integration) do

@@ -45,55 +45,21 @@ defmodule Tymeslot.Bookings.Policy do
         }
   def scheduling_config(nil, _meeting_type) do
     nil
-    |> policy_values()
+    |> Schedules.config(nil)
     |> Map.put(:owner_timezone, Profiles.get_default_timezone())
-    |> Map.put(:slot_interval_minutes, nil)
   end
 
   def scheduling_config(organizer_user_id, meeting_type) do
+    # `Profiles.get_profile_settings/1` already resolves a profile with no
+    # timezone to `Profiles.get_default_timezone()`, the same fallback the
+    # booking page applies, so a nil profile timezone resolves to one zone on
+    # both sides.
     settings = Profiles.get_profile_settings(organizer_user_id)
 
     organizer_user_id
     |> resolve_schedule(meeting_type)
-    |> policy_values()
+    |> Schedules.config(meeting_type)
     |> Map.put(:owner_timezone, settings.timezone)
-    |> Map.put(:slot_interval_minutes, slot_interval_minutes(meeting_type))
-  end
-
-  @doc """
-  Resolves a meeting type's booking interval, in minutes.
-
-  NULL means "use the meeting type's own duration" — the default for almost
-  every meeting type, since most have not configured an explicit interval.
-  Nil for a nil meeting type and for meeting-type maps (such as the demo
-  provider's) that omit the key entirely, so this never raises regardless of
-  what shape of meeting type it is handed.
-
-  The single resolver for this value, shared by `scheduling_config/2` here and
-  by `TymeslotWeb.Live.Scheduling.AvailabilityHelpers`, so the display path
-  and the submit path cannot disagree about the interval.
-  """
-  @spec slot_interval_minutes(map() | nil) :: pos_integer() | nil
-  def slot_interval_minutes(%{slot_interval_minutes: minutes}), do: minutes
-  def slot_interval_minutes(_meeting_type), do: nil
-
-  # `max_advance_booking_days` is this map's name for the schedule's
-  # `advance_booking_days`; every other key is carried through unrenamed.
-  # `schedule_id` is carried so callers can recompute the schedule's own
-  # windows from this config alone. `owner_timezone` is set by the caller from
-  # `Profiles.get_profile_settings/1`, which already resolves a profile with no
-  # timezone to `Profiles.get_default_timezone()` — the same fallback the
-  # display path applies in
-  # `TymeslotWeb.Live.Scheduling.AvailabilityHelpers.get_owner_timezone/1` and
-  # `CalendarHelpers.availability_config/2`, so a nil profile timezone
-  # resolves to the same zone on both the display and enforcement paths.
-  defp policy_values(schedule) do
-    %{
-      schedule_id: schedule && schedule.id,
-      buffer_minutes: Schedules.policy(schedule, :buffer_minutes),
-      min_advance_hours: Schedules.policy(schedule, :min_advance_hours),
-      max_advance_booking_days: Schedules.policy(schedule, :advance_booking_days)
-    }
   end
 
   defp resolve_schedule(_organizer_user_id, %{} = meeting_type) do
@@ -120,6 +86,8 @@ defmodule Tymeslot.Bookings.Policy do
           required(:end_time) => DateTime.t(),
           required(:duration) => integer(),
           required(:location) => String.t() | nil,
+          required(:location_kind) => String.t() | nil,
+          required(:location_option_id) => String.t() | nil,
           required(:meeting_type) => String.t(),
           required(:meeting_type_id) => integer() | nil,
           required(:organizer_name) => String.t(),
@@ -218,7 +186,6 @@ defmodule Tymeslot.Bookings.Policy do
       start_time: params.start_datetime,
       end_time: params.end_datetime,
       duration: params.duration_minutes,
-      location: nil,
       meeting_type: meeting_type_name,
       meeting_type_id: resolved_meeting_type_id,
       organizer_name: org_name,
@@ -227,14 +194,6 @@ defmodule Tymeslot.Bookings.Policy do
       organizer_user_id: organizer_user_id,
       calendar_integration_id: calendar_integration_id,
       calendar_path: calendar_path,
-      video_integration_id: video_integration_id,
-      attendee_name: form_data["name"],
-      attendee_email: form_data["email"],
-      attendee_message: form_data["message"],
-      attendee_phone: nil,
-      attendee_company: nil,
-      attendee_timezone: Timezones.normalize(user_timezone),
-      attendee_locale: params.attendee_locale || default_locale(),
       status: status,
       approval_requested_at: requested_at,
       approval_deadline_at: deadline_at,
@@ -244,8 +203,50 @@ defmodule Tymeslot.Bookings.Policy do
       custom_fields_snapshot: params.custom_fields_snapshot,
       custom_field_answers: params.custom_field_answers
     }
+    |> Map.merge(attendee_attributes(params, user_timezone))
+    |> Map.merge(location_attributes(meeting_type_record, params, video_integration_id))
     |> Map.merge(source_attribution(params))
     |> Map.merge(build_meeting_action_urls(meeting_uid, org_username))
+  end
+
+  # Who the booking is for, as they gave it. `attendee_phone` is deliberately
+  # absent: it is set by `location_attributes/3` when, and only when, the
+  # chosen location asked the booker for a number.
+  defp attendee_attributes(%BuildParams{form_data: form_data} = params, user_timezone) do
+    %{
+      attendee_name: form_data["name"],
+      attendee_email: form_data["email"],
+      attendee_message: form_data["message"],
+      attendee_company: nil,
+      attendee_timezone: Timezones.normalize(user_timezone),
+      attendee_locale: params.attendee_locale || default_locale()
+    }
+  end
+
+  # Where the meeting is held, and everything that follows from it: the
+  # display string, the kind, and the video integration a room would be
+  # created on.
+  #
+  # The booker submitted only an option id, and within a video option the
+  # provider they picked. The rest is re-derived here from the host's own
+  # meeting type, so a forged or stale id can only ever select a location,
+  # or a provider, the host already offers.
+  defp location_attributes(meeting_type_record, %BuildParams{} = params, fallback_video_id) do
+    location =
+      MeetingTypes.resolve_location(
+        meeting_type_record,
+        params.location_option_id,
+        params.location_phone,
+        params.location_video_integration_id
+      )
+
+    %{
+      location: location.location,
+      location_kind: location.location_kind,
+      location_option_id: location.location_option_id,
+      attendee_phone: location.attendee_phone,
+      video_integration_id: video_integration_for(location, fallback_video_id)
+    }
   end
 
   # Where the booking came from: the UTM parameters and referrer captured on
@@ -535,6 +536,15 @@ defmodule Tymeslot.Bookings.Policy do
         {nil, nil}
     end
   end
+
+  # Once a location has been chosen, it is the only thing that decides
+  # whether a room is created and where: an in-person or phone location
+  # resolves to no integration, and must *not* inherit the meeting type's,
+  # which would open a video room for a meeting nobody is attending online.
+  # The meeting-type-level id survives only for ad-hoc bookings, which have
+  # no location list to choose from.
+  defp video_integration_for(%{location_option_id: nil}, fallback_id), do: fallback_id
+  defp video_integration_for(%{video_integration_id: id}, _fallback_id), do: id
 
   defp resolve_video_integration_id(params, organizer_user_id) do
     video_integration_id =

@@ -9,6 +9,8 @@ defmodule Tymeslot.Mocks.Calendar do
 
   import Mox
 
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
+
   @spec setup(keyword()) :: term()
   def setup(opts \\ []) do
     events = Keyword.get(opts, :events, [])
@@ -19,7 +21,9 @@ defmodule Tymeslot.Mocks.Calendar do
     |> stub(:get_booking_integration_info, fn _user_id ->
       {:error, :no_integration}
     end)
-    |> stub(:create_event, fn _event_data, _context -> {:ok, %{uid: "mock-created-uid"}} end)
+    |> stub(:create_event, fn _event_data, _context ->
+      {:ok, CreatedEvent.new("mock-created-uid")}
+    end)
     |> stub(:update_event, fn _uid, _event_data, _context -> :ok end)
 
     google_url =

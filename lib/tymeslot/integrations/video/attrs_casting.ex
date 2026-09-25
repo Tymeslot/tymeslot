@@ -8,8 +8,8 @@ defmodule Tymeslot.Integrations.Video.AttrsCasting do
   @doc """
   Converts string keys to atoms, dropping any key with no existing atom
   rather than retaining it as a string — a mixed atom/string map raises
-  `Ecto.CastError` on cast. Shared by `Video.create_integration/3` and the
-  video edit form so the two callers cannot diverge on this.
+  `Ecto.CastError` on cast. Shared by `Video.create_integration/3` and
+  `Video.update_integration/3` so the two cannot diverge on this.
   """
   @spec atomize_known_attrs(%{(String.t() | atom()) => term()}) :: %{atom() => term()}
   def atomize_known_attrs(attrs) when is_map(attrs) do

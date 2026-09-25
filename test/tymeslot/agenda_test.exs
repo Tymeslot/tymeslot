@@ -125,6 +125,40 @@ defmodule Tymeslot.AgendaTest do
       assert Day.empty?(Agenda.day_agenda(user, "Etc/UTC"))
     end
 
+    # The sync leaves a deselected calendar's rows in the cache until pruning
+    # runs, so the agenda has to honour the selection itself, as the grid does.
+    test "excludes events from a calendar the user has deselected", %{
+      user: user,
+      tomorrow: tomorrow
+    } do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          calendar_paths: ["/cal/work/"],
+          calendar_list: [
+            %{"id" => "/cal/work/", "path" => "/cal/work/", "selected" => true},
+            %{"id" => "/cal/personal/", "path" => "/cal/personal/", "selected" => false}
+          ]
+        )
+
+      for {summary, path, hour} <- [
+            {"Work Meeting", "/cal/work/", 12},
+            {"Personal Errand", "/cal/personal/", 11}
+          ] do
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          summary: summary,
+          start_at: at(tomorrow, Time.new!(hour, 0, 0)),
+          end_at: at(tomorrow, Time.new!(hour + 1, 0, 0)),
+          all_day: false,
+          provider_event_id: path <> "evt.ics"
+        )
+      end
+
+      assert titles(Agenda.day_agenda(user, "Etc/UTC")) == ["Work Meeting"]
+    end
+
     test "excludes cancelled external events", %{user: user, tomorrow: tomorrow} do
       external_event(user, at(tomorrow, ~T[12:00:00]), summary: "Called off", status: "cancelled")
 

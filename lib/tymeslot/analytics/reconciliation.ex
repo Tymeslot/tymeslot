@@ -35,6 +35,7 @@ defmodule Tymeslot.Analytics.Reconciliation do
 
   alias Tymeslot.Analytics
   alias Tymeslot.Analytics.ReconciliationQueries
+  alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AdminAlerts
 
   @default_window_days 7
@@ -59,7 +60,7 @@ defmodule Tymeslot.Analytics.Reconciliation do
 
   defp reconcile do
     days = config(:window_days, @default_window_days)
-    now = DateTime.utc_now()
+    now = Clock.utc_now()
     from = DateTime.add(now, -days * 86_400, :second)
 
     totals = ReconciliationQueries.instance_totals(from, now)

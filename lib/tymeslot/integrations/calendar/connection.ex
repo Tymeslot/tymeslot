@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   alias Tymeslot.Integrations.Calendar.Provider
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
+  alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
   alias Tymeslot.Integrations.Calendar.Tokens
   alias Tymeslot.Integrations.Shared.ConnectionProbe
 
@@ -83,6 +84,16 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   able to exhaust the budget a real user's button draws from, nor one user
   another's — and `:background` is unmetered by construction, per
   `ConnectionProbe`'s moduledoc.
+
+  It also decides what a failure comes back as. Providers state a reason
+  (`:unauthorized`, `:not_found`, …); an `:interactive` test is read by a
+  person, so the reason is turned into copy here, while a `:background` probe
+  is classified rather than read and gets the reason untouched. Flattening it
+  early is what the health check cannot recover from: its classifier
+  (`HealthCheck.ErrorAnalysis.classify_error/1`) recognises `:unauthorized` as
+  a permanent credential failure, but a sentence saying the same thing falls
+  through to its conservative `:transient` default, and a run of transient
+  probes never advances `consecutive_hard_failures`.
   """
   @type scope :: ConnectionProbe.scope()
 
@@ -97,12 +108,14 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
            {:ok, provider_module} <- ProviderRegistry.get_provider(provider_atom) do
         config = to_probe_config(provider_atom, integration)
 
-        ConnectionProbe.probe_provider(provider_module, integration,
+        provider_module
+        |> ConnectionProbe.probe_provider(integration,
           scope: scope,
           # Deliberately nothing to validate here — see this function's doc.
           validate: fn -> :ok end,
           run: fn -> provider_module.perform_connection_test(config) end
         )
+        |> present_failure(scope, provider_atom)
       else
         _other -> {:error, :unsupported_provider}
       end
@@ -132,6 +145,24 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   end
 
   defp to_probe_config(_provider_atom, config), do: config
+
+  # Copy for the reader of an `:interactive` test, per `test_connection/2`.
+  # Everything else is passed through: a `:background` probe wants the reason
+  # as it stands, a `ConnectionProbe` refusal keeps its tag so the web layer
+  # can write its own copy for it, and a message a provider already phrased is
+  # left alone — `sanitize_error_message/2` matches English keywords, so
+  # re-reading a localised sentence would re-classify it by its wording.
+  defp present_failure({:error, reason}, :interactive, provider_atom),
+    do: {:error, display_reason(reason, provider_atom)}
+
+  defp present_failure(result, _scope, _provider_atom), do: result
+
+  defp display_reason({:rate_limited, _message} = refusal, _provider_atom), do: refusal
+  defp display_reason(:unattributable, _provider_atom), do: :unattributable
+  defp display_reason(reason, _provider_atom) when is_binary(reason), do: reason
+
+  defp display_reason(reason, provider_atom),
+    do: ErrorHandler.sanitize_error_message(reason, provider_atom)
 
   @doc """
   Runs the rate-limited connection probe for `provider_atom` against `config`,
@@ -170,6 +201,9 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
           provider_module: provider_module,
           scope: :interactive,
           actor: actor,
+          # Every caller here is a creation pre-check, not the "Test connection"
+          # button, and a refusal has to say so: the organiser pressed "Add".
+          action: :calendar_setup,
           # Deliberately nothing to validate here — see this function's doc.
           validate: fn -> :ok end,
           run: fn -> provider_module.perform_connection_test(config) end

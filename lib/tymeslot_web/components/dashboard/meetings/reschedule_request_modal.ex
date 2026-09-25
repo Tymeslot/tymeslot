@@ -144,7 +144,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.RescheduleRequestModal do
       <:footer>
         <div class="flex justify-end gap-3">
           <CoreComponents.action_button variant={:secondary} phx-click={@on_cancel}>
-            {dgettext("dashboard_bookings", "Cancel")}
+            {dgettext("common", "Cancel")}
           </CoreComponents.action_button>
           <CoreComponents.loading_button
             variant={:primary}

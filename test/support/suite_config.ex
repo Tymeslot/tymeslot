@@ -8,6 +8,8 @@ defmodule Tymeslot.Test.SuiteConfig do
   suites can't drift on how many cases they run or which tags they skip.
   """
 
+  alias Tymeslot.Test.LogCapture
+
   # Slow/external suites are opt-in — run them explicitly with `--include`
   # (or `--only`), e.g. `mix test --only e2e`.
   @default_exclude_tags [
@@ -102,6 +104,35 @@ defmodule Tymeslot.Test.SuiteConfig do
         :ok
       end)
     end
+
+    :ok
+  end
+
+  @doc """
+  Installs the suite-wide `Tymeslot.Test.LogCapture` handler, and registers an
+  after-suite check that fails the run if any `:logger` handler id ended up
+  listed twice.
+
+  A duplicated id means `:logger` called that handler twice per event for the
+  rest of the run, so every test counting log lines after that point failed for
+  a reason none of them could show. The check names the cause instead; see the
+  `LogCapture` moduledoc for the race that produces it.
+  """
+  @spec setup_log_capture() :: :ok
+  def setup_log_capture do
+    :ok = LogCapture.install()
+
+    ExUnit.after_suite(fn _result ->
+      ids = :logger.get_handler_ids()
+
+      if ids != Enum.uniq(ids) do
+        raise "the :logger handler list is corrupted, some ids appear twice: #{inspect(ids)}. " <>
+                "A test added or removed a :logger handler while others were running; " <>
+                "see Tymeslot.Test.LogCapture."
+      end
+
+      :ok
+    end)
 
     :ok
   end

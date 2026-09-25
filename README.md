@@ -95,6 +95,7 @@ Every connected calendar is checked the moment someone books. One conflict anywh
 
 - **Email that delivers** — responsive templates, an `.ics` file on every send, configurable reminders, and signed cancel/reschedule links that need no login.
 - **Ask the right questions** — add custom questions to any meeting type, so you walk into every call already briefed.
+- **Meet where it suits them**: offer in person, phone, video or somewhere else on any meeting type. Add several and your guest picks one when they book, including which video service.
 - **SSO-first auth** — email/password, Google, GitHub, plus generic OAuth/OIDC for Keycloak, Authentik, Okta and Azure AD. Disable registration or password login independently.
 - **Privacy by design** — credentials encrypted at rest, no third-party trackers or analytics pixels, rate-limited public endpoints, HMAC-signed webhooks, CSRF and signed tokens throughout.
 - **Automate everything** — Slack and Telegram notifications, plus `meeting_created`, `meeting_cancelled` and `meeting_rescheduled` webhooks that plug straight into n8n, Zapier, Make or your own backend.
@@ -129,7 +130,7 @@ Every connected calendar is checked the moment someone books. One conflict anywh
 </tr>
 </table>
 
-<b>Video &amp; location</b> — auto-create a meeting room (or set a place) when a booking is confirmed.
+<b>Video &amp; location</b>: offer several locations per meeting type and let the guest pick; video rooms are created automatically on the provider they choose.
 
 <table align="center">
 <tr>
@@ -139,6 +140,11 @@ Every connected calendar is checked the moment someone books. One conflict anywh
 </tr>
 <tr>
 <td align="center"><img src="./priv/static/icons/providers/video/medium/mirotalk.webp" alt="MiroTalk P2P" height="40" /><br /><sub>MiroTalk P2P</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/video/medium/jitsi.webp" alt="Jitsi Meet" height="40" /><br /><sub>Jitsi Meet</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/video/medium/kmeet.webp" alt="kMeet" height="40" /><br /><sub>kMeet</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="./priv/static/icons/providers/video/generic.svg" alt="Nextcloud Talk" height="40" /><br /><sub>Nextcloud Talk</sub></td>
 <td align="center"><img src="./priv/static/icons/providers/video/medium/in_person.webp" alt="In person / phone" height="40" /><br /><sub>In person / phone</sub></td>
 <td align="center"><img src="./priv/static/icons/providers/video/medium/custom.webp" alt="Custom link" height="40" /><br /><sub>Custom link</sub></td>
 </tr>

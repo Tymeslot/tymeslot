@@ -9,7 +9,7 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
   @meeting %{
     attendee_name: "John Smith",
     attendee_email: "john@example.com",
-    attendee_timezone: "UTC",
+    attendee_timezone: "America/New_York",
     start_time: ~U[2026-03-10 14:00:00Z],
     end_time: ~U[2026-03-10 14:30:00Z],
     event_type: %{name: "30-minute intro call"},
@@ -18,9 +18,13 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
     cancellation_reason: nil
   }
 
-  describe "build_message/2" do
+  # The organiser's timezone, deliberately different from the attendee's: these
+  # messages land in the organiser's chat, so every time below is theirs.
+  @timezone "UTC"
+
+  describe "build_message/3" do
     test "builds meeting.created message" do
-      msg = MessageBuilder.build_message("meeting.created", @meeting)
+      msg = MessageBuilder.build_message("meeting.created", @meeting, @timezone)
       assert msg =~ "<b>New Meeting</b>"
       assert msg =~ "John Smith"
       assert msg =~ "Meeting"
@@ -30,36 +34,44 @@ defmodule Tymeslot.Telegram.MessageBuilderTest do
 
     test "builds meeting.cancelled message" do
       meeting = Map.put(@meeting, :cancellation_reason, "Schedule conflict")
-      msg = MessageBuilder.build_message("meeting.cancelled", meeting)
+      msg = MessageBuilder.build_message("meeting.cancelled", meeting, @timezone)
       assert msg =~ "<b>Meeting Cancelled</b>"
       assert msg =~ "John Smith"
       assert msg =~ "Schedule conflict"
     end
 
     test "builds meeting.rescheduled message" do
-      msg = MessageBuilder.build_message("meeting.rescheduled", @meeting)
+      msg = MessageBuilder.build_message("meeting.rescheduled", @meeting, @timezone)
       assert msg =~ "<b>Meeting Rescheduled</b>"
       assert msg =~ "John Smith"
     end
 
     test "HTML-escapes user content" do
       meeting = %{@meeting | attendee_name: "<script>alert('xss')</script>"}
-      msg = MessageBuilder.build_message("meeting.created", meeting)
+      msg = MessageBuilder.build_message("meeting.created", meeting, @timezone)
       refute msg =~ "<script>"
       assert msg =~ "&lt;script&gt;"
     end
 
     test "includes video link when present" do
       meeting = Map.put(@meeting, :video_room_url, "https://meet.example.com/room")
-      msg = MessageBuilder.build_message("meeting.created", meeting)
+      msg = MessageBuilder.build_message("meeting.created", meeting, @timezone)
       assert msg =~ "Join video call"
       assert msg =~ "https://meet.example.com/room"
     end
 
     test "uses attendee_email as fallback name" do
       meeting = %{@meeting | attendee_name: nil}
-      msg = MessageBuilder.build_message("meeting.created", meeting)
+      msg = MessageBuilder.build_message("meeting.created", meeting, @timezone)
       assert msg =~ "john@example.com"
+    end
+  end
+
+  describe "build_message/3 — timezone" do
+    test "renders times in the organiser's timezone, not the attendee's" do
+      msg = MessageBuilder.build_message("meeting.created", @meeting, "Europe/Tallinn")
+      assert msg =~ "16:00\u201316:30 (Europe/Tallinn)"
+      refute msg =~ "America/New_York"
     end
   end
 

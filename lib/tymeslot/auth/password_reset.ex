@@ -8,8 +8,9 @@ defmodule Tymeslot.Auth.PasswordReset do
   require Logger
 
   alias Tymeslot.Auth.{
-    ErrorFormatter,
+    AccountTokens,
     Helpers.AccountLogging,
+    RateLimit,
     Session,
     UserSchema,
     Validation
@@ -18,121 +19,99 @@ defmodule Tymeslot.Auth.PasswordReset do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Repo
-  alias Tymeslot.Security.{InputProcessor, RateLimiter, SecurityLogger, Token}
+  alias Tymeslot.Security.{Password, RateLimiter, SecurityLogger, Token}
   alias Tymeslot.Utils.UrlBuilder
-  alias TymeslotWeb.Helpers.ClientIP
 
   @doc """
   Initiates the password reset process for a given email.
 
   ## Parameters
     - email: String.t() (user email)
-    - opts: Keyword list
+    - opts: Keyword list; `:ip` and `:user_agent` identify the requester for
+      the rate limit and its audit entry
 
   ## Returns
-    - {:ok, user, message} on success
-    - {:error, reason, message} on failure
+    - `{:ok, :reset_initiated, message}` for every well-formed address within
+      the rate limit, whether it belongs to a password account, an account
+      that signs in through a provider, or no account at all. The reply is
+      byte-identical across the three; what differs is only the email the
+      address's owner receives (a reset link, a note that there is no password
+      to reset, or nothing).
+    - `{:error, :invalid_input | :rate_limited, message}` otherwise, which
+      depends only on the input and the requester, never on the account
   """
   @spec initiate_reset(String.t(), keyword()) ::
-          {:ok, atom(), String.t()}
-          | {:error, atom(), String.t()}
+          {:ok, :reset_initiated, String.t()}
+          | {:error, :invalid_input | :rate_limited, String.t()}
   def initiate_reset(email, opts \\ []) do
-    user_queries = Keyword.get(opts, :user_queries_module, Config.user_queries_module())
-    ip = extract_ip_from_opts(opts)
-
     with {:ok, validated_email} <- validate_email_format(email),
-         :ok <- check_reset_rate_limit(validated_email, ip) do
-      process_password_reset_secure(validated_email, user_queries)
+         :ok <- check_reset_rate_limit(validated_email, opts) do
+      process_password_reset_secure(validated_email)
     else
       {:error, reason, message} -> {:error, reason, message}
     end
   end
 
-  defp check_reset_rate_limit(email, ip) do
-    case RateLimiter.check_password_reset_rate_limit(email, ip) do
-      :ok ->
-        :ok
-
-      {:error, :rate_limited, message} ->
-        SecurityLogger.log_rate_limit_violation(email, "password_reset", %{ip_address: ip})
-        {:error, :rate_limited, message}
-    end
+  defp check_reset_rate_limit(email, opts) do
+    RateLimit.check(RateLimiter.check_password_reset_rate_limit(email, opts[:ip]),
+      event: "password_reset",
+      identifier: email,
+      ip: opts[:ip],
+      user_agent: opts[:user_agent]
+    )
   end
 
-  # Secure implementation that prevents timing attacks and email enumeration.
-  # The timing randomisation lives inside handle_password_reset_attempt/2
-  # (Process.sleep for the not-found case), so no Task wrapping is needed here.
-  defp process_password_reset_secure(email, user_queries) do
-    case handle_password_reset_attempt(email, user_queries) do
-      {:oauth_user_error, message} ->
-        {:error, :oauth_user, message}
+  # Every account state gets the same reply, and the explanation, where there
+  # is one, goes to the mailbox: only the address's owner can read it.
+  #
+  # Timing is kept equal by giving every branch the same dominant cost, one
+  # bcrypt operation, paid here rather than inside each branch so a branch
+  # added later cannot forget it. The work left in the branches (a token write,
+  # an Oban insert, or nothing) is small beside it.
+  defp process_password_reset_secure(email) do
+    Password.no_user_verify()
 
-      _other ->
-        # Always return the same message for non-OAuth cases to prevent user enumeration
-        {:ok, :reset_initiated,
-         dgettext(
-           "auth",
-           "If an account exists with this email address, password reset instructions have been sent."
-         )}
-    end
+    email
+    |> Config.user_queries_module().get_user_by_email()
+    |> handle_password_reset_attempt(email)
+
+    {:ok, :reset_initiated,
+     dgettext(
+       "auth",
+       "If an account exists with this email address, password reset instructions have been sent."
+     )}
   end
 
-  defp handle_password_reset_attempt(email, user_queries) do
-    case user_queries.get_user_by_email(email) do
-      {:error, :not_found} ->
-        # Simulate work to match timing of successful case
-        Process.sleep(:rand.uniform(50) + 50)
-        AccountLogging.log_operation_failure("password_reset", email, :user_not_found)
-        :user_not_found
-
-      {:ok, user} ->
-        case handle_user_found(user, user_queries) do
-          {:ok, _user, _token} -> :email_sent
-          {:error, :oauth_user, message} -> {:oauth_user_error, message}
-          _other -> :error
-        end
-    end
+  defp handle_password_reset_attempt({:error, :not_found}, email) do
+    AccountLogging.log_operation_failure("password_reset", email, :user_not_found)
   end
 
-  defp handle_user_found(user, _user_queries) do
-    case user.provider do
-      provider when provider in [nil, "email"] ->
-        process_regular_user_reset(user)
-
-      provider ->
-        handle_oauth_user_reset(user, provider)
-    end
+  defp handle_password_reset_attempt({:ok, %{provider: provider} = user}, _email)
+       when provider in [nil, "email"] do
+    process_regular_user_reset(user)
   end
+
+  defp handle_password_reset_attempt({:ok, user}, _email), do: notify_no_password(user)
 
   defp validate_email_format(email) do
-    case InputProcessor.validate_field(email, :email) do
+    case Validation.validate_email(email) do
       {:ok, validated} -> {:ok, validated}
       {:error, msg} -> {:error, :invalid_input, msg}
     end
   end
 
-  # `:ip_address` is the canonical key (matches `PasswordUpdate.update_user_password/5`'s
-  # convention, and what the audit entry itself is keyed under); `:ip` is
-  # accepted too since `AuthActions` still passes it for this flow's callers.
-  defp extract_ip_from_opts(opts) do
-    opts[:ip_address] || opts[:ip] ||
-      case opts[:socket_or_conn] do
-        nil -> nil
-        soc -> ClientIP.get(soc)
-      end
-  end
-
   defp process_regular_user_reset(user) do
-    {token, _expiry} = Token.generate_password_reset_token()
-    reset_url = UrlBuilder.password_reset_url(token)
-    token_hash = Token.hash_token(token)
-
     # Persist the token first so it is valid in the database before the job runs.
     # The job carries the token's hash; the worker discards it at send time if a
     # newer request has since rotated the stored token, so an in-flight or
     # retrying job can never deliver an invalidated link.
-    with {:ok, updated_user} <- persist_reset_token_and_log(user, token),
-         {:ok, _status} <- schedule_reset_email(updated_user, reset_url, token_hash) do
+    with {:ok, updated_user, token} <- persist_reset_token_and_log(user),
+         {:ok, _status} <-
+           schedule_reset_email(
+             updated_user,
+             UrlBuilder.password_reset_url(token),
+             Token.hash_token(token)
+           ) do
       {:ok, :email_sent,
        dgettext("auth", "Password reset instructions have been sent to your email.")}
     else
@@ -153,9 +132,9 @@ defmodule Tymeslot.Auth.PasswordReset do
     end
   end
 
-  defp persist_reset_token_and_log(user, token) do
-    case Config.user_token_queries_module().set_reset_token(user, token) do
-      {:ok, updated_user} ->
+  defp persist_reset_token_and_log(user) do
+    case AccountTokens.issue(:reset, user) do
+      {:ok, updated_user, token} ->
         # Logged at persist time — the email is scheduled separately afterwards, so
         # this records token storage only, not delivery (mirrors the verification flow).
         Logger.info("Password reset token stored",
@@ -166,7 +145,7 @@ defmodule Tymeslot.Auth.PasswordReset do
 
         AccountLogging.log_password_reset(updated_user, "initiated")
 
-        {:ok, updated_user}
+        {:ok, updated_user, token}
 
       {:error, _error_reason} ->
         AccountLogging.log_operation_failure(
@@ -206,61 +185,42 @@ defmodule Tymeslot.Auth.PasswordReset do
     end
   end
 
-  defp handle_oauth_user_reset(user, provider) do
+  # An account that signs in through a provider has no password to reset. Its
+  # owner is told so by email, with a sign-in link; the screen says nothing.
+  defp notify_no_password(user) do
     AccountLogging.log_operation_failure("password_reset", user.email, :oauth_user, %{
       user_id: user.id,
-      provider: provider
+      provider: user.provider
     })
 
-    {:error, :oauth_user, ErrorFormatter.format_password_reset_error(:oauth_user)}
+    case EmailScheduler.schedule_no_password_to_reset(user.id) do
+      {:ok, _status} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule no-password notice",
+          user_id: user.id,
+          reason: inspect(reason),
+          event: :password_reset_no_password_notice_failed
+        )
+
+        :error
+    end
   end
 
   @doc """
-  Verifies a password reset token.
-
-  ## Parameters
-    - token: String.t() (password reset token)
-    - opts: Keyword list
+  Verifies a password reset token without consuming it.
 
   ## Returns
     - {:ok, user, message} on success
     - {:error, reason, message} on failure
   """
-  @spec verify_token(String.t(), keyword()) ::
-          {:ok, map(), String.t()}
-          | {:error, atom(), String.t()}
-  def verify_token(token, _opts \\ []) do
-    case Config.user_token_queries_module().get_user_by_reset_token(token) do
-      {:error, :not_found} ->
-        Logger.warning("Invalid password reset token",
-          # Log only part of the token for security
-          token: String.slice(token, 0, 8) <> "...",
-          event: :password_reset_invalid_token
-        )
-
-        {:error, :invalid_token, dgettext("auth", "Invalid or expired password reset token.")}
-
-      {:ok, user} ->
-        # Calculate expiry as reset_sent_at + 2 hours
-        expiry = DateTime.add(user.reset_sent_at, 2 * 3600, :second)
-
-        case Token.verify_token(token, expiry) do
-          {:ok, _verified_token} ->
-            {:ok, Map.from_struct(user), dgettext("auth", "Token verified successfully.")}
-
-          {:error, :token_expired} ->
-            Logger.warning("Password reset token expired",
-              user_id: user.id,
-              email_masked: SecurityLogger.mask_email(user.email),
-              event: :password_reset_token_expired
-            )
-
-            {:error, :token_expired,
-             dgettext(
-               "auth",
-               "Your reset token has expired. Please request a new password reset."
-             )}
-        end
+  @spec verify_token(String.t()) ::
+          {:ok, UserSchema.t(), String.t()} | {:error, atom(), String.t()}
+  def verify_token(token) do
+    case fetch_reset_token(token) do
+      {:ok, user} -> {:ok, user, dgettext("auth", "Token verified successfully.")}
+      {:error, reason, message} -> {:error, reason, message}
     end
   end
 
@@ -271,30 +231,42 @@ defmodule Tymeslot.Auth.PasswordReset do
     - token: String.t() (password reset token)
     - new_password: String.t() (new password)
     - password_confirmation: String.t() (password confirmation)
-    - opts: Keyword list; `:ip_address` (or `:ip`) and `:user_agent` are recorded on the audit
-      entry the completed reset emits
+    - opts: Keyword list; `:ip` keys the per-address limit on attempts, and
+      it and `:user_agent` are recorded on the audit entry the completed reset
+      emits
 
   ## Returns
     - {:ok, user, message} on success
     - {:error, reason, message} on failure
   """
   @spec reset_password(String.t(), String.t(), String.t(), keyword()) ::
-          {:ok, map(), String.t()}
+          {:ok, UserSchema.t(), String.t()}
           | {:error, atom(), String.t()}
-  def reset_password(token, new_password, password_confirmation, opts \\ []) do
+  def reset_password(token, new_password, password_confirmation, opts) do
+    RateLimit.with_limit(
+      RateLimiter.check_password_reset_submit_rate_limit(opts[:ip]),
+      [event: "password_reset_submit", ip: opts[:ip], user_agent: opts[:user_agent]],
+      fn -> do_reset_password(token, new_password, password_confirmation, opts) end
+    )
+  end
+
+  defp do_reset_password(token, new_password, password_confirmation, opts) do
     case consume_and_update(token, new_password, password_confirmation) do
       {:ok, updated_user} ->
         AccountLogging.log_password_reset(updated_user, "completed")
         :ok = invalidate_all_sessions(updated_user)
 
         SecurityLogger.log_password_change(updated_user.id, %{
-          ip_address: extract_ip_from_opts(opts),
+          ip_address: opts[:ip],
           user_agent: opts[:user_agent],
           sessions_invalidated: true
         })
 
-        {:ok, Map.from_struct(updated_user),
-         dgettext("auth", "Your password has been reset successfully")}
+        {:ok, updated_user,
+         dgettext(
+           "auth",
+           "Your password has been reset successfully. Please log in with your new password."
+         )}
 
       {:error, reason, message} ->
         {:error, reason, message}
@@ -308,7 +280,7 @@ defmodule Tymeslot.Auth.PasswordReset do
   defp consume_and_update(token, new_password, password_confirmation) do
     txn =
       Repo.transaction(fn ->
-        with {:ok, user} <- consume_reset_token(token),
+        with {:ok, user} <- fetch_reset_token(token, lock: true),
              {:ok, _validated} <-
                validate_password_input(new_password, password_confirmation, user),
              {:ok, updated_user} <- perform_password_update(user, new_password) do
@@ -324,9 +296,12 @@ defmodule Tymeslot.Auth.PasswordReset do
     end
   end
 
-  defp consume_reset_token(token) do
-    case Config.user_token_queries_module().get_user_by_reset_token_for_update(token) do
-      {:error, :not_found} ->
+  defp fetch_reset_token(token, opts \\ []) do
+    case AccountTokens.fetch(:reset, token, opts) do
+      {:ok, user} ->
+        {:ok, user}
+
+      {:error, :invalid_token} ->
         Logger.warning("Invalid password reset token",
           token: String.slice(token, 0, 8) <> "...",
           event: :password_reset_invalid_token
@@ -334,26 +309,15 @@ defmodule Tymeslot.Auth.PasswordReset do
 
         {:error, :invalid_token, dgettext("auth", "Invalid or expired password reset token.")}
 
-      {:ok, user} ->
-        expiry = DateTime.add(user.reset_sent_at, 2 * 3600, :second)
+      {:error, :token_expired, user} ->
+        Logger.warning("Password reset token expired",
+          user_id: user.id,
+          email_masked: SecurityLogger.mask_email(user.email),
+          event: :password_reset_token_expired
+        )
 
-        case Token.verify_token(token, expiry) do
-          {:ok, _verified} ->
-            {:ok, user}
-
-          {:error, :token_expired} ->
-            Logger.warning("Password reset token expired",
-              user_id: user.id,
-              email_masked: SecurityLogger.mask_email(user.email),
-              event: :password_reset_token_expired
-            )
-
-            {:error, :token_expired,
-             dgettext(
-               "auth",
-               "Your reset token has expired. Please request a new password reset."
-             )}
-        end
+        {:error, :token_expired,
+         dgettext("auth", "Your reset token has expired. Please request a new password reset.")}
     end
   end
 
@@ -388,7 +352,11 @@ defmodule Tymeslot.Auth.PasswordReset do
   end
 
   defp perform_password_update(user, new_password) do
-    case update_user_password(user, new_password) do
+    # Pass raw passwords to let the changeset handle validation and hashing.
+    case AccountTokens.consume(:reset, user, %{
+           password: new_password,
+           password_confirmation: new_password
+         }) do
       {:ok, updated_user} ->
         {:ok, updated_user}
 
@@ -405,37 +373,6 @@ defmodule Tymeslot.Auth.PasswordReset do
            "auth",
            "The password couldn't be updated. Please try again with a different password."
          )}
-    end
-  end
-
-  # Private functions
-
-  defp update_user_password(user, new_password) do
-    actual_user =
-      case user do
-        %UserSchema{} ->
-          user
-
-        %{email: email} when is_binary(email) ->
-          case Config.user_queries_module().get_user_by_email(email) do
-            {:ok, user} -> user
-            _error -> nil
-          end
-
-        _invalid ->
-          nil
-      end
-
-    case actual_user do
-      %UserSchema{} = valid_user ->
-        # Pass raw passwords to let the changeset handle validation and hashing
-        Config.user_queries_module().reset_password(valid_user, %{
-          password: new_password,
-          password_confirmation: new_password
-        })
-
-      _invalid ->
-        {:error, :invalid_user}
     end
   end
 

@@ -8,7 +8,6 @@ defmodule Tymeslot.Meetings.QueriesTest do
 
   alias Ecto.UUID
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.Listing
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -97,73 +96,6 @@ defmodule Tymeslot.Meetings.QueriesTest do
 
       assert {:error, :not_found} =
                Meetings.get_meeting_by_uid_for_organizer("nonexistent-uid", user.id)
-    end
-  end
-
-  describe "meetings_needing_reminders/0" do
-    test "filters meetings based on reminder rules" do
-      now = DateTime.utc_now()
-      soon = DateTime.add(now, 30, :minute)
-
-      meeting_needing_reminder =
-        insert(:meeting,
-          start_time: soon,
-          status: "confirmed",
-          reminder_email_sent: false,
-          reminders: nil
-        )
-
-      _meeting_already_reminded =
-        insert(:meeting,
-          start_time: soon,
-          status: "confirmed",
-          reminder_email_sent: true,
-          reminders: nil
-        )
-
-      _meeting_with_empty_reminders =
-        insert(:meeting,
-          start_time: soon,
-          status: "confirmed",
-          reminders: []
-        )
-
-      _meeting_fully_reminded =
-        insert(:meeting,
-          start_time: soon,
-          status: "confirmed",
-          reminders: [%{"value" => 30, "unit" => "minutes"}],
-          reminders_sent: [%{"value" => 30, "unit" => "minutes"}]
-        )
-
-      meeting_with_pending_reminder =
-        insert(:meeting,
-          start_time: soon,
-          status: "confirmed",
-          reminders: [%{"value" => 1, "unit" => "hours"}],
-          reminders_sent: []
-        )
-
-      _meeting_not_confirmed =
-        insert(:meeting,
-          start_time: soon,
-          status: "pending",
-          reminder_email_sent: false
-        )
-
-      _meeting_later =
-        insert(:meeting,
-          start_time: DateTime.add(now, 2, :hour),
-          status: "confirmed",
-          reminder_email_sent: false
-        )
-
-      meetings = Listing.meetings_needing_reminders()
-      meeting_ids = Enum.map(meetings, & &1.id)
-
-      assert meeting_needing_reminder.id in meeting_ids
-      assert meeting_with_pending_reminder.id in meeting_ids
-      assert length(meeting_ids) == 2
     end
   end
 

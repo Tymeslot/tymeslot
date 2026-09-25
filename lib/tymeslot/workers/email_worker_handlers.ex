@@ -12,9 +12,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   alias Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.PollEmails
 
-  # Static dispatch table — keeps `execute_email_action/2` simple and lets
+  # Static dispatch table — keeps `execute_email_action/3` simple and lets
   # adding a new email type be a one-line change. Each entry maps the
-  # serialised action name to the function that handles its args.
+  # serialised action name to the function that handles its args. An entry
+  # tagged `:with_job_id` also receives the Oban job id, which the handler
+  # passes to `Tymeslot.Workers.DeliveryClaims` so that a rescued job does not
+  # repeat a send it already made.
   #
   # The six seat-action keys come from `MeetingScheduler.seat_action/1`
   # rather than retyped literals, so this table and the scheduling call sites
@@ -26,7 +29,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     "send_confirmation_emails" => {MeetingEmails, :handle_confirmation_emails},
     MeetingScheduler.seat_action(:seat_confirmation) =>
       {GroupMeetingEmails, :handle_seat_confirmation_emails},
-    "send_cancellation_emails" => {MeetingEmails, :handle_cancellation_emails},
+    "send_cancellation_emails" => {MeetingEmails, :handle_cancellation_emails, :with_job_id},
     MeetingScheduler.seat_action(:seat_cancellation) =>
       {GroupMeetingEmails, :handle_seat_cancellation_emails},
     MeetingScheduler.seat_action(:seat_meeting_cancellation) =>
@@ -42,11 +45,16 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     "send_booking_request_emails" => {BookingApprovalEmails, :handle_booking_request_emails},
     "send_booking_approval_nudge" => {BookingApprovalEmails, :handle_booking_approval_nudge},
     "send_booking_request_outcome" => {BookingApprovalEmails, :handle_booking_request_outcome},
-    "send_poll_deadline_reminders" => {PollEmails, :handle_deadline_reminders},
-    "send_poll_host_nudge" => {PollEmails, :handle_host_nudge},
+    "send_reschedule_request_expired" =>
+      {BookingApprovalEmails, :handle_reschedule_request_expired},
+    "send_poll_deadline_reminders" => {PollEmails, :handle_deadline_reminders, :with_job_id},
+    "send_poll_host_nudge" => {PollEmails, :handle_host_nudge, :with_job_id},
     "send_email_change_confirmations" => {AuthEmails, :handle_email_change_confirmations},
     "send_email_verification" => {AuthEmails, :handle_email_verification},
     "send_password_reset" => {AuthEmails, :handle_password_reset},
+    "send_no_password_to_reset" => {AuthEmails, :handle_no_password_to_reset},
+    "send_signup_attempt_notice" => {AuthEmails, :handle_signup_attempt_notice},
+    "send_social_signup_confirmation" => {AuthEmails, :handle_social_signup_confirmation},
     "send_email_change_verification" => {AuthEmails, :handle_email_change_verification},
     "send_email_change_notification" => {AuthEmails, :handle_email_change_notification},
     "send_integration_unhealthy_notification" =>
@@ -55,8 +63,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
       {IntegrationEmails, :handle_integration_reauth_notification},
     "send_integration_paused_notification" =>
       {IntegrationEmails, :handle_integration_paused_notification},
+    "send_video_room_creation_error_notification" =>
+      {IntegrationEmails, :handle_video_room_creation_error_notification},
     "send_calendar_invitation" => {IntegrationEmails, :handle_calendar_invitation},
-    "send_event_update_notification" => {IntegrationEmails, :handle_event_update_notification}
+    "send_event_update_notification" =>
+      {IntegrationEmails, :handle_event_update_notification, :with_job_id}
   }
 
   @doc """
@@ -68,12 +79,16 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   Returns `:ok` on success, `{:error, reason}` for retriable failures,
   `{:discard, reason}` for fatal errors that shouldn't be retried,
   or `{:snooze, seconds}` if the job should be delayed.
+
+  `job_id` is the id of the Oban job running the action, or `nil` for a job
+  that was never persisted (which cannot be rescued, so needs no guard).
   """
-  @spec execute_email_action(String.t(), %{String.t() => term()}) ::
+  @spec execute_email_action(String.t(), %{String.t() => term()}, integer() | nil) ::
           :ok | {:error, term()} | {:discard, String.t()} | {:snooze, integer()}
-  def execute_email_action(action, args) do
+  def execute_email_action(action, args, job_id \\ nil) do
     case Map.fetch(@action_handlers, action) do
       {:ok, {module, fun}} -> apply(module, fun, [args])
+      {:ok, {module, fun, :with_job_id}} -> apply(module, fun, [args, job_id])
       :error -> {:discard, "Unknown action: #{action}"}
     end
   end

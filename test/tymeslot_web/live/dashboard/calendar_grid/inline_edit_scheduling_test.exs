@@ -12,10 +12,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditSchedulingTest do
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    _profile = insert(:profile, user: user)
+    _profile = insert(:profile, user: user, timezone: "Etc/UTC")
     conn = conn |> Test.init_test_session(%{}) |> fetch_session()
     conn = log_in_user(conn, user)
     {:ok, conn: conn, user: user}
+  end
+
+  # Edits write to the provider from a background Task; answering it keeps a
+  # crashed write from reverting the grid underneath the assertions.
+  setup do
+    Mox.stub(Tymeslot.CalendarMock, :update_event, fn _uid, _data, _context -> :ok end)
+    :ok
   end
 
   describe "all-day toggling" do
@@ -80,7 +87,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditSchedulingTest do
       all_day_event: event
     } do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#allday-event-#{event.id}") |> render_click()
+      lv |> element("[id^='allday-event-#{event.id}-']") |> render_click()
 
       html =
         lv

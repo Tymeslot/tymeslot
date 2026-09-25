@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
 
   alias Phoenix.LiveView
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
+  alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
   alias TymeslotWeb.Themes.Shared.GuestBooking
 
@@ -27,6 +28,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:theme_id, theme_id)
     |> assign(:duration, nil)
     |> assign(:meeting_type, nil)
+    |> assign(:meeting_type_pinned, false)
     |> assign(:current_year, today.year)
     |> assign(:current_month, today.month)
     |> assign(:current_week_start, week_start)
@@ -95,5 +97,6 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:custom_fields_snapshot, [])
     |> assign(:custom_field_answers, %{})
     |> GuestBooking.assign_defaults()
+    |> BookingLocation.assign_defaults()
   end
 end

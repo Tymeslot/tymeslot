@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates
+  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -26,10 +26,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
   # change (the default, original behaviour) and a recurrence-rule change.
   defp replay_with_scope(%{kind: :recurrence_rule} = prompt, scope, socket) do
     socket =
-      Updates.update_recurrence_async(
+      EditWorkflow.update_event_async(
         socket,
         prompt.event,
-        prompt.recurrence_rule,
+        %{recurrence_rule: prompt.recurrence_rule},
         recurrence_scope: scope
       )
 
@@ -38,12 +38,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
   end
 
   defp replay_with_scope(prompt, scope, socket) do
-    Updates.update_event_async(
+    EditWorkflow.update_event_async(
       socket,
       prompt.event,
-      prompt.optimistic_event,
-      prompt.new_start,
-      prompt.new_end,
+      %{start_at: prompt.new_start, end_at: prompt.new_end},
       recurrence_scope: scope
     )
   end

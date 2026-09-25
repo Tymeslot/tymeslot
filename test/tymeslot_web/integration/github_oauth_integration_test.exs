@@ -10,28 +10,16 @@ defmodule TymeslotWeb.Integration.GitHubOAuthIntegrationTest do
   @moduletag :auth
   @moduletag :integrations
 
-  import Mox
-
   alias Phoenix.Flash
-  alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
-  alias Tymeslot.Auth.OAuth.HelperMock
 
   # `RateLimiter.OAuth.check_initiation/1` allows this many initiations per IP
   # per 600s window; the next one is refused.
   @initiation_limit 10
 
-  # The controller resolves its callback handler through
-  # `:oauth_callback_module`, which test config points at `HelperMock`. Without
-  # a stub the callback raises `Mox.UnexpectedCallError` before any flash is
-  # set, so stub the mock with the real implementation and let these tests
-  # exercise genuine state validation.
-  setup do
-    stub_with(HelperMock, OAuthHelper)
-    :ok
-  end
-
   describe "GitHub OAuth Security" do
     test "prevents CSRF attacks with state parameter validation" do
+      enable_social_auth(:github_enabled)
+
       # Setup: Create session with expected state
       conn =
         build_conn()
@@ -97,7 +85,7 @@ defmodule TymeslotWeb.Integration.GitHubOAuthIntegrationTest do
       # the "provider not available" and rate-limited paths are 302s too.
       uri = conn |> redirected_to(302) |> URI.parse()
       query = URI.decode_query(uri.query)
-      {stored_state, _issued_at} = get_session(conn, :_oauth_state)
+      {stored_state, _code_verifier, _issued_at} = get_session(conn, :_oauth_state)
 
       assert "#{uri.scheme}://#{uri.host}#{uri.path}" ==
                "https://github.com/login/oauth/authorize"
@@ -114,6 +102,8 @@ defmodule TymeslotWeb.Integration.GitHubOAuthIntegrationTest do
     end
 
     test "user sees error when the callback carries a state the server never issued" do
+      enable_social_auth(:github_enabled)
+
       # Act: GitHub redirects back on a session that never started a flow, so
       # there is no stored state to compare against.
       conn =

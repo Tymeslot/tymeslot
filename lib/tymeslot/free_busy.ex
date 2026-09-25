@@ -5,10 +5,12 @@ defmodule Tymeslot.FreeBusy do
   The feed is exposed at `GET /free-busy/:token`. A profile opts in by
   generating a secret token (`enable_feed/1`); clearing it (`disable_feed/1`)
   takes the feed offline. Busy intervals are derived from the same connected
-  calendar events the availability engine treats as blocking, so the published
-  free/busy reflects exactly what blocks bookings.
+  calendar events the availability engine treats as blocking, plus the
+  profile's time off, so a holiday entered in Tymeslot rather than in a
+  calendar is published as busy too.
   """
 
+  alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
@@ -75,20 +77,25 @@ defmodule Tymeslot.FreeBusy do
 
   @doc """
   Returns the profile's busy intervals (UTC `{start, end}` pairs) overlapping
-  the window, derived from connected-calendar events that block availability.
+  the window, derived from connected-calendar events that block availability
+  and from the profile's time off.
   """
   @spec busy_intervals(ProfileSchema.t(), DateTime.t(), DateTime.t()) ::
           [FreebusyGenerator.interval()]
-  def busy_intervals(%ProfileSchema{user_id: user_id}, window_start, window_end) do
+  def busy_intervals(%ProfileSchema{} = profile, window_start, window_end) do
     integration_ids =
-      user_id
+      profile.user_id
       |> CalendarIntegrationQueries.list_active_for_user()
       |> Enum.map(& &1.id)
 
-    integration_ids
-    |> CalendarEventQueries.in_range({window_start, window_end})
-    |> Enum.filter(&CalendarEvent.blocking?/1)
-    |> Enum.flat_map(&event_interval/1)
+    event_intervals =
+      integration_ids
+      |> CalendarEventQueries.in_range({window_start, window_end})
+      |> Enum.filter(&CalendarEvent.blocking?/1)
+      |> Enum.flat_map(&event_interval/1)
+
+    event_intervals ++
+      TimeOff.busy_intervals(profile.id, profile.timezone, window_start, window_end)
   end
 
   # Timed events map directly; all-day events span midnight-to-midnight UTC.

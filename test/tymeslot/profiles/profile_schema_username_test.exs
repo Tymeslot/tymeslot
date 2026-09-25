@@ -107,6 +107,18 @@ defmodule Tymeslot.Profiles.ProfileSchemaUsernameTest do
       end
     end
 
+    test "rejects reserved phrases written with hyphens" do
+      # Usernames are lowercase by format, so a reserved entry is only ever
+      # matched in its lowercase spelling.
+      for username <- ["jesus-christ", "christ-sake"] do
+        changeset =
+          ProfileSchema.changeset(%ProfileSchema{}, %{username: username, timezone: "Europe/Kyiv"})
+
+        assert "is reserved" in (errors_on(changeset)[:username] || []),
+               "Username '#{username}' should be reserved"
+      end
+    end
+
     test "username is optional" do
       user = insert(:user)
 

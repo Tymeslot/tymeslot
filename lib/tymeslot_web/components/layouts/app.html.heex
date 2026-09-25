@@ -1,2 +1,13 @@
+<%!-- The single flash group for every Core LiveView and controller render.
+
+Placement is load-bearing, not incidental. This layout is part of the
+LiveView's own rendered tree, so a `put_flash/3` raised while the page is
+live patches this group. A root layout is rendered once, on the initial HTTP
+response, and is never diffed afterwards, so a group placed there shows only
+the flash that was already in the session at mount and silently swallows
+every later one.
+
+No root layout and no page template may render a second group: both would
+render, and the user would read the same sentence twice. --%>
 <.flash_group flash={@flash} id="app-flash-group" />
 {@inner_content}

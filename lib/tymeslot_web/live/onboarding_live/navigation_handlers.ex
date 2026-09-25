@@ -9,6 +9,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   use TymeslotWeb, :verified_routes
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Ecto.Changeset
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Onboarding
@@ -18,6 +19,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
   alias TymeslotWeb.OnboardingLive.CalendarHandlers
+  alias TymeslotWeb.OnboardingLive.ProfileHandlers
   alias TymeslotWeb.OnboardingLive.StepConfig
 
   @doc """
@@ -286,14 +288,29 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
 
         {:noreply, socket}
 
-      {:error, _reason} ->
-        {:noreply,
-         LiveView.put_flash(
-           socket,
-           :error,
-           dgettext("onboarding_wizard", "Please check your input and try again.")
-         )}
+      {:error, {:update_failed, reason}} ->
+        {:noreply, handle_update_failure(socket, reason)}
     end
+  end
+
+  # A username that was free when checked can still be refused on write: taken
+  # in the meantime, or colliding only at the case-insensitive unique index.
+  # That is worth naming inline; anything else gets the generic message.
+  defp handle_update_failure(socket, %Changeset{} = changeset) do
+    case Profiles.username_error(changeset) do
+      nil -> put_generic_input_error(socket)
+      reason -> ProfileHandlers.put_username_error(socket, reason)
+    end
+  end
+
+  defp handle_update_failure(socket, _reason), do: put_generic_input_error(socket)
+
+  defp put_generic_input_error(socket) do
+    LiveView.put_flash(
+      socket,
+      :error,
+      dgettext("onboarding_wizard", "Please check your input and try again.")
+    )
   end
 
   defp handle_profile_next(socket) do
@@ -308,27 +325,22 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
 
   defp handle_username_validation(socket, sanitized_params) do
     username = Map.get(sanitized_params, "username", "")
-    current_username = socket.assigns.profile.username || ""
 
-    cond do
-      username == current_username ->
+    case Profiles.username_status(socket.assigns.profile, username) do
+      status when status in [:ok, :unchanged] ->
         update_and_proceed(socket, sanitized_params)
 
-      username == "" ->
+      reason when reason in [:reserved, :taken] ->
+        {:noreply, ProfileHandlers.put_username_error(socket, reason)}
+
+      {:invalid, _message} when username == "" ->
         {:noreply,
          Component.assign(socket, :form_errors, %{
            username: dgettext("onboarding_wizard", "Username is required")
          })}
 
-      Profiles.username_available?(username) ->
-        update_and_proceed(socket, sanitized_params)
-
-      true ->
-        {:noreply,
-         Component.assign(socket, :form_errors, %{
-           username:
-             dgettext("onboarding_wizard", "Username is already taken. Please choose another.")
-         })}
+      {:invalid, message} ->
+        {:noreply, Component.assign(socket, :form_errors, %{username: message})}
     end
   end
 end

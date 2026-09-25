@@ -138,7 +138,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
       assert mjml =~ "CEO"
     end
 
-    test "generates default avatar URL when not provided" do
+    test "renders an initials badge, never a data URI image, when no avatar is provided" do
       content = "<mj-text>Test</mj-text>"
 
       organizer_details = %{
@@ -147,10 +147,14 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
         eyebrow: "Confirmed"
       }
 
-      mjml = MjmlEmail.base_mjml_template(content, organizer_details)
+      html =
+        content
+        |> MjmlEmail.base_mjml_template(organizer_details)
+        |> MjmlEmail.compile_mjml()
 
-      assert mjml =~ "data:image/svg+xml;base64"
-      assert mjml =~ "Jane Smith"
+      refute html =~ "data:image"
+      assert html =~ ~r{>JS</td>}
+      assert html =~ "Jane Smith"
     end
 
     test "uses provided avatar URL" do

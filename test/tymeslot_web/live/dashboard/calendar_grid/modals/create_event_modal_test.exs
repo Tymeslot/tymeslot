@@ -129,7 +129,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModalTest do
     assert html =~ "bob@example.com"
   end
 
-  test "shows video integration picker when attendees present and video integrations available" do
+  test "shows the video picker whenever the organiser has a video integration" do
+    # Offered before any guest is added: an event can be created with a room
+    # in one step, rather than made first and given a room afterwards.
+    assigns =
+      base_assigns(%{video_integrations: [%{id: 10, name: "Zoom", provider: "google_meet"}]})
+
+    html = render_component(&CreateEventModal.create_event_modal/1, assigns)
+
+    assert html =~ "Video"
+    assert html =~ "Zoom"
+    assert html =~ "update_create_video"
+  end
+
+  test "offers the same picker once guests have been added" do
     assigns =
       base_assigns(%{
         creating_event: Map.put(@creating_event, :attendees, ["alice@example.com"]),
@@ -138,14 +151,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModalTest do
 
     html = render_component(&CreateEventModal.create_event_modal/1, assigns)
 
-    assert html =~ "Video"
     assert html =~ "Zoom"
   end
 
-  test "hides video picker when no attendees" do
+  test "hides the video picker when the organiser has no video integration" do
     html = render_component(&CreateEventModal.create_event_modal/1, base_assigns())
 
-    refute html =~ "Video"
+    refute html =~ "update_create_video"
   end
 
   test "shows loading state when saving" do

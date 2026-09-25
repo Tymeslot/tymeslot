@@ -20,6 +20,7 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.Rooms
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
@@ -40,7 +41,7 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
         })
 
       # CRITICAL: We expect exactly ONE call to refresh_access_token
-      expect(Tymeslot.GoogleOAuthHelperMock, :refresh_access_token, 1, fn _token, _scope ->
+      expect(Tymeslot.GoogleOAuthHelperMock, :refresh_access_token, 1, fn _token, _scope, _opts ->
         # Intentional sleep: Simulate slow OAuth provider response to create
         # a timing window where concurrent requests can overlap, testing that
         # the locking mechanism prevents duplicate refreshes
@@ -127,7 +128,7 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
       end)
 
       # CRITICAL: We expect exactly ONE call to refresh_access_token
-      expect(Tymeslot.TeamsOAuthHelperMock, :refresh_access_token, 1, fn _token, _scope ->
+      expect(Tymeslot.TeamsOAuthHelperMock, :refresh_access_token, 1, fn _token, _scope, _opts ->
         Process.sleep(100)
 
         {:ok,
@@ -165,7 +166,15 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
               {^barrier, :go} -> :ok
             end
 
-            Rooms.create_meeting_room(user.id, integration_id: integration.id)
+            # Teams refuses to create an event without the booking's times.
+            Rooms.create_meeting_room(user.id,
+              integration_id: integration.id,
+              event_details: %EventDetails{
+                summary: "Concurrent booking",
+                start_time: ~U[2030-03-14 09:30:00Z],
+                end_time: ~U[2030-03-14 10:15:00Z]
+              }
+            )
           end)
         end
 

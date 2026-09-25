@@ -1,20 +1,17 @@
 defmodule TymeslotWeb.E2E.OnboardingTest do
   use TymeslotWeb.BrowserCase, async: false
 
-  alias Tymeslot.Auth.Verification
-
   @moduletag :e2e
   @moduletag :onboarding
 
   feature "new user completes onboarding wizard", %{session: session} do
-    # Create a verified user who hasn't completed onboarding
+    # Create a verified user who hasn't completed onboarding (the factory
+    # default is verified)
     user =
       insert(:user, %{
         onboarding_completed_at: nil,
         email: "e2e-onboard-#{System.unique_integer([:positive])}@example.com"
       })
-
-    {:ok, _user} = Verification.verify_user(user.id)
 
     # Log in — should redirect to onboarding since not completed
     session =

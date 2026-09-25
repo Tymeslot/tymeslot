@@ -17,7 +17,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Search do
   def handle_search(%{"term" => term}, socket) do
     user_id = socket.assigns.current_user.id
     hidden_ids = socket.assigns.hidden_integration_ids
-    results = CalendarGrid.search_events(user_id, term, hidden_integration_ids: hidden_ids)
+
+    results =
+      CalendarGrid.search_events(user_id, term, socket.assigns.integrations,
+        hidden_integration_ids: hidden_ids
+      )
 
     {:noreply,
      socket

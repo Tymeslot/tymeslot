@@ -26,7 +26,6 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   alias Tymeslot.Emails.Shared.Styles.Tokens
   alias Tymeslot.Mailer
   alias Tymeslot.Mailer.Providers
-  alias Tymeslot.Security.UrlValidation
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -172,7 +171,8 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     raw_organizer_name = organizer_details[:name] || fetch_from_name()
     organizer_name = Sanitise.sanitize_for_email(raw_organizer_name)
 
-    organizer_avatar_url = resolve_avatar(organizer_details[:avatar_url], organizer_name)
+    organizer_avatar =
+      AvatarHelper.avatar_mjml(organizer_details[:avatar_url], raw_organizer_name)
 
     organizer_title =
       Sanitise.sanitize_for_email(organizer_details[:title] || Branding.brand_name())
@@ -189,7 +189,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
         ),
       pre_card: logo_header(),
       stage: Stage.stage_band(intent, stage_eyebrow, stage_title, stage_subtitle),
-      header: organizer_strip(organizer_avatar_url, organizer_name, organizer_title),
+      header: organizer_strip(organizer_avatar, organizer_name, organizer_title),
       body: content,
       footer: footer_strip()
     })
@@ -237,20 +237,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     end
   end
 
-  defp resolve_avatar(nil, organizer_name),
-    do: AvatarHelper.generate_default_avatar(organizer_name)
-
-  defp resolve_avatar(url, organizer_name) when is_binary(url) do
-    case UrlValidation.validate_http_url(url) do
-      :ok -> Sanitise.sanitize_for_email(url)
-      _other -> AvatarHelper.generate_default_avatar(organizer_name)
-    end
-  end
-
-  defp resolve_avatar(_other, organizer_name),
-    do: AvatarHelper.generate_default_avatar(organizer_name)
-
-  defp organizer_strip(avatar_url, name, title) do
+  defp organizer_strip(avatar, name, title) do
     """
     <mj-section
       padding="18px 28px 14px 28px"
@@ -260,15 +247,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     >
       <mj-group>
         <mj-column width="16%" vertical-align="middle">
-          <mj-image
-            src="#{avatar_url}"
-            width="44px"
-            height="44px"
-            border-radius="22px"
-            alt="#{name}"
-            align="left"
-            padding="0"
-          />
+          #{avatar}
         </mj-column>
         <mj-column width="84%" vertical-align="middle">
           <mj-text

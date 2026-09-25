@@ -29,7 +29,7 @@ defmodule Tymeslot.Infrastructure.AvailabilityCache do
   See the six-argument form for why the meeting type participates in the key.
   """
   @spec availability_range_key(integer(), Date.t(), Date.t(), String.t(), integer() | nil) ::
-          {atom(), integer(), Date.t(), Date.t(), String.t(), integer() | nil, nil}
+          {atom(), integer(), Date.t(), Date.t(), String.t(), integer() | nil, nil, nil}
   def availability_range_key(user_id, start_date, end_date, timezone, duration) do
     availability_range_key(user_id, start_date, end_date, timezone, duration, nil)
   end
@@ -39,8 +39,11 @@ defmodule Tymeslot.Infrastructure.AvailabilityCache do
 
   `meeting_type_id` is part of the key because per-meeting-type booking
   limits make availability differ between types sharing a duration, and
-  because group meeting types cache their own seat-overlaid range maps.
-  Solo lookups pass (or default to) nil.
+  because group meeting types cache their own seat-overlaid range maps; solo
+  lookups with no type pass (or default to) nil. `moving_uid` is part of it
+  too, because a reschedule page does not count the meeting being moved
+  against those limits; pass only a uid already proven to be the organiser's,
+  so visitor input cannot mint entries. Nil for every other page.
   """
   @spec availability_range_key(
           integer(),
@@ -48,11 +51,22 @@ defmodule Tymeslot.Infrastructure.AvailabilityCache do
           Date.t(),
           String.t(),
           integer() | nil,
-          integer() | nil
+          integer() | nil,
+          String.t() | nil
         ) ::
-          {atom(), integer(), Date.t(), Date.t(), String.t(), integer() | nil, integer() | nil}
-  def availability_range_key(user_id, start_date, end_date, timezone, duration, meeting_type_id) do
-    {:range_availability, user_id, start_date, end_date, timezone, duration, meeting_type_id}
+          {atom(), integer(), Date.t(), Date.t(), String.t(), integer() | nil, integer() | nil,
+           String.t() | nil}
+  def availability_range_key(
+        user_id,
+        start_date,
+        end_date,
+        timezone,
+        duration,
+        meeting_type_id,
+        moving_uid \\ nil
+      ) do
+    {:range_availability, user_id, start_date, end_date, timezone, duration, meeting_type_id,
+     moving_uid}
   end
 
   @doc """
@@ -81,7 +95,7 @@ defmodule Tymeslot.Infrastructure.AvailabilityCache do
   def invalidate_for_user(nil), do: :ok
 
   def invalidate_for_user(user_id) do
-    invalidate_pattern({:range_availability, user_id, :_, :_, :_, :_, :_})
+    invalidate_pattern({:range_availability, user_id, :_, :_, :_, :_, :_, :_})
     invalidate(booking_window_events_key(user_id))
     :ok
   end

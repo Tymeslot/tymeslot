@@ -1,90 +1,44 @@
 defmodule TymeslotWeb.HealthcheckController do
+  @moduledoc """
+  Serves `GET /healthcheck`, the probe container orchestrators poll.
+
+  Answers 200 with `"status": "ok"` when every check in
+  `Tymeslot.Infrastructure.Health` passes, and 503 with
+  `"status": "unhealthy"` otherwise; the per-check results are in `checks`.
+  Rate-limited per client IP.
+  """
+
   use TymeslotWeb, :controller
 
   require Logger
-  alias Ecto.Adapters.SQL
+
+  alias Tymeslot.Infrastructure.Health
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Helpers.ClientIP
 
-  @db_check_timeout 5_000
+  @retry_after_seconds 60
 
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def index(conn, _params) do
-    # Rate limit healthcheck endpoint - 30 requests per minute per IP
-    client_ip = ClientIP.get(conn)
-    bucket_key = "healthcheck:#{client_ip}"
-
-    case RateLimiter.check_rate(bucket_key, 60_000, 30) do
-      {:allow, _count} ->
-        checks = run_checks()
-
-        {status, http_status} =
-          cond do
-            not essentials_healthy?(checks) -> {"unhealthy", 503}
-            not all_healthy?(checks) -> {"degraded", 200}
-            true -> {"ok", 200}
-          end
+    case RateLimiter.check_healthcheck_rate_limit(ClientIP.get(conn)) do
+      :ok ->
+        %{status: status, checks: checks} = Health.check()
 
         conn
-        |> put_resp_content_type("application/json")
-        |> put_status(http_status)
+        |> put_status(if status == :ok, do: 200, else: 503)
         |> json(%{status: status, timestamp: DateTime.utc_now(), checks: checks})
 
-      {:deny, _limit} ->
+      {:error, :rate_limited} ->
         Logger.warning("Health check rate limit exceeded")
 
         conn
-        |> put_resp_content_type("application/json")
         |> put_status(429)
-        |> put_resp_header("retry-after", "60")
+        |> put_resp_header("retry-after", to_string(@retry_after_seconds))
         |> json(%{
           error: "Too many requests",
           message: "Rate limit exceeded for healthcheck endpoint",
-          retry_after: 60
+          retry_after: @retry_after_seconds
         })
     end
-  end
-
-  defp run_checks do
-    %{
-      database: check_database(),
-      oban: check_oban()
-    }
-  end
-
-  defp check_database do
-    case SQL.query(Tymeslot.Repo, "SELECT 1", [], timeout: @db_check_timeout) do
-      {:ok, _result} -> "ok"
-      {:error, _reason} -> "unavailable"
-    end
-  rescue
-    exception ->
-      Logger.error("Healthcheck database probe raised",
-        error: Exception.message(exception)
-      )
-
-      "unavailable"
-  end
-
-  defp check_oban do
-    queues = Oban.check_all_queues()
-    if Enum.any?(queues, & &1.paused), do: "paused", else: "ok"
-  rescue
-    exception ->
-      Logger.error("Healthcheck Oban probe raised",
-        error: Exception.message(exception)
-      )
-
-      "unavailable"
-  end
-
-  @essential_checks [:database, :oban]
-
-  defp essentials_healthy?(checks) do
-    Enum.all?(@essential_checks, fn name -> checks[name] == "ok" end)
-  end
-
-  defp all_healthy?(checks) do
-    Enum.all?(checks, fn {_name, status} -> status == "ok" end)
   end
 end

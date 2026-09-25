@@ -148,17 +148,18 @@ defmodule TymeslotWeb.ZoomDeauthController do
 
   # Zoom sends the signing timestamp as Unix epoch seconds. Reject anything more
   # than the tolerance window away from now so a captured request can't be
-  # replayed indefinitely. A non-integer timestamp is treated as invalid.
+  # replayed indefinitely. Anything but a bare integer is treated as invalid:
+  # `Integer.parse/1` alone would accept "1700000000abc".
   defp verify_timestamp_fresh(timestamp) when is_binary(timestamp) do
     case Integer.parse(timestamp) do
-      {seconds, _rest} ->
+      {seconds, ""} ->
         skew = abs(System.system_time(:second) - seconds)
 
         if skew <= @timestamp_tolerance_seconds,
           do: :ok,
           else: {:error, :stale_timestamp}
 
-      :error ->
+      _invalid ->
         {:error, :invalid_signature}
     end
   end

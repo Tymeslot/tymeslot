@@ -95,11 +95,27 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventFetcher do
     # calendar's already-fetched result — it now surfaces as a normal failed
     # entry that `resolve_availability_fetch/3` classifies, instead of the
     # whole coalesced fetch dying with `{:error, :timeout}`.
+    #
+    # Stream over indices, not over the clients themselves. A crashing task
+    # makes OTP log a termination report containing the task function's
+    # arguments verbatim, and a client carries the integration's decrypted
+    # CalDAV password: streaming the clients directly put plaintext
+    # credentials into the shipped logs every time a fetch raised. The
+    # closure's captured environment is not part of that report, so resolving
+    # the client inside the task keeps the credential out of it while leaving
+    # the crash, the alert and the per-client isolation exactly as they were.
+    clients_by_index =
+      all_clients |> Enum.with_index() |> Map.new(fn {client, index} -> {index, client} end)
+
     results =
       Tymeslot.TaskSupervisor
       |> Task.Supervisor.async_stream_nolink(
-        all_clients,
-        fn client -> fetch_events_for_client_in_range(client, start_datetime, end_datetime) end,
+        0..(length(all_clients) - 1)//1,
+        fn index ->
+          clients_by_index
+          |> Map.fetch!(index)
+          |> fetch_events_for_client_in_range(start_datetime, end_datetime)
+        end,
         timeout: Base.task_await_timeout_ms(),
         on_timeout: :kill_task
       )

@@ -55,6 +55,11 @@ defmodule Tymeslot.Bookings.RescheduleGroupMeetingTest do
     open_schedule_for(profile)
     meeting = insert_meeting_for_user(user)
 
+    # The reschedule re-reads the host's calendar before moving the meeting.
+    stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _from, _to ->
+      {:ok, []}
+    end)
+
     new_params = %{
       date: Date.to_string(Date.add(Date.utc_today(), 2)),
       time: "2:00 PM",

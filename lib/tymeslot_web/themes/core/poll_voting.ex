@@ -30,7 +30,6 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
 
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Polls
-  alias Tymeslot.Polls.PollParticipantQueries
   alias Tymeslot.Polls.Voting
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.SecurityLogger
@@ -60,7 +59,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
       poll: poll,
       tallies: Polls.tallies(poll),
       voting_open: Polls.voting_open?(poll),
-      participant: resolve_participant(poll, params["p"])
+      participant: Voting.get_participant(poll, params["p"])
     )
   end
 
@@ -219,17 +218,6 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
     end
   end
 
-  # --- Participant resolution ---
-
-  defp resolve_participant(_poll, token) when not is_binary(token), do: nil
-
-  defp resolve_participant(poll, token) do
-    case PollParticipantQueries.get_by_token(token) do
-      nil -> nil
-      participant -> if participant.poll_id == poll.id, do: participant, else: nil
-    end
-  end
-
   # --- Reloading ---
 
   defp reload_tallies(socket) do
@@ -239,7 +227,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
           poll: poll,
           tallies: Polls.tallies(poll),
           voting_open: Polls.voting_open?(poll),
-          participant: reload_participant(socket.assigns[:participant])
+          participant: reload_participant(poll, socket.assigns[:participant])
         )
 
       {:error, :not_found} ->
@@ -247,8 +235,8 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
     end
   end
 
-  defp reload_participant(nil), do: nil
-  defp reload_participant(%{token: token}), do: PollParticipantQueries.get_by_token(token)
+  defp reload_participant(_poll, nil), do: nil
+  defp reload_participant(poll, %{token: token}), do: Voting.get_participant(poll, token)
 
   # --- URL building ---
 

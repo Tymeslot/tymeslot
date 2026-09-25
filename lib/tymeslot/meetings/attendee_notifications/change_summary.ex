@@ -1,7 +1,15 @@
 defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeSummary do
   @moduledoc "Immutable description of an attendee-notifiable change."
 
-  @type field :: :title | :starts_at | :ends_at | :location | :description | :video_link
+  @type field ::
+          :title
+          | :starts_at
+          | :ends_at
+          | :start_date
+          | :end_date
+          | :location
+          | :description
+          | :video_link
   @type attendee :: %{email: String.t(), name: String.t() | nil}
 
   @type t :: %__MODULE__{

@@ -1,11 +1,16 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   @moduledoc "Initialisation and form data building for MeetingTypeForm."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  alias Ecto.UUID
   alias Phoenix.Component
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Features
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.MeetingPayments
+  alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.CustomInputModeHelper
@@ -23,8 +28,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
 
     socket
     |> Component.assign(:selected_icon, get_selected_icon(type))
-    |> Component.assign(:meeting_mode, get_meeting_mode(type))
-    |> Component.assign(:selected_video_integration_id, get_video_integration_id(type))
+    |> Component.assign(:locations, get_locations(type))
     |> Component.assign(
       :selected_calendar_integration_id,
       get_calendar_integration_id(type)
@@ -44,24 +48,32 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     )
     |> assign_availability_schedules(Map.get(assigns, :current_user))
     |> assign_payment_state(type, Map.get(assigns, :current_user))
-    |> then(fn socket ->
-      if id = socket.assigns.selected_calendar_integration_id do
-        socket
-        |> Component.assign(
-          :available_calendars,
-          fetch_available_calendars(id, socket.assigns.calendar_integrations)
-        )
-        |> Component.assign(
-          :no_writable_calendars,
-          all_selected_read_only?(id, socket.assigns.calendar_integrations)
-        )
-      else
-        socket
-      end
-    end)
+    |> assign_calendar_state()
     |> Component.assign(:form_data, build_form_data(type))
     |> Component.assign(:custom_input_mode, initial_custom_input_mode(type))
     |> Component.assign(:__initialized__, true)
+  end
+
+  # Everything the booking-destination picker needs about the integration the
+  # meeting type already points at: which calendars it may offer, whether it
+  # has none to offer, and whether the target already stored has since stopped
+  # accepting bookings. All three are left at their mount defaults while no
+  # integration is selected.
+  @spec assign_calendar_state(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  defp assign_calendar_state(%{assigns: %{selected_calendar_integration_id: nil}} = socket),
+    do: socket
+
+  defp assign_calendar_state(%{assigns: assigns} = socket) do
+    id = assigns.selected_calendar_integration_id
+    integrations = assigns.calendar_integrations
+
+    socket
+    |> Component.assign(:available_calendars, fetch_available_calendars(id, integrations))
+    |> Component.assign(:no_writable_calendars, all_selected_read_only?(id, integrations))
+    |> Component.assign(
+      :target_calendar_status,
+      target_calendar_status(id, assigns.selected_target_calendar_id, integrations)
+    )
   end
 
   @spec assign_availability_schedules(Phoenix.LiveView.Socket.t(), map() | nil) ::
@@ -98,7 +110,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   defp assign_payment_state(socket, type, current_user) do
     feature_enabled? = payments_feature_enabled?(current_user)
     charges_enabled? = feature_enabled? and charges_enabled?(current_user)
-    currency = host_currency(current_user)
+    currency = current_user |> user_id() |> MeetingPayments.host_currency()
 
     socket
     |> Component.assign(:payments_feature_enabled, feature_enabled?)
@@ -120,17 +132,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   defp charges_enabled?(%{id: user_id}), do: MeetingPayments.charges_enabled_for_user?(user_id)
   defp charges_enabled?(_user), do: false
 
-  defp host_currency(%{id: user_id}) do
-    case MeetingPayments.get_connect_account_for_user(user_id) do
-      %{default_currency: currency} when is_binary(currency) and currency != "" ->
-        currency
-
-      _other ->
-        List.first(MeetingPayments.currency_allowlist()) || "usd"
-    end
-  end
-
-  defp host_currency(_user), do: List.first(MeetingPayments.currency_allowlist()) || "usd"
+  defp user_id(%{id: user_id}), do: user_id
+  defp user_id(_user), do: nil
 
   @spec get_payment_required(Ecto.Schema.t() | nil) :: boolean()
   defp get_payment_required(%{payment_required: true}), do: true
@@ -265,25 +268,31 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   def get_selected_icon(%{icon: icon}) when is_binary(icon) and icon != "", do: icon
   def get_selected_icon(_arg), do: "none"
 
-  @doc "Returns the meeting mode string for a meeting type."
-  @spec get_meeting_mode(Ecto.Schema.t() | nil) :: String.t()
-  def get_meeting_mode(%{allow_video: true}), do: "video"
-  def get_meeting_mode(_arg), do: "personal"
+  @doc """
+  Returns the meeting type's locations, in the host's order.
 
-  @doc "Returns the video integration id as an integer, or nil."
-  @spec get_video_integration_id(Ecto.Schema.t() | nil) :: integer() | nil
-  def get_video_integration_id(nil), do: nil
-  def get_video_integration_id(%{video_integration_id: nil}), do: nil
-  def get_video_integration_id(%{video_integration_id: id}) when is_integer(id), do: id
+  A new meeting type opens on one in-person location rather than an empty
+  list: the schema requires at least one, so an empty editor would be a form
+  the host cannot submit until they notice why.
+  """
+  @spec get_locations(Ecto.Schema.t() | nil) :: [LocationOption.t()]
+  def get_locations(nil), do: [default_location()]
 
-  def get_video_integration_id(%{video_integration_id: id}) when is_binary(id) do
-    case Integer.parse(id) do
-      {int, _value} -> int
-      :error -> nil
+  def get_locations(type) do
+    case MeetingTypes.location_options(type) do
+      [] -> [default_location()]
+      locations -> locations
     end
   end
 
-  def get_video_integration_id(_arg), do: nil
+  defp default_location do
+    %LocationOption{
+      id: UUID.generate(),
+      kind: "in_person",
+      label: dgettext("dashboard_meeting_form", "In person"),
+      position: 0
+    }
+  end
 
   @doc "Returns the calendar integration id for a meeting type, or nil."
   @spec get_calendar_integration_id(Ecto.Schema.t() | nil) :: integer() | nil
@@ -315,7 +324,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   """
   @spec fetch_available_calendars(integer(), list()) :: list()
   def fetch_available_calendars(integration_id, integrations) do
-    case Enum.find(integrations, &(&1.id == integration_id)) do
+    case find_integration(integrations, integration_id) do
       nil -> []
       integration -> Calendar.writable_calendars(integration.calendar_list)
     end
@@ -329,10 +338,32 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   """
   @spec all_selected_read_only?(integer(), list()) :: boolean()
   def all_selected_read_only?(integration_id, integrations) do
-    case Enum.find(integrations, &(&1.id == integration_id)) do
+    case find_integration(integrations, integration_id) do
       nil -> false
       integration -> Calendar.all_selected_read_only?(integration.calendar_list)
     end
+  end
+
+  @doc """
+  Reports whether the target calendar already on the meeting type can still
+  take a booking, so the editor can say so above a picker that would
+  otherwise just show nothing selected. See
+  `Tymeslot.MeetingTypes.target_calendar_status/2`.
+  """
+  @spec target_calendar_status(integer(), String.t() | nil, list()) ::
+          MeetingTypes.target_calendar_status()
+  def target_calendar_status(integration_id, target_calendar_id, integrations) do
+    case find_integration(integrations, integration_id) do
+      nil ->
+        :ok
+
+      integration ->
+        MeetingTypes.target_calendar_status(integration.calendar_list, target_calendar_id)
+    end
+  end
+
+  defp find_integration(integrations, integration_id) do
+    Enum.find(integrations, &(&1.id == integration_id))
   end
 
   @doc "Returns the normalised reminders list for a meeting type."

@@ -10,6 +10,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Availability.AvailabilityBreakSchema
   alias Tymeslot.Availability.AvailabilityOverrideSchema
   alias Tymeslot.Availability.AvailabilityScheduleSchema
+  alias Tymeslot.Availability.TimeOffPeriodSchema
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
@@ -18,6 +19,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
+  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.Polls.PollParticipantSchema
@@ -183,6 +185,30 @@ defmodule Tymeslot.Factory do
     }
   end
 
+  @doc """
+  A video location for a meeting type, bound to `integration`, or to a list
+  of integrations the booker picks between (the first is the default).
+
+  A booking's video room follows the location the booker chose, not the
+  request, so a test that expects a room has to give the meeting type
+  somewhere video to be held:
+
+      insert(:meeting_type, user: user, locations: [video_location(integration)])
+  """
+  @spec video_location(map() | [map()], keyword()) :: LocationOption.t()
+  def video_location(integrations, attrs \\ []) do
+    struct!(
+      %LocationOption{
+        id: UUID.generate(),
+        kind: "video",
+        label: "Video call",
+        video_integration_ids: integrations |> List.wrap() |> Enum.map(& &1.id),
+        position: 0
+      },
+      attrs
+    )
+  end
+
   @spec calendar_integration_factory() ::
           Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()
   def calendar_integration_factory do
@@ -286,6 +312,20 @@ defmodule Tymeslot.Factory do
       override_type: "unavailable",
       reason: "Out of office",
       schedule: build(:availability_schedule)
+    }
+  end
+
+  @spec time_off_period_factory() :: Tymeslot.Availability.TimeOffPeriodSchema.t()
+  def time_off_period_factory do
+    starts_on = Date.add(Date.utc_today(), 7)
+
+    %TimeOffPeriodSchema{
+      starts_on: starts_on,
+      ends_on: Date.add(starts_on, 6),
+      start_time: nil,
+      end_time: nil,
+      label: "Holiday",
+      profile: build(:profile)
     }
   end
 
@@ -420,6 +460,16 @@ defmodule Tymeslot.Factory do
       status: "pending",
       refunded_amount_cents: 0
     }
+  end
+
+  # A settled charge, which is what the refund flow acts on.
+  @spec paid_booking_payment_factory() :: Tymeslot.MeetingPayments.BookingPaymentSchema.t()
+  def paid_booking_payment_factory do
+    struct!(booking_payment_factory(),
+      stripe_charge_id: sequence(:bp_stripe_charge_id, &"ch_#{&1}"),
+      status: "paid",
+      paid_at: DateTime.utc_now(:second)
+    )
   end
 
   @spec poll_factory() :: Tymeslot.Polls.PollSchema.t()

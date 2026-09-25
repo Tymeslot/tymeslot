@@ -616,3 +616,13 @@ msgstr "Sondage mis à jour"
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr "Enregistrer les modifications"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "This time falls within your time off, so it can't be confirmed while that stays in place."
+msgstr "Ce créneau tombe pendant votre absence : il ne pourra pas être confirmé tant qu'elle est en place."
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "This time falls within your time off. Change or remove the time off to confirm it."
+msgstr "Ce créneau tombe pendant votre absence. Modifiez ou supprimez l'absence pour le confirmer."

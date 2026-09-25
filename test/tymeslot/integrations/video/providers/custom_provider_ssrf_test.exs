@@ -33,7 +33,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderSsrfTest do
     with_config(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
     with_config(:tymeslot, :environment, :prod)
     with_config(:tymeslot, :allow_private_ips_for_calendar, false)
-    with_config(:tymeslot, :allow_private_ips_for_video, false)
+    with_config(:tymeslot, :allow_private_ips_for_video, nil)
     with_config(:tymeslot, :dns_resolver_module, CustomProviderSsrfPrivateResolver)
     :ok
   end
@@ -81,11 +81,20 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderSsrfTest do
       assert {:error, "URL responded with HTTP 503"} = test_connection()
     end
 
-    test "ALLOW_PRIVATE_IPS_FOR_CALENDAR still satisfies video, for deployments that set it" do
+    test "an unset ALLOW_PRIVATE_IPS_FOR_VIDEO leaves the calendar switch satisfying video" do
       with_config(:tymeslot, :allow_private_ips_for_calendar, true)
       respond(200)
 
       assert {:ok, "URL responded with HTTP 200"} = test_connection()
+    end
+
+    test "ALLOW_PRIVATE_IPS_FOR_VIDEO=false blocks the probe even with the calendar switch on" do
+      with_config(:tymeslot, :allow_private_ips_for_calendar, true)
+      with_config(:tymeslot, :allow_private_ips_for_video, false)
+      refuse_network("the probe must not reach a private host once video is switched off")
+
+      assert {:error, message} = test_connection()
+      assert message == "URL resolves to a private or loopback address"
     end
   end
 

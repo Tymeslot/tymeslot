@@ -482,8 +482,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
 
       assert %Swoosh.Attachment{} = ics, "expected a text/calendar attachment"
-      assert ics.content_type =~ "method=PUBLISH"
-      refute ics.content_type =~ "method=CANCEL"
+      assert ics.data =~ "METHOD:PUBLISH"
+      refute ics.data =~ "METHOD:CANCEL"
       assert ics.filename =~ ".ics"
     end
 

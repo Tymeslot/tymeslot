@@ -27,6 +27,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   import TymeslotWeb.Dashboard.PaymentsSettings.CurrencySelector, only: [currency_selector: 1]
   import TymeslotWeb.Dashboard.PaymentsSettings.DisconnectModal, only: [disconnect_modal: 1]
   import TymeslotWeb.Dashboard.PaymentsSettings.LifetimeStats, only: [lifetime_stats: 1]
+
+  import TymeslotWeb.Dashboard.PaymentsSettings.OutstandingRefunds,
+    only: [outstanding_refunds: 1]
+
   import TymeslotWeb.Dashboard.PaymentsSettings.PaymentsTable, only: [payments_table: 1]
   import TymeslotWeb.Dashboard.PaymentsSettings.RefundModal, only: [refund_modal: 1]
 
@@ -43,6 +47,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
      |> assign(:disconnect_modal_open, false)
      |> assign(:connect_account, nil)
      |> assign(:payments, [])
+     |> assign(:outstanding_refunds, [])
+     |> assign(:outstanding_refunds_summary, %{count: 0, totals: []})
      |> assign(:stats, %{received: 0, refunded: 0, platform_fee: 0})
      |> assign(:pending_payments_count, 0)}
   end
@@ -61,6 +67,19 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     <div id="payments-settings" class="space-y-10 pb-20">
       <.section_header icon="hero-credit-card" title={dgettext("dashboard_payments", "Payments")} />
 
+      <%!--
+        Outside the connect-account branch on purpose. These are obligations
+        the host has already incurred, and they do not stop existing when the
+        account goes away: a disconnect is precisely when the host most needs
+        to see them, so the debt renders above the reconnect prompt.
+      --%>
+      <.outstanding_refunds
+        payments={@outstanding_refunds}
+        total_count={@outstanding_refunds_summary.count}
+        account={@connect_account}
+        myself={@myself}
+      />
+
       <div :if={is_nil(@connect_account)}>
         <.connect_cta />
       </div>
@@ -69,17 +88,20 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
         <.status_card account={@connect_account} />
 
         <%!--
-          The operational sections (currency, payments, stats, disconnect) only
-          make sense once onboarding is submitted. While the account is still
-          `:incomplete`, the StatusCard shows the Continue-onboarding prompt and
-          we render nothing else, so the host is never stuck on a dead-end card.
+          The operational sections (currency, payments, stats) only make sense
+          once onboarding is submitted. While the account is still
+          `:incomplete`, the StatusCard shows the Continue-onboarding prompt
+          instead. Disconnect stays available either way: an account Stripe has
+          closed or rejected can never finish onboarding, and disconnecting is
+          how the host starts again with a new one.
         --%>
         <div :if={not needs_onboarding?(@connect_account)} class="space-y-8">
           <.currency_selector account={@connect_account} myself={@myself} />
           <.payments_table payments={@payments} account={@connect_account} myself={@myself} />
           <.lifetime_stats stats={@stats} account={@connect_account} />
-          <.disconnect_zone myself={@myself} />
         </div>
+
+        <.disconnect_zone myself={@myself} />
       </div>
 
       <.refund_modal
@@ -91,6 +113,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
       <.disconnect_modal
         open={@disconnect_modal_open}
         pending_count={@pending_payments_count}
+        outstanding_refunds={@outstanding_refunds_summary}
         myself={@myself}
       />
     </div>
@@ -133,20 +156,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     socket = assign(socket, :disconnect_modal_open, false)
 
     case MeetingPayments.disconnect(user) do
-      {:ok, %{cancelled_count: 0}} ->
-        Flash.info(dgettext("dashboard_payments", "Stripe account disconnected."))
-        {:noreply, assign_payments_state(socket, user)}
-
-      {:ok, %{cancelled_count: n}} ->
-        Flash.info(
-          dngettext(
-            "dashboard_payments",
-            "Stripe account disconnected. %{count} pending booking cancelled.",
-            "Stripe account disconnected. %{count} pending bookings cancelled.",
-            n
-          )
-        )
-
+      {:ok, result} ->
+        Flash.info(disconnect_message(result))
         {:noreply, assign_payments_state(socket, user)}
 
       {:error, _reason} ->
@@ -178,28 +189,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   end
 
   def handle_event("open_refund_modal", %{"id" => id}, socket) do
-    user = socket.assigns.current_user
-    payment = MeetingPayments.get_payment(id)
-
-    cond do
-      is_nil(payment) ->
-        {:noreply, socket}
-
-      payment.host_user_id != user.id ->
-        {:noreply, socket}
-
-      not MeetingPayments.refundable?(payment) ->
-        Flash.error(
-          dgettext(
-            "dashboard_payments",
-            "This payment can no longer be refunded from Tymeslot. Refunds older than 60 days must be processed in your Stripe dashboard."
-          )
-        )
-
-        {:noreply, socket}
-
-      true ->
-        {:noreply, assign(socket, :refund_modal_payment, payment)}
+    case MeetingPayments.get_payment_for_host(id, socket.assigns.current_user.id) do
+      {:ok, payment} -> open_refund_modal(socket, payment)
+      {:error, :not_found} -> {:noreply, socket}
     end
   end
 
@@ -210,30 +202,75 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
      |> assign(:refund_submitting, false)}
   end
 
+  # The payment always comes from the open modal, never from params: the form
+  # posts a `payment_id` this handler deliberately ignores.
+  def handle_event("submit_refund", _params, %{assigns: %{refund_modal_payment: nil}} = socket),
+    do: {:noreply, socket}
+
   def handle_event("submit_refund", params, socket) do
-    user = socket.assigns.current_user
-    payment = socket.assigns.refund_modal_payment
+    %{refund_modal_payment: payment, current_user: user} = socket.assigns
 
-    cond do
-      is_nil(payment) ->
-        {:noreply, socket}
-
-      payment.host_user_id != user.id ->
-        {:noreply, socket}
-
-      true ->
-        # Re-fetch from DB to pick up any concurrent state changes (e.g. a
-        # refund issued from another tab) before parsing the amount. The
-        # MeetingPayments.issue_refund/2 call still acquires a FOR UPDATE
-        # lock, so this is defence-in-depth rather than a guarantee.
-        case MeetingPayments.get_payment(payment.id) do
-          nil -> {:noreply, socket}
-          fresh_payment -> do_submit_refund(socket, fresh_payment, params)
-        end
+    # Re-fetch to pick up concurrent changes (e.g. a refund issued from another
+    # tab) before parsing the amount, so "full" means the balance left now.
+    # The refund itself re-checks ownership and re-validates under the row lock.
+    case MeetingPayments.get_payment_for_host(payment.id, user.id) do
+      {:ok, fresh_payment} -> do_submit_refund(socket, fresh_payment, params)
+      {:error, :not_found} -> {:noreply, socket}
     end
   end
 
   # ── Private orchestration ─────────────────────────────────────────
+
+  # Two independent facts, either of which may be absent: what the disconnect
+  # cancelled, and what it left the host still owing. Composed from whole
+  # sentences rather than a clause per combination, so naming a third
+  # consequence later does not double the message table.
+  defp disconnect_message(%{cancelled_count: cancelled, outstanding_refunds_count: outstanding}) do
+    [
+      dgettext("dashboard_payments", "Stripe account disconnected."),
+      cancelled_sentence(cancelled),
+      outstanding_refunds_sentence(outstanding)
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" ")
+  end
+
+  defp cancelled_sentence(0), do: nil
+
+  defp cancelled_sentence(count) do
+    dngettext(
+      "dashboard_payments",
+      "%{count} pending booking cancelled.",
+      "%{count} pending bookings cancelled.",
+      count
+    )
+  end
+
+  defp outstanding_refunds_sentence(0), do: nil
+
+  defp outstanding_refunds_sentence(count) do
+    dngettext(
+      "dashboard_payments",
+      "%{count} refund is still outstanding and must now be issued from your Stripe dashboard.",
+      "%{count} refunds are still outstanding and must now be issued from your Stripe dashboard.",
+      count
+    )
+  end
+
+  defp open_refund_modal(socket, payment) do
+    if MeetingPayments.refundable?(payment) do
+      {:noreply, assign(socket, :refund_modal_payment, payment)}
+    else
+      Flash.error(
+        dgettext(
+          "dashboard_payments",
+          "This payment can no longer be refunded from Tymeslot. Refunds older than 60 days must be processed in your Stripe dashboard."
+        )
+      )
+
+      {:noreply, socket}
+    end
+  end
 
   defp change_currency(socket, user, currency) do
     case MeetingPayments.change_default_currency(socket.assigns.connect_account, currency) do
@@ -274,27 +311,17 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
   # Run the blocking Stripe refund call in an async task so the
   # `refund_submitting` spinner actually paints — assigning it and then making
   # the synchronous call in the same handle_event would never yield a render
-  # between the two. We re-assert host ownership inside the task closure so a
-  # forged/raced request still cannot refund another host's payment, and
-  # `issue_refund/2` itself re-locks and re-validates the row under FOR UPDATE.
+  # between the two. The host-scoped refund decides ownership under the row
+  # lock, in the same transaction as the Stripe call, so a forged or raced
+  # request still cannot refund another host's payment.
   defp process_refund(socket, payment, amount_cents) do
     user_id = socket.assigns.current_user.id
     payment_id = payment.id
 
     {:noreply,
      start_async(socket, :issue_refund, fn ->
-       issue_refund_authorized(payment_id, user_id, amount_cents)
+       MeetingPayments.refund_payment_for_host(payment_id, user_id, amount_cents)
      end)}
-  end
-
-  defp issue_refund_authorized(payment_id, user_id, amount_cents) do
-    case MeetingPayments.get_payment(payment_id) do
-      %{host_user_id: ^user_id} = fresh_payment ->
-        MeetingPayments.issue_refund(fresh_payment, amount_cents)
-
-      _missing_or_not_owner ->
-        {:error, :not_authorized}
-    end
   end
 
   @impl Phoenix.LiveComponent
@@ -345,6 +372,11 @@ defmodule TymeslotWeb.Dashboard.PaymentsSettingsComponent do
     socket
     |> assign(:connect_account, connect_account)
     |> assign(:payments, MeetingPayments.list_payments_for_host(user.id))
+    |> assign(:outstanding_refunds, MeetingPayments.list_outstanding_refunds_for_host(user.id))
+    |> assign(
+      :outstanding_refunds_summary,
+      MeetingPayments.outstanding_refunds_summary_for_host(user.id)
+    )
     |> assign(:stats, MeetingPayments.lifetime_stats_for_host(user.id))
     |> assign(:pending_payments_count, MeetingPayments.count_pending_payments_for_host(user.id))
   end

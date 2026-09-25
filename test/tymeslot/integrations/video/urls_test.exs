@@ -30,6 +30,23 @@ defmodule Tymeslot.Integrations.Video.UrlsTest do
     end
   end
 
+  describe "extract_room_id/2" do
+    test "parses by the named provider's rules rather than guessing from the URL" do
+      # MiroTalk's "/join/" pattern claims this link and is listed first, so
+      # the URL-only function answers with its last path segment. The custom
+      # provider, which actually issued it, derives the id from the whole URL.
+      url = "https://whereby.com/join/team-standup"
+
+      assert Urls.extract_room_id(url) == "team-standup"
+      assert Urls.extract_room_id(url, :custom) == "176c39fdfe37cdea"
+    end
+
+    test "returns nil for a non-binary URL" do
+      assert Urls.extract_room_id(nil, :custom) == nil
+      assert Urls.extract_room_id(%{room_data: %{room_id: "room123"}}, :custom) == nil
+    end
+  end
+
   describe "valid_meeting_url?/1" do
     test "validates supported video URLs" do
       assert Urls.valid_meeting_url?("https://meet.google.com/abc-defg-hij")

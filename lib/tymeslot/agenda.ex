@@ -42,13 +42,11 @@ defmodule Tymeslot.Agenda do
     window_end = DateTime.add(now, @lookahead_days * 86_400, :second)
 
     integrations = active_integrations(user)
-    integration_ids = Enum.map(integrations, & &1.id)
-    calendar_names = Map.new(integrations, &{&1.id, &1.name})
     overrides = load_overrides(user)
 
     entries =
       user
-      |> gather_entries(integration_ids, calendar_names, overrides, now, window_end, tz)
+      |> gather_entries(integrations, overrides, now, window_end, tz)
       |> Enum.filter(&upcoming?(&1, now))
       |> Enum.sort_by(& &1.start_at, DateTime)
 
@@ -58,7 +56,7 @@ defmodule Tymeslot.Agenda do
       next: next,
       today: Enum.filter(rest, &Entry.covers?(&1, today, tz)),
       tomorrow: Enum.filter(rest, &Entry.covers?(&1, tomorrow, tz)),
-      has_calendar?: integration_ids != [],
+      has_calendar?: integrations != [],
       later?: next != nil and Date.after?(next.day, tomorrow),
       timezone: tz
     }
@@ -66,7 +64,7 @@ defmodule Tymeslot.Agenda do
 
   # --- Gathering & merging ---------------------------------------------------
 
-  defp gather_entries(user, integration_ids, calendar_names, overrides, now, window_end, tz) do
+  defp gather_entries(user, integrations, overrides, now, window_end, tz) do
     # The `/2` query filters to live confirmed bookings, excluding slots
     # voided by a pending reschedule request; `/1` would include pending
     # and cancelled ones, which have no place on the agenda.
@@ -76,9 +74,13 @@ defmodule Tymeslot.Agenda do
     # shared identifier so the (richer) Tymeslot copy is the one we keep.
     booked_identifiers = Meetings.calendar_identifier_set(meetings)
 
+    calendar_names = Map.new(integrations, &{&1.id, &1.name})
+
     external =
-      integration_ids
+      integrations
+      |> Enum.map(& &1.id)
       |> CalendarGrid.list_events_for_range(now, window_end, limit: @external_event_limit)
+      |> Calendar.visible_events(integrations)
       |> Enum.reject(&drop_external?(&1, booked_identifiers))
 
     Enum.map(meetings, &entry_from_meeting(&1, tz, overrides)) ++
@@ -195,14 +197,7 @@ defmodule Tymeslot.Agenda do
 
   # Total by construction: midnight can be a DST gap or ambiguous in some zones,
   # and an all-day chip must never crash the dashboard.
-  defp local_midnight(date, tz) do
-    case DateTime.new(date, ~T[00:00:00], tz) do
-      {:ok, datetime} -> datetime
-      {:ambiguous, first, _second} -> first
-      {:gap, _just_before, just_after} -> just_after
-      {:error, _reason} -> DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
-    end
-  end
+  defp local_midnight(date, tz), do: DateTimeUtils.create_datetime_safe(date, ~T[00:00:00], tz)
 
   defp organiser_name(organiser) when is_map(organiser) do
     presence(organiser["displayName"]) || presence(organiser["name"]) ||

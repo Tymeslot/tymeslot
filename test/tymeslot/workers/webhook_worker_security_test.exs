@@ -126,6 +126,7 @@ defmodule Tymeslot.Workers.WebhookWorkerSecurityTest do
     # is re-validated by check_ssrf/1 before the re-POST.
     test "refuses to follow a redirect that points at loopback" do
       with_config(:tymeslot, environment: :prod)
+      resolve_every_host_publicly()
 
       meeting = insert(:meeting)
       webhook = insert(:webhook, url: "https://example.com/webhook")
@@ -157,6 +158,7 @@ defmodule Tymeslot.Workers.WebhookWorkerSecurityTest do
 
     test "refuses to follow a redirect that points at the link-local range" do
       with_config(:tymeslot, environment: :prod)
+      resolve_every_host_publicly()
 
       meeting = insert(:meeting)
       webhook = insert(:webhook, url: "https://example.com/webhook")
@@ -265,5 +267,18 @@ defmodule Tymeslot.Workers.WebhookWorkerSecurityTest do
       assert delivery, "Expected a delivery log row for the blocked attempt"
       assert delivery.error_message =~ "blocked_redirect"
     end
+  end
+
+  # Production mode resolves the webhook's hostname before the first POST, so
+  # without a resolver double these tests depend on live DNS for example.com
+  # and fail with :blocked_by_ssrf whenever the lookup does. Approving every
+  # host keeps the redirect refusal honest: the IP-literal targets must still be
+  # rejected by URL validation, which runs before the resolver is consulted.
+  defp resolve_every_host_publicly do
+    with_config(:tymeslot, :dns_resolver_module, Tymeslot.DnsResolverMock)
+
+    stub(Tymeslot.DnsResolverMock, :resolve_public, fn _url, _opts ->
+      {:ok, [{93, 184, 216, 34}]}
+    end)
   end
 end

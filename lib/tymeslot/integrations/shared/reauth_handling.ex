@@ -24,6 +24,8 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Infrastructure.BreakerOutcome
+
   require Logger
 
   @typedoc """
@@ -49,9 +51,12 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   # One row per cause: the operator-facing log line and the message persisted
   # to the integration's `sync_error`, which the account owner reads. Keeping
   # them together stops the two from drifting, and stops a decryption
-  # diagnosis being reused for an OAuth failure it does not describe. Only
-  # `message` is translated — `log` stays English so operator-facing logs read
-  # the same whatever locale the flagging process happens to carry.
+  # diagnosis being reused for an OAuth failure it does not describe.
+  #
+  # `message` is persisted as its English msgid, never translated here: the
+  # flagging process's locale belongs to whoever happened to trigger the flag,
+  # not to the owner who reads it. The dashboard translates it into the
+  # viewer's locale when it renders (`ConnectionRow.reconnect_reason/1`).
   @causes %{
     credentials_undecryptable: %{
       log: "Integration credentials cannot be decrypted — flagging for reauth",
@@ -88,15 +93,40 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   }
 
   @doc """
-  The error message recorded when flagging an integration for reauth.
+  The error message recorded when flagging an integration for reauth for the
+  given `t:cause/0`: the untranslated msgid, exactly as persisted to
+  `sync_error`.
 
-  Exposed so callers that build their own Oban return shapes can embed it.
-  Defaults to the decryption cause, which is the path this module was built
-  for; pass a `t:cause/0` for the others.
+  Exposed so tests can pin the persisted message without restating the copy.
   """
   @spec reauth_error_message(cause()) :: String.t()
-  def reauth_error_message(cause \\ @default_cause),
-    do: translate_message(fetch_cause(cause).message)
+  def reauth_error_message(cause), do: fetch_cause(cause).message
+
+  @doc """
+  Which `t:cause/0` a permanent credential failure describes.
+
+  `invalid_grant` and `:token_expired` mean the grant itself is gone: expired,
+  or revoked by the user in their provider account. Anything else the provider
+  refused counts as rejected credentials. The two get different messages
+  because they send the owner to different places.
+
+  A binary reason is matched on whole-word tokens, so the marker has to reach
+  this function intact: a caller that replaces the provider's error text with
+  its own wording loses the distinction.
+  """
+  @spec rejection_cause(term()) :: :expired_grant | :rejected_credentials
+  def rejection_cause(:token_expired), do: :expired_grant
+
+  def rejection_cause(reason) when is_binary(reason) do
+    if "invalid_grant" in BreakerOutcome.error_tokens(reason),
+      do: :expired_grant,
+      else: :rejected_credentials
+  end
+
+  def rejection_cause({:exception, message}) when is_binary(message),
+    do: rejection_cause(message)
+
+  def rejection_cause(_reason), do: :rejected_credentials
 
   @doc """
   Flags an integration for reauthentication.
@@ -134,7 +164,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
       user_id: integration.user_id
     )
 
-    case mark_needs_reauth.(integration, translate_message(cause.message)) do
+    case mark_needs_reauth.(integration, cause.message) do
       {:ok, _integration} ->
         :ok
 
@@ -151,7 +181,4 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   end
 
   defp fetch_cause(cause), do: Map.get(@causes, cause) || @causes[@default_cause]
-
-  defp translate_message(msgid),
-    do: Gettext.dgettext(TymeslotWeb.Gettext, "dashboard_integrations", msgid)
 end

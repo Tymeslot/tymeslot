@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
+  alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
@@ -118,6 +119,23 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       timezone={@user_timezone}
                       variant={:compact}
                     />
+
+                    <div
+                      :if={BookingLocation.chosen_display(assigns)}
+                      class="confirmation-border-top mt-3 pt-3 border-t"
+                    >
+                      <div class="confirmation-email-row" data-testid="confirmation-location">
+                        <div class="confirmation-icon-wrapper rounded-full center-content">
+                          <.icon name="hero-map-pin" class="confirmation-email-link w-3.5 h-3.5" />
+                        </div>
+                        <p class="text-sm text-white">
+                          {dgettext("booking", "Location")}:
+                          <span class="confirmation-email-link font-semibold">
+                            {BookingLocation.chosen_display(assigns)}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
 
                     <div class="confirmation-border-top mt-3 pt-3 border-t">
                       <div class="confirmation-email-row">

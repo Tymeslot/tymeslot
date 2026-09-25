@@ -13,10 +13,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.PollEmails do
   alias Tymeslot.Polls.PollQueries
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Utils.UrlBuilder
+  alias Tymeslot.Workers.DeliveryClaims
 
-  @spec handle_deadline_reminders(%{String.t() => term()}) ::
+  @spec handle_deadline_reminders(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
-  def handle_deadline_reminders(%{"poll_id" => poll_id}) do
+  def handle_deadline_reminders(%{"poll_id" => poll_id}, job_id) do
     with_open_poll(poll_id, "poll deadline reminders", fn poll ->
       # Without a host username the public voting page has no working URL, so the
       # reminder's call-to-action would be broken. Discard rather than sending a
@@ -30,32 +31,36 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.PollEmails do
           {:discard, "host has no username"}
 
         username ->
-          deliver_deadline_reminders(poll, username)
+          deliver_deadline_reminders(poll, username, job_id)
       end
     end)
   end
 
-  defp deliver_deadline_reminders(poll, username) do
+  defp deliver_deadline_reminders(poll, username, job_id) do
     voting_url = voting_url(poll, username)
 
     poll.id
     |> PollParticipantQueries.list_unvoted_for_poll()
     |> Enum.each(fn participant ->
-      poll
-      |> PollDeadlineReminder.render(participant, voting_url)
-      |> Delivery.deliver()
+      DeliveryClaims.once(job_id, "participant:#{participant.id}", fn ->
+        poll
+        |> PollDeadlineReminder.render(participant, voting_url)
+        |> Delivery.deliver()
+      end)
     end)
 
     :ok
   end
 
-  @spec handle_host_nudge(%{String.t() => term()}) ::
+  @spec handle_host_nudge(%{String.t() => term()}, DeliveryClaims.job_id()) ::
           :ok | {:error, term()} | {:discard, String.t()}
-  def handle_host_nudge(%{"poll_id" => poll_id, "variant" => variant}) do
+  def handle_host_nudge(%{"poll_id" => poll_id, "variant" => variant}, job_id) do
     with_open_poll(poll_id, "poll host nudge", fn poll ->
-      poll
-      |> PollHostNudge.render(variant_atom(variant), results_url())
-      |> Delivery.deliver()
+      DeliveryClaims.once(job_id, "host", fn ->
+        poll
+        |> PollHostNudge.render(variant_atom(variant), results_url())
+        |> Delivery.deliver()
+      end)
 
       :ok
     end)

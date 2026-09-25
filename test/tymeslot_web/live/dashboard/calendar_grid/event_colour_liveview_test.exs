@@ -4,16 +4,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventColourLiveViewTest do
   @moduletag :calendar
   @moduletag :live
 
+  import Mox
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
   alias Plug.Test
-  alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+
+  setup :verify_on_exit!
+
+  # The provider write runs in a Task; allow for a busy test machine.
+  @task_timeout 5_000
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    _profile = insert(:profile, user: user)
+    _profile = insert(:profile, user: user, timezone: "Etc/UTC")
     conn = conn |> Test.init_test_session(%{}) |> fetch_session()
     conn = log_in_user(conn, user)
     {:ok, conn: conn, user: user}
@@ -70,6 +75,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventColourLiveViewTest do
       integration: integration,
       event: event
     } do
+      test_pid = self()
+
+      expect(Tymeslot.CalendarMock, :update_event, fn _uid, payload, _context ->
+        send(test_pid, {:provider_update, self(), payload})
+        :ok
+      end)
+
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
@@ -77,23 +89,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventColourLiveViewTest do
       |> element("#calendar-grid")
       |> render_hook("update_event_colour", %{"colour" => "blueberry"})
 
-      # The async provider write reports success; the LiveView's result handler
-      # commits the optimistic colour to the cache row.
-      send(lv.pid, {:event_update_result, :ok})
+      assert_receive {:provider_update, task_pid, payload}, @task_timeout
+      assert payload.colour == "blueberry"
 
-      CalendarGrid.update_cached_event(%{
-        uid: event.uid,
-        calendar_integration_id: integration.id,
-        provider: "caldav",
-        provider_calendar_id: event.provider_calendar_id,
-        provider_event_id: event.provider_event_id,
-        summary: event.summary,
-        all_day: false,
-        start_at: event.start_at,
-        end_at: event.end_at,
-        colour: "blueberry",
-        synced_at: DateTime.utc_now(:microsecond)
-      })
+      # The cache is written by the same Task once the provider has answered.
+      ref = Process.monitor(task_pid)
+      assert_receive {:DOWN, ^ref, :process, ^task_pid, _reason}, @task_timeout
 
       assert {:ok, cached} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
       assert cached.colour == "blueberry"

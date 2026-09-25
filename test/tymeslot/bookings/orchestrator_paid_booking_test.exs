@@ -27,8 +27,11 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
 
   alias Tymeslot.Bookings.Orchestrator
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.MeetingPayments.StripeAdapterMock
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.VideoRoomWorker
@@ -118,6 +121,37 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
 
       refute_enqueued(worker: EmailWorker)
       refute_enqueued(worker: VideoRoomWorker)
+    end
+
+    # A paid type keeps its price when the host disconnects Stripe, so that it
+    # resumes on reconnect. Refusing the booking up front is what stops one
+    # being taken anyway: the meeting used to be persisted as
+    # `awaiting_payment`, `CheckoutSessions` then refused for want of a
+    # charges-enabled account, and the booker got the message on top of a
+    # half-made booking that had to be expired.
+    test "refuses a paid booking outright when the host cannot accept charges, creating no meeting",
+         %{user: user, meeting_type: meeting_type} do
+      ConnectAccounts.disconnect(user)
+
+      params = %{
+        form_data: %{
+          "name" => "Attendee",
+          "email" => "attendee@example.com",
+          "message" => ""
+        },
+        meeting_params: %{
+          date: Date.add(Date.utc_today(), 1),
+          time: "11:00",
+          duration: "30min",
+          user_timezone: "Europe/Berlin",
+          organizer_user_id: user.id,
+          meeting_type_id: meeting_type.id
+        }
+      }
+
+      assert {:error, :payments_unavailable} = Orchestrator.submit_booking(params)
+
+      assert Repo.aggregate(MeetingSchema, :count) == 0
     end
 
     test "expires the meeting, frees the slot, and returns a payment-oriented message when Stripe checkout creation fails",

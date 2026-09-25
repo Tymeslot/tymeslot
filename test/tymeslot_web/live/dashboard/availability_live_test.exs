@@ -6,8 +6,9 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
 
   import Tymeslot.DashboardTestHelpers
 
-  alias Tymeslot.Availability.{Breaks, Schedules, WeeklySchedule}
+  alias Tymeslot.Availability.{AvailabilityBreakSchema, Schedules, WeeklySchedule}
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Repo
 
   setup %{conn: conn} do
     AvailabilityCache.clear_all()
@@ -27,6 +28,9 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
     |> element("button[phx-click='toggle_day_menu'][phx-value-day='#{day}']")
     |> render_click()
   end
+
+  defp breaks_for_day(day_id),
+    do: Repo.all_by(AvailabilityBreakSchema, weekly_availability_id: day_id)
 
   # ===========================================================================
   # Page rendering
@@ -202,7 +206,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       assert html =~ "Lunch"
 
       day = WeeklySchedule.get_day_availability(schedule.id, 1)
-      breaks = Breaks.get_breaks_for_day(day.id)
+      breaks = breaks_for_day(day.id)
       assert length(breaks) == 1
       [break] = breaks
       assert break.label == "Lunch"
@@ -228,7 +232,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       |> render_submit()
 
       day = WeeklySchedule.get_day_availability(schedule.id, 1)
-      [break] = Breaks.get_breaks_for_day(day.id)
+      [break] = breaks_for_day(day.id)
 
       # Open delete modal
       view
@@ -246,7 +250,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       html = render(view)
       assert html =~ "Break deleted"
 
-      breaks = Breaks.get_breaks_for_day(day.id)
+      breaks = breaks_for_day(day.id)
       assert breaks == []
     end
 
@@ -270,7 +274,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
       assert html =~ "Break added"
 
       day = WeeklySchedule.get_day_availability(schedule.id, 1)
-      [break] = Breaks.get_breaks_for_day(day.id)
+      [break] = breaks_for_day(day.id)
       # Empty label is normalised to "Break" by the input validation layer
       assert break.label == "Break"
     end

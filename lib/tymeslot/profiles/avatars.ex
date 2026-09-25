@@ -9,6 +9,7 @@ defmodule Tymeslot.Profiles.Avatars do
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Utils.AvatarUtils
   alias Tymeslot.Utils.MediaValidator
+  alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Helpers.UploadConstraints
   alias TymeslotWeb.Helpers.UploadHandler
 
@@ -144,6 +145,18 @@ defmodule Tymeslot.Profiles.Avatars do
   end
 
   @doc """
+  Removes every avatar file stored for a profile, including earlier uploads a
+  replacement left behind. For erasing a profile that no longer exists: it
+  touches no database row.
+  """
+  @spec delete_all_files(pos_integer()) :: :ok | {:error, File.posix(), Path.t()}
+  def delete_all_files(profile_id) when is_integer(profile_id) do
+    [get_upload_directory(), "avatars", Integer.to_string(profile_id)]
+    |> Path.join()
+    |> remove_directory()
+  end
+
+  @doc """
   Gets the avatar URL for a profile.
   """
   @spec avatar_url(profile | nil, atom()) :: String.t()
@@ -174,6 +187,22 @@ defmodule Tymeslot.Profiles.Avatars do
   end
 
   def uploaded_avatar_path(_profile), do: nil
+
+  @doc """
+  Returns the absolute URL of a profile's *uploaded* avatar image, or `nil`
+  when none has been uploaded.
+
+  For images fetched from outside the app, such as by a mail client rendering
+  an email. Like `uploaded_avatar_path/1`, it never returns a data URI, which
+  Gmail refuses to render.
+  """
+  @spec uploaded_avatar_url(profile | nil) :: String.t() | nil
+  def uploaded_avatar_url(profile) do
+    case uploaded_avatar_path(profile) do
+      nil -> nil
+      path -> UrlBuilder.build_url(path)
+    end
+  end
 
   @doc """
   Gets appropriate alt text for the avatar image.
@@ -227,6 +256,13 @@ defmodule Tymeslot.Profiles.Avatars do
   defp build_avatar_path(filename, profile) do
     upload_dir = get_upload_directory()
     Path.join([upload_dir, "avatars", to_string(profile.id), filename])
+  end
+
+  defp remove_directory(path) do
+    case File.rm_rf(path) do
+      {:ok, _removed} -> :ok
+      {:error, reason, failed_path} -> {:error, reason, failed_path}
+    end
   end
 
   defp get_upload_directory do

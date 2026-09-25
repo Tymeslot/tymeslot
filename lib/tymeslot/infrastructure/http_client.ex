@@ -7,6 +7,10 @@ defmodule Tymeslot.Infrastructure.ResponseTooLargeError do
 
   alias Tymeslot.Infrastructure.HTTPClient
 
+  # `message/1` reduces the URL to an origin, but a caller logging this struct
+  # with `inspect/1` bypasses `message/1` entirely and would print the whole
+  # URL, secrets in the path included.
+  @derive {Inspect, except: [:url]}
   defexception [:url, :max_bytes]
 
   @impl Exception
@@ -60,6 +64,54 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     report: 60_000,
     propfind: 60_000
   }
+
+  # How long a request waits to check a connection out of its Finch pool unless
+  # it passes `pool_timeout:`. This is Finch's own default; the application's
+  # pools do not change it.
+  @default_pool_timeout_ms 5_000
+
+  @doc """
+  How long a single request sent with `method` and `options` may wait on its
+  pool and the network, in milliseconds: checking a connection out of the pool,
+  connecting, and waiting for the response, as `request/5` applies them.
+
+  The connect timeout is the request's `connect_options: [timeout: ms]`, or the
+  one the shared pool connects with (`Tymeslot.Infrastructure.FinchPool`).
+
+  This is a hard bound only for a request that passes `request_timeout:`,
+  which caps the whole response, and does not follow redirects (every request
+  guarded by `ssrf_protect: true` refuses them). Without `request_timeout:` the
+  receive timeout applies to each chunk of the body rather than to the
+  response as a whole, and each redirect followed starts afresh, so a server
+  trickling its answer can exceed it. Name resolution is never counted: the
+  system resolver has no timeout of its own here.
+
+  A caller that has to outlast a request, such as a job running it under a
+  timeout of its own, derives that timeout from this rather than repeating the
+  numbers, and passes `request_timeout:` when it needs the bound to hold.
+  """
+  @spec request_budget_ms(atom(), keyword()) :: pos_integer()
+  def request_budget_ms(method, options \\ []) when is_atom(method) do
+    Keyword.get(options, :pool_timeout, @default_pool_timeout_ms) +
+      connect_timeout_ms(options) + response_timeout_ms(method, options)
+  end
+
+  defp connect_timeout_ms(options) do
+    options
+    |> Keyword.get(:connect_options, [])
+    |> Keyword.get_lazy(:timeout, fn ->
+      FinchPool.default_options()
+      |> Keyword.fetch!(:conn_opts)
+      |> get_in([:transport_opts, :timeout])
+    end)
+  end
+
+  defp response_timeout_ms(method, options) do
+    case Keyword.get(options, :request_timeout) do
+      timeout when is_integer(timeout) -> timeout
+      _unbounded -> get_timeout(method, options)
+    end
+  end
 
   @doc """
   Reduces a URL to `scheme://host` for logging: never the path or query,
@@ -446,8 +498,11 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
       )
     end
 
-    # Build Req-compatible proxy options
-    ProxyConfig.build_req_proxy_options(proxy_config)
+    # Build Req-compatible proxy options. The URL goes along because the socket
+    # options for the hop to the proxy depend on the target's scheme: mint
+    # proxies http:// and https:// through different modules, and they need
+    # opposite settings. See `ProxyConfig.build_req_proxy_options/2`.
+    ProxyConfig.build_req_proxy_options(proxy_config, url)
   end
 
   @spec get_timeout(atom(), keyword()) :: non_neg_integer()

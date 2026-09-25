@@ -15,7 +15,6 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
 
   alias Tymeslot.Availability.{
     AvailabilityActions,
-    AvailabilityScheduleSchema,
     Schedules,
     WeeklySchedule
   }
@@ -26,7 +25,12 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   alias TymeslotWeb.Components.Dashboard.Availability.{DeleteScheduleModal, ScheduleFormModal}
   alias TymeslotWeb.CustomInputModeHelper
 
-  alias TymeslotWeb.Dashboard.Availability.{ListComponent, PolicyCard, ScheduleSwitcher}
+  alias TymeslotWeb.Dashboard.Availability.{
+    ListComponent,
+    PolicyCard,
+    ScheduleSwitcher,
+    TimeOffCard
+  }
 
   # The policy settings differ only in which schedule field they write, so the
   # handlers below route through one pair of helpers driven by these tables.
@@ -131,9 +135,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
 
   def handle_event("duplicate_schedule", _params, socket) do
     with_selected(socket, fn schedule ->
-      taken = Enum.map(socket.assigns.schedules, & &1.name)
-
-      case Schedules.duplicate(schedule, copy_name(schedule.name, taken)) do
+      case Schedules.duplicate(schedule) do
         {:ok, copy} ->
           Flash.info(duplicate_message(schedule))
           {:noreply, select_and_reload(socket, copy.id)}
@@ -196,12 +198,6 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   def handle_event("focus_custom_input", %{"setting" => setting}, socket)
       when is_map_key(@policy_settings, setting) do
     enable_custom_policy(socket, Map.fetch!(@policy_settings, setting))
-  end
-
-  @spec handle_info({:reload_schedule}, Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_info({:reload_schedule}, socket) do
-    {:noreply, load_schedules(socket)}
   end
 
   # State Management Functions
@@ -343,22 +339,6 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     else
       dgettext("dashboard_availability", "Schedule duplicated")
     end
-  end
-
-  # Appends a "(copy)" suffix, numbering it when that name is already taken and
-  # trimming it to the column limit so the insert cannot fail on length.
-  defp copy_name(source_name, taken) do
-    base = truncate_name(dgettext("dashboard_availability", "%{name} (copy)", name: source_name))
-    if base in taken, do: number_copy(base, taken, 2), else: base
-  end
-
-  defp number_copy(base, taken, counter) do
-    candidate = truncate_name("#{base} #{counter}")
-    if candidate in taken, do: number_copy(base, taken, counter + 1), else: candidate
-  end
-
-  defp truncate_name(name) do
-    String.slice(name, 0, AvailabilityScheduleSchema.name_max_length())
   end
 
   defp parse_id(schedule_id) when is_binary(schedule_id) do
@@ -532,6 +512,16 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
           custom_input_mode={@custom_input_mode}
         />
       </ScheduleSwitcher.schedule_panel>
+
+      <%!-- Outside the panel on purpose: a period is the profile's, not the
+      selected schedule's, and inside the frame it would read as switching with
+      the tabs. --%>
+      <.live_component
+        module={TimeOffCard}
+        id="availability-time-off"
+        profile={@profile}
+        time_format={@time_format}
+      />
 
       <ScheduleFormModal.schedule_form_modal
         id="schedule-form-modal"

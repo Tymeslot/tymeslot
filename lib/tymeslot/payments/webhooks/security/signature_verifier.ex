@@ -74,16 +74,11 @@ defmodule Tymeslot.Payments.Webhooks.Security.SignatureVerifier do
        }}
   end
 
+  # Every verified event leaves here as a string-keyed map, whatever shape
+  # the provider handed back, so downstream code reads `event["id"]` once
+  # instead of guessing between atom and string keys at each access.
   @spec normalize_event(map()) :: map()
-  defp normalize_event(%{__struct__: _value} = event) do
-    struct_to_map(event)
-  end
-
-  defp normalize_event(%{data: %{object: object}} = event) when is_struct(object) do
-    %{event | data: %{object: struct_to_map(object)}}
-  end
-
-  defp normalize_event(event), do: event
+  defp normalize_event(event), do: struct_to_map(event)
 
   @spec struct_to_map(any()) :: any()
   defp struct_to_map(%{__struct__: _value} = struct) do

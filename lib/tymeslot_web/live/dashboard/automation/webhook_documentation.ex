@@ -190,11 +190,25 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
                         {dgettext("dashboard_automation", "Request timestamp")}
                       </span>
                     </div>
+                    <div class="flex items-center gap-2 p-2 bg-white rounded-lg">
+                      <code class="text-token-xs font-black text-turquoise-700 bg-turquoise-50 px-2 py-1 rounded">
+                        X-Tymeslot-Delivery-Id
+                      </code>
+                      <span class="text-token-xs text-tymeslot-600 font-medium">
+                        {dgettext("dashboard_automation", "Delivery ID")}
+                      </span>
+                    </div>
                   </div>
                   <p class="text-tymeslot-600 text-token-xs font-medium mt-2">
                     {dgettext(
                       "dashboard_automation",
                       "Verify the token in your automation tool to ensure requests are from Tymeslot."
+                    )}
+                  </p>
+                  <p class="text-tymeslot-600 text-token-xs font-medium mt-2">
+                    {dgettext(
+                      "dashboard_automation",
+                      "The delivery ID is the same on every retry of one delivery and different for every other delivery. A failed or timed-out delivery can be retried, so your endpoint may receive the same event twice: record the delivery ID and ignore a request whose ID you have already processed."
                     )}
                   </p>
                 </div>

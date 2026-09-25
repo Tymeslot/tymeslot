@@ -29,15 +29,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.MiniMonthPopover do
     cursor = assigns.cursor || assigns.date
     week_start = Helpers.week_start_atom(assigns)
 
-    today =
-      DateTime.utc_now()
-      |> DateTime.shift_zone!(assigns.user_timezone)
-      |> DateTime.to_date()
-
     assigns =
       assigns
       |> assign(:cursor, cursor)
-      |> assign(:today, today)
+      |> assign(:today, Helpers.today(assigns.user_timezone))
       |> assign(:weeks, Enum.chunk_every(Helpers.month_matrix(cursor, week_start), 7))
       |> assign(:show_week_numbers, Helpers.show_week_numbers?(assigns))
       |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))

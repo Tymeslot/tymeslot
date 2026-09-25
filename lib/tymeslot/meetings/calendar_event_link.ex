@@ -67,6 +67,28 @@ defmodule Tymeslot.Meetings.CalendarEventLink do
   end
 
   @doc """
+  Drops from `records` every record that mirrors `meeting`.
+
+  The reverse of `linked?/2`, for the caller holding one meeting and a list of
+  provider events rather than two lists: the availability display and the
+  submit-time calendar check both have to treat the meeting being rescheduled
+  as free time, since its own event sits in the host's calendar and would
+  otherwise block every move onto (or, through the buffer, next to) the time
+  it already occupies.
+
+  `nil` means "nothing to exclude", so the ordinary booking paths can call this
+  unconditionally.
+  """
+  @spec reject_mirrors(Enumerable.t(), map() | nil) :: list()
+  def reject_mirrors(records, nil), do: Enum.to_list(records)
+
+  def reject_mirrors(records, meeting) do
+    identifiers = identifier_set([meeting])
+
+    Enum.reject(records, &linked?(&1, identifiers))
+  end
+
+  @doc """
   Whether `value` is unusable as an identifier: absent, or blank once trimmed.
 
   Exposed so that callers holding bare identifier values rather than whole

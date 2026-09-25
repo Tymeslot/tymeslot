@@ -1,7 +1,7 @@
 defmodule Tymeslot.Emails.EmailScheduler.AuthScheduler do
   @moduledoc "Schedules authentication-related emails via Oban."
 
-  alias Tymeslot.Emails.EmailScheduler.Helpers
+  alias Tymeslot.Emails.EmailScheduler.{Helpers, LinkArg}
   alias Tymeslot.Workers.EmailWorker
 
   require Logger
@@ -16,10 +16,10 @@ defmodule Tymeslot.Emails.EmailScheduler.AuthScheduler do
       %{
         "action" => "send_email_verification",
         "user_id" => user_id,
-        "verification_url" => verification_url,
         # Lets the worker discard a job whose token has since been rotated.
         "token_hash" => token_hash
       }
+      |> LinkArg.put("verification_url", verification_url)
       |> EmailWorker.new(
         queue: :emails,
         # Highest priority for auth emails
@@ -79,10 +79,10 @@ defmodule Tymeslot.Emails.EmailScheduler.AuthScheduler do
       %{
         "action" => "send_password_reset",
         "user_id" => user_id,
-        "reset_url" => reset_url,
         # Lets the worker discard a job whose token has since been rotated.
         "token_hash" => token_hash
       }
+      |> LinkArg.put("reset_url", reset_url)
       |> EmailWorker.new(
         queue: :emails,
         # Highest priority for auth emails
@@ -124,6 +124,113 @@ defmodule Tymeslot.Emails.EmailScheduler.AuthScheduler do
 
       {:error, reason} ->
         Logger.error("Failed to schedule password reset email",
+          user_id: user_id,
+          error: Helpers.format_insert_error(reason)
+        )
+
+        {:error, "Failed to schedule job"}
+    end
+  end
+
+  @doc """
+  Schedules the note sent when a password reset is requested for an account
+  that signs in through a provider and so has no password to reset.
+  """
+  @spec schedule_no_password_to_reset(term()) ::
+          {:ok, :scheduled | :duplicate} | {:error, String.t()}
+  def schedule_no_password_to_reset(user_id),
+    do: schedule_account_notice("send_no_password_to_reset", user_id)
+
+  @doc """
+  Schedules the note sent to an account's owner when someone tries to sign up
+  with their address.
+  """
+  @spec schedule_signup_attempt_notice(term()) ::
+          {:ok, :scheduled | :duplicate} | {:error, String.t()}
+  def schedule_signup_attempt_notice(user_id),
+    do: schedule_account_notice("send_signup_attempt_notice", user_id)
+
+  @doc """
+  Schedules the link that finishes a social sign-up with a typed address. There
+  is no account yet, so the job carries the recipient itself (address, name,
+  and the locale the form was filled in) and the link, encrypted.
+  """
+  @spec schedule_social_signup_confirmation(%{
+          email: String.t(),
+          name: String.t() | nil,
+          provider: String.t(),
+          confirm_url: String.t(),
+          locale: String.t() | nil
+        }) :: {:ok, :scheduled | :duplicate} | {:error, String.t()}
+  def schedule_social_signup_confirmation(details) do
+    result =
+      %{
+        "action" => "send_social_signup_confirmation",
+        "email" => details.email,
+        "name" => details.name,
+        "provider" => details.provider,
+        "locale" => details.locale
+      }
+      |> LinkArg.put("confirm_url", details.confirm_url)
+      |> EmailWorker.new(
+        queue: :emails,
+        priority: 0,
+        unique: [
+          period: 120,
+          fields: [:args, :queue],
+          keys: [:action, :email],
+          states: [:scheduled, :available]
+        ],
+        replace: [:args]
+      )
+      |> Oban.insert()
+
+    case result do
+      {:ok, %Oban.Job{conflict?: true}} ->
+        {:ok, :duplicate}
+
+      {:ok, _job} ->
+        {:ok, :scheduled}
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule sign-up confirmation",
+          error: Helpers.format_insert_error(reason)
+        )
+
+        {:error, "Failed to schedule job"}
+    end
+  end
+
+  # Notices that carry no token: the job needs only the recipient, and the links
+  # in them lead to public pages, so the worker builds them at send time. A
+  # second request inside the window coalesces with the first rather than
+  # sending the owner the same note twice.
+  defp schedule_account_notice(action, user_id) do
+    result =
+      %{"action" => action, "user_id" => user_id}
+      |> EmailWorker.new(
+        queue: :emails,
+        priority: 0,
+        unique: [
+          period: 120,
+          fields: [:args, :queue],
+          keys: [:action, :user_id],
+          states: [:scheduled, :available, :executing]
+        ]
+      )
+      |> Oban.insert()
+
+    case result do
+      {:ok, %Oban.Job{conflict?: true}} ->
+        {:ok, :duplicate}
+
+      {:ok, _job} ->
+        Logger.info("Account notice scheduled", action: action, user_id: user_id)
+        {:ok, :scheduled}
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule account notice",
+          action: action,
           user_id: user_id,
           error: Helpers.format_insert_error(reason)
         )

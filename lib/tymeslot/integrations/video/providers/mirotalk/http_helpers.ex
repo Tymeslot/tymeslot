@@ -1,20 +1,11 @@
 defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers do
   @moduledoc false
 
+  require Logger
+
+  alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Security.SsrfBlockedError
   alias Tymeslot.Security.SsrfGuard
-
-  @doc """
-  Request options that put a MiroTalk call behind the SSRF guard, scoped to the
-  video opt-out rather than the calendar one.
-
-  Defined once so a new call site cannot pick up `ssrf_protect: true` while
-  silently reading the wrong switch.
-  """
-  @spec ssrf_options() :: keyword()
-  def ssrf_options do
-    [ssrf_protect: true, ssrf_allow_private: SsrfGuard.allow_private_for_video?()]
-  end
 
   @doc """
   Attempts an HTTPS request first; falls back to the original base URL on
@@ -23,8 +14,16 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers do
   `fun` receives the fully-built URL and must return
   `{:ok, %Req.Response{}}` or `{:error, reason}`.
 
-  An `%SsrfBlockedError{}` is treated as terminal — the HTTP fallback is
-  skipped, because the host is blocked regardless of scheme.
+  An `%SsrfBlockedError{}` is terminal: the fallback is skipped, because the
+  host is blocked regardless of scheme.
+
+  The fallback re-sends the request on whatever scheme `base_url` carries,
+  which for a plain-http server means the API key travels in the clear, so it
+  runs only where the operator has opted into private addresses for video.
+  That switch is how a deployment declares its MiroTalk is on its own network;
+  everywhere else an unreachable HTTPS endpoint is reported as the error it
+  is, rather than being retried in a form that would leak the credential to
+  anyone on the path.
   """
   @spec try_https_then_http(String.t(), String.t(), (String.t() ->
                                                        {:ok, term()} | {:error, term()})) ::
@@ -40,13 +39,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers do
         {:error, blocked}
 
       {:error, exception} when is_exception(exception) ->
-        fallback_url = base_url <> path
-
-        case fun.(fallback_url) do
-          {:ok, %Req.Response{} = resp2} -> {:ok, resp2}
-          {:error, exception2} when is_exception(exception2) -> {:error, exception2}
-          {:error, reason} -> {:error, reason}
-        end
+        maybe_retry_on_base_scheme(base_url, path, fun, exception)
 
       {:error, reason} ->
         {:error, reason}
@@ -55,6 +48,23 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers do
 
   def try_https_then_http(base_url, path, fun) do
     fun.(base_url <> path)
+  end
+
+  defp maybe_retry_on_base_scheme(base_url, path, fun, exception) do
+    if SsrfGuard.allow_private_for_video?() do
+      case fun.(base_url <> path) do
+        {:ok, %Req.Response{} = resp} -> {:ok, resp}
+        {:error, reason} -> {:error, reason}
+      end
+    else
+      Logger.warning(
+        "MiroTalk server did not answer over HTTPS and the cleartext retry is " <>
+          "not available, because private addresses are not allowed for video",
+        server: HTTPClient.log_safe_origin(base_url)
+      )
+
+      {:error, exception}
+    end
   end
 
   @doc """

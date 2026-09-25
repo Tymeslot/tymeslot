@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.NotifyPromptTest do
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    _profile = insert(:profile, user: user)
+    _profile = insert(:profile, user: user, timezone: "Etc/UTC")
     conn = conn |> Test.init_test_session(%{}) |> fetch_session()
     conn = log_in_user(conn, user)
 
@@ -157,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.NotifyPromptTest do
       event: event
     } do
       seed_pending_notification(event)
-      assert AttendeeNotifications.pending?(event.id)
+      assert AttendeeNotifications.pending?(event)
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       lv |> element("[id^='event-#{event.id}-']") |> render_click()
@@ -168,7 +168,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.NotifyPromptTest do
         |> render_hook("cancel_pending_notification", %{})
 
       refute html =~ "Attendees will be notified of pending changes"
-      refute AttendeeNotifications.pending?(event.id)
+      refute AttendeeNotifications.pending?(event)
     end
   end
 

@@ -18,13 +18,19 @@ defmodule Tymeslot.Auth.AuthenticationTimingTest do
   # contended CI runner. Measured at that cost, a healthy build and one with
   # the dummy hash deleted produce overlapping ratios, so no threshold tells
   # them apart. 10 rounds costs ~60ms, which noise cannot forge in either
-  # direction, and the sample count below keeps the whole test under a second.
+  # direction, and the sample count below keeps the whole file to ~2s.
   @log_rounds 10
 
   # Pairs are measured alternately rather than as two blocks: a burst of load
   # landing on one block skews that block alone, whereas a burst inside a pair
   # moves both halves together. The median then discards a pair that got hit.
-  @pairs 3
+  #
+  # Five pairs, not three: the median of three survives one skewed pair and no
+  # more, and the precommit gate runs several test partitions plus dialyzer,
+  # credo and sobelow as separate OS processes on the same cores, which is
+  # enough to hit two of three. Five leaves the median two spares, for about
+  # 240ms more.
+  @pairs 5
 
   setup do
     previous = Application.get_env(:bcrypt_elixir, :log_rounds)
@@ -57,8 +63,19 @@ defmodule Tymeslot.Auth.AuthenticationTimingTest do
       ratio = median(ratios)
 
       # Measured under deliberate CPU starvation: 0.97-1.00 with the dummy
-      # hash, 0.009-0.011 without it. Both lie far from this threshold.
-      assert ratio > 0.5,
+      # hash, 0.009-0.011 without it. The threshold sits an order of magnitude
+      # clear of each, because the gap is what carries the signal, not the
+      # absolute value.
+      #
+      # It sits at the low end of that gap rather than the middle because the
+      # two branches are not symmetrical: a wrong password additionally writes
+      # to the lockout tracker and emits a second structured log, work the
+      # not-found branch never reaches. Load therefore inflates the denominator
+      # more than the numerator and drags the ratio down, the same direction a
+      # missing dummy hash moves it. A gate run on 2026-09-21 produced the
+      # pairs [0.789, 0.207, 0.495] on a healthy build; 0.1 absorbs the 0.207
+      # while still leaving a broken build's 0.011 an order of magnitude below.
+      assert ratio > 0.1,
              "an unknown address answered #{Float.round(ratio, 3)}x as slowly as a wrong " <>
                "password (pairs #{inspect(Enum.map(ratios, &Float.round(&1, 3)))}); the dummy " <>
                "bcrypt hash is missing, leaking which addresses have accounts"

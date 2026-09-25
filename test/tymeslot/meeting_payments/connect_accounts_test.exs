@@ -1,11 +1,14 @@
 defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
-  use Tymeslot.DataCase, async: true
+  # `start_onboarding/1` reads the global meeting-payments flag and default
+  # country, which these tests change.
+  use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :database
   @moduletag :payments
 
   import Mox
+  import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
@@ -15,15 +18,24 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
   setup :verify_on_exit!
 
-  describe "start_onboarding/2" do
+  describe "start_onboarding/1" do
+    setup do
+      with_config(:tymeslot,
+        meeting_payments_enabled: true,
+        feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
+        meeting_payments_default_country: "ch"
+      )
+
+      :ok
+    end
+
     test "creates Stripe account, persists row, returns AccountLink URL" do
       user = insert(:user)
-      country = "ch"
 
       expect(StripeAdapterMock, :create_account, fn params, opts ->
         assert params.type == "standard"
-        assert params.country == country
-        assert opts[:idempotency_key] == "account:#{user.id}"
+        assert params.country == "ch"
+        send(self(), {:idempotency_key, opts[:idempotency_key]})
         {:ok, %{id: "acct_TEST_123", default_currency: "chf"}}
       end)
 
@@ -33,21 +45,49 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
         {:ok, %{url: "https://connect.stripe.com/setup/acct_TEST"}}
       end)
 
-      assert {:ok, %{url: url}} = ConnectAccounts.start_onboarding(user, country: country)
+      assert {:ok, %{url: url}} = ConnectAccounts.start_onboarding(user)
       assert url =~ "connect.stripe.com"
 
       account = ConnectAccountQueries.live_for_user(user.id)
       assert account.stripe_account_id == "acct_TEST_123"
       assert account.default_currency == "chf"
       assert account.status == "active"
+      assert_received {:idempotency_key, key}
+      assert key == "connect_account:#{account.id}"
+    end
+
+    test "uses the operator-configured default country" do
+      with_config(:tymeslot, meeting_payments_default_country: "de")
+      user = insert(:user)
+
+      expect(StripeAdapterMock, :create_account, fn params, _opts ->
+        assert params.country == "de"
+        {:ok, %{id: "acct_DE", default_currency: "eur"}}
+      end)
+
+      expect(StripeAdapterMock, :create_account_link, fn _params ->
+        {:ok, %{url: "https://connect.stripe.com/de"}}
+      end)
+
+      assert {:ok, _result} = ConnectAccounts.start_onboarding(user)
+      assert ConnectAccountQueries.live_for_user(user.id).country == "de"
+    end
+
+    test "is refused with the feature-access reason when meeting payments are disabled" do
+      with_config(:tymeslot, meeting_payments_enabled: false)
+      user = insert(:user)
+
+      # No Stripe expectation: verify_on_exit! fails the test on any call.
+      assert {:error, :feature_disabled} = ConnectAccounts.start_onboarding(user)
+      refute ConnectAccountQueries.live_for_user(user.id)
     end
 
     test "resumes onboarding when placeholder exists from a prior crashed attempt" do
       user = insert(:user)
-      {:ok, _placeholder} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+      {:ok, placeholder} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
 
       expect(StripeAdapterMock, :create_account, fn _params, opts ->
-        assert opts[:idempotency_key] == "account:#{user.id}"
+        assert opts[:idempotency_key] == "connect_account:#{placeholder.id}"
         {:ok, %{id: "acct_RESUMED", default_currency: "chf"}}
       end)
 
@@ -55,15 +95,91 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
         {:ok, %{url: "https://connect.stripe.com/resume"}}
       end)
 
-      assert {:ok, %{url: _url}} = ConnectAccounts.start_onboarding(user, country: "ch")
+      assert {:ok, %{url: _url}} = ConnectAccounts.start_onboarding(user)
 
       account = ConnectAccountQueries.live_for_user(user.id)
       assert account.stripe_account_id == "acct_RESUMED"
     end
 
+    test "reuses the host's existing Stripe account instead of creating a second one" do
+      # A host who left the hosted onboarding part-way and returns days later
+      # (past Stripe's 24-hour idempotency-key window) must get a new link for
+      # the account they already have, not a second Standard account.
+      user = insert(:user)
+      existing = insert(:connect_account, user: user, stripe_account_id: "acct_EXISTING")
+
+      # No `create_account` expectation: verify_on_exit! fails on any call.
+      expect(StripeAdapterMock, :create_account_link, fn params ->
+        assert params.account == "acct_EXISTING"
+        {:ok, %{url: "https://connect.stripe.com/continue"}}
+      end)
+
+      assert {:ok, %{url: "https://connect.stripe.com/continue", account: account}} =
+               ConnectAccounts.start_onboarding(user)
+
+      assert account.id == existing.id
+      assert ConnectAccountQueries.live_for_user(user.id).stripe_account_id == "acct_EXISTING"
+    end
+
+    test "creates a new account after the host disconnects one that never finished onboarding" do
+      # An account Stripe has closed or rejected can never finish onboarding;
+      # disconnecting it is the host's way out. Starting again must create a
+      # new account, not reuse the old one or replay Stripe's cached answer
+      # for it within the idempotency-key window.
+      user = insert(:user)
+      old = insert(:connect_account, user: user, stripe_account_id: "acct_DEAD")
+
+      assert {:ok, _result} = ConnectAccounts.disconnect(user)
+
+      expect(StripeAdapterMock, :create_account, fn _params, opts ->
+        refute opts[:idempotency_key] == "connect_account:#{old.id}"
+        {:ok, %{id: "acct_FRESH", default_currency: "chf"}}
+      end)
+
+      expect(StripeAdapterMock, :create_account_link, fn params ->
+        assert params.account == "acct_FRESH"
+        {:ok, %{url: "https://connect.stripe.com/fresh"}}
+      end)
+
+      assert {:ok, %{url: "https://connect.stripe.com/fresh", account: account}} =
+               ConnectAccounts.start_onboarding(user)
+
+      refute account.id == old.id
+      assert ConnectAccountQueries.live_for_user(user.id).stripe_account_id == "acct_FRESH"
+    end
+
+    test "classifies Stripe's hold on creating connected accounts" do
+      user = insert(:user)
+
+      expect(StripeAdapterMock, :create_account, fn _params, _opts ->
+        {:error,
+         %Stripe.Error{
+           source: :stripe,
+           code: :invalid_request_error,
+           message:
+             "We've temporarily restricted your ability to create this type of connected account."
+         }}
+      end)
+
+      assert {:error, :account_creation_restricted} = ConnectAccounts.start_onboarding(user)
+    end
+
+    test "passes other Stripe request errors through unclassified" do
+      user = insert(:user)
+
+      error = %Stripe.Error{
+        source: :stripe,
+        code: :invalid_request_error,
+        message: "Country is not supported."
+      }
+
+      expect(StripeAdapterMock, :create_account, fn _params, _opts -> {:error, error} end)
+
+      assert {:error, ^error} = ConnectAccounts.start_onboarding(user)
+    end
+
     test "row stays in recoverable 'creating' state when create_account_link fails" do
       user = insert(:user)
-      country = "ch"
 
       expect(StripeAdapterMock, :create_account, fn _params, _opts ->
         {:ok, %{id: "acct_FAIL_LINK", default_currency: "chf"}}
@@ -73,7 +189,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
         {:error, %{message: "Stripe link creation failed"}}
       end)
 
-      assert {:error, _reason} = ConnectAccounts.start_onboarding(user, country: country)
+      assert {:error, _reason} = ConnectAccounts.start_onboarding(user)
 
       # Row must still exist in "creating" state — not left in "active" with a
       # stripe_account_id set, since the link never succeeded.
@@ -129,6 +245,37 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       # The payment row must still be "paid" — not "failed".
       reloaded = BookingPaymentQueries.get(payment.id)
       assert reloaded.status == "paid"
+    end
+
+    # Disconnecting neither settles nor cancels a refund the host already owes;
+    # it only takes away their ability to issue it from Tymeslot. The count is
+    # reported so the caller can say so, rather than let the obligation drop
+    # off the screen along with the account.
+    test "reports the refunds the host is still holding" do
+      user = insert(:user)
+      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+
+      meeting = insert(:meeting, status: "cancelled", cancelled_at: DateTime.utc_now(:second))
+      payment = insert(:paid_booking_payment, host_user_id: user.id, meeting: meeting)
+
+      assert {:ok, %{outstanding_refunds_count: 1}} = ConnectAccounts.disconnect(user)
+
+      # Untouched: still owed, still unrefunded, just no longer refundable here.
+      reloaded = BookingPaymentQueries.get(payment.id)
+      assert reloaded.status == "paid"
+      assert reloaded.refunded_amount_cents == 0
+    end
+
+    test "reports no outstanding refunds when the host owes nothing" do
+      user = insert(:user)
+      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+
+      insert(:paid_booking_payment,
+        host_user_id: user.id,
+        meeting: insert(:meeting, status: "confirmed")
+      )
+
+      assert {:ok, %{outstanding_refunds_count: 0}} = ConnectAccounts.disconnect(user)
     end
   end
 

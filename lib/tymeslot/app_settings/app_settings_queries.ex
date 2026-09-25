@@ -74,4 +74,48 @@ defmodule Tymeslot.AppSettings.AppSettingsQueries do
       end
     end)
   end
+
+  @doc """
+  Whether the first-user admin bootstrap has already closed.
+  """
+  @spec admin_bootstrapped?(module()) :: boolean()
+  def admin_bootstrapped?(repo \\ Repo) do
+    repo.exists?(
+      from(s in AppSettingsSchema,
+        where: s.id == @singleton_id and not is_nil(s.admin_bootstrapped_at)
+      )
+    )
+  end
+
+  @doc """
+  Closes the first-user admin bootstrap, returning `true` only to the caller
+  that closed it.
+
+  The claim is one conditional `UPDATE ... WHERE admin_bootstrapped_at IS
+  NULL`. Two concurrent callers cannot both win: the second blocks on the row
+  the first updated, and once the first commits, PostgreSQL re-evaluates the
+  condition against the committed row and updates nothing. If the first
+  rolls back, the second claims it instead. A missing singleton row is
+  created first with `ON CONFLICT DO NOTHING`, which leaves the claim to the
+  same `UPDATE`.
+  """
+  @spec claim_admin_bootstrap(module()) :: boolean()
+  def claim_admin_bootstrap(repo \\ Repo) do
+    now = DateTime.utc_now()
+
+    repo.insert_all(AppSettingsSchema, [%{id: @singleton_id, inserted_at: now, updated_at: now}],
+      on_conflict: :nothing,
+      conflict_target: :id
+    )
+
+    {claimed, _rows} =
+      repo.update_all(
+        from(s in AppSettingsSchema,
+          where: s.id == @singleton_id and is_nil(s.admin_bootstrapped_at)
+        ),
+        set: [admin_bootstrapped_at: DateTime.truncate(now, :second)]
+      )
+
+    claimed == 1
+  end
 end

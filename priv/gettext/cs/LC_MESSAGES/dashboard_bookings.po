@@ -74,6 +74,12 @@ msgstr "Rezervace potvrzena. Host byl informován."
 msgid "Booking requests you haven't answered yet will appear here."
 msgstr "Zde se objeví žádosti o rezervaci, na které jste zatím neodpověděli."
 
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_panels.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Zrušit"
+
 #: lib/tymeslot_web/components/dashboard/meetings/cancel_meeting_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel Meeting"
@@ -83,13 +89,6 @@ msgstr "Zrušit schůzku"
 #, elixir-autogen, elixir-format
 msgid "Cancel without refund."
 msgstr "Zrušit bez vrácení platby."
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_panels.ex
-#: lib/tymeslot_web/components/dashboard/meetings/reschedule_request_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel"
-msgstr "Zrušit"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
@@ -132,6 +131,11 @@ msgstr "Vlastní odpovědi"
 msgid "Date & Time"
 msgstr "Datum a čas"
 
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#, elixir-autogen, elixir-format
+msgid "Decline"
+msgstr "Zamítnout"
+
 #: lib/tymeslot_web/components/dashboard/meetings/decline_request_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Decline request"
@@ -141,11 +145,6 @@ msgstr "Zamítnout žádost"
 #, elixir-autogen, elixir-format
 msgid "Decline the request from %{name} for %{when}?"
 msgstr "Zamítnout žádost od %{name} na %{when}?"
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#, elixir-autogen, elixir-format
-msgid "Decline"
-msgstr "Zamítnout"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
 #, elixir-autogen, elixir-format
@@ -372,6 +371,12 @@ msgstr "Žádost zamítnuta. Termín je opět volný."
 msgid "Requests"
 msgstr "Žádosti"
 
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
+#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_panels.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule"
+msgstr "Přesunout"
+
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule Requested"
@@ -381,12 +386,6 @@ msgstr "Žádost o přesunutí"
 #, elixir-autogen, elixir-format
 msgid "Reschedule request sent to %{attendee_name}"
 msgstr "Žádost o přesunutí byla odeslána účastníkovi %{attendee_name}."
-
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_components.ex
-#: lib/tymeslot_web/components/dashboard/meetings/meeting_list_panels.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule"
-msgstr "Přesunout"
 
 #: lib/tymeslot_web/components/dashboard/meetings/meeting_status_badge.ex
 #, elixir-autogen, elixir-format

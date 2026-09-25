@@ -17,6 +17,8 @@ defmodule TymeslotWeb.Themes.Rhythm.PaymentProcessingTest do
 
   alias Phoenix.PubSub
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.Webhooks.FailAndExpire
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Profiles
 
   setup do
@@ -60,6 +62,9 @@ defmodule TymeslotWeb.Themes.Rhythm.PaymentProcessingTest do
         status: "paid",
         paid_at: DateTime.utc_now(:second)
       })
+
+    # The webhook confirms the meeting in the same transaction.
+    {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: "confirmed"})
 
     PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting.id}", :paid)
 
@@ -154,6 +159,155 @@ defmodule TymeslotWeb.Themes.Rhythm.PaymentProcessingTest do
     assert html =~ "refunded"
     refute html =~ "Booking confirmed"
     refute html =~ "Confirming your payment"
+  end
+
+  test "a failed payment broadcast shows the failed outcome instead of crashing the page", %{
+    conn: conn,
+    user: user
+  } do
+    meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+
+    insert(:booking_payment,
+      meeting: meeting,
+      host_user_id: user.id,
+      status: "pending",
+      stripe_checkout_session_id: "cs_TEST"
+    )
+
+    {:ok, view, html} =
+      live(conn, ~p"/themes/rhythm/payment-processing/#{meeting.id}?session_id=cs_TEST")
+
+    assert html =~ "Confirming your payment"
+
+    # The real webhook path: marks the payment failed, expires the meeting and
+    # broadcasts `:expired` on the page's topic.
+    assert :ok =
+             FailAndExpire.handle(
+               %{
+                 "id" => "evt_async_failed_#{System.unique_integer([:positive])}",
+                 "data" => %{"object" => %{"client_reference_id" => meeting.id}}
+               },
+               "checkout.session.async_payment_failed",
+               :async_payment_failed
+             )
+
+    html = render(view)
+    assert html =~ "Payment not completed"
+    refute html =~ "Confirming your payment"
+  end
+
+  test "returning after a failed payment shows the failed outcome instead of spinning", %{
+    conn: conn,
+    user: user
+  } do
+    meeting = insert(:meeting, organizer_user_id: user.id, status: "expired")
+
+    insert(:booking_payment,
+      meeting: meeting,
+      host_user_id: user.id,
+      status: "failed",
+      stripe_checkout_session_id: "cs_TEST"
+    )
+
+    {:ok, _view, html} =
+      live(conn, ~p"/themes/rhythm/payment-processing/#{meeting.id}?session_id=cs_TEST")
+
+    assert html =~ "Payment not completed"
+    refute html =~ "Confirming your payment"
+  end
+
+  test "a paid booking that was later cancelled is never shown as confirmed", %{
+    conn: conn,
+    user: user
+  } do
+    now = DateTime.utc_now(:second)
+
+    # A held request the attendee withdrew: cancelled, but neither declined
+    # nor expired, with the payment cycle complete.
+    meeting =
+      insert(:meeting,
+        organizer_user_id: user.id,
+        status: "cancelled",
+        cancelled_at: now,
+        approval_requested_at: now
+      )
+
+    insert(:booking_payment,
+      meeting: meeting,
+      host_user_id: user.id,
+      status: "refunded",
+      paid_at: now,
+      refunded_amount_cents: 5000,
+      stripe_checkout_session_id: "cs_TEST"
+    )
+
+    {:ok, _view, html} =
+      live(conn, ~p"/themes/rhythm/payment-processing/#{meeting.id}?session_id=cs_TEST")
+
+    assert html =~ "Booking cancelled"
+    refute html =~ "Booking confirmed"
+  end
+
+  test "a declined request that was already a confirmed meeting promises no refund", %{
+    conn: conn,
+    user: user
+  } do
+    now = DateTime.utc_now(:second)
+
+    # A confirmed booking re-gated by a reschedule, then declined: the
+    # automatic refund is skipped, so the page must not claim one.
+    meeting =
+      insert(:meeting,
+        organizer_user_id: user.id,
+        status: "cancelled",
+        first_announced_at: now,
+        approval_resolved_at: now,
+        approval_declined_at: now
+      )
+
+    insert(:booking_payment,
+      meeting: meeting,
+      host_user_id: user.id,
+      status: "paid",
+      paid_at: now,
+      stripe_checkout_session_id: "cs_TEST"
+    )
+
+    {:ok, _view, html} =
+      live(conn, ~p"/themes/rhythm/payment-processing/#{meeting.id}?session_id=cs_TEST")
+
+    assert html =~ "Booking not accepted"
+    refute html =~ "refunded"
+  end
+
+  test "a re-requested confirmed meeting awaiting approval promises no automatic refund", %{
+    conn: conn,
+    user: user
+  } do
+    now = DateTime.utc_now(:second)
+
+    meeting =
+      insert(:meeting,
+        organizer_user_id: user.id,
+        status: "awaiting_approval",
+        first_announced_at: now,
+        approval_deadline_at: DateTime.add(now, 3600, :second)
+      )
+
+    insert(:booking_payment,
+      meeting: meeting,
+      host_user_id: user.id,
+      status: "paid",
+      paid_at: now,
+      stripe_checkout_session_id: "cs_TEST"
+    )
+
+    {:ok, _view, html} =
+      live(conn, ~p"/themes/rhythm/payment-processing/#{meeting.id}?session_id=cs_TEST")
+
+    assert html =~ "Payment received"
+    assert html =~ "the request lapses"
+    refute html =~ "refunded"
   end
 
   test "rejects mismatched session_id", %{conn: conn, user: user} do

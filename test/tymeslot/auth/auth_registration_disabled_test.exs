@@ -1,6 +1,6 @@
 defmodule Tymeslot.AuthRegistrationDisabledTest do
   @moduledoc """
-  Covers `Tymeslot.Auth.register_user/3` on a deployment that has closed new
+  Covers `Tymeslot.Auth.register_user/2` on a deployment that has closed new
   registrations.
 
   Split out of `Tymeslot.AuthTest`, which is `async: true`, because
@@ -16,8 +16,9 @@ defmodule Tymeslot.AuthRegistrationDisabledTest do
   @moduletag :auth
 
   alias Tymeslot.Auth
+  alias TymeslotWeb.Helpers.ClientIP
 
-  describe "register_user/3 — registration disabled" do
+  describe "register_user/2 — registration disabled" do
     setup do
       original = Application.get_env(:tymeslot, :registration_enabled)
       Application.put_env(:tymeslot, :registration_enabled, false)
@@ -35,7 +36,7 @@ defmodule Tymeslot.AuthRegistrationDisabledTest do
       }
 
       assert {:error, :registration_disabled, "Registration is currently disabled."} =
-               Auth.register_user(params, %Plug.Conn{})
+               Auth.register_user(params, ClientIP.request_opts(%Plug.Conn{}))
     end
   end
 end

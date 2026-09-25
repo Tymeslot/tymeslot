@@ -64,23 +64,53 @@ defmodule Tymeslot.MeetingTypes.ReminderValidation do
   def parse_and_normalize_reminders(_other), do: {:error, "Invalid reminder settings format"}
 
   @doc """
+  The maximum number of reminders one meeting type may carry.
+  """
+  @spec max_reminders() :: pos_integer()
+  def max_reminders, do: @max_reminders
+
+  @doc """
+  Checks a normalised reminder list against the reminder policy: at most
+  `max_reminders/0` reminders, no two for the same interval, and none more
+  than a year ahead.
+
+  `already_held` is the normalised list the meeting type had before this
+  change. The year limit is newer than some stored reminders, so it judges
+  only what the change adds: a reminder the meeting type already held stays
+  acceptable, or an unrelated edit to that meeting type could never be saved.
+
+  Returns the first rule broken as an atom, so each caller can word it for
+  its own surface.
+  """
+  @spec check_policy([map()], [map()]) :: :ok | {:error, :too_many | :duplicate | :exceeds_max}
+  def check_policy(reminders, already_held \\ [])
+      when is_list(reminders) and is_list(already_held) do
+    cond do
+      length(reminders) > @max_reminders -> {:error, :too_many}
+      ReminderUtils.duplicate_reminders?(reminders) -> {:error, :duplicate}
+      Enum.any?(reminders -- already_held, &reminder_exceeds_max?/1) -> {:error, :exceeds_max}
+      true -> :ok
+    end
+  end
+
+  @doc """
   Enforces reminder policy constraints: maximum count, uniqueness, and
-  maximum interval.
+  maximum interval. See `check_policy/1`.
   """
   @spec validate_reminders_policy(list()) :: :ok | {:error, String.t()}
   def validate_reminders_policy(reminders) do
-    cond do
-      length(reminders) > @max_reminders ->
+    case check_policy(reminders) do
+      :ok ->
+        :ok
+
+      {:error, :too_many} ->
         {:error, "You can configure up to #{@max_reminders} reminders"}
 
-      ReminderUtils.duplicate_reminders?(reminders) ->
+      {:error, :duplicate} ->
         {:error, "Reminder settings must be unique"}
 
-      Enum.any?(reminders, &reminder_exceeds_max?/1) ->
+      {:error, :exceeds_max} ->
         {:error, "Reminders cannot be set for more than 1 year in advance"}
-
-      true ->
-        :ok
     end
   end
 

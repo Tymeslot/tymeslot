@@ -36,8 +36,9 @@ defmodule TymeslotWeb.Live.Scheduling.RhythmCustomQuestionsFlowTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Meetings.MeetingListQueries
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
 
@@ -189,7 +190,7 @@ defmodule TymeslotWeb.Live.Scheduling.RhythmCustomQuestionsFlowTest do
 
       _drain = :sys.get_state(view.pid)
 
-      [meeting] = MeetingListQueries.list_meetings_by_attendee_email("rhythm.cf@example.com")
+      [meeting] = Repo.all_by(MeetingSchema, attendee_email: "rhythm.cf@example.com")
 
       assert length(meeting.custom_fields_snapshot) == 2
 

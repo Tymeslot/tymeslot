@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Video.EventDetailsTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Video.EventDetails
 
   describe "from_creating_form/1" do
@@ -27,17 +28,17 @@ defmodule Tymeslot.Integrations.Video.EventDetailsTest do
       assert details.end_time == later
 
       assert details.attendees == [
-               %{email: "alice@example.com", name: nil},
-               %{email: "bob@example.com", name: nil}
+               Attendee.new(email: "alice@example.com"),
+               Attendee.new(email: "bob@example.com")
              ]
     end
 
-    test "normalises bare-string attendees to %{email: _, name: nil} with email trimmed and downcased" do
+    test "normalises bare-string attendees to nameless attendees with email trimmed and downcased" do
       creating = %{title: "Call", attendees: ["  Alice@Example.COM  "]}
 
       details = EventDetails.from_creating_form(creating)
 
-      assert details.attendees == [%{email: "alice@example.com", name: nil}]
+      assert details.attendees == [Attendee.new(email: "alice@example.com")]
     end
 
     test "normalises empty title to nil" do
@@ -90,7 +91,10 @@ defmodule Tymeslot.Integrations.Video.EventDetailsTest do
       assert details.description == "Quarterly plan"
       assert details.start_time == now
       assert details.end_time == later
-      assert details.attendees == [%{email: "carol@example.com", name: "Carol"}]
+
+      assert details.attendees == [
+               Attendee.new(email: "carol@example.com", display_name: "Carol")
+             ]
     end
 
     test "accepts string-key attendee maps and normalises them" do
@@ -101,7 +105,7 @@ defmodule Tymeslot.Integrations.Video.EventDetailsTest do
 
       details = EventDetails.from_grid_event(event)
 
-      assert details.attendees == [%{email: "dave@example.com", name: "Dave"}]
+      assert details.attendees == [Attendee.new(email: "dave@example.com", display_name: "Dave")]
     end
 
     test "accepts atom-key attendee maps and normalises email" do
@@ -112,7 +116,33 @@ defmodule Tymeslot.Integrations.Video.EventDetailsTest do
 
       details = EventDetails.from_grid_event(event)
 
-      assert details.attendees == [%{email: "eve@example.com", name: "Eve"}]
+      assert details.attendees == [Attendee.new(email: "eve@example.com", display_name: "Eve")]
+    end
+
+    test "keeps the name and reply of a synced attendee read back from the cache" do
+      # The cache column is JSONB, so a synced attendee comes back string-keyed
+      # and spells its label `display_name`, not the grid's old `name`.
+      event = %{
+        summary: "Review",
+        attendees: [
+          %{
+            "email" => "Ivy@Example.COM",
+            "display_name" => "Ivy",
+            "response_status" => "accepted",
+            "optional" => false
+          }
+        ]
+      }
+
+      details = EventDetails.from_grid_event(event)
+
+      assert details.attendees == [
+               Attendee.new(
+                 email: "ivy@example.com",
+                 display_name: "Ivy",
+                 response_status: :accepted
+               )
+             ]
     end
 
     test "normalises mixed list of bare strings and maps consistently" do
@@ -128,9 +158,9 @@ defmodule Tymeslot.Integrations.Video.EventDetailsTest do
       details = EventDetails.from_grid_event(event)
 
       assert details.attendees == [
-               %{email: "frank@example.com", name: nil},
-               %{email: "grace@example.com", name: "Grace"},
-               %{email: "henry@example.com", name: "Henry"}
+               Attendee.new(email: "frank@example.com"),
+               Attendee.new(email: "grace@example.com", display_name: "Grace"),
+               Attendee.new(email: "henry@example.com", display_name: "Henry")
              ]
     end
 
@@ -152,7 +182,7 @@ defmodule Tymeslot.Integrations.Video.EventDetailsTest do
 
       details = EventDetails.from_grid_event(event)
 
-      assert details.attendees == [%{email: "valid@example.com", name: nil}]
+      assert details.attendees == [Attendee.new(email: "valid@example.com")]
     end
 
     test "normalises empty summary to nil" do
@@ -184,7 +214,10 @@ defmodule Tymeslot.Integrations.Video.EventDetailsTest do
       assert details.description == "First conversation"
       assert details.start_time == meeting.start_time
       assert details.end_time == meeting.end_time
-      assert details.attendees == [%{email: "alice@example.com", name: "Alice"}]
+
+      assert details.attendees == [
+               Attendee.new(email: "alice@example.com", display_name: "Alice")
+             ]
     end
 
     test "falls back to title when summary is nil and defaults description to empty string" do
@@ -213,7 +246,77 @@ defmodule Tymeslot.Integrations.Video.EventDetailsTest do
 
       details = EventDetails.from_meeting(meeting)
 
-      assert details.attendees == [%{email: "alice@example.com", name: "Alice"}]
+      assert details.attendees == [
+               Attendee.new(email: "alice@example.com", display_name: "Alice")
+             ]
+    end
+  end
+
+  describe "from_provider_config/1" do
+    @start ~U[2030-03-14 09:30:00Z]
+    @finish ~U[2030-03-14 10:15:00Z]
+
+    test "returns the attached event details as they are" do
+      details = %EventDetails{
+        summary: "Quarterly review",
+        description: "Agenda",
+        start_time: @start,
+        end_time: @finish,
+        attendees: [Attendee.new(email: "guest@example.com")]
+      }
+
+      assert EventDetails.from_provider_config(%{event_details: details}) == details
+    end
+
+    test "builds the struct from a plain map of event details" do
+      config = %{event_details: %{summary: "From a map", start_time: @start, end_time: @finish}}
+
+      assert %EventDetails{summary: "From a map", start_time: @start, end_time: @finish} =
+               EventDetails.from_provider_config(config)
+    end
+
+    test "reads the flat update keys when no event details are attached" do
+      config = %{
+        meeting_topic: "  Moved review  ",
+        meeting_start_time: @start,
+        meeting_end_time: @finish
+      }
+
+      assert %EventDetails{summary: "Moved review", start_time: @start, end_time: @finish} =
+               EventDetails.from_provider_config(config)
+    end
+
+    test "prefers the event details field by field, filling gaps from the flat keys" do
+      config = %{
+        event_details: %EventDetails{summary: "Booked title", start_time: @start},
+        meeting_topic: "Flat title",
+        meeting_start_time: ~U[2031-01-01 00:00:00Z],
+        meeting_end_time: @finish
+      }
+
+      assert %EventDetails{summary: "Booked title", start_time: @start, end_time: @finish} =
+               EventDetails.from_provider_config(config)
+    end
+
+    test "keeps every field of the event details over conflicting flat keys" do
+      config = %{
+        event_details: %EventDetails{
+          summary: "Booked title",
+          start_time: @start,
+          end_time: @finish
+        },
+        meeting_topic: "Flat title",
+        meeting_start_time: ~U[2031-01-01 00:00:00Z],
+        meeting_end_time: ~U[2031-01-01 01:00:00Z]
+      }
+
+      assert %EventDetails{summary: "Booked title", start_time: @start, end_time: @finish} =
+               EventDetails.from_provider_config(config)
+    end
+
+    test "leaves a field neither source carries nil rather than guessing it" do
+      assert %EventDetails{summary: nil, start_time: nil, end_time: nil} =
+               EventDetails.from_provider_config(%{meeting_topic: "   "})
     end
   end
 end

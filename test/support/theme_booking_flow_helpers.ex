@@ -100,31 +100,14 @@ defmodule Tymeslot.ThemeBookingFlowHelpers do
   the end-to-end tests use.
   """
   @spec advance_to_booking_form(term(), String.t()) :: :ok
-  def advance_to_booking_form(view, theme_name) do
+  def advance_to_booking_form(view, _theme_name) do
     view
     |> element("button[data-testid='duration-option'][data-duration='quick-chat']")
     |> render_click()
 
     view |> element("button[data-testid='next-step']") |> render_click()
 
-    target_date = next_business_day(Date.utc_today())
-    date_str = Date.to_string(target_date)
-
-    navigate_calendar_to_date(view, theme_name, target_date)
-
-    eventually(
-      fn ->
-        has_element?(
-          view,
-          "button[data-testid='calendar-day'][phx-value-date='#{date_str}']:not([disabled])"
-        )
-      end,
-      timeout: 5000
-    )
-
-    view
-    |> element("button[data-testid='calendar-day'][phx-value-date='#{date_str}']")
-    |> render_click()
+    select_first_available_day(view)
 
     eventually(fn -> has_element?(view, "button[data-testid='time-slot']") end, timeout: 5000)
 
@@ -176,29 +159,35 @@ defmodule Tymeslot.ThemeBookingFlowHelpers do
     end
   end
 
-  @doc "Advances the calendar/week strip so `target_date` is reachable for the theme."
-  @spec navigate_calendar_to_date(term(), String.t(), Date.t()) :: :ok | binary()
-  def navigate_calendar_to_date(view, theme_name, target_date) do
-    today = Date.utc_today()
+  @doc """
+  Waits for the schedule step to finish loading availability, then clicks the
+  first bookable day it renders and returns that day's ISO date.
 
-    case theme_name do
-      "quill" ->
-        if target_date.year > today.year ||
-             (target_date.year == today.year && target_date.month > today.month) do
-          view |> element("button[phx-click='next_month']") |> render_click()
-        end
+  The day is read from the page rather than predicted from the clock. Once
+  availability arrives the scheduling page jumps to the first bookable day,
+  which late in the visitor's day is already in the next week (Rhythm) or month
+  (Quill), so any date worked out from `Date.utc_today/0` can name a day that is
+  not on screen. Day buttons stay disabled until availability has loaded, so
+  the first enabled one is only rendered after that jump.
+  """
+  @spec select_first_available_day(term()) :: String.t()
+  def select_first_available_day(view) do
+    enabled_day = "button[data-testid='calendar-day']:not([disabled])"
 
-      "rhythm" ->
-        week_start = Date.beginning_of_week(today, :monday)
-        week_end = Date.add(week_start, 6)
+    eventually(fn -> has_element?(view, enabled_day) end, timeout: 5000)
 
-        if Date.compare(target_date, week_end) == :gt do
-          view |> element("button[phx-click='next_week']") |> render_click()
-        end
+    date_str =
+      view
+      |> render()
+      |> Floki.parse_document!()
+      |> Floki.attribute(enabled_day, "phx-value-date")
+      |> List.first()
 
-      _date ->
-        :ok
-    end
+    view
+    |> element("button[data-testid='calendar-day'][phx-value-date='#{date_str}']")
+    |> render_click()
+
+    date_str
   end
 
   @doc "Returns the next weekday strictly after `start_date`."

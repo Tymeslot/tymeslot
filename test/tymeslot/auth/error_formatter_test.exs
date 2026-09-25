@@ -6,53 +6,51 @@ defmodule Tymeslot.Auth.ErrorFormatterTest do
   alias Tymeslot.Auth.ErrorFormatter
 
   describe "format_auth_error/1" do
-    test "returns string as is" do
-      assert ErrorFormatter.format_auth_error("Custom error") == "Custom error"
+    test "answers every failed-credentials reason with one generic message" do
+      for reason <- [:not_found, :invalid_password] do
+        assert ErrorFormatter.format_auth_error(reason) ==
+                 "Invalid email or password. If you signed up recently, check your inbox for the verification link."
+      end
     end
 
-    test "formats generic auth errors" do
-      Enum.each(
-        [:invalid_input, :not_found, :invalid_password, :invalid_credentials],
-        fn reason ->
-          assert ErrorFormatter.format_auth_error(reason) == "Invalid email or password."
-        end
-      )
-    end
-
-    test "formats account status errors" do
-      assert ErrorFormatter.format_auth_error(:account_throttled) =~ "Too many login attempts"
-      assert ErrorFormatter.format_auth_error(:email_not_verified) =~ "verify your email"
-    end
-
-    test "formats rate limit errors" do
-      assert ErrorFormatter.format_auth_error(:rate_limited) =~ "Too many attempts"
-    end
-
-    test "formats oauth errors" do
+    test "names the social login for an account without a password" do
       assert ErrorFormatter.format_auth_error(:oauth_user) =~ "associated with a social login"
-      assert ErrorFormatter.format_auth_error(:user_already_exists) =~ "already registered"
-      assert ErrorFormatter.format_auth_error(:invalid_oauth_state) =~ "Authentication failed"
     end
 
-    test "formats token errors" do
-      assert ErrorFormatter.format_auth_error(:token_expired) =~ "link has expired"
-      assert ErrorFormatter.format_auth_error(:invalid_token) =~ "link is invalid"
+    test "formats the rate limit and the closed-flow reasons" do
+      assert ErrorFormatter.format_auth_error(:rate_limited) ==
+               "Too many attempts. Please try again later."
+
+      assert ErrorFormatter.format_auth_error(:registration_disabled) ==
+               "Registration is currently disabled."
+
+      assert ErrorFormatter.format_auth_error(:password_auth_disabled) ==
+               "Password authentication is currently disabled."
     end
 
-    test "formats registration errors" do
-      assert ErrorFormatter.format_auth_error(:profile_creation) =~ "profile setup failed"
-      assert ErrorFormatter.format_auth_error(:verification) =~ "email verification failed"
-      assert ErrorFormatter.format_auth_error(:registration_failed) =~ "Registration failed"
-    end
-
-    test "formats password reset errors" do
-      assert ErrorFormatter.format_auth_error(:password_reset_failed) =~
-               "Unable to reset password"
-    end
-
-    test "returns default message for unknown atom" do
+    test "falls back to a generic message" do
       assert ErrorFormatter.format_auth_error(:unknown_reason) ==
                "An error occurred. Please try again."
+    end
+  end
+
+  describe "format_password_reset_error/1" do
+    test "formats each reason a reset can fail with" do
+      assert ErrorFormatter.format_password_reset_error(:rate_limited) ==
+               "Too many attempts. Please try again later."
+
+      assert ErrorFormatter.format_password_reset_error(:invalid_token) ==
+               "Invalid or expired token"
+
+      assert ErrorFormatter.format_password_reset_error(:token_expired) ==
+               "This link has expired. Please request a new one"
+
+      assert ErrorFormatter.format_password_reset_error(:invalid_password) == "Invalid password"
+    end
+
+    test "answers an unmapped reason with the server error instead of raising" do
+      assert ErrorFormatter.format_password_reset_error(:something_new) ==
+               "A server error occurred. Please try again"
     end
   end
 
@@ -77,21 +75,6 @@ defmodule Tymeslot.Auth.ErrorFormatterTest do
       result = ErrorFormatter.format_validation_errors(errors)
       assert result =~ "Email is invalid"
       assert result =~ "Password is too short"
-    end
-  end
-
-  describe "format_oauth_error/2" do
-    test "formats specific oauth errors" do
-      assert ErrorFormatter.format_oauth_error(:github, "access_denied") =~
-               "Github authorization was denied"
-
-      assert ErrorFormatter.format_oauth_error(:google, :invalid_response) =~
-               "Invalid response from Google"
-
-      assert ErrorFormatter.format_oauth_error(:github, :token_exchange_failed) =~
-               "Failed to authenticate with Github"
-
-      assert ErrorFormatter.format_oauth_error(:google, :other) =~ "Google authentication failed"
     end
   end
 
@@ -121,19 +104,6 @@ defmodule Tymeslot.Auth.ErrorFormatterTest do
   end
 
   describe "format_user_friendly_error/2" do
-    test "formats email taken error for registration" do
-      assert ErrorFormatter.format_user_friendly_error(
-               "registration",
-               "email: has already been taken"
-             ) ==
-               "This email address is already registered. Please use a different email or try logging in."
-    end
-
-    test "formats email taken error for other operations" do
-      assert ErrorFormatter.format_user_friendly_error("update", "email: has already been taken") ==
-               "This email address is already in use. Please try with a different email."
-    end
-
     test "formats general taken error" do
       assert ErrorFormatter.format_user_friendly_error(
                "registration",
@@ -156,40 +126,12 @@ defmodule Tymeslot.Auth.ErrorFormatterTest do
       assert ErrorFormatter.format_user_friendly_error("registration", "something went wrong") ==
                "Registration failed: something went wrong"
     end
-
-    test "formats non-string reason" do
-      assert ErrorFormatter.format_user_friendly_error("registration", :unexpected_error) ==
-               "Registration failed: :unexpected_error"
-    end
   end
 
-  describe "format_password_reset_error/1" do
-    test "formats password reset error atoms" do
-      assert ErrorFormatter.format_password_reset_error(:user_not_found) ==
-               "If your email is registered, you will receive password reset instructions."
-
-      assert ErrorFormatter.format_password_reset_error(:oauth_user) ==
-               "You cannot reset your password because your account is managed by an external authentication provider."
-
-      assert ErrorFormatter.format_password_reset_error(:invalid_token) ==
-               "Invalid or expired password reset token."
-
-      assert ErrorFormatter.format_password_reset_error(:rate_limited) ==
-               "Too many password reset attempts. Please try again later."
-
-      assert ErrorFormatter.format_password_reset_error(:other) ==
-               "Password reset failed. Please try again."
-    end
-  end
-
-  describe "format_rate_limit_error/2" do
-    test "formats with retry_after" do
-      assert ErrorFormatter.format_rate_limit_error("login", 120) =~ "try again in 2 minute(s)"
-      assert ErrorFormatter.format_rate_limit_error("login", 30) =~ "try again in 30 seconds"
-    end
-
-    test "formats without retry_after" do
-      assert ErrorFormatter.format_rate_limit_error("login") =~ "try again later"
+  describe "format_rate_limit_error/1" do
+    test "names the operation" do
+      assert ErrorFormatter.format_rate_limit_error("authentication") ==
+               "Too many authentication attempts. Please try again later."
     end
   end
 end

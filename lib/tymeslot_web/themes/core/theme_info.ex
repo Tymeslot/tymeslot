@@ -3,8 +3,8 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfo do
   Convenience accessors over the theme system for the web layer.
 
   Resolves full theme metadata, loads theme modules, and exposes per-theme
-  runtime details (states, components, LiveView module, CSS file) by combining
-  the registry definitions with the theme behaviour callbacks. This is a
+  runtime details (states, LiveView module, CSS file) by combining the registry
+  definitions with the theme behaviour callbacks. This is a
   presentation-layer concern: domain code reads theme facts from
   `Tymeslot.Themes.Catalog` instead.
   """
@@ -121,17 +121,6 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfo do
   end
 
   @doc """
-  Gets the components map for a theme.
-  """
-  @spec get_components(term()) :: map()
-  def get_components(id) do
-    case get_theme_module(id) do
-      nil -> %{}
-      module -> module.components()
-    end
-  end
-
-  @doc """
   Gets the LiveView module for a theme.
   Uses dynamic loading to ensure the module is available.
   """
@@ -148,27 +137,6 @@ defmodule TymeslotWeb.Themes.Core.ThemeInfo do
     case get_theme_module(id) do
       nil -> false
       module -> module.supports_feature?(feature)
-    end
-  end
-
-  @doc """
-  Validates all registered themes on application start.
-  """
-  @spec validate_all_themes() :: :ok | {:error, term()}
-  def validate_all_themes do
-    results =
-      Enum.map(Registry.all_themes(), fn {_key, theme} ->
-        {theme.id, theme.module.validate_theme()}
-      end)
-
-    failed_themes = Enum.filter(results, fn {_id, result} -> result != :ok end)
-
-    if Enum.empty?(failed_themes) do
-      Logger.info("All themes validated successfully")
-      :ok
-    else
-      Logger.error("Theme validation failures", failures: inspect(failed_themes))
-      {:error, failed_themes}
     end
   end
 end

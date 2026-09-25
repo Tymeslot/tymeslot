@@ -131,6 +131,33 @@ defmodule Tymeslot.Meetings.VideoRoomsTransactionTest do
 
       refute_enqueued(worker: Tymeslot.Workers.CalendarEventWorker)
     end
+
+    test "releases instead of attaching a room when the meeting changed location mid-call" do
+      %{meeting: meeting, integration: integration} = build_mirotalk_scenario()
+
+      # A reschedule moves the meeting in person while the provider is still
+      # creating the room for its old video location.
+      __MODULE__.FakeVideoModule.move_before_return(meeting.id, nil)
+
+      assert {:ok, returned} = VideoRooms.add_video_room_to_meeting(meeting.id)
+
+      assert returned.video_room_id == nil
+      assert Repo.get!(MeetingSchema, meeting.id).video_room_id == nil
+      refute Repo.get!(MeetingSchema, meeting.id).video_room_enabled
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.VideoSyncWorker,
+        args: %{
+          "action" => "release",
+          "meeting_id" => meeting.id,
+          "room_id" => "https://fake.video/join/abc",
+          "video_provider" => "mirotalk",
+          "video_integration_id" => integration.id
+        }
+      )
+
+      refute_enqueued(worker: Tymeslot.Workers.CalendarEventWorker)
+    end
   end
 
   defp build_mirotalk_scenario do
@@ -193,6 +220,17 @@ defmodule Tymeslot.Meetings.VideoRoomsTransactionTest do
       :ok
     end
 
+    @doc """
+    Instructs the fake to move the meeting onto `integration_id` before
+    returning, as a reschedule to another location would mid-call.
+    """
+    @spec move_before_return(String.t(), integer() | nil) :: :ok
+    def move_before_return(meeting_id, integration_id) do
+      ensure_table()
+      :ets.insert(@table, {:race_move, {meeting_id, integration_id}})
+      :ok
+    end
+
     @spec create_meeting_room(integer() | nil, keyword()) :: {:ok, MeetingContext.t()}
     def create_meeting_room(_user_id, opts) do
       ensure_table()
@@ -238,6 +276,17 @@ defmodule Tymeslot.Meetings.VideoRoomsTransactionTest do
                 video_room_enabled: true
               })
           end
+
+        [] ->
+          :ok
+      end
+
+      case :ets.lookup(@table, :race_move) do
+        [{:race_move, {meeting_id, integration_id}}] ->
+          {:ok, meeting} = MeetingQueries.get_meeting(meeting_id)
+
+          {:ok, _updated} =
+            MeetingQueries.update_meeting(meeting, %{video_integration_id: integration_id})
 
         [] ->
           :ok

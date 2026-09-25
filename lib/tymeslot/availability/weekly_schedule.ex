@@ -74,24 +74,6 @@ defmodule Tymeslot.Availability.WeeklySchedule do
     end
   end
 
-  @doc """
-  Sets a preset schedule for specified days.
-  """
-  @spec set_preset_schedule(integer(), String.t(), list(integer())) ::
-          {:ok, term()} | {:error, String.t()}
-  def set_preset_schedule(schedule_id, preset_name, days) when is_list(days) do
-    case get_preset_config(preset_name) do
-      nil -> {:error, "Unknown preset: #{preset_name}"}
-      config -> apply_preset_in_tx(schedule_id, days, config)
-    end
-  end
-
-  defp apply_preset_in_tx(schedule_id, days, config) do
-    Repo.transaction(fn ->
-      Enum.each(days, &upsert_day_availability(schedule_id, &1, config))
-    end)
-  end
-
   # Private functions
 
   defp copy_single_day_settings(source, schedule_id, to_day) do
@@ -115,38 +97,6 @@ defmodule Tymeslot.Availability.WeeklySchedule do
   defp copy_breaks(breaks, target_weekly_availability_id) do
     WeeklyAvailabilityQueries.replace_breaks(target_weekly_availability_id, breaks)
   end
-
-  defp get_preset_config("9-5") do
-    %{
-      is_available: true,
-      start_time: ~T[09:00:00],
-      end_time: ~T[17:00:00]
-    }
-  end
-
-  defp get_preset_config("8-6") do
-    %{
-      is_available: true,
-      start_time: ~T[08:00:00],
-      end_time: ~T[18:00:00]
-    }
-  end
-
-  defp get_preset_config("10-6") do
-    %{
-      is_available: true,
-      start_time: ~T[10:00:00],
-      end_time: ~T[18:00:00]
-    }
-  end
-
-  defp get_preset_config("unavailable") do
-    %{
-      is_available: false
-    }
-  end
-
-  defp get_preset_config(_preset), do: nil
 
   @doc """
   Clears all settings for a specific day (sets to unavailable and removes all breaks).

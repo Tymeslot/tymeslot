@@ -10,6 +10,7 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
   alias ExUnit.CaptureLog
   alias Tymeslot.Infrastructure.CrashReporter
   alias Tymeslot.Security.RateLimiter
+  alias TymeslotWeb.Components.UserDropdownComponent
 
   setup :capture_admin_alerts
 
@@ -162,6 +163,64 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
         assert_receive {:send_alert, :unhandled_crash, payload}, 2_000
         assert payload.kind == :error
         assert payload.reason_message =~ "integration boom"
+      end)
+    end
+  end
+
+  describe "events no handle_event/3 clause matches" do
+    defmodule BodyCrashComponent do
+      use Phoenix.LiveComponent
+
+      @impl Phoenix.LiveComponent
+      def render(assigns), do: ~H"<div></div>"
+
+      @impl Phoenix.LiveComponent
+      def handle_event("known", params, socket) do
+        {:noreply, assign(socket, :picked, pick(params))}
+      end
+
+      defp pick(%{"id" => id}), do: id
+    end
+
+    setup do
+      :ok = CrashReporter.attach()
+      on_exit(&CrashReporter.detach/0)
+      :ok
+    end
+
+    # The client names both the event and the component it targets, so any
+    # signed-in user can produce this crash at will. The real dropdown
+    # component, crashed the way a forged socket frame crashes it.
+    # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
+    test "a forged event name aimed at a real component logs a warning instead of alerting" do
+      log =
+        CaptureLog.capture_log(fn ->
+          Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+            UserDropdownComponent.handle_event(
+              "open_refund_modal",
+              %{},
+              %Phoenix.LiveView.Socket{}
+            )
+          end)
+
+          refute_receive {:send_alert, :unhandled_crash, _payload}, 500
+        end)
+
+      assert log =~ "no handle_event/3 clause matches"
+      assert log =~ "open_refund_modal"
+    end
+
+    # A clause matched and its body then failed: a real bug, whoever sent the
+    # event, and it must keep alerting.
+    # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
+    test "a function clause error raised inside a matched handler still alerts" do
+      CaptureLog.capture_log(fn ->
+        Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+          BodyCrashComponent.handle_event("known", %{}, %Phoenix.LiveView.Socket{})
+        end)
+
+        assert_receive {:send_alert, :unhandled_crash, payload}, 2_000
+        assert payload.reason_message =~ "pick/1"
       end)
     end
   end

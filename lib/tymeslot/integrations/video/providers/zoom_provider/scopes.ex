@@ -32,10 +32,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes do
   # Scopes that are not tied to one meeting operation.
   @read_scopes ["meeting:read:meeting", "user:read:user"]
 
-  # The operations Tymeslot always asks Zoom for. `:update` is conditional and
-  # lives behind `:zoom_update_scope_enabled` instead, because whether it can be
-  # obtained is a property of the Marketplace app behind a given deployment, not
-  # of this code.
+  # The operations Tymeslot always asks Zoom for. `:update` is requested by
+  # default but lives behind `:zoom_update_scope_enabled`, because whether it
+  # can be obtained is a property of the Marketplace app behind a given
+  # deployment, not of this code.
   #
   # Zoom gives no signal when an app lacks a requested scope: the authorize
   # request is not rejected, the scope is silently dropped, the rest is
@@ -46,8 +46,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes do
   # scope is obtainable and start asking users to reconnect to get a scope no
   # reconnect can produce.
   #
-  # Enable it (`ZOOM_UPDATE_SCOPE_ENABLED=true`) only where the Zoom app is
-  # actually configured for the scope. The authorize request, the pre-flight,
+  # Disable it (`ZOOM_UPDATE_SCOPE_ENABLED=false`) wherever the Zoom app is not
+  # configured for the scope. The authorize request, the pre-flight,
   # and whether users are asked to reconnect all follow from this one setting.
   @always_requested [:write, :delete]
 
@@ -95,7 +95,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes do
   end
 
   defp update_scope_enabled? do
-    Application.get_env(:tymeslot, :zoom_update_scope_enabled, false) == true
+    Application.get_env(:tymeslot, :zoom_update_scope_enabled, true) == true
   end
 
   @doc """
@@ -129,22 +129,34 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes do
 
   Both the runtime rejection path and the nightly audit flag integrations with
   this, so the wording a user sees does not depend on which one noticed first.
+
+  Returned as the untranslated msgid, because it is persisted and translated
+  only when the dashboard renders it. That is also why each operation has a
+  whole sentence of its own rather than one sentence with the action
+  interpolated: an interpolated string is not a msgid, so it could never be
+  looked up again in the viewer's locale.
   """
   @spec reauth_message(operation()) :: String.t()
-  def reauth_message(operation) do
-    dgettext(
+  def reauth_message(:write) do
+    dgettext_noop(
       "dashboard_integrations",
-      "Zoom is missing the permission needed to %{action}. Please reconnect your Zoom account.",
-      action: action_phrase(operation)
+      "Zoom is missing the permission needed to create meetings. Please reconnect your Zoom account."
     )
   end
 
-  # Phrase naming what the user loses while `operation` is unauthorised.
-  defp action_phrase(:write), do: dgettext("dashboard_integrations", "create meetings")
+  def reauth_message(:update) do
+    dgettext_noop(
+      "dashboard_integrations",
+      "Zoom is missing the permission needed to reschedule meetings. Please reconnect your Zoom account."
+    )
+  end
 
-  defp action_phrase(:update), do: dgettext("dashboard_integrations", "reschedule meetings")
-
-  defp action_phrase(:delete), do: dgettext("dashboard_integrations", "cancel meetings")
+  def reauth_message(:delete) do
+    dgettext_noop(
+      "dashboard_integrations",
+      "Zoom is missing the permission needed to cancel meetings. Please reconnect your Zoom account."
+    )
+  end
 
   @doc """
   Detects Zoom's `4711` response, which means the token's grant predates a

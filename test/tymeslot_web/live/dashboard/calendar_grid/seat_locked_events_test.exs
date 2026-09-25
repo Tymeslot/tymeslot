@@ -185,6 +185,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeatLockedEventsTest do
     end
 
     test "moves when dropped", %{conn: conn, event: event} do
+      # Moving a booking re-reads the host's calendar before it is written.
+      Mox.stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _from, _to ->
+        {:ok, []}
+      end)
+
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
       html =

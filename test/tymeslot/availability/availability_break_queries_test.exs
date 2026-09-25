@@ -66,51 +66,6 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueriesTest do
     end
   end
 
-  describe "get_breaks_by_weekly_availability/1" do
-    test "retrieves all breaks for a weekly availability" do
-      weekly_availability = insert(:weekly_availability)
-
-      break1 =
-        insert(:availability_break, weekly_availability: weekly_availability, sort_order: 1)
-
-      break2 =
-        insert(:availability_break, weekly_availability: weekly_availability, sort_order: 0)
-
-      _other_break = insert(:availability_break)
-
-      result = AvailabilityBreakQueries.get_breaks_by_weekly_availability(weekly_availability.id)
-
-      assert length(result) == 2
-      assert Enum.map(result, & &1.id) == [break2.id, break1.id]
-    end
-
-    test "returns breaks in sort_order ascending order" do
-      weekly_availability = insert(:weekly_availability)
-
-      break1 =
-        insert(:availability_break, weekly_availability: weekly_availability, sort_order: 2)
-
-      break2 =
-        insert(:availability_break, weekly_availability: weekly_availability, sort_order: 0)
-
-      break3 =
-        insert(:availability_break, weekly_availability: weekly_availability, sort_order: 1)
-
-      result = AvailabilityBreakQueries.get_breaks_by_weekly_availability(weekly_availability.id)
-
-      assert Enum.map(result, & &1.sort_order) == [0, 1, 2]
-      assert Enum.map(result, & &1.id) == [break2.id, break3.id, break1.id]
-    end
-
-    test "returns empty list when no breaks exist" do
-      weekly_availability = insert(:weekly_availability)
-
-      result = AvailabilityBreakQueries.get_breaks_by_weekly_availability(weekly_availability.id)
-
-      assert result == []
-    end
-  end
-
   describe "delete_break/1" do
     test "deletes an existing break" do
       break = insert(:availability_break)
@@ -210,57 +165,7 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueriesTest do
     end
   end
 
-  describe "reorder_breaks/2" do
-    test "updates sort order for breaks" do
-      weekly_availability = insert(:weekly_availability)
-
-      break1 =
-        insert(:availability_break, weekly_availability: weekly_availability, sort_order: 0)
-
-      break2 =
-        insert(:availability_break, weekly_availability: weekly_availability, sort_order: 1)
-
-      break3 =
-        insert(:availability_break, weekly_availability: weekly_availability, sort_order: 2)
-
-      # Reorder: break3, break1, break2
-      new_order = [break3.id, break1.id, break2.id]
-
-      assert {:ok, _result} =
-               AvailabilityBreakQueries.reorder_breaks(weekly_availability.id, new_order)
-
-      # Verify new order
-      updated_break1 = AvailabilityBreakQueries.get_break(break1.id)
-      updated_break2 = AvailabilityBreakQueries.get_break(break2.id)
-      updated_break3 = AvailabilityBreakQueries.get_break(break3.id)
-
-      assert updated_break3.sort_order == 0
-      assert updated_break1.sort_order == 1
-      assert updated_break2.sort_order == 2
-    end
-
-    test "only updates breaks belonging to the specified weekly availability" do
-      weekly_availability1 = insert(:weekly_availability)
-      weekly_availability2 = insert(:weekly_availability)
-
-      break1 =
-        insert(:availability_break, weekly_availability: weekly_availability1, sort_order: 0)
-
-      break2 =
-        insert(:availability_break, weekly_availability: weekly_availability2, sort_order: 0)
-
-      # Try to reorder break2 (different weekly availability)
-      new_order = [break2.id, break1.id]
-
-      AvailabilityBreakQueries.reorder_breaks(weekly_availability1.id, new_order)
-
-      # break2 should not be updated (belongs to different weekly availability)
-      updated_break2 = AvailabilityBreakQueries.get_break(break2.id)
-      assert updated_break2.sort_order == 0
-    end
-  end
-
-  describe "insert_changeset/1 and update_changeset/1" do
+  describe "insert_changeset/1" do
     test "insert_changeset inserts a pre-validated changeset" do
       weekly_availability = insert(:weekly_availability)
 
@@ -273,15 +178,6 @@ defmodule Tymeslot.Availability.AvailabilityBreakQueriesTest do
 
       assert {:ok, break} = AvailabilityBreakQueries.insert_changeset(changeset)
       assert break.weekly_availability_id == weekly_availability.id
-    end
-
-    test "update_changeset updates a pre-validated changeset" do
-      break = insert(:availability_break, label: "Old Label")
-
-      changeset = AvailabilityBreakSchema.changeset(break, %{label: "New Label"})
-
-      assert {:ok, updated} = AvailabilityBreakQueries.update_changeset(changeset)
-      assert updated.label == "New Label"
     end
   end
 end

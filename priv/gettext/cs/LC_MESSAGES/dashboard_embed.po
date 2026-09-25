@@ -415,3 +415,28 @@ msgstr "Nainstalujte oficiální plugin Tymeslot a vložte rezervační stránk
 #, elixir-autogen, elixir-format
 msgid "Updates every snippet below. Defaults work for most embeds - adjust when your site needs them."
 msgstr "Aktualizuje všechny úryvky kódu níže. Výchozí hodnoty vyhovují většině vložení – upravte je, jen když to váš web potřebuje."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Booking Preview"
+msgstr "Náhled rezervace"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Booking widget is still loading. Please try again in a second."
+msgstr "Rezervační widget se ještě načítá. Zkuste to prosím znovu za vteřinu."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Click to test the booking modal"
+msgstr "Kliknutím vyzkoušíte rezervační okno"
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Preview only: this link opens in test mode and stops working after an hour. Copy the link to share from the Embed Options tab."
+msgstr "Pouze náhled: tento odkaz se otevře v testovacím režimu a po hodině přestane fungovat. Odkaz ke sdílení zkopírujte na kartě „Možnosti vložení“."
+
+#: lib/tymeslot_web/live/dashboard/embed_settings/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "The preview is disabled because your booking link is currently deactivated."
+msgstr "Náhled je vypnutý, protože váš rezervační odkaz je momentálně neaktivní."

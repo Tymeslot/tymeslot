@@ -1,17 +1,20 @@
 defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerReauthTest do
   @moduledoc """
-  A sync worker that encounters a credential it cannot decrypt must flag the
-  integration as `needs_reauth` and complete the Oban job with `{:discard, _}`
-  — never crash. Once the user reconnects, the flag must clear so the
-  sweep-level `needs_reauth` filter doesn't keep the integration stranded.
+  A sync worker that encounters a credential it cannot decrypt, or one Google
+  itself rejects, must flag the integration as `needs_reauth` and complete the
+  Oban job with `{:discard, _}` — never crash. Once the user reconnects, the
+  flag must clear so the sweep-level `needs_reauth` filter doesn't keep the
+  integration stranded.
   """
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
 
   @moduletag :workers
   @moduletag :calendar
   @moduletag :security
 
   use Oban.Testing, repo: Tymeslot.Repo
+
+  import Mox
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -45,6 +48,77 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerReauthTest do
       reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert reloaded.needs_reauth == true
       assert reloaded.sync_error =~ "could not be decrypted"
+    end
+  end
+
+  describe "perform/1 when Google rejects the stored credentials" do
+    setup :verify_on_exit!
+
+    # The scheduled probe reaches the same verdict on its own cadence, but the
+    # 15-minute sweep would re-queue this job several more times first, each
+    # one refused identically. Flagging removes the integration from the
+    # sweep's population on the first refusal instead.
+    test "flags for reconnection rather than discarding silently" do
+      integration = insert(:calendar_integration, provider: "google", is_active: true)
+
+      refute integration.needs_reauth
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:error, :unauthorized, "Token revoked"}
+      end)
+
+      assert {:discard, reason} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert reason =~ "reauthentication"
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert reloaded.needs_reauth == true
+      assert reloaded.sync_error =~ "Google rejected the stored credentials"
+    end
+
+    test "flags for reconnection when the bootstrap is the call that is refused" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          is_active: true,
+          google_sync_token: nil
+        )
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:error, :no_sync_token}
+      end)
+
+      expect(GoogleCalendarAPIMock, :bootstrap_sync, fn _integration ->
+        {:error, :unauthorized, "Token revoked"}
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert Repo.get!(CalendarIntegrationSchema, integration.id).needs_reauth == true
+    end
+
+    # Quota exhaustion and a Calendar-less account are classified ahead of
+    # `:unauthorized` in the API client, so neither should ever reach the
+    # reconnection path — a rate-limited account has nothing to reconnect.
+    test "leaves a rate-limited integration connected" do
+      integration = insert(:calendar_integration, provider: "google", is_active: true)
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:error, :rate_limited, "Quota exceeded"}
+      end)
+
+      assert {:error, _reason} =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert Repo.get!(CalendarIntegrationSchema, integration.id).needs_reauth == false
     end
   end
 

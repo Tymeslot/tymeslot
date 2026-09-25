@@ -36,9 +36,11 @@ defmodule Tymeslot.Emails.EmailService do
           required(:location_type) => atom(),
           required(:meeting_type) => String.t(),
           optional(:attendee_locale) => String.t(),
+          optional(:organizer_locale) => String.t(),
           optional(:start_time_attendee_tz) => DateTime.t(),
           optional(:start_time_owner_tz) => DateTime.t(),
           optional(:attendee_video_url) => String.t() | nil,
+          optional(:guest_video_url) => String.t() | nil,
           optional(:reschedule_url) => String.t(),
           optional(:cancel_url) => String.t(),
           optional(:booking_url) => String.t(),
@@ -67,13 +69,24 @@ defmodule Tymeslot.Emails.EmailService do
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_booking_request_received(meeting), to: AppointmentEmails
 
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_booking_request_received(meeting, opts), to: AppointmentEmails
+
   @doc "Asks the host to approve or decline a booking request, or reminds them."
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_booking_approval_request(variant, meeting, urls, locale), to: AppointmentEmails
 
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_booking_approval_request(variant, meeting, urls, locale, opts),
+    to: AppointmentEmails
+
   @doc "Tells an invitee a booking request was declined or expired."
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_booking_request_outcome(variant, meeting), to: AppointmentEmails
+
+  @doc "Tells the host a booking was cancelled because a reschedule request lapsed."
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_reschedule_request_expired(meeting, locale), to: AppointmentEmails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_guest_confirmation(guest_email, appointment_details), to: AppointmentEmails
@@ -85,6 +98,16 @@ defmodule Tymeslot.Emails.EmailService do
                 old_event
               ),
               to: AppointmentEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_guest_reschedule(guest_email, appointment_details), to: AppointmentEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_guest_cancellation(guest_email, appointment_details), to: AppointmentEmails
+
+  @doc "Sends the reminder for an upcoming meeting to one of its guests."
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_guest_reminder(guest_email, appointment_details), to: AppointmentEmails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_appointment_confirmations(appointment_details), to: AppointmentEmails
@@ -136,6 +159,15 @@ defmodule Tymeslot.Emails.EmailService do
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_password_reset(user, reset_url), to: AuthEmails
 
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_no_password_to_reset(user, sign_in_url), to: AuthEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_signup_attempt_notice(user, sign_in_url, reset_url), to: AuthEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_social_signup_confirmation(recipient, provider, confirm_url), to: AuthEmails
+
   # Account emails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour
@@ -178,6 +210,10 @@ defmodule Tymeslot.Emails.EmailService do
 
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_integration_paused_notification(user, integration, type, cutoff_days),
+    to: IntegrationEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_video_room_creation_error_notification(user, integration),
     to: IntegrationEmails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour

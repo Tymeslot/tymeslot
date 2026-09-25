@@ -11,14 +11,14 @@ defmodule Tymeslot.Auth.SignupSecurity do
      reCAPTCHA so distributed bots cannot burn Google API quota.
   3. **reCAPTCHA v3** — score-based human verification.
 
-  This module owns the gate decision only. The caller (typically the auth
-  LiveView) is responsible for the subsequent state transitions, flash
-  messages, and the actual `Tymeslot.Auth.AuthActions.register_user/2`
-  call once the gate returns `:ok`.
+  This module owns the gate decision only. `Tymeslot.Auth.Registration`
+  runs it at the start of every sign-up, so the signup rate limit is charged
+  exactly once per attempt; the caller then answers the outcome.
   """
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Auth.RateLimit
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.SecurityLogger
@@ -38,19 +38,27 @@ defmodule Tymeslot.Auth.SignupSecurity do
   @doc """
   Decides whether a signup submission should proceed to registration.
 
+  `opts` carries the request context (`:ip`, `:user_agent`) and `:bot_checks`
+  (default `true`): `false` skips the honeypot and reCAPTCHA, which only a
+  browser form can satisfy, for trusted server-side callers. The rate limit
+  always applies.
+
   Returns:
   - `:honeypot` — bot-filled honeypot, caller should fake success
   - `:ok` — human submission within rate limits, caller may register
   - `{:error, kind, message}` — rejected by rate limiter or reCAPTCHA
   """
-  @spec gate(map(), metadata()) :: gate_result()
-  def gate(user_params, metadata) do
-    if honeypot_tripped?(user_params) do
+  @spec gate(map(), keyword()) :: gate_result()
+  def gate(user_params, opts) do
+    metadata = opts |> Keyword.take([:ip, :user_agent]) |> Map.new()
+    bot_checks? = Keyword.get(opts, :bot_checks, true)
+
+    if bot_checks? and honeypot_tripped?(user_params) do
       log_honeypot_signup(metadata)
       :honeypot
     else
       with :ok <- check_rate_limit(user_params, metadata) do
-        verify_recaptcha(user_params, metadata)
+        if bot_checks?, do: verify_recaptcha(user_params, metadata), else: :ok
       end
     end
   end
@@ -59,7 +67,7 @@ defmodule Tymeslot.Auth.SignupSecurity do
   Logs a honeypot-triggered "resend verification" attempt — the bot has
   followed the decoy success path and is requesting another email.
   """
-  @spec log_honeypot_resend(metadata()) :: :ok
+  @spec log_honeypot_resend(metadata() | keyword()) :: :ok
   def log_honeypot_resend(metadata) do
     SecurityLogger.log_security_event("signup_honeypot_resend", %{
       ip_address: metadata[:ip],
@@ -85,18 +93,12 @@ defmodule Tymeslot.Auth.SignupSecurity do
     email = user_params["email"]
 
     if is_binary(email) and email != "" do
-      case RateLimiter.check_signup_rate_limit(email, metadata[:ip]) do
-        :ok ->
-          :ok
-
-        {:error, :rate_limited, reason} ->
-          SecurityLogger.log_rate_limit_violation(email, "signup", %{
-            ip_address: metadata[:ip],
-            user_agent: metadata[:user_agent]
-          })
-
-          {:error, :rate_limited, reason}
-      end
+      RateLimit.check(RateLimiter.check_signup_rate_limit(email, metadata[:ip]),
+        event: "signup",
+        identifier: email,
+        ip: metadata[:ip],
+        user_agent: metadata[:user_agent]
+      )
     else
       {:error, :rate_limited,
        dgettext("auth", "Too many signup attempts. Please try again later.")}

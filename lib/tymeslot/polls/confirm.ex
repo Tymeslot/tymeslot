@@ -10,6 +10,7 @@ defmodule Tymeslot.Polls.Confirm do
   subscribers are notified.
   """
 
+  alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.Emails.EmailScheduler.PollScheduler
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -28,6 +29,7 @@ defmodule Tymeslot.Polls.Confirm do
           | :slot_in_past
           | :no_participants
           | :slot_taken
+          | :time_off
           | Ecto.Changeset.t()
           | String.t()
 
@@ -35,8 +37,14 @@ defmodule Tymeslot.Polls.Confirm do
   Confirms `poll_id` on `slot_id` for its owner `user_id`.
 
   Returns `{:ok, meeting}` on success, or `{:error, reason}` when the poll is
-  missing, not open, the slot is invalid or past, there are no participants, the
-  slot is already taken for the host, or the underlying booking fails.
+  missing, not open, the slot is invalid or past, the slot falls inside the
+  host's time off (`:time_off`), there are no participants, the slot is already
+  taken for the host, or the underlying booking fails.
+
+  Time off is checked here rather than in `Bookings.CreateAdHoc`, which also
+  serves the calendar grid and deliberately skips every schedule rule. A poll
+  is answered days after the host proposed its times, so a holiday entered in
+  between must still stop it being confirmed into.
   """
   @spec confirm(Ecto.UUID.t(), Ecto.UUID.t(), integer()) ::
           {:ok, Tymeslot.Meetings.MeetingSchema.t()} | {:error, reason()}
@@ -64,6 +72,7 @@ defmodule Tymeslot.Polls.Confirm do
     with {:ok, poll} <- lock_poll(poll_id, user_id),
          :ok <- ensure_open(poll),
          {:ok, slot} <- resolve_slot(poll, slot_id),
+         :ok <- ensure_outside_time_off(poll, slot),
          {:ok, primary} <- resolve_primary(poll, slot),
          {:ok, meeting} <- create_meeting(poll, slot, primary),
          {:ok, _poll} <-
@@ -108,6 +117,13 @@ defmodule Tymeslot.Polls.Confirm do
       {:ok, slot}
     else
       {:error, :slot_in_past}
+    end
+  end
+
+  defp ensure_outside_time_off(poll, slot) do
+    case TimeOff.clashing_ranges(poll.user_id, [{slot.start_time, slot.end_time}]) do
+      [] -> :ok
+      [_clash] -> {:error, :time_off}
     end
   end
 

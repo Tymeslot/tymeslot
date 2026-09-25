@@ -26,6 +26,30 @@ defmodule Tymeslot.Integrations.Calendar.Google.ConferenceData do
   end
 
   @doc """
+  The `conference_data` value that takes an event's conference off it on an
+  update: the event is written with `conferenceDataVersion=1` and no
+  `conferenceData`, which Google's full-replace `events.update` reads as none.
+  """
+  @spec remove() :: :remove
+  def remove, do: :remove
+
+  @doc """
+  Extracts the Google Meet URL from a raw Google Calendar event, the video
+  entry point of its `conferenceData`. Returns `nil` when it has none, which
+  includes a conference Google is still creating.
+  """
+  @spec meet_url_from_google_event(map()) :: String.t() | nil
+  def meet_url_from_google_event(%{"conferenceData" => %{"entryPoints" => entry_points}})
+      when is_list(entry_points) do
+    case Enum.find(entry_points, &(&1["entryPointType"] == "video")) do
+      %{"uri" => uri} when is_binary(uri) and uri != "" -> uri
+      _other -> nil
+    end
+  end
+
+  def meet_url_from_google_event(_event), do: nil
+
+  @doc """
   Extracts the Google Meet URL from the converted-event map returned by
   `Google.Provider.convert_event/1`.
 

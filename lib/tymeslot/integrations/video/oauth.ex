@@ -61,16 +61,24 @@ defmodule Tymeslot.Integrations.Video.OAuth do
   def reconnect_url(provider, user_id, opts), do: build(provider, user_id, opts)
 
   defp build(provider, user_id, opts) do
-    case Map.fetch(@providers, provider) do
-      {:ok, config} -> {:ok, url_for(provider, user_id, redirect_uri(config), opts)}
-      :error -> {:error, "Provider does not support OAuth"}
+    if supported?(provider) do
+      {:ok, url_for(provider, user_id, redirect_uri(provider), opts)}
+    else
+      {:error, "Provider does not support OAuth"}
     end
   rescue
     error -> {:error, format_error(provider, error)}
   end
 
-  defp redirect_uri(%{callback: callback}),
-    do: "#{Endpoint.url()}/auth/#{callback}/video/callback"
+  @doc """
+  The provider's OAuth callback URL. The authorisation request and the code
+  exchange must name the same URI, so both build it here.
+  """
+  @spec redirect_uri(provider()) :: String.t()
+  def redirect_uri(provider) do
+    %{callback: callback} = Map.fetch!(@providers, provider)
+    "#{Endpoint.url()}/auth/#{callback}/video/callback"
+  end
 
   # Each provider's helper takes its options last; Google additionally needs
   # its scopes stated explicitly, which is the only shape difference worth a

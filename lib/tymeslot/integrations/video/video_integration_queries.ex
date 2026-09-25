@@ -261,6 +261,25 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   end
 
   @doc """
+  Lists the account keys of the user's integrations for `provider`, active or
+  not, leaving out the integration `except_id` (`nil` leaves out none).
+  """
+  @spec list_account_keys_for_user(integer(), String.t(), integer() | nil) :: [String.t()]
+  def list_account_keys_for_user(user_id, provider, except_id)
+      when is_integer(user_id) and is_binary(provider) do
+    VideoIntegrationSchema
+    |> exclude_deleted()
+    |> where([v], v.user_id == ^user_id and v.provider == ^provider)
+    |> where([v], not is_nil(v.provider_account_id))
+    |> except_integration(except_id)
+    |> select([v], v.provider_account_id)
+    |> Repo.all()
+  end
+
+  defp except_integration(query, nil), do: query
+  defp except_integration(query, id), do: where(query, [v], v.id != ^id)
+
+  @doc """
   Creates a new video integration.
   """
   @spec create(map()) :: {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
@@ -286,20 +305,184 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   end
 
   @doc """
+  Updates a video integration and removes the named stored credentials in the
+  same write, leaving any outstanding `needs_reauth` flag in place.
+
+  `fields` are virtual credential names (`:client_id`), as in
+  `VideoIntegrationSchema.remove_credentials/2`.
+  """
+  @spec update_removing_credentials(VideoIntegrationSchema.t(), map(), [atom()]) ::
+          {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_removing_credentials(%VideoIntegrationSchema{} = integration, attrs, fields) do
+    integration
+    |> VideoIntegrationSchema.changeset(attrs)
+    |> VideoIntegrationSchema.remove_credentials(fields)
+    |> Repo.update()
+  end
+
+  @doc """
   Updates a video integration with credentials its owner has just supplied,
-  clearing `needs_reauth`.
+  clearing `needs_reauth`, the message explaining it, and any recorded room
+  creation error.
+
+  `sync_error` is written alongside `needs_reauth` by `mark_needs_reauth/2` and
+  describes why the integration stopped working. Leaving it behind outlives the
+  flag it belongs to, and the row then carries an explanation of a problem it no
+  longer has: the dashboard reads it for the reconnect prompt's reason, and the
+  reauth email for the reason it quotes.
 
   Only reconnect paths may use this: an OAuth callback, or a credential form.
   See `Tymeslot.Integrations.Calendar.CalendarIntegrationQueries.update_credentials/2`
-  for why this cannot be inferred from the changeset.
+  for why this cannot be inferred from the changeset. A Nextcloud Talk edit
+  reaches it only once the new connection is proven against the server, which
+  also checked the account's right to create conversations, so the refusal
+  recorded against the old connection no longer describes it. What the owner
+  was emailed about is forgotten with it: a refusal by the new connection is
+  news, whoever the old one belonged to.
   """
   @spec update_credentials(VideoIntegrationSchema.t(), map()) ::
           {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def update_credentials(%VideoIntegrationSchema{} = integration, attrs) do
-    integration
-    |> VideoIntegrationSchema.changeset(attrs)
-    |> Changeset.put_change(:needs_reauth, false)
-    |> Repo.update()
+    with {:ok, updated, _was_flagged?} <- reconnect(integration, attrs), do: {:ok, updated}
+  end
+
+  @doc """
+  Updates a video integration with credentials proven to work, as
+  `update_credentials/2` does, and also says whether the row was flagged for
+  reconnection when it was written.
+
+  The flag is read from the row under a lock in the same transaction as the
+  write, not from `integration`: a proof can take a network round trip, during
+  which a refusal elsewhere may flag the row. For the same reason the cleared
+  fields are always written, even when `integration` already shows them clear.
+  """
+  @spec reconnect(VideoIntegrationSchema.t(), map()) ::
+          {:ok, VideoIntegrationSchema.t(), boolean()} | {:error, Ecto.Changeset.t()}
+  def reconnect(%VideoIntegrationSchema{id: id} = integration, attrs) do
+    result =
+      Repo.transaction(fn ->
+        was_flagged? =
+          VideoIntegrationSchema
+          |> where([v], v.id == ^id)
+          |> lock("FOR UPDATE")
+          |> select([v], v.needs_reauth)
+          |> Repo.one()
+
+        changeset =
+          integration
+          |> VideoIntegrationSchema.changeset(attrs)
+          |> Changeset.force_change(:needs_reauth, false)
+          |> Changeset.force_change(:sync_error, nil)
+          |> Changeset.force_change(:room_creation_error, nil)
+          |> Changeset.force_change(:room_creation_error_since, nil)
+          |> Changeset.force_change(:room_creation_error_notices, %{})
+
+        case Repo.update(changeset) do
+          {:ok, updated} -> {updated, was_flagged? == true}
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+      end)
+
+    case result do
+      {:ok, {updated, was_flagged?}} -> {:ok, updated, was_flagged?}
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  Records that the provider refuses to create rooms for the integration `id`
+  with `code`, stamping the time only when the code is new, so the time stays
+  the one the refusal was first seen.
+  """
+  @spec record_room_creation_error(integer(), atom()) :: :ok
+  def record_room_creation_error(id, code) when is_integer(id) and is_atom(code) do
+    VideoIntegrationSchema
+    |> where([v], v.id == ^id)
+    |> where([v], is_nil(v.room_creation_error) or v.room_creation_error != ^code)
+    |> Repo.update_all(
+      set: [room_creation_error: code, room_creation_error_since: DateTime.utc_now(:second)]
+    )
+
+    :ok
+  end
+
+  @doc """
+  Clears the room creation error recorded for the integration `id`.
+  """
+  @spec clear_room_creation_error(integer()) :: :ok
+  def clear_room_creation_error(id) when is_integer(id) do
+    VideoIntegrationSchema
+    |> where([v], v.id == ^id and not is_nil(v.room_creation_error))
+    |> Repo.update_all(set: [room_creation_error: nil, room_creation_error_since: nil])
+
+    :ok
+  end
+
+  @doc """
+  Claims the email about room creation error `code` for the integration `id`,
+  stamping `now` as the time the owner was told: returns `true` for the caller
+  that claims it, and `false` while a claim made since `resend_after` stands.
+
+  One conditional update, so concurrent callers serialise on the row and only
+  the first one's condition still holds. `release_room_creation_error_notice/2`
+  gives a claim back when its email never went out.
+  """
+  @spec claim_room_creation_error_notice(integer(), atom(), DateTime.t(), DateTime.t()) ::
+          boolean()
+  def claim_room_creation_error_notice(id, code, now, resend_after)
+      when is_integer(id) and is_atom(code) do
+    code = Atom.to_string(code)
+
+    {count, _rows} =
+      VideoIntegrationSchema
+      |> where([v], v.id == ^id)
+      |> where(
+        [v],
+        fragment(
+          "? -> ? IS NULL OR (? ->> ?)::timestamptz < ?::timestamptz",
+          v.room_creation_error_notices,
+          type(^code, :string),
+          v.room_creation_error_notices,
+          type(^code, :string),
+          type(^DateTime.to_iso8601(resend_after), :string)
+        )
+      )
+      |> update([v],
+        set: [
+          room_creation_error_notices:
+            fragment(
+              "jsonb_set(coalesce(?, '{}'::jsonb), array[?], to_jsonb(?::text))",
+              v.room_creation_error_notices,
+              type(^code, :string),
+              type(^DateTime.to_iso8601(now), :string)
+            )
+        ]
+      )
+      |> Repo.update_all([])
+
+    count == 1
+  end
+
+  @doc """
+  Gives back the claim on the email about `code` for the integration `id`, for
+  an email that was never sent: the next refusal with that code claims it
+  again.
+  """
+  @spec release_room_creation_error_notice(integer(), atom()) :: :ok
+  def release_room_creation_error_notice(id, code) when is_integer(id) and is_atom(code) do
+    code = Atom.to_string(code)
+
+    VideoIntegrationSchema
+    |> where([v], v.id == ^id)
+    |> update([v],
+      set: [
+        room_creation_error_notices:
+          fragment("? - ?", v.room_creation_error_notices, type(^code, :string))
+      ]
+    )
+    |> Repo.update_all([])
+
+    :ok
   end
 
   @doc """

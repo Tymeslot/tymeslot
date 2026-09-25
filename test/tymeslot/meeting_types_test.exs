@@ -362,23 +362,6 @@ defmodule Tymeslot.MeetingTypesTest do
     end
   end
 
-  describe "when getting meeting type by ID only" do
-    test "returns meeting type when it exists" do
-      user = insert(:user)
-      meeting_type = insert(:meeting_type, user: user)
-
-      result = MeetingTypes.get_meeting_type!(meeting_type.id)
-
-      assert result.id == meeting_type.id
-    end
-
-    test "raises when meeting type does not exist" do
-      assert_raise Ecto.NoResultsError, fn ->
-        MeetingTypes.get_meeting_type!(999_999)
-      end
-    end
-  end
-
   describe "when reordering meeting types" do
     test "reorders meeting types for a user" do
       user = insert(:user)

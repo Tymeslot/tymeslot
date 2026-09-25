@@ -70,6 +70,63 @@ defmodule Tymeslot.Security.SsrfGuardTest do
     end
   end
 
+  describe "validate_pinned/2 for plain http to an internal name, with private addresses allowed" do
+    # The https rule accepts `http://nextcloud` on the name's shape alone once
+    # private addresses are allowed. The shape can lie (a resolver search
+    # domain, a public `.lan`), and the request would carry credentials in
+    # clear text, so the guard confirms the name really is private.
+    setup do
+      Application.put_env(:tymeslot, :environment, :prod)
+      Application.put_env(:tymeslot, :allow_private_ips_for_calendar, true)
+      :ok
+    end
+
+    test "pins to the private addresses a single-label or internal-suffix name resolves to" do
+      Application.put_env(:tymeslot, :dns_resolver_module, SsrfGuardInternalResolver)
+
+      for url <- ["http://nextcloud/remote.php/dav", "http://talk.lan:8080", "http://cloud.local"] do
+        assert {url, {:ok, [{172, 18, 0, 5}]}} == {url, SsrfGuard.validate_pinned(url)}
+      end
+    end
+
+    test "refuses a name that resolves to a public address" do
+      Application.put_env(:tymeslot, :dns_resolver_module, SsrfGuardPublicInternalResolver)
+
+      assert {:error, _reason} = SsrfGuard.validate_pinned("http://nextcloud/remote.php/dav")
+
+      assert {:error, _reason} =
+               SsrfGuard.validate_pinned("http://talk.lan", allow_private: true)
+    end
+
+    test "refuses when the resolver cannot confirm the name is internal" do
+      Application.put_env(:tymeslot, :dns_resolver_module, SsrfGuardOkResolver)
+
+      assert {:error, :internal_name_unverified} =
+               SsrfGuard.validate_pinned("http://nextcloud/remote.php/dav")
+    end
+
+    test "leaves https, localhost and address literals to the opt-out without resolving" do
+      Application.put_env(:tymeslot, :dns_resolver_module, SsrfGuardPublicInternalResolver)
+
+      for url <- [
+            "https://nextcloud/remote.php/dav",
+            "http://localhost:8080",
+            "http://172.18.0.5",
+            "http://[fd00::5]",
+            "http://cloud.example.com"
+          ] do
+        assert {url, {:ok, []}} == {url, SsrfGuard.validate_pinned(url)}
+      end
+    end
+
+    test "is not applied outside production" do
+      Application.put_env(:tymeslot, :environment, :dev)
+      Application.put_env(:tymeslot, :dns_resolver_module, SsrfGuardPublicInternalResolver)
+
+      assert {:ok, []} = SsrfGuard.validate_pinned("http://nextcloud/remote.php/dav")
+    end
+  end
+
   describe "validate/2 (non-production)" do
     setup do
       Application.put_env(:tymeslot, :environment, :test)
@@ -157,4 +214,27 @@ defmodule SsrfGuardResolvingResolver do
 
   @impl Tymeslot.Security.DnsResolutionBehaviour
   def resolve_public(_url, _opts), do: {:ok, [{93, 184, 216, 34}]}
+end
+
+defmodule SsrfGuardInternalResolver do
+  @moduledoc false
+  @behaviour Tymeslot.Security.DnsResolutionBehaviour
+
+  @impl Tymeslot.Security.DnsResolutionBehaviour
+  def check_private_ip(_url, _opts), do: :ok
+
+  @impl Tymeslot.Security.DnsResolutionBehaviour
+  def resolve_internal(_url, _opts), do: {:ok, [{172, 18, 0, 5}]}
+end
+
+defmodule SsrfGuardPublicInternalResolver do
+  @moduledoc false
+  @behaviour Tymeslot.Security.DnsResolutionBehaviour
+
+  @impl Tymeslot.Security.DnsResolutionBehaviour
+  def check_private_ip(_url, _opts), do: :ok
+
+  @impl Tymeslot.Security.DnsResolutionBehaviour
+  def resolve_internal(_url, _opts),
+    do: {:error, "Plain http to an internal name must resolve to a private network address"}
 end

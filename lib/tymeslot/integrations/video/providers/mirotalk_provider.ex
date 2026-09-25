@@ -13,11 +13,13 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder
+  alias Tymeslot.Integrations.Video.Providers.SsrfOptions
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Security.SsrfGuard
   alias Tymeslot.Security.UrlValidation
@@ -121,7 +123,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   defp test_api_connection(base_url, api_key) do
     headers = build_api_headers(api_key)
-    options = [timeout: 5_000] ++ HttpHelpers.ssrf_options()
+    options = [timeout: 5_000] ++ SsrfOptions.request_options()
 
     # Always try HTTPS first; if it fails due to network/connection, fall back to HTTP
     handle_api_response(
@@ -269,7 +271,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
     # Try HTTPS first, then HTTP
     case HttpHelpers.try_https_then_http(base_url, "/api/v1/meeting", fn url ->
-           Config.http_client_module().post(url, "", headers, HttpHelpers.ssrf_options())
+           Config.http_client_module().post(url, "", headers, SsrfOptions.request_options())
          end) do
       {:ok, %Req.Response{status: 200, body: body}} ->
         case Jason.decode(body) do
@@ -326,6 +328,11 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   defp presence(nil), do: nil
   defp presence(""), do: nil
   defp presence(value), do: value
+
+  # The slowest creation tries https and then falls back to plain http, both at
+  # the HTTP client's default timeouts.
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def room_creation_budget_ms, do: HTTPClient.request_budget_ms(:post) * 2
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, participant_email, role, meeting_time) do
@@ -430,8 +437,16 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     }
   end
 
+  # A bare `"talk."` used to sit here, which claimed every host containing it:
+  # Nextcloud Talk on `talk.example.org`, and even `cloud.mytalk.de`. These
+  # patterns decide whose `extract_room_id/1` parses a stored link, and
+  # `Tymeslot.CalendarGrid.EventVideo` recovers a room id that way before
+  # deleting the room an event no longer uses, so claiming another provider's
+  # URL turns that cleanup into a delete with a room id parsed by the wrong
+  # rules. Self-hosted instances on arbitrary domains stay recognised through
+  # `/join/`, the path MiroTalk's own meeting URLs carry.
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
-  def url_patterns, do: ["mirotalk", "talk."]
+  def url_patterns, do: ["mirotalk", "/join/"]
 
   defp domain_not_found_message,
     do: dgettext("dashboard_integrations", "Domain not found - Please check the URL")

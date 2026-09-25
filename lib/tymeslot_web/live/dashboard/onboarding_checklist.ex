@@ -13,9 +13,9 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
 
   Gate rendering on `visible?/2`: the widget hides once every item is done or the
   host has closed it, so a fully set-up user never sees it and no empty container
-  is left behind. `toggleable_item?/1` lets the owning LiveView validate a toggled
-  key at the event boundary before persisting it — deterministic provider items
-  are rejected there, since they can only complete from a real connection.
+  is left behind. Which items may be ticked by hand is a rule of
+  `Tymeslot.Onboarding.manual_dashboard_setup_items/0`; the catalogue here only
+  mirrors it, giving each manual item a checkbox and each provider item none.
   """
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
@@ -34,14 +34,6 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklist do
     not Onboarding.dashboard_setup_dismissed?(current_user) and
       Enum.any?(items(integration_status, current_user), &(not &1.done))
   end
-
-  @doc """
-  Whether `key` is an item the host may tick off by hand. Deterministic items —
-  connecting a calendar or video provider — are excluded: they complete only
-  from real state and can never be marked done manually.
-  """
-  @spec toggleable_item?(String.t()) :: boolean()
-  def toggleable_item?(key), do: Enum.any?(catalog(), &(&1.key == key and is_nil(&1.auto)))
 
   attr :integration_status, :map, required: true
   attr :current_user, :map, required: true

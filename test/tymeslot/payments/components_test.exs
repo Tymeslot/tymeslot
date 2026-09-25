@@ -1,5 +1,6 @@
 defmodule Tymeslot.Payments.ComponentsTest do
-  use Tymeslot.DataCase, async: true
+  # async: false: :stripe_provider is read through Payments.Config by every payment path.
+  use Tymeslot.DataCase, async: false
   @moduletag :payments
 
   import Mox

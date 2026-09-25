@@ -26,6 +26,7 @@ msgstr "Сума"
 msgid "Amount exceeds the remaining refundable balance."
 msgstr "Сума перевищує залишок, доступний для повернення."
 
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee"
@@ -179,6 +180,7 @@ msgstr "Оплата зустрічей для цього облікового �
 msgid "Meeting payments require an upgraded plan."
 msgstr "Для оплати зустрічей потрібен вищий тарифний план."
 
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting type"
@@ -254,6 +256,7 @@ msgstr "Причина: %{reason}"
 msgid "Recent payments"
 msgstr "Останні платежі"
 
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #: lib/tymeslot_web/live/dashboard/payments_settings/payments_table.ex
 #, elixir-autogen, elixir-format
 msgid "Refund"
@@ -322,14 +325,6 @@ msgstr "Обліковий запис Stripe від'єднано."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
-msgid "Stripe account disconnected. %{count} pending booking cancelled."
-msgid_plural "Stripe account disconnected. %{count} pending bookings cancelled."
-msgstr[0] "Обліковий запис Stripe від'єднано. %{count} незавершене бронювання скасовано."
-msgstr[1] "Обліковий запис Stripe від'єднано. %{count} незавершені бронювання скасовано."
-msgstr[2] "Обліковий запис Stripe від'єднано. %{count} незавершених бронювань скасовано."
-
-#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
-#, elixir-autogen, elixir-format
 msgid "Stripe has not yet captured a charge for this booking. Try again in a moment."
 msgstr "Stripe ще не стягнув плату за це бронювання. Спробуйте ще раз за мить."
 
@@ -395,3 +390,62 @@ msgstr "Повернути кошти учаснику %{attendee} за %{meetin
 #, elixir-autogen, elixir-format
 msgid "Changing the currency will reset every paid event type to free - existing prices are recorded in the previous currency and would otherwise be charged at the new one."
 msgstr "Зміна валюти зробить усі платні типи подій безкоштовними - поточні ціни збережено в попередній валюті, інакше кошти стягувалися б у новій."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Скасовано"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Outstanding"
+msgstr "До повернення"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Refund in Stripe"
+msgstr "Повернути у Stripe"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds outstanding"
+msgstr "Кошти до повернення"
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "These bookings were cancelled while you still held the attendee's money. Cancelling never refunds on its own."
+msgstr "Ці бронювання було скасовано, коли кошти учасника ще залишалися у вас. Скасування саме собою ніколи не повертає кошти."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} pending booking cancelled."
+msgid_plural "%{count} pending bookings cancelled."
+msgstr[0] "Скасовано %{count} незавершене бронювання."
+msgstr[1] "Скасовано %{count} незавершені бронювання."
+msgstr[2] "Скасовано %{count} незавершених бронювань."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} refund is still outstanding and must now be issued from your Stripe dashboard."
+msgid_plural "%{count} refunds are still outstanding and must now be issued from your Stripe dashboard."
+msgstr[0] "%{count} повернення коштів досі не виконано, і тепер його потрібно здійснити з панелі керування Stripe."
+msgstr[1] "%{count} повернення коштів досі не виконано, і тепер їх потрібно здійснити з панелі керування Stripe."
+msgstr[2] "%{count} повернень коштів досі не виконано, і тепер їх потрібно здійснити з панелі керування Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Showing the %{shown} oldest of %{total} outstanding refunds."
+msgstr "Показано %{shown} найдавніших із %{total} невиконаних повернень коштів."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
+#, elixir-autogen, elixir-format
+msgid "You still owe %{count} refund totalling %{total}. Disconnecting does not issue it, and afterwards you will have to refund it from your Stripe dashboard."
+msgid_plural "You still owe %{count} refunds totalling %{total}. Disconnecting does not issue them, and afterwards you will have to refund them from your Stripe dashboard."
+msgstr[0] "За вами досі %{count} повернення коштів на суму %{total}. Від'єднання його не виконує, і потім вам доведеться повернути кошти з панелі керування Stripe."
+msgstr[1] "За вами досі %{count} повернення коштів на суму %{total}. Від'єднання їх не виконує, і потім вам доведеться повернути кошти з панелі керування Stripe."
+msgstr[2] "За вами досі %{count} повернень коштів на суму %{total}. Від'єднання їх не виконує, і потім вам доведеться повернути кошти з панелі керування Stripe."
+
+#: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
+#, elixir-autogen, elixir-format
+msgid "Your Stripe account is not connected, so these refunds have to be issued from your Stripe dashboard. The money is still owed."
+msgstr "Ваш обліковий запис Stripe не підключено, тому ці повернення коштів потрібно здійснити з панелі керування Stripe. Кошти досі не повернуто."

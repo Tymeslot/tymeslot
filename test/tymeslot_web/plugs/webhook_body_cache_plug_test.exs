@@ -9,9 +9,7 @@ defmodule TymeslotWeb.Plugs.WebhookBodyCachePlugTest do
   empty string and accept forged payloads.
   """
 
-  # async: false — the :webhook_paths override test mutates application
-  # env, so concurrent tests would race on the config read.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   @moduletag :plugs
   @moduletag :webhooks
@@ -28,7 +26,7 @@ defmodule TymeslotWeb.Plugs.WebhookBodyCachePlugTest do
   end
 
   describe "read_body/2 — webhook paths" do
-    test "assigns :raw_body when the request path matches a configured webhook path" do
+    test "assigns :raw_body when the request path is a signed webhook route" do
       payload = ~s({"type":"checkout.session.completed"})
       conn = build_conn_with_body("/webhooks/stripe", payload)
 
@@ -44,30 +42,16 @@ defmodule TymeslotWeb.Plugs.WebhookBodyCachePlugTest do
       refute Map.has_key?(conn.assigns, :raw_body)
     end
 
-    test "respects the :webhook_paths application config override" do
-      # Overriding the config is the self-host seam — every Core
-      # deployment can declare its own set of signed webhook routes.
-      original = Application.get_env(:tymeslot, :webhook_paths)
-      Application.put_env(:tymeslot, :webhook_paths, ["/api/webhook/custom"])
+    test "caches the body of every signed webhook route" do
+      # Each of these verifies a signature over the raw body. Dropping the
+      # `raw_body` metadata from any of their routes would leave the
+      # controller comparing against an empty body.
+      for path <- ["/webhooks/stripe", "/webhooks/stripe/connect", "/auth/zoom/deauthorize"] do
+        conn = build_conn_with_body(path, "signed-payload")
 
-      on_exit(fn ->
-        if original == nil do
-          Application.delete_env(:tymeslot, :webhook_paths)
-        else
-          Application.put_env(:tymeslot, :webhook_paths, original)
-        end
-      end)
-
-      payload = "signed-by-custom-provider"
-      conn = build_conn_with_body("/api/webhook/custom", payload)
-
-      assert {:ok, ^payload, conn} = WebhookBodyCachePlug.read_body(conn, [])
-      assert conn.assigns[:raw_body] == payload
-
-      # The stripe path is no longer cached under the override.
-      default_conn = build_conn_with_body("/webhooks/stripe", payload)
-      assert {:ok, ^payload, default_conn} = WebhookBodyCachePlug.read_body(default_conn, [])
-      refute Map.has_key?(default_conn.assigns, :raw_body)
+        assert {:ok, "signed-payload", conn} = WebhookBodyCachePlug.read_body(conn, [])
+        assert conn.assigns[:raw_body] == "signed-payload", "#{path} body was not cached"
+      end
     end
   end
 

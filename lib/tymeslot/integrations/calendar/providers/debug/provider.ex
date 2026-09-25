@@ -20,7 +20,9 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
 
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.DebugSchedule
   alias Tymeslot.Integrations.Calendar.DebugStore
 
@@ -45,7 +47,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
     |> stored_event_from(uid)
     |> DebugStore.put_event()
 
-    {:ok, %{uid: uid}}
+    {:ok, CreatedEvent.new(uid)}
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
@@ -230,7 +232,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
       recurrence_rule: Map.get(raw, :recurrence_rule),
       reminders: Map.get(raw, :reminders) || [],
       colour: Map.get(raw, :colour),
-      attendees: Map.get(raw, :attendees) || [],
+      attendees: Enum.map(Map.get(raw, :attendees) || [], &Attendee.normalise/1),
       status: :confirmed,
       transparency: :opaque,
       created_by_tymeslot: Map.get(raw, :created_by_tymeslot, false)

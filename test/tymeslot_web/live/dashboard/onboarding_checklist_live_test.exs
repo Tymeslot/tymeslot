@@ -44,6 +44,30 @@ defmodule TymeslotWeb.Dashboard.OnboardingChecklistLiveTest do
     assert "share" in (Repo.get!(UserSchema, user.id).dashboard_setup_done_items || [])
   end
 
+  test "unticking an item restores it and persists", %{conn: conn} do
+    {conn, user} = log_in_fresh_host(conn)
+    {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
+
+    view |> element("button[phx-value-id='theme']") |> render_click()
+    assert "theme" in Repo.get!(UserSchema, user.id).dashboard_setup_done_items
+
+    view |> element("button[phx-value-id='theme']") |> render_click()
+
+    assert has_element?(view, "button[phx-value-id='theme'][aria-checked='false']")
+    assert Repo.get!(UserSchema, user.id).dashboard_setup_done_items == []
+  end
+
+  test "a forged toggle for a provider item persists nothing", %{conn: conn} do
+    {conn, user} = log_in_fresh_host(conn)
+    {:ok, view, _html} = live(conn, ~p"/dashboard/overview")
+
+    # No checkbox is rendered for it, so only a hand-crafted event can send it.
+    render_hook(view, "onboarding:toggle", %{"id" => "calendar"})
+
+    assert Repo.get!(UserSchema, user.id).dashboard_setup_done_items == []
+    assert has_element?(view, "[data-testid=onboarding-checklist]")
+  end
+
   test "dismissing the widget hides it permanently", %{conn: conn} do
     {conn, user} = log_in_fresh_host(conn)
     {:ok, view, _html} = live(conn, ~p"/dashboard/overview")

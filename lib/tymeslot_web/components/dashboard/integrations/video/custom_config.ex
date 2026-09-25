@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplateAnalyzer
+  alias Tymeslot.Integrations.Video.TemplateSyntax
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplatePreviewBox
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponents,
@@ -86,7 +86,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig do
               }
             />
 
-            <%= case TemplateAnalyzer.analyze(Map.get(@form_values, "custom_meeting_url", "")) do %>
+            <%= case TemplateSyntax.analyze(Map.get(@form_values, "custom_meeting_url", "")) do %>
               <% {:ok, :valid_template, preview, _message} -> %>
                 <TemplatePreviewBox.render
                   status={:valid}

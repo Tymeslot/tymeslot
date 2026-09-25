@@ -650,11 +650,6 @@ msgstr "Téléversement en cours… %{percent} %"
 msgid "Username"
 msgstr "Nom d’utilisateur"
 
-#: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex
-#, elixir-autogen, elixir-format
-msgid "Username is already taken. Please choose another."
-msgstr "Ce nom d’utilisateur est déjà pris. Veuillez en choisir un autre."
-
 #: lib/tymeslot_web/live/onboarding_live/calendar_handlers.ex
 #: lib/tymeslot_web/live/onboarding_live/navigation_handlers.ex
 #, elixir-autogen, elixir-format

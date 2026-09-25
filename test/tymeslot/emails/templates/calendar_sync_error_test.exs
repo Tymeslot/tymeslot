@@ -11,12 +11,12 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
   import Tymeslot.Factory
   import Tymeslot.TestFixtures
 
-  describe "CalendarSyncError.render/2" do
+  describe "CalendarSyncError.render_both/2 HTML body" do
     test "generates valid HTML output" do
       meeting = insert(:meeting)
       error_reason = :network_error
 
-      html = CalendarSyncError.render(meeting, error_reason)
+      html = html_body(meeting, error_reason)
 
       assert html =~ "</html>"
       assert html =~ "Calendar Sync Error"
@@ -27,7 +27,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
       meeting = insert(:meeting)
       error_reason = :authentication_failed
 
-      html = CalendarSyncError.render(meeting, error_reason)
+      html = html_body(meeting, error_reason)
 
       assert html =~ "Error Details"
       assert html =~ ":authentication_failed"
@@ -37,7 +37,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
       meeting = insert(:meeting, location: "Conference Room A", duration: 60)
       error_reason = :connection_timeout
 
-      html = CalendarSyncError.render(meeting, error_reason)
+      html = html_body(meeting, error_reason)
 
       assert html =~ "Conference Room A"
     end
@@ -46,7 +46,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
       meeting = insert(:meeting, organizer_user_id: nil)
       error_reason = :unknown_error
 
-      html = CalendarSyncError.render(meeting, error_reason)
+      html = html_body(meeting, error_reason)
 
       # Falls back to the application default timezone rather than crashing
       fallback_local = DateTime.shift_zone!(meeting.start_time, Profiles.get_default_timezone())
@@ -60,7 +60,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
       meeting = insert(:meeting, organizer_user: profile.user)
       error_reason = :rate_limited
 
-      html = CalendarSyncError.render(meeting, error_reason)
+      html = html_body(meeting, error_reason)
 
       owner_local = DateTime.shift_zone!(meeting.start_time, "America/New_York")
 
@@ -72,7 +72,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
       meeting = insert(:meeting)
       error_reason = :server_unavailable
 
-      html = CalendarSyncError.render(meeting, error_reason)
+      html = html_body(meeting, error_reason)
 
       assert html =~ "Action Required"
     end
@@ -81,7 +81,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
       meeting = insert(:meeting)
       error_reason = :invalid_credentials
 
-      html = CalendarSyncError.render(meeting, error_reason)
+      html = html_body(meeting, error_reason)
 
       assert html =~ "Common causes:"
     end
@@ -98,7 +98,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
       ]
 
       for {error_reason, rendered} <- error_reasons do
-        html = CalendarSyncError.render(meeting, error_reason)
+        html = html_body(meeting, error_reason)
 
         assert html =~ "Error Details"
         assert html =~ rendered
@@ -106,23 +106,11 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
     end
   end
 
-  describe "CalendarSyncError.render_both/2" do
-    test "returns a {html, text} tuple equivalent to calling render/2 and render_text/2 separately" do
-      meeting = insert(:meeting)
-      error_reason = :network_error
-
-      {html, text} = CalendarSyncError.render_both(meeting, error_reason)
-
-      assert html == CalendarSyncError.render(meeting, error_reason)
-      assert text == CalendarSyncError.render_text(meeting, error_reason)
-    end
-  end
-
-  describe "CalendarSyncError.render_text/2" do
+  describe "CalendarSyncError.render_both/2 text body" do
     test "returns plain text with meeting and error details" do
       meeting = insert(:meeting, location: "Conference Room A", duration: 60)
 
-      text = CalendarSyncError.render_text(meeting, :network_error)
+      text = text_body(meeting, :network_error)
 
       assert text =~ "Calendar Sync Error"
       assert text =~ "Conference Room A"
@@ -139,7 +127,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
 
       text =
         RecipientLocale.with_user_id_locale(user.id, fn ->
-          CalendarSyncError.render_text(meeting, :network_error)
+          text_body(meeting, :network_error)
         end)
 
       assert text =~ "Kalender-Synchronisierungsfehler"
@@ -151,7 +139,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
     test "handles missing organizer_user_id" do
       meeting = insert(:meeting, organizer_user_id: nil)
 
-      text = CalendarSyncError.render_text(meeting, :unknown_error)
+      text = text_body(meeting, :unknown_error)
 
       assert text =~ "Calendar Sync Error"
       assert text =~ ":unknown_error"
@@ -162,19 +150,19 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
     end
   end
 
-  describe "render/2 security" do
-    test "CalendarSyncError.render/2 handles XML-hostile error reason without crashing" do
+  describe "render_both/2 HTML body security" do
+    test "HTML body handles XML-hostile error reason without crashing" do
       meeting = insert(:meeting)
-      html = CalendarSyncError.render(meeting, "<CalDAV:error> tag not closed & invalid")
+      html = html_body(meeting, "<CalDAV:error> tag not closed & invalid")
 
       assert html =~ "</html>"
       assert html =~ "Error Details"
       refute html =~ "<CalDAV:error>"
     end
 
-    test "CalendarSyncError.render/2 handles XML-hostile binary error without crashing" do
+    test "HTML body handles XML-hostile binary error without crashing" do
       meeting = insert(:meeting)
-      html = CalendarSyncError.render(meeting, "Response: <foo/> & </bar> unclosed")
+      html = html_body(meeting, "Response: <foo/> & </bar> unclosed")
 
       assert html =~ "</html>"
       assert html =~ "Error Details"
@@ -182,26 +170,32 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
     end
   end
 
-  describe "render_text security" do
+  describe "render_both/2 text body security" do
     # Plain-text email bodies are not rendered as HTML, so tags are harmless literal
     # characters. The security properties that matter are: the function never crashes
     # on adversarial input and the expected structural content is always present.
 
-    test "CalendarSyncError.render_text returns a valid binary with malicious error reason" do
+    test "text body is a valid binary with malicious error reason" do
       meeting = insert(:meeting)
-      text = CalendarSyncError.render_text(meeting, "<script>alert('xss')</script>")
+      text = text_body(meeting, "<script>alert('xss')</script>")
 
       assert text =~ "Calendar Sync Error"
       assert text =~ "ACTION REQUIRED"
       assert text =~ "<script>alert('xss')</script>"
     end
 
-    test "CalendarSyncError.render_text returns a valid binary with malicious location" do
+    test "text body is a valid binary with malicious location" do
       meeting = insert(:meeting, location: "Room A\nX-Injected: evil-header")
-      text = CalendarSyncError.render_text(meeting, :network_error)
+      text = text_body(meeting, :network_error)
 
       assert text =~ "Calendar Sync Error"
       assert text =~ "Location: Room A"
     end
   end
+
+  defp html_body(meeting, error_reason),
+    do: meeting |> CalendarSyncError.render_both(error_reason) |> elem(0)
+
+  defp text_body(meeting, error_reason),
+    do: meeting |> CalendarSyncError.render_both(error_reason) |> elem(1)
 end

@@ -26,31 +26,29 @@ defmodule TymeslotWeb.WebhookCompositionTest do
   Dropped from the plan with rationale:
 
     * Validation token > 256 bytes → 400 — the premise is contradicted
-      by production code. The first `webhook/2` clause guards
-      `byte_size(token) <= 256`; an oversize token fails the guard,
-      falls through to the `_params` clause, and returns 202 (the
+      by production code. The validation clause of
+      `OutlookCalendarWebhookController` guards `byte_size(token) <= 256`;
+      an oversize token fails the guard, falls through to the
+      notification clause, and returns 202 (the
       notification-batch arm with no notifications to process). Graph
       does not treat 202 as a validation response, so subscription
       activation fails — the correct security outcome, just not a 400.
 
     * Outlook notification with `Oban.insert` failure →
-      `touch_notification_timestamp` NOT called — the premise is
-      contradicted by production code. `handle_valid_notification/2`
-      at `outlook_calendar_webhook_controller.ex:131-134` calls
-      `enqueue_sync/2` and then unconditionally calls
-      `touch_notification_timestamp/1`. The Oban error is swallowed
-      inside `enqueue_sync/2` and the timestamp still advances.
-      Whether this is the desired behaviour is a product question
-      (timestamp = "heard from Graph" vs. "successfully queued a
-      sync"); either way, the current behaviour is "always touch" and
-      pinning the opposite would lock in a fiction.
+      `last_outlook_notification_at` NOT advanced — the product
+      question this was once dropped over ("heard from Graph" vs
+      "successfully queued a sync") has since been settled in favour
+      of the latter, matching Google, so that a run of failed inserts
+      cannot read as a healthy channel. Pinned where the decision
+      lives, in `webhooks_test.exs`, rather than through the
+      controller: the enqueue failure is faked with `:meck` on `Oban`,
+      which needs `async: false` around the module that does it.
 
     * Outlook lifecycle missing `subscriptionId` / `lifecycleEvent` →
-      202, no enqueue — covered at
-      `outlook_lifecycle_controller_test.exs` ("missing value key" and
-      "missing required fields" scenarios). Catch-all at
-      `outlook_lifecycle_controller.ex:88` makes this a no-op that
-      returns 202, already asserted.
+      202, no enqueue — covered in
+      `outlook_calendar_webhook_controller_lifecycle_test.exs` and by
+      `webhooks_test.exs`, where entries without a string
+      `subscriptionId` are dropped before any lookup.
 
     * Google webhook concurrent deliveries for same channel_id → at
       most one sync enqueued per delivery — the premise is confused.
@@ -63,7 +61,7 @@ defmodule TymeslotWeb.WebhookCompositionTest do
 
     * Telegram webhook when `telegram_webhook_secret` is nil →
       consistent 403 — covered at `telegram_webhook_controller_test.exs`
-      (nil/missing/mismatched secret → 403) together with the
+      (nil/empty/missing/mismatched secret → 403) together with the
       `telegram_enabled?` / `shared_bot_mode?` 404 path.
   """
 

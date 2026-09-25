@@ -5,8 +5,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Helpers.LocaleFormat
+
+  @doc """
+  Today's date in the user's `timezone`.
+
+  Every "today" in the grid (the date it opens on, the Today button, the
+  highlighted day) reads from here. The UTC date is a different day for part of
+  every day in any other zone, so a grid that opened on it could show the
+  previous week while events were placed by the user's own day.
+  """
+  @spec today(String.t()) :: Date.t()
+  def today(timezone), do: timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
 
   @spec week_start(Date.t(), map()) :: Date.t()
   def week_start(date, assigns), do: Date.beginning_of_week(date, week_start_atom(assigns))
@@ -20,12 +32,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
 
   @spec day_header_class(Date.t(), String.t()) :: String.t()
   def day_header_class(day, timezone) do
-    today =
-      DateTime.utc_now()
-      |> DateTime.shift_zone!(timezone)
-      |> DateTime.to_date()
-
-    if Date.compare(day, today) == :eq do
+    if Date.compare(day, today(timezone)) == :eq do
       "font-bold text-turquoise-600"
     else
       "text-tymeslot-600"
@@ -58,12 +65,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   def period_label(%{view: :agenda, date: date} = assigns) do
     tz = Map.get(assigns, :user_timezone, "Etc/UTC")
 
-    today =
-      DateTime.utc_now()
-      |> DateTime.shift_zone!(tz)
-      |> DateTime.to_date()
-
-    if Date.compare(date, today) == :eq do
+    if Date.compare(date, today(tz)) == :eq do
       dgettext("dashboard_calendar", "Next 30 days")
     else
       range_label(date, Date.add(date, 30))

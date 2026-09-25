@@ -16,6 +16,15 @@ defmodule Tymeslot.Slack.OAuth do
   # 10 minutes
   @state_max_age 600
 
+  @typedoc "The workspace install details a successful code exchange yields."
+  @type install :: %{
+          bot_token: String.t(),
+          team_id: String.t() | nil,
+          team_name: String.t() | nil,
+          authed_user_id: String.t() | nil,
+          scope: String.t() | nil
+        }
+
   @doc """
   Builds the URL to redirect a user to in order to install the Slack app.
 
@@ -66,7 +75,7 @@ defmodule Tymeslot.Slack.OAuth do
   Returns `{:ok, %{bot_token, team_id, team_name, authed_user_id, scope}}` on
   success or a tagged error from `Tymeslot.Slack.API.oauth_v2_access/4`.
   """
-  @spec exchange_code(String.t(), String.t()) :: {:ok, map()} | {:error, term()}
+  @spec exchange_code(String.t(), String.t()) :: {:ok, install()} | {:error, term()}
   def exchange_code(code, redirect_uri) do
     client_id = require_config!(:slack_client_id)
     client_secret = require_config!(:slack_client_secret)

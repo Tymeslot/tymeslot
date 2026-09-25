@@ -11,6 +11,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
   use TymeslotWeb.LiveCase, async: false
   @moduletag :utils
+  @moduletag :onboarding
 
   import Mox
   import Tymeslot.Factory
@@ -230,7 +231,64 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       html = render(view)
 
       # Should show error
-      assert html =~ "already taken"
+      assert html =~ "This username is already taken"
+      refute html =~ "Please check your input"
+      assert has_element?(view, "#profile-form")
+    end
+
+    test "a username taken after it was checked explains why on continue", %{conn: conn} do
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      fill_basic_settings(view, "New User", "racehandle")
+      refute render(view) =~ "already taken"
+
+      # Someone else claims it while this user is still on the form.
+      insert(:profile, username: "racehandle")
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      html = render(view)
+      assert html =~ "This username is already taken"
+      refute html =~ "Please check your input"
+      assert has_element?(view, "#profile-form")
+    end
+
+    test "a username refused only by the database explains why on continue", %{conn: conn} do
+      # Uniqueness is case-insensitive in the database. A legacy handle stored
+      # with capitals is invisible to the availability check, so the collision
+      # surfaces only when the profile is written.
+      insert(:profile, username: "LegacyHandle")
+
+      {:ok, view, _html, _user} = setup_onboarding(conn)
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      fill_basic_settings(view, "New User", "legacyhandle")
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      html = render(view)
+      assert html =~ "This username is already taken"
+      refute html =~ "Please check your input"
+      assert has_element?(view, "#profile-form")
+    end
+
+    test "a reserved username explains why on continue", %{conn: conn} do
+      {:ok, view, _html, user} = setup_onboarding(conn)
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      fill_basic_settings(view, "New User", "admin")
+
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      html = render(view)
+      assert html =~ "This username is reserved"
+      refute html =~ "Please check your input"
+      assert has_element?(view, "#profile-form")
+      refute Profiles.get_profile(user.id).username == "admin"
     end
 
     test "available username proceeds successfully", %{conn: conn} do

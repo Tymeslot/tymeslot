@@ -275,6 +275,21 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
     end
   end
 
+  describe "valid_provider?/1" do
+    test "returns true for valid providers" do
+      assert ProviderConfig.valid_provider?(:caldav)
+      assert ProviderConfig.valid_provider?(:google)
+      assert ProviderConfig.valid_provider?(:nextcloud)
+      assert ProviderConfig.valid_provider?(:radicale)
+    end
+
+    test "returns false for unknown providers and non-atoms" do
+      refute ProviderConfig.valid_provider?(:invalid)
+      refute ProviderConfig.valid_provider?(:unknown)
+      refute ProviderConfig.valid_provider?("google")
+    end
+  end
+
   describe "exchange provider" do
     test "is a known, enabled provider" do
       assert :exchange in ProviderConfig.all_providers()

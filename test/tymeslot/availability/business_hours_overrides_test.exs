@@ -9,6 +9,7 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
   @moduletag :availability
 
   alias Tymeslot.Availability.BusinessHours
+  alias Tymeslot.Availability.Calculate
   alias Tymeslot.Availability.WeeklySchedule
 
   # April 6, 2026 is a Monday (day_of_week 1)
@@ -58,9 +59,47 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
       assert BusinessHours.business_day?(@saturday, schedule.id)
     end
 
-    test "available override marks a normally-unavailable day as a business day", %{
+    test "available override with no hours leaves a normally-unavailable day closed", %{
       schedule: schedule
     } do
+      insert(:availability_override,
+        schedule: schedule,
+        date: @saturday,
+        override_type: "available"
+      )
+
+      refute BusinessHours.business_day?(@saturday, schedule.id)
+    end
+
+    test "available override with no hours agrees with the hours the day offers", %{
+      schedule: schedule
+    } do
+      insert(:availability_override,
+        schedule: schedule,
+        date: @saturday,
+        override_type: "available"
+      )
+
+      assert {:ok, %{start_datetime: nil, end_datetime: nil}} =
+               BusinessHours.get_business_hours_in_timezone(
+                 @saturday,
+                 schedule.id,
+                 "Etc/UTC",
+                 "Etc/UTC"
+               )
+
+      refute BusinessHours.business_day?(@saturday, schedule.id)
+    end
+
+    test "available override opens a day the weekly pattern already has hours for", %{
+      schedule: schedule
+    } do
+      WeeklySchedule.upsert_day_availability(schedule.id, 6, %{
+        is_available: true,
+        start_time: ~T[10:00:00],
+        end_time: ~T[14:00:00]
+      })
+
       insert(:availability_override,
         schedule: schedule,
         date: @saturday,
@@ -79,6 +118,53 @@ defmodule Tymeslot.Availability.BusinessHoursOverridesTest do
 
       assert BusinessHours.business_day?(@monday, schedule.id)
       refute BusinessHours.business_day?(@saturday, schedule.id)
+    end
+  end
+
+  describe "the booking page's reading of a day with no hours" do
+    # The week strip renders each day through this function
+    # (`CalendarHelpers.business_hours_lookup/5`), so it is where an override
+    # that opens a day without hours becomes a day a visitor can click into and
+    # find empty. The date is chosen forward of today and inside the advance
+    # booking window, or the day is unbookable for reasons that have nothing to
+    # do with the override.
+    setup %{schedule: schedule} do
+      today = Date.utc_today()
+      saturday = Date.add(today, rem(13 - Date.day_of_week(today), 7) + 7)
+
+      %{schedule: schedule, saturday: saturday}
+    end
+
+    test "an available override with no hours does not open the day", %{
+      schedule: schedule,
+      saturday: saturday
+    } do
+      insert(:availability_override,
+        schedule: schedule,
+        date: saturday,
+        override_type: "available"
+      )
+
+      refute Calculate.day_bookable_by_business_hours?(saturday, "Etc/UTC", %{
+               schedule_id: schedule.id
+             })
+    end
+
+    test "the same day opens once the override names hours", %{
+      schedule: schedule,
+      saturday: saturday
+    } do
+      insert(:availability_override,
+        schedule: schedule,
+        date: saturday,
+        override_type: "custom_hours",
+        start_time: ~T[10:00:00],
+        end_time: ~T[14:00:00]
+      )
+
+      assert Calculate.day_bookable_by_business_hours?(saturday, "Etc/UTC", %{
+               schedule_id: schedule.id
+             })
     end
   end
 

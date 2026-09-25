@@ -41,4 +41,35 @@ defmodule Tymeslot.Security.DnsResolutionTest do
                )
     end
   end
+
+  describe "resolve_internal/2" do
+    test "returns the addresses of a name that resolves only to loopback" do
+      assert {:ok, [_first | _rest] = addresses} =
+               DnsResolution.resolve_internal("http://localhost/dav", [])
+
+      assert Enum.all?(addresses, &(&1 in [{127, 0, 0, 1}, {0, 0, 0, 0, 0, 0, 0, 1}]))
+    end
+
+    test "returns private addresses" do
+      assert {:ok, [{192, 168, 1, 20}]} =
+               DnsResolution.resolve_internal("http://192.168.1.20/dav", [])
+    end
+
+    test "refuses a public address" do
+      assert {:error, message} = DnsResolution.resolve_internal("http://8.8.8.8/dav", [])
+      assert message =~ "private network address"
+    end
+
+    test "refuses a name that does not resolve" do
+      assert {:error, _message} =
+               DnsResolution.resolve_internal(
+                 "http://this-host-definitely-does-not-exist.invalid/dav",
+                 []
+               )
+    end
+
+    test "refuses a URL with no host" do
+      assert {:error, _message} = DnsResolution.resolve_internal("http:///dav", [])
+    end
+  end
 end

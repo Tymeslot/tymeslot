@@ -280,32 +280,6 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueriesMutationTes
     end
   end
 
-  describe "delete_by_provider_event_id/2" do
-    test "deletes existing event by provider_event_id" do
-      event =
-        insert(:provider_calendar_event, provider_event_id: "provider-123")
-
-      assert {:ok, :deleted} =
-               ProviderCalendarEventQueries.delete_by_provider_event_id(
-                 event.calendar_integration_id,
-                 "provider-123"
-               )
-
-      refute Repo.get(ProviderCalendarEventSchema, event.id)
-    end
-
-    test "returns :not_found when no match" do
-      user = insert(:user)
-      integration = insert(:calendar_integration, user: user)
-
-      assert {:ok, :not_found} =
-               ProviderCalendarEventQueries.delete_by_provider_event_id(
-                 integration.id,
-                 "nonexistent"
-               )
-    end
-  end
-
   describe "delete_by_uids/2" do
     test "returns {0, _} and deletes nothing for an empty list" do
       user = insert(:user)

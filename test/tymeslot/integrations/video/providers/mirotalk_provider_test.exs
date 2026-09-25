@@ -3,6 +3,8 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
   @moduletag :integrations
 
   import Mox
+  import Tymeslot.ConfigTestHelpers, only: [with_config: 3]
+
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder
   alias Tymeslot.Integrations.Video.Providers.MiroTalkProvider
   alias Tymeslot.Test.LogCapture
@@ -93,7 +95,23 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
   end
 
   describe "test_connection/1" do
-    test "returns error when connection fails" do
+    # One attempt, not two: the cleartext retry carries the API key, so it is
+    # gated on the operator having opted into private addresses for video.
+    test "returns error when connection fails, without retrying in the clear" do
+      with_config(:tymeslot, :allow_private_ips_for_calendar, false)
+      with_config(:tymeslot, :allow_private_ips_for_video, nil)
+      config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
+
+      expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, _headers, _http_opts ->
+        {:error, %Mint.TransportError{reason: :econnrefused}}
+      end)
+
+      assert {:error, {:unreachable, message}} = MiroTalkProvider.perform_connection_test(config)
+      assert String.contains?(message, "Connection refused")
+    end
+
+    test "retries on the base URL's scheme when private addresses are allowed for video" do
+      with_config(:tymeslot, :allow_private_ips_for_video, true)
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
       expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _http_opts ->
@@ -307,37 +325,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       payload = Jason.decode!(payload_json)
 
       assert payload["user"] == "Johnscript"
-    end
-  end
-
-  describe "create_direct_join_url/3" do
-    test "creates join URL with correct parameters" do
-      config = %{base_url: "https://mirotalk.example.com"}
-      room_id = "room123"
-      participant_name = "John Doe"
-
-      url = JoinUrlBuilder.create_direct_join_url(config, room_id, participant_name)
-
-      assert String.starts_with?(url, "https://mirotalk.example.com/join?")
-      assert String.contains?(url, "room=room123")
-      assert String.contains?(url, "name=John+Doe")
-      assert String.contains?(url, "audio=1")
-      assert String.contains?(url, "video=1")
-      assert String.contains?(url, "screen=0")
-    end
-
-    test "sanitizes participant name in URL" do
-      config = %{base_url: "https://mirotalk.example.com"}
-
-      url =
-        JoinUrlBuilder.create_direct_join_url(
-          config,
-          "room123",
-          "John<script>alert(1)</script>"
-        )
-
-      assert String.contains?(url, "name=Johnscriptalert1script")
-      refute String.contains?(url, "<script>")
     end
   end
 

@@ -1,7 +1,7 @@
 defmodule Tymeslot.Emails.EmailScheduler.AccountScheduler do
   @moduledoc "Schedules account management emails via Oban."
 
-  alias Tymeslot.Emails.EmailScheduler.Helpers
+  alias Tymeslot.Emails.EmailScheduler.{Helpers, LinkArg}
   alias Tymeslot.Workers.EmailWorker
 
   require Logger
@@ -12,22 +12,33 @@ defmodule Tymeslot.Emails.EmailScheduler.AccountScheduler do
   Enqueues two jobs: one to send a verification email to the new address,
   and one to notify the current address of the pending change. Both use a
   10-minute uniqueness window to prevent duplicate sends.
+
+  The verification link is stored encrypted (see `LinkArg`). The job carries
+  the token's hash instead, both as its uniqueness key (each request mints a
+  new token, so each gets its own email) and so the worker can discard it once
+  the token has been replaced or revoked.
   """
-  @spec schedule_email_change_emails(term(), String.t(), String.t()) :: :ok
-  def schedule_email_change_emails(user_id, new_email, verification_url) do
+  @spec schedule_email_change_emails(term(), String.t(), String.t(), String.t()) :: :ok
+  def schedule_email_change_emails(user_id, new_email, verification_url, token_hash) do
+    verification_args =
+      LinkArg.put(
+        %{
+          "action" => "send_email_change_verification",
+          "user_id" => user_id,
+          "new_email" => new_email,
+          "token_hash" => token_hash
+        },
+        "verification_url",
+        verification_url
+      )
+
     with {:ok, _job1} <-
            Oban.insert(
-             EmailWorker.new(
-               %{
-                 "action" => "send_email_change_verification",
-                 "user_id" => user_id,
-                 "new_email" => new_email,
-                 "verification_url" => verification_url
-               },
+             EmailWorker.new(verification_args,
                unique: [
                  period: 600,
                  fields: [:args, :queue],
-                 keys: [:action, :user_id, :new_email, :verification_url]
+                 keys: [:action, :user_id, :new_email, :token_hash]
                ]
              )
            ),

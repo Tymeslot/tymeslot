@@ -78,6 +78,25 @@ defmodule Tymeslot.Auth.UserSchemaTest do
     end
   end
 
+  describe "revoke_credential_tokens/1" do
+    # A caller may hold a copy of the user loaded before a token was issued,
+    # where the token fields still read nil. The revocation must still reach
+    # the database, so it cannot be dropped as "no change".
+    test "writes every token field even when the struct already reads nil" do
+      changeset = UserSchema.revoke_credential_tokens(Changeset.change(%UserSchema{}))
+
+      for field <- [
+            :reset_token_hash,
+            :reset_sent_at,
+            :pending_email,
+            :email_change_token_hash,
+            :email_change_sent_at
+          ] do
+        assert Map.fetch(changeset.changes, field) == {:ok, nil}, "#{field} not written"
+      end
+    end
+  end
+
   describe "locale_changeset/2" do
     test "accepts a supported locale code" do
       changeset = UserSchema.locale_changeset(%UserSchema{}, %{locale: "de"})

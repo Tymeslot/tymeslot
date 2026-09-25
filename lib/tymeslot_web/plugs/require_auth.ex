@@ -1,6 +1,12 @@
 defmodule TymeslotWeb.Plugs.RequireAuthPlug do
   @moduledoc """
-  Demo plug to require authentication.
+  Requires a signed-in user: the `:require_authenticated_user` pipeline.
+
+  Reads the `:current_user` assigned by `TymeslotWeb.Plugs.FetchCurrentUser`,
+  which must run first, and redirects anyone without one to the login page
+  with an explanatory flash. LiveViews behind this plug re-check on mount with
+  `{TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated}`, since a
+  live navigation does not pass through the plug pipeline.
   """
   use Phoenix.VerifiedRoutes,
     endpoint: TymeslotWeb.Endpoint,

@@ -12,6 +12,7 @@ defmodule Tymeslot.Meetings.MeetingQueries do
 
   alias Ecto.Changeset
   alias Ecto.UUID
+  alias Tymeslot.Meetings.MeetingListQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Repo
@@ -21,14 +22,6 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   def create_meeting(attrs) when is_map(attrs) do
     %Meeting{}
     |> Meeting.changeset(attrs)
-    |> Repo.insert()
-  end
-
-  @doc "Creates a group meeting (bookers live in meeting_participants, not attendee_* fields)."
-  @spec create_group_meeting(map()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
-  def create_group_meeting(attrs) when is_map(attrs) do
-    %Meeting{}
-    |> Meeting.group_changeset(attrs)
     |> Repo.insert()
   end
 
@@ -88,38 +81,6 @@ defmodule Tymeslot.Meetings.MeetingQueries do
       meeting -> {:ok, meeting}
     end
   end
-
-  @doc """
-  The `uid`s of the organiser's meetings that are group bookings
-  (`capacity > 1`).
-
-  Keyed by `uid` rather than id because the consumer is the calendar grid,
-  which knows provider events, and a Tymeslot booking's provider event
-  carries the meeting's `uid`.
-  """
-  @spec group_booking_uids_for_user(integer()) :: MapSet.t(String.t())
-  def group_booking_uids_for_user(user_id) do
-    Meeting
-    |> where([m], m.organizer_user_id == ^user_id and m.capacity > 1)
-    |> select([m], m.uid)
-    |> Repo.all()
-    |> MapSet.new()
-  end
-
-  @doc """
-  Whether the meeting behind `uid` is a group booking (`capacity > 1`).
-
-  The authoritative form of `group_booking_uids_for_user/1`, for guards that
-  must not act on a set assigned when the page was loaded.
-  """
-  @spec group_booking_uid?(term()) :: boolean()
-  def group_booking_uid?(uid) when is_binary(uid) do
-    Meeting
-    |> where([m], m.uid == ^uid and m.capacity > 1)
-    |> Repo.exists?()
-  end
-
-  def group_booking_uid?(_uid), do: false
 
   @doc """
   Fetches a meeting by UID only if the given `organizer_user_id` owns it.
@@ -275,12 +236,6 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     |> Repo.update()
   end
 
-  @doc "Deletes a meeting."
-  @spec delete_meeting(Meeting.t()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
-  def delete_meeting(%Meeting{} = meeting) do
-    Repo.delete(meeting)
-  end
-
   @doc """
   Records that the host has been nudged about an unanswered request.
 
@@ -305,24 +260,41 @@ defmodule Tymeslot.Meetings.MeetingQueries do
 
   The claim is a single conditional UPDATE rather than a read followed by a
   write, so two callers racing on the same meeting cannot both win it.
+
+  A winning claim also says whether the booking has been announced before:
+  `{:ok, :re_announcement}` when a reschedule sent a confirmed booking back
+  into the approval gate (which clears `announced_at` but never
+  `first_announced_at`) and the host has now approved the new time,
+  `{:ok, :first_announcement}` otherwise. The answer is read from the row the
+  UPDATE locks, in the same statement, rather than from the caller's struct,
+  so a stale struct cannot turn a first announcement into a repeat or the
+  other way round.
   """
-  @spec claim_announcement(term()) :: :ok | :already_announced
+  @spec claim_announcement(term()) ::
+          {:ok, :first_announcement | :re_announcement} | :already_announced
   def claim_announcement(meeting_id) do
     case UUID.cast(meeting_id) do
       {:ok, uuid} -> claim_announcement_for(uuid)
       # Nothing to dedupe against, so let the caller announce rather than
       # swallow an event on the strength of an id we cannot look up.
-      :error -> :ok
+      :error -> {:ok, :first_announcement}
     end
   end
 
   defp claim_announcement_for(uuid) do
     now = DateTime.utc_now(:second)
 
-    {claimed, _rows} =
+    # The self-join exposes the row as it stood before this UPDATE: RETURNING
+    # on the target itself would only show the COALESCE result, which is
+    # `now` for a first announcement and indistinguishable from an earlier
+    # stamp taken within the same second.
+    {claimed, previous} =
       Repo.update_all(
         from(m in Meeting,
+          join: before in Meeting,
+          on: before.id == m.id,
           where: m.id == ^uuid and is_nil(m.announced_at),
+          select: before.first_announced_at,
           update: [
             set: [
               announced_at: ^now,
@@ -338,11 +310,12 @@ defmodule Tymeslot.Meetings.MeetingQueries do
       )
 
     cond do
-      claimed == 1 -> :ok
+      claimed == 1 and previous == [nil] -> {:ok, :first_announcement}
+      claimed == 1 -> {:ok, :re_announcement}
       Repo.exists?(from(m in Meeting, where: m.id == ^uuid)) -> :already_announced
       # The meeting is gone, or was never persisted. Either way there is no
       # stamp to read, and refusing to announce would be the worse failure.
-      true -> :ok
+      true -> {:ok, :first_announcement}
     end
   end
 
@@ -500,20 +473,22 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
-  Counts upcoming live bookings holding a provider room created by the given
-  integration.
+  Counts the meetings holding a provider room created by the given integration,
+  within `scope`.
 
-  Drives the "N upcoming bookings use this" line in the disconnect modal, so the
-  user knows what the optional room cleanup would affect before choosing it.
+  Drives the room cleanup line in the disconnect modal, so the user knows what
+  the optional cleanup would affect before choosing it. Built on the same query
+  the disconnect drains (`MeetingListQueries.with_video_room_for_integration/3`),
+  so the two cannot disagree.
   """
-  @spec count_upcoming_with_video_room_for_integration(pos_integer(), DateTime.t()) ::
-          non_neg_integer()
-  def count_upcoming_with_video_room_for_integration(integration_id, %DateTime{} = now) do
-    Meeting
-    |> MeetingState.where_live_booking()
-    |> where([m], m.end_time > ^now)
-    |> where([m], m.video_integration_id == ^integration_id)
-    |> where([m], not is_nil(m.video_room_id))
+  @spec count_with_video_room_for_integration(
+          pos_integer(),
+          MeetingListQueries.room_scope(),
+          DateTime.t()
+        ) :: non_neg_integer()
+  def count_with_video_room_for_integration(integration_id, scope, %DateTime{} = now) do
+    integration_id
+    |> MeetingListQueries.with_video_room_for_integration(scope, now)
     |> Repo.aggregate(:count, :id)
   end
 

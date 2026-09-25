@@ -35,6 +35,34 @@ defmodule Tymeslot.Infrastructure.Logging.Redactor do
   end
 
   @doc """
+  A short, non-reversible reference to a secret-bearing identifier, for logs.
+
+  Some identifiers are credentials in their own right: a video room id is the
+  join link for every link-based provider, so a log sink that records it hands
+  whoever can read it a way into the call. Such an id must never be logged, but
+  correlating two lines about the same room is still worth something to support,
+  hence this: the first eight hex characters of its SHA-256.
+
+  Stable across nodes and restarts, so the same id fingerprints alike wherever
+  it is logged, and short enough that nobody mistakes it for the value itself.
+  It is a correlation aid, not an identifier: eight characters collide, and
+  nothing should key off one. Anything that is not a non-empty binary has no
+  fingerprint and renders as `"none"`.
+
+      iex> Tymeslot.Infrastructure.Logging.Redactor.fingerprint("room-123")
+      "1bb12b94"
+  """
+  @spec fingerprint(any()) :: binary()
+  def fingerprint(value) when is_binary(value) and value != "" do
+    :sha256
+    |> :crypto.hash(value)
+    |> Base.encode16(case: :lower)
+    |> binary_part(0, 8)
+  end
+
+  def fingerprint(_value), do: "none"
+
+  @doc """
   Standardized helper to redact and truncate a term for logging.
   """
   @spec redact_and_truncate(any(), integer()) :: binary()

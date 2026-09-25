@@ -7,7 +7,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.VideoSection do
   email's stage band.
   """
 
-  alias Tymeslot.Emails.Shared.{Sanitise, Styles}
+  alias Tymeslot.Emails.Shared.{Sanitise, Stack, Styles}
   alias Tymeslot.Emails.Shared.Styles.Tokens
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -47,7 +47,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.VideoSection do
         ""
       end
 
-    """
+    Stack.spaced("""
     <mj-section
       background-color="#{tokens.tint}"
       border-left="4px solid #{tokens.accent}"
@@ -93,7 +93,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.VideoSection do
         #{time_note_block}
       </mj-column>
     </mj-section>
-    """
+    """)
   end
 
   @doc """

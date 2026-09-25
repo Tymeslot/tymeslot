@@ -27,6 +27,8 @@ defmodule Tymeslot.Webhooks.HttpDeliveryPinningTest do
   @approved {93, 184, 216, 34}
   @redirect_approved {198, 51, 100, 7}
 
+  setup :verify_on_exit!
+
   setup do
     setup_config(:tymeslot, :environment, :prod)
     setup_config(:tymeslot, :dns_resolver_module, Tymeslot.DnsResolverMock)

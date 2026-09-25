@@ -11,10 +11,10 @@ defmodule Tymeslot.AppSettingsTest do
   alias Tymeslot.Analytics
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.AuthActions
   alias Tymeslot.Infrastructure.AdminAlerts.EmailNotifier
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Locales
+  alias TymeslotWeb.Helpers.ClientIP
 
   setup :restore_app_settings_env
 
@@ -168,24 +168,33 @@ defmodule Tymeslot.AppSettingsTest do
   # their own coverage via Application.put_env — these tests pin down the
   # contract that admin-side writes flow through to those read sites.
   describe "admin toggles change runtime behaviour" do
-    test "disabling registration_enabled blocks Auth.register_user/3" do
+    test "disabling registration_enabled blocks Auth.register_user/2" do
       {:ok, _settings} = AppSettings.update(%{registration_enabled: false})
 
       assert {:error, :registration_disabled, _msg} =
-               Auth.register_user(%{"email" => "new@example.com"}, %Plug.Conn{})
+               Auth.register_user(
+                 %{"email" => "new@example.com"},
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
     test "resetting registration_enabled lifts the registration block" do
       {:ok, _settings} = AppSettings.update(%{registration_enabled: false})
 
       assert {:error, :registration_disabled, _msg} =
-               Auth.register_user(%{"email" => "new@example.com"}, %Plug.Conn{})
+               Auth.register_user(
+                 %{"email" => "new@example.com"},
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       {:ok, _reset} = AppSettings.reset(:registration_enabled)
 
       refute match?(
                {:error, :registration_disabled, _ignored},
-               Auth.register_user(%{"email" => "new@example.com"}, %Plug.Conn{})
+               Auth.register_user(
+                 %{"email" => "new@example.com"},
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
              )
     end
 
@@ -193,24 +202,19 @@ defmodule Tymeslot.AppSettingsTest do
       # No admin exists, so the lockout protection does not engage.
       {:ok, _settings} = AppSettings.update(%{password_auth_enabled: false})
 
-      socket = %Phoenix.LiveView.Socket{
-        assigns: %{client_ip: "127.0.0.1", user_agent: "AppSettingsTest/1.0"}
-      }
-
-      assert {:error, "Password authentication is currently disabled."} =
-               AuthActions.register_user(%{"email" => "new@example.com"}, socket)
+      assert {:error, :password_auth_disabled, "Password authentication is currently disabled."} =
+               Auth.register_user(
+                 %{"email" => "new@example.com"},
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
 
     test "disabling password_auth_enabled blocks password reset requests" do
       # No admin exists, so the lockout protection does not engage.
       {:ok, _settings} = AppSettings.update(%{password_auth_enabled: false})
 
-      socket = %Phoenix.LiveView.Socket{
-        assigns: %{client_ip: "127.0.0.1", user_agent: "AppSettingsTest/1.0"}
-      }
-
-      assert {:error, "Password authentication is currently disabled."} =
-               AuthActions.request_password_reset("new@example.com", socket)
+      assert {:error, :password_auth_disabled, "Password authentication is currently disabled."} =
+               Auth.request_password_reset("new@example.com", ClientIP.request_opts(%Plug.Conn{}))
     end
   end
 

@@ -50,11 +50,6 @@ msgstr "Безпека облікового запису"
 msgid "Account Settings"
 msgstr "Налаштування облікового запису"
 
-#: lib/tymeslot_web/live/account_live/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "An unexpected error occurred"
-msgstr "Сталася непередбачена помилка"
-
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "At least 8 characters"
@@ -150,11 +145,6 @@ msgstr "Нова адреса електронної пошти"
 msgid "New Password"
 msgstr "Новий пароль"
 
-#: lib/tymeslot_web/live/account_live/handlers.ex
-#, elixir-autogen, elixir-format
-msgid "New password must be different from current password"
-msgstr "Новий пароль має відрізнятися від поточного"
-
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Password"
@@ -179,11 +169,6 @@ msgstr "Очікується зміна на:"
 #, elixir-autogen, elixir-format
 msgid "Sent %{time}"
 msgstr "Надіслано %{time}"
-
-#: lib/tymeslot_web/live/account_live/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Too many attempts. Please try again later."
-msgstr "Забагато спроб. Спробуйте пізніше."
 
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format

@@ -10,9 +10,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
   import Swoosh.Email
 
+  alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks
   alias Tymeslot.Integrations.Calendar.IcsGenerator
-  alias Tymeslot.Locales
 
   alias Tymeslot.Emails.Shared.{
     Callouts,
@@ -193,7 +193,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       |> text_body(build_guest_text_body(appointment_details, guest_name, locale))
       |> attachment(
         IcsGenerator.generate_ics_attachment(
-          appointment_details,
+          # The calendar entry is where a guest is most likely to click from,
+          # so it advertises the same link the email body does rather than the
+          # bare room URL. Where there is no guests' link the value is the
+          # room URL already, so this never changes a non-video booking.
+          Map.put(appointment_details, :meeting_url, guest_video_url),
           locale,
           "appointment-#{appointment_details.uid}.ics"
         )
@@ -419,8 +423,13 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
   #   * the booker gets the participant URL minted for them;
   #   * guests are third parties with no URL of their own. Handing them the
   #     booker's URL would put them in the room under the booker's identity,
-  #     so they get the shared room URL, the same link the ICS attachment on
-  #     this very email already advertises.
+  #     so they get `guest_video_url`, the link
+  #     `Meetings.VideoRooms.guest_join_url/1` builds for a recipient the room
+  #     cannot name. On most providers that is the shared room URL, the same
+  #     link the ICS attachment on this very email already advertises; on one
+  #     whose links carry a credential it is that room URL with a token that
+  #     names nobody and confers no moderator rights, because a server
+  #     enforcing tokens refuses the bare URL outright.
   #
   # The organiser URL falls back to the room URL: a meeting can carry
   # `meeting_url` without the per-role pair (its presence is also what marks a
@@ -433,7 +442,13 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
   defp join_url(:attendee, details), do: Map.get(details, :attendee_video_url)
 
-  defp join_url(:guest, details), do: Map.get(details, :meeting_url)
+  # The guest URL falls back to the room URL for the same reason the organiser
+  # one does: a payload assembled before `guest_video_url` existed, or by a
+  # caller that builds its own map, still has a room to point at.
+  defp join_url(:guest, details) do
+    Map.get(details, :guest_video_url) || Map.get(details, :meeting_url)
+  end
 
-  defp organizer_locale(_appointment_details), do: Locales.admin_default_locale()
+  defp organizer_locale(appointment_details),
+    do: RecipientLocale.organizer_locale(appointment_details)
 end

@@ -445,6 +445,7 @@ msgstr "Opravdu chcete uživateli %{email} odebrat oprávnění správce?"
 msgid "Promote %{email} to admin?"
 msgstr "Opravdu chcete uživateli %{email} udělit oprávnění správce?"
 
+#: lib/tymeslot_web/live/admin_live.ex
 #: lib/tymeslot_web/plugs/require_admin.ex
 #, elixir-autogen, elixir-format
 msgid "Admin access required."

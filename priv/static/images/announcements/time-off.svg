@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" fill="none" role="img" aria-label="A run of days marked as time off on a month calendar, and the booking page showing those days as closed">
+  <defs>
+    <linearGradient id="to-bg" x1="0" y1="0" x2="640" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f0fdfa"/>
+      <stop offset="1" stop-color="#f8fafc"/>
+    </linearGradient>
+    <filter id="to-shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0d9488" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <rect width="640" height="240" fill="url(#to-bg)"/>
+
+  <!-- the month the days are marked off on -->
+  <g filter="url(#to-shadow)">
+    <rect x="64" y="44" width="288" height="152" rx="18" fill="#ffffff"/>
+  </g>
+
+  <!-- month name and the "away" pill -->
+  <rect x="88" y="68" width="88" height="8" rx="4" fill="#334155"/>
+  <rect x="248" y="64" width="80" height="20" rx="10" fill="#ccfbf1"/>
+  <circle cx="260" cy="74" r="4" fill="#0d9488"/>
+  <rect x="270" y="71" width="46" height="6" rx="3" fill="#0f766e"/>
+
+  <!-- ordinary days -->
+  <g fill="#f1f5f9">
+    <rect x="88" y="96" width="28" height="18" rx="6"/>
+    <rect x="123" y="96" width="28" height="18" rx="6"/>
+    <rect x="158" y="96" width="28" height="18" rx="6"/>
+    <rect x="193" y="96" width="28" height="18" rx="6"/>
+    <rect x="228" y="96" width="28" height="18" rx="6"/>
+    <rect x="263" y="96" width="28" height="18" rx="6"/>
+    <rect x="298" y="96" width="28" height="18" rx="6"/>
+
+    <rect x="88" y="120" width="28" height="18" rx="6"/>
+    <rect x="123" y="120" width="28" height="18" rx="6"/>
+
+    <rect x="263" y="144" width="28" height="18" rx="6"/>
+    <rect x="298" y="144" width="28" height="18" rx="6"/>
+
+    <rect x="88" y="168" width="28" height="18" rx="6"/>
+    <rect x="123" y="168" width="28" height="18" rx="6"/>
+    <rect x="158" y="168" width="28" height="18" rx="6"/>
+    <rect x="193" y="168" width="28" height="18" rx="6"/>
+    <rect x="228" y="168" width="28" height="18" rx="6"/>
+    <rect x="263" y="168" width="28" height="18" rx="6"/>
+    <rect x="298" y="168" width="28" height="18" rx="6"/>
+  </g>
+
+  <!-- the run of days taken off, carrying across the week -->
+  <rect x="158" y="120" width="168" height="18" rx="9" fill="#0d9488"/>
+  <rect x="88" y="144" width="168" height="18" rx="9" fill="#0d9488"/>
+
+  <!-- the booking page for one of those days: closed, with nothing to pick -->
+  <g filter="url(#to-shadow)">
+    <rect x="400" y="60" width="176" height="120" rx="16" fill="#ffffff"/>
+  </g>
+  <rect x="422" y="82" width="64" height="7" rx="3.5" fill="#cbd5e1"/>
+
+  <rect x="422" y="104" width="132" height="22" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="5 4"/>
+  <rect x="422" y="134" width="132" height="22" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="5 4"/>
+
+  <!-- no calendar was touched to make it so -->
+  <path d="M576 120h18" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+</svg>
