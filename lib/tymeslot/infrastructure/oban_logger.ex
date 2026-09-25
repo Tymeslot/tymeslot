@@ -12,11 +12,12 @@ defmodule Tymeslot.Infrastructure.ObanLogger do
       *after* the default logger has already emitted `job:start`.
 
   This module instead owns the three job events directly. A single handler sets
-  a fresh `correlation_id` at job start, and the `user_id` the job's args name,
-  as Logger metadata and error context (so every subsequent log line in the job
-  process, and any exception it raises, is traceable, including the start line
-  itself) and emits each event,
-  logging `job:exception` at `:warning` while the job can still retry and at
+  the job's `correlation_id` at job start (the enqueuer's, carried in the job's
+  meta by `Tymeslot.Infrastructure.ObanEngine`, or a fresh one), and the
+  `user_id` the job's args or meta name, as Logger metadata and error context
+  (so every subsequent log line in the job process, and any exception it
+  raises, is traceable, including the start line itself) and emits each
+  event, logging `job:exception` at `:warning` while the job can still retry and at
   `:error` once it reaches a terminal state.
 
   The non-job events (plugin, notifier, peer, queue, stager) are still handled by
@@ -25,6 +26,7 @@ defmodule Tymeslot.Infrastructure.ObanLogger do
 
   alias Tymeslot.Infrastructure.CorrelationId
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.ObanEngine
 
   require Logger
 
@@ -41,8 +43,6 @@ defmodule Tymeslot.Infrastructure.ObanLogger do
   # metadata redactor cannot reach into the log message. Args are queryable in
   # the oban_jobs table via the logged job id when needed.
   @detail_keys [:attempt, :id, :max_attempts, :meta, :queue, :tags, :worker]
-
-  @user_id_arg_keys ["user_id", "organizer_user_id"]
 
   @doc """
   Attaches the telemetry handler for Oban job events. Call once during startup.
@@ -66,10 +66,10 @@ defmodule Tymeslot.Infrastructure.ObanLogger do
   end
 
   defp do_handle(:start, measurements, metadata) do
-    correlation_id = CorrelationId.generate()
-    CorrelationId.put_in_process(correlation_id)
+    context = job_context(metadata[:job])
+    CorrelationId.put_in_process(context[:correlation_id])
 
-    ErrorTracking.put_context([correlation_id: correlation_id] ++ user_context(metadata[:job]))
+    ErrorTracking.put_context(context)
 
     # ErrorTracker's Oban integration records the attempt but not the limit,
     # which an alert about a failing job needs to say how close it is to
@@ -99,17 +99,20 @@ defmodule Tymeslot.Infrastructure.ObanLogger do
     })
   end
 
-  # A job acting for a user names them in its args: `user_id` by convention,
-  # `organizer_user_id` in the meeting-driven video jobs. Tagging the job's
-  # process with it here covers every worker at once, before `perform/1` runs.
-  defp user_context(%Oban.Job{args: args}) when is_map(args) do
-    case Enum.find_value(@user_id_arg_keys, &Map.get(args, &1)) do
-      nil -> []
-      user_id -> [user_id: user_id]
-    end
+  # The job carries on its enqueuer's correlation id, and the user its args or
+  # its enqueuer name, so every log line and error of the job ties back to
+  # the work that asked for it. A job nothing enqueued with an id (a cron
+  # job, one inserted outside any request) gets a fresh one. Tagging the
+  # job's process here covers every worker at once, before `perform/1` runs.
+  defp job_context(%Oban.Job{} = job) do
+    Keyword.put_new_lazy(
+      ObanEngine.inherited_context(job),
+      :correlation_id,
+      &CorrelationId.generate/0
+    )
   end
 
-  defp user_context(_job), do: []
+  defp job_context(_job), do: [correlation_id: CorrelationId.generate()]
 
   defp max_attempts_context(%Oban.Job{max_attempts: max_attempts}),
     do: %{"job.max_attempts" => max_attempts}

@@ -18,6 +18,7 @@ defmodule Tymeslot.Application do
     IndexHealth,
     Metrics,
     ObanCron,
+    ObanEngine,
     ObanLogger,
     ObanQueues,
     ObanRescue,
@@ -406,7 +407,11 @@ defmodule Tymeslot.Application do
   defp oban_config do
     base_config = Application.get_env(:tymeslot, Oban) || [repo: Tymeslot.Repo]
 
-    ObanQueues.build(base_config)
+    # Every environment runs the engine that carries the enqueuer's
+    # correlation id into each job.
+    base_config
+    |> Keyword.put_new(:engine, ObanEngine)
+    |> ObanQueues.build()
   end
 
   # Schedule periodic jobs using TaskSupervisor for proper error handling
