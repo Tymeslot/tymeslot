@@ -290,18 +290,6 @@ defmodule Tymeslot.CalendarGrid.EventEditTest do
       assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
       assert captured_payload().status == nil
     end
-
-    test "forwards the recurrence scope", %{user: user, integration: integration} do
-      event = insert_event(integration, %{})
-      expect_provider_update()
-
-      assert {:ok, _updated} =
-               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"},
-                 recurrence_scope: "all"
-               )
-
-      assert captured_payload().recurrence_scope == "all"
-    end
   end
 
   describe "update_event/4 on a recurring series that changes all-day" do

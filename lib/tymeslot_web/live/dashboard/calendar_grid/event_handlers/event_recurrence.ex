@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.CalendarGrid.RecurrenceScope
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -12,13 +13,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
   @spec handle_confirm_recurrence_scope(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_confirm_recurrence_scope(%{"scope" => scope}, socket) do
-    case socket.assigns.recurrence_prompt do
-      nil ->
+    case {socket.assigns.recurrence_prompt, RecurrenceScope.parse(scope)} do
+      {nil, _scope} ->
         {:noreply, socket}
 
-      prompt ->
+      {prompt, {:ok, scope}} ->
         socket = assign(socket, :recurrence_prompt, nil)
         {:noreply, replay_with_scope(prompt, scope, socket)}
+
+      # Only a tampered or stale button sends a scope the prompt never
+      # offered. Nothing is written; the prompt closes as if cancelled, so
+      # the optimistic change is taken back off the grid.
+      {_prompt, :error} ->
+        {:noreply, reverted} = handle_cancel_recurrence_prompt(%{}, socket)
+        {:noreply, EditWorkflow.refuse_recurring_edit(reverted)}
     end
   end
 

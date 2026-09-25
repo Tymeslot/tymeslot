@@ -59,13 +59,11 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
 
   alias Tymeslot.CalendarGrid.EventVideoDiscard
   alias Tymeslot.CalendarGrid.EventVideoRooms
+  alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarResourceQueries
-  alias Tymeslot.Integrations.Calendar.ProviderConfig
-  alias Tymeslot.Integrations.Calendar.Recurrence.Series
-  alias Tymeslot.Utils.MapKeys
 
   @type event :: %{
           required(:uid) => String.t(),
@@ -102,7 +100,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   """
   @spec deletion_scopes(map()) :: {:ok, :single | :series} | {:error, :recurring_event}
   def deletion_scopes(event) do
-    case event |> stored_event() |> series_family() do
+    case event |> stored_event() |> Occurrence.series_family() do
       :single -> {:ok, :single}
       :unsupported -> {:error, :recurring_event}
       _family -> {:ok, :series}
@@ -130,7 +128,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
       when scope in [:occurrence, :series] do
     stored = stored_event(event)
 
-    case series_family(stored) do
+    case Occurrence.series_family(stored) do
       :single -> delete_single_event(user_id, event, stored)
       :unsupported -> {:error, %{reason: :recurring_event, retry: :not_queued}}
       family -> delete_series_member(user_id, event, stored, family, scope)
@@ -141,20 +139,6 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
     case ProviderCalendarEventQueries.get_by_uid(integration_id, uid) do
       {:ok, record} -> record
       {:error, :not_found} -> event
-    end
-  end
-
-  # Which scoped delete a series member's provider has: by the provider's own
-  # occurrence and master ids (Google, Outlook), by rewriting the resource
-  # (the CalDAV family), or none (Exchange, and anything else).
-  defp series_family(stored) do
-    provider = Map.get(stored, :provider)
-
-    cond do
-      not Series.member?(stored) -> :single
-      ProviderConfig.caldav_based?(provider) -> :caldav
-      ProviderConfig.oauth_provider?(provider) -> :provider_ids
-      true -> :unsupported
     end
   end
 
@@ -238,7 +222,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   defp series_delete(:caldav, :series, _stored), do: {:error, :unaddressable_series}
 
   defp caldav_occurrence_delete(stored, href) do
-    with {:ok, key} <- occurrence_key(stored) do
+    with {:ok, key} <- Occurrence.occurrence_key(stored) do
       occurrence = %{
         href: href,
         key: key,
@@ -266,19 +250,6 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
        do: own_id
 
   defp master_id(_stored), do: nil
-
-  # A CalDAV occurrence is cached under its series' UID followed by the
-  # occurrence's key, which is what the writer excludes. A uid that does not
-  # carry that prefix names no occurrence the writer could find, and guessing
-  # one could delete the wrong day.
-  defp occurrence_key(%{uid: uid} = stored) do
-    prefix = "#{MapKeys.get_binary(Map.get(stored, :provider_metadata), :uid)}_"
-
-    case String.split_at(uid, String.length(prefix)) do
-      {^prefix, key} when prefix != "_" and key != "" -> {:ok, key}
-      _unaddressable -> {:error, :unaddressable_occurrence}
-    end
-  end
 
   defp provider_delete(uid, context, opts, removal) do
     case CalendarEvents.delete_event(uid, context, opts) do

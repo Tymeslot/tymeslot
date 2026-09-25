@@ -415,6 +415,13 @@ defmodule Tymeslot.CalendarGrid do
   @spec ensure_editable(map()) :: :ok | {:error, :recurring_event}
   defdelegate ensure_editable(event), to: EventEdit
 
+  @doc """
+  How an event may be edited from the grid: on its own, in a scope, or not at
+  all. See `Tymeslot.CalendarGrid.EventEdit.edit_scopes/1`.
+  """
+  @spec edit_scopes(map()) :: {:ok, :single | :series} | {:error, :recurring_event}
+  defdelegate edit_scopes(event), to: EventEdit
+
   @doc "Fetches a single cached event by integration ID and UID."
   @spec get_cached_event(integer(), String.t()) ::
           {:ok, CalendarEvent.t()} | {:error, :not_found}

@@ -134,6 +134,38 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsInteractionsTest do
 
       refute html =~ "Edit recurring event"
     end
+
+    test "a scope the prompt never offered writes nothing", %{conn: conn, event: event} do
+      test_pid = self()
+
+      Mox.stub(Tymeslot.CalendarMock, :update_event, fn uid, _data, _context ->
+        send(test_pid, {:provider_update, uid})
+        :ok
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      tomorrow_iso = Date.to_iso8601(Date.add(Date.utc_today(), 1))
+
+      lv
+      |> element("#calendar-drag-zone")
+      |> render_hook("event_dropped", %{
+        "event-id" => to_string(event.id),
+        "new-date" => tomorrow_iso,
+        "new-hour" => "10",
+        "new-minute" => "0",
+        "new-end-hour" => "11",
+        "new-end-minute" => "0"
+      })
+
+      html =
+        lv
+        |> element("[phx-click='confirm_recurrence_scope'][phx-value-scope='this_only']")
+        |> render_click(%{"scope" => "everything"})
+
+      refute html =~ "Edit recurring event"
+      assert render(lv) =~ "Recurring events cannot be edited here yet"
+      refute_receive {:provider_update, _uid}, 200
+    end
   end
 
   describe "calendar visibility toggles" do

@@ -27,7 +27,18 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   changes it: a Graph `PATCH` that carries attendees resets every reply, and
   a CalDAV write that carries them states the new complete list.
 
-  ## Recurring events on the CalDAV family
+  ## Recurring events
+
+  An edit of a member of a series applies to a
+  `Tymeslot.CalendarGrid.RecurrenceScope`: this event, this and following, or
+  all of them. `update_event/4` hands such an edit to
+  `Tymeslot.CalendarGrid.SeriesEdit`, which decides per provider family what
+  each scope writes, and which scopes are refused. Whichever it picks ends in
+  `write_edit/6`, the same write a one-off event takes. Google and Outlook
+  address an occurrence by its own id, so an edit of that one occurrence is
+  written like any other event.
+
+  ### The CalDAV family
 
   A CalDAV series lives in one resource: the master VEVENT carrying the
   `RRULE`, plus a VEVENT per occurrence that has been edited on its own. The
@@ -42,7 +53,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   renaming "this Tuesday" rewrites the master's start to that Tuesday and
   drops every earlier occurrence, exactly as dragging it would. There is no
   edit of a CalDAV occurrence that stays inside the occurrence, so
-  `ensure_editable/1` refuses all of them, the way
+  `SeriesEdit` and `ensure_editable/1` refuse all of them, the way
   `Tymeslot.CalendarGrid.EventMove.ensure_movable/1` refuses the move.
 
   They come back when the writer can author a `RECURRENCE-ID` override into
@@ -55,18 +66,21 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   A failed provider write is queued for replay when the error is one a retry
   can recover (see `Calendar.Events.queueable_error?/1`) and the integration
   has an offline queue (the CalDAV family). A queued edit is also written to
-  the cache, so the grid keeps showing what the organiser saved.
+  the cache, so the grid keeps showing what the organiser saved. An edit of a
+  series member is never queued (see `Tymeslot.CalendarGrid.SeriesEdit`).
   """
 
   alias Tymeslot.CalendarGrid.AllDay
   alias Tymeslot.CalendarGrid.EventVideoRooms
+  alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.ProviderPayload
+  alias Tymeslot.CalendarGrid.RecurrenceScope
+  alias Tymeslot.CalendarGrid.SeriesEdit
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
-  alias Tymeslot.Integrations.Calendar.Recurrence.Series
 
   require Logger
 
@@ -76,6 +90,9 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   @type changes :: %{optional(atom()) => term()}
 
   @type failure :: %{reason: term(), retry: :queued | :not_queued}
+
+  @typedoc "Whether a failed provider write may be queued for offline replay."
+  @type retry_policy :: :queue_recoverable | :never_queue
 
   @doc """
   Applies `changes` to `event`, writes the whole updated event to the
@@ -90,8 +107,10 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   ## Options
 
     * `:recurrence_scope` - which occurrences of a recurring series the edit
-      is meant for (`"this_only"`, `"following"`, `"all"`). Forwarded to the
-      provider payload; no provider acts on it yet.
+      applies to, a `t:Tymeslot.CalendarGrid.RecurrenceScope.t/0`; defaults to
+      `:this_only`, and is ignored for an event outside a series. Anything
+      else raises `ArgumentError`: a scope arriving from a form is parsed with
+      `RecurrenceScope.parse/1` first. See `Tymeslot.CalendarGrid.SeriesEdit`.
     * `:conference_data` - a change to a Google event's own conference, sent
       with the write: a `createRequest` from
       `Tymeslot.Integrations.Calendar.Google.ConferenceData.create_request/0`,
@@ -104,33 +123,81 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   Returns `{:ok, updated_event}`, or `{:error, %{reason: reason, retry:
   :queued | :not_queued}}` where `:queued` means the edit is saved locally
-  and will be replayed on the next sync. An edit of a CalDAV series
-  occurrence is refused with `:recurring_event` before anything is written;
-  see `ensure_editable/1`.
+  and will be replayed on the next sync. An edit of a series member is never
+  queued; a scope its provider cannot write is refused with
+  `:unsupported_scope`, and an edit of a CalDAV series occurrence with
+  `:recurring_event`, before anything is written (see
+  `Tymeslot.CalendarGrid.SeriesEdit`).
   """
   @spec update_event(pos_integer(), map(), changes(), keyword()) ::
           {:ok, map()} | {:error, failure()}
   def update_event(user_id, event, changes, opts \\ []) when is_map(changes) do
     ensure_known_fields!(changes)
+    scope = recurrence_scope!(opts)
 
-    # The cache row, read once and used twice: it is what the guard below is
-    # asked about, since the caller's copy may be an optimistic one built from
-    # a form, and it carries the document the CalDAV adapters patch.
+    # The cache row, read once and used throughout: it is what says whether
+    # the event belongs to a series, since the caller's copy may be an
+    # optimistic one built from a form, and it carries the document the CalDAV
+    # adapters patch.
     stored = stored_row(event)
 
-    with :ok <- ensure_editable(stored || event),
-         {:ok, updated} <- apply_changes(event, changes, opts),
+    case Occurrence.series_family(stored || event) do
+      :single -> write_edit(user_id, event, stored, changes, opts, :queue_recoverable)
+      family -> SeriesEdit.update_event(user_id, event, stored, family, scope, changes, opts)
+    end
+  end
+
+  @doc """
+  How `event` may be edited from the grid: `{:ok, :single}` for an event
+  outside any series, `{:ok, :series}` for a member of one whose edit takes a
+  scope, and `{:error, :recurring_event}` for a series whose provider has no
+  scoped edit. Reads the cached row, as `update_event/4` does. See
+  `Tymeslot.CalendarGrid.SeriesEdit`.
+  """
+  @spec edit_scopes(map()) :: {:ok, :single | :series} | {:error, :recurring_event}
+  def edit_scopes(event) do
+    (stored_row(event) || event)
+    |> Occurrence.series_family()
+    |> SeriesEdit.edit_scopes()
+  end
+
+  @doc """
+  The write every edit ends in, once it is known which event it lands on:
+  applies `changes` to `event`, writes the whole updated event to the
+  provider, and records the edit on the cached row `stored`.
+
+  `retry` says what a failed write does: `:queue_recoverable` queues one a
+  retry can recover (see the moduledoc), `:never_queue` reports every failure
+  as `:not_queued`. Called by `update_event/4` and by
+  `Tymeslot.CalendarGrid.SeriesEdit`; everything else goes through
+  `update_event/4`.
+  """
+  @spec write_edit(pos_integer(), map(), map() | nil, changes(), keyword(), retry_policy()) ::
+          {:ok, map()} | {:error, failure()}
+  def write_edit(user_id, event, stored, changes, opts, retry) do
+    with {:ok, updated} <- apply_changes(event, changes, opts),
          {:ok, payload} <- ProviderPayload.from_event(updated) do
       payload =
         payload
-        |> maybe_put_scope(Keyword.get(opts, :recurrence_scope))
         |> maybe_put_conference(Keyword.get(opts, :conference_data))
         |> put_stored_document(stored)
         |> scope_attendees(event, changes)
 
-      write_to_provider(user_id, event, updated, payload)
+      write_to_provider(user_id, event, updated, payload, retry)
     else
       {:error, reason} -> {:error, %{reason: reason, retry: :not_queued}}
+    end
+  end
+
+  defp recurrence_scope!(opts) do
+    scope = Keyword.get(opts, :recurrence_scope, :this_only)
+
+    if scope in RecurrenceScope.values() do
+      scope
+    else
+      raise ArgumentError,
+            "expected :recurrence_scope to be one of #{inspect(RecurrenceScope.values())}, " <>
+              "got: #{inspect(scope)}"
     end
   end
 
@@ -140,22 +207,21 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   Every write for such an event is patched onto the series' master VEVENT,
   and the payload always carries the occurrence's own timing, so no edit of
-  one occurrence can stay inside it (see the moduledoc). The series test is
-  the one a move uses, `Tymeslot.Integrations.Calendar.Recurrence.Series.member?/1`;
-  the provider test is what keeps Google and Outlook, which address an
-  occurrence by its own id, editable.
+  one occurrence can stay inside it (see the moduledoc). The test is the
+  series family deletes use too,
+  `Tymeslot.CalendarGrid.Occurrence.series_family/1`, whose provider half is
+  what keeps Google and Outlook, which address an occurrence by its own id,
+  editable.
 
   Takes a cached row or a normalised event: the provider is read in either
   its string or atom form, and the series markers in either key shape.
   """
   @spec ensure_editable(map()) :: :ok | {:error, :recurring_event}
   def ensure_editable(event) do
-    if written_as_whole_series?(event), do: {:error, :recurring_event}, else: :ok
-  end
-
-  defp written_as_whole_series?(event) do
-    ProviderConfig.caldav_based?(Map.get(event, :provider)) and
-      Series.member?(event)
+    case Occurrence.series_family(event) do
+      :caldav -> {:error, :recurring_event}
+      _family -> :ok
+    end
   end
 
   defp stored_row(event) do
@@ -201,7 +267,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   defp merges_attendees?(_provider, _payload), do: false
 
-  defp write_to_provider(user_id, event, updated, payload) do
+  defp write_to_provider(user_id, event, updated, payload, retry) do
     case CalendarEvents.update_event(event.uid, payload, {event.calendar_integration_id, user_id}) do
       :ok ->
         record_local_edit(user_id, updated)
@@ -211,7 +277,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
         {:ok, updated}
 
       {:error, reason} ->
-        {:error, %{reason: reason, retry: queue_retry(user_id, updated, payload, reason)}}
+        {:error, %{reason: reason, retry: queue_retry(retry, user_id, updated, payload, reason)}}
     end
   end
 
@@ -256,10 +322,9 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   defp maybe_put_conference(payload, nil), do: payload
   defp maybe_put_conference(payload, change), do: Map.put(payload, :conference_data, change)
 
-  defp maybe_put_scope(payload, nil), do: payload
-  defp maybe_put_scope(payload, scope), do: Map.put(payload, :recurrence_scope, scope)
+  defp queue_retry(:never_queue, _user_id, _event, _payload, _reason), do: :not_queued
 
-  defp queue_retry(user_id, event, payload, reason) do
+  defp queue_retry(:queue_recoverable, user_id, event, payload, reason) do
     target = %{uid: event.uid, calendar_integration_id: event.calendar_integration_id}
 
     with true <- CalendarEvents.queueable_error?(reason),
