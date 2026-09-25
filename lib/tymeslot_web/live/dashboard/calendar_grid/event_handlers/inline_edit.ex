@@ -444,10 +444,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     result
   end
 
-  # Applies a recurrence-rule change. When the event is already part of a
-  # recurring series, the scope prompt (this / this-and-following / all events)
-  # is shown first and the actual write is deferred to confirmation; otherwise
-  # the rule is written straight away.
+  # Applies a recurrence-rule change. When the event is part of a series whose
+  # provider takes a scope (see `EditWorkflow.series_edit?/1`), the scope
+  # prompt is shown first and the actual write is deferred to confirmation;
+  # otherwise the rule is written straight away.
   #
   # Recurrence changes deviate from the standard `apply_optimistic_update`
   # pattern: the async step is conditional on whether the event belongs to a
@@ -464,7 +464,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       |> assign(:events, updated_events)
       |> Helpers.precompute_derived()
 
-    if original_event.recurring_event_id do
+    if EditWorkflow.series_edit?(original_event) do
       prompt = %{
         kind: :recurrence_rule,
         event: original_event,

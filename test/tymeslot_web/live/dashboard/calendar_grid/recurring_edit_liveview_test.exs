@@ -4,16 +4,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringEditLiveViewTest do
   resizing it, re-dating it, renaming it.
 
   On the CalDAV family the sync expands a series into one cached row per
-  occurrence, all sharing the series' href. An edit of one of them is written
-  as that occurrence's override in the series' resource, so the grid sends it
-  straight to the calendar, addressed to the occurrence, and the occurrence
-  keeps its edit. The recurrence prompt is not shown for it yet: the prompt
-  offers scopes the CalDAV writer cannot take, and is gated on the
-  `recurring_event_id` only Google and Outlook occurrences carry. Turning one
-  occurrence all-day is refused by the domain, and the grid reverts it.
+  occurrence, all sharing the series' href. A change of time of one of them
+  asks which occurrences it applies to, as it does on Google and Outlook;
+  "This event" writes it as that occurrence's override in the series'
+  resource, and the occurrence keeps its edit. A field edit, such as a
+  rename, asks nothing and is written to the occurrence alone. Turning one
+  occurrence all-day is refused by the domain, and the grid reverts it and
+  says why.
 
-  Google and Outlook address an occurrence by its own id, and theirs goes
-  through the recurrence prompt, whose copy promises exactly that.
+  An Exchange occurrence takes no scope, so it is written as that event
+  alone, without the prompt. `RecurringScopeLiveViewTest` follows each
+  choice down to the wire.
   """
 
   use TymeslotWeb.LiveCase, async: true
@@ -57,14 +58,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringEditLiveViewTest do
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       drop(lv, event, 14)
+      confirm_scope(lv, "this_only")
 
       assert {:update, payload} = await_update(lv)
       assert payload.occurrence.key == key_for(event)
+      assert payload.occurrence.scope == :this_only
       assert DateTime.compare(payload.occurrence.changes.start_time, at_today(14)) == :eq
 
-      html = render(lv)
-      refute html =~ "recurrence-prompt-modal"
-      refute html =~ "Recurring events cannot be edited here yet."
+      refute render(lv) =~ "recurrence-prompt-modal"
 
       assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
       assert DateTime.compare(row.start_at, at_today(14)) == :eq
@@ -87,6 +88,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringEditLiveViewTest do
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       drop(lv, event, 14)
+      confirm_scope(lv, "this_only")
 
       assert {:update, %{occurrence: occurrence}} = await_update(lv)
       assert occurrence.key == key_for(event)
@@ -107,6 +109,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringEditLiveViewTest do
         "new-end-minute" => "0"
       })
 
+      confirm_scope(lv, "this_only")
+
       assert {:update, %{occurrence: occurrence}} = await_update(lv)
       assert DateTime.compare(occurrence.changes.end_time, at_today(13)) == :eq
 
@@ -114,7 +118,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringEditLiveViewTest do
       assert DateTime.compare(row.end_at, at_today(13)) == :eq
     end
 
-    test "turning it into an all-day event is refused and reverted", %{
+    test "turning it into an all-day event is refused, reverted and explained", %{
       conn: conn,
       integration: integration
     } do
@@ -131,9 +135,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringEditLiveViewTest do
       lv |> element("#calendar-grid") |> render_hook("toggle_event_all_day", %{})
 
       eventually(
-        fn -> assert render(lv) =~ "Failed to update event - changes reverted" end,
+        fn ->
+          assert render(lv) =~
+                   "Events of a repeating series cannot be switched between all-day and timed here."
+        end,
         timeout: @task_timeout
       )
+
+      refute render(lv) =~ "Failed to update event - changes reverted"
 
       refute_received {:provider_call, _task_pid, _call}
 
@@ -210,6 +219,36 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringEditLiveViewTest do
       assert html =~ "the rest of the series stays as it is"
       refute html =~ "Recurring events cannot be edited here yet."
     end
+
+    test "an Exchange occurrence is written as that event alone, without the prompt", %{
+      conn: conn,
+      user: user
+    } do
+      exchange = insert(:calendar_integration, user: user, provider: "exchange")
+
+      # An Exchange occurrence names no master; only its item type says it
+      # belongs to a series.
+      event =
+        insert_event(exchange, %{
+          provider: "exchange",
+          provider_calendar_id: "calendar",
+          provider_event_id: "AAMkAD-occurrence",
+          provider_metadata: %{"calendar_item_type" => "Occurrence"}
+        })
+
+      stub_update()
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      drop(lv, event, 14)
+
+      assert {:update, payload} = await_update(lv)
+      refute Map.has_key?(payload, :occurrence)
+      assert DateTime.compare(payload.start_time, at_today(14)) == :eq
+      refute render(lv) =~ "recurrence-prompt-modal"
+
+      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(exchange.id, event.uid)
+      assert DateTime.compare(row.start_at, at_today(14)) == :eq
+    end
   end
 
   defp at_today(hour), do: DateTime.new!(Date.utc_today(), Time.new!(hour, 0, 0), "Etc/UTC")
@@ -268,6 +307,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringEditLiveViewTest do
       "new-end-hour" => to_string(hour + 1),
       "new-end-minute" => "0"
     })
+  end
+
+  defp confirm_scope(lv, scope) do
+    lv
+    |> element("#recurrence-prompt-modal [phx-value-scope='#{scope}']")
+    |> render_click()
   end
 
   defp stub_update(result \\ :ok) do

@@ -9,29 +9,49 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal
 
   @spec handle_confirm_recurrence_scope(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_confirm_recurrence_scope(%{"scope" => scope}, socket) do
-    case {socket.assigns.recurrence_prompt, RecurrenceScope.parse(scope)} do
-      {nil, _scope} ->
+  def handle_confirm_recurrence_scope(params, socket) do
+    prompt = socket.assigns.recurrence_prompt
+
+    case prompt && offered_scope(prompt, params) do
+      nil ->
         {:noreply, socket}
 
-      {prompt, {:ok, scope}} ->
+      {:ok, scope} ->
         socket = assign(socket, :recurrence_prompt, nil)
         {:noreply, replay_with_scope(prompt, scope, socket)}
 
       # Only a tampered or stale button sends a scope the prompt never
       # offered. Nothing is written; the prompt closes as if cancelled, so
       # the optimistic change is taken back off the grid.
-      {_prompt, :error} ->
+      :error ->
         {:noreply, reverted} = handle_cancel_recurrence_prompt(%{}, socket)
-        {:noreply, EditWorkflow.refuse_recurring_edit(reverted)}
+        send(self(), {:flash, {:error, unknown_scope_message()}})
+        {:noreply, reverted}
     end
   end
 
+  defp offered_scope(prompt, params) do
+    with {:ok, scope} <- RecurrenceScope.parse(params["scope"]),
+         true <- scope in RecurrencePromptModal.offered_scopes(prompt) do
+      {:ok, scope}
+    else
+      _not_offered -> :error
+    end
+  end
+
+  defp unknown_scope_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "That choice is not available for this event, so nothing was changed."
+    )
+  end
+
   # The scope prompt gates two kinds of edit on a recurring series: a timing
-  # change (the default, original behaviour) and a recurrence-rule change.
+  # change (a drag, a resize or an inline time) and a recurrence-rule change.
   defp replay_with_scope(%{kind: :recurrence_rule} = prompt, scope, socket) do
     socket =
       EditWorkflow.update_event_async(

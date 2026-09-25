@@ -23,7 +23,8 @@ defmodule Tymeslot.CalendarGrid.Occurrence do
       own, and the series its master's.
     * `:caldav` - the CalDAV family holds a whole series in one resource,
       addressed by its href; an occurrence is a part of that document.
-    * `:unsupported` - no scoped write (Exchange, and anything else).
+    * `:unsupported` - no scoped write (Exchange, and anything else): an
+      edit is written to the one event, and a delete is refused.
   """
   @type series_family :: :single | :provider_ids | :caldav | :unsupported
 

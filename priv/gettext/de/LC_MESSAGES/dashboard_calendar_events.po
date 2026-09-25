@@ -1043,16 +1043,6 @@ msgstr "Meetingraum erstellt."
 msgid "Your calendar could not be reached. The change is saved and will sync on the next attempt."
 msgstr "Ihr Kalender war nicht erreichbar. Die Änderung ist gespeichert und wird beim nächsten Versuch synchronisiert."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This event is part of a repeating series. Your change applies to this event only, and the rest of the series stays as it is. To change the whole series, use your calendar app."
-msgstr "Dieses Ereignis gehört zu einer Serie. Ihre Änderung gilt nur für dieses Ereignis, der Rest der Serie bleibt unverändert. Um die gesamte Serie zu ändern, verwenden Sie Ihre Kalender-App."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Update this event"
-msgstr "Dieses Ereignis aktualisieren"
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #, elixir-autogen, elixir-format
 msgid "Recurring events cannot be edited here yet. Please change this one in your calendar app."
@@ -1117,3 +1107,75 @@ msgstr "Wiederkehrendes Ereignis gelöscht. Teilnehmer wurden benachrichtigt."
 #, elixir-autogen, elixir-format
 msgid "This event could not be deleted here. Please delete it in your calendar app."
 msgstr "Dieses Ereignis konnte hier nicht gelöscht werden. Bitte löschen Sie es in Ihrer Kalender-App."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "All events"
+msgstr "Alle Ereignisse"
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Events of a repeating series cannot be switched between all-day and timed here. Please make this change in your calendar app."
+msgstr "Ereignisse einer Serie können hier nicht zwischen ganztägig und zeitgebunden umgestellt werden. Bitte nehmen Sie diese Änderung in Ihrer Kalender-App vor."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "That change cannot be made to the events you chose. A repeat rule can only be changed for all events, or this and following events, and cannot be removed here."
+msgstr "Diese Änderung ist für die gewählten Ereignisse nicht möglich. Eine Wiederholungsregel kann nur für alle Ereignisse oder für dieses und alle folgenden geändert und hier nicht entfernt werden."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex
+#, elixir-autogen, elixir-format
+msgid "That choice is not available for this event, so nothing was changed."
+msgstr "Diese Auswahl ist für dieses Ereignis nicht verfügbar, daher wurde nichts geändert."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_writes.ex
+#, elixir-autogen, elixir-format
+msgid "The series was updated, but a change you made while it was saving was not applied. Please make it again."
+msgid_plural "The series was updated, but %{count} changes you made while it was saving were not applied. Please make them again."
+msgstr[0] "Die Serie wurde aktualisiert, aber eine Änderung, die Sie während des Speicherns vorgenommen haben, wurde nicht übernommen. Bitte nehmen Sie sie erneut vor."
+msgstr[1] "Die Serie wurde aktualisiert, aber %{count} Änderungen, die Sie während des Speicherns vorgenommen haben, wurden nicht übernommen. Bitte nehmen Sie sie erneut vor."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This and following events"
+msgstr "Dieses und folgende Ereignisse"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This event"
+msgstr "Dieses Ereignis"
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "This event could not be matched to its series. Refresh your calendars and try again."
+msgstr "Dieses Ereignis konnte seiner Serie nicht zugeordnet werden. Aktualisieren Sie Ihre Kalender und versuchen Sie es erneut."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This event is part of a repeating series. Which events should your change apply to?"
+msgstr "Dieses Ereignis gehört zu einer Serie. Für welche Ereignisse soll Ihre Änderung gelten?"
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "This series repeats on fixed days, such as the second Monday of the month, so it cannot be moved like this. Please make this change in your calendar app."
+msgstr "Diese Serie wiederholt sich an festen Tagen, etwa am zweiten Montag des Monats, und kann daher nicht so verschoben werden. Bitte nehmen Sie diese Änderung in Ihrer Kalender-App vor."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "This series' repeat rule cannot be split here. Please make this change in your calendar app."
+msgstr "Die Wiederholungsregel dieser Serie kann hier nicht aufgeteilt werden. Bitte nehmen Sie diese Änderung in Ihrer Kalender-App vor."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "every occurrence in the series changes, earlier ones included."
+msgstr "Alle Termine der Serie ändern sich, auch die früheren."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "only this occurrence changes, and the rest of the series stays as it is."
+msgstr "Nur dieser Termin ändert sich, der Rest der Serie bleibt unverändert."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "this occurrence and every later one change, and the earlier ones stay as they are."
+msgstr "Dieser und alle späteren Termine ändern sich, die früheren bleiben unverändert."

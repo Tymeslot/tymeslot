@@ -36,6 +36,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   (`retry: :queued`) counts as accepted: the next write starts from it, as
   the queued replay will.
 
+  ## After a write to a whole series
+
+  A write of this and following events, or of all events, of a recurring
+  series (`:recurrence_scope` `:following` or `:all`) can move every
+  occurrence, and the grid's cached rows of the series are dropped until a
+  sync brings them back (see `Tymeslot.CalendarGrid.SeriesEdit`). When one
+  succeeds, the grid reloads its events, so the series shows what the cache
+  now holds and the sync's rows appear as it lands; the detail panel closes
+  if its event is gone.
+
+  The writes still waiting behind it for the same event are dropped, not
+  run. They were made against the occurrence as it was, whose row, and for
+  a split its uid, may no longer exist, and the chain's `confirmed` event
+  is no longer what the provider holds; running them could write a stale
+  copy of the event over the series-wide change, or to an occurrence the
+  series has left. The organiser is told how many changes were not applied,
+  and can make them again on the reloaded grid.
+
   ## Results
 
   Every write carries a reference, `{key, seq}`, where `seq` rises with every
@@ -45,6 +63,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   LiveView (see `EditWorkflow.run_async/4`), one per task, so two writes can
   never share a task name and silently drop each other's answer.
   """
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
 
@@ -136,6 +156,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   end
 
   defp advance(socket, key, chain, outcome) do
+    if series_wide_success?(chain.in_flight, outcome),
+      do: after_series_write(socket, key, chain),
+      else: advance_chain(socket, key, chain, outcome)
+  end
+
+  defp advance_chain(socket, key, chain, outcome) do
     confirmed = confirmed_after(chain, outcome)
 
     case :queue.out(chain.waiting) do
@@ -149,6 +175,36 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
         |> show_waiting(outcome, confirmed, [next | :queue.to_list(rest)])
         |> start(next, confirmed)
     end
+  end
+
+  defp series_wide_success?(%{kind: :update, opts: opts}, {:ok, _updated}),
+    do: Keyword.get(opts, :recurrence_scope) in [:following, :all]
+
+  defp series_wide_success?(_write, _outcome), do: false
+
+  # See "After a write to a whole series" in the moduledoc.
+  defp after_series_write(socket, key, chain) do
+    case :queue.len(chain.waiting) do
+      0 -> :ok
+      dropped -> send(self(), {:flash, {:warning, dropped_writes_message(dropped)}})
+    end
+
+    socket = assign(socket, :event_writes, Map.delete(socket.assigns.event_writes, key))
+    socket = Helpers.load_events(socket)
+    selected = socket.assigns.selected_event
+
+    if selected && not Enum.any?(socket.assigns.events, &(&1.id == selected.id)),
+      do: assign(socket, :selected_event, nil),
+      else: socket
+  end
+
+  defp dropped_writes_message(count) do
+    dngettext(
+      "dashboard_calendar_events",
+      "The series was updated, but a change you made while it was saving was not applied. Please make it again.",
+      "The series was updated, but %{count} changes you made while it was saving were not applied. Please make them again.",
+      count
+    )
   end
 
   defp confirmed_after(_chain, {:ok, updated}), do: updated

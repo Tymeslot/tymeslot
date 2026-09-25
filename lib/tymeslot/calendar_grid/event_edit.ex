@@ -149,11 +149,11 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   @doc """
   How `event` may be edited from the grid: `{:ok, :single}` for an event
   outside any series, `{:ok, :series}` for a member of one whose edit takes a
-  scope, and `{:error, :recurring_event}` for a series whose provider has no
-  scoped edit. Reads the cached row, as `update_event/4` does. See
-  `Tymeslot.CalendarGrid.SeriesEdit`.
+  scope, and `{:ok, :this_only}` for a member of a series whose provider has
+  no scoped edit (Exchange), which is written to that event alone. Reads the
+  cached row, as `update_event/4` does. See `Tymeslot.CalendarGrid.SeriesEdit`.
   """
-  @spec edit_scopes(map()) :: {:ok, :single | :series} | {:error, :recurring_event}
+  @spec edit_scopes(map()) :: {:ok, :single | :this_only | :series}
   def edit_scopes(event) do
     (stored_row(event) || event)
     |> Occurrence.series_family()

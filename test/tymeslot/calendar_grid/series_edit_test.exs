@@ -339,11 +339,11 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       assert CalendarGrid.edit_scopes(event) == {:ok, :series}
     end
 
-    test "an occurrence of an Exchange series takes no scope", %{user: user} do
+    test "an occurrence of an Exchange series is edited as that event only", %{user: user} do
       exchange = insert(:calendar_integration, user: user, provider: "exchange")
       event = insert_event(exchange, exchange_occurrence())
 
-      assert CalendarGrid.edit_scopes(event) == {:error, :recurring_event}
+      assert CalendarGrid.edit_scopes(event) == {:ok, :this_only}
     end
 
     test "reads the series from the cached row when handed only the address", %{

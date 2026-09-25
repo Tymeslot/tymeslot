@@ -137,9 +137,48 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   end
 
   # A refusal the domain made names its own reason; everything else is a
-  # provider failure the organiser can do nothing about.
+  # provider failure the organiser can do nothing about. The scoped edits of
+  # a recurring series refuse before anything is written, so each of their
+  # reasons says what the organiser can do instead (see
+  # `Tymeslot.CalendarGrid.SeriesEdit`).
   defp update_failed_message(:recurring_event),
     do: EditWorkflow.recurring_edit_refused_message()
+
+  defp update_failed_message(:value_type_change) do
+    dgettext(
+      "dashboard_calendar_events",
+      "Events of a repeating series cannot be switched between all-day and timed here. Please make this change in your calendar app."
+    )
+  end
+
+  defp update_failed_message(reason) when reason in [:unsupported_scope, :rule_removal] do
+    dgettext(
+      "dashboard_calendar_events",
+      "That change cannot be made to the events you chose. A repeat rule can only be changed for all events, or this and following events, and cannot be removed here."
+    )
+  end
+
+  defp update_failed_message(:rule_pins_occurrences) do
+    dgettext(
+      "dashboard_calendar_events",
+      "This series repeats on fixed days, such as the second Monday of the month, so it cannot be moved like this. Please make this change in your calendar app."
+    )
+  end
+
+  defp update_failed_message(:unsupported_rule) do
+    dgettext(
+      "dashboard_calendar_events",
+      "This series' repeat rule cannot be split here. Please make this change in your calendar app."
+    )
+  end
+
+  defp update_failed_message(reason)
+       when reason in [:unaddressable_occurrence, :unreadable_timing, :not_recurring] do
+    dgettext(
+      "dashboard_calendar_events",
+      "This event could not be matched to its series. Refresh your calendars and try again."
+    )
+  end
 
   defp update_failed_message(_reason),
     do: dgettext("dashboard_calendar_events", "Failed to update event - changes reverted")

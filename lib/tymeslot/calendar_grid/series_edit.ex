@@ -27,8 +27,9 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
       splits the series in two there (see *What this and every following
       CalDAV occurrence can take*).
     * **Exchange** has no scoped write. An edit of this event is written to
-      the item's own id, as it always has been; the wider scopes are refused
-      with `:unsupported_scope`.
+      the item's own id, as it always has been, and the grid does not ask
+      for a scope (`edit_scopes/1` answers `:this_only`); the wider scopes
+      are refused with `:unsupported_scope`.
 
   ## What one CalDAV occurrence can take
 
@@ -142,13 +143,14 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   @doc """
   How a series member whose provider is in `family` may be edited from the
   grid: `{:ok, :single}` outside a series, `{:ok, :series}` when the edit
-  takes a scope, `{:error, :recurring_event}` when it cannot take one.
+  takes a scope, and `{:ok, :this_only}` for a member of a series whose
+  provider has no scoped write, whose edit is written to that event alone
+  (see *Exchange* above).
   """
-  @spec edit_scopes(Occurrence.series_family()) ::
-          {:ok, :single | :series} | {:error, :recurring_event}
+  @spec edit_scopes(Occurrence.series_family()) :: {:ok, :single | :this_only | :series}
   def edit_scopes(:single), do: {:ok, :single}
   def edit_scopes(family) when family in [:provider_ids, :caldav], do: {:ok, :series}
-  def edit_scopes(:unsupported), do: {:error, :recurring_event}
+  def edit_scopes(:unsupported), do: {:ok, :this_only}
 
   @doc """
   Applies `changes` to `event`, a member of a series whose cached row is

@@ -85,14 +85,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   @doc """
   Applies a new start and end to `event`: optimistically on screen, then
-  either through the recurrence prompt or straight to the provider.
+  either through the recurrence prompt (see `series_edit?/1`) or straight to
+  the provider.
 
-  An edit the provider can only write to a whole series is refused here,
-  before the optimistic update and before the prompt. The prompt offers "this
-  event only", so putting it in front of a write that moves every occurrence
-  would be the bug with a dialog on top of it; see
+  An event the grid cannot edit at all is refused here, before the
+  optimistic update and before the prompt; see
   `Tymeslot.CalendarGrid.EventEdit.ensure_editable/1`. The gate the handlers
-  call, and the domain itself, refuse the same edit again — this clause is
+  call, and the domain itself, refuse the same edit again; this clause is
   what keeps the prompt out of a path either of them somehow let through.
   """
   @spec apply_event_change(Phoenix.LiveView.Socket.t(), map(), map(), DateTime.t(), DateTime.t()) ::
@@ -131,7 +130,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       |> assign(:events, new_events)
       |> Helpers.precompute_derived()
 
-    if event.recurring_event_id do
+    if series_edit?(event) do
       prompt = %{
         event: event,
         optimistic_event: optimistic_event,
@@ -145,6 +144,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       update_event_async(socket, event, %{start_at: new_start, end_at: new_end})
     end
   end
+
+  @doc """
+  Whether an edit of `event` asks the organiser which occurrences of its
+  series it applies to: this event, this and following, or all of them.
+
+  Only a member of a series whose provider can write each of those scopes is
+  asked (`Tymeslot.CalendarGrid.edit_scopes/1` answers `:series`): Google,
+  Outlook and the CalDAV family. An event outside a series, and a member of a
+  series whose provider writes only the one event (Exchange), are written
+  straight away, as that one event.
+  """
+  @spec series_edit?(map()) :: boolean()
+  def series_edit?(event), do: CalendarGrid.edit_scopes(event) == {:ok, :series}
 
   @doc """
   Runs `fun` in a supervised Task and sends `{tag, result}` back to this
