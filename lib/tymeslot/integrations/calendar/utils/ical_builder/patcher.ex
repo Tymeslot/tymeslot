@@ -68,8 +68,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   alias Tymeslot.Integrations.Calendar.CalDAV.Scheduling
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Alarms
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.ContentLines
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
-  alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Properties
 
   @doc """
@@ -85,12 +85,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     patch_set = build_patch_set(event_data, mode)
 
     raw_ical
-    |> LineFolder.unfold_lines()
-    |> Enum.reject(&(&1 == ""))
+    |> ContentLines.split()
     |> patch_components(patch_set)
-    |> Enum.join("\r\n")
-    |> Kernel.<>("\r\n")
-    |> LineFolder.fold_lines()
+    |> ContentLines.join()
   end
 
   # A patch set is the list of {properties it replaces, replacement lines} the
@@ -146,7 +143,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   defp patch_components([], _patch_set), do: []
 
   defp patch_components(["BEGIN:VEVENT" | rest], patch_set) do
-    {body, remaining} = take_until(rest, "END:VEVENT", [])
+    {body, remaining} = ContentLines.take_until(rest, "END:VEVENT")
 
     ["BEGIN:VEVENT"] ++
       patch_vevent(body, patch_set) ++
@@ -155,10 +152,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
 
   defp patch_components([line | rest], patch_set),
     do: [line | patch_components(rest, patch_set)]
-
-  defp take_until([], _terminator, acc), do: {Enum.reverse(acc), []}
-  defp take_until([terminator | rest], terminator, acc), do: {Enum.reverse(acc), rest}
-  defp take_until([line | rest], terminator, acc), do: take_until(rest, terminator, [line | acc])
 
   defp patch_vevent(body, patch_set) do
     {properties, alarms} = split_alarms(body, [], [])
@@ -169,7 +162,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
       entries = patch_set.entries ++ attendee_entries(properties, patch_set)
       replaced = MapSet.new(Enum.flat_map(entries, fn {names, _lines} -> names end))
 
-      kept = Enum.reject(properties, &MapSet.member?(replaced, property_name(&1)))
+      kept = Enum.reject(properties, &MapSet.member?(replaced, ContentLines.property_name(&1)))
       added = Enum.flat_map(entries, fn {_names, lines} -> content_lines(lines) end)
 
       kept ++ added ++ patched_alarms(alarms, patch_set.event_data)
@@ -179,7 +172,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   # An occurrence override carries the timing of its own instance; the payload
   # describes the series' master event, so applying it here would move every
   # exception onto the master's start.
-  defp override?(properties), do: Enum.any?(properties, &(property_name(&1) == "RECURRENCE-ID"))
+  defp override?(properties),
+    do: Enum.any?(properties, &(ContentLines.property_name(&1) == "RECURRENCE-ID"))
 
   # Both spellings are always replaced in a block of Tymeslot's own, never just
   # the one being written, so a document Tymeslot wrote under the other mode,
@@ -210,7 +204,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
 
     kept =
       Enum.filter(properties, fn line ->
-        property_name(line) == "ATTENDEE" and keep_attendee_line?(line, wanted)
+        ContentLines.property_name(line) == "ATTENDEE" and keep_attendee_line?(line, wanted)
       end)
 
     present = MapSet.new(kept, &line_address/1)
@@ -243,7 +237,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   defp replaced_attendee_properties(false = _ours), do: ["ATTENDEE"]
 
   defp marker(lines, :attendee, true = _ours) do
-    if Enum.any?(lines, &(property_name(&1) == "ATTENDEE")),
+    if Enum.any?(lines, &(ContentLines.property_name(&1) == "ATTENDEE")),
       do: [ICalBuilder.attendee_marker()],
       else: []
   end
@@ -275,10 +269,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   end
 
   defp advertises_attendees?(properties),
-    do: Enum.any?(properties, &(property_name(&1) == "ATTENDEE"))
+    do: Enum.any?(properties, &(ContentLines.property_name(&1) == "ATTENDEE"))
 
   defp marked_ours?(properties),
-    do: Enum.any?(properties, &(property_name(&1) == "X-TYMESLOT-ATTENDEES"))
+    do: Enum.any?(properties, &(ContentLines.property_name(&1) == "X-TYMESLOT-ATTENDEES"))
 
   defp patched_alarms(alarms, event_data) do
     if Map.has_key?(event_data, :reminders) do
@@ -295,7 +289,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
     do: {Enum.reverse(properties), Enum.reverse(alarms)}
 
   defp split_alarms(["BEGIN:VALARM" | rest], properties, alarms) do
-    {body, remaining} = take_until(rest, "END:VALARM", [])
+    {body, remaining} = ContentLines.take_until(rest, "END:VALARM")
     alarm = ["BEGIN:VALARM"] ++ body ++ ["END:VALARM"]
     split_alarms(remaining, properties, [alarm | alarms])
   end
@@ -308,13 +302,4 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Patcher do
   # normalised to a list of content lines here.
   defp content_lines(nil), do: []
   defp content_lines(lines), do: String.split(lines, ~r/\r\n|\r|\n/, trim: true)
-
-  # RFC 5545 §3.1: the property name runs to the first parameter separator or
-  # the value separator, whichever comes first.
-  defp property_name(line) do
-    line
-    |> String.split([";", ":"], parts: 2)
-    |> hd()
-    |> String.upcase()
-  end
 end

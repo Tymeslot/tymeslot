@@ -102,7 +102,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   # truncated as well and is not attempted here.
   defp override?(raw), do: is_binary(raw[:recurrence_id]) and raw[:recurrence_id] != ""
 
-  defp override_key(raw), do: recurrence_id_suffix(raw[:recurrence_id], raw[:timezone])
+  defp override_key(raw), do: occurrence_key(raw[:recurrence_id], raw[:timezone])
 
   defp expand_event(raw, range_start, range_end, overrides) do
     rrule = raw[:rrule] || raw[:recurrence_rule]
@@ -372,17 +372,28 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   defp occurrence_suffix(%DateTime{} = dt), do: Calendar.strftime(dt, "%Y%m%dT%H%M%S")
   defp occurrence_suffix(_other), do: "unknown"
 
-  # `RECURRENCE-ID` reaches here as the raw property value: `20260501T100000`
-  # when its TZID parameter named a zone (the event's own), `20260501T080000Z`
-  # for a UTC instant, `20260501` for an all-day series. Each is reduced to the
-  # same wall-clock stamp `occurrence_suffix/1` builds from an expanded
-  # occurrence, so an override lines up with the occurrence it replaces
-  # whichever of the three forms the server wrote.
   # The UTC marker's group always takes part in a timed match, so a value
   # without one captures it as "" rather than leaving it out.
   @recurrence_id ~r/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z?))?$/
 
-  defp recurrence_id_suffix(value, timezone) when is_binary(value) do
+  @doc """
+  Reduces a raw `RECURRENCE-ID` value to the key the cache files the
+  occurrence it names under: the wall-clock stamp in the series' own zone,
+  `YYYYMMDDTHHMMSS` for a timed series or `YYYYMMDD` for an all-day one, the
+  same stamp an expanded occurrence's uid is suffixed with.
+
+  The value arrives as written on the wire: `20260501T100000` when its `TZID`
+  parameter named a zone (the event's own) and taken as written, likewise
+  `20260501` for an all-day series, and `20260501T080000Z` for a UTC instant,
+  which is shifted into `timezone` (the series' IANA zone, or `nil` to keep it
+  in UTC). Every reader of a `RECURRENCE-ID` goes through this one rule, so an
+  override lines up with the occurrence it replaces whichever of the three
+  forms the server wrote.
+
+  Returns `nil` for a value it cannot read.
+  """
+  @spec occurrence_key(String.t() | nil, String.t() | nil) :: String.t() | nil
+  def occurrence_key(value, timezone) when is_binary(value) do
     case Regex.run(@recurrence_id, String.trim(value)) do
       [_all, y, m, d] -> y <> m <> d
       [_all, y, m, d, hh, mm, ss, ""] -> "#{y}#{m}#{d}T#{hh}#{mm}#{ss}"
@@ -391,7 +402,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
     end
   end
 
-  defp recurrence_id_suffix(_value, _timezone), do: nil
+  def occurrence_key(_value, _timezone), do: nil
 
   defp utc_suffix_in_zone([y, m, d, hh, mm, ss], timezone) do
     with {:ok, date} <- Date.new(to_int(y), to_int(m), to_int(d)),

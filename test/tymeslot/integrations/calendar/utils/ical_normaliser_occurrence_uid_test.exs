@@ -98,4 +98,31 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliserOccurrenceUidTest do
 
     assert event.uid == "D2B2CBB0-F8B5-4EA6-9B43-287EF45F4EC2"
   end
+
+  describe "occurrence_key/2" do
+    test "a zoned RECURRENCE-ID is taken as written" do
+      assert ICalNormaliser.occurrence_key("20260511T100000", "Europe/Berlin") ==
+               "20260511T100000"
+    end
+
+    test "a floating RECURRENCE-ID is taken as written" do
+      assert ICalNormaliser.occurrence_key("20260511T100000", nil) == "20260511T100000"
+    end
+
+    test "an all-day RECURRENCE-ID is its date" do
+      assert ICalNormaliser.occurrence_key("20260511", nil) == "20260511"
+    end
+
+    test "a UTC RECURRENCE-ID is read in the series' zone" do
+      assert ICalNormaliser.occurrence_key("20260511T080000Z", "Europe/Berlin") ==
+               "20260511T100000"
+
+      assert ICalNormaliser.occurrence_key("20260511T080000Z", nil) == "20260511T080000"
+    end
+
+    test "an unreadable value has no key" do
+      assert ICalNormaliser.occurrence_key("next Tuesday", "Europe/Berlin") == nil
+      assert ICalNormaliser.occurrence_key(nil, "Europe/Berlin") == nil
+    end
+  end
 end
