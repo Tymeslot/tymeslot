@@ -94,6 +94,18 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.FilterTest do
              }
     end
 
+    test "redacts the meeting uid in request and LiveView params" do
+      context = %{
+        "request.params" => %{"username" => "jane", "meeting_uid" => @uid},
+        "live_view.params" => %{"username" => "jane", "meeting_uid" => @uid}
+      }
+
+      assert Filter.sanitize(context) == %{
+               "request.params" => %{"username" => "jane", "meeting_uid" => "[REDACTED]"},
+               "live_view.params" => %{"username" => "jane", "meeting_uid" => "[REDACTED]"}
+             }
+    end
+
     test "keeps an ordinary path unchanged" do
       assert Filter.sanitize(%{"request.path" => "/dashboard/settings"}) ==
                %{"request.path" => "/dashboard/settings"}

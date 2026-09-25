@@ -48,8 +48,7 @@ defmodule Tymeslot.Bookings.Cancel do
 
   def execute(%Meeting{status: "cancelled"} = meeting, _opts) do
     Logger.info("Skipping cancellation for already-cancelled meeting",
-      meeting_id: meeting.id,
-      uid: meeting.uid
+      meeting_id: meeting.id
     )
 
     {:error, "Meeting is already cancelled"}
@@ -93,8 +92,7 @@ defmodule Tymeslot.Bookings.Cancel do
 
   defp withdraw_held_request(meeting, announce?) do
     Logger.info("Withdrawing held booking request",
-      meeting_id: meeting.id,
-      uid: meeting.uid
+      meeting_id: meeting.id
     )
 
     with {:ok, released} <- Approval.withdraw(meeting),
@@ -113,8 +111,7 @@ defmodule Tymeslot.Bookings.Cancel do
 
   defp cancel_confirmed_meeting(meeting, announce?) do
     Logger.info("Cancelling meeting",
-      meeting_id: meeting.id,
-      uid: meeting.uid
+      meeting_id: meeting.id
     )
 
     with {:ok, updated_meeting} <- update_meeting_status(meeting),
@@ -188,8 +185,7 @@ defmodule Tymeslot.Bookings.Cancel do
 
   defp withdraw_held_request_external(meeting) do
     Logger.info("Auto-withdrawing externally deleted booking request",
-      meeting_id: meeting.id,
-      uid: meeting.uid
+      meeting_id: meeting.id
     )
 
     with {:ok, released} <-
@@ -211,8 +207,7 @@ defmodule Tymeslot.Bookings.Cancel do
 
   defp cancel_confirmed_meeting_external(meeting) do
     Logger.info("Auto-cancelling externally deleted meeting",
-      meeting_id: meeting.id,
-      uid: meeting.uid
+      meeting_id: meeting.id
     )
 
     with {:ok, updated_meeting} <- update_meeting_status_external(meeting),

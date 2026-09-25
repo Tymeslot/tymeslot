@@ -71,6 +71,11 @@ defmodule Tymeslot.Infrastructure.ObanLogger do
 
     ErrorTracking.put_context([correlation_id: correlation_id] ++ user_context(metadata[:job]))
 
+    # ErrorTracker's Oban integration records the attempt but not the limit,
+    # which an alert about a failing job needs to say how close it is to
+    # giving up.
+    ErrorTracker.set_context(max_attempts_context(metadata[:job]))
+
     log_job_event(:info, "job:start", metadata, %{
       system_time: Map.get(measurements, :system_time)
     })
@@ -105,6 +110,11 @@ defmodule Tymeslot.Infrastructure.ObanLogger do
   end
 
   defp user_context(_job), do: []
+
+  defp max_attempts_context(%Oban.Job{max_attempts: max_attempts}),
+    do: %{"job.max_attempts" => max_attempts}
+
+  defp max_attempts_context(_job), do: %{}
 
   # A job that can still retry logs at :warning; a terminal failure (discarded,
   # cancelled) logs at :error so it stands out and can be alerted on.

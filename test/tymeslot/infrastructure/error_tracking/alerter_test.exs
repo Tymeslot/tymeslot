@@ -37,6 +37,12 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.AlerterTest do
     ErrorTracker.report(%RuntimeError{message: message}, @stacktrace, context)
   end
 
+  defp admin_alert_args do
+    AdminAlertScheduler.build_args("ops@example.com", "System", :error, "boom", %{},
+      dedup_key: "alerter-test"
+    )
+  end
+
   defp resolve!(error_id) do
     {:ok, _error} = Error |> Repo.get!(error_id) |> ErrorTracker.resolve()
     :ok
@@ -109,6 +115,23 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.AlerterTest do
       assert payload.job_action == "deliver"
     end
 
+    test "a failed job attempt carries the attempt, the limit and its outcome" do
+      expect(EmailServiceMock, :send_admin_alert, fn _to, _category, _severity, _msg, _meta ->
+        {:error, :smtp_unreachable}
+      end)
+
+      CaptureLog.capture_log(fn ->
+        assert {:error, _reason} =
+                 perform_job(EmailWorker, admin_alert_args(), attempt: 2, max_attempts: 5)
+      end)
+
+      assert_receive {:send_alert, :new_error, payload}
+      assert payload.job_worker == "Tymeslot.Workers.EmailWorker"
+      assert payload.job_attempt == 2
+      assert payload.job_max_attempts == 5
+      assert payload.job_state == "failure"
+    end
+
     test "a second occurrence of a known error raises nothing" do
       report("bookings exploded")
       assert_receive {:send_alert, :new_error, _payload}
@@ -158,12 +181,6 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.AlerterTest do
         admin_alerts_impl: Tymeslot.Infrastructure.AdminAlerts.EmailNotifier,
         admin_alerts_enabled: true,
         admin_alert_email: "ops@example.com"
-      )
-    end
-
-    defp admin_alert_args do
-      AdminAlertScheduler.build_args("ops@example.com", "System", :error, "boom", %{},
-        dedup_key: "alerter-test"
       )
     end
 

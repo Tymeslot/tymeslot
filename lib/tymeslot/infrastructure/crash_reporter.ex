@@ -23,6 +23,14 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   whether the crash it is looking at was recorded a moment earlier in the
   same process, and skip it.
 
+  This assumes a report made in a process is an integration's, made just
+  before the process crashes. A process that reports an exception it
+  handled and then carries on would leave the memory behind, and a later
+  crash with the same kind and message would be skipped. Such a direct
+  report must therefore be made inside
+  `Tymeslot.Infrastructure.ErrorTracking.with_direct_report/1`, whose
+  occurrences are not remembered.
+
   Matching on the recorded crash rather than on which integration's context
   keys the process carries is deliberate: a LiveView process carries
   `"live_view.*"` context from mount onwards, but a crash in its
@@ -125,7 +133,7 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   def remember_recorded(_event, _measurements, metadata, _config) do
     case metadata do
       %{error: %{kind: kind}, occurrence: %{reason: reason}} ->
-        Process.put(@recorded_key, {kind, reason})
+        unless ErrorTracking.direct_report?(), do: Process.put(@recorded_key, {kind, reason})
 
       _other ->
         nil

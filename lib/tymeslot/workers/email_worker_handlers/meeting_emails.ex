@@ -154,7 +154,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   end
 
   defp send_participant_cancellations(meeting, appointment_details) do
-    Logger.info("Sending cancellation emails", meeting_id: meeting.id, uid: meeting.uid)
+    Logger.info("Sending cancellation emails", meeting_id: meeting.id)
 
     case Config.email_service_module().send_cancellation_emails(appointment_details) do
       {{:ok, _organizer}, {:ok, _attendee}} ->
@@ -196,7 +196,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
       :ok
     else
-      Logger.info("Sending confirmation emails", meeting_id: meeting.id, uid: meeting.uid)
+      Logger.info("Sending confirmation emails", meeting_id: meeting.id)
 
       appointment_details = AppointmentBuilder.from_meeting(meeting)
 
@@ -311,7 +311,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   # the organizer succeeded and the attendee hit an open circuit breaker);
   # without this, a retry would re-email the recipient who already got it.
   defp send_reminder_emails(meeting, reminder_value, reminder_unit) do
-    Logger.info("Sending reminder emails", meeting_id: meeting.id, uid: meeting.uid)
+    Logger.info("Sending reminder emails", meeting_id: meeting.id)
 
     status = reminder_sent_status(meeting, reminder_value, reminder_unit)
     need_organizer? = !status.organizer
@@ -383,7 +383,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   end
 
   defp send_reschedule_request_email(meeting) do
-    Logger.info("Sending reschedule request email", meeting_id: meeting.id, uid: meeting.uid)
+    Logger.info("Sending reschedule request email", meeting_id: meeting.id)
 
     case Config.email_service_module().send_reschedule_request(meeting) do
       {:ok, _result} ->

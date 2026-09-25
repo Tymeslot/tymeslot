@@ -75,8 +75,12 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
 
   # Matched on the whole key only. `identifier` is the key the account-lockout
   # and rate-limiter paths use for an email address; `provider_identifier` is an
-  # opaque calendar event id and stays readable.
-  @sensitive_exact_keys ~w(identifier)
+  # opaque calendar event id and stays readable. `meeting_uid` is a bearer
+  # capability: the meeting's uid alone authorises cancelling or rescheduling
+  # it, and it is the route parameter of those pages, so it reaches request
+  # and LiveView params as well as Logger metadata. A bare `uid` is not
+  # matched: calendar event UIDs from other calendars carry no authority.
+  @sensitive_exact_keys ~w(identifier meeting_uid)
 
   @redacted "[REDACTED]"
   @filter_id :tymeslot_metadata_redactor

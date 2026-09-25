@@ -14,6 +14,8 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
   who made it.
   """
 
+  @direct_report_key :tymeslot_error_tracking_direct_report
+
   @doc """
   Sets `context` as Logger metadata and as ErrorTracker context for the
   current process.
@@ -42,4 +44,33 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
   """
   @spec current_context() :: map()
   def current_context, do: ErrorTracker.get_context()
+
+  @doc """
+  Runs `fun`, marking every ErrorTracker report made inside it as a direct
+  report: an exception the calling process handled and reported itself,
+  and survives.
+
+  `Tymeslot.Infrastructure.CrashReporter` remembers what ErrorTracker
+  recorded in a process so that the crash log which follows an integration's
+  report is not recorded a second time. A process that reports an exception
+  and carries on must not leave that memory behind, or a later crash with
+  the same kind and message would be taken for the one already recorded. Any
+  code reporting directly wraps its `ErrorTracker.report/3` call in this.
+  """
+  @spec with_direct_report((-> result)) :: result when result: var
+  def with_direct_report(fun) when is_function(fun, 0) do
+    previous = Process.put(@direct_report_key, true)
+
+    try do
+      fun.()
+    after
+      if previous,
+        do: Process.put(@direct_report_key, previous),
+        else: Process.delete(@direct_report_key)
+    end
+  end
+
+  @doc "Returns true inside `with_direct_report/1` in the calling process."
+  @spec direct_report?() :: boolean()
+  def direct_report?, do: Process.get(@direct_report_key) == true
 end

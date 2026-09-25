@@ -66,7 +66,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
 
       Logger.info("CalDAV queue wiring tagged cache row for offline retry",
         calendar_integration_id: integration_id,
-        uid: meeting.uid,
+        meeting_id: meeting.id,
         action: action
       )
 

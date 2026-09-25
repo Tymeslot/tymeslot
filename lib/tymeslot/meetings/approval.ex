@@ -228,7 +228,7 @@ defmodule Tymeslot.Meetings.Approval do
            approval_resolved_at: DateTime.truncate(now, :second)
          ) do
       {:ok, confirmed} ->
-        Logger.info("Booking request approved", meeting_id: confirmed.id, uid: confirmed.uid)
+        Logger.info("Booking request approved", meeting_id: confirmed.id)
         AvailabilityCache.invalidate_for_user(confirmed.organizer_user_id)
         activate_confirmed(confirmed)
 
@@ -392,7 +392,6 @@ defmodule Tymeslot.Meetings.Approval do
       {:ok, released} ->
         Logger.info("Booking request released",
           meeting_id: released.id,
-          uid: released.uid,
           status: released.status
         )
 

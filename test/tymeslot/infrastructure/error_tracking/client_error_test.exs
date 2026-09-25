@@ -52,6 +52,11 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ClientErrorTest do
       refute ClientError.client_error_kind?("Elixir.RuntimeError", @request)
     end
 
+    test "is false for the non-exception kinds ErrorTracker records" do
+      refute ClientError.client_error_kind?("exit", @request)
+      refute ClientError.client_error_kind?("throw", @live_view)
+    end
+
     test "is false for a module that is not an exception" do
       refute ClientError.client_error_kind?("Elixir.Enum", @request)
     end

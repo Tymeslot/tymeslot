@@ -135,6 +135,20 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
       assert filtered.meta.provider_identifier == "evt_abc123"
     end
 
+    test "redacts the meeting uid, a bearer capability, but not a bare calendar event uid" do
+      filtered =
+        MetadataRedactor.filter(
+          event(%{
+            meeting_uid: "0b7e1f3a-4c1d-4a8e-9f3b-2d6c8e1a5b7c",
+            uid: "evt-123@google.com"
+          }),
+          []
+        )
+
+      assert filtered.meta.meeting_uid == "[REDACTED]"
+      assert filtered.meta.uid == "evt-123@google.com"
+    end
+
     test "leaves non-sensitive metadata untouched" do
       filtered =
         MetadataRedactor.filter(
@@ -281,6 +295,32 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
 
       filter_ids = :logger.get_primary_config() |> Map.fetch!(:filters) |> Keyword.keys()
       assert :tymeslot_metadata_redactor in filter_ids
+    end
+  end
+
+  describe "through the installed logger filter" do
+    alias Tymeslot.Bookings.Policy
+    alias Tymeslot.Test.LogCapture
+
+    # A real call site: blocking the reschedule of a meeting that has started
+    # logs its uid. The primary filter installed at boot must blank it before
+    # any handler sees it.
+    test "a logged meeting uid reaches handlers redacted" do
+      now = DateTime.utc_now()
+
+      meeting = %{
+        uid: "0b7e1f3a-4c1d-4a8e-9f3b-2d6c8e1a5b7c",
+        status: "confirmed",
+        start_time: DateTime.add(now, -600),
+        end_time: DateTime.add(now, 600)
+      }
+
+      LogCapture.with_capture([logger_level: :info], fn ->
+        assert {:error, _reason} = Policy.can_reschedule_meeting?(meeting)
+
+        %{meta: meta} = LogCapture.await_log("Blocked reschedule")
+        assert meta.meeting_uid == "[REDACTED]"
+      end)
     end
   end
 end

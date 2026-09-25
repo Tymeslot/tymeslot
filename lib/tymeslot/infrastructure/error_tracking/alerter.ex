@@ -54,7 +54,9 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Alerter do
     {"live_view.event", :live_view_event},
     {"job.worker", :job_worker},
     {"job.queue", :job_queue},
-    {"job.id", :job_id}
+    {"job.id", :job_id},
+    {"job.attempt", :job_attempt},
+    {"job.max_attempts", :job_max_attempts}
   ]
 
   @doc """
@@ -125,7 +127,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Alerter do
   defp occurrence_context(context) do
     @context_keys
     |> Enum.map(fn {source, key} -> {key, scalar(Map.get(context, source))} end)
-    |> Enum.concat([{:job_action, job_action(context)}])
+    |> Enum.concat([{:job_action, job_action(context)}, {:job_state, job_state(context)}])
     |> Enum.reject(fn {_key, value} -> is_nil(value) end)
     |> Map.new()
   end
@@ -135,6 +137,11 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Alerter do
   # deliver. Read after the Filter's redaction, which keeps `action`.
   defp job_action(%{"job.args" => %{"action" => action}}), do: scalar(action)
   defp job_action(_context), do: nil
+
+  # ErrorTracker's Oban integration records the attempt's outcome as `state`:
+  # `:failure` while retries remain, `:discard` once they are exhausted.
+  defp job_state(%{state: state}) when state in [:failure, :discard], do: Atom.to_string(state)
+  defp job_state(_context), do: nil
 
   defp scalar(nil), do: nil
   defp scalar(value) when is_integer(value) or is_boolean(value), do: value

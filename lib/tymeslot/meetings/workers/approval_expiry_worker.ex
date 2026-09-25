@@ -76,8 +76,7 @@ defmodule Tymeslot.Meetings.Workers.ApprovalExpiryWorker do
     case Approval.expire(meeting) do
       {:ok, expired} ->
         Logger.info("Booking request expired at its deadline",
-          meeting_id: expired.id,
-          uid: expired.uid
+          meeting_id: expired.id
         )
 
         :ok

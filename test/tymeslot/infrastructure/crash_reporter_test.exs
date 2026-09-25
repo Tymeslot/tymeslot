@@ -71,6 +71,7 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
   alias Tymeslot.Infrastructure.CrashReporterTest.CrashingLive
   alias Tymeslot.Infrastructure.CrashReporterTest.CrashingServer
   alias Tymeslot.Infrastructure.CrashReporterTest.RaisingIgnorer
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Repo
   alias TymeslotWeb.Components.UserDropdownComponent
 
@@ -273,6 +274,43 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
 
         assert occurrence.reason == "handle_info boom"
         assert occurrence.context["live_view.view"] == CrashingLive
+      end)
+
+      assert occurrence_count() == 1
+    end
+  end
+
+  describe "a process that reported an exception directly" do
+    # Reports the exception it handled, carries on, then crashes with an
+    # exception of the same kind and message.
+    defp report_then_crash(report) do
+      crash_task(fn ->
+        report.(fn -> ErrorTracker.report(%RuntimeError{message: "same boom"}, [], %{}) end)
+        raise "same boom"
+      end)
+    end
+
+    # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
+    test "inside with_direct_report/1, its later crash is still recorded" do
+      CaptureLog.capture_log(fn ->
+        report_then_crash(&ErrorTracking.with_direct_report/1)
+
+        await_occurrence!()
+        await_occurrence!()
+      end)
+
+      assert occurrence_count() == 2
+    end
+
+    # The reason the hook exists: without it the direct report is taken for
+    # an integration's, and the crash that follows is skipped.
+    # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
+    test "outside it, the later crash is taken as already recorded" do
+      CaptureLog.capture_log(fn ->
+        report_then_crash(fn report -> report.() end)
+
+        await_occurrence!()
+        refute_occurrence()
       end)
 
       assert occurrence_count() == 1

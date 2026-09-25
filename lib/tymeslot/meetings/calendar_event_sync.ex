@@ -126,8 +126,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
           # currently expects one — skip and let the live state stand.
           Logger.info(
             "Meeting now expects a calendar event, skipping stale deletion",
-            meeting_id: meeting_id,
-            uid: meeting.uid
+            meeting_id: meeting_id
           )
 
           :ok
@@ -380,7 +379,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   end
 
   defp create_event_for_meeting(meeting, meeting_id, attempt) do
-    Logger.info("Creating calendar event", meeting_id: meeting_id, uid: meeting.uid)
+    Logger.info("Creating calendar event", meeting_id: meeting_id)
 
     event_data = CalendarEventBuilder.build_event_data(meeting)
 

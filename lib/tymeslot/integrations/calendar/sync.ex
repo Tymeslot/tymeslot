@@ -421,7 +421,6 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
           calendar_integration_id: integration.id,
           meeting_id: meeting.id,
           provider_event_id: meeting.provider_event_id,
-          uid: meeting.uid,
           reason: inspect(reason)
         )
     end
