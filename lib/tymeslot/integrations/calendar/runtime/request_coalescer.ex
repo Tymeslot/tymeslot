@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
   require Logger
 
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalDAV.Base
 
   # Client API
@@ -158,7 +159,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
     parent = self()
 
     {:ok, pid} =
-      Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+      Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
         result =
           try do
             fetch_fn.()

@@ -22,6 +22,7 @@ defmodule Tymeslot.Workers.EmailWorker do
 
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Workers.EmailWorker.AdminAlertScheduler
   alias Tymeslot.Workers.EmailWorkerHandlers
@@ -141,7 +142,7 @@ defmodule Tymeslot.Workers.EmailWorker do
     timeout_ms = email_timeout_ms()
 
     task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+      Tasks.async(Tymeslot.TaskSupervisor, fn ->
         EmailWorkerHandlers.execute_email_action(action, args, job.id)
       end)
 

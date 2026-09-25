@@ -10,6 +10,7 @@ defmodule Tymeslot.Emails.Delivery do
 
   alias Tymeslot.Infrastructure.CircuitBreaker
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Mailer
 
   # Postmark reports an API-level rejection as `{422, %{"ErrorCode" => code}}`.
@@ -86,7 +87,7 @@ defmodule Tymeslot.Emails.Delivery do
   # the caller before the breaker has seen it.
   defp deliver_within_deadline(email) do
     deadline_ms = send_deadline_ms()
-    task = Task.Supervisor.async_nolink(Tymeslot.TaskSupervisor, fn -> Mailer.deliver(email) end)
+    task = Tasks.async_nolink(Tymeslot.TaskSupervisor, fn -> Mailer.deliver(email) end)
 
     case Task.yield(task, deadline_ms) || Task.shutdown(task, :brutal_kill) do
       {:ok, result} ->

@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
   """
 
   require Logger
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.CalendarManagement
@@ -32,7 +33,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
       user_id: user_id
     )
 
-    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+    Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
       case CalendarManagement.get_calendar_integration(integration_id, user_id) do
         {:ok, integration} ->
           case Discovery.discover_calendars_for_integration(integration) do

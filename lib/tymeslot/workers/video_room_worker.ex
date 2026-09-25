@@ -45,6 +45,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   alias Ecto.Changeset
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
@@ -255,7 +256,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     timeout_ms = creation_timeout_ms(meeting)
 
     task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+      Tasks.async(Tymeslot.TaskSupervisor, fn ->
         Meetings.add_video_room_to_meeting(meeting_id)
       end)
 

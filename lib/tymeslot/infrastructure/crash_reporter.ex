@@ -57,6 +57,7 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   alias String.Chars
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.ErrorTracking.UnmatchedEvent
+  alias Tymeslot.Infrastructure.Tasks
 
   require Logger
 
@@ -288,7 +289,7 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   end
 
   defp offload(kind, reason, stacktrace, context) do
-    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+    Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
       try do
         ErrorTracker.report(exception(kind, reason), stacktrace, context)
       rescue

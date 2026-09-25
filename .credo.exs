@@ -153,6 +153,7 @@
           {CredoChecks.PhantomLiveCallback, [priority: :high]},
           {CredoChecks.PutFlashInLiveComponent, [priority: :normal]},
           {CredoChecks.HttpClientBoundary, [priority: :normal]},
+          {CredoChecks.TaskSpawnBoundary, [priority: :normal]},
           {CredoChecks.NoSaasReferenceInCore, [priority: :high]},
           {CredoChecks.NoMixEnvInCoreLib, [priority: :high]},
           {CredoChecks.PreloadOrderThroughAssociation, [priority: :normal]},

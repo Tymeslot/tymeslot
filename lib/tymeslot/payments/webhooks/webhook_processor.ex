@@ -7,6 +7,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Payments.Errors.WebhookError
   alias Tymeslot.Payments.Webhooks.WebhookRegistry
 
@@ -182,7 +183,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
     # We use a supervised task to record unhandled events asynchronously so
     # that the webhook response is never blocked and a crash inside the
     # recorder cannot take down the webhook handler process.
-    case Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+    case Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
            attrs = %{
              event_type: "stripe.#{event_type}",
              payload: %{

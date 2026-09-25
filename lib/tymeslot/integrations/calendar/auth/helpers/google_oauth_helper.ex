@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
@@ -275,7 +276,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
         )
 
       _url ->
-        Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+        Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
           case Config.google_calendar_api_module().register_push_channel(integration) do
             {:ok, _updated} ->
               Logger.info("Google push channel registered",

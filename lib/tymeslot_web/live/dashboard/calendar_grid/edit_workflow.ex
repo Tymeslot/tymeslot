@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Meetings.AttendeeNotifications
@@ -155,7 +156,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     lv_pid = self()
 
     {:ok, _pid} =
-      Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+      Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
         send(lv_pid, {tag, run_guarded(tag, fun, crash_result)})
       end)
 

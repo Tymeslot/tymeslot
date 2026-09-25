@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Client, Discovery, Events, Http, UrlBuilder}
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CreatedEvent
@@ -211,7 +212,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     tasks =
       Enum.map(paths, fn path ->
         {path,
-         Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+         Tasks.async(Tymeslot.TaskSupervisor, fn ->
            Events.fetch_events(client, path, start_time, end_time)
          end)}
       end)

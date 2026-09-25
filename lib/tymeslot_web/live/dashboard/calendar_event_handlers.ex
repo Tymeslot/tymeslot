@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Video.RoomCreationError
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
@@ -199,7 +200,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   def handle_execute_create_event(payload, socket) do
     lv_pid = self()
 
-    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+    Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
       send(lv_pid, {:create_event_result, EventCrud.run_create_event(payload)})
     end)
 
@@ -219,7 +220,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   def handle_execute_create_ad_hoc_meeting(params, socket) do
     lv_pid = self()
 
-    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+    Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
       send(lv_pid, {:create_ad_hoc_meeting_result, EventCrud.run_create_ad_hoc_meeting(params)})
     end)
 

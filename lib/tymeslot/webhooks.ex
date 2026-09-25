@@ -16,6 +16,7 @@ defmodule Tymeslot.Webhooks do
   require Logger
 
   alias Tymeslot.Features
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Notifications.EventTypes
 
@@ -217,7 +218,7 @@ defmodule Tymeslot.Webhooks do
 
   defp run_bounded_test_connection(url, addresses, payload, headers) do
     task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+      Tasks.async(Tymeslot.TaskSupervisor, fn ->
         HttpDelivery.post(url, Jason.encode!(payload), headers,
           skip_initial_check: true,
           pin_addresses: addresses

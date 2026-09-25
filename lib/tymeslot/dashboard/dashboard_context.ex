@@ -8,6 +8,7 @@ defmodule Tymeslot.Dashboard.DashboardContext do
 
   alias Tymeslot.Agenda
   alias Tymeslot.Infrastructure.DashboardCache
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.BookingEligibility
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -132,17 +133,17 @@ defmodule Tymeslot.Dashboard.DashboardContext do
   @spec fetch_integration_status(integer()) :: map()
   defp fetch_integration_status(user_id) do
     calendar_task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+      Tasks.async(Tymeslot.TaskSupervisor, fn ->
         CalendarManagement.list_active_calendar_integrations(user_id)
       end)
 
     video_task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+      Tasks.async(Tymeslot.TaskSupervisor, fn ->
         VideoIntegrationQueries.list_active_for_user(user_id)
       end)
 
     meeting_types_task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+      Tasks.async(Tymeslot.TaskSupervisor, fn ->
         MeetingTypeQueries.list_active_meeting_types(user_id)
       end)
 

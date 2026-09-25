@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   require Logger
 
   alias Tymeslot.FreeBusy
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.HealthCheck
@@ -223,7 +224,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
              |> assign(:is_refreshing, true)
              |> start_async(:refresh_calendars, fn ->
                Tymeslot.TaskSupervisor
-               |> Task.Supervisor.async_stream_nolink(
+               |> Tasks.async_stream_nolink(
                  active,
                  fn integration ->
                    {integration.name, Calendar.refresh_integration(integration)}

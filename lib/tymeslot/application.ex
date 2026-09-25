@@ -23,7 +23,8 @@ defmodule Tymeslot.Application do
     ObanQueues,
     ObanRescue,
     ProxyConfig,
-    ProxyCredentials
+    ProxyCredentials,
+    Tasks
   }
 
   alias Tymeslot.Infrastructure.ErrorTracking.Alerter, as: ErrorAlerter
@@ -434,7 +435,7 @@ defmodule Tymeslot.Application do
   end
 
   defp schedule_supervised(name, fun) do
-    case Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fun) do
+    case Tasks.start_child(Tymeslot.TaskSupervisor, fun) do
       {:ok, _pid} ->
         Logger.info("Scheduled post-startup task", task: name)
 

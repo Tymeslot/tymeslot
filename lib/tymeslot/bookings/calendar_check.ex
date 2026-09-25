@@ -31,6 +31,7 @@ defmodule Tymeslot.Bookings.CalendarCheck do
   require Logger
 
   alias Tymeslot.Bookings.Validation
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings
 
@@ -92,7 +93,7 @@ defmodule Tymeslot.Bookings.CalendarCheck do
     {start_date, end_date} = fetch_range(slot, Map.get(config, :buffer_minutes, 15))
 
     fetch =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+      Tasks.async(Tymeslot.TaskSupervisor, fn ->
         CalendarEvents.get_events_for_range_fresh(organizer_user_id, start_date, end_date)
       end)
 

@@ -14,6 +14,8 @@ defmodule Tymeslot.Infrastructure.RetryLogic do
   - Selective retry based on error types
   """
 
+  alias Tymeslot.Infrastructure.Tasks
+
   require Logger
 
   @default_opts [
@@ -79,7 +81,7 @@ defmodule Tymeslot.Infrastructure.RetryLogic do
   def with_retry_async(fun, opts \\ []) when is_function(fun, 0) do
     await_timeout = Keyword.get(opts, :await_timeout, :infinity)
 
-    Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+    Tasks.async(Tymeslot.TaskSupervisor, fn ->
       with_retry(
         fn ->
           task = fun.()

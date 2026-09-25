@@ -20,10 +20,17 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
 
   alias Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueries
   alias Tymeslot.Infrastructure.ErrorTracking.HandledError
+  alias Tymeslot.Infrastructure.Tasks
 
   require Logger
 
   @direct_report_key :tymeslot_error_tracking_direct_report
+
+  # The keys this module keeps in step between Logger metadata and the
+  # ErrorTracker context.
+  @context_keys [:user_id, :request_id, :correlation_id]
+
+  @opaque captured_context :: {map(), keyword()}
 
   @doc """
   Sets `context` as Logger metadata and as ErrorTracker context for the
@@ -53,6 +60,26 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
   """
   @spec current_context() :: map()
   def current_context, do: ErrorTracker.get_context()
+
+  @doc """
+  Captures the calling process's context, for `restore_context/1` to set in
+  another process doing work on its behalf: the whole ErrorTracker context,
+  and the `user_id`, `request_id` and `correlation_id` Logger metadata.
+  """
+  @spec capture_context() :: captured_context()
+  def capture_context,
+    do: {current_context(), Keyword.take(Logger.metadata(), @context_keys)}
+
+  @doc """
+  Sets a context captured by `capture_context/0` in the current process, so
+  its log lines and any exception it raises tie back to the process that
+  captured it.
+  """
+  @spec restore_context(captured_context()) :: :ok
+  def restore_context({tracker_context, metadata}) do
+    ErrorTracker.set_context(tracker_context)
+    put_context(metadata)
+  end
 
   @doc """
   Runs `fun`, marking every ErrorTracker report made inside it as a direct
@@ -183,7 +210,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
 
   defp record(exception, stacktrace, context) do
     if ErrorTrackingQueries.in_transaction?() do
-      offload(exception, stacktrace, Map.merge(current_context(), context))
+      offload(exception, stacktrace, context)
     else
       with_direct_report(fn -> ErrorTracker.report(exception, stacktrace, context) end)
     end
@@ -191,12 +218,12 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
     :ok
   end
 
-  # The task has no ErrorTracker context of its own, so the caller's is
-  # merged in first. It exits once the report is made, so no dedup memory is
+  # The task runs with the caller's ErrorTracker context, which `Tasks`
+  # carries into it. It exits once the report is made, so no dedup memory is
   # left behind to guard against.
   defp offload(exception, stacktrace, context) do
     {:ok, _pid} =
-      Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+      Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
         try do
           ErrorTracker.report(exception, stacktrace, context)
         rescue

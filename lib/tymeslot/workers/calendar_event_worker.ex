@@ -22,6 +22,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     priority: 1
 
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
@@ -77,7 +78,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       handle_result(result, job)
     else
       task =
-        Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+        Tasks.async(Tymeslot.TaskSupervisor, fn ->
           dispatch_action(action, meeting_id, job.args, attempt)
         end)
 

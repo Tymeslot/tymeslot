@@ -17,6 +17,7 @@ defmodule Tymeslot.Workers.IntegrationHealthWorker do
     ]
 
   require Logger
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.HealthCheck
 
   @impl Oban.Worker
@@ -42,7 +43,7 @@ defmodule Tymeslot.Workers.IntegrationHealthWorker do
 
   defp run_with_timeout(type, integration_id, job_id) do
     task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+      Tasks.async(Tymeslot.TaskSupervisor, fn ->
         health_check_module().perform_single_check(type, integration_id)
       end)
 
