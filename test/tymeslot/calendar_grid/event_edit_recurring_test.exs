@@ -60,6 +60,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
       assert payload.occurrence == %{
                href: "/cal/weekly-sync.ics",
                key: "20260601T110000",
+               scope: :this_only,
                timezone: "Europe/Berlin",
                document: @series_document,
                etag: "\"etag-1\"",

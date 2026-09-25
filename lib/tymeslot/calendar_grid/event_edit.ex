@@ -53,7 +53,10 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   hands `write_edit/7` an address that turns the payload into an override of
   the occurrence (see `Calendar.Events.update_event/3`), and the provider
   answers with the document the series now lives in, which every cached row
-  of the resource is given (see `ProviderCalendarResourceQueries`).
+  of the resource is given (see `ProviderCalendarResourceQueries`). An edit
+  of all of them is addressed the same way and written to the series'
+  master; `SeriesEdit` then drops the series' rows and has the sync bring
+  them back.
 
   ## Failure
 

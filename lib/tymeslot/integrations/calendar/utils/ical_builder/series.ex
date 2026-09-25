@@ -13,7 +13,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   whole `VEVENT`s and the properties that tie them to the master's recurrence
   set (`EXDATE`, `RECURRENCE-ID`), and leaves every other line of the
   document, the `VTIMEZONE` and each `VALARM` included, exactly as the server
-  returned it.
+  returned it. The document is read and written by `Series.Document`; an
+  edit of every occurrence (`edit_master/5`) is carried out by
+  `Series.Master`, which moves timing with `Series.Shift`.
 
   ## Occurrence keys
 
@@ -33,15 +35,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   alias Tymeslot.Integrations.Calendar.CalDAV.Scheduling
   alias Tymeslot.Integrations.Calendar.ICalBuilder.ContentLines
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Patcher
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Document
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Master
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Timing
-  alias Tymeslot.Integrations.Calendar.ICalNormaliser
-
-  # A document is read as a list of top-level lines and `{:vevent, items}`
-  # components; the items of a VEVENT are its property lines and
-  # `{:component, lines}` for each subcomponent (its VALARMs), kept in place so
-  # an edit never reorders what it does not touch.
-  @typep item :: String.t() | {:component, [String.t()]}
-  @typep component :: String.t() | {:vevent, [item()]}
 
   # Where a new EXDATE goes in the master, in order of preference: after the
   # EXDATEs already there, else beside the rule that generates the slot.
@@ -74,13 +70,13 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
           {:ok, String.t()} | :empty
   def exclude_occurrence(document, key, timezone)
       when is_binary(document) and is_binary(key) do
-    components = components(document)
-    zone = series_zone(components, timezone)
+    components = Document.components(document)
+    zone = Document.series_zone(components, timezone)
 
     components
-    |> Enum.reject(&override_for?(&1, key, zone))
+    |> Enum.reject(&Document.override_for?(&1, key, zone))
     |> Enum.map(&exclude_from_master(&1, key))
-    |> serialise()
+    |> Document.serialise()
   end
 
   @doc """
@@ -119,26 +115,59 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
           {:ok, String.t()} | {:error, term()}
   def put_override(document, key, changes, timezone, mode \\ :contact)
       when is_binary(document) and is_binary(key) and is_map(changes) do
-    components = components(document)
-    zone = series_zone(components, timezone)
-    index = Enum.find_index(components, &override_for?(&1, key, zone))
+    components = Document.components(document)
+    zone = Document.series_zone(components, timezone)
+    index = Enum.find_index(components, &Document.override_for?(&1, key, zone))
 
     with {:ok, reference} <- reference_start(components, index),
          {:ok, components} <-
            write_override(components, index, reference, key, changes, timezone, mode) do
-      serialise(components)
+      Document.serialise(components)
     end
   end
 
-  # The series' zone is its master's DTSTART's (`Timing.zone/2`), not the
-  # zone of whichever cached row asked: an override's row carries the zone of
-  # its own DTSTART, which another client may have written in UTC or another
-  # zone. `timezone` stands in only where the document cannot say.
-  defp series_zone(components, timezone) do
-    case Enum.find(components, &master?/1) do
-      {:vevent, items} -> Timing.zone(ContentLines.find("DTSTART", properties(items)), timezone)
-      nil -> timezone
-    end
+  @doc """
+  Edits every occurrence of the series in `document` from the edit of one of
+  them, the occurrence named by `key`: its master `VEVENT` takes `changes`,
+  and a move of the occurrence moves the whole series with it.
+
+  `changes` uses the payload vocabulary of `put_override/5`, with
+  `:start_time` and `:end_time` the edited occurrence's new timing.
+
+    * **Timing.** The series moves by as much as the occurrence did on the
+      wall clock of the series' zone: from where it shows now (its override's
+      `DTSTART`, else its slot) to `:start_time`. The master's `DTSTART` and
+      `DTEND`, its `EXDATE`s and `RDATE`s, and every override's
+      `RECURRENCE-ID`, `DTSTART` and `DTEND` move by that amount, each in the
+      form it is written in (see `Series.Shift`), so every exception still
+      names the slot it did and every override still replaces its own. An
+      `:end_time` that changes how long the occurrence lasts gives the master
+      that duration, and every override that lasted as long as the master
+      (and the edited one) too; other overrides keep their own.
+    * **Plain fields** (`:summary`, `:description`, `:location`, `:colour`,
+      `:reminders`, `:attendees`) are written to the master by
+      `ICalBuilder.Patcher.patch_vevent/3`, in `mode`. Overrides keep their
+      own values: they are what the organiser set on those occurrences.
+    * **`:recurrence_rule`** replaces the master's `RRULE`, its `UNTIL`
+      refitted to the value type and zone of `DTSTART`
+      (`Recurrence.RRule.retarget/2`); `EXDATE`s and `RDATE`s stay. A `nil`
+      rule is `{:error, :rule_removal}`: that turns the series into one
+      event, which is not an edit of every occurrence.
+    * `:recurrence_exceptions` belongs to the document and is ignored.
+
+  Refused before anything is written: a change of value type
+  (`{:error, :value_type_change}`), a move of a date by part of a day
+  (`{:error, :shift_not_whole_days}`), a move off the day (or time) a rule
+  part such as `BYDAY` pins its occurrences to
+  (`{:error, :rule_pins_occurrences}`), a resource with no master
+  (`{:error, :master_not_found}`) and timing it cannot read
+  (`{:error, :unreadable_timing}`).
+  """
+  @spec edit_master(String.t(), String.t(), map(), String.t() | nil, Scheduling.mode()) ::
+          {:ok, String.t()} | {:error, term()}
+  def edit_master(document, key, changes, timezone, mode \\ :contact)
+      when is_binary(document) and is_binary(key) and is_map(changes) do
+    Master.edit(document, key, changes, timezone, mode)
   end
 
   # --- Writing an override ---
@@ -147,8 +176,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   # or, in a resource holding only overrides, the override's own.
   defp reference_start(components, index) do
     reference =
-      case Enum.find(components, &master?/1) do
-        {:vevent, items} -> ContentLines.find("DTSTART", properties(items))
+      case Enum.find(components, &Document.master?/1) do
+        {:vevent, items} -> ContentLines.find("DTSTART", Document.properties(items))
         nil when is_integer(index) -> own_start(Enum.at(components, index))
         nil -> nil
       end
@@ -156,20 +185,11 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
     if reference, do: {:ok, reference}, else: {:error, :occurrence_not_found}
   end
 
-  defp own_start({:vevent, items}), do: ContentLines.find("DTSTART", properties(items))
-
-  defp master?({:vevent, items}) do
-    properties = properties(items)
-
-    is_nil(ContentLines.find("RECURRENCE-ID", properties)) and
-      is_binary(ContentLines.find("DTSTART", properties))
-  end
-
-  defp master?(_line), do: false
+  defp own_start({:vevent, items}), do: ContentLines.find("DTSTART", Document.properties(items))
 
   defp write_override(components, nil, reference, key, changes, timezone, mode) do
     with :ok <- ensure_timing(changes),
-         {:vevent, items} <- Enum.find(components, &master?/1),
+         {:vevent, items} <- Enum.find(components, &Document.master?/1),
          {:ok, override} <-
            edit_items(from_master(items, reference, key), reference, changes, timezone, mode) do
       {:ok, insert_after_last_vevent(components, {:vevent, override})}
@@ -197,28 +217,20 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   defp from_master(items, reference, key) do
     items
     |> Enum.reject(&(is_binary(&1) and ContentLines.property_name(&1) in @recurrence_properties))
-    |> insert_after("DTSTART", property_line(slot_for("RECURRENCE-ID", reference, key)))
+    |> Document.insert_after("DTSTART", property_line(slot_for("RECURRENCE-ID", reference, key)))
   end
 
   defp edit_items(items, reference, changes, timezone, mode) do
     patched =
       items
-      |> Enum.flat_map(&item_lines/1)
+      |> Enum.flat_map(&Document.item_lines/1)
       |> Patcher.patch_vevent(Map.drop(changes, @series_keys), mode)
-      |> collect_items()
+      |> Document.collect_items()
 
-    with :ok <- ensure_value_type(reference, changes) do
+    with :ok <- Timing.ensure_value_type(reference, changes) do
       put_timing(patched, reference, changes, timezone)
     end
   end
-
-  defp ensure_value_type(reference, %{start_time: start}) when is_struct(start) do
-    if match?(%Date{}, start) == Timing.date?(reference),
-      do: :ok,
-      else: {:error, :value_type_change}
-  end
-
-  defp ensure_value_type(_reference, _changes), do: :ok
 
   defp put_timing(items, reference, changes, timezone) do
     with {:ok, items} <- put_start(items, reference, changes, timezone) do
@@ -228,7 +240,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
 
   defp put_start(items, reference, %{start_time: start}, timezone) when is_struct(start) do
     with {:ok, line} <- Timing.line("DTSTART", start, reference, timezone) do
-      {:ok, replace_properties(items, ["DTSTART"], line)}
+      {:ok, Document.replace_properties(items, ["DTSTART"], line)}
     end
   end
 
@@ -236,43 +248,14 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
 
   defp put_end(items, reference, %{end_time: finish} = changes, timezone)
        when is_struct(finish) do
-    finish = end_boundary(finish, Map.get(changes, :start_time))
+    finish = Timing.end_boundary(finish, Map.get(changes, :start_time))
 
     with {:ok, line} <- Timing.line("DTEND", finish, reference, timezone) do
-      {:ok, replace_properties(items, ["DTEND", "DURATION"], line)}
+      {:ok, Document.replace_properties(items, ["DTEND", "DURATION"], line)}
     end
   end
 
   defp put_end(items, _reference, _changes, _timezone), do: {:ok, items}
-
-  defp end_boundary(%Date{} = finish, %Date{} = start), do: Timing.exclusive_end(finish, start)
-  defp end_boundary(finish, _start), do: finish
-
-  # The new line takes the place of the first property it replaces, so the
-  # override reads in the order the server wrote it; one with none of them
-  # gains it after its DTSTART.
-  defp replace_properties(items, names, line) do
-    replaced? = &(is_binary(&1) and ContentLines.property_name(&1) in names)
-
-    case Enum.find_index(items, replaced?) do
-      nil ->
-        insert_after(items, "DTSTART", line)
-
-      index ->
-        items
-        |> List.replace_at(index, line)
-        |> Enum.with_index()
-        |> Enum.reject(fn {item, at} -> at != index and replaced?.(item) end)
-        |> Enum.map(&elem(&1, 0))
-    end
-  end
-
-  defp insert_after(items, name, line) do
-    case last_index(items, name) do
-      nil -> [line | items]
-      index -> List.insert_at(items, index + 1, line)
-    end
-  end
 
   defp insert_after_last_vevent(components, override) do
     index =
@@ -287,21 +270,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
 
   # --- Excluding an occurrence ---
 
-  defp override_for?({:vevent, items}, key, timezone) do
-    case ContentLines.find("RECURRENCE-ID", properties(items)) do
-      nil ->
-        false
-
-      line ->
-        {_name, value} = ContentLines.split_value(line)
-        ICalNormaliser.occurrence_key(value, timezone) == key
-    end
-  end
-
-  defp override_for?(_line, _key, _timezone), do: false
-
   defp exclude_from_master({:vevent, items} = vevent, key) do
-    properties = properties(items)
+    properties = Document.properties(items)
 
     with nil <- ContentLines.find("RECURRENCE-ID", properties),
          dtstart when is_binary(dtstart) <- ContentLines.find("DTSTART", properties) do
@@ -345,61 +315,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   end
 
   defp insert_after_anchor(items, line) do
-    case Enum.find_value(@exdate_anchors, &last_index(items, &1)) do
+    case Enum.find_value(@exdate_anchors, &Document.last_index(items, &1)) do
       nil -> items ++ [line]
       index -> List.insert_at(items, index + 1, line)
     end
   end
-
-  defp last_index(items, name) do
-    items
-    |> Enum.with_index()
-    |> Enum.reverse()
-    |> Enum.find_value(fn
-      {line, index} when is_binary(line) -> if ContentLines.property_name(line) == name, do: index
-      _subcomponent -> nil
-    end)
-  end
-
-  # --- Reading and writing the document ---
-
-  @spec components(String.t()) :: [component()]
-  defp components(document), do: document |> ContentLines.split() |> collect_components()
-
-  defp collect_components([]), do: []
-
-  defp collect_components(["BEGIN:VEVENT" | rest]) do
-    {body, remaining} = ContentLines.take_until(rest, "END:VEVENT")
-    [{:vevent, collect_items(body)} | collect_components(remaining)]
-  end
-
-  defp collect_components([line | rest]), do: [line | collect_components(rest)]
-
-  @spec collect_items([String.t()]) :: [item()]
-  defp collect_items([]), do: []
-
-  defp collect_items(["BEGIN:" <> name = line | rest]) do
-    {body, remaining} = ContentLines.take_until(rest, "END:" <> name)
-    [{:component, [line | body] ++ ["END:" <> name]} | collect_items(remaining)]
-  end
-
-  defp collect_items([line | rest]), do: [line | collect_items(rest)]
-
-  defp properties(items), do: Enum.filter(items, &is_binary/1)
-
-  # A document left without any VEVENT holds nothing of the series; the
-  # caller deletes the resource rather than storing an empty calendar.
-  defp serialise(components) do
-    if Enum.any?(components, &match?({:vevent, _items}, &1)),
-      do: {:ok, components |> Enum.flat_map(&component_lines/1) |> ContentLines.join()},
-      else: :empty
-  end
-
-  defp component_lines({:vevent, items}),
-    do: ["BEGIN:VEVENT"] ++ Enum.flat_map(items, &item_lines/1) ++ ["END:VEVENT"]
-
-  defp component_lines(line), do: [line]
-
-  defp item_lines({:component, lines}), do: lines
-  defp item_lines(line), do: [line]
 end

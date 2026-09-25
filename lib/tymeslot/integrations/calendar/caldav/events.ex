@@ -17,9 +17,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     sent; when only `If-Match: *` was sent the write is simply replayed
     unconditionally, since that condition guarded nothing. The write itself
     is `ConditionalWrite`'s.
-  - **Occurrence writes**: one occurrence of a series is deleted or edited
-    by rewriting the series' resource, see `delete_occurrence/4` and
-    `update_occurrence/4`.
+  - **Series writes**: one occurrence of a series is deleted or edited, or
+    every occurrence edited, by rewriting the series' resource, see
+    `delete_occurrence/4`, `update_occurrence/4` and `update_series/4`.
   - **iCal construction**: builds valid RFC 5545 event payloads from domain maps.
   - **Per-operation retry policies**: reads retry on transient failures.
   - **Circuit breaker protection** for all operations.
@@ -389,7 +389,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
           required(:timezone) => String.t() | nil,
           required(:document) => String.t() | nil,
           required(:etag) => String.t() | nil,
-          optional(:changes) => map()
+          optional(:changes) => map(),
+          optional(:scope) => :this_only | :all
         }
 
   @doc """
@@ -437,6 +438,32 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     override = &Series.put_override(&1, occurrence.key, changes, occurrence.timezone, mode)
 
     case rewrite_series(client, calendar_path, occurrence, override, opts) do
+      {:ok, :gone} -> {:error, :not_found}
+      result -> result
+    end
+  end
+
+  @doc """
+  Edits every occurrence of the series stored in the resource at
+  `occurrence.href`, from the edit of the one `occurrence.key` names:
+  `occurrence.changes` are written to the master `VEVENT`, and a move of the
+  occurrence moves the whole series, its exceptions and overrides with it
+  (see `ICalBuilder.Series.edit_master/5`). The write is the one
+  `delete_occurrence/4` makes: the cached document under its ETag, one
+  re-read on a 412.
+
+  Returns `{:ok, %{document: String.t()}}` with the document now on the
+  server, `{:error, :not_found}` when the series is gone, or
+  `{:error, reason}`, including the refusals of `Series.edit_master/5`, which
+  are answered before anything is written.
+  """
+  @spec update_series(Base.client(), String.t() | nil, occurrence(), keyword()) ::
+          {:ok, %{document: String.t()}} | {:error, term()}
+  def update_series(client, calendar_path, %{changes: changes} = occurrence, opts) do
+    mode = Scheduling.attendee_mode(client)
+    edit = &Series.edit_master(&1, occurrence.key, changes, occurrence.timezone, mode)
+
+    case rewrite_series(client, calendar_path, occurrence, edit, opts) do
       {:ok, :gone} -> {:error, :not_found}
       result -> result
     end

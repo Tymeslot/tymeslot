@@ -136,9 +136,16 @@ defmodule Tymeslot.Test.ICalSeriesFixtures do
 
   @doc "The events the sync makes of `document`, by uid."
   @spec normalised(String.t()) :: %{String.t() => map()}
-  def normalised(document) do
+  def normalised(document), do: document |> normalised_events() |> Map.new(&{&1.uid, &1})
+
+  @doc """
+  The events the sync makes of `document`, as a list: an occurrence filed
+  twice shows up twice here, where `normalised/1` would keep one of them.
+  """
+  @spec normalised_events(String.t()) :: [map()]
+  def normalised_events(document) do
     assert {:ok, raws} = EventProcessor.parse_ical_events(document)
     assert {:ok, events} = ICalNormaliser.normalise_events(raws, @context, :caldav)
-    Map.new(events, &{&1.uid, &1})
+    events
   end
 end

@@ -14,6 +14,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
   `CONTACT` lines and their invitations dropped.
   """
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :calendar
   @moduletag :integration
@@ -26,6 +27,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
   alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Workers.SyncCalDavCalendarWorker
 
   setup :verify_on_exit!
 
@@ -222,7 +224,9 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
                    "\r\n"
                  ) <> "\r\n"
 
-    setup %{integration: integration} do
+    setup :insert_series
+
+    defp insert_series(%{integration: integration}) do
       row = fn key, start_at ->
         insert(:provider_calendar_event,
           calendar_integration: integration,
@@ -474,6 +478,122 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
 
       assert_received {:put, body}
       assert "DTSTART:20260910T110000Z" in LineFolder.unfold_lines(body)
+    end
+  end
+
+  describe "editing every occurrence of a synced CalDAV series" do
+    setup :insert_series
+
+    defp caldav_sync_job(integration),
+      do: [
+        worker: SyncCalDavCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id, "force_full_fetch" => true}
+      ]
+
+    test "a move PUTs the whole series moved, its exception with it", %{
+      user: user,
+      occurrence: occurrence
+    } do
+      expect_series_put()
+
+      # 11:00 in Berlin (UTC+2) on 15 September: two hours later.
+      assert {:ok, updated} =
+               CalendarGrid.update_event(
+                 user.id,
+                 occurrence,
+                 %{
+                   start_at: ~U[2026-09-15 09:00:00.000000Z],
+                   end_at: ~U[2026-09-15 09:15:00.000000Z]
+                 },
+                 recurrence_scope: :all
+               )
+
+      assert updated.start_at == ~U[2026-09-15 09:00:00.000000Z]
+      assert_received {:put, @series_url, body, headers}
+      assert {"If-Match", "\"etag-1\""} in headers
+
+      assert [master] = vevent_blocks(body)
+      assert "DTSTART;TZID=Europe/Berlin:20260908T110000" in master
+      assert "DTEND;TZID=Europe/Berlin:20260908T111500" in master
+      assert "EXDATE;TZID=Europe/Berlin:20260929T110000" in master
+      assert "RRULE:FREQ=WEEKLY;BYDAY=TU" in master
+    end
+
+    test "the series' rows are dropped and a full sync of the integration is requested", %{
+      user: user,
+      integration: integration,
+      occurrence: occurrence,
+      sibling: sibling,
+      event: unrelated
+    } do
+      expect_series_put()
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+                 recurrence_scope: :all
+               )
+
+      assert_received {:put, _url, body, _headers}
+      assert "SUMMARY:Standup" in hd(vevent_blocks(body))
+
+      for uid <- [occurrence.uid, sibling.uid] do
+        assert ProviderCalendarEventQueries.get_by_uid(integration.id, uid) ==
+                 {:error, :not_found}
+      end
+
+      {:ok, other} = ProviderCalendarEventQueries.get_by_uid(integration.id, unrelated.uid)
+
+      assert {other.summary, other.raw_ical, other.etag} ==
+               {"Sprint review", @synced_ical, "\"etag-1\""}
+
+      assert_enqueued(caldav_sync_job(integration))
+    end
+
+    test "a failed write is not queued, leaves the rows and requests no sync", %{
+      user: user,
+      integration: integration,
+      occurrence: occurrence,
+      sibling: sibling
+    } do
+      expect(Tymeslot.HTTPClientMock, :put, fn _url, _body, _headers, _opts ->
+        {:error, %Req.TransportError{reason: :econnrefused}}
+      end)
+
+      assert {:error, %{retry: :not_queued}} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+                 recurrence_scope: :all
+               )
+
+      for uid <- [occurrence.uid, sibling.uid] do
+        {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, uid)
+
+        assert {row.summary, row.sync_state, row.etag, row.raw_ical} ==
+                 {"Weekly standup", "synced", "\"etag-1\"", @series_ical}
+      end
+
+      refute_enqueued(worker: SyncCalDavCalendarWorker)
+    end
+
+    # No `expect`: under `verify_on_exit!` a PUT that reached the server would
+    # fail the test as an unexpected call.
+    test "a move off the weekday the rule names is refused before anything is written", %{
+      user: user,
+      integration: integration,
+      occurrence: occurrence
+    } do
+      assert {:error, %{reason: :rule_pins_occurrences, retry: :not_queued}} =
+               CalendarGrid.update_event(
+                 user.id,
+                 occurrence,
+                 %{
+                   start_at: ~U[2026-09-16 07:00:00.000000Z],
+                   end_at: ~U[2026-09-16 07:15:00.000000Z]
+                 },
+                 recurrence_scope: :all
+               )
+
+      assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(integration.id, occurrence.uid)
+      refute_enqueued(worker: SyncCalDavCalendarWorker)
     end
   end
 end

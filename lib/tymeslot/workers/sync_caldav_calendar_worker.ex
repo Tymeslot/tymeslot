@@ -42,6 +42,20 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Workers.SyncHealth
 
+  @doc """
+  Enqueues a full fetch of the CalDAV integration `integration_id`, the sync
+  the dashboard's Refresh asks for: every calendar is read in full rather
+  than by delta, so a change the delta would not report (or a cached row
+  removed on purpose) comes back. A sync already queued or running for the
+  integration answers in its place (see *Per-integration deduplication*).
+  """
+  @spec enqueue_full_fetch(pos_integer()) :: {:ok, Oban.Job.t()} | {:error, term()}
+  def enqueue_full_fetch(integration_id) do
+    %{"calendar_integration_id" => integration_id, "force_full_fetch" => true}
+    |> new()
+    |> Oban.insert()
+  end
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
     integration_id = Map.fetch!(args, "calendar_integration_id")

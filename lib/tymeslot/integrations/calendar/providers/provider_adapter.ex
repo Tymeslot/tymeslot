@@ -220,8 +220,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   @doc """
   Updates an existing event in the calendar.
 
-  An edit of one occurrence of a CalDAV series (an `:occurrence` in
-  `event_data`) answers `{:ok, %{document: document}}`, the document the
+  An edit of one or every occurrence of a CalDAV series (an `:occurrence`
+  in `event_data`) answers `{:ok, %{document: document}}`, the document the
   series now lives in, which the caller needs to refresh its cache.
   """
   @spec update_event(adapter_client(), String.t(), map()) ::

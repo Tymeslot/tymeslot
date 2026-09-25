@@ -640,12 +640,7 @@ defmodule Tymeslot.CalendarGrid do
       # Manual refresh always forces a full fetch: users click Refresh because
       # they believe something is missing, and delta sync is exactly what would
       # miss it. See docs/superpowers/specs/2026-04-13-caldav-periodic-full-resync-design.md.
-      %{
-        "calendar_integration_id" => integration.id,
-        "force_full_fetch" => true
-      }
-      |> SyncCalDavCalendarWorker.new()
-      |> Oban.insert()
+      SyncCalDavCalendarWorker.enqueue_full_fetch(integration.id)
     else
       {:error, "unknown provider: #{provider} for integration #{integration.id}"}
     end

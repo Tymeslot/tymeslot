@@ -179,8 +179,9 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   On a CalDAV-family calendar, an `:occurrence` in `event_data` (see
   `Tymeslot.Integrations.Calendar.CalDAV.Events.occurrence/0`, with its
-  `:changes`) edits only that occurrence of a series; success is then
-  `{:ok, %{document: document}}` with the document the series now lives in.
+  `:changes`) edits only that occurrence of a series, or with `scope: :all`
+  every occurrence of it; success is then `{:ok, %{document: document}}` with
+  the document the series now lives in.
   """
   @spec update_event(
           String.t(),

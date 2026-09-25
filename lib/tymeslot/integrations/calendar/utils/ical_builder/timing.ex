@@ -93,6 +93,29 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Timing do
     if Date.compare(end_date, start) == :gt, do: end_date, else: Date.add(start, 1)
   end
 
+  @doc """
+  `:ok` when `changes` carry no `:start_time`, or one of the value type of
+  `reference` (a `Date` for a date `DTSTART`, a `DateTime` otherwise), and
+  `{:error, :value_type_change}` when they do not.
+  """
+  @spec ensure_value_type(String.t(), map()) :: :ok | {:error, :value_type_change}
+  def ensure_value_type(reference, %{start_time: start}) when is_struct(start) do
+    if match?(%Date{}, start) == date?(reference),
+      do: :ok,
+      else: {:error, :value_type_change}
+  end
+
+  def ensure_value_type(_reference, _changes), do: :ok
+
+  @doc """
+  The end a payload's `finish` stands for: `exclusive_end/2` of it for a
+  date, as written, for an instant.
+  """
+  @spec end_boundary(Date.t() | DateTime.t(), Date.t() | DateTime.t() | nil) ::
+          Date.t() | DateTime.t()
+  def end_boundary(%Date{} = finish, %Date{} = start), do: exclusive_end(finish, start)
+  def end_boundary(finish, _start), do: finish
+
   defp form(reference, params, value) do
     cond do
       date?(reference) -> :date
