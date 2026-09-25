@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
 
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Providers.Directory, as: ProviderDirectory
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.KmeetProvider
   alias Tymeslot.Integrations.Video.RoomCreationError
@@ -182,7 +183,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   # is done. Otherwise a provider refusing to create rooms is explained, with
   # its fix: the connection itself is fine, so nothing else would show it.
   defp notice(integration) do
-    ConnectionRow.reconnect_reason(integration) || room_creation_notice(integration)
+    ConnectionRow.reconnect_reason(integration) || room_creation_notice(integration) ||
+      meeting_link_notice(integration)
   end
 
   defp room_creation_notice(%{room_creation_error: nil}), do: nil
@@ -194,6 +196,17 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   end
 
   defp room_creation_notice(_integration), do: nil
+
+  # A custom link saved before its placeholder was validated still works, as a
+  # static room, so this explains rather than blocks.
+  defp meeting_link_notice(integration) do
+    if Video.meeting_link_template_invalid?(integration) do
+      dgettext(
+        "dashboard_integrations",
+        "The meeting link placeholder is invalid, so all bookings currently share one room. Edit the integration to fix it."
+      )
+    end
+  end
 
   # Status-first badge mapping. Precedence lives in the canonical
   # `HealthCheck.attention_status/2` classifier; this just maps the atom to
@@ -208,8 +221,13 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     end
   end
 
-  defp healthy_status(%{room_creation_error: nil}),
-    do: {:ok, dgettext("dashboard_integrations", "Healthy")}
+  defp healthy_status(%{room_creation_error: nil} = integration) do
+    if Video.meeting_link_template_invalid?(integration) do
+      {:warning, dgettext("dashboard_integrations", "Invalid meeting link")}
+    else
+      {:ok, dgettext("dashboard_integrations", "Healthy")}
+    end
+  end
 
   defp healthy_status(%{room_creation_error: _code}),
     do: {:warning, dgettext("dashboard_integrations", "No video links")}

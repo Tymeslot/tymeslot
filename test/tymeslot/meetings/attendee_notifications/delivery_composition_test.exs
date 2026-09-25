@@ -11,7 +11,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.DeliveryCompositionTest do
       `ical_sequence`, and enqueues an `EmailWorker` job — the test then feeds
       that job's own args into `perform_job(EmailWorker, …)`, so a rename or
       reshape between producer (`CalendarScheduler.schedule_event_update_notification/1`)
-      and consumer (`EmailWorkerHandlers.IntegrationEmails.handle_event_update_notification/1`)
+      and consumer (`EmailWorkerHandlers.IntegrationEmails.handle_event_update_notification/2`)
       surfaces here.
     * the **inner** handler's partial-delivery branch, which returns
       `{:discard, "Partial delivery failure: N of M failed"}` when any

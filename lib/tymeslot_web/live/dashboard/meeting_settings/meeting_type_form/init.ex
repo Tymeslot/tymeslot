@@ -1,12 +1,16 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   @moduledoc "Initialisation and form data building for MeetingTypeForm."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  alias Ecto.UUID
   alias Phoenix.Component
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Features
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.LocationOption
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.CustomInputModeHelper
@@ -24,8 +28,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
 
     socket
     |> Component.assign(:selected_icon, get_selected_icon(type))
-    |> Component.assign(:meeting_mode, get_meeting_mode(type))
-    |> Component.assign(:selected_video_integration_id, get_video_integration_id(type))
+    |> Component.assign(:locations, get_locations(type))
     |> Component.assign(
       :selected_calendar_integration_id,
       get_calendar_integration_id(type)
@@ -234,25 +237,31 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   def get_selected_icon(%{icon: icon}) when is_binary(icon) and icon != "", do: icon
   def get_selected_icon(_arg), do: "none"
 
-  @doc "Returns the meeting mode string for a meeting type."
-  @spec get_meeting_mode(Ecto.Schema.t() | nil) :: String.t()
-  def get_meeting_mode(%{allow_video: true}), do: "video"
-  def get_meeting_mode(_arg), do: "personal"
+  @doc """
+  Returns the meeting type's locations, in the host's order.
 
-  @doc "Returns the video integration id as an integer, or nil."
-  @spec get_video_integration_id(Ecto.Schema.t() | nil) :: integer() | nil
-  def get_video_integration_id(nil), do: nil
-  def get_video_integration_id(%{video_integration_id: nil}), do: nil
-  def get_video_integration_id(%{video_integration_id: id}) when is_integer(id), do: id
+  A new meeting type opens on one in-person location rather than an empty
+  list: the schema requires at least one, so an empty editor would be a form
+  the host cannot submit until they notice why.
+  """
+  @spec get_locations(Ecto.Schema.t() | nil) :: [LocationOption.t()]
+  def get_locations(nil), do: [default_location()]
 
-  def get_video_integration_id(%{video_integration_id: id}) when is_binary(id) do
-    case Integer.parse(id) do
-      {int, _value} -> int
-      :error -> nil
+  def get_locations(type) do
+    case MeetingTypes.location_options(type) do
+      [] -> [default_location()]
+      locations -> locations
     end
   end
 
-  def get_video_integration_id(_arg), do: nil
+  defp default_location do
+    %LocationOption{
+      id: UUID.generate(),
+      kind: "in_person",
+      label: dgettext("dashboard_meeting_form", "In person"),
+      position: 0
+    }
+  end
 
   @doc "Returns the calendar integration id for a meeting type, or nil."
   @spec get_calendar_integration_id(Ecto.Schema.t() | nil) :: integer() | nil

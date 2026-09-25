@@ -12,8 +12,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Shared.BookingLabels
+  alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
   alias TymeslotWeb.Themes.Shared.Components.GuestField
+  alias TymeslotWeb.Themes.Shared.Components.LocationField
   alias TymeslotWeb.Themes.Shared.GuestBooking
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SecurityFields
@@ -41,8 +43,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("submit", %{"booking" => booking_params}, socket) do
-    # Set submitting state immediately for instant UI feedback
-    socket = assign(socket, :submitting, true)
+    # Set submitting state immediately for instant UI feedback — but only when
+    # the location picker has an answer the LiveView will accept. An
+    # incomplete one is refused without changing any assign this component
+    # renders, so a flag set here would have nothing to clear it again.
+    socket = assign(socket, :submitting, BookingLocation.complete?(socket.assigns))
     send(self(), {:step_event, :booking, :submit, booking_params})
     {:noreply, socket}
   end
@@ -50,6 +55,24 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   @impl Phoenix.LiveComponent
   def handle_event("back_step", _params, socket) do
     send(self(), {:step_event, :booking, :back_step, nil})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("select_location", %{"id" => id}, socket) do
+    send(self(), {:step_event, :booking, :select_location, id})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("select_video_provider", %{"id" => id}, socket) do
+    send(self(), {:step_event, :booking, :select_video_provider, id})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("location_phone_change", params, socket) do
+    send(self(), {:step_event, :booking, :location_phone, params["location_phone"] || ""})
     {:noreply, socket}
   end
 
@@ -140,6 +163,18 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       @user_timezone
                     )}
                   </p>
+
+                  <LocationField.location_field
+                    :if={BookingLocation.choice_required?(assigns)}
+                    location_options={@location_options}
+                    selected_location_id={@selected_location_id}
+                    video_choices={BookingLocation.video_choices(assigns)}
+                    selected_video_id={@selected_video_id}
+                    location_phone={@location_phone}
+                    location_error={@location_error}
+                    phone_required={BookingLocation.phone_required?(assigns)}
+                    target={@myself}
+                  />
 
                   <.form
                     :let={f}

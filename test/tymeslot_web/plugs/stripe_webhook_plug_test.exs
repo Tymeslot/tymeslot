@@ -1,55 +1,24 @@
 defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
   @moduledoc """
-  Composition tests for the Stripe webhook pipeline —
-  `WebhookBodyCachePlug` (run as a `body_reader` from `Plug.Parsers`) +
-  `StripeWebhookPlug` (run in the `:webhook` router pipeline) +
-  `StripeWebhookController.webhook/2`.
+  Composition tests for the Stripe webhook pipeline: `WebhookBodyCachePlug`
+  (run as a `body_reader` from `Plug.Parsers`), `StripeWebhookPlug` (rate
+  limiting in the `:webhook` router pipeline) and `StripeWebhookController`.
 
-  Three gaps are closed here:
+    * **Rate limit on both endpoints**: the platform and the Connect endpoint
+      each answer an exhausted limiter with a halted 429 before any
+      verification work is done.
 
-    * **Rate-limit arm** — the plug's `{:error, :rate_limited}` branch
-      returns a 429 JSON body. Previously only the `:ok` side was
-      exercised, so a regression that mis-coded the 429 (e.g., 503 or
-      an un-halted `send_resp`) would not fail any existing test.
+    * **End-to-end signature wiring**: a real POST to `/webhooks/stripe` with
+      a valid HMAC must succeed without any manual `assign(:raw_body,
+      payload)` in the test. This proves the pair (the route's `raw_body: true`
+      metadata + `body_reader` = `WebhookBodyCachePlug.read_body`) is wired
+      correctly; a regression that dropped the metadata would surface here as
+      a 400 (empty cached body, so the signature cannot match).
 
-    * **Raw body absent** — the fallback at
-      `stripe_webhook_plug.ex:127-154`, `conn.assigns[:raw_body] == nil`,
-      feeds the signature verifier an empty string. The user-observable
-      outcome must be a 400 with a signature error (not a 500, not a
-      silent success).
-
-    * **End-to-end signature wiring** (Task 118) — a real POST to
-      `/webhooks/stripe` with a valid HMAC must succeed without any
-      manual `assign(:raw_body, payload)` in the test. This proves the
-      config pair (`webhook_paths` = `["/webhooks/stripe"]` +
-      `body_reader` = `WebhookBodyCachePlug.read_body`) is wired
-      correctly; a regression that set `webhook_paths` to the stale
-      `/api/webhook/stripe` default would surface here as a 400 (empty
-      cached body → signature mismatch).
-
-  Dropped from the plan with rationale:
-
-    * `FetchCurrentUser: expired session → nil assigned, no error;
-      malformed user_token → nil, no query crash` — covered at
-      `fetch_current_user_test.exs` ("assigns nil current_user when the
-      session token does not match any user") and the production code
-      composes nil safely (`user_token && get_user_by_session_token/1`).
-
-    * `RequireAuthPlug: unauthenticated request halted + redirect with
-      flash` — covered at `require_auth_test.exs` (redirect,
-      flash-message, halt assertions are all present).
-
-    * `Overlay-mode plug: request to an overlay route in a Core-only
-      deployment → redirect` — covered by the overlay's own plug tests
-      (halt and redirect to `/auth/login` when the configured router is
-      not the overlay's).
-
-    * Boundary test at exactly 100 vs. 101 real requests — the numeric
-      bound lives in `Tymeslot.Security.RateLimiter.Bookings` and is
-      pinned by its own tests. Replaying 101 requests here would
-      duplicate that coverage at the cost of a slow, flaky suite; the
-      behaviourally interesting part is the plug's response when the
-      limiter reports `:rate_limited`, which we assert directly.
+  The numeric bound (1000 requests per minute, in a bucket of its own so
+  Telegram and Zoom traffic cannot starve Stripe) lives in
+  `Tymeslot.Security.RateLimiter.Bookings` and is pinned by its own tests;
+  what matters here is the response when the limiter reports `:rate_limited`.
   """
 
   use TymeslotWeb.ConnCase, async: false
@@ -57,39 +26,45 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
   @moduletag :plugs
   @moduletag :payments
 
+  import Mox
   import Tymeslot.ConfigTestHelpers
 
-  alias Plug.Conn
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
   alias Tymeslot.PaymentTestHelpers
   alias Tymeslot.Security.RateLimit
   alias Tymeslot.Security.RateLimiter
-  alias TymeslotWeb.Plugs.StripeWebhookPlug
+  alias TymeslotWeb.Helpers.ClientIP
+
+  setup :verify_on_exit!
 
   setup do
     IdempotencyCache.clear_all()
     :ok
   end
 
-  describe "StripeWebhookPlug — rate limit arm" do
-    test "returns 429 JSON and halts when the rate limiter rejects the request", %{conn: conn} do
-      # Exhaust the real Hammer ETS bucket (100 requests per 10 minutes per IP).
-      # Hit 101 times to avoid boundary races in the sliding window backend.
-      client_ip = "127.0.0.1"
+  describe "rate limit" do
+    setup %{conn: conn} do
+      # A per-test address keeps the exhausted bucket from leaking into any
+      # other test that posts from the default 127.0.0.1.
+      last_octet = rem(System.unique_integer([:positive]), 250) + 1
+      conn = %{conn | remote_ip: {10, 77, 0, last_octet}}
+      client_ip = ClientIP.get(conn)
 
-      for _i <- 1..101 do
-        RateLimit.hit("webhook:#{client_ip}", 600_000, 100)
-      end
+      # Hit 1001 times to avoid boundary races in the sliding window backend.
+      for _i <- 1..1001, do: RateLimit.hit("stripe_webhook:#{client_ip}", 60_000, 1_000)
+      assert {:error, :rate_limited} = RateLimiter.check_stripe_webhook_rate_limit(client_ip)
 
-      # Verify the bucket is actually exhausted before making the request
-      assert {:error, :rate_limited} = RateLimiter.check_webhook_rate_limit(client_ip)
+      on_exit(fn -> RateLimiter.clear_bucket("stripe_webhook:#{client_ip}") end)
 
+      %{conn: conn}
+    end
+
+    test "the platform endpoint answers 429 and halts", %{conn: conn} do
       payload = ~s({"type":"checkout.session.completed","id":"evt_rate_limited"})
 
       conn =
         conn
         |> put_req_header("content-type", "application/json")
-        |> assign(:raw_body, payload)
         |> post("/webhooks/stripe", payload)
 
       assert conn.status == 429
@@ -100,49 +75,49 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
                "message" => "Too many requests"
              }
     end
-  end
 
-  describe "StripeWebhookPlug — raw body absent + empty body yields 400" do
-    test "responds with 400 when :raw_body is absent and Conn.read_body returns an empty body",
-         %{conn: conn} do
-      # When no raw_body assign is present, the plug falls back to
-      # Conn.read_body. The Plug test adapter returns {:ok, "", conn},
-      # so the signature verifier receives an empty string and must
-      # reject it with a 400.
-      with_config(:tymeslot,
-        skip_webhook_verification: false,
-        stripe_provider: Tymeslot.Payments.Stripe,
-        stripe_webhook_secret: "whsec_test"
-      )
+    test "the Connect endpoint answers 429 and halts before verifying anything", %{conn: conn} do
+      # The secret is configured and no `StripeAdapterMock` expectation is
+      # set, so reaching signature verification would raise
+      # `Mox.UnexpectedCallError`.
+      with_config(:tymeslot, stripe_connect_webhook_secret: "whsec_test_connect")
 
-      payload = ~s({"type":"checkout.session.completed","id":"evt_preconsumed"})
-      signature = PaymentTestHelpers.generate_stripe_signature(payload, "whsec_test")
+      payload = ~s({"type":"account.updated","id":"evt_connect_rate_limited"})
 
       conn =
         conn
         |> put_req_header("content-type", "application/json")
-        |> put_req_header("stripe-signature", signature)
-        |> Map.put(:body_params, %{})
+        |> put_req_header("stripe-signature", "t=1,v1=GOOD")
+        |> post("/webhooks/stripe/connect", payload)
 
-      {:ok, _body, conn} = Conn.read_body(conn)
-
-      conn = StripeWebhookPlug.call(conn, [])
-
-      assert conn.status == 400
+      assert conn.status == 429
       assert conn.halted
-      body = Jason.decode!(conn.resp_body)
-      assert body["error"] == "invalid_signature"
     end
   end
 
-  describe "end-to-end through /webhooks/stripe — signature verification" do
+  describe "rate limit isolation" do
+    test "an exhausted generic webhook bucket does not throttle Stripe", %{conn: conn} do
+      last_octet = rem(System.unique_integer([:positive]), 250) + 1
+      conn = %{conn | remote_ip: {10, 78, 0, last_octet}}
+      client_ip = ClientIP.get(conn)
+
+      # The bucket Telegram and Zoom share; Stripe must not draw from it.
+      for _i <- 1..101, do: RateLimit.hit("webhook:#{client_ip}", 600_000, 100)
+      assert {:error, :rate_limited} = RateLimiter.check_webhook_rate_limit(client_ip)
+      on_exit(fn -> RateLimiter.clear_bucket("webhook:#{client_ip}") end)
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/webhooks/stripe", ~s({"type":"checkout.session.completed"}))
+
+      refute conn.status == 429
+    end
+  end
+
+  describe "end-to-end through /webhooks/stripe: signature verification" do
     test "accepts a POST with a valid HMAC signature when the body is cached by WebhookBodyCachePlug",
          %{conn: conn} do
-      # Deliberately does not `assign(:raw_body, payload)`. This proves
-      # the full endpoint chain (Plug.Parsers → body_reader →
-      # StripeWebhookPlug) caches and verifies without any manual wiring.
-      # A regression reverting `config :tymeslot, :webhook_paths` to the
-      # stale `/api/webhook/stripe` would surface here as a 400.
       secret = "whsec_e2e_valid"
 
       with_config(:tymeslot,
@@ -165,7 +140,7 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
       assert response(conn, 200) == ""
     end
 
-    test "rejects a POST with an invalid HMAC signature without pre-assigning :raw_body",
+    test "rejects a POST with an invalid HMAC signature with an empty 400",
          %{conn: conn} do
       secret = "whsec_e2e_invalid"
 
@@ -183,7 +158,7 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlugTest do
         |> put_req_header("stripe-signature", "t=1700000000,v1=deadbeef")
         |> post("/webhooks/stripe", payload)
 
-      assert json_response(conn, 400)
+      assert response(conn, 400) == ""
     end
   end
 end

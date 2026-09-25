@@ -33,6 +33,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   """
 
   alias Tymeslot.Emails.EmailScheduler.CalendarScheduler
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeDetector
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
@@ -41,7 +42,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   alias Tymeslot.Meetings.MeetingSchema
 
   @type event :: map
-  @type attendee :: %{optional(:email) => String.t(), optional(:name) => String.t() | nil}
+  @type attendee ::
+          Attendee.t() | %{optional(:email) => String.t(), optional(:name) => String.t() | nil}
 
   @spec event_created(event, [attendee]) :: {:ok, :sent | :noop}
   def event_created(_event, []), do: {:ok, :noop}
@@ -141,22 +143,40 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   ## Internal helpers
 
   defp send_immediate(event, attendees, method, sequence) do
+    timing = invitation_timing(event)
+
     Enum.each(attendees, fn attendee ->
-      CalendarScheduler.schedule_calendar_invitation(%{
-        user_id: user_id_for(event),
-        attendee_email: Map.get(attendee, :email),
-        event_title: title_for(event),
-        event_uid: Map.get(event, :uid),
-        event_start_at: iso(start_at_for(event)),
-        event_end_at: iso(end_at_for(event)),
-        event_location: Map.get(event, :location),
-        event_description: Map.get(event, :description),
-        method: method,
-        sequence: sequence
-      })
+      CalendarScheduler.schedule_calendar_invitation(
+        Map.merge(timing, %{
+          user_id: user_id_for(event),
+          attendee_email: Map.get(attendee, :email),
+          event_title: title_for(event),
+          event_uid: Map.get(event, :uid),
+          event_location: Map.get(event, :location),
+          event_description: Map.get(event, :description),
+          method: method,
+          sequence: sequence
+        })
+      )
     end)
 
     :ok
+  end
+
+  # An all-day event has dates and no instants, so it travels as dates; the
+  # instants stay in the args as nil because the job requires the keys.
+  defp invitation_timing(%{all_day: true, start_date: %Date{} = start_date, end_date: end_date}) do
+    %{
+      all_day: true,
+      event_start_date: Date.to_iso8601(start_date),
+      event_end_date: Date.to_iso8601(end_date),
+      event_start_at: nil,
+      event_end_at: nil
+    }
+  end
+
+  defp invitation_timing(event) do
+    %{event_start_at: iso(start_at_for(event)), event_end_at: iso(end_at_for(event))}
   end
 
   defp to_event_map(event, attendees) do
@@ -164,6 +184,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       title: title_for(event),
       starts_at: start_at_for(event),
       ends_at: end_at_for(event),
+      start_date: Map.get(event, :start_date),
+      end_date: Map.get(event, :end_date),
       location: Map.get(event, :location),
       description: Map.get(event, :description),
       video_link: video_link_for(event),

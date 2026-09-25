@@ -24,6 +24,30 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
       assert email.subject =~ "Invitation"
     end
 
+    test "an all-day invitation shows its days and gets a date-only ICS" do
+      details =
+        build_invitation_details(%{
+          all_day: true,
+          start_time: nil,
+          end_time: nil,
+          duration: nil,
+          date: ~D[2026-10-12],
+          start_date: ~D[2026-10-12],
+          end_date: ~D[2026-10-15],
+          last_date: ~D[2026-10-14]
+        })
+
+      email = CalendarInvitation.render("guest@example.com", details)
+
+      assert email.html_body =~ "All day, until October 14, 2026"
+      assert email.html_body =~ "3 days"
+      assert email.text_body =~ "Time: All day, until October 14, 2026"
+
+      [ics] = Enum.filter(email.attachments, &(&1.content_type == "text/calendar"))
+      assert ics.data =~ "DTSTART;VALUE=DATE:20261012"
+      assert ics.data =~ "DTEND;VALUE=DATE:20261015"
+    end
+
     test "sets recipient as plain email without name tuple" do
       email =
         CalendarInvitation.render(

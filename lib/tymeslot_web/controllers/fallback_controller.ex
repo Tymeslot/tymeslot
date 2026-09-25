@@ -2,29 +2,13 @@ defmodule TymeslotWeb.FallbackController do
   @moduledoc """
   Catch-all for paths that match no route.
 
-  Returns a real `404 Not Found` instead of a soft-404 redirect. Previously an
-  unmatched URL was bounced to `/` (or to a resolved profile) with a flash,
-  producing a `302 → 200` chain that crawlers and monitoring read as a valid
-  page. Honest 404s keep stale/garbage URLs out of search indexes and let
-  clients distinguish "missing" from "moved".
-
-  Both layouts are disabled for the error response so the self-contained
-  `ErrorHTML` 404 template renders on its own. The root layout's `<head>` emits a
-  self-referential `<link rel="canonical">`; on a 404 that would advertise the
-  missing URL as its own canonical, telling crawlers a dead page is real. The app
-  layout would prepend a flash group ahead of the template's `<html>` skeleton.
-  Disabling both matches the bare `NoRouteError` path (`render_errors: layout:
-  false`), which the branded template is also written to render under.
+  Answers with a real `404 Not Found`; see `TymeslotWeb.NotFound` for why it
+  is not a soft-404 redirect and why both layouts are disabled.
   """
   use TymeslotWeb, :controller
 
+  alias TymeslotWeb.NotFound
+
   @spec index(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def index(conn, _params) do
-    conn
-    |> put_status(:not_found)
-    |> put_root_layout(html: false)
-    |> put_layout(html: false)
-    |> put_view(html: TymeslotWeb.ErrorHTML, json: TymeslotWeb.ErrorJSON)
-    |> render(:"404")
-  end
+  def index(conn, _params), do: NotFound.render(conn)
 end

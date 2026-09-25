@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
   alias TymeslotWeb.Themes.Shared.ChosenLength
+  alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: CustomizationHelpers
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
   alias TymeslotWeb.Themes.Shared.ReschedulePin
@@ -388,6 +389,13 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     |> assign(:meeting_type, meeting_type)
     |> assign(:engine, refreshed_engine(socket, meeting_type))
     |> ChosenLength.assign_for_reschedule()
+    |> BookingLocation.assign_for_meeting_type(
+      meeting_type,
+      ThemeFlow.reschedule_location_choice(
+        socket.assigns[:reschedule_meeting_uid],
+        socket.assigns[:organizer_user_id]
+      )
+    )
     |> OrganizerHelpers.assign_booking_window()
   end
 

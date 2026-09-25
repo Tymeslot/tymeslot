@@ -1062,3 +1062,18 @@ msgstr "Dieses Ereignis aktualisieren"
 #, elixir-autogen, elixir-format
 msgid "Recurring events cannot be edited here yet. Please change this one in your calendar app."
 msgstr "Wiederkehrende Ereignisse können hier noch nicht bearbeitet werden. Bitte ändern Sie dieses Ereignis in Ihrer Kalender-App."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
+msgstr "Ereignis in den neuen Kalender kopiert, aber das Verschieben wurde nicht abgeschlossen. Bitte prüfen Sie den ursprünglichen Kalender und löschen Sie das Original, falls es noch dort ist."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "This event is a booking, so its video link belongs to the booking. Reschedule or cancel the booking to change it."
+msgstr "Dieses Ereignis ist eine Buchung, daher gehört sein Videolink zur Buchung. Verschieben oder stornieren Sie die Buchung, um ihn zu ändern."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Google Calendar added Google Meet to the event but has not returned its link yet. Choose Google Meet again to fetch it."
+msgstr "Google Kalender hat dem Ereignis Google Meet hinzugefügt, den Link aber noch nicht zurückgegeben. Wählen Sie Google Meet erneut, um ihn abzurufen."

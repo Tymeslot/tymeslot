@@ -12,6 +12,7 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
   alias Phoenix.Flash
   alias Phoenix.Token
   alias Tymeslot.Repo
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Slack.OAuth
   alias Tymeslot.Slack.SlackIntegrationSchema
   alias TymeslotWeb.Endpoint
@@ -28,6 +29,8 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
       http_client_module: Tymeslot.HTTPClientMock,
       environment: :test
     )
+
+    RateLimiter.clear_all()
 
     :ok
   end
@@ -80,6 +83,22 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
       assert redirected_to(conn) == "/dashboard/automation"
       assert Flash.get(conn.assigns.flash, :error) =~ "plan does not include Slack"
     end
+
+    test "shows the plan message in the visitor's language", %{conn: conn} do
+      with_config(
+        :tymeslot,
+        :feature_access_checker,
+        TymeslotWeb.SlackOAuthControllerTest.DenyAccessChecker
+      )
+
+      user = insert(:user)
+      conn = conn |> log_in_user(user) |> get(~p"/api/slack/oauth/start?locale=de")
+
+      assert redirected_to(conn) == "/dashboard/automation"
+
+      assert Flash.get(conn.assigns.flash, :error) =~
+               "Ihr Tarif enthält keine Slack-Benachrichtigungen"
+    end
   end
 
   describe "GET /api/slack/oauth/callback — success" do
@@ -117,6 +136,8 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
       assert integration.app_mode == "oauth"
       assert integration.team_id == "T7"
       assert integration.team_name == "Acme"
+      assert integration.name == "Acme"
+      assert "meeting.created" in integration.events
       assert SlackIntegrationSchema.status(integration) == :pending_oauth
       assert SlackIntegrationSchema.bot_token(integration) == "xoxb-real"
     end
@@ -133,6 +154,51 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
 
       assert redirected_to(conn) == "/dashboard/automation"
       assert Flash.get(conn.assigns.flash, :error) =~ "cancelled"
+      assert Repo.all(SlackIntegrationSchema) == []
+    end
+
+    test "shows the cancellation flash in the visitor's language", %{conn: conn} do
+      user = insert(:user)
+
+      conn =
+        conn
+        |> log_in_user(user)
+        |> get(~p"/api/slack/oauth/callback?error=access_denied&locale=de")
+
+      assert Flash.get(conn.assigns.flash, :error) == "Slack-Verbindung abgebrochen."
+    end
+
+    test "shows a translated generic failure for any other Slack error code", %{conn: conn} do
+      user = insert(:user)
+
+      conn =
+        conn
+        |> log_in_user(user)
+        |> get(~p"/api/slack/oauth/callback?error=invalid_scope&locale=de")
+
+      assert Flash.get(conn.assigns.flash, :error) =~
+               "Die Slack-Verbindung konnte nicht abgeschlossen werden"
+    end
+  end
+
+  describe "GET /api/slack/oauth/callback — rate limiting" do
+    test "refuses to exchange the code once the callback limit is exhausted", %{conn: conn} do
+      user = insert(:user)
+      state = sign_state(user.id)
+      conn = %{conn | remote_ip: {203, 0, 113, 77}}
+
+      for _attempt <- 1..20 do
+        assert :ok = RateLimiter.check_oauth_callback_rate_limit("203.0.113.77")
+      end
+
+      # No HTTP expectation is set: an exchange with Slack would fail Mox.
+      conn =
+        conn
+        |> log_in_user(user)
+        |> get(~p"/api/slack/oauth/callback?code=abc123&state=#{state}")
+
+      assert redirected_to(conn) == "/dashboard/automation"
+      assert Flash.get(conn.assigns.flash, :error) =~ "Too many requests"
       assert Repo.all(SlackIntegrationSchema) == []
     end
   end

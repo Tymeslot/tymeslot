@@ -19,8 +19,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
     curl \
-    nodejs \
-    npm \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -42,11 +40,6 @@ COPY . .
 RUN rm -rf priv/static/assets/
 RUN mix compile
 RUN mix assets.setup
-# Install node_modules for the heroicons plugin — the standalone tailwind
-# binary bundles @tailwindcss/forms but not the tailwindcss runtime that
-# assets/heroicons.js needs via require("tailwindcss/plugin"), so it resolves
-# them from the assets dir's node_modules.
-RUN npm ci --prefix assets
 RUN mix assets.deploy
 
 # mix release embeds config/runtime.exs in the release itself, so no extra

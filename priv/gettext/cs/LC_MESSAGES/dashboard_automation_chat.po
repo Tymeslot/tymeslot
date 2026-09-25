@@ -542,6 +542,7 @@ msgstr "Integrace Slack byla znovu zapnuta."
 msgid "Slack integration updated"
 msgstr "Integrace Slack byla aktualizována."
 
+#: lib/tymeslot/slack/slack.ex
 #: lib/tymeslot_web/live/dashboard/automation/slack/crud_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Slack notifications are not enabled on this deployment."
@@ -750,3 +751,93 @@ msgstr "příliš mnoho po sobě jdoucích chyb doručení"
 #, elixir-autogen, elixir-format
 msgid "My Telegram"
 msgstr "Můj Telegram"
+
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Slack connection cancelled."
+msgstr "Připojení ke službě Slack bylo zrušeno."
+
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Slack connection could not be completed. Please try again."
+msgstr "Připojení ke službě Slack se nepodařilo dokončit. Zkuste to prosím znovu."
+
+#: lib/tymeslot_web/controllers/slack_oauth_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Too many requests. Please try again later."
+msgstr "Příliš mnoho požadavků. Zkuste to prosím později."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Slack credentials are missing. Reconnect to continue."
+msgstr "Chybí přihlašovací údaje ke službě Slack. Pro pokračování ji znovu připojte."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook URL is missing. Add it again to continue."
+msgstr "Chybí URL webhooku. Pro pokračování ji přidejte znovu."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Your plan does not include Slack notifications. Upgrade to connect Slack."
+msgstr "Váš tarif nezahrnuje oznámení ve službě Slack. Pro připojení služby Slack přejděte na vyšší tarif."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Could not verify your plan right now. Please try again in a moment."
+msgstr "Váš tarif se teď nepodařilo ověřit. Zkuste to prosím za chvíli znovu."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Slack app install is not available on this deployment. Use a webhook URL instead."
+msgstr "Instalace aplikace Slack není v této instalaci k dispozici. Použijte místo toho URL webhooku."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Slack app is not configured as a bot token app. Check your Slack app settings and ensure the OAuth scopes grant a bot token."
+msgstr "Aplikace Slack není nastavena pro token bota. Zkontrolujte nastavení své aplikace Slack a ověřte, že rozsahy OAuth udělují token bota."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Slack integration is misconfigured."
+msgstr "Integrace se službou Slack je špatně nastavená."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "This Slack workspace is already connected. Disconnect the existing integration first."
+msgstr "Tento pracovní prostor Slack je již připojen. Nejprve odpojte stávající integraci."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Could not save Slack integration."
+msgstr "Integraci se službou Slack se nepodařilo uložit."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Channel not accessible. If it's a private channel, invite the Tymeslot bot first."
+msgstr "Kanál není přístupný. Pokud jde o soukromý kanál, nejprve do něj pozvěte bota Tymeslot."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Slack authorisation was revoked. Reconnect to continue."
+msgstr "Autorizace služby Slack byla odvolána. Pro pokračování ji znovu připojte."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Bot is not in this channel. Either pick a public channel or invite the bot."
+msgstr "Bot v tomto kanálu není. Vyberte veřejný kanál, nebo bota pozvěte."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Slack is rate-limiting. Try again in a minute."
+msgstr "Služba Slack omezuje počet požadavků. Zkuste to znovu za minutu."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Webhook URL was revoked in Slack. Generate a new one."
+msgstr "URL webhooku byla ve službě Slack odvolána. Vygenerujte novou."
+
+#: lib/tymeslot/slack/slack.ex
+#, elixir-autogen, elixir-format
+msgid "Slack error: %{error}"
+msgstr "Chyba služby Slack: %{error}"

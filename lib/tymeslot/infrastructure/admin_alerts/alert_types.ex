@@ -125,7 +125,47 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     end
   end
 
+  # The message embeds `days_past_due`, which the daily dunning run increments
+  # on every pass over the same stuck row, so the default message-based key
+  # changes daily and the admin is emailed again about a condition nobody has
+  # resolved yet. Dedup on the subscription instead: one alert per stuck row
+  # per window, while a second stalled subscription still raises its own.
+  def dedup_key(:dunning_stalled, metadata) do
+    "dunning_stalled:#{Map.get(metadata, :stripe_subscription_id, "unknown")}"
+  end
+
+  # Aggregate integration health alerts (`HealthCheck.Alerting`) embed a live
+  # count in the message, which would change the key on every hourly run and
+  # email the admin every hour for one incident. Key on the signal and its
+  # threshold band instead, so a steady incident alerts once per window and a
+  # worsening one (band "elevated" to "severe") alerts again. An auto-pause
+  # alert also carries its run's date: each daily run reports different
+  # integrations, and the next run lands just inside the 24-hour window.
+  # The hourly signals carry the hour their incident began, and their recovery
+  # the same hour, so a second incident on the same day alerts again instead
+  # of colliding with the first. Matched on the signal shape only, so the
+  # shared Telegram token alert keeps its message-based key.
+  def dedup_key(:integration_health_failure, %{signal: signal, band: band} = metadata) do
+    health_key([
+      "integration_health_failure",
+      signal,
+      Map.get(metadata, :run_date),
+      Map.get(metadata, :incident_started_at),
+      band
+    ])
+  end
+
+  def dedup_key(:integration_health_recovery, %{signal: signal} = metadata) do
+    health_key([
+      "integration_health_recovery",
+      signal,
+      Map.get(metadata, :incident_started_at)
+    ])
+  end
+
   def dedup_key(type, metadata), do: format_message(type, metadata)
+
+  defp health_key(parts), do: parts |> Enum.reject(&is_nil/1) |> Enum.join(":")
 
   @doc "Formats a human-readable message for the given alert type and metadata."
   @spec format_message(atom(), map()) :: String.t()
@@ -172,6 +212,11 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     "PubSub broadcast failed for #{event}"
   end
 
+  # Aggregate signals (`HealthCheck.Alerting`) describe many integrations, so
+  # the summary is the whole message rather than one integration's.
+  def format_message(:integration_health_failure, %{signal: _signal, summary: summary}),
+    do: summary
+
   def format_message(:integration_health_failure, metadata) do
     integration_id = Map.get(metadata, :integration_id, "unknown")
 
@@ -182,8 +227,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   end
 
   def format_message(:integration_health_recovery, metadata) do
-    integration_id = Map.get(metadata, :integration_id, "unknown")
-    "Integration #{integration_id} recovered from health check failure"
+    Map.get(metadata, :summary, "Integration health recovered")
   end
 
   def format_message(:oban_queue_stuck, metadata) do
@@ -221,9 +265,9 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     "Payment event enqueue failed for #{event}: #{detail}"
   end
 
-  # The message embeds the subscription id, so the default message-based dedup
-  # key already collapses repeat runs over the same stuck row into one alert
-  # per window while a second stuck subscription still raises its own.
+  # The day count is deliberately in the message: the admin needs to see how
+  # long the row has been stalled. It is what makes the message unusable as a
+  # dedup key, which is why this type has its own `dedup_key/2` clause.
   def format_message(:dunning_stalled, metadata) do
     stripe_id = Map.get(metadata, :stripe_subscription_id, "unknown")
     days = Map.get(metadata, :days_past_due, "unknown")

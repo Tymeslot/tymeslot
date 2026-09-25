@@ -173,7 +173,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfigTest do
       assert Enum.filter(
                ProviderConfig.known_providers(),
                &ProviderConfig.rooms_updated_on_reschedule?/1
-             ) == [:zoom, :nextcloud_talk]
+             ) == [:teams, :zoom, :nextcloud_talk]
     end
 
     test "answers the stored string form as the atom" do

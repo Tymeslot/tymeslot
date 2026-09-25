@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
          {:ok, naive_dt} <- NaiveDateTime.new(date_struct, time_obj),
          {:ok, dt} <- DateTime.from_naive(naive_dt, timezone) do
       weekday = get_weekday_name(Date.day_of_week(DateTime.to_date(dt)))
-      month = get_month_name(dt.month)
+      month = month_in_date(dt.month)
       time_str = format_time_by_locale(dt)
 
       dgettext("booking", "%{weekday}, %{day} %{month} %{year} at %{time} %{timezone}",
@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
       {:ok, dt} ->
         dgettext("booking", "%{day} %{month} %{year} at %{time} %{timezone}",
           day: dt.day,
-          month: get_month_name(dt.month),
+          month: month_in_date(dt.month),
           year: dt.year,
           time: format_time_by_locale(dt),
           timezone: dt.zone_abbr
@@ -101,7 +101,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
         dgettext("booking", "%{weekday} %{day} %{month}, %{time}",
           weekday: get_weekday_name(Date.day_of_week(DateTime.to_date(dt))),
           day: dt.day,
-          month: get_month_name(dt.month),
+          month: month_in_date(dt.month),
           time: format_time_by_locale(dt)
         )
 
@@ -147,7 +147,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
 
   @spec format_date(Date.t()) :: String.t()
   def format_date(%Date{} = date) do
-    month = get_month_name(date.month)
+    month = month_in_date(date.month)
     dgettext("booking", "%{month} %{day}, %{year}", month: month, day: date.day, year: date.year)
   end
 
@@ -223,6 +223,15 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
       _single ->
         format_duration(Map.get(meeting_type, :duration_minutes))
     end
+  end
+
+  # A month named inside a date takes a different form from a standalone one in
+  # several locales: Ukrainian and Czech use the genitive ("15 червня 2026"),
+  # French and Italian lowercase it. `get_month_name/1` is the standalone form
+  # for "%{month} %{year}" headings; this is the in-date form.
+  @spec month_in_date(integer()) :: String.t()
+  defp month_in_date(month) do
+    LocaleFormat.format_month_name(month, Gettext.get_locale(TymeslotWeb.Gettext))
   end
 
   @spec get_month_name(integer()) :: String.t()

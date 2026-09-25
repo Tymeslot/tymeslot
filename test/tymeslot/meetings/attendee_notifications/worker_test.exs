@@ -12,6 +12,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Workers.EmailWorker
 
   setup do
     starts_at = ~U[2026-01-01 10:00:00.000000Z]
@@ -63,6 +64,33 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
       reloaded = Repo.get!(ProviderCalendarEventSchema, event.id)
       assert reloaded.ical_sequence == 1
       assert reloaded.last_notified_state["title"] == "new title"
+    end
+
+    # The dispatch (an EmailWorker insert) and the new baseline commit in one
+    # transaction, so a job the Oban lifeline re-runs after that commit diffs
+    # against the baseline it already wrote and finds nothing to send.
+    test "a rescued job dispatches the change notification once", %{event: event} do
+      {:ok, event} =
+        event
+        |> Changeset.change(summary: "new title")
+        |> Repo.update()
+
+      {:ok, job} =
+        %{"event_id" => event.id, "kind" => "provider_calendar_event", "action" => "update"}
+        |> Worker.new()
+        |> Oban.insert()
+
+      assert :ok = Worker.perform(job)
+      assert :ok = Worker.perform(job)
+
+      reloaded = Repo.get!(ProviderCalendarEventSchema, event.id)
+      assert reloaded.ical_sequence == 1
+
+      assert [_one] =
+               all_enqueued(
+                 worker: EmailWorker,
+                 args: %{"action" => "send_event_update_notification"}
+               )
     end
 
     test "no-ops when diff is empty (user reverted edits)", %{event: event} do
@@ -202,6 +230,50 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
     end
   end
 
+  describe "perform/1 for an event notified before" do
+    test "does not flag the dispatch as a first notification" do
+      event = event_with_attendees([{"a@x.com", "accepted"}])
+
+      assert :ok = perform_job(Worker, update_args(event))
+
+      assert [job] = notification_jobs()
+      assert job.args["first_notification"] == false
+      assert job.args["before_title"] == "before"
+    end
+
+    test "passes an all-day baseline's dates, and notices the event moved days" do
+      baseline =
+        LastNotifiedState.serialise(
+          %{title: "Offsite", start_date: ~D[2026-10-05], end_date: ~D[2026-10-08]},
+          [%{email: "a@x.com"}]
+        )
+
+      event =
+        insert(:provider_calendar_event,
+          summary: "Offsite",
+          location: "",
+          description: "",
+          all_day: true,
+          start_date: ~D[2026-10-12],
+          end_date: ~D[2026-10-15],
+          start_at: nil,
+          end_at: nil,
+          attendees: [%{"email" => "a@x.com"}],
+          last_notified_state: baseline
+        )
+
+      assert :ok = perform_job(Worker, update_args(event))
+
+      assert [job] = notification_jobs()
+
+      assert {job.args["before_start_date"], job.args["before_end_date"]} ==
+               {"2026-10-05", "2026-10-08"}
+
+      reloaded = Repo.get!(ProviderCalendarEventSchema, event.id)
+      assert reloaded.last_notified_state["start_date"] == "2026-10-12"
+    end
+  end
+
   describe "perform/1 excludes attendees who have declined" do
     test "notifies the active attendees but skips the one who declined" do
       event =
@@ -223,6 +295,64 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
       # The edit is real, so the sequence/baseline still advances — we simply
       # have no one to email.
       assert Repo.get!(ProviderCalendarEventSchema, event.id).ical_sequence == 1
+    end
+  end
+
+  describe "perform/1 excludes the user whose integration owns the event" do
+    test "notifies the guests but not the owner who made the edit" do
+      # Google and Outlook list the organiser as an attendee of events created
+      # in their own UI, so without the filter the person editing the event in
+      # the grid is emailed about their own edit, with an ICS attached.
+      owner = insert(:user, email: "owner@x.com")
+      integration = insert(:calendar_integration, user: owner)
+
+      event =
+        event_with_attendees(
+          [{"owner@x.com", "accepted"}, {"guest@x.com", "needs_action"}],
+          calendar_integration: integration
+        )
+
+      assert :ok = perform_job(Worker, update_args(event))
+
+      emails = notification_recipient_emails()
+      assert "guest@x.com" in emails
+      refute "owner@x.com" in emails
+    end
+
+    test "matches an owner whose stored address is not lower-cased" do
+      # `ChangeDetector` lower-cases every attendee address on its way into the
+      # summary, so the only side of the comparison that can still carry case
+      # is the address stored on the user.
+      owner = insert(:user, email: "Owner@X.com")
+      integration = insert(:calendar_integration, user: owner)
+
+      event =
+        event_with_attendees(
+          [{"owner@x.com", "accepted"}, {"guest@x.com", "needs_action"}],
+          calendar_integration: integration
+        )
+
+      assert :ok = perform_job(Worker, update_args(event))
+
+      assert notification_recipient_emails() == ["guest@x.com"]
+    end
+
+    test "still notifies an attendee who merely shares the event, not the integration" do
+      # The filter is the integration owner's address, never the event's
+      # `organizer` field: a user can be an attendee of someone else's event
+      # that syncs into their grid, and the real organiser must still hear.
+      owner = insert(:user, email: "owner@x.com")
+      integration = insert(:calendar_integration, user: owner)
+
+      event =
+        event_with_attendees(
+          [{"real-organiser@x.com", "accepted"}, {"owner@x.com", "accepted"}],
+          calendar_integration: integration
+        )
+
+      assert :ok = perform_job(Worker, update_args(event))
+
+      assert notification_recipient_emails() == ["real-organiser@x.com"]
     end
   end
 
@@ -248,6 +378,15 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
       assert reloaded.last_notified_state["title"] == "first edit"
       assert reloaded.last_notified_state["attendees"] == ["a@x.com"]
       assert reloaded.ical_sequence == 1
+    end
+
+    test "flags the dispatch as a first notification, since nothing before is known" do
+      event = event_with_empty_baseline(["a@x.com"])
+
+      assert :ok = perform_job(Worker, update_args(event))
+
+      assert [job] = notification_jobs()
+      assert job.args["first_notification"] == true
     end
 
     test "an attendee who has declined is still skipped" do
@@ -314,7 +453,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
 
   # Inserts a provider event whose title differs from its notified baseline (so
   # the diff is non-empty) and whose attendees carry the given response statuses.
-  defp event_with_attendees(attendees) do
+  defp event_with_attendees(attendees, overrides \\ []) do
     starts_at = ~U[2026-02-01 10:00:00.000000Z]
     ends_at = ~U[2026-02-01 11:00:00.000000Z]
 
@@ -331,18 +470,24 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
         Enum.map(attendees, fn {email, _status} -> %{email: email} end)
       )
 
-    insert(:provider_calendar_event,
-      summary: "after",
-      location: "",
-      description: "",
-      start_at: starts_at,
-      end_at: ends_at,
-      attendees:
-        Enum.map(attendees, fn {email, status} ->
-          %{"email" => email, "response_status" => status}
-        end),
-      ical_sequence: 0,
-      last_notified_state: baseline
+    insert(
+      :provider_calendar_event,
+      Keyword.merge(
+        [
+          summary: "after",
+          location: "",
+          description: "",
+          start_at: starts_at,
+          end_at: ends_at,
+          attendees:
+            Enum.map(attendees, fn {email, status} ->
+              %{"email" => email, "response_status" => status}
+            end),
+          ical_sequence: 0,
+          last_notified_state: baseline
+        ],
+        overrides
+      )
     )
   end
 
@@ -351,9 +496,12 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.WorkerTest do
   end
 
   defp notification_recipient_emails do
+    Enum.flat_map(notification_jobs(), &(&1.args["attendee_emails"] || []))
+  end
+
+  defp notification_jobs do
     [worker: Tymeslot.Workers.EmailWorker]
     |> all_enqueued()
     |> Enum.filter(&(&1.args["action"] == "send_event_update_notification"))
-    |> Enum.flat_map(&(&1.args["attendee_emails"] || []))
   end
 end

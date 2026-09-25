@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   require Logger
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
@@ -454,25 +455,24 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   defp map_attendees(attendees) when is_list(attendees), do: Enum.map(attendees, &map_attendee/1)
   defp map_attendees(_other), do: []
 
+  # `ICalParser` is the only producer: it has already read the `CN` and
+  # `PARTSTAT` parameters off the `ATTENDEE` line into `"name"` and a
+  # lower-cased `"status"`, so those are the only spellings that arrive.
   defp map_attendee(a) when is_map(a) do
-    %{
-      email: MapKeys.get(a, :email),
-      display_name: a["name"] || a["CN"] || a[:display_name],
-      response_status: map_partstat(a["status"] || a["PARTSTAT"] || a[:response_status]),
-      optional: false
-    }
+    Attendee.new(
+      email: a["email"],
+      display_name: a["name"],
+      response_status: map_partstat(a["status"])
+    )
   end
 
-  defp map_attendee(_other),
-    do: %{email: nil, display_name: nil, response_status: nil, optional: false}
+  defp map_attendee(_other), do: Attendee.new([])
 
+  # RFC 5545 §3.2.12: an absent PARTSTAT means NEEDS-ACTION, and DELEGATED is
+  # not a reply any provider can carry.
   defp map_partstat("accepted"), do: :accepted
-  defp map_partstat("ACCEPTED"), do: :accepted
   defp map_partstat("declined"), do: :declined
-  defp map_partstat("DECLINED"), do: :declined
   defp map_partstat("tentative"), do: :tentative
-  defp map_partstat("TENTATIVE"), do: :tentative
-  defp map_partstat("NEEDS-ACTION"), do: :needs_action
   defp map_partstat(_other), do: :needs_action
 
   defp map_reminders(nil), do: []

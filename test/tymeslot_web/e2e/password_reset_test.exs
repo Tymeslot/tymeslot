@@ -4,6 +4,10 @@ defmodule TymeslotWeb.E2E.PasswordResetTest do
   @moduletag :e2e
   @moduletag :auth
 
+  import Mox, only: [verify_on_exit!: 1]
+
+  setup :verify_on_exit!
+
   # Override the default stub to capture the reset URL before the Oban job
   # delivers it. The plaintext token is only available at generation time —
   # the DB stores only a hash, so we cannot recover it from there.

@@ -6,8 +6,9 @@ defmodule Tymeslot.Auth.SecurityTest do
   @moduletag :auth
 
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.Authentication
+  alias Tymeslot.Auth.Session
   alias Tymeslot.Security.Password
+  alias TymeslotWeb.Helpers.ClientIP
 
   import Tymeslot.Factory
 
@@ -20,12 +21,16 @@ defmodule Tymeslot.Auth.SecurityTest do
 
       # Should block after 10 failed attempts (as configured in RateLimiter)
       Enum.each(1..10, fn _attempt ->
-        Auth.authenticate_user(user.email, "WrongPassword")
+        Auth.authenticate_user(user.email, "WrongPassword", ClientIP.request_opts(%Plug.Conn{}))
       end)
 
       # Subsequent attempts should be rate limited
-      assert {:error, :rate_limit_exceeded, _message} =
-               Auth.authenticate_user(user.email, "ValidPass123!")
+      assert {:error, :rate_limited, _message} =
+               Auth.authenticate_user(
+                 user.email,
+                 "ValidPass123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
   end
 
@@ -39,11 +44,17 @@ defmodule Tymeslot.Auth.SecurityTest do
 
       # Change password
       {:ok, _updated_user} =
-        Auth.update_user_password(user, "OldPass123!", "NewPass123!", "NewPass123!")
+        Auth.update_user_password(
+          user,
+          "OldPass123!",
+          "NewPass123!",
+          "NewPass123!",
+          ClientIP.request_opts(%Plug.Conn{})
+        )
 
       # Verify all old sessions are invalid
       Enum.each(sessions, fn session ->
-        assert nil == Authentication.get_user_by_session_token(session.token)
+        assert nil == Session.get_user_by_token(session.token)
       end)
     end
   end
@@ -72,7 +83,8 @@ defmodule Tymeslot.Auth.SecurityTest do
           "terms_accepted" => "true"
         }
 
-        assert {:error, :input, _changeset} = Auth.register_user(params, %Plug.Conn{})
+        assert {:error, :input, _changeset} =
+                 Auth.register_user(params, ClientIP.request_opts(%Plug.Conn{}))
       end)
     end
 
@@ -92,14 +104,15 @@ defmodule Tymeslot.Auth.SecurityTest do
         "terms_accepted" => "true"
       }
 
-      assert {:ok, user, _message} = Auth.register_user(params, %Plug.Conn{})
+      assert {:ok, user, _message} =
+               Auth.register_user(params, ClientIP.request_opts(%Plug.Conn{}))
 
       assert user.email == "safe@example.com"
       assert is_nil(user.name)
     end
 
     test "new accounts require email verification" do
-      conn = %Plug.Conn{}
+      conn = ClientIP.request_opts(%Plug.Conn{})
 
       params = %{
         "email" => "new@example.com",
@@ -120,12 +133,22 @@ defmodule Tymeslot.Auth.SecurityTest do
         insert(:user, password_hash: Password.hash_password("Current123!"))
 
       # Wrong password blocks email change
-      assert {:error, {:current_password, "Current password is incorrect"}} =
-               Auth.request_email_change(user, "new@example.com", "Wrong123!")
+      assert {:error, %{current_password: "Current password is incorrect"}} =
+               Auth.request_email_change(
+                 user,
+                 "new@example.com",
+                 "Wrong123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       # Correct password initiates email change
       assert {:ok, updated, _message} =
-               Auth.request_email_change(user, "new@example.com", "Current123!")
+               Auth.request_email_change(
+                 user,
+                 "new@example.com",
+                 "Current123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       assert updated.pending_email == "new@example.com"
       # SHA-256 hex digest of the emailed token — the raw token is never stored.
@@ -137,12 +160,24 @@ defmodule Tymeslot.Auth.SecurityTest do
         insert(:user, password_hash: Password.hash_password("Current123!"))
 
       # Wrong password blocks password change
-      assert {:error, {:current_password, _message}} =
-               Auth.update_user_password(user, "Wrong123!", "New123!New", "New123!New")
+      assert {:error, %{current_password: _message}} =
+               Auth.update_user_password(
+                 user,
+                 "Wrong123!",
+                 "New123!New",
+                 "New123!New",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
 
       # Correct password allows password change
       assert {:ok, _updated} =
-               Auth.update_user_password(user, "Current123!", "NewPass123!", "NewPass123!")
+               Auth.update_user_password(
+                 user,
+                 "Current123!",
+                 "NewPass123!",
+                 "NewPass123!",
+                 ClientIP.request_opts(%Plug.Conn{})
+               )
     end
   end
 end

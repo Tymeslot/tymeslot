@@ -445,6 +445,7 @@ msgstr "Retirer le rôle d’administrateur à %{email} ?"
 msgid "Promote %{email} to admin?"
 msgstr "Nommer %{email} administrateur ?"
 
+#: lib/tymeslot_web/live/admin_live.ex
 #: lib/tymeslot_web/plugs/require_admin.ex
 #, elixir-autogen, elixir-format
 msgid "Admin access required."

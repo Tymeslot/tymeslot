@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Meetings.AttendeeNotifications
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -19,19 +20,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
 
       event ->
         email = raw_email |> String.trim() |> String.downcase()
-        already_present = Enum.any?(event.attendees || [], &(comparable_email(&1) == email))
+        attendees = attendees_of(event)
+        already_present = Enum.any?(attendees, &(comparable_email(&1) == email))
 
         with true <- Shared.valid_email?(email),
              false <- already_present,
              :ok <- EditWorkflow.assert_event_editable(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
-          new_attendee = %{"email" => email, "name" => nil, "status" => "needs_action"}
-          new_attendees = (event.attendees || []) ++ [new_attendee]
+          new_attendee = Attendee.new(email: email)
+          new_attendees = attendees ++ [new_attendee]
           updated_event = %{event | attendees: new_attendees}
           updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
 
           {:ok, _result} =
-            AttendeeNotifications.attendees_added(event, [%{email: email, name: nil}])
+            AttendeeNotifications.attendees_added(event, [new_attendee])
 
           send(
             self(),
@@ -61,37 +63,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.AttendeeManagement do
     end
   end
 
-  defp attendee_email(%{} = attendee),
-    do: Map.get(attendee, "email") || Map.get(attendee, :email)
+  # The cached list comes back from JSONB string-keyed, and may predate the
+  # canonical shape. Reading it into that shape here means the list written
+  # back by an add or a remove is canonical throughout.
+  defp attendees_of(event), do: Enum.map(event.attendees || [], &Attendee.normalise/1)
 
   # Providers keep the case an address was stored with (CalDAV, Outlook), but
   # the mailbox is the same whatever its case, so duplicates are found by
   # comparing lowercased addresses. Stored values are left as they are.
-  defp comparable_email(attendee) do
-    case attendee_email(attendee) do
-      email when is_binary(email) -> String.downcase(email)
-      _missing -> nil
-    end
-  end
-
-  defp normalise_attendee(%{} = attendee) do
-    %{
-      email: Map.get(attendee, "email") || Map.get(attendee, :email),
-      name: Map.get(attendee, "name") || Map.get(attendee, :name)
-    }
-  end
+  defp comparable_email(%{email: email}) when is_binary(email), do: String.downcase(email)
+  defp comparable_email(_missing), do: nil
 
   defp apply_remove_attendee(socket, event, email) do
-    {removed, new_attendees} =
-      Enum.split_with(event.attendees || [], &(attendee_email(&1) == email))
+    {removed, new_attendees} = Enum.split_with(attendees_of(event), &(&1.email == email))
 
     updated_event = %{event | attendees: new_attendees}
     updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
 
-    normalised_removed = Enum.map(removed, &normalise_attendee/1)
-
-    if normalised_removed != [] do
-      {:ok, _result} = AttendeeNotifications.attendees_removed(event, normalised_removed)
+    if removed != [] do
+      {:ok, _result} = AttendeeNotifications.attendees_removed(event, removed)
 
       send(
         self(),

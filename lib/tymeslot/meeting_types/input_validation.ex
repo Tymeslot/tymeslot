@@ -12,7 +12,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   alias Tymeslot.Validation.Constraints
 
   @doc """
-  Validates meeting type form input (name, duration, description, icon, mode).
+  Validates meeting type form input (name, duration, description, icon).
 
   ## Parameters
   - `params` - Map containing meeting type form parameters
@@ -32,7 +32,6 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
       {:slot_interval, params["slot_interval"]},
       {:description, params["description"]},
       {:icon, params["icon"]},
-      {:meeting_mode, params["meeting_mode"]},
       {:calendar_integration_id, params["calendar_integration_id"]},
       {:target_calendar_id, params["target_calendar_id"]},
       {:reminder_config, params["reminder_config"]}
@@ -57,7 +56,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
 
   ## Parameters
   - `field` - The field atom (`:name`, `:duration`, `:slot_interval`,
-    `:description`, `:icon`, `:meeting_mode`, `:reminder_config`)
+    `:description`, `:icon`, `:reminder_config`)
   - `value` - The raw input value
   - `metadata` - Security metadata map (ip, user_agent, user_id)
 
@@ -80,7 +79,6 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     do: validate_meeting_description(value, metadata)
 
   def validate_field(:icon, value, metadata), do: validate_icon(value, metadata)
-  def validate_field(:meeting_mode, value, metadata), do: validate_meeting_mode(value, metadata)
 
   def validate_field(:calendar_integration_id, value, metadata),
     do: validate_calendar_integration_id(value, metadata)
@@ -468,27 +466,6 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
 
   defp validate_icon(_invalid, _metadata) do
     {:error, %{icon: "Invalid icon format"}}
-  end
-
-  defp validate_meeting_mode(nil, _metadata), do: {:ok, "personal"}
-  defp validate_meeting_mode("", _metadata), do: {:ok, "personal"}
-
-  defp validate_meeting_mode(mode, metadata) when is_binary(mode) do
-    case UniversalSanitizer.sanitize_and_validate(mode, allow_html: false, metadata: metadata) do
-      {:ok, sanitized_mode} ->
-        if sanitized_mode in ["personal", "video"] do
-          {:ok, sanitized_mode}
-        else
-          {:error, %{meeting_mode: "Invalid meeting mode selected"}}
-        end
-
-      {:error, error} ->
-        {:error, %{meeting_mode: error}}
-    end
-  end
-
-  defp validate_meeting_mode(_invalid, _metadata) do
-    {:error, %{meeting_mode: "Invalid meeting mode format"}}
   end
 
   defp validate_calendar_integration_id(nil, _metadata), do: {:ok, nil}

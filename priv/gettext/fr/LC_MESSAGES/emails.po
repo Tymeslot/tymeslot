@@ -399,6 +399,7 @@ msgstr "Type :"
 msgid "Video Call"
 msgstr "Appel vidéo"
 
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format
 msgid "Video meeting:"
@@ -634,7 +635,9 @@ msgstr "Un nouveau mot de passe et c’est reparti."
 msgid "A verification email has been sent to the new address"
 msgstr "Un e-mail de vérification a été envoyé à la nouvelle adresse"
 
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
 #: lib/tymeslot/emails/templates/password_reset.ex
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Account Security"
 msgstr "Sécurité du compte"
@@ -645,6 +648,7 @@ msgid "Account Update"
 msgstr "Mise à jour du compte"
 
 #: lib/tymeslot/emails/templates/email_verification.ex
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Account Verification"
 msgstr "Vérification du compte"
@@ -950,7 +954,9 @@ msgid "Saturday"
 msgstr "samedi"
 
 #: lib/tymeslot/emails/templates/email_change_notification.ex
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
 #: lib/tymeslot/emails/templates/password_reset.ex
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
 #, elixir-autogen, elixir-format
 msgid "Security"
 msgstr "Sécurité"
@@ -1135,6 +1141,7 @@ msgid "Wednesday"
 msgstr "mercredi"
 
 #: lib/tymeslot/emails/templates/email_verification.ex
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
 #, elixir-autogen, elixir-format
 msgid "Welcome"
 msgstr "Bienvenue"
@@ -2616,3 +2623,187 @@ msgstr "Que dois-je faire ?"
 #, elixir-autogen, elixir-format
 msgid "What's happening?"
 msgstr "Que se passe-t-il ?"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} day"
+msgid_plural "%{count} days"
+msgstr[0] "%{count} jour"
+msgstr[1] "%{count} jours"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "All day"
+msgstr "Toute la journée"
+
+#: lib/tymeslot/emails/shared/formatting.ex
+#, elixir-autogen, elixir-format
+msgid "All day, until %{date}"
+msgstr "Toute la journée, jusqu'au %{date}"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "Current Details"
+msgstr "Détails actuels"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "Current details"
+msgstr "Détails actuels"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "Description:"
+msgstr "Description :"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Additional details:"
+msgstr "Détails supplémentaires :"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Attachments:"
+msgstr "Pièces jointes :"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee: %{attendee}"
+msgstr "Participant : %{attendee}"
+
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Message from attendee:"
+msgstr "Message du participant :"
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Forgot your password? Reset it here."
+msgstr "Mot de passe oublié ? Réinitialisez-le ici."
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "If it wasn't you, you can ignore this email. No new account was created and nothing about your account has changed."
+msgstr "Si ce n’était pas vous, vous pouvez ignorer cet e-mail. Aucun nouveau compte n’a été créé et rien n’a changé sur votre compte."
+
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
+#, elixir-autogen, elixir-format
+msgid "If you didn't ask to reset your password, you can ignore this email. Nothing about your account has changed."
+msgstr "Si vous n’avez pas demandé la réinitialisation de votre mot de passe, vous pouvez ignorer cet e-mail. Rien n’a changé sur votre compte."
+
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
+#, elixir-autogen, elixir-format
+msgid "No password to reset"
+msgstr "Aucun mot de passe à réinitialiser"
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Reset your password:"
+msgstr "Réinitialiser votre mot de passe :"
+
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Sign In to Tymeslot"
+msgstr "Se connecter à Tymeslot"
+
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Sign In to Tymeslot:"
+msgstr "Se connecter à Tymeslot :"
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Sign in instead of signing up."
+msgstr "Connectez-vous au lieu de vous inscrire."
+
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Someone asked to reset the password for your Tymeslot account, but your account signs in with %{provider}, so it has no password to reset. Use the button below and choose %{provider} to sign in."
+msgstr "Quelqu’un a demandé la réinitialisation du mot de passe de votre compte Tymeslot, mais votre compte se connecte avec %{provider} et n’a donc pas de mot de passe à réinitialiser. Utilisez le bouton ci-dessous et choisissez %{provider} pour vous connecter."
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Someone just tried to create a new Tymeslot account with this email address, which already has an account. If it was you, sign in below, or reset your password if you can't remember it."
+msgstr "Quelqu’un vient d’essayer de créer un nouveau compte Tymeslot avec cette adresse e-mail, qui a déjà un compte. Si c’était vous, connectez-vous ci-dessous, ou réinitialisez votre mot de passe si vous ne vous en souvenez plus."
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Someone tried to sign up with your email address."
+msgstr "Quelqu’un a essayé de s’inscrire avec votre adresse e-mail."
+
+#: lib/tymeslot/emails/email_service/auth_emails.ex
+#, elixir-autogen, elixir-format
+msgid "You already have a Tymeslot account"
+msgstr "Vous avez déjà un compte Tymeslot"
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "You already have an account"
+msgstr "Vous avez déjà un compte"
+
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
+#, elixir-autogen, elixir-format
+msgid "You sign in with %{provider}."
+msgstr "Vous vous connectez avec %{provider}."
+
+#: lib/tymeslot/emails/email_service/auth_emails.ex
+#, elixir-autogen, elixir-format
+msgid "Your Tymeslot account has no password"
+msgstr "Votre compte Tymeslot n’a pas de mot de passe"
+
+#: lib/tymeslot/emails/templates/no_password_to_reset.ex
+#, elixir-autogen, elixir-format
+msgid "Your Tymeslot account has no password to reset."
+msgstr "Votre compte Tymeslot n’a pas de mot de passe à réinitialiser."
+
+#: lib/tymeslot/emails/shared/sign_in_provider.ex
+#, elixir-autogen, elixir-format
+msgid "single sign-on"
+msgstr "l’authentification unique"
+
+#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Someone just tried to create a new Tymeslot account with this email address, which already has an account. If it was you, sign in with %{provider} below."
+msgstr "Quelqu’un vient d’essayer de créer un nouveau compte Tymeslot avec cette adresse e-mail, qui a déjà un compte. Si c’était vous, connectez-vous ci-dessous avec %{provider}."
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm Email & Finish Signing Up"
+msgstr "Confirmer l’e-mail et finaliser l’inscription"
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm Email & Finish Signing Up:"
+msgstr "Confirmer l’e-mail et finaliser l’inscription :"
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your email and your account is ready."
+msgstr "Confirmez votre e-mail et votre compte est prêt."
+
+#: lib/tymeslot/emails/email_service/auth_emails.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your email to finish signing up"
+msgstr "Confirmez votre e-mail pour finaliser votre inscription"
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirm your email to finish signing up for Tymeslot."
+msgstr "Confirmez votre e-mail pour finaliser votre inscription à Tymeslot."
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "One step to go"
+msgstr "Plus qu’une étape"
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "This link expires in 24 hours. If you didn't sign up for Tymeslot, you can ignore this email and no account will be created."
+msgstr "Ce lien expire dans 24 heures. Si vous ne vous êtes pas inscrit à Tymeslot, vous pouvez ignorer cet e-mail et aucun compte ne sera créé."
+
+#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "You're signing up for Tymeslot with %{provider}. Confirm this email address to create your account and sign in."
+msgstr "Vous vous inscrivez à Tymeslot avec %{provider}. Confirmez cette adresse e-mail pour créer votre compte et vous connecter."

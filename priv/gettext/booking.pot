@@ -1059,16 +1059,6 @@ msgstr ""
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
-msgid "The invitation link may have expired or already been used. Please contact the meeting host."
-msgstr ""
-
-#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
-#, elixir-autogen, elixir-format
-msgid "This link is no longer valid"
-msgstr ""
-
-#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
-#, elixir-autogen, elixir-format
 msgid "Too many attempts"
 msgstr ""
 
@@ -1897,4 +1887,65 @@ msgstr ""
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
 #, elixir-autogen, elixir-format
 msgid "How long should the meeting be?"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting has already taken place, or it was cancelled or not confirmed. Please contact the meeting host."
+msgstr ""
+
+#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#, elixir-autogen, elixir-format
+msgid "This link is not valid"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting is no longer taking responses"
+msgstr ""
+
+#: lib/tymeslot_web/controllers/guest_rsvp_html.ex
+#, elixir-autogen, elixir-format
+msgid "We couldn't find an invitation for this link. Please check that you copied the whole link from your email, or contact the meeting host."
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/booking_location.ex
+#, elixir-autogen, elixir-format
+msgid "Enter the number we should call you on."
+msgstr ""
+
+#: lib/tymeslot/meeting_types/location_selection.ex
+#, elixir-autogen, elixir-format
+msgid "In person"
+msgstr ""
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/confirmation_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/confirmation_component.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr ""
+
+#: lib/tymeslot/meeting_types/location_selection.ex
+#, elixir-autogen, elixir-format
+msgid "Video call"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "We'll call you"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Where shall we meet?"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Which video service?"
+msgstr ""
+
+#: lib/tymeslot_web/themes/shared/components/location_field.ex
+#, elixir-autogen, elixir-format
+msgid "Your phone number"
 msgstr ""

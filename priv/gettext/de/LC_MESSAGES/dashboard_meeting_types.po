@@ -99,11 +99,6 @@ msgstr "Termintyp löschen"
 msgid "Edit"
 msgstr "Bearbeiten"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
-#, elixir-autogen, elixir-format
-msgid "In-person"
-msgstr "Vor Ort"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Types"
@@ -123,11 +118,6 @@ msgstr "Diese Aktion kann nicht rückgängig gemacht werden und entfernt diesen 
 #, elixir-autogen, elixir-format
 msgid "Toggle %{name} availability"
 msgstr "Verfügbarkeit von %{name} umschalten"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
-#, elixir-autogen, elixir-format
-msgid "Video"
-msgstr "Video"
 
 #: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
 #, elixir-autogen, elixir-format
@@ -204,3 +194,10 @@ msgstr "Dieser Termintyp bucht in einen Kalender, in den Sie nicht mehr schreibe
 #, elixir-autogen
 msgid "%{min}–%{max} min"
 msgstr "%{min}–%{max} Min."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} location"
+msgid_plural "%{count} locations"
+msgstr[0] "%{count} Ort"
+msgstr[1] "%{count} Orte"

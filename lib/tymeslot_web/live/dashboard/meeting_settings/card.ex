@@ -100,41 +100,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
                 {format_amount(@type.price_cents, @currency)}
               </span>
             <% end %>
-            <%= if @type.allow_video do %>
-              <span class="flex items-center min-w-0">
-                <%= if @type.video_integration do %>
-                  <span class="mr-1.5 shrink-0">
-                    <ProviderIcon.provider_icon
-                      provider={@type.video_integration.provider}
-                      size={@icon_size}
-                    />
-                  </span>
-                  <span class="truncate max-w-[10rem]">
-                    {@type.video_integration.name}
-                  </span>
-                <% else %>
-                  <svg
-                    class="w-3.5 h-3.5 mr-1 text-blue-400 shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                    />
-                  </svg>
-                  <span>{dgettext("dashboard_meeting_types", "Video")}</span>
-                <% end %>
-              </span>
-            <% else %>
-              <span class="flex items-center">
-                <ProviderIcon.provider_icon provider="in_person" size={@icon_size} class="mr-1" />
-                <span>{dgettext("dashboard_meeting_types", "In-person")}</span>
-              </span>
-            <% end %>
+            <.location_summary type={@type} icon_size={@icon_size} />
             <%= if @type.calendar_integration do %>
               <span class="flex items-center min-w-0">
                 <span class="mr-1.5 shrink-0">
@@ -268,6 +234,59 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
 
   defp described?(%{description: nil}), do: false
   defp described?(%{description: description}), do: String.trim(description) != ""
+
+  # One location is named; several are counted. Naming them all would push
+  # the calendar and question badges off the row on a card that is already a
+  # single line of metadata.
+  attr :type, :map, required: true
+  attr :icon_size, :string, required: true
+
+  defp location_summary(assigns) do
+    assigns = assign(assigns, :locations, MeetingTypes.location_options(assigns.type))
+
+    ~H"""
+    <span :if={length(@locations) > 1} class="flex items-center shrink-0">
+      <Icons.icon name="hero-map-pin-mini" class="w-3.5 h-3.5 mr-1 text-tymeslot-500" />
+      <span>
+        {dngettext(
+          "dashboard_meeting_types",
+          "%{count} location",
+          "%{count} locations",
+          length(@locations)
+        )}
+      </span>
+    </span>
+    <span :if={match?([_single], @locations)} class="flex items-center min-w-0">
+      <span class="mr-1.5 shrink-0">
+        <%!-- A video location keeps its provider's own mark, which is how the
+              host recognises which account the rooms land on; the other kinds
+              have no provider and take a plain glyph. --%>
+        <ProviderIcon.provider_icon
+          :if={video_provider(hd(@locations), @type)}
+          provider={video_provider(hd(@locations), @type)}
+          size={@icon_size}
+        />
+        <Icons.icon
+          :if={is_nil(video_provider(hd(@locations), @type))}
+          name={kind_icon(hd(@locations).kind)}
+          class="w-3.5 h-3.5 text-tymeslot-500"
+        />
+      </span>
+      <span class="truncate max-w-[10rem]">{hd(@locations).label}</span>
+    </span>
+    """
+  end
+
+  # The provider whose mark a video location shows, or nil for a location
+  # that is not a video call (or whose integration has since been deleted,
+  # leaving nothing to name).
+  defp video_provider(%{kind: "video"}, %{video_integration: %{provider: provider}}), do: provider
+  defp video_provider(_location, _type), do: nil
+
+  defp kind_icon("video"), do: "hero-video-camera-mini"
+  defp kind_icon("phone"), do: "hero-phone-mini"
+  defp kind_icon("in_person"), do: "hero-building-office-mini"
+  defp kind_icon(_kind), do: "hero-map-pin-mini"
 
   defp custom_question_count(%{custom_fields: fields}) when is_list(fields), do: length(fields)
   defp custom_question_count(_type), do: 0

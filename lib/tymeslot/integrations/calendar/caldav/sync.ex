@@ -18,13 +18,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   - **Tier 3** – Fallback: a full PROPFIND + REPORT calendar-query on every
     run. Required for basic servers supporting neither extension.
 
-  Tiers 1 and 2 are scoped to a single collection, so any calendar beyond the
-  primary one always goes through the Tier 3 path.
+  Tiers 1 and 2 are scoped to a single collection, so each configured calendar
+  path runs the tier's mechanism on its own, against its own entry in
+  `caldav_sync_tokens`.
 
   The tier is chosen from what the server *advertises*, and some servers
   advertise `sync-collection` and then refuse every REPORT that uses it. A
-  refusal therefore demotes the integration to the best tier that does not need
-  the extension, so a lying server costs one request rather than every sync.
+  refusal on any path therefore demotes the integration to the best tier that
+  does not need the extension, so a lying server costs one request rather than
+  every sync.
   The daily forced full fetch clears the stored tier, so detection runs again
   and a server that refused once because it was genuinely unwell gets its delta
   sync back within a day.
@@ -68,7 +70,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   yet if the push happens first.
 
   Passing `force_full_fetch?: true` skips tier handling entirely: a plain
-  calendar-query REPORT runs against every configured path, then the sync
+  calendar-query REPORT runs against every configured path, then every sync
   token is reset and the full-sync timestamp recorded.
   """
   @spec run(struct(), boolean()) :: result()
@@ -106,50 +108,39 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   # ---------------------------------------------------------------------------
 
   # Runs a calendar-query REPORT against every configured path, ignoring the
-  # tier, then resets the sync token and records the full-sync timestamp.
+  # tier, then resets the sync tokens and records the full-sync timestamp.
   #
   # Tier 1 delta sync and Tier 2 CTag checks can silently miss events that were
   # already on the server when the initial sync ran, so a plain calendar-query
-  # REPORT is the only way to re-establish ground truth. Clearing the sync token
-  # makes the next normal sync rebuild its state from scratch, which can
-  # self-heal a server whose own sync tracking has drifted. Clearing the tier
+  # REPORT is the only way to re-establish ground truth. Clearing every path's
+  # sync token makes the next normal sync rebuild its state from scratch, which
+  # can self-heal a server whose own sync tracking has drifted; clearing them
+  # path by path would leave the rest to carry the drift on. Clearing the tier
   # forces re-detection, which is otherwise one-shot and would never notice a
   # server upgrade that adds sync-collection support.
   @spec forced_full_fetch(struct(), map()) :: result()
   defp forced_full_fetch(integration, client) do
-    paths = client.calendar_paths
+    case EventFetch.fetch_paths(integration, client) do
+      :ok ->
+        # EventFetch has already stamped per-path state; this final write
+        # takes precedence and carries the force-specific columns.
+        State.put(integration,
+          clear_sync_tokens: true,
+          last_full_sync_at: DateTime.utc_now(:second),
+          sync_tier: nil
+        )
 
-    if Enum.empty?(paths) do
-      {:error, :no_calendar_paths}
-    else
-      finish_forced_full_fetch(
-        integration,
-        EventFetch.fetch_paths(integration, client, paths),
-        paths
-      )
+        Logger.info("CalDAV forced full fetch completed",
+          calendar_integration_id: integration.id,
+          paths: length(client.calendar_paths)
+        )
+
+        :ok
+
+      {:error, reason} = error ->
+        log_sync_error(integration, "forced full fetch", reason)
+        error
     end
-  end
-
-  defp finish_forced_full_fetch(integration, :ok, paths) do
-    # EventFetch has already stamped per-path state; this final write takes
-    # precedence and carries the force-specific columns.
-    State.put(integration,
-      sync_token: nil,
-      last_full_sync_at: DateTime.utc_now(:second),
-      sync_tier: nil
-    )
-
-    Logger.info("CalDAV forced full fetch completed",
-      calendar_integration_id: integration.id,
-      paths: length(paths)
-    )
-
-    :ok
-  end
-
-  defp finish_forced_full_fetch(integration, {:error, reason} = error, _paths) do
-    log_sync_error(integration, "forced full fetch", reason)
-    error
   end
 
   # ---------------------------------------------------------------------------
@@ -175,53 +166,44 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
 
   defp dispatch(integration, client, 1), do: tier1(integration, client)
   defp dispatch(integration, client, 2), do: tier2(integration, client)
-  defp dispatch(integration, client, _tier), do: tier3(integration, client)
-
-  # Tiers 1 and 2 are single-collection protocols, so the primary path uses the
-  # tier's own mechanism and every extra path falls back to a plain fetch.
-  defp with_extra_paths(integration, client, primary_fun) do
-    case client.calendar_paths do
-      [] ->
-        {:error, :no_calendar_paths}
-
-      [primary_path] ->
-        primary_fun.(primary_path)
-
-      [primary_path | extra_paths] ->
-        with :ok <- primary_fun.(primary_path) do
-          EventFetch.fetch_paths(integration, client, extra_paths)
-        end
-    end
-  end
+  defp dispatch(integration, client, _tier), do: EventFetch.fetch_paths(integration, client)
 
   # ---------------------------------------------------------------------------
   # Tier 1: sync-collection REPORT (delta sync via DAV:sync-token)
   # ---------------------------------------------------------------------------
 
   defp tier1(integration, client) do
-    with_extra_paths(integration, client, &do_tier1(integration, client, &1))
+    case EventFetch.each_path(integration, client, &tier1_path(integration, client, &1)) do
+      {:error, {:sync_collection_refused, reason}} ->
+        demote_from_tier1(integration, client, reason)
+
+      result ->
+        result
+    end
   end
 
-  defp do_tier1(integration, client, primary_path) do
-    calendar_url = UrlBuilder.build_calendar_url(client.base_url, primary_path)
+  defp tier1_path(integration, client, path) do
+    calendar_url = UrlBuilder.build_calendar_url(client.base_url, path)
 
-    case SyncCollectionReport.fetch(integration, client, calendar_url) do
+    case SyncCollectionReport.fetch(client, calendar_url, State.sync_token(integration, path)) do
       {:ok, {events, deleted_hrefs, new_sync_token}} ->
         Logger.info("CalDAV Tier 1 sync fetched changes",
           calendar_integration_id: integration.id,
+          calendar_path: path,
           changed_count: length(events),
           deleted_count: length(deleted_hrefs)
         )
 
-        apply_tier1_delta(integration, events, deleted_hrefs, new_sync_token)
+        apply_tier1_delta(integration, path, events, deleted_hrefs, new_sync_token)
 
       {:error, :sync_token_expired} ->
         Logger.info("CalDAV sync token expired; falling back to full fetch",
-          calendar_integration_id: integration.id
+          calendar_integration_id: integration.id,
+          calendar_path: path
         )
 
-        State.put(integration, sync_token: nil)
-        tier3(integration, client)
+        State.put(integration, sync_token: {path, nil})
+        EventFetch.fetch_path(integration, client, path, [])
 
       # The server named the changed resources but did not inline their
       # calendar data, so the delta cannot be applied on its own. The token is
@@ -229,17 +211,18 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
       # same changes again, so nothing is lost if this fetch fails.
       {:error, :calendar_data_withheld} ->
         Logger.info("CalDAV sync-collection returned no event data; falling back to full fetch",
-          calendar_integration_id: integration.id
+          calendar_integration_id: integration.id,
+          calendar_path: path
         )
 
-        tier3(integration, client)
+        EventFetch.fetch_path(integration, client, path, [])
 
       {:error, :not_found} ->
-        {:error, :booking_calendar_missing}
+        :not_found
 
       {:error, reason} ->
         if Errors.unsupported_request?(reason) do
-          demote_from_tier1(integration, client, reason)
+          {:error, {:sync_collection_refused, reason}}
         else
           log_unless_actionable(integration, "Tier 1 sync", reason)
           {:error, reason}
@@ -262,6 +245,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   # a day, at the cost of one wasted request. That is the right way round —
   # losing delta sync for a day is cheap, and syncing nothing for a fortnight is
   # not.
+  #
+  # A refusal on any one path demotes the whole integration rather than that
+  # path alone. The tier is stored per integration, and one awkward calendar on
+  # an otherwise capable server then costs the others their delta for a day,
+  # which Tier 2's per-path CTag check keeps cheap; what it must never do is
+  # fail the sync.
   defp demote_from_tier1(integration, client, reason) do
     {:ok, tier} = TierDetector.detect_without_sync_collection(integration, client)
 
@@ -276,15 +265,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
     |> dispatch(client, tier)
   end
 
-  defp apply_tier1_delta(integration, events, deleted_hrefs, new_sync_token) do
+  defp apply_tier1_delta(integration, path, events, deleted_hrefs, new_sync_token) do
     case SyncReconciler.process_tier1(integration, events, deleted_hrefs) do
       :ok ->
-        State.put(integration, sync_token: new_sync_token)
+        State.put(integration, sync_token: {path, new_sync_token})
         :ok
 
       {:error, reason} ->
         Logger.error("CalDAV Tier 1 event processing failed; sync token NOT updated",
           calendar_integration_id: integration.id,
+          calendar_path: path,
           error: inspect(reason)
         )
 
@@ -297,18 +287,18 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
   # ---------------------------------------------------------------------------
 
   defp tier2(integration, client) do
-    with_extra_paths(integration, client, &do_tier2(integration, client, &1))
+    EventFetch.each_path(integration, client, &tier2_path(integration, client, &1))
   end
 
-  defp do_tier2(integration, client, primary_path) do
-    calendar_url = UrlBuilder.build_calendar_url(client.base_url, primary_path)
+  defp tier2_path(integration, client, path) do
+    calendar_url = UrlBuilder.build_calendar_url(client.base_url, path)
 
     case SyncCollectionReport.fetch_ctag(calendar_url, client) do
       {:ok, current_ctag} ->
-        ctag_result(integration, client, primary_path, current_ctag)
+        ctag_result(integration, client, path, current_ctag)
 
       {:error, :not_found} ->
-        {:error, :booking_calendar_missing}
+        :not_found
 
       {:error, reason} when reason in [:unauthorized, :forbidden] ->
         {:error, reason}
@@ -318,39 +308,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
         # any reason short of auth or a missing collection, fetching everything
         # still produces a correct result.
         log_sync_error(integration, "Tier 2 CTag check", reason)
-        EventFetch.fetch_primary(integration, client, primary_path, [])
+        EventFetch.fetch_path(integration, client, path, [])
     end
   end
 
-  defp ctag_result(integration, client, primary_path, current_ctag) do
-    stored_ctag = integration.caldav_sync_token
+  defp ctag_result(integration, client, path, current_ctag) do
+    stored_ctag = State.sync_token(integration, path)
 
     if current_ctag == stored_ctag and not is_nil(stored_ctag) do
       Logger.debug("CalDAV CTag unchanged; skipping event fetch",
-        calendar_integration_id: integration.id
+        calendar_integration_id: integration.id,
+        calendar_path: path
       )
 
       State.put(integration, [])
       :ok
     else
-      EventFetch.fetch_primary(integration, client, primary_path,
-        new_ctag: current_ctag,
-        ctag_paths: [primary_path]
-      )
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # Tier 3: full calendar-query REPORT
-  # ---------------------------------------------------------------------------
-
-  defp tier3(integration, client) do
-    paths = client.calendar_paths
-
-    if Enum.empty?(paths) do
-      {:error, :no_calendar_paths}
-    else
-      EventFetch.fetch_paths(integration, client, paths)
+      EventFetch.fetch_path(integration, client, path, new_ctag: current_ctag)
     end
   end
 

@@ -3,12 +3,12 @@ defmodule TymeslotWeb.AuthLiveSignupRateLimitTest do
   Confirms a genuine signup submission through `AuthLive` consumes exactly
   one signup rate-limit token.
 
-  `SignupSecurity.gate/2` and `Registration.register_user/3` both call
+  `SignupSecurity.gate/2` calls
   `Tymeslot.Security.RateLimiter.check_signup_rate_limit/2`, which is a
-  counting Hammer hit rather than a read-only peek. If both layers ever
-  charged the same LiveView submission, the effective budget would be
-  halved and legitimate signups from a shared IP would be locked out
-  early.
+  counting Hammer hit rather than a read-only peek. If anything else on the
+  path ever charged the same LiveView submission too, the effective budget
+  would be halved and legitimate signups from a shared IP would be locked
+  out early.
   """
 
   use TymeslotWeb.LiveCase, async: false

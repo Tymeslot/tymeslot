@@ -23,10 +23,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   Builds the `meeting_type` params map from the form's socket assigns.
 
   The shape matches what the rendered form posts: string keys, string values,
-  `reminder_config` as a list of `%{"value", "unit"}` maps and `custom_fields`
-  as a list of definition maps. Custom fields and payment fields are omitted
-  under exactly the same conditions as the hidden inputs (paywalled questions
-  and hosts who cannot accept charges), so cast leaves those embeds untouched.
+  `reminder_config` as a list of `%{"value", "unit"}` maps, and `custom_fields`
+  and `locations` as lists of maps. Custom fields and payment fields are
+  omitted under exactly the same conditions as the hidden inputs (paywalled
+  questions and hosts who cannot accept charges), so cast leaves those embeds
+  untouched.
+
+  `allow_video` and `video_integration_id` are absent by design: the schema
+  projects them from `locations`, so posting them would give the same two
+  columns two authors.
   """
   @spec build_params(map()) :: map()
   def build_params(assigns) do
@@ -40,8 +45,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
       "slot_interval" => Map.get(form_data, "slot_interval", ""),
       "description" => Map.get(form_data, "description", ""),
       "is_active" => active_param(Map.get(assigns, :type)),
-      "meeting_mode" => assigns.meeting_mode,
-      "video_integration_id" => to_param(assigns.selected_video_integration_id),
+      "locations" => Enum.map(Map.get(assigns, :locations) || [], &location_param/1),
       "calendar_integration_id" => to_param(assigns.selected_calendar_integration_id),
       "target_calendar_id" => to_param(assigns.selected_target_calendar_id),
       "availability_schedule_id" =>
@@ -90,15 +94,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
     end
   end
 
-  # Builds the UI-state map the context uses to resolve mode, icon and the
-  # selected video integration from the submitted params.
+  # Builds the UI-state map the context uses to resolve the icon from the
+  # submitted params.
   @spec build_ui_state(map(), map()) :: map()
-  defp build_ui_state(params, sanitized_params) do
-    %{
-      meeting_mode: Map.get(sanitized_params, "meeting_mode", "personal"),
-      selected_icon: Map.get(sanitized_params, "icon", "none"),
-      selected_video_integration_id: parse_integer(Map.get(params, "video_integration_id"))
-    }
+  defp build_ui_state(_params, sanitized_params) do
+    %{selected_icon: Map.get(sanitized_params, "icon", "none")}
   end
 
   defp active_param(%{is_active: is_active}), do: to_string(is_active)
@@ -150,14 +150,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Submission do
   defp put_optional(map, _key, nil), do: map
   defp put_optional(map, key, value), do: Map.put(map, key, to_string(value))
 
-  defp parse_integer(nil), do: nil
-  defp parse_integer(""), do: nil
-  defp parse_integer(id) when is_integer(id), do: id
-
-  defp parse_integer(id) when is_binary(id) do
-    case Integer.parse(id) do
-      {int, _rest} -> int
-      :error -> nil
-    end
+  defp location_param(location) do
+    %{
+      "id" => location.id,
+      "kind" => location.kind,
+      "label" => location.label,
+      "details" => location.details || "",
+      "collect_from_guest" => to_string(location.collect_from_guest),
+      "video_integration_ids" => Enum.map(location.video_integration_ids, &to_string/1),
+      "position" => to_string(location.position)
+    }
   end
 end

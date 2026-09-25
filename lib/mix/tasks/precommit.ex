@@ -6,6 +6,14 @@ defmodule Mix.Tasks.Precommit do
 
       $ mix precommit
       $ mix precommit --fail-fast
+      $ mix precommit --affected               # before a commit
+      $ mix precommit --affected --base main   # the whole branch
+
+  `--affected` runs only the steps the diff can reach, and narrows the suite
+  the way `mix test.affected` does; `Tymeslot.Precommit.Affected` has the
+  rules. It is the pre-commit check. The full gate, without it, is what runs
+  before a push or a release, because the narrowed suite misses cross-domain
+  coupling that only the whole suite catches.
 
   Every step remains individually runnable (`mix credo --strict`, `mix test`,
   and so on); this only removes the chance of applying the gate by halves.
@@ -74,6 +82,7 @@ defmodule Mix.Tasks.Precommit do
 
   use Mix.Task
 
+  alias Tymeslot.Precommit.Affected
   alias Tymeslot.Precommit.CpuBudget
   alias Tymeslot.Precommit.Guard
   alias Tymeslot.Precommit.Runner
@@ -117,9 +126,36 @@ defmodule Mix.Tasks.Precommit do
   def run(argv) do
     Guard.ensure_wrapped("--core", argv: argv)
 
-    {opts, _rest} = OptionParser.parse!(argv, strict: [fail_fast: :boolean])
+    {opts, _rest} =
+      OptionParser.parse!(argv, strict: [fail_fast: :boolean, affected: :boolean, base: :string])
+
     fail_fast? = Keyword.get(opts, :fail_fast, false)
 
-    Runner.run(@steps, fail_fast?, suite_plan: &CpuBudget.suite_plan/0)
+    if opts[:affected] do
+      narrowed = Affected.narrow(@steps, base: opts[:base])
+
+      Runner.run(narrowed.steps, fail_fast?,
+        skipped: narrowed.skipped,
+        suite_plan: suite_plan(narrowed.suite)
+      )
+    else
+      if opts[:base], do: Mix.raise("--base only applies together with --affected")
+      Runner.run(@steps, fail_fast?, suite_plan: &CpuBudget.suite_plan/0)
+    end
   end
+
+  # A selection is partitioned like the full suite, since it can still be
+  # thousands of tests, but never into more partitions than it has files: `mix
+  # test --partitions` deals files out one per partition in turn, and a
+  # partition dealt none exits 1.
+  defp suite_plan(%{scope: :selection, files: files}) do
+    fn ->
+      case CpuBudget.suite_plan() do
+        %{partitions: count} = plan -> %{plan | partitions: min(count, length(files))}
+        nil -> nil
+      end
+    end
+  end
+
+  defp suite_plan(_suite), do: &CpuBudget.suite_plan/0
 end

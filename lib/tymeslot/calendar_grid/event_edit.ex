@@ -21,6 +21,12 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   Outlook have no equivalent: their updates replace the event with the
   payload, and what the cache does not model is still lost there.
 
+  Attendees are the one exception to "always the whole event". Outlook's
+  update is a `PATCH` and a patched CalDAV document keeps what the payload
+  leaves out, so on those writes the guest list is sent only by an edit that
+  changes it: a Graph `PATCH` that carries attendees resets every reply, and
+  a CalDAV write that carries them states the new complete list.
+
   ## Recurring events on the CalDAV family
 
   A CalDAV series lives in one resource: the master VEVENT carrying the
@@ -54,7 +60,6 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   """
 
   alias Tymeslot.CalendarGrid.AllDay
-  alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.ProviderPayload
   alias Tymeslot.Infrastructure.AvailabilityCache
@@ -62,6 +67,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
+  alias Tymeslot.Integrations.Calendar.Recurrence.Series
 
   require Logger
 
@@ -87,6 +93,11 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
     * `:recurrence_scope` - which occurrences of a recurring series the edit
       is meant for (`"this_only"`, `"following"`, `"all"`). Forwarded to the
       provider payload; no provider acts on it yet.
+    * `:conference_data` - a change to a Google event's own conference, sent
+      with the write: a `createRequest` from
+      `Tymeslot.Integrations.Calendar.Google.ConferenceData.create_request/0`,
+      or `ConferenceData.remove/0`. Without it the event's conference is left
+      as it is.
     * `:timezone` - the organiser's timezone. A timed event's `UNTIL` is an
       instant (RFC 5545 §3.3.10), so refitting one has to end the organiser's
       chosen day in their own zone; without it the day ends in UTC and the
@@ -114,7 +125,9 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
       payload =
         payload
         |> maybe_put_scope(Keyword.get(opts, :recurrence_scope))
+        |> maybe_put_conference(Keyword.get(opts, :conference_data))
         |> put_stored_document(stored)
+        |> scope_attendees(event, changes)
 
       write_to_provider(user_id, event, updated, payload)
     else
@@ -129,7 +142,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   Every write for such an event is patched onto the series' master VEVENT,
   and the payload always carries the occurrence's own timing, so no edit of
   one occurrence can stay inside it (see the moduledoc). The series test is
-  the one a move uses, `Tymeslot.CalendarGrid.EventMove.part_of_series?/1`;
+  the one a move uses, `Tymeslot.Integrations.Calendar.Recurrence.Series.member?/1`;
   the provider test is what keeps Google and Outlook, which address an
   occurrence by its own id, editable.
 
@@ -143,7 +156,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
 
   defp written_as_whole_series?(event) do
     ProviderConfig.caldav_based?(Map.get(event, :provider)) and
-      EventMove.part_of_series?(event)
+      Series.member?(event)
   end
 
   defp stored_row(event) do
@@ -164,6 +177,30 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
        do: Map.merge(payload, %{raw_ical: raw_ical, etag: row.etag})
 
   defp put_stored_document(payload, _never_synced), do: payload
+
+  # Google's `events.update` is a `PUT`, so its payload has to carry the guest
+  # list on every write or the guests are deleted. Outlook's `PATCH` and a
+  # patched CalDAV document are merges instead: a key the payload leaves out
+  # keeps its value on the server. There, sending the list with an edit that
+  # is not about attendees can only do harm. Graph replaces the collection,
+  # and every reply with it, and a stale or empty cached list would take the
+  # guests off the event. So those writes carry attendees only when the edit
+  # changes them. A CalDAV event with no stored document is rebuilt from the
+  # payload, not patched, and keeps the whole list.
+  defp scope_attendees(payload, _event, %{attendees: _attendees}), do: payload
+
+  defp scope_attendees(payload, event, _changes) do
+    if merges_attendees?(Map.get(event, :provider), payload),
+      do: Map.delete(payload, :attendees),
+      else: payload
+  end
+
+  defp merges_attendees?(provider, _payload) when provider in [:outlook, "outlook"], do: true
+
+  defp merges_attendees?(provider, %{raw_ical: _stored_document}),
+    do: ProviderConfig.caldav_based?(provider)
+
+  defp merges_attendees?(_provider, _payload), do: false
 
   defp write_to_provider(user_id, event, updated, payload) do
     case CalendarEvents.update_event(event.uid, payload, {event.calendar_integration_id, user_id}) do
@@ -216,6 +253,9 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
       {:error, :until_before_start} = error -> error
     end
   end
+
+  defp maybe_put_conference(payload, nil), do: payload
+  defp maybe_put_conference(payload, change), do: Map.put(payload, :conference_data, change)
 
   defp maybe_put_scope(payload, nil), do: payload
   defp maybe_put_scope(payload, scope), do: Map.put(payload, :recurrence_scope, scope)

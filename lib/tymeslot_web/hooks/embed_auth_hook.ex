@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
   require Logger
 
   alias Tymeslot.Embed.Token
+  alias Tymeslot.Locales
   alias Tymeslot.Profiles
 
   @spec on_mount(atom(), map(), map(), Phoenix.LiveView.Socket.t()) ::
@@ -25,7 +26,7 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
     embed_token = session["embed_token"]
 
     if embed_token do
-      handle_embedded(embed_token, preview?(params), socket)
+      handle_embedded(embed_token, params, socket)
     else
       {:cont, socket}
     end
@@ -46,7 +47,7 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
   # security_headers_plug_test.exs.
   defp preview?(params), do: params["preview"] in ["true", "1"]
 
-  defp handle_embedded(embed_token, preview?, socket) do
+  defp handle_embedded(embed_token, params, socket) do
     case Token.verify(embed_token) do
       {:ok, {username, parent_origin}} ->
         cond do
@@ -59,7 +60,7 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
           # freshly created account (no allowed_embed_domains yet) can still see
           # its own live preview instead of being redirected to the
           # embed-unavailable notice.
-          preview? ->
+          preview?(params) ->
             {:cont, assign(socket, :embedded, true)}
 
           # On the connected (WebSocket) render, verify the signed parent_origin
@@ -78,25 +79,34 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
                   parent_origin: parent_origin
                 )
 
-                {:halt, redirect(socket, to: embed_unavailable_path(parent_origin))}
+                {:halt, redirect(socket, to: embed_unavailable_path(parent_origin, params))}
             end
         end
 
       {:error, reason} ->
         Logger.warning("Embed auth rejected", reason: reason)
-        {:halt, redirect(socket, to: embed_unavailable_path(nil))}
+        {:halt, redirect(socket, to: embed_unavailable_path(nil, params))}
     end
   end
 
   # Where a rejected embedded render is sent. This dedicated notice replaces the
   # old redirect to "/" (the marketing homepage), which would otherwise render
   # inside the embedding site. The parent origin is forwarded so the notice can
-  # post `tymeslot-embed-blocked` back to the embedder.
-  defp embed_unavailable_path(parent_origin) when is_binary(parent_origin) do
-    "/embed-unavailable?" <> URI.encode_query(%{"parent-origin" => parent_origin})
-  end
+  # post `tymeslot-embed-blocked` back to the embedder, and the booking page's
+  # `locale` param so the notice renders in the same language (the notice is
+  # framed cross-site, so no session cookie can carry it).
+  defp embed_unavailable_path(parent_origin, params) do
+    query =
+      Enum.filter(
+        [{"parent-origin", parent_origin}, {"locale", Locales.acceptable(params["locale"])}],
+        fn {_key, value} -> is_binary(value) end
+      )
 
-  defp embed_unavailable_path(_parent_origin), do: "/embed-unavailable"
+    case query do
+      [] -> "/embed-unavailable"
+      query -> "/embed-unavailable?" <> URI.encode_query(query)
+    end
+  end
 
   defp verify_embedding(_username, nil), do: {:error, :missing_origin}
 

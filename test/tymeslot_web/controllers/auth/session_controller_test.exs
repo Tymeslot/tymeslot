@@ -2,12 +2,8 @@ defmodule TymeslotWeb.SessionControllerTest do
   use TymeslotWeb.ConnCase, async: false
   @moduletag :auth
 
-  import Mox
-
   alias Phoenix.Flash
   alias Tymeslot.Auth.UserTokenQueries
-  alias Tymeslot.Auth.Verification
-  alias Tymeslot.Auth.VerificationMock
   alias Tymeslot.AuthTestHelpers
   alias Tymeslot.Factory
   alias Tymeslot.Infrastructure.Config
@@ -120,7 +116,8 @@ defmodule TymeslotWeb.SessionControllerTest do
       refute get_session(conn, :user_token)
     end
 
-    test "handles unverified email", %{conn: conn, password: password} do
+    test "an unverified account with its password looks like a failed login",
+         %{conn: conn, password: password} do
       user =
         Factory.insert(:user,
           password: password,
@@ -128,15 +125,50 @@ defmodule TymeslotWeb.SessionControllerTest do
           verified_at: nil
         )
 
+      conn = post(conn, ~p"/auth/session", %{"email" => user.email, "password" => password})
+
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :error) == unknown_account_error()
+      refute get_session(conn, :user_token)
+      refute get_session(conn, :unverified_user_id)
+      refute get_session(conn, :unverified_user_email)
+    end
+
+    test "a wrong password for an unverified account reveals nothing about it",
+         %{conn: conn, password: password} do
+      user =
+        Factory.insert(:user,
+          password_hash: Password.hash_password(password),
+          verified_at: nil
+        )
+
+      conn = post(conn, ~p"/auth/session", %{"email" => user.email, "password" => "Wrong1234!"})
+
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :error) == unknown_account_error()
+      refute get_session(conn, :unverified_user_id)
+      refute get_session(conn, :unverified_user_email)
+    end
+
+    test "an account without a password gets the generic error", %{conn: conn} do
+      user = Factory.insert(:user, provider: "google", password_hash: nil)
+
+      conn = post(conn, ~p"/auth/session", %{"email" => user.email, "password" => "Any1234!"})
+
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :error) == unknown_account_error()
+    end
+
+    # The flash an address with no account gets; every failure before the
+    # password is proved must read the same.
+    defp unknown_account_error do
       conn =
-        post(conn, ~p"/auth/session", %{
-          "email" => user.email,
-          "password" => password
+        post(build_conn(), ~p"/auth/session", %{
+          "email" => "nobody-#{System.unique_integer([:positive])}@example.com",
+          "password" => "Any1234!"
         })
 
-      assert redirected_to(conn) == "/auth/verify-email"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Please verify your email"
-      assert get_session(conn, :unverified_user_id) == user.id
+      Flash.get(conn.assigns.flash, :error)
     end
   end
 
@@ -214,6 +246,42 @@ defmodule TymeslotWeb.SessionControllerTest do
                "Too many failed attempts. Please wait before trying again"
     end
 
+    test "failed attempts from one address do not lock the owner out from another", %{
+      conn: conn,
+      user: user,
+      password: password
+    } do
+      attacker_ip = {198, 51, 100, 23}
+      owner_ip = {203, 0, 113, 45}
+
+      for _i <- 1..10 do
+        post(%{conn | remote_ip: attacker_ip}, ~p"/auth/session", %{
+          "email" => user.email,
+          "password" => "WrongPassword123!"
+        })
+      end
+
+      # The attacker's own address is throttled for this account...
+      blocked =
+        post(%{conn | remote_ip: attacker_ip}, ~p"/auth/session", %{
+          "email" => user.email,
+          "password" => password
+        })
+
+      assert Flash.get(blocked.assigns.flash, :error) ==
+               "Too many failed attempts. Please wait before trying again"
+
+      # ...but the owner, from their own address, still signs in.
+      conn =
+        post(%{conn | remote_ip: owner_ip}, ~p"/auth/session", %{
+          "email" => user.email,
+          "password" => password
+        })
+
+      assert redirected_to(conn) == "/dashboard"
+      assert get_session(conn, :user_token)
+    end
+
     test "blocks login after 50 attempts from the same IP across different emails", %{conn: conn} do
       rate_limit_ip = {10, 88, 88, 1}
 
@@ -254,14 +322,24 @@ defmodule TymeslotWeb.SessionControllerTest do
   end
 
   describe "GET /auth/verify-complete/:token" do
-    setup :verify_on_exit!
+    test "renders a confirmation page without verifying the address", %{conn: conn} do
+      user = Factory.insert(:user, verified_at: nil, signup_ip: "127.0.0.1")
 
+      {:ok, _user} =
+        UserTokenQueries.set_verification_token(user, "prefetched_token", "127.0.0.1")
+
+      conn = get(conn, ~p"/auth/verify-complete/prefetched_token")
+
+      html = html_response(conn, 200)
+      assert html =~ ~s(action="/auth/verify-complete/prefetched_token")
+      assert html =~ ~s(method="post")
+      refute get_session(conn, :user_token)
+      refute Repo.reload!(user).verified_at
+    end
+  end
+
+  describe "POST /auth/verify-complete/:token" do
     setup do
-      # Stub with real implementation by default; individual tests override as needed
-      Mox.stub(VerificationMock, :verify_user_token, fn token ->
-        Verification.verify_user_token(token)
-      end)
-
       %{token: "valid_token"}
     end
 
@@ -279,7 +357,7 @@ defmodule TymeslotWeb.SessionControllerTest do
     test "verifies and logs in user when IP matches", %{conn: conn, token: token} do
       user = insert_unverified_user(token, "127.0.0.1")
 
-      conn = get(conn, ~p"/auth/verify-complete/#{token}")
+      conn = post(conn, ~p"/auth/verify-complete/#{token}")
 
       assert redirected_to(conn) == "/dashboard"
       assert Flash.get(conn.assigns.flash, :success) =~ "successfully verified"
@@ -292,7 +370,7 @@ defmodule TymeslotWeb.SessionControllerTest do
     test "verifies but does NOT log in user when IP mismatch", %{conn: conn, token: token} do
       user = insert_unverified_user(token, "1.1.1.1")
 
-      conn = get(conn, ~p"/auth/verify-complete/#{token}")
+      conn = post(conn, ~p"/auth/verify-complete/#{token}")
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :info) =~ "Please log in to continue"
@@ -303,10 +381,30 @@ defmodule TymeslotWeb.SessionControllerTest do
     end
 
     test "handles invalid token", %{conn: conn} do
-      conn = get(conn, ~p"/auth/verify-complete/invalid_token")
+      conn = post(conn, ~p"/auth/verify-complete/invalid_token")
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "no longer valid"
+    end
+
+    test "refuses a client past 30 links a minute, leaving the token unspent", %{
+      conn: conn,
+      token: token
+    } do
+      user = insert_unverified_user(token, "10.77.0.1")
+      client = %{conn | remote_ip: {10, 77, 0, 1}}
+
+      for _i <- 1..30 do
+        refused = post(client, ~p"/auth/verify-complete/not-a-token")
+        assert Flash.get(refused.assigns.flash, :error) =~ "no longer valid"
+      end
+
+      conn = post(client, ~p"/auth/verify-complete/#{token}")
+
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :error) =~ "reached the limit"
+      refute get_session(conn, :user_token)
+      refute Repo.reload!(user).verified_at
     end
 
     test "handles expired verification token", %{conn: conn} do
@@ -320,23 +418,11 @@ defmodule TymeslotWeb.SessionControllerTest do
         [expired_time, user.id]
       )
 
-      conn = get(conn, ~p"/auth/verify-complete/expired_verification_token")
+      conn = post(conn, ~p"/auth/verify-complete/expired_verification_token")
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "has expired"
-    end
-
-    test "handles verification failure for existing user", %{conn: conn, token: token} do
-      _unverified_user = insert_unverified_user(token, "127.0.0.1")
-
-      Mox.expect(VerificationMock, :verify_user_token, fn ^token ->
-        {:error, :invalid_token}
-      end)
-
-      conn = get(conn, ~p"/auth/verify-complete/#{token}")
-
-      assert redirected_to(conn) == "/auth/login"
-      assert Flash.get(conn.assigns.flash, :error) =~ "no longer valid"
+      refute Repo.reload!(user).verified_at
     end
   end
 end

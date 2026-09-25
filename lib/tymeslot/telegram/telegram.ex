@@ -11,6 +11,7 @@ defmodule Tymeslot.Telegram do
 
   alias Tymeslot.Features
   alias Tymeslot.Repo
+  alias Tymeslot.Security.SharedSecret
   alias Tymeslot.Telegram.{API, MessageBuilder, TelegramDeliverySchema, TelegramIntegrationSchema}
   alias Tymeslot.Telegram.TelegramQueries
   alias Tymeslot.Workers.TelegramWorker
@@ -426,6 +427,19 @@ defmodule Tymeslot.Telegram do
   @spec telegram_enabled?() :: boolean()
   def telegram_enabled? do
     Application.get_env(:tymeslot, :telegram_notifications_allowed, false)
+  end
+
+  @doc """
+  Whether `received` is the shared bot's webhook secret, as Telegram echoes it
+  in the `X-Telegram-Bot-Api-Secret-Token` header.
+
+  An unset or empty configured secret never matches, so a deployment that sets
+  `TELEGRAM_WEBHOOK_SECRET` to an empty string refuses every update rather
+  than accepting the ones that send an empty header.
+  """
+  @spec valid_webhook_secret?(String.t() | nil) :: boolean()
+  def valid_webhook_secret?(received) do
+    SharedSecret.matches?(received, Application.get_env(:tymeslot, :telegram_webhook_secret))
   end
 
   # ============================================================================

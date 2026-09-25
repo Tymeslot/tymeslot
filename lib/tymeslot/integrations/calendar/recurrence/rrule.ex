@@ -77,6 +77,7 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
   @token_to_weekday Map.new(@weekday_to_token, fn {atom, token} -> {token, atom} end)
 
   @end_of_day ~T[23:59:59]
+  @start_of_day ~T[00:00:00]
   @utc "Etc/UTC"
 
   # See `until_date/2`: an UNTIL ending in this is a local date stamped with
@@ -259,12 +260,26 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
     |> DateTime.to_iso8601(:basic)
   end
 
+  # Built as the next local day's first instant less a second, rather than as
+  # 23:59:59 on this one. The two agree on an ordinary day and diverge where a
+  # DST transition makes 23:59:59 ambiguous: `create_datetime_safe/3` resolves
+  # an ambiguous wall clock to the *first* of the pair, which is right for a
+  # start instant and an hour early for an upper bound, so a series ending on
+  # the transition date in Cairo, Beirut or Amman dropped its last evening
+  # occurrence. Midnight is the one wall clock on a day that cannot be
+  # ambiguous in that direction: where it repeats, the earlier of the two is
+  # still the first instant to carry the new date, which is exactly the bound
+  # wanted, and where it does not exist the subtraction is instant arithmetic
+  # and lands on the real last second regardless.
+  #
   # `create_datetime_safe/3` applies the project-wide rule for a wall-clock
   # time that a DST transition makes ambiguous or non-existent, and falls back
   # to UTC when the timezone is not one tzdata knows.
   defp end_of_day_utc(date, timezone) when is_binary(timezone) do
     date
-    |> DateTimeUtils.create_datetime_safe(@end_of_day, timezone)
+    |> Date.add(1)
+    |> DateTimeUtils.create_datetime_safe(@start_of_day, timezone)
+    |> DateTime.add(-1, :second)
     |> DateTime.shift_zone!(@utc)
   end
 

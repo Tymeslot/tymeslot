@@ -33,9 +33,26 @@ defmodule Tymeslot.Precommit.Runner do
   the end. That is the cost of the arrangement: nothing scrolls live after the
   compile steps.
 
+  ## Step results as they happen
+
+  Every step also prints one plain line the moment it finishes, before any
+  buffered output that goes with it: `precommit: ok credo`, or `precommit:
+  failed test (2)`. The suite's comes from its own task, so it is not held back
+  until the static checks are done. The prefix is a contract: the workspace
+  `mix.sh -p` buffers each repository's output until the whole run finishes, and
+  forwards only these lines to the terminal as they arrive, so a run that is
+  interrupted has still reported every step that finished.
+
   `--fail-fast` turns all of this off and runs everything in sequence. It asks
   for the first failure as soon as possible, which is incompatible with steps
   whose results are only known when they finish together.
+
+  ## Steps left out on purpose
+
+  `mix precommit --affected` drops the steps a diff cannot reach (see
+  `Tymeslot.Precommit.Affected`) and passes them as `:skipped`, each with its
+  reason. The summary lists them after the steps that ran, so a narrowed run
+  can never read as the full gate.
 
   ## Partitioning the suite
 
@@ -59,6 +76,7 @@ defmodule Tymeslot.Precommit.Runner do
   """
 
   @barrier_prefix "compile"
+  @result_prefix "precommit: "
   @dialyzer_schedulers 8
 
   @type step :: {name :: String.t(), args :: [String.t()], env :: atom()}
@@ -75,7 +93,7 @@ defmodule Tymeslot.Precommit.Runner do
     suite_plan_fun = Keyword.get(opts, :suite_plan, fn -> nil end)
     results = run_all(steps, fail_fast?, cmd_fun, {capture_fun, suite_plan_fun})
 
-    report(results)
+    report(results, Keyword.get(opts, :skipped, []))
 
     if Enum.any?(results, &match?({_name, :failed, _code}, &1)) do
       exit({:shutdown, 1})
@@ -150,7 +168,7 @@ defmodule Tymeslot.Precommit.Runner do
       ])
 
       IO.write(output)
-      status(name, code)
+      name |> status(code) |> announce()
     end)
   end
 
@@ -178,7 +196,14 @@ defmodule Tymeslot.Precommit.Runner do
       "  mix #{Enum.join(args, " ")}  (#{describe_plan(plan)}in the background; output follows at the end)"
     ])
 
-    {name, Task.async(fn -> capture_suite(args, env, capture_fun, plan) end)}
+    task =
+      Task.async(fn ->
+        {_output, code} = result = capture_suite(args, env, capture_fun, plan)
+        announce(status(name, code))
+        result
+      end)
+
+    {name, task}
   end
 
   defp describe_plan(nil), do: ""
@@ -231,6 +256,18 @@ defmodule Tymeslot.Precommit.Runner do
   defp status(name, 0), do: {name, :passed, 0}
   defp status(name, code), do: {name, :failed, code}
 
+  # Plain text, never coloured: a line that starts with an escape sequence would
+  # no longer start with the prefix `mix.sh` matches on.
+  defp announce({name, :passed, _code} = result) do
+    IO.puts("#{@result_prefix}ok #{name}")
+    result
+  end
+
+  defp announce({name, :failed, code} = result) do
+    IO.puts("#{@result_prefix}failed #{name} (#{code})")
+    result
+  end
+
   # Everything up to and including the last barrier runs in the foreground, so
   # a backgrounded step can never start against a build the gate has not yet
   # established.
@@ -259,11 +296,7 @@ defmodule Tymeslot.Precommit.Runner do
   defp run_steps([{name, args, env} | rest], fail_fast?, cmd_fun, acc) do
     Mix.shell().info([:bright, "\n==> #{name}", :reset, :faint, "  mix #{Enum.join(args, " ")}"])
 
-    result =
-      case cmd_fun.(args, env) do
-        0 -> {name, :passed, 0}
-        code -> {name, :failed, code}
-      end
+    result = name |> status(cmd_fun.(args, env)) |> announce()
 
     acc = [result | acc]
 
@@ -340,7 +373,7 @@ defmodule Tymeslot.Precommit.Runner do
   @spec dialyzer_schedulers(pos_integer()) :: pos_integer()
   def dialyzer_schedulers(cores), do: min(@dialyzer_schedulers, cores)
 
-  defp report(results) do
+  defp report(results, skipped) do
     Mix.shell().info([:bright, "\nSummary", :reset])
 
     Enum.each(results, fn
@@ -352,6 +385,10 @@ defmodule Tymeslot.Precommit.Runner do
 
       {_name, :skipped, _code} ->
         Mix.shell().info(["  ", :faint, "skipped remaining steps: the build is broken", :reset])
+    end)
+
+    Enum.each(skipped, fn {name, reason} ->
+      Mix.shell().info(["  ", :faint, "not run  ", :reset, name, :faint, " (#{reason})", :reset])
     end)
   end
 end

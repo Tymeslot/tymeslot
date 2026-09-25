@@ -5,9 +5,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias TymeslotWeb.Components.Dashboard.ColourSwatches
   alias TymeslotWeb.Components.UI.StatusSwitch
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.AttendeeEditor
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
@@ -33,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   def event_detail_modal(assigns) do
     assigns =
       assigns
-      |> assign(:attendees, List.wrap(Map.get(assigns.selected_event, :attendees)))
+      |> assign(:attendees, attendees(assigns.selected_event))
       |> assign(:locale, Gettext.get_locale(TymeslotWeb.Gettext))
 
     ~H"""
@@ -387,7 +389,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       <div :if={@editable} class="mb-3">
         <RecurrenceEditor.recurrence_editor
           recurrence_rule={Map.get(@selected_event, :recurrence_rule)}
-          timezone={@user_timezone}
+          timezone={Shared.recurrence_timezone(@selected_event, @user_timezone)}
           myself={@myself}
           change_event="update_event_recurrence"
         />
@@ -492,11 +494,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   end
 
   # Read-only human-readable summary of an event's recurrence rule, or nil when
-  # the event does not repeat.
-  defp recurrence_summary(event, timezone) do
+  # the event does not repeat. The rule's UNTIL is an instant written in UTC, so
+  # it is read back in the zone it was written against, the event's own.
+  defp recurrence_summary(event, user_timezone) do
     case Map.get(event, :recurrence_rule) do
       rule when is_binary(rule) and rule != "" ->
-        rule |> RRule.parse(timezone: timezone) |> RecurrenceEditor.summary()
+        rule
+        |> RRule.parse(timezone: Shared.recurrence_timezone(event, user_timezone))
+        |> RecurrenceEditor.summary()
 
       _none ->
         nil
@@ -507,5 +512,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   defp full_date_label(date, locale) do
     "#{LocaleFormat.format_weekday_name(Date.day_of_week(date), locale, :full)}, " <>
       "#{LocaleFormat.format_month_name(date.month, locale)} #{date.day}"
+  end
+
+  # Cached attendees come back from JSONB string-keyed, while one the organiser
+  # has just added is still atom-keyed in memory, so the editor reads them all
+  # in the one canonical shape.
+  defp attendees(event) do
+    event
+    |> Map.get(:attendees)
+    |> List.wrap()
+    |> Enum.map(&Attendee.normalise/1)
   end
 end

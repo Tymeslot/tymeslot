@@ -167,11 +167,7 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       today = timezone |> DateTime.now!() |> DateTime.to_date()
       target = Date.add(today, 1)
 
-      # Ask the grid which month it is on, never arithmetic: it opens on the
-      # first bookable day, so it may already have moved itself past today's.
-      unless BookingTestHelpers.showing_month?(view, target) do
-        view |> element("button[phx-click='next_month']") |> render_click()
-      end
+      BookingTestHelpers.show_month(view, target)
 
       date_str = Date.to_string(target)
 
@@ -212,11 +208,7 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       today = timezone |> DateTime.now!() |> DateTime.to_date()
       target = Date.add(today, 1)
 
-      # Ask the grid which month it is on, never arithmetic: it opens on the
-      # first bookable day, so it may already have moved itself past today's.
-      unless BookingTestHelpers.showing_month?(view, target) do
-        view |> element("button[phx-click='next_month']") |> render_click()
-      end
+      BookingTestHelpers.show_month(view, target)
 
       date_str = Date.to_string(target)
 
@@ -295,9 +287,7 @@ defmodule TymeslotWeb.Live.Scheduling.ScheduleInteractionTest do
       # first.
       today = profile.timezone |> DateTime.now!() |> DateTime.to_date()
 
-      unless BookingTestHelpers.showing_month?(view, today) do
-        view |> element("button[phx-click='prev_month']") |> render_click()
-      end
+      BookingTestHelpers.show_month(view, today, :prev)
 
       assert view
              |> render()

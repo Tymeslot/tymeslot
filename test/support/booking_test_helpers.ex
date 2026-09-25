@@ -25,6 +25,7 @@ defmodule Tymeslot.BookingTestHelpers do
   # made every Rhythm walk raise on the last day of a month: the one day where
   # tomorrow falls outside the range already on screen.
   @next_month "button[phx-click='next_month']"
+  @prev_month "button[phx-click='prev_month']"
   @month_label ".calendar-month-label"
   @next_week "button[phx-click='next_week']"
 
@@ -96,7 +97,7 @@ defmodule Tymeslot.BookingTestHelpers do
     today = timezone |> DateTime.now!() |> DateTime.to_date()
     target_date = Date.add(today, 1)
 
-    advance_calendar_to(view, today, target_date)
+    advance_calendar_to(view, target_date)
 
     wait_until(fn -> has_element?(view, "#{day_selector(target_date)}:not([disabled])") end)
 
@@ -145,23 +146,46 @@ defmodule Tymeslot.BookingTestHelpers do
 
   # Bring `target_date` into the displayed range, driving whichever control the
   # rendered theme actually offers.
-  defp advance_calendar_to(view, today, target_date) do
+  defp advance_calendar_to(view, target_date) do
     wait_until(fn -> has_element?(view, @calendar_day) end)
 
     cond do
-      has_element?(view, @next_month) -> advance_month(view, today, target_date)
+      has_element?(view, @next_month) -> show_month(view, target_date, :next)
       has_element?(view, @next_week) -> advance_week(view, target_date)
       true -> :ok
     end
   end
 
-  # The month itself is what has to move, and only if it has not moved already:
-  # see `showing_month?/2` for why the calendar is asked rather than computed.
-  defp advance_month(view, _today, target_date) do
-    unless showing_month?(view, target_date) do
-      view |> element(@next_month) |> render_click()
+  @doc """
+  Brings `date`'s month onto Quill's month grid, stepping one month towards
+  `direction` (`:next` or `:prev`) only if the grid is not showing it already.
+
+  The only way to move the month in a booking test. The schedule step opens on
+  the first bookable day, so whether the grid still shows today's month depends
+  on the hour and the day of the month the suite happens to run on; see
+  `showing_month?/2` for what goes wrong when the step is computed instead.
+  Two directions because two questions get asked: a walk towards a later date
+  steps forward, and a test about today's own cell steps back to it.
+
+  Asserts the month is on screen afterwards, so an overshoot or a step the
+  wrong way fails here, by name, rather than as a five-second `wait_until`
+  timeout further down.
+  """
+  @spec show_month(Phoenix.LiveViewTest.View.t(), Date.t(), :next | :prev) :: :ok
+  def show_month(view, %Date{} = date, direction \\ :next) when direction in [:next, :prev] do
+    unless showing_month?(view, date) do
+      view |> element(month_arrow(direction)) |> render_click()
     end
+
+    assert showing_month?(view, date),
+           "expected the calendar to show #{Calendar.strftime(date, "%B %Y")} " <>
+             "after at most one step #{direction}"
+
+    :ok
   end
+
+  defp month_arrow(:next), do: @next_month
+  defp month_arrow(:prev), do: @prev_month
 
   @doc """
   Whether the month grid is currently displaying `date`'s month.

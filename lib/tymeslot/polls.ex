@@ -4,6 +4,7 @@ defmodule Tymeslot.Polls do
   for the host or for voting, tallying votes, and lifecycle transitions.
   """
 
+  alias Tymeslot.Availability.TimeOff
   alias Tymeslot.Emails.EmailScheduler.PollScheduler
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls.{PollQueries, PollSchema, PollTimeSlotQueries, PollTimeSlotSchema}
@@ -37,6 +38,25 @@ defmodule Tymeslot.Polls do
          {:ok, slots} <- prepare_slots(attrs) do
       insert_poll(user_id, attrs, slots)
     end
+  end
+
+  @doc """
+  The candidate `start_times` that would put a meeting of `duration_minutes`
+  inside `user_id`'s time off, in the order given.
+
+  Advisory: the poll form uses it to warn the host while they build the poll,
+  and nothing refuses to save one. Confirmation is where time off is enforced
+  (`Tymeslot.Polls.Confirm`), because a period can be entered after the poll
+  has gone out.
+  """
+  @spec starts_during_time_off(integer(), [DateTime.t()], pos_integer()) :: [DateTime.t()]
+  def starts_during_time_off(user_id, start_times, duration_minutes)
+      when is_integer(duration_minutes) and duration_minutes > 0 do
+    user_id
+    |> TimeOff.clashing_ranges(
+      Enum.map(start_times, &{&1, DateTime.add(&1, duration_minutes, :minute)})
+    )
+    |> Enum.map(&elem(&1, 0))
   end
 
   @doc "Fetches a poll by its public token, in any status, for the voting page."

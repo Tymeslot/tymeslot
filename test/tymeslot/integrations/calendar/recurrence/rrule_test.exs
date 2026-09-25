@@ -252,6 +252,27 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRuleTest do
     end
   end
 
+  describe "build/2 — a timed UNTIL on a DST transition date" do
+    # Egypt ends DST at 24:00 on the last Thursday of October, so 2026-10-29
+    # runs 23:00–24:00 twice: once at EEST (+03) and again at EET (+02). The
+    # day's last instant is the later of the pair, 23:59:59 +02 = 21:59:59Z.
+    # Resolving the ambiguity the way a *start* instant is resolved, to the
+    # first of the pair, ends the series an hour early and drops a 23:30
+    # occurrence on the final day.
+    test "an ambiguous local midnight ends the day at its later instant" do
+      assert RRule.build(%{freq: :daily, until: ~D[2026-10-29]}, timezone: "Africa/Cairo") ==
+               "FREQ=DAILY;UNTIL=20261029T215959Z"
+    end
+
+    # Chile springs forward at midnight, so 2026-09-06 00:00 never happens: the
+    # clock goes straight from 2026-09-05 23:59:59 -04 to 01:00 -03. The last
+    # instant of 5 September is therefore 23:59:59 -04 = 03:59:59Z on the 6th.
+    test "a local midnight that never happens still ends the day before it" do
+      assert RRule.build(%{freq: :daily, until: ~D[2026-09-05]}, timezone: "America/Santiago") ==
+               "FREQ=DAILY;UNTIL=20260906T035959Z"
+    end
+  end
+
   describe "parse/2 — a timed UNTIL reads back as the organiser's local date" do
     test "west of UTC" do
       assert %{until: ~D[2026-06-30]} =

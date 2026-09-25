@@ -5,10 +5,7 @@ defmodule Tymeslot.Integrations.Video do
   Exposes a cohesive API used by web components without any LiveView/socket coupling.
   """
 
-  use Gettext, backend: TymeslotWeb.Gettext
-
   alias Tymeslot.Emails.EmailScheduler.IntegrationScheduler
-  alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video.AccessToken
@@ -17,11 +14,12 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Video.Connection
   alias Tymeslot.Integrations.Video.Disconnect
   alias Tymeslot.Integrations.Video.Discovery
+  alias Tymeslot.Integrations.Video.MeetingLinkTemplate
   alias Tymeslot.Integrations.Video.OAuth
+  alias Tymeslot.Integrations.Video.OAuthCallback
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.JitsiProvider
   alias Tymeslot.Integrations.Video.Providers.NextcloudTalkProvider
-  alias Tymeslot.Integrations.Video.Reconnect
   alias Tymeslot.Integrations.Video.Rooms
   alias Tymeslot.Integrations.Video.Update
   alias Tymeslot.Integrations.Video.Urls
@@ -29,8 +27,6 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   @behaviour Tymeslot.Security.EncryptedStorage
-
-  require Logger
 
   @type provider ::
           :google_meet
@@ -57,6 +53,10 @@ defmodule Tymeslot.Integrations.Video do
   def list_integrations(user_id) when is_integer(user_id) do
     VideoIntegrationQueries.list_all_for_user(user_id)
   end
+
+  @doc "See `Tymeslot.Integrations.Video.MeetingLinkTemplate.invalid?/1`."
+  @spec meeting_link_template_invalid?(map()) :: boolean()
+  defdelegate meeting_link_template_invalid?(integration), to: MeetingLinkTemplate, as: :invalid?
 
   @doc """
   Gets a single video integration by ID for a specific user.
@@ -474,20 +474,21 @@ defmodule Tymeslot.Integrations.Video do
   defdelegate extract_room_id(meeting_url, provider), to: Urls
 
   # ---------------
-  # OAuth create-or-update
+  # OAuth callback
   # ---------------
 
   @doc """
+  Completes a Google Meet, Teams or Zoom OAuth callback and connects the
+  integration, invalidating the user's cached dashboard integration status on
+  success. See `Tymeslot.Integrations.Video.OAuthCallback.complete/3`.
+  """
+  @spec complete_oauth(OAuth.provider(), String.t(), String.t()) ::
+          {:ok, VideoIntegrationSchema.t()} | {:error, term()}
+  defdelegate complete_oauth(provider, code, state), to: OAuthCallback, as: :complete
+
+  @doc """
   Creates or updates an OAuth video integration from callback token data.
-
-  Handles three scenarios:
-  1. Re-authorization of a specific integration (integration_id present)
-  2. New connection with a known account (provider_account_id present)
-  3. Legacy fallback — match by user + provider
-
-  An OAuth callback proves the grant, so every update of an existing row goes
-  through `Tymeslot.Integrations.Video.Reconnect`, which catches the rooms up
-  on what they missed while the integration needed reconnecting.
+  See `Tymeslot.Integrations.Video.OAuthCallback.match_or_create/6`.
   """
   @spec match_or_create_oauth_integration(
           pos_integer(),
@@ -497,107 +498,16 @@ defmodule Tymeslot.Integrations.Video do
           pos_integer() | nil,
           map()
         ) :: {:ok, VideoIntegrationSchema.t()} | {:error, any()}
-  def match_or_create_oauth_integration(
-        user_id,
-        provider,
-        name,
-        provider_account_id,
-        integration_id,
-        token_attrs
-      ) do
-    cond do
-      integration_id ->
-        reauthorize_existing(user_id, integration_id, provider_account_id, token_attrs)
-
-      is_binary(provider_account_id) ->
-        match_or_create_by_account(user_id, provider, name, provider_account_id, token_attrs)
-
-      true ->
-        fallback_match_or_create(user_id, provider, name, token_attrs)
-    end
-  end
-
-  defp reauthorize_existing(user_id, integration_id, provider_account_id, token_attrs) do
-    case VideoIntegrationQueries.get_for_user(integration_id, user_id) do
-      {:ok, existing} ->
-        AccountMatch.verify_account_match(existing, provider_account_id, fn ->
-          Reconnect.save(existing, token_attrs)
-        end)
-
-      {:error, :not_found} ->
-        {:error, "Integration not found"}
-
-      {:error, :requires_reencryption, existing} ->
-        # Credentials are stale but the user is reconnecting — allow the update
-        # so fresh credentials replace the undecryptable ones.
-        AccountMatch.verify_account_match(existing, provider_account_id, fn ->
-          Reconnect.save(existing, token_attrs)
-        end)
-    end
-  end
-
-  defp match_or_create_by_account(user_id, provider, name, provider_account_id, token_attrs) do
-    case VideoIntegrationQueries.get_by_account_for_user(user_id, provider, provider_account_id) do
-      {:ok, existing} ->
-        Reconnect.save(existing, token_attrs)
-
-      {:error, :not_found} ->
-        reactivate_or_create_video(user_id, provider, name, provider_account_id, token_attrs)
-    end
-  end
-
-  defp reactivate_or_create_video(user_id, provider, name, provider_account_id, token_attrs) do
-    reactivation_attrs = Map.put(token_attrs, :is_active, true)
-    create_attrs = Map.merge(token_attrs, %{user_id: user_id, name: name, provider: provider})
-
-    AccountMatch.find_or_create_with_reactivation(
-      fn ->
-        VideoIntegrationQueries.get_any_by_account_for_user(
-          user_id,
-          provider,
-          provider_account_id
-        )
-      end,
-      fn existing -> Reconnect.save(existing, reactivation_attrs) end,
-      fn ->
-        AccountMatch.create_with_race_protection(
-          fn -> VideoIntegrationQueries.create(create_attrs) end,
-          fn ->
-            VideoIntegrationQueries.get_by_account_for_user(
-              user_id,
-              provider,
-              provider_account_id
-            )
-          end,
-          fn existing -> Reconnect.save(existing, token_attrs) end
-        )
-      end
-    )
-  end
-
-  defp fallback_match_or_create(user_id, provider, name, token_attrs) do
-    Logger.warning(
-      "OAuth callback missing provider_account_id — using legacy per-provider match",
-      user_id: user_id,
-      provider: provider
-    )
-
-    case VideoIntegrationQueries.get_by_provider_for_user(user_id, provider) do
-      {:ok, _existing} ->
-        # User already has integration(s) for this provider but we can't identify
-        # which account this callback belongs to. Reject to avoid silently overwriting.
-        {:error,
-         dgettext(
-           "dashboard_integrations",
-           "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
-         )}
-
-      {:error, :not_found} ->
-        VideoIntegrationQueries.create(
-          Map.merge(token_attrs, %{user_id: user_id, name: name, provider: provider})
-        )
-    end
-  end
+  defdelegate match_or_create_oauth_integration(
+                user_id,
+                provider,
+                name,
+                provider_account_id,
+                integration_id,
+                token_attrs
+              ),
+              to: OAuthCallback,
+              as: :match_or_create
 
   # ---------------
   # OAuth URL generation
