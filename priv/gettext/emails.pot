@@ -477,6 +477,11 @@ msgstr ""
 msgid "Message from attendee:"
 msgstr ""
 
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
+#, elixir-autogen, elixir-format
+msgid "Message from the organiser:"
+msgstr ""
+
 #: lib/tymeslot/emails/email_service/auth_emails.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a Tymeslot account"
