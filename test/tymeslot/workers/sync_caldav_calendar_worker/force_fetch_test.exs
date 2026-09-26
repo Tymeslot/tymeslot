@@ -122,7 +122,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker.ForceFetchTest do
       assert body =~ "calendar-query"
       refute body =~ "sync-collection"
 
-      assert {:error, _reason} = result
+      # Discarded rather than retried: a refused connection is the remote being
+      # away, which the three attempts within the minute cannot mend. What this
+      # test is about is what the failed cycle leaves behind, either way.
+      assert {:discard, _reason} = result
 
       reloaded = Repo.reload!(integration)
       assert reloaded.caldav_sync_tokens == %{path1() => "preserved-token"}
