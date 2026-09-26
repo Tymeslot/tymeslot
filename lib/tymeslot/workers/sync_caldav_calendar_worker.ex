@@ -160,6 +160,21 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     {:discard, "CalDAV server returned a server error; the next scheduled sync will retry"}
   end
 
+  # The remote never answered: a read that timed out, a connection that failed,
+  # or a server that took the connection and then went quiet. Same shape as the
+  # 5xx above — the remote's condition, not the request's — and `Base` has
+  # already retried the transport once with backoff before this. What Oban's
+  # remaining attempts add is the same request against the same unreachable
+  # host inside a single minute, ending in a permanent-failure alert about an
+  # outage no operator here can act on: a host that was down for an hour
+  # produced one such alert per sync cycle. Discard, and let the scheduled
+  # sync pick the server up when it comes back; a server that stays away is
+  # what the health check is for.
+  defp handle_sync_result({:error, reason}, _integration)
+       when reason in [:timeout, :server_unresponsive, :network_error] do
+    {:discard, "CalDAV server did not respond; the next scheduled sync will retry"}
+  end
+
   # A 4xx there is no talking the request out of (415, 400…, and the modelled
   # `:method_not_allowed`) is the server
   # refusing the request itself: the remaining attempts re-send the same bytes
