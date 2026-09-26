@@ -57,11 +57,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
         <ProviderIcon.provider_icon provider="nextcloud_talk" type="video" size="large" />
         <div>
           <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-            {dgettext("dashboard_integrations", "Nextcloud Talk")}
+            {dgettext("dashboard_video", "Nextcloud Talk")}
           </h3>
           <p class="text-token-sm text-tymeslot-500 font-medium">
             {dgettext(
-              "dashboard_integrations",
+              "dashboard_video",
               "A Talk conversation on your own Nextcloud for every booking"
             )}
           </p>
@@ -74,11 +74,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
       >
         <div>
           <p id="nextcloud_talk_copy_heading" class="text-token-sm font-bold text-tymeslot-900">
-            {dgettext("dashboard_integrations", "Use your Nextcloud calendar connection")}
+            {dgettext("dashboard_video", "Use your Nextcloud calendar connection")}
           </p>
           <p id="nextcloud_talk_copy_help" class="mt-1 text-token-xs text-tymeslot-500">
             {dgettext(
-              "dashboard_integrations",
+              "dashboard_video",
               "Fills in the server and login name, and uses the same app password unless you enter a different one."
             )}
           </p>
@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
             phx-target={@target}
             class="btn-secondary"
           >
-            {dgettext("dashboard_integrations", "Copy from %{name}", name: calendar.name)}
+            {dgettext("dashboard_video", "Copy from %{name}", name: calendar.name)}
           </button>
         </div>
       </div>
@@ -114,9 +114,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <SharedForm.integration_name_field
             form_errors={@form_errors}
-            value={
-              Map.get(@form_values, "name", dgettext("dashboard_integrations", "My Nextcloud Talk"))
-            }
+            value={Map.get(@form_values, "name", dgettext("dashboard_video", "My Nextcloud Talk"))}
             target={@target}
           />
 
@@ -137,7 +135,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
 
         <p class="text-token-xs text-tymeslot-500 leading-relaxed">
           {dgettext(
-            "dashboard_integrations",
+            "dashboard_video",
             "Each booking gets its own public Talk conversation, and guests join from its link without a Nextcloud account. To skip the lobby and moderate, sign in to Nextcloud in your browser as this login name first, with your usual password and any second factor; the app password works only for Tymeslot. Anyone else, other Nextcloud users included, waits in the lobby until the meeting starts. A conversation is deleted when its booking is cancelled, and about a week after the meeting ends."
           )}
         </p>
@@ -153,7 +151,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
             phx-target={@target}
             class="btn-secondary"
           >
-            {dgettext("dashboard_integrations", "Cancel")}
+            {dgettext("dashboard_video", "Cancel")}
           </button>
           <UIComponents.form_submit_button saving={@saving} />
         </div>
@@ -179,16 +177,16 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
     <SharedForm.url_field
       id={@id}
       name="integration[base_url]"
-      label={dgettext("dashboard_integrations", "Server URL")}
+      label={dgettext("dashboard_video", "Server URL")}
       value={@value}
-      placeholder={dgettext("dashboard_integrations", "https://cloud.example.com")}
+      placeholder={dgettext("dashboard_video", "https://cloud.example.com")}
       form_errors={@form_errors}
       error_key={:base_url}
       target={@target}
       validate_on_blur={false}
       helper_text={
         dgettext(
-          "dashboard_integrations",
+          "dashboard_video",
           "The address you open Nextcloud at, including any subfolder, such as https://example.com/nextcloud."
         )
       }
@@ -218,14 +216,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
       name="integration[client_id]"
       type="text"
       icon="hero-user"
-      label={dgettext("dashboard_integrations", "Login name")}
+      label={dgettext("dashboard_video", "Login name")}
       value={Map.get(@form_values, "client_id", "")}
       describedby={"#{@id_prefix}_client_id_help"}
       required={not @stored_credentials}
       errors={FormValidationHelpers.field_errors(@form_errors, :client_id)}
     >
       <p id={"#{@id_prefix}_client_id_help"} class="mt-2 text-token-xs text-tymeslot-500">
-        {dgettext("dashboard_integrations", "The name you sign in to Nextcloud with.")}
+        {dgettext("dashboard_video", "The name you sign in to Nextcloud with.")}
       </p>
     </SharedForm.credential_input>
 
@@ -234,7 +232,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
       name="integration[client_secret]"
       type="password"
       icon="hero-key"
-      label={dgettext("dashboard_integrations", "App password")}
+      label={dgettext("dashboard_video", "App password")}
       describedby={"#{@id_prefix}_client_secret_help"}
       placeholder="xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"
       required={not (@stored_credentials or @copying)}
@@ -248,19 +246,19 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.NextcloudTalkConfi
   end
 
   defp app_password_help(true, _copying),
-    do: dgettext("dashboard_integrations", "Leave blank to keep the current app password.")
+    do: dgettext("dashboard_video", "Leave blank to keep the current app password.")
 
   defp app_password_help(false, true),
     do:
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "Leave blank to use the app password of your calendar connection."
       )
 
   defp app_password_help(false, false),
     do:
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "Create one in Nextcloud under Personal settings, Security. Your login password stops working here once two-factor authentication is on."
       )
 end

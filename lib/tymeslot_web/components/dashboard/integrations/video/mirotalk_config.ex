@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
         <div>
           <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">MiroTalk P2P</h3>
           <p class="text-sm text-tymeslot-500 font-medium">
-            {dgettext("dashboard_integrations", "Self-hosted video conferencing")}
+            {dgettext("dashboard_video", "Self-hosted video conferencing")}
           </p>
         </div>
       </div>
@@ -55,22 +55,22 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <SharedForm.integration_name_field
             form_errors={@form_errors}
-            value={Map.get(@form_values, "name", dgettext("dashboard_integrations", "My MiroTalk"))}
+            value={Map.get(@form_values, "name", dgettext("dashboard_video", "My MiroTalk"))}
             target={@target}
           />
 
           <SharedForm.url_field
             id="mirotalk_base_url"
             name="integration[base_url]"
-            label={dgettext("dashboard_integrations", "Server URL")}
+            label={dgettext("dashboard_video", "Server URL")}
             value={Map.get(@form_values, "base_url", "")}
-            placeholder={dgettext("dashboard_integrations", "https://mirotalk.yourdomain.com")}
+            placeholder={dgettext("dashboard_video", "https://mirotalk.yourdomain.com")}
             form_errors={@form_errors}
             error_key={:base_url}
             target={@target}
             helper_text={
               dgettext(
-                "dashboard_integrations",
+                "dashboard_video",
                 "The full URL where your MiroTalk P2P instance is hosted"
               )
             }
@@ -81,12 +81,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
               id="mirotalk_api_key"
               name="integration[api_key]"
               value={Map.get(@form_values, "api_key", "")}
-              placeholder={dgettext("dashboard_integrations", "your-api-key-here")}
+              placeholder={dgettext("dashboard_video", "your-api-key-here")}
               form_errors={@form_errors}
               target={@target}
               helper_text={
                 dgettext(
-                  "dashboard_integrations",
+                  "dashboard_video",
                   "Get your API key from your MiroTalk instance configuration"
                 )
               }
@@ -105,7 +105,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
             phx-target={@target}
             class="btn-secondary"
           >
-            {dgettext("dashboard_integrations", "Cancel")}
+            {dgettext("dashboard_video", "Cancel")}
           </button>
           <TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents.form_submit_button saving={
             @saving

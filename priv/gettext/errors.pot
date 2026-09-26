@@ -10,43 +10,14 @@
 msgid ""
 msgstr ""
 
-#: Error Messages
-msgid "something_went_wrong"
-msgstr ""
-
-msgid "try_again_later"
-msgstr ""
-
-msgid "invalid_meeting_link"
-msgstr ""
-
-msgid "slot_no_longer_available"
-msgstr ""
-
-msgid "name_required"
-msgstr ""
-
-msgid "email_required"
-msgstr ""
-
-msgid "email_invalid"
+#: lib/tymeslot_web/themes/shared/components/error_component.ex
+#, elixir-autogen
+msgid "We can't show this scheduling page yet"
 msgstr ""
 
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
-msgid "calendar_setup_required"
-msgstr ""
-
-#: lib/tymeslot_web/themes/shared/components/error_component.ex
-#, elixir-autogen
-msgid "connect_calendar_first"
-msgstr ""
-
-#: Status
-msgid "loading"
-msgstr ""
-
-msgid "submitting"
+msgid "If you are the organizer, please connect a calendar in your dashboard."
 msgstr ""
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex

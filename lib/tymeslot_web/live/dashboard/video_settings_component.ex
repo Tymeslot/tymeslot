@@ -214,8 +214,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
           case Video.toggle_integration(user_id, integration_id) do
             {:ok, _result} ->
               notify_parent(
-                {:flash,
-                 {:info, dgettext("dashboard_integrations", "Integration status updated")}}
+                {:flash, {:info, dgettext("dashboard_video", "Integration status updated")}}
               )
 
               notify_parent({:integration_updated, :video})
@@ -226,7 +225,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
                 {:flash,
                  {:error,
                   dgettext(
-                    "dashboard_integrations",
+                    "dashboard_video",
                     "Cannot reactivate - another active integration already uses this account"
                   )}}
               )
@@ -236,8 +235,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
             {:error, _reason} ->
               notify_parent(
                 {:flash,
-                 {:error,
-                  dgettext("dashboard_integrations", "Failed to update integration status")}}
+                 {:error, dgettext("dashboard_video", "Failed to update integration status")}}
               )
 
               {:noreply, socket}
@@ -305,7 +303,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     notify_parent(
       {:flash,
        {:error,
-        dgettext("dashboard_integrations", "Connection test failed unexpectedly: %{reason}",
+        dgettext("dashboard_video", "Connection test failed unexpectedly: %{reason}",
           reason: inspect(reason)
         )}}
     )
@@ -334,7 +332,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
       {:error, _reason} ->
         notify_parent(
           {:flash,
-           {:error, dgettext("dashboard_integrations", "Failed to reconnect. Please try again.")}}
+           {:error, dgettext("dashboard_video", "Failed to reconnect. Please try again.")}}
         )
 
         {:noreply, socket}
@@ -367,7 +365,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:form_errors, %{
        base:
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "This provider is already connected. Deactivate or remove the existing integration before adding another."
          )
      })
@@ -382,7 +380,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:form_errors, %{
        base:
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "This server is already connected. Edit or remove the existing integration instead."
          )
      })
@@ -397,7 +395,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:form_errors, %{
        base:
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "This Nextcloud account is already connected. Edit or remove the existing integration instead."
          )
      })
@@ -421,7 +419,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:form_errors, %{
        base:
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "A video integration with this configuration already exists"
          )
      })
@@ -439,8 +437,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   # away before a probe finishes.
   defp announce_added(socket, integration) do
     notify_parent(
-      {:flash,
-       {:info, dgettext("dashboard_integrations", "Video integration added successfully")}}
+      {:flash, {:info, dgettext("dashboard_video", "Video integration added successfully")}}
     )
 
     maybe_probe_connection(socket, integration)
@@ -469,7 +466,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
   defp connection_advisory_warning(_failed) do
     dgettext(
-      "dashboard_integrations",
+      "dashboard_video",
       "Saved, but the server did not answer as expected. Check the URL, or use Test connection once it is reachable."
     )
   end
@@ -501,7 +498,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     {:noreply,
      socket
      |> assign(:form_errors, %{
-       base: dgettext("dashboard_integrations", "Please select a provider")
+       base: dgettext("dashboard_video", "Please select a provider")
      })
      |> assign(:saving, false)}
   end
@@ -525,8 +522,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   defp copied_login_unavailable(socket) do
     assign(socket,
       form_errors: %{
-        base:
-          dgettext("dashboard_integrations", "That calendar connection is no longer available.")
+        base: dgettext("dashboard_video", "That calendar connection is no longer available.")
       },
       copied_nextcloud_login: nil
     )

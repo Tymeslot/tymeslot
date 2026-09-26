@@ -328,7 +328,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
     cond do
       ApprovalDisplay.awaiting_approval?(assigns) -> dgettext("booking", "Request sent!")
       assigns[:is_rescheduling] -> dgettext("booking", "Meeting Rescheduled!")
-      true -> dgettext("booking", "meeting_confirmed")
+      true -> dgettext("booking", "Meeting Confirmed!")
     end
   end
 

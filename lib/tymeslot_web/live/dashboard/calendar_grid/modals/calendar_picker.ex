@@ -6,7 +6,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
-  alias Tymeslot.Integrations.Calendar.Selection
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -24,7 +23,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
     # than at each call site means no picker can offer one, whatever list it is
     # handed.
     assigns =
-      assign(assigns, :integrations, Selection.writable_integrations(assigns.integrations))
+      assign(assigns, :integrations, Calendar.writable_integrations(assigns.integrations))
 
     ~H"""
     <div class="space-y-3">

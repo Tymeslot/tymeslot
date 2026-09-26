@@ -102,22 +102,31 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   @doc """
   Records where the calendar provider put an event written under the uid
   Tymeslot generated: the identifier it returned, which is how Google and
-  Outlook address the event from then on, and the calendar it was written to,
-  which Google needs to look the event up again.
+  Outlook address the event from then on, the calendar it was written to,
+  which Google needs to look the event up again, and the iCalendar UID its
+  cached row carries, which Outlook finds it by once it moved to another
+  calendar.
   """
-  @spec identified(pos_integer(), String.t(), String.t() | nil, String.t() | nil) :: :ok
-  def identified(calendar_integration_id, event_uid, provider_uid, provider_calendar_id)
+  @spec identified(
+          pos_integer(),
+          String.t(),
+          String.t() | nil,
+          String.t() | nil,
+          String.t() | nil
+        ) :: :ok
+  def identified(calendar_integration_id, event_uid, provider_uid, provider_calendar_id, ical_uid)
       when is_integer(calendar_integration_id) and is_binary(event_uid) do
     _count =
       EventVideoRoomQueries.set_event_location(calendar_integration_id, event_uid, %{
         provider_event_id: other_identifier(provider_uid, event_uid),
-        provider_calendar_id: provider_calendar_id
+        provider_calendar_id: provider_calendar_id,
+        event_ical_uid: ical_uid
       })
 
     :ok
   end
 
-  def identified(_calendar_integration_id, _event_uid, _provider_uid, _calendar_id), do: :ok
+  def identified(_integration_id, _event_uid, _provider_uid, _calendar_id, _ical_uid), do: :ok
 
   @doc """
   Brings the rooms of a grid event in step with its timing after the event
@@ -162,7 +171,9 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
             calendar_integration_id: to_integration_id,
             event_uid: new_uid,
             provider_event_id: other_identifier(provider_uid, new_uid),
-            provider_calendar_id: provider_calendar_id
+            provider_calendar_id: provider_calendar_id,
+            # Learnt afresh from the destination's cache.
+            event_ical_uid: nil
           })
 
         :ok
@@ -210,6 +221,28 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   """
   @spec discard([EventVideoRoomSchema.t()]) :: :ok
   def discard(rooms), do: Enum.each(rooms, &enqueue(&1, "delete"))
+
+  @doc """
+  The identifiers a room's event may be cached under: the uid Tymeslot
+  generated, the provider's own identifier, and the iCalendar UID its cached
+  row was seen with.
+  """
+  @spec cached_identifiers(EventVideoRoomSchema.t()) :: [String.t()]
+  def cached_identifiers(room),
+    do: non_blank([room.event_uid, room.provider_event_id, room.event_ical_uid])
+
+  @doc """
+  What addresses a room's event on its calendar provider
+  (`Tymeslot.Integrations.Calendar.Provider.event_ref/0`).
+  """
+  @spec provider_event_ref(EventVideoRoomSchema.t()) :: map()
+  def provider_event_ref(room),
+    do: %{
+      uid: room.event_uid,
+      provider_event_id: room.provider_event_id,
+      calendar_id: room.provider_calendar_id,
+      ical_uid: room.event_ical_uid
+    }
 
   @doc """
   Whether an ended room's event is over in its calendar's cache. The nightly

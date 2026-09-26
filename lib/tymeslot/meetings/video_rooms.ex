@@ -98,7 +98,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
          {:ok, user_id} <- get_meeting_organizer_user_id(meeting),
          {:ok, :proceed} <- should_create_video_room(meeting, user_id),
          {:ok, meeting_context} <- create_provider_meeting_room(meeting, user_id),
-         {:ok, video_room_attrs} <- build_video_room_attrs(meeting, meeting_context) do
+         {:ok, video_room_attrs} <- build_attrs_or_release(meeting, meeting_context) do
       VideoRoomAttachment.persist(meeting, video_room_attrs)
     else
       {:already_attached, meeting} -> {:ok, meeting}
@@ -355,6 +355,37 @@ defmodule Tymeslot.Meetings.VideoRooms do
         )
 
         error
+    end
+  end
+
+  # The provider room exists by the time its attributes are built, and a
+  # failure here sends `Tymeslot.Workers.VideoRoomWorker` round again to mint
+  # a fresh one. Nothing records the refused room, so
+  # `Tymeslot.Workers.OrphanedVideoRoomScanWorker` never sees it: it is
+  # released here, on every attempt, or each retry leaves one behind.
+  defp build_attrs_or_release(meeting, meeting_context) do
+    with {:error, _reason} = error <- build_video_room_attrs(meeting, meeting_context) do
+      release_refused_room(meeting, meeting_context)
+      error
+    end
+  end
+
+  # A Teams meeting placed on the booking's own calendar event is that event,
+  # not a room of its own: deleting it would delete the booking's event, and
+  # the retry places the meeting on the same event again, so nothing leaks.
+  defp release_refused_room(%MeetingSchema{provider_event_id: event_id} = meeting, context) do
+    case video_module().extract_room_id(context) do
+      nil ->
+        :ok
+
+      ^event_id ->
+        :ok
+
+      room_id ->
+        VideoRoomAttachment.release_unattached_room(meeting, %{
+          video_room_id: room_id,
+          video_provider: provider_string(context.provider_type)
+        })
     end
   end
 
