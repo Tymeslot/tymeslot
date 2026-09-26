@@ -24,6 +24,7 @@ defmodule Tymeslot.Meetings.VideoRoomsJoinUrlFallbackTest do
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.CalendarEventWorker
+  alias Tymeslot.Workers.VideoSyncWorker
 
   @room_url "https://video.example.com/join/a1b2c3d4e5f67890"
 
@@ -37,6 +38,7 @@ defmodule Tymeslot.Meetings.VideoRoomsJoinUrlFallbackTest do
 
     on_exit(fn ->
       Application.delete_env(:tymeslot, :test_video_room_meeting_url)
+      Application.delete_env(:tymeslot, :test_video_room_id)
 
       case original_video_module do
         nil -> Application.delete_env(:tymeslot, :video_module)
@@ -85,6 +87,44 @@ defmodule Tymeslot.Meetings.VideoRoomsJoinUrlFallbackTest do
 
       assert_meeting_untouched(meeting.id)
     end
+
+    # The job retries a refused room by creating another, and nothing in the
+    # database records the refused one, so each attempt has to let go of its
+    # own room or leave it on the provider.
+    test "releases the refused room on every attempt" do
+      Application.put_env(:tymeslot, :test_video_room_meeting_url, nil)
+      meeting = build_mirotalk_scenario()
+
+      for room_id <- ["room-attempt-1", "room-attempt-2"] do
+        Application.put_env(:tymeslot, :test_video_room_id, room_id)
+
+        assert {:error, :join_url_unavailable} = VideoRooms.add_video_room_to_meeting(meeting.id)
+
+        assert_enqueued(
+          worker: VideoSyncWorker,
+          args: %{
+            "action" => "release",
+            "meeting_id" => meeting.id,
+            "room_id" => room_id,
+            "video_provider" => "mirotalk",
+            "video_integration_id" => meeting.video_integration_id
+          }
+        )
+      end
+
+      assert_meeting_untouched(meeting.id)
+    end
+
+    test "leaves a room that is the booking's own calendar event alone" do
+      Application.put_env(:tymeslot, :test_video_room_meeting_url, nil)
+      Application.put_env(:tymeslot, :test_video_room_id, "booking-event-1")
+      meeting = build_mirotalk_scenario(provider_event_id: "booking-event-1")
+
+      assert {:error, :join_url_unavailable} = VideoRooms.add_video_room_to_meeting(meeting.id)
+
+      refute_enqueued(worker: VideoSyncWorker)
+      refute_enqueued(worker: CalendarEventWorker)
+    end
   end
 
   defp assert_meeting_untouched(meeting_id) do
@@ -98,7 +138,7 @@ defmodule Tymeslot.Meetings.VideoRoomsJoinUrlFallbackTest do
     refute_enqueued(worker: CalendarEventWorker)
   end
 
-  defp build_mirotalk_scenario do
+  defp build_mirotalk_scenario(meeting_attrs \\ []) do
     user = insert(:user)
     _profile = insert(:profile, user: user)
 
@@ -110,7 +150,8 @@ defmodule Tymeslot.Meetings.VideoRoomsJoinUrlFallbackTest do
       organizer_email: user.email,
       video_integration_id: integration.id,
       video_room_id: nil,
-      video_room_enabled: false
+      video_room_enabled: false,
+      provider_event_id: Keyword.get(meeting_attrs, :provider_event_id)
     )
   end
 
@@ -130,7 +171,7 @@ defmodule Tymeslot.Meetings.VideoRoomsJoinUrlFallbackTest do
        %MeetingContext{
          provider_type: :mirotalk,
          room_data: %RoomData{
-           room_id: "a1b2c3d4e5f67890",
+           room_id: Application.get_env(:tymeslot, :test_video_room_id, "a1b2c3d4e5f67890"),
            meeting_url: Application.get_env(:tymeslot, :test_video_room_meeting_url),
            provider_data: %{}
          },

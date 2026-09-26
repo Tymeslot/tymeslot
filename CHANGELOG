@@ -1,4 +1,15 @@
 
+[1.18.1]
+* calendar: Stop a large CalDAV change from exhausting memory during sync
+* calendar: Stop a large CalDAV calendar's first sync running out of memory
+* Follow the browser's language instead of pinning the first one seen
+* calendar: Delete a video room when its event is deleted elsewhere
+* video: Stop leaving a stray video room behind on each link retry
+* Stop offering subscribed calendars as a place to write
+* ui: Let a dialog taller than the window scroll
+* Send a quick-add guest one invitation, not two
+
+
 [1.18.0]
 * auth: Point social sign-in back to an account's own sign-in method
 * themes: Show a keyboard focus ring on Rhythm location choices

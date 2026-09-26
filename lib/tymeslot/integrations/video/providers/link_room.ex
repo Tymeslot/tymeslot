@@ -103,8 +103,7 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
         {:ok, room_id}
 
       {:error, :empty_meeting_id} ->
-        {:error,
-         dgettext("dashboard_integrations", "A meeting ID is required to create a video room")}
+        {:error, dgettext("dashboard_video", "A meeting ID is required to create a video room")}
     end
   end
 
@@ -131,14 +130,14 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
       String.match?(trimmed, ~r/\s/u) ->
         {:error,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "The server URL cannot contain spaces. Enter only the address of the server."
          )}
 
       URI.parse(trimmed).userinfo != nil ->
         {:error,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "The server URL cannot contain a login name or password. Enter only the address of the server."
          )}
 
@@ -148,7 +147,7 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
       true ->
         {:error,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "The server URL cannot contain a query string (?) or a fragment (#). Enter only the address of the server."
          )}
     end
@@ -185,7 +184,7 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
     else
       {:error,
        dgettext(
-         "dashboard_integrations",
+         "dashboard_video",
          "Processed URL exceeds maximum length of %{max_length} characters (got %{url_length})",
          max_length: max_length,
          url_length: url_length
@@ -261,8 +260,7 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
       # Shares the msgid the non-2xx branches use: the caller wraps a
       # success in "✓ Custom provider configured - …", so the status
       # line does not have to carry the verdict itself.
-      {:ok,
-       dgettext("dashboard_integrations", "URL responded with HTTP %{status}", status: status)}
+      {:ok, dgettext("dashboard_video", "URL responded with HTTP %{status}", status: status)}
     end
   end
 
@@ -283,7 +281,7 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
     else
       {:error,
        dgettext(
-         "dashboard_integrations",
+         "dashboard_video",
          "Invalid URL scheme. Only http and https are supported"
        )}
     end
@@ -301,7 +299,7 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
   end
 
   defp check_reachable(_url, hops_left, _deadline) when hops_left < 0 do
-    {:error, dgettext("dashboard_integrations", "URL redirects too many times")}
+    {:error, dgettext("dashboard_video", "URL redirects too many times")}
   end
 
   defp check_reachable(url, hops_left, deadline) do
@@ -371,16 +369,15 @@ defmodule Tymeslot.Integrations.Video.Providers.LinkRoom do
   end
 
   defp classify_probe(%{status: status}, _url, _hops_left, _deadline) do
-    {:error,
-     dgettext("dashboard_integrations", "URL responded with HTTP %{status}", status: status)}
+    {:error, dgettext("dashboard_video", "URL responded with HTTP %{status}", status: status)}
   end
 
   defp blocked_url_message,
-    do: dgettext("dashboard_integrations", "URL resolves to a private or loopback address")
+    do: dgettext("dashboard_video", "URL resolves to a private or loopback address")
 
   defp url_timeout_message,
-    do: dgettext("dashboard_integrations", "Connection timeout while reaching the URL")
+    do: dgettext("dashboard_video", "Connection timeout while reaching the URL")
 
   defp unreachable_url_message(reason),
-    do: dgettext("dashboard_integrations", "Failed to reach URL: %{reason}", reason: reason)
+    do: dgettext("dashboard_video", "Failed to reach URL: %{reason}", reason: reason)
 end

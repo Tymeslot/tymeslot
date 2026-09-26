@@ -12,42 +12,17 @@ defmodule CredoChecks.GettextDomainBoundary do
 
   ## Known domains
 
-  Catalogs are split small and per-context. The authoritative table lives in the
-  `tymeslot-translations` skill; the `:domains` param below is the enforced copy.
+  Catalogues are split small and per app area, so that a change to one area means
+  reading one small `.po`. The `:domains` param below is the enforced list, and
+  the `tymeslot-translations` skill describes what belongs in each domain.
+  `CredoChecks.GettextDomainBoundaryTest` fails if this list and the `.pot`
+  templates in `priv/gettext` disagree, so adding a domain means extracting it
+  and listing it here in the same change.
 
-  Public / attendee-facing:
-
-  - `booking` — public booking/scheduling flow (themes)
-  - `embed` — the embed-unavailable notice page
-  - `emails` — email subjects and bodies
-  - `errors` — validation and system error messages
-  - `common` — genuinely cross-cutting atoms reused across areas
-
-  Authenticated app — one small domain per feature area:
-
-  - `auth` — login, register, password reset, email verification
-  - `account` — account security page (email, password)
-  - `onboarding` — post-setup dashboard tour + announcement chrome (frozen)
-  - `onboarding_wizard` — the first-run setup wizard
-  - `dashboard_common` — sidebar/nav labels and reused button atoms
-  - `dashboard_home`, `dashboard_meeting_types`, `dashboard_meeting_form`,
-    `dashboard_availability`, `dashboard_calendar_settings`, `dashboard_calendar`,
-    `dashboard_calendar_events`, `dashboard_integrations`,
-    `dashboard_calendar_providers`, `dashboard_automation`,
-    `dashboard_automation_chat`, `dashboard_appearance`, `dashboard_embed`,
-    `dashboard_payments`, `dashboard_bookings`, `dashboard_profile`,
-    `dashboard_analytics`, `dashboard_admin` — dashboard feature areas
-
-  The former monolithic `dashboard` domain has been resharded into
-  `dashboard_admin` (the bulk) and the per-feature domains above.
-
-  This list covers Core only. SaaS-owned domains (the `marketing_*` catalogs,
-  which live under `apps/tymeslot_saas/priv/gettext`) are not enumerated here —
-  this check module ships with Core and must carry no SaaS-specific
-  knowledge. The umbrella-root `.credo.exs` extends the allowlist with the
-  SaaS domains via the `:domains` param so both apps are covered when linting
-  runs at the umbrella root; Core's own `.credo.exs` (used for the standalone
-  open-source build) uses this module's plain default.
+  This list covers Core only, since the check ships with Core and must carry no
+  knowledge of the managed offering. A repository with domains of its own
+  passes the full list (these plus its own) through the `:domains` param in its
+  `.credo.exs`; Credo replaces params rather than merging them.
 
   Configure the allowlist with the `:domains` param.
 
@@ -76,7 +51,9 @@ defmodule CredoChecks.GettextDomainBoundary do
     category: :design,
     param_defaults: [
       domains: ~w(
-        booking embed emails errors common
+        booking booking_manage booking_polls embed errors common
+        emails emails_account emails_booking emails_booking_requests
+        emails_integrations emails_polls
         auth account onboarding onboarding_wizard
         dashboard_common
         dashboard_home dashboard_meeting_types dashboard_meeting_form
@@ -84,7 +61,7 @@ defmodule CredoChecks.GettextDomainBoundary do
         dashboard_calendar_events dashboard_integrations dashboard_calendar_providers
         dashboard_automation dashboard_automation_chat dashboard_appearance
         dashboard_embed dashboard_payments dashboard_bookings dashboard_profile
-        dashboard_analytics dashboard_admin
+        dashboard_analytics dashboard_admin dashboard_video
       )
     ],
     explanations: [

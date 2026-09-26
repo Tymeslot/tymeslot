@@ -23,17 +23,17 @@ defmodule TymeslotWeb.GuestRsvpHTML do
 
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
         {if accepting?,
-          do: dgettext("booking", "You're about to accept"),
-          else: dgettext("booking", "You're about to decline")}
+          do: dgettext("booking_manage", "You're about to accept"),
+          else: dgettext("booking_manage", "You're about to decline")}
       </h1>
 
       <p class="mt-2 text-token-base text-tymeslot-600">
         {if accepting? do
-          dgettext("booking", "Confirm to let %{name} know you'll be attending.",
+          dgettext("booking_manage", "Confirm to let %{name} know you'll be attending.",
             name: @meeting.organizer_name
           )
         else
-          dgettext("booking", "Confirm to let %{name} know you can't make it.",
+          dgettext("booking_manage", "Confirm to let %{name} know you can't make it.",
             name: @meeting.organizer_name
           )
         end}
@@ -48,8 +48,8 @@ defmodule TymeslotWeb.GuestRsvpHTML do
           class="w-full"
         >
           {if accepting?,
-            do: dgettext("booking", "Confirm attendance"),
-            else: dgettext("booking", "Confirm decline")}
+            do: dgettext("booking_manage", "Confirm attendance"),
+            else: dgettext("booking_manage", "Confirm decline")}
         </.action_button>
       </.form>
     </.rsvp_shell>
@@ -70,17 +70,17 @@ defmodule TymeslotWeb.GuestRsvpHTML do
 
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
         {if accepted?,
-          do: dgettext("booking", "You're going!"),
-          else: dgettext("booking", "You've declined")}
+          do: dgettext("booking_manage", "You're going!"),
+          else: dgettext("booking_manage", "You've declined")}
       </h1>
 
       <p class="mt-2 text-token-base text-tymeslot-600">
         {if accepted? do
-          dgettext("booking", "Your response has been sent to %{name}.",
+          dgettext("booking_manage", "Your response has been sent to %{name}.",
             name: @meeting.organizer_name
           )
         else
-          dgettext("booking", "We've let %{name} know you can't make it.",
+          dgettext("booking_manage", "We've let %{name} know you can't make it.",
             name: @meeting.organizer_name
           )
         end}
@@ -90,15 +90,15 @@ defmodule TymeslotWeb.GuestRsvpHTML do
 
       <p class="mt-6 text-token-sm text-tymeslot-500">
         {if accepted?,
-          do: dgettext("booking", "Changed your mind?"),
-          else: dgettext("booking", "Able to make it after all?")}
+          do: dgettext("booking_manage", "Changed your mind?"),
+          else: dgettext("booking_manage", "Able to make it after all?")}
         <.link
           href={~p"/guest/#{@token}/#{if accepted?, do: "decline", else: "accept"}"}
           class="font-medium text-turquoise-600 underline"
         >
           {if accepted?,
-            do: dgettext("booking", "Decline instead"),
-            else: dgettext("booking", "Accept instead")}
+            do: dgettext("booking_manage", "Decline instead"),
+            else: dgettext("booking_manage", "Accept instead")}
         </.link>
       </p>
     </.rsvp_shell>
@@ -114,11 +114,11 @@ defmodule TymeslotWeb.GuestRsvpHTML do
         <.icon name="hero-calendar-days" class="h-9 w-9" />
       </div>
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
-        {dgettext("booking", "This meeting is no longer taking responses")}
+        {dgettext("booking_manage", "This meeting is no longer taking responses")}
       </h1>
       <p class="mt-2 text-token-base text-tymeslot-600">
         {dgettext(
-          "booking",
+          "booking_manage",
           "The meeting has already taken place, or it was cancelled or not confirmed. Please contact the meeting host."
         )}
       </p>
@@ -135,11 +135,11 @@ defmodule TymeslotWeb.GuestRsvpHTML do
         <.icon name="hero-link-slash" class="h-9 w-9" />
       </div>
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
-        {dgettext("booking", "This link is not valid")}
+        {dgettext("booking_manage", "This link is not valid")}
       </h1>
       <p class="mt-2 text-token-base text-tymeslot-600">
         {dgettext(
-          "booking",
+          "booking_manage",
           "We couldn't find an invitation for this link. Please check that you copied the whole link from your email, or contact the meeting host."
         )}
       </p>
@@ -156,10 +156,10 @@ defmodule TymeslotWeb.GuestRsvpHTML do
         <.icon name="hero-clock" class="h-9 w-9" />
       </div>
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
-        {dgettext("booking", "Too many attempts")}
+        {dgettext("booking_manage", "Too many attempts")}
       </h1>
       <p class="mt-2 text-token-base text-tymeslot-600">
-        {dgettext("booking", "Please wait a moment and try again.")}
+        {dgettext("booking_manage", "Please wait a moment and try again.")}
       </p>
     </.rsvp_shell>
     """
@@ -206,7 +206,7 @@ defmodule TymeslotWeb.GuestRsvpHTML do
       </p>
       <p class="flex items-center gap-2 text-token-sm text-tymeslot-600">
         <.icon name="hero-user-mini" class="h-4 w-4 text-turquoise-500" />
-        {dgettext("booking", "Hosted by %{name}", name: @meeting.organizer_name)}
+        {dgettext("booking_manage", "Hosted by %{name}", name: @meeting.organizer_name)}
       </p>
     </div>
     """

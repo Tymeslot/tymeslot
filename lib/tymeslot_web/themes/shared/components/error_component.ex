@@ -37,11 +37,14 @@ defmodule TymeslotWeb.Themes.Shared.Components.ErrorComponent do
           </svg>
         </div>
         <h1 class="readiness-notice-heading">
-          {dgettext("errors", "calendar_setup_required")}
+          {dgettext("errors", "We can't show this scheduling page yet")}
         </h1>
         <p class="readiness-notice-message">{@message}</p>
         <p class="readiness-notice-hint">
-          {dgettext("errors", "connect_calendar_first")}
+          {dgettext(
+            "errors",
+            "If you are the organizer, please connect a calendar in your dashboard."
+          )}
         </p>
       </div>
     </div>

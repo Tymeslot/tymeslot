@@ -191,11 +191,11 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   def perform_connection_test(config) do
     case get_access_token(config) do
       {:ok, _token} ->
-        {:ok, dgettext("dashboard_integrations", "Zoom connected successfully!")}
+        {:ok, dgettext("dashboard_video", "Zoom connected successfully!")}
 
       {:error, reason} ->
         {:error,
-         dgettext("dashboard_integrations", "Failed to authenticate with Zoom: %{reason}",
+         dgettext("dashboard_video", "Failed to authenticate with Zoom: %{reason}",
            reason: inspect(reason)
          )}
     end
@@ -540,7 +540,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
         {:error,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "Zoom token refresh failed after 401. Please reconnect your Zoom account."
          )}
     end

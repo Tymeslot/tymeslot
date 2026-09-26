@@ -66,13 +66,13 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
           class="flex items-center justify-center h-9 w-9 bg-tymeslot-50 text-tymeslot-700 rounded-token-lg border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5 disabled:opacity-60"
           title={
             (@testing_connection == @integration.id &&
-               dgettext("dashboard_integrations", "Testing…")) ||
-              dgettext("dashboard_integrations", "Test connection")
+               dgettext("dashboard_video", "Testing…")) ||
+              dgettext("dashboard_video", "Test connection")
           }
           aria-label={
             (@testing_connection == @integration.id &&
-               dgettext("dashboard_integrations", "Testing connection…")) ||
-              dgettext("dashboard_integrations", "Test connection")
+               dgettext("dashboard_video", "Testing connection…")) ||
+              dgettext("dashboard_video", "Test connection")
           }
         >
           <.icon
@@ -91,11 +91,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
                "bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100 shadow-amber-500/5") ||
               "bg-tymeslot-50 text-tymeslot-700 border-tymeslot-100 hover:bg-tymeslot-100 shadow-tymeslot-500/5"
           ]}
-          title={dgettext("dashboard_integrations", "Reconnect integration")}
-          aria-label={dgettext("dashboard_integrations", "Reconnect integration")}
+          title={dgettext("dashboard_video", "Reconnect integration")}
+          aria-label={dgettext("dashboard_video", "Reconnect integration")}
         >
           <.icon name="hero-arrow-path" class="w-4 h-4" /><span class="lg:hidden">{dgettext(
-            "dashboard_integrations",
+            "dashboard_video",
             "Reconnect"
           )}</span>
         </button>
@@ -104,8 +104,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
           phx-value-id={@integration.id}
           phx-target="#edit-video-modal"
           class="flex items-center justify-center h-9 w-9 bg-tymeslot-50 text-tymeslot-700 rounded-token-lg border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
-          title={dgettext("dashboard_integrations", "Edit integration")}
-          aria-label={dgettext("dashboard_integrations", "Edit integration")}
+          title={dgettext("dashboard_video", "Edit integration")}
+          aria-label={dgettext("dashboard_video", "Edit integration")}
         >
           <.icon name="hero-pencil-square" class="w-5 h-5" />
         </button>
@@ -114,8 +114,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
           phx-value-id={@integration.id}
           phx-target="#delete-video-modal"
           class="flex items-center justify-center h-9 w-9 text-tymeslot-500 hover:text-red-500 hover:bg-red-50 rounded-token-lg border-2 border-transparent hover:border-red-100 transition-all"
-          title={dgettext("dashboard_integrations", "Delete integration")}
-          aria-label={dgettext("dashboard_integrations", "Delete integration")}
+          title={dgettext("dashboard_video", "Delete integration")}
+          aria-label={dgettext("dashboard_video", "Delete integration")}
         >
           <.icon name="hero-trash" class="w-5 h-5" />
         </button>
@@ -143,25 +143,25 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   end
 
   defp summary_segments(%{provider: "custom"} = integration) do
-    [Map.get(integration, :custom_meeting_url), dgettext("dashboard_integrations", "custom link")]
+    [Map.get(integration, :custom_meeting_url), dgettext("dashboard_video", "custom link")]
   end
 
   defp summary_segments(%{provider: "kmeet"}) do
     [
       host(KmeetProvider.host()),
-      dgettext("dashboard_integrations", "rooms created automatically")
+      dgettext("dashboard_video", "rooms created automatically")
     ]
   end
 
   defp summary_segments(%{provider: "jitsi"} = integration) do
-    [Map.get(integration, :base_url), dgettext("dashboard_integrations", "Jitsi")]
+    [Map.get(integration, :base_url), dgettext("dashboard_video", "Jitsi")]
   end
 
   defp summary_segments(%{provider: "nextcloud_talk"} = integration) do
     [
       Map.get(integration, :client_id),
       host(integration.base_url),
-      dgettext("dashboard_integrations", "self-hosted")
+      dgettext("dashboard_video", "self-hosted")
     ]
   end
 
@@ -171,8 +171,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
     if ProviderConfig.oauth_provider?(provider) do
       [
         integration.provider_account_email,
-        dgettext("dashboard_integrations", "OAuth"),
-        dgettext("dashboard_integrations", "rooms created automatically")
+        dgettext("dashboard_video", "OAuth"),
+        dgettext("dashboard_video", "rooms created automatically")
       ]
     else
       [integration.provider_account_email || ConnectionRow.server_label(integration.base_url)]
@@ -190,7 +190,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   defp room_creation_notice(%{room_creation_error: nil}), do: nil
 
   defp room_creation_notice(%{room_creation_error: code}) do
-    dgettext("dashboard_integrations", "New bookings get no video link. %{reason}",
+    dgettext("dashboard_video", "New bookings get no video link. %{reason}",
       reason: RoomCreationError.message(code)
     )
   end
@@ -202,7 +202,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   defp meeting_link_notice(integration) do
     if Video.meeting_link_template_invalid?(integration) do
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "The meeting link placeholder is invalid, so all bookings currently share one room. Edit the integration to fix it."
       )
     end
@@ -214,35 +214,35 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.Components do
   # the provider refuses still needs the owner, so it is not shown as healthy.
   defp video_status(integration, health) do
     case HealthCheck.attention_status(integration, health) do
-      :paused -> {:paused, dgettext("dashboard_integrations", "Paused")}
-      :needs_reauth -> {:warning, dgettext("dashboard_integrations", "Reconnect")}
-      :unhealthy -> {:warning, dgettext("dashboard_integrations", "Connection issues")}
+      :paused -> {:paused, dgettext("dashboard_video", "Paused")}
+      :needs_reauth -> {:warning, dgettext("dashboard_video", "Reconnect")}
+      :unhealthy -> {:warning, dgettext("dashboard_video", "Connection issues")}
       :ok -> healthy_status(integration)
     end
   end
 
   defp healthy_status(%{room_creation_error: nil} = integration) do
     if Video.meeting_link_template_invalid?(integration) do
-      {:warning, dgettext("dashboard_integrations", "Invalid meeting link")}
+      {:warning, dgettext("dashboard_video", "Invalid meeting link")}
     else
-      {:ok, dgettext("dashboard_integrations", "Healthy")}
+      {:ok, dgettext("dashboard_video", "Healthy")}
     end
   end
 
   defp healthy_status(%{room_creation_error: _code}),
-    do: {:warning, dgettext("dashboard_integrations", "No video links")}
+    do: {:warning, dgettext("dashboard_video", "No video links")}
 
-  defp healthy_status(_integration), do: {:ok, dgettext("dashboard_integrations", "Healthy")}
+  defp healthy_status(_integration), do: {:ok, dgettext("dashboard_video", "Healthy")}
 
-  defp type_tag("mirotalk"), do: dgettext("dashboard_integrations", "self-hosted")
-  defp type_tag("custom"), do: dgettext("dashboard_integrations", "custom")
-  defp type_tag("kmeet"), do: dgettext("dashboard_integrations", "hosted")
-  defp type_tag("jitsi"), do: dgettext("dashboard_integrations", "self-hosted")
-  defp type_tag("nextcloud_talk"), do: dgettext("dashboard_integrations", "self-hosted")
+  defp type_tag("mirotalk"), do: dgettext("dashboard_video", "self-hosted")
+  defp type_tag("custom"), do: dgettext("dashboard_video", "custom")
+  defp type_tag("kmeet"), do: dgettext("dashboard_video", "hosted")
+  defp type_tag("jitsi"), do: dgettext("dashboard_video", "self-hosted")
+  defp type_tag("nextcloud_talk"), do: dgettext("dashboard_video", "self-hosted")
 
   defp type_tag(provider) do
     if ProviderConfig.oauth_provider?(provider) do
-      dgettext("dashboard_integrations", "OAuth")
+      dgettext("dashboard_video", "OAuth")
     end
   end
 

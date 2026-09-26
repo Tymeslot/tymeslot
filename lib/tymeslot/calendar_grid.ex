@@ -13,6 +13,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.CalendarGrid.EventVideo
+  alias Tymeslot.CalendarGrid.EventVideoRoomPresence
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
@@ -464,6 +465,14 @@ defmodule Tymeslot.CalendarGrid do
   defdelegate confirm_event_video_room_expired(room),
     to: EventVideoRooms,
     as: :confirm_expired
+
+  @doc "Grid event video rooms whose event seems deleted outside the grid. See `EventVideoRoomPresence.list_gone/0`."
+  @spec list_gone_event_video_rooms() :: [EventVideoRoomSchema.t()]
+  defdelegate list_gone_event_video_rooms, to: EventVideoRoomPresence, as: :list_gone
+
+  @doc "Whether a grid event's room lost its event, asking its provider. See `EventVideoRoomPresence.confirm/1`."
+  @spec confirm_event_video_room_gone(EventVideoRoomSchema.t()) :: :gone | :kept
+  defdelegate confirm_event_video_room_gone(room), to: EventVideoRoomPresence, as: :confirm
 
   @doc "A grid event's video room with its integrations loaded."
   @spec get_event_video_room(pos_integer()) ::

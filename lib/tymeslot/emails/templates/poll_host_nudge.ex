@@ -42,7 +42,7 @@ defmodule Tymeslot.Emails.Templates.PollHostNudge do
           eyebrow: copy.eyebrow,
           stage_title: copy.headline,
           stage_subtitle:
-            dgettext("emails", "Pick a final time so everyone can put it in the diary.")
+            dgettext("emails_polls", "Pick a final time so everyone can put it in the diary.")
         )
 
       MjmlEmail.base_email(tracking: :lifecycle)
@@ -57,7 +57,7 @@ defmodule Tymeslot.Emails.Templates.PollHostNudge do
     """
     #{Text.centered_text(copy.body, padding: "4px 0 12px 0")}
 
-    #{Buttons.action_button(copy.intent, dgettext("emails", "Pick a Time"), results_url, full_width: true, size: :large)}
+    #{Buttons.action_button(copy.intent, dgettext("emails_polls", "Pick a Time"), results_url, full_width: true, size: :large)}
 
     #{Text.troubleshooting_link(results_url)}
     """
@@ -69,7 +69,7 @@ defmodule Tymeslot.Emails.Templates.PollHostNudge do
 
     #{copy.body}
 
-    #{dgettext("emails", "Pick a time:")}
+    #{dgettext("emails_polls", "Pick a time:")}
     #{results_url}
     """
   end
@@ -77,13 +77,13 @@ defmodule Tymeslot.Emails.Templates.PollHostNudge do
   defp copy(:all_voted, title) do
     %{
       intent: :confirmed,
-      eyebrow: dgettext("emails", "All votes in"),
+      eyebrow: dgettext("emails_polls", "All votes in"),
       subject:
-        dgettext("emails", "Everyone has voted on \"%{title}\", pick a time", title: title),
-      headline: dgettext("emails", "Everyone has voted on %{title}", title: title),
+        dgettext("emails_polls", "Everyone has voted on \"%{title}\", pick a time", title: title),
+      headline: dgettext("emails_polls", "Everyone has voted on %{title}", title: title),
       body:
         dgettext(
-          "emails",
+          "emails_polls",
           "Every participant has cast their vote on %{title}. Review the results and confirm the time that works best.",
           title: title
         )
@@ -93,12 +93,13 @@ defmodule Tymeslot.Emails.Templates.PollHostNudge do
   defp copy(:deadline_passed, title) do
     %{
       intent: :alert,
-      eyebrow: dgettext("emails", "Voting closed"),
-      subject: dgettext("emails", "Voting has closed on \"%{title}\", pick a time", title: title),
-      headline: dgettext("emails", "Voting has closed on %{title}", title: title),
+      eyebrow: dgettext("emails_polls", "Voting closed"),
+      subject:
+        dgettext("emails_polls", "Voting has closed on \"%{title}\", pick a time", title: title),
+      headline: dgettext("emails_polls", "Voting has closed on %{title}", title: title),
       body:
         dgettext(
-          "emails",
+          "emails_polls",
           "The deadline for %{title} has passed. Review the results and confirm the time that works best.",
           title: title
         )
