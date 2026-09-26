@@ -149,7 +149,10 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
       organizer_user_id: params.organizer_user_id,
       calendar_integration_id: params[:calendar_integration_id],
       calendar_path: params[:calendar_id],
-      video_integration_id: params[:video_integration_id]
+      video_integration_id: params[:video_integration_id],
+      guest_emails: params[:guest_emails] || [],
+      attendee_message: params[:attendee_message],
+      attendee_locale: params[:attendee_locale]
     }
 
     case CreateAdHoc.execute(ad_hoc_params) do

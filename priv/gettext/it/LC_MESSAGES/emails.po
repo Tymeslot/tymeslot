@@ -447,6 +447,11 @@ msgstr "Tutto il giorno"
 msgid "All day, until %{date}"
 msgstr "Tutto il giorno, fino al %{date}"
 
+#: lib/tymeslot/emails/shared/meeting/attendee.ex
+#, elixir-autogen, elixir-format
+msgid "Message from the organiser"
+msgstr "Messaggio dall'organizzatore"
+
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "Description:"
@@ -471,6 +476,16 @@ msgstr "Partecipante: %{attendee}"
 #, elixir-autogen, elixir-format
 msgid "Message from attendee:"
 msgstr "Messaggio dal partecipante:"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen
+msgid "MESSAGE FROM THE ORGANISER:"
+msgstr "MESSAGGIO DALL'ORGANIZZATORE:"
+
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
+#, elixir-autogen, elixir-format
+msgid "Message from the organiser:"
+msgstr "Messaggio dall'organizzatore:"
 
 #: lib/tymeslot/emails/email_service/auth_emails.ex
 #, elixir-autogen, elixir-format

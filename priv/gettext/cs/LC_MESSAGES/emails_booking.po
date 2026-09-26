@@ -26,11 +26,6 @@ msgstr "%{amount} vráceno za „%{title}“"
 msgid "%{amount} returned to your card"
 msgstr "%{amount} vráceno na vaši kartu"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "%{booker} has invited you as a guest to this meeting with %{organizer}."
-msgstr "Jako hosta vás na tuto schůzku s uživatelem %{organizer} pozval uživatel %{booker}."
-
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has moved your meeting."
@@ -261,11 +256,6 @@ msgstr "Údaj"
 #, elixir-autogen, elixir-format
 msgid "Funds will arrive on your usual Stripe payout schedule."
 msgstr "Peníze dorazí podle vašeho obvyklého výplatního plánu Stripe."
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{guest} - %{booker} has invited you as a guest to this meeting with %{organizer}."
-msgstr "Dobrý den, %{guest}, jako hosta vás na tuto schůzku s uživatelem %{organizer} pozval uživatel %{booker}."
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #, elixir-autogen, elixir-format
@@ -1060,3 +1050,13 @@ msgstr "• Materiály připraveny"
 #, elixir-autogen, elixir-format
 msgid "⏰ Meeting with %{name} in %{time_until}"
 msgstr "⏰ Schůzka s uživatelem %{name} za %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "%{booker} has invited you as a guest to this meeting with %{organizer}."
+msgstr "Jako hosta vás na tuto schůzku s uživatelem %{organizer} pozval uživatel %{booker}."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - %{booker} has invited you as a guest to this meeting with %{organizer}."
+msgstr "Dobrý den, %{guest}, jako hosta vás na tuto schůzku s uživatelem %{organizer} pozval uživatel %{booker}."

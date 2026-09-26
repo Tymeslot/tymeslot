@@ -5,6 +5,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Locales
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -107,6 +109,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       mode: if(writable?(socket), do: :event, else: :meeting),
       guest_name: "",
       guest_email: "",
+      guest_emails: [],
+      guest_email_input: "",
+      message: "",
+      # Which language the guest is written to. Defaults to the host's own —
+      # they know whom they are inviting — and is theirs to change per meeting.
+      locale: Locales.guest_default_locale(Map.get(socket.assigns, :current_user)),
       integration_id: default_int_id,
       calendar_id: EditWorkflow.default_calendar_id(socket.assigns.integrations, default_int_id),
       attendees: [],
@@ -381,6 +389,88 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       {:noreply, socket}
     else
       {:noreply, assign(socket, :creating_event, Map.put(creating, :attendee_input, value))}
+    end
+  end
+
+  @doc """
+  Adds one more guest to an ad-hoc meeting.
+
+  Capped at `Guests.max_guests/0`, the same number a booker may bring, and the
+  cap the domain enforces again when the meeting is created. The main guest's
+  own address is refused here rather than silently dropped later, so the host
+  can see why nothing happened.
+  """
+  @spec handle_add_create_guest(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_add_create_guest(%{"email" => raw_email}, socket) do
+    creating = socket.assigns.creating_event
+
+    if is_nil(creating) do
+      {:noreply, socket}
+    else
+      email = raw_email |> String.trim() |> String.downcase()
+
+      if addable_guest?(creating, email) do
+        updated =
+          creating
+          |> Map.put(:guest_emails, creating.guest_emails ++ [email])
+          |> Map.put(:guest_email_input, "")
+
+        {:noreply, assign(socket, :creating_event, updated)}
+      else
+        {:noreply, socket}
+      end
+    end
+  end
+
+  @spec handle_remove_create_guest(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_remove_create_guest(%{"email" => email}, socket) do
+    creating = socket.assigns.creating_event
+
+    if is_nil(creating) do
+      {:noreply, socket}
+    else
+      updated = Map.put(creating, :guest_emails, List.delete(creating.guest_emails, email))
+      {:noreply, assign(socket, :creating_event, updated)}
+    end
+  end
+
+  @spec handle_update_create_guest_input(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_create_guest_input(%{"email" => value}, socket) do
+    put_field(socket, :guest_email_input, value)
+  end
+
+  @spec handle_update_create_message(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_create_message(%{"value" => message}, socket) do
+    case UniversalSanitizer.sanitize_and_validate(message, mode: :plain_text, max_length: 2000) do
+      {:ok, clean} -> put_field(socket, :message, clean)
+      {:error, _reason} -> {:noreply, socket}
+    end
+  end
+
+  @spec handle_update_create_locale(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_create_locale(%{"locale" => locale}, socket) do
+    case Locales.acceptable(locale) do
+      nil -> {:noreply, socket}
+      code -> put_field(socket, :locale, code)
+    end
+  end
+
+  defp addable_guest?(creating, email) do
+    Shared.valid_email?(email) and
+      email not in creating.guest_emails and
+      email != String.downcase(String.trim(creating.guest_email || "")) and
+      length(creating.guest_emails) < Guests.max_guests()
+  end
+
+  defp put_field(socket, key, value) do
+    case socket.assigns.creating_event do
+      nil -> {:noreply, socket}
+      creating -> {:noreply, assign(socket, :creating_event, Map.put(creating, key, value))}
     end
   end
 

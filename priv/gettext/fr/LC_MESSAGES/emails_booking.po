@@ -26,11 +26,6 @@ msgstr "%{amount} remboursés pour « %{title} »"
 msgid "%{amount} returned to your card"
 msgstr "%{amount} remboursés sur votre carte"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "%{booker} has invited you as a guest to this meeting with %{organizer}."
-msgstr "%{booker} vous convie en tant qu’invité(e) à cette réunion avec %{organizer}."
-
 #: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has moved your meeting."
@@ -261,11 +256,6 @@ msgstr "Champ"
 #, elixir-autogen, elixir-format
 msgid "Funds will arrive on your usual Stripe payout schedule."
 msgstr "Les fonds vous seront versés selon votre calendrier de versement Stripe habituel."
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{guest} - %{booker} has invited you as a guest to this meeting with %{organizer}."
-msgstr "Bonjour %{guest} - %{booker} vous convie en tant qu’invité(e) à cette réunion avec %{organizer}."
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex
 #, elixir-autogen, elixir-format
@@ -1060,3 +1050,13 @@ msgstr "• Documents préparés"
 #, elixir-autogen, elixir-format
 msgid "⏰ Meeting with %{name} in %{time_until}"
 msgstr "⏰ Réunion avec %{name} dans %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "%{booker} has invited you as a guest to this meeting with %{organizer}."
+msgstr "%{booker} vous convie en tant qu’invité(e) à cette réunion avec %{organizer}."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - %{booker} has invited you as a guest to this meeting with %{organizer}."
+msgstr "Bonjour %{guest} - %{booker} vous convie en tant qu’invité(e) à cette réunion avec %{organizer}."

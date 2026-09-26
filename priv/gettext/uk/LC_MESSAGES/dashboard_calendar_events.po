@@ -1076,6 +1076,36 @@ msgstr "Оновити цю подію"
 msgid "Recurring events cannot be edited here yet. Please change this one in your calendar app."
 msgstr "Повторювані події поки що не можна редагувати тут. Змініть цю подію у своєму календарному застосунку."
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Additional message (optional)"
+msgstr "Додаткове повідомлення (необов'язково)"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Each one is invited by email and can accept or decline."
+msgstr "Кожен отримає запрошення електронною поштою та зможе прийняти або відхилити його."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Language of the invitation"
+msgstr "Мова запрошення"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "More guests (optional)"
+msgstr "Інші гості (необов'язково)"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The language every email about this meeting is written in, for the guest and anyone else invited."
+msgstr "Мова всіх листів про цю зустріч — для гостя та всіх інших запрошених."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "What the meeting is about, where to meet, anything they should bring..."
+msgstr "Про що йдеться, де зустрітися, що взяти із собою…"
+
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."

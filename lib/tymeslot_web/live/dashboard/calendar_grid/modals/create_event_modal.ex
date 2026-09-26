@@ -6,6 +6,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Locales
+  alias Tymeslot.Meetings.Guests
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -122,6 +124,103 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           phx-blur="update_create_guest_email"
           phx-target={@myself}
         />
+      </div>
+
+      <%!-- Further guests, the message, and the language they are all written
+            in. Meeting mode only: a bare provider event has its own attendee
+            list further down, and no Tymeslot email to translate. --%>
+      <div :if={@meeting_mode} class="mb-3 space-y-3">
+        <div>
+          <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
+            {dgettext("dashboard_calendar_events", "More guests (optional)")}
+          </p>
+          <div :if={@creating_event[:guest_emails] != []} class="flex flex-wrap gap-1.5 mb-2">
+            <span
+              :for={email <- @creating_event[:guest_emails] || []}
+              class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
+            >
+              {email}
+              <button
+                type="button"
+                phx-click="remove_create_guest"
+                phx-value-email={email}
+                phx-target={@myself}
+                class="w-4 h-4 rounded-full hover:bg-turquoise-200 flex items-center justify-center transition-colors"
+                aria-label={dgettext("dashboard_calendar_events", "Remove %{email}", email: email)}
+              >
+                <.icon name="hero-x-mark" class="w-2.5 h-2.5" />
+              </button>
+            </span>
+          </div>
+          <form
+            :if={length(@creating_event[:guest_emails] || []) < Guests.max_guests()}
+            id="create-add-guest-form"
+            phx-submit="add_create_guest"
+            phx-target={@myself}
+            class="flex gap-2"
+          >
+            <input
+              type="email"
+              id="create-guest-email-input"
+              name="email"
+              value={@creating_event[:guest_email_input] || ""}
+              phx-change="update_create_guest_input"
+              phx-target={@myself}
+              placeholder="colleague@example.com"
+              class="flex-1 rounded-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
+            />
+            <button
+              type="submit"
+              class="px-3 py-1.5 rounded-md border border-tymeslot-300 text-token-xs text-tymeslot-600 hover:bg-tymeslot-50 transition-colors"
+            >
+              {dgettext("dashboard_calendar_events", "Add")}
+            </button>
+          </form>
+          <p class="text-token-xs text-tymeslot-400 mt-1">
+            {dgettext(
+              "dashboard_calendar_events",
+              "Each one is invited by email and can accept or decline."
+            )}
+          </p>
+        </div>
+
+        <.input
+          type="textarea"
+          name="message"
+          value={@creating_event[:message] || ""}
+          label={dgettext("dashboard_calendar_events", "Additional message (optional)")}
+          placeholder={
+            dgettext(
+              "dashboard_calendar_events",
+              "What the meeting is about, where to meet, anything they should bring..."
+            )
+          }
+          id="create-meeting-message"
+          phx-blur="update_create_message"
+          phx-target={@myself}
+        />
+
+        <div>
+          <%!-- Wrapped in a form because `phx-change` is a form binding: on a
+                bare select element the change never arrives as the named
+                field, and the chosen language was silently dropped. --%>
+          <form id="create-meeting-locale-form" phx-change="update_create_locale" phx-target={@myself}>
+            <.input
+              type="select"
+              name="locale"
+              value={@creating_event[:locale]}
+              options={language_options()}
+              label={dgettext("dashboard_calendar_events", "Language of the invitation")}
+              id="create-meeting-locale"
+            />
+          </form>
+          <p class="text-token-xs text-tymeslot-400 mt-1">
+            {dgettext(
+              "dashboard_calendar_events",
+              "The language every email about this meeting is written in, for the guest and anyone else invited."
+            )}
+          </p>
+        </div>
       </div>
 
       <div :if={!@meeting_mode} class="mb-3 flex items-center justify-between">
@@ -319,5 +418,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </:footer>
     </.modal>
     """
+  end
+
+  # `{label, value}` pairs, the shape `<.input type="select">` expects. Same
+  # source as every other language picker in the app, so a locale added to the
+  # config appears here without a second list to remember.
+  defp language_options do
+    Enum.map(Locales.supported(), fn %{code: code, name: name} -> {name, code} end)
   end
 end
