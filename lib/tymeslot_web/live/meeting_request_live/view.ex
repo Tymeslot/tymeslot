@@ -51,32 +51,35 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
   defp open_request(assigns) do
     ~H"""
     <div>
-      <.section_header title={dgettext("booking", "Booking request")} icon="hero-inbox-arrow-down" />
+      <.section_header
+        title={dgettext("booking_manage", "Booking request")}
+        icon="hero-inbox-arrow-down"
+      />
 
       <p class="mt-2 text-token-base text-tymeslot-600">
-        {dgettext("booking", "%{name} would like to book time with you.",
+        {dgettext("booking_manage", "%{name} would like to book time with you.",
           name: @meeting.attendee_name
         )}
       </p>
 
       <div class="mt-6 space-y-3">
-        <.detail_row label={dgettext("booking", "When")} value={when_line(@meeting)} />
-        <.detail_row label={dgettext("booking", "Duration")} value={duration_line(@meeting)} />
+        <.detail_row label={dgettext("booking_manage", "When")} value={when_line(@meeting)} />
+        <.detail_row label={dgettext("booking_manage", "Duration")} value={duration_line(@meeting)} />
         <.detail_row
-          label={dgettext("booking", "Type")}
-          value={@meeting.meeting_type || dgettext("booking", "Meeting")}
+          label={dgettext("booking_manage", "Type")}
+          value={@meeting.meeting_type || dgettext("booking_manage", "Meeting")}
         />
-        <.detail_row label={dgettext("booking", "From")} value={from_line(@meeting)} />
+        <.detail_row label={dgettext("booking_manage", "From")} value={from_line(@meeting)} />
         <.detail_row
           :if={@meeting.attendee_message not in [nil, ""]}
-          label={dgettext("booking", "Message")}
+          label={dgettext("booking_manage", "Message")}
           value={@meeting.attendee_message}
         />
       </div>
 
       <.info_box :if={@meeting.approval_deadline_at} variant={:warning} class="mt-6">
         {dgettext(
-          "booking",
+          "booking_manage",
           "If you don't answer by %{deadline}, this request lapses and the slot is released.",
           deadline: deadline_line(@meeting)
         )}
@@ -86,10 +89,10 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
         <.action_button
           variant={:primary}
           phx-click="approve"
-          phx-disable-with={dgettext("booking", "Approving...")}
+          phx-disable-with={dgettext("booking_manage", "Approving...")}
           data-testid="approve-request"
         >
-          {dgettext("booking", "Approve booking")}
+          {dgettext("booking_manage", "Approve booking")}
         </.action_button>
 
         <.action_button
@@ -98,7 +101,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
           phx-click="choose"
           phx-value-intent="decline"
         >
-          {dgettext("booking", "Decline")}
+          {dgettext("booking_manage", "Decline")}
         </.action_button>
       </div>
 
@@ -108,8 +111,10 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
             type="textarea"
             name="reason"
             value={@decline_reason}
-            label={dgettext("booking", "Reason (optional)")}
-            placeholder={dgettext("booking", "Shared with %{name}.", name: @meeting.attendee_name)}
+            label={dgettext("booking_manage", "Reason (optional)")}
+            placeholder={
+              dgettext("booking_manage", "Shared with %{name}.", name: @meeting.attendee_name)
+            }
             maxlength={Constraints.decline_reason_max_length()}
           />
 
@@ -117,10 +122,10 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
             <.action_button
               type="submit"
               variant={:danger}
-              phx-disable-with={dgettext("booking", "Declining...")}
+              phx-disable-with={dgettext("booking_manage", "Declining...")}
               data-testid="decline-request"
             >
-              {dgettext("booking", "Decline booking")}
+              {dgettext("booking_manage", "Decline booking")}
             </.action_button>
 
             <.action_button
@@ -129,7 +134,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
               phx-click="choose"
               phx-value-intent="approve"
             >
-              {dgettext("booking", "Back")}
+              {dgettext("booking_manage", "Back")}
             </.action_button>
           </div>
         </form>
@@ -162,27 +167,29 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
   defp outcome_icon(:too_late), do: "hero-clock"
   defp outcome_icon(_state), do: "hero-question-mark-circle"
 
-  defp outcome_title(:approved), do: dgettext("booking", "Booking confirmed")
-  defp outcome_title(:declined), do: dgettext("booking", "Booking declined")
-  defp outcome_title(:expired), do: dgettext("booking", "Request expired")
-  defp outcome_title(:lapsed), do: dgettext("booking", "Deadline passed")
-  defp outcome_title(:too_late), do: dgettext("booking", "Too late to answer")
-  defp outcome_title(_state), do: dgettext("booking", "Link not recognised")
+  defp outcome_title(:approved), do: dgettext("booking_manage", "Booking confirmed")
+  defp outcome_title(:declined), do: dgettext("booking_manage", "Booking declined")
+  defp outcome_title(:expired), do: dgettext("booking_manage", "Request expired")
+  defp outcome_title(:lapsed), do: dgettext("booking_manage", "Deadline passed")
+  defp outcome_title(:too_late), do: dgettext("booking_manage", "Too late to answer")
+  defp outcome_title(_state), do: dgettext("booking_manage", "Link not recognised")
 
   defp outcome_body(:approved, meeting) do
-    dgettext("booking", "%{name} has been sent the confirmation and the calendar invite.",
+    dgettext("booking_manage", "%{name} has been sent the confirmation and the calendar invite.",
       name: attendee_name(meeting)
     )
   end
 
   defp outcome_body(:declined, meeting) do
-    dgettext("booking", "The slot is free again and %{name} has been told.",
+    dgettext("booking_manage", "The slot is free again and %{name} has been told.",
       name: attendee_name(meeting)
     )
   end
 
   defp outcome_body(:expired, meeting) do
-    dgettext("booking", "Nobody answered in time, so the slot was released and %{name} was told.",
+    dgettext(
+      "booking_manage",
+      "Nobody answered in time, so the slot was released and %{name} was told.",
       name: attendee_name(meeting)
     )
   end
@@ -193,25 +200,31 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
   # free again before it actually is.
   defp outcome_body(:lapsed, meeting) do
     dgettext(
-      "booking",
+      "booking_manage",
       "The deadline to answer this request has passed, so it can no longer be confirmed. The slot will be released shortly; %{name} has not been told yet.",
       name: attendee_name(meeting)
     )
   end
 
   defp outcome_body(:too_late, _meeting) do
-    dgettext("booking", "This meeting's start time has passed, so it can no longer be confirmed.")
+    dgettext(
+      "booking_manage",
+      "This meeting's start time has passed, so it can no longer be confirmed."
+    )
   end
 
   defp outcome_body(_state, _meeting) do
     dgettext(
-      "booking",
+      "booking_manage",
       "This link is no longer valid. It may have expired, or the request may have been removed."
     )
   end
 
-  defp attendee_name(nil), do: dgettext("booking", "the person who booked")
-  defp attendee_name(%{attendee_name: nil}), do: dgettext("booking", "the person who booked")
+  defp attendee_name(nil), do: dgettext("booking_manage", "the person who booked")
+
+  defp attendee_name(%{attendee_name: nil}),
+    do: dgettext("booking_manage", "the person who booked")
+
   defp attendee_name(%{attendee_name: name}), do: name
 
   defp when_line(meeting), do: displayed(meeting.start_time, host_timezone(meeting))
@@ -229,7 +242,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
   defp host_timezone(%{organizer_user_id: nil}), do: Profiles.get_default_timezone()
   defp host_timezone(%{organizer_user_id: user_id}), do: Profiles.get_user_timezone(user_id)
 
-  defp displayed(nil, _timezone), do: dgettext("booking", "Not set")
+  defp displayed(nil, _timezone), do: dgettext("booking_manage", "Not set")
 
   # `DateTime.shift_zone/2` is called directly, rather than through
   # `Tymeslot.Utils.DateTimeUtils.convert_to_timezone/2`, because that helper
@@ -246,7 +259,7 @@ defmodule TymeslotWeb.MeetingRequestLive.View do
     end
   end
 
-  defp duration_line(%{duration: nil}), do: dgettext("booking", "Not set")
+  defp duration_line(%{duration: nil}), do: dgettext("booking_manage", "Not set")
   defp duration_line(%{duration: minutes}), do: LocalizationHelpers.format_duration(minutes)
 
   defp from_line(meeting), do: "#{meeting.attendee_name} (#{meeting.attendee_email})"

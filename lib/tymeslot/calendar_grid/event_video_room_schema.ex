@@ -1,8 +1,10 @@
 defmodule Tymeslot.CalendarGrid.EventVideoRoomSchema do
   @moduledoc """
-  A video room made for an event created on the dashboard calendar grid, kept
-  for providers whose rooms stay on the organiser's server until something
-  deletes them (`ProviderConfig.rooms_deleted_after_meeting/0`).
+  A video room made for an event on the dashboard calendar grid, kept for the
+  providers whose rooms have to follow their event
+  (`ProviderConfig.rooms_recorded_for_grid_events/0`): those whose rooms stay
+  on the organiser's server until something deletes them, and a Teams meeting
+  held as a separate Outlook event.
 
   The event is addressed within `calendar_integration_id` by `event_uid`, the
   uid Tymeslot generated for it, and `provider_event_id`, the identifier the
@@ -24,6 +26,13 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomSchema do
   recurring series a time no later occurrence can end after. It is nil when no
   such time is known, and the room is then kept until the event is deleted or
   the integration disconnected.
+
+  `event_seen_at` is when the nightly scan last found the event in its
+  calendar's cache, and `event_ical_uid` the iCalendar UID the event's own
+  cached row carries, learnt there. An Outlook event keeps that UID when it
+  moves to another calendar, where its id changes. Both stay nil until the
+  event is first seen, and a room whose event was never seen is never judged
+  gone (`Tymeslot.CalendarGrid.EventVideoRoomPresence`).
   """
   use Ecto.Schema
 
@@ -45,6 +54,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomSchema do
           room_id: String.t() | nil,
           lobby_opens_at: DateTime.t() | nil,
           ends_at: DateTime.t() | nil,
+          event_seen_at: DateTime.t() | nil,
+          event_ical_uid: String.t() | nil,
           video_integration: VideoIntegrationSchema.t() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integration:
             CalendarIntegrationSchema.t() | Ecto.Association.NotLoaded.t() | nil,
@@ -60,6 +71,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomSchema do
     field(:room_id, :string)
     field(:lobby_opens_at, :utc_datetime)
     field(:ends_at, :utc_datetime)
+    field(:event_seen_at, :utc_datetime)
+    field(:event_ical_uid, :string)
 
     belongs_to(:user, UserSchema)
     belongs_to(:video_integration, VideoIntegrationSchema)

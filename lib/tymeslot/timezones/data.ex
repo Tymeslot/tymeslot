@@ -27,6 +27,17 @@ defmodule Tymeslot.Timezones.Data do
     "beijing" => "Asia/Shanghai",
     "peking" => "Asia/Shanghai",
     "cape town" => "Africa/Johannesburg",
+    # Départements et collectivités d'outre-mer : la façon dont un agent les
+    # nomme (« la Réunion », « les Antilles ») ou les numérote ne correspond à
+    # aucun libellé de la liste, qui porte le chef-lieu.
+    "la reunion" => "Indian/Reunion",
+    "974" => "Indian/Reunion",
+    "976" => "Indian/Mayotte",
+    "971" => "America/Guadeloupe",
+    "972" => "America/Martinique",
+    "973" => "America/Cayenne",
+    "guyane" => "America/Cayenne",
+    "antilles" => "America/Martinique",
     "saigon" => "Asia/Ho_Chi_Minh",
     # Vietnam and Alberta each have a single IANA zone; the second city is an
     # alias rather than an entry, so the picker can't offer a fictional id.
@@ -98,13 +109,26 @@ defmodule Tymeslot.Timezones.Data do
   @search_index (
                   entry_by_id = Map.new(@all_entries, fn e -> {e.timezone_id, e} end)
 
+                  # Les clés sont repliées sans diacritiques : un prospect français tape
+                  # « Réunion » ou « Pointe-à-Pitre », et la liste, elle, est écrite sans
+                  # accents (« Sao Paulo », « Reunion »). Sans ce repli, la recherche ne
+                  # renvoyait rien pour ces deux saisies.
+                  plier = fn texte ->
+                    texte
+                    |> String.downcase()
+                    |> String.normalize(:nfd)
+                    |> String.replace(~r/[\x{0300}-\x{036f}]/u, "")
+                  end
+
                   label_index =
                     Enum.flat_map(@all_entries, fn entry ->
                       # Index both "city, country" and "country" separately
-                      [
+                      Enum.uniq([
                         {String.downcase(entry.label), entry},
-                        {String.downcase(entry.country_name), entry}
-                      ]
+                        {String.downcase(entry.country_name), entry},
+                        {plier.(entry.label), entry},
+                        {plier.(entry.country_name), entry}
+                      ])
                     end)
 
                   alias_index =
@@ -177,7 +201,7 @@ defmodule Tymeslot.Timezones.Data do
   def search(""), do: @popular_options
 
   def search(term) do
-    search_lower = String.downcase(term)
+    search_lower = fold_diacritics(term)
 
     @search_index
     |> Enum.filter(fn {key, _entry} -> String.contains?(key, search_lower) end)
@@ -186,6 +210,14 @@ defmodule Tymeslot.Timezones.Data do
       {entry.label, entry.timezone_id, Formatting.utc_offset(entry.timezone_id)}
     end)
     |> Enum.take(50)
+  end
+
+  # Même repli que celui appliqué aux clés de l'index, au moment de la construction.
+  defp fold_diacritics(texte) do
+    texte
+    |> String.downcase()
+    |> String.normalize(:nfd)
+    |> String.replace(~r/[\x{0300}-\x{036f}]/u, "")
   end
 
   @spec country_code(String.t()) :: atom() | nil

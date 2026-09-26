@@ -84,9 +84,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
 
   Options:
 
-    * `:new_ctag` — a `getctag` value to store as the path's sync token once
-      the events have been reconciled. Only written on success: a failed
-      reconciliation must not advance the token past changes it never applied.
+    * `:new_ctag` — a `getctag` value (Tier 2) to store as the path's sync
+      token once the events have been reconciled.
+    * `:new_sync_token` — a `DAV:sync-token` (Tier 1) to store the same way.
+
+  Either is written only on success: a failed reconciliation must not advance
+  the token past changes it never applied.
   """
   @spec fetch_path(struct(), map(), String.t(), keyword()) :: result() | :not_found
   def fetch_path(integration, client, calendar_path, opts) do
@@ -149,9 +152,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
   end
 
   defp sync_token_opt(calendar_path, opts) do
-    case Keyword.get(opts, :new_ctag) do
+    case opts[:new_ctag] || opts[:new_sync_token] do
       nil -> []
-      ctag -> [sync_token: {calendar_path, ctag}]
+      token -> [sync_token: {calendar_path, token}]
     end
   end
 

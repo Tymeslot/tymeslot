@@ -44,6 +44,11 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlersVideoTest do
                "The video provider did not return a meeting link, so the video link was not changed."
     end
 
+    test "says Google has not returned the Meet link yet when that is what happened" do
+      assert flash_for(failure(:meet_link_pending)) ==
+               "Google Calendar added Google Meet to the event but has not returned its link yet. Choose Google Meet again to fetch it."
+    end
+
     test "falls back to the general failure for anything else" do
       for reason <- [
             :timeout,

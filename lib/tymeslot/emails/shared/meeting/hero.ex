@@ -7,7 +7,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
   the older 2×2 emoji grid so a meeting reads like a moment, not a form.
   """
 
-  alias Tymeslot.Emails.Shared.{Formatting, Sanitise, Styles}
+  alias Tymeslot.Emails.Shared.{Formatting, Sanitise, Stack, Styles}
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -42,7 +42,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
       location = Formatting.format_location(details)
       meeting_type = Map.get(details, :meeting_type)
 
-      """
+      Stack.spaced("""
       <mj-section
         background-color="#{Styles.canvas_soft()}"
         border-radius="#{Styles.card_radius()}"
@@ -57,7 +57,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Hero do
           #{hero_meta_grid(meeting_type, duration, location)}
         </mj-column>
       </mj-section>
-      """
+      """)
     end)
   end
 

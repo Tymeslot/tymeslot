@@ -42,6 +42,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   require Logger
 
   alias Tymeslot.CalendarGrid.EventMove
+  alias Tymeslot.CalendarGrid.EventVideoDiscard
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
@@ -83,8 +84,10 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   """
   @spec delete_event(pos_integer(), event()) :: {:ok, deleted()} | {:error, failure()}
   def delete_event(user_id, event) do
-    case ensure_deletable(stored_event(event)) do
-      :ok -> delete_single_event(user_id, event)
+    stored = stored_event(event)
+
+    case ensure_deletable(stored) do
+      :ok -> delete_single_event(user_id, event, stored)
       {:error, reason} -> {:error, %{reason: reason, retry: :not_queued}}
     end
   end
@@ -104,7 +107,11 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
     end
   end
 
-  defp delete_single_event(user_id, %{uid: uid, calendar_integration_id: integration_id} = event) do
+  defp delete_single_event(
+         user_id,
+         %{uid: uid, calendar_integration_id: integration_id} = event,
+         stored
+       ) do
     provider_event_id = Map.get(event, :provider_event_id)
 
     # Both halves of the event's address: its own id, and the calendar it is
@@ -127,7 +134,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
            opts
          ) do
       {:ok, result} ->
-        purge_local_traces(user_id, event)
+        purge_local_traces(user_id, event, stored)
         {:ok, %{uid: uid, integration_id: integration_id, linked_meeting: linked_meeting(result)}}
 
       {:error, reason} ->
@@ -143,11 +150,22 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   # organiser to delete an event that no longer exists does not recover. They
   # are rescued one by one so a failing room clean-up still leaves the cached
   # row deleted and the availability invalidated.
-  defp purge_local_traces(user_id, %{uid: uid, calendar_integration_id: integration_id} = event) do
+  defp purge_local_traces(
+         user_id,
+         %{uid: uid, calendar_integration_id: integration_id} = event,
+         stored
+       ) do
     context = [user_id: user_id, calendar_integration_id: integration_id, uid: uid]
 
     after_delete("delete the event's video rooms", context, fn ->
       :ok = EventVideoRooms.event_deleted(event)
+    end)
+
+    # Read off the cached row, since the caller passes only the fields that
+    # address the event: its link names the room no record holds (a Zoom
+    # meeting's).
+    after_delete("delete the event's unrecorded video room", context, fn ->
+      :ok = EventVideoDiscard.event_deleted(user_id, stored)
     end)
 
     after_delete("delete the cached event row", context, fn ->

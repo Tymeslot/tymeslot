@@ -16,6 +16,11 @@ defmodule Tymeslot.Workers.SlackWorker do
   Failures are recorded against the integration only on the genuinely final
   attempt, which is `max_attempts`: a snooze costs the job no attempt, so it
   always gets its full budget of real ones.
+
+  The post is claimed through `Tymeslot.Workers.DeliveryClaims` before it is
+  sent, so a job the Oban lifeline rescues after the message reached Slack
+  does not post it to the channel a second time. Only a successful post keeps
+  the claim; every retry, snooze and discard path above releases it.
   """
 
   use Oban.Worker,
@@ -30,6 +35,7 @@ defmodule Tymeslot.Workers.SlackWorker do
   alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Slack
   alias Tymeslot.Slack.{API, MessageBuilder, SlackIntegrationSchema, SlackQueries}
+  alias Tymeslot.Workers.DeliveryClaims
 
   @impl Oban.Worker
   def perform(
@@ -51,8 +57,11 @@ defmodule Tymeslot.Workers.SlackWorker do
          {:ok, meeting} <- Meetings.get_meeting(meeting_id) do
       timezone = Recipients.get_organizer_timezone(meeting)
       blocks = MessageBuilder.build_blocks(event_type, meeting, timezone)
-      result = deliver(integration, blocks)
-      handle_result(integration, event_type, meeting_id, blocks, job, result)
+
+      DeliveryClaims.once(job, "slack_message", fn ->
+        result = deliver(integration, blocks)
+        handle_result(integration, event_type, meeting_id, blocks, job, result)
+      end)
     else
       {:error, :not_found} -> {:discard, "Integration or meeting not found"}
       {:error, :disabled} -> {:discard, "Integration is disabled"}

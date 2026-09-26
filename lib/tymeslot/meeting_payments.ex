@@ -74,12 +74,15 @@ defmodule Tymeslot.MeetingPayments do
   @doc """
   Starts the Stripe Connect onboarding flow for a user.
 
-  Persists a placeholder row before calling Stripe, making the flow
-  crash-safe. Returns the Stripe-hosted onboarding URL on success.
+  Enforces the meeting-payments feature gate, persists a placeholder row
+  before calling Stripe (making the flow crash-safe), and reuses a Stripe
+  account the host already has. Returns the Stripe-hosted onboarding URL on
+  success; on failure, a `Tymeslot.Features.check_access/2` reason,
+  `{:error, :account_creation_restricted}`, or the underlying Stripe error.
   """
-  @spec start_onboarding(user :: %{id: integer()}, opts :: keyword()) ::
+  @spec start_onboarding(user :: %{id: integer()}) ::
           {:ok, %{url: String.t(), account: account()}} | {:error, term()}
-  defdelegate start_onboarding(user, opts), to: ConnectAccounts
+  defdelegate start_onboarding(user), to: ConnectAccounts
 
   @doc """
   Soft-deletes the host's Stripe Connect account row.
@@ -473,12 +476,14 @@ defmodule Tymeslot.MeetingPayments do
   Verifies the Stripe-Signature header and dispatches the event to the
   appropriate handler.
 
-  Returns `:ok` on success, `{:error, reason}` on signature failure, replay
-  detection, or an unrecognised event.
+  Reads the Connect signing secret from configuration itself, so callers
+  never handle it; see
+  `Tymeslot.MeetingPayments.Webhooks.WebhookProcessor.process/2` for the
+  outcomes.
   """
-  @spec process_webhook(payload :: String.t(), signature :: String.t(), secret :: String.t()) ::
-          :ok | {:error, term()}
-  defdelegate process_webhook(payload, signature, secret), to: WebhookProcessor, as: :process
+  @spec process_webhook(payload :: String.t(), signature :: String.t() | nil) ::
+          WebhookProcessor.process_result()
+  defdelegate process_webhook(payload, signature), to: WebhookProcessor, as: :process
 
   # ---------------------------------------------------------------------------
   # Data retention

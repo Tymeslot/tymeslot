@@ -622,3 +622,13 @@ msgstr "Anketa aktualizována"
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr "Uložit změny"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "This time falls within your time off, so it can't be confirmed while that stays in place."
+msgstr "Tento čas spadá do vaší nepřítomnosti, takže ho nelze potvrdit, dokud platí."
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "This time falls within your time off. Change or remove the time off to confirm it."
+msgstr "Tento čas spadá do vaší nepřítomnosti. Upravte nebo odeberte nepřítomnost, abyste ho mohli potvrdit."

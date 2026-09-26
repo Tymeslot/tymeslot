@@ -234,6 +234,49 @@ defmodule Tymeslot.Notifications.EventsTest do
       assert reannounced.first_announced_at == announced.first_announced_at
       assert %DateTime{} = reannounced.announced_at
     end
+
+    # A reschedule that sends a confirmed booking back for approval frees the
+    # claim so the host's second approval still reaches the invitee's emails
+    # and reminders. Integrations already heard `meeting.created` for this
+    # booking; telling them again would read as a second booking.
+    test "meeting_created/1 tells the channels a re-gated booking moved rather than was made", %{
+      meeting: meeting,
+      slack_integration: slack_integration,
+      telegram_integration: telegram_integration
+    } do
+      assert {:ok, _first} = Events.meeting_created(meeting)
+
+      # The first announcement's jobs would otherwise dedupe the second
+      # through the five-minute uniqueness window; see the test above.
+      Repo.delete_all(Job)
+
+      {1, _rows} =
+        Repo.update_all(
+          from(m in MeetingSchema, where: m.id == ^meeting.id),
+          set: [announced_at: nil]
+        )
+
+      # The struct still says the meeting was never announced. The claim reads
+      # the row, so a caller holding a stale struct cannot mislabel it.
+      assert is_nil(meeting.first_announced_at)
+      assert {:ok, _again} = Events.meeting_created(meeting)
+
+      for {worker, integration} <- [
+            {TelegramWorker, telegram_integration},
+            {SlackWorker, slack_integration}
+          ] do
+        assert_enqueued(
+          worker: worker,
+          args: %{
+            "integration_id" => integration.id,
+            "event_type" => "meeting.rescheduled",
+            "meeting_id" => meeting.id
+          }
+        )
+
+        refute_enqueued(worker: worker, args: %{"event_type" => "meeting.created"})
+      end
+    end
   end
 
   # Issue #76: the email step renders templates in-process, so a payload the

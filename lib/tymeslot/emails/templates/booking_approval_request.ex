@@ -76,11 +76,11 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
         #{Sanitise.sanitize_for_email(deadline_text)}
       </mj-text>
 
-      #{Buttons.action_button(:confirmed, dgettext("emails", "Approve"), urls.approve_url, full_width: true, size: :large)}
-      #{Buttons.action_button(:cancelled, dgettext("emails", "Decline"), urls.decline_url, full_width: true)}
+      #{Buttons.action_button(:confirmed, dgettext("emails_booking_requests", "Approve"), urls.approve_url, full_width: true, size: :large)}
+      #{Buttons.action_button(:cancelled, dgettext("emails_booking_requests", "Decline"), urls.decline_url, full_width: true)}
 
       <mj-text font-size="13px" color="#{Styles.ink_muted()}" line-height="19px" padding="16px 0 0 0">
-        #{dgettext("emails", "Both buttons open the request for you to confirm. Nothing is decided until you choose there.")}
+        #{dgettext("emails_booking_requests", "Both buttons open the request for you to confirm. Nothing is decided until you choose there.")}
       </mj-text>
       """
 
@@ -115,32 +115,41 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
     end)
   end
 
-  defp eyebrow(:request), do: dgettext("emails", "Needs your answer")
-  defp eyebrow(:nudge), do: dgettext("emails", "Still waiting")
+  defp eyebrow(:request), do: dgettext("emails_booking_requests", "Needs your answer")
+  defp eyebrow(:nudge), do: dgettext("emails_booking_requests", "Still waiting")
 
-  defp title(:request, :booking), do: dgettext("emails", "New booking request")
-  defp title(:nudge, :booking), do: dgettext("emails", "Booking request still waiting")
-  defp title(:request, :reschedule), do: dgettext("emails", "Reschedule request")
-  defp title(:nudge, :reschedule), do: dgettext("emails", "Reschedule request still waiting")
+  defp title(:request, :booking), do: dgettext("emails_booking_requests", "New booking request")
+
+  defp title(:nudge, :booking),
+    do: dgettext("emails_booking_requests", "Booking request still waiting")
+
+  defp title(:request, :reschedule), do: dgettext("emails_booking_requests", "Reschedule request")
+
+  defp title(:nudge, :reschedule),
+    do: dgettext("emails_booking_requests", "Reschedule request still waiting")
 
   # Confirmed once already: the invitee is moving a meeting, not booking one.
   defp rescheduled?(%Meeting{first_announced_at: %DateTime{}}), do: true
   defp rescheduled?(_meeting), do: false
 
-  defp requested_time_title(:booking), do: dgettext("emails", "Requested Time")
-  defp requested_time_title(:reschedule), do: dgettext("emails", "Requested New Time")
+  defp requested_time_title(:booking), do: dgettext("emails_booking_requests", "Requested Time")
+
+  defp requested_time_title(:reschedule),
+    do: dgettext("emails_booking_requests", "Requested New Time")
 
   defp request_sentence(meeting, :booking) do
-    dgettext("emails", "%{name} would like to book %{type} with you.",
+    dgettext("emails_booking_requests", "%{name} would like to book %{type} with you.",
       name: meeting.attendee_name,
-      type: meeting.meeting_type || dgettext("emails", "a meeting")
+      type: meeting.meeting_type || dgettext("emails_booking_requests", "a meeting")
     )
   end
 
   # The meeting type is listed in the details below, so the sentence does not
   # need it; leaving it out keeps the translations free of a spliced-in noun.
   defp request_sentence(meeting, :reschedule) do
-    dgettext("emails", "%{name} would like to move their confirmed booking to a new time.",
+    dgettext(
+      "emails_booking_requests",
+      "%{name} would like to move their confirmed booking to a new time.",
       name: meeting.attendee_name
     )
   end
@@ -148,7 +157,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
   defp previous_time_text(opts, host_tz, locale) do
     case Keyword.get(opts, :previous_start_time) do
       %DateTime{} = previous ->
-        dgettext("emails", "Previously scheduled for %{time}.",
+        dgettext("emails_booking_requests", "Previously scheduled for %{time}.",
           time:
             previous
             |> TimezoneHelper.convert_to_timezone(host_tz)
@@ -175,36 +184,40 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
   end
 
   defp preview(:request, meeting) do
-    dgettext("emails", "%{name} is waiting on your answer.", name: meeting.attendee_name)
+    dgettext("emails_booking_requests", "%{name} is waiting on your answer.",
+      name: meeting.attendee_name
+    )
   end
 
   defp preview(:nudge, meeting) do
-    dgettext("emails", "%{name} is still waiting on your answer.", name: meeting.attendee_name)
+    dgettext("emails_booking_requests", "%{name} is still waiting on your answer.",
+      name: meeting.attendee_name
+    )
   end
 
   defp subject_line(:request, :booking, meeting, date) do
-    dgettext("emails", "Booking request: %{name} - %{date}",
+    dgettext("emails_booking_requests", "Booking request: %{name} - %{date}",
       name: meeting.attendee_name,
       date: date
     )
   end
 
   defp subject_line(:nudge, :booking, meeting, date) do
-    dgettext("emails", "Reminder - booking request: %{name} - %{date}",
+    dgettext("emails_booking_requests", "Reminder - booking request: %{name} - %{date}",
       name: meeting.attendee_name,
       date: date
     )
   end
 
   defp subject_line(:request, :reschedule, meeting, date) do
-    dgettext("emails", "Reschedule request: %{name} - %{date}",
+    dgettext("emails_booking_requests", "Reschedule request: %{name} - %{date}",
       name: meeting.attendee_name,
       date: date
     )
   end
 
   defp subject_line(:nudge, :reschedule, meeting, date) do
-    dgettext("emails", "Reminder - reschedule request: %{name} - %{date}",
+    dgettext("emails_booking_requests", "Reminder - reschedule request: %{name} - %{date}",
       name: meeting.attendee_name,
       date: date
     )
@@ -228,7 +241,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
       duration: meeting.duration,
       location: meeting.location,
       location_type: BookingRequestLocation.type(meeting),
-      meeting_type: meeting.meeting_type || dgettext("emails", "Meeting"),
+      meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting"),
       timezone: host_tz
     }
   end
@@ -238,14 +251,14 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
     zone = meeting.attendee_timezone || "UTC"
     time_with_zone = if zone != "UTC", do: "#{formatted} (#{zone})", else: formatted
 
-    dgettext("emails", "For %{name}, that's %{time}.",
+    dgettext("emails_booking_requests", "For %{name}, that's %{time}.",
       name: meeting.attendee_name,
       time: time_with_zone
     )
   end
 
   defp deadline_sentence(%Meeting{approval_deadline_at: nil} = meeting, _host_tz, _locale) do
-    dgettext("emails", "The slot stays held for %{name} until you answer.",
+    dgettext("emails_booking_requests", "The slot stays held for %{name} until you answer.",
       name: meeting.attendee_name
     )
   end
@@ -257,7 +270,7 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
       |> Formatting.format_datetime(locale)
 
     dgettext(
-      "emails",
+      "emails_booking_requests",
       "The slot is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the time is free again.",
       deadline: deadline,
       name: meeting.attendee_name
@@ -278,28 +291,28 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalRequest do
 
     #{request_sentence(meeting, kind)}
 
-    #{dgettext("emails", "From:")} #{meeting.attendee_name} <#{meeting.attendee_email}>
-    #{if meeting.attendee_message, do: dgettext("emails", "Message:") <> " " <> meeting.attendee_message, else: ""}
+    #{dgettext("emails_booking_requests", "From:")} #{meeting.attendee_name} <#{meeting.attendee_email}>
+    #{if meeting.attendee_message, do: dgettext("emails_booking_requests", "Message:") <> " " <> meeting.attendee_message, else: ""}
 
-    #{dgettext("emails", "REQUESTED TIME:")}
-    #{dgettext("emails", "Date:")} #{Formatting.format_date_short(details.date, locale)}
-    #{dgettext("emails", "Time:")} #{Formatting.format_time(details.start_time, locale)}
-    #{dgettext("emails", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
-    #{dgettext("emails", "Location:")} #{Formatting.format_location(details)}
-    #{dgettext("emails", "Timezone:")} #{details.timezone}
+    #{dgettext("emails_booking_requests", "REQUESTED TIME:")}
+    #{dgettext("emails_booking_requests", "Date:")} #{Formatting.format_date_short(details.date, locale)}
+    #{dgettext("emails_booking_requests", "Time:")} #{Formatting.format_time(details.start_time, locale)}
+    #{dgettext("emails_booking_requests", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
+    #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}
+    #{dgettext("emails_booking_requests", "Timezone:")} #{details.timezone}
     #{previous || ""}
 
     #{attendee_time_sentence(meeting, attendee_time, locale)}
     #{TextBodyHelper.format_custom_answers(meeting, locale)}
     #{deadline_text}
 
-    #{dgettext("emails", "Approve:")}
+    #{dgettext("emails_booking_requests", "Approve:")}
     #{urls.approve_url}
 
-    #{dgettext("emails", "Decline:")}
+    #{dgettext("emails_booking_requests", "Decline:")}
     #{urls.decline_url}
 
-    #{dgettext("emails", "Both links open the request for you to confirm. Nothing is decided until you choose there.")}
+    #{dgettext("emails_booking_requests", "Both links open the request for you to confirm. Nothing is decided until you choose there.")}
     """
   end
 end

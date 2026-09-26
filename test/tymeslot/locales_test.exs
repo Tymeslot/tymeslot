@@ -232,4 +232,22 @@ defmodule Tymeslot.LocalesTest do
       refute Locales.pseudo_enabled?()
     end
   end
+
+  describe "resolve/2" do
+    doctest Tymeslot.Locales, only: [resolve: 2]
+
+    test "takes the first acceptable candidate in priority order" do
+      assert Locales.resolve(["fr", "de"], "en") == "fr"
+      assert Locales.resolve(["de", "fr"], "en") == "de"
+    end
+
+    test "skips absent and unsupported candidates instead of stopping at them" do
+      assert Locales.resolve([nil, "es", "", "it"], "en") == "it"
+    end
+
+    test "returns the fallback when nothing is acceptable" do
+      assert Locales.resolve([nil, "xx"], "uk") == "uk"
+      assert Locales.resolve([], "uk") == "uk"
+    end
+  end
 end

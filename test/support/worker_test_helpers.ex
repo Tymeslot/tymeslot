@@ -16,6 +16,21 @@ defmodule Tymeslot.WorkerTestHelpers do
   alias Tymeslot.Repo
 
   @doc """
+  Inserts a job for `worker` and returns it as a running execution would see
+  it: persisted, so it has the id a lifeline rescue keeps, and on its first
+  attempt.
+
+  Calling the worker's `perform/1` twice with the returned job is how a test
+  simulates a rescue: the same job, run again after its first run finished
+  its side effect but before Oban recorded the outcome.
+  """
+  @spec persisted_job(module(), map()) :: Oban.Job.t()
+  def persisted_job(worker, args) do
+    {:ok, job} = args |> worker.new() |> Oban.insert()
+    %{job | attempt: 1}
+  end
+
+  @doc """
   Inserts an `unhealthy` integration health state row for the given user and
   integration. Used by tests for `IntegrationAutoPauseWorker` and the recovery
   flow to seed deterministic unhealthy state.

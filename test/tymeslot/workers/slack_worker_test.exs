@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
   import Mox
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
+  import Tymeslot.WorkerTestHelpers
 
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Slack.{SlackDeliverySchema, SlackIntegrationSchema}
@@ -103,6 +104,31 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
                  "event_type" => "meeting.created",
                  "meeting_id" => meeting.id
                })
+    end
+  end
+
+  describe "perform/1 — rescued jobs" do
+    # The Mox expectation fails the test on a second post.
+    test "posts the message once across a rescue" do
+      user = insert(:user)
+      integration = insert(:slack_integration, user: user)
+      meeting = insert(:meeting, organizer_user_id: user.id)
+
+      expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
+        {:ok, %{status: 200, body: ~s({"ok":true,"ts":"1.2"})}}
+      end)
+
+      job =
+        persisted_job(SlackWorker, %{
+          "integration_id" => integration.id,
+          "event_type" => "meeting.created",
+          "meeting_id" => meeting.id
+        })
+
+      assert :ok = SlackWorker.perform(job)
+      assert :ok = SlackWorker.perform(job)
+
+      assert Repo.aggregate(SlackDeliverySchema, :count) == 1
     end
   end
 

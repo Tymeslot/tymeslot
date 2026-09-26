@@ -50,11 +50,6 @@ msgstr "Безпека облікового запису"
 msgid "Account Settings"
 msgstr "Налаштування облікового запису"
 
-#: lib/tymeslot_web/live/account_live/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "An unexpected error occurred"
-msgstr "Сталася непередбачена помилка"
-
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "At least 8 characters"
@@ -174,11 +169,6 @@ msgstr "Очікується зміна на:"
 #, elixir-autogen, elixir-format
 msgid "Sent %{time}"
 msgstr "Надіслано %{time}"
-
-#: lib/tymeslot_web/live/account_live/error_formatter.ex
-#, elixir-autogen, elixir-format
-msgid "Too many attempts. Please try again later."
-msgstr "Забагато спроб. Спробуйте пізніше."
 
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format

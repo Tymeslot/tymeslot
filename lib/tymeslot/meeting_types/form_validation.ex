@@ -14,7 +14,11 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
       submitted: the integration may have been deleted, deactivated, or had the
       chosen calendar turn read-only since the picker rendered. An availability
       schedule id additionally has to be *owned*, because the referenced
-      schedule goes on to drive what the public booking page offers.
+      schedule goes on to drive what the public booking page offers. Every
+      provider of every video location is checked, not just the one the
+      schema projects onto `video_integration_id`: a meeting type may offer
+      several, and an unchecked one would book rooms on someone else's
+      account.
 
   Both gates deliberately restrict only the *permissive* direction. Turning
   payment off, or saving no questions, is always allowed, so a host who has
@@ -34,6 +38,7 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
   @type error ::
           :video_integration_required
           | :invalid_video_integration
+          | :invalid_location
           | :calendar_integration_required
           | :calendar_integration_invalid
           | :target_calendar_required
@@ -50,10 +55,86 @@ defmodule Tymeslot.MeetingTypes.FormValidation do
     with :ok <- gate_custom_fields(user_id, attrs),
          :ok <- gate_payment(user_id, attrs),
          :ok <- validate_availability_schedule(attrs, user_id),
-         :ok <- validate_video_integration(attrs, user_id) do
+         :ok <- validate_video_integration(attrs, user_id),
+         :ok <- validate_locations(attrs, user_id) do
       validate_calendar_integration(attrs, user_id)
     end
   end
+
+  # Each video location must name at least one integration, and every one it
+  # names must be this host's and active. The list arrives as raw form input, so it can be either a list
+  # (the auto-save path, which builds params from socket assigns) or the
+  # index-keyed map Plug parses `locations[0][kind]` into; the values are
+  # likewise string- or atom-keyed. Both shapes are normalised before the
+  # lookup, because a shape this function fails to recognise would silently
+  # skip the check rather than fail it.
+  defp validate_locations(%{locations: locations}, user_id) do
+    locations
+    |> location_list()
+    |> Enum.filter(&(location_field(&1, "kind") == "video"))
+    |> Enum.flat_map(&video_integration_ids/1)
+    |> Enum.reduce_while(:ok, fn id, :ok ->
+      case video_integration_active?(id, user_id) do
+        :ok -> {:cont, :ok}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp validate_locations(_attrs, _user_id), do: :ok
+
+  defp location_list(locations) when is_list(locations), do: locations
+
+  # Plug turns `locations[0][kind]` into `%{"0" => %{"kind" => …}}`. The keys
+  # are the submitted indices, so ordering by them keeps the list in the
+  # order the form rendered it.
+  defp location_list(locations) when is_map(locations) do
+    locations
+    |> Enum.sort_by(fn {index, _location} -> index end)
+    |> Enum.map(fn {_index, location} -> location end)
+  end
+
+  defp location_list(_locations), do: []
+
+  # A video location naming no integration becomes a single `nil`, which
+  # `video_integration_active?/2` refuses, so an empty list cannot pass for
+  # "nothing to check".
+  defp video_integration_ids(location) do
+    case location |> location_field("video_integration_ids") |> List.wrap() do
+      [] -> [nil]
+      ids -> ids
+    end
+  end
+
+  defp location_field(location, key) when is_map(location) do
+    Map.get(location, key) || Map.get(location, String.to_existing_atom(key))
+  end
+
+  defp location_field(_location, _key), do: nil
+
+  defp video_integration_active?(id, user_id) do
+    case integration_id(id) do
+      :invalid ->
+        {:error, :invalid_location}
+
+      parsed ->
+        case Video.fetch_integration_for_user(parsed, user_id) do
+          {:ok, %{is_active: true}} -> :ok
+          _other -> {:error, :invalid_video_integration}
+        end
+    end
+  end
+
+  defp integration_id(id) when is_integer(id) and id > 0, do: id
+
+  defp integration_id(id) when is_binary(id) do
+    case Integer.parse(String.trim(id)) do
+      {parsed, ""} when parsed > 0 -> parsed
+      _other -> :invalid
+    end
+  end
+
+  defp integration_id(_id), do: :invalid
 
   # The picker only ever lists this profile's own schedules, but the form posts
   # a bare id and can be forged, and a foreign id would otherwise be accepted:

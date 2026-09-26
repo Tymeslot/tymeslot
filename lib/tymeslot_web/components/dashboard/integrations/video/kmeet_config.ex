@@ -43,10 +43,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig do
         <ProviderIcon.provider_icon provider="kmeet" type="video" size="large" />
         <div>
           <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">
-            {dgettext("dashboard_integrations", "kMeet")}
+            {dgettext("dashboard_video", "kMeet")}
           </h3>
           <p class="text-token-sm text-tymeslot-500 font-medium">
-            {dgettext("dashboard_integrations", "Infomaniak's hosted video meetings")}
+            {dgettext("dashboard_video", "Infomaniak's hosted video meetings")}
           </p>
         </div>
       </div>
@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig do
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <SharedForm.integration_name_field
             form_errors={@form_errors}
-            value={Map.get(@form_values, "name", dgettext("dashboard_integrations", "My kMeet"))}
+            value={Map.get(@form_values, "name", dgettext("dashboard_video", "My kMeet"))}
             target={@target}
           />
 
@@ -81,7 +81,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig do
             phx-target={@target}
             class="btn-secondary"
           >
-            {dgettext("dashboard_integrations", "Cancel")}
+            {dgettext("dashboard_video", "Cancel")}
           </button>
           <UIComponents.form_submit_button saving={@saving} />
         </div>
@@ -106,13 +106,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.KmeetConfig do
       value={@host}
       tooltip={
         dgettext(
-          "dashboard_integrations",
+          "dashboard_video",
           "kMeet is Infomaniak's hosted service and always uses this address, which cannot be changed."
         )
       }
       helper_text={
         dgettext(
-          "dashboard_integrations",
+          "dashboard_video",
           "Every booking gets its own room, generated automatically."
         )
       }

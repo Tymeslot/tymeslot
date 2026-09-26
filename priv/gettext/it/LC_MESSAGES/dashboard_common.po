@@ -616,3 +616,13 @@ msgstr "Sondaggio aggiornato"
 #, elixir-autogen, elixir-format
 msgid "Save changes"
 msgstr "Salva modifiche"
+
+#: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
+#, elixir-autogen, elixir-format
+msgid "This time falls within your time off, so it can't be confirmed while that stays in place."
+msgstr "Questo orario rientra nella tua assenza, quindi non può essere confermato finché resta attiva."
+
+#: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
+#, elixir-autogen, elixir-format
+msgid "This time falls within your time off. Change or remove the time off to confirm it."
+msgstr "Questo orario rientra nella tua assenza. Modifica o rimuovi l'assenza per confermarlo."

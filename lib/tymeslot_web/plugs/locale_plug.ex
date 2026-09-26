@@ -1,37 +1,82 @@
 defmodule TymeslotWeb.Plugs.LocalePlug do
   @moduledoc """
-  Detects and sets the user's preferred locale from various sources:
-  1. Path-derived locale (`:path_locale` assign) - Highest priority; set as a
-     route assign by routers that serve locale-prefixed URLs (/de/...)
-  2. Query parameter (?locale=de) - Explicit user choice
-  3. Session - User's previously selected locale
-  4. Accept-Language header - Browser's preferred language
-  5. The surface's default locale - When no preference is detected
+  Resolves the request locale, applies it to Gettext, and assigns it.
+
+  Sources, highest priority first; `Tymeslot.Locales.resolve/2` takes the
+  first acceptable one:
+
+  1. Path-derived locale (`:path_locale` assign), set as a route assign by
+     routers that serve locale-prefixed URLs (`/de/...`)
+  2. The signed-in user's saved interface language (only with
+     `prefer_user_locale: true`)
+  3. The `?locale=` query parameter: an explicit choice
+  4. An explicit choice remembered in the session from an earlier request
+  5. The `Accept-Language` header, highest weight first
+  6. The surface's fallback (`:surface` below)
+
+  ## What the session remembers
+
+  Only an explicit choice. An acceptable `?locale=` parameter is written to
+  the session (under `:chosen_locale`), and nothing else ever is: the user
+  preference, the header and the fallback are derived afresh on every
+  request. Persisting a derived locale would let one surface's fallback leak
+  into another in the same session (the admin default rendering a public
+  booking page), pin the session to whatever browser language it started
+  with, and stop an admin's change to a fallback reaching existing sessions.
+
+  A path-derived locale is not persisted either. The URL restates it on every
+  request, so remembering it adds nothing for that URL, and it would silently
+  re-language every unprefixed page a visitor reaches after landing on a
+  single localised link.
+
+  The session key used to be `:locale`, which held derived values as well.
+  That key is no longer read, so a derived locale stored before this change
+  cannot outlive it as if it had been chosen.
+
+  ## Assigns
+
+    * `:locale` - the resolved locale.
+    * `:ambient_locale` - the same resolution without the user's saved
+      preference (source 2): what the page resolves to once that preference
+      is cleared. Equal to `:locale` unless `prefer_user_locale` is set.
+
+  A connected LiveView mounts in its own process from a websocket, with no
+  conn and no request headers. `live_session_data/1` carries these assigns to
+  it through the live_session's signed static session, so the LiveView locale
+  hooks reuse what the dead render resolved rather than re-deriving it.
 
   ## Options
 
     * `:prefer_user_locale` - consult the signed-in user's saved interface
-      language (source 2 above). Off by default, so public booking pages never
+      language (source 2). Off by default, so public booking pages never
       render in the language of whoever happens to be logged in.
-    * `:surface` - which admin-editable fallback ends the chain,
-      `:admin` or `:booking`. Defaults to `:booking`: the plug is mounted on
-      public pipelines as well as the authenticated one, and a public visitor
+    * `:surface` - which admin-editable fallback ends the chain, `:admin` or
+      `:booking`. Defaults to `:booking`: the plug is mounted on public
+      pipelines as well as the authenticated one, and a public visitor
       getting the booking fallback is the safe way to be wrong.
+    * `:session` - read and remember the explicit choice in the session
+      (source 4). Defaults to `true`; pass `false` on pipelines that do not
+      fetch the session, such as pages only ever rendered in a cross-site
+      iframe, where the browser withholds the session cookie anyway.
 
-  The selected locale is stored in the session for persistence across requests
-  and set in Gettext for translation rendering.
+  ## Input handling
 
-  Security: All locale inputs are sanitized and validated to prevent:
-  - Path traversal attacks
-  - Unicode bidirectional override attacks
-  - Header injection attacks
-  - DoS via extremely long inputs
+  Every candidate is whitelisted against the supported locale codes by
+  `Tymeslot.Locales.resolve/2`, so nothing reaches Gettext unless it is a
+  known code. Normalisation therefore only has to let legitimate spellings
+  match: trim, lowercase, and reduce a language-region tag to its primary
+  language subtag (`de-AT` becomes `de`); regional locales are out of scope.
+  Raw input is length-capped before any work is done on it.
   """
   alias Tymeslot.Locales
   import Plug.Conn
   require Logger
 
-  @max_locale_length 10
+  @session_key :chosen_locale
+
+  # Generous for any real language tag (BCP 47 tags in the wild stay well
+  # under this); anything longer is rejected before it is normalised.
+  @max_locale_length 35
   @max_header_length 1000
   @max_tags_count 20
 
@@ -40,28 +85,48 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
 
   @spec call(Plug.Conn.t(), keyword()) :: Plug.Conn.t()
   def call(conn, opts) do
-    user_locale =
-      if Keyword.get(opts, :prefer_user_locale, false), do: get_locale_from_user(conn), else: nil
+    session? = Keyword.get(opts, :session, true)
+    choice = conn.params["locale"] |> normalize_locale() |> Locales.acceptable()
+    conn = if session? and choice, do: put_session(conn, @session_key, choice), else: conn
 
-    # Each source is validated individually (`Locales.acceptable/1`) so an
-    # unacceptable candidate falls through to the next source instead of
-    # short-circuiting the chain and being coerced to the default.
-    locale =
-      Locales.acceptable(get_locale_from_path(conn)) ||
-        Locales.acceptable(user_locale) ||
-        Locales.acceptable(get_locale_from_params(conn)) ||
-        Locales.acceptable(get_locale_from_session(conn)) ||
-        get_locale_from_header(conn) ||
-        surface_default(opts)
+    path_locale = normalize_locale(conn.assigns[:path_locale])
+    detected = [choice, remembered_choice(conn, session?) | header_locales(conn)]
+    fallback = surface_default(opts)
 
-    # Store in session for persistence
-    conn = put_session(conn, :locale, locale)
+    locale = Locales.resolve([path_locale, user_locale(conn, opts) | detected], fallback)
+    ambient_locale = Locales.resolve([path_locale | detected], fallback)
 
-    # Set for Gettext (global — reaches every backend for this process)
+    # Global: reaches every Gettext backend in this process, not just Core's.
     Gettext.put_locale(locale)
 
-    # Store in assigns for LiveView access
-    assign(conn, :locale, locale)
+    merge_assigns(conn, locale: locale, ambient_locale: ambient_locale)
+  end
+
+  @doc """
+  The resolved locales for a LiveView's signed static session.
+
+  Use as (or merge into) a live_session's `session:` so the connected mount
+  sees exactly what the dead render resolved, including a locale that came
+  from `Accept-Language` alone, which the websocket cannot see:
+
+      live_session :name, session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []}
+
+  `TymeslotWeb.Hooks.LocaleHook` reads `"resolved_locale"`;
+  `TymeslotWeb.Hooks.AppLocaleHook` reads `"path_locale"` and
+  `"ambient_locale"` and re-applies the user's saved preference itself, so a
+  preference changed after the page loaded still takes effect on a live
+  remount. Absent assigns are left out.
+  """
+  @spec live_session_data(Plug.Conn.t()) :: %{optional(String.t()) => String.t()}
+  def live_session_data(conn) do
+    Map.reject(
+      %{
+        "resolved_locale" => conn.assigns[:locale],
+        "ambient_locale" => conn.assigns[:ambient_locale],
+        "path_locale" => conn.assigns[:path_locale]
+      },
+      fn {_key, value} -> is_nil(value) end
+    )
   end
 
   # The end of the chain: the admin-editable fallback for the surface this
@@ -74,61 +139,37 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
     end
   end
 
-  # A locale carried by the URL path itself, set as a static route assign
-  # (`assigns: %{path_locale: "de"}`) on locale-prefixed scopes. The URL is
-  # the most explicit statement of intent, so it outranks every other source,
-  # including the saved user preference.
-  defp get_locale_from_path(conn) do
-    case conn.assigns[:path_locale] do
-      locale when is_binary(locale) -> sanitize_locale_input(locale)
-      _other -> nil
-    end
-  end
-
-  # The authenticated user's saved interface-language preference, when set.
   # Only consulted on pipelines that pass `prefer_user_locale: true` (the
   # authenticated app), never on public booking pages. Requires
   # `FetchCurrentUser` to have run earlier in the pipeline.
-  defp get_locale_from_user(conn) do
-    case conn.assigns[:current_user] do
-      %{locale: locale} when is_binary(locale) -> sanitize_locale_input(locale)
-      _other -> nil
+  defp user_locale(conn, opts) do
+    with true <- Keyword.get(opts, :prefer_user_locale, false),
+         %{locale: locale} <- conn.assigns[:current_user] do
+      normalize_locale(locale)
+    else
+      _no_preference -> nil
     end
   end
 
-  defp get_locale_from_params(conn) do
-    case conn.params["locale"] do
-      locale when is_binary(locale) -> sanitize_locale_input(locale)
-      _other -> nil
+  defp remembered_choice(conn, true), do: get_session(conn, @session_key)
+  defp remembered_choice(_conn, false), do: nil
+
+  # The header's languages, highest weight first. Ties keep header order.
+  defp header_locales(conn) do
+    case get_req_header(conn, "accept-language") do
+      [header | _rest] -> parse_accept_language(header)
+      [] -> []
     end
   end
 
-  defp get_locale_from_session(conn) do
-    case get_session(conn, :locale) do
-      locale when is_binary(locale) -> sanitize_locale_input(locale)
-      _other -> nil
-    end
-  end
-
-  defp get_locale_from_header(conn) do
-    conn
-    |> get_req_header("accept-language")
-    |> List.first()
-    |> parse_accept_language()
-    |> find_best_match()
-  end
-
-  defp parse_accept_language(nil), do: []
-
-  defp parse_accept_language(header) when is_binary(header) do
-    # Validate UTF-8 and length before processing
-    if String.valid?(header) and byte_size(header) <= @max_header_length do
+  defp parse_accept_language(header) do
+    if byte_size(header) <= @max_header_length and String.valid?(header) do
       header
       |> String.split(",")
       |> Enum.take(@max_tags_count)
-      |> Enum.map(&parse_language_tag/1)
-      |> Enum.reject(&is_nil/1)
-      |> Enum.sort_by(fn {_locale, quality} -> quality end, :desc)
+      |> Enum.flat_map(&parse_language_range/1)
+      |> Enum.sort_by(fn {_locale, weight} -> weight end, :desc)
+      |> Enum.map(fn {locale, _weight} -> locale end)
     else
       Logger.warning("Invalid or oversized Accept-Language header",
         valid_utf8: String.valid?(header),
@@ -139,105 +180,48 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
     end
   end
 
-  defp parse_accept_language(_arg), do: []
-
-  defp parse_language_tag(tag) when is_binary(tag) do
-    # Limit tag length to prevent DoS
-    if byte_size(tag) > 100 do
-      nil
-    else
-      case String.split(tag, ";q=") do
-        [locale] ->
-          case normalize_locale(locale) do
-            normalized when is_binary(normalized) -> {normalized, 1.0}
-            _other -> nil
-          end
-
-        [locale, quality] ->
-          case Float.parse(quality) do
-            # Validate quality score is within HTTP spec (0.0 to 1.0)
-            {q, _value} when q >= 0.0 and q <= 1.0 ->
-              case normalize_locale(locale) do
-                normalized when is_binary(normalized) -> {normalized, q}
-                _other -> nil
-              end
-
-            _other ->
-              nil
-          end
-
-        _other ->
-          nil
-      end
+  # RFC 9110: `language-range weight`, where
+  # `weight = OWS ";" OWS "q=" qvalue`. A weight of 0 means "not acceptable",
+  # so such a range is dropped rather than ranked last.
+  defp parse_language_range(range) do
+    case range |> String.split(";") |> Enum.map(&String.trim/1) do
+      [tag] -> weighted(tag, 1.0)
+      [tag, weight] -> weighted(tag, parse_qvalue(weight))
+      _malformed -> []
     end
   end
 
-  defp parse_language_tag(_arg), do: nil
+  defp weighted(tag, weight) when is_float(weight) and weight > 0.0 do
+    case normalize_locale(tag) do
+      nil -> []
+      locale -> [{locale, weight}]
+    end
+  end
 
-  # Sanitizes locale input to prevent security issues.
-  #
-  # Protects against:
-  # - Path traversal (../, ./, etc.)
-  # - Unicode bidirectional override (U+202E, U+202D, etc.)
-  # - Control characters
-  # - Excessive length
-  defp sanitize_locale_input(input) when is_binary(input) do
-    # Check if input is valid UTF-8
+  defp weighted(_tag, _weight), do: []
+
+  # The "q" is case-insensitive; the qvalue must lie in 0..1.
+  defp parse_qvalue(<<q, "=", value::binary>>) when q in [?q, ?Q] do
+    case Float.parse(value) do
+      {weight, ""} when weight >= 0.0 and weight <= 1.0 -> weight
+      _invalid -> nil
+    end
+  end
+
+  defp parse_qvalue(_weight), do: nil
+
+  # Reduces a tag to its lowercased primary language subtag (`de-AT` and
+  # `DE_at` both become `de`). Not a validator: `Locales.resolve/2`
+  # whitelists the result against the supported codes.
+  defp normalize_locale(input) when is_binary(input) and byte_size(input) <= @max_locale_length do
     if String.valid?(input) do
       input
       |> String.trim()
-      # Remove Unicode bidirectional override and control characters
-      # Using String.to_charlist for proper Unicode handling
-      |> then(fn str ->
-        str
-        |> String.to_charlist()
-        |> Enum.reject(fn char ->
-          # C0 and C1 control characters
-          # Unicode bidirectional formatting characters
-          (char >= 0x0000 and char <= 0x001F) or
-            (char >= 0x007F and char <= 0x009F) or
-            (char >= 0x200E and char <= 0x200F) or
-            (char >= 0x202A and char <= 0x202E)
-        end)
-        |> List.to_string()
-      end)
-      # Remove any path traversal attempts
-      |> String.replace(~r/\.\.|\.\/|\\\\/, "")
-      |> normalize_locale()
-    else
-      Logger.warning("Invalid UTF-8 in locale input")
-      nil
-    end
-  end
-
-  defp normalize_locale(locale) when is_binary(locale) do
-    normalized =
-      locale
-      |> String.trim()
       |> String.downcase()
-      # Remove any non-alphanumeric characters except hyphen
-      |> String.replace(~r/[^a-z0-9\-]/, "")
-      |> String.split("-")
-      |> List.first()
-      # Truncate to maximum length
-      |> then(fn
-        nil -> nil
-        str -> String.slice(str, 0, @max_locale_length)
-      end)
-
-    # Return nil if result is empty string
-    case normalized do
-      "" -> nil
-      nil -> nil
-      valid -> valid
+      |> String.split(["-", "_"], parts: 2)
+      |> hd()
     end
   end
 
-  defp find_best_match([]), do: nil
-
-  defp find_best_match(parsed_locales) do
-    Enum.find_value(parsed_locales, fn {locale, _quality} ->
-      if locale in Locales.supported_codes(), do: locale
-    end)
-  end
+  defp normalize_locale(_input), do: nil
 end
