@@ -101,7 +101,7 @@ defmodule Tymeslot.MixProject do
       {:phoenix_live_reload, "~> 1.6", only: :dev},
       {:phoenix_live_view, "~> 1.1"},
       {:floki, ">= 0.30.0", only: :test},
-      {:lazy_html, "~> 0.1.8", only: :test},
+      {:lazy_html, "~> 0.1.13", only: :test},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.5.1", runtime: Mix.env() == :dev},
       # 1.27 is the first release carrying the AhaSend adapter.
