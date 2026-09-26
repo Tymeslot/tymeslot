@@ -196,7 +196,7 @@ msgstr "Popis (nepovinné)"
 msgid "Done"
 msgstr "Hotovo"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
 #, elixir-autogen, elixir-format
 msgid "Duration (minutes)"
 msgstr "Délka (minuty)"
@@ -238,7 +238,7 @@ msgstr "Upravit"
 msgid "Edit question"
 msgstr "Upravit otázku"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a duration between %{min} and %{max} minutes"
 msgstr "Zadejte délku mezi %{min} a %{max} minutami"
@@ -895,6 +895,31 @@ msgstr[2] "Můžete nastavit až %{count} připomínek"
 #, elixir-autogen, elixir-format
 msgid "The price of %{amount} is kept and applies again once Stripe is connected."
 msgstr "Cena %{amount} zůstává uložena a začne znovu platit po připojení Stripe."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
+#, elixir-autogen, elixir-format
+msgid "Additional duration (minutes)"
+msgstr "Další délka (minuty)"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
+#, elixir-autogen, elixir-format
+msgid "Bookers choose one of these durations before picking a time. Each booking lasts the duration chosen; the price is the same for all."
+msgstr "Rezervující si před výběrem času zvolí jednu z těchto délek. Každá rezervace trvá zvolenou dobu; cena je pro všechny stejná."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
+#, elixir-autogen, elixir-format
+msgid "Offer another duration"
+msgstr "Nabídnout další délku"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/lengths_field.ex
+#, elixir-autogen, elixir-format
+msgid "Remove this duration"
+msgstr "Odebrat tuto délku"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/form_view.ex
+#, elixir-autogen, elixir-format
+msgid "Start times follow whichever length the booker picks, so each length offers a different set of times. Choose a fixed interval to offer the same start times for every length."
+msgstr "Časy začátku se řídí délkou, kterou si vybere rezervující, takže každá délka nabízí jiné časy. Zvolte pevný interval, aby byly časy začátku pro všechny délky stejné."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_type_form/location_editor_component.ex
 #, elixir-autogen, elixir-format

@@ -26,6 +26,7 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.Lengths
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
   alias UUID
@@ -132,13 +133,20 @@ defmodule Tymeslot.Bookings.Create do
   defp prepare_booking_data(meeting_params, form_data) do
     # The duration used to compute the slot and to gate ScheduleCheck's
     # granularity comes from the resolved meeting type, never the request,
-    # whenever a type is known — mirroring Reschedule, which pins duration to
+    # whenever a type is known (the request only picks among the lengths the
+    # type offers, see `Offer.duration_minutes/3`) — mirroring Reschedule, which pins duration to
     # the persisted meeting rather than trusting `params.duration`. Only an
     # unresolvable type (ad-hoc booking, or one that fails
     # `validate_meeting_type_active/1` a few steps later) falls back to the
     # client-supplied value, bounded exactly as the booking page bounds it.
     meeting_type = resolve_meeting_type_for_duration(meeting_params)
-    duration_minutes = Offer.duration_minutes(meeting_type, meeting_params.duration)
+
+    duration_minutes =
+      Offer.duration_minutes(
+        meeting_type,
+        meeting_params.duration,
+        Lengths.parse(meeting_params.duration)
+      )
 
     with {:ok, date_string} <- normalize_date_input(meeting_params.date),
          {:ok, {start_datetime, end_datetime}} <-

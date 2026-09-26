@@ -191,6 +191,11 @@ msgid "This meeting type books into a calendar you can no longer write to. Edit 
 msgstr "Questo tipo di riunione salva le prenotazioni in un calendario su cui non puoi più scrivere. Modificalo e scegli un altro calendario."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen
+msgid "%{min}–%{max} min"
+msgstr "%{min}–%{max} min"
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} location"
 msgid_plural "%{count} locations"

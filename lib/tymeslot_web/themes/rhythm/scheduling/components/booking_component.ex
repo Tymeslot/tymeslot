@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Timezones
+  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
@@ -113,6 +114,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
             <div class="schedule-header">
               <OrganizerHeader.organizer_header_small
                 organizer_profile={@organizer_profile}
+                duration_minutes={AvailabilityHelpers.duration_minutes(assigns)}
                 meeting_type={@meeting_type}
                 selected_duration={@duration}
               />
@@ -137,7 +139,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                     </div>
                     <div class="summary-label">
                       <%= if @meeting_type do %>
-                        {LocalizationHelpers.format_duration(@meeting_type.duration_minutes)} {dgettext(
+                        {LocalizationHelpers.format_duration(
+                          AvailabilityHelpers.duration_minutes(assigns)
+                        )} {dgettext(
                           "booking",
                           "meeting"
                         )}

@@ -103,6 +103,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       def handle_info({:step_event, step, event, data}, socket) do
         case step do
           :overview -> handle_overview_events(socket, event, data)
+          :length -> handle_length_events(socket, event, data)
           :schedule -> handle_schedule_events(socket, event, data)
           :questions -> handle_questions_events(socket, event, data)
           :booking -> handle_booking_events(socket, event, data)
@@ -216,6 +217,15 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
         EventHandlers.handle_overview_events(socket, event, data, callbacks)
       end
 
+      defp handle_length_events(socket, event, data) do
+        callbacks = %{
+          validate_state_transition: &validate_state_transition/3,
+          transition_to: &transition_to/3
+        }
+
+        EventHandlers.handle_length_events(socket, event, data, callbacks)
+      end
+
       defp handle_schedule_events(socket, event, data) do
         cond do
           event in [:select_date, :select_time] ->
@@ -310,15 +320,22 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
             # organiser's other meeting types — enforce this server-side so a
             # client cannot bypass the template-level `:if` guard by pushing
             # the event directly.
-            if socket.assigns[:entered_via_overview] do
-              handle_state_transition(socket, :schedule, :overview)
-            else
-              {:noreply, socket}
+            cond do
+              # Choosing the length never exposes the organiser's other
+              # meeting types, so it is reachable from a direct link too.
+              StateMachine.choose_length?(socket) ->
+                handle_state_transition(socket, :schedule, :length)
+
+              socket.assigns[:entered_via_overview] ->
+                handle_state_transition(socket, :schedule, :overview)
+
+              true ->
+                {:noreply, socket}
             end
 
           :next_step ->
             # Route to :questions when the meeting type has custom fields, else :booking.
-            states = StateMachine.states_for(socket.assigns[:meeting_type] || %{})
+            states = StateMachine.states_for_socket(socket)
             next = get_in(states, [:schedule, :next]) || :booking
             handle_state_transition(socket, :schedule, next)
         end
@@ -469,9 +486,15 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       end
 
       defp handle_state_entry(socket, :schedule, params) do
-        socket
-        |> LiveHelpers.handle_schedule_entry(params)
-        |> refresh_stale_slot_snapshot()
+        socket = LiveHelpers.handle_schedule_entry(socket, params)
+
+        # A type offering several lengths is only scheduled once one is chosen;
+        # a direct link without `?minutes=` lands on that choice first.
+        if StateMachine.needs_length_choice?(socket) do
+          assign(socket, :current_state, :length)
+        else
+          refresh_stale_slot_snapshot(socket)
+        end
       end
 
       defp handle_state_entry(socket, :questions, _params) do
@@ -581,7 +604,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       # `Integer.parse/1` has no clause for.
       defp handle_theme_event("navigate_to_step", %{"step" => step}, socket)
            when is_binary(step) do
-        states = StateMachine.states_for(socket.assigns[:meeting_type] || %{})
+        states = StateMachine.states_for_socket(socket)
 
         target_step =
           case Integer.parse(step) do
@@ -590,10 +613,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
           end
 
         target_state =
-          case Enum.find(states, fn {_state, %{step: n}} -> n == target_step end) do
-            {state, _meta} -> state
-            nil -> socket.assigns[:current_state]
-          end
+          StateMachine.state_for_step(states, target_step) || socket.assigns[:current_state]
 
         if target_state != socket.assigns[:current_state] and
              StateMachine.can_navigate_to_step?(socket, target_state, states) do

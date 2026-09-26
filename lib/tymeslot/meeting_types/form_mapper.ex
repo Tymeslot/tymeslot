@@ -17,6 +17,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
 
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingTypes.ApprovalWindow
+  alias Tymeslot.MeetingTypes.InputValidation
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
 
@@ -61,6 +62,7 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
         |> Map.merge(booking_limits(params))
         |> maybe_put_custom_fields(params)
         |> maybe_put_locations(params)
+        |> maybe_put_extra_lengths(params)
         |> Map.merge(payment)
 
       {:ok, attrs}
@@ -116,6 +118,26 @@ defmodule Tymeslot.MeetingTypes.FormMapper do
       attrs
     end
   end
+
+  # Only when the params carry the key, like `custom_fields`: a caller that
+  # does not render the durations row cannot clear them by omission. Values
+  # that do not parse are dropped here; InputValidation has already refused
+  # them for the form.
+  defp maybe_put_extra_lengths(attrs, %{"extra_lengths" => extras}) do
+    minutes =
+      extras
+      |> InputValidation.extra_lengths_list()
+      |> Enum.flat_map(fn value ->
+        case Integer.parse(String.trim(value)) do
+          {minutes, ""} -> [minutes]
+          _other -> []
+        end
+      end)
+
+    Map.put(attrs, :extra_lengths_minutes, minutes)
+  end
+
+  defp maybe_put_extra_lengths(attrs, _params), do: attrs
 
   # `allow_video` and `video_integration_id` are deliberately absent from the
   # attributes above: the schema projects them from this list, so mapping them

@@ -468,6 +468,7 @@ msgstr "Vyplňte prosím všechna povinná pole"
 msgid "Please select a date to see available times"
 msgstr "Vyberte prosím datum, abyste viděli volné termíny"
 
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a meeting duration first"
@@ -742,8 +743,14 @@ msgstr "Vaše rezervace nebyla potvrzena. Kdykoli se můžete vrátit a zkusit 
 msgid "Your timezone"
 msgstr "Vaše časové pásmo"
 
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
 #, elixir-autogen, elixir-format
+msgid "back"
+msgstr "Zpět"
+
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
+#, elixir-autogen
 msgid "Add any details..."
 msgstr "Doplňte podrobnosti…"
 
@@ -1378,6 +1385,17 @@ msgstr "Tato rezervace byla zrušena, a proto se neuskuteční."
 msgid "This booking wasn't accepted, so it won't be going ahead."
 msgstr "Tato rezervace nebyla přijata, a proto se neuskuteční."
 
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "%{min}–%{max} min"
+msgstr "%{min}–%{max} min"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
+#, elixir-autogen, elixir-format
+msgid "How long should the meeting be?"
+msgstr "Jak dlouho má schůzka trvat?"
+
 #: lib/tymeslot_web/themes/shared/booking_location.ex
 #, elixir-autogen, elixir-format
 msgid "Enter the number we should call you on."
@@ -1418,3 +1436,9 @@ msgstr "Která videoslužba?"
 #, elixir-autogen, elixir-format
 msgid "Your phone number"
 msgstr "Vaše telefonní číslo"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
+#, elixir-autogen, elixir-format
+msgid "next"
+msgstr "Další"

@@ -151,6 +151,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     %{
       "name" => "",
       "duration" => "30",
+      "extra_lengths" => [],
       "slot_interval" => "",
       "description" => "",
       "icon" => "none"
@@ -161,6 +162,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     %{
       "name" => type.name || "",
       "duration" => to_string(type.duration_minutes || 30),
+      "extra_lengths" => Enum.map(Map.get(type, :extra_lengths_minutes) || [], &to_string/1),
       "slot_interval" => slot_interval_form_value(type.slot_interval_minutes),
       "description" => type.description || "",
       "icon" => type.icon || "none"

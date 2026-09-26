@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
+  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
@@ -96,7 +97,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                 <div class="ticket-header">
                   <span class="ticket-label">{dgettext("booking", "Meeting Details")}</span>
                   <span class="ticket-badge">
-                    {if @meeting_type, do: @meeting_type.duration_minutes, else: @duration} min
+                    {if @meeting_type,
+                      do: AvailabilityHelpers.duration_minutes(assigns),
+                      else: @duration} min
                   </span>
                 </div>
 

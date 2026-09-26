@@ -29,6 +29,10 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
       - nil: Use business hours only (fast)
       - :loading: Show loading state
       - %{}: Use real conflict-aware availability
+    - meeting_type: The type the grid is answering for, if one is selected
+    - length_minutes: The length the booking is being made for, when the page
+      has resolved one. A type offering several lengths is answered for the
+      one the booker picked, not for its primary duration.
   """
   @spec get_calendar_days(
           String.t(),
@@ -36,7 +40,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
           integer(),
           map() | nil,
           map() | atom() | nil,
-          map() | nil
+          map() | nil,
+          pos_integer() | nil
         ) :: [map()]
   def get_calendar_days(
         user_timezone,
@@ -44,7 +49,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
         month,
         organizer_profile,
         availability_map,
-        meeting_type \\ nil
+        meeting_type \\ nil,
+        length_minutes \\ nil
       ) do
     if organizer_profile do
       if Demo.demo_profile?(organizer_profile) do
@@ -52,7 +58,9 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
         Demo.get_calendar_days(user_timezone, year, month, organizer_profile, availability_map)
       else
         schedule = Schedules.resolve_for(meeting_type, organizer_profile)
-        config = availability_config(schedule, organizer_profile, meeting_type)
+
+        config =
+          availability_config(schedule, organizer_profile, meeting_type, length_minutes)
 
         Calculate.get_calendar_days(user_timezone, year, month, config, availability_map)
       end
@@ -89,13 +97,21 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   @doc """
   Gets calendar days for a week view.
   """
-  @spec get_week_days(Date.t(), map(), map() | atom() | nil, String.t(), map() | nil) :: [map()]
+  @spec get_week_days(
+          Date.t(),
+          map(),
+          map() | atom() | nil,
+          String.t(),
+          map() | nil,
+          pos_integer() | nil
+        ) :: [map()]
   def get_week_days(
         week_start,
         organizer_profile,
         availability_map,
         user_timezone,
-        meeting_type \\ nil
+        meeting_type \\ nil,
+        length_minutes \\ nil
       ) do
     if organizer_profile do
       today = user_timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
@@ -106,7 +122,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
           organizer_profile,
           availability_map,
           user_timezone,
-          meeting_type
+          meeting_type,
+          length_minutes
         )
 
       Enum.map(0..6, fn day_offset ->
@@ -138,7 +155,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
          organizer_profile,
          availability_map,
          user_timezone,
-         meeting_type
+         meeting_type,
+         length_minutes
        ) do
     cond do
       availability_map == :loading ->
@@ -151,7 +169,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
             organizer_profile,
             availability_map,
             user_timezone,
-            meeting_type
+            meeting_type,
+            length_minutes
           )
 
         fn date, date_string ->
@@ -177,7 +196,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
             organizer_profile,
             availability_map,
             meeting_type,
-            user_timezone
+            user_timezone,
+            length_minutes
           )
         else
           fn _date, date_string -> {Map.get(demo_days, date_string, false), false} end
@@ -189,7 +209,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
           organizer_profile,
           availability_map,
           meeting_type,
-          user_timezone
+          user_timezone,
+          length_minutes
         )
     end
   end
@@ -222,12 +243,20 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
          organizer_profile,
          availability_map,
          user_timezone,
-         meeting_type
+         meeting_type,
+         length_minutes
        ) do
     if week_covered?(week_start, availability_map) do
       fn _date, _date_string -> {false, false} end
     else
-      day_availability_lookup(week_start, organizer_profile, nil, user_timezone, meeting_type)
+      day_availability_lookup(
+        week_start,
+        organizer_profile,
+        nil,
+        user_timezone,
+        meeting_type,
+        length_minutes
+      )
     end
   end
 
@@ -242,10 +271,13 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
          organizer_profile,
          availability_map,
          meeting_type,
-         user_timezone
+         user_timezone,
+         length_minutes
        ) do
     schedule = fallback_schedule(organizer_profile, availability_map, meeting_type)
-    fallback_config = fallback_config(schedule, organizer_profile, week_start, meeting_type)
+
+    fallback_config =
+      fallback_config(schedule, organizer_profile, week_start, meeting_type, length_minutes)
 
     fn date, _date_string ->
       {Calculate.day_bookable_by_business_hours?(date, user_timezone, fallback_config), false}
@@ -326,8 +358,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   # it. Prefetched because this runs inside the template render of a public
   # page: without it the seven per-day business-hours lookups each hit the
   # database.
-  defp fallback_config(schedule, organizer_profile, week_start, meeting_type) do
-    config = availability_config(schedule, organizer_profile, meeting_type)
+  defp fallback_config(schedule, organizer_profile, week_start, meeting_type, length_minutes) do
+    config = availability_config(schedule, organizer_profile, meeting_type, length_minutes)
 
     Calculate.prefetch_schedule_data(
       config,
@@ -346,7 +378,16 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
   # profile with none set, as `Tymeslot.Availability.Offer` and
   # `Tymeslot.Bookings.Policy.scheduling_config/2` do, so a nil profile
   # timezone resolves to the same zone everywhere.
-  @spec availability_config(map() | nil, map(), map() | nil) :: %{
+  #
+  # `length_minutes` is the length the page has settled on, and it decides more
+  # than how wide a slot is: `Calculate.day_bookable_by_business_hours?/3`
+  # subtracts it together with the minimum notice when working out how late a
+  # day can still be started. Answering with the type's primary duration would
+  # paint today as bookable for a two-hour booking that no longer fits into it.
+  # `Offer.duration_minutes/3` still owns the decision, so a length the type
+  # does not offer resolves to the primary one here exactly as it does on the
+  # real availability path.
+  @spec availability_config(map() | nil, map(), map() | nil, pos_integer() | nil) :: %{
           required(:schedule_id) => integer() | nil,
           required(:max_advance_booking_days) => pos_integer(),
           required(:min_advance_hours) => non_neg_integer(),
@@ -355,11 +396,11 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarHelpers do
           required(:duration_minutes) => pos_integer(),
           required(:owner_timezone) => String.t()
         }
-  defp availability_config(schedule, organizer_profile, meeting_type) do
+  defp availability_config(schedule, organizer_profile, meeting_type, length_minutes) do
     schedule
     |> Schedules.config(meeting_type)
     |> Map.merge(%{
-      duration_minutes: Offer.duration_minutes(meeting_type, nil),
+      duration_minutes: Offer.duration_minutes(meeting_type, nil, length_minutes),
       owner_timezone: organizer_profile.timezone || Profiles.get_default_timezone()
     })
   end

@@ -48,6 +48,23 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   def resolve_meeting_type_for_reschedule(_meeting_uid, _organizer_user_id), do: nil
 
   @doc """
+  The length of the meeting being rescheduled, in minutes. A reschedule keeps
+  it: the booker moves the meeting they booked, they do not re-choose it.
+
+  `nil` when this is not a reschedule or the meeting is not the organiser's.
+  """
+  @spec reschedule_length_minutes(String.t() | nil, integer() | nil) :: pos_integer() | nil
+  def reschedule_length_minutes(meeting_uid, organizer_user_id)
+      when is_binary(meeting_uid) and is_integer(organizer_user_id) do
+    case Orchestrator.get_meeting_for_reschedule(meeting_uid, organizer_user_id) do
+      {:ok, %{duration: minutes}} when is_integer(minutes) and minutes > 0 -> minutes
+      _not_resolvable -> nil
+    end
+  end
+
+  def reschedule_length_minutes(_meeting_uid, _organizer_user_id), do: nil
+
+  @doc """
   The location the meeting being rescheduled was booked at, as the picker
   records a choice: the option id, the booker's own number if the option
   asked for one, and the video provider the meeting is on.

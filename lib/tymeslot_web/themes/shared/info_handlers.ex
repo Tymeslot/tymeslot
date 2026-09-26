@@ -23,7 +23,11 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   def handle_calendar_events_updated(socket) do
     socket =
       case socket.assigns[:current_state] do
-        state when state in [:overview, :schedule, nil] ->
+        # `:length` belongs with the states that have committed to nothing:
+        # a calendar change there must clear the slots the page is holding,
+        # exactly as on the two steps around it. Left in the committed branch
+        # it would carry a stale offer into scheduling.
+        state when state in [:overview, :length, :schedule, nil] ->
           socket
           |> assign(:available_slots, nil)
           |> assign(:selected_time, nil)

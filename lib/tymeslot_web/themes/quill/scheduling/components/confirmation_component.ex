@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
+  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Themes.Shared.ApprovalDisplay
   alias TymeslotWeb.Themes.Shared.BookingLocation
   alias TymeslotWeb.Themes.Shared.Components.ApprovalNotice
@@ -115,7 +116,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     <.booking_details
                       date={@selected_date}
                       time={@selected_time}
-                      duration={if @meeting_type, do: @meeting_type.duration_minutes, else: @duration}
+                      duration={
+                        if @meeting_type,
+                          do: AvailabilityHelpers.duration_minutes(assigns),
+                          else: @duration
+                      }
                       timezone={@user_timezone}
                       variant={:compact}
                     />

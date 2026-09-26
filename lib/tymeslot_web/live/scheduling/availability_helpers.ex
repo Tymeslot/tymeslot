@@ -170,15 +170,20 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   @doc """
   The meeting length the flow is operating on, in minutes.
 
-  Resolved by `Tymeslot.Availability.Offer.duration_minutes/2`, the resolver
+  Resolved by `Tymeslot.Availability.Offer.duration_minutes/3`, the resolver
   the booking and reschedule submits share, so the display path and the
-  submit path cannot disagree about the duration or its bound.
+  submit path cannot disagree about the duration or its bound. On a type
+  offering several lengths it is the one the booker chose; a reschedule keeps
+  the booked length.
   """
-  @spec duration_minutes(Phoenix.LiveView.Socket.t()) :: pos_integer()
-  def duration_minutes(socket) do
+  @spec duration_minutes(Phoenix.LiveView.Socket.t() | map()) :: pos_integer()
+  def duration_minutes(%Phoenix.LiveView.Socket{assigns: assigns}), do: duration_minutes(assigns)
+
+  def duration_minutes(assigns) when is_map(assigns) do
     Offer.duration_minutes(
-      socket.assigns[:meeting_type],
-      socket.assigns[:duration] || socket.assigns[:selected_duration]
+      assigns[:meeting_type],
+      assigns[:duration] || assigns[:selected_duration],
+      assigns[:reschedule_length_minutes] || assigns[:chosen_length_minutes]
     )
   end
 

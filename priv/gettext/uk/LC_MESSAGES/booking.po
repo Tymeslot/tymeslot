@@ -468,6 +468,7 @@ msgstr "Заповніть усі обов'язкові поля"
 msgid "Please select a date to see available times"
 msgstr "Оберіть дату, щоб побачити вільний час"
 
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
 #: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
 #, elixir-autogen, elixir-format
 msgid "Please select a meeting duration first"
@@ -742,8 +743,14 @@ msgstr "Бронювання не підтверджено. Ви можете п
 msgid "Your timezone"
 msgstr "Ваш часовий пояс"
 
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
 #, elixir-autogen, elixir-format
+msgid "back"
+msgstr "Назад"
+
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex
+#, elixir-autogen
 msgid "Add any details..."
 msgstr "Вкажіть деталі…"
 
@@ -1379,6 +1386,17 @@ msgstr "Це бронювання скасовано, тож воно не ві�
 msgid "This booking wasn't accepted, so it won't be going ahead."
 msgstr "Це бронювання не було прийнято, тож воно не відбудеться."
 
+#: lib/tymeslot_web/themes/shared/localization_helpers.ex
+#, elixir-autogen, elixir-format
+msgid "%{min}–%{max} min"
+msgstr "%{min}–%{max} хв"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
+#, elixir-autogen, elixir-format
+msgid "How long should the meeting be?"
+msgstr "Скільки має тривати зустріч?"
+
 #: lib/tymeslot_web/themes/shared/booking_location.ex
 #, elixir-autogen, elixir-format
 msgid "Enter the number we should call you on."
@@ -1419,3 +1437,9 @@ msgstr "Який відеосервіс?"
 #, elixir-autogen, elixir-format
 msgid "Your phone number"
 msgstr "Ваш номер телефону"
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/length_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/length_component.ex
+#, elixir-autogen, elixir-format
+msgid "next"
+msgstr "Далі"
