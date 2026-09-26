@@ -418,7 +418,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 phx-target={@myself}
                 data-testid="back-step"
               >
-                ← {dgettext("booking", "back")}
+                ← {dgettext("booking", "Back")}
               </button>
               <button
                 class={
@@ -429,7 +429,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 data-testid="next-step"
                 disabled={is_nil(@selected_date) or is_nil(@selected_time)}
               >
-                {dgettext("booking", "next")} →
+                {dgettext("booking", "Next")} →
               </button>
             </div>
           </div>

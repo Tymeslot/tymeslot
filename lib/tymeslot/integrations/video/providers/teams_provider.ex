@@ -240,12 +240,12 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   def perform_connection_test(config) do
     case get_access_token(config) do
       {:ok, _token} ->
-        {:ok, dgettext("dashboard_integrations", "Microsoft Teams connected successfully!")}
+        {:ok, dgettext("dashboard_video", "Microsoft Teams connected successfully!")}
 
       {:error, reason} ->
         {:error,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "Failed to authenticate with Microsoft Teams: %{reason}",
            reason: inspect(reason)
          )}
@@ -509,7 +509,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
       event: "teams_token_revoked",
       message:
         dgettext_noop(
-          "dashboard_integrations",
+          "dashboard_video",
           "Microsoft Teams access was revoked. Please reconnect your Teams account."
         )
     )

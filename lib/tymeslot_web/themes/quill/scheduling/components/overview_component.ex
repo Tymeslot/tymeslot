@@ -167,7 +167,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                         }
                         class="w-full"
                       >
-                        {dgettext("booking", "next")} →
+                        {dgettext("booking", "Next")} →
                       </.action_button>
                     </div>
                   </div>

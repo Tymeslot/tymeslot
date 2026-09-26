@@ -185,8 +185,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
               <.input
                 field={f[:name]}
-                label={dgettext("booking", "name")}
-                placeholder={dgettext("booking", "enter_full_name")}
+                label={dgettext("booking", "Name")}
+                placeholder={dgettext("booking", "Enter your full name")}
                 errors={FormValidationHelpers.field_errors(@validation_errors, :name)}
                 phx-debounce="blur"
                 phx-blur="field_blur"
@@ -196,9 +196,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
               <.input
                 field={f[:email]}
-                label={dgettext("booking", "email")}
+                label={dgettext("booking", "Email")}
                 type="email"
-                placeholder={dgettext("booking", "enter_email")}
+                placeholder={dgettext("booking", "your.email@example.com")}
                 errors={FormValidationHelpers.field_errors(@validation_errors, :email)}
                 phx-debounce="blur"
                 phx-blur="field_blur"
@@ -209,8 +209,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               <.input
                 field={f[:message]}
                 type="textarea"
-                label={dgettext("booking", "message_optional")}
-                placeholder={dgettext("booking", "add_details")}
+                label={dgettext("booking", "Message (optional)")}
+                placeholder={dgettext("booking", "Add any details...")}
                 errors={FormValidationHelpers.field_errors(@validation_errors, :message)}
                 rows={4}
                 phx-debounce="blur"
@@ -250,7 +250,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 data-testid="back-step"
                 disabled={@submitting}
               >
-                ← {dgettext("booking", "back")}
+                ← {dgettext("booking", "Back")}
               </button>
               <button
                 type="submit"
@@ -305,7 +305,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
     BookingLabels.submit_label(
       is_rescheduling,
       meeting_type,
-      dgettext("booking", "submit")
+      dgettext("booking", "Submit")
     )
   end
 

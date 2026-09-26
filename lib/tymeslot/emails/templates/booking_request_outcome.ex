@@ -65,9 +65,9 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
 
       #{reason_block({variant, kind}, meeting)}
 
-      #{Buttons.action_button(:confirmed, dgettext("emails", "Pick another time"), Urls.get_app_url(), full_width: true)}
+      #{Buttons.action_button(:confirmed, dgettext("emails_booking_requests", "Pick another time"), Urls.get_app_url(), full_width: true)}
 
-      #{Text.system_footer_note(dgettext("emails", "This time slot is available for booking again."))}
+      #{Text.system_footer_note(dgettext("emails_booking_requests", "This time slot is available for booking again."))}
       """
 
       html_body =
@@ -104,69 +104,92 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
   defp rescheduled?(%Meeting{first_announced_at: %DateTime{}}), do: true
   defp rescheduled?(_meeting), do: false
 
-  defp requested_time_title(:booking), do: dgettext("emails", "Requested Time")
-  defp requested_time_title(:reschedule), do: dgettext("emails", "Requested New Time")
+  defp requested_time_title(:booking), do: dgettext("emails_booking_requests", "Requested Time")
 
-  defp headline({:declined, :booking}), do: dgettext("emails", "Booking Request Declined")
-  defp headline({:expired, :booking}), do: dgettext("emails", "Booking Request Expired")
-  defp headline({:declined, :reschedule}), do: dgettext("emails", "Reschedule Declined")
-  defp headline({:expired, :reschedule}), do: dgettext("emails", "Reschedule Request Expired")
+  defp requested_time_title(:reschedule),
+    do: dgettext("emails_booking_requests", "Requested New Time")
 
-  defp eyebrow({:declined, :booking}), do: dgettext("emails", "Not confirmed")
-  defp eyebrow({:expired, :booking}), do: dgettext("emails", "No longer held")
-  defp eyebrow({_variant, :reschedule}), do: dgettext("emails", "Booking cancelled")
+  defp headline({:declined, :booking}),
+    do: dgettext("emails_booking_requests", "Booking Request Declined")
+
+  defp headline({:expired, :booking}),
+    do: dgettext("emails_booking_requests", "Booking Request Expired")
+
+  defp headline({:declined, :reschedule}),
+    do: dgettext("emails_booking_requests", "Reschedule Declined")
+
+  defp headline({:expired, :reschedule}),
+    do: dgettext("emails_booking_requests", "Reschedule Request Expired")
+
+  defp eyebrow({:declined, :booking}), do: dgettext("emails_booking_requests", "Not confirmed")
+  defp eyebrow({:expired, :booking}), do: dgettext("emails_booking_requests", "No longer held")
+
+  defp eyebrow({_variant, :reschedule}),
+    do: dgettext("emails_booking_requests", "Booking cancelled")
 
   defp subject_line({:declined, :booking}, meeting, date) do
-    dgettext("emails", "Request declined: %{title} - %{date}", title: meeting.title, date: date)
+    dgettext("emails_booking_requests", "Request declined: %{title} - %{date}",
+      title: meeting.title,
+      date: date
+    )
   end
 
   defp subject_line({:expired, :booking}, meeting, date) do
-    dgettext("emails", "Request expired: %{title} - %{date}", title: meeting.title, date: date)
+    dgettext("emails_booking_requests", "Request expired: %{title} - %{date}",
+      title: meeting.title,
+      date: date
+    )
   end
 
   defp subject_line({:declined, :reschedule}, meeting, date) do
-    dgettext("emails", "Reschedule declined, booking cancelled: %{title} - %{date}",
+    dgettext(
+      "emails_booking_requests",
+      "Reschedule declined, booking cancelled: %{title} - %{date}",
       title: meeting.title,
       date: date
     )
   end
 
   defp subject_line({:expired, :reschedule}, meeting, date) do
-    dgettext("emails", "Reschedule request expired, booking cancelled: %{title} - %{date}",
+    dgettext(
+      "emails_booking_requests",
+      "Reschedule request expired, booking cancelled: %{title} - %{date}",
       title: meeting.title,
       date: date
     )
   end
 
   defp preheader({:declined, :reschedule}, meeting) do
-    dgettext("emails", "Hi %{name}, %{organizer} can't make the new time.",
+    dgettext("emails_booking_requests", "Hi %{name}, %{organizer} can't make the new time.",
       name: meeting.attendee_name,
       organizer: meeting.organizer_name
     )
   end
 
   defp preheader({:expired, :reschedule}, meeting) do
-    dgettext("emails", "Hi %{name}, your reschedule request wasn't answered in time.",
+    dgettext(
+      "emails_booking_requests",
+      "Hi %{name}, your reschedule request wasn't answered in time.",
       name: meeting.attendee_name
     )
   end
 
   defp preheader({:declined, :booking}, meeting) do
-    dgettext("emails", "Hi %{name}, %{organizer} can't make this time.",
+    dgettext("emails_booking_requests", "Hi %{name}, %{organizer} can't make this time.",
       name: meeting.attendee_name,
       organizer: meeting.organizer_name
     )
   end
 
   defp preheader({:expired, :booking}, meeting) do
-    dgettext("emails", "Hi %{name}, this request wasn't answered in time.",
+    dgettext("emails_booking_requests", "Hi %{name}, this request wasn't answered in time.",
       name: meeting.attendee_name
     )
   end
 
   defp explanation({:declined, :reschedule}, meeting) do
     dgettext(
-      "emails",
+      "emails_booking_requests",
       "%{organizer} wasn't able to accept the new time. Your previous time had already been given up for it, so your booking has been cancelled. The attached calendar file removes it from your calendar.",
       organizer: meeting.organizer_name
     )
@@ -174,7 +197,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
 
   defp explanation({:expired, :reschedule}, meeting) do
     dgettext(
-      "emails",
+      "emails_booking_requests",
       "%{organizer} didn't get to your reschedule request in time. Your previous time had already been given up for it, so your booking has been cancelled. The attached calendar file removes it from your calendar.",
       organizer: meeting.organizer_name
     )
@@ -182,7 +205,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
 
   defp explanation({:declined, :booking}, meeting) do
     dgettext(
-      "emails",
+      "emails_booking_requests",
       "%{organizer} wasn't able to take this booking, so the time is no longer held for you.",
       organizer: meeting.organizer_name
     )
@@ -190,7 +213,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
 
   defp explanation({:expired, :booking}, meeting) do
     dgettext(
-      "emails",
+      "emails_booking_requests",
       "%{organizer} didn't get to your request in time, so the time has been released. You are welcome to pick another slot.",
       organizer: meeting.organizer_name
     )
@@ -206,7 +229,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
        when is_binary(reason) and reason != "" do
     """
     <mj-text font-size="15px" color="#{Styles.ink_soft()}" line-height="22px" padding="8px 0 0 0">
-      #{dgettext("emails", "They added:")}
+      #{dgettext("emails_booking_requests", "They added:")}
     </mj-text>
     <mj-text font-size="15px" color="#{Styles.ink_soft()}" line-height="22px" font-style="italic" padding="4px 0 0 16px">
       #{reason |> Sanitise.sanitize_for_email() |> String.replace("\n", "<br/>")}
@@ -224,7 +247,7 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
       duration: meeting.duration,
       location: meeting.location,
       location_type: BookingRequestLocation.type(meeting),
-      meeting_type: meeting.meeting_type || dgettext("emails", "Meeting"),
+      meeting_type: meeting.meeting_type || dgettext("emails_booking_requests", "Meeting"),
       timezone: meeting.attendee_timezone || "UTC"
     }
   end
@@ -233,26 +256,26 @@ defmodule Tymeslot.Emails.Templates.BookingRequestOutcome do
     """
     #{headline(outcome)}
 
-    #{dgettext("emails", "Hi %{name},", name: meeting.attendee_name)}
+    #{dgettext("emails_booking_requests", "Hi %{name},", name: meeting.attendee_name)}
 
     #{explanation(outcome, meeting)}
 
-    #{dgettext("emails", "REQUESTED TIME:")}
-    #{dgettext("emails", "Date:")} #{Formatting.format_date_short(details.date, locale)}
-    #{dgettext("emails", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
-    #{dgettext("emails", "Location:")} #{Formatting.format_location(details)}
-    #{dgettext("emails", "Type:")} #{details.meeting_type}
-    #{dgettext("emails", "Timezone:")} #{details.timezone}
+    #{dgettext("emails_booking_requests", "REQUESTED TIME:")}
+    #{dgettext("emails_booking_requests", "Date:")} #{Formatting.format_date_short(details.date, locale)}
+    #{dgettext("emails_booking_requests", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
+    #{dgettext("emails_booking_requests", "Location:")} #{Formatting.format_location(details)}
+    #{dgettext("emails_booking_requests", "Type:")} #{details.meeting_type}
+    #{dgettext("emails_booking_requests", "Timezone:")} #{details.timezone}
     #{text_reason(outcome, meeting)}
-    #{dgettext("emails", "This time slot is available for booking again.")}
+    #{dgettext("emails_booking_requests", "This time slot is available for booking again.")}
 
-    #{dgettext("emails", "Pick another time:")} #{Urls.get_app_url()}
+    #{dgettext("emails_booking_requests", "Pick another time:")} #{Urls.get_app_url()}
     """
   end
 
   defp text_reason({:declined, _kind}, %Meeting{decline_reason: reason})
        when is_binary(reason) and reason != "" do
-    "\n" <> dgettext("emails", "They added:") <> "\n" <> reason <> "\n"
+    "\n" <> dgettext("emails_booking_requests", "They added:") <> "\n" <> reason <> "\n"
   end
 
   defp text_reason(_outcome, _meeting), do: ""

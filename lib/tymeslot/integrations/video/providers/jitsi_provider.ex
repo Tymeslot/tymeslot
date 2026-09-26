@@ -229,7 +229,7 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
   end
 
   defp fetch_http_base_url(base_url) when base_url in [nil, ""],
-    do: {:error, dgettext("dashboard_integrations", "Base URL is required")}
+    do: {:error, dgettext("dashboard_video", "Base URL is required")}
 
   defp fetch_http_base_url(base_url) do
     if LinkRoom.http_url?(base_url) do
@@ -237,7 +237,7 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
     else
       {:error,
        dgettext(
-         "dashboard_integrations",
+         "dashboard_video",
          "Invalid URL format. Please provide a valid HTTP/HTTPS URL."
        )}
     end
@@ -257,7 +257,7 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
       internal_names_local: SsrfGuard.allow_private_for_video?(),
       https_error_message:
         dgettext(
-          "dashboard_integrations",
+          "dashboard_video",
           "Use an https:// server URL when token authentication is configured, so the tokens in meeting links are not sent unencrypted."
         )
     )
@@ -266,20 +266,16 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
   defp validate_credentials(nil, nil), do: :ok
 
   defp validate_credentials(_app_id, nil),
-    do:
-      {:error,
-       dgettext("dashboard_integrations", "Enter the App secret that belongs to this App ID")}
+    do: {:error, dgettext("dashboard_video", "Enter the App secret that belongs to this App ID")}
 
   defp validate_credentials(nil, _secret),
-    do:
-      {:error,
-       dgettext("dashboard_integrations", "Enter the App ID that belongs to this App secret")}
+    do: {:error, dgettext("dashboard_video", "Enter the App ID that belongs to this App secret")}
 
   defp validate_credentials(_app_id, secret) when byte_size(secret) < @min_secret_bytes,
     do:
       {:error,
        dgettext(
-         "dashboard_integrations",
+         "dashboard_video",
          "The App secret must be at least %{bytes} bytes long. Every guest receives a token signed with it, so a short secret can be recovered from any booking link.",
          bytes: @min_secret_bytes
        )}

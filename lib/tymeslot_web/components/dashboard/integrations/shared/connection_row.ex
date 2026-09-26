@@ -91,10 +91,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.ConnectionRow do
   # `dgettext_noop/2` in one of these domains. Translating at write time would
   # bake in the locale of whichever process raised the flag, which is not the
   # owner's. Looking the msgid up here, in the viewer's locale, is the one place
-  # it is translated; a reason that isn't a known msgid in either domain (a raw
+  # it is translated; a reason that isn't a known msgid in any of them (a raw
   # diagnostic string, or a row flagged before reasons were stored this way)
   # comes back unchanged.
-  @reason_domains ~w[dashboard_calendar_providers dashboard_integrations]
+  @reason_domains ~w[dashboard_calendar_providers dashboard_integrations dashboard_video]
 
   @doc """
   The reason an integration awaiting reconnection was flagged, for the row's

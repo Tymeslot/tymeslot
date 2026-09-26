@@ -10,8 +10,15 @@
 }
 
 /* Modal Content */
+/* A dialog taller than the viewport has to scroll, or its header and footer
+   are cut off and the buttons cannot be reached — the form is then stuck open,
+   answerable only with Escape. It is the *body* that scrolls, so the title
+   stays readable and the buttons stay put rather than sliding away with the
+   content. The height is capped at the viewport less the container's own
+   padding, so the dialog keeps its margins. */
 .modal-content {
-  @apply relative w-full bg-white rounded-[2.5rem] border-2 border-slate-50 shadow-2xl transform transition-all duration-500 overflow-hidden;
+  @apply relative flex w-full flex-col overflow-hidden bg-white rounded-[2.5rem] border-2 border-slate-50 shadow-2xl transform transition-all duration-500;
+  max-height: calc(100vh - 3rem);
   animation: modalScaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -36,8 +43,12 @@
 }
 
 /* Modal Body */
+/* The one part that scrolls, which is why it may shrink below its content
+   (`min-h-0`) while header and footer keep their height. The markup also
+   carries `.scrollable`, so the bar it shows is the app's own rather than the
+   platform's default one against the dialog's rounded edge. */
 .modal-body {
-  @apply px-10 py-10 text-slate-600 font-medium text-lg leading-relaxed;
+  @apply flex-1 min-h-0 overflow-y-auto px-10 py-10 text-slate-600 font-medium text-lg leading-relaxed;
 }
 
 /* Modal Footer */
@@ -70,12 +81,9 @@
   @apply max-w-[calc(100vw-3rem)] h-[calc(100vh-3rem)] flex flex-col;
 }
 
-/* Full-screen modals lay their content out as a column so the body fills the
-   remaining height. Embedded content (e.g. a preview iframe) can then size to
-   100% and max out the dialog without overflowing or jumping. */
-.modal-content--full .modal-body {
-  @apply flex-1 min-h-0;
-}
+/* Full-screen modals differ only in taking the whole viewport; the column
+   layout that lets embedded content (e.g. a preview iframe) size to 100%
+   without overflowing is now what every dialog does. */
 
 /* Responsive adjustments */
 @media (max-width: 640px) {
@@ -83,8 +91,11 @@
     @apply items-end p-0;
   }
 
+  /* Sheet-style on a phone: anchored to the bottom edge, and shorter than the
+     viewport so what is behind it stays visible. The scrolling itself is
+     inherited from `.modal-content` above. */
   .modal-content {
-    @apply rounded-t-[2.5rem] rounded-b-none overflow-y-auto;
+    @apply rounded-t-[2.5rem] rounded-b-none;
     max-height: 85vh;
     animation: modalSlideUp 0.5s cubic-bezier(0.32, 0.72, 0, 1);
   }

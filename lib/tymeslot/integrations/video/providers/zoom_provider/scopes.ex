@@ -139,21 +139,21 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes do
   @spec reauth_message(operation()) :: String.t()
   def reauth_message(:write) do
     dgettext_noop(
-      "dashboard_integrations",
+      "dashboard_video",
       "Zoom is missing the permission needed to create meetings. Please reconnect your Zoom account."
     )
   end
 
   def reauth_message(:update) do
     dgettext_noop(
-      "dashboard_integrations",
+      "dashboard_video",
       "Zoom is missing the permission needed to reschedule meetings. Please reconnect your Zoom account."
     )
   end
 
   def reauth_message(:delete) do
     dgettext_noop(
-      "dashboard_integrations",
+      "dashboard_video",
       "Zoom is missing the permission needed to cancel meetings. Please reconnect your Zoom account."
     )
   end

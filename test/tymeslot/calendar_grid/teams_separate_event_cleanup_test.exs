@@ -32,9 +32,12 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
 
   import Mox
 
+  alias Ecto.Changeset
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Workers.ExpiredVideoRoomCleanupWorker
 
   setup :verify_on_exit!
 
@@ -200,6 +203,80 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
     end
   end
 
+  # Deleted in Outlook rather than through the grid, the grid event only ever
+  # goes missing from the calendar cache. The nightly scan has seen it there,
+  # finds it missing for two days of syncs, and asks Outlook before it
+  # deletes the Teams event.
+  describe "a grid event with a separate Teams event, deleted in Outlook" do
+    setup ctx do
+      event = with_separate_teams(ctx, insert_event(ctx.calendar), ctx.other_teams)
+      run_nightly_scan()
+
+      Repo.delete!(event)
+      three_days_ago = DateTime.add(DateTime.utc_now(:second), -3 * 86_400, :second)
+      Repo.update_all(EventVideoRoomSchema, set: [event_seen_at: three_days_ago])
+
+      ctx.calendar
+      |> Changeset.change(last_external_sync_at: DateTime.utc_now(:second))
+      |> Repo.update!()
+
+      :ok
+    end
+
+    test "deletes the separate Teams event once Outlook confirms the event is gone" do
+      expect(OutlookCalendarAPIMock, :get_event, fn _integration, @grid_event_id ->
+        {:error, :not_found, "Event not found"}
+      end)
+
+      expect(OutlookCalendarAPIMock, :find_events_by_ical_uid, fn _integration,
+                                                                  "040000008200E00074C5B7101A82E008-existing" ->
+        {:ok, []}
+      end)
+
+      run_nightly_scan()
+
+      assert {:delete, own_event_url(1)} in graph_calls()
+      refute_grid_event_deleted_on_graph()
+    end
+
+    # Outlook gives a moved event a new id, so the old one answers 404.
+    test "keeps the Teams event of a grid event moved to another calendar" do
+      expect(OutlookCalendarAPIMock, :get_event, fn _integration, @grid_event_id ->
+        {:error, :not_found, "Event not found"}
+      end)
+
+      expect(OutlookCalendarAPIMock, :find_events_by_ical_uid, fn _integration, _ical_uid ->
+        {:ok, [%{"id" => "AAMk-moved", "iCalUId" => "040000008200E00074C5B7101A82E008-existing"}]}
+      end)
+
+      expect(OutlookCalendarAPIMock, :get_event, fn _integration, "AAMk-moved" ->
+        {:ok,
+         %{
+           "id" => "AAMk-moved",
+           "iCalUId" => "040000008200E00074C5B7101A82E008-existing",
+           "subject" => "Planning",
+           "isAllDay" => false,
+           "start" => %{"dateTime" => "2030-06-01T09:00:00", "timeZone" => "UTC"},
+           "end" => %{"dateTime" => "2030-06-01T10:00:00", "timeZone" => "UTC"}
+         }}
+      end)
+
+      run_nightly_scan()
+
+      assert graph_calls() == []
+    end
+
+    test "keeps the Teams event while Outlook cannot be asked" do
+      expect(OutlookCalendarAPIMock, :get_event, fn _integration, @grid_event_id ->
+        {:error, :network_error, "Network error: :timeout"}
+      end)
+
+      run_nightly_scan()
+
+      assert graph_calls() == []
+    end
+  end
+
   # Regression guard: the attached meeting's room id is the grid event's own
   # Outlook id, so a clean-up that deletes Teams rooms by id must not reach it.
   describe "a grid event whose Teams meeting is attached to it" do
@@ -317,6 +394,11 @@ defmodule Tymeslot.CalendarGrid.TeamsSeparateEventCleanupTest do
   end
 
   defp drain_room_jobs, do: Oban.drain_queue(queue: :video_rooms, with_recursion: true)
+
+  defp run_nightly_scan do
+    assert :ok = perform_job(ExpiredVideoRoomCleanupWorker, %{})
+    drain_room_jobs()
+  end
 
   defp refute_grid_event_deleted_on_graph do
     refute {:delete, "#{@graph}/me/events/#{@grid_event_id}"} in graph_calls()

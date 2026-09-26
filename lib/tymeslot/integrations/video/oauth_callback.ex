@@ -220,7 +220,7 @@ defmodule Tymeslot.Integrations.Video.OAuthCallback do
         # which account this callback belongs to. Reject to avoid silently overwriting.
         {:error,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
          )}
 

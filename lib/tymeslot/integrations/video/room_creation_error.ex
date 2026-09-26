@@ -174,42 +174,42 @@ defmodule Tymeslot.Integrations.Video.RoomCreationError do
   def message(:conversation_creation_restricted),
     do:
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "Nextcloud Talk does not allow this user to create conversations. In the Talk administration settings on Nextcloud, allow the user's group to create conversations, or connect a user who may."
       )
 
   def message(:talk_not_allowed),
     do:
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "This Nextcloud user may not use Talk. In the Talk administration settings on Nextcloud, add the user to a group that may use Talk, or connect a user who may."
       )
 
   def message(:password_required),
     do:
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "Nextcloud Talk requires a password on public conversations, so guests could not join from the booking's link. In the Talk administration settings on Nextcloud, turn off the password requirement for public conversations."
       )
 
   def message(:talk_not_found),
     do:
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "Nextcloud did not find Talk at this address. Check that the Talk app is installed and enabled, and that the server address is the one you open Nextcloud at."
       )
 
   def message(:redirected),
     do:
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "Nextcloud redirected the request to create a conversation. Edit the integration and enter the address your browser ends up on when you open Nextcloud."
       )
 
   def message(:conversation_refused),
     do:
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "Nextcloud Talk refused to create a conversation. Check the Talk administration settings on Nextcloud; the next booking tries again."
       )
 
