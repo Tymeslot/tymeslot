@@ -62,6 +62,99 @@ defmodule Tymeslot.Meetings.GuestsTest do
     end
   end
 
+  describe "add_to_meeting/3" do
+    test "adds the guests a host names after the booking was made" do
+      meeting = insert(:meeting, attendee_email: "primary@example.com")
+
+      {:ok, added} =
+        Guests.add_to_meeting(meeting.id, ["Colleague@Example.com"], meeting.attendee_email)
+
+      assert [%{email: "colleague@example.com", status: "pending"}] = added
+      assert [%{email: "colleague@example.com"}] = GuestQueries.list_for_meeting(meeting.id)
+    end
+
+    test "leaves a guest who is already invited alone, so no second invitation goes out" do
+      meeting = insert(:meeting, attendee_email: "primary@example.com")
+      {:ok, [first]} = Guests.create_for_meeting(meeting.id, ["colleague@example.com"])
+      stamped_at = DateTime.utc_now(:second)
+      {:ok, _sent} = GuestQueries.mark_confirmation_sent(first, stamped_at)
+
+      assert {:ok, []} =
+               Guests.add_to_meeting(
+                 meeting.id,
+                 ["COLLEAGUE@example.com", "colleague@example.com"],
+                 meeting.attendee_email
+               )
+
+      # One row still, carrying the very stamp it already had: the guest was not
+      # re-queued, which is what would mail them a second invitation.
+      assert [%{email: "colleague@example.com", confirmation_sent_at: ^stamped_at}] =
+               GuestQueries.list_for_meeting(meeting.id)
+    end
+
+    test "adds only the new address when some are already there" do
+      meeting = insert(:meeting, attendee_email: "primary@example.com")
+      {:ok, _existing} = Guests.create_for_meeting(meeting.id, ["one@example.com"])
+
+      {:ok, added} =
+        Guests.add_to_meeting(
+          meeting.id,
+          ["one@example.com", "two@example.com"],
+          meeting.attendee_email
+        )
+
+      assert [%{email: "two@example.com"}] = added
+    end
+
+    test "drops the attendee's own address and anything unusable" do
+      meeting = insert(:meeting, attendee_email: "primary@example.com")
+
+      assert {:ok, []} =
+               Guests.add_to_meeting(
+                 meeting.id,
+                 ["primary@example.com", "not-an-email", "  "],
+                 meeting.attendee_email
+               )
+    end
+
+    test "counts the cap across the guests already on the meeting" do
+      meeting = insert(:meeting, attendee_email: "primary@example.com")
+      full = for n <- 1..Guests.max_guests(), do: "guest#{n}@example.com"
+      {:ok, _existing} = Guests.create_for_meeting(meeting.id, full)
+
+      assert {:error, :full} =
+               Guests.add_to_meeting(meeting.id, ["late@example.com"], meeting.attendee_email)
+
+      assert length(GuestQueries.list_for_meeting(meeting.id)) == Guests.max_guests()
+    end
+
+    test "fills the remaining room and stops there rather than overshooting the cap" do
+      meeting = insert(:meeting, attendee_email: "primary@example.com")
+      taken = for n <- 1..(Guests.max_guests() - 2), do: "guest#{n}@example.com"
+      {:ok, _existing} = Guests.create_for_meeting(meeting.id, taken)
+
+      {:ok, added} =
+        Guests.add_to_meeting(
+          meeting.id,
+          ["a@example.com", "b@example.com", "c@example.com"],
+          meeting.attendee_email
+        )
+
+      assert length(added) == 2
+      assert length(GuestQueries.list_for_meeting(meeting.id)) == Guests.max_guests()
+    end
+  end
+
+  describe "remaining_capacity/1" do
+    test "counts down from the cap as guests are added" do
+      meeting = insert(:meeting)
+      assert Guests.remaining_capacity(meeting.id) == Guests.max_guests()
+
+      {:ok, _guests} = Guests.create_for_meeting(meeting.id, ["one@example.com"])
+      assert Guests.remaining_capacity(meeting.id) == Guests.max_guests() - 1
+    end
+  end
+
   describe "record_rsvp/2" do
     setup do
       meeting = insert(:meeting)

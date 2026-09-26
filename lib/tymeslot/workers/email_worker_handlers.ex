@@ -20,6 +20,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     "send_admin_alert" => {AdminEmails, :handle_admin_alert},
     "send_confirmation_emails" => {MeetingEmails, :handle_confirmation_emails},
     "send_cancellation_emails" => {MeetingEmails, :handle_cancellation_emails, :with_job_id},
+    "send_guest_invitations" => {MeetingEmails, :handle_guest_invitations},
     "send_reminder_emails" => {MeetingEmails, :handle_reminder_emails},
     "send_reschedule_request" => {MeetingEmails, :handle_reschedule_request},
     "send_booking_request_emails" => {BookingApprovalEmails, :handle_booking_request_emails},
