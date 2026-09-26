@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Router do
   require Logger
 
   alias Plug.Conn
+  alias TymeslotWeb.Plugs.LocalePlug
 
   # =============================================================================
   # Healthcheck (early to avoid wildcard username routes)
@@ -130,6 +131,7 @@ defmodule TymeslotWeb.Router do
     pipe_through :browser
 
     live_session :meeting_request,
+      session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
       on_mount: [TymeslotWeb.Hooks.LocaleHook, TymeslotWeb.Hooks.ClientInfoHook] do
       live "/meeting-request/:token", MeetingRequestLive, :show
     end
@@ -146,6 +148,7 @@ defmodule TymeslotWeb.Router do
     # user is sent on from the login and sign-up screens; the emailed-link
     # screens (password reset, email verification) stay reachable.
     live_session :auth,
+      session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
       on_mount: [
         TymeslotWeb.Hooks.LocaleHook,
         {TymeslotWeb.Hooks.AuthLiveSessionHook,
@@ -344,6 +347,7 @@ defmodule TymeslotWeb.Router do
       do: module.on_mount(:default, params, session, socket)
 
     live_session :authenticated,
+      session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
       on_mount: {__MODULE__, :dashboard_hooks} do
       live "/dashboard", DashboardLive, :calendar
       live "/dashboard/overview", DashboardLive, :overview
@@ -380,6 +384,7 @@ defmodule TymeslotWeb.Router do
     ]
 
     live_session :admin,
+      session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
       on_mount: [
         {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
         TymeslotWeb.Hooks.AppLocaleHook,
@@ -407,6 +412,7 @@ defmodule TymeslotWeb.Router do
     ]
 
     live_session :onboarding,
+      session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
       on_mount: {TymeslotWeb.Router, :onboarding_hooks} do
       live "/onboarding", OnboardingLive, :welcome
       live "/onboarding/:step", OnboardingLive, :step
@@ -422,6 +428,7 @@ defmodule TymeslotWeb.Router do
     pipe_through :theme_browser
 
     live_session :meeting_management,
+      session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
       on_mount: [
         TymeslotWeb.Hooks.LocaleHook,
         TymeslotWeb.Hooks.ThemeHook,
@@ -442,6 +449,7 @@ defmodule TymeslotWeb.Router do
     pipe_through :theme_browser
 
     live_session :payment_return,
+      session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
       on_mount: [
         TymeslotWeb.Hooks.LocaleHook,
         TymeslotWeb.Hooks.ClientInfoHook
@@ -487,6 +495,7 @@ defmodule TymeslotWeb.Router do
     pipe_through :theme_browser
 
     live_session :poll_voting,
+      session: {TymeslotWeb.Plugs.LocalePlug, :live_session_data, []},
       on_mount: [
         TymeslotWeb.Hooks.LocaleHook,
         TymeslotWeb.Hooks.ThemeHook,
@@ -532,8 +541,9 @@ defmodule TymeslotWeb.Router do
   @doc false
   @spec scheduling_session(Plug.Conn.t()) :: map()
   def scheduling_session(conn) do
-    %{
-      "locale" => Conn.get_session(conn, "locale"),
+    conn
+    |> LocalePlug.live_session_data()
+    |> Map.merge(%{
       "embed_token" => conn.assigns[:embed_token],
       "scheduling_referrer" => Conn.get_session(conn, "scheduling_referrer"),
       # Forwarded so PageViewHook can recognise an organiser viewing their own
@@ -541,7 +551,7 @@ defmodule TymeslotWeb.Router do
       # this map is signed, not encrypted, into the public page's HTML, so the
       # session token must never be put here.
       "viewer_user_id" => viewer_user_id(conn)
-    }
+    })
   end
 
   defp viewer_user_id(conn) do

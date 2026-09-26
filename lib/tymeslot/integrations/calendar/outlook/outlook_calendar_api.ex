@@ -193,6 +193,32 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   end
 
   @doc """
+  Finds the signed-in user's events carrying the iCalendar UID `ical_uid`, in
+  every calendar of the mailbox. An event keeps its iCalendar UID when it
+  moves to another calendar, where its Graph id changes, so this finds an
+  event that `get_event/2` no longer does. Answers `{:ok, []}` only when every
+  calendar was asked and none holds it.
+  """
+  @impl CalendarAPIBehaviour
+  @spec find_events_by_ical_uid(CalendarIntegrationSchema.t(), String.t()) ::
+          {:ok, [map()]} | api_error()
+  def find_events_by_ical_uid(%CalendarIntegrationSchema{} = integration, ical_uid) do
+    params = %{
+      "$filter" => "iCalUId eq '#{String.replace(ical_uid, "'", "''")}'",
+      "$select" => "id,iCalUId,isCancelled"
+    }
+
+    with {:ok, calendars} <- list_calendars(integration) do
+      Enum.reduce_while(calendars, {:ok, []}, fn %{"id" => calendar_id}, {:ok, found} ->
+        case list_events_for_path(integration, "/me/calendars/#{calendar_id}/events", params) do
+          {:ok, events} -> {:cont, {:ok, found ++ events}}
+          error -> {:halt, error}
+        end
+      end)
+    end
+  end
+
+  @doc """
   Deletes an event from the primary calendar.
   """
   @impl CalendarAPIBehaviour

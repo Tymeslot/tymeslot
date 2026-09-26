@@ -203,7 +203,8 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
             ctx.creating.integration_id,
             ctx.uid,
             CreatedEvent.local_uid(created),
-            created.calendar_id || written_calendar_id(ctx.creating)
+            created.calendar_id || written_calendar_id(ctx.creating),
+            CreatedEvent.cache_uid(created)
           )
 
     ctx = attach_video_room(ctx, created)

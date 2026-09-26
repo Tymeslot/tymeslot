@@ -87,7 +87,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider.Reauth do
       config,
       "zoom_token_revoked",
       dgettext_noop(
-        "dashboard_integrations",
+        "dashboard_video",
         "Zoom access was revoked. Please reconnect your Zoom account."
       )
     )

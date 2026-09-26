@@ -19,7 +19,7 @@ defmodule Tymeslot.Emails.Templates.SocialSignupConfirmation do
 
     #{Text.centered_text(explanation(provider), padding: "0 0 20px 0")}
 
-    #{Buttons.action_button(@intent, dgettext("emails", "Confirm Email & Finish Signing Up"), confirm_url, full_width: true, size: :large)}
+    #{Buttons.action_button(@intent, dgettext("emails_account", "Confirm Email & Finish Signing Up"), confirm_url, full_width: true, size: :large)}
 
     #{Text.system_footer_note(footer())}
 
@@ -30,12 +30,12 @@ defmodule Tymeslot.Emails.Templates.SocialSignupConfirmation do
 
     TemplateHelper.compile_system_template(
       mjml_content,
-      dgettext("emails", "Account Verification"),
-      dgettext("emails", "Confirm your email to finish signing up for Tymeslot."),
+      dgettext("emails_account", "Account Verification"),
+      dgettext("emails_account", "Confirm your email to finish signing up for Tymeslot."),
       intent: @intent,
-      eyebrow: dgettext("emails", "Welcome"),
-      stage_title: dgettext("emails", "One step to go"),
-      stage_subtitle: dgettext("emails", "Confirm your email and your account is ready.")
+      eyebrow: dgettext("emails_account", "Welcome"),
+      stage_title: dgettext("emails_account", "One step to go"),
+      stage_subtitle: dgettext("emails_account", "Confirm your email and your account is ready.")
     )
   end
 
@@ -43,13 +43,13 @@ defmodule Tymeslot.Emails.Templates.SocialSignupConfirmation do
           String.t()
   def render_text(recipient, provider, confirm_url) do
     """
-    #{dgettext("emails", "One step to go")}
+    #{dgettext("emails_account", "One step to go")}
 
     #{Greeting.text(recipient)}
 
     #{explanation(provider)}
 
-    #{dgettext("emails", "Confirm Email & Finish Signing Up:")}
+    #{dgettext("emails_account", "Confirm Email & Finish Signing Up:")}
     #{confirm_url}
 
     #{footer()}
@@ -58,7 +58,7 @@ defmodule Tymeslot.Emails.Templates.SocialSignupConfirmation do
 
   defp explanation(provider) do
     dgettext(
-      "emails",
+      "emails_account",
       "You're signing up for Tymeslot with %{provider}. Confirm this email address to create your account and sign in.",
       provider: SignInProvider.display_name(%{provider: provider})
     )
@@ -66,7 +66,7 @@ defmodule Tymeslot.Emails.Templates.SocialSignupConfirmation do
 
   defp footer do
     dgettext(
-      "emails",
+      "emails_account",
       "This link expires in 24 hours. If you didn't sign up for Tymeslot, you can ignore this email and no account will be created."
     )
   end
