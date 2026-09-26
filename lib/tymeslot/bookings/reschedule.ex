@@ -44,12 +44,14 @@ defmodule Tymeslot.Bookings.Reschedule do
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Meetings.VideoRooms
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Notifications.{Events, GuestNotifications, Orchestrator}
   alias Tymeslot.Repo
+  alias Tymeslot.Scheduling.SharedAvailability
   alias Tymeslot.Utils.DateTimeUtils.Duration, as: UrlDuration
   alias Tymeslot.Workers.VideoSyncWorker
 
@@ -117,9 +119,18 @@ defmodule Tymeslot.Bookings.Reschedule do
              organizer_user_id,
              original_meeting.duration
            ),
-         config <- Policy.scheduling_config(original_meeting.organizer_user_id, meeting_type),
+         shared_availability_guests = shared_availability_guests(original_meeting),
+         config =
+           original_meeting.organizer_user_id
+           |> Policy.scheduling_config(meeting_type)
+           |> SharedAvailability.strictest_policy(shared_availability_guests),
          {:ok, new_times} <-
-           prepare_new_times(new_params, original_meeting, meeting_type, config),
+           prepare_new_times(
+             new_params,
+             original_meeting,
+             meeting_type,
+             {config, shared_availability_guests}
+           ),
          :ok <- verify_calendar_free(original_meeting, new_times, config),
          {:ok, updated_meeting} <-
            apply_time_update_and_schedule_job(
@@ -440,7 +451,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   # window in which a host edit between them could be answered differently by
   # each call, and `verify_calendar_free/3` needs the same buffer and notice
   # rules this check was made against.
-  defp prepare_new_times(params, meeting, meeting_type, config) do
+  defp prepare_new_times(params, meeting, meeting_type, {config, shared_availability_guests}) do
     organizer_user_id = meeting.organizer_user_id
 
     duration_minutes = meeting.duration
@@ -464,6 +475,13 @@ defmodule Tymeslot.Bookings.Reschedule do
              params.user_timezone,
              config,
              organizer_user_id
+           ),
+         :ok <-
+           validate_shared_availability(
+             shared_availability_guests,
+             meeting,
+             {date, start_datetime, end_datetime, params.user_timezone},
+             config
            ) do
       {:ok,
        %{
@@ -477,6 +495,47 @@ defmodule Tymeslot.Bookings.Reschedule do
 
       {:error, _reason} = error ->
         error
+    end
+  end
+
+  defp shared_availability_guests(meeting) do
+    meeting.id
+    |> Guests.list_for_meeting()
+    |> Enum.map(& &1.email)
+    |> SharedAvailability.resolve_from_guest_emails(meeting.organizer_user_id)
+  end
+
+  # The same rules a booking with these guests was created under: their
+  # schedule, calendar and hosted bookings, with the meeting's own invitation
+  # left out of their calendars. A calendar that cannot be read at all only
+  # refuses when it reported an incomplete busy set; a transport failure lets
+  # the reschedule through, as `Bookings.Create` does for a new booking.
+  defp validate_shared_availability([], _meeting, _slot, _config), do: :ok
+
+  defp validate_shared_availability(guests, meeting, {date, start_dt, end_dt, user_tz}, config) do
+    case SharedAvailability.validate_guests_available(
+           guests,
+           date,
+           start_dt,
+           end_dt,
+           user_tz,
+           config,
+           SharedAvailability.fresh_events_fetcher(meeting.uid)
+         ) do
+      :ok ->
+        :ok
+
+      {:error, reason}
+      when reason in [:slot_unavailable, :some_calendars_unavailable, :all_calendars_unavailable] ->
+        {:error, :slot_taken}
+
+      {:error, reason} ->
+        Logger.warning("Guest calendar availability check failed, proceeding with reschedule",
+          reason: inspect(reason),
+          meeting_id: meeting.id
+        )
+
+        :ok
     end
   end
 

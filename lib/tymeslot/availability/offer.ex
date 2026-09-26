@@ -27,6 +27,8 @@ defmodule Tymeslot.Availability.Offer do
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.Profiles
+  alias Tymeslot.Scheduling.SharedAvailability
+  alias Tymeslot.Utils.DateTimeUtils
 
   # A day. The duration can come from a URL slug, which is visitor input, so an
   # unbounded parse would let `/:username/99999/book` hold a multi-day slot.
@@ -57,6 +59,11 @@ defmodule Tymeslot.Availability.Offer do
       organiser; any other value is ignored.
     * `:demo_mode?` - whether the page is running as a demo.
     * `:debug_calendar_module` - a calendar module override, for development.
+    * `:shared_availability_guests` - further users who must be free as well,
+      resolved from a `?with=` booking link
+      (`Tymeslot.Scheduling.SharedAvailability`). Only times every one of them
+      can make are offered, under the strictest scheduling rules of everyone
+      involved.
   """
   @type request :: %{
           required(:profile) => %{required(:user_id) => integer(), optional(atom()) => any()},
@@ -64,7 +71,8 @@ defmodule Tymeslot.Availability.Offer do
           optional(:meeting_type) => map() | nil,
           optional(:reschedule_uid) => String.t() | nil,
           optional(:demo_mode?) => boolean() | nil,
-          optional(:debug_calendar_module) => module() | nil
+          optional(:debug_calendar_module) => module() | nil,
+          optional(:shared_availability_guests) => [SharedAvailability.Guest.t()]
         }
 
   @doc """
@@ -104,24 +112,38 @@ defmodule Tymeslot.Availability.Offer do
   @spec days_in_range(request(), Date.t(), Date.t(), pos_integer() | nil) ::
           {:ok, %{String.t() => boolean()}} | {:error, any()}
   def days_in_range(
-        %{profile: %{user_id: user_id} = profile} = request,
+        %{profile: %{user_id: _user_id}} = request,
         start_date,
         end_date,
         duration_minutes
       ) do
-    if demo?(request) do
-      Demo.get_range_availability(
-        user_id,
-        start_date,
-        end_date,
-        request.user_timezone,
-        profile,
-        context(request),
-        duration_minutes
-      )
-    else
-      free_days(request, start_date, end_date, duration_minutes)
+    cond do
+      demo?(request) ->
+        demo_days(request, start_date, end_date, duration_minutes)
+
+      shared_availability_guests(request) != [] ->
+        shared_days(request, start_date, end_date, duration_minutes || @default_duration_minutes)
+
+      true ->
+        free_days(request, start_date, end_date, duration_minutes)
     end
+  end
+
+  defp demo_days(
+         %{profile: %{user_id: user_id} = profile} = request,
+         start_date,
+         end_date,
+         duration_minutes
+       ) do
+    Demo.get_range_availability(
+      user_id,
+      start_date,
+      end_date,
+      request.user_timezone,
+      profile,
+      context(request),
+      duration_minutes
+    )
   end
 
   @doc """
@@ -173,21 +195,135 @@ defmodule Tymeslot.Availability.Offer do
 
       limit_checker = limit_checker(request, moving_uid(moving), date, date)
 
+      guests = shared_availability_guests(request)
+
       config =
         meeting_type
         |> Schedules.resolve_for(profile)
         |> config(meeting_type, limit_checker, duration_minutes)
+        |> SharedAvailability.strictest_policy(guests)
 
-      Calculate.available_slots(
-        date,
-        duration_minutes,
-        request.user_timezone,
-        owner_timezone(profile),
-        busy_periods(events, user_id, date, date, moving),
-        config
-      )
+      with {:ok, slots} <-
+             Calculate.available_slots(
+               date,
+               duration_minutes,
+               request.user_timezone,
+               owner_timezone(profile),
+               busy_periods(events, user_id, date, date, moving),
+               config
+             ) do
+        filter_for_guests(slots, date, duration_minutes, {request, moving}, guests, config)
+      end
     end
   end
+
+  # Booking together with other users (`?with=`) answers the calendar grid day
+  # by day from the actual slot lists, because a day is only bookable when the
+  # host's slots and every guest's overlap. It stays off the range cache: that
+  # key knows nothing about the guests, and a combined map must never be served
+  # to the host's plain link or the other way round. The calendar events it
+  # reads are still the cached booking-window fetches, one per user.
+  defp shared_days(request, start_date, end_date, duration_minutes) do
+    moving = moving_meeting(request)
+
+    with {:ok, events} <- booking_window_events(request, start_date) do
+      config = shared_config(request, moving, {start_date, end_date}, duration_minutes)
+
+      guests =
+        request
+        |> shared_availability_guests()
+        |> SharedAvailability.prefetch_schedule_data(start_date, end_date)
+
+      today = request.user_timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
+      last_day = Date.add(today, Calculate.config_policy(config).max_advance_booking_days)
+
+      day = %{
+        request: request,
+        moving: moving,
+        window: {today, last_day},
+        events: busy_periods(events, request.profile.user_id, start_date, end_date, moving),
+        config: config,
+        guests: guests,
+        duration_minutes: duration_minutes
+      }
+
+      Enum.reduce_while(Date.range(start_date, end_date), {:ok, %{}}, fn date, {:ok, acc} ->
+        case shared_day_slots(date, day) do
+          {:ok, slots} -> {:cont, {:ok, Map.put(acc, Date.to_string(date), slots != [])}}
+          {:error, _reason} = error -> {:halt, error}
+        end
+      end)
+    end
+  end
+
+  # The host's rules made strict enough for every named user, with the host's
+  # schedule data loaded once for the whole range.
+  defp shared_config(%{profile: profile} = request, moving, {start_date, end_date}, duration) do
+    meeting_type = request[:meeting_type]
+    schedule = Schedules.resolve_for(meeting_type, profile)
+
+    schedule
+    |> config(
+      meeting_type,
+      limit_checker(request, moving_uid(moving), start_date, end_date),
+      duration
+    )
+    |> SharedAvailability.strictest_policy(shared_availability_guests(request))
+    |> Calculate.prefetch_schedule_data(
+      schedule && schedule.id,
+      Date.add(start_date, -1),
+      Date.add(end_date, 1)
+    )
+  end
+
+  defp shared_day_slots(date, %{window: {today, last_day}} = day) do
+    if Date.compare(date, today) == :lt or Date.compare(date, last_day) == :gt do
+      {:ok, []}
+    else
+      with {:ok, slots} <-
+             Calculate.available_slots(
+               date,
+               day.duration_minutes,
+               day.request.user_timezone,
+               owner_timezone(day.request.profile),
+               day.events,
+               day.config
+             ) do
+        filter_for_guests(
+          slots,
+          date,
+          day.duration_minutes,
+          {day.request, day.moving},
+          day.guests,
+          day.config
+        )
+      end
+    end
+  end
+
+  defp filter_for_guests(slots, date, duration_minutes, {request, moving}, guests, config) do
+    SharedAvailability.filter_slots(
+      slots,
+      date,
+      duration_minutes,
+      request.user_timezone,
+      guests,
+      config,
+      &guest_events(&1, &2, request, moving)
+    )
+  end
+
+  # A guest's calendar is read exactly as the host's is, from their own cached
+  # booking-window fetch; only the profile the fetch is made for differs. When
+  # a booking is being rescheduled, its invitation in the guest's calendar is
+  # not a conflict.
+  defp guest_events(guest, date, request, moving) do
+    with {:ok, events} <- booking_window_events(%{request | profile: guest.profile}, date) do
+      {:ok, SharedAvailability.exclude_event(events, moving_uid(moving))}
+    end
+  end
+
+  defp shared_availability_guests(request), do: request[:shared_availability_guests] || []
 
   defp free_days(
          %{profile: %{user_id: user_id} = profile} = request,

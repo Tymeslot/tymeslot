@@ -1379,6 +1379,27 @@ msgstr "Diese Buchung wurde storniert und findet daher nicht statt."
 msgid "This booking wasn't accepted, so it won't be going ahead."
 msgstr "Diese Buchung wurde nicht angenommen und findet daher nicht statt."
 
+#: lib/tymeslot_web/themes/shared/booking_text.ex
+#, elixir-autogen, elixir-format
+msgid "Additional participants: %{names}"
+msgstr "Weitere Teilnehmer: %{names}"
+
+#: lib/tymeslot_web/live/scheduling/shared_availability_guests.ex
+#, elixir-autogen, elixir-format
+msgid "One of the participants named in this link isn’t available for booking. Please check the link."
+msgstr "Einer der in diesem Link genannten Teilnehmer ist nicht buchbar. Bitte prüfen Sie den Link."
+
+#: lib/tymeslot_web/live/scheduling/shared_availability_guests.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting type can’t be booked together with other participants."
+msgstr "Dieser Termintyp kann nicht zusammen mit weiteren Teilnehmern gebucht werden."
+
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex
+#, elixir-autogen, elixir-format
+msgid "This booking link can’t be used"
+msgstr "Dieser Buchungslink kann so nicht verwendet werden"
+
 #: lib/tymeslot_web/themes/shared/booking_location.ex
 #, elixir-autogen, elixir-format
 msgid "Enter the number we should call you on."

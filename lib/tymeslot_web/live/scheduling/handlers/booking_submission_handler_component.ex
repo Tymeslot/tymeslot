@@ -42,6 +42,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias TymeslotWeb.Live.Scheduling.BookingConfig
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingGuards
+  alias TymeslotWeb.Live.Scheduling.SharedAvailabilityGuests
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Themes.Shared.BookingLocation
 
@@ -220,7 +221,12 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       organizer_user_id: socket.assigns[:organizer_user_id]
     ]
 
-    case booking_orchestrator(socket) do
+    # The page shows why a `with` link can't be booked and offers nothing to
+    # submit; a submit arriving anyway must not book without the users named.
+    case SharedAvailabilityGuests.blocked?(socket) || booking_orchestrator(socket) do
+      true ->
+        handle_booking_error(socket, :booking_failed)
+
       :preview_without_valid_token ->
         handle_expired_preview(socket)
 
@@ -369,7 +375,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       # provider, the host already offers.
       location_option_id: BookingLocation.submitted_option_id(socket.assigns),
       location_phone: socket.assigns[:location_phone],
-      location_video_integration_id: BookingLocation.submitted_video_id(socket.assigns)
+      location_video_integration_id: BookingLocation.submitted_video_id(socket.assigns),
+      shared_availability_usernames: SharedAvailabilityGuests.usernames(socket)
     }
   end
 
