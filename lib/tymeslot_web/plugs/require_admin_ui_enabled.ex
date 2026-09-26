@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Plugs.RequireAdminUiEnabled do
   """
 
   import Plug.Conn
-  alias Phoenix.Controller
+  alias TymeslotWeb.NotFound
 
   @spec init(Keyword.t()) :: Keyword.t()
   def init(opts), do: opts
@@ -17,9 +17,7 @@ defmodule TymeslotWeb.Plugs.RequireAdminUiEnabled do
       conn
     else
       conn
-      |> put_status(:not_found)
-      |> Controller.put_view(html: TymeslotWeb.ErrorHTML, json: TymeslotWeb.ErrorJSON)
-      |> Controller.render(:"404")
+      |> NotFound.render()
       |> halt()
     end
   end

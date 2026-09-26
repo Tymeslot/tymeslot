@@ -10,22 +10,22 @@ defmodule TymeslotWeb.Components.CoreComponentsFormsTest do
 
   describe "translate_error/1 with a {msg, opts} changeset error tuple" do
     test "routes through gettext instead of returning the raw English msgid unconditionally" do
-      # "something_went_wrong" already carries a real German translation in the
+      # "can't be blank" already carries a real German translation in the
       # `errors` domain (priv/gettext/de/LC_MESSAGES/errors.po), so this proves
       # translate_error/1 actually calls gettext rather than merely doing the
       # old string-replace-on-the-msgid.
       german =
         Gettext.with_locale(Backend, "de", fn ->
-          Forms.translate_error({"something_went_wrong", []})
+          Forms.translate_error({"can't be blank", []})
         end)
 
       english =
         Gettext.with_locale(Backend, "en", fn ->
-          Forms.translate_error({"something_went_wrong", []})
+          Forms.translate_error({"can't be blank", []})
         end)
 
-      assert german == "Ein Fehler ist aufgetreten"
-      assert english == "Something went wrong"
+      assert german == "darf nicht leer sein"
+      assert english == "can't be blank"
       assert german != english
     end
 

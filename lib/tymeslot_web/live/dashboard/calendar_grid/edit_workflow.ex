@@ -17,7 +17,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   @spec default_integration_id(Phoenix.LiveView.Socket.t()) :: integer() | nil
   def default_integration_id(socket) do
-    case socket.assigns.integrations do
+    # The first connection that can actually take an event. Taking the first of
+    # all of them pre-selected read-only ones — a subscribed ICS feed sorting
+    # ahead of a writable account left the form pointing at a calendar whose
+    # provider answers `{:error, :read_only}`.
+    case Calendar.writable_integrations(socket.assigns.integrations) do
       [first | _rest] -> first.id
       [] -> nil
     end
@@ -231,10 +235,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
           {:ok, :unchanged} ->
             {:ok, :unchanged}
 
+          # The event as the change wrote it, so the grid shows what the
+          # calendar has and the notification diff sees exactly what the
+          # attendees' invitation will carry.
           {:ok, url} ->
             {:ok,
              original_event: event,
-             updated_event: video_changed_event(event, video_integration_id, url)}
+             updated_event: CalendarGrid.changed_event(user_id, event, video_integration_id, url)}
 
           {:error, reason} ->
             video_failure(event, reason)
@@ -242,18 +249,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       end,
       video_failure(event, :crashed)
     )
-  end
-
-  # The event as `EventVideo` has just written it: the same description
-  # rewrite it sent to the calendar, so the notification diff sees exactly
-  # what the attendees' invitation will carry.
-  defp video_changed_event(event, video_integration_id, url) do
-    %{
-      event
-      | video_integration_id: video_integration_id,
-        video_link: url,
-        description: CalendarGrid.put_join_link(event.description, event.video_link, url)
-    }
   end
 
   defp video_failure(event, reason), do: {:error, original_event: event, reason: reason}
@@ -306,6 +301,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     dgettext(
       "dashboard_calendar_events",
       "Recurring events cannot be moved to another calendar yet. Only single events can be moved."
+    )
+  end
+
+  @doc """
+  The message shown when an organiser tries to change the video of an event
+  that is the calendar copy of a booking.
+  """
+  @spec booking_video_refused_message() :: String.t()
+  def booking_video_refused_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "This event is a booking, so its video link belongs to the booking. Reschedule or cancel the booking to change it."
     )
   end
 

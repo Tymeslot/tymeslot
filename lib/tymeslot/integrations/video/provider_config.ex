@@ -41,8 +41,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   @provider_metadata %{
     mirotalk: %{
       icon: "mirotalk",
-      description:
-        dgettext_noop("dashboard_integrations", "Self-hosted peer-to-peer video meetings"),
+      description: dgettext_noop("dashboard_video", "Self-hosted peer-to-peer video meetings"),
       button_text: "Connect MiroTalk",
       click_event: "connect_mirotalk",
       circuit_breaker_enabled: true
@@ -51,7 +50,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
       icon: "google_meet",
       description:
         dgettext_noop(
-          "dashboard_integrations",
+          "dashboard_video",
           "Full OAuth integration with automatic room creation"
         ),
       button_text: "Connect Google Meet",
@@ -62,7 +61,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
       icon: "teams",
       description:
         dgettext_noop(
-          "dashboard_integrations",
+          "dashboard_video",
           "Enterprise OAuth integration with organizational accounts"
         ),
       button_text: "Connect Teams",
@@ -73,7 +72,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
       icon: "zoom",
       description:
         dgettext_noop(
-          "dashboard_integrations",
+          "dashboard_video",
           "OAuth integration with automatic Zoom meeting creation"
         ),
       button_text: "Connect Zoom",
@@ -83,14 +82,14 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
     kmeet: %{
       icon: "kmeet",
       description:
-        dgettext_noop("dashboard_integrations", "Infomaniak's hosted video meetings, Swiss-based"),
+        dgettext_noop("dashboard_video", "Infomaniak's hosted video meetings, Swiss-based"),
       button_text: "Connect kMeet",
       click_event: "connect_kmeet",
       circuit_breaker_enabled: false
     },
     jitsi: %{
       icon: "jitsi",
-      description: dgettext_noop("dashboard_integrations", "Your own Jitsi Meet server"),
+      description: dgettext_noop("dashboard_video", "Your own Jitsi Meet server"),
       button_text: "Connect Jitsi",
       click_event: "connect_jitsi",
       circuit_breaker_enabled: false
@@ -99,7 +98,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
       icon: "nextcloud_talk",
       description:
         dgettext_noop(
-          "dashboard_integrations",
+          "dashboard_video",
           "A Talk conversation on your own Nextcloud for every booking"
         ),
       button_text: "Connect Nextcloud Talk",
@@ -109,7 +108,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
     custom: %{
       icon: "custom",
       description:
-        dgettext_noop("dashboard_integrations", "Any video platform with static meeting URLs"),
+        dgettext_noop("dashboard_video", "Any video platform with static meeting URLs"),
       button_text: "Add Custom Link",
       click_event: "connect_custom",
       circuit_breaker_enabled: false
@@ -193,7 +192,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   def description(provider) do
     Gettext.dgettext(
       TymeslotWeb.Gettext,
-      "dashboard_integrations",
+      "dashboard_video",
       metadata(provider).description
     )
   end
@@ -355,11 +354,50 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   def rooms_deleted_after_meeting,
     do: Enum.map(@rooms_deleted_after_meeting, &Atom.to_string/1)
 
+  # Providers whose room is an event of its own in the organiser's calendar,
+  # holding the meeting's title, start and end: a Teams meeting that is not
+  # attached to the event it belongs to. Such a room is an entry the organiser
+  # sees, so it has to move and go with its event, and its join link does not
+  # name the event, so nothing but a record of it can find it again.
+  @rooms_held_as_calendar_events [:teams]
+
+  @doc """
+  Whether a provider's room, when not attached to the event it belongs to, is
+  an event of its own in the organiser's calendar, holding the meeting's start
+  and end. Accepts the atom or the stored string form.
+  """
+  @spec room_held_as_calendar_event?(atom() | String.t()) :: boolean()
+  def room_held_as_calendar_event?(provider) when is_binary(provider) do
+    case Map.fetch(@provider_atoms, provider) do
+      {:ok, atom} -> room_held_as_calendar_event?(atom)
+      :error -> false
+    end
+  end
+
+  def room_held_as_calendar_event?(provider) when is_atom(provider),
+    do: provider in @rooms_held_as_calendar_events
+
+  @doc """
+  The providers, in their stored string form, whose rooms made for events on
+  the dashboard calendar grid are recorded
+  (`Tymeslot.CalendarGrid.EventVideoRooms`), so that they follow their event:
+  those Tymeslot deletes some days after the meeting, and those held as
+  calendar events of their own.
+  """
+  @spec rooms_recorded_for_grid_events() :: [String.t()]
+  def rooms_recorded_for_grid_events,
+    do:
+      Enum.map(
+        @rooms_deleted_after_meeting ++ @rooms_held_as_calendar_events,
+        &Atom.to_string/1
+      )
+
   # Providers whose rooms hold the meeting's time or name on the provider's side
-  # (a Zoom meeting's start, a Talk conversation's lobby timer and name), so a
-  # reschedule has to be sent to the room. Every other provider's room is a
-  # link that stays right whatever the meeting's time.
-  @rooms_updated_on_reschedule [:zoom, :nextcloud_talk]
+  # (a Zoom meeting's start, a Talk conversation's lobby timer and name, the
+  # calendar event a Teams meeting lives on), so a reschedule has to be sent to
+  # the room. Every other provider's room is a link that stays right whatever
+  # the meeting's time.
+  @rooms_updated_on_reschedule [:zoom, :nextcloud_talk, :teams]
 
   @doc """
   Whether a provider's rooms hold the meeting's time or name, so a reschedule

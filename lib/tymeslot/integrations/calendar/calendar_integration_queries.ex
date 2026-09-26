@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   import Ecto.Query
 
   alias Ecto.Changeset
+  alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Repo
 
@@ -438,16 +439,43 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   Flags an integration as needing reauthentication — used when the stored
   credentials can no longer be decrypted. Also records a sync error so the
   dashboard banner and the sync log stay consistent.
+
+  Stamps `reauth_flagged_at` only when the flag was not already set, so
+  re-flagging an integration already awaiting reconnection is not counted as a
+  new flag by `count_reauth_flagged_by_provider/2`.
   """
   @spec mark_needs_reauth(CalendarIntegrationSchema.t(), String.t()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def mark_needs_reauth(%CalendarIntegrationSchema{} = integration, error_message) do
     integration
-    |> Changeset.change(%{
-      needs_reauth: true,
-      sync_error: error_message
-    })
+    |> Changeset.change(%{needs_reauth: true, sync_error: error_message})
+    |> stamp_reauth_flagged_at(integration)
     |> Repo.update()
+  end
+
+  defp stamp_reauth_flagged_at(changeset, %{needs_reauth: true}), do: changeset
+
+  defp stamp_reauth_flagged_at(changeset, _integration) do
+    Changeset.put_change(
+      changeset,
+      :reauth_flagged_at,
+      DateTime.truncate(Clock.utc_now(), :second)
+    )
+  end
+
+  @doc """
+  Counts the integrations newly flagged `needs_reauth` within `[from, to)`,
+  per provider, whether or not the flag has since been cleared.
+  """
+  @spec count_reauth_flagged_by_provider(DateTime.t(), DateTime.t()) ::
+          %{String.t() => pos_integer()}
+  def count_reauth_flagged_by_provider(%DateTime{} = from, %DateTime{} = to) do
+    CalendarIntegrationSchema
+    |> where([c], c.reauth_flagged_at >= ^from and c.reauth_flagged_at < ^to)
+    |> group_by([c], c.provider)
+    |> select([c], {c.provider, count(c.id)})
+    |> Repo.all()
+    |> Map.new()
   end
 
   @doc """

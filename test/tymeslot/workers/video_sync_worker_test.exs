@@ -1,7 +1,8 @@
 defmodule Tymeslot.Workers.VideoSyncWorkerTest do
   @moduledoc """
   Drives the supervised video-room sync worker used by reschedule (update) and
-  cancellation (delete). Covers the happy path, the transient-failure retry
+  cancellation (delete). Releasing a room a moved meeting left behind is in
+  `Tymeslot.Workers.VideoSyncWorkerReleaseTest`. Covers the happy path, the transient-failure retry
   path, the idempotent already-gone path, and the no-room discard.
   """
 

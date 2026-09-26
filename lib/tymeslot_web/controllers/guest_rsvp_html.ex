@@ -9,7 +9,6 @@ defmodule TymeslotWeb.GuestRsvpHTML do
   alias TymeslotWeb.Helpers.LocaleFormat
 
   @doc "Landing page shown before the guest submits their RSVP (GET step)."
-  attr :guest, :map, required: true
   attr :meeting, :map, required: true
   attr :status, :string, required: true
   attr :token, :string, required: true
@@ -20,125 +19,108 @@ defmodule TymeslotWeb.GuestRsvpHTML do
     ~H"""
     <% accepting? = @status == "accepted" %>
     <.rsvp_shell>
-      <div class={[
-        "mx-auto flex h-16 w-16 items-center justify-center rounded-token-full",
-        accepting? && "bg-green-100 text-green-600",
-        !accepting? && "bg-amber-100 text-amber-600"
-      ]}>
-        <.icon
-          name={if accepting?, do: "hero-check-circle", else: "hero-x-circle"}
-          class="h-9 w-9"
-        />
-      </div>
+      <.rsvp_badge accepted?={accepting?} />
 
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
         {if accepting?,
-          do: dgettext("booking", "You're about to accept"),
-          else: dgettext("booking", "You're about to decline")}
+          do: dgettext("booking_manage", "You're about to accept"),
+          else: dgettext("booking_manage", "You're about to decline")}
       </h1>
 
       <p class="mt-2 text-token-base text-tymeslot-600">
         {if accepting? do
-          dgettext("booking", "Confirm to let %{name} know you'll be attending.",
+          dgettext("booking_manage", "Confirm to let %{name} know you'll be attending.",
             name: @meeting.organizer_name
           )
         else
-          dgettext("booking", "Confirm to let %{name} know you can't make it.",
+          dgettext("booking_manage", "Confirm to let %{name} know you can't make it.",
             name: @meeting.organizer_name
           )
         end}
       </p>
 
-      <div class="mt-6 space-y-2 rounded-token-xl bg-tymeslot-50 p-5 text-left">
-        <p class="text-token-base font-semibold text-tymeslot-800">{@meeting.title}</p>
-        <p class="flex items-center gap-2 text-token-sm text-tymeslot-600">
-          <.icon name="hero-calendar-mini" class="h-4 w-4 text-turquoise-500" />
-          {format_when(@meeting)}
-        </p>
-        <p class="flex items-center gap-2 text-token-sm text-tymeslot-600">
-          <.icon name="hero-user-mini" class="h-4 w-4 text-turquoise-500" />
-          {dgettext("booking", "Hosted by %{name}", name: @meeting.organizer_name)}
-        </p>
-      </div>
+      <.meeting_summary meeting={@meeting} />
 
-      <form method="post" action={"/guest/#{@token}/#{@response}"} class="mt-6">
-        <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
-        <button
+      <.form for={%{}} action={~p"/guest/#{@token}/#{@response}"} class="mt-6">
+        <.action_button
           type="submit"
-          class={[
-            "w-full rounded-token-xl px-6 py-3 text-token-base font-semibold text-white",
-            accepting? && "bg-green-600 hover:bg-green-700",
-            !accepting? && "bg-amber-500 hover:bg-amber-600"
-          ]}
+          variant={if accepting?, do: :primary, else: :secondary}
+          class="w-full"
         >
           {if accepting?,
-            do: dgettext("booking", "Confirm attendance"),
-            else: dgettext("booking", "Confirm decline")}
-        </button>
-      </form>
+            do: dgettext("booking_manage", "Confirm attendance"),
+            else: dgettext("booking_manage", "Confirm decline")}
+        </.action_button>
+      </.form>
     </.rsvp_shell>
     """
   end
 
   @doc "Shown after a guest successfully accepts or declines their invitation."
-  attr :guest, :map, required: true
   attr :meeting, :map, required: true
   attr :status, :string, required: true
-  attr :toggle_url, :string, required: true
-  attr :toggle_label, :atom, required: true
+  attr :token, :string, required: true
 
   @spec confirmation(map()) :: Phoenix.LiveView.Rendered.t()
   def confirmation(assigns) do
     ~H"""
     <% accepted? = @status == "accepted" %>
     <.rsvp_shell>
-      <div class={[
-        "mx-auto flex h-16 w-16 items-center justify-center rounded-token-full",
-        accepted? && "bg-green-100 text-green-600",
-        !accepted? && "bg-amber-100 text-amber-600"
-      ]}>
-        <.icon name={if accepted?, do: "hero-check-circle", else: "hero-x-circle"} class="h-9 w-9" />
-      </div>
+      <.rsvp_badge accepted?={accepted?} />
 
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
         {if accepted?,
-          do: dgettext("booking", "You're going!"),
-          else: dgettext("booking", "You've declined")}
+          do: dgettext("booking_manage", "You're going!"),
+          else: dgettext("booking_manage", "You've declined")}
       </h1>
 
       <p class="mt-2 text-token-base text-tymeslot-600">
         {if accepted? do
-          dgettext("booking", "Your response has been sent to %{name}.",
+          dgettext("booking_manage", "Your response has been sent to %{name}.",
             name: @meeting.organizer_name
           )
         else
-          dgettext("booking", "We've let %{name} know you can't make it.",
+          dgettext("booking_manage", "We've let %{name} know you can't make it.",
             name: @meeting.organizer_name
           )
         end}
       </p>
 
-      <div class="mt-6 space-y-2 rounded-token-xl bg-tymeslot-50 p-5 text-left">
-        <p class="text-token-base font-semibold text-tymeslot-800">{@meeting.title}</p>
-        <p class="flex items-center gap-2 text-token-sm text-tymeslot-600">
-          <.icon name="hero-calendar-mini" class="h-4 w-4 text-turquoise-500" />
-          {format_when(@meeting)}
-        </p>
-        <p class="flex items-center gap-2 text-token-sm text-tymeslot-600">
-          <.icon name="hero-user-mini" class="h-4 w-4 text-turquoise-500" />
-          {dgettext("booking", "Hosted by %{name}", name: @meeting.organizer_name)}
-        </p>
-      </div>
+      <.meeting_summary meeting={@meeting} />
 
       <p class="mt-6 text-token-sm text-tymeslot-500">
         {if accepted?,
-          do: dgettext("booking", "Changed your mind?"),
-          else: dgettext("booking", "Able to make it after all?")}
-        <.link href={@toggle_url} class="font-medium text-turquoise-600 underline">
-          {if @toggle_label == :decline,
-            do: dgettext("booking", "Decline instead"),
-            else: dgettext("booking", "Accept instead")}
+          do: dgettext("booking_manage", "Changed your mind?"),
+          else: dgettext("booking_manage", "Able to make it after all?")}
+        <.link
+          href={~p"/guest/#{@token}/#{if accepted?, do: "decline", else: "accept"}"}
+          class="font-medium text-turquoise-600 underline"
+        >
+          {if accepted?,
+            do: dgettext("booking_manage", "Decline instead"),
+            else: dgettext("booking_manage", "Accept instead")}
         </.link>
+      </p>
+    </.rsvp_shell>
+    """
+  end
+
+  @doc "Shown when the meeting behind a valid link no longer takes responses."
+  @spec closed(map()) :: Phoenix.LiveView.Rendered.t()
+  def closed(assigns) do
+    ~H"""
+    <.rsvp_shell>
+      <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-token-full bg-tymeslot-100 text-tymeslot-500">
+        <.icon name="hero-calendar-days" class="h-9 w-9" />
+      </div>
+      <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
+        {dgettext("booking_manage", "This meeting is no longer taking responses")}
+      </h1>
+      <p class="mt-2 text-token-base text-tymeslot-600">
+        {dgettext(
+          "booking_manage",
+          "The meeting has already taken place, or it was cancelled or not confirmed. Please contact the meeting host."
+        )}
       </p>
     </.rsvp_shell>
     """
@@ -153,12 +135,12 @@ defmodule TymeslotWeb.GuestRsvpHTML do
         <.icon name="hero-link-slash" class="h-9 w-9" />
       </div>
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
-        {dgettext("booking", "This link is no longer valid")}
+        {dgettext("booking_manage", "This link is not valid")}
       </h1>
       <p class="mt-2 text-token-base text-tymeslot-600">
         {dgettext(
-          "booking",
-          "The invitation link may have expired or already been used. Please contact the meeting host."
+          "booking_manage",
+          "We couldn't find an invitation for this link. Please check that you copied the whole link from your email, or contact the meeting host."
         )}
       </p>
     </.rsvp_shell>
@@ -174,10 +156,10 @@ defmodule TymeslotWeb.GuestRsvpHTML do
         <.icon name="hero-clock" class="h-9 w-9" />
       </div>
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
-        {dgettext("booking", "Too many attempts")}
+        {dgettext("booking_manage", "Too many attempts")}
       </h1>
       <p class="mt-2 text-token-base text-tymeslot-600">
-        {dgettext("booking", "Please wait a moment and try again.")}
+        {dgettext("booking_manage", "Please wait a moment and try again.")}
       </p>
     </.rsvp_shell>
     """
@@ -193,6 +175,40 @@ defmodule TymeslotWeb.GuestRsvpHTML do
         {render_slot(@inner_block)}
       </div>
     </main>
+    """
+  end
+
+  # Status icon: a tick for accepting, a cross for declining.
+  attr :accepted?, :boolean, required: true
+
+  defp rsvp_badge(assigns) do
+    ~H"""
+    <div class={[
+      "mx-auto flex h-16 w-16 items-center justify-center rounded-token-full",
+      @accepted? && "bg-green-100 text-green-600",
+      !@accepted? && "bg-amber-100 text-amber-600"
+    ]}>
+      <.icon name={if @accepted?, do: "hero-check-circle", else: "hero-x-circle"} class="h-9 w-9" />
+    </div>
+    """
+  end
+
+  # The meeting's title, time and host.
+  attr :meeting, :map, required: true
+
+  defp meeting_summary(assigns) do
+    ~H"""
+    <div class="mt-6 space-y-2 rounded-token-xl bg-tymeslot-50 p-5 text-left">
+      <p class="text-token-base font-semibold text-tymeslot-800">{@meeting.title}</p>
+      <p class="flex items-center gap-2 text-token-sm text-tymeslot-600">
+        <.icon name="hero-calendar-mini" class="h-4 w-4 text-turquoise-500" />
+        {format_when(@meeting)}
+      </p>
+      <p class="flex items-center gap-2 text-token-sm text-tymeslot-600">
+        <.icon name="hero-user-mini" class="h-4 w-4 text-turquoise-500" />
+        {dgettext("booking_manage", "Hosted by %{name}", name: @meeting.organizer_name)}
+      </p>
+    </div>
     """
   end
 

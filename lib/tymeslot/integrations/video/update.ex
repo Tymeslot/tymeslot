@@ -252,7 +252,7 @@ defmodule Tymeslot.Integrations.Video.Update do
       {:error,
        {:secret_required,
         dgettext(
-          "dashboard_integrations",
+          "dashboard_video",
           "Enter the app password again to connect to a different server."
         )}}
     end

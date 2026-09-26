@@ -84,11 +84,11 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntax do
           String.replace(url, TemplateConfig.template_variable(), TemplateConfig.sample_hash())
 
         {:ok, :valid_template, preview,
-         dgettext("dashboard_integrations", "Template variable detected: {{meeting_id}}")}
+         dgettext("dashboard_video", "Template variable detected: {{meeting_id}}")}
 
       :static ->
         {:ok, :static, url,
-         dgettext("dashboard_integrations", "Static URL - all meetings will use the same room")}
+         dgettext("dashboard_video", "Static URL - all meetings will use the same room")}
 
       {_severity, type, message} ->
         {:warning, type, url, message}
@@ -96,7 +96,7 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntax do
   end
 
   def analyze(_url),
-    do: {:ok, :empty, "", dgettext("dashboard_integrations", "Enter a URL to see a preview")}
+    do: {:ok, :empty, "", dgettext("dashboard_video", "Enter a URL to see a preview")}
 
   # One classification feeds both entry points. `:invalid` blocks a save;
   # `:advisory` is only a preview hint.
@@ -109,7 +109,7 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntax do
       template_in_fragment?(url) ->
         {:invalid, :template_in_fragment,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "Template in fragment (#) won't work - fragments aren't sent to servers. Use path instead: https://example.com/{{meeting_id}}"
          )}
 
@@ -122,7 +122,7 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntax do
       String.contains?(url, "meeting_id") ->
         {:advisory, :no_brackets,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "Found 'meeting_id' without brackets - use {{meeting_id}}"
          )}
 
@@ -165,7 +165,7 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntax do
         wrong_case?(remainder) ->
           {:wrong_case,
            dgettext(
-             "dashboard_integrations",
+             "dashboard_video",
              "Use lowercase: {{meeting_id}} not {{MEETING_ID}} or {{Meeting_Id}}"
            )}
 
@@ -184,14 +184,14 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntax do
         unknown_variable?(remainder) ->
           {:unknown_variable,
            dgettext(
-             "dashboard_integrations",
+             "dashboard_video",
              "Unknown template variable. Only {{meeting_id}} is supported"
            )}
 
         true ->
           {:invalid_template_syntax,
            dgettext(
-             "dashboard_integrations",
+             "dashboard_video",
              "Write the template variable exactly as {{meeting_id}}"
            )}
       end
@@ -217,34 +217,34 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntax do
       Regex.match?(~r/\{\{meeting_id\)/i, url) ->
         {:mismatched_open_double_close_paren,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "Mismatched brackets: {{meeting_id) should be {{meeting_id}}"
          )}
 
       Regex.match?(~r/\{meeting_id\}\}/i, url) ->
         {:mismatched_open_single_close_double,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "Mismatched brackets: {meeting_id}} should be {{meeting_id}}"
          )}
 
       Regex.match?(~r/\{\{meeting_id\]\]/i, url) ->
         {:mismatched_curly_square,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "Mismatched brackets: {{meeting_id]] should be {{meeting_id}}"
          )}
 
       Regex.match?(~r/\[\[meeting_id\}\}/i, url) ->
         {:mismatched_square_curly,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "Mismatched brackets: [[meeting_id}} should be {{meeting_id}}"
          )}
 
       true ->
         {:mismatched_brackets,
-         dgettext("dashboard_integrations", "Mismatched brackets detected - use {{meeting_id}}")}
+         dgettext("dashboard_video", "Mismatched brackets detected - use {{meeting_id}}")}
     end
   end
 
@@ -259,15 +259,14 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntax do
     cond do
       Regex.match?(~r/\{\{meeting_id(?!\}\})/i, url) ->
         {:missing_closing_brackets,
-         dgettext("dashboard_integrations", "Missing closing brackets - should be {{meeting_id}}")}
+         dgettext("dashboard_video", "Missing closing brackets - should be {{meeting_id}}")}
 
       Regex.match?(~r/(?<!\{)meeting_id\}\}/i, url) ->
         {:missing_opening_brackets,
-         dgettext("dashboard_integrations", "Missing opening brackets - should be {{meeting_id}}")}
+         dgettext("dashboard_video", "Missing opening brackets - should be {{meeting_id}}")}
 
       true ->
-        {:missing_brackets,
-         dgettext("dashboard_integrations", "Missing brackets - use {{meeting_id}}")}
+        {:missing_brackets, dgettext("dashboard_video", "Missing brackets - use {{meeting_id}}")}
     end
   end
 
@@ -281,31 +280,31 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntax do
       Regex.match?(~r/\{meeting_id\}/i, url) ->
         {:single_curly_brackets,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "Use double curly brackets: {{meeting_id}} not {meeting_id}"
          )}
 
       Regex.match?(~r/\[\[meeting_id\]\]/i, url) ->
         {:square_brackets,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "Use curly brackets: {{meeting_id}} not [[meeting_id]]"
          )}
 
       Regex.match?(~r/\(\(meeting_id\)\)/i, url) ->
         {:parentheses,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "Use curly brackets: {{meeting_id}} not ((meeting_id))"
          )}
 
       Regex.match?(~r/<+meeting_id>+/i, url) ->
         {:angle_brackets,
-         dgettext("dashboard_integrations", "Use curly brackets: {{meeting_id}} not <meeting_id>")}
+         dgettext("dashboard_video", "Use curly brackets: {{meeting_id}} not <meeting_id>")}
 
       true ->
         {:wrong_bracket_type,
-         dgettext("dashboard_integrations", "Use double curly brackets: {{meeting_id}}")}
+         dgettext("dashboard_video", "Use double curly brackets: {{meeting_id}}")}
     end
   end
 
@@ -319,20 +318,20 @@ defmodule Tymeslot.Integrations.Video.TemplateSyntax do
       Regex.match?(~r/\{\{meeting-id\}\}/i, url) ->
         {:hyphen_instead_of_underscore,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "Use underscore not hyphen: {{meeting_id}} not {{meeting-id}}"
          )}
 
       Regex.match?(~r/\{\{meetingid\}\}/i, url) ->
         {:missing_underscore,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "Missing underscore: {{meeting_id}} not {{meetingid}}"
          )}
 
       true ->
         {:variable_name_error,
-         dgettext("dashboard_integrations", "Variable name should be: {{meeting_id}}")}
+         dgettext("dashboard_video", "Variable name should be: {{meeting_id}}")}
     end
   end
 

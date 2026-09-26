@@ -20,6 +20,7 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.Rooms
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
@@ -165,7 +166,15 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
               {^barrier, :go} -> :ok
             end
 
-            Rooms.create_meeting_room(user.id, integration_id: integration.id)
+            # Teams refuses to create an event without the booking's times.
+            Rooms.create_meeting_room(user.id,
+              integration_id: integration.id,
+              event_details: %EventDetails{
+                summary: "Concurrent booking",
+                start_time: ~U[2030-03-14 09:30:00Z],
+                end_time: ~U[2030-03-14 10:15:00Z]
+              }
+            )
           end)
         end
 

@@ -207,9 +207,12 @@ defmodule Tymeslot.Bookings.NextcloudTalkBookingLifecycleTest do
     assert requests() == []
 
     # The retry adopts the conversation, still waiting for the old start, and
-    # moves its lobby. Its name already matches the booking.
+    # moves its lobby. Its name already matches the booking. The reschedule
+    # queued a room job of its own to announce the move once the link exists;
+    # whichever of the two runs second finds the room attached and asks
+    # Nextcloud nothing.
     nextcloud_answers([{200, ocs([made])}, {200, ocs(%{})}])
-    assert %{success: 1, failure: 0} = drain_video_rooms(with_scheduled: true)
+    assert %{success: 2, failure: 0} = drain_video_rooms(with_scheduled: true)
 
     assert requests() == [
              {:get, server <> @room_list, nil},

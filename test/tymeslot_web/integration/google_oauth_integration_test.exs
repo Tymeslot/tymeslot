@@ -10,11 +10,8 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
   @moduletag :auth
   @moduletag :integrations
 
-  import Mox
   import Tymeslot.Factory
   alias Phoenix.Flash
-  alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
-  alias Tymeslot.Auth.OAuth.HelperMock
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Security.Encryption
 
@@ -22,16 +19,10 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
   # per 600s window; the next one is refused.
   @initiation_limit 10
 
-  setup do
-    # The controller resolves its callback module from config, which points at
-    # the Mox double in the test environment. Delegate to the real helper so
-    # these tests exercise the genuine callback and state handling.
-    stub_with(HelperMock, OAuthHelper)
-    :ok
-  end
-
   describe "Google OAuth Security" do
     test "prevents CSRF attacks with state parameter validation" do
+      enable_social_auth(:google_enabled)
+
       # Setup: Create session with expected state
       conn =
         build_conn()
@@ -97,7 +88,7 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
       # the "provider not available" and rate-limited paths are 302s too.
       uri = conn |> redirected_to(302) |> URI.parse()
       query = URI.decode_query(uri.query)
-      {stored_state, _issued_at} = get_session(conn, :_oauth_state)
+      {stored_state, _code_verifier, _issued_at} = get_session(conn, :_oauth_state)
 
       assert "#{uri.scheme}://#{uri.host}#{uri.path}" ==
                "https://accounts.google.com/o/oauth2/v2/auth"
@@ -115,6 +106,8 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
     end
 
     test "callback with no stored state is rejected before the code is exchanged" do
+      enable_social_auth(:google_enabled)
+
       # Act: Google redirects back, but this browser's session carries no
       # `:_oauth_state` — the initiation leg never ran, or the session was lost.
       conn =

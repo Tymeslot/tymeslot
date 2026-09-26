@@ -57,7 +57,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
           provider: provider
         })
 
-        {:error, %{provider: dgettext("dashboard_integrations", "Unknown video provider")}}
+        {:error, %{provider: dgettext("dashboard_video", "Unknown video provider")}}
     end
   end
 
@@ -280,15 +280,13 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
           String.length(sanitized_api_key) > 500 ->
             {:error,
              %{
-               api_key:
-                 dgettext("dashboard_integrations", "API key must be 500 characters or less")
+               api_key: dgettext("dashboard_video", "API key must be 500 characters or less")
              }}
 
           String.length(String.trim(sanitized_api_key)) < 8 ->
             {:error,
              %{
-               api_key:
-                 dgettext("dashboard_integrations", "API key must be at least 8 characters")
+               api_key: dgettext("dashboard_video", "API key must be at least 8 characters")
              }}
 
           true ->
@@ -301,7 +299,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   end
 
   defp validate_api_key(_other, _metadata) do
-    {:error, %{api_key: dgettext("dashboard_integrations", "API key must be text")}}
+    {:error, %{api_key: dgettext("dashboard_video", "API key must be text")}}
   end
 
   defp validate_base_url(nil, _metadata), do: {:error, %{base_url: base_url_required_message()}}
@@ -314,7 +312,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
     case InputValidators.validate_server_url(base_url, metadata,
            error_message:
              dgettext(
-               "dashboard_integrations",
+               "dashboard_video",
                "Please enter a valid server URL (e.g., https://mirotalk.example.com)"
              ),
            internal_names_local: SsrfGuard.allow_private_for_video?(),
@@ -326,7 +324,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   end
 
   defp validate_base_url(_other, _metadata) do
-    {:error, %{base_url: dgettext("dashboard_integrations", "Base URL must be text")}}
+    {:error, %{base_url: dgettext("dashboard_video", "Base URL must be text")}}
   end
 
   defp validate_meeting_url(nil, _metadata),
@@ -345,8 +343,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
              error_message: invalid_meeting_url_error(trimmed_url),
              validate_url_fn: &validate_video_url/1
            ),
-         :ok <- TemplateSyntax.validate(validated_url),
-         :ok <- validate_decoded_template(validated_url) do
+         :ok <- validate_meeting_url_template(validated_url) do
       {:ok, validated_url}
     else
       {:error, error} -> {:error, %{custom_meeting_url: error}}
@@ -354,8 +351,21 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   end
 
   defp validate_meeting_url(_other, _metadata) do
-    {:error,
-     %{custom_meeting_url: dgettext("dashboard_integrations", "Meeting URL must be text")}}
+    {:error, %{custom_meeting_url: dgettext("dashboard_video", "Meeting URL must be text")}}
+  end
+
+  @doc """
+  Checks the `{{meeting_id}}` placeholder of a custom meeting URL exactly as a
+  save does: on the URL as typed, and again on its percent-decoded reading.
+
+  Returns `:ok` for a static URL or a correctly written template, and
+  `{:error, message}` with the message the save form would show otherwise.
+  Only the template syntax is checked, not the URL's shape or host, so a
+  stored URL can be judged by the same rule the form enforces.
+  """
+  @spec validate_meeting_url_template(String.t()) :: :ok | {:error, String.t()}
+  def validate_meeting_url_template(url) when is_binary(url) do
+    with :ok <- TemplateSyntax.validate(url), do: validate_decoded_template(url)
   end
 
   # A URL that already names http or https and is still refused failed on its
@@ -369,13 +379,13 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   defp invalid_meeting_url_error(_scheme_less),
     do:
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "Enter a full address starting with https://, for example https://meet.example.com"
       )
 
   defp malformed_meeting_url_message do
     dgettext(
-      "dashboard_integrations",
+      "dashboard_video",
       "Please enter a valid meeting URL (e.g., https://meet.google.com/abc-defg-hij)"
     )
   end
@@ -416,7 +426,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
       disallowed_protocol_error: http_https_only_message(),
       invalid_message:
         dgettext(
-          "dashboard_integrations",
+          "dashboard_video",
           "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)"
         )
     )
@@ -426,7 +436,7 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
     if video_host_allowed?(host) do
       :ok
     else
-      {:error, dgettext("dashboard_integrations", "Invalid hostname in URL")}
+      {:error, dgettext("dashboard_video", "Invalid hostname in URL")}
     end
   end
 
@@ -447,20 +457,20 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
     end
   end
 
-  defp api_key_required_message, do: dgettext("dashboard_integrations", "API key is required")
+  defp api_key_required_message, do: dgettext("dashboard_video", "API key is required")
 
-  defp base_url_required_message, do: dgettext("dashboard_integrations", "Base URL is required")
+  defp base_url_required_message, do: dgettext("dashboard_video", "Base URL is required")
 
   defp meeting_url_required_message,
-    do: dgettext("dashboard_integrations", "Meeting URL is required")
+    do: dgettext("dashboard_video", "Meeting URL is required")
 
   defp http_https_only_message,
-    do: dgettext("dashboard_integrations", "Only HTTP and HTTPS URLs are allowed")
+    do: dgettext("dashboard_video", "Only HTTP and HTTPS URLs are allowed")
 
   defp escaped_template_message,
     do:
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "Write {{meeting_id}} with plain brackets: percent-encoded ones are never replaced"
       )
 end

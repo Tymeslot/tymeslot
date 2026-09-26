@@ -14,17 +14,17 @@ msgstr ""
 #: lib/tymeslot/custom_fields/answer_renderer.ex
 #, elixir-autogen, elixir-format
 msgid "No"
-msgstr "No"
+msgstr ""
 
 #: lib/tymeslot/custom_fields/answer_renderer.ex
 #, elixir-autogen, elixir-format
 msgid "Yes"
-msgstr "Yes"
+msgstr ""
 
 #: lib/tymeslot/custom_fields/answer_renderer.ex
 #, elixir-autogen, elixir-format
 msgid "✓ Acknowledged (%{at})"
-msgstr "✓ Acknowledged (%{at})"
+msgstr ""
 
 #: lib/tymeslot_web/components/core_components/flash.ex
 #, elixir-autogen, elixir-format

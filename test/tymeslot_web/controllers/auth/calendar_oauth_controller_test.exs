@@ -3,6 +3,7 @@ defmodule TymeslotWeb.CalendarOAuthControllerTest do
   @moduletag :utils
 
   alias Phoenix.Flash
+  alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Factory
   alias Tymeslot.Infrastructure.DashboardCache
   alias Tymeslot.Integrations.Calendar.Google.OAuthHelper, as: GoogleCalendarOAuthHelper
@@ -174,6 +175,85 @@ defmodule TymeslotWeb.CalendarOAuthControllerTest do
 
       assert Flash.get(conn.assigns.flash, :error) =~
                "Calendar permission was not granted"
+    end
+  end
+
+  describe "dashboard integration status after connecting" do
+    # The dashboard caches whether the user has a calendar for five minutes. A
+    # connect that leaves the cached "no calendar" in place keeps nagging the
+    # user to connect the calendar they just connected.
+    for {path, helper, provider} <- [
+          {"/auth/google/calendar/callback", GoogleCalendarOAuthHelper, "google"},
+          {"/auth/outlook/calendar/callback", OutlookCalendarOAuthHelper, "outlook"}
+        ] do
+      test "#{provider} connect refreshes the cached status", %{conn: conn} do
+        user = Factory.insert(:user)
+        conn = log_in_user(conn, user)
+        :meck.expect(State, :validate, fn _state, _secret -> {:ok, %{user_id: user.id}} end)
+        assert %{has_calendar: false} = DashboardContext.get_integration_status(user.id)
+
+        :meck.expect(unquote(helper), :handle_callback, fn _code, _state, _uri ->
+          {:ok, Factory.insert(:calendar_integration, user: user, provider: unquote(provider))}
+        end)
+
+        conn = get(conn, unquote(path), %{"code" => "code", "state" => "state"})
+
+        assert redirected_to(conn) == "/dashboard"
+        assert %{has_calendar: true} = DashboardContext.get_integration_status(user.id)
+      end
+    end
+  end
+
+  describe "return_to" do
+    # The redirect target comes from the state only once the state has been
+    # verified: the raw "state" parameter here embeds nothing, so a redirect to
+    # the validated path proves where it was read from.
+    test "a successful connect lands on the validated return_to", %{conn: conn} do
+      user = Factory.insert(:user, id: 123)
+      conn = log_in_user(conn, user)
+
+      :meck.expect(State, :validate, fn _state, _secret ->
+        {:ok, %{user_id: 123, integration_id: nil, return_to: "/dashboard/onboarding"}}
+      end)
+
+      :meck.expect(OutlookCalendarOAuthHelper, :handle_callback, fn _code, _state, _uri ->
+        {:ok, %{user_id: 123}}
+      end)
+
+      conn =
+        get(conn, ~p"/auth/outlook/calendar/callback", %{"code" => "code", "state" => "state"})
+
+      assert redirected_to(conn) == "/dashboard/onboarding"
+    end
+
+    test "a failed connect also returns to the validated return_to", %{conn: conn} do
+      user = Factory.insert(:user, id: 123)
+      conn = log_in_user(conn, user)
+
+      :meck.expect(State, :validate, fn _state, _secret ->
+        {:ok, %{user_id: 123, integration_id: nil, return_to: "/dashboard/onboarding"}}
+      end)
+
+      :meck.expect(GoogleCalendarOAuthHelper, :handle_callback, fn _code, _state, _uri ->
+        {:error, :invalid_code}
+      end)
+
+      conn =
+        get(conn, ~p"/auth/google/calendar/callback", %{"code" => "code", "state" => "state"})
+
+      assert redirected_to(conn) == "/dashboard/onboarding"
+      assert Flash.get(conn.assigns.flash, :error) =~ "Failed to connect Google Calendar"
+    end
+
+    test "a rejected state ignores the return_to it carries", %{conn: conn} do
+      user = Factory.insert(:user, id: 123)
+      conn = log_in_user(conn, user)
+      state = State.generate(123, "wrong_secret", nil, return_to: "/dashboard/onboarding")
+
+      conn = get(conn, ~p"/auth/outlook/calendar/callback", %{"code" => "code", "state" => state})
+
+      assert redirected_to(conn) == "/dashboard/integrations?tab=calendars"
+      assert Flash.get(conn.assigns.flash, :error) =~ "session mismatch"
     end
   end
 

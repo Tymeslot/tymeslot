@@ -25,7 +25,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   should call it.
   """
 
-  alias Tymeslot.Emails.Shared.{Formatting, Sanitise, Styles, Text}
+  alias Tymeslot.Emails.Shared.{Formatting, Sanitise, Stack, Styles, Text}
   alias Tymeslot.MeetingPayments
 
   require Logger
@@ -112,19 +112,23 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   @doc "Renders the attendee receipt as MJML."
   @spec attendee_receipt_html(map()) :: String.t()
   def attendee_receipt_html(receipt) do
-    title = dgettext("emails", "Payment receipt")
+    title = dgettext("emails_booking", "Payment receipt")
 
     amount_line =
-      dgettext("emails", "%{amount} paid", amount: Sanitise.sanitize_for_email(receipt.amount))
+      dgettext("emails_booking", "%{amount} paid",
+        amount: Sanitise.sanitize_for_email(receipt.amount)
+      )
 
     date_line =
       if receipt.paid_at do
-        dgettext("emails", "Date: %{date}", date: Sanitise.sanitize_for_email(receipt.paid_at))
+        dgettext("emails_booking", "Date: %{date}",
+          date: Sanitise.sanitize_for_email(receipt.paid_at)
+        )
       end
 
     reference_line =
       if receipt.reference do
-        dgettext("emails", "Reference: %{ref}",
+        dgettext("emails_booking", "Reference: %{ref}",
           ref: Sanitise.sanitize_for_email(receipt.reference)
         )
       end
@@ -136,43 +140,46 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
 
     """
     #{Text.section_title(title)}
-    <mj-section
-      background-color="#{Styles.canvas_soft()}"
-      border-radius="#{Styles.card_radius()}"
-      padding="20px 26px"
-      css-class="mobile-card email-canvas-soft"
-    >
-      <mj-column>
-        <mj-text
-          font-size="15px"
-          color="#{Styles.text_color(:primary)}"
-          line-height="1.7"
-          align="center"
-        >
-          #{body_lines}
-        </mj-text>
-        #{receipt_button(receipt)}
-      </mj-column>
-    </mj-section>
+    #{Stack.spaced("""
+      <mj-section
+        background-color="#{Styles.canvas_soft()}"
+        border-radius="#{Styles.card_radius()}"
+        padding="20px 26px"
+        css-class="mobile-card email-canvas-soft"
+      >
+        <mj-column>
+          <mj-text
+            font-size="15px"
+            color="#{Styles.text_color(:primary)}"
+            line-height="1.7"
+            align="center"
+          >
+            #{body_lines}
+          </mj-text>
+          #{receipt_button(receipt)}
+        </mj-column>
+      </mj-section>
+    """)}
     """
   end
 
   @doc "Renders the attendee receipt as plain text."
   @spec attendee_receipt_text(map()) :: String.t()
   def attendee_receipt_text(receipt) do
-    header = dgettext("emails", "PAYMENT RECEIPT:")
+    header = dgettext("emails_booking", "PAYMENT RECEIPT:")
 
-    amount_line = dgettext("emails", "%{amount} paid", amount: receipt.amount)
+    amount_line = dgettext("emails_booking", "%{amount} paid", amount: receipt.amount)
 
     date_line =
-      if receipt.paid_at, do: dgettext("emails", "Date: %{date}", date: receipt.paid_at)
+      if receipt.paid_at, do: dgettext("emails_booking", "Date: %{date}", date: receipt.paid_at)
 
     reference_line =
-      if receipt.reference, do: dgettext("emails", "Reference: %{ref}", ref: receipt.reference)
+      if receipt.reference,
+        do: dgettext("emails_booking", "Reference: %{ref}", ref: receipt.reference)
 
     link_line =
       if receipt.receipt_url do
-        dgettext("emails", "View receipt: %{url}", url: receipt.receipt_url)
+        dgettext("emails_booking", "View receipt: %{url}", url: receipt.receipt_url)
       end
 
     [header, amount_line, date_line, reference_line, link_line]
@@ -184,16 +191,18 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   @spec organizer_summary_html(map()) :: String.t()
   def organizer_summary_html(payment) do
     # `Text.section_title/2` escapes what it is handed, so the amount goes in raw.
-    title = dgettext("emails", "You received %{amount}", amount: payment.net_received)
+    title = dgettext("emails_booking", "You received %{amount}", amount: payment.net_received)
 
     body_lines =
       Enum.join(
         [
-          dgettext("emails", "Attendee paid: %{amount}", amount: strong(payment.attendee_paid)),
-          dgettext("emails", "Tymeslot platform fee: %{amount}",
+          dgettext("emails_booking", "Attendee paid: %{amount}",
+            amount: strong(payment.attendee_paid)
+          ),
+          dgettext("emails_booking", "Tymeslot platform fee: %{amount}",
             amount: strong(payment.platform_fee)
           ),
-          dgettext("emails", "You received: %{amount} (less Stripe processing fees)",
+          dgettext("emails_booking", "You received: %{amount} (less Stripe processing fees)",
             amount: strong(payment.net_received)
           )
         ],
@@ -202,32 +211,34 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
 
     """
     #{Text.section_title(title)}
-    <mj-section
-      background-color="#{Styles.canvas_soft()}"
-      border-radius="#{Styles.card_radius()}"
-      padding="20px 26px"
-      css-class="mobile-card email-canvas-soft"
-    >
-      <mj-column>
-        <mj-text
-          font-size="15px"
-          color="#{Styles.text_color(:primary)}"
-          line-height="1.7"
-          align="left"
-        >
-          #{body_lines}
-        </mj-text>
-        <mj-text
-          font-size="13px"
-          color="#{Styles.text_color(:muted)}"
-          line-height="1.55"
-          align="left"
-          padding-top="12px"
-        >
-          #{dgettext("emails", "Funds will arrive on your usual Stripe payout schedule.")}
-        </mj-text>
-      </mj-column>
-    </mj-section>
+    #{Stack.spaced("""
+      <mj-section
+        background-color="#{Styles.canvas_soft()}"
+        border-radius="#{Styles.card_radius()}"
+        padding="20px 26px"
+        css-class="mobile-card email-canvas-soft"
+      >
+        <mj-column>
+          <mj-text
+            font-size="15px"
+            color="#{Styles.text_color(:primary)}"
+            line-height="1.7"
+            align="left"
+          >
+            #{body_lines}
+          </mj-text>
+          <mj-text
+            font-size="13px"
+            color="#{Styles.text_color(:muted)}"
+            line-height="1.55"
+            align="left"
+            padding-top="12px"
+          >
+            #{dgettext("emails_booking", "Funds will arrive on your usual Stripe payout schedule.")}
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    """)}
     """
   end
 
@@ -238,15 +249,17 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   # would misalign in every locale but English.
   def organizer_summary_text(payment) do
     [
-      dgettext("emails", "PAYMENT RECEIVED:"),
-      dgettext("emails", "You received %{amount}", amount: payment.net_received),
-      dgettext("emails", "Attendee paid: %{amount}", amount: payment.attendee_paid),
-      dgettext("emails", "Tymeslot platform fee: %{amount}", amount: payment.platform_fee),
-      dgettext("emails", "You received: %{amount} (less Stripe processing fees)",
+      dgettext("emails_booking", "PAYMENT RECEIVED:"),
+      dgettext("emails_booking", "You received %{amount}", amount: payment.net_received),
+      dgettext("emails_booking", "Attendee paid: %{amount}", amount: payment.attendee_paid),
+      dgettext("emails_booking", "Tymeslot platform fee: %{amount}",
+        amount: payment.platform_fee
+      ),
+      dgettext("emails_booking", "You received: %{amount} (less Stripe processing fees)",
         amount: payment.net_received
       ),
       "",
-      dgettext("emails", "Funds will arrive on your usual Stripe payout schedule.")
+      dgettext("emails_booking", "Funds will arrive on your usual Stripe payout schedule.")
     ]
     |> Enum.join("\n")
     |> String.trim_trailing()
@@ -259,7 +272,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   defp receipt_button(%{receipt_url: nil}), do: nil
 
   defp receipt_button(%{receipt_url: receipt_url}) do
-    button_label = dgettext("emails", "View receipt")
+    button_label = dgettext("emails_booking", "View receipt")
     safe_url = Sanitise.sanitize_for_email(receipt_url)
     accent_deep = Styles.intent_accent_deep(:confirmed)
 

@@ -8,7 +8,7 @@ defmodule Tymeslot.Emails.Shared.Cards do
   the warm canvas; the typography does the heavy lifting.
   """
 
-  alias Tymeslot.Emails.Shared.{Sanitise, Styles}
+  alias Tymeslot.Emails.Shared.{Sanitise, Stack, Styles, Text}
   alias Tymeslot.Security.UniversalSanitizer
 
   @type contact_row :: %{
@@ -16,6 +16,40 @@ defmodule Tymeslot.Emails.Shared.Cards do
           required(:value) => String.t() | {:safe, String.t()},
           optional(:safe_html) => boolean()
         }
+
+  @doc """
+  A titled card holding a block of already-prepared HTML — the lines of a
+  dispute or a restricted account, joined with `<br/>` by the caller.
+
+  Shared because the same card, down to the padding, was written out in two
+  templates; once both stopped differing in their spacing there was nothing
+  left to tell them apart.
+  """
+  @spec details_card(String.t(), String.t()) :: String.t()
+  def details_card(title, body_html) do
+    """
+    #{Text.section_title(title)}
+    #{Stack.spaced("""
+      <mj-section
+        background-color="#{Styles.canvas_soft()}"
+        border-radius="#{Styles.card_radius()}"
+        padding="20px 26px"
+        css-class="mobile-card email-canvas-soft"
+      >
+        <mj-column>
+          <mj-text
+            font-size="15px"
+            color="#{Styles.text_color(:primary)}"
+            line-height="1.7"
+            align="left"
+          >
+            #{body_html}
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    """)}
+    """
+  end
 
   @doc """
   A contact details card. `row.value` is sanitised by default; pass
@@ -38,7 +72,7 @@ defmodule Tymeslot.Emails.Shared.Cards do
         """
       end)
 
-    """
+    Stack.spaced("""
     <mj-section
       background-color="#{Styles.canvas_soft()}"
       border-radius="#{Styles.card_radius()}"
@@ -61,7 +95,7 @@ defmodule Tymeslot.Emails.Shared.Cards do
         </mj-table>
       </mj-column>
     </mj-section>
-    """
+    """)
   end
 
   @doc """
@@ -83,7 +117,7 @@ defmodule Tymeslot.Emails.Shared.Cards do
 
     formatted = String.replace(sanitized_message, "\n", "<br>")
 
-    """
+    Stack.spaced("""
     <mj-section
       background-color="#{Styles.canvas_soft()}"
       border-radius="#{Styles.card_radius()}"
@@ -112,7 +146,7 @@ defmodule Tymeslot.Emails.Shared.Cards do
         </mj-text>
       </mj-column>
     </mj-section>
-    """
+    """)
   end
 
   defp resolve_row_value(%{value: {:safe, html}}), do: html

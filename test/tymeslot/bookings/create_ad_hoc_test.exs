@@ -109,19 +109,27 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
       assert_enqueued(worker: Tymeslot.Workers.EmailWorker)
     end
 
-    test "routes attendee invitation through AttendeeNotifications with defaults",
+    test "sends the guest one email, not a bare invitation beside it",
          %{base_params: params} do
       assert {:ok, meeting} = CreateAdHoc.execute(params)
 
-      # Meeting is persisted with default notification-tracking columns
-      assert meeting.ical_sequence == 0
-      assert meeting.last_notified_state == %{}
-
-      # An EmailWorker job for the attendee calendar invitation is enqueued
+      # The confirmation is the email: it carries the ICS file, the
+      # accept/decline links and the video link, in the guest's language.
       assert_enqueued(
         worker: Tymeslot.Workers.EmailWorker,
-        args: %{"attendee_email" => "jane@example.com"}
+        args: %{"action" => "send_confirmation_emails", "meeting_id" => meeting.id}
       )
+
+      refute_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{"action" => "send_calendar_invitation"}
+      )
+
+      # The notification baseline is untouched, as on every other booking
+      # path: nothing seeds it on create, and `LastNotifiedState.to_event/2`
+      # reads an empty one as "the people on the event were already invited".
+      assert meeting.ical_sequence == 0
+      assert meeting.last_notified_state == %{}
     end
 
     test "schedules video room creation when video_integration_id is set", %{
@@ -143,18 +151,13 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
 
       assert {:ok, meeting} = CreateAdHoc.execute(params)
 
-      # The iCal invitation carries the event's time and location, not the join
-      # link, so it goes out on the video path too rather than waiting for a
-      # room that may take days to arrive.
-      assert_enqueued(
+      # Nothing is mailed from here on the video path: the room is created
+      # first so the join link is in the confirmation, and the video worker
+      # sends it — falling back to sending without a link if the provider
+      # cannot be reached, so the guest is never left with nothing.
+      refute_enqueued(
         worker: Tymeslot.Workers.EmailWorker,
-        args: %{
-          "action" => "send_calendar_invitation",
-          "attendee_email" => "jane@example.com",
-          "event_uid" => meeting.uid,
-          "method" => "request",
-          "sequence" => 0
-        }
+        args: %{"action" => "send_calendar_invitation"}
       )
 
       # The meeting.created fan-out is the one side effect that *is* deferred to
@@ -194,15 +197,16 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
 
       refute_enqueued(worker: Tymeslot.Workers.VideoRoomWorker)
 
+      # With no video job left to send them, the confirmation is enqueued here
+      # instead — still one email, still the complete one.
       assert_enqueued(
         worker: Tymeslot.Workers.EmailWorker,
-        args: %{
-          "action" => "send_calendar_invitation",
-          "attendee_email" => "jane@example.com",
-          "event_uid" => meeting.uid,
-          "method" => "request",
-          "sequence" => 0
-        }
+        args: %{"action" => "send_confirmation_emails", "meeting_id" => meeting.id}
+      )
+
+      refute_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{"action" => "send_calendar_invitation"}
       )
 
       # No worker is left to raise meeting.created, so the booking is announced

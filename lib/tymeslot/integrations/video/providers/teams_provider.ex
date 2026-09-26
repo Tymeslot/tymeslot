@@ -12,12 +12,12 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
-  alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.NeedsReauth
   alias Tymeslot.Integrations.Video.OAuthTokenManager
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  alias Tymeslot.Integrations.Video.Providers.TeamsProvider.Payload
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
 
@@ -92,7 +92,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
           {:ok, RoomData.t()} | {:error, term()}
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def finish_create_meeting_room(token, config) do
-    case create_scheduled_meeting(token, config) do
+    case create_or_attach(token, config) do
       {:ok, meeting} ->
         room_data = %RoomData{
           room_id: meeting["id"],
@@ -118,6 +118,65 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     end
   end
 
+  # `:calendar_event_id` names the booking's own Outlook event when the Teams
+  # account is also the calendar it was written to (see
+  # `Tymeslot.Integrations.MeetingProvisioning.teams_room_placement/1`); the
+  # meeting then lives on that event. Otherwise it needs an event of its own.
+  defp create_or_attach(token, config) do
+    case Map.get(config, :calendar_event_id) do
+      event_id when is_binary(event_id) and event_id != "" ->
+        attach_to_calendar_event(token, event_id, config)
+
+      _none ->
+        create_scheduled_meeting(token, config)
+    end
+  end
+
+  @doc """
+  Moves a room's event to the booking's new title and times.
+
+  Only a room that is an event of its own reaches this. One attached to the
+  booking's calendar event moves with that event, through calendar sync
+  (`Tymeslot.Workers.VideoSyncWorker` leaves it alone).
+  """
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def update_meeting_room(room_id, config) when is_binary(room_id) do
+    with {:ok, :valid} <- validate_teams_scope(config),
+         {:ok, window} <- Payload.event_window(config),
+         {:ok, token} <- get_access_token(config) do
+      :patch
+      |> graph_request(token, event_path(room_id), Payload.event_fields(window))
+      |> handle_room_write(config)
+    end
+  end
+
+  @doc """
+  Deletes a room's event, so a cancelled booking's Teams meeting does not
+  linger in the organiser's calendar. An event already gone answers
+  `{:error, :meeting_not_found}`, which the sync treats as done.
+  """
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def delete_meeting_room(room_id, config) when is_binary(room_id) do
+    with {:ok, :valid} <- validate_teams_scope(config),
+         {:ok, token} <- get_access_token(config) do
+      :delete
+      |> graph_request(token, event_path(room_id), nil)
+      |> handle_room_write(config)
+    end
+  end
+
+  @doc """
+  Returns `config` carrying a usable access token, refreshed and written back
+  first if the stored one has expired (see
+  `Tymeslot.Integrations.Video.AccessToken`).
+  """
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def ensure_valid_token(config) do
+    with {:ok, token} <- get_access_token(config) do
+      {:ok, Map.put(config, :access_token, token)}
+    end
+  end
+
   defp log_create_meeting_room_error(reason) do
     Logger.error("Failed to create Teams meeting", error: inspect(reason))
   end
@@ -139,7 +198,8 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
   # The slowest creation refreshes the token (through the shared OAuth client,
   # at the HTTP client's default timeouts), creates the event and, when the
-  # event came back without a Teams link, deletes it again.
+  # event came back without a Teams link, deletes it again. Attaching the
+  # meeting to the booking's own event is a single PATCH, well inside that.
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def room_creation_budget_ms,
     do:
@@ -180,12 +240,12 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   def perform_connection_test(config) do
     case get_access_token(config) do
       {:ok, _token} ->
-        {:ok, dgettext("dashboard_integrations", "Microsoft Teams connected successfully!")}
+        {:ok, dgettext("dashboard_video", "Microsoft Teams connected successfully!")}
 
       {:error, reason} ->
         {:error,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "Failed to authenticate with Microsoft Teams: %{reason}",
            reason: inspect(reason)
          )}
@@ -382,44 +442,62 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
   defp maybe_put_scope(attrs, _scope), do: attrs
 
+  # A room of its own: a new event in the Teams account's default calendar
+  # that carries the meeting, titled and timed as the booking is.
   defp create_scheduled_meeting(token, config) do
-    {start_time, end_time} = get_meeting_times(config)
-    meeting_payload = build_meeting_payload(start_time, end_time, config)
-
-    headers = graph_headers(token)
-
-    url = "#{@graph_api_base_url}/me/events"
-
-    case Config.http_client_module().request(
-           :post,
-           url,
-           Jason.encode!(meeting_payload),
-           headers,
-           @create_request_options
-         ) do
-      {:ok, %Req.Response{status: 201, body: body}} ->
-        parse_meeting_response(token, body)
-
-      {:ok, %Req.Response{status: 401, body: body}} ->
-        # The access token was rejected by Graph even though it had survived
-        # token validation/refresh — this indicates server-side revocation or a
-        # consent withdrawal. Flag the integration so the dashboard surfaces the
-        # "Reconnect required" badge immediately, rather than waiting for the
-        # async HealthCheck cycle. Mirrors Zoom's flag_revoked_token/1.
-        flag_revoked_token(config)
-        decode_and_format_error(401, body)
-
-      {:ok, %Req.Response{status: status, body: body}} ->
-        decode_and_format_error(status, body)
-
-      {:error, reason} ->
-        # Passed through raw (a `%Req.TransportError{}`/`%Mint.*{}` struct or
-        # a transport reason atom) rather than flattened to prose, so
-        # `BreakerOutcome` recognises a genuine transport failure and lets the
-        # breaker witness it.
-        {:error, reason}
+    with {:ok, window} <- Payload.event_window(config) do
+      :post
+      |> graph_request(token, "/me/events", Payload.new_event(window, config))
+      |> handle_room_event(token, config, :own_event)
     end
   end
+
+  # The booking's own calendar event, made into the Teams meeting, so the
+  # organiser's calendar holds one entry for the booking rather than two.
+  defp attach_to_calendar_event(token, event_id, config) do
+    :patch
+    |> graph_request(token, event_path(event_id), Payload.online_meeting(config))
+    |> handle_room_event(token, config, :calendar_event)
+  end
+
+  defp handle_room_event({:ok, %Req.Response{status: status, body: body}}, token, _config, owner)
+       when status in [200, 201] do
+    case decode_body(body) do
+      {:ok, event} -> extract_join_info(token, event, owner)
+      error -> error
+    end
+  end
+
+  defp handle_room_event(response, _token, config, _owner),
+    do: handle_failed_write(response, config)
+
+  # The access token was rejected by Graph even though it had survived token
+  # validation/refresh, which means server-side revocation or a consent
+  # withdrawal. Flag the integration so the dashboard surfaces the "Reconnect
+  # required" badge immediately, rather than waiting for the async HealthCheck
+  # cycle. Mirrors Zoom's flag_revoked_token/1.
+  defp handle_failed_write({:ok, %Req.Response{status: 401, body: body}}, config) do
+    flag_revoked_token(config)
+    decode_and_format_error(401, body)
+  end
+
+  defp handle_failed_write({:ok, %Req.Response{status: status, body: body}}, _config),
+    do: decode_and_format_error(status, body)
+
+  # Passed through raw (a `%Req.TransportError{}`/`%Mint.*{}` struct or a
+  # transport reason atom) rather than flattened to prose, so `BreakerOutcome`
+  # recognises a genuine transport failure and lets the breaker witness it.
+  defp handle_failed_write({:error, reason}, _config), do: {:error, reason}
+
+  # A room's later writes (a reschedule, a cancellation) only need to land: a
+  # 404 is the room already gone, which the sync treats as done.
+  defp handle_room_write({:ok, %Req.Response{status: status}}, _config) when status in 200..299,
+    do: :ok
+
+  defp handle_room_write({:ok, %Req.Response{status: 404}}, _config),
+    do: {:error, :meeting_not_found}
+
+  defp handle_room_write(response, config), do: handle_failed_write(response, config)
 
   # Flags the integration as needing reauthentication after a 401 from Graph —
   # i.e. the credentials are no longer accepted server-side. The dashboard
@@ -431,95 +509,52 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
       event: "teams_token_revoked",
       message:
         dgettext_noop(
-          "dashboard_integrations",
+          "dashboard_video",
           "Microsoft Teams access was revoked. Please reconnect your Teams account."
         )
     )
   end
 
-  defp get_meeting_times(config) do
-    start_time =
-      case Map.get(config, :meeting_start_time) do
-        nil -> DateTime.add(DateTime.utc_now(), 3600, :second)
-        dt when is_binary(dt) -> parse_iso8601!(dt)
-        dt -> dt
-      end
+  defp decode_body(body) when is_binary(body), do: Jason.decode(body)
+  defp decode_body(body) when is_map(body), do: {:ok, body}
 
-    end_time =
-      case Map.get(config, :meeting_end_time) do
-        nil -> DateTime.add(start_time, 1800, :second)
-        dt when is_binary(dt) -> parse_iso8601!(dt)
-        dt -> dt
-      end
+  defp extract_join_info(token, event, owner) do
+    case Payload.join_url(event) do
+      nil ->
+        discard_linkless_event(token, event["id"], owner)
 
-    {start_time, end_time}
-  end
+        # A tagged reason rather than a sentence: the caller's error policy
+        # has to recognise this as terminal, and it cannot match on prose.
+        {:error, :video_meeting_not_enabled}
 
-  defp parse_iso8601!(dt) do
-    {:ok, parsed, _offset} = DateTime.from_iso8601(dt)
-    parsed
-  end
-
-  defp build_meeting_payload(start_time, end_time, config) do
-    payload = %{
-      subject: Map.get(config, :meeting_topic, "Scheduled Meeting"),
-      start: %{dateTime: DateTime.to_iso8601(start_time), timeZone: "UTC"},
-      end: %{dateTime: DateTime.to_iso8601(end_time), timeZone: "UTC"},
-      isOnlineMeeting: true
-    }
-
-    if personal_account?(config) do
-      payload
-    else
-      Map.put(payload, :onlineMeetingProvider, "teamsForBusiness")
+      join_url ->
+        {:ok,
+         %{
+           "id" => event["id"],
+           "joinUrl" => join_url,
+           "joinWebUrl" => join_url,
+           "videoTeleconferenceId" => nil,
+           "passcode" => nil
+         }}
     end
   end
 
-  defp parse_meeting_response(token, body) do
-    case Jason.decode(body) do
-      {:ok, event} -> extract_join_info(token, event)
-      error -> error
-    end
-  end
+  # Graph answered, so the event exists on the account even though it carries
+  # no Teams link: the account cannot host Teams meetings. An event of the
+  # room's own is removed, or every attempt would deposit another placeholder
+  # in the organiser's calendar. The booking's own event is left alone: it is
+  # the booking, and calendar sync owns it.
+  defp discard_linkless_event(_token, _event_id, :calendar_event), do: :ok
 
-  defp extract_join_info(token, event) do
-    join_url = get_in(event, ["onlineMeeting", "joinUrl"]) || event["onlineMeetingUrl"]
-
-    if join_url do
-      {:ok,
-       %{
-         "id" => event["id"],
-         "joinUrl" => join_url,
-         "joinWebUrl" => join_url,
-         "videoTeleconferenceId" => nil,
-         "passcode" => nil
-       }}
-    else
-      # Graph answered 201, so the calendar event exists on the account even
-      # though it carries no Teams link — the account cannot host Teams
-      # meetings. Left behind, every attempt would deposit another placeholder
-      # in the organiser's calendar, so the event is removed before the failure
-      # is reported. A tagged reason rather than a sentence: the caller's error
-      # policy has to recognise this as terminal, and it cannot match on prose.
-      delete_orphaned_event(token, event["id"])
-      {:error, :video_meeting_not_enabled}
-    end
-  end
+  defp discard_linkless_event(token, event_id, :own_event),
+    do: delete_orphaned_event(token, event_id)
 
   # Best-effort: the room creation has already failed and the caller's outcome
   # does not change either way, so a failed cleanup is logged, never raised.
   defp delete_orphaned_event(_token, nil), do: :ok
 
   defp delete_orphaned_event(token, event_id) do
-    url = "#{@graph_api_base_url}/me/events/#{URI.encode(event_id)}"
-
-    case Config.http_client_module().request(
-           :delete,
-           url,
-           "",
-           graph_headers(token),
-           @create_request_options
-         ) do
+    case graph_request(:delete, token, event_path(event_id), nil) do
       {:ok, %Req.Response{status: status}} when status in [200, 202, 204] ->
         Logger.info("Deleted Teams calendar event left without a join link")
         :ok
@@ -533,18 +568,28 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     end
   end
 
+  defp graph_request(method, token, path, body) do
+    Config.http_client_module().request(
+      method,
+      @graph_api_base_url <> path,
+      encode_body(body),
+      graph_headers(token),
+      @create_request_options
+    )
+  end
+
+  defp encode_body(nil), do: ""
+  defp encode_body(body), do: Jason.encode!(body)
+
+  # Graph ids are base64-like and may carry `/`, `+` or `=`, which must not
+  # reach the path unescaped.
+  defp event_path(event_id), do: "/me/events/#{URI.encode(event_id, &URI.char_unreserved?/1)}"
+
   defp graph_headers(token) do
     [
       {"Authorization", "Bearer #{token}"},
       {"Content-Type", "application/json"}
     ]
-  end
-
-  defp personal_account?(config) do
-    tenant_id = Map.get(config, :tenant_id)
-    # Check if it is the consumer tenant or we don't know yet (common)
-    tenant_id == MicrosoftConfig.consumer_tenant_id() or tenant_id == "common" or
-      is_nil(tenant_id)
   end
 
   defp teams_oauth_helper do

@@ -30,6 +30,7 @@ defmodule Tymeslot.Availability.TimeOff do
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.TimeRange
 
   @typedoc """
   What a period does to one date: nothing, blocks the whole of it, or blocks
@@ -350,6 +351,41 @@ defmodule Tymeslot.Availability.TimeOff do
     |> Enum.filter(fn {from, to} ->
       DateTime.before?(from, to) and DateTime.before?(from, window_end) and
         DateTime.after?(to, window_start)
+    end)
+  end
+
+  @doc """
+  The `ranges` that `user_id`'s time off reaches into, in the order given.
+
+  Each range is a UTC `{start, end}` pair, and it clashes when any part of it
+  overlaps a stretch `busy_intervals/4` publishes for the owner, so a range
+  here and a slot on the booking page are measured against the same time off.
+  Ranges are half-open: one that ends as a period begins does not clash.
+
+  For callers holding host-chosen times rather than offered slots, such as a
+  poll's candidate times, which never pass through the slot engine that
+  applies time off everywhere else. A user without a profile has no time off.
+  """
+  @spec clashing_ranges(integer(), [{DateTime.t(), DateTime.t()}]) ::
+          [{DateTime.t(), DateTime.t()}]
+  def clashing_ranges(_user_id, []), do: []
+
+  def clashing_ranges(user_id, ranges) when is_integer(user_id) and is_list(ranges) do
+    case ProfileQueries.get_by_user_id(user_id) do
+      {:ok, profile} -> clashing_for_profile(profile, ranges)
+      {:error, :not_found} -> []
+    end
+  end
+
+  defp clashing_for_profile(profile, ranges) do
+    window_start = ranges |> Enum.map(&elem(&1, 0)) |> Enum.min(DateTime)
+    window_end = ranges |> Enum.map(&elem(&1, 1)) |> Enum.max(DateTime)
+    busy = busy_intervals(profile.id, profile.timezone, window_start, window_end)
+
+    Enum.filter(ranges, fn {from, to} ->
+      Enum.any?(busy, fn {busy_from, busy_to} ->
+        TimeRange.overlaps?(from, to, busy_from, busy_to)
+      end)
     end)
   end
 

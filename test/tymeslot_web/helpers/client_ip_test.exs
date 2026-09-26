@@ -151,22 +151,38 @@ defmodule TymeslotWeb.Helpers.ClientIPTest do
       assert ClientIP.get_from_mount(socket) == "203.0.113.7"
     end
 
-    test "x-real-ip takes precedence over x-forwarded-for on socket path" do
-      # Note: CF-Connecting-IP is NOT available on the socket path — Phoenix's
-      # :x_headers only collects headers with an "x-" prefix, so cf-connecting-ip
-      # is never present in socket connect_info. Resolution uses x-real-ip first.
+    test "x-real-ip does not outrank x-forwarded-for on the socket path" do
+      # The endpoint's RemoteIp plug resolves the conn path from the rightmost
+      # usable entry across both headers, so giving x-real-ip precedence here
+      # let one visitor resolve to two addresses (and two rate-limit buckets)
+      # depending on whether they arrived over HTTP or the socket.
       socket =
         mock_socket(
           connect_info: %{
             peer_data: @peer_data,
-            x_headers: [
-              {"x-real-ip", "203.0.113.7"},
-              {"x-forwarded-for", "203.0.113.9, 10.0.0.1"}
-            ]
+            x_headers: [{"x-real-ip", "1.2.3.4"}, {"x-forwarded-for", "5.6.7.8"}]
           }
         )
 
-      assert ClientIP.get_from_mount(socket) == "203.0.113.7"
+      assert ClientIP.get_from_mount(socket) == "5.6.7.8"
+    end
+
+    test "resolves the same address as RemoteIp whatever order the headers arrive in" do
+      for headers <- [
+            [{"x-real-ip", "1.2.3.4"}, {"x-forwarded-for", "5.6.7.8"}],
+            [{"x-forwarded-for", "5.6.7.8"}, {"x-real-ip", "1.2.3.4"}],
+            [{"x-real-ip", "203.0.113.7"}, {"x-forwarded-for", "203.0.113.9, 10.0.0.1"}]
+          ] do
+        socket = mock_socket(connect_info: %{peer_data: @peer_data, x_headers: headers})
+
+        conn_path =
+          headers
+          |> RemoteIp.from(headers: ~w[x-forwarded-for x-real-ip])
+          |> :inet.ntoa()
+          |> to_string()
+
+        assert ClientIP.get_from_mount(socket) == conn_path, inspect(headers)
+      end
     end
 
     test "resolves x-forwarded-for when x-real-ip is absent" do

@@ -19,7 +19,6 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
       assert sanitized["name"] == "Coffee Chat"
       assert sanitized["duration"] == "30"
       assert sanitized["icon"] == "hero-bolt"
-      assert sanitized["meeting_mode"] == "video"
     end
 
     test "returns error for missing name" do
@@ -46,28 +45,10 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
       assert Map.has_key?(errors, :icon)
     end
 
-    test "returns error for invalid meeting mode" do
-      params = %{
-        "name" => "Coffee Chat",
-        "duration" => "30",
-        "icon" => "hero-bolt",
-        "meeting_mode" => "hologram"
-      }
-
-      assert {:error, errors} = InputValidation.validate_meeting_type_form(params)
-      assert Map.has_key?(errors, :meeting_mode)
-    end
-
     test "defaults icon to 'none' when nil" do
       params = %{"name" => "Chat", "duration" => "30", "meeting_mode" => "personal"}
       assert {:ok, sanitized} = InputValidation.validate_meeting_type_form(params)
       assert sanitized["icon"] == "none"
-    end
-
-    test "defaults meeting_mode to 'personal' when nil" do
-      params = %{"name" => "Chat", "duration" => "30", "icon" => "none"}
-      assert {:ok, sanitized} = InputValidation.validate_meeting_type_form(params)
-      assert sanitized["meeting_mode"] == "personal"
     end
 
     test "accumulates multiple field errors" do

@@ -23,6 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
 
   @typep converted_event :: %{
            required(:uid) => String.t() | nil,
+           required(:ical_uid) => String.t() | nil,
            required(:summary) => String.t() | nil,
            required(:description) => String.t() | nil,
            required(:location) => String.t() | nil,
@@ -91,6 +92,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
 
     %{
       uid: outlook_event[:id] || outlook_event[:uid],
+      # The key sync caches the event under (`EventNormaliser`).
+      ical_uid: outlook_event[:ical_uid],
       summary: outlook_event[:summary],
       description: outlook_event[:description],
       location: outlook_event[:location],
@@ -147,24 +150,44 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   @doc """
   Fetches one event by the Graph event id in `provider_event_id`, whichever
   calendar holds it.
+
+  Graph gives an event a new id when it moves to another calendar, so a 404
+  alone cannot tell a moved event from a deleted one. The event is then looked
+  up by the iCalendar UID in `ical_uid`, which a move keeps, and it is
+  `{:error, :not_found}` only when no calendar holds it. Without an
+  `ical_uid` the absence is unconfirmed.
   """
   @impl Tymeslot.Integrations.Calendar.Provider
   def fetch_event(integration, %{provider_event_id: event_id} = ref)
       when is_binary(event_id) and event_id != "" do
+    fetched =
+      case get_live_event(integration, event_id) do
+        {:error, :not_found} -> find_moved_event(integration, Map.get(ref, :ical_uid))
+        other -> other
+      end
+
+    normalise_fetched(fetched, ref)
+  end
+
+  def fetch_event(_integration, _ref), do: {:error, :unaddressable}
+
+  defp get_live_event(integration, event_id) do
     case api_module().get_event(integration, event_id) do
-      {:ok, %{"isCancelled" => true}} ->
-        {:error, :not_found}
+      {:ok, %{"isCancelled" => true}} -> {:error, :not_found}
+      {:ok, raw} -> {:ok, raw}
+      {:error, type, _message} when type in [:not_found, :gone] -> {:error, :not_found}
+      {:error, type, _message} -> {:error, type}
+      {:error, _reason} = error -> error
+    end
+  end
 
-      {:ok, raw} ->
-        EventNormaliser.normalise_events([raw], %{
-          calendar_integration_id: Map.get(ref, :calendar_integration_id),
-          # Graph addresses the event without its calendar: this only labels it.
-          provider_calendar_id: Map.get(ref, :calendar_id) || "primary",
-          synced_at: DateTime.utc_now()
-        })
-
-      {:error, type, _message} when type in [:not_found, :gone] ->
-        {:error, :not_found}
+  defp find_moved_event(integration, ical_uid) when is_binary(ical_uid) and ical_uid != "" do
+    case api_module().find_events_by_ical_uid(integration, ical_uid) do
+      {:ok, found} ->
+        case Enum.reject(found, &(&1["isCancelled"] == true)) do
+          [] -> {:error, :not_found}
+          [%{"id" => moved_id} | _rest] -> get_live_event(integration, moved_id)
+        end
 
       {:error, type, _message} ->
         {:error, type}
@@ -174,7 +197,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     end
   end
 
-  def fetch_event(_integration, _ref), do: {:error, :unaddressable}
+  defp find_moved_event(_integration, _ical_uid), do: {:error, :unconfirmed}
+
+  defp normalise_fetched({:ok, raw}, ref),
+    do:
+      EventNormaliser.normalise_events([raw], %{
+        calendar_integration_id: Map.get(ref, :calendar_integration_id),
+        # Graph addresses the event without its calendar: this only labels it.
+        provider_calendar_id: Map.get(ref, :calendar_id) || "primary",
+        synced_at: DateTime.utc_now()
+      })
+
+  defp normalise_fetched(error, _ref), do: error
 
   @spec call_delete_event(CalendarIntegrationSchema.t(), String.t(), keyword()) ::
           :ok | {:error, atom(), String.t()}

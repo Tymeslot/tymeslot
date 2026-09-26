@@ -15,6 +15,9 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
     * `Bookings.Create.execute/2`      → `Events.meeting_created/1`
     * `Bookings.Reschedule.execute/4`  → `Events.meeting_rescheduled/2`
     * `Bookings.Cancel`                → `Events.meeting_cancelled/1`
+    * `Meetings.Approval.approve/1`    → `Events.meeting_created/1`, which
+      announces a booking a reschedule sent back for approval as
+      `meeting.rescheduled` instead
 
   Each test drives the real domain function and asserts the Slack, Telegram
   and webhook delivery jobs land with the event type that transition
@@ -43,10 +46,20 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers
 
+  alias Oban.Job
   alias Tymeslot.Bookings.{Cancel, Create, Reschedule}
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Meetings.Approval
+  alias Tymeslot.Repo
   alias Tymeslot.TestMocks
-  alias Tymeslot.Workers.{SlackWorker, TelegramWorker, VideoRoomWorker, WebhookWorker}
+
+  alias Tymeslot.Workers.{
+    EmailWorker,
+    SlackWorker,
+    TelegramWorker,
+    VideoRoomWorker,
+    WebhookWorker
+  }
 
   setup :verify_on_exit!
 
@@ -188,6 +201,91 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
     end
   end
 
+  describe "a booking on a meeting type requiring approval" do
+    setup ctx do
+      gated_type =
+        insert(:meeting_type,
+          user: ctx.user,
+          name: "Approved Chat",
+          duration_minutes: 30,
+          is_active: true,
+          requires_approval: true,
+          approval_window_hours: 12
+        )
+
+      %{gated_type: gated_type}
+    end
+
+    test "approving a first-time request fans out meeting.created", ctx do
+      params = booking_params(%{user: ctx.user, meeting_type: ctx.gated_type})
+
+      assert {:ok, %{status: "awaiting_approval"} = held} = Create.execute(params, form_data())
+      refute_enqueued(worker: WebhookWorker, args: %{"event_type" => "meeting.created"})
+
+      assert {:ok, confirmed} = Approval.approve(held)
+
+      assert_fanned_out(ctx, confirmed, "meeting.created")
+    end
+
+    # A reschedule sends the confirmed booking back to the host, and their
+    # second approval runs the confirmation path again so the invitee still
+    # gets their reminders. To an integration it is one meeting that moved:
+    # a second `meeting.created` would be recorded as a second booking.
+    test "moving an approved booking and approving it again announces a move, not a booking",
+         ctx do
+      test_pid = self()
+      params = booking_params(%{user: ctx.user, meeting_type: ctx.gated_type})
+
+      assert {:ok, held} = Create.execute(params, form_data())
+      assert {:ok, confirmed} = Approval.approve(held)
+      assert_fanned_out(ctx, confirmed, "meeting.created")
+
+      # The booking was approved well before it was moved. Every channel
+      # dedupes on a five-minute uniqueness window, which would otherwise hide
+      # a second `meeting.created` behind the first.
+      age_enqueued_jobs()
+
+      new_params = %{
+        date: Date.to_string(Date.add(Date.utc_today(), 2)),
+        time: "15:00",
+        duration: "30min",
+        user_timezone: "UTC"
+      }
+
+      assert {:ok, %{status: "awaiting_approval"} = moved} =
+               Reschedule.execute(confirmed.uid, new_params, form_data(), ctx.user.id)
+
+      expect(Tymeslot.EmailServiceMock, :send_reschedule_emails, fn details ->
+        send(test_pid, {:reschedule_emails, details})
+        {{:ok, :sent}, {:ok, :sent}}
+      end)
+
+      assert {:ok, reapproved} = Approval.approve(moved)
+
+      assert DateTime.compare(reapproved.start_time, confirmed.start_time) == :gt
+      assert_fanned_out(ctx, reapproved, "meeting.rescheduled")
+
+      # Exactly one of each across the meeting's whole life, on every channel.
+      assert channel_event_counts(ctx, confirmed, "meeting.created") == [1, 1, 1]
+      assert channel_event_counts(ctx, confirmed, "meeting.rescheduled") == [1, 1, 1]
+
+      # The invitee's side is unchanged: the approval of the new time is sent
+      # as a reschedule notice, and the reminders follow the new time.
+      assert_received {:reschedule_emails, details}
+      assert details.is_rescheduled
+      assert DateTime.compare(details.start_time, reapproved.start_time) == :eq
+
+      assert [reminder] =
+               all_enqueued(
+                 worker: EmailWorker,
+                 args: %{"action" => "send_reminder_emails", "meeting_id" => confirmed.id}
+               )
+
+      assert DateTime.compare(reminder.scheduled_at, confirmed.start_time) == :gt
+      assert DateTime.compare(reminder.scheduled_at, reapproved.start_time) == :lt
+    end
+  end
+
   describe "channel selection is honoured" do
     test "an integration not subscribed to the event receives no job", _ctx do
       quiet_user = insert(:user)
@@ -294,6 +392,23 @@ defmodule Tymeslot.Bookings.NotificationFanoutIntegrationTest do
         "meeting_id" => meeting.id
       }
     )
+  end
+
+  defp channel_event_counts(ctx, meeting, event_type) do
+    for {worker, key, id} <- [
+          {SlackWorker, "integration_id", ctx.slack.id},
+          {TelegramWorker, "integration_id", ctx.telegram.id},
+          {WebhookWorker, "webhook_id", ctx.webhook.id}
+        ] do
+      args = %{key => id, "event_type" => event_type, "meeting_id" => meeting.id}
+      length(all_enqueued(worker: worker, args: args))
+    end
+  end
+
+  # Moves every job inserted so far a day into the past, out of reach of the
+  # workers' uniqueness windows, as a booking approved yesterday would be.
+  defp age_enqueued_jobs do
+    Repo.update_all(Job, set: [inserted_at: DateTime.add(DateTime.utc_now(), -1, :day)])
   end
 
   defp booking_params(%{user: user, meeting_type: meeting_type}) do

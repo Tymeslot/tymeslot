@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
   import Tymeslot.Factory
 
   alias Tymeslot.HTTPClientMock
+  alias Tymeslot.Integrations.Video.EventDetails
   alias Tymeslot.Integrations.Video.Providers.TeamsProvider
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -14,6 +15,9 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
   alias Tymeslot.TeamsOAuthHelperMock
 
   setup :verify_on_exit!
+
+  @booking_start ~U[2030-03-14 09:30:00Z]
+  @booking_end ~U[2030-03-14 10:15:00Z]
 
   describe "provider_type/0" do
     test "returns :teams" do
@@ -121,12 +125,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
   describe "create_meeting_room/1" do
     test "successfully creates a meeting room" do
-      config = %{
-        access_token: "valid_token",
-        refresh_token: "refresh_token",
-        token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-        oauth_scope: "Calendars.ReadWrite"
-      }
+      config = valid_config()
 
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
 
@@ -171,14 +170,15 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
           oauth_scope: "Calendars.ReadWrite"
         })
 
-      config = %{
-        access_token: "expired",
-        refresh_token: "refresh",
-        token_expires_at: DateTime.add(DateTime.utc_now(), -3600),
-        integration_id: integration.id,
-        user_id: user.id,
-        oauth_scope: "Calendars.ReadWrite"
-      }
+      config =
+        with_booking(%{
+          access_token: "expired",
+          refresh_token: "refresh",
+          token_expires_at: DateTime.add(DateTime.utc_now(), -3600),
+          integration_id: integration.id,
+          user_id: user.id,
+          oauth_scope: "Calendars.ReadWrite"
+        })
 
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :needs_refresh} end)
 
@@ -216,12 +216,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
     end
 
     test "refresh path without integration_id/user_id bypasses persistence" do
-      config = %{
-        access_token: "expired",
-        refresh_token: "refresh",
-        token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second),
-        oauth_scope: "Calendars.ReadWrite"
-      }
+      config =
+        with_booking(%{
+          access_token: "expired",
+          refresh_token: "refresh",
+          token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second),
+          oauth_scope: "Calendars.ReadWrite"
+        })
 
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :needs_refresh} end)
 
@@ -272,14 +273,15 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
           oauth_scope: "Calendars.ReadWrite"
         })
 
-      config = %{
-        access_token: "stale-token-current-process",
-        refresh_token: "ref",
-        token_expires_at: DateTime.add(DateTime.utc_now(), -10, :second),
-        oauth_scope: "Calendars.ReadWrite",
-        integration_id: integration.id,
-        user_id: user.id
-      }
+      config =
+        with_booking(%{
+          access_token: "stale-token-current-process",
+          refresh_token: "ref",
+          token_expires_at: DateTime.add(DateTime.utc_now(), -10, :second),
+          oauth_scope: "Calendars.ReadWrite",
+          integration_id: integration.id,
+          user_id: user.id
+        })
 
       # Current process thinks the token needs refreshing; after acquiring the
       # lock the DB re-fetch reveals a fresh token — no OAuth call should fire.
@@ -321,14 +323,15 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
           oauth_scope: "Calendars.ReadWrite"
         })
 
-      config = %{
-        access_token: "valid_token",
-        refresh_token: "refresh",
-        token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-        integration_id: integration.id,
-        user_id: user.id,
-        oauth_scope: "Calendars.ReadWrite"
-      }
+      config =
+        with_booking(%{
+          access_token: "valid_token",
+          refresh_token: "refresh",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+          integration_id: integration.id,
+          user_id: user.id,
+          oauth_scope: "Calendars.ReadWrite"
+        })
 
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
 
@@ -380,7 +383,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
       # `VideoRoom.ErrorPolicy` has to recognise it as terminal, and it cannot
       # match on prose. Reported as free text, this burned all ten attempts and
       # raised a permanent-failure alert every day the recovery scan re-queued.
-      expect(HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 201, body: Jason.encode!(%{"id" => "m1"})}}
       end)
 
@@ -394,7 +397,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
       # Audio conferencing missing
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
 
-      expect(HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok,
          %Req.Response{
            status: 201,
@@ -615,11 +618,21 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
   end
 
   defp valid_config do
-    %{
+    with_booking(%{
       access_token: "valid_token",
       refresh_token: "refresh_token",
       token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
       oauth_scope: "Calendars.ReadWrite"
-    }
+    })
+  end
+
+  # The booking a room is created for, as `Rooms.create_meeting_room/2`
+  # attaches it to the provider config.
+  defp with_booking(config) do
+    Map.put(config, :event_details, %EventDetails{
+      summary: "Quarterly review",
+      start_time: @booking_start,
+      end_time: @booking_end
+    })
   end
 end

@@ -1,10 +1,13 @@
 defmodule Tymeslot.Auth.AuthenticationTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :auth
 
-  alias Tymeslot.Auth.Authentication
-  alias Tymeslot.Security.Password
+  alias Tymeslot.Auth.{Authentication, UserSchema}
+  alias Tymeslot.Repo
+  alias Tymeslot.Security.{Password, RateLimiter}
+  alias Tymeslot.Workers.EmailWorker
 
   import Tymeslot.Factory
 
@@ -31,14 +34,64 @@ defmodule Tymeslot.Auth.AuthenticationTest do
                        %{method: "password"}}
     end
 
-    test "unverified user returns {:error, :email_not_verified, _}" do
+    test "an unverified account with the correct password gets the generic failure" do
+      password = "ValidPass123!"
+      user = insert(:unverified_user, password_hash: Password.hash_password(password))
+      taken = insert(:user, password_hash: Password.hash_password("OtherPass123!"))
+
+      # Anyone can sign up an unverified account for an address, so admitting
+      # to it with its password would tell them the address was free.
+      assert Authentication.authenticate_user(user.email, password) ==
+               Authentication.authenticate_user(taken.email, "WrongPass123!")
+    end
+
+    test "an unverified account with the correct password is sent a fresh link, quietly" do
       password = "ValidPass123!"
       user = insert(:unverified_user, password_hash: Password.hash_password(password))
 
-      assert {:error, :email_not_verified, message} =
-               Authentication.authenticate_user(user.email, password)
+      Authentication.authenticate_user(user.email, password, ip: "198.51.100.61")
 
-      assert message == "Please verify your email address before logging in."
+      assert [job] =
+               all_enqueued(
+                 worker: EmailWorker,
+                 args: %{"action" => "send_email_verification", "user_id" => user.id}
+               )
+
+      assert job.args["token_hash"] == Repo.get!(UserSchema, user.id).verification_token
+    end
+
+    test "the fresh link is capped per account, and the reply stays the generic failure" do
+      password = "ValidPass123!"
+      user = insert(:unverified_user, password_hash: Password.hash_password(password))
+      for _i <- 1..5, do: RateLimiter.check_verification_user_rate_limit(user.id)
+
+      assert {:error, :invalid_password, message} =
+               Authentication.authenticate_user(user.email, password, ip: "198.51.100.62")
+
+      assert message == generic_error()
+      assert [] = all_enqueued(worker: EmailWorker)
+    end
+
+    test "a wrong password on an unverified account sends nothing" do
+      user = insert(:unverified_user, password_hash: Password.hash_password("ValidPass123!"))
+
+      Authentication.authenticate_user(user.email, "WrongPass123!", ip: "198.51.100.63")
+
+      assert [] = all_enqueued(worker: EmailWorker)
+    end
+
+    test "the generic failure points recent sign-ups at their inbox" do
+      assert generic_error() ==
+               "Invalid email or password. If you signed up recently, check your inbox for the verification link."
+    end
+
+    test "unverified user with a wrong password gets the generic error, not 'not verified'" do
+      user = insert(:unverified_user, password_hash: Password.hash_password("ValidPass123!"))
+
+      assert {:error, :invalid_password, message} =
+               Authentication.authenticate_user(user.email, "WrongPass123!")
+
+      assert message == generic_error()
     end
 
     test "consistent error messages prevent user enumeration" do
@@ -86,37 +139,38 @@ defmodule Tymeslot.Auth.AuthenticationTest do
       assert errors[:password]
     end
 
-    test "oauth accounts cannot use password authentication" do
+    test "an account without a password gets the generic error, not 'social login'" do
       oauth_user = insert(:user, provider: "google", password_hash: nil)
 
-      assert {:error, :oauth_user, _error_message} =
+      assert {:error, :invalid_password, message} =
                Authentication.authenticate_user(oauth_user.email, "any-password")
+
+      assert message == generic_error()
+    end
+
+    test "a social-login account is only named as such once its password is proved" do
+      password = "ValidPass123!"
+      user = insert(:user, provider: "google", password_hash: Password.hash_password(password))
+
+      assert {:error, :invalid_password, _message} =
+               Authentication.authenticate_user(user.email, "WrongPass123!")
+
+      assert {:error, :oauth_user, message} =
+               Authentication.authenticate_user(user.email, password)
+
+      assert message =~ "social login"
     end
   end
 
-  describe "get_user_by_session_token/1" do
-    test "returns user for valid session" do
-      user = insert(:user)
-      session = insert(:user_session, user: user)
+  # What an unknown address gets: every other failure before the password is
+  # proved must be indistinguishable from it.
+  defp generic_error do
+    {:error, :not_found, message} =
+      Authentication.authenticate_user(
+        "nobody-#{System.unique_integer([:positive])}@example.com",
+        "x"
+      )
 
-      assert %{id: id} = Authentication.get_user_by_session_token(session.token)
-      assert id == user.id
-    end
-
-    test "expired sessions cannot authenticate" do
-      user = insert(:user)
-
-      expired =
-        insert(:user_session,
-          user: user,
-          expires_at: DateTime.add(DateTime.utc_now(), -1, :hour)
-        )
-
-      assert nil == Authentication.get_user_by_session_token(expired.token)
-    end
-
-    test "returns nil for nonexistent token" do
-      assert nil == Authentication.get_user_by_session_token("nonexistent-token")
-    end
+    message
   end
 end

@@ -230,12 +230,15 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
   What addresses one event on the provider. Any field may be nil: Google and
   Outlook address an event by `provider_event_id` (Google within
   `calendar_id`), CalDAV servers by its href in `provider_event_id` or else by
-  `uid` within the client's calendar. `calendar_integration_id` labels the
+  `uid` within the client's calendar. `ical_uid` is the iCalendar UID the
+  event's cached row carries, which Outlook falls back to when the event moved
+  to another calendar and its id changed. `calendar_integration_id` labels the
   events returned.
   """
   @type event_ref :: %{
           optional(:uid) => String.t() | nil,
           optional(:provider_event_id) => String.t() | nil,
+          optional(:ical_uid) => String.t() | nil,
           optional(:calendar_id) => String.t() | nil,
           optional(:calendar_integration_id) => integer() | nil
         }

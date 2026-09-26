@@ -96,6 +96,8 @@ defmodule Tymeslot.Profiles.ProfileSchema do
       :primary_calendar_integration_id
     ])
     |> validate_required([:user_id])
+    # The column is a varchar(255); a longer name must fail here, not at insert.
+    |> validate_length(:full_name, max: 255)
     |> validate_username()
     |> validate_timezone()
     |> validate_booking_theme()

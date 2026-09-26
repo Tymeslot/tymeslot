@@ -73,12 +73,12 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     if Application.get_env(:tymeslot, :test_mode, false) do
       # In test mode, run synchronously to avoid SQL sandbox and Mox allowance issues
       # with child processes created by Task.async
-      result = dispatch_action(action, meeting_id, attempt)
+      result = dispatch_action(action, meeting_id, job.args, attempt)
       handle_result(result, job)
     else
       task =
         Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
-          dispatch_action(action, meeting_id, attempt)
+          dispatch_action(action, meeting_id, job.args, attempt)
         end)
 
       handle_task_result(task, action, meeting_id, job)
@@ -151,11 +151,12 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   # is no queue for it to be behind.
   defp wait_behind_earlier_write(_job, _meeting_id), do: :go
 
-  defp dispatch_action(action, meeting_id, attempt) do
-    case action do
-      "create" -> CalendarEventSync.create(meeting_id, attempt)
-      "update" -> CalendarEventSync.update(meeting_id, attempt)
-      "delete" -> CalendarEventSync.delete(meeting_id, attempt)
+  defp dispatch_action(action, meeting_id, args, attempt) do
+    case {action, args} do
+      {"create", _args} -> CalendarEventSync.create(meeting_id, attempt)
+      {"update", _args} -> CalendarEventSync.update(meeting_id, attempt)
+      {"delete", _args} -> CalendarEventSync.delete(meeting_id, attempt)
+      {"replace", %{"event_id" => id}} -> CalendarEventSync.replace(meeting_id, id, attempt)
       _unknown -> {:discard, "Unknown action: #{action}"}
     end
   end

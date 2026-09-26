@@ -3,231 +3,303 @@ defmodule Tymeslot.Auth.Verification do
   Handles user verification processes.
   """
 
-  @behaviour Tymeslot.Infrastructure.VerificationBehaviour
-
   require Logger
 
+  alias Tymeslot.Auth.{AccountTokens, RateLimit, SignupSecurity, UserSchema}
   alias Tymeslot.Auth.Helpers.AccountLogging
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Repo
   alias Tymeslot.Security.{RateLimiter, SecurityLogger, Token}
   alias Tymeslot.Utils.UrlBuilder
-  alias TymeslotWeb.Helpers.ClientIP
 
   @type verification_result ::
           {:ok, term()} | {:error, atom()} | {:error, :rate_limited, String.t()}
-  @type socket_or_conn :: Phoenix.LiveView.Socket.t() | Plug.Conn.t()
-
-  # Verification links stay valid for 24 hours from the moment they are sent.
-  @token_validity_seconds 24 * 3600
 
   @doc """
-  Stores a verification token for a user.
+  Issues a fresh verification token for a user, replacing any earlier one,
+  and returns the raw token for the emailed link.
   """
-  @spec store_verification_token(integer(), String.t(), DateTime.t(), String.t() | nil) ::
-          {:ok, term()} | {:error, atom()}
-  def store_verification_token(user_id, token, _expiry, ip_address \\ nil) do
-    case Config.user_queries_module().get_user(user_id) do
-      {:ok, user} ->
-        case Config.user_token_queries_module().set_verification_token(user, token, ip_address) do
-          {:ok, updated_user} ->
-            {:ok, updated_user}
-
-          {:error, _changeset} ->
-            Logger.error("Token storage failed", user_id: user_id)
-            {:error, :token_storage_failed}
-        end
-
-      _other ->
-        Logger.error("User not found when storing verification token", user_id: user_id)
-        {:error, :user_not_found}
-    end
-  end
-
-  @doc """
-  Verifies a user based on the provided token or user ID.
-
-  ## When passing a token (String)
-  Looks up the user by token, checks if the token is expired, and marks the user as verified.
-
-  ## When passing a user_id (Integer)
-  Directly marks the user as verified without token validation (useful for testing).
-  """
-  @impl Tymeslot.Infrastructure.VerificationBehaviour
-  @spec verify_user(String.t() | integer()) :: verification_result()
-  def verify_user(token) when is_binary(token) do
-    case fetch_user_by_token(token) do
-      {:error, :invalid_token} = error ->
-        Logger.warning("Email verification failed - invalid token")
+  @spec issue_verification_token(integer(), String.t() | nil) ::
+          {:ok, UserSchema.t(), String.t()} | {:error, :user_not_found | :token_storage_failed}
+  def issue_verification_token(user_id, ip_address \\ nil) do
+    with {:ok, user} <- fetch_user(user_id, "storing verification token"),
+         {:ok, updated_user, token} <-
+           AccountTokens.issue(:verification, user, %{ip_address: ip_address}) do
+      {:ok, updated_user, token}
+    else
+      {:error, :user_not_found} = error ->
         error
 
-      {:ok, user} ->
-        verify_fetched_user(user)
+      {:error, _changeset} ->
+        Logger.error("Token storage failed", user_id: user_id)
+        {:error, :token_storage_failed}
     end
   end
 
-  def verify_user(user_id) when is_integer(user_id) do
-    mark_user_as_verified(user_id)
+  @doc """
+  Verifies the user behind an email verification `token`: looks the user up
+  by token, refuses an expired one, and marks the user as verified.
+  """
+  @spec verify_user(String.t()) :: verification_result()
+  def verify_user(token) when is_binary(token) do
+    with {:ok, _user, verified_user} <- verify_by_token(token) do
+      {:ok, verified_user}
+    end
+  end
+
+  # Returns the user as the token found them (still carrying `signup_ip`)
+  # alongside the verified user. The token's row is locked while it is
+  # spent, so two clicks on the same link cannot both verify.
+  defp verify_by_token(token) do
+    result =
+      Repo.transaction(fn ->
+        case AccountTokens.fetch(:verification, token, lock: true) do
+          {:ok, user} ->
+            case verify_fetched_user(user) do
+              {:ok, verified_user} -> {user, verified_user}
+              {:error, reason} -> Repo.rollback(reason)
+            end
+
+          {:error, :invalid_token} ->
+            Logger.warning("Email verification failed - invalid token")
+            AccountLogging.log_operation_failure("verification", "token", :invalid_token)
+            Repo.rollback(:invalid_token)
+
+          {:error, :token_expired, user} ->
+            Logger.warning("Email verification failed - token expired")
+            AccountLogging.log_operation_failure("email_verification", user.id, :token_expired)
+            Repo.rollback(:token_expired)
+        end
+      end)
+
+    case result do
+      {:ok, {user, verified_user}} -> {:ok, user, verified_user}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   @doc """
-  Initiates the email verification process for a user, rate-limited by IP.
+  Verifies the email address behind `token` and decides whether the person who
+  opened the link may be signed straight in.
+
+  Auto-login is granted only when the link is completed from the IP address
+  the account signed up from (localhost spellings treated as one), so a link
+  forwarded to, or intercepted by, someone else verifies the address without
+  handing over a session.
+
+  `opts` carries the client (`:ip`, `:user_agent`). Following links is
+  limited per address; over the limit the result is
+  `{:error, {:rate_limited, message}}` and the token is left untouched.
   """
-  @impl Tymeslot.Infrastructure.VerificationBehaviour
-  @spec verify_user_email(socket_or_conn(), term(), map()) :: verification_result()
-  def verify_user_email(socket_or_conn, user, _profile_params) do
-    send_within_rate_limit(socket_or_conn, user)
+  @spec verify_email_and_maybe_login(String.t(), keyword()) ::
+          {:ok, term(), :auto_login | :manual}
+          | {:error, atom() | {:rate_limited, String.t()}}
+  def verify_email_and_maybe_login(token, opts) when is_binary(token) do
+    limit = RateLimiter.check_verification_link_rate_limit(opts[:ip])
+    context = [event: "email_verification_link", ip: opts[:ip], user_agent: opts[:user_agent]]
+
+    with :ok <- limit_link(limit, context),
+         {:ok, user, verified_user} <- verify_by_token(token) do
+      {:ok, verified_user, login_mode(user.signup_ip, opts[:ip])}
+    end
+  end
+
+  defp limit_link(limit, context) do
+    case RateLimit.check(limit, context) do
+      :ok -> :ok
+      {:error, :rate_limited, message} -> {:error, {:rate_limited, message}}
+    end
+  end
+
+  defp login_mode(nil, _request_ip), do: :manual
+
+  defp login_mode(signup_ip, request_ip) do
+    if normalise_localhost(signup_ip) == normalise_localhost(request_ip),
+      do: :auto_login,
+      else: :manual
+  end
+
+  defp normalise_localhost(ip) when ip in ["127.0.0.1", "::1", "0:0:0:0:0:0:0:1"],
+    do: "localhost"
+
+  defp normalise_localhost(ip), do: ip
+
+  @doc """
+  Sends `user` a fresh verification link, within the per-account and
+  per-address limits the initial send and every resend share.
+
+  `ip` is the requesting client's address; it keys the limit and is stored
+  with the token, so a link completed from the same address may sign in.
+  """
+  @spec send_verification_email(UserSchema.t(), String.t() | nil) :: verification_result()
+  def send_verification_email(user, ip) do
+    RateLimit.with_limit(
+      RateLimiter.check_verification_rate_limit(user.id, ip),
+      [event: "email_verification", identifier: user.id, ip: ip],
+      fn ->
+        issue_and_send(user, ip)
+      end
+    )
   end
 
   @doc """
-  Handles the verification token submitted by the user (controller action).
-  Returns only tagged tuples, no Plug.Conn.
-  """
-  @impl Tymeslot.Infrastructure.VerificationBehaviour
-  @spec verify_user_token(String.t()) :: {:ok, term()} | {:error, atom()}
-  def verify_user_token(token), do: verify_user(token)
+  Resends the verification email for `email`, answering the same way whatever
+  the address turns out to be.
 
-  @doc """
-  Resends the verification email, rate-limited by IP.
+  The address bucket is charged first, before anything is looked up, so the
+  only refusal a caller can see depends on who is asking and never on the
+  account. After that the reply is `:ok` for an unverified account (which is
+  sent a fresh link), a verified one, an unknown address, `nil` (no account to
+  resend for), and an account that has used up its own resend allowance: the
+  mailbox is the only place the difference shows.
+
+  Callers pass an address the requester has already proved is theirs (the
+  session-bound unverified user), never one typed into a form.
+
+  `opts` carries the client (`:ip`, `:user_agent`) and `:honeypot`, `true`
+  when the resend comes from the decoy screen a honeypot-caught sign-up was
+  shown; such resends are audited as bot traffic.
   """
-  @impl Tymeslot.Infrastructure.VerificationBehaviour
-  @spec resend_verification_email(socket_or_conn(), term()) :: verification_result()
-  def resend_verification_email(socket_or_conn, user) do
-    send_within_rate_limit(socket_or_conn, user)
+  @spec resend_verification_email_by_email(String.t() | nil, keyword()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def resend_verification_email_by_email(email, opts) do
+    ip = opts[:ip]
+
+    result =
+      RateLimit.with_limit(
+        RateLimiter.check_verification_ip_rate_limit(ip),
+        [event: "email_verification", identifier: nil, ip: ip, user_agent: opts[:user_agent]],
+        fn -> email |> unverified_user() |> resend_quietly(ip) end
+      )
+
+    if opts[:honeypot], do: audit_honeypot_resend(result, opts)
+    result
+  end
+
+  # A resend from the decoy screen a honeypot-caught sign-up lands on is a bot
+  # following the fake success path. A refused one is recorded separately too,
+  # since it is the limiter rejecting traffic already known to be a bot; there
+  # is no account to name it by.
+  defp audit_honeypot_resend(:ok, opts), do: SignupSecurity.log_honeypot_resend(opts)
+
+  defp audit_honeypot_resend({:error, :rate_limited, _message}, opts) do
+    SecurityLogger.log_rate_limit_violation(nil, "email_verification_honeypot", %{
+      ip_address: opts[:ip],
+      user_agent: opts[:user_agent]
+    })
   end
 
   @doc """
-  Resends verification email by email address.
-  Looks up the user first, then resends if found.
-  Used by AuthLive for email-based resending.
+  Sends an unverified account a fresh verification link after its owner
+  proved the password at sign-in, within the usual per-account and per-address
+  limits.
+
+  Silent by design: sign-in answers an unverified account exactly as it
+  answers a wrong password, so this is how a genuine new user who lost the
+  first email still gets one. Whatever happens here is logged, never returned.
   """
-  @spec resend_verification_email_by_email(String.t(), socket_or_conn()) :: verification_result()
-  def resend_verification_email_by_email(email, socket_or_conn) do
+  @spec send_link_after_sign_in(UserSchema.t(), String.t() | nil) :: :ok
+  def send_link_after_sign_in(%UserSchema{verified_at: nil} = user, ip_address) do
+    with {:error, reason} <- send_verification_email(user, ip_address) do
+      Logger.error("Verification link after sign-in failed",
+        user_id: user.id,
+        reason: inspect(reason)
+      )
+    end
+
+    :ok
+  end
+
+  def send_link_after_sign_in(_verified_user, _ip_address), do: :ok
+
+  defp unverified_user(nil), do: nil
+
+  defp unverified_user(email) do
     case Config.user_queries_module().get_user_by_email(email) do
-      {:ok, user} ->
-        resend_verification_email(socket_or_conn, user)
-
-      {:error, :not_found} ->
-        Logger.warning("Attempted to resend verification for non-existent email",
-          email_masked: SecurityLogger.mask_email(email)
-        )
-
-        {:error, :user_not_found}
-
-      other ->
-        Logger.error("Unexpected return from get_user_by_email/1", result: inspect(other))
-        {:error, :user_not_found}
+      {:ok, %{verified_at: nil} = user} -> user
+      _verified_or_unknown -> nil
     end
+  end
+
+  defp resend_quietly(nil, _ip), do: :ok
+
+  defp resend_quietly(user, ip) do
+    RateLimit.with_limit(
+      RateLimiter.check_verification_user_rate_limit(user.id),
+      [event: "email_verification", identifier: user.id, ip: ip],
+      fn ->
+        with {:error, reason} <- issue_and_send(user, ip) do
+          Logger.error("Verification resend failed", user_id: user.id, reason: inspect(reason))
+        end
+      end
+    )
+
+    :ok
   end
 
   # Private functions
 
-  # Split out of `verify_user/1` so `user` (already resolved from the token)
-  # stays in scope for the failure branches below: they identify a failure
-  # by user id, never by the raw token.
-  @spec verify_fetched_user(term()) :: verification_result()
+  @spec verify_fetched_user(UserSchema.t()) :: verification_result()
   defp verify_fetched_user(user) do
-    with :ok <- check_token_expiration(user),
-         {:ok, updated_user} <- mark_user_as_verified(user.id) do
-      Logger.info("Email verification successful", user_id: updated_user.id)
-      {:ok, updated_user}
-    else
-      {:error, :token_expired} = error ->
-        Logger.warning("Email verification failed - token expired")
-        AccountLogging.log_operation_failure("email_verification", user.id, :token_expired)
-        error
+    case mark_user_as_verified(user) do
+      {:ok, updated_user} ->
+        Logger.info("Email verification successful", user_id: updated_user.id)
+        {:ok, updated_user}
 
       {:error, reason} = error ->
         Logger.error("Email verification failed", reason: inspect(reason))
-        # The token resolved and had not expired, only `mark_user_as_verified/1`
-        # failed, so the token may still be valid and unconsumed.
+        # The token resolved and had not expired, only the update failed, so
+        # the token may still be valid and unconsumed.
         AccountLogging.log_operation_failure("email_verification", user.id, reason)
         error
     end
   end
 
-  # The initial send and the resend are the same operation as far as the limiter
-  # is concerned: they share a bucket, a rejection message, and an audit entry.
-  defp send_within_rate_limit(socket_or_conn, user) do
-    ip_address = extract_ip_address(socket_or_conn)
+  @spec mark_user_as_verified(UserSchema.t()) :: {:ok, UserSchema.t()} | {:error, atom()}
+  defp mark_user_as_verified(user) do
+    case AccountTokens.consume(:verification, user) do
+      {:ok, updated_user} ->
+        AccountLogging.log_user_verified(updated_user, "email")
+        :telemetry.execute([:tymeslot, :auth, :email_verified], %{count: 1}, %{})
+        {:ok, updated_user}
 
-    case RateLimiter.check_verification_rate_limit(user.id, ip_address) do
-      :ok ->
-        do_verify_user_email(socket_or_conn, user)
-
-      {:error, :rate_limited, message} ->
-        SecurityLogger.log_rate_limit_violation(user.id, "email_verification", %{
-          ip_address: ip_address
-        })
-
-        {:error, :rate_limited, message}
+      {:error, _changeset} ->
+        AccountLogging.log_operation_failure("verification", user.id, :verification_failed)
+        {:error, :verification_failed}
     end
   end
 
-  @spec fetch_user_by_token(String.t()) :: {:ok, term()} | {:error, :invalid_token}
-  defp fetch_user_by_token(token) do
-    case Config.user_token_queries_module().get_user_by_verification_token(token) do
-      {:error, :not_found} ->
-        AccountLogging.log_operation_failure("verification", "token", :invalid_token)
-        {:error, :invalid_token}
-
-      {:ok, user} ->
-        {:ok, user}
-    end
-  end
-
-  @spec check_token_expiration(term()) :: :ok | {:error, :token_expired}
-  defp check_token_expiration(user) do
-    with nil <- user.verification_token_used_at,
-         %DateTime{} = sent_at <- user.verification_sent_at,
-         expiry <- DateTime.add(sent_at, @token_validity_seconds, :second),
-         :gt <- DateTime.compare(expiry, DateTime.utc_now()) do
-      :ok
-    else
-      _other -> {:error, :token_expired}
-    end
-  end
-
-  @spec mark_user_as_verified(integer()) :: {:ok, term()} | {:error, atom()}
-  defp mark_user_as_verified(user_id) do
+  defp fetch_user(user_id, context) do
     case Config.user_queries_module().get_user(user_id) do
       {:ok, user} ->
-        case Config.user_queries_module().verify_user(user) do
-          {:ok, updated_user} ->
-            AccountLogging.log_user_verified(updated_user, "email")
-            :telemetry.execute([:tymeslot, :auth, :email_verified], %{count: 1}, %{})
-            {:ok, updated_user}
-
-          {:error, _changeset} ->
-            AccountLogging.log_operation_failure("verification", user_id, :verification_failed)
-            {:error, :verification_failed}
-        end
+        {:ok, user}
 
       _other ->
-        Logger.error("User not found when marking as verified", user_id: user_id)
+        Logger.error("User not found", during: context, user_id: user_id)
         {:error, :user_not_found}
     end
   end
 
-  defp do_verify_user_email(socket_or_conn, user) do
-    {token, expiry, _purpose} = Token.generate_email_verification_token(user.id)
-    verification_url = build_verification_url(socket_or_conn, token)
-    token_hash = Token.hash_token(token)
-    ip_address = extract_ip_address(socket_or_conn)
-
+  defp issue_and_send(user, ip_address) do
     # Persist the token first so it is valid in the database before the job runs.
     # The job carries the token's hash; the worker discards it at send time if a
     # newer request has since rotated the stored token, so an in-flight or
     # retrying job can never deliver an invalidated link.
-    with {:ok, updated_user} <- persist_verification_token(user, token, expiry, ip_address),
-         {:ok, _status} <- send_verification_email(updated_user, verification_url, token_hash) do
+    with {:ok, updated_user, token} <- issue_verification_token(user.id, ip_address),
+         {:ok, _status} <-
+           schedule_verification_email(
+             updated_user,
+             UrlBuilder.email_verification_url(token),
+             Token.hash_token(token)
+           ) do
       {:ok, updated_user}
     else
       {:error, :token_storage_failed} ->
         Logger.error("Failed to store verification token", user_id: user.id)
         {:error, :token_storage_failed}
 
-      {:error, :unknown} ->
+      {:error, :user_not_found} ->
         Logger.error("Unknown error during email verification", user_id: user.id)
         {:error, :unknown}
 
@@ -237,24 +309,7 @@ defmodule Tymeslot.Auth.Verification do
     end
   end
 
-  defp persist_verification_token(user, token, expiry, ip_address) do
-    case store_verification_token(user.id, token, expiry, ip_address) do
-      {:ok, updated_user} ->
-        {:ok, updated_user}
-
-      {:error, :token_storage_failed} ->
-        {:error, :token_storage_failed}
-
-      {:error, _reason} ->
-        {:error, :unknown}
-    end
-  end
-
-  defp build_verification_url(_socket_or_conn, verification_token) do
-    UrlBuilder.email_verification_url(verification_token)
-  end
-
-  defp send_verification_email(user, verification_url, token_hash) do
+  defp schedule_verification_email(user, verification_url, token_hash) do
     # Use the email worker to send the verification email asynchronously.
     case EmailScheduler.schedule_email_verification(user.id, verification_url, token_hash) do
       {:ok, :scheduled} ->
@@ -272,9 +327,5 @@ defmodule Tymeslot.Auth.Verification do
 
         {:error, reason}
     end
-  end
-
-  defp extract_ip_address(socket_or_conn) do
-    ClientIP.get(socket_or_conn)
   end
 end

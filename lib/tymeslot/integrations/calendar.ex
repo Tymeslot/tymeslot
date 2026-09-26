@@ -231,6 +231,10 @@ defmodule Tymeslot.Integrations.Calendar do
   @spec writable_calendars([CalendarEntry.t()] | nil) :: [CalendarEntry.t()]
   defdelegate writable_calendars(calendar_list), to: Selection
 
+  @doc "Keeps the integrations that can take a new event. See `Selection.writable_integrations/1`."
+  @spec writable_integrations([map()]) :: [map()]
+  defdelegate writable_integrations(integrations), to: Selection
+
   @doc """
   Drops cached events from calendars the user has deselected. See
   `Tymeslot.Integrations.Calendar.Selection.visible_events/2`.
@@ -409,20 +413,10 @@ defmodule Tymeslot.Integrations.Calendar do
   @spec delete_with_primary_reassignment_and_invalidate(user_id(), integration_id()) ::
           {:ok, any()} | {:error, any()}
   def delete_with_primary_reassignment_and_invalidate(user_id, id) do
-    case delete_with_primary_reassignment(user_id, id) do
-      {:ok, result} ->
-        DashboardContext.invalidate_integration_status(user_id)
-        {:ok, result}
-
-      error ->
-        error
+    with {:ok, result} <- Deletion.delete_with_primary_reassignment(user_id, id) do
+      DashboardContext.invalidate_integration_status(user_id)
+      {:ok, result}
     end
-  end
-
-  @spec delete_with_primary_reassignment(user_id(), integration_id()) ::
-          {:ok, any()} | {:error, any()}
-  defp delete_with_primary_reassignment(user_id, id) do
-    Deletion.delete_with_primary_reassignment(user_id, id)
   end
 
   # ---------------------------
@@ -460,6 +454,14 @@ defmodule Tymeslot.Integrations.Calendar do
   def initiate_outlook_oauth(user_id, opts \\ []) when is_integer(user_id) do
     OAuth.initiate_outlook_oauth(user_id, opts)
   end
+
+  @doc """
+  Completes a Google or Outlook OAuth callback and connects the calendar,
+  invalidating the user's cached dashboard integration status on success.
+  """
+  @spec complete_oauth(OAuth.provider(), String.t(), String.t()) ::
+          {:ok, integration()} | {:error, term()}
+  defdelegate complete_oauth(provider, code, state), to: OAuth, as: :complete
 
   @doc """
   Initiates a Google scope upgrade for an existing integration.
