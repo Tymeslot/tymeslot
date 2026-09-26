@@ -326,13 +326,22 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   defp build_attendee_message_section(meeting_details) do
     case Map.get(meeting_details, :attendee_message) do
       message when is_binary(message) and message != "" ->
-        attendee_label = Map.get(meeting_details, :attendee_name, dgettext("emails", "attendee"))
-
-        "#{dgettext("emails", "Message from %{name}:", name: attendee_label)}\n#{String.trim(message)}"
+        "#{message_heading(meeting_details)}\n#{String.trim(message)}"
 
       _other ->
         nil
     end
+  end
+
+  # A note on a meeting the host created is theirs; naming the main guest as its
+  # author puts words in the mouth of someone who is reading them for the first
+  # time. Same distinction the email body makes, from the same field.
+  defp message_heading(%{message_from: :organiser}),
+    do: dgettext("emails", "Message from the organiser:")
+
+  defp message_heading(meeting_details) do
+    attendee_label = Map.get(meeting_details, :attendee_name, dgettext("emails", "attendee"))
+    dgettext("emails", "Message from %{name}:", name: attendee_label)
   end
 
   defp build_video_url_section(meeting_details) do

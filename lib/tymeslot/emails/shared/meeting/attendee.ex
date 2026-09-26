@@ -58,11 +58,19 @@ defmodule Tymeslot.Emails.Shared.Meeting.Attendee do
   end
 
   @doc """
-  A small tinted callout for the attendee's message left during booking. The
-  caller supplies the email `intent` so the tint matches the stage band.
+  A small tinted callout for the note left with a booking. The caller supplies
+  the email `intent` so the tint matches the stage band.
+
+  `from` says who wrote it. On a booking made through a booking page that is
+  the attendee; on one the host created themselves it is the host, and calling
+  their own words "Message from attendee" tells the guest they wrote something
+  they never wrote.
   """
-  @spec attendee_message_box(Tokens.intent(), String.t() | nil) :: String.t()
-  def attendee_message_box(intent, message)
+  @spec attendee_message_box(Tokens.intent(), String.t() | nil, :attendee | :organiser) ::
+          String.t()
+  def attendee_message_box(intent, message, from \\ :attendee)
+
+  def attendee_message_box(intent, message, from)
       when is_atom(intent) and is_binary(message) and message != "" do
     sanitized =
       case UniversalSanitizer.sanitize_and_validate(message,
@@ -92,7 +100,7 @@ defmodule Tymeslot.Emails.Shared.Meeting.Attendee do
           text-transform="uppercase"
           padding="0 0 4px 0"
         >
-          #{dgettext("emails", "Message from attendee")}
+          #{message_heading(from)}
         </mj-text>
         <mj-text
           font-size="14px"
@@ -108,7 +116,10 @@ defmodule Tymeslot.Emails.Shared.Meeting.Attendee do
     """)
   end
 
-  def attendee_message_box(intent, _message) when is_atom(intent), do: ""
+  def attendee_message_box(intent, _message, _from) when is_atom(intent), do: ""
+
+  defp message_heading(:organiser), do: dgettext("emails", "Message from the organiser")
+  defp message_heading(_attendee), do: dgettext("emails", "Message from attendee")
 
   defp attendee_row(label, value) do
     """

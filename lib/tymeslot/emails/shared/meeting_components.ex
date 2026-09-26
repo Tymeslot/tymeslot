@@ -40,6 +40,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
 
   defdelegate attendee_info_section(intent, attendee), to: Attendee
   defdelegate attendee_message_box(intent, message), to: Attendee
+  defdelegate attendee_message_box(intent, message, from), to: Attendee
 
   defdelegate custom_answers_section(appointment_details), to: CustomAnswers
 end

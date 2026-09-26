@@ -1063,6 +1063,43 @@ msgstr "Dieses Ereignis aktualisieren"
 msgid "Recurring events cannot be edited here yet. Please change this one in your calendar app."
 msgstr "Wiederkehrende Ereignisse können hier noch nicht bearbeitet werden. Bitte ändern Sie dieses Ereignis in Ihrer Kalender-App."
 
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Additional message (optional)"
+msgstr "Zusätzliche Nachricht (optional)"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Each one is invited by email and can accept or decline."
+msgstr "Alle erhalten eine Einladung per E-Mail und können zu- oder absagen."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Language of the invitation"
+msgstr "Sprache der Einladung"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "More guests (optional)"
+msgstr "Weitere Gäste (optional)"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "The language every email about this meeting is written in, for the guest and anyone else invited."
+msgstr "Die Sprache aller E-Mails zu diesem Termin – für den Gast und alle weiteren Eingeladenen."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "What the meeting is about, where to meet, anything they should bring..."
+msgstr "Worum es geht, wo man sich trifft, was mitzubringen ist …"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Add up to %{count} reminder email for this meeting. The guest and anyone else invited receive it."
+msgid_plural "Add up to %{count} reminder emails for this meeting. The guest and anyone else invited receive it."
+msgstr[0] "Fügen Sie bis zu %{count} Erinnerungs-E-Mail für diesen Termin hinzu. Der Gast und alle weiteren Eingeladenen erhalten sie."
+msgstr[1] "Fügen Sie bis zu %{count} Erinnerungs-E-Mails für diesen Termin hinzu. Der Gast und alle weiteren Eingeladenen erhalten sie."
+
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."

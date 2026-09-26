@@ -254,3 +254,133 @@ msgstr "Přehrát video na pozadí"
 #, elixir-autogen, elixir-format
 msgid "Search timezones"
 msgstr "Hledat časová pásma"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{label} before"
+msgstr "%{label} předem"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour before"
+msgstr "1 hodinu předem"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "30 min. before"
+msgstr "30 min předem"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add"
+msgstr "Přidat"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add Custom"
+msgstr "Přidat vlastní"
+
+#: lib/tymeslot_web/components/shared/reminder_picker_state.ex
+#, elixir-autogen, elixir-format
+msgid "Added %{label} before"
+msgstr "Přidáno: %{label} předem"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel Custom"
+msgstr "Zrušit vlastní"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Days"
+msgstr "Dny"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Hours"
+msgstr "Hodiny"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Maximum of %{count} reminder allowed"
+msgid_plural "Maximum of %{count} reminders allowed"
+msgstr[0] "Nastavit lze nejvýše %{count} připomínku"
+msgstr[1] "Nastavit lze nejvýše %{count} připomínky"
+msgstr[2] "Nastavit lze nejvýše %{count} připomínek"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Minutes"
+msgstr "Minuty"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "No reminders configured."
+msgstr "Nejsou nastaveny žádné připomínky."
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder value is required"
+msgstr "Hodnota připomínky je povinná"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder value must be a positive number"
+msgstr "Hodnota připomínky musí být kladné číslo"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders"
+msgstr "Připomínky"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders cannot be set for more than 1 year in advance"
+msgstr "Připomínky nelze nastavit více než 1 rok předem"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Remove reminder"
+msgstr "Odebrat připomínku"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Select a valid reminder unit"
+msgstr "Vyberte platnou jednotku připomínky"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "This reminder already exists"
+msgstr "Tato připomínka již existuje"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "You can configure up to %{count} reminder"
+msgid_plural "You can configure up to %{count} reminders"
+msgstr[0] "Můžete nastavit až %{count} připomínku"
+msgstr[1] "Můžete nastavit až %{count} připomínky"
+msgstr[2] "Můžete nastavit až %{count} připomínek"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} day"
+msgid_plural "%{count} days"
+msgstr[0] "%{count} den"
+msgstr[1] "%{count} dny"
+msgstr[2] "%{count} dní"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} hour"
+msgid_plural "%{count} hours"
+msgstr[0] "%{count} hodinu"
+msgstr[1] "%{count} hodiny"
+msgstr[2] "%{count} hodin"
+
+#: lib/tymeslot_web/components/shared/reminder_picker.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "%{count} minutu"
+msgstr[1] "%{count} minuty"
+msgstr[2] "%{count} minut"

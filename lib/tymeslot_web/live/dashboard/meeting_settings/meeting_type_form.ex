@@ -14,8 +14,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.ApprovalWindow
-  alias Tymeslot.Utils.ReminderUtils
-  alias TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders
+  alias TymeslotWeb.Components.Shared.ReminderPickerState
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{
@@ -332,109 +331,28 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("update_reminder_input", %{"reminder" => reminder_params}, socket) do
-    reminder_value = Map.get(reminder_params, "value", socket.assigns.new_reminder_value)
-    reminder_unit = Map.get(reminder_params, "unit", socket.assigns.new_reminder_unit)
-
-    {:noreply,
-     assign(socket,
-       new_reminder_value: reminder_value,
-       new_reminder_unit: reminder_unit,
-       reminder_error: nil
-     )}
+  def handle_event("update_reminder_input", params, socket) do
+    socket |> picker_state() |> ReminderPickerState.update_input(params) |> apply_picker(socket)
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("toggle_custom_reminder", _params, socket) do
-    {:noreply,
-     assign(socket,
-       show_custom_reminder: !socket.assigns.show_custom_reminder,
-       reminder_confirmation: nil
-     )}
+    socket |> picker_state() |> ReminderPickerState.toggle_custom() |> apply_picker(socket)
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("add_quick_reminder", params, socket) do
-    # Handle map from JS.push
-    {amount, unit} =
-      case params do
-        %{"amount" => a, "unit" => u} -> {a, u}
-        _other -> {nil, nil}
-      end
-
-    case Validation.validate_new_reminder(socket.assigns.reminders, amount, unit) do
-      {:ok, reminder} ->
-        reminders = socket.assigns.reminders ++ [reminder]
-
-        # Clear any existing confirmation timer if we had one
-        Process.send_after(self(), {:clear_reminder_confirmation, socket.assigns.id}, 3000)
-
-        {:noreply,
-         socket
-         |> assign(:reminders, reminders)
-         |> assign(
-           :reminder_confirmation,
-           dgettext("dashboard_meeting_form", "Added %{label} before",
-             label: Reminders.reminder_label(reminder.value, reminder.unit)
-           )
-         )
-         |> assign(:reminder_error, nil)
-         |> Autosave.maybe_run()}
-
-      {:error, message} ->
-        {:noreply, assign(socket, reminder_error: message)}
-    end
+    socket |> picker_state() |> ReminderPickerState.add_quick(params) |> apply_picker(socket)
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("add_reminder", _params, socket) do
-    value = socket.assigns.new_reminder_value
-    unit = socket.assigns.new_reminder_unit
-
-    case Validation.validate_new_reminder(socket.assigns.reminders, value, unit) do
-      {:ok, reminder} ->
-        reminders = socket.assigns.reminders ++ [reminder]
-
-        Process.send_after(self(), {:clear_reminder_confirmation, socket.assigns.id}, 3000)
-
-        {:noreply,
-         socket
-         |> assign(
-           reminders: reminders,
-           new_reminder_value: "",
-           reminder_error: nil,
-           show_custom_reminder: false,
-           reminder_confirmation:
-             dgettext("dashboard_meeting_form", "Added %{label} before",
-               label: Reminders.reminder_label(reminder.value, reminder.unit)
-             )
-         )
-         |> Autosave.maybe_run()}
-
-      {:error, message} ->
-        {:noreply, assign(socket, reminder_error: message)}
-    end
+    socket |> picker_state() |> ReminderPickerState.add_custom() |> apply_picker(socket)
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("remove_reminder", params, socket) do
-    # Handle both JS.push map and individual phx-value-params
-    {value, unit} =
-      case params do
-        %{"value" => %{"value" => v, "unit" => u}} -> {v, u}
-        %{"value" => v, "unit" => u} -> {v, u}
-        _other -> {nil, nil}
-      end
-
-    reminders =
-      Enum.reject(socket.assigns.reminders, fn reminder ->
-        reminder.value == ReminderUtils.parse_reminder_value(value) and reminder.unit == unit
-      end)
-
-    {:noreply,
-     socket
-     |> assign(reminders: reminders, reminder_error: nil)
-     |> Autosave.maybe_run()}
+    socket |> picker_state() |> ReminderPickerState.remove(params) |> apply_picker(socket)
   end
 
   @impl Phoenix.LiveComponent
@@ -514,4 +432,29 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   defp off_preset_interval?(_value), do: false
+
+  # The reminder picker's own state, as the shared module keeps it. This form
+  # holds each field as an assign of its own, so it is lifted out for the
+  # picker to work on and written straight back.
+  defp picker_state(socket) do
+    Map.take(socket.assigns, [
+      :reminders,
+      :new_reminder_value,
+      :new_reminder_unit,
+      :reminder_error,
+      :show_custom_reminder,
+      :reminder_confirmation
+    ])
+  end
+
+  # A change to the list is worth saving, and starts the timer that takes the
+  # confirmation back down; anything else (a keystroke in the custom row, a
+  # rejected reminder) only updates what is on screen.
+  defp apply_picker({:ok, state}, socket) do
+    Process.send_after(self(), {:clear_reminder_confirmation, socket.assigns.id}, 3000)
+
+    {:noreply, socket |> assign(state) |> Autosave.maybe_run()}
+  end
+
+  defp apply_picker({:noop, state}, socket), do: {:noreply, assign(socket, state)}
 end

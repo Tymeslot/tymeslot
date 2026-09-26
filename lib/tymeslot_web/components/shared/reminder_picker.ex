@@ -1,30 +1,54 @@
-defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
-  @moduledoc "Reminder configuration component for meeting type forms."
+defmodule TymeslotWeb.Components.Shared.ReminderPicker do
+  @moduledoc """
+  Reminder picker shared by the surfaces that decide when Tymeslot emails a
+  reminder: the meeting type form and the calendar's quick-add meeting.
+
+  Both hold the same thing — a list of `%{value: integer, unit: "minutes" |
+  "hours" | "days"}` reminders, capped by `ReminderValidation.max_reminders/0`
+  and checked by `ReminderValidation.check_policy/2` — so both offer the same
+  control: the two lead times most reminders use as one-click buttons, and a
+  custom value with its unit for anything else.
+
+  The owning LiveComponent keeps the picker's state (the list, the custom
+  input's value and unit, whether the custom row is open, the last error and
+  confirmation) and receives the picker's events through `phx-target`. Event
+  names are prefixed with `event_prefix` so a component that already answers
+  to `add_reminder` for something else can namespace them; the names are
+  otherwise `add_quick_reminder`, `toggle_custom_reminder`,
+  `update_reminder_input`, `add_reminder` and `remove_reminder`.
+  """
+
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
   import TymeslotWeb.Components.CoreComponents
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.Utils.ReminderUtils
-  alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
-  alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @doc """
-  Section for configuring meeting reminders.
+  The reminder picker.
+
+  `description` is the caller's own one-line explanation of what the reminders
+  being configured will do — a meeting type and a single quick-added meeting
+  word that differently — and `extra_errors` are messages from the caller's own
+  validation, shown below the picker's.
   """
   attr :reminders, :list, required: true
   attr :max_reminders, :integer, required: true
   attr :new_reminder_value, :string, required: true
   attr :new_reminder_unit, :string, required: true
   attr :reminder_error, :string, required: true
+  attr :description, :string, required: true
   attr :show_custom_reminder, :boolean, default: false
   attr :reminder_confirmation, :string, default: nil
-  attr :form_errors, :map, required: true
+  attr :extra_errors, :list, default: []
+  attr :event_prefix, :string, default: ""
   attr :myself, :any, required: true
 
-  @spec reminders_section(map()) :: Phoenix.LiveView.Rendered.t()
-  def reminders_section(assigns) do
+  @spec reminder_picker(map()) :: Phoenix.LiveView.Rendered.t()
+  def reminder_picker(assigns) do
     assigns =
       assign(assigns, :limit_reached?, length(assigns.reminders) >= assigns.max_reminders)
 
@@ -33,39 +57,31 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
       <div class="flex items-center gap-2">
         <.icon name="hero-bell" class="w-5 h-5 text-turquoise-500" />
         <h3 class="text-token-base font-semibold text-tymeslot-800">
-          {dgettext("dashboard_meeting_form", "Reminders")}
+          {dgettext("common", "Reminders")}
         </h3>
       </div>
-      <p class="text-token-sm text-tymeslot-600">
-        {dngettext(
-          "dashboard_meeting_form",
-          "Add up to %{count} reminder email for this meeting type. We recommend using only one.",
-          "Add up to %{count} reminder emails for this meeting type. We recommend using only one.",
-          @max_reminders
-        )}
-      </p>
+      <p class="text-token-sm text-tymeslot-600">{@description}</p>
 
       <div class="mt-3 flex flex-wrap items-center gap-3">
         <%= if @reminders == [] do %>
           <span class="text-token-sm text-tymeslot-500 italic">
-            {dgettext("dashboard_meeting_form", "No reminders configured.")}
+            {dgettext("common", "No reminders configured.")}
           </span>
         <% else %>
           <%= for reminder <- @reminders do %>
             <span class="tag-semantic tag-semantic-turquoise">
-              {dgettext("dashboard_meeting_form", "%{label} before",
-                label: reminder_label(reminder.value, reminder.unit)
-              )}
+              {dgettext("common", "%{label} before", label: reminder_label(reminder))}
               <button
                 type="button"
                 phx-click={
-                  JS.push("remove_reminder",
+                  JS.push(@event_prefix <> "remove_reminder",
                     value: %{value: reminder.value, unit: reminder.unit},
                     target: @myself
                   )
                 }
+                data-testid="reminder-remove"
                 class="inline-flex items-center justify-center rounded-full border border-turquoise-200 bg-white text-turquoise-600 hover:text-turquoise-700 hover:border-turquoise-300"
-                aria-label={dgettext("dashboard_meeting_form", "Remove reminder")}
+                aria-label={dgettext("common", "Remove reminder")}
               >
                 <.icon name="hero-x-mark" class="h-4 w-4" />
               </button>
@@ -81,13 +97,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
             <button
               type="button"
               phx-click={
-                JS.push("add_quick_reminder", value: %{amount: 30, unit: "minutes"}, target: @myself)
+                JS.push(@event_prefix <> "add_quick_reminder",
+                  value: %{amount: 30, unit: "minutes"},
+                  target: @myself
+                )
               }
+              data-testid="reminder-preset-30-minutes"
               disabled={@limit_reached?}
               title={limit_title(@limit_reached?, @max_reminders)}
               class="btn-tag-selector btn-tag-selector-turquoise"
             >
-              + {dgettext("dashboard_meeting_form", "30 min. before")}
+              + {dgettext("common", "30 min. before")}
             </button>
           <% end %>
 
@@ -95,20 +115,25 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
             <button
               type="button"
               phx-click={
-                JS.push("add_quick_reminder", value: %{amount: 60, unit: "minutes"}, target: @myself)
+                JS.push(@event_prefix <> "add_quick_reminder",
+                  value: %{amount: 60, unit: "minutes"},
+                  target: @myself
+                )
               }
+              data-testid="reminder-preset-60-minutes"
               disabled={@limit_reached?}
               title={limit_title(@limit_reached?, @max_reminders)}
               class="btn-tag-selector btn-tag-selector-turquoise"
             >
-              + {dgettext("dashboard_meeting_form", "1 hour before")}
+              + {dgettext("common", "1 hour before")}
             </button>
           <% end %>
 
           <button
             type="button"
-            phx-click="toggle_custom_reminder"
+            phx-click={@event_prefix <> "toggle_custom_reminder"}
             phx-target={@myself}
+            data-testid="reminder-custom-toggle"
             disabled={@limit_reached?}
             title={limit_title(@limit_reached?, @max_reminders)}
             class={[
@@ -117,8 +142,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
             ]}
           >
             {if @show_custom_reminder,
-              do: dgettext("dashboard_meeting_form", "Cancel Custom"),
-              else: dgettext("dashboard_meeting_form", "Add Custom")}
+              do: dgettext("common", "Cancel Custom"),
+              else: dgettext("common", "Add Custom")}
           </button>
 
           <%= if @reminder_confirmation do %>
@@ -139,28 +164,29 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
                 value={@new_reminder_value}
                 placeholder="30"
                 class="input py-1.5! px-3! w-20 text-token-sm"
-                phx-change="update_reminder_input"
+                phx-change={@event_prefix <> "update_reminder_input"}
                 phx-target={@myself}
               />
               <select
                 name="reminder[unit]"
                 class="input py-1.5! px-3! w-28 text-token-sm"
                 value={@new_reminder_unit}
-                phx-change="update_reminder_input"
+                phx-change={@event_prefix <> "update_reminder_input"}
                 phx-target={@myself}
               >
-                <option value="minutes">{dgettext("dashboard_meeting_form", "Minutes")}</option>
-                <option value="hours">{dgettext("dashboard_meeting_form", "Hours")}</option>
-                <option value="days">{dgettext("dashboard_meeting_form", "Days")}</option>
+                <option value="minutes">{dgettext("common", "Minutes")}</option>
+                <option value="hours">{dgettext("common", "Hours")}</option>
+                <option value="days">{dgettext("common", "Days")}</option>
               </select>
             </div>
             <button
               type="button"
-              phx-click="add_reminder"
+              phx-click={@event_prefix <> "add_reminder"}
               phx-target={@myself}
+              data-testid="reminder-custom-add"
               class="btn btn-primary btn-sm rounded-token-lg!"
             >
-              {dgettext("dashboard_meeting_form", "Add")}
+              {dgettext("common", "Add")}
             </button>
           </div>
         <% end %>
@@ -169,8 +195,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
       <%= if @reminder_error do %>
         <p class="form-error mt-2">{@reminder_error}</p>
       <% end %>
-      <%= for error <- FormValidationHelpers.field_errors(@form_errors, :reminder_config) do %>
-        <p class="form-error mt-2">{Helpers.format_errors(error)}</p>
+      <%= for error <- @extra_errors do %>
+        <p class="form-error mt-2">{error}</p>
       <% end %>
     </section>
     """
@@ -188,21 +214,65 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
   properly, while the sentences around it ("%{label} before", "Added %{label}
   before") stay one msgid each.
   """
-  @spec reminder_label(integer() | String.t(), String.t()) :: String.t()
-  def reminder_label(value, unit) do
+  @spec reminder_label(%{value: integer() | String.t(), unit: String.t()}) :: String.t()
+  def reminder_label(%{value: value, unit: unit}) do
     value = ReminderUtils.parse_reminder_value(value)
 
     case ReminderUtils.normalize_reminder_unit(unit) do
-      "hours" ->
-        dngettext("dashboard_meeting_form", "%{count} hour", "%{count} hours", value)
-
-      "days" ->
-        dngettext("dashboard_meeting_form", "%{count} day", "%{count} days", value)
-
-      _minutes ->
-        dngettext("dashboard_meeting_form", "%{count} minute", "%{count} minutes", value)
+      "hours" -> dngettext("common", "%{count} hour", "%{count} hours", value)
+      "days" -> dngettext("common", "%{count} day", "%{count} days", value)
+      _minutes -> dngettext("common", "%{count} minute", "%{count} minutes", value)
     end
   end
+
+  @doc """
+  Validates a reminder about to be added to `reminders` and returns
+  `{:ok, reminder}` or `{:error, message}`.
+
+  The input checks are the picker's own; whether the resulting list is allowed
+  is `ReminderValidation.check_policy/2`, the same rule the save path applies,
+  so a reminder accepted here cannot later block what holds it from saving.
+  The reminders already in the list are passed as held, so the year limit
+  judges the one being added and not a longer one saved before the limit.
+  """
+  @spec validate_new_reminder(list(), any(), any()) :: {:ok, map()} | {:error, String.t()}
+  def validate_new_reminder(reminders, value, unit) do
+    cond do
+      is_nil(value) or value == "" ->
+        {:error, dgettext("common", "Reminder value is required")}
+
+      match?({:error, _reason}, ReminderUtils.validate_reminder_value(value)) ->
+        {:error, dgettext("common", "Reminder value must be a positive number")}
+
+      unit not in ["minutes", "hours", "days"] ->
+        {:error, dgettext("common", "Select a valid reminder unit")}
+
+      true ->
+        reminder = %{value: ReminderUtils.parse_reminder_value(value), unit: unit}
+
+        case ReminderValidation.check_policy(reminders ++ [reminder], reminders) do
+          :ok -> {:ok, reminder}
+          {:error, reason} -> {:error, policy_message(reason)}
+        end
+    end
+  end
+
+  # --- Private helpers ---
+
+  defp policy_message(:too_many) do
+    dngettext(
+      "common",
+      "You can configure up to %{count} reminder",
+      "You can configure up to %{count} reminders",
+      ReminderValidation.max_reminders()
+    )
+  end
+
+  defp policy_message(:duplicate),
+    do: dgettext("common", "This reminder already exists")
+
+  defp policy_message(:exceeds_max),
+    do: dgettext("common", "Reminders cannot be set for more than 1 year in advance")
 
   # The tooltip explaining why an add button is disabled. Nil while more
   # reminders can still be added, so an enabled button carries no title.
@@ -211,7 +281,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
 
   defp limit_title(true, max_reminders) do
     dngettext(
-      "dashboard_meeting_form",
+      "common",
       "Maximum of %{count} reminder allowed",
       "Maximum of %{count} reminders allowed",
       max_reminders

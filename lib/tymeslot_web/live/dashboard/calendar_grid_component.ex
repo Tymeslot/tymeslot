@@ -319,6 +319,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: EventCrud.handle_add_create_attendee(params, socket)
 
   @impl Phoenix.LiveComponent
+  def handle_event("add_create_guest", params, socket),
+    do: EventCrud.handle_add_create_guest(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("remove_create_guest", params, socket),
+    do: EventCrud.handle_remove_create_guest(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_create_guest_input", params, socket),
+    do: EventCrud.handle_update_create_guest_input(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_create_message", params, socket),
+    do: EventCrud.handle_update_create_message(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_create_locale", params, socket),
+    do: EventCrud.handle_update_create_locale(params, socket)
+
+  @impl Phoenix.LiveComponent
   def handle_event("remove_create_attendee", params, socket),
     do: EventCrud.handle_remove_create_attendee(params, socket)
 
@@ -341,6 +361,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event("update_create_recurrence", params, socket),
     do: EventCrud.handle_update_create_recurrence(params, socket)
+
+  # Meeting mode's reminder picker. One clause for its five events: they all
+  # act on the same picker state, which the handler keeps inside the form.
+  @impl Phoenix.LiveComponent
+  def handle_event(event, params, socket)
+      when event in ~w(meeting_add_quick_reminder meeting_add_reminder meeting_remove_reminder
+                       meeting_toggle_custom_reminder meeting_update_reminder_input),
+      do: EventCrud.handle_meeting_reminder_event(event, params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("add_event_attendee", params, socket),

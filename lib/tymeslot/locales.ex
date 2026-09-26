@@ -96,6 +96,27 @@ defmodule Tymeslot.Locales do
   end
 
   @doc """
+  The language to write to a guest the host invites directly, from the host's
+  own account setting.
+
+  A booking page resolves its visitor's language from the request; a meeting
+  the host creates from the dashboard has no visitor to ask, so the host's own
+  choice stands in — they know whom they are inviting. `users.locale` is
+  nullable, and a host who has never chosen falls back to the language public
+  booking pages use rather than the dashboard's fallback: the reader here is a
+  guest, not an admin.
+
+  Only the *default* a form offers. Which language a given guest was actually
+  written to is stored on the meeting.
+  """
+  @spec guest_default_locale(map() | nil) :: String.t()
+  def guest_default_locale(%{locale: locale}) do
+    if acceptable?(locale), do: locale, else: booking_default_locale()
+  end
+
+  def guest_default_locale(_user), do: booking_default_locale()
+
+  @doc """
   Resolves a locale from `candidates`, highest priority first: the first
   acceptable one (see `acceptable?/1`) wins, otherwise `fallback`.
 

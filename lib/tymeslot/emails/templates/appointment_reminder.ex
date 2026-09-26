@@ -46,6 +46,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
+      #{organiser_note(appointment_details)}
+
       #{MeetingComponents.custom_answers_section(appointment_details)}
 
       #{if Map.get(appointment_details, :meeting_url) do
@@ -122,6 +124,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
+      #{organiser_note(appointment_details)}
+
       #{if guest_video_url do
         MeetingComponents.video_meeting_section(@intent, guest_video_url,
         title: dgettext("emails_booking", "Join when you're ready"),
@@ -174,7 +178,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       #{MeetingComponents.attendee_info_section(@intent, %{name: appointment_details.attendee_name, email: appointment_details.attendee_email})}
 
-      #{MeetingComponents.attendee_message_box(@intent, appointment_details[:attendee_message])}
+      #{MeetingComponents.attendee_message_box(@intent, appointment_details[:attendee_message], appointment_details[:message_from] || :attendee)}
 
       #{if Map.get(appointment_details, :meeting_url) do
         MeetingComponents.video_meeting_section(@intent, appointment_details.meeting_url,
@@ -332,6 +336,24 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
   defp guest_join_url(appointment_details) do
     Map.get(appointment_details, :guest_video_url) ||
       Map.get(appointment_details, :meeting_url)
+  end
+
+  # The host's own note about the meeting, repeated in the reminder for the
+  # people they invited — where to meet and what to bring are worth having
+  # again on the day. A note from the person booking still goes only to the
+  # organiser.
+  defp organiser_note(appointment_details) do
+    case appointment_details[:message_from] do
+      :organiser ->
+        MeetingComponents.attendee_message_box(
+          @intent,
+          appointment_details[:attendee_message],
+          :organiser
+        )
+
+      _attendee ->
+        ""
+    end
   end
 
   defp organizer_locale(appointment_details),
