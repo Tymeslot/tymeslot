@@ -21,72 +21,12 @@ msgstr "AKTIONEN:"
 msgid "ATTENDEE INFORMATION:"
 msgstr "TEILNEHMER-INFORMATIONEN:"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Appointment Confirmed - %{date} with %{name}"
-msgstr "Termin bestätigt – %{date} mit %{name}"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Appointment Confirmed!"
-msgstr "Termin bestätigt!"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Best,"
-msgstr "Beste Grüße,"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "CANCELLED APPOINTMENT DETAILS:"
-msgstr "DETAILS ZUM ABGESAGTEN TERMIN:"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel"
-msgstr "Absagen"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Cancel Appointment"
-msgstr "Termin absagen"
-
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "Cancel:"
 msgstr "Absagen:"
 
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "Cancelled Appointment Details"
-msgstr "Details zum abgesagten Termin"
-
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "Choose a New Time"
-msgstr "Neuen Termin wählen"
-
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "Choose a New Time:"
-msgstr "Neuen Termin wählen:"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "DETAILS:"
-msgstr "DETAILS:"
-
 #: lib/tymeslot/emails/shared/text_body_helper.ex
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Date:"
 msgstr "Datum:"
@@ -96,68 +36,20 @@ msgstr "Datum:"
 msgid "Duration"
 msgstr "Dauer"
 
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format
-msgid "Duration:"
-msgstr "Dauer:"
-
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "Email:"
 msgstr "E-Mail:"
 
 #: lib/tymeslot/emails/shared/greeting.ex
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name},"
 msgstr "Hallo %{name},"
-
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name}, I need to reschedule our upcoming meeting. Could you please select a new time that works for you?"
-msgstr "Hallo %{name}, ich muss unser anstehendes Treffen leider verschieben. Könnten Sie bitte eine neue Zeit auswählen, die Ihnen passt?"
-
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "I apologize for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience."
-msgstr "Bitte entschuldigen Sie die Unannehmlichkeiten. Ihr aktueller Termin wurde abgesagt. Gerne helfe ich Ihnen, so schnell wie möglich einen neuen Termin zu finden."
-
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "I need to reschedule our upcoming meeting. Could you please select a new time that works for you?"
-msgstr "ich muss unser anstehendes Treffen leider verschieben. Bitte wählen Sie einen neuen Termin, der Ihnen passt."
 
 #: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
 msgid "I'll send you a reminder %{label} before our appointment."
 msgstr "Ich sende Ihnen %{label} vor unserem Termin eine Erinnerung."
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "I'm looking forward to our conversation!"
-msgstr "ich freue mich auf unser Gespräch!"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "I'm looking forward to our meeting. I've blocked the time on my calendar and will be ready for you."
-msgstr "ich freue mich auf unser Treffen. Der Termin ist fest in meinem Kalender eingetragen, und ich bin zur vereinbarten Zeit für Sie da."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "If you have any questions, please don't hesitate to reach out."
-msgstr "Falls Sie Fragen haben, melden Sie sich gerne jederzeit."
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
@@ -165,50 +57,26 @@ msgid "JOIN VIDEO MEETING:"
 msgstr "VIDEO-MEETING BEITRETEN:"
 
 #: lib/tymeslot/emails/shared/meeting/video_section.ex
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Join Meeting"
 msgstr "Meeting beitreten"
 
 #: lib/tymeslot/emails/shared/meeting/video_section.ex
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
 #, elixir-autogen, elixir-format
 msgid "Join Video Meeting"
 msgstr "Video-Meeting beitreten"
 
 #: lib/tymeslot/emails/shared/meeting/hero.ex
-#: lib/tymeslot/emails/templates/event_update_notification.ex
 #, elixir-autogen, elixir-format
 msgid "Location"
 msgstr "Ort"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Location:"
 msgstr "Ort:"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Looking forward to meeting you!"
-msgstr "Ich freue mich auf unseren Termin!"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
 msgid "MEETING DETAILS:"
 msgstr "TERMIN-DETAILS:"
@@ -218,38 +86,10 @@ msgstr "TERMIN-DETAILS:"
 msgid "MESSAGE FROM ATTENDEE:"
 msgstr "NACHRICHT DES TEILNEHMERS:"
 
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting"
 msgstr "Termin"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Cancelled"
-msgstr "Termin abgesagt"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Cancelled - %{date} with %{name}"
-msgstr "Termin abgesagt – %{date} mit %{name}"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting with %{name}"
-msgstr "Termin mit %{name}"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting with:"
-msgstr "Termin mit:"
 
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format
@@ -261,90 +101,20 @@ msgstr "Nachricht von %{name}:"
 msgid "Name:"
 msgstr "Name:"
 
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Need to change plans?"
-msgstr "Müssen Sie umplanen?"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Need to make changes?"
-msgstr "Möchten Sie Änderungen vornehmen?"
-
 #: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
 msgid "No reminder emails are scheduled for this appointment."
 msgstr "Für diesen Termin sind keine Erinnerungs-E-Mails geplant."
-
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "Once you select a new slot, you'll receive a confirmation email with the updated details. If you have any questions or need to discuss alternative options, please don't hesitate to reach out."
-msgstr "Sobald Sie einen neuen Termin gewählt haben, erhalten Sie eine Bestätigung mit den aktualisierten Details. Bei Fragen oder für andere Optionen melden Sie sich gerne."
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "QUESTIONS?"
-msgstr "FRAGEN?"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Questions? %{contact_info}"
-msgstr "Fragen? %{contact_info}"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "REMINDER: Our meeting in %{time_until}"
-msgstr "ERINNERUNG: Unser Termin in %{time_until}"
 
 #: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
 msgid "Reminder %{label} before the appointment."
 msgstr "Erinnerung %{label} vor dem Termin."
 
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Reminder: Our meeting is %{time_until}"
-msgstr "Erinnerung: Unser Termin ist in %{time_until}"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Reminders Scheduled"
-msgstr "Geplante Erinnerungen"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule"
-msgstr "Verschieben"
-
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule Request"
-msgstr "Anfrage zur Terminverschiebung"
-
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule Request: %{title} - %{date}"
-msgstr "Anfrage zur Terminverschiebung: %{title} – %{date}"
-
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "Reschedule:"
 msgstr "Verschieben:"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Schedule New Appointment"
-msgstr "Neuen Termin vereinbaren"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "See you %{time_until}!"
-msgstr "Bis %{time_until}!"
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #: lib/tymeslot/emails/shared/meeting/hero.ex
@@ -352,43 +122,17 @@ msgstr "Bis %{time_until}!"
 msgid "TBD"
 msgstr "Noch offen"
 
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "Thank you for your understanding and flexibility."
-msgstr "Vielen Dank für Ihr Verständnis und Ihre Flexibilität."
-
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "The meeting room opens 5 minutes before your scheduled time."
 msgstr "Der Meetingraum öffnet 5 Minuten vor dem geplanten Termin."
 
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "This time slot is now available for booking again."
-msgstr "Dieses Zeitfenster ist nun wieder buchbar."
-
 #: lib/tymeslot/emails/shared/text_body_helper.ex
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#: lib/tymeslot/emails/templates/external_booking_change.ex
 #, elixir-autogen, elixir-format
 msgid "Time:"
 msgstr "Uhrzeit:"
 
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format
-msgid "Timezone:"
-msgstr "Zeitzone:"
-
 #: lib/tymeslot/emails/shared/text_body_helper.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
 #, elixir-autogen, elixir-format
 msgid "Type:"
 msgstr "Art:"
@@ -404,21 +148,6 @@ msgstr "Videoanruf"
 #, elixir-autogen, elixir-format
 msgid "Video meeting:"
 msgstr "Video-Meeting:"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Visit:"
-msgstr "Link:"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "We're writing to confirm that your appointment has been cancelled."
-msgstr "hiermit bestätigen wir, dass Ihr Termin abgesagt wurde."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Would you like to schedule a new appointment?"
-msgstr "Möchten Sie einen neuen Termin vereinbaren?"
 
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format
@@ -447,11 +176,6 @@ msgstr[1] "Minuten"
 msgid "reply to this email"
 msgstr "auf diese E-Mail antworten"
 
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "soon"
-msgstr "bald"
-
 #: lib/tymeslot/emails/shared/text.ex
 #, elixir-autogen, elixir-format
 msgid "Having trouble with the button? Copy and paste this link into your browser:"
@@ -468,106 +192,6 @@ msgid "hour"
 msgid_plural "hours"
 msgstr[0] "Stunde"
 msgstr[1] "Stunden"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} has scheduled a meeting with you."
-msgstr "%{name} hat einen Termin mit Ihnen vereinbart."
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "- No reminder emails are scheduled for this appointment"
-msgstr "- Für diesen Termin sind keine Erinnerungs-E-Mails geplant"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "- Prepare an agenda if needed"
-msgstr "- Bei Bedarf eine Agenda vorbereiten"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "- Review any relevant materials"
-msgstr "- Relevante Unterlagen durchsehen"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "- Set a reminder %{time} before"
-msgstr "- Eine Erinnerung %{time} vorher einstellen"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "- Test video/audio setup if virtual"
-msgstr "- Video-/Audio-Einrichtung testen, falls virtuell"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "15 minutes"
-msgstr "15 Minuten"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "New Appointment Booked!"
-msgstr "Neuer Termin gebucht!"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "New Appointment: %{name} - %{date}"
-msgstr "Neuer Termin: %{name} – %{date}"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "PREPARATION REMINDERS:"
-msgstr "VORBEREITUNGSHINWEISE:"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "The appointment with %{name} has been cancelled."
-msgstr "Der Termin mit %{name} wurde abgesagt."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "The attendee has been notified of the cancellation."
-msgstr "Der Teilnehmer wurde über die Absage informiert."
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "QUICK PREP:"
-msgstr "KURZE VORBEREITUNG:"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "STARTING IN %{time_until}"
-msgstr "BEGINNT IN %{time_until}"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Starting in %{time_until}"
-msgstr "Beginnt in %{time_until}"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "• Agenda ready"
-msgstr "• Agenda bereit"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "• Camera & mic ready"
-msgstr "• Kamera & Mikrofon bereit"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "• Location confirmed"
-msgstr "• Ort bestätigt"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "• Materials prepared"
-msgstr "• Materialien vorbereitet"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "⏰ Meeting with %{name} in %{time_until}"
-msgstr "⏰ Termin mit %{name} in %{time_until}"
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
@@ -589,13 +213,7 @@ msgstr "Kalendereinladung – %{title} am %{date}"
 msgid "You're Invited"
 msgstr "Sie sind eingeladen"
 
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} has updated an event you're attending."
-msgstr "%{name} hat einen Termin aktualisiert, an dem Sie teilnehmen."
-
 #: lib/tymeslot/emails/shared/text_body_helper.ex
-#: lib/tymeslot/emails/templates/event_update_notification.ex
 #, elixir-autogen, elixir-format
 msgid "(none)"
 msgstr "(keine)"
@@ -605,255 +223,35 @@ msgstr "(keine)"
 msgid "Description updated"
 msgstr "Beschreibung aktualisiert"
 
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Event Updated"
-msgstr "Termin aktualisiert"
-
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "Title:"
 msgstr "Titel:"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "What Changed"
-msgstr "Was hat sich geändert"
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "A change was requested on your Tymeslot account."
-msgstr "Für Ihr Tymeslot-Konto wurde eine Änderung angefordert."
-
-#: lib/tymeslot/emails/templates/password_reset.ex
-#, elixir-autogen, elixir-format
-msgid "A fresh password and you're back in."
-msgstr "Ein neues Passwort und Sie sind wieder drin."
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "A verification email has been sent to the new address"
-msgstr "Eine Bestätigungs-E-Mail wurde an die neue Adresse gesendet"
-
-#: lib/tymeslot/emails/templates/no_password_to_reset.ex
-#: lib/tymeslot/emails/templates/password_reset.ex
-#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
-#, elixir-autogen, elixir-format
-msgid "Account Security"
-msgstr "Kontosicherheit"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Account Update"
-msgstr "Kontoaktualisierung"
-
-#: lib/tymeslot/emails/templates/email_verification.ex
-#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Account Verification"
-msgstr "Kontobestätigung"
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Action required"
-msgstr "Aktion erforderlich"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Action required: \"%{title}\" was deleted from your external calendar (%{date})"
-msgstr "Aktion erforderlich: „%{title}“ wurde aus Ihrem externen Kalender gelöscht (%{date})"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Action required: \"%{title}\" was rescheduled in your external calendar (%{date})"
-msgstr "Aktion erforderlich: „%{title}“ wurde in Ihrem externen Kalender verschoben (%{date})"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Active"
-msgstr "Aktiv"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "All future emails will be sent to your new address"
-msgstr "Alle künftigen E-Mails werden an Ihre neue Adresse gesendet"
 
 #: lib/tymeslot/emails/shared/meeting/attendee.ex
 #, elixir-autogen, elixir-format
 msgid "Attendee Information"
 msgstr "Teilnehmerinformationen"
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "CHANGE DETAILS:"
-msgstr "ÄNDERUNGSDETAILS:"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Cancelled"
-msgstr "Abgesagt"
-
 #: lib/tymeslot/emails/shared/meeting/attendee.ex
 #, elixir-autogen, elixir-format
 msgid "Company"
 msgstr "Unternehmen"
-
-#: lib/tymeslot/emails/templates/email_verification.ex
-#, elixir-autogen, elixir-format
-msgid "Confirm Email & Get Started"
-msgstr "E-Mail bestätigen und loslegen"
-
-#: lib/tymeslot/emails/templates/email_verification.ex
-#, elixir-autogen, elixir-format
-msgid "Confirm Email & Get Started:"
-msgstr "E-Mail bestätigen und loslegen:"
-
-#: lib/tymeslot/emails/templates/email_change_verification.ex
-#, elixir-autogen, elixir-format
-msgid "Confirm the new email address on your Tymeslot account."
-msgstr "Bestätigen Sie die neue E-Mail-Adresse Ihres Tymeslot-Kontos."
-
-#: lib/tymeslot/emails/templates/email_change_verification.ex
-#, elixir-autogen, elixir-format
-msgid "Confirm your new email"
-msgstr "Neue E-Mail-Adresse bestätigen"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Confirmed"
-msgstr "Bestätigt"
 
 #: lib/tymeslot/emails/shared/meeting/attendee.ex
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "E-Mail"
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Email change complete"
-msgstr "E-Mail-Änderung abgeschlossen"
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Email change requested"
-msgstr "E-Mail-Änderung angefordert"
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Email change requested to: %{new_email}"
-msgstr "Angeforderte neue E-Mail-Adresse: %{new_email}"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Event updated"
-msgstr "Termin aktualisiert"
-
-#: lib/tymeslot/emails/templates/email_verification.ex
-#, elixir-autogen, elixir-format
-msgid "For your security, this link expires in 24 hours. If you didn't sign up for Tymeslot, no further action is needed."
-msgstr "Aus Sicherheitsgründen läuft dieser Link in 24 Stunden ab. Falls Sie sich nicht bei Tymeslot registriert haben, müssen Sie nichts weiter tun."
-
-#: lib/tymeslot/emails/templates/email_verification.ex
-#, elixir-autogen, elixir-format
-msgid "For your security, this link expires in 24 hours. If you didn't sign up for Tymeslot, you can ignore this email."
-msgstr "Aus Sicherheitsgründen läuft dieser Link in 24 Stunden ab. Falls Sie sich nicht bei Tymeslot registriert haben, können Sie diese E-Mail ignorieren."
-
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "Friday"
 msgstr "Freitag"
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex
-#, elixir-autogen, elixir-format
-msgid "Heads up"
-msgstr "Hinweis"
-
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name}, I need to reschedule our upcoming meeting."
-msgstr "Hallo %{name}, ich muss unser bevorstehendes Treffen verschieben."
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Host video call"
-msgstr "Videoanruf als Gastgeber starten"
-
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "I apologise for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience."
-msgstr "Bitte entschuldigen Sie die Unannehmlichkeiten. Ihr aktueller Termin wurde abgesagt, und ich helfe Ihnen gerne, möglichst bald einen neuen Termin zu finden."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "If the meeting is no longer happening, please cancel it in Tymeslot so the attendee is notified and the time slot is freed up."
-msgstr "Falls der Termin nicht mehr stattfindet, sagen Sie ihn bitte in Tymeslot ab, damit der Teilnehmer benachrichtigt und das Zeitfenster freigegeben wird."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
-msgstr "Falls die neue Zeit endgültig ist, aktualisieren oder verschieben Sie die Buchung bitte in Tymeslot, damit der Teilnehmer die aktuellen Details erhält."
-
-#: lib/tymeslot/emails/templates/password_reset.ex
-#, elixir-autogen, elixir-format
-msgid "Instructions to reset your Tymeslot password."
-msgstr "Anleitung zum Zurücksetzen Ihres Tymeslot-Passworts."
-
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Invited"
 msgstr "Eingeladen"
-
-#: lib/tymeslot/emails/templates/password_reset.ex
-#, elixir-autogen, elixir-format
-msgid "It happens to the best of us! Click the link below to choose a new password and regain access to your account."
-msgstr "das passiert den Besten! Klicken Sie auf den untenstehenden Link, um ein neues Passwort zu wählen und wieder Zugriff auf Ihr Konto zu erhalten."
-
-#: lib/tymeslot/emails/templates/password_reset.ex
-#, elixir-autogen, elixir-format
-msgid "It happens to the best of us. Click the button below to choose a new password and pick up where you left off."
-msgstr "das passiert den Besten. Klicken Sie auf die Schaltfläche unten, um ein neues Passwort zu wählen und dort weiterzumachen, wo Sie aufgehört haben."
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Join when you're ready"
-msgstr "Treten Sie dem Meeting bei, sobald Sie bereit sind"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Just now"
-msgstr "Gerade eben"
-
-#: lib/tymeslot/emails/templates/reschedule_request.ex
-#, elixir-autogen, elixir-format
-msgid "Let's find a new time"
-msgstr "Lassen Sie uns einen neuen Termin finden"
-
-#: lib/tymeslot/emails/templates/email_verification.ex
-#, elixir-autogen, elixir-format
-msgid "Let's get you scheduling in under a minute."
-msgstr "In weniger als einer Minute bereit zum Planen."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Deleted in External Calendar"
-msgstr "Termin im externen Kalender gelöscht"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Rescheduled in External Calendar"
-msgstr "Termin im externen Kalender verschoben"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting cancelled"
-msgstr "Termin abgesagt"
 
 #: lib/tymeslot/emails/shared/meeting/hero.ex
 #, elixir-autogen, elixir-format
@@ -875,75 +273,12 @@ msgstr "Montag"
 msgid "Name"
 msgstr "Name"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "New booking"
-msgstr "Neue Buchung"
-
-#: lib/tymeslot/emails/templates/email_change_verification.ex
-#, elixir-autogen, elixir-format
-msgid "New email address"
-msgstr "Neue E-Mail-Adresse"
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Not specified"
-msgstr "Nicht angegeben"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "ORIGINAL BOOKING DETAILS:"
-msgstr "URSPRÜNGLICHE BUCHUNGSDETAILS:"
-
-#: lib/tymeslot/emails/templates/email_change_verification.ex
-#, elixir-autogen, elixir-format
-msgid "One click and the switch is done."
-msgstr "Ein Klick und die Umstellung ist erledigt."
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Our meeting is coming up"
-msgstr "Unser Treffen steht bevor"
-
 #: lib/tymeslot/emails/shared/meeting/attendee.ex
 #, elixir-autogen, elixir-format
 msgid "Phone"
 msgstr "Telefon"
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "Please review and update the booking in Tymeslot."
-msgstr "Bitte überprüfen und aktualisieren Sie die Buchung in Tymeslot."
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Quick actions"
-msgstr "Schnellaktionen"
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "REQUEST DETAILS:"
-msgstr "ANFRAGEDETAILS:"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Ready to join when it's time?"
-msgstr "Bereit, pünktlich beizutreten?"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Reminder"
-msgstr "Erinnerung"
-
-#: lib/tymeslot/emails/templates/password_reset.ex
-#, elixir-autogen, elixir-format
-msgid "Reset Your Password"
-msgstr "Passwort zurücksetzen"
-
 #: lib/tymeslot/emails/email_service/auth_emails.ex
-#: lib/tymeslot/emails/templates/password_reset.ex
 #, elixir-autogen, elixir-format
 msgid "Reset your password"
 msgstr "Passwort zurücksetzen"
@@ -953,106 +288,10 @@ msgstr "Passwort zurücksetzen"
 msgid "Saturday"
 msgstr "Samstag"
 
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#: lib/tymeslot/emails/templates/no_password_to_reset.ex
-#: lib/tymeslot/emails/templates/password_reset.ex
-#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
-#, elixir-autogen, elixir-format
-msgid "Security"
-msgstr "Sicherheit"
-
-#: lib/tymeslot/emails/templates/password_reset.ex
-#, elixir-autogen, elixir-format
-msgid "Set New Password"
-msgstr "Neues Passwort festlegen"
-
-#: lib/tymeslot/emails/templates/password_reset.ex
-#, elixir-autogen, elixir-format
-msgid "Set New Password:"
-msgstr "Neues Passwort festlegen:"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Start Meeting"
-msgstr "Meeting starten"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Starting %{time_until}"
-msgstr "Beginnt in %{time_until}"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Starting soon"
-msgstr "Beginnt bald"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Status:"
-msgstr "Status:"
-
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "Sunday"
 msgstr "Sonntag"
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "The change will only be completed after verification"
-msgstr "Die Änderung wird erst nach Bestätigung wirksam"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "The meeting \"%{title}\" was deleted from your external calendar but is still active in Tymeslot."
-msgstr "Der Termin „%{title}“ wurde aus Ihrem externen Kalender gelöscht, ist aber in Tymeslot weiterhin aktiv."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking shown below."
-msgstr "Der Termin „%{title}“ wurde in Ihrem externen Kalender verschoben. In Tymeslot ist weiterhin die ursprüngliche Buchung gespeichert (siehe unten)."
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "The verification link expires in 24 hours"
-msgstr "Der Bestätigungslink läuft in 24 Stunden ab"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "This is a confirmation of changes made to your account. If you have any questions, please contact support."
-msgstr "Dies ist eine Bestätigung der Änderungen an Ihrem Konto. Bei Fragen wenden Sie sich bitte an den Support."
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "This is a security notification sent to protect your account. If you have concerns, please contact support immediately."
-msgstr "Dies ist eine Sicherheitsbenachrichtigung zum Schutz Ihres Kontos. Bei Bedenken wenden Sie sich bitte umgehend an den Support."
-
-#: lib/tymeslot/emails/templates/email_change_verification.ex
-#, elixir-autogen, elixir-format
-msgid "This link expires in 24 hours. Once confirmed, you'll sign in with your new email address."
-msgstr "Dieser Link läuft in 24 Stunden ab. Nach der Bestätigung melden Sie sich mit Ihrer neuen E-Mail-Adresse an."
-
-#: lib/tymeslot/emails/templates/password_reset.ex
-#, elixir-autogen, elixir-format
-msgid "This link is valid for the next 2 hours."
-msgstr "Dieser Link ist für die nächsten 2 Stunden gültig."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "This meeting was <strong>removed from your external calendar</strong> but is still active in Tymeslot. If the meeting is no longer happening, please cancel it in Tymeslot so the attendee is notified and the time slot is freed up."
-msgstr "Dieser Termin wurde <strong>aus Ihrem externen Kalender entfernt</strong>, ist aber in Tymeslot weiterhin aktiv. Falls er nicht mehr stattfindet, sagen Sie ihn bitte in Tymeslot ab, damit der Teilnehmer benachrichtigt und das Zeitfenster freigegeben wird."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "This meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above. If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
-msgstr "Dieser Termin wurde <strong>in Ihrem externen Kalender verschoben</strong>. Tymeslot zeigt oben weiterhin die ursprüngliche Zeit. Falls die neue Zeit endgültig ist, aktualisieren oder verschieben Sie die Buchung bitte in Tymeslot, damit der Teilnehmer die aktuellen Details erhält."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "This notification was triggered automatically when a change was detected in your external calendar."
-msgstr "Diese Benachrichtigung wurde automatisch ausgelöst, als eine Änderung in Ihrem externen Kalender erkannt wurde."
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
@@ -1064,38 +303,12 @@ msgstr "Donnerstag"
 msgid "Timezone"
 msgstr "Zeitzone"
 
-#: lib/tymeslot/emails/templates/email_change_verification.ex
-#, elixir-autogen, elixir-format
-msgid "To confirm this change, visit the link below:"
-msgstr "Um diese Änderung zu bestätigen, rufen Sie den untenstehenden Link auf:"
-
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "Tuesday"
 msgstr "Dienstag"
 
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Updated"
-msgstr "Aktualisiert"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Use %{new_email} to sign in from now on"
-msgstr "Verwenden Sie ab sofort %{new_email} zum Anmelden"
-
-#: lib/tymeslot/emails/templates/email_change_verification.ex
-#, elixir-autogen, elixir-format
-msgid "Verify"
-msgstr "Bestätigen"
-
-#: lib/tymeslot/emails/templates/email_change_verification.ex
-#, elixir-autogen, elixir-format
-msgid "Verify New Email Address"
-msgstr "Neue E-Mail-Adresse bestätigen"
-
 #: lib/tymeslot/emails/email_service/account_emails.ex
-#: lib/tymeslot/emails/templates/email_change_verification.ex
 #, elixir-autogen, elixir-format
 msgid "Verify your new email address"
 msgstr "Bestätigen Sie Ihre neue E-Mail-Adresse"
@@ -1105,264 +318,15 @@ msgstr "Bestätigen Sie Ihre neue E-Mail-Adresse"
 msgid "Video call"
 msgstr "Videoanruf"
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "View Meeting Details"
-msgstr "Termindetails ansehen"
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "View meeting:"
-msgstr "Termin ansehen:"
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "WHAT HAPPENS NEXT:"
-msgstr "WIE ES WEITERGEHT:"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "WHAT YOU NEED TO KNOW:"
-msgstr "WAS SIE WISSEN SOLLTEN:"
-
-#: lib/tymeslot/emails/templates/email_verification.ex
-#, elixir-autogen, elixir-format
-msgid "We're excited to have you on board! To start scheduling meetings and simplify your calendar, please verify your email address."
-msgstr "wir freuen uns, Sie an Bord zu haben! Um mit der Terminplanung zu beginnen und Ihren Kalender zu vereinfachen, bestätigen Sie bitte Ihre E-Mail-Adresse."
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "We're letting you know in case it wasn't you."
-msgstr "Wir informieren Sie für den Fall, dass Sie das nicht selbst waren."
-
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "Wednesday"
 msgstr "Mittwoch"
 
-#: lib/tymeslot/emails/templates/email_verification.ex
-#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Welcome"
-msgstr "Willkommen"
-
-#: lib/tymeslot/emails/templates/email_verification.ex
-#, elixir-autogen, elixir-format
-msgid "Welcome to Tymeslot"
-msgstr "Willkommen bei Tymeslot"
-
-#: lib/tymeslot/emails/templates/email_verification.ex
-#, elixir-autogen, elixir-format
-msgid "Welcome to Tymeslot!"
-msgstr "Willkommen bei Tymeslot!"
-
-#: lib/tymeslot/emails/templates/email_change_verification.ex
-#, elixir-autogen, elixir-format
-msgid "You asked to change the email address on your Tymeslot account to %{new_email}."
-msgstr "Sie haben angefordert, die E-Mail-Adresse Ihres Tymeslot-Kontos auf %{new_email} zu ändern."
-
-#: lib/tymeslot/emails/templates/email_change_verification.ex
-#, elixir-autogen, elixir-format
-msgid "You asked to change the email address on your Tymeslot account. Confirm the new address below to finish the switch."
-msgstr "Sie haben angefordert, die E-Mail-Adresse Ihres Tymeslot-Kontos zu ändern. Bestätigen Sie unten die neue Adresse, um die Umstellung abzuschließen."
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "You may need to sign in again on other devices"
-msgstr "Auf anderen Geräten müssen Sie sich möglicherweise erneut anmelden"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "You're booked."
-msgstr "Der Termin steht."
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Your Tymeslot email address has been changed."
-msgstr "Die E-Mail-Adresse Ihres Tymeslot-Kontos wurde geändert."
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Your account is now using the new address."
-msgstr "Ihr Konto verwendet nun die neue Adresse."
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Your current email remains active until the change is confirmed"
-msgstr "Ihre aktuelle E-Mail-Adresse bleibt aktiv, bis die Änderung bestätigt wird"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Your meetings and settings remain unchanged"
-msgstr "Ihre Termine und Einstellungen bleiben unverändert"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "with %{name}"
-msgstr "mit %{name}"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "(previous)"
-msgstr "(vorher)"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "(updated)"
-msgstr "(aktualisiert)"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "After"
-msgstr "Nachher"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Before"
-msgstr "Vorher"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Change details"
-msgstr "Änderungsdetails"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Changed at"
-msgstr "Geändert am"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Changed at:"
-msgstr "Geändert am:"
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Current email"
-msgstr "Aktuelle E-Mail-Adresse"
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Current email:"
-msgstr "Aktuelle E-Mail-Adresse:"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Description"
-msgstr "Beschreibung"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Didn't expect this?"
-msgstr "Haben Sie das nicht erwartet?"
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Didn't request this?"
-msgstr "Haben Sie das nicht angefordert?"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Email change completed successfully."
-msgstr "E-Mail-Änderung erfolgreich abgeschlossen."
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Field"
-msgstr "Feld"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "If you did not authorise this change, please contact support immediately. You will no longer receive emails at this address."
-msgstr "Falls Sie diese Änderung nicht veranlasst haben, wenden Sie sich bitte umgehend an den Support. An diese Adresse werden keine E-Mails mehr gesendet."
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "If you did not request this change, your account may be compromised. Please sign in to your account immediately and change your password."
-msgstr "Falls Sie diese Änderung nicht angefordert haben, ist Ihr Konto möglicherweise kompromittiert. Bitte melden Sie sich umgehend in Ihrem Konto an und ändern Sie Ihr Passwort."
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "New email"
-msgstr "Neue E-Mail-Adresse"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "New email:"
-msgstr "Neue E-Mail-Adresse:"
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Pending verification"
-msgstr "Bestätigung ausstehend"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Previous email"
-msgstr "Bisherige E-Mail-Adresse"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Previous email:"
-msgstr "Bisherige E-Mail-Adresse:"
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Request details"
-msgstr "Anfragedetails"
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Requested at"
-msgstr "Angefordert am"
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Requested at:"
-msgstr "Angefordert am:"
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Security notification"
-msgstr "Sicherheitsbenachrichtigung"
-
 #: lib/tymeslot/emails/shared/mjml_email.ex
 #, elixir-autogen, elixir-format
 msgid "Sent with care by"
 msgstr "Gesendet von"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Status"
-msgstr "Status"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Time"
-msgstr "Uhrzeit"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Title"
-msgstr "Titel"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "What changed"
-msgstr "Was hat sich geändert"
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "What happens next"
-msgstr "Wie es weitergeht"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "What you need to know"
-msgstr "Was Sie wissen sollten"
 
 #: lib/tymeslot/emails/shared/layouts.ex
 #: lib/tymeslot/emails/shared/mjml_email.ex
@@ -1370,170 +334,15 @@ msgstr "Was Sie wissen sollten"
 msgid "scheduling that respects your time"
 msgstr "Terminplanung, die Ihre Zeit respektiert"
 
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "For security, a copy of this confirmation was sent to your previous email address."
-msgstr "Aus Sicherheitsgründen wurde eine Kopie dieser Bestätigung an Ihre bisherige E-Mail-Adresse gesendet."
-
-#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
-#, elixir-autogen, elixir-format
-msgid "%{amount} paid"
-msgstr "%{amount} bezahlt"
-
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
 msgid "%{date} at %{time}"
 msgstr "%{date} um %{time}"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
-#, elixir-autogen, elixir-format
-msgid "Date: %{date}"
-msgstr "Datum: %{date}"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
-#, elixir-autogen, elixir-format
-msgid "PAYMENT RECEIPT:"
-msgstr "ZAHLUNGSBELEG:"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
-#, elixir-autogen, elixir-format
-msgid "Payment receipt"
-msgstr "Zahlungsbeleg"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
-#, elixir-autogen, elixir-format
-msgid "Reference: %{ref}"
-msgstr "Referenz: %{ref}"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
-#, elixir-autogen, elixir-format
-msgid "View receipt"
-msgstr "Beleg ansehen"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
-#, elixir-autogen, elixir-format
-msgid "View receipt: %{url}"
-msgstr "Beleg ansehen: %{url}"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "%{amount} returned for “%{title}”"
-msgstr "%{amount} für „%{title}“ erstattet"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "%{amount} returned to your card"
-msgstr "%{amount} auf Ihre Karte erstattet"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "A partial refund was issued."
-msgstr "Eine Teilrückerstattung wurde veranlasst."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name}, %{amount} of your %{original} payment has been refunded."
-msgstr "Hallo %{name}, %{amount} Ihrer Zahlung von %{original} wurden erstattet."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name}, your payment of %{amount} has been refunded in full."
-msgstr "Hallo %{name}, Ihre Zahlung in Höhe von %{amount} wurde vollständig erstattet."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "If you have any questions, please reply to this email and %{name} will be happy to help."
-msgstr "Falls Sie Fragen haben, antworten Sie einfach auf diese E-Mail. %{name} hilft Ihnen gerne weiter."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting: %{title}"
-msgstr "Termin: %{title}"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Original payment: %{amount}"
-msgstr "Ursprüngliche Zahlung: %{amount}"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Partial Refund Issued - %{amount}"
-msgstr "Teilrückerstattung veranlasst – %{amount}"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "REFUND DETAILS:"
-msgstr "DETAILS ZUR RÜCKERSTATTUNG:"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "REFUND ISSUED"
-msgstr "RÜCKERSTATTUNG VERANLASST"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Refund Issued - %{amount}"
-msgstr "Rückerstattung veranlasst – %{amount}"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Refund details"
-msgstr "Details zur Rückerstattung"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Refunded"
-msgstr "Erstattet"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Refunded amount: %{amount}"
-msgstr "Erstatteter Betrag: %{amount}"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Refunds typically take 5–10 business days to appear on your original payment method, depending on your bank."
-msgstr "Je nach Bank dauert es in der Regel 5 bis 10 Werktage, bis die Rückerstattung auf Ihrer ursprünglichen Zahlungsmethode verbucht ist."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Your payment was refunded."
-msgstr "Ihre Zahlung wurde erstattet."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "your host"
-msgstr "Ihr Gastgeber"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Hi, %{amount} of your %{original} payment has been refunded."
-msgstr "Hallo, %{amount} Ihrer Zahlung von %{original} wurden erstattet."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Hi, your payment of %{amount} has been refunded in full."
-msgstr "Hallo, Ihre Zahlung in Höhe von %{amount} wurde vollständig erstattet."
-
-#: lib/tymeslot/emails/templates/email_change_notification.ex
-#, elixir-autogen, elixir-format
-msgid "A request has been made to change the email address on your Tymeslot account. We're letting you know so you can confirm it was you."
-msgstr "für Ihr Tymeslot-Konto wurde eine Änderung der E-Mail-Adresse angefordert. Wir informieren Sie, damit Sie bestätigen können, dass Sie das selbst waren."
-
 #: lib/tymeslot/emails/shared/greeting.ex
 #, elixir-autogen, elixir-format
 msgid "Hi there,"
 msgstr "Hallo,"
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Your Tymeslot account email address has been successfully changed."
-msgstr "die E-Mail-Adresse Ihres Tymeslot-Kontos wurde erfolgreich geändert."
-
-#: lib/tymeslot/emails/templates/email_change_confirmed.ex
-#, elixir-autogen, elixir-format
-msgid "Your Tymeslot account email address has been successfully changed. This confirmation is being sent to your previous address so you know the switch happened."
-msgstr "die E-Mail-Adresse Ihres Tymeslot-Kontos wurde erfolgreich geändert. Diese Bestätigung wird an Ihre bisherige Adresse gesendet, damit Sie wissen, dass die Umstellung erfolgt ist."
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
@@ -1545,146 +354,15 @@ msgstr "WEITERE DETAILS:"
 msgid "Additional details"
 msgstr "Weitere Details"
 
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "A meeting changed in your external calendar."
-msgstr "Ein Termin in Ihrem externen Kalender hat sich geändert."
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "%{booker} has invited you as a guest to this meeting with %{organizer}."
-msgstr "%{booker} hat Sie als Gast zu diesem Termin mit %{organizer} eingeladen."
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Can't make it"
-msgstr "Kann nicht teilnehmen"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Can't make it: %{url}"
-msgstr "Kann nicht teilnehmen: %{url}"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{guest},"
-msgstr "Hallo %{guest},"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "WILL YOU BE THERE?"
-msgstr "SIND SIE DABEI?"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Will you be there?"
-msgstr "Sind Sie dabei?"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Yes, I'll attend"
-msgstr "Ja, ich nehme teil"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Yes, I'll attend: %{url}"
-msgstr "Ja, ich nehme teil: %{url}"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "You can change your response any time using the buttons above."
-msgstr "Sie können Ihre Antwort jederzeit über die Schaltflächen oben ändern."
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "You can change your response any time using the links above."
-msgstr "Sie können Ihre Antwort jederzeit über die Links oben ändern."
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "You're invited"
-msgstr "Sie sind eingeladen"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "You're invited - %{date} with %{name}"
-msgstr "Sie sind eingeladen – %{date} mit %{name}"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "You're invited!"
-msgstr "Sie sind eingeladen!"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "You've been added as a guest"
-msgstr "Sie wurden als Gast hinzugefügt"
-
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format
 msgid "Join the video call"
 msgstr "Videoanruf beitreten"
 
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "A meeting could not be added to your calendar."
-msgstr "Ein Termin konnte nicht zu Ihrem Kalender hinzugefügt werden."
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "ACTION REQUIRED:"
-msgstr "AKTION ERFORDERLICH:"
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "Action Required"
-msgstr "Aktion erforderlich"
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "CalDAV server temporarily unavailable"
-msgstr "CalDAV-Server vorübergehend nicht erreichbar"
-
 #: lib/tymeslot/emails/email_service/calendar_emails.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar Owner"
 msgstr "Kalenderinhaber"
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "Calendar Sync Error"
-msgstr "Kalender-Synchronisierungsfehler"
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "Calendar didn't sync"
-msgstr "Kalender wurde nicht synchronisiert"
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "Calendar permissions or authentication problems"
-msgstr "Probleme mit Kalenderberechtigungen oder der Authentifizierung"
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "Common causes:"
-msgstr "Häufige Ursachen:"
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "ERROR DETAILS:"
-msgstr "FEHLERDETAILS:"
 
 #: lib/tymeslot/emails/email_service/account_emails.ex
 #, elixir-autogen, elixir-format
@@ -1695,41 +373,6 @@ msgstr "E-Mail-Adresse geändert – Tymeslot-Konto"
 #, elixir-autogen, elixir-format
 msgid "Email Address Changed Successfully"
 msgstr "E-Mail-Adresse erfolgreich geändert"
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "Error"
-msgstr "Fehler"
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "Error Details"
-msgstr "Fehlerdetails"
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar."
-msgstr "Ich konnte diesen Termin nicht zu Ihrem Kalender hinzufügen. Der Termin wurde in Tymeslot erfolgreich bestätigt und sowohl Sie als auch der Teilnehmer haben Bestätigungs-E-Mails erhalten. Sie müssen ihn jedoch manuell zu Ihrem Kalender hinzufügen."
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "Maximum retries exceeded"
-msgstr "Maximale Anzahl an Wiederholungsversuchen überschritten"
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Details"
-msgstr "Termin-Details"
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "Network connectivity issues"
-msgstr "Probleme mit der Netzwerkverbindung"
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "This is an automated system notification. Please check your calendar sync settings if this issue persists."
-msgstr "Dies ist eine automatische Systembenachrichtigung. Bitte überprüfen Sie Ihre Einstellungen zur Kalendersynchronisierung, falls dieses Problem weiterhin besteht."
 
 #: lib/tymeslot/emails/email_service/auth_emails.ex
 #, elixir-autogen, elixir-format
@@ -1777,300 +420,10 @@ msgid_plural "minutes"
 msgstr[0] "Minute"
 msgstr[1] "Minuten"
 
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "Calendar Sync Error - Manual Action Required"
-msgstr "Kalender-Synchronisierungsfehler - Manuelle Aktion erforderlich"
-
-#: lib/tymeslot/emails/templates/email_change_verification.ex
-#, elixir-autogen, elixir-format
-msgid "Didn't request this change? You can safely ignore this email - nothing will happen to your account."
-msgstr "Haben Sie diese Änderung nicht angefordert? Sie können diese E-Mail ignorieren - an Ihrem Konto wird sich nichts ändern."
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{guest} - %{booker} has invited you as a guest to this meeting with %{organizer}."
-msgstr "Hallo %{guest} - %{booker} hat Sie als Gast zu diesem Termin mit %{organizer} eingeladen."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} - %{amount} of your %{original} payment has been refunded."
-msgstr "Hallo %{name}, %{amount} Ihrer Zahlung von %{original} wurden erstattet."
-
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} - I've blocked the time on my calendar and I'm looking forward to our meeting."
-msgstr "Hallo %{name} - ich habe die Zeit in meinem Kalender geblockt und freue mich auf unser Treffen."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} - our appointment has been cancelled. I'm sorry for the inconvenience."
-msgstr "Hallo %{name} - unser Termin wurde abgesagt. Ich bedaure die Unannehmlichkeiten."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} - your payment of %{amount} has been refunded in full."
-msgstr "Hallo %{name}, Ihre Zahlung in Höhe von %{amount} wurde vollständig erstattet."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Hi - %{amount} of your %{original} payment has been refunded."
-msgstr "Hallo - %{amount} Ihrer Zahlung von %{original} wurden erstattet."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
-#, elixir-autogen, elixir-format
-msgid "Hi - your payment of %{amount} has been refunded in full."
-msgstr "Hallo - Ihre Zahlung in Höhe von %{amount} wurde vollständig erstattet."
-
-#: lib/tymeslot/emails/templates/password_reset.ex
-#, elixir-autogen, elixir-format
-msgid "If you didn't request this change, your account is still secure - you can simply delete this email."
-msgstr "Falls Sie diese Änderung nicht angefordert haben, ist Ihr Konto weiterhin sicher - Sie können diese E-Mail einfach löschen."
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails - this is purely a technical calendar sync issue that doesn't affect the booking itself."
-msgstr "Bitte fügen Sie diesen Termin manuell zu Ihrem Kalender hinzu, damit Sie ihn nicht verpassen. Sowohl Sie als auch der Teilnehmer haben Ihre Bestätigungs-E-Mails bereits erhalten - dies ist ein rein technisches Problem der Kalendersynchronisierung, das die Buchung selbst nicht beeinträchtigt."
-
-#: lib/tymeslot/emails/templates/calendar_sync_error.ex
-#, elixir-autogen, elixir-format
-msgid "The booking is safe - but please add it to your calendar manually."
-msgstr "Die Buchung bleibt bestehen - bitte fügen Sie sie jedoch manuell zu Ihrem Kalender hinzu."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "The meeting \"%{title}\" was deleted from your external calendar. Tymeslot still has this booking on record - please review and cancel it here if the meeting is no longer taking place."
-msgstr "Der Termin „%{title}“ wurde aus Ihrem externen Kalender gelöscht. Tymeslot hat diese Buchung noch gespeichert - bitte überprüfen Sie sie und sagen Sie sie hier ab, falls der Termin nicht mehr stattfindet."
-
-#: lib/tymeslot/emails/templates/external_booking_change.ex
-#, elixir-autogen, elixir-format
-msgid "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking - please review the details and update or cancel it accordingly."
-msgstr "Der Termin „%{title}“ wurde in Ihrem externen Kalender verschoben. In Tymeslot ist weiterhin die ursprüngliche Buchung gespeichert - bitte überprüfen Sie die Details und aktualisieren oder stornieren Sie sie entsprechend."
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Updated: %{title} - %{date}"
-msgstr "Aktualisiert: %{title} - %{date}"
-
-#: lib/tymeslot/emails/templates/email_verification.ex
-#, elixir-autogen, elixir-format
-msgid "We're glad you're here. One quick step and your calendar will be ready to go - please confirm your email below."
-msgstr "schön, dass Sie hier sind. Nur noch ein kurzer Schritt und Ihr Kalender ist startklar - bitte bestätigen Sie unten Ihre E-Mail-Adresse."
-
-#: lib/tymeslot/emails/templates/email_verification.ex
-#, elixir-autogen, elixir-format
-msgid "Welcome to Tymeslot - please verify your email."
-msgstr "Willkommen bei Tymeslot - bitte bestätigen Sie Ihre E-Mail-Adresse."
-
-#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
-#, elixir-autogen, elixir-format
-msgid "Attendee paid: %{amount}"
-msgstr "Teilnehmer hat gezahlt: %{amount}"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
-#, elixir-autogen, elixir-format
-msgid "Funds will arrive on your usual Stripe payout schedule."
-msgstr "Die Auszahlung erfolgt gemäß Ihrem üblichen Stripe-Auszahlungsplan."
-
 #: lib/tymeslot/emails/shared/mjml_email.ex
 #, elixir-autogen, elixir-format
 msgid "Message from %{name}"
 msgstr "Nachricht von %{name}"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
-#, elixir-autogen, elixir-format
-msgid "PAYMENT RECEIVED:"
-msgstr "ZAHLUNG ERHALTEN:"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
-#, elixir-autogen, elixir-format
-msgid "Tymeslot platform fee: %{amount}"
-msgstr "Tymeslot-Plattformgebühr: %{amount}"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
-#, elixir-autogen, elixir-format
-msgid "You received %{amount}"
-msgstr "Sie haben %{amount} erhalten"
-
-#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
-#, elixir-autogen, elixir-format
-msgid "You received: %{amount} (less Stripe processing fees)"
-msgstr "Sie haben erhalten: %{amount} (abzüglich Stripe-Bearbeitungsgebühren)"
-
-#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "%{host} invited you to help pick a time for %{title}. Your vote is still outstanding."
-msgstr "%{host} hat Sie eingeladen, bei der Terminfindung für %{title} zu helfen. Ihre Stimme fehlt noch."
-
-#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "%{host} is waiting for your vote on %{title}."
-msgstr "%{host} wartet auf Ihre Stimme zu %{title}."
-
-#: lib/tymeslot/emails/templates/poll_host_nudge.ex
-#, elixir-autogen, elixir-format
-msgid "All votes in"
-msgstr "Alle Stimmen liegen vor"
-
-#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Cast Your Vote"
-msgstr "Jetzt abstimmen"
-
-#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Cast your vote:"
-msgstr "Jetzt abstimmen:"
-
-#: lib/tymeslot/emails/templates/poll_host_nudge.ex
-#, elixir-autogen, elixir-format
-msgid "Every participant has cast their vote on %{title}. Review the results and confirm the time that works best."
-msgstr "Alle Teilnehmer haben zu %{title} abgestimmt. Sehen Sie sich die Ergebnisse an und bestätigen Sie die passendste Zeit."
-
-#: lib/tymeslot/emails/templates/poll_host_nudge.ex
-#, elixir-autogen, elixir-format
-msgid "Everyone has voted on \"%{title}\", pick a time"
-msgstr "Alle haben über „%{title}“ abgestimmt – wählen Sie eine Zeit"
-
-#: lib/tymeslot/emails/templates/poll_host_nudge.ex
-#, elixir-autogen, elixir-format
-msgid "Everyone has voted on %{title}"
-msgstr "Alle haben zu %{title} abgestimmt"
-
-#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Help %{host} lock in a time for %{title}."
-msgstr "Helfen Sie %{host}, eine Zeit für %{title} festzulegen."
-
-#: lib/tymeslot/emails/templates/poll_host_nudge.ex
-#, elixir-autogen, elixir-format
-msgid "Pick a Time"
-msgstr "Zeit auswählen"
-
-#: lib/tymeslot/emails/templates/poll_host_nudge.ex
-#, elixir-autogen, elixir-format
-msgid "Pick a final time so everyone can put it in the diary."
-msgstr "Legen Sie eine endgültige Zeit fest, damit alle sie eintragen können."
-
-#: lib/tymeslot/emails/templates/poll_host_nudge.ex
-#, elixir-autogen, elixir-format
-msgid "Pick a time:"
-msgstr "Zeit auswählen:"
-
-#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Reminder: vote on \"%{title}\""
-msgstr "Erinnerung: Stimmen Sie über „%{title}“ ab"
-
-#: lib/tymeslot/emails/templates/poll_host_nudge.ex
-#, elixir-autogen, elixir-format
-msgid "The deadline for %{title} has passed. Review the results and confirm the time that works best."
-msgstr "Die Frist für %{title} ist abgelaufen. Sehen Sie sich die Ergebnisse an und bestätigen Sie die passendste Zeit."
-
-#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Vote on %{title}"
-msgstr "Über %{title} abstimmen"
-
-#: lib/tymeslot/emails/templates/poll_host_nudge.ex
-#, elixir-autogen, elixir-format
-msgid "Voting closed"
-msgstr "Abstimmung beendet"
-
-#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Voting closes"
-msgstr "Abstimmung endet"
-
-#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Voting closes:"
-msgstr "Abstimmung endet:"
-
-#: lib/tymeslot/emails/templates/poll_host_nudge.ex
-#, elixir-autogen, elixir-format
-msgid "Voting has closed on \"%{title}\", pick a time"
-msgstr "Die Abstimmung über „%{title}“ ist beendet – wählen Sie eine Zeit"
-
-#: lib/tymeslot/emails/templates/poll_host_nudge.ex
-#, elixir-autogen, elixir-format
-msgid "Voting has closed on %{title}"
-msgstr "Die Abstimmung über %{title} ist beendet"
-
-#: lib/tymeslot/emails/templates/poll_deadline_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Your vote is needed"
-msgstr "Ihre Stimme wird benötigt"
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} has moved your meeting."
-msgstr "%{name} hat Ihren Termin verschoben."
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Does the new time not work?"
-msgstr "Passt die neue Zeit nicht?"
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name} - our appointment has been moved. Here's the new time, and my calendar is already updated."
-msgstr "Hallo %{name} - unser Termin wurde verschoben. Hier ist die neue Zeit, mein Kalender ist bereits aktualisiert."
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Rescheduled"
-msgstr "Termin verschoben"
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting Rescheduled - %{date} with %{name}"
-msgstr "Termin verschoben – %{date} mit %{name}"
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Meeting rescheduled"
-msgstr "Termin verschoben"
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "NEW MEETING DETAILS:"
-msgstr "NEUE TERMINDETAILS:"
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Our appointment has been moved. Here's the new time, and my calendar is already updated."
-msgstr "Unser Termin wurde verschoben. Hier ist die neue Zeit, mein Kalender ist bereits aktualisiert."
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Previously scheduled for"
-msgstr "Ursprünglich geplant für"
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Rescheduled"
-msgstr "Verschoben"
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Rescheduled: %{name} - %{date}"
-msgstr "Verschoben: %{name} – %{date}"
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Same link, new time"
-msgstr "Gleicher Link, neue Zeit"
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "The attendee has been notified of the new time."
-msgstr "Der Teilnehmer wurde über die neue Zeit informiert."
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Your meeting has moved."
-msgstr "Ihr Termin wurde verschoben."
 
 #: lib/tymeslot/emails/shared/mjml_email.ex
 #, elixir-autogen, elixir-format
@@ -2081,548 +434,6 @@ msgstr "%{name} über %{brand}"
 #, elixir-autogen, elixir-format
 msgid "Important notification from %{brand}"
 msgstr "Wichtige Benachrichtigung von %{brand}"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} is still waiting on your answer."
-msgstr "%{name} wartet weiterhin auf Ihre Antwort."
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} is waiting on your answer."
-msgstr "%{name} wartet auf Ihre Antwort."
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} would like to book %{type} with you."
-msgstr "%{name} möchte %{type} mit Ihnen buchen."
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "%{organizer} confirms each booking personally, so this isn't final yet."
-msgstr "%{organizer} bestätigt jede Buchung persönlich, daher ist dies noch nicht endgültig."
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "%{organizer} will reply by %{deadline} at the latest."
-msgstr "%{organizer} antwortet spätestens bis %{deadline}."
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "%{organizer} will review your request and get back to you shortly."
-msgstr "%{organizer} prüft Ihre Anfrage und meldet sich in Kürze bei Ihnen."
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "Approve"
-msgstr "Bestätigen"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "Approve:"
-msgstr "Bestätigen:"
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "Awaiting confirmation"
-msgstr "Warten auf Bestätigung"
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "Booking Request Received"
-msgstr "Buchungsanfrage eingegangen"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "Booking request still waiting"
-msgstr "Buchungsanfrage wartet weiterhin"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "Booking request: %{name} - %{date}"
-msgstr "Buchungsanfrage: %{name} - %{date}"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "Both buttons open the request for you to confirm. Nothing is decided until you choose there."
-msgstr "Beide Schaltflächen öffnen die Anfrage zur Bestätigung. Entschieden wird erst dort."
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "Both links open the request for you to confirm. Nothing is decided until you choose there."
-msgstr "Beide Links öffnen die Anfrage zur Bestätigung. Entschieden wird erst dort."
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "Decline"
-msgstr "Ablehnen"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "Decline:"
-msgstr "Ablehnen:"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format
-msgid "From:"
-msgstr "Von:"
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name}, %{organizer} confirms each booking personally, so this isn't final yet."
-msgstr "Hallo %{name}, %{organizer} bestätigt jede Buchung persönlich, daher ist dies noch nicht endgültig."
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name}, we've passed your request to %{organizer}. It isn't confirmed yet."
-msgstr "Hallo %{name}, wir haben Ihre Anfrage an %{organizer} weitergeleitet. Sie ist noch nicht bestätigt."
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "Message:"
-msgstr "Nachricht:"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "Needs your answer"
-msgstr "Ihre Antwort wird benötigt"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "New booking request"
-msgstr "Neue Buchungsanfrage"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format
-msgid "REQUESTED TIME:"
-msgstr "GEWÜNSCHTE ZEIT:"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "Reminder - booking request: %{name} - %{date}"
-msgstr "Erinnerung - Buchungsanfrage: %{name} - %{date}"
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "Request received"
-msgstr "Anfrage eingegangen"
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "Request received: %{title} - %{date}"
-msgstr "Anfrage eingegangen: %{title} - %{date}"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "Requested Time"
-msgstr "Gewünschte Zeit"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "Still waiting"
-msgstr "Weiterhin offen"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "The slot is held until you answer. If you haven't replied by %{deadline}, the request lapses and %{name} is told the time is free again."
-msgstr "Der Termin bleibt reserviert, bis Sie antworten. Ohne Antwort bis %{deadline} verfällt die Anfrage und %{name} erfährt, dass die Zeit wieder frei ist."
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "The slot stays held for %{name} until you answer."
-msgstr "Der Termin bleibt für %{name} reserviert, bis Sie antworten."
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "This time is held for you in the meantime, so nobody else can take it. You'll get a confirmation with the calendar invite as soon as %{organizer} accepts."
-msgstr "Die Zeit ist währenddessen für Sie reserviert, niemand sonst kann sie buchen. Sobald %{organizer} zusagt, erhalten Sie eine Bestätigung mit der Kalendereinladung."
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "Withdraw your request:"
-msgstr "Anfrage zurückziehen:"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "a meeting"
-msgstr "einen Termin"
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "%{organizer} wasn't able to take this booking, so the time is no longer held for you."
-msgstr "%{organizer} konnte diese Buchung nicht annehmen, daher ist die Zeit nicht mehr für Sie reserviert."
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "Booking Request Declined"
-msgstr "Buchungsanfrage abgelehnt"
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "Booking Request Expired"
-msgstr "Buchungsanfrage abgelaufen"
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name}, %{organizer} can't make this time."
-msgstr "Hallo %{name}, %{organizer} kann diesen Termin nicht wahrnehmen."
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name}, this request wasn't answered in time."
-msgstr "Hallo %{name}, diese Anfrage wurde nicht rechtzeitig beantwortet."
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "No longer held"
-msgstr "Nicht mehr reserviert"
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "Not confirmed"
-msgstr "Nicht bestätigt"
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "Pick another time"
-msgstr "Andere Zeit wählen"
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "Pick another time:"
-msgstr "Andere Zeit wählen:"
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "Request declined: %{title} - %{date}"
-msgstr "Anfrage abgelehnt: %{title} - %{date}"
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "Request expired: %{title} - %{date}"
-msgstr "Anfrage abgelaufen: %{title} - %{date}"
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "They added:"
-msgstr "Anmerkung:"
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "This time slot is available for booking again."
-msgstr "Dieses Zeitfenster ist wieder buchbar."
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "%{organizer} didn't get to your request in time, so the time has been released. You are welcome to pick another slot."
-msgstr "%{organizer} hat Ihre Anfrage nicht rechtzeitig bearbeitet, daher wurde die Zeit wieder freigegeben. Sie können gerne einen anderen Termin wählen."
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "For %{name}, that's %{time}."
-msgstr "Für %{name} ist das %{time}."
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "Changed your mind? You can %{link} at any time."
-msgstr "Meinung geändert? Sie können jederzeit %{link}."
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "withdraw your request"
-msgstr "Ihre Anfrage zurückziehen"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
-#, elixir-autogen, elixir-format
-msgid "Cancelling does not refund anything on its own. Issue or decline the refund under Payments in your dashboard."
-msgstr "Eine Absage erstattet nichts von sich aus. Erstatten Sie den Betrag oder lehnen Sie ihn unter Zahlungen in Ihrem Dashboard ab."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
-#, elixir-autogen, elixir-format
-msgid "REFUND OUTSTANDING:"
-msgstr "OFFENE RÜCKERSTATTUNG:"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
-#, elixir-autogen, elixir-format
-msgid "Refund outstanding"
-msgstr "Offene Rückerstattung"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
-#, elixir-autogen, elixir-format
-msgid "You still hold %{amount} for this booking."
-msgstr "Sie halten für diese Buchung noch %{amount}."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to has been cancelled."
-msgstr "Hallo %{guest} - der Termin mit %{organizer}, zu dem %{booker} Sie eingeladen hat, wurde abgesagt."
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to has been moved to a new time."
-msgstr "Hallo %{guest} - der Termin mit %{organizer}, zu dem %{booker} Sie eingeladen hat, wurde auf eine neue Zeit verschoben."
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "The meeting has moved."
-msgstr "Der Termin wurde verschoben."
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "The meeting with %{organizer} that %{booker} invited you to has been cancelled."
-msgstr "Der Termin mit %{organizer}, zu dem %{booker} Sie eingeladen hat, wurde abgesagt."
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "The meeting with %{organizer} that %{booker} invited you to has been moved to a new time."
-msgstr "Der Termin mit %{organizer}, zu dem %{booker} Sie eingeladen hat, wurde auf eine neue Zeit verschoben."
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "WILL YOU BE THERE AT THE NEW TIME?"
-msgstr "SIND SIE ZUR NEUEN ZEIT DABEI?"
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Will you be there at the new time?"
-msgstr "Sind Sie zur neuen Zeit dabei?"
-
-#: lib/tymeslot/emails/templates/appointment_cancellation.ex
-#, elixir-autogen, elixir-format
-msgid "You don't need to do anything. If you added the meeting to your calendar, the attached file marks it as cancelled there."
-msgstr "Sie müssen nichts weiter tun. Falls Sie den Termin in Ihren Kalender übernommen haben, markiert ihn die angehängte Datei dort als abgesagt."
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "Your earlier response applied to the previous time, so please let us know again."
-msgstr "Ihre bisherige Antwort galt für die alte Zeit – bitte geben Sie uns noch einmal Bescheid."
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} would like to move their confirmed booking to a new time."
-msgstr "%{name} möchte die bestätigte Buchung auf eine neue Zeit verschieben."
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "%{organizer} confirms each change personally, so the new time isn't final yet."
-msgstr "%{organizer} bestätigt jede Änderung persönlich, daher ist die neue Zeit noch nicht endgültig."
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name}, %{organizer} confirms each change personally, so the new time isn't final yet."
-msgstr "Hallo %{name}, %{organizer} bestätigt jede Änderung persönlich, daher ist die neue Zeit noch nicht endgültig."
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "Previously scheduled for %{time}."
-msgstr "Ursprünglich geplant für %{time}."
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "Reminder - reschedule request: %{name} - %{date}"
-msgstr "Erinnerung - Verschiebungsanfrage: %{name} - %{date}"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format
-msgid "Requested New Time"
-msgstr "Gewünschte neue Zeit"
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule Request Received"
-msgstr "Verschiebungsanfrage eingegangen"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule request"
-msgstr "Verschiebungsanfrage"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule request still waiting"
-msgstr "Verschiebungsanfrage wartet weiterhin"
-
-#: lib/tymeslot/emails/templates/booking_approval_request.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule request: %{name} - %{date}"
-msgstr "Verschiebungsanfrage: %{name} - %{date}"
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule requested"
-msgstr "Verschiebung angefragt"
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule requested: %{title} - %{date}"
-msgstr "Verschiebung angefragt: %{title} - %{date}"
-
-#: lib/tymeslot/emails/templates/booking_request_received.ex
-#, elixir-autogen, elixir-format
-msgid "The new time is held for you in the meantime, so nobody else can take it. You'll get an email with the updated calendar entry as soon as %{organizer} accepts."
-msgstr "Die neue Zeit ist in der Zwischenzeit für Sie reserviert, sodass niemand anderes sie buchen kann. Sobald %{organizer} zustimmt, erhalten Sie eine E-Mail mit dem aktualisierten Kalendereintrag."
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "%{organizer} didn't get to your reschedule request in time. Your previous time had already been given up for it, so your booking has been cancelled. The attached calendar file removes it from your calendar."
-msgstr "%{organizer} hat Ihre Verschiebungsanfrage nicht rechtzeitig beantwortet. Ihre bisherige Zeit war dafür bereits freigegeben, daher wurde Ihre Buchung storniert. Die angehängte Kalenderdatei entfernt sie aus Ihrem Kalender."
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "%{organizer} wasn't able to accept the new time. Your previous time had already been given up for it, so your booking has been cancelled. The attached calendar file removes it from your calendar."
-msgstr "%{organizer} konnte die neue Zeit nicht annehmen. Ihre bisherige Zeit war dafür bereits freigegeben, daher wurde Ihre Buchung storniert. Die angehängte Kalenderdatei entfernt sie aus Ihrem Kalender."
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format
-msgid "Booking cancelled"
-msgstr "Buchung storniert"
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name}, %{organizer} can't make the new time."
-msgstr "Hallo %{name}, %{organizer} kann die neue Zeit nicht wahrnehmen."
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{name}, your reschedule request wasn't answered in time."
-msgstr "Hallo %{name}, Ihre Verschiebungsanfrage wurde nicht rechtzeitig beantwortet."
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule Declined"
-msgstr "Verschiebung abgelehnt"
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule Request Expired"
-msgstr "Verschiebungsanfrage abgelaufen"
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule declined, booking cancelled: %{title} - %{date}"
-msgstr "Verschiebung abgelehnt, Buchung storniert: %{title} - %{date}"
-
-#: lib/tymeslot/emails/templates/booking_request_outcome.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule request expired, booking cancelled: %{title} - %{date}"
-msgstr "Verschiebungsanfrage abgelaufen, Buchung storniert: %{title} - %{date}"
-
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} asked to move their confirmed booking to this time, and the request wasn't answered before its deadline. The previous time had already been given up for it, so the booking has been cancelled. %{name} has been told and can book a new time."
-msgstr "%{name} hat gebeten, die bestätigte Buchung auf diese Zeit zu verschieben, und die Anfrage wurde nicht vor Ablauf der Frist beantwortet. Die bisherige Zeit war dafür bereits freigegeben, daher wurde die Buchung storniert. %{name} wurde informiert und kann eine neue Zeit buchen."
-
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format
-msgid "Reschedule request expired, booking cancelled: %{name} - %{date}"
-msgstr "Verschiebungsanfrage abgelaufen, Buchung storniert: %{name} - %{date}"
-
-#: lib/tymeslot/emails/templates/reschedule_request_expired.ex
-#, elixir-autogen, elixir-format
-msgid "Your booking with %{name} has been cancelled."
-msgstr "Ihre Buchung mit %{name} wurde storniert."
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "CAN YOU STILL MAKE IT?"
-msgstr "KÖNNEN SIE NOCH TEILNEHMEN?"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Can you still make it?"
-msgstr "Können Sie noch teilnehmen?"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to is coming up."
-msgstr "Hallo %{guest}, der Termin mit %{organizer}, zu dem %{booker} Sie eingeladen hat, steht bevor."
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Only %{booker} can move or cancel the meeting itself."
-msgstr "Nur %{booker} kann den Termin selbst verschieben oder absagen."
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "REMINDER: the meeting is in %{time_until}"
-msgstr "ERINNERUNG: Der Termin beginnt in %{time_until}"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "Reminder: the meeting with %{name} is in %{time_until}"
-msgstr "Erinnerung: Der Termin mit %{name} beginnt in %{time_until}"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "The meeting is coming up"
-msgstr "Der Termin steht bevor"
-
-#: lib/tymeslot/emails/templates/appointment_reminder.ex
-#, elixir-autogen, elixir-format
-msgid "The meeting with %{organizer} that %{booker} invited you to is coming up."
-msgstr "Der Termin mit %{organizer}, zu dem %{booker} Sie eingeladen hat, steht bevor."
-
-#: lib/tymeslot/emails/templates/video_room_creation_error.ex
-#, elixir-autogen, elixir-format
-msgid "%{provider} refused to create a video room. Whatever it was for went ahead without one: a booking is still confirmed, and a calendar event is still in your calendar. Nothing on this integration gets a video link until the setting described above changes, and links already sent keep working."
-msgstr "%{provider} hat das Erstellen eines Videoraums abgelehnt. Wofür er gedacht war, hat auch ohne ihn stattgefunden: Eine Buchung ist weiterhin bestätigt, und ein Kalendertermin steht weiterhin in Ihrem Kalender. Nichts in dieser Integration erhält einen Videolink, bis sich die oben beschriebene Einstellung ändert; bereits verschickte Links funktionieren weiter."
-
-#: lib/tymeslot/emails/templates/video_room_creation_error.ex
-#, elixir-autogen, elixir-format
-msgid "Bookings on %{provider} are getting no video link"
-msgstr "Buchungen über %{provider} erhalten keinen Videolink"
-
-#: lib/tymeslot/emails/templates/video_room_creation_error.ex
-#, elixir-autogen, elixir-format
-msgid "Change the setting described above, or ask whoever runs the server to. Once a booking gets its video link again, the notice on your video integration disappears."
-msgstr "Ändern Sie die oben beschriebene Einstellung, oder bitten Sie die Person, die den Server betreibt, darum. Sobald eine Buchung wieder ihren Videolink erhält, verschwindet der Hinweis bei Ihrer Video-Integration."
-
-#: lib/tymeslot/emails/templates/video_room_creation_error.ex
-#, elixir-autogen, elixir-format
-msgid "Integration"
-msgstr "Integration"
-
-#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
-#, elixir-autogen, elixir-format
-msgid "New link for the new time"
-msgstr "Neuer Link für die neue Zeit"
-
-#: lib/tymeslot/emails/templates/video_room_creation_error.ex
-#, elixir-autogen, elixir-format
-msgid "Open video settings"
-msgstr "Video-Einstellungen öffnen"
-
-#: lib/tymeslot/emails/templates/video_room_creation_error.ex
-#, elixir-autogen, elixir-format
-msgid "This is the only email you will get about this for now. If the same problem is still there in %{days} days, you will hear about it again. Your video settings show the notice for as long as it lasts."
-msgstr "Dies ist vorerst die einzige E-Mail dazu. Besteht dasselbe Problem in %{days} Tagen noch, hören Sie wieder davon. Ihre Video-Einstellungen zeigen den Hinweis, solange er gilt."
-
-#: lib/tymeslot/emails/templates/video_room_creation_error.ex
-#, elixir-autogen, elixir-format
-msgid "Video rooms not created"
-msgstr "Videoräume nicht erstellt"
-
-#: lib/tymeslot/emails/templates/video_room_creation_error.ex
-#, elixir-autogen, elixir-format
-msgid "What should I do?"
-msgstr "Was muss ich tun?"
-
-#: lib/tymeslot/emails/templates/video_room_creation_error.ex
-#, elixir-autogen, elixir-format
-msgid "What's happening?"
-msgstr "Was ist passiert?"
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
@@ -2640,16 +451,6 @@ msgstr "Ganztägig"
 #, elixir-autogen, elixir-format
 msgid "All day, until %{date}"
 msgstr "Ganztägig, bis %{date}"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Current Details"
-msgstr "Aktuelle Details"
-
-#: lib/tymeslot/emails/templates/event_update_notification.ex
-#, elixir-autogen, elixir-format
-msgid "Current details"
-msgstr "Aktuelle Details"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
@@ -2676,134 +477,22 @@ msgstr "Teilnehmer: %{attendee}"
 msgid "Message from attendee:"
 msgstr "Nachricht vom Teilnehmer:"
 
-#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
-#, elixir-autogen, elixir-format
-msgid "Forgot your password? Reset it here."
-msgstr "Passwort vergessen? Hier zurücksetzen."
-
-#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
-#, elixir-autogen, elixir-format
-msgid "If it wasn't you, you can ignore this email. No new account was created and nothing about your account has changed."
-msgstr "Falls Sie das nicht waren, können Sie diese E-Mail ignorieren. Es wurde kein neues Konto erstellt, und an Ihrem Konto hat sich nichts geändert."
-
-#: lib/tymeslot/emails/templates/no_password_to_reset.ex
-#, elixir-autogen, elixir-format
-msgid "If you didn't ask to reset your password, you can ignore this email. Nothing about your account has changed."
-msgstr "Falls Sie kein Zurücksetzen Ihres Passworts angefordert haben, können Sie diese E-Mail ignorieren. An Ihrem Konto hat sich nichts geändert."
-
-#: lib/tymeslot/emails/templates/no_password_to_reset.ex
-#, elixir-autogen, elixir-format
-msgid "No password to reset"
-msgstr "Kein Passwort zum Zurücksetzen"
-
-#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
-#, elixir-autogen, elixir-format
-msgid "Reset your password:"
-msgstr "Passwort zurücksetzen:"
-
-#: lib/tymeslot/emails/templates/no_password_to_reset.ex
-#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
-#, elixir-autogen, elixir-format
-msgid "Sign In to Tymeslot"
-msgstr "Bei Tymeslot anmelden"
-
-#: lib/tymeslot/emails/templates/no_password_to_reset.ex
-#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
-#, elixir-autogen, elixir-format
-msgid "Sign In to Tymeslot:"
-msgstr "Bei Tymeslot anmelden:"
-
-#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
-#, elixir-autogen, elixir-format
-msgid "Sign in instead of signing up."
-msgstr "Melden Sie sich an, statt sich neu zu registrieren."
-
-#: lib/tymeslot/emails/templates/no_password_to_reset.ex
-#, elixir-autogen, elixir-format
-msgid "Someone asked to reset the password for your Tymeslot account, but your account signs in with %{provider}, so it has no password to reset. Use the button below and choose %{provider} to sign in."
-msgstr "Jemand hat das Zurücksetzen des Passworts für Ihr Tymeslot-Konto angefordert. Ihr Konto meldet sich jedoch über %{provider} an und hat daher kein Passwort, das zurückgesetzt werden könnte. Nutzen Sie die Schaltfläche unten und wählen Sie %{provider}, um sich anzumelden."
-
-#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
-#, elixir-autogen, elixir-format
-msgid "Someone just tried to create a new Tymeslot account with this email address, which already has an account. If it was you, sign in below, or reset your password if you can't remember it."
-msgstr "Jemand hat gerade versucht, mit dieser E-Mail-Adresse ein neues Tymeslot-Konto zu erstellen, obwohl für sie bereits ein Konto besteht. Falls Sie das waren, melden Sie sich unten an oder setzen Sie Ihr Passwort zurück, wenn Sie es nicht mehr wissen."
-
-#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
-#, elixir-autogen, elixir-format
-msgid "Someone tried to sign up with your email address."
-msgstr "Jemand hat versucht, sich mit Ihrer E-Mail-Adresse zu registrieren."
-
 #: lib/tymeslot/emails/email_service/auth_emails.ex
 #, elixir-autogen, elixir-format
 msgid "You already have a Tymeslot account"
 msgstr "Sie haben bereits ein Tymeslot-Konto"
-
-#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
-#, elixir-autogen, elixir-format
-msgid "You already have an account"
-msgstr "Sie haben bereits ein Konto"
-
-#: lib/tymeslot/emails/templates/no_password_to_reset.ex
-#, elixir-autogen, elixir-format
-msgid "You sign in with %{provider}."
-msgstr "Sie melden sich über %{provider} an."
 
 #: lib/tymeslot/emails/email_service/auth_emails.ex
 #, elixir-autogen, elixir-format
 msgid "Your Tymeslot account has no password"
 msgstr "Ihr Tymeslot-Konto hat kein Passwort"
 
-#: lib/tymeslot/emails/templates/no_password_to_reset.ex
-#, elixir-autogen, elixir-format
-msgid "Your Tymeslot account has no password to reset."
-msgstr "Ihr Tymeslot-Konto hat kein Passwort, das zurückgesetzt werden könnte."
-
 #: lib/tymeslot/emails/shared/sign_in_provider.ex
 #, elixir-autogen, elixir-format
 msgid "single sign-on"
 msgstr "Single Sign-on"
 
-#: lib/tymeslot/emails/templates/signup_attempt_notice.ex
-#, elixir-autogen, elixir-format
-msgid "Someone just tried to create a new Tymeslot account with this email address, which already has an account. If it was you, sign in with %{provider} below."
-msgstr "Jemand hat gerade versucht, mit dieser E-Mail-Adresse ein neues Tymeslot-Konto zu erstellen, obwohl für sie bereits ein Konto besteht. Falls Sie das waren, melden Sie sich unten über %{provider} an."
-
-#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Confirm Email & Finish Signing Up"
-msgstr "E-Mail bestätigen und Registrierung abschließen"
-
-#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Confirm Email & Finish Signing Up:"
-msgstr "E-Mail bestätigen und Registrierung abschließen:"
-
-#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Confirm your email and your account is ready."
-msgstr "Bestätigen Sie Ihre E-Mail-Adresse, und Ihr Konto ist bereit."
-
 #: lib/tymeslot/emails/email_service/auth_emails.ex
 #, elixir-autogen, elixir-format
 msgid "Confirm your email to finish signing up"
 msgstr "Bestätigen Sie Ihre E-Mail-Adresse, um die Registrierung abzuschließen"
-
-#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "Confirm your email to finish signing up for Tymeslot."
-msgstr "Bestätigen Sie Ihre E-Mail-Adresse, um die Registrierung bei Tymeslot abzuschließen."
-
-#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "One step to go"
-msgstr "Nur noch ein Schritt"
-
-#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "This link expires in 24 hours. If you didn't sign up for Tymeslot, you can ignore this email and no account will be created."
-msgstr "Dieser Link ist 24 Stunden gültig. Falls Sie sich nicht bei Tymeslot registriert haben, können Sie diese E-Mail ignorieren; es wird kein Konto erstellt."
-
-#: lib/tymeslot/emails/templates/social_signup_confirmation.ex
-#, elixir-autogen, elixir-format
-msgid "You're signing up for Tymeslot with %{provider}. Confirm this email address to create your account and sign in."
-msgstr "Sie registrieren sich bei Tymeslot über %{provider}. Bestätigen Sie diese E-Mail-Adresse, um Ihr Konto zu erstellen und sich anzumelden."

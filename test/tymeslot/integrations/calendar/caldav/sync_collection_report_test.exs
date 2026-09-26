@@ -5,8 +5,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReportTest do
   The network round-trip is already covered by `CalDAV.Http` tests; this
   module focuses on the pure building/parsing logic:
 
-    * `build_report/1` produces an initial-sync body for `nil` and a
-      delta body that embeds (and properly escapes) the stored token.
+    * `build_report/1` produces a delta body that embeds (and properly
+      escapes) the stored token.
     * `parse_response/1` splits 207 Multi-Status responses into changed
       events and the hrefs the server reported as removed, surfaces the new
       sync token, and refuses a delta whose event data the server withheld
@@ -27,18 +27,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReportTest do
   alias Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport
 
   describe "build_report/1" do
-    test "nil token produces an initial-sync body with an empty sync-token element" do
-      body = SyncCollectionReport.build_report(nil)
-
-      assert body =~ "<d:sync-collection"
-      assert body =~ "<d:sync-token/>"
-      assert body =~ "<d:sync-level>1</d:sync-level>"
-    end
-
     test "binary token embeds the token value" do
       body = SyncCollectionReport.build_report("https://example.com/sync/token-42")
 
+      assert body =~ "<d:sync-collection"
       assert body =~ "<d:sync-token>https://example.com/sync/token-42</d:sync-token>"
+      assert body =~ "<d:sync-level>1</d:sync-level>"
     end
 
     test "a token containing XML special characters is escaped" do

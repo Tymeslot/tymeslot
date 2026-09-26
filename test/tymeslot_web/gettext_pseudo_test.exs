@@ -28,21 +28,18 @@ defmodule TymeslotWeb.GettextPseudoTest do
     end
 
     test "wraps a plain-English msgid in coverage markers" do
-      result = Gettext.dgettext(Backend, "dashboard", "Save")
+      result = Gettext.dgettext(Backend, "dashboard_common", "Save")
 
       assert result =~ "⟦"
       assert result =~ "⟧"
     end
 
-    test "resolves the real English for key-based catalogs, then pseudo-ises it" do
-      # The booking domain uses semantic keys as msgids ("meeting_confirmed").
-      # Pseudo must render the *English* the user sees, not the developer key.
-      result = Gettext.dgettext(Backend, "booking", "meeting_confirmed")
+    test "interpolates bindings before pseudo-ising" do
+      result = Gettext.dgettext(Backend, "booking", "Booking with %{name}", name: "Ada")
 
       assert result =~ "⟦"
-      # English "Meeting Confirmed!" — carries the "!", never the key's "_".
-      assert result =~ "!"
-      refute result =~ "_"
+      refute result =~ "%{name}"
+      assert result =~ "Áðá"
     end
 
     test "handles plural forms" do
@@ -66,7 +63,7 @@ defmodule TymeslotWeb.GettextPseudoTest do
 
     test "German renders the real translation without markers" do
       Gettext.put_locale(Backend, "de")
-      result = Gettext.dgettext(Backend, "booking", "meeting_confirmed")
+      result = Gettext.dgettext(Backend, "booking", "Meeting Confirmed!")
 
       assert result == "Termin bestätigt!"
       refute result =~ "⟦"
@@ -74,7 +71,7 @@ defmodule TymeslotWeb.GettextPseudoTest do
 
     test "English renders the real translation without markers" do
       Gettext.put_locale(Backend, "en")
-      result = Gettext.dgettext(Backend, "booking", "meeting_confirmed")
+      result = Gettext.dgettext(Backend, "booking", "Meeting Confirmed!")
 
       assert result == "Meeting Confirmed!"
       refute result =~ "⟦"
@@ -86,7 +83,7 @@ defmodule TymeslotWeb.GettextPseudoTest do
       Application.put_env(:tymeslot, :pseudo_locale_enabled, false)
       Gettext.put_locale(Backend, "pseudo")
 
-      result = Gettext.dgettext(Backend, "dashboard", "Save")
+      result = Gettext.dgettext(Backend, "dashboard_common", "Save")
 
       refute result =~ "⟦"
       assert result == "Save"

@@ -11,44 +11,15 @@ msgstr ""
 "Language: cs\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 
-#: Error Messages
-msgid "something_went_wrong"
-msgstr "Došlo k chybě"
-
-msgid "try_again_later"
-msgstr "Zkuste to prosím později"
-
-msgid "invalid_meeting_link"
-msgstr "Neplatný odkaz na schůzku"
-
-msgid "slot_no_longer_available"
-msgstr "Tento termín už není k dispozici"
-
-msgid "name_required"
-msgstr "Zadejte jméno"
-
-msgid "email_required"
-msgstr "Zadejte e-mailovou adresu"
-
-msgid "email_invalid"
-msgstr "Zadejte platnou e-mailovou adresu"
-
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
-msgid "calendar_setup_required"
+msgid "We can't show this scheduling page yet"
 msgstr "Tato rezervační stránka zatím není k dispozici"
 
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
-msgid "connect_calendar_first"
+msgid "If you are the organizer, please connect a calendar in your dashboard."
 msgstr "Pokud jste hostitel, připojte si prosím kalendář na své nástěnce."
-
-#: Status
-msgid "loading"
-msgstr "Načítání…"
-
-msgid "submitting"
-msgstr "Odesílání…"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
