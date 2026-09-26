@@ -75,10 +75,15 @@ defmodule Tymeslot.Integrations.Calendar.SelectionFiltersTest do
   describe "writable_integrations/1" do
     test "drops a connection whose calendars are all read-only" do
       # What a subscribed ICS feed looks like: one synthetic entry, read-only.
-      feed = %{id: 1, calendar_list: entries([%{id: "ics", selected: true, read_only: true}])}
+      feed = %{
+        id: 1,
+        provider: "ics_url",
+        calendar_list: entries([%{id: "ics", selected: true, read_only: true}])
+      }
 
       account = %{
         id: 2,
+        provider: "caldav",
         calendar_list: entries([%{id: "main", selected: true, read_only: false}])
       }
 
@@ -90,8 +95,8 @@ defmodule Tymeslot.Integrations.Calendar.SelectionFiltersTest do
       # provider's own default is written to instead.
       assert [%{id: 1}, %{id: 2}] =
                Selection.writable_integrations([
-                 %{id: 1, calendar_list: nil},
-                 %{id: 2, calendar_list: []}
+                 %{id: 1, provider: "caldav", calendar_list: nil},
+                 %{id: 2, provider: "caldav", calendar_list: []}
                ])
     end
 
@@ -102,14 +107,27 @@ defmodule Tymeslot.Integrations.Calendar.SelectionFiltersTest do
           %{id: "mine", selected: true, read_only: false}
         ])
 
-      assert [%{id: 1}] = Selection.writable_integrations([%{id: 1, calendar_list: mixed}])
+      assert [%{id: 1}] =
+               Selection.writable_integrations([
+                 %{id: 1, provider: "caldav", calendar_list: mixed}
+               ])
     end
 
     test "drops a connection whose only writable calendar is deselected" do
       # A calendar the host has switched off is not a place to put an event.
       list = entries([%{id: "off", selected: false, read_only: false}])
 
-      assert Selection.writable_integrations([%{id: 1, calendar_list: list}]) == []
+      assert Selection.writable_integrations([%{id: 1, provider: "caldav", calendar_list: list}]) ==
+               []
+    end
+
+    test "drops a read-only provider even when its calendars were never listed" do
+      # A subscription is read-only by provider, not only by its synthetic
+      # entry, so a missing list must not make it look undiscovered.
+      assert Selection.writable_integrations([
+               %{id: 1, provider: "ics_url", calendar_list: nil},
+               %{id: 2, provider: "caldav", calendar_list: nil}
+             ]) == [%{id: 2, provider: "caldav", calendar_list: nil}]
     end
   end
 

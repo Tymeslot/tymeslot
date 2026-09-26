@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
       <div class="flex items-center justify-between gap-4 flex-wrap">
         <.section_header
           icon="hero-video-camera"
-          title={dgettext("dashboard_integrations", "Video Integration")}
+          title={dgettext("dashboard_video", "Video Integration")}
         />
         <button
           phx-click="show_picker"
@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
           class="inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-4 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600 shrink-0"
         >
           <.icon name="hero-plus" class="w-4 h-4" />
-          {dgettext("dashboard_integrations", "Connect a video provider")}
+          {dgettext("dashboard_video", "Connect a video provider")}
         </button>
       </div>
 
@@ -49,11 +49,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
               <.icon name="hero-video-camera" class="h-7 w-7" />
             </div>
             <h3 class="text-token-lg font-semibold text-tymeslot-800">
-              {dgettext("dashboard_integrations", "No video providers connected yet")}
+              {dgettext("dashboard_video", "No video providers connected yet")}
             </h3>
             <p class="mx-auto mt-1 max-w-md text-token-sm text-tymeslot-500">
               {dgettext(
-                "dashboard_integrations",
+                "dashboard_video",
                 "Connect one so online meetings get a video link added automatically when they're booked."
               )}
             </p>
@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
               class="mt-5 inline-flex items-center gap-1.5 rounded-token-lg bg-turquoise-500 px-4 py-2 text-token-sm font-semibold text-white transition-colors hover:bg-turquoise-600"
             >
               <.icon name="hero-plus" class="w-4 h-4" />
-              {dgettext("dashboard_integrations", "Connect a video provider")}
+              {dgettext("dashboard_video", "Connect a video provider")}
             </button>
           </div>
         <% else %>
@@ -77,7 +77,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
               <div class="space-y-3">
                 <%= if show_section_headers do %>
                   <h3 class="text-lg font-bold text-turquoise-800">
-                    {dgettext("dashboard_integrations", "Active Video Integrations")}
+                    {dgettext("dashboard_video", "Active Video Integrations")}
                   </h3>
                 <% end %>
 
@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
               <div class="space-y-3">
                 <%= if show_section_headers do %>
                   <h3 class="text-lg font-semibold text-tymeslot-600">
-                    {dgettext("dashboard_integrations", "Inactive Video Integrations")}
+                    {dgettext("dashboard_video", "Inactive Video Integrations")}
                   </h3>
                 <% end %>
 
@@ -117,10 +117,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettings.ComponentView do
         <ProviderPickerModal.provider_picker_modal
           id="video-provider-picker"
           show={@show_picker}
-          title={dgettext("dashboard_integrations", "Connect a video provider")}
+          title={dgettext("dashboard_video", "Connect a video provider")}
           subtitle={
             dgettext(
-              "dashboard_integrations",
+              "dashboard_video",
               "Add a video link to online meetings automatically when they're booked."
             )
           }

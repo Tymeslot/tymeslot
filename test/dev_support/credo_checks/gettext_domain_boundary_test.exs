@@ -15,6 +15,24 @@ defmodule CredoChecks.GettextDomainBoundaryTest do
     :ok
   end
 
+  describe "default allowlist" do
+    # The allowlist and the catalogues on disk describe the same set from two
+    # sides. A domain allowed but never extracted is a stale entry that lets a
+    # typo through; a domain extracted but not allowed cannot be linted clean.
+    test "names exactly the domains extracted into priv/gettext" do
+      allowed = MapSet.new(GettextDomainBoundary.param_defaults()[:domains])
+
+      extracted =
+        __DIR__
+        |> Path.join("../../../priv/gettext/*.pot")
+        |> Path.wildcard()
+        |> MapSet.new(&Path.basename(&1, ".pot"))
+
+      assert MapSet.size(extracted) > 0
+      assert allowed == extracted
+    end
+  end
+
   describe "bare gettext/ngettext are flagged" do
     test "gettext/1 is flagged" do
       """

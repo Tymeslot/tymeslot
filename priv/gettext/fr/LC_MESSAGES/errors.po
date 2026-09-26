@@ -4,44 +4,15 @@ msgstr ""
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n>1);\n"
 
-#: Error Messages
-msgid "something_went_wrong"
-msgstr "Une erreur est survenue"
-
-msgid "try_again_later"
-msgstr "Veuillez réessayer ultérieurement"
-
-msgid "invalid_meeting_link"
-msgstr "Lien de réunion invalide"
-
-msgid "slot_no_longer_available"
-msgstr "Ce créneau n’est plus disponible"
-
-msgid "name_required"
-msgstr "Nom requis"
-
-msgid "email_required"
-msgstr "E-mail requis"
-
-msgid "email_invalid"
-msgstr "Adresse e-mail invalide"
-
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
-msgid "calendar_setup_required"
+msgid "We can't show this scheduling page yet"
 msgstr "Configuration du calendrier requise"
 
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
-msgid "connect_calendar_first"
+msgid "If you are the organizer, please connect a calendar in your dashboard."
 msgstr "Veuillez d’abord connecter votre calendrier"
-
-#: Status
-msgid "loading"
-msgstr "Chargement"
-
-msgid "submitting"
-msgstr "Envoi en cours"
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format

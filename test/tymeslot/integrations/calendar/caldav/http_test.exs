@@ -222,6 +222,22 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.HttpTest do
       assert {:error, {:unexpected_status, 410}} =
                Http.report(url, "user", "pass", "<calendar-query/>")
     end
+
+    test "abandons a body past the caller's byte budget as too large, not as a network failure" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        conn
+        |> Conn.put_resp_header("content-type", "application/xml")
+        |> Conn.send_resp(207, String.duplicate("x", 101))
+      end)
+
+      url = "https://caldav.example.com/calendars/user/personal/"
+
+      assert {:error, :response_too_large} =
+               Http.report(url, "user", "pass", "<sync-collection/>", max_response_bytes: 100)
+
+      assert {:ok, %Req.Response{status: 207}} =
+               Http.report(url, "user", "pass", "<sync-collection/>", max_response_bytes: 101)
+    end
   end
 
   describe "put_event/5" do

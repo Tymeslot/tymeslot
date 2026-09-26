@@ -123,7 +123,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                 data-testid="next-step"
                 disabled={is_nil(@selected_duration)}
               >
-                {dgettext("booking", "next")} →
+                {dgettext("booking", "Next")} →
               </button>
             </div>
           </div>

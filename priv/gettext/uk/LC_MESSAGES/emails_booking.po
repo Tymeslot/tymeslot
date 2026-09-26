@@ -1,0 +1,1062 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: uk\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100 != 11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10||n%100>=20) ? 1 : 2);\n"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} paid"
+msgstr "Сплачено %{amount}"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} returned for “%{title}”"
+msgstr "Повернуто %{amount} за «%{title}»"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "%{amount} returned to your card"
+msgstr "%{amount} повернуто на вашу картку"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has moved your meeting."
+msgstr "%{name} переніс(ла) вашу зустріч."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has scheduled a meeting with you."
+msgstr "%{name} запланував(-ла) зустріч з вами."
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has updated an event you're attending."
+msgstr "%{name} оновив(-ла) подію, на яку ви записані."
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "(none)"
+msgstr "(немає)"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "(previous)"
+msgstr "(попередній)"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "(updated)"
+msgstr "(оновлено)"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "- No reminder emails are scheduled for this appointment"
+msgstr "- Для цієї зустрічі не заплановано нагадувань електронною поштою"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "- Prepare an agenda if needed"
+msgstr "- Підготуйте порядок денний, якщо потрібно"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "- Review any relevant materials"
+msgstr "- Перегляньте відповідні матеріали"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "- Set a reminder %{time} before"
+msgstr "- Налаштуйте нагадування за %{time} до початку"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "- Test video/audio setup if virtual"
+msgstr "- Перевірте налаштування відео/аудіо, якщо зустріч онлайн"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "15 minutes"
+msgstr "15 хвилин"
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "A meeting changed in your external calendar."
+msgstr "У вашому зовнішньому календарі змінено зустріч."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "A partial refund was issued."
+msgstr "Здійснено часткове повернення коштів."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Action required"
+msgstr "Потрібна дія"
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Action required: \"%{title}\" was deleted from your external calendar (%{date})"
+msgstr "Потрібна дія: «%{title}» видалено з вашого зовнішнього календаря (%{date})"
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Action required: \"%{title}\" was rescheduled in your external calendar (%{date})"
+msgstr "Потрібна дія: «%{title}» перенесено у вашому зовнішньому календарі (%{date})"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "After"
+msgstr "Після"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Appointment Confirmed - %{date} with %{name}"
+msgstr "Зустріч підтверджено - %{date} з %{name}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Appointment Confirmed!"
+msgstr "Зустріч підтверджено!"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "Attendee paid: %{amount}"
+msgstr "Учасник сплатив: %{amount}"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "Before"
+msgstr "До"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Best,"
+msgstr "З повагою,"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "CAN YOU STILL MAKE IT?"
+msgstr "ЧИ ЗМОЖЕТЕ ВИ БУТИ?"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "CANCELLED APPOINTMENT DETAILS:"
+msgstr "ДЕТАЛІ СКАСОВАНОЇ ЗУСТРІЧІ:"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Can you still make it?"
+msgstr "Чи зможете ви бути?"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Can't make it"
+msgstr "Не зможу прийти"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Can't make it: %{url}"
+msgstr "Не зможу прийти: %{url}"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr "Скасувати"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Cancel Appointment"
+msgstr "Скасувати зустріч"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Скасовано"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelling does not refund anything on its own. Issue or decline the refund under Payments in your dashboard."
+msgstr "Скасування саме собою не повертає кошти. Виконайте або відхиліть повернення коштів у розділі «Платежі» вашої панелі керування."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Confirmed"
+msgstr "Підтверджено"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "Current Details"
+msgstr "Поточні дані"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "Current details"
+msgstr "Поточні дані"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "DETAILS:"
+msgstr "ДЕТАЛІ:"
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Date:"
+msgstr "Дата:"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "Date: %{date}"
+msgstr "Дата: %{date}"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "Description"
+msgstr "Опис"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Does the new time not work?"
+msgstr "Новий час не підходить?"
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Duration:"
+msgstr "Тривалість:"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "Event Updated"
+msgstr "Подію оновлено"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "Event updated"
+msgstr "Подію оновлено"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "Field"
+msgstr "Поле"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "Funds will arrive on your usual Stripe payout schedule."
+msgstr "Кошти надійдуть за вашим звичайним графіком виплат Stripe."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to has been cancelled."
+msgstr "Вітаю, %{guest}! Зустріч з %{organizer}, на яку вас запросив(ла) %{booker}, скасовано."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to has been moved to a new time."
+msgstr "Вітаю, %{guest}! Зустріч з %{organizer}, на яку вас запросив(ла) %{booker}, перенесено на новий час."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - the meeting with %{organizer} that %{booker} invited you to is coming up."
+msgstr "Вітаю, %{guest}! Наближається зустріч із %{organizer}, на яку вас запросив %{booker}."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest},"
+msgstr "Вітаю, %{guest}!"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - %{amount} of your %{original} payment has been refunded."
+msgstr "Вітаю, %{name} - %{amount} з вашого початкового платежу на суму %{original} було повернуто."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - I've blocked the time on my calendar and I'm looking forward to our meeting."
+msgstr "Вітаю, %{name} - я заблокував(-ла) час у своєму календарі й з нетерпінням чекаю на нашу зустріч."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - our appointment has been cancelled. I'm sorry for the inconvenience."
+msgstr "Вітаю, %{name} - нашу зустріч скасовано. Перепрошую за незручності."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - our appointment has been moved. Here's the new time, and my calendar is already updated."
+msgstr "Вітаю, %{name} - нашу зустріч перенесено. Ось новий час, мій календар уже оновлено."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} - your payment of %{amount} has been refunded in full."
+msgstr "Вітаю, %{name} - ваш платіж на суму %{amount} було повністю повернуто."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name},"
+msgstr "Вітаю, %{name}!"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, %{amount} of your %{original} payment has been refunded."
+msgstr "Вітаю, %{name}! %{amount} з вашого початкового платежу на суму %{original} було повернуто."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, your payment of %{amount} has been refunded in full."
+msgstr "Вітаю, %{name}! Ваш платіж на суму %{amount} було повністю повернуто."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Hi - %{amount} of your %{original} payment has been refunded."
+msgstr "Вітаю - %{amount} з вашого початкового платежу на суму %{original} було повернуто."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Hi - your payment of %{amount} has been refunded in full."
+msgstr "Вітаю - ваш платіж на суму %{amount} було повністю повернуто."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Hi, %{amount} of your %{original} payment has been refunded."
+msgstr "Вітаю! %{amount} з вашого початкового платежу на суму %{original} було повернуто."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Hi, your payment of %{amount} has been refunded in full."
+msgstr "Вітаю! Ваш платіж на суму %{amount} було повністю повернуто."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Host video call"
+msgstr "Розпочати відеодзвінок"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "I'm looking forward to our conversation!"
+msgstr "З нетерпінням чекаю на нашу розмову!"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "I'm looking forward to our meeting. I've blocked the time on my calendar and will be ready for you."
+msgstr "З нетерпінням чекаю на нашу зустріч. Я вже зарезервував(-ла) час у календарі та буду готовий(-а) до розмови."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "If the meeting is no longer happening, please cancel it in Tymeslot so the attendee is notified and the time slot is freed up."
+msgstr "Якщо зустріч більше не відбудеться, будь ласка, скасуйте її в Tymeslot, щоб учасник отримав сповіщення, а часовий слот звільнився."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
+msgstr "Якщо новий час остаточний, будь ласка, оновіть або перенесіть бронювання в Tymeslot, щоб учасник отримав оновлені деталі."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "If you have any questions, please don't hesitate to reach out."
+msgstr "Якщо у вас виникнуть запитання, будь ласка, звертайтеся."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "If you have any questions, please reply to this email and %{name} will be happy to help."
+msgstr "Якщо у вас виникнуть запитання, дайте відповідь на цей лист, і %{name} із радістю вам допоможе."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Join Meeting"
+msgstr "Приєднатися до зустрічі"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Join Video Meeting"
+msgstr "Приєднатися до відеозустрічі"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Join when you're ready"
+msgstr "Приєднуйтесь, коли будете готові"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr "Місце проведення"
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Location:"
+msgstr "Місце:"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Looking forward to meeting you!"
+msgstr "З нетерпінням чекаю на зустріч!"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "MEETING DETAILS:"
+msgstr "ДЕТАЛІ ЗУСТРІЧІ:"
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting"
+msgstr "Зустріч"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Cancelled"
+msgstr "Зустріч скасовано"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Cancelled - %{date} with %{name}"
+msgstr "Зустріч скасовано - %{date} з %{name}"
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Deleted in External Calendar"
+msgstr "Зустріч видалено в зовнішньому календарі"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Rescheduled"
+msgstr "Зустріч перенесено"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Rescheduled - %{date} with %{name}"
+msgstr "Зустріч перенесено - %{date} з %{name}"
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Rescheduled in External Calendar"
+msgstr "Зустріч перенесено в зовнішньому календарі"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting cancelled"
+msgstr "Зустріч скасовано"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting rescheduled"
+msgstr "Зустріч перенесено"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting with %{name}"
+msgstr "Зустріч із %{name}"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting with:"
+msgstr "Зустріч із:"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting: %{title}"
+msgstr "Зустріч: %{title}"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "NEW MEETING DETAILS:"
+msgstr "НОВІ ДЕТАЛІ ЗУСТРІЧІ:"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Need to change plans?"
+msgstr "Змінилися плани?"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Need to make changes?"
+msgstr "Потрібно внести зміни?"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "New Appointment Booked!"
+msgstr "Заброньовано нову зустріч!"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "New Appointment: %{name} - %{date}"
+msgstr "Нова зустріч: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "New booking"
+msgstr "Нове бронювання"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "New link for the new time"
+msgstr "Нове посилання на новий час"
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Not specified"
+msgstr "Не вказано"
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "ORIGINAL BOOKING DETAILS:"
+msgstr "ДЕТАЛІ ПОЧАТКОВОГО БРОНЮВАННЯ:"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Only %{booker} can move or cancel the meeting itself."
+msgstr "Лише %{booker} може перенести або скасувати саму зустріч."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Original payment: %{amount}"
+msgstr "Початковий платіж: %{amount}"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Our appointment has been moved. Here's the new time, and my calendar is already updated."
+msgstr "Нашу зустріч перенесено. Ось новий час, мій календар уже оновлено."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Our meeting is coming up"
+msgstr "Наша зустріч уже незабаром"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "PAYMENT RECEIPT:"
+msgstr "КВИТАНЦІЯ ПРО ОПЛАТУ:"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "PAYMENT RECEIVED:"
+msgstr "ОПЛАТУ ОТРИМАНО:"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "PREPARATION REMINDERS:"
+msgstr "НАГАДУВАННЯ ЩОДО ПІДГОТОВКИ:"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Partial Refund Issued - %{amount}"
+msgstr "Часткове повернення коштів - %{amount}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "Payment receipt"
+msgstr "Квитанція про оплату"
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Please review and update the booking in Tymeslot."
+msgstr "Будь ласка, перегляньте та оновіть бронювання в Tymeslot."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Previously scheduled for"
+msgstr "Раніше було заплановано на"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "QUESTIONS?"
+msgstr "ЗАПИТАННЯ?"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "QUICK PREP:"
+msgstr "ШВИДКА ПІДГОТОВКА:"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Questions? %{contact_info}"
+msgstr "Маєте запитання? %{contact_info}"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Quick actions"
+msgstr "Швидкі дії"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "REFUND DETAILS:"
+msgstr "ДЕТАЛІ ПОВЕРНЕННЯ:"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "REFUND ISSUED"
+msgstr "КОШТИ ПОВЕРНУТО"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "REFUND OUTSTANDING:"
+msgstr "КОШТИ ДО ПОВЕРНЕННЯ:"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "REMINDER: Our meeting in %{time_until}"
+msgstr "НАГАДУВАННЯ: Наша зустріч через %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "REMINDER: the meeting is in %{time_until}"
+msgstr "НАГАДУВАННЯ: зустріч почнеться через %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Ready to join when it's time?"
+msgstr "Готові приєднатися, коли настане час?"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "Reference: %{ref}"
+msgstr "Код операції: %{ref}"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Refund Issued - %{amount}"
+msgstr "Кошти повернуто - %{amount}"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Refund details"
+msgstr "Деталі повернення"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Refund outstanding"
+msgstr "Кошти до повернення"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Refunded"
+msgstr "Повернуто"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Refunded amount: %{amount}"
+msgstr "Сума повернення: %{amount}"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Refunds typically take 5–10 business days to appear on your original payment method, depending on your bank."
+msgstr "Зазвичай кошти надходять на початковий спосіб оплати протягом 5–10 робочих днів, залежно від вашого банку."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder"
+msgstr "Нагадування"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder: Our meeting is %{time_until}"
+msgstr "Нагадування: Наша зустріч через %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Reminder: the meeting with %{name} is in %{time_until}"
+msgstr "Нагадування: зустріч із %{name} почнеться через %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Reminders Scheduled"
+msgstr "Заплановані нагадування"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Reschedule"
+msgstr "Перенести"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Rescheduled"
+msgstr "Перенесено"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Rescheduled: %{name} - %{date}"
+msgstr "Перенесено: %{name} - %{date}"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "STARTING IN %{time_until}"
+msgstr "ПОЧИНАЄТЬСЯ ЧЕРЕЗ %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Same link, new time"
+msgstr "Те саме посилання, новий час"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Schedule New Appointment"
+msgstr "Запланувати нову зустріч"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "See you %{time_until}!"
+msgstr "До зустрічі %{time_until}!"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Start Meeting"
+msgstr "Розпочати зустріч"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Starting %{time_until}"
+msgstr "Починається через %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Starting in %{time_until}"
+msgstr "Починається через %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "Starting soon"
+msgstr "Скоро почнеться"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "The appointment with %{name} has been cancelled."
+msgstr "Зустріч з %{name} було скасовано."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "The attendee has been notified of the cancellation."
+msgstr "Учасника було повідомлено про скасування."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "The attendee has been notified of the new time."
+msgstr "Учасника повідомлено про новий час."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting \"%{title}\" was deleted from your external calendar but is still active in Tymeslot."
+msgstr "Зустріч «%{title}» видалено з вашого зовнішнього календаря, але вона все ще активна в Tymeslot."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting \"%{title}\" was deleted from your external calendar. Tymeslot still has this booking on record - please review and cancel it here if the meeting is no longer taking place."
+msgstr "Зустріч «%{title}» видалено з вашого зовнішнього календаря. Tymeslot усе ще зберігає це бронювання - будь ласка, перегляньте його й скасуйте тут, якщо зустріч більше не відбудеться."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking - please review the details and update or cancel it accordingly."
+msgstr "Зустріч «%{title}» перенесено у вашому зовнішньому календарі. У Tymeslot усе ще збережено початкове бронювання - будь ласка, перегляньте деталі та оновіть або скасуйте його відповідно."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting \"%{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking shown below."
+msgstr "Зустріч «%{title}» перенесено у вашому зовнішньому календарі. У Tymeslot усе ще збережено початкове бронювання, показане нижче."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting has moved."
+msgstr "Зустріч перенесено."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting is coming up"
+msgstr "Наближається зустріч"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting with %{organizer} that %{booker} invited you to has been cancelled."
+msgstr "Зустріч з %{organizer}, на яку вас запросив(ла) %{booker}, скасовано."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting with %{organizer} that %{booker} invited you to has been moved to a new time."
+msgstr "Зустріч з %{organizer}, на яку вас запросив(ла) %{booker}, перенесено на новий час."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "The meeting with %{organizer} that %{booker} invited you to is coming up."
+msgstr "Наближається зустріч із %{organizer}, на яку вас запросив %{booker}."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting was <strong>removed from your external calendar</strong> but is still active in Tymeslot. If the meeting is no longer happening, please cancel it in Tymeslot so the attendee is notified and the time slot is freed up."
+msgstr "Цю зустріч <strong>видалено з вашого зовнішнього календаря</strong>, але вона все ще активна в Tymeslot. Якщо вона більше не відбудеться, будь ласка, скасуйте її в Tymeslot, щоб учасник отримав сповіщення, а часовий слот звільнився."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "This meeting was <strong>rescheduled in your external calendar</strong>. Tymeslot still shows the original time above. If the new time is final, please update or reschedule the booking in Tymeslot so the attendee receives updated details."
+msgstr "Цю зустріч <strong>перенесено у вашому зовнішньому календарі</strong>. У Tymeslot вище все ще показано початковий час. Якщо новий час остаточний, будь ласка, оновіть або перенесіть бронювання в Tymeslot, щоб учасник отримав оновлені деталі."
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "This notification was triggered automatically when a change was detected in your external calendar."
+msgstr "Це сповіщення було створено автоматично, коли у вашому зовнішньому календарі виявлено зміну."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "This time slot is now available for booking again."
+msgstr "Цей час знову доступний для бронювання."
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "Time"
+msgstr "Час"
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "Time:"
+msgstr "Час:"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr "Назва"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "Tymeslot platform fee: %{amount}"
+msgstr "Комісія платформи Tymeslot: %{amount}"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "Updated"
+msgstr "Оновлено"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "Updated: %{title} - %{date}"
+msgstr "Оновлено: %{title} - %{date}"
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "View Meeting Details"
+msgstr "Переглянути деталі зустрічі"
+
+#: lib/tymeslot/emails/templates/external_booking_change.ex
+#, elixir-autogen, elixir-format
+msgid "View meeting:"
+msgstr "Переглянути зустріч:"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "View receipt"
+msgstr "Переглянути квитанцію"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "View receipt: %{url}"
+msgstr "Переглянути квитанцію: %{url}"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Visit:"
+msgstr "Посилання:"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "WILL YOU BE THERE AT THE NEW TIME?"
+msgstr "ЧИ БУДЕТЕ ВИ ПРИСУТНІ В НОВИЙ ЧАС?"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "WILL YOU BE THERE?"
+msgstr "ЧИ БУДЕТЕ ВИ ПРИСУТНІ?"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "We're writing to confirm that your appointment has been cancelled."
+msgstr "Пишемо, щоб підтвердити скасування вашої зустрічі."
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "What Changed"
+msgstr "Що змінилося"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "What changed"
+msgstr "Що змінилося"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Will you be there at the new time?"
+msgstr "Чи будете ви присутні в новий час?"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Will you be there?"
+msgstr "Чи будете ви присутні?"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "Would you like to schedule a new appointment?"
+msgstr "Бажаєте запланувати нову зустріч?"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Yes, I'll attend"
+msgstr "Так, я буду"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Yes, I'll attend: %{url}"
+msgstr "Так, я буду: %{url}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "You can change your response any time using the buttons above."
+msgstr "Ви можете змінити свою відповідь у будь-який час за допомогою кнопок вище."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "You can change your response any time using the links above."
+msgstr "Ви можете змінити свою відповідь у будь-який час за допомогою посилань вище."
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "You don't need to do anything. If you added the meeting to your calendar, the attached file marks it as cancelled there."
+msgstr "Вам нічого не потрібно робити. Якщо ви додали зустріч до свого календаря, вкладений файл позначить її там як скасовану."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "You received %{amount}"
+msgstr "Ви отримали %{amount}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation/payment_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "You received: %{amount} (less Stripe processing fees)"
+msgstr "Ви отримали: %{amount} (без урахування комісії Stripe за обробку платежу)"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation/refund_notice.ex
+#, elixir-autogen, elixir-format
+msgid "You still hold %{amount} for this booking."
+msgstr "За це бронювання у вас досі залишається %{amount}."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "You're booked."
+msgstr "Зустріч заплановано."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "You're invited"
+msgstr "Вас запрошено"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "You're invited - %{date} with %{name}"
+msgstr "Вас запрошено - %{date} з %{name}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "You're invited!"
+msgstr "Вас запрошено!"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "You've been added as a guest"
+msgstr "Вас додано як гостя"
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Your earlier response applied to the previous time, so please let us know again."
+msgstr "Ваша попередня відповідь стосувалася старого часу, тож повідомте нам ще раз."
+
+#: lib/tymeslot/emails/templates/appointment_rescheduled.ex
+#, elixir-autogen, elixir-format
+msgid "Your meeting has moved."
+msgstr "Вашу зустріч перенесено."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "Your payment was refunded."
+msgstr "Ваш платіж було повернуто."
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "soon"
+msgstr "незабаром"
+
+#: lib/tymeslot/emails/templates/appointment_cancellation.ex
+#, elixir-autogen, elixir-format
+msgid "with %{name}"
+msgstr "з %{name}"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex
+#, elixir-autogen, elixir-format
+msgid "your host"
+msgstr "ваш організатор"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "• Agenda ready"
+msgstr "• Порядок денний готовий"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "• Camera & mic ready"
+msgstr "• Камера та мікрофон готові"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "• Location confirmed"
+msgstr "• Місце підтверджено"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "• Materials prepared"
+msgstr "• Матеріали підготовлено"
+
+#: lib/tymeslot/emails/templates/appointment_reminder.ex
+#, elixir-autogen, elixir-format
+msgid "⏰ Meeting with %{name} in %{time_until}"
+msgstr "⏰ Зустріч з %{name} через %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "%{booker} has invited you as a guest to this meeting with %{organizer}."
+msgstr "%{booker} запрошує вас як гостя на цю зустріч із %{organizer}."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex
+#, elixir-autogen, elixir-format
+msgid "Hi %{guest} - %{booker} has invited you as a guest to this meeting with %{organizer}."
+msgstr "Вітаю, %{guest} - %{booker} запрошує вас як гостя на цю зустріч із %{organizer}."

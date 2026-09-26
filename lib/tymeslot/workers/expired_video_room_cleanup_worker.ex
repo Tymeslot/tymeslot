@@ -25,6 +25,15 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorker do
   end can be stale, because the event may have been moved in a calendar
   client, so each is checked against the calendar before it is queued, and
   again by the job before it deletes.
+
+  The same scan also looks for grid events deleted in a calendar client,
+  which the grid never hears of, whatever their end: a whole series can only
+  be deleted there, and a Teams meeting held as a separate event goes only
+  with its grid event, never at its meeting's end. Every recorded room
+  (`ProviderConfig.rooms_recorded_for_grid_events/0`) whose event has been
+  missing from its synced calendar for two days is queued, and the job asks
+  the calendar provider before it deletes
+  (`Tymeslot.CalendarGrid.EventVideoRoomPresence`).
   """
 
   use Oban.Worker, queue: :default, max_attempts: 1, unique: [period: 60]
@@ -61,13 +70,20 @@ defmodule Tymeslot.Workers.ExpiredVideoRoomCleanupWorker do
       |> CalendarGrid.list_ended_event_video_rooms(ended_before, ended_after)
       |> Enum.filter(&(CalendarGrid.check_event_video_room_expired(&1) == :expired))
 
+    orphaned_rooms = CalendarGrid.list_gone_event_video_rooms()
+
     enqueued =
       Enum.count(meetings, &enqueued?(VideoSyncWorker.enqueue(&1.id, "delete"))) +
-        Enum.count(event_rooms, &enqueued?(VideoSyncWorker.enqueue_event_room(&1.id, "expire")))
+        Enum.count(event_rooms, &enqueued?(VideoSyncWorker.enqueue_event_room(&1.id, "expire"))) +
+        Enum.count(
+          orphaned_rooms,
+          &enqueued?(VideoSyncWorker.enqueue_event_room(&1.id, "orphan"))
+        )
 
     Logger.info("Expired video room clean-up completed",
       total_meetings: length(meetings),
       total_calendar_event_rooms: length(event_rooms),
+      total_orphaned_calendar_event_rooms: length(orphaned_rooms),
       enqueued: enqueued,
       retention_days: retention_days
     )

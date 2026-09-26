@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Gettext.PseudoFallback do
   Shared `handle_missing_translation/5` and `handle_missing_plural_translation/7`
   callbacks that power the dev-only `"pseudo"` locale.
 
-  Every gettext backend in the umbrella renders the `"pseudo"` locale identically,
+  Every gettext backend in either repository renders the `"pseudo"` locale identically,
   so this coverage tool stays effective across every domain regardless of which
   backend extracted it. `use` this module immediately after `use Gettext.Backend`
   so the injected clauses land after the default's `defoverridable` and `super`
