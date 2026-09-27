@@ -33,7 +33,8 @@ defmodule Tymeslot.Infrastructure.ObanCronTest do
     end
 
     test "reads a crontab entry that carries its own options" do
-      crontab = Enum.map(all_workers(), fn {schedule, worker} -> {schedule, worker, args: %{}} end)
+      crontab =
+        Enum.map(all_workers(), fn {schedule, worker} -> {schedule, worker, args: %{}} end)
 
       assert ObanCron.missing_workers(cron_config(crontab)) == []
     end
