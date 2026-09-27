@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
   """
 
   use TymeslotWeb.LiveCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :calendar
   @moduletag :live
@@ -19,9 +20,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Repo
   alias Tymeslot.TestMocks
+  alias Tymeslot.Workers.VideoSyncWorker
 
   setup :verify_on_exit!
 
@@ -227,6 +231,85 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
 
       assert render(lv) =~ "Recurring event deleted. Attendees have been notified."
       refute has_element?(lv, "[id^='event-#{second.id}-']")
+    end
+  end
+
+  describe "deleting the later half of a split Google series" do
+    @talk_link "https://cloud.example.com/call/room-standup"
+
+    # A series split for an edit of one occurrence and every following one:
+    # its Talk room moved to the later series, `tail-master`, while the
+    # earlier one, `head-master`, keeps occurrences linking to it. Both halves
+    # as the sync brought them back, on today's grid.
+    setup %{user: user} do
+      google = insert(:calendar_integration, user: user, provider: "google")
+      talk = insert(:video_integration, user: user, provider: "nextcloud_talk", is_active: true)
+
+      day = Calendar.strftime(Date.utc_today(), "%Y%m%d")
+
+      video = %{
+        description: "Agenda\n\nJoin video call: #{@talk_link}",
+        video_link: @talk_link,
+        video_integration_id: talk.id
+      }
+
+      head =
+        insert_event(
+          google,
+          "head-master" |> google_occurrence("#{day}T090000Z", ~T[09:00:00]) |> Map.merge(video)
+        )
+
+      tail =
+        insert_event(
+          google,
+          "tail-master" |> google_occurrence("#{day}T140000Z", ~T[14:00:00]) |> Map.merge(video)
+        )
+
+      {:ok, room} =
+        EventVideoRoomQueries.insert(%{
+          user_id: user.id,
+          video_integration_id: talk.id,
+          provider: "nextcloud_talk",
+          calendar_integration_id: google.id,
+          event_uid: "tail-master@google.com",
+          provider_event_id: "tail-master",
+          room_id: "room-standup",
+          lobby_opens_at: head.start_at,
+          ends_at: DateTime.add(tail.end_at, 90, :day)
+        })
+
+      %{head: head, tail: tail, talk: talk, room: room}
+    end
+
+    test "keeps the video room the earlier half still links to", %{
+      conn: conn,
+      head: head,
+      tail: tail,
+      talk: talk,
+      room: room
+    } do
+      stub_delete(:ok)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      request_delete(lv, tail)
+      confirm_scope(lv, "series")
+
+      assert {:delete, _uid, _context, opts} = await_delete(lv)
+      assert opts[:provider_event_id] == "tail-master"
+      assert render(lv) =~ "Recurring event deleted."
+
+      refute_enqueued(worker: VideoSyncWorker, args: %{"event_room_id" => room.id})
+
+      assert %{event_uid: "head-master@google.com", provider_event_id: "head-master"} =
+               Repo.reload(room)
+
+      # The earlier half still shows the room as its video.
+      lv |> element("[id^='event-#{head.id}-']") |> render_click()
+
+      assert has_element?(
+               lv,
+               ~s|button[phx-value-video_integration_id="#{talk.id}"].border-turquoise-400|
+             )
     end
   end
 

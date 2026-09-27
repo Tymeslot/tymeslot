@@ -383,6 +383,18 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
     |> append_join_line(url)
   end
 
+  @doc """
+  The URLs of the "Join video call" lines in `description`.
+  """
+  @spec join_links(String.t() | nil) :: [String.t()]
+  def join_links(description) when is_binary(description) do
+    ~r/^#{Regex.escape(@join_line_prefix)}(\S+)/m
+    |> Regex.scan(description, capture: :all_but_first)
+    |> List.flatten()
+  end
+
+  def join_links(_description), do: []
+
   defp remove_join_line(description, url) when is_binary(description) and is_binary(url) do
     line = join_line(url)
 

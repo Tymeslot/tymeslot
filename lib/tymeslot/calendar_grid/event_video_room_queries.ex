@@ -238,22 +238,35 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
   def list_cached_events(_calendar_integration_id, [], []), do: []
 
   def list_cached_events(calendar_integration_id, identifiers, series_uids) do
-    addressed =
-      dynamic(
-        [e],
-        e.uid in ^identifiers or e.provider_event_id in ^identifiers or
-          e.recurring_event_id in ^identifiers
-      )
+    ProviderCalendarEventSchema
+    |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+    |> where(^addressed(identifiers, series_uids))
+    |> Repo.all()
+  end
 
-    addressed_or_occurrence =
-      Enum.reduce(series_uids, addressed, fn uid, acc ->
-        dynamic([e], ^acc or like(e.uid, ^(escape_like(uid) <> "\\_%")))
+  @doc """
+  A cached event of the calendar integration that carries one of the join
+  links `links`, as its cached video link or anywhere in its description,
+  other than the events `identifiers` and `series_uids` address (as in
+  `list_cached_events/3`); `nil` when there is none.
+  """
+  @spec find_link_holder(pos_integer(), [String.t()], [String.t()], [String.t()]) ::
+          ProviderCalendarEventSchema.t() | nil
+  def find_link_holder(_calendar_integration_id, [], _identifiers, _series_uids), do: nil
+
+  def find_link_holder(calendar_integration_id, links, identifiers, series_uids) do
+    carries =
+      Enum.reduce(links, dynamic([e], e.video_link in ^links), fn link, acc ->
+        dynamic([e], ^acc or like(e.description, ^("%" <> escape_like(link) <> "%")))
       end)
 
     ProviderCalendarEventSchema
     |> where([e], e.calendar_integration_id == ^calendar_integration_id)
-    |> where(^addressed_or_occurrence)
-    |> Repo.all()
+    |> where(^carries)
+    |> where(^dynamic([e], not (^addressed(identifiers, series_uids))))
+    |> order_by([e], asc: e.id)
+    |> limit(1)
+    |> Repo.one()
   end
 
   @doc """
@@ -273,6 +286,26 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomQueries do
     |> where([e], e.video_integration_id == ^video_integration_id and e.video_link == ^video_link)
     |> where([e], not (e.calendar_integration_id == ^calendar_integration_id and e.uid == ^uid))
     |> Repo.exists?()
+  end
+
+  # An event's own rows, and those of its occurrences: a row whose parent is
+  # one of `identifiers`, or whose uid is one of `series_uids` followed by the
+  # occurrence suffix CalDAV occurrences are cached under. A row with none of
+  # the columns set is not addressed.
+  defp addressed(identifiers, series_uids) do
+    own =
+      dynamic(
+        [e],
+        coalesce(
+          e.uid in ^identifiers or e.provider_event_id in ^identifiers or
+            e.recurring_event_id in ^identifiers,
+          false
+        )
+      )
+
+    Enum.reduce(series_uids, own, fn uid, acc ->
+      dynamic([e], ^acc or like(e.uid, ^(escape_like(uid) <> "\\_%")))
+    end)
   end
 
   # Rooms on one of `providers` whose video integration can take a delete: not

@@ -266,19 +266,22 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
        ) do
     context = [user_id: user_id, calendar_integration_id: integration_id, uid: uid]
 
-    after_delete("delete the event's video rooms", context, fn ->
-      :ok = delete_recorded_rooms(event, stored, removal)
-    end)
-
     after_delete("delete the cached event rows", context, fn ->
       purge_cached_rows(integration_id, uid, removal)
     end)
 
+    # Run once the cached rows are gone, since a room another cached event
+    # still carries is left in place: the rest of a series keeps its room
+    # while any of it remains, and loses it with the last row, and the earlier
+    # half of a split series keeps the room its deleted later half was
+    # recorded with.
+    after_delete("delete the event's video rooms", context, fn ->
+      :ok = delete_recorded_rooms(event, stored, removal)
+    end)
+
     # Read off the cached row, since the caller passes only the fields that
     # address the event: its link names the room no record holds (a Zoom
-    # meeting's). Run once the cached rows are gone, since a room another
-    # cached event still carries is left in place: the rest of a series keeps
-    # its room while any of it remains, and loses it with the last row.
+    # meeting's).
     after_delete("delete the event's unrecorded video room", context, fn ->
       :ok = EventVideoDiscard.event_deleted(user_id, stored)
     end)

@@ -177,7 +177,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
     end)
 
     step("hand over the series' video", user_id, fn ->
-      if plan.video, do: Enum.each(plan.video_to, &SeriesVideoWorker.enqueue(&1, plan.video))
+      if plan.video, do: Enum.each(plan.video_to, &hand_over_video(&1, plan.video, user_id))
     end)
   end
 
@@ -203,7 +203,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
         }
 
         step("hand over the created series' video", nil, fn ->
-          SeriesVideoWorker.enqueue(series, {video_id, link})
+          hand_over_video(series, {video_id, link}, nil)
         end)
 
       {:error, :unaddressable_series} ->
@@ -230,6 +230,22 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
          ) do
       {:ok, _count} -> :ok
       :not_cached -> :not_cached
+    end
+  end
+
+  # A job that could not be enqueued leaves the series' occurrences without
+  # their video once the sync brings them back; the write itself stands.
+  defp hand_over_video(series, video, user_id) do
+    case SeriesVideoWorker.enqueue(series, video) do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Could not hand a series' video to the sync that brings it back",
+          user_id: user_id,
+          calendar_integration_id: series.integration_id,
+          reason: inspect(reason)
+        )
     end
   end
 

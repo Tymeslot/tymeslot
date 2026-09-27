@@ -57,6 +57,10 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
 
     * Deleting an occurrence of a series, or moving one to another calendar,
       leaves the room with the series.
+    * Replacing the video of one occurrence, or deleting a whole series,
+      leaves the room while another cached event of the calendar still
+      carries its link (`link_holder/2`), such as the earlier half of a split
+      series.
     * The times a room keeps only ever widen for a series
       (`Tymeslot.CalendarGrid.EventVideoRoomTimes`).
     * Before an ended room is deleted, the cached calendar is consulted, since
@@ -65,10 +69,12 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
 
   require Logger
 
+  alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.CalendarGrid.EventVideoRoomExpiry
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.CalendarGrid.EventVideoRoomTimes
+  alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Workers.VideoSyncWorker
 
@@ -193,7 +199,9 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   since its occurrences are the last the rooms serve: they are found from
   its rows, follow them when they move, go when it is deleted as a whole,
   and are judged over only once it is. The original series keeps the
-  occurrences before the split, which all come earlier.
+  occurrences before the split, which all come earlier, and the same join
+  link: deleting the new series as a whole hands the rooms back to it
+  (`series_deleted/1`).
   """
   @spec series_split(map(), String.t(), String.t()) :: :ok
   def series_split(event, tail_uid, tail_id),
@@ -263,9 +271,90 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   any one of its rows. Unlike `event_deleted/1`, the series' rooms go whatever
   the row looks like: a CalDAV occurrence edited on its own carries no repeat
   rule, yet still shares its series' rooms.
+
+  A room another event still uses is kept: when a cached event of the same
+  calendar outside the series carries the series' join link (see
+  `link_holder/2`), the series' rooms move to that event, or to its series,
+  as if they had been recorded for it. This is how the earlier half of a
+  split series keeps the room its later half took with it
+  (`series_split/3`) when the later half is deleted, and loses it when it is
+  deleted in turn. The series' own rows never count, cached or not.
   """
   @spec series_deleted(map()) :: :ok
-  def series_deleted(event), do: event |> rooms_for(true) |> discard()
+  def series_deleted(event) do
+    case rooms_for(event, true) do
+      [] ->
+        :ok
+
+      rooms ->
+        own = event_identifiers(event)
+        series = Enum.map(own, &series_identifier/1)
+
+        case find_holder(event, series_links(event), Enum.uniq(own ++ series), series) do
+          nil -> discard(rooms)
+          holder -> adopt(rooms, holder)
+        end
+    end
+  end
+
+  @doc """
+  A cached event of the same calendar as `event`, other than `event` itself,
+  that still carries one of the join links `links`: as its cached video link,
+  or in its description, which the calendar keeps while the cached link waits
+  for `Tymeslot.Workers.SeriesVideoWorker` after a series-wide write. The
+  other occurrences of `event`'s series count. `nil` when there is none.
+
+  The description is read here only to keep a room, never to find one to
+  delete (see the moduledoc).
+  """
+  @spec link_holder(map(), [String.t() | nil]) :: map() | nil
+  def link_holder(event, links), do: find_holder(event, links, [event.uid], [])
+
+  defp find_holder(%{calendar_integration_id: calendar_integration_id}, links, own, series_uids)
+       when is_integer(calendar_integration_id),
+       do:
+         EventVideoRoomQueries.find_link_holder(
+           calendar_integration_id,
+           non_blank(links),
+           own,
+           series_uids
+         )
+
+  defp find_holder(_event, _links, _own, _series_uids), do: nil
+
+  # The join links a series' rows carry: the cached one, and any in the
+  # description, which is all a row cached before its video was carried back
+  # has (see `link_holder/2`).
+  defp series_links(event),
+    do: [Map.get(event, :video_link) | EventVideo.join_links(Map.get(event, :description))]
+
+  # Points `rooms` at the event still carrying their link, or at its series,
+  # by the identifiers every row of it matches (see `rooms_for/2`): the uid
+  # without an occurrence's suffix, and the series' address. The event has not
+  # been seen under that identity yet, so its iCalendar UID is learnt afresh.
+  defp adopt(rooms, holder) do
+    event_uid = series_identifier(holder.uid)
+
+    provider_id =
+      case Occurrence.series_address(holder) do
+        {:ok, {_kind, id}} -> id
+        {:error, :unaddressable_series} -> holder.provider_event_id
+      end
+
+    _count =
+      EventVideoRoomQueries.move_to_event(Enum.map(rooms, & &1.id), %{
+        calendar_integration_id: holder.calendar_integration_id,
+        event_uid: event_uid,
+        provider_event_id: other_identifier(provider_id, event_uid),
+        provider_calendar_id: holder.provider_calendar_id,
+        event_ical_uid: nil
+      })
+
+    Logger.info("Video room kept: another calendar event still uses it",
+      calendar_integration_id: holder.calendar_integration_id,
+      calendar_event_video_room_ids: Enum.map(rooms, & &1.id)
+    )
+  end
 
   @doc """
   The recorded rooms of `event` (or of its series) made on the video

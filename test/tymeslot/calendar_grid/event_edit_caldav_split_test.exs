@@ -354,5 +354,87 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSplitTest do
         args: %{"event_room_id" => room.id, "action" => "delete"}
       )
     end
+
+    test "deleting the following occurrences as a whole leaves the room to the earlier ones", %{
+      user: user,
+      integration: integration,
+      occurrence: occurrence
+    } do
+      talk = insert(:video_integration, user: user, provider: "nextcloud_talk")
+      link = "https://cloud.example.com/call/room-weekly-standup"
+      description = "Agenda\n\nJoin video call: #{link}"
+
+      {:ok, room} =
+        EventVideoRoomQueries.insert(%{
+          user_id: user.id,
+          video_integration_id: talk.id,
+          provider: "nextcloud_talk",
+          calendar_integration_id: integration.id,
+          event_uid: "weekly-standup",
+          provider_event_id: @series_href,
+          room_id: "room-weekly-standup",
+          lobby_opens_at: ~U[2026-09-08 06:45:00Z],
+          ends_at: ~U[2026-12-29 07:15:00Z]
+        })
+
+      expect_split_puts()
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+                 recurrence_scope: :following
+               )
+
+      assert_received {:put, _tail_url, tail, _headers}
+      uid = tail_uid(tail)
+
+      # Both halves as the requested sync caches them: each carries the join
+      # line in its description, and no cached link yet, since the series'
+      # video is handed back to the rows only after the sync.
+      cached = fn row_uid, href, start_at ->
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: row_uid,
+          provider: "caldav",
+          provider_calendar_id: "/cal/",
+          provider_event_id: href,
+          summary: "Weekly standup",
+          description: description,
+          start_at: start_at,
+          end_at: DateTime.add(start_at, 15, :minute),
+          all_day: false,
+          timezone: "Europe/Berlin",
+          recurrence_rule: "FREQ=WEEKLY;BYDAY=TU",
+          sync_state: "synced"
+        )
+      end
+
+      head_row =
+        cached.("weekly-standup_20260908T090000", @series_href, ~U[2026-09-08 07:00:00.000000Z])
+
+      tail_row =
+        cached.("#{uid}_20260922T090000", "/cal/#{uid}.ics", ~U[2026-09-22 07:00:00.000000Z])
+
+      expect_resource_delete("https://caldav.example.com/cal/#{uid}.ics")
+      assert {:ok, _deleted} = CalendarGrid.delete_event(user.id, tail_row, :series)
+
+      refute_enqueued(worker: VideoSyncWorker, args: %{"event_room_id" => room.id})
+      assert [%{id: room_id}] = EventVideoRooms.rooms_on_integration(head_row, talk.id)
+      assert room_id == room.id
+
+      # The earlier occurrences take the room with them when they go in turn.
+      expect_resource_delete(@series_url)
+      assert {:ok, _deleted} = CalendarGrid.delete_event(user.id, head_row, :series)
+
+      assert_enqueued(
+        worker: VideoSyncWorker,
+        args: %{"event_room_id" => room.id, "action" => "delete"}
+      )
+    end
+  end
+
+  defp expect_resource_delete(url) do
+    expect(Tymeslot.HTTPClientMock, :delete, fn ^url, _headers, _opts ->
+      {:ok, %Req.Response{status: 204, body: "", headers: %{}}}
+    end)
   end
 end
