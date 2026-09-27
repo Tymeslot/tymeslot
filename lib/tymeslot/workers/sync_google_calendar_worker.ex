@@ -345,7 +345,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   # Google is refusing the credentials themselves: either the token refresh
   # failed, so the grant is gone, or a 403 named insufficient permissions.
   # Rate limiting and a Calendar-less account are classified ahead of this in
-  # `GoogleCalendarAPI.classify_403/2`, so nothing merely transient lands here
+  # `Google.ApiStatus`, so nothing merely transient lands here
   # and no retry can re-authorise anything.
   #
   # The scheduled probe reaches the same verdict on its own cadence, but not

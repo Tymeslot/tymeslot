@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.AllDay
+  alias Tymeslot.CalendarGrid.SeriesEdit
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
@@ -468,7 +469,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         event: original_event,
         optimistic_event: optimistic_event,
         recurrence_rule: new_rule,
-        original_event: original_event
+        original_event: original_event,
+        following_notes: SeriesEdit.following_notes(original_event, %{recurrence_rule: new_rule})
       }
 
       {:noreply, assign(socket, :recurrence_prompt, prompt)}

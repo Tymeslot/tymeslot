@@ -12,6 +12,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal do
   A change of repeat rule belongs to the series, not to one of its
   occurrences, so its prompt leaves out "This event" (see
   `offered_scopes/1`).
+
+  The prompt's `:following_notes`, when it has any, say under "This and
+  following events" what that choice will not carry
+  (`Tymeslot.CalendarGrid.SeriesEdit.following_notes/2`).
   """
 
   use TymeslotWeb, :html
@@ -19,13 +23,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.CalendarGrid.RecurrenceScope
+  alias TymeslotWeb.Dashboard.CalendarGrid.SeriesNotes
 
   attr :recurrence_prompt, :map, required: true
   attr :myself, :any, required: true
 
   @spec recurrence_prompt_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def recurrence_prompt_modal(assigns) do
-    assigns = assign(assigns, :scopes, offered_scopes(assigns.recurrence_prompt))
+    prompt = assigns.recurrence_prompt
+
+    assigns =
+      assign(assigns,
+        scopes: offered_scopes(prompt),
+        following_notes: Map.get(prompt, :following_notes, [])
+      )
 
     ~H"""
     <.modal
@@ -47,6 +58,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal do
         <li :for={scope <- @scopes}>
           <span class="font-semibold text-tymeslot-800">{scope_label(scope)}:</span>
           {scope_description(scope)}
+          <ul
+            :if={scope == :following and @following_notes != []}
+            id="recurrence-following-notes"
+            class="mt-1 space-y-1 list-disc pl-5 text-tymeslot-500"
+          >
+            <li :for={note <- @following_notes}>{SeriesNotes.text(note)}</li>
+          </ul>
         </li>
       </ul>
 

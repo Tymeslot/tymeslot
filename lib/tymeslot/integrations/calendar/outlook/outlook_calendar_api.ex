@@ -249,6 +249,37 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   end
 
   @doc """
+  The occurrences of the series master `master_id` changed on their own:
+  `exceptionOccurrences`, the edited ones as events, and
+  `cancelledOccurrences`, the occurrence ids of the cancelled ones.
+  """
+  @impl CalendarAPIBehaviour
+  @spec get_series_exceptions(CalendarIntegrationSchema.t(), String.t()) ::
+          {:ok, map()} | api_error()
+  def get_series_exceptions(%CalendarIntegrationSchema{} = integration, master_id) do
+    params = %{
+      "$select" => "id,cancelledOccurrences,exceptionOccurrences",
+      "$expand" => "exceptionOccurrences"
+    }
+
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      make_request(:get, "/me/events/#{master_id}", token, params)
+    end)
+  end
+
+  @doc """
+  The occurrences of the series master `event_id` between `start_time` and
+  `end_time`, as Graph expands them (cancelled ones left out).
+  """
+  @impl CalendarAPIBehaviour
+  @spec list_instances(CalendarIntegrationSchema.t(), String.t(), DateTime.t(), DateTime.t()) ::
+          {:ok, [calendar_event()]} | api_error()
+  def list_instances(%CalendarIntegrationSchema{} = integration, event_id, start_time, end_time) do
+    params = build_events_query_params(start_time, end_time)
+    list_events_for_path(integration, "/me/events/#{event_id}/instances", params)
+  end
+
+  @doc """
   Finds the signed-in user's events carrying the iCalendar UID `ical_uid`, in
   every calendar of the mailbox. An event keeps its iCalendar UID when it
   moves to another calendar, where its Graph id changes, so this finds an

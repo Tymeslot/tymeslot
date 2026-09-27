@@ -24,9 +24,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesSplit do
   a conference is copied as the join details it has, so the tail's
   occurrences keep the series' Meet link.
 
-  Occurrences edited on their own in Google are separate events that name
-  the master. Those from the slot on are not carried to the tail: Google
-  drops them once the master's rule no longer makes their slot.
+  Occurrences edited or cancelled on their own in Google are separate
+  events that name the master, which Google drops once the master's rule no
+  longer makes their slot. They are not part of these bodies: the provider
+  carries those from the slot on to the tail once it is written
+  (`Google.SeriesExceptions`).
   """
 
   alias Tymeslot.Integrations.Calendar.Google.CreatableEvent

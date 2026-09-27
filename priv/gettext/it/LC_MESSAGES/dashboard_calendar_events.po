@@ -1170,7 +1170,7 @@ msgstr "cambia solo questa occorrenza, il resto della serie rimane invariato."
 msgid "this occurrence and every later one change, and the earlier ones stay as they are."
 msgstr "cambiano questa occorrenza e tutte le successive, quelle precedenti rimangono invariate."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/series_notes.ex
 #, elixir-autogen, elixir-format
 msgid "A Teams meeting on the series is not carried over."
 msgstr "Un’eventuale riunione Teams della serie non viene trasferita."
@@ -1190,17 +1190,17 @@ msgstr "Un evento ricorrente può essere spostato solo in un calendario dello st
 msgid "Could not move the series. It is still on its original calendar."
 msgstr "Impossibile spostare la serie. Si trova ancora nel suo calendario di origine."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/series_notes.ex
 #, elixir-autogen, elixir-format
 msgid "Events in the series that were changed on their own go back to the series' usual pattern."
 msgstr "Gli eventi della serie modificati singolarmente tornano allo schema abituale della serie."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/series_notes.ex
 #, elixir-autogen, elixir-format
 msgid "Events in the series that were changed or cancelled on their own go back to the series' usual pattern."
 msgstr "Gli eventi della serie modificati o annullati singolarmente tornano allo schema abituale della serie."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/series_notes.ex
 #, elixir-autogen, elixir-format
 msgid "Guests are sent a cancellation for the original series and an invitation to the moved one."
 msgstr "Gli invitati ricevono un annullamento della serie originale e un invito a quella spostata."
@@ -1261,3 +1261,8 @@ msgstr[1] "La serie è stata spostata, ma %{count} modifiche fatte durante lo sp
 #, elixir-autogen, elixir-format
 msgid "A change to this series is still saving. Please make this change once it has saved."
 msgstr "Una modifica a questa serie è ancora in fase di salvataggio. Ripeti questa modifica quando il salvataggio è terminato."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/series_notes.ex
+#, elixir-autogen, elixir-format
+msgid "Later events that were changed or cancelled on their own keep that only on dates the new pattern still includes."
+msgstr "Gli eventi successivi modificati o annullati singolarmente restano tali solo nelle date ancora incluse nel nuovo schema."

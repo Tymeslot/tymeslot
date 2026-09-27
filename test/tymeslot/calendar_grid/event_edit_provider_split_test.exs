@@ -4,11 +4,13 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
   following one, from the grid down to the wire.
 
   As in `Tymeslot.CalendarGrid.EventEditProviderSeriesTest`, only the HTTP
-  client is mocked: the master is read with a `GET`, the following
-  occurrences are created as a new series with a `POST`, and the master is
-  then ended with a `PATCH` of its recurrence; a `DELETE` of the new series
-  undoes it when the master cannot be ended. Every request is recorded in
-  the order it was made.
+  client is mocked: the master is read with a `GET`, and its occurrences
+  changed on their own with another, the following occurrences are created
+  as a new series with a `POST`, and the master is then ended with a
+  `PATCH` of its recurrence; a `DELETE` of the new series undoes it when the
+  master cannot be ended. Every request is recorded in the order it was
+  made. Carrying the changed occurrences to the new series is pinned in
+  `Tymeslot.CalendarGrid.EventEditProviderSplitExceptionsTest`.
   """
   use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
@@ -179,10 +181,18 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
                )
 
       sent = requests()
-      assert methods(sent) == [:get, :post, :patch]
+      assert methods(sent) == [:get, :get, :post, :patch]
 
-      assert [{:get, @master_url, _get}, {:post, post_url, _tail}, {:patch, patch_url, _head}] =
-               sent
+      assert [
+               {:get, @master_url, _get},
+               {:get, list_url, _list},
+               {:post, post_url, _tail},
+               {:patch, patch_url, _head}
+             ] = sent
+
+      assert String.starts_with?(list_url, @events_url <> "?")
+      assert list_url =~ "iCalUID=series1%40google.com"
+      assert list_url =~ "showDeleted=true"
 
       assert String.starts_with?(post_url, @events_url <> "?")
       assert patch_url == @master_url <> "?sendUpdates=none"
@@ -287,7 +297,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
                )
 
       sent = requests()
-      assert methods(sent) == [:get, :post, :patch, :delete]
+      assert methods(sent) == [:get, :get, :post, :patch, :delete]
       assert {:delete, @events_url <> "/tail1", _body} = List.last(sent)
 
       assert {:ok, %{summary: "Weekly sync", sync_state: "synced"}} =
@@ -308,7 +318,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
                  recurrence_scope: :following
                )
 
-      assert methods(requests()) == [:get, :post]
+      assert methods(requests()) == [:get, :get, :post]
       assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(integration.id, occurrence.uid)
       refute_enqueued(worker: SyncGoogleCalendarWorker)
     end
@@ -410,9 +420,13 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
       assert [
                {:get, @graph <> "/me/events/master-1", _get},
                {:get, @graph <> "/me/events/master-1/calendar" <> _select, _calendar},
+               {:get, @graph <> "/me/events/master-1?" <> exceptions, _exceptions},
                {:post, @graph <> "/me/calendars/team-calendar/events", _tail},
                {:patch, @graph <> "/me/events/master-1", _head}
              ] = sent
+
+      assert exceptions =~ "expand=exceptionOccurrences"
+      assert exceptions =~ "cancelledOccurrences"
 
       tail = body_of(sent, :post)
       assert tail["subject"] == "Standup"
@@ -452,7 +466,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
                )
 
       sent = requests()
-      assert methods(sent) == [:get, :get, :post, :patch, :delete]
+      assert methods(sent) == [:get, :get, :get, :post, :patch, :delete]
       assert {:delete, @graph <> "/me/events/tail-1", _body} = List.last(sent)
 
       assert {:ok, %{summary: "Weekly sync"}} =

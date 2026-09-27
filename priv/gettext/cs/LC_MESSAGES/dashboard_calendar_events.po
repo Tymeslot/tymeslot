@@ -1184,7 +1184,7 @@ msgstr "změní se jen tento výskyt, zbytek série zůstane beze změny."
 msgid "this occurrence and every later one change, and the earlier ones stay as they are."
 msgstr "změní se tento výskyt a všechny pozdější, dřívější zůstanou beze změny."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/series_notes.ex
 #, elixir-autogen, elixir-format
 msgid "A Teams meeting on the series is not carried over."
 msgstr "Schůzka Teams v sérii se nepřenáší."
@@ -1204,17 +1204,17 @@ msgstr "Opakující se událost lze přesunout jen do kalendáře stejného druh
 msgid "Could not move the series. It is still on its original calendar."
 msgstr "Sérii se nepodařilo přesunout. Zůstává v původním kalendáři."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/series_notes.ex
 #, elixir-autogen, elixir-format
 msgid "Events in the series that were changed on their own go back to the series' usual pattern."
 msgstr "Jednotlivě změněné události série se vrátí k obvyklému vzoru série."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/series_notes.ex
 #, elixir-autogen, elixir-format
 msgid "Events in the series that were changed or cancelled on their own go back to the series' usual pattern."
 msgstr "Jednotlivě změněné nebo zrušené události série se vrátí k obvyklému vzoru série."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/series_notes.ex
 #, elixir-autogen, elixir-format
 msgid "Guests are sent a cancellation for the original series and an invitation to the moved one."
 msgstr "Hosté obdrží zrušení původní série a pozvánku do přesunuté."
@@ -1276,3 +1276,8 @@ msgstr[2] "Série byla přesunuta, ale %{count} změn provedených během přesu
 #, elixir-autogen, elixir-format
 msgid "A change to this series is still saving. Please make this change once it has saved."
 msgstr "Změna této série se ještě ukládá. Proveďte prosím tuto změnu, až bude uložena."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/series_notes.ex
+#, elixir-autogen, elixir-format
+msgid "Later events that were changed or cancelled on their own keep that only on dates the new pattern still includes."
+msgstr "Jednotlivě změněné nebo zrušené pozdější události si to zachovají jen v termínech, které nový vzor stále obsahuje."

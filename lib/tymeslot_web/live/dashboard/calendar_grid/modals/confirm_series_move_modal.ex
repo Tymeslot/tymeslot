@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmSeriesMoveModal do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias TymeslotWeb.Dashboard.CalendarGrid.SeriesNotes
 
   attr :prompt, :map, required: true
   attr :myself, :any, required: true
@@ -42,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmSeriesMoveModal do
         id="series-move-notes"
         class="mt-4 space-y-2 list-disc pl-5 text-token-sm text-tymeslot-600"
       >
-        <li :for={note <- @prompt.notes}>{note_text(note)}</li>
+        <li :for={note <- @prompt.notes}>{SeriesNotes.text(note)}</li>
       </ul>
 
       <:footer>
@@ -60,33 +61,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmSeriesMoveModal do
       </:footer>
     </.modal>
     """
-  end
-
-  defp note_text(:changed_occurrences_reset) do
-    dgettext(
-      "dashboard_calendar_events",
-      "Events in the series that were changed on their own go back to the series' usual pattern."
-    )
-  end
-
-  defp note_text(:changed_or_cancelled_occurrences_reset) do
-    dgettext(
-      "dashboard_calendar_events",
-      "Events in the series that were changed or cancelled on their own go back to the series' usual pattern."
-    )
-  end
-
-  defp note_text(:teams_meeting_not_carried) do
-    dgettext(
-      "dashboard_calendar_events",
-      "A Teams meeting on the series is not carried over."
-    )
-  end
-
-  defp note_text(:guests_reinvited) do
-    dgettext(
-      "dashboard_calendar_events",
-      "Guests are sent a cancellation for the original series and an invitation to the moved one."
-    )
   end
 end

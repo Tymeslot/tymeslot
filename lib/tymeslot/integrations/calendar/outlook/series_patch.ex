@@ -131,9 +131,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
 
   def master_timing(_master), do: {:error, :unreadable_timing}
 
+  @doc """
+  The IANA zone Graph's zone `label` names (a Windows or an IANA name), or
+  `nil` when it names none this can read.
+  """
+  @spec known_zone(String.t() | nil) :: String.t() | nil
   # `Timezones.sanitize/1` maps Graph's Windows names to IANA ones, and hands
   # back what it does not recognise as it was.
-  defp known_zone(label) do
+  def known_zone(label) do
     with zone when is_binary(zone) <- Timezones.sanitize(label),
          {:ok, _now} <- DateTime.shift_zone(DateTime.utc_now(), zone) do
       zone

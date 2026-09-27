@@ -28,9 +28,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesSplit do
   meeting, which the head keeps.
 
   Occurrences edited or deleted on their own are not in the master's
-  `recurrence`, so they are not carried to the tail: from the slot on, the
-  tail's occurrences are all plain again. Graph drops the master's own
-  exceptions from the slot on once its range ends before them.
+  `recurrence`, so these bodies make the tail's occurrences all plain, and
+  Graph drops the master's own exceptions from the slot on once its range
+  ends before them. The provider carries them to the tail once it is
+  written (`Outlook.SeriesExceptions`).
   """
 
   alias Tymeslot.Integrations.Calendar.Outlook.CreatableEvent

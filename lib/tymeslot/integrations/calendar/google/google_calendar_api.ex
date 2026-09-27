@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.EventColour
+  alias Tymeslot.Integrations.Calendar.Google.ApiStatus
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour
   alias Tymeslot.Integrations.Calendar.Google.EventMapper
   alias Tymeslot.Integrations.Calendar.Google.PushChannel
@@ -297,6 +298,24 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   end
 
   @doc """
+  Lists the events that make up the recurring event `ical_uid` in
+  `calendar_id`, unexpanded: its master, the occurrences edited on their
+  own, and, with `status` `cancelled`, those cancelled on their own. Each
+  occurrence names the master in `recurringEventId`.
+  """
+  @impl CalendarAPIBehaviour
+  @spec list_series_events(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
+          {:ok, [calendar_event()]} | api_error()
+  def list_series_events(%CalendarIntegrationSchema{} = integration, calendar_id, ical_uid) do
+    params = %{"iCalUID" => ical_uid, "showDeleted" => "true"}
+
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      with {:ok, %{events: events}} <- fetch_events_page(token, calendar_id, params, nil, []),
+           do: {:ok, events}
+    end)
+  end
+
+  @doc """
   Deletes an event from the specified calendar.
   """
   @impl CalendarAPIBehaviour
@@ -577,54 +596,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   # --- HTTP response handling ---
 
   defp handle_http_response(response, path) do
-    ApiResponse.handle(response, path, label: "Google Calendar", custom: &google_status/1)
-  end
-
-  # The statuses Google answers differently from the shared envelope: a 403
-  # carrying its classification in `error.errors[].reason`, and a 410 marking a
-  # sync token the caller must discard.
-  defp google_status({:ok, %Req.Response{status: 403, body: body}}) do
-    ApiResponse.with_error_object(body, fn error_msg, decoded ->
-      classify_403(error_msg, get_in(decoded, ["error", "errors"]) || [])
-    end)
-  end
-
-  defp google_status({:ok, %Req.Response{status: 410}}) do
-    {:error, :gone, "Resource no longer available"}
-  end
-
-  defp google_status(_response), do: :default
-
-  # --- Error classification ---
-
-  defp classify_403(error_msg, reasons) do
-    reason_strings =
-      reasons
-      |> Enum.map(&(&1["reason"] || ""))
-      |> Enum.map(&String.downcase/1)
-
-    cond do
-      "notacalendaruser" in reason_strings -> {:error, :not_a_calendar_user, error_msg}
-      rate_limited?(error_msg, reason_strings) -> {:error, :rate_limited, error_msg}
-      unauthorized_forbidden?(error_msg, reason_strings) -> {:error, :unauthorized, error_msg}
-      true -> {:error, :network_error, error_msg}
-    end
-  end
-
-  defp rate_limited?(error_msg, reason_strings) do
-    msg = String.downcase(error_msg)
-
-    Enum.any?(reason_strings, &String.contains?(&1, "ratelimit")) or
-      String.contains?(msg, "quota") or
-      String.contains?(msg, "rate")
-  end
-
-  defp unauthorized_forbidden?(error_msg, reason_strings) do
-    msg = String.downcase(error_msg)
-
-    String.contains?(msg, "insufficient") or
-      String.contains?(msg, "forbidden") or
-      Enum.any?(reason_strings, &String.contains?(&1, "insufficientpermissions"))
+    ApiResponse.handle(response, path, label: "Google Calendar", custom: &ApiStatus.classify/1)
   end
 
   # --- Config helpers ---

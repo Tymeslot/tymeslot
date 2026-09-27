@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.ConferenceData
   alias Tymeslot.Integrations.Calendar.Google.EventNormaliser
+  alias Tymeslot.Integrations.Calendar.Google.SeriesExceptions
   alias Tymeslot.Integrations.Calendar.Google.SeriesPatch
   alias Tymeslot.Integrations.Calendar.Google.SeriesSplit
   alias Tymeslot.Integrations.Calendar.Recurrence.SeriesSplit, as: RecurrenceSplit
@@ -157,10 +158,13 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   splits the series there (`Google.SeriesSplit`): the following occurrences
   are inserted as a new series, which takes the edit, then the master is
   ended before them, and if that fails the new series is deleted again. The
-  answer is then `{:ok, %{tail: %{uid: uid, id: id}}}`, the new series'
-  `iCalUID` and id; an edit of the first occurrence is written as one of
-  every occurrence. A refusal of the edit is answered before anything is
-  written.
+  occurrences from the split on that were edited or cancelled on their own
+  are read before anything is written, and carried to the new series once
+  the split is (`Google.SeriesExceptions`); one that cannot be carried is
+  logged, and does not fail the split. The answer is then
+  `{:ok, %{tail: %{uid: uid, id: id}}}`, the new series' `iCalUID` and id;
+  an edit of the first occurrence is written as one of every occurrence. A
+  refusal of the edit is answered before anything is written.
   """
   @spec call_update_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
           {:ok, map()} | {:error, atom(), String.t()} | {:error, term()}
@@ -205,13 +209,16 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
       {:ok, %{tail: tail, head: head}} ->
         api = api_module()
 
-        with {:ok, created} <-
+        with {:ok, carries} <- SeriesExceptions.plan(api, integration, calendar_id, master, edit),
+             {:ok, created} <-
                RecurrenceSplit.write(
                  fn -> api.insert_event(integration, calendar_id, tail) end,
                  fn -> api.patch_event(integration, calendar_id, edit.master_id, head) end,
                  &api.delete_event(integration, calendar_id, &1["id"])
-               ),
-             do: {:ok, %{tail: %{uid: created["iCalUID"], id: created["id"]}}}
+               ) do
+          SeriesExceptions.carry(api, integration, calendar_id, master, created["id"], carries)
+          {:ok, %{tail: %{uid: created["iCalUID"], id: created["id"]}}}
+        end
 
       :first_occurrence ->
         patch_series(integration, calendar_id, master, edit)

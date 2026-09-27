@@ -120,8 +120,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeLiveViewTest do
     } do
       lv = move_and_choose(conn, event, "following")
 
-      assert [{:get, _master_url, _read}, {:post, post_url, _tail}, {:patch, patch_url, _head}] =
-               await_requests(3)
+      # The master, then its occurrences changed on their own, to carry.
+      assert [
+               {:get, _master_url, _read},
+               {:get, list_url, _list},
+               {:post, post_url, _tail},
+               {:patch, patch_url, _head}
+             ] = await_requests(4)
+
+      assert list_url =~ "iCalUID=series1%40google.com"
 
       assert String.starts_with?(post_url, @google_events <> "?")
       assert patch_url == @google_master_url <> "?sendUpdates=none"
@@ -152,6 +159,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeLiveViewTest do
       )
 
       refute render(lv) =~ "Failed to update event - changes reverted"
+    end
+
+    test "a change of rule warns under this and following what it cannot carry", %{
+      conn: conn,
+      event: event
+    } do
+      lv = change_rule(conn, event)
+
+      assert lv |> element("#recurrence-following-notes") |> render() =~
+               "Later events that were changed or cancelled on their own keep that only on dates the new pattern still includes."
+    end
+
+    test "a move carries every changed occurrence, so its prompt has no warning", %{
+      conn: conn,
+      event: event
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      drop(lv, event, 14)
+
+      assert has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='following']")
+      refute has_element?(lv, "#recurrence-following-notes")
     end
   end
 
@@ -197,19 +225,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeLiveViewTest do
     } do
       lv = move_and_choose(conn, event, "following")
 
-      # The master, then the calendar it sits in, where the new series goes.
+      # The master, the calendar it sits in, where the new series goes, and
+      # its occurrences changed on their own, to carry.
       assert [
                {:get, _master_url, _read},
                {:get, _calendar_url, _calendar},
+               {:get, exceptions_url, _exceptions},
                {:post, _post_url, _tail},
                {:patch, url, body}
              ] =
-               await_requests(4)
+               await_requests(5)
 
+      assert exceptions_url =~ "exceptionOccurrences"
       assert url == @outlook_master_url
 
       assert %{"recurrence" => %{"range" => %{"type" => "endDate"}}} = Jason.decode!(body)
       assert_series_reloaded(lv, event)
+    end
+
+    test "a change of rule warns under this and following", %{conn: conn, event: event} do
+      lv = change_rule(conn, event)
+      assert has_element?(lv, "#recurrence-following-notes")
     end
   end
 
@@ -329,6 +365,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeLiveViewTest do
 
       assert has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='all']")
       refute has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='this_only']")
+
+      # A CalDAV split keeps every override and exclusion.
+      assert has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='following']")
+      refute has_element?(lv, "#recurrence-following-notes")
     end
 
     # A rename made while the series was being moved was made against the
@@ -526,6 +566,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeLiveViewTest do
       "new-end-hour" => to_string(hour + 1),
       "new-end-minute" => "0"
     })
+  end
+
+  # Opens `event` and changes its repeat rule to daily, which asks for a
+  # scope.
+  defp change_rule(conn, event) do
+    {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+    lv
+    |> element("#calendar-grid")
+    |> render_hook("show_event", %{"event-id" => to_string(event.id)})
+
+    lv
+    |> element("#calendar-grid")
+    |> render_hook("update_event_recurrence", %{
+      "freq" => "daily",
+      "interval" => "1",
+      "end_type" => "never"
+    })
+
+    assert has_element?(lv, "#recurrence-prompt-modal [phx-value-scope='following']")
+    lv
   end
 
   defp confirm_scope(lv, scope) do

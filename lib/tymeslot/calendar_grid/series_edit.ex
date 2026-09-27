@@ -107,11 +107,18 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   The new series is a copy of the master's own fields, not of the provider's
   bookkeeping: Google's Meet link is copied as it is, while an Outlook
   series' Teams meeting is not (creating one would make a new meeting),
-  though the join details in its description are. Occurrences edited or
-  deleted on their own from the split on do not carry over (Google's
-  excluded dates do), and a repeat count the grid cannot count as the
-  provider does, such as the second Monday of the month for ten months, is
-  refused (`:unsupported_rule`) before anything is written.
+  though the join details in its description are. A repeat count the grid
+  cannot count as the provider does, such as the second Monday of the month
+  for ten months, is refused (`:unsupported_rule`) before anything is
+  written.
+
+  Occurrences from the split on that were edited or cancelled on their own
+  are read before anything is written and carried to the new series once
+  it is (`Recurrence.SplitExceptions`): each keeps what it had of its own,
+  moved with the series, and a cancelled one stays cancelled. Only one
+  whose place a new repeat rule no longer has cannot be carried, which the
+  organiser is told before choosing the scope (`following_notes/2`). A
+  write that fails after the split is logged, and the edit still succeeds.
 
   The series' rows are then deleted and a sync requested, as for an edit of
   every occurrence, which brings back both halves; the series' recorded video
@@ -143,6 +150,31 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   # The fields of a series member an edit can change, in the cache's
   # vocabulary, which the payload shares for these; timing is always written.
   @override_fields [:summary, :description, :location, :colour, :reminders, :attendees]
+
+  @typedoc """
+  Something an edit of this and every following occurrence does not carry,
+  which the organiser is told before choosing that scope:
+
+    * `:unmatched_changes_reset` - occurrences from the edited one on that
+      were changed or cancelled on their own keep that only where the
+      series' new repeat rule still has them (Google and Outlook, for a
+      change of rule; a CalDAV split keeps every override and exclusion).
+  """
+  @type following_note :: :unmatched_changes_reset
+
+  @doc """
+  What an edit of `event` and every following occurrence by `changes` will
+  not carry (`t:following_note/0`), in the order the organiser should read
+  them. Reads the cached row, as `EventEdit.update_event/4` does.
+  """
+  @spec following_notes(map(), map()) :: [following_note()]
+  def following_notes(event, changes) do
+    stored = Occurrence.cached_row(event)
+
+    if Occurrence.series_family(stored) == :provider_ids and rule_changed?(stored, changes),
+      do: [:unmatched_changes_reset],
+      else: []
+  end
 
   @doc """
   How a series member whose provider is in `family` may be edited from the
