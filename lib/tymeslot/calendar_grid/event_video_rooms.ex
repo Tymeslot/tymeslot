@@ -228,7 +228,9 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
             calendar_integration_id: to_integration_id,
             event_uid: new_uid,
             provider_event_id: other_identifier(new_id, new_uid),
-            provider_calendar_id: provider_calendar_id
+            provider_calendar_id: provider_calendar_id,
+            # A series' uid is its iCalendar UID on every provider.
+            event_ical_uid: new_uid
           })
 
         :ok

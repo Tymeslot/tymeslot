@@ -424,7 +424,9 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
                calendar_integration_id: calendar_integration_id,
                event_uid: "moved@google.com",
                provider_event_id: "newmaster",
-               provider_calendar_id: "team"
+               provider_calendar_id: "team",
+               event_ical_uid: "moved@google.com",
+               event_seen_at: nil
              } = Repo.reload!(series_room)
 
       assert calendar_integration_id == destination.id
