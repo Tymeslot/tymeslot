@@ -414,6 +414,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesEditMasterTest do
       {winter, summer} = winter_and_summer_mondays()
       excluded = Date.add(summer, -7)
       overridden = Date.add(summer, 7)
+      # The series ends days after the override, so no occurrence reaches the
+      # edge of the sync's window, where a day's shift could carry it across.
+      until = Date.add(overridden, 3)
 
       document =
         calendar(
@@ -424,7 +427,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesEditMasterTest do
                 "EXDATE;TZID=Europe/Berlin:#{stamp(excluded)}T100000\n"
               ),
               "RRULE:FREQ=WEEKLY",
-              "RRULE:FREQ=WEEKLY;BYDAY=MO"
+              "RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=#{stamp(until)}T000000Z"
             ) <>
             """
             BEGIN:VEVENT
