@@ -40,17 +40,28 @@ defmodule Tymeslot.Payments.Webhooks.SecretCheck do
   """
   @spec check() :: [String.t()]
   def check do
-    missing = if MeetingPayments.platform_configured?(), do: missing_secrets(), else: []
+    run([
+      {@platform_secret, &platform_required?/0, &platform_secret/0},
+      {@connect_secret, &connect_required?/0, &connect_secret/0}
+    ])
+  end
+
+  @doc """
+  `check/0` for the Connect secret alone: the one an admin setting (meeting
+  payments) can make required while the application runs.
+  """
+  @spec check_connect() :: [String.t()]
+  def check_connect, do: run([{@connect_secret, &connect_required?/0, &connect_secret/0}])
+
+  defp run(secrets) do
+    missing = if MeetingPayments.platform_configured?(), do: missing_secrets(secrets), else: []
     Enum.each(missing, &report/1)
     missing
   end
 
-  defp missing_secrets do
-    [
-      {@platform_secret, platform_required?(), &platform_secret/0},
-      {@connect_secret, connect_required?(), &connect_secret/0}
-    ]
-    |> Enum.filter(fn {_name, required?, read} -> required? and blank?(read.()) end)
+  defp missing_secrets(secrets) do
+    secrets
+    |> Enum.filter(fn {_name, required?, read} -> required?.() and blank?(read.()) end)
     |> Enum.map(fn {name, _required?, _read} -> name end)
   end
 

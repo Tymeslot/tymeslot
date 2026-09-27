@@ -43,6 +43,7 @@ defmodule Tymeslot.AppSettings do
   alias Tymeslot.AppSettings.{AppSettingsQueries, AppSettingsSchema, Env}
   alias Tymeslot.AppSettings.LockoutPolicy
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Payments.Webhooks.SecretCheck
 
   @type setting_key ::
           :registration_enabled
@@ -214,6 +215,7 @@ defmodule Tymeslot.AppSettings do
         Env.flush_overrides(settings)
         Logger.info("App settings updated", keys: Map.keys(attrs))
         AdminAlerts.check_config()
+        maybe_check_connect_secret(attrs)
         {:ok, settings}
 
       {:error, :would_lock_out} = error ->
@@ -228,6 +230,16 @@ defmodule Tymeslot.AppSettings do
         error
     end
   end
+
+  # Switching meeting payments on makes the Connect webhook secret required;
+  # say so now if it is missing, rather than at the next boot. Only a save
+  # that touches the toggle checks, so unrelated saves do not repeat the log.
+  defp maybe_check_connect_secret(%{meeting_payments_enabled: _value}) do
+    _missing = SecretCheck.check_connect()
+    :ok
+  end
+
+  defp maybe_check_connect_secret(_attrs), do: :ok
 
   # Guard callback invoked under the row lock with the merged settings row
   # (the exact state that is about to be committed). Returns `:ok` to allow
