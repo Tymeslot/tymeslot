@@ -5,7 +5,10 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
 
   Two parts of the event are scrubbed, both by key name:
 
-  * `meta` — inline Logger metadata, the keys a call site passes itself.
+  * `meta` — inline Logger metadata, the keys a call site passes itself, and
+    the maps, keyword lists, lists, tuples and structs inside their values,
+    to five levels down: `error: %{"access_token" => _}` is caught as surely
+    as `access_token: _`.
   * `msg` — the message term, when it is a report (`Logger.info(%{...})`, and
     every OTP report) or a `{format, args}` pair. These are walked to any
     depth, because the terms that leak are nested: an OTP task-termination
@@ -89,6 +92,14 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   # leak that prompted this sat four levels down) with room to spare, but
   # bounded so a pathologically nested term cannot make logging expensive.
   @max_depth 12
+
+  # Metadata values are walked less deeply than message reports: they run for
+  # every log event, and a call site's own metadata is rarely nested deeper
+  # than a decoded API response. Five levels reaches a token in
+  # `%{response: %{body: %{data: %{token: _}}}}` with room to spare.
+  @meta_max_depth 5
+
+  @max_key_bytes 128
 
   @doc """
   Installs the redactor as a primary `:logger` filter.
@@ -186,19 +197,9 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
     )
   end
 
-  defp redact_meta(meta) do
-    if Enum.any?(meta, fn {k, _v} -> sensitive_key?(k) end) do
-      Map.new(meta, fn {key, value} ->
-        if sensitive_key?(key) do
-          {key, @redacted}
-        else
-          {key, value}
-        end
-      end)
-    else
-      meta
-    end
-  end
+  # The metadata map itself is one level above its values, so its keys are
+  # checked here and each value is walked to `@meta_max_depth` below that.
+  defp redact_meta(meta), do: redact_map(meta, @meta_max_depth + 1)
 
   defp sensitive_key?(key) when is_atom(key) do
     key
@@ -206,10 +207,13 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
     |> sensitive_key?()
   end
 
-  defp sensitive_key?(key) when is_binary(key) do
+  # A key longer than any sensitive name could be is data, not a name (a map
+  # keyed by a response body, say), and downcasing it on every log event
+  # would cost more than the rest of the walk.
+  defp sensitive_key?(key) when is_binary(key) and byte_size(key) <= @max_key_bytes do
     downcased = String.downcase(key)
 
-    Enum.any?(@sensitive_substrings, &String.contains?(downcased, &1)) or
+    String.contains?(downcased, @sensitive_substrings) or
       downcased in @sensitive_exact_keys or
       Enum.any?(@sensitive_key_suffixes, &suffix_match?(downcased, &1))
   end

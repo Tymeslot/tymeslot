@@ -180,6 +180,97 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
     end
   end
 
+  describe "filter/2 over nested metadata values" do
+    test "redacts a sensitive key inside a map value" do
+      filtered = MetadataRedactor.filter(event(%{error: %{"access_token" => "abc"}}), [])
+
+      assert filtered.meta.error == %{"access_token" => "[REDACTED]"}
+    end
+
+    test "redacts a token nested three levels down, keeping its siblings" do
+      meta = %{response: %{body: %{data: %{refresh_token: "rt-1", expires_in: 3600}}}}
+
+      filtered = MetadataRedactor.filter(event(meta), [])
+
+      assert filtered.meta.response.body.data == %{
+               refresh_token: "[REDACTED]",
+               expires_in: 3600
+             }
+    end
+
+    test "redacts inside keyword lists, lists and structs" do
+      meta = %{
+        opts: [api_key: "sk-1", timeout: 5_000],
+        attempts: [%{password: "pw", n: 1}],
+        exception: %RuntimeError{message: "boom"},
+        request: %URI{host: "example.com", userinfo: "user", query: "a=1"}
+      }
+
+      filtered = MetadataRedactor.filter(event(meta), [])
+
+      assert filtered.meta.opts == [api_key: "[REDACTED]", timeout: 5_000]
+      assert filtered.meta.attempts == [%{password: "[REDACTED]", n: 1}]
+      assert filtered.meta.exception == %RuntimeError{message: "boom"}
+      assert %URI{host: "example.com"} = filtered.meta.request
+    end
+
+    test "redacts a sensitive field inside a struct and keeps it the struct it was" do
+      config = %Req.Request{options: %{auth: {:bearer, "t"}, client_secret: "cs"}}
+
+      filtered = MetadataRedactor.filter(event(%{request: config}), [])
+
+      assert %Req.Request{options: options} = filtered.meta.request
+      assert options.client_secret == "[REDACTED]"
+    end
+
+    test "walks five levels into a metadata value and no further" do
+      nest = fn levels -> Enum.reduce(1..levels, %{token: "t"}, &%{"n#{&1}" => &2}) end
+
+      # The metadata key is level zero; the token's own key sits at level five.
+      assert MetadataRedactor.filter(event(%{ctx: nest.(4)}), []).meta.ctx ==
+               Enum.reduce(1..4, %{token: "[REDACTED]"}, &%{"n#{&1}" => &2})
+
+      deep = nest.(5)
+      assert MetadataRedactor.filter(event(%{ctx: deep}), []).meta.ctx == deep
+    end
+
+    test "passes odd terms through unchanged rather than raising inside the logger" do
+      pid = self()
+      ref = make_ref()
+      fun = fn -> :ok end
+      large = :binary.copy("x", 1_000_000)
+      large_key_map = %{large => "value"}
+
+      meta = %{
+        improper: ["abc" | "def"],
+        nested_improper: [%{password: "pw"} | :tail],
+        tuple: {:ok, 1, 2},
+        pid: pid,
+        ref: ref,
+        fun: fun,
+        large: large,
+        large_key_map: large_key_map,
+        charlist: ~c"plain text",
+        empty: [],
+        nil_value: nil
+      }
+
+      filtered = MetadataRedactor.filter(event(meta), []).meta
+
+      assert filtered.improper == ["abc" | "def"]
+      assert filtered.nested_improper == [%{password: "[REDACTED]"} | :tail]
+      assert filtered.tuple == {:ok, 1, 2}
+      assert filtered.pid == pid
+      assert filtered.ref == ref
+      assert filtered.fun == fun
+      assert filtered.large == large
+      assert filtered.large_key_map == large_key_map
+      assert filtered.charlist == ~c"plain text"
+      assert filtered.empty == []
+      assert filtered.nil_value == nil
+    end
+  end
+
   describe "filter/2 over message reports" do
     test "redacts a credential nested inside an OTP report's arguments" do
       # The shape an OTP task-termination report actually has: the crashed
