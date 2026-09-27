@@ -271,9 +271,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
   # (`{:error, type, reason}` — the `api_error()` shape returned by the
   # Outlook/Graph client) error shapes into a single printable string.
   defp format_error({:error, type, reason}) when is_atom(type),
-    do: "#{type}: #{inspect(reason)}"
+    do: "#{type}: #{LogFormat.reason(reason)}"
 
-  defp format_error({:error, reason}), do: inspect(reason)
+  defp format_error({:error, reason}), do: LogFormat.reason(reason)
 
-  defp format_error(other), do: inspect(other)
+  defp format_error(other), do: LogFormat.reason(other)
 end

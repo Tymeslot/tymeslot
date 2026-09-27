@@ -286,7 +286,7 @@ defmodule Tymeslot.Mailer.SmtpProbe do
   defp format_readable_reason(:starttls_not_offered),
     do: "Server does not offer STARTTLS, which this port requires"
 
-  defp format_readable_reason(reason), do: inspect(reason)
+  defp format_readable_reason(reason), do: LogFormat.reason(reason)
 
   defp get_error_suggestion(:econnrefused, 587) do
     "\n\nPort 587 (STARTTLS) connection refused. Common causes:\n" <>

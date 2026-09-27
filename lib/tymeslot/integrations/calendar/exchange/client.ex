@@ -46,6 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.CircuitBreakerHelpers
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Exchange.ClientConfig
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
   alias Tymeslot.Integrations.Calendar.Shared.HttpLogging
@@ -207,14 +208,16 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.Client do
   # `ResponseTooLargeError` both carry the request URL, which is the one place
   # a credential could still be hiding. The struct name plus its `:reason`
   # says everything the operator needs and can carry nothing else.
-  defp error_label(%module{reason: reason}), do: "#{inspect(module)}: #{inspect(reason)}"
+  defp error_label(%module{reason: reason}),
+    do: "#{inspect(module)}: #{LogFormat.reason(reason)}"
+
   defp error_label(%module{}), do: inspect(module)
 
   # Unreachable today: `HTTPClient` returns only exception structs. It stays
   # because without it a non-struct term would raise `FunctionClauseError` from
   # inside the error handler itself, turning a recoverable network failure into
   # an Oban crash.
-  defp error_label(other), do: inspect(other)
+  defp error_label(other), do: LogFormat.reason(other)
 
   defp headers(%{username: username, password: password})
        when is_binary(username) and is_binary(password) do

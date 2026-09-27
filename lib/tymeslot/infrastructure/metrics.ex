@@ -49,7 +49,7 @@ defmodule Tymeslot.Infrastructure.Metrics do
 
         emit_calendar_operation(
           operation,
-          Map.merge(metadata, %{status: :error, error: inspect(error)}),
+          Map.merge(metadata, %{status: :error, error: LogFormat.reason(error)}),
           %{duration: duration_ms}
         )
 
@@ -61,7 +61,7 @@ defmodule Tymeslot.Infrastructure.Metrics do
   # raised. Recording it as a success overstated the calendar success rate and
   # meant the "Calendar operation failed" line never fired for the ordinary
   # case where a provider call returns an error tuple.
-  defp result_status({:error, reason}), do: %{status: :error, error: inspect(reason)}
+  defp result_status({:error, reason}), do: %{status: :error, error: LogFormat.reason(reason)}
   defp result_status(_result), do: %{status: :success}
 
   @doc """

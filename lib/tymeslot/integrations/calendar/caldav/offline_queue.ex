@@ -379,7 +379,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
       calendar_integration_id: integration.id,
       uid: row.uid,
       operation: operation,
-      error: format_reason(reason)
+      error: LogFormat.reason(reason)
     )
 
     QueueQueries.mark_sync_failed(
@@ -406,9 +406,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
       operation: operation
     )
   end
-
-  defp format_reason(reason) when is_binary(reason), do: reason
-  defp format_reason(reason), do: inspect(reason)
 
   defp no_primary_path_message do
     dgettext(

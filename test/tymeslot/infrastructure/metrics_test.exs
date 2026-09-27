@@ -115,6 +115,43 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
     end
   end
 
+  describe "time_operation/3 error metadata" do
+    setup %{handler_id: handler_id} do
+      parent = self()
+
+      :telemetry.attach(
+        handler_id,
+        [:tymeslot, :calendar, :redacted_op],
+        fn _event, _measurements, metadata, _config -> send(parent, {:metadata, metadata}) end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+    end
+
+    test "redacts a credential inside an {:error, _} reason" do
+      Metrics.time_operation(:redacted_op, %{}, fn ->
+        {:error, %{"error" => "invalid_grant", "access_token" => "at-leak"}}
+      end)
+
+      assert_receive {:metadata, %{status: :error, error: error}}
+      assert error =~ "invalid_grant"
+      refute error =~ "at-leak"
+    end
+
+    test "redacts a credential inside a raised exception" do
+      assert_raise RuntimeError, fn ->
+        Metrics.time_operation(:redacted_op, %{}, fn ->
+          raise "upstream said Bearer bt-leak"
+        end)
+      end
+
+      assert_receive {:metadata, %{status: :error, error: error}}
+      assert error =~ "RuntimeError"
+      refute error =~ "bt-leak"
+    end
+  end
+
   describe "track_http_request/4" do
     test "emits [:tymeslot, :http, :request] with correct data", %{handler_id: handler_id} do
       ref = make_ref()

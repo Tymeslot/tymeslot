@@ -213,7 +213,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   defp format_insert_error(%Changeset{} = changeset),
     do: Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
 
-  defp format_insert_error(other), do: inspect(other)
+  defp format_insert_error(other), do: LogFormat.reason(other)
 
   # Exponential backoff between ordinary retries: 1s, 2s, 4s, 8s, 16s. Sleeping
   # in the job rather than snoozing keeps the failure a genuine attempt, so it
