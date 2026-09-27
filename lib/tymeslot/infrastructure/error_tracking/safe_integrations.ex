@@ -18,6 +18,11 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.SafeIntegrations do
   the failure's module or kind, and dropped. It is never reported to
   ErrorTracker, which is what just failed.
 
+  A failed Oban job is the one event not passed to the library: it goes to
+  `Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes.report_exception/1`,
+  which records it with the job's context taken from the event, since Oban
+  reports some failures from a process that never ran the job.
+
   The handler ids and events below are copied from
   `ErrorTracker.Integrations.Oban` and `ErrorTracker.Integrations.Phoenix`.
   The test suite attaches the library's own handlers and compares, so an
@@ -25,12 +30,15 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.SafeIntegrations do
   handlers attached.
   """
 
+  alias Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes
   alias Tymeslot.Infrastructure.Logging.LogFormat
 
   require Logger
 
+  @oban ErrorTracker.Integrations.Oban
+
   @integrations [
-    {ErrorTracker.Integrations.Oban, [[:oban, :job, :start], [:oban, :job, :exception]]},
+    {@oban, [[:oban, :job, :start], [:oban, :job, :exception]]},
     {ErrorTracker.Integrations.Phoenix,
      [
        [:phoenix, :router_dispatch, :start],
@@ -74,13 +82,19 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.SafeIntegrations do
   @doc false
   @spec handle_event([atom()], map(), map(), module()) :: :ok
   def handle_event(event, measurements, metadata, integration) do
-    _result = integration.handle_event(event, measurements, metadata, :no_config)
+    _result = dispatch(event, measurements, metadata, integration)
     :ok
   rescue
     exception -> log_failure(integration, exception.__struct__)
   catch
     kind, _reason -> log_failure(integration, kind)
   end
+
+  defp dispatch([:oban, :job, :exception], _measurements, metadata, @oban),
+    do: ObanOutcomes.report_exception(metadata)
+
+  defp dispatch(event, measurements, metadata, integration),
+    do: integration.handle_event(event, measurements, metadata, :no_config)
 
   # A plain log line with no crash_reason, so `CrashReporter` does not take
   # it for a crash and try to record it in the database that just failed.

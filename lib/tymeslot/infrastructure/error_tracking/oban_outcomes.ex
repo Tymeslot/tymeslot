@@ -1,7 +1,8 @@
 defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   @moduledoc """
   Records the Oban jobs that end without running to completion and without
-  raising, which ErrorTracker's own Oban integration never sees.
+  raising, which ErrorTracker's own Oban integration never sees, and the jobs
+  that fail, in that integration's place (see *Failed jobs* below).
 
   That integration listens to `[:oban, :job, :exception]` only: a job that
   raises, returns `{:error, reason}` or times out, including the final
@@ -13,9 +14,9 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
       `:cancelled`. This module records it through
       `Tymeslot.Infrastructure.ErrorTracking.report_error/3`, as a
       `Tymeslot.Infrastructure.ErrorTracking.JobDiscardedError`, unless the
-      worker declares the outcome expected (below). Because the integration
-      ignores `:stop` and this module ignores `:exception`, no job outcome is
-      recorded by both.
+      worker declares the outcome expected (below). Oban reports a job
+      outcome as either `:stop` or `:exception`, never both, so no job
+      outcome is recorded twice.
     * `Oban.Lifeline` discards an `executing` job that has used up its
       attempts, reported as `[:oban, :plugin, :stop]` with the jobs in
       `discarded_jobs`.
@@ -46,6 +47,19 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   file and line 0. So each worker and reason is one error, while the detail
   after a reason's first `": "` (an HTTP status line, a provider message)
   stays in the message and does not split it.
+
+  ## Failed jobs
+
+  A job that raises, returns `{:error, reason}`, times out or is killed is
+  reported as `[:oban, :job, :exception]`. ErrorTracker's integration records
+  it with the `job.*` context its `:start` handler put in the job's process.
+  A timeout or a crash of a linked process is reported from a fresh task
+  under Oban's foreman instead, which has no such context: the occurrence
+  would carry no job id, and an alert about a failing admin alert email
+  could not be recognised as one. `report_exception/1` therefore builds the
+  `job.*` context from the job itself and passes it with the report.
+  `Tymeslot.Infrastructure.ErrorTracking.SafeIntegrations` calls it in place
+  of the integration's own handler.
 
   Telemetry detaches a handler that raises, so `handle_event/4` never raises:
   a failure is logged, naming only its module, and dropped.
@@ -91,19 +105,61 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
     :ok
   end
 
+  @doc """
+  Records the job failure reported by an `[:oban, :job, :exception]` event,
+  as ErrorTracker's Oban integration does, but with the job's context taken
+  from `metadata.job` rather than from the reporting process. Raises when the
+  report fails; the caller guards against that.
+  """
+  @spec report_exception(map()) :: :ok
+  def report_exception(%{job: %Oban.Job{} = job, reason: reason} = metadata) do
+    state = Map.get(metadata, :state, :failure)
+    exception = if is_exception(reason), do: reason, else: {Map.get(metadata, :kind), reason}
+
+    _occurrence =
+      ErrorTracker.report(
+        exception,
+        failure_stacktrace(job.worker, Map.get(metadata, :stacktrace)),
+        Map.put(job_context(job), :state, state)
+      )
+
+    :ok
+  end
+
+  # ErrorTracker's integration uses the same synthetic frame, so an error
+  # returned from a worker keeps the fingerprint it had before.
+  defp failure_stacktrace(worker, [_frame | _more] = stacktrace) when is_binary(worker),
+    do: stacktrace
+
+  defp failure_stacktrace(worker, _none), do: [{worker_module(worker), :perform, 2, []}]
+
+  # The keys ErrorTracker's Oban integration sets when the job starts, plus
+  # the attempt limit `Tymeslot.Infrastructure.ObanLogger` adds.
+  defp job_context(%Oban.Job{} = job) do
+    %{
+      "job.args" => job.args,
+      "job.attempt" => job.attempt,
+      "job.id" => job.id,
+      "job.max_attempts" => job.max_attempts,
+      "job.priority" => job.priority,
+      "job.queue" => job.queue,
+      "job.worker" => job.worker
+    }
+  end
+
   @doc false
   @spec handle_event([atom()], map(), map(), term()) :: :ok
   def handle_event(
         [:oban, :job, :stop],
         _measurements,
-        %{state: state, job: %Oban.Job{worker: worker}, result: result},
+        %{state: state, job: %Oban.Job{worker: worker} = job, result: result},
         _config
       )
       when state in [:discard, :cancelled] do
     outcome = if state == :discard, do: :discard, else: :cancel
     reason = result_reason(result)
 
-    if not expected?(worker, reason), do: record(worker, outcome, reason)
+    if not expected?(worker, reason), do: record(job, outcome, reason)
 
     :ok
   rescue
@@ -224,13 +280,19 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
     false
   end
 
-  defp record(worker, outcome, reason) do
+  # A job cancelled by a shutdown is reported from outside its process, so
+  # the job's context is passed along here too.
+  defp record(%Oban.Job{worker: worker} = job, outcome, reason) do
     exception = JobDiscardedError.exception({worker, outcome, reason})
 
-    ErrorTracking.report_error(exception, stacktrace(worker, outcome, reason), %{
-      job_outcome: Atom.to_string(outcome),
-      job_reason: exception.reason
-    })
+    ErrorTracking.report_error(
+      exception,
+      stacktrace(worker, outcome, reason),
+      Map.merge(job_context(job), %{
+        job_outcome: Atom.to_string(outcome),
+        job_reason: exception.reason
+      })
+    )
   end
 
   defp stacktrace(worker, outcome, reason) do
