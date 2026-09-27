@@ -25,6 +25,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Infrastructure.BreakerOutcome
+  alias Tymeslot.Infrastructure.ErrorTracking
 
   require Logger
 
@@ -162,9 +163,13 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
     mark_needs_reauth = Keyword.fetch!(opts, :mark_needs_reauth)
     provider_label_fun = Keyword.get(opts, :provider_label, & &1.provider)
     log_prefix = Keyword.get(opts, :log_prefix, "Integration")
-    cause = fetch_cause(Keyword.get(opts, :cause, @default_cause))
+    cause_key = cause_key(Keyword.get(opts, :cause, @default_cause))
+    cause = fetch_cause(cause_key)
 
     provider = provider_label_fun.(integration)
+
+    if cause_key == :credentials_undecryptable,
+      do: report_undecryptable(integration, provider, log_prefix)
 
     Logger.warning(
       cause.log,
@@ -190,5 +195,23 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
     end
   end
 
-  defp fetch_cause(cause), do: Map.get(@causes, cause) || @causes[@default_cause]
+  defp cause_key(cause) when is_map_key(@causes, cause), do: cause
+  defp cause_key(_unknown), do: @default_cause
+
+  defp fetch_cause(cause), do: Map.fetch!(@causes, cause_key(cause))
+
+  # Credentials that no longer decrypt usually mean the encryption key was
+  # lost or rotated: the operator's to fix, and never one integration's
+  # alone. The job that meets them is discarded as an expected end, since
+  # only a reconnect recovers that integration, so the failure is recorded
+  # here instead. One call site and one reason, so however many
+  # integrations are affected it is one error, and one new-error alert.
+  defp report_undecryptable(integration, provider, log_prefix) do
+    ErrorTracking.report_error(:credentials_undecryptable, nil, %{
+      integration_type: log_prefix,
+      provider: provider,
+      integration_id: integration.id,
+      user_id: integration.user_id
+    })
+  end
 end
