@@ -11,6 +11,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.BookingApprovalEmails do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
@@ -76,11 +77,20 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.BookingApprovalEmails do
   end
 
   # Set by a reschedule that sent a confirmed booking back into the gate:
-  # the time it was moved from, for the emails to show.
-  defp previous_start_opts(%{"previous_start_time" => iso}) when is_binary(iso) do
+  # the time it was moved from, for the emails to show. Only this application
+  # writes it, as ISO 8601, so one that does not parse is a bug; the emails
+  # still go, without the previous time.
+  defp previous_start_opts(%{"previous_start_time" => iso} = args) when is_binary(iso) do
     case DateTime.from_iso8601(iso) do
-      {:ok, previous, _offset} -> [previous_start_time: previous]
-      {:error, _reason} -> []
+      {:ok, previous, _offset} ->
+        [previous_start_time: previous]
+
+      {:error, reason} ->
+        ErrorTracking.report_error({:unreadable_previous_start_time, reason}, nil,
+          meeting_id: args["meeting_id"]
+        )
+
+        []
     end
   end
 

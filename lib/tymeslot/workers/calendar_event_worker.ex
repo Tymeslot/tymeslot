@@ -214,8 +214,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   defp handle_result(result, job) do
     case result do
       :ok ->
-        clear_offline_queue_tag(job)
-        maybe_invalidate_availability_cache(job)
+        tidy_after_write(job)
         :ok
 
       {:error, error_type} ->
@@ -254,10 +253,26 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     end
   end
 
-  defp clear_offline_queue_tag(%Oban.Job{args: args}) do
-    case MeetingQueries.get_meeting(args["meeting_id"]) do
-      {:ok, meeting} -> QueueWiring.clear(meeting, nil)
-      {:error, _reason} -> :ok
+  # A successful write leaves the meeting's offline queue tag to clear and,
+  # for a create, the organiser's availability cache to invalidate.
+  defp tidy_after_write(%Oban.Job{args: %{"action" => action, "meeting_id" => meeting_id}}) do
+    case MeetingQueries.get_meeting(meeting_id) do
+      {:ok, meeting} ->
+        QueueWiring.clear(meeting, nil)
+        maybe_invalidate_availability_cache(action, meeting)
+
+      # A deletion counts a meeting that is already gone as done.
+      {:error, :not_found} when action == "delete" ->
+        :ok
+
+      # Deleted while the write was in flight: the calendar now holds an
+      # event for a booking that no longer exists.
+      {:error, reason} ->
+        Logger.warning("Meeting gone after a successful calendar write",
+          meeting_id: meeting_id,
+          action: action,
+          reason: reason
+        )
     end
   end
 
@@ -271,16 +286,10 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   # booking-page load reflects it immediately rather than the cached window
   # from before the event existed. "update"/"delete" don't shift what counts
   # as busy in a way booking-page callers observe, so this is create-only.
-  defp maybe_invalidate_availability_cache(%Oban.Job{
-         args: %{"action" => "create", "meeting_id" => meeting_id}
-       }) do
-    case MeetingQueries.get_meeting(meeting_id) do
-      {:ok, meeting} -> AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
-      {:error, _reason} -> :ok
-    end
-  end
+  defp maybe_invalidate_availability_cache("create", meeting),
+    do: AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
 
-  defp maybe_invalidate_availability_cache(_job), do: :ok
+  defp maybe_invalidate_availability_cache(_action, _meeting), do: :ok
 
   # Group all handle_error_result/2 clauses together
   defp handle_error_result(:rate_limited, job) do

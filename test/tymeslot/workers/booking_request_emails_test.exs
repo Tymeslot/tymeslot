@@ -10,12 +10,14 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
   use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
+  import ExUnit.CaptureLog
   import Mox
   import Tymeslot.ConfigTestHelpers
 
   @moduletag :emails
   @moduletag :bookings
 
+  alias ErrorTracker.Error
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingQueries
@@ -174,6 +176,42 @@ defmodule Tymeslot.Workers.BookingRequestEmailsTest do
 
       assert_received {:invitee_opts, [previous_start_time: ^previous]}
       assert_received {:host_opts, [previous_start_time: ^previous]}
+    end
+
+    test "records an unreadable previous time, and still sends both emails without it" do
+      # Only this application writes the previous time, as ISO 8601, so one
+      # that does not parse is a bug rather than bad input.
+      with_config(:error_tracker, enabled: true)
+      meeting = held_meeting()
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_request_received, fn _sent ->
+        {:ok, :sent}
+      end)
+
+      expect(Tymeslot.EmailServiceMock, :send_booking_approval_request, fn :request,
+                                                                           _sent,
+                                                                           _urls,
+                                                                           _locale ->
+        {:ok, :sent}
+      end)
+
+      capture_log(fn ->
+        assert :ok =
+                 perform_job(EmailWorker, %{
+                   "action" => "send_booking_request_emails",
+                   "meeting_id" => meeting.id,
+                   "previous_start_time" => "not a time"
+                 })
+      end)
+
+      assert [%Error{kind: "Elixir.Tymeslot.Infrastructure.ErrorTracking.HandledError"} = error] =
+               Error |> Repo.all() |> Repo.preload(:occurrences)
+
+      assert [%{context: %{"meeting_id" => meeting_id, "error.reason" => reason}}] =
+               error.occurrences
+
+      assert meeting_id == meeting.id
+      assert reason =~ "invalid_format"
     end
 
     test "a single-leg follow-up keeps the reschedule's previous time" do

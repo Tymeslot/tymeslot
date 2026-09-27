@@ -486,8 +486,16 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
           {:error, %{discovery: message}}
       end
     else
-      # If provider validation/lookup fails, skip pre-validation and allow creation to proceed
-      {:error, _error} -> {:ok, attrs}
+      # A CalDAV-family provider the operator has switched off is not in the
+      # registry, so there is nothing to probe with; creation goes ahead
+      # unprobed, as it always has, but no longer silently.
+      {:error, _error} ->
+        Logger.warning("Skipped the connection probe for a calendar provider not in the registry",
+          provider: provider,
+          user_id: attrs[:user_id]
+        )
+
+        {:ok, attrs}
     end
   end
 
