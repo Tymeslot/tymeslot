@@ -256,6 +256,9 @@ config :tymeslot, :payment_retry, base_delay_ms: 1
 # they are disposable artefacts of a failed run, and writing them under test/
 # left untracked PNGs behind after every red e2e run. Wallaby mkdir_p's the
 # directory itself, so nothing has to create it.
+# CHROME_BINARY names the browser on machines without the snap, as in SaaS.
+# Wallaby's own lookup of google-chrome on PATH does not help: a configured
+# binary replaces whatever it found, even when the path does not exist.
 config :wallaby,
   otp_app: :tymeslot,
   ecto_repos: [Tymeslot.Repo],
@@ -264,5 +267,6 @@ config :wallaby,
   screenshot_dir: Path.join(System.tmp_dir!(), "tymeslot-screenshots"),
   chromedriver: [
     headless: true,
-    binary: "/snap/chromium/current/usr/lib/chromium-browser/chrome"
+    binary:
+      System.get_env("CHROME_BINARY", "/snap/chromium/current/usr/lib/chromium-browser/chrome")
   ]
