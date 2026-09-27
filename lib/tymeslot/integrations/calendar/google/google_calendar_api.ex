@@ -6,13 +6,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
 
   @behaviour Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour
 
-  require Logger
-
-  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.Google.ApiStatus
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour
+  alias Tymeslot.Integrations.Calendar.Google.EventListing
   alias Tymeslot.Integrations.Calendar.Google.EventMapper
   alias Tymeslot.Integrations.Calendar.Google.PushChannel
   alias Tymeslot.Integrations.Calendar.HTTP
@@ -27,17 +25,6 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   import ErrorParser, only: [is_oauth_error_status: 1]
 
   @base_url "https://www.googleapis.com/calendar/v3"
-
-  # Google's own maximum per page.
-  @max_results "2500"
-
-  # Neither listing loop had any bound on iterations: a provider echoing the
-  # same page token would occupy one of the ten `calendar_events` queue slots
-  # permanently, with nothing in the logs to say why: `SyncGoogleCalendarWorker`
-  # defines no `timeout/1`, so Oban's `:infinity` default applies. At 2500
-  # events a page this cap is far past any real calendar, so hitting it means
-  # the provider is misbehaving, and saying so beats looping in silence.
-  @max_pages 200
 
   @type calendar_event :: %{
           id: String.t(),
@@ -65,7 +52,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   end
 
   @doc """
-  Lists events for a specific calendar within a date range.
+  Lists events for a specific calendar within a date range, every page of
+  it: `{:ok, events}` is the whole window, never a truncated first page, so
+  the sync may take an event's absence from it as the event's deletion.
   """
   @impl CalendarAPIBehaviour
   @spec list_events(CalendarIntegrationSchema.t(), String.t(), DateTime.t(), DateTime.t()) ::
@@ -75,15 +64,16 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
       "timeMin" => DateTime.to_iso8601(start_time),
       "timeMax" => DateTime.to_iso8601(end_time),
       "singleEvents" => "true",
-      "orderBy" => "startTime",
-      "maxResults" => "2500"
+      "orderBy" => "startTime"
     }
 
+    # Outside the circuit breaker, as this read has always been: its live
+    # callers (availability, the connection test) handle no
+    # `{:error, :circuit_open}`.
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      with {:ok, response} <-
-             make_request(:get, "/calendars/#{URI.encode(calendar_id)}/events", token, params) do
-        {:ok, response["items"] || []}
-      end
+      with {:ok, %{events: events}} <-
+             EventListing.fetch_all(token, calendar_id, params, breaker: false),
+           do: {:ok, events}
     end)
   end
 
@@ -310,7 +300,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
     params = %{"iCalUID" => ical_uid, "showDeleted" => "true"}
 
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      with {:ok, %{events: events}} <- fetch_events_page(token, calendar_id, params, nil, []),
+      with {:ok, %{events: events}} <- EventListing.fetch_all(token, calendar_id, params),
            do: {:ok, events}
     end)
   end
@@ -389,12 +379,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
       # `singleEvents` repeats the bootstrap's, as a token requires: without
       # it a series changed since the bootstrap arrives as its unexpanded
       # master and is cached as one event in place of its occurrences.
-      fetch_events_page(
+      EventListing.fetch_all(
         token,
         calendar_id,
-        %{"syncToken" => sync_token, "singleEvents" => "true"},
-        nil,
-        []
+        %{"syncToken" => sync_token, "singleEvents" => "true"}
       )
     end)
   end
@@ -425,79 +413,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
     }
 
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      fetch_events_page(token, calendar_id, base, nil, [])
+      EventListing.fetch_all(token, calendar_id, base)
     end)
   end
-
-  # The one paginator. Both listings walk `nextPageToken` identically and
-  # differ only in their base params, so they share the loop rather than
-  # holding two copies of it: before PR #94 the incremental path had no
-  # pagination at all while bootstrap had it correct, and one branch stayed
-  # broken for as long as both existed.
-  #
-  # `maxResults` is set here rather than by either caller, so the page size
-  # cannot drift between them again. The incremental path was taking Google's
-  # default of 250 where bootstrap asked for 2500: about 18 sequential
-  # round-trips for a 4,465-event backlog where 2 would do, each one through
-  # the circuit breaker inside a single Oban job.
-  defp fetch_events_page(token, calendar_id, base_params, page_token, acc, page \\ 1)
-
-  defp fetch_events_page(_token, _calendar_id, _base_params, _page_token, _acc, page)
-       when page > @max_pages do
-    {:error, :too_many_pages,
-     "Event listing exceeded #{@max_pages} pages of #{@max_results} events"}
-  end
-
-  defp fetch_events_page(token, calendar_id, base_params, page_token, acc, page) do
-    params =
-      base_params
-      |> Map.put("maxResults", @max_results)
-      |> maybe_put_page_token(page_token)
-
-    result =
-      CalendarCircuitBreaker.call(:google, fn ->
-        make_request(:get, "/calendars/#{URI.encode(calendar_id)}/events", token, params)
-      end)
-
-    case result do
-      {:ok, response} when is_map(response) ->
-        acc = Enum.reverse(response["items"] || [], acc)
-
-        case response["nextPageToken"] do
-          nil ->
-            {:ok, %{events: Enum.reverse(acc), next_sync_token: response["nextSyncToken"]}}
-
-          next_page ->
-            fetch_events_page(token, calendar_id, base_params, next_page, acc, page + 1)
-        end
-
-      # Not an error tuple: the success clause is guarded on a map, so this
-      # fires when `decode_body/1` decoded a JSON array or string rather than
-      # an object, and the raw term is returned as the result. Preserved as it
-      # has always behaved, but no longer silently.
-      {:ok, body} ->
-        Logger.warning("Google events listing returned a non-object body",
-          calendar_id: calendar_id,
-          body: inspect(body)
-        )
-
-        body
-
-      {:error, :circuit_open} = error ->
-        error
-
-      # Load-bearing. The circuit breaker deliberately does not wrap the
-      # calendar clients' 3-tuple, so a 410 arrives here as a bare
-      # `{:error, :gone, "Resource no longer available"}`, which is exactly
-      # what SyncGoogleCalendarWorker matches on to fall back to
-      # `bootstrap_sync/1`. Unrecognised terms must pass through untouched.
-      other ->
-        other
-    end
-  end
-
-  defp maybe_put_page_token(params, nil), do: params
-  defp maybe_put_page_token(params, token), do: Map.put(params, "pageToken", token)
 
   @doc """
   Refreshes the access token using the refresh token.

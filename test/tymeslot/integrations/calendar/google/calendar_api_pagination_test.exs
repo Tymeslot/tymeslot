@@ -4,11 +4,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIPaginationTest do
   use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
-  # Both Google listings walk `nextPageToken` through one shared paginator.
+  # Every Google listing walks `nextPageToken` through one shared paginator.
   # They were copy-paste twins until they were merged, and the incremental
   # half spent that time with no pagination at all, so the cases proving the
   # loop, the page size, the error passthrough and the page cap live together
-  # here rather than split across the two entry points that share them.
+  # here rather than split across the entry points that share them.
 
   import Mox
   import Tymeslot.Factory
@@ -236,6 +236,81 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIPaginationTest do
                CalendarAPI.list_events_incremental(integration)
 
       assert message =~ "200 pages"
+    end
+  end
+
+  describe "list_events/4" do
+    # The windowed read of one calendar is what the sync sweeps a secondary
+    # calendar against, so an event missing from it is taken as deleted. It
+    # used to keep Google's first page and drop the rest; it runs outside the
+    # circuit breaker, as it always has, so no process needs allowing here.
+    setup do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
+        )
+
+      now = DateTime.utc_now()
+      %{integration: integration, window: {now, DateTime.add(now, 30, :day)}}
+    end
+
+    defp page(items, extra),
+      do:
+        {:ok,
+         %Req.Response{status: 200, body: Jason.encode!(Map.merge(%{"items" => items}, extra))}}
+
+    test "reads every page, repeating the window on each", %{
+      integration: integration,
+      window: {from, to}
+    } do
+      expect(Tymeslot.HTTPClientMock, :request, 2, fn :get, url, _body, _headers, _opts ->
+        assert String.starts_with?(
+                 url,
+                 "https://www.googleapis.com/calendar/v3/calendars/work@example.com/events"
+               )
+
+        assert url =~ "timeMin="
+        assert url =~ "timeMax="
+        assert url =~ "singleEvents=true"
+
+        if url =~ "pageToken=page2" do
+          page([%{"id" => "evt3"}], %{})
+        else
+          page([%{"id" => "evt1"}, %{"id" => "evt2"}], %{"nextPageToken" => "page2"})
+        end
+      end)
+
+      assert {:ok, events} = CalendarAPI.list_events(integration, "work@example.com", from, to)
+      assert Enum.map(events, & &1["id"]) == ["evt1", "evt2", "evt3"]
+    end
+
+    test "a page that fails fails the listing rather than answering the pages before it",
+         %{integration: integration, window: {from, to}} do
+      expect(Tymeslot.HTTPClientMock, :request, 2, fn :get, url, _body, _headers, _opts ->
+        if url =~ "pageToken=page2" do
+          {:ok, %Req.Response{status: 500, body: ""}}
+        else
+          page([%{"id" => "evt1"}], %{"nextPageToken" => "page2"})
+        end
+      end)
+
+      assert {:error, _type, _message} =
+               CalendarAPI.list_events(integration, "work@example.com", from, to)
+    end
+
+    test "a listing cut off at the page cap is an error, not a partial answer",
+         %{integration: integration, window: {from, to}} do
+      expect(Tymeslot.HTTPClientMock, :request, 200, fn :get, _url, _body, _headers, _opts ->
+        page([%{"id" => "evt"}], %{"nextPageToken" => "same_token_every_time"})
+      end)
+
+      assert {:error, :too_many_pages, _message} =
+               CalendarAPI.list_events(integration, "work@example.com", from, to)
     end
   end
 end
