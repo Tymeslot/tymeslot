@@ -31,6 +31,7 @@ defmodule Tymeslot.Application do
   alias Tymeslot.Infrastructure.ErrorTracking.Alerter, as: ErrorAlerter
   alias Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes
   alias Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber
+  alias Tymeslot.Infrastructure.ErrorTracking.SafeIntegrations
   alias Tymeslot.Infrastructure.Logging.{FileSink, LogFormat, MetadataRedactor}
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Integrations.{HealthCheck, Telemetry}
@@ -70,14 +71,7 @@ defmodule Tymeslot.Application do
     # levels for every Oban job process.
     ObanLogger.attach()
 
-    # Raise an admin alert when ErrorTracker records a new error, or a
-    # resolved one happens again, wherever it was raised (request, LiveView,
-    # job or crashed process).
-    ErrorAlerter.attach()
-
-    # Mask email addresses and credentials in the exception messages
-    # ErrorTracker stores, which its context Filter does not reach.
-    ReasonScrubber.attach()
+    attach_error_tracking()
 
     # Set up telemetry handlers for metrics
     Metrics.setup_handlers()
@@ -212,6 +206,23 @@ defmodule Tymeslot.Application do
         Logger.error("Failed to start Tymeslot application", reason: LogFormat.reason(reason))
         error
     end
+  end
+
+  defp attach_error_tracking do
+    # Raise an admin alert when ErrorTracker records a new error, or a
+    # resolved one happens again, wherever it was raised (request, LiveView,
+    # job or crashed process).
+    ErrorAlerter.attach()
+
+    # ErrorTracker's own integrations write to the database from telemetry
+    # handlers, and telemetry detaches a handler that raises: one failed
+    # write would stop exception recording until the next restart. Replace
+    # them with handlers that log such a failure and stay attached.
+    SafeIntegrations.install()
+
+    # Mask email addresses and credentials in the exception messages
+    # ErrorTracker stores, which its context Filter does not reach.
+    ReasonScrubber.attach()
   end
 
   # Checks that read DB-backed settings, so they run after AppSettings.load!/0.
