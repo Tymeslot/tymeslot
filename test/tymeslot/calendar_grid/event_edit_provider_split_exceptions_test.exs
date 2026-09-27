@@ -26,6 +26,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitExceptionsTest do
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.OutlookGraphStubs
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
@@ -85,10 +86,13 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitExceptionsTest do
   defp serve(answer) do
     test_pid = self()
 
-    stub(Tymeslot.HTTPClientMock, :request, fn method, url, body, _headers, _opts ->
+    stub(Tymeslot.HTTPClientMock, :request, fn method, url, body, headers, _opts ->
       send(test_pid, {:request, method, url, body})
 
-      case answer.(method, url) do
+      reply =
+        if is_function(answer, 3), do: answer.(method, url, headers), else: answer.(method, url)
+
+      case reply do
         {status, nil} -> {:ok, %Req.Response{status: status, body: ""}}
         {status, reply} -> {:ok, %Req.Response{status: status, body: Jason.encode!(reply)}}
       end
@@ -323,8 +327,11 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitExceptionsTest do
         end
     }
 
-    defp outlook do
-      fn method, url ->
+    # Graph as it answers the split. The descriptions, stored as HTML, are
+    # read as each request asks for them, and the exceptions carry only the
+    # fields their query selects.
+    defp outlook(descriptions \\ %{}) do
+      fn method, url, headers ->
         %URI{path: path, query: query} = URI.parse(url)
 
         cond do
@@ -332,13 +339,13 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitExceptionsTest do
             {200, %{"id" => "team-calendar"}}
 
           method == :get and path == "/v1.0/me/events/master-1" and is_binary(query) ->
-            {200, @exceptions}
+            {200, exceptions_as_read(descriptions, url, headers)}
 
           method == :get and path == "/v1.0/me/events/tail-1/instances" ->
             {200, @tail_instances}
 
           method == :get ->
-            {200, @outlook_master}
+            {200, with_description(@outlook_master, descriptions[:master], headers)}
 
           method == :post ->
             {201, %{"id" => "tail-1", "iCalUId" => "040000008200E00074C5B7101A82E009"}}
@@ -350,6 +357,29 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitExceptionsTest do
             {204, nil}
         end
       end
+    end
+
+    defp exceptions_as_read(descriptions, url, headers) do
+      Map.update!(@exceptions, "exceptionOccurrences", fn occurrences ->
+        Enum.map(occurrences, fn occurrence ->
+          occurrence
+          |> with_description(descriptions[:exception], headers)
+          |> OutlookGraphStubs.selected(url)
+        end)
+      end)
+    end
+
+    defp with_description(event, nil, _headers), do: event
+
+    defp with_description(event, html, headers),
+      do: Map.put(event, "body", OutlookGraphStubs.read_body(html, headers))
+
+    # The patch of the new series' occurrence of 9 November.
+    defp carried_to_ninth(sent) do
+      [{:patch, "/v1.0/me/events/tail-occurrence-09", patch}] =
+        sent |> writes_to("/tail-occurrence-09") |> Enum.filter(&(elem(&1, 0) == :patch))
+
+      patch
     end
 
     setup %{user: user} do
@@ -390,6 +420,42 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitExceptionsTest do
              ]
 
       assert_enqueued(worker: RefreshOutlookCalendarWorker)
+    end
+
+    test "an occurrence with the series' own HTML description is carried without it",
+         %{user: user, occurrence: occurrence} do
+      html = "<html><body><p>Agenda: <b>roadmap</b></p></body></html>"
+      serve(outlook(%{master: html, exception: html}))
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+                 recurrence_scope: :following
+               )
+
+      assert carried_to_ninth(requests()) == %{
+               "subject" => "Planning",
+               "start" => %{"dateTime" => "2026-11-09T14:00:00", "timeZone" => @zone},
+               "end" => %{"dateTime" => "2026-11-09T15:00:00", "timeZone" => @zone}
+             }
+    end
+
+    test "an occurrence with an HTML description of its own keeps it as HTML",
+         %{user: user, occurrence: occurrence} do
+      own = "<html><body><p>Agenda: <b>quarterly planning</b></p></body></html>"
+
+      serve(
+        outlook(%{
+          master: "<html><body><p>Agenda: <b>roadmap</b></p></body></html>",
+          exception: own
+        })
+      )
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+                 recurrence_scope: :following
+               )
+
+      assert carried_to_ninth(requests())["body"] == %{"contentType" => "html", "content" => own}
     end
   end
 end

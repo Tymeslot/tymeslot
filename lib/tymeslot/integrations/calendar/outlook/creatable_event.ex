@@ -30,9 +30,15 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CreatableEvent do
              isReminderOn reminderMinutesBeforeStart responseRequested allowNewTimeProposals
              hideAttendees)
 
+  @doc "The fields a copy takes from the event as they are."
+  @spec copied_fields() :: [String.t()]
+  def copied_fields, do: @copied
+
   @doc """
   The body a create makes a copy of `event` from, without its timing or
-  recurrence.
+  recurrence. Its `body` is copied in the format it was read in, so the
+  event is read with it as stored (`CalendarAPI.get_event/3`,
+  `body: :stored`), or an HTML description is copied flattened to text.
   """
   @spec from_event(map()) :: map()
   def from_event(event) when is_map(event) do

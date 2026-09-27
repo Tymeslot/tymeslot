@@ -119,7 +119,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesExceptions do
   defp same_type?(_slot, _start), do: false
 
   # The writable fields the occurrence has that differ from the master's.
-  # Guests are compared as `CreatableEvent` copies them, without replies.
+  # Guests are compared as `CreatableEvent` copies them, without replies,
+  # and bodies as both are read, in the format they are stored in.
   defp own_fields(exception, master) do
     base = fields(master)
 

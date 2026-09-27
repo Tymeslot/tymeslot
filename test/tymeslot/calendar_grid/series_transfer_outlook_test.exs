@@ -24,6 +24,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferOutlookTest do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.OutlookGraphStubs
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
 
   setup :verify_on_exit!
@@ -180,7 +181,12 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferOutlookTest do
     stub(Tymeslot.HTTPClientMock, :request, fn method, url, body, headers, _opts ->
       send(test_pid, {:request, method, url, body, headers})
 
-      case answer.(method, path(url)) do
+      reply =
+        if is_function(answer, 3),
+          do: answer.(method, path(url), headers),
+          else: answer.(method, path(url))
+
+      case reply do
         {status, nil} -> {:ok, %Req.Response{status: status, body: ""}}
         {status, reply} -> {:ok, %Req.Response{status: status, body: Jason.encode!(reply)}}
       end
@@ -190,7 +196,16 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferOutlookTest do
   defp requests do
     receive do
       {:request, method, url, body, headers} ->
-        [%{method: method, url: path(url), body: body, token: bearer(headers)} | requests()]
+        [
+          %{
+            method: method,
+            url: path(url),
+            body: body,
+            token: bearer(headers),
+            prefer: OutlookGraphStubs.prefer(headers)
+          }
+          | requests()
+        ]
     after
       0 -> []
     end
@@ -295,6 +310,34 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferOutlookTest do
 
       assert post_url == "#{@graph}/me/calendars/#{@destination_calendar}/events"
       assert Jason.decode!(body) == @copy_body
+    end
+
+    test "a description written in HTML is copied as HTML", %{
+      user: user,
+      source: source,
+      occurrence: occurrence
+    } do
+      html =
+        "<html><body><p>Agenda: <b>roadmap</b> and <a href=\"https://example.com\">notes</a></p></body></html>"
+
+      graph = graph()
+
+      # Graph flattens the body to text for a read that prefers text bodies.
+      serve(fn
+        :get, @master_url, headers ->
+          {200, Map.put(@master, "body", OutlookGraphStubs.read_body(html, headers))}
+
+        method, url, _headers ->
+          graph.(method, url)
+      end)
+
+      assert {:ok, _moved} = move(user, occurrence, source, @destination_calendar)
+
+      assert [%{method: :get, url: @master_url, prefer: prefer} | sent] = requests()
+      assert prefer == ~s(outlook.timezone="UTC")
+
+      assert %{body: body} = Enum.find(sent, &(&1.method == :post))
+      assert Jason.decode!(body)["body"] == %{"contentType" => "html", "content" => html}
     end
 
     test "drops the series' rows, moves the room to the copy, and syncs once", %{

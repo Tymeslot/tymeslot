@@ -9,7 +9,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.HTTP
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour
+  alias Tymeslot.Integrations.Calendar.Outlook.CreatableEvent
   alias Tymeslot.Integrations.Calendar.Outlook.EventMapper
+  alias Tymeslot.Integrations.Calendar.Outlook.GraphStatus
   alias Tymeslot.Integrations.Calendar.Outlook.GraphSubscription
   alias Tymeslot.Integrations.Calendar.Outlook.TymeslotFingerprint
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
@@ -239,31 +241,44 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   Fetches one event of the signed-in user by its Graph event id, whichever
   calendar holds it. A deleted event answers 404; a cancelled meeting can
   still come back with `"isCancelled" => true`.
+
+  Its `body` comes as plain text, unless `body: :stored` asks for it in the
+  format it is stored in (HTML, as Outlook writes it), for a copy of the
+  event that keeps it as it is.
   """
   @impl CalendarAPIBehaviour
-  @spec get_event(CalendarIntegrationSchema.t(), String.t()) :: {:ok, map()} | api_error()
-  def get_event(%CalendarIntegrationSchema{} = integration, event_id) do
+  @spec get_event(CalendarIntegrationSchema.t(), String.t(), keyword()) ::
+          {:ok, map()} | api_error()
+  def get_event(%CalendarIntegrationSchema{} = integration, event_id, opts \\ []) do
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      make_request(:get, "/me/events/#{event_id}", token, %{})
+      make_request(:get, "/me/events/#{event_id}", token, %{}, opts)
     end)
   end
 
   @doc """
   The occurrences of the series master `master_id` changed on their own:
   `exceptionOccurrences`, the edited ones as events, and
-  `cancelledOccurrences`, the occurrence ids of the cancelled ones.
+  `cancelledOccurrences`, the occurrence ids of the cancelled ones. Graph
+  answers an expanded exception with the `$select`ed fields only, so it
+  selects every field a copy takes (`Outlook.CreatableEvent`) and the
+  timing, and each `body` comes in the format it is stored in.
   """
   @impl CalendarAPIBehaviour
   @spec get_series_exceptions(CalendarIntegrationSchema.t(), String.t()) ::
           {:ok, map()} | api_error()
   def get_series_exceptions(%CalendarIntegrationSchema{} = integration, master_id) do
     params = %{
-      "$select" => "id,cancelledOccurrences,exceptionOccurrences",
+      "$select" =>
+        Enum.join(
+          ~w(id cancelledOccurrences exceptionOccurrences originalStart start end attendees) ++
+            CreatableEvent.copied_fields(),
+          ","
+        ),
       "$expand" => "exceptionOccurrences"
     }
 
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      make_request(:get, "/me/events/#{master_id}", token, params)
+      make_request(:get, "/me/events/#{master_id}", token, params, body: :stored)
     end)
   end
 
@@ -478,13 +493,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   # HTTP plumbing — used internally and by GraphSubscription
 
+  # Reads ask for UTC, and for bodies as plain text unless `body: :stored`.
   @doc false
-  @spec make_request(atom(), String.t(), String.t(), map()) ::
+  @spec make_request(atom(), String.t(), String.t(), map(), keyword()) ::
           {:ok, map()} | api_error()
-  def make_request(method, path, token, params) do
+  def make_request(method, path, token, params, opts \\ []) do
     headers = [
       {"Content-Type", "application/json"},
-      {"Prefer", "outlook.timezone=\"UTC\", outlook.body-content-type=\"text\""}
+      {"Prefer", read_preference(Keyword.get(opts, :body, :text))}
     ]
 
     HTTP.request(method, @base_url, path, token,
@@ -508,37 +524,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     )
   end
 
+  defp read_preference(:text), do: ~s(outlook.timezone="UTC", outlook.body-content-type="text")
+  defp read_preference(:stored), do: ~s(outlook.timezone="UTC")
+
   # Response handling and error classification
 
   defp handle_response(response, path) do
-    ApiResponse.handle(response, path, label: "Outlook Calendar", custom: &graph_status/1)
+    ApiResponse.handle(response, path, label: "Outlook Calendar", custom: &GraphStatus.classify/1)
   end
 
   defp handle_response(response) do
-    ApiResponse.handle(response, label: "Outlook Calendar", custom: &graph_status/1)
+    ApiResponse.handle(response, label: "Outlook Calendar", custom: &GraphStatus.classify/1)
   end
-
-  # The statuses Graph answers differently from the shared envelope: a 403
-  # carrying its classification in `error.code`, and throttling reported as a
-  # bare 429. Both may carry a `Retry-After` the caller should honour.
-  defp graph_status({:ok, %{status: 403, body: body} = resp}) do
-    ApiResponse.with_error_object(body, fn msg, decoded ->
-      code = String.downcase(to_string(get_in(decoded, ["error", "code"]) || ""))
-      handle_403_reason(classify_outlook_403(msg, code), msg, parse_retry_after(resp))
-    end)
-  end
-
-  defp graph_status({:ok, %{status: 429} = resp}) do
-    case parse_retry_after(resp) do
-      retry_after when is_integer(retry_after) ->
-        {:error, :rate_limited, "retry_after:" <> Integer.to_string(retry_after)}
-
-      nil ->
-        {:error, :rate_limited, "Too many requests"}
-    end
-  end
-
-  defp graph_status(_response), do: :default
 
   # Delta queries share the standard response handling but additionally map
   # 410 Gone — Graph's signal that the delta token is no longer valid and the
@@ -548,54 +545,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   end
 
   defp handle_delta_response(response), do: handle_response(response)
-
-  defp classify_outlook_403(msg, code) do
-    m = msg |> to_string() |> String.downcase()
-    c = code |> to_string() |> String.downcase()
-
-    cond do
-      throttled_or_quota?(m, c) -> :rate_limited
-      permission_denied?(m, c) -> :unauthorized
-      true -> :network_error
-    end
-  end
-
-  defp throttled_or_quota?(message, code) do
-    String.contains?(code, "throttled") or
-      String.contains?(message, "throttle") or
-      String.contains?(message, "rate") or
-      String.contains?(message, "quota")
-  end
-
-  defp permission_denied?(message, code) do
-    String.contains?(code, "accessdenied") or
-      String.contains?(code, "permission") or
-      String.contains?(message, "permission") or
-      String.contains?(message, "insufficient")
-  end
-
-  defp parse_retry_after(resp) do
-    headers = Map.get(resp, :headers, %{})
-
-    case Map.get(headers, "retry-after") do
-      [value | _rest] ->
-        case Integer.parse(value) do
-          {n, _remainder} -> n
-          _parse_error -> nil
-        end
-
-      _no_header ->
-        nil
-    end
-  end
-
-  defp handle_403_reason(:rate_limited, _msg, retry_after) when is_integer(retry_after) do
-    {:error, :rate_limited, "retry_after:" <> Integer.to_string(retry_after)}
-  end
-
-  defp handle_403_reason(:rate_limited, msg, _retry_after), do: {:error, :rate_limited, msg}
-  defp handle_403_reason(:unauthorized, msg, _retry_after), do: {:error, :unauthorized, msg}
-  defp handle_403_reason(_other_reason, msg, _retry_after), do: {:error, :network_error, msg}
 
   # Query helpers
 

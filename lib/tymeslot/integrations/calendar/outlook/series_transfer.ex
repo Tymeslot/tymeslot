@@ -6,7 +6,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesTransfer do
   which loads both integrations as the user's.
 
   Graph has no move for events, so the series is always copied: the master
-  is read on the source, created in the destination calendar as
+  is read on the source, with its body as stored (an HTML description stays
+  HTML), created in the destination calendar as
   `Outlook.CreatableEvent` makes it creatable, with the master's own
   `recurrence` (its pattern and range as they are) and its timing on the
   series' own wall clock, labelled with the zone the series was created in,
@@ -113,7 +114,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesTransfer do
   # A master Graph still answers for, but as cancelled, is not a series to
   # copy.
   defp read_master(api, source) do
-    case reason(api.get_event(source.integration, source.master_id)) do
+    case reason(api.get_event(source.integration, source.master_id, body: :stored)) do
       {:ok, %{"isCancelled" => true}} -> {:error, :not_found}
       other -> other
     end

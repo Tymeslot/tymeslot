@@ -143,6 +143,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   An `:occurrence` of scope `:all` in `event_attrs` (see
   `Recurrence.SeriesMove.edit/0`, naming the series master in `:master_id`)
   edits every occurrence of a recurring event instead: the master is read,
+  with its body as stored so that a copy keeps an HTML description as HTML,
   and patched with only what the edit changes (`Outlook.SeriesPatch`). One
   of scope `:following`, with the occurrence's original start in `:slot`,
   splits the series there (`Outlook.SeriesSplit`): the following
@@ -161,7 +162,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
           {:ok, map()} | {:error, atom(), String.t()} | {:error, term()}
   def call_update_event(integration, _event_id, %{occurrence: %{scope: scope} = edit})
       when scope in [:all, :following] do
-    with {:ok, master} <- api_module().get_event(integration, edit.master_id) do
+    with {:ok, master} <- api_module().get_event(integration, edit.master_id, body: :stored) do
       if scope == :all,
         do: patch_series(integration, master, edit),
         else: split_series(integration, master, edit)

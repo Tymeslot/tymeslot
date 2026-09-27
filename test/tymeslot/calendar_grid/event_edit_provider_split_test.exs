@@ -29,6 +29,7 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.OutlookGraphStubs
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
@@ -110,10 +111,13 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
   defp serve(answer) do
     test_pid = self()
 
-    stub(Tymeslot.HTTPClientMock, :request, fn method, url, body, _headers, _opts ->
+    stub(Tymeslot.HTTPClientMock, :request, fn method, url, body, headers, _opts ->
       send(test_pid, {:request, method, url, body})
 
-      case answer.(method, url) do
+      reply =
+        if is_function(answer, 3), do: answer.(method, url, headers), else: answer.(method, url)
+
+      case reply do
         {status, nil} -> {:ok, %Req.Response{status: status, body: ""}}
         {status, reply} -> {:ok, %Req.Response{status: status, body: Jason.encode!(reply)}}
       end
@@ -451,6 +455,36 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSplitTest do
         worker: RefreshOutlookCalendarWorker,
         args: %{"calendar_integration_id" => integration.id}
       )
+    end
+
+    test "a description written in HTML goes to the tail as HTML, and the master keeps its own",
+         %{user: user, occurrence: occurrence} do
+      html = "<html><body><p>Agenda: <b>roadmap</b></p></body></html>"
+      test_pid = self()
+      graph = outlook(200)
+
+      # Graph flattens the body to text for a read that prefers text bodies.
+      serve(fn
+        :get, @graph <> "/me/events/master-1", headers ->
+          send(test_pid, {:master_read, OutlookGraphStubs.prefer(headers)})
+          {200, Map.put(@outlook_master, "body", OutlookGraphStubs.read_body(html, headers))}
+
+        method, url, _headers ->
+          graph.(method, url)
+      end)
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+                 recurrence_scope: :following
+               )
+
+      assert_received {:master_read, ~s(outlook.timezone="UTC")}
+
+      sent = requests()
+      assert body_of(sent, :post)["body"] == %{"contentType" => "html", "content" => html}
+
+      # The edit left the description alone, so the master's is not rewritten.
+      assert Map.keys(body_of(sent, :patch)) == ["recurrence"]
     end
 
     test "deletes the tail again when the master cannot be ended", %{
