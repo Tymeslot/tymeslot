@@ -12,6 +12,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Auth
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
@@ -255,7 +256,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   def handle_discover_caldav_result({:ok, {:creation_failed, reason}}, socket) do
     Logger.warning("CalDAV integration creation failed",
       user_id: socket.assigns.current_user.id,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     {:noreply,
@@ -279,7 +280,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   def handle_discover_caldav_result({:exit, reason}, socket) do
     Logger.error("CalDAV discovery task crashed",
       user_id: socket.assigns.current_user.id,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     {:noreply,

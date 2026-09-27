@@ -14,6 +14,7 @@ defmodule TymeslotWeb.SlackOAuthController do
   require Logger
 
   alias Tymeslot.Features
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Slack
   alias Tymeslot.Slack.OAuth
@@ -102,7 +103,7 @@ defmodule TymeslotWeb.SlackOAuthController do
       )
 
   defp callback_error_message({:error, reason}) do
-    Logger.warning("Slack OAuth callback failed", reason: inspect(reason))
+    Logger.warning("Slack OAuth callback failed", reason: LogFormat.reason(reason))
     Slack.translate_error(reason)
   end
 

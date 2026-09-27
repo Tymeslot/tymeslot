@@ -8,6 +8,7 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
 
   alias Phoenix.LiveView
   alias Tymeslot.Auth
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   import Phoenix.Component, only: [assign: 2, assign: 3]
   require Logger
 
@@ -206,7 +207,7 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
         socket
 
       {:error, reason, message} ->
-        Logger.error("Invalid reset token", reason: inspect(reason))
+        Logger.error("Invalid reset token", reason: LogFormat.reason(reason))
 
         socket
         |> assign(:current_state, :invalid_token)

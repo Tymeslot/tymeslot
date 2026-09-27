@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   require Logger
 
   alias Tymeslot.FreeBusy
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.ProviderConfig
@@ -411,7 +412,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   def handle_async(:refresh_calendars, {:exit, reason}, socket) do
-    Logger.error("Calendar refresh task crashed", reason: inspect(reason))
+    Logger.error("Calendar refresh task crashed", reason: LogFormat.reason(reason))
     Flash.error(dgettext("dashboard_calendar_settings", "Refresh process failed unexpectedly."))
     {:noreply, assign(socket, :is_refreshing, false)}
   end

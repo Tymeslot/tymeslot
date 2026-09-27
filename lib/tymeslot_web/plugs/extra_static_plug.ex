@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Plugs.ExtraStatic do
   require Logger
 
   alias Plug.Static
+  alias Tymeslot.Infrastructure.Logging.LogFormat
 
   @impl Plug
   def init(opts), do: opts
@@ -67,7 +68,7 @@ defmodule TymeslotWeb.Plugs.ExtraStatic do
   rescue
     error ->
       Logger.warning("ExtraStatic: skipping invalid static source",
-        source: inspect(source),
+        source: LogFormat.reason(source),
         reason: Exception.message(error)
       )
 

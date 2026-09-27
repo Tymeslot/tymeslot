@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.DisplayHelpers
@@ -229,7 +230,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
   end
 
   def handle_async(:create_subscription, {:exit, reason}, socket) do
-    Logger.error("Calendar subscription creation task crashed", reason: inspect(reason))
+    Logger.error("Calendar subscription creation task crashed", reason: LogFormat.reason(reason))
 
     {:noreply,
      assign(socket,
