@@ -1,8 +1,10 @@
 defmodule Tymeslot.Integrations.Calendar.ProviderEventTimeParseTest do
   @moduledoc """
   The Google and Outlook providers read an event time they cannot parse as
-  missing. That is logged with the provider, the event id and the field, and
-  nothing of the event's content.
+  missing. That is logged with the provider and the field, and nothing of the
+  event's content. Outlook's opaque Graph id is logged too; Google's is not,
+  since for an event this application created it is derived from the meeting
+  uid, which authorises cancelling the booking.
   """
 
   # async: false: the capture handler sees every process's log events, and
@@ -38,8 +40,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderEventTimeParseTest do
     log = LogCapture.await_log(@message)
     assert log.level == :warning
 
-    assert %{provider: :google, event_id: "google-evt-1", field: "start", reason: :invalid_format} =
-             LogCapture.user_metadata(log)
+    meta = LogCapture.user_metadata(log)
+    assert %{provider: :google, field: "start", reason: :invalid_format} = meta
+    refute Map.has_key?(meta, :event_id)
 
     refute inspect(LogCapture.user_metadata(log)) =~ "Private summary"
   end
@@ -55,7 +58,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderEventTimeParseTest do
     assert event.end_time == nil
 
     log = LogCapture.await_log(@message)
-    assert %{provider: :google, event_id: "google-evt-2", field: "end"} = log.meta
+    assert %{provider: :google, field: "end"} = log.meta
+    refute Map.has_key?(log.meta, :event_id)
   end
 
   test "Outlook: an unparseable start is logged and read as missing" do

@@ -273,13 +273,14 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   defp all_day_google_event?(_other), do: false
 
   # A time Google sent but that does not parse is read as missing, like an
-  # absent one, and logged: the id and field only, never the event's content.
+  # absent one, and logged: the field only, never the event's content. Nor
+  # its id: for an event this application created, Google's id is derived
+  # from the meeting uid, which authorises cancelling the booking.
   defp event_time(google_event, field) do
     case parse_datetime(google_event[field]) do
       {:error, reason} ->
         Logger.warning("Could not parse a calendar event time",
           provider: :google,
-          event_id: google_event["id"],
           field: field,
           reason: reason
         )
