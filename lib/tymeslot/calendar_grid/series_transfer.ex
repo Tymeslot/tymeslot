@@ -65,9 +65,19 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
   (`CalendarEvents.move_google_series/3`). A move to the calendar the series
   is already on is refused with `:same_calendar`.
 
-  Outlook has no writer yet, and refuses with `:unsupported_scope`. A writer
-  can be handed to `move/4` as its `:writer` option, which is how the steps
-  after the write are exercised on their own.
+  The Outlook writer always copies, since Graph has no move for events: it
+  reads the master, creates it with its own recurrence and timing in the
+  destination calendar (the account's default one, as Graph names it, when
+  the grid knows it only as `"primary"`), and then deletes the master at
+  the source, each on its own integration's credentials
+  (`CalendarEvents.move_outlook_series/3`). The copy has no Teams meeting of
+  its own, and occurrences edited or cancelled on their own are not carried.
+  A move to the calendar the series is on is refused with `:same_calendar`;
+  Outlook rows are mostly cached as on `"primary"`, so within one
+  integration the calendar Graph says holds the master is what settles it.
+
+  A writer can be handed to `move/4` as its `:writer` option, which is how
+  the steps after the write are exercised on their own.
 
   ## After the write
 
@@ -150,7 +160,6 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
              | :cross_provider_series
              | :unaddressable_series
              | :no_destination_calendar
-             | :unsupported_scope
              | :same_calendar
              | term()}
   def move(user_id, stored, %{integration: integration} = destination, opts \\ []) do
@@ -225,7 +234,16 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
     CalendarEvents.move_google_series(transfer.user_id, source, destination)
   end
 
-  defp write(:outlook, _transfer), do: {:error, :unsupported_scope}
+  defp write(:outlook, %{address: {:master, master_id}, stored: stored} = transfer) do
+    source = %{
+      integration_id: stored.calendar_integration_id,
+      calendar_id: stored.provider_calendar_id || "primary",
+      master_id: master_id
+    }
+
+    destination = %{integration_id: transfer.integration.id, calendar_id: transfer.calendar_id}
+    CalendarEvents.move_outlook_series(transfer.user_id, source, destination)
+  end
 
   # The steps every writer shares once the destination `integration` holds
   # the series, as `written` describes it (see *After the write*).

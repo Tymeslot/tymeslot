@@ -20,14 +20,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesSplit do
       same pattern, and an `endDate` range ending on the day before the
       slot's date.
 
-  The tail is built from the master's writable fields only (subject, body,
-  location, attendees, categories, reminders, show-as, sensitivity,
-  importance and response settings); what Graph assigns or manages itself is
-  left out, as is the series' online meeting (`isOnlineMeeting`,
-  `onlineMeetingProvider`, `onlineMeeting`): creating an event with one asks
-  Teams for a new meeting rather than copying the old one. The join details
-  the organiser sees in the body are copied with it, and lead to the
-  original meeting, which the head keeps.
+  The tail is built from the master as `Outlook.CreatableEvent` makes any
+  event creatable: its writable fields only, without what Graph assigns or
+  manages itself and without the series' online meeting, since creating an
+  event with one asks Teams for a new meeting. The join details the
+  organiser sees in the body are copied with it, and lead to the original
+  meeting, which the head keeps.
 
   Occurrences edited or deleted on their own are not in the master's
   `recurrence`, so they are not carried to the tail: from the slot on, the
@@ -35,14 +33,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesSplit do
   exceptions from the slot on once its range ends before them.
   """
 
+  alias Tymeslot.Integrations.Calendar.Outlook.CreatableEvent
   alias Tymeslot.Integrations.Calendar.Outlook.SeriesPatch
   alias Tymeslot.Integrations.Calendar.Recurrence.SeriesMove
   alias Tymeslot.Integrations.Calendar.Recurrence.SeriesSplit
-
-  # The master's fields a new event takes as they are.
-  @copied ~w(subject body location locations categories importance sensitivity showAs isAllDay
-             isReminderOn reminderMinutesBeforeStart responseRequested allowNewTimeProposals
-             hideAttendees)
 
   @typedoc "The tail's body for a create, and the master's for a patch."
   @type halves :: %{tail: map(), head: map()}
@@ -116,30 +110,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesSplit do
   # `originalStartTimeZone` is what `SeriesPatch` reads the tail's zone from;
   # it is not written.
   defp tail(master, timing, slot, label, recurrence) do
-    {start, finish} = SeriesSplit.at_slot(timing, slot)
-
     master
-    |> Map.take(@copied)
-    |> Map.merge(%{
-      "start" => timing_value(start, label),
-      "end" => timing_value(finish, label),
-      "recurrence" => recurrence,
-      "originalStartTimeZone" => label
-    })
-    |> put_attendees(master["attendees"])
+    |> CreatableEvent.from_event()
+    |> CreatableEvent.put_timing(SeriesSplit.at_slot(timing, slot), label)
+    |> Map.merge(%{"recurrence" => recurrence, "originalStartTimeZone" => label})
   end
-
-  defp timing_value(%Date{} = date, label),
-    do: %{"dateTime" => Date.to_iso8601(date) <> "T00:00:00", "timeZone" => label}
-
-  defp timing_value(wall, label),
-    do: %{"dateTime" => NaiveDateTime.to_iso8601(wall), "timeZone" => label}
-
-  # An attendee's response belongs to the event it answered.
-  defp put_attendees(tail, attendees) when is_list(attendees),
-    do: Map.put(tail, "attendees", Enum.map(attendees, &Map.take(&1, ["emailAddress", "type"])))
-
-  defp put_attendees(tail, _none), do: tail
 
   defp date_of(%Date{} = date), do: date
   defp date_of(wall), do: NaiveDateTime.to_date(wall)

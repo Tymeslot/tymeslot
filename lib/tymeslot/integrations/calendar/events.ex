@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   alias Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Google.SeriesTransfer, as: GoogleSeriesTransfer
+  alias Tymeslot.Integrations.Calendar.Outlook.SeriesTransfer, as: OutlookSeriesTransfer
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
   alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
@@ -393,26 +394,63 @@ defmodule Tymeslot.Integrations.Calendar.Events do
           %{integration_id: integration_id(), calendar_id: String.t()}
         ) :: {:ok, GoogleSeriesTransfer.moved()} | {:error, term()}
   def move_google_series(user_id, source, destination) do
+    with {:ok, source, destination} <- series_ends("google", user_id, source, destination),
+         do: GoogleSeriesTransfer.move(source, destination)
+  end
+
+  @doc """
+  Moves an Outlook recurring series, addressed by its master's id
+  (`source.master_id`), cached as on `source.calendar_id` of `user_id`'s
+  Outlook integration `source.integration_id`, to `destination.calendar_id`
+  of their Outlook integration `destination.integration_id`, the same one
+  or another, by a copy of the master and a delete of the original. See
+  `Outlook.SeriesTransfer` for what the copy carries and what each failure
+  leaves.
+
+  Returns `{:ok, %{uid:, id:, calendar_id:, source: :removed |
+  :left_behind}}` once the destination holds the series, `uid` and `id`
+  being the new master's `iCalUId` and id and `calendar_id` the id of the
+  calendar that holds it, or `{:error, reason}` with nothing written,
+  including `:not_found` when the source integration is not the user's
+  Outlook integration, `:no_destination_calendar` when the destination
+  integration is not, and `:same_calendar` for a move to the calendar the
+  series is on.
+  """
+  @spec move_outlook_series(
+          user_id(),
+          %{integration_id: integration_id(), calendar_id: String.t(), master_id: String.t()},
+          %{integration_id: integration_id(), calendar_id: String.t()}
+        ) :: {:ok, OutlookSeriesTransfer.moved()} | {:error, term()}
+  def move_outlook_series(user_id, source, destination) do
+    with {:ok, source, destination} <- series_ends("outlook", user_id, source, destination),
+         do: OutlookSeriesTransfer.move(source, destination)
+  end
+
+  # Both ends of a series move with their integrations, each looked up as
+  # the user's, so an integration of anyone else, or one of another
+  # provider, resolves to nothing.
+  defp series_ends(provider, user_id, source, destination) do
     with {:ok, source_integration} <-
-           google_integration(source.integration_id, user_id, :not_found),
+           user_integration(provider, source.integration_id, user_id, :not_found),
          {:ok, destination_integration} <-
-           google_integration(destination.integration_id, user_id, :no_destination_calendar) do
-      GoogleSeriesTransfer.move(
-        %{
-          integration: source_integration,
-          calendar_id: source.calendar_id,
-          master_id: source.master_id
-        },
-        %{integration: destination_integration, calendar_id: destination.calendar_id}
-      )
+           user_integration(
+             provider,
+             destination.integration_id,
+             user_id,
+             :no_destination_calendar
+           ) do
+      {:ok,
+       %{
+         integration: source_integration,
+         calendar_id: source.calendar_id,
+         master_id: source.master_id
+       }, %{integration: destination_integration, calendar_id: destination.calendar_id}}
     end
   end
 
-  # Looked up as the user's, so an integration of anyone else, or one of
-  # another provider, resolves to nothing.
-  defp google_integration(integration_id, user_id, missing) do
+  defp user_integration(provider, integration_id, user_id, missing) do
     case CalendarManagement.fetch_integration_for_user(integration_id, user_id) do
-      {:ok, %{provider: "google"} = integration} -> {:ok, integration}
+      {:ok, %{provider: ^provider} = integration} -> {:ok, integration}
       _none -> {:error, missing}
     end
   end

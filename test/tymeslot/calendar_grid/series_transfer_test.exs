@@ -287,19 +287,6 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
     end
   end
 
-  # Each family's writer lands on its own; until then the move is refused
-  # without writing anything.
-  describe "move_event/3 of a series member within its family, before its writer lands" do
-    test "Outlook to Outlook", %{user: user} do
-      outlook = insert(:calendar_integration, user: user, provider: "outlook")
-      event = insert_row(outlook, %{uid: "AAMk-occ", recurring_event_id: "AAMk-master"})
-      refute_one_off_writes()
-
-      assert move(user, event, outlook, "AAMk-other-calendar") == {:error, :unsupported_scope}
-      assert_untouched(event)
-    end
-  end
-
   describe "move/4 once the writer has written the series to the destination" do
     test "hands the writer the family, the series' address and the destination calendar", %{
       user: user,
