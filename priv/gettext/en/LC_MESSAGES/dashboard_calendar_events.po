@@ -1256,3 +1256,8 @@ msgid "The series was moved, but a change you made while it was moving was not a
 msgid_plural "The series was moved, but %{count} changes you made while it was moving were not applied. Please make them again."
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex
+#, elixir-autogen, elixir-format
+msgid "A change to this series is still saving. Please make this change once it has saved."
+msgstr ""

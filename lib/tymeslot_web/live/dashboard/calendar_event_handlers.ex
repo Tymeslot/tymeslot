@@ -183,7 +183,8 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   A whole series the organiser confirmed moving (the result carries
   `:series_to`, the destination calendar's name) was never shown moved, so
   nothing is reverted when it fails, and the note that it is moving is
-  cleared either way. When it succeeds the grid reloads, as
+  cleared either way, and the changes held while it moved are made. When
+  it succeeds the grid reloads, as
   after any write to a whole series, since the series' rows are gone from
   the source until the destination's sync brings them back.
   """
@@ -228,6 +229,12 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
         {:noreply, put_flash(socket, :error, move_failed_message(payload[:reason]))}
 
       _calendar ->
+        send_update(CalendarGridComponent,
+          id: "calendar",
+          action: :series_move_failed,
+          moved_event: payload[:original_event]
+        )
+
         message = EditWorkflow.series_move_failed_message(payload[:reason])
         {:noreply, socket |> clear_flash(:info) |> put_flash(:error, message)}
     end

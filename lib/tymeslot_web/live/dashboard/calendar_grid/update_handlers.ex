@@ -143,6 +143,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     {:ok, socket}
   end
 
+  @doc """
+  Makes the changes held while a whole series was moving, once the move
+  has failed and left the series where it was.
+  """
+  @spec handle_series_move_failed(map(), Phoenix.LiveView.Socket.t()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
+  def handle_series_move_failed(%{moved_event: event} = assigns, socket) do
+    socket =
+      socket
+      |> assign(Map.drop(assigns, [:action, :moved_event]))
+      |> EventWrites.series_move_failed(event)
+
+    {:ok, socket}
+  end
+
   @spec handle_event_deleted(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   def handle_event_deleted(assigns, socket) do

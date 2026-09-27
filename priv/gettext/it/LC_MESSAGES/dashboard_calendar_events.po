@@ -1254,6 +1254,10 @@ msgstr "La serie è stata spostata in %{calendar}."
 #, elixir-autogen, elixir-format
 msgid "The series was moved, but a change you made while it was moving was not applied. Please make it again."
 msgid_plural "The series was moved, but %{count} changes you made while it was moving were not applied. Please make them again."
-
 msgstr[0] "La serie è stata spostata, ma una modifica fatta durante lo spostamento non è stata applicata. Rifalla."
 msgstr[1] "La serie è stata spostata, ma %{count} modifiche fatte durante lo spostamento non sono state applicate. Rifalle."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex
+#, elixir-autogen, elixir-format
+msgid "A change to this series is still saving. Please make this change once it has saved."
+msgstr "Una modifica a questa serie è ancora in fase di salvataggio. Ripeti questa modifica quando il salvataggio è terminato."

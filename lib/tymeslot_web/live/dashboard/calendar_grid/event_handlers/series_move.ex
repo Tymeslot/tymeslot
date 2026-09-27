@@ -13,7 +13,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SeriesMove do
   not shown on its new calendar while it moves, and cancelling changes
   nothing at all. A series with a change of one of its events still saving
   is not moved until that change has saved, since the move copies the
-  series as it was before it. The result is handled with every other move's, in
+  series as it was before it, and a change made while it moves waits until
+  it has answered (see `TymeslotWeb.Dashboard.CalendarGrid.EventWrites`).
+  The result is handled with every other move's, in
   `TymeslotWeb.Dashboard.CalendarEventHandlers.handle_event_move_result/2`.
   """
 
@@ -72,8 +74,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SeriesMove do
           send(self(), {:flash, {:info, moving_message(prompt.calendar_name)}})
 
           {:noreply,
-           EditWorkflow.move_event_async(
-             socket,
+           socket
+           |> EventWrites.series_moving(prompt.event)
+           |> EditWorkflow.move_event_async(
              prompt.event,
              prompt.integration,
              prompt.calendar_id,

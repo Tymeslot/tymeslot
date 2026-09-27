@@ -55,9 +55,32 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   and can make them again on the reloaded grid.
 
   A series moved to another calendar is not one of these writes, but it
-  ends the same way (`series_moved/2`): every write still waiting for an
-  event of the series, which can only be one made while it was moving
-  (`series_saving?/2`), is dropped, and the grid reloads.
+  ends the same way (`series_moved/2`): every write held while it was
+  moving is dropped and counted, and the grid reloads.
+
+  ## While a whole series is written or moved
+
+  Queueing by event alone would let an edit of another occurrence of the
+  series run alongside a write to the whole of it, or its move, and land
+  on the series as it was: on Google across accounts and on Outlook, on
+  the original the move deletes; on CalDAV, turning the move into a copy
+  with the original left behind, or writing an occurrence the series no
+  longer has.
+
+  So while such a write or move is running, the series is held, known by
+  its integration and address (`Tymeslot.CalendarGrid.Occurrence.series_address/1`)
+  as read when it started. A write to any other event of the series waits
+  in the hold, not started, until the series write or move answers.
+  Writes to the event the series write was made from queue behind it as
+  before. When the series was changed, the held writes are dropped with
+  the ones queued behind it, and counted in the same warning; when it was
+  not, they start in the order they were made.
+
+  Neither starts while the series is busy: a move while any write to the
+  series is saving (`series_saving?/2`), a write to the whole series while
+  a write to another of its events is saving, or it is moving
+  (`series_busy?/2`). The organiser is asked to wait instead. Events
+  outside a series, and other series, are never held.
 
   ## Results
 
@@ -130,46 +153,88 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   end
 
   @doc """
-  Reloads the grid once the series `event` belongs to has moved to another
-  calendar, dropping every write still waiting for one of its events on the
-  source (see "After a write to a whole series" in the moduledoc). A write
-  already in flight for one of them is forgotten, so its answer changes
-  nothing on the reloaded grid.
+  Holds every write to an event of the series `event` belongs to while
+  the series moves to another calendar, until `series_moved/2` or
+  `series_move_failed/2`. The move is only started once nothing is saving
+  for the series (`series_saving?/2`).
   """
-  @spec series_moved(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
-  def series_moved(socket, event) do
-    {series, other} =
-      Enum.split_with(socket.assigns.event_writes, fn {_key, chain} ->
-        same_series?(chain.confirmed, event)
-      end)
-
-    case Enum.sum_by(series, fn {_key, chain} -> :queue.len(chain.waiting) end) do
-      0 -> :ok
-      dropped -> send(self(), {:flash, {:warning, dropped_by_move_message(dropped)}})
+  @spec series_moving(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
+  def series_moving(socket, event) do
+    case series_key(event) do
+      nil -> socket
+      series -> put_hold(socket, series, %{uid: nil, held: []})
     end
-
-    socket
-    |> assign(:event_writes, Map.new(other))
-    |> reload()
   end
 
   @doc """
+  Reloads the grid once the series `event` belongs to has moved to another
+  calendar, dropping every write held while it moved (see "While a whole
+  series is written or moved" in the moduledoc).
+  """
+  @spec series_moved(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
+  def series_moved(socket, event) do
+    {held, socket} = take_hold(socket, series_key(event))
+    report_dropped(length(held), &dropped_by_move_message/1)
+    reload(socket)
+  end
+
+  @doc """
+  Starts the writes held while the series `event` belongs to was moving,
+  once the move has failed and left the series where it was.
+  """
+  @spec series_move_failed(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
+  def series_move_failed(socket, event), do: release(socket, series_key(event))
+
+  @doc """
   Whether a write to an event of the series `event` belongs to is still
-  running or waiting. A series is not moved while one is: the write would
-  land on the original after the move had copied it.
+  running or waiting, or the series is moving. A series is not moved while
+  one is: the write would land on the original after the move had copied it.
   """
   @spec series_saving?(Phoenix.LiveView.Socket.t(), map()) :: boolean()
-  def series_saving?(socket, event),
-    do:
-      Enum.any?(socket.assigns.event_writes, fn {_key, chain} ->
-        same_series?(chain.confirmed, event)
-      end)
+  def series_saving?(socket, event) do
+    case series_key(event) do
+      nil ->
+        false
 
-  defp same_series?(a, b) do
-    a.calendar_integration_id == b.calendar_integration_id and
-      match?({:ok, _address}, Occurrence.series_address(a)) and
-      Occurrence.series_address(a) == Occurrence.series_address(b)
+      series ->
+        Map.has_key?(socket.assigns.series_holds, series) or
+          Enum.any?(socket.assigns.event_writes, fn {_key, chain} -> chain.series == series end)
+    end
   end
+
+  @doc """
+  Whether a write to another event of the series `event` belongs to is
+  still running or waiting, or the series is moving. A write to the whole
+  series is not made from `event` while one is: the two would race at the
+  provider. Writes to `event` itself are not counted, since a write to the
+  whole series made from it waits behind them.
+  """
+  @spec series_busy?(Phoenix.LiveView.Socket.t(), map()) :: boolean()
+  def series_busy?(socket, event) do
+    case series_key(event) do
+      nil ->
+        false
+
+      series ->
+        uid = event.uid
+
+        match?(%{^series => %{uid: holder}} when holder != uid, socket.assigns.series_holds) or
+          Enum.any?(socket.assigns.event_writes, fn {{_integration_id, chain_uid}, chain} ->
+            chain.series == series and chain_uid != uid
+          end)
+    end
+  end
+
+  # The series an event belongs to, as the grid holds its writes: its
+  # integration and its address there, read once, when a write is made.
+  defp series_key(%{calendar_integration_id: integration_id} = event) do
+    case Occurrence.series_address(event) do
+      {:ok, address} -> {integration_id, address}
+      {:error, _unaddressable} -> nil
+    end
+  end
+
+  defp series_key(_event), do: nil
 
   defp dropped_by_move_message(count) do
     dngettext(
@@ -197,25 +262,92 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
 
   defp submit(socket, event, write) do
     key = {event.calendar_integration_id, event.uid}
+    series = series_key(event)
     seq = socket.assigns.event_write_seq + 1
-    write = Map.put(write, :ref, {key, seq})
+    write = write |> Map.put(:ref, {key, seq}) |> tag_series_wide(series)
     socket = assign(socket, :event_write_seq, seq)
 
+    case socket.assigns.series_holds do
+      # See "While a whole series is written or moved" in the moduledoc.
+      %{^series => %{uid: holder} = hold} when holder != event.uid ->
+        put_hold(socket, series, %{hold | held: [{event, write} | hold.held]})
+
+      _free ->
+        socket
+        |> hold_for(write, event)
+        |> enqueue(key, series, event, write)
+    end
+  end
+
+  defp enqueue(socket, key, series, event, write) do
     case socket.assigns.event_writes do
       %{^key => chain} ->
         put_chain(socket, key, %{chain | waiting: :queue.in(write, chain.waiting)})
 
       _idle ->
         socket
-        |> put_chain(key, %{confirmed: event, in_flight: write, waiting: :queue.new()})
+        |> put_chain(key, %{
+          confirmed: event,
+          series: series,
+          in_flight: write,
+          waiting: :queue.new()
+        })
         |> start(write, event)
     end
   end
 
+  # A write to the whole of an addressable series carries the series, so
+  # the hold it puts on it can be lifted when it answers.
+  defp tag_series_wide(write, nil), do: write
+
+  defp tag_series_wide(%{kind: :update, opts: opts} = write, series) do
+    if Keyword.get(opts, :recurrence_scope) in [:following, :all],
+      do: Map.put(write, :series, series),
+      else: write
+  end
+
+  defp tag_series_wide(write, _series), do: write
+
+  defp hold_for(socket, %{series: series}, event) do
+    if Map.has_key?(socket.assigns.series_holds, series),
+      do: socket,
+      else: put_hold(socket, series, %{uid: event.uid, held: []})
+  end
+
+  defp hold_for(socket, _write, _event), do: socket
+
+  defp put_hold(socket, series, hold),
+    do: assign(socket, :series_holds, Map.put(socket.assigns.series_holds, series, hold))
+
+  # Lifts the hold on `series`, answering with the writes it held, oldest
+  # first.
+  defp take_hold(socket, series) do
+    case Map.pop(socket.assigns.series_holds, series) do
+      {nil, _holds} -> {[], socket}
+      {hold, holds} -> {Enum.reverse(hold.held), assign(socket, :series_holds, holds)}
+    end
+  end
+
+  # Lifts the hold on `series` and makes the writes it held, in order, as
+  # if they had just been made.
+  defp release(socket, series) do
+    {held, socket} = take_hold(socket, series)
+    Enum.reduce(held, socket, fn {event, write}, socket -> submit(socket, event, write) end)
+  end
+
   defp advance(socket, key, chain, outcome) do
-    if series_wide_success?(chain.in_flight, outcome),
-      do: after_series_write(socket, key, chain),
-      else: advance_chain(socket, key, chain, outcome)
+    cond do
+      series_wide_success?(chain.in_flight, outcome) ->
+        after_series_write(socket, key, chain)
+
+      Map.has_key?(chain.in_flight, :series) ->
+        socket
+        |> advance_chain(key, chain, outcome)
+        |> release_unless_pending(key, chain.in_flight.series)
+
+      true ->
+        advance_chain(socket, key, chain, outcome)
+    end
   end
 
   defp advance_chain(socket, key, chain, outcome) do
@@ -228,10 +360,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
 
       {{:value, next}, rest} ->
         socket
-        |> put_chain(key, %{confirmed: confirmed, in_flight: next, waiting: rest})
+        |> put_chain(key, %{chain | confirmed: confirmed, in_flight: next, waiting: rest})
         |> show_waiting(outcome, confirmed, [next | :queue.to_list(rest)])
         |> start(next, confirmed)
     end
+  end
+
+  # A write to the whole series that did not change it lifts its hold,
+  # unless another one made from the same event is still to run.
+  defp release_unless_pending(socket, key, series) do
+    pending =
+      case socket.assigns.event_writes do
+        %{^key => chain} -> [chain.in_flight | :queue.to_list(chain.waiting)]
+        _drained -> []
+      end
+
+    if Enum.any?(pending, &(Map.get(&1, :series) == series)),
+      do: socket,
+      else: release(socket, series)
   end
 
   defp series_wide_success?(%{kind: :update, opts: opts}, {:ok, _updated}),
@@ -241,15 +387,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
 
   # See "After a write to a whole series" in the moduledoc.
   defp after_series_write(socket, key, chain) do
-    case :queue.len(chain.waiting) do
-      0 -> :ok
-      dropped -> send(self(), {:flash, {:warning, dropped_writes_message(dropped)}})
-    end
+    {held, socket} = take_hold(socket, Map.get(chain.in_flight, :series))
+    report_dropped(:queue.len(chain.waiting) + length(held), &dropped_writes_message/1)
 
     socket
     |> assign(:event_writes, Map.delete(socket.assigns.event_writes, key))
     |> reload()
   end
+
+  defp report_dropped(0, _message), do: :ok
+  defp report_dropped(count, message), do: send(self(), {:flash, {:warning, message.(count)}})
 
   # Reloads the grid's events, closing the detail panel when its event is
   # gone from them.

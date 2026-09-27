@@ -31,7 +31,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   These bypass attr validation and are dispatched in the `update/2` clauses below:
   `:revert_event`, `:event_write_settled`, `:refresh_events`, `:reload_events`,
   `:ad_hoc_meeting_created`, `:ad_hoc_meeting_failed`, `:event_created`,
-  `:event_create_failed`, `:event_moved`, `:series_moved`, `:event_deleted`,
+  `:event_create_failed`, `:event_moved`, `:series_moved`, `:series_move_failed`,
+  `:event_deleted`,
   `:event_delete_failed`,
   `:events_updated`, `:video_link_updated`, `:integration_synced`.
 
@@ -136,6 +137,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def update(%{action: :series_moved} = assigns, socket),
     do: UpdateHandlers.handle_series_moved(assigns, socket)
+
+  @impl Phoenix.LiveComponent
+  def update(%{action: :series_move_failed} = assigns, socket),
+    do: UpdateHandlers.handle_series_move_failed(assigns, socket)
 
   @impl Phoenix.LiveComponent
   def update(%{action: :event_deleted} = assigns, socket),

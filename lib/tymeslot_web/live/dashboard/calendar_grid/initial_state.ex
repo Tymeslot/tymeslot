@@ -50,6 +50,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       # Writes to existing events, serialised per event; see `EventWrites`.
       event_writes: %{},
       event_write_seq: 0,
+      # Series held while written whole or moved; see `EventWrites`.
+      series_holds: %{},
       deleting_event: false,
       video_integrations: [],
       confirm_remove_attendee: nil,

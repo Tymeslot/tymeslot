@@ -56,8 +56,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeriesMoveLiveViewTest do
   end
 
   setup %{conn: conn} do
-    # An edit of the series reaches the HTTP client too (see the tests of a
-    # change made while the series is moving).
+    # An edit of the series reaches the HTTP client too (see the test of a
+    # change still saving; `SeriesHoldLiveViewTest` covers changes made
+    # while the series is moving).
     swap_env(:calendar_module, Operations)
     swap_env(:google_calendar_api_module, GoogleAPI)
     swap_env(:outlook_calendar_api_module, OutlookAPI)
@@ -234,47 +235,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.SeriesMoveLiveViewTest do
       refute_receive {:put_blocked, :copy, _mover}, 200
 
       release(editor)
-    end
-
-    # A rename made while the series was moving was made against the series
-    # as it was on its old calendar, which the move has deleted, so the one
-    # still waiting to be written is not run.
-    test "a change made while the series is moving is dropped and reported", %{
-      conn: conn,
-      destination: destination,
-      event: event
-    } do
-      block_puts()
-      expect_delete(204)
-
-      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      choose_calendar(lv, event, destination, "/dav/team/")
-      confirm(lv)
-      assert_receive {:put_blocked, :copy, mover}, @task_timeout
-
-      lv
-      |> element("#calendar-grid")
-      |> render_hook("show_event", %{"event-id" => to_string(event.id)})
-
-      rename(lv, "Daily standup")
-      assert_receive {:put_blocked, :edit, editor}, @task_timeout
-      rename(lv, "Monthly standup")
-
-      release(mover)
-
-      eventually(
-        fn ->
-          assert render(lv) =~
-                   "The series was moved, but a change you made while it was moving was not applied."
-        end,
-        timeout: @task_timeout
-      )
-
-      release(editor)
-
-      # The waiting rename never reaches the calendar.
-      refute_receive {:put_blocked, :edit, _second}, 200
-      assert_series_reloaded(lv, event)
     end
 
     test "a calendar of another kind of account is refused without asking", %{
