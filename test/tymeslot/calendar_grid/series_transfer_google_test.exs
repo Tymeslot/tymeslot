@@ -16,6 +16,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferGoogleTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.WorkerTestHelpers, only: [running_job: 2]
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
@@ -24,6 +25,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferGoogleTest do
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
+  alias Tymeslot.Workers.SyncRequest
 
   setup :verify_on_exit!
 
@@ -256,6 +258,22 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferGoogleTest do
 
       assert room_integration_id == source.id
       assert [_one] = all_enqueued(sync_job(source))
+    end
+
+    test "a sync already running runs again once it finishes", %{
+      user: user,
+      source: source,
+      occurrence: occurrence
+    } do
+      running =
+        running_job(SyncGoogleCalendarWorker, %{"calendar_integration_id" => source.id})
+
+      serve(fn :post, _url -> {200, @master} end)
+
+      assert {:ok, _moved} = move(user, occurrence, source, @destination_calendar)
+
+      assert all_enqueued(sync_job(source)) == []
+      assert {:snooze, _seconds} = SyncRequest.rerun_if_requested(:ok, running)
     end
 
     test "a move Google refuses leaves everything as it was", %{

@@ -20,6 +20,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
   @moduletag :integration
 
   import Mox
+  import Tymeslot.WorkerTestHelpers, only: [running_job: 2]
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
@@ -28,6 +29,7 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
   alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
+  alias Tymeslot.Workers.SyncRequest
 
   setup :verify_on_exit!
 
@@ -535,6 +537,29 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
                {"Sprint review", @synced_ical, "\"etag-1\""}
 
       assert_enqueued(caldav_sync_job(integration))
+    end
+
+    # A delta sync that listed the server before the write would finish
+    # without the series; the full fetch asked for runs after it instead.
+    test "a delta sync already running runs again, as a full fetch", %{
+      user: user,
+      integration: integration,
+      occurrence: occurrence
+    } do
+      running =
+        running_job(SyncCalDavCalendarWorker, %{"calendar_integration_id" => integration.id})
+
+      expect_series_put()
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+                 recurrence_scope: :all
+               )
+
+      assert %{state: "executing", args: %{"force_full_fetch" => true}} =
+               Repo.get!(Oban.Job, running.id)
+
+      assert {:snooze, _seconds} = SyncRequest.rerun_if_requested(:ok, running)
     end
 
     test "a failed write is not queued, leaves the rows and requests no sync", %{

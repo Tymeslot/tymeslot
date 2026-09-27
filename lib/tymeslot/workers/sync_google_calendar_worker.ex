@@ -37,24 +37,24 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Workers.SyncHealth
+  alias Tymeslot.Workers.SyncRequest
 
   @sync_window_past_days ProviderConfig.sync_window_past_days()
   @sync_window_future_days ProviderConfig.sync_window_future_days()
 
   @doc """
   Enqueues a sync of the Google integration `integration_id`, the one the
-  dashboard's Refresh asks for. A sync already queued or running for the
-  integration answers in its place (the worker is unique per integration).
+  dashboard's Refresh asks for. A sync already waiting for the integration
+  runs in its place; one already running runs again once it finishes, since
+  it may have read Google before the request (see
+  `Tymeslot.Workers.SyncRequest`).
   """
   @spec enqueue(pos_integer()) :: {:ok, Oban.Job.t()} | {:error, term()}
-  def enqueue(integration_id) do
-    %{"calendar_integration_id" => integration_id}
-    |> new()
-    |> Oban.insert()
-  end
+  def enqueue(integration_id),
+    do: SyncRequest.insert(__MODULE__, %{"calendar_integration_id" => integration_id})
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
+  def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}} = job) do
     Logger.metadata(calendar_integration_id: integration_id)
 
     case CalendarIntegrationQueries.get(integration_id) do
@@ -62,6 +62,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         integration
         |> sync_integration()
         |> tap(&SyncHealth.record_outcome(integration, &1))
+        |> SyncRequest.rerun_if_requested(job)
 
       {:error, :not_found} ->
         Logger.warning("Calendar integration not found, discarding sync job",
