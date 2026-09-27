@@ -17,6 +17,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
+  alias Tymeslot.CalendarGrid.SeriesCarry
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
@@ -305,12 +306,14 @@ defmodule Tymeslot.CalendarGrid do
   immediately without waiting for the next sync cycle.
 
   Accepts a map with `:uid`, `:calendar_integration_id`, `:title`,
-  `:start_at`, `:end_at`, and optionally `:all_day`.
+  `:start_at`, `:end_at`, and optionally `:all_day`. A recurring event's
+  video is handed on to the occurrences its first sync caches
+  (`SeriesCarry.series_created/1`).
   """
   @spec cache_created_event(map()) :: :ok
   def cache_created_event(attrs) do
     {:ok, _count} = ProviderCalendarEventQueries.upsert_batch([normalise_cache_attrs(attrs)])
-    :ok
+    SeriesCarry.series_created(attrs)
   end
 
   # The cached events schema stores start/end/synced_at as :utc_datetime_usec

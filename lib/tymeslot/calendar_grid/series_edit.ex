@@ -58,7 +58,10 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   series' cached rows are not patched: they are deleted, and a full sync of
   the integration is requested, the one the dashboard's Refresh asks for
   (`Tymeslot.Workers.SyncCalDavCalendarWorker.enqueue_full_fetch/1`), which
-  brings the series back as the server holds it.
+  brings the series back as the server holds it. What no sync brings back,
+  the series' video and the organiser's colour overrides on its occurrences,
+  is carried across by `Tymeslot.CalendarGrid.SeriesCarry`, as it is after
+  every write below that drops the series' rows.
 
   ## What this and every following CalDAV occurrence can take
 
@@ -129,6 +132,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.RecurrenceScope
+  alias Tymeslot.CalendarGrid.SeriesCarry
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
@@ -182,7 +186,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
         opts,
         :never_queue,
         &address(&1, family, stored, scope, changes),
-        &after_write(scope, user_id, stored, &1)
+        &after_write(scope, user_id, stored, changes, &1)
       )
     end
   end
@@ -294,14 +298,22 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   end
 
   # Runs once the provider accepted the write, with what it answered.
-  defp after_write(:this_only, _user_id, _stored, _answer), do: :ok
-  defp after_write(:all, user_id, stored, _answer), do: resync_series(user_id, stored)
+  defp after_write(:this_only, _user_id, _stored, _changes, _answer), do: :ok
 
-  defp after_write(:following, user_id, stored, answer) do
-    with {:ok, %{tail: %{uid: uid} = tail}} when is_binary(uid) <- answer,
-         do: EventVideoRooms.series_split(stored, uid, tail_address(tail))
+  defp after_write(:all, user_id, stored, changes, _answer),
+    do: resync_series(user_id, stored, {:edited, changes})
 
-    resync_series(user_id, stored)
+  defp after_write(:following, user_id, stored, changes, answer) do
+    case answer do
+      {:ok, %{tail: %{uid: uid} = tail}} when is_binary(uid) ->
+        EventVideoRooms.series_split(stored, uid, tail_address(tail))
+        resync_series(user_id, stored, {:split, changes, %{uid: uid, id: tail_address(tail)}})
+
+      # An edit of the series' first occurrence, written as one of every
+      # occurrence.
+      _whole_series ->
+        resync_series(user_id, stored, {:edited, changes})
+    end
   end
 
   # How the provider addresses the series a split made: a CalDAV resource by
@@ -316,10 +328,17 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   #
   # The write addressed the series, so its address is known; it is read again
   # here rather than threaded through, from the same row.
-  defp resync_series(user_id, %{calendar_integration_id: integration_id} = stored) do
+  #
+  # What only Tymeslot knows of the series, its video and the organiser's
+  # colours, is read before the rows go and carried to the series as the
+  # write left it (`SeriesCarry`), for the sync to find.
+  defp resync_series(user_id, %{calendar_integration_id: integration_id} = stored, write) do
+    carried = SeriesCarry.plan(user_id, stored, write)
+
     with {:ok, address} <- Occurrence.series_address(stored),
          do: EventDeletion.delete_series_rows(integration_id, address)
 
+    SeriesCarry.carry(carried)
     AvailabilityCache.invalidate_for_user(user_id)
     request_sync(stored.provider, integration_id)
   end

@@ -24,6 +24,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
   alias Joken.Signer
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.EventVideo
+  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
+  alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Video.Providers.LinkRoom
@@ -527,6 +529,47 @@ defmodule Tymeslot.CalendarGrid.EventVideoTest do
       assert claims["context"]["user"] == %{"moderator" => false}
       assert claims["room"] == room_id
       assert claims["exp"] == DateTime.to_unix(event.start_at) + 4 * 60 * 60
+    end
+  end
+
+  describe "change_event_video/3 on a series whose row lost its link" do
+    # A sync brought the series back before its video was given to it again
+    # (`Tymeslot.CalendarGrid.SeriesCarry`), while its Talk room is recorded.
+    setup %{user: user, integration: integration} do
+      talk = insert(:video_integration, user: user, provider: "nextcloud_talk")
+
+      {:ok, room} =
+        EventVideoRoomQueries.insert(%{
+          user_id: user.id,
+          video_integration_id: talk.id,
+          provider: "nextcloud_talk",
+          calendar_integration_id: integration.id,
+          event_uid: "series-1@google.com",
+          provider_event_id: "series-1",
+          room_id: "room-weekly-sync",
+          lobby_opens_at: ~U[2026-06-01 08:45:00Z],
+          ends_at: ~U[2026-12-01 10:00:00Z]
+        })
+
+      %{talk: talk, room: room}
+    end
+
+    # Under `verify_on_exit!` a room created or a calendar write would fail
+    # the test: neither is expected.
+    test "choosing the series' integration again makes no second room", %{
+      user: user,
+      integration: integration,
+      talk: talk,
+      room: room
+    } do
+      event = insert_event(integration)
+
+      assert {:ok, :unchanged} = CalendarGrid.change_event_video(user.id, event, talk.id)
+
+      row = reload(event)
+      assert {row.video_integration_id, row.video_link} == {talk.id, nil}
+      assert [%{id: room_id}] = Repo.all(EventVideoRoomSchema)
+      assert room_id == room.id
     end
   end
 

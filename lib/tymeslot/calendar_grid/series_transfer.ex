@@ -89,15 +89,15 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
       join link in the description the move copied.
     * The series' cached rows on the source are deleted
       (`EventDeletion.delete_series_rows/2`); the cache holds nothing of the
-      new series yet.
+      new series yet. What only Tymeslot knows of the series goes with it
+      (`SeriesCarry`): its video, for the destination's sync to find, and
+      the organiser's colour overrides, moved to the uids its occurrences
+      will be cached under there.
     * The organiser's cached availability is invalidated.
     * A sync of the destination integration is requested, which caches the
       series where it now lives, and one of the source integration when it
       is another, which confirms it gone or brings back an original left
       behind (`SeriesEdit.request_sync/2`).
-
-  Per-occurrence colour overrides and cached video links keyed by the
-  source's uids are not carried over.
 
   ## Before the move
 
@@ -115,6 +115,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
   alias Tymeslot.CalendarGrid.EventMove
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
+  alias Tymeslot.CalendarGrid.SeriesCarry
   alias Tymeslot.CalendarGrid.SeriesEdit
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
@@ -328,10 +329,14 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
         )
     end)
 
+    carried = SeriesCarry.plan(user_id, stored, {:moved, integration.id, written})
+
     after_move("delete the series' cached rows", context, fn ->
       {:ok, address} = Occurrence.series_address(stored)
       :ok = EventDeletion.delete_series_rows(source_id, address)
     end)
+
+    SeriesCarry.carry(carried)
 
     after_move("invalidate cached availability", context, fn ->
       AvailabilityCache.invalidate_for_user(user_id)
