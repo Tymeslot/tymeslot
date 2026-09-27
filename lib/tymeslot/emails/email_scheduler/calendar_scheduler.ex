@@ -14,6 +14,11 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
   DateTimes are passed as ISO 8601 strings for JSON serialisation. An all-day
   event passes `all_day: true` with ISO 8601 `event_start_date` and exclusive
   `event_end_date` instead of the two instants, which it does not have.
+
+  `method: :cancel` makes it a cancellation instead, and `series: true` a
+  cancellation of every occurrence of a recurring event. The job carries all
+  it says, so it does not depend on the event still being cached when it
+  runs.
   """
   @spec schedule_calendar_invitation(map()) :: :ok | {:error, String.t()}
   def schedule_calendar_invitation(params) do
@@ -35,7 +40,8 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
         "event_location" => params[:event_location],
         "event_description" => params[:event_description],
         "method" => Atom.to_string(method),
-        "sequence" => sequence
+        "sequence" => sequence,
+        "event_series" => Map.get(params, :series, false)
       }
       |> EmailWorker.new(
         queue: :emails,

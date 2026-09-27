@@ -34,6 +34,16 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   reconciles no meeting, and a room the series shares stays until the whole
   series goes.
 
+  ## Telling the attendees
+
+  With `notify_attendees: true` the attendees are sent a cancellation once
+  the provider has deleted the event, built from the cached row as it was
+  (see `AttendeeNotifications.event_deleted_confirm/3`), and the result says
+  whether it went out as `:attendees_notified`. Nothing is sent for a delete
+  that failed or was queued for a retry, since the event is still in the
+  calendar, nor for a booking, whose cancelled meeting tells its attendee
+  itself.
+
   ## Failure
 
   A failed delete is queued for replay on the next sync when the error is one
@@ -64,6 +74,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarResourceQueries
+  alias Tymeslot.Meetings.AttendeeNotifications
 
   @type event :: %{
           required(:uid) => String.t(),
@@ -83,11 +94,21 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   """
   @type linked_meeting :: :none | :cancelled | :cancel_failed
 
+  @typedoc """
+  Whether the attendees were sent a cancellation: `:sent`; `:none` when none
+  was asked for or nobody was left to tell; `:failed` when the event is gone
+  but the cancellation could not be enqueued.
+  """
+  @type attendees_notified :: :sent | :none | :failed
+
   @type deleted :: %{
           uid: String.t(),
           integration_id: pos_integer(),
-          linked_meeting: linked_meeting()
+          linked_meeting: linked_meeting(),
+          attendees_notified: attendees_notified()
         }
+
+  @type option :: {:notify_attendees, boolean()}
 
   @type failure :: %{reason: term(), retry: :queued | :not_queued}
 
@@ -116,6 +137,9 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   one occurrence or the whole series goes (see the moduledoc); it is ignored
   for any other event.
 
+  `opts` takes `notify_attendees: true` to send the attendees a cancellation
+  once the event is deleted (see the moduledoc).
+
   Returns `{:ok, deleted}`, or `{:error, %{reason: reason, retry: :queued |
   :not_queued}}` where `:queued` means the delete will be replayed on the
   next sync. A series member is refused with `:recurring_event` when its
@@ -123,22 +147,25 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   `:unaddressable_series` when its cached row does not say which occurrence
   or series it is.
   """
-  @spec delete_event(pos_integer(), event(), scope()) :: {:ok, deleted()} | {:error, failure()}
-  def delete_event(user_id, event, scope \\ :occurrence)
+  @spec delete_event(pos_integer(), event(), scope(), [option()]) ::
+          {:ok, deleted()} | {:error, failure()}
+  def delete_event(user_id, event, scope \\ :occurrence, opts \\ [])
       when scope in [:occurrence, :series] do
     stored = Occurrence.cached_row(event)
+    notify? = Keyword.get(opts, :notify_attendees, false)
 
     case Occurrence.series_family(stored) do
-      :single -> delete_single_event(user_id, event, stored)
+      :single -> delete_single_event(user_id, event, stored, notify?)
       :unsupported -> {:error, %{reason: :recurring_event, retry: :not_queued}}
-      family -> delete_series_member(user_id, event, stored, family, scope)
+      family -> delete_series_member(user_id, event, stored, family, {scope, notify?})
     end
   end
 
   defp delete_single_event(
          user_id,
          %{uid: uid, calendar_integration_id: integration_id} = event,
-         stored
+         stored,
+         notify?
        ) do
     provider_event_id = Map.get(event, :provider_event_id)
 
@@ -159,8 +186,17 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
            opts
          ) do
       {:ok, result} ->
+        linked_meeting = linked_meeting(result)
+        notified = notify_attendees(notify? and linked_meeting == :none, stored, user_id, :single)
         purge_local_traces(user_id, event, stored, :single)
-        {:ok, %{uid: uid, integration_id: integration_id, linked_meeting: linked_meeting(result)}}
+
+        {:ok,
+         %{
+           uid: uid,
+           integration_id: integration_id,
+           linked_meeting: linked_meeting,
+           attendees_notified: notified
+         }}
 
       {:error, reason} ->
         {:error, %{reason: reason, retry: queue_retry(event, reason)}}
@@ -176,12 +212,20 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
          %{uid: uid, calendar_integration_id: integration_id} = event,
          stored,
          family,
-         scope
+         {scope, notify?}
        ) do
     with {:ok, opts, removal} <- series_delete(family, scope, stored),
          {:ok, removal} <- provider_delete(uid, {integration_id, user_id}, opts, removal) do
+      notified = notify_attendees(notify?, stored, user_id, scope)
       purge_local_traces(user_id, event, stored, removal)
-      {:ok, %{uid: uid, integration_id: integration_id, linked_meeting: :none}}
+
+      {:ok,
+       %{
+         uid: uid,
+         integration_id: integration_id,
+         linked_meeting: :none,
+         attendees_notified: notified
+       }}
     else
       {:error, reason} -> {:error, %{reason: reason, retry: :not_queued}}
     end
@@ -350,6 +394,36 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
 
       :ok
   end
+
+  # Runs once the provider has deleted the event, and before the cached rows
+  # go, although the cancellation reads only `stored`, already in memory. Like
+  # the local tidying, a failure here cannot undo the delete, so it is
+  # reported rather than raised.
+  defp notify_attendees(false, _stored, _user_id, _scope), do: :none
+
+  defp notify_attendees(true, stored, user_id, scope) do
+    case AttendeeNotifications.event_deleted_confirm(stored, user_id, email_scope(scope)) do
+      {:ok, :sent} -> :sent
+      {:ok, :noop} -> :none
+      {:error, reason} -> notify_failed(stored, user_id, inspect(reason))
+    end
+  rescue
+    error -> notify_failed(stored, user_id, Exception.format(:error, error, __STACKTRACE__))
+  end
+
+  defp notify_failed(stored, user_id, error) do
+    Logger.error("Calendar grid delete: could not enqueue the attendees' cancellation",
+      user_id: user_id,
+      calendar_integration_id: Map.get(stored, :calendar_integration_id),
+      uid: Map.get(stored, :uid),
+      error: error
+    )
+
+    :failed
+  end
+
+  defp email_scope(:series), do: :series
+  defp email_scope(_scope), do: :occurrence
 
   defp compact(opts), do: Enum.reject(opts, fn {_key, value} -> is_nil(value) end)
 

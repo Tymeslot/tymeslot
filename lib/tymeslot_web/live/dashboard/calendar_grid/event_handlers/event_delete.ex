@@ -135,17 +135,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
   @doc false
   @spec handle_delete_result({:ok, map()} | {:error, map()}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_delete_result({:ok, %{linked_meeting: linked_meeting}}, socket) do
+  def handle_delete_result({:ok, %{linked_meeting: linked_meeting} = deleted}, socket) do
     send_update(CalendarGridComponent,
       id: "calendar",
       action: :event_deleted
     )
 
     pending = Map.get(socket.assigns, :pending_delete) || %{}
+    notified = Map.get(deleted, :attendees_notified, :none)
 
     socket
     |> assign(:pending_delete, nil)
-    |> put_deleted_flash(linked_meeting, pending)
+    |> put_deleted_flash(linked_meeting, {Map.get(pending, :scope, :occurrence), notified})
     |> then(&{:noreply, &1})
   end
 
@@ -155,10 +156,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
       action: :event_delete_failed
     )
 
+    pending = Map.get(socket.assigns, :pending_delete) || %{}
+
     {:noreply,
      socket
      |> assign(:pending_delete, nil)
-     |> put_flash(:error, delete_failed_message(failure))}
+     |> put_flash(:error, delete_failed_message(failure, Map.get(pending, :notify_on_delete)))}
   end
 
   defp put_deleted_flash(socket, :cancelled, _pending) do
@@ -180,15 +183,37 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
     )
   end
 
-  defp put_deleted_flash(socket, :none, pending) do
-    scope = Map.get(pending, :scope, :occurrence)
-    notified? = Map.get(pending, :notify_on_delete, false)
-    put_flash(socket, :info, delete_success_flash(scope, notified?))
+  # Says attendees were notified only when their cancellation was actually
+  # enqueued, which happens only once the event is gone.
+  defp put_deleted_flash(socket, :none, {_scope, :failed}) do
+    put_flash(
+      socket,
+      :warning,
+      dgettext(
+        "dashboard_calendar_events",
+        "Event deleted, but the attendees could not be notified."
+      )
+    )
+  end
+
+  defp put_deleted_flash(socket, :none, {scope, notified}) do
+    put_flash(socket, :info, delete_success_flash(scope, notified == :sent))
   end
 
   # A queued delete will be replayed on the next sync; anything else is final.
-  defp delete_failed_message(%{retry: :queued}),
+  # Nobody is notified of a delete that has not happened, which a queued one
+  # that was meant to notify says, since its retry sends nothing.
+  defp delete_failed_message(%{retry: :queued}, true),
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "Delete failed - queued to retry on next sync. Attendees have not been notified."
+      )
+
+  defp delete_failed_message(%{retry: :queued}, _notify?),
     do: dgettext("dashboard_calendar_events", "Delete failed - queued to retry on next sync")
+
+  defp delete_failed_message(failure, _notify?), do: delete_failed_message(failure)
 
   defp delete_failed_message(%{reason: :recurring_event}), do: recurring_delete_refused_message()
 

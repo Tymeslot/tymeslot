@@ -503,3 +503,33 @@ msgstr "єдиний вхід (SSO)"
 #, elixir-autogen, elixir-format
 msgid "Confirm your email to finish signing up"
 msgstr "Підтвердьте пошту, щоб завершити реєстрацію"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has cancelled a recurring event you were invited to. Every occurrence is cancelled."
+msgstr "%{name} скасував(-ла) повторювану подію, на яку вас запросили. Усі її повторення скасовано."
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has cancelled an event you were invited to."
+msgstr "%{name} скасував(-ла) подію, на яку вас запросили."
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Скасовано"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled - %{title} (every occurrence)"
+msgstr "Скасовано - %{title} (усі повторення)"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled - %{title} on %{date}"
+msgstr "Скасовано - %{title}, %{date}"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Event Cancelled"
+msgstr "Подію скасовано"

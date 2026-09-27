@@ -207,11 +207,6 @@ msgstr "Couleur"
 msgid "Could not schedule notification. Changes were saved."
 msgstr "Impossible de planifier la notification. Les modifications ont été enregistrées."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
-#, elixir-autogen, elixir-format
-msgid "Could not schedule notification. Please try again."
-msgstr "Impossible de planifier la notification. Veuillez réessayer."
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Create"
@@ -1267,3 +1262,13 @@ msgstr "Une modification de cette série est encore en cours d’enregistrement.
 #, elixir-autogen, elixir-format
 msgid "Later events that were changed or cancelled on their own keep that only on dates the new pattern still includes."
 msgstr "Les événements suivants modifiés ou annulés individuellement ne le restent qu'aux dates que le nouveau modèle comprend encore."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "Delete failed - queued to retry on next sync. Attendees have not been notified."
+msgstr "Échec de la suppression - nouvelle tentative programmée à la prochaine synchronisation. Les participants n'ont pas été informés."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but the attendees could not be notified."
+msgstr "Événement supprimé, mais les participants n'ont pas pu être informés."

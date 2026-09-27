@@ -77,7 +77,13 @@ defmodule Tymeslot.CalendarGrid.EventDeletionTest do
 
       assert {:ok, result} = CalendarGrid.delete_event(user.id, event)
 
-      assert result == %{uid: event.uid, integration_id: caldav.id, linked_meeting: :none}
+      assert result == %{
+               uid: event.uid,
+               integration_id: caldav.id,
+               linked_meeting: :none,
+               attendees_notified: :none
+             }
+
       assert_received {:deleted, uid, context, opts}
 
       assert {uid, context, opts} ==

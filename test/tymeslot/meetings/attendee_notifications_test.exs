@@ -226,17 +226,43 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
     end
   end
 
-  describe "event_deleted_confirm/2" do
-    test "delegates to Dispatcher.schedule_delete/2" do
-      event = insert(:provider_calendar_event)
+  describe "event_deleted_confirm/3" do
+    test "enqueues one cancellation per attendee at once, carrying the event" do
+      user = insert(:user)
 
-      assert {:ok, :sent} =
-               AttendeeNotifications.event_deleted_confirm(event, [%{email: "a@x.com"}])
+      event =
+        insert(:provider_calendar_event,
+          summary: "Standup",
+          ical_sequence: 4,
+          attendees: [%{"email" => "a@x.com"}, %{"email" => "b@x.com"}]
+        )
 
-      assert_enqueued(
-        worker: Worker,
-        args: %{"event_id" => event.id, "kind" => "provider_calendar_event", "action" => "delete"}
-      )
+      assert {:ok, :sent} = AttendeeNotifications.event_deleted_confirm(event, user.id, :series)
+
+      jobs = all_enqueued(worker: EmailWorker)
+
+      assert jobs |> Enum.map(& &1.args["attendee_email"]) |> Enum.sort() == [
+               "a@x.com",
+               "b@x.com"
+             ]
+
+      for job <- jobs do
+        assert %{
+                 "action" => "send_calendar_invitation",
+                 "user_id" => user_id,
+                 "event_title" => "Standup",
+                 "event_uid" => uid,
+                 "method" => "cancel",
+                 "sequence" => 5,
+                 "event_series" => true
+               } = job.args
+
+        assert user_id == user.id
+        assert uid == event.uid
+        refute job.scheduled_at > DateTime.utc_now()
+      end
+
+      assert all_enqueued(worker: Worker) == []
     end
   end
 
@@ -252,7 +278,6 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
     test "cancel_pending/1 removes scheduled jobs for the event" do
       event = insert(:provider_calendar_event)
       {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
-      {:ok, :scheduled} = Dispatcher.schedule_delete(event.id, :provider_calendar_event)
 
       :ok = AttendeeNotifications.cancel_pending(event)
 

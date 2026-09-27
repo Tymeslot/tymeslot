@@ -491,3 +491,33 @@ msgstr "il single sign-on"
 #, elixir-autogen, elixir-format
 msgid "Confirm your email to finish signing up"
 msgstr "Conferma la tua email per completare la registrazione"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has cancelled a recurring event you were invited to. Every occurrence is cancelled."
+msgstr "%{name} ha annullato un evento ricorrente a cui eri invitato. Tutte le ricorrenze sono annullate."
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has cancelled an event you were invited to."
+msgstr "%{name} ha annullato un evento a cui eri invitato."
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr "Annullato"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled - %{title} (every occurrence)"
+msgstr "Annullato - %{title} (tutte le ricorrenze)"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Cancelled - %{title} on %{date}"
+msgstr "Annullato - %{title} il %{date}"
+
+#: lib/tymeslot/emails/templates/calendar_invitation.ex
+#, elixir-autogen, elixir-format
+msgid "Event Cancelled"
+msgstr "Evento annullato"

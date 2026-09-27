@@ -46,34 +46,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
             {:noreply, assign(socket, :notify_prompt, nil)}
         end
 
-      %{kind: :delete, event: event, attendees: attendees, scope: scope} ->
-        case AttendeeNotifications.event_deleted_confirm(event, attendees) do
-          {:ok, :sent} ->
-            user_id = socket.assigns.current_user.id
+      # The cancellation is sent by the delete itself, once the calendar has
+      # deleted the event, so a delete that fails notifies nobody.
+      %{kind: :delete, event: event, scope: scope} ->
+        user_id = socket.assigns.current_user.id
 
-            send(
-              self(),
-              {:execute_delete_event, build_delete_payload(event, user_id, true, scope)}
-            )
+        send(
+          self(),
+          {:execute_delete_event, build_delete_payload(event, user_id, true, scope)}
+        )
 
-            {:noreply,
-             socket
-             |> assign(:notify_prompt, nil)
-             |> assign(:deleting_event, true)}
-
-          {:error, _reason} ->
-            send(
-              self(),
-              {:flash,
-               {:warning,
-                dgettext(
-                  "dashboard_calendar_events",
-                  "Could not schedule notification. Please try again."
-                )}}
-            )
-
-            {:noreply, assign(socket, :notify_prompt, nil)}
-        end
+        {:noreply,
+         socket
+         |> assign(:notify_prompt, nil)
+         |> assign(:deleting_event, true)}
     end
   end
 

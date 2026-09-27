@@ -22,13 +22,15 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     * `event_deleted/2` — returns `{:needs_confirmation, count}` so the caller
       knows to show a confirmation prompt; `{:ok, :no_attendees}` if there is
       nobody to notify.
-    * `event_deleted_confirm/2` — delegates to Dispatcher for debounced send.
+    * `event_deleted_confirm/3` — sends the cancellation at once, one per
+      attendee, from the event as it was. Called once the event has actually
+      been deleted, never before: see its docs.
     * `pending?/1` / `cancel_pending/1` — inspection and cancellation of the
       debounced pipeline. Both take the event, not its id: `meetings` and
       `provider_calendar_events` number their rows independently, so an id
       alone does not name an event.
 
-  The debounced update/delete path is owned by `Dispatcher`. This module does
+  The debounced update path is owned by `Dispatcher`. This module does
   not itself know anything about Oban.
   """
 
@@ -39,6 +41,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
   alias Tymeslot.Meetings.AttendeeNotifications.Dispatcher
   alias Tymeslot.Meetings.AttendeeNotifications.IcalMethod
+  alias Tymeslot.Meetings.AttendeeNotifications.Recipients
   alias Tymeslot.Meetings.MeetingSchema
 
   @type event :: map
@@ -113,10 +116,50 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     {:needs_confirmation, length(attendees)}
   end
 
-  @spec event_deleted_confirm(event, [attendee]) :: {:ok, :sent} | {:error, term}
-  def event_deleted_confirm(event, _attendees) do
-    case Dispatcher.schedule_delete(event_id(event), event_kind(event)) do
-      {:ok, :scheduled} -> {:ok, :sent}
+  @doc """
+  Sends the cancellation of a deleted event to its attendees: one email per
+  attendee, enqueued at once, each carrying everything it says about the
+  event (title, timing, location, uid, sequence and whether the whole series
+  went). Nothing is read back later, so it is sent whether or not the event's
+  cached row still exists by then.
+
+  Call it only once the calendar has deleted the event: a cancellation for
+  an event still in the calendar is wrong, and one sent before a delete that
+  then fails cannot be taken back.
+
+  `event` is the cached row as it was before the delete, whose attendees are
+  the recipients, less anyone who declined and the user `owner_user_id`
+  (who made the delete). `scope` is `:series` when the whole series was
+  deleted, which the email says; anything else cancels the one event.
+  `{:ok, :noop}` when nobody is left to tell.
+  """
+  @spec event_deleted_confirm(event, pos_integer(), :occurrence | :series) ::
+          {:ok, :sent | :noop} | {:error, term}
+  def event_deleted_confirm(event, owner_user_id, scope) do
+    excluded = Recipients.excluded(event, owner_user_id)
+
+    recipients =
+      (Map.get(event, :attendees) || [])
+      |> Enum.map(&Attendee.normalise/1)
+      |> Enum.reject(fn attendee ->
+        email = Recipients.email(attendee)
+        is_nil(email) or email in excluded
+      end)
+      |> Enum.uniq_by(&Recipients.email/1)
+
+    notify_deleted(event, recipients, owner_user_id, scope)
+  end
+
+  defp notify_deleted(_event, [], _owner_user_id, _scope), do: {:ok, :noop}
+
+  defp notify_deleted(event, recipients, owner_user_id, scope) do
+    {method, sequence} =
+      IcalMethod.for(:event_deleted, current_sequence: current_sequence(event))
+
+    extra = %{user_id: owner_user_id, series: scope == :series}
+
+    case send_immediate(event, recipients, method, sequence, extra) do
+      :ok -> {:ok, :sent}
       {:error, reason} -> {:error, reason}
     end
   end
@@ -142,12 +185,17 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
 
   ## Internal helpers
 
-  defp send_immediate(event, attendees, method, sequence) do
+  # `extra` overrides the defaults: the organiser a caller already knows, and
+  # whether a cancellation takes the whole series. Returns the first failure
+  # to enqueue, after trying every attendee.
+  defp send_immediate(event, attendees, method, sequence, extra \\ %{}) do
     timing = invitation_timing(event)
 
-    Enum.each(attendees, fn attendee ->
+    attendees
+    |> Enum.map(fn attendee ->
       CalendarScheduler.schedule_calendar_invitation(
-        Map.merge(timing, %{
+        timing
+        |> Map.merge(%{
           user_id: user_id_for(event),
           attendee_email: Map.get(attendee, :email),
           event_title: title_for(event),
@@ -157,10 +205,10 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
           method: method,
           sequence: sequence
         })
+        |> Map.merge(extra)
       )
     end)
-
-    :ok
+    |> Enum.find(:ok, &match?({:error, _reason}, &1))
   end
 
   # An all-day event has dates and no instants, so it travels as dates; the

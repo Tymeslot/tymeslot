@@ -444,7 +444,11 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     socket
     |> EditWorkflow.run_async(
       :delete_event_result,
-      fn -> CalendarGrid.delete_event(payload.user_id, payload, payload.scope) end,
+      fn ->
+        CalendarGrid.delete_event(payload.user_id, payload, payload.scope,
+          notify_attendees: payload.notify_on_delete
+        )
+      end,
       {:error, %{reason: :crashed, retry: :not_queued}}
     )
     |> assign(:pending_delete, Map.take(payload, [:notify_on_delete, :scope]))

@@ -239,6 +239,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       assert render(lv) =~ "Event deleted."
     end
 
+    # The event is gone, so the delete is not reported as failed, but the
+    # organiser who asked to notify is not told attendees were.
+    test "a cancellation that could not be enqueued is reported", %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      send(
+        lv.pid,
+        {:delete_event_result,
+         {:ok,
+          %{
+            uid: "gone",
+            integration_id: integration.id,
+            linked_meeting: :none,
+            attendees_notified: :failed
+          }}}
+      )
+
+      html = render(lv)
+      assert html =~ "Event deleted, but the attendees could not be notified."
+      refute html =~ "Attendees have been notified"
+    end
+
     test "a cancelled linked meeting is reported", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
 

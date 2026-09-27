@@ -211,11 +211,6 @@ msgstr "Barva"
 msgid "Could not schedule notification. Changes were saved."
 msgstr "Oznámení se nepodařilo naplánovat. Změny byly uloženy."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
-#, elixir-autogen, elixir-format
-msgid "Could not schedule notification. Please try again."
-msgstr "Oznámení se nepodařilo naplánovat. Zkuste to prosím znovu."
-
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Create"
@@ -1281,3 +1276,13 @@ msgstr "Změna této série se ještě ukládá. Proveďte prosím tuto změnu, 
 #, elixir-autogen, elixir-format
 msgid "Later events that were changed or cancelled on their own keep that only on dates the new pattern still includes."
 msgstr "Jednotlivě změněné nebo zrušené pozdější události si to zachovají jen v termínech, které nový vzor stále obsahuje."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "Delete failed - queued to retry on next sync. Attendees have not been notified."
+msgstr "Smazání se nezdařilo – zkusíme to znovu při příští synchronizaci. Účastníci nebyli informováni."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but the attendees could not be notified."
+msgstr "Událost byla smazána, ale účastníky se nepodařilo informovat."
