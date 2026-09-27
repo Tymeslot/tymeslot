@@ -114,6 +114,17 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   end
 
   @doc """
+  Whether the series `event` belongs to can move to `integration`, and what
+  the organiser should be told the move will not carry. Reads the cached
+  row, as `move_event/3` does; see `SeriesTransfer.notes/2`.
+  """
+  @spec series_move_notes(map(), map()) ::
+          {:ok, [SeriesTransfer.note()]}
+          | {:error, :recurring_event | :cross_provider_series | :unaddressable_series}
+  def series_move_notes(event, integration),
+    do: event |> Occurrence.cached_row() |> SeriesTransfer.notes(integration)
+
+  @doc """
   Moves `event` to `destination`'s integration, on the calendar named by
   `:calendar_id` or that integration's default when it is `nil`. A member
   of a series moves the whole series (see

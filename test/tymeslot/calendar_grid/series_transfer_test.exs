@@ -287,6 +287,79 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
     end
   end
 
+  describe "series_move_notes/2, before a series move" do
+    test "a Google series within its own account carries everything", %{google: google} do
+      assert CalendarGrid.series_move_notes(google_occurrence(google), google) == {:ok, []}
+    end
+
+    test "a Google series to another account loses its occurrences changed on their own", %{
+      user: user,
+      google: google
+    } do
+      other = insert(:calendar_integration, user: user, provider: "google")
+
+      assert CalendarGrid.series_move_notes(google_occurrence(google), other) ==
+               {:ok, [:changed_occurrences_reset]}
+    end
+
+    test "an Outlook series loses its edited occurrences and its Teams meeting", %{user: user} do
+      outlook = insert(:calendar_integration, user: user, provider: "outlook")
+      event = google_occurrence(outlook, %{provider: "outlook"})
+
+      assert CalendarGrid.series_move_notes(event, outlook) ==
+               {:ok, [:changed_or_cancelled_occurrences_reset, :teams_meeting_not_carried]}
+    end
+
+    test "an Outlook series with guests has them invited again", %{user: user} do
+      outlook = insert(:calendar_integration, user: user, provider: "outlook")
+
+      event =
+        google_occurrence(outlook, %{
+          provider: "outlook",
+          attendees: [%{"email" => "guest@example.com"}]
+        })
+
+      assert {:ok, notes} = CalendarGrid.series_move_notes(event, outlook)
+      assert List.last(notes) == :guests_reinvited
+    end
+
+    test "a CalDAV series carries its whole resource", %{user: user} do
+      event = caldav_series(caldav_integration(user))
+
+      assert CalendarGrid.series_move_notes(event, caldav_integration(user, "radicale")) ==
+               {:ok, []}
+    end
+
+    test "reads the cached row, not the copy it is handed", %{user: user, google: google} do
+      other = insert(:calendar_integration, user: user, provider: "google")
+      event = google_occurrence(google)
+
+      assert CalendarGrid.series_move_notes(%{event | recurring_event_id: nil}, other) ==
+               {:ok, [:changed_occurrences_reset]}
+    end
+
+    test "refuses as the move would, before anything is written", %{user: user, google: google} do
+      exchange = insert(:calendar_integration, user: user, provider: "exchange")
+
+      exchange_event =
+        insert_row(exchange, %{
+          uid: "weekly",
+          provider_metadata: %{"calendar_item_type" => "Occurrence"}
+        })
+
+      unaddressable = caldav_series(caldav_integration(user), %{provider_event_id: nil})
+
+      assert CalendarGrid.series_move_notes(google_occurrence(google), caldav_integration(user)) ==
+               {:error, :cross_provider_series}
+
+      assert CalendarGrid.series_move_notes(exchange_event, exchange) ==
+               {:error, :recurring_event}
+
+      assert CalendarGrid.series_move_notes(unaddressable, caldav_integration(user)) ==
+               {:error, :unaddressable_series}
+    end
+  end
+
   describe "move/4 once the writer has written the series to the destination" do
     test "hands the writer the family, the series' address and the destination calendar", %{
       user: user,

@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SeriesMove
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -38,7 +39,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   def handle_close_event_detail(_params, socket) do
     sub_modal_open =
       socket.assigns.confirm_remove_attendee != nil or
-        socket.assigns.confirm_discard_attendees
+        socket.assigns.confirm_discard_attendees or
+        socket.assigns.series_move_prompt != nil
 
     cond do
       sub_modal_open ->
@@ -315,6 +317,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
              :ok <- Shared.check_move_rate_limit(socket) do
           {:noreply, start_move(socket, event, new_id, cal_id)}
         else
+          {:ok, :series} -> SeriesMove.prompt(socket, event, new_id, cal_id)
           error -> flash_move_error(socket, error)
         end
 
@@ -338,8 +341,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   end
 
   # The move guard's refusals, each with its own wording: the target calendar
-  # rejects writes, the event is not the organiser's, the event repeats, or
-  # the move rate limit has been hit.
+  # rejects writes, the event is not the organiser's, the event repeats on a
+  # calendar that cannot move a series, or the move rate limit has been hit.
   defp flash_move_error(socket, {:error, :read_only} = error),
     do: Shared.flash_guard_error(socket, error)
 
@@ -359,19 +362,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     {:noreply, socket}
   end
 
-  # A series member's move takes the whole series, which the organiser has to
-  # confirm first. Until the grid asks for that confirmation, it is refused as
-  # a recurring event always was.
-  defp flash_move_error(socket, {:ok, :series}),
-    do: flash_move_error(socket, {:error, :recurring_event})
-
   defp flash_move_error(socket, {:error, :rate_limited, _message}) do
-    send(
-      self(),
-      {:flash,
-       {:warning, dgettext("dashboard_calendar_events", "Too many moves. Please wait a moment.")}}
-    )
-
+    send(self(), {:flash, {:warning, EditWorkflow.move_rate_limited_message()}})
     {:noreply, socket}
   end
 

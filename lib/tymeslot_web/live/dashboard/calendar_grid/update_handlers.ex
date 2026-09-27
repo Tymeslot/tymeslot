@@ -126,6 +126,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     {:ok, assign(socket, :selected_event, new_event)}
   end
 
+  @doc """
+  Reloads the grid once a whole series has moved to another calendar, as
+  after any write to a whole series (see `EventWrites.series_moved/2`): the
+  series' rows are gone from the source, and its rows on the destination
+  arrive with that calendar's sync.
+  """
+  @spec handle_series_moved(map(), Phoenix.LiveView.Socket.t()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
+  def handle_series_moved(%{moved_event: event} = assigns, socket) do
+    socket =
+      socket
+      |> assign(Map.drop(assigns, [:action, :moved_event]))
+      |> EventWrites.series_moved(event)
+
+    {:ok, socket}
+  end
+
   @spec handle_event_deleted(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   def handle_event_deleted(assigns, socket) do

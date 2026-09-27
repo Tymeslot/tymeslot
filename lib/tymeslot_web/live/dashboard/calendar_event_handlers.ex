@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
+  import Phoenix.LiveView, only: [clear_flash: 2, put_flash: 3, send_update: 2]
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Video.RoomCreationError
@@ -170,12 +170,8 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   end
 
   defp update_failed_message(reason)
-       when reason in [:unaddressable_occurrence, :unreadable_timing, :not_recurring] do
-    dgettext(
-      "dashboard_calendar_events",
-      "This event could not be matched to its series. Refresh your calendars and try again."
-    )
-  end
+       when reason in [:unaddressable_occurrence, :unreadable_timing, :not_recurring],
+       do: EditWorkflow.unmatched_series_message()
 
   defp update_failed_message(_reason),
     do: dgettext("dashboard_calendar_events", "Failed to update event - changes reverted")
@@ -183,31 +179,58 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @doc """
   Handles the result of an event move: shows the moved event and says where
   the original ended up, or reverts the grid when nothing was moved.
+
+  A whole series the organiser confirmed moving (the result carries
+  `:series_to`, the destination calendar's name) was never shown moved, so
+  nothing is reverted when it fails, and the note that it is moving is
+  cleared either way. When it succeeds the grid reloads, as
+  after any write to a whole series, since the series' rows are gone from
+  the source until the destination's sync brings them back.
   """
   @spec handle_event_move_result(
           {:ok, keyword()} | {:error, keyword()},
           Phoenix.LiveView.Socket.t()
         ) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event_move_result({:ok, new_event_info}, socket) do
-    send_update(CalendarGridComponent,
-      id: "calendar",
-      action: :event_moved,
-      new_event_uid: new_event_info[:uid],
-      new_event_integration_id: new_event_info[:integration_id]
-    )
+    case new_event_info[:series_to] do
+      nil ->
+        send_update(CalendarGridComponent,
+          id: "calendar",
+          action: :event_moved,
+          new_event_uid: new_event_info[:uid],
+          new_event_integration_id: new_event_info[:integration_id]
+        )
 
-    {level, message} = moved_flash(new_event_info[:source])
-    {:noreply, put_flash(socket, level, message)}
+        {level, message} = moved_flash(new_event_info[:source])
+        {:noreply, put_flash(socket, level, message)}
+
+      calendar ->
+        send_update(CalendarGridComponent,
+          id: "calendar",
+          action: :series_moved,
+          moved_event: new_event_info[:original_event]
+        )
+
+        {level, message} = series_moved_flash(new_event_info[:source], calendar)
+        {:noreply, socket |> clear_flash(:info) |> put_flash(level, message)}
+    end
   end
 
   def handle_event_move_result({:error, payload}, socket) do
-    send_update(CalendarGridComponent,
-      id: "calendar",
-      action: :revert_event,
-      original_event: payload[:original_event]
-    )
+    case payload[:series_to] do
+      nil ->
+        send_update(CalendarGridComponent,
+          id: "calendar",
+          action: :revert_event,
+          original_event: payload[:original_event]
+        )
 
-    {:noreply, put_flash(socket, :error, move_failed_message(payload[:reason]))}
+        {:noreply, put_flash(socket, :error, move_failed_message(payload[:reason]))}
+
+      _calendar ->
+        message = EditWorkflow.series_move_failed_message(payload[:reason])
+        {:noreply, socket |> clear_flash(:info) |> put_flash(:error, message)}
+    end
   end
 
   defp moved_flash(nil),
@@ -236,6 +259,22 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
      dgettext(
        "dashboard_calendar_events",
        "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
+     )}
+  end
+
+  defp series_moved_flash(nil, calendar) do
+    {:info,
+     dgettext("dashboard_calendar_events", "The series was moved to %{calendar}.",
+       calendar: calendar
+     )}
+  end
+
+  defp series_moved_flash(:left_behind, calendar) do
+    {:warning,
+     dgettext(
+       "dashboard_calendar_events",
+       "The series was copied to %{calendar}, but the original series could not be removed. Please delete it from its original calendar.",
+       calendar: calendar
      )}
   end
 

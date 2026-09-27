@@ -176,29 +176,61 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventMoveLiveViewTest do
   end
 
   describe "moving a recurring event" do
+    # A member of a CalDAV series moves with its whole series, which the
+    # organiser confirms first; nothing is written until they do (no stub
+    # answers a provider call here). `SeriesMoveLiveViewTest` follows the
+    # confirmed move down to the provider.
     for {kind, attrs} <- [
           {"a series", quote(do: %{recurrence_rule: "FREQ=WEEKLY;BYDAY=MO"})},
           {"an occurrence", quote(do: %{recurring_event_id: "series-1"})},
           {"an occurrence edited on its own",
-           quote(do: %{provider_metadata: %{"recurrence_id" => "20261012T090000Z"}})},
-          {"a repeating Exchange event",
-           quote(do: %{provider_metadata: %{"calendar_item_type" => "RecurringMaster"}})}
+           quote(do: %{provider_metadata: %{"recurrence_id" => "20261012T090000Z"}})}
         ] do
-      test "#{kind} is refused with a clear message and stays where it is", %{
+      test "#{kind} asks to move the whole series and stays where it is meanwhile", %{
         conn: conn,
         source: source,
         destination: destination
       } do
-        event = insert_all_day_event(source, unquote(attrs))
+        event =
+          insert_all_day_event(
+            source,
+            Map.put(unquote(attrs), :provider_event_id, "/cal/source/series.ics")
+          )
 
         {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
         move(lv, event, destination)
 
-        assert render(lv) =~ "Recurring events cannot be moved to another calendar"
+        assert has_element?(lv, "#confirm-series-move-modal")
+        assert render(lv) =~ "Move every event in this series to #{destination.name}?"
 
         assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(source.id, event.uid)
         assert row.calendar_integration_id == source.id
       end
+    end
+
+    test "a repeating Exchange event is refused with a clear message and no confirmation", %{
+      conn: conn,
+      user: user,
+      destination: destination
+    } do
+      exchange = insert(:calendar_integration, user: user, provider: "exchange")
+
+      event =
+        insert_all_day_event(exchange, %{
+          provider: "exchange",
+          provider_metadata: %{"calendar_item_type" => "RecurringMaster"}
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      move(lv, event, destination)
+
+      refute has_element?(lv, "#confirm-series-move-modal")
+
+      assert render(lv) =~
+               "Recurring events on this calendar cannot be moved to another calendar."
+
+      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(exchange.id, event.uid)
+      assert row.calendar_integration_id == exchange.id
     end
   end
 

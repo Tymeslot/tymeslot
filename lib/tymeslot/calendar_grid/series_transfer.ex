@@ -99,6 +99,13 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
   Per-occurrence colour overrides and cached video links keyed by the
   source's uids are not carried over.
 
+  ## Before the move
+
+  `notes/2` answers, before anything is written, whether a series can move
+  to a destination integration at all and what the organiser should be told
+  the move will not carry, so the grid can ask them to confirm it knowing
+  that.
+
   None of these steps can undo the move, so none of them may report it as
   one that did not happen: each is rescued and logged on its own, and the
   move is still reported.
@@ -138,6 +145,65 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
           calendar_id: String.t(),
           source: :removed | :left_behind
         }
+
+  @typedoc """
+  Something a move to a given destination does not carry, which the
+  organiser is told before confirming it:
+
+    * `:changed_occurrences_reset` - occurrences edited on their own come
+      back on the destination as the series' rule makes them (Google, when
+      the series is copied to another integration).
+    * `:changed_or_cancelled_occurrences_reset` - occurrences edited or
+      cancelled on their own come back as the rule makes them (Outlook,
+      which always copies).
+    * `:teams_meeting_not_carried` - a Teams meeting on the series is not
+      carried to the copy (Outlook). The cache does not record whether the
+      series has one, so this is said of every Outlook move.
+    * `:guests_reinvited` - the series' guests are sent a cancellation of
+      the original and an invitation to the copy (Outlook, when the cached
+      row has attendees).
+  """
+  @type note ::
+          :changed_occurrences_reset
+          | :changed_or_cancelled_occurrences_reset
+          | :teams_meeting_not_carried
+          | :guests_reinvited
+
+  @doc """
+  Whether the series `stored`, the cached row of one of its members, can
+  move to `integration`, and if so what the move will not carry
+  (`t:note/0`), in the order the organiser should read them.
+
+  Refuses as `move/4` refuses before anything is written:
+  `:recurring_event` for a provider with no series-wide write,
+  `:cross_provider_series` for a destination of another family, and
+  `:unaddressable_series` for a row that names no series. A move to the
+  calendar the series is already on is only refused by `move/4`, which is
+  when the destination calendar is settled.
+
+  A move within one Google integration is Google's own, which carries
+  everything, and a CalDAV move copies the series' whole resource, so
+  neither has notes.
+  """
+  @spec notes(map(), map()) ::
+          {:ok, [note()]}
+          | {:error, :recurring_event | :cross_provider_series | :unaddressable_series}
+  def notes(stored, integration) do
+    with {:ok, family} <- same_family(stored, integration),
+         {:ok, _address} <- Occurrence.series_address(stored) do
+      {:ok, family_notes(family, stored, integration)}
+    end
+  end
+
+  defp family_notes(:google, %{calendar_integration_id: id}, %{id: id}), do: []
+  defp family_notes(:google, _stored, _integration), do: [:changed_occurrences_reset]
+
+  defp family_notes(:outlook, stored, _integration) do
+    guests = if Map.get(stored, :attendees) in [nil, []], do: [], else: [:guests_reinvited]
+    [:changed_or_cancelled_occurrences_reset, :teams_meeting_not_carried | guests]
+  end
+
+  defp family_notes(:caldav, _stored, _integration), do: []
 
   @doc """
   Moves the series `stored`, the cached row of one of its members, to

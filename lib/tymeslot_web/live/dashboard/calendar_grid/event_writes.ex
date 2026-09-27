@@ -54,6 +54,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   series has left. The organiser is told how many changes were not applied,
   and can make them again on the reloaded grid.
 
+  A series moved to another calendar is not one of these writes, but it
+  ends the same way (`series_moved/2`): every write still waiting for an
+  event of the series, which can only be one made while it was moving
+  (`series_saving?/2`), is dropped, and the grid reloads.
+
   ## Results
 
   Every write carries a reference, `{key, seq}`, where `seq` rises with every
@@ -69,6 +74,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.Occurrence
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -121,6 +127,57 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
       %{^key => %{in_flight: %{ref: ^ref}} = chain} -> advance(socket, key, chain, outcome)
       _stale -> socket
     end
+  end
+
+  @doc """
+  Reloads the grid once the series `event` belongs to has moved to another
+  calendar, dropping every write still waiting for one of its events on the
+  source (see "After a write to a whole series" in the moduledoc). A write
+  already in flight for one of them is forgotten, so its answer changes
+  nothing on the reloaded grid.
+  """
+  @spec series_moved(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
+  def series_moved(socket, event) do
+    {series, other} =
+      Enum.split_with(socket.assigns.event_writes, fn {_key, chain} ->
+        same_series?(chain.confirmed, event)
+      end)
+
+    case Enum.sum_by(series, fn {_key, chain} -> :queue.len(chain.waiting) end) do
+      0 -> :ok
+      dropped -> send(self(), {:flash, {:warning, dropped_by_move_message(dropped)}})
+    end
+
+    socket
+    |> assign(:event_writes, Map.new(other))
+    |> reload()
+  end
+
+  @doc """
+  Whether a write to an event of the series `event` belongs to is still
+  running or waiting. A series is not moved while one is: the write would
+  land on the original after the move had copied it.
+  """
+  @spec series_saving?(Phoenix.LiveView.Socket.t(), map()) :: boolean()
+  def series_saving?(socket, event),
+    do:
+      Enum.any?(socket.assigns.event_writes, fn {_key, chain} ->
+        same_series?(chain.confirmed, event)
+      end)
+
+  defp same_series?(a, b) do
+    a.calendar_integration_id == b.calendar_integration_id and
+      match?({:ok, _address}, Occurrence.series_address(a)) and
+      Occurrence.series_address(a) == Occurrence.series_address(b)
+  end
+
+  defp dropped_by_move_message(count) do
+    dngettext(
+      "dashboard_calendar_events",
+      "The series was moved, but a change you made while it was moving was not applied. Please make it again.",
+      "The series was moved, but %{count} changes you made while it was moving were not applied. Please make them again.",
+      count
+    )
   end
 
   @doc """
@@ -189,7 +246,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
       dropped -> send(self(), {:flash, {:warning, dropped_writes_message(dropped)}})
     end
 
-    socket = assign(socket, :event_writes, Map.delete(socket.assigns.event_writes, key))
+    socket
+    |> assign(:event_writes, Map.delete(socket.assigns.event_writes, key))
+    |> reload()
+  end
+
+  # Reloads the grid's events, closing the detail panel when its event is
+  # gone from them.
+  defp reload(socket) do
     socket = Helpers.load_events(socket)
     selected = socket.assigns.selected_event
 

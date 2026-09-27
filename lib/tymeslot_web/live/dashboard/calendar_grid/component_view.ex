@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDiscardAttendeesModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmRemoveAttendeeModal
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmSeriesMoveModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.NotifyPromptModal
@@ -182,6 +183,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ComponentView do
           scopes={@confirm_delete_scopes}
           deleting={@deleting_event}
           linked_to_booking={@confirm_delete_linked_to_booking}
+          myself={@myself}
+        />
+        <ConfirmSeriesMoveModal.confirm_series_move_modal
+          :if={@series_move_prompt}
+          prompt={@series_move_prompt}
           myself={@myself}
         />
         <ConfirmRemoveAttendeeModal.confirm_remove_attendee_modal

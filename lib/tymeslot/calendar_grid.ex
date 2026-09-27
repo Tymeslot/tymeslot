@@ -411,6 +411,14 @@ defmodule Tymeslot.CalendarGrid do
   defdelegate ensure_movable(event), to: EventMove
 
   @doc """
+  Whether the series an event belongs to can move to an integration, and
+  what the move will not carry. See
+  `Tymeslot.CalendarGrid.EventMove.series_move_notes/2`.
+  """
+  @spec series_move_notes(map(), map()) :: {:ok, [atom()]} | {:error, atom()}
+  defdelegate series_move_notes(event, integration), to: EventMove
+
+  @doc """
   How an event may be edited from the grid: on its own, in a scope, or, for
   a series whose provider has no scoped edit, as that one event only. See
   `Tymeslot.CalendarGrid.EventEdit.edit_scopes/1`.

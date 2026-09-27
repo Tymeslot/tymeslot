@@ -31,7 +31,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   These bypass attr validation and are dispatched in the `update/2` clauses below:
   `:revert_event`, `:event_write_settled`, `:refresh_events`, `:reload_events`,
   `:ad_hoc_meeting_created`, `:ad_hoc_meeting_failed`, `:event_created`,
-  `:event_create_failed`, `:event_moved`, `:event_deleted`, `:event_delete_failed`,
+  `:event_create_failed`, `:event_moved`, `:series_moved`, `:event_deleted`,
+  `:event_delete_failed`,
   `:events_updated`, `:video_link_updated`, `:integration_synced`.
 
   ## Internal state
@@ -56,6 +57,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Search
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SeriesMove
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shortcuts
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility
   alias TymeslotWeb.Dashboard.CalendarGrid.InitialState
@@ -130,6 +132,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def update(%{action: :event_moved} = assigns, socket),
     do: UpdateHandlers.handle_event_moved(assigns, socket)
+
+  @impl Phoenix.LiveComponent
+  def update(%{action: :series_moved} = assigns, socket),
+    do: UpdateHandlers.handle_series_moved(assigns, socket)
 
   @impl Phoenix.LiveComponent
   def update(%{action: :event_deleted} = assigns, socket),
@@ -401,6 +407,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event("cancel_recurrence_prompt", params, socket),
     do: EventCrud.handle_cancel_recurrence_prompt(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("confirm_series_move", params, socket),
+    do: SeriesMove.handle_confirm_series_move(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("cancel_series_move", params, socket),
+    do: SeriesMove.handle_cancel_series_move(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("toggle_settings", params, socket),

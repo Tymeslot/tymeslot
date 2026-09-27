@@ -193,7 +193,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventAsyncResultsTest do
       )
 
       html = render(lv)
-      assert html =~ "Recurring events cannot be moved to another calendar yet."
+      assert html =~ "Recurring events on this calendar cannot be moved to another calendar."
       refute html =~ "Could not move the event"
     end
 

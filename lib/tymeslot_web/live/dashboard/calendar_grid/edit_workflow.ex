@@ -202,16 +202,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   when `nil`) in the background through `Tymeslot.CalendarGrid.move_event/3`.
 
   Reports back with `{:event_move_result, {:ok, uid: uid, integration_id: id,
-  source: source}}`, where `source` is `nil` when the original was removed,
-  `:queued_delete` or `:left_behind` otherwise; or with
+  source: source, original_event: event}}`, where `source` is `nil` when the
+  original was removed, `:queued_delete` or `:left_behind` otherwise; or with
   `{:event_move_result, {:error, original_event: event, reason: reason}}`
   when nothing was moved.
+
+  `opts` takes `:series_to`, the name of the destination calendar, for the
+  move of a whole series the organiser has confirmed; both answers then
+  carry it, so the result handler can tell a series move from the move of
+  one event.
   """
-  @spec move_event_async(Phoenix.LiveView.Socket.t(), map(), map(), String.t() | nil) ::
+  @spec move_event_async(Phoenix.LiveView.Socket.t(), map(), map(), String.t() | nil, keyword()) ::
           Phoenix.LiveView.Socket.t()
-  def move_event_async(socket, event, integration, calendar_id) do
+  def move_event_async(socket, event, integration, calendar_id, opts \\ []) do
     user_id = socket.assigns.current_user.id
     destination = %{integration: integration, calendar_id: calendar_id}
+    series = Keyword.take(opts, [:series_to])
 
     run_async(
       socket,
@@ -219,24 +225,88 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       fn ->
         case CalendarGrid.move_event(user_id, event, destination) do
           {:ok, moved} ->
-            {:ok, uid: moved.uid, integration_id: moved.integration_id, source: moved[:source]}
+            {:ok,
+             [
+               uid: moved.uid,
+               integration_id: moved.integration_id,
+               source: moved[:source],
+               original_event: event
+             ] ++ series}
 
           {:error, reason} ->
-            move_failure(event, reason)
+            move_failure(event, reason, series)
         end
       end,
-      move_failure(event, :crashed)
+      move_failure(event, :crashed, series)
     )
   end
 
-  defp move_failure(event, reason), do: {:error, original_event: event, reason: reason}
+  defp move_failure(event, reason, series),
+    do: {:error, [original_event: event, reason: reason] ++ series}
 
-  @doc "The message shown when an organiser tries to move a recurring event."
+  @doc """
+  The message shown when an organiser tries to move a recurring event whose
+  calendar provider cannot move a whole series (Exchange).
+  """
   @spec recurring_move_refused_message() :: String.t()
   def recurring_move_refused_message do
     dgettext(
       "dashboard_calendar_events",
-      "Recurring events cannot be moved to another calendar yet. Only single events can be moved."
+      "Recurring events on this calendar cannot be moved to another calendar. Only single events can be moved."
+    )
+  end
+
+  @doc "The message shown when an organiser has moved events too often in a short while."
+  @spec move_rate_limited_message() :: String.t()
+  def move_rate_limited_message,
+    do: dgettext("dashboard_calendar_events", "Too many moves. Please wait a moment.")
+
+  @doc """
+  The message shown when a recurring series could not be moved, for each
+  reason `Tymeslot.CalendarGrid.move_event/3` and
+  `Tymeslot.CalendarGrid.series_move_notes/2` give. Every one of them means
+  the series is still where it was.
+  """
+  @spec series_move_failed_message(term()) :: String.t()
+  def series_move_failed_message(:recurring_event), do: recurring_move_refused_message()
+
+  def series_move_failed_message(:cross_provider_series) do
+    dgettext(
+      "dashboard_calendar_events",
+      "A recurring event can only be moved to a calendar of the same kind of account: Google to Google, Outlook to Outlook, or CalDAV to CalDAV."
+    )
+  end
+
+  def series_move_failed_message(reason)
+      when reason in [:unaddressable_series, :not_recurring, :unreadable_timing],
+      do: unmatched_series_message()
+
+  def series_move_failed_message(:same_calendar),
+    do: dgettext("dashboard_calendar_events", "The series is already on that calendar.")
+
+  def series_move_failed_message(:no_destination_calendar) do
+    dgettext(
+      "dashboard_calendar_events",
+      "That calendar cannot be written to. Please choose another calendar."
+    )
+  end
+
+  def series_move_failed_message(_reason) do
+    dgettext(
+      "dashboard_calendar_events",
+      "Could not move the series. It is still on its original calendar."
+    )
+  end
+
+  @doc """
+  The message shown when the grid cannot tell which series, or which
+  occurrence of it, an event is.
+  """
+  @spec unmatched_series_message() :: String.t()
+  def unmatched_series_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "This event could not be matched to its series. Refresh your calendars and try again."
     )
   end
 

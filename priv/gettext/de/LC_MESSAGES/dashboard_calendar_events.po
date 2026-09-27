@@ -165,6 +165,7 @@ msgstr "Kalender aktualisiert"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
@@ -752,7 +753,7 @@ msgstr "Diese Hilfe ein-/ausblenden"
 msgid "Too many edits. Please wait a moment."
 msgstr "Zu viele Bearbeitungen. Bitte warten Sie einen Moment."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #, elixir-autogen, elixir-format
 msgid "Too many moves. Please wait a moment."
 msgstr "Zu viele Verschiebungen. Bitte warten Sie einen Moment."
@@ -1018,11 +1019,6 @@ msgstr "Ereignis in den neuen Kalender kopiert. Das Original wird bei der nächs
 msgid "Event moved to the new calendar."
 msgstr "Ereignis in den neuen Kalender verschoben."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
-#, elixir-autogen, elixir-format
-msgid "Recurring events cannot be moved to another calendar yet. Only single events can be moved."
-msgstr "Wiederkehrende Ereignisse können noch nicht in einen anderen Kalender verschoben werden. Nur einzelne Ereignisse lassen sich verschieben."
-
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "The video provider did not return a meeting link, so the video link was not changed."
@@ -1140,7 +1136,7 @@ msgstr "Dieses und folgende Ereignisse"
 msgid "This event"
 msgstr "Dieses Ereignis"
 
-#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #, elixir-autogen, elixir-format
 msgid "This event could not be matched to its series. Refresh your calendars and try again."
 msgstr "Dieses Ereignis konnte seiner Serie nicht zugeordnet werden. Aktualisieren Sie Ihre Kalender und versuchen Sie es erneut."
@@ -1174,3 +1170,91 @@ msgstr "Nur dieser Termin ändert sich, der Rest der Serie bleibt unverändert."
 #, elixir-autogen, elixir-format
 msgid "this occurrence and every later one change, and the earlier ones stay as they are."
 msgstr "Dieser und alle späteren Termine ändern sich, die früheren bleiben unverändert."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "A Teams meeting on the series is not carried over."
+msgstr "Ein Teams-Meeting der Serie wird nicht übernommen."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/series_move.ex
+#, elixir-autogen, elixir-format
+msgid "A change to this series is still saving. Please move the series once it has saved."
+msgstr "Eine Änderung an dieser Serie wird noch gespeichert. Bitte verschieben Sie die Serie, sobald sie gespeichert ist."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "A recurring event can only be moved to a calendar of the same kind of account: Google to Google, Outlook to Outlook, or CalDAV to CalDAV."
+msgstr "Ein wiederkehrendes Ereignis kann nur in einen Kalender derselben Kontoart verschoben werden: von Google zu Google, von Outlook zu Outlook oder von CalDAV zu CalDAV."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Could not move the series. It is still on its original calendar."
+msgstr "Die Serie konnte nicht verschoben werden. Sie befindet sich weiterhin in ihrem ursprünglichen Kalender."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Events in the series that were changed on their own go back to the series' usual pattern."
+msgstr "Einzeln geänderte Ereignisse der Serie folgen wieder dem üblichen Muster der Serie."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Events in the series that were changed or cancelled on their own go back to the series' usual pattern."
+msgstr "Einzeln geänderte oder abgesagte Ereignisse der Serie folgen wieder dem üblichen Muster der Serie."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Guests are sent a cancellation for the original series and an invitation to the moved one."
+msgstr "Gäste erhalten eine Absage für die ursprüngliche Serie und eine Einladung zur verschobenen."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move every event in this series to %{calendar}?"
+msgstr "Alle Ereignisse dieser Serie nach %{calendar} verschieben?"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move recurring event"
+msgstr "Wiederkehrendes Ereignis verschieben"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move series"
+msgstr "Serie verschieben"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/series_move.ex
+#, elixir-autogen, elixir-format
+msgid "Moving the series to %{calendar}..."
+msgstr "Die Serie wird nach %{calendar} verschoben..."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring events on this calendar cannot be moved to another calendar. Only single events can be moved."
+msgstr "Wiederkehrende Ereignisse in diesem Kalender können nicht in einen anderen Kalender verschoben werden. Nur einzelne Ereignisse lassen sich verschieben."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "That calendar cannot be written to. Please choose another calendar."
+msgstr "In diesen Kalender kann nicht geschrieben werden. Bitte wählen Sie einen anderen Kalender."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "The series is already on that calendar."
+msgstr "Die Serie befindet sich bereits in diesem Kalender."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "The series was copied to %{calendar}, but the original series could not be removed. Please delete it from its original calendar."
+msgstr "Die Serie wurde nach %{calendar} kopiert, aber die ursprüngliche Serie konnte nicht entfernt werden. Bitte löschen Sie sie aus ihrem ursprünglichen Kalender."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "The series was moved to %{calendar}."
+msgstr "Die Serie wurde nach %{calendar} verschoben."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_writes.ex
+#, elixir-autogen, elixir-format
+msgid "The series was moved, but a change you made while it was moving was not applied. Please make it again."
+msgid_plural "The series was moved, but %{count} changes you made while it was moving were not applied. Please make them again."
+
+msgstr[0] "Die Serie wurde verschoben, aber eine Änderung, die Sie währenddessen vorgenommen haben, wurde nicht übernommen. Bitte nehmen Sie sie erneut vor."
+msgstr[1] "Die Serie wurde verschoben, aber %{count} Änderungen, die Sie währenddessen vorgenommen haben, wurden nicht übernommen. Bitte nehmen Sie sie erneut vor."
