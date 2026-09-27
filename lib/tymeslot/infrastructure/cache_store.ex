@@ -290,7 +290,7 @@ defmodule Tymeslot.Infrastructure.CacheStore do
         Logger.warning("Cache computation raised an exception",
           table: table_name,
           key: render(key),
-          exception: Exception.message(exception)
+          exception: exception |> Exception.message() |> redact()
         )
 
         Logger.debug("Cache computation stacktrace",
@@ -319,8 +319,17 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   # put LogFormat and the redaction modules behind it on the compile-time
   # graph of every cache (see `compute_and_store/5`). Cache keys are built from
   # ids and dates, not credentials; a thrown or exited reason is the one term
-  # here that is not, and it is capped so it cannot carry much.
-  defp render(term), do: inspect(term, limit: 20, printable_limit: 256)
+  # here that is not, so the rendering is capped and then scrubbed of what
+  # shows up in text (bearer headers, query-string tokens, quoted secrets).
+  defp render(term), do: term |> inspect(limit: 20, printable_limit: 256) |> redact()
+
+  # `Logging.Redactor.redact/1`, called through a module atom returned at
+  # runtime rather than an alias: xref records an alias as a reference, and
+  # every module that `use`s this one would then count the redactor on its
+  # compile-connected graph. The regex-only redactor is the one piece of log
+  # scrubbing that needs nothing else from the application.
+  defp redact(text), do: redactor().redact(text)
+  defp redactor, do: :"Elixir.Tymeslot.Infrastructure.Logging.Redactor"
 
   @doc false
   @spec cleanup_expired(atom()) :: integer()
