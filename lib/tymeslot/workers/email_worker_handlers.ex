@@ -50,6 +50,25 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
       {IntegrationEmails, :handle_event_update_notification, :with_job_id}
   }
 
+  # The handlers that declare some of their discards an expected end of the
+  # job. `AdminEmails` discards nothing of its own.
+  @declaring_handlers [
+    AuthEmails,
+    BookingApprovalEmails,
+    IntegrationEmails,
+    MeetingEmails,
+    PollEmails
+  ]
+
+  @doc """
+  Whether `reason`, from a discard one of the handlers returned, is an
+  expected end of the email job rather than a fault
+  (see `Tymeslot.Infrastructure.ExpectedJobOutcome`).
+  """
+  @spec expected_discard?(term()) :: boolean()
+  def expected_discard?(reason),
+    do: Enum.any?(@declaring_handlers, & &1.expected_discard?(reason))
+
   @doc """
   Executes the specified email action with the given arguments.
 

@@ -44,6 +44,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
   alias Ecto.Changeset
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Video
@@ -93,6 +94,15 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     states: [:available, :scheduled, :executing, :retryable]
   ]
 
+  @behaviour ExpectedJobOutcome
+
+  # A missing meeting, an integration only the user can restore, and a
+  # meeting that started before recovery finished are expected; failed
+  # credentials, configuration and exhausted recovery are not.
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do: ErrorPolicy.expected_discard?(reason) or Recovery.expected_discard?(reason)
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"meeting_id" => meeting_id} = args, attempt: attempt} = job) do
     announcement = Announcement.from_args(args)
@@ -121,7 +131,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
       {:error, :not_found} ->
         Logger.warning("Meeting not found, discarding video room job", meeting_id: meeting_id)
-        {:discard, "Meeting not found"}
+        {:discard, ErrorPolicy.discard_reason(:meeting_not_found)}
     end
   end
 

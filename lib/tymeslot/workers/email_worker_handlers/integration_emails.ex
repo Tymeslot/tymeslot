@@ -20,6 +20,33 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
   alias Tymeslot.Workers.EmailWorkerHandlers.CalendarEventDetails
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
+  # The user, integration or event is gone, or the condition the email was
+  # about has cleared. Unknown error codes, unreadable dates and partial
+  # delivery failures are recorded.
+  @gone "User or integration not found"
+  @reauth_resolved "Integration no longer needs reauth"
+  @room_error_cleared "Room creation error no longer recorded"
+  @user_gone "User not found"
+  @event_gone "Event or user not found"
+  @no_timing "Cached event has no timing"
+
+  @doc """
+  Whether `reason`, from a discard this module returned, is an expected end
+  of the email job rather than a fault
+  (see `Tymeslot.Infrastructure.ExpectedJobOutcome`).
+  """
+  @spec expected_discard?(term()) :: boolean()
+  def expected_discard?(reason),
+    do:
+      reason in [
+        @gone,
+        @reauth_resolved,
+        @room_error_cleared,
+        @user_gone,
+        @event_gone,
+        @no_timing
+      ]
+
   @spec handle_integration_unhealthy_notification(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_integration_unhealthy_notification(%{
@@ -67,7 +94,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
           integration_id: integration_id
         )
 
-        {:discard, "User or integration not found"}
+        {:discard, @gone}
     end
   end
 
@@ -88,7 +115,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
           integration_id: integration_id
         )
 
-        {:discard, "User or integration not found"}
+        {:discard, @gone}
     end
   end
 
@@ -101,7 +128,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
       type: integration_type
     )
 
-    {:discard, "Integration no longer needs reauth"}
+    {:discard, @reauth_resolved}
   end
 
   defp send_reauth_notification(user, integration, integration_type) do
@@ -175,7 +202,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
           integration_id: integration_id
         )
 
-        {:discard, "User or integration not found"}
+        {:discard, @gone}
     end
   end
 
@@ -206,7 +233,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
           integration_id: integration_id
         )
 
-        {:discard, "User or integration not found"}
+        {:discard, @gone}
 
       {:discard, _reason} = discard ->
         discard
@@ -230,7 +257,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
       code: code
     )
 
-    {:discard, "Room creation error no longer recorded"}
+    {:discard, @room_error_cleared}
   end
 
   defp deliver_room_creation_error_notification(user, integration, code) do
@@ -285,7 +312,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
     else
       {:error, :not_found} ->
         Logger.warning("User not found for calendar invitation", user_id: user_id)
-        {:discard, "User not found"}
+        {:discard, @user_gone}
 
       {:error, "Invalid datetime: " <> _rest = reason} ->
         Logger.warning("Invalid datetime in calendar invitation args", reason: reason)
@@ -324,14 +351,14 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
           event_uid: event_uid
         )
 
-        {:discard, "Event or user not found"}
+        {:discard, @event_gone}
 
       {:error, :no_timing} ->
         Logger.warning("Cached event has no start or end, cannot describe the update",
           event_uid: event_uid
         )
 
-        {:discard, "Cached event has no timing"}
+        {:discard, @no_timing}
 
       true ->
         Logger.info("No effective changes detected, skipping notification",

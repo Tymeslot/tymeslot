@@ -32,11 +32,29 @@ defmodule Tymeslot.Workers.SlackWorker do
 
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Meetings
   alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Slack
   alias Tymeslot.Slack.{API, MessageBuilder, SlackIntegrationSchema, SlackQueries}
   alias Tymeslot.Workers.DeliveryClaims
+
+  @behaviour ExpectedJobOutcome
+
+  # The work no longer applies, or the user revoked access and the integration
+  # was switched off. Missing parameters are recorded.
+  @gone "Integration or meeting not found"
+  @disabled "Integration is disabled"
+  @insufficient_plan "Insufficient plan"
+  @webhook_revoked "webhook_url_revoked"
+  # Auto-disabling Slack errors — token / account / channel are not retry-worthy.
+  @auto_disable_errors ~w(token_revoked account_inactive channel_not_found)
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do:
+      reason in [@gone, @disabled, @insufficient_plan, @webhook_revoked] or
+        reason in @auto_disable_errors
 
   @impl Oban.Worker
   def perform(
@@ -64,8 +82,8 @@ defmodule Tymeslot.Workers.SlackWorker do
         handle_result(integration, event_type, meeting_id, blocks, job, result)
       end)
     else
-      {:error, :not_found} -> {:discard, "Integration or meeting not found"}
-      {:error, :disabled} -> {:discard, "Integration is disabled"}
+      {:error, :not_found} -> {:discard, @gone}
+      {:error, :disabled} -> {:discard, @disabled}
       {:error, :insufficient_plan} -> handle_revoked_access(integration_id)
       {:error, :feature_access_checker_failed} -> {:error, :feature_access_checker_failed}
     end
@@ -148,7 +166,7 @@ defmodule Tymeslot.Workers.SlackWorker do
         :ok
     end
 
-    {:discard, "Insufficient plan"}
+    {:discard, @insufficient_plan}
   end
 
   defp deliver(%SlackIntegrationSchema{app_mode: "oauth"} = integration, blocks) do
@@ -185,9 +203,6 @@ defmodule Tymeslot.Workers.SlackWorker do
     Slack.record_success(integration)
     :ok
   end
-
-  # Auto-disabling Slack errors — token / account / channel are not retry-worthy.
-  @auto_disable_errors ~w(token_revoked account_inactive channel_not_found)
 
   defp handle_error(integration, delivery_attrs, _job, {:slack_error, err, _body})
        when err in @auto_disable_errors,
@@ -226,7 +241,7 @@ defmodule Tymeslot.Workers.SlackWorker do
   # A 404 from an Incoming Webhook URL means the user revoked the hook in Slack.
   # Retries will never succeed — auto-disable the same way we do for token_revoked.
   defp handle_error(integration, delivery_attrs, _job, {:webhook_error, 404, _body}),
-    do: auto_disable_and_log(integration, "webhook_url_revoked", delivery_attrs)
+    do: auto_disable_and_log(integration, @webhook_revoked, delivery_attrs)
 
   defp handle_error(integration, delivery_attrs, job, {:webhook_error, status, body}) do
     log_failure(delivery_attrs, "webhook_#{status}", body)

@@ -34,6 +34,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
     priority: 2
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -82,6 +83,15 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
     end
   end
 
+  @behaviour ExpectedJobOutcome
+
+  # Another path removed the integration first: nothing is left to do.
+  @already_removed "Integration already removed"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do: reason in [@already_removed]
+
   @impl Oban.Worker
   def backoff(%Oban.Job{attempt: attempt}) do
     # Matches VideoSyncWorker: 30s, 60s, 120s, then 180s.
@@ -120,7 +130,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
         drain(integration, executions)
 
       {:error, :not_found} ->
-        {:discard, "Integration already removed"}
+        {:discard, @already_removed}
 
       {:error, :requires_reencryption, %{deleted_at: nil} = integration} ->
         Logger.info("Video integration reconnected, skipping room cleanup",

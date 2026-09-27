@@ -36,12 +36,36 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Integrations.Calendar.CalDAV.Errors, as: CalDAVErrors
   alias Tymeslot.Integrations.Calendar.CalDAV.Sync
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Workers.SyncHealth
+
+  @behaviour ExpectedJobOutcome
+
+  # The integration is gone, or only its owner can fix it by reconnecting.
+  # A server error is retried by the next sync. The deletion circuit breaker
+  # refusing a sync is recorded.
+  @integration_gone "Integration not found"
+  @credentials_rejected "CalDAV server rejected credentials — reauthentication required"
+  @calendar_gone "CalDAV booking calendar not found — user action required"
+  @no_calendar "CalDAV integration has no calendar selected — user action required"
+  @server_error "CalDAV server returned a server error; the next scheduled sync will retry"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do:
+      reason in [
+        @integration_gone,
+        @credentials_rejected,
+        @calendar_gone,
+        @no_calendar,
+        @server_error
+      ] or reason == ReauthHandling.discard_reason()
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
@@ -64,7 +88,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
           calendar_integration_id: integration_id
         )
 
-        {:discard, "Integration not found"}
+        {:discard, @integration_gone}
 
       {:error, :requires_reencryption, integration} ->
         CalendarManagement.handle_reauth_required(integration)
@@ -96,7 +120,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         "dashboard_calendar_providers",
         "CalDAV server rejected the stored credentials. Please reconnect the integration."
       ),
-      "CalDAV server rejected credentials — reauthentication required"
+      @credentials_rejected
     )
   end
 
@@ -114,7 +138,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         "dashboard_calendar_providers",
         "The booking calendar no longer exists on the CalDAV server. Please reconnect the integration and select a different calendar."
       ),
-      "CalDAV booking calendar not found — user action required"
+      @calendar_gone
     )
   end
 
@@ -136,7 +160,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         "dashboard_calendar_providers",
         "No calendar is selected for this integration, so nothing can be synced. Please reconnect the integration and select a calendar."
       ),
-      "CalDAV integration has no calendar selected — user action required"
+      @no_calendar
     )
   end
 
@@ -160,7 +184,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # can fix. Discard and let the scheduled sync retry minutes later; the health
   # check is what surfaces a remote that never comes back.
   defp handle_sync_result({:error, :server_error}, _integration) do
-    {:discard, "CalDAV server returned a server error; the next scheduled sync will retry"}
+    {:discard, @server_error}
   end
 
   # A 4xx there is no talking the request out of (415, 400…, and the modelled

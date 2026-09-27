@@ -16,6 +16,22 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
+  # The meeting is gone, started, or changed state since the email was
+  # scheduled. A partial cancellation delivery is recorded.
+  @meeting_started "Meeting already started"
+  @meeting_cancelled "Meeting cancelled"
+  @meeting_not_cancelled "Meeting not cancelled"
+  @meeting_gone "Meeting not found"
+
+  @doc """
+  Whether `reason`, from a discard this module returned, is an expected end
+  of the email job rather than a fault
+  (see `Tymeslot.Infrastructure.ExpectedJobOutcome`).
+  """
+  @spec expected_discard?(term()) :: boolean()
+  def expected_discard?(reason),
+    do: reason in [@meeting_started, @meeting_cancelled, @meeting_not_cancelled, @meeting_gone]
+
   @spec handle_confirmation_emails(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_confirmation_emails(%{"meeting_id" => meeting_id}) do
@@ -50,7 +66,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
             start_time: meeting.start_time
           )
 
-          {:discard, "Meeting already started"}
+          {:discard, @meeting_started}
 
         true ->
           reminder_value = Map.get(args, "reminder_value", 30)
@@ -78,7 +94,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           meeting_id: meeting_id
         )
 
-        {:discard, "Meeting cancelled"}
+        {:discard, @meeting_cancelled}
       else
         send_reschedule_request_email(meeting)
       end
@@ -97,7 +113,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           status: meeting.status
         )
 
-        {:discard, "Meeting not cancelled"}
+        {:discard, @meeting_not_cancelled}
       end
     end)
   end
@@ -120,7 +136,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           meeting_id: meeting_id
         )
 
-        {:discard, "Meeting not found"}
+        {:discard, @meeting_gone}
     end
   end
 

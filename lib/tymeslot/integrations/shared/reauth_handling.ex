@@ -48,6 +48,8 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
 
   @default_cause :credentials_undecryptable
 
+  @discard_reason "Credentials require reauthentication"
+
   # One row per cause: the operator-facing log line and the message persisted
   # to the integration's `sync_error`, which the account owner reads. Keeping
   # them together stops the two from drifting, and stops a decryption
@@ -101,6 +103,14 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   """
   @spec reauth_error_message(cause()) :: String.t()
   def reauth_error_message(cause), do: fetch_cause(cause).message
+
+  @doc """
+  The reason an Oban job is discarded with once its integration has been
+  flagged for reauthentication. Only the owner can fix that, so workers
+  declare it an expected outcome (`Tymeslot.Infrastructure.ExpectedJobOutcome`).
+  """
+  @spec discard_reason() :: String.t()
+  def discard_reason, do: @discard_reason
 
   @doc """
   Which `t:cause/0` a permanent credential failure describes.

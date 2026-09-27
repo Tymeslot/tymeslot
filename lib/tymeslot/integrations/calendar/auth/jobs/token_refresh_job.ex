@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
   require Logger
 
   alias Tymeslot.Infrastructure.BreakerOutcome
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
@@ -62,6 +63,26 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
     end
   end
 
+  @behaviour ExpectedJobOutcome
+
+  # The integration is gone, or its grant expired and only the owner can
+  # reconnect it. Any other refusal, such as `invalid_client`, points at the
+  # OAuth client registration and is recorded.
+  @integration_gone "Integration not found"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(@integration_gone), do: true
+
+  def expected_outcome?(reason) when is_binary(reason) do
+    case String.split(reason, ReauthHandling.discard_reason(), parts: 2) do
+      ["", ""] -> true
+      ["", ": " <> cause] -> ReauthHandling.rejection_cause(cause) == :expired_grant
+      _other -> false
+    end
+  end
+
+  def expected_outcome?(_reason), do: false
+
   @impl Oban.Worker
   def perform(%Oban.Job{
         id: job_id,
@@ -71,7 +92,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
     # Single integration refresh (for retry jobs)
     case CalendarIntegrationQueries.get(integration_id) do
       {:error, :not_found} ->
-        {:discard, "Integration not found"}
+        {:discard, @integration_gone}
 
       {:error, :requires_reencryption, integration} ->
         CalendarManagement.handle_reauth_required(integration)

@@ -34,12 +34,26 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.Outlook.DeltaSync, as: OutlookDeltaSync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
+  alias Tymeslot.Integrations.Shared.ReauthHandling
+
+  @behaviour ExpectedJobOutcome
+
+  # The integration is gone, or only its owner can fix it by reconnecting.
+  # A transient failure is retried by the next sweep. A job for an integration
+  # that is not Outlook is a bug, and is recorded.
+  @integration_gone "Integration not found"
+  @transient "Outlook sync failed transiently; the next scheduled sweep will retry"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do: reason in [@integration_gone, @transient] or reason == ReauthHandling.discard_reason()
 
   @impl Oban.Worker
   def backoff(%Oban.Job{attempt: attempt}) do
@@ -79,7 +93,7 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
           calendar_integration_id: integration_id
         )
 
-        {:discard, "Integration not found"}
+        {:discard, @integration_gone}
 
       {:error, :requires_reencryption, integration} ->
         CalendarManagement.handle_reauth_required(integration)
@@ -134,7 +148,7 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
   # a failed local write — keeps failing loudly.
   defp give_up_or_retry(:transient, %Oban.Job{attempt: attempt, max_attempts: max_attempts}, _rsn)
        when attempt >= max_attempts do
-    {:discard, "Outlook sync failed transiently; the next scheduled sweep will retry"}
+    {:discard, @transient}
   end
 
   defp give_up_or_retry(_class, _job, reason), do: {:error, reason}

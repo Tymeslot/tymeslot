@@ -30,6 +30,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
   alias Tymeslot.Integrations.Calendar.InvalidEventReport
@@ -37,10 +38,26 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Workers.SyncHealth
 
   @sync_window_past_days ProviderConfig.sync_window_past_days()
   @sync_window_future_days ProviderConfig.sync_window_future_days()
+
+  @behaviour ExpectedJobOutcome
+
+  # The integration is gone, or only its owner can fix it by reconnecting.
+  # A sync past the pagination limit is recorded.
+  @integration_gone "Integration not found"
+  @calendar_gone "Booking calendar not found — user action required"
+  @credentials_rejected "Google rejected credentials — reauthentication required"
+  @calendar_disabled "Google Calendar not enabled for account: user action required"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do:
+      reason in [@integration_gone, @calendar_gone, @credentials_rejected, @calendar_disabled] or
+        reason == ReauthHandling.discard_reason()
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
@@ -59,7 +76,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
           calendar_integration_id: integration_id
         )
 
-        {:discard, "Integration not found"}
+        {:discard, @integration_gone}
 
       {:error, :requires_reencryption, integration} ->
         CalendarManagement.handle_reauth_required(integration)
@@ -329,7 +346,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         "dashboard_calendar_providers",
         "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
       ),
-      "Booking calendar not found — user action required"
+      @calendar_gone
     )
   end
 
@@ -352,7 +369,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         "dashboard_calendar_providers",
         "Google rejected the stored credentials. Please reconnect the integration."
       ),
-      "Google rejected credentials — reauthentication required"
+      @credentials_rejected
     )
   end
 
@@ -372,7 +389,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         "dashboard_calendar_providers",
         "This Google account doesn't have Google Calendar enabled. Turn on Google Calendar for the account (a Google Workspace administrator may need to do this), or connect a different Google account."
       ),
-      "Google Calendar not enabled for account: user action required"
+      @calendar_disabled
     )
   end
 

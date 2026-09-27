@@ -58,6 +58,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     priority: 2
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
@@ -66,6 +67,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.SnoozePolicy
   alias Tymeslot.Workers.VideoRoom.ErrorPolicy
+  alias Tymeslot.Workers.VideoSync.Discards
 
   require Logger
 
@@ -204,6 +206,11 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
     end
   end
 
+  @behaviour ExpectedJobOutcome
+
+  @impl ExpectedJobOutcome
+  defdelegate expected_outcome?(reason), to: Discards, as: :expected?
+
   @impl Oban.Worker
   def backoff(%Oban.Job{attempt: attempt}) do
     # Progressive backoff: 30s, 60s, 120s, 180s, then 180s.
@@ -239,7 +246,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
           calendar_event_video_room_id: room_id
         )
 
-        {:discard, "Calendar event video room not found"}
+        Discards.discard(:room_gone)
     end
   end
 
@@ -277,7 +284,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
           room_ref: Redactor.fingerprint(room_id)
         )
 
-        {:discard, "Video integration not found"}
+        Discards.discard(:integration_gone)
     end
   end
 
@@ -290,7 +297,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
 
       {:error, :not_found} ->
         Logger.info("Meeting gone before video sync, discarding", meeting_id: meeting_id)
-        {:discard, "Meeting not found"}
+        {:discard, ErrorPolicy.discard_reason(:meeting_not_found)}
     end
   end
 
@@ -374,7 +381,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
         snooze
 
       :exhausted ->
-        discard_unreachable(target, "release", reason)
+        Discards.unreachable(target, "release", reason)
     end
   end
 
@@ -417,15 +424,15 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
           reason: reason
         )
 
-        {:discard, "No video integration can reach the provider room"}
+        Discards.discard(:unreachable)
     end
   end
 
   # Clause order matters: a meeting with no room at all is an ordinary no-op and
   # stays silent, whereas a meeting that holds a room nothing can reach is a
   # problem worth surfacing. Testing for the room first keeps the two apart.
-  defp dispatch(_action, %{video_room_id: nil}, _executions), do: discard_no_room()
-  defp dispatch(_action, %{organizer_user_id: nil}, _executions), do: discard_no_room()
+  defp dispatch(_action, %{video_room_id: nil}, _executions), do: Discards.discard(:no_room)
+  defp dispatch(_action, %{organizer_user_id: nil}, _executions), do: Discards.discard(:no_room)
 
   # A room that is the booking's own calendar event moves and goes with that
   # event, through calendar sync. Updating it here would race the calendar's
@@ -444,7 +451,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
         perform_action(action, meeting_target(meeting), integration_id, executions)
 
       {:error, reason} ->
-        discard_unreachable(meeting_target(meeting), action, reason)
+        Discards.unreachable(meeting_target(meeting), action, reason)
     end
   end
 
@@ -485,33 +492,6 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   defp room_changes(%{kind: :event_room, record: room}),
     do: [start_time: room.lobby_opens_at, end_time: room.ends_at]
 
-  defp discard_no_room, do: {:discard, "No provider video room to sync"}
-
-  # The meeting holds a live provider room but nothing can authenticate against
-  # it: the integration was disconnected and never replaced, or the row predates
-  # `meetings.video_provider`. Retrying cannot help — only the user reconnecting
-  # can — so the job is discarded, but loudly. A silent :ok here is exactly what
-  # let orphaned Zoom meetings accumulate unnoticed. A released room reaches
-  # this only once it has waited out its snoozes.
-  #
-  # Only a fingerprint of the room id goes into the line: the id is the join
-  # link for every link-based provider, and `meeting_id` already leads to the
-  # row that holds the real one (or, for a release, to the meeting that did).
-  defp discard_unreachable(target, action, reason) do
-    Logger.warning(
-      "Meeting holds a provider video room but no video integration can reach it",
-      target.log ++
-        [
-          action: action,
-          provider: target.provider,
-          room_ref: Redactor.fingerprint(target.room_id),
-          reason: reason
-        ]
-    )
-
-    {:discard, "No video integration can reach the provider room"}
-  end
-
   # The provider treats a missing remote meeting as success, so :ok and the
   # idempotent not-found cases both arrive here as :ok. Anything else is a
   # genuine failure worth retrying via Oban's backoff.
@@ -545,7 +525,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
       target.log ++ [action: action]
     )
 
-    {:discard, "Video provider scope insufficient — reconnect required"}
+    Discards.discard(:scope_insufficient)
   end
 
   # The provider refused the stored credentials and has flagged the integration
@@ -558,7 +538,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
       target.log ++ [action: action]
     )
 
-    {:discard, "Video provider refused the stored credentials: reconnect required"}
+    Discards.discard(:credentials_refused)
   end
 
   # The provider refused the change for a reason that repeats on every attempt,

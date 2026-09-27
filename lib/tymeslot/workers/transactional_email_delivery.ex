@@ -46,8 +46,20 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   @circuit_open_max_snoozes 12
   @rate_limited_max_snoozes 10
 
+  @recipient_rejected_reason "Recipient permanently undeliverable"
+
   @typedoc "An Oban `perform/1` return value."
   @type outcome :: :ok | {:error, term()} | {:snooze, pos_integer()} | {:discard, String.t()}
+
+  @doc """
+  Returns true for the discard `handle_failure/3` returns for a permanently
+  rejected recipient. That discard already raises its own
+  `:recipient_email_rejected` alert, so the workers delivering through this
+  module declare it an expected outcome
+  (`Tymeslot.Infrastructure.ExpectedJobOutcome`).
+  """
+  @spec recipient_rejected?(term()) :: boolean()
+  def recipient_rejected?(reason), do: reason == @recipient_rejected_reason
 
   @doc """
   Delivers `email`, logging `failure_message` with `metadata` when the failure
@@ -140,7 +152,7 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
       context: Map.new(metadata)
     )
 
-    {:discard, "Recipient permanently undeliverable"}
+    {:discard, @recipient_rejected_reason}
   end
 
   def handle_failure(reason, failure_message, metadata) do

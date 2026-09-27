@@ -16,6 +16,21 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.BookingApprovalEmails do
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails
 
+  # One leg of a booking request went out and the other was requeued, so
+  # nothing is lost.
+  @leg_requeued "One booking request leg already sent; the other failed and was requeued"
+
+  @doc """
+  Whether `reason`, from a discard this module returned, is an expected end
+  of the email job rather than a fault
+  (see `Tymeslot.Infrastructure.ExpectedJobOutcome`).
+  """
+  @spec expected_discard?(term()) :: boolean()
+  def expected_discard?(reason) when is_binary(reason),
+    do: String.starts_with?(reason, @leg_requeued <> ": ")
+
+  def expected_discard?(_reason), do: false
+
   @doc """
   Sends the invitee's acknowledgement and the host's request.
 
@@ -125,8 +140,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.BookingApprovalEmails do
   defp retry_failed_leg(meeting_id, skip_opts, reason) do
     case EmailScheduler.schedule_request_emails(meeting_id, skip_opts) do
       :ok ->
-        {:discard,
-         "One booking request leg already sent; the other failed and was requeued: #{inspect(reason)}"}
+        {:discard, "#{@leg_requeued}: #{inspect(reason)}"}
 
       {:error, requeue_reason} ->
         Logger.error("Failed to requeue booking request leg",

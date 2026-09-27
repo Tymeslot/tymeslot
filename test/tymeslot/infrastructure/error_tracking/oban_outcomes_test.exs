@@ -1,7 +1,6 @@
 defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomesTest do
   # async: false: ErrorTracker's `enabled` switch, the admin alert
-  # implementation, the expected-outcomes list and the telemetry handler are
-  # all global.
+  # implementation and the telemetry handler are all global.
   use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
@@ -16,6 +15,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomesTest do
   alias ExUnit.CaptureLog
   alias Tymeslot.Infrastructure.ErrorTracking.JobDiscarded
   alias Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Repo
 
   defmodule OutcomeWorker do
@@ -33,6 +33,36 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomesTest do
       do: {:cancel, reason}
 
     def perform(%Oban.Job{args: %{"outcome" => "ok"}}), do: :ok
+  end
+
+  defmodule DeclaringWorker do
+    @moduledoc false
+    use Oban.Worker, queue: :default
+
+    @behaviour ExpectedJobOutcome
+
+    @expected "Expected for this worker"
+
+    @impl Oban.Worker
+    def perform(%Oban.Job{args: %{"reason" => reason}}), do: {:discard, reason}
+
+    @impl ExpectedJobOutcome
+    def expected_outcome?(@expected), do: true
+    def expected_outcome?("HTTP 4" <> _status), do: true
+    def expected_outcome?(_reason), do: false
+  end
+
+  defmodule RaisingWorker do
+    @moduledoc false
+    use Oban.Worker, queue: :default
+
+    @behaviour ExpectedJobOutcome
+
+    @impl Oban.Worker
+    def perform(%Oban.Job{args: %{"reason" => reason}}), do: {:discard, reason}
+
+    @impl ExpectedJobOutcome
+    def expected_outcome?(_reason), do: raise("broken check")
   end
 
   setup do
@@ -62,7 +92,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomesTest do
     )
   end
 
-  describe "the expected outcomes shipped in config" do
+  describe "the outcomes Core's workers declare expected" do
     test "keep an email worker's cancelled meeting out, and record its timed-out send" do
       stop_event("Tymeslot.Workers.EmailWorker", {:discard, "Meeting cancelled"})
       assert errors() == []
@@ -83,15 +113,40 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomesTest do
     end
   end
 
-  describe "a job the worker discards or cancels" do
-    setup do
-      setup_config(:tymeslot, :expected_job_outcomes, [
-        {:any_worker, ["Meeting not found"]},
-        {OutcomeWorker, ["Expected for this worker", {:prefix, "HTTP 4"}]}
-      ])
+  describe "a worker that declares expected outcomes" do
+    defp declared(reason), do: perform_job(DeclaringWorker, %{"reason" => reason})
+
+    test "has a reason it declares expected left out" do
+      assert {:discard, "Expected for this worker"} = declared("Expected for this worker")
+      assert errors() == []
     end
 
-    test "an unlisted discard is recorded with its worker and reason" do
+    test "has a reason matching a declared pattern left out, and others recorded" do
+      declared("HTTP 410")
+      assert errors() == []
+
+      declared("HTTP 503")
+      assert [%Error{}] = errors()
+    end
+
+    test "has its outcome recorded when the check raises" do
+      log =
+        CaptureLog.capture_log(fn ->
+          assert {:discard, "Anything"} = perform_job(RaisingWorker, %{"reason" => "Anything"})
+        end)
+
+      assert [%Error{}] = errors()
+      assert log =~ "Expected outcome check failed"
+    end
+
+    test "is not asked about a worker name that resolves to no module" do
+      stop_event("Tymeslot.Workers.NoSuchWorkerEverDefined", {:discard, "gone"})
+      assert [%Error{}] = errors()
+    end
+  end
+
+  describe "a worker without the expected outcome callback" do
+    test "has a discard recorded with its worker and reason" do
       assert {:discard, :x} = run("discard_atom", "x")
 
       kind = Atom.to_string(JobDiscarded)
@@ -105,7 +160,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomesTest do
       assert context["job_outcome"] == "discard"
     end
 
-    test "an unlisted cancel is recorded" do
+    test "has a cancel recorded" do
       assert {:cancel, "Unplanned"} = run("cancel", "Unplanned")
 
       assert [%Error{reason: reason}] = errors()
@@ -127,21 +182,8 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomesTest do
       assert [%Error{occurrences: [_first, _second]}] = errors()
     end
 
-    test "a reason allowlisted for the worker is not recorded" do
-      assert {:discard, "Expected for this worker"} = run("discard", "Expected for this worker")
-      assert errors() == []
-    end
-
-    test "a reason allowlisted for every worker is not recorded" do
-      run("discard", "Meeting not found")
-      assert errors() == []
-    end
-
-    test "a reason matching an allowlisted prefix is not recorded" do
-      run("discard", "HTTP 410")
-      assert errors() == []
-
-      run("discard", "HTTP 503")
+    test "has even a reason another worker expects recorded" do
+      run("discard", "Expected for this worker")
       assert [%Error{}] = errors()
     end
 
@@ -165,13 +207,11 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomesTest do
     # Telemetry detaches a handler that raises, which would stop recording
     # every later discard until the next restart.
     test "a failure inside the handler is logged, never raised" do
-      setup_config(:tymeslot, :expected_job_outcomes, :not_a_list)
-
       log =
         CaptureLog.capture_log(fn ->
           :telemetry.execute([:oban, :job, :stop], %{}, %{
             state: :discard,
-            job: %Oban.Job{worker: inspect(OutcomeWorker)},
+            job: %Oban.Job{worker: nil},
             result: {:discard, "x"}
           })
         end)

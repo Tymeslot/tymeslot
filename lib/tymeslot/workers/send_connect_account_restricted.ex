@@ -30,10 +30,24 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Emails.Templates.ConnectAccountRestricted
   alias Tymeslot.Emails.Templates.ConnectAccountRestricted.RestrictionContext
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.TransactionalEmailDelivery
+
+  @behaviour ExpectedJobOutcome
+
+  # The account or its user is gone, or the recipient already raised its own
+  # alert; missing ids and a user without an email address are recorded.
+  @account_gone "connect_account not found"
+  @user_gone "user not found"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do:
+      reason in [@account_gone, @user_gone] or
+        TransactionalEmailDelivery.recipient_rejected?(reason)
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"connect_account_id" => id} = args} = job) do
@@ -43,7 +57,7 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
           connect_account_id: id
         )
 
-        {:discard, "connect_account not found"}
+        {:discard, @account_gone}
 
       %ConnectAccountSchema{user_id: nil} ->
         Logger.warning("Connect-restricted email skipped — connect_account has no user_id",
@@ -82,7 +96,7 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
           user_id: account.user_id
         )
 
-        {:discard, "user not found"}
+        {:discard, @user_gone}
     end
   end
 

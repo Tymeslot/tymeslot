@@ -21,9 +21,20 @@ defmodule Tymeslot.Workers.ReregisterOutlookSubscriptionWorker do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Shared.ReauthHandling
+
+  @behaviour ExpectedJobOutcome
+
+  # The integration is gone, or only its owner can fix it by reconnecting.
+  @integration_gone "Integration not found"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do: reason in [@integration_gone] or reason == ReauthHandling.discard_reason()
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
@@ -53,7 +64,7 @@ defmodule Tymeslot.Workers.ReregisterOutlookSubscriptionWorker do
           calendar_integration_id: integration_id
         )
 
-        {:discard, "Integration not found"}
+        {:discard, @integration_gone}
 
       {:error, :requires_reencryption, integration} ->
         CalendarManagement.handle_reauth_required(integration)

@@ -33,9 +33,19 @@ defmodule Tymeslot.Meetings.Workers.ApprovalExpiryWorker do
   require Logger
 
   alias Tymeslot.Clock
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
+
+  @behaviour ExpectedJobOutcome
+
+  # The host answered the request as it expired: nothing is left to do.
+  @answered_while_expiring "Request answered while expiring"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do: reason in [@answered_while_expiring]
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"meeting_id" => meeting_id}}) do
@@ -82,7 +92,7 @@ defmodule Tymeslot.Meetings.Workers.ApprovalExpiryWorker do
         :ok
 
       {:error, :not_awaiting_approval} ->
-        {:discard, "Request answered while expiring"}
+        {:discard, @answered_while_expiring}
     end
   rescue
     # Unlike `ApprovalSweepWorker`, this job has no rescue of its own to fall

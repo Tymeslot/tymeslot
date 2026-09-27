@@ -13,7 +13,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
       `:cancelled`. This module records it through
       `Tymeslot.Infrastructure.ErrorTracking.report_error/3`, as a
       `Tymeslot.Infrastructure.ErrorTracking.JobDiscarded`, unless the
-      outcome is on the expected list (below). Because the integration
+      worker declares the outcome expected (below). Because the integration
       ignores `:stop` and this module ignores `:exception`, no job outcome is
       recorded by both.
     * `Oban.Lifeline` discards an `executing` job that has used up its
@@ -32,12 +32,11 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   Most discards are a worker recognising that its work no longer applies (the
   meeting was deleted, the integration disconnected) or that only the user
   can fix it (credentials to reconnect, a webhook endpoint refusing
-  deliveries). `config :tymeslot, :expected_job_outcomes` lists them, as a
-  keyword list of worker module (or `:any_worker`) to the reasons expected
-  from it. A reason is matched by equality, or by `{:prefix, text}` for a
-  reason that carries a variable tail. The list is a keyword list so that a
-  deployment's config can add its own workers' entries: `config/3` deep
-  merges keyword lists.
+  deliveries). A worker says so by implementing
+  `Tymeslot.Infrastructure.ExpectedJobOutcome`, next to the code that
+  returns the reason. The job's worker is resolved from its name without
+  creating atoms; when it does not export `expected_outcome?/1`, or the
+  callback raises or returns anything but `true`, the outcome is recorded.
 
   ## Grouping
 
@@ -168,21 +167,29 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   defp result_reason(_bare_discard), do: nil
 
   defp expected?(worker, reason) do
-    :tymeslot
-    |> Application.get_env(:expected_job_outcomes, [])
-    |> Enum.any?(fn {scope, reasons} ->
-      applies_to?(scope, worker) and Enum.any?(reasons, &matches?(&1, reason))
-    end)
+    case Worker.from_string(worker) do
+      {:ok, module} -> declared_expected?(module, reason)
+      {:error, _unknown} -> false
+    end
   end
 
-  defp applies_to?(:any_worker, _worker), do: true
-  defp applies_to?(module, worker), do: inspect(module) == worker
+  defp declared_expected?(module, reason) do
+    function_exported?(module, :expected_outcome?, 1) and module.expected_outcome?(reason) == true
+  rescue
+    exception -> callback_failed(module, inspect(exception.__struct__))
+  catch
+    kind, _reason -> callback_failed(module, inspect(kind))
+  end
 
-  defp matches?({:prefix, prefix}, reason) when is_binary(reason),
-    do: String.starts_with?(reason, prefix)
+  # A broken callback must not hide the outcome it was asked about.
+  defp callback_failed(module, error) do
+    Logger.error("Expected outcome check failed; recording the outcome",
+      worker: inspect(module),
+      error: error
+    )
 
-  defp matches?({:prefix, _prefix}, _reason), do: false
-  defp matches?(expected, reason), do: expected == reason
+    false
+  end
 
   defp record(worker, outcome, reason) do
     exception = JobDiscarded.exception({worker, outcome, reason})

@@ -22,7 +22,9 @@ defmodule Tymeslot.Workers.EmailWorker do
 
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Infrastructure.Tasks
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Workers.EmailWorker.AdminAlertScheduler
   alias Tymeslot.Workers.EmailWorkerHandlers
@@ -47,6 +49,23 @@ defmodule Tymeslot.Workers.EmailWorker do
   Performs the email job based on the action specified in the args.
   Implements exponential backoff for retries.
   """
+  @behaviour ExpectedJobOutcome
+
+  # The meeting is gone or cancelled, a handler declares the discard expected,
+  # the recipient already raised its own alert, or only the owner can fix the
+  # integration the email was about. Timeouts, invalid addresses and missing
+  # actions are recorded.
+  @meeting_gone "Meeting not found"
+  @meeting_cancelled "Meeting cancelled"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do:
+      reason in [@meeting_gone, @meeting_cancelled] or
+        EmailWorkerHandlers.expected_discard?(reason) or
+        TransactionalEmailDelivery.recipient_rejected?(reason) or
+        reason == ReauthHandling.discard_reason()
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"action" => action} = args, attempt: attempt} = job) do
     # `user_id` in the args is already Logger metadata and error context:
@@ -115,12 +134,12 @@ defmodule Tymeslot.Workers.EmailWorker do
 
   defp handle_email_error(:meeting_not_found, _job) do
     Logger.error("Meeting not found, discarding job")
-    {:discard, "Meeting not found"}
+    {:discard, @meeting_gone}
   end
 
   defp handle_email_error(:meeting_cancelled, _job) do
     Logger.info("Meeting cancelled, discarding job")
-    {:discard, "Meeting cancelled"}
+    {:discard, @meeting_cancelled}
   end
 
   defp handle_email_error(reason, _job) when is_binary(reason) do

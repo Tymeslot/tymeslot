@@ -41,10 +41,12 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Shared.ReauthHandling
 
   # How far ahead an expiring channel or subscription is renewed.
   @renewal_window_hours 48
@@ -59,6 +61,16 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
 
   # Batch entry point: enumerate expiring integrations and schedule one
   # per-integration renewal job with a staggered `schedule_in` delay.
+  @behaviour ExpectedJobOutcome
+
+  # The integration is gone, or only its owner can fix it by reconnecting.
+  @integration_gone "Integration not found"
+  @calendar_gone "Booking calendar not found — user action required"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do: reason in [@integration_gone, @calendar_gone] or reason == ReauthHandling.discard_reason()
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) when not is_map_key(args, "calendar_integration_id") do
     google_ids = schedule_google_renewals()
@@ -87,7 +99,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
           calendar_integration_id: integration_id
         )
 
-        {:discard, "Integration not found"}
+        {:discard, @integration_gone}
 
       {:error, :requires_reencryption, integration} ->
         CalendarManagement.handle_reauth_required(integration)
@@ -233,7 +245,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
     CalendarManagement.flag_for_reconnection(
       integration,
       booking_calendar_missing_message(provider),
-      "Booking calendar not found — user action required"
+      @calendar_gone
     )
   end
 

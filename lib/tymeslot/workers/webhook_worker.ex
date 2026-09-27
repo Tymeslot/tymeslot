@@ -31,6 +31,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
 
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
@@ -81,6 +82,34 @@ defmodule Tymeslot.Workers.WebhookWorker do
 
   defp encode_snapshot_field(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
   defp encode_snapshot_field(value), do: value
+
+  @behaviour ExpectedJobOutcome
+
+  # The work no longer applies, or the user's own endpoint refuses it: a
+  # blocked or broken redirect, or a 4xx it answers for good. Missing
+  # parameters and a 5xx are recorded.
+  @blocked_by_ssrf :blocked_by_ssrf
+  @blocked_redirect :blocked_redirect
+  @too_many_redirects :too_many_redirects
+  @redirect_missing_location :redirect_missing_location
+  @refused_destinations [
+    @blocked_by_ssrf,
+    @blocked_redirect,
+    @too_many_redirects,
+    @redirect_missing_location
+  ]
+  @http_status_prefix "HTTP "
+  @gone "Webhook or meeting not found"
+  @disabled "Webhook is disabled"
+  @insufficient_plan "Insufficient plan"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason) when is_binary(reason) do
+    reason in [@gone, @disabled, @insufficient_plan] or
+      String.starts_with?(reason, @http_status_prefix <> "4")
+  end
+
+  def expected_outcome?(reason), do: reason in @refused_destinations
 
   @impl Oban.Worker
   def perform(
@@ -134,17 +163,17 @@ defmodule Tymeslot.Workers.WebhookWorker do
        do: discard
 
   defp handle_delivery_error({:error, :not_found}, webhook_id, meeting_id, _event_type) do
-    Logger.warning("Webhook or meeting not found",
+    Logger.warning(@gone,
       webhook_id: webhook_id,
       meeting_id: meeting_id
     )
 
-    {:discard, "Webhook or meeting not found"}
+    {:discard, @gone}
   end
 
   defp handle_delivery_error({:error, :disabled}, webhook_id, _meeting_id, _event_type) do
     Logger.info("Webhook is disabled, discarding job", webhook_id: webhook_id)
-    {:discard, "Webhook is disabled"}
+    {:discard, @disabled}
   end
 
   defp handle_delivery_error({:error, :insufficient_plan}, webhook_id, _meeting_id, event_type) do
@@ -153,7 +182,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
       event_type: event_type
     )
 
-    {:discard, "Insufficient plan"}
+    {:discard, @insufficient_plan}
   end
 
   defp handle_delivery_error(
@@ -176,7 +205,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
       event_type: event_type
     )
 
-    {:discard, :blocked_by_ssrf}
+    {:discard, @blocked_by_ssrf}
   end
 
   defp handle_delivery_error({:error, :blocked_redirect}, webhook_id, _meeting_id, event_type) do
@@ -185,7 +214,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
       event_type: event_type
     )
 
-    {:discard, :blocked_redirect}
+    {:discard, @blocked_redirect}
   end
 
   defp handle_delivery_error({:error, :too_many_redirects}, webhook_id, _meeting_id, event_type) do
@@ -194,7 +223,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
       event_type: event_type
     )
 
-    {:discard, :too_many_redirects}
+    {:discard, @too_many_redirects}
   end
 
   defp handle_delivery_error(
@@ -208,7 +237,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
       event_type: event_type
     )
 
-    {:discard, :redirect_missing_location}
+    {:discard, @redirect_missing_location}
   end
 
   defp handle_delivery_error({:error, reason} = error, webhook_id, _meeting_id, event_type) do
@@ -455,7 +484,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
   # 401, 403 and 404 hard), already relied on by the integration health checks,
   # so the retry policy stays in one place instead of drifting per worker.
   defp http_failure(webhook, status, attempt) do
-    reason = "HTTP #{status}"
+    reason = "#{@http_status_prefix}#{status}"
 
     case ErrorAnalysis.classify_error({:http_error, status, reason}) do
       :transient ->

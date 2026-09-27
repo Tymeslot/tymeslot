@@ -32,11 +32,22 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
 
   alias Tymeslot.Emails.Templates.BookingPaymentRefunded
   alias Tymeslot.Emails.Templates.BookingPaymentRefunded.RefundContext
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.DeliveryClaims
   alias Tymeslot.Workers.TransactionalEmailDelivery
+
+  @behaviour ExpectedJobOutcome
+
+  # The payment is gone, or the recipient already raised its own alert;
+  # missing ids and a payment without an attendee email are recorded.
+  @payment_gone "booking_payment not found"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do: reason in [@payment_gone] or TransactionalEmailDelivery.recipient_rejected?(reason)
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"booking_payment_id" => booking_payment_id}} = job) do
@@ -46,7 +57,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
           booking_payment_id: booking_payment_id
         )
 
-        {:discard, "booking_payment not found"}
+        {:discard, @payment_gone}
 
       %BookingPaymentSchema{refunded_amount_cents: 0} ->
         Logger.info("Refund email skipped — no refund recorded on booking_payment",
