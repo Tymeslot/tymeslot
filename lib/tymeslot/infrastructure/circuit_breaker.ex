@@ -93,6 +93,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       :success_count,
       :window_start,
       :last_failure_time,
+      :last_error,
       :half_open_attempts,
       :half_open_successes,
       :half_open_started_at,
@@ -171,7 +172,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
 
   defp run_protected(breaker_name, fun, classify_fun) do
     {result, outcome} = execute_function(fun, classify_fun)
-    GenServer.cast(breaker_name, {:record_outcome, outcome})
+    GenServer.cast(breaker_name, {:record_outcome, outcome, failure_detail(outcome, result)})
     result
   catch
     kind, reason ->
@@ -181,7 +182,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
         reason: inspect(reason)
       )
 
-      GenServer.cast(breaker_name, {:record_outcome, :ignore})
+      GenServer.cast(breaker_name, {:record_outcome, :ignore, nil})
       :erlang.raise(kind, reason, __STACKTRACE__)
   end
 
@@ -220,6 +221,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       success_count: 0,
       window_start: System.monotonic_time(:millisecond),
       last_failure_time: nil,
+      last_error: nil,
       half_open_attempts: 0,
       half_open_successes: 0,
       half_open_started_at: nil,
@@ -250,8 +252,8 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   end
 
   @impl GenServer
-  def handle_cast({:record_outcome, outcome}, state) do
-    new_state = record_outcome(outcome, state)
+  def handle_cast({:record_outcome, outcome, last_error}, state) do
+    new_state = record_outcome(outcome, remember_error(state, last_error))
     persist_state(new_state)
     {:noreply, new_state, new_state.idle_timeout}
   end
@@ -267,6 +269,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
         success_count: 0,
         window_start: System.monotonic_time(:millisecond),
         last_failure_time: nil,
+        last_error: nil,
         half_open_attempts: 0,
         half_open_successes: 0,
         half_open_started_at: nil
@@ -354,7 +357,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
         threshold: new_state.config.failure_threshold
       )
 
-      Metrics.track_circuit_breaker_state(state.name, :closed, :open)
+      Metrics.track_circuit_breaker_state(state.name, :closed, :open, opening_detail(new_state))
 
       %{new_state | status: :open, last_failure_time: now}
     else
@@ -389,7 +392,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       name: state.name
     )
 
-    Metrics.track_circuit_breaker_state(state.name, :half_open, :open)
+    Metrics.track_circuit_breaker_state(state.name, :half_open, :open, opening_detail(state))
 
     %{
       state
@@ -404,6 +407,19 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   # A probe granted before the circuit re-opened, reporting in afterwards. The
   # transition it would have caused has already happened.
   defp record_outcome(_outcome, %State{status: :open} = state), do: state
+
+  # Why the last failing call failed, kept so that the alert raised when the
+  # circuit opens can say what the provider was doing. Summarised in the
+  # caller (`BreakerOutcome.failure_summary/1`), so neither the raw result nor
+  # anything it carries is copied into this process.
+  defp failure_detail(:failure, result), do: BreakerOutcome.failure_summary(result)
+  defp failure_detail(_outcome, _result), do: nil
+
+  defp remember_error(state, nil), do: state
+  defp remember_error(state, last_error), do: %{state | last_error: last_error}
+
+  defp opening_detail(state),
+    do: %{failure_count: state.failure_count, last_error: state.last_error}
 
   defp execute_function(fun, classify_fun) do
     result = normalize_result(fun.())
@@ -467,6 +483,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       success_count: state.success_count,
       window_start: state.window_start,
       last_failure_time: state.last_failure_time,
+      last_error: state.last_error,
       half_open_attempts: state.half_open_attempts,
       half_open_successes: state.half_open_successes,
       half_open_started_at: state.half_open_started_at

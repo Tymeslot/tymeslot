@@ -103,6 +103,10 @@ config :tymeslot,
   admin_alerts_enabled: false,
   admin_alert_email: nil,
 
+  # Repos whose connection pool `PoolPressureMonitor` watches. A downstream
+  # overlay with its own repo adds it here.
+  pool_pressure_repos: [Tymeslot.Repo],
+
   # Dashboard Extensions
   dashboard_sidebar_extensions: [],
   dashboard_action_components: %{},

@@ -199,7 +199,6 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
         [:tymeslot, :calendar, :delete_event],
         [:tymeslot, :http, :request],
         [:tymeslot, :circuit_breaker, :state_change],
-        [:tymeslot, :connection_pool, :usage],
         [:tymeslot, :parser, :performance]
       ]
 
@@ -340,21 +339,6 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
 
       assert_receive {:captured_log, %{meta: meta}}
       assert meta.path == "/api/v1/meetings/123"
-    end
-  end
-
-  describe "handle_pool_event/4" do
-    test "does not log when pool is not under stress" do
-      LogCapture.attach()
-
-      Metrics.handle_pool_event(
-        [:tymeslot, :connection_pool, :usage],
-        %{in_use: 3, free: 5, queue: 0},
-        %{pool: :test},
-        nil
-      )
-
-      refute_receive {:captured_log, _}, 100
     end
   end
 

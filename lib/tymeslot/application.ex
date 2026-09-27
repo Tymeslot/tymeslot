@@ -22,6 +22,7 @@ defmodule Tymeslot.Application do
     ObanLogger,
     ObanQueues,
     ObanRescue,
+    PoolPressureMonitor,
     ProxyConfig,
     ProxyCredentials,
     Tasks
@@ -35,6 +36,7 @@ defmodule Tymeslot.Application do
   alias Tymeslot.Integrations.{HealthCheck, Telemetry}
   alias Tymeslot.Integrations.Shared.Lock
   alias Tymeslot.Mailer.HealthCheck, as: MailerHealthCheck
+  alias Tymeslot.Payments.Webhooks.SecretCheck
   alias Tymeslot.Telegram.BotSetup
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Plugs.AdditionalDashboardPlugs
@@ -125,7 +127,9 @@ defmodule Tymeslot.Application do
           # Own the account lockout ETS table (AccountLockout is a plain module)
           Tymeslot.Security.AccountLockout.TableOwner,
           # Start circuit breaker supervisor
-          Tymeslot.Infrastructure.CircuitBreakerSupervisor
+          Tymeslot.Infrastructure.CircuitBreakerSupervisor,
+          # Alert when queries keep waiting for a database connection
+          PoolPressureMonitor
         ]
       else
         # Only start essential services for tests
@@ -188,8 +192,7 @@ defmodule Tymeslot.Application do
         # restart. Skipped in test, where deliberately crashed processes would
         # otherwise be recorded; tests attach it explicitly.
         if Application.get_env(:tymeslot, :environment) != :test do
-          # After load!/0, so a recipient set only in the admin settings counts.
-          AdminAlerts.check_config()
+          check_deployment_config()
 
           CrashReporter.attach()
 
@@ -209,6 +212,17 @@ defmodule Tymeslot.Application do
         Logger.error("Failed to start Tymeslot application", reason: inspect(reason))
         error
     end
+  end
+
+  # Checks that read DB-backed settings, so they run after AppSettings.load!/0.
+  defp check_deployment_config do
+    # A recipient set only in the admin settings counts.
+    AdminAlerts.check_config()
+
+    # Meeting payments can be switched on in the admin settings, which is what
+    # makes the Connect webhook secret required.
+    _missing = SecretCheck.check()
+    :ok
   end
 
   defp validate_config! do

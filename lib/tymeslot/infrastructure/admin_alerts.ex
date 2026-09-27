@@ -33,6 +33,9 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
           | :oban_queue_stuck
           | :oban_jobs_accumulating
           | :oban_jobs_force_discarded
+          | :circuit_breaker_open
+          | :database_pool_pressure
+          | :stripe_webhook_secret_missing
           | :new_error
           | :error_regression
           | :pubsub_broadcast_failed

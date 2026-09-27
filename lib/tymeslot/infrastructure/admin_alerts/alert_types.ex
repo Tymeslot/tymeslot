@@ -29,6 +29,9 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     oban_queue_stuck: %{category: "Queue", severity: :error},
     oban_jobs_accumulating: %{category: "Queue", severity: :warning},
     oban_jobs_force_discarded: %{category: "Queue", severity: :error},
+    circuit_breaker_open: %{category: "System", severity: :warning},
+    database_pool_pressure: %{category: "System", severity: :warning},
+    stripe_webhook_secret_missing: %{category: "Payment", severity: :error},
     new_error: %{category: "Errors", severity: :error},
     error_regression: %{category: "Errors", severity: :error},
     reconciliation_discrepancies: %{category: "Payment", severity: :warning},
@@ -188,9 +191,36 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     "oban_jobs_force_discarded:#{Map.get(metadata, :discarded_by)}:#{Map.get(metadata, :job_ids)}"
   end
 
+  # The message embeds a live failure count and the last error, which change
+  # from one opening to the next. Key on the breaker and the clock hour it
+  # opened in, so a breaker flapping between open and half-open alerts at
+  # most once an hour, and each other breaker alerts on its own.
+  def dedup_key(:circuit_breaker_open, metadata) do
+    "circuit_breaker_open:#{Map.get(metadata, :breaker)}:#{hour_bucket(metadata, :opened_at)}"
+  end
+
+  # The same for sustained pool pressure: the monitor raises one alert per
+  # window while it lasts, which collapses to one per repo and hour.
+  def dedup_key(:database_pool_pressure, metadata) do
+    "database_pool_pressure:#{Map.get(metadata, :repo)}:#{hour_bucket(metadata, :detected_at)}"
+  end
+
+  def dedup_key(:stripe_webhook_secret_missing, metadata) do
+    "stripe_webhook_secret_missing:#{Map.get(metadata, :env_var)}"
+  end
+
   def dedup_key(type, metadata), do: format_message(type, metadata)
 
   defp health_key(parts), do: parts |> Enum.reject(&is_nil/1) |> Enum.join(":")
+
+  # "2026-09-27T14:05:00Z" becomes "2026-09-27T14": the UTC hour an ISO 8601
+  # timestamp falls in.
+  defp hour_bucket(metadata, key) do
+    case Map.get(metadata, key) do
+      timestamp when is_binary(timestamp) -> String.slice(timestamp, 0, 13)
+      _missing -> "unknown"
+    end
+  end
 
   @doc """
   Formats a human-readable message for the given alert type and metadata.
@@ -283,6 +313,35 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     discarded_by = Map.get(metadata, :discarded_by, "unknown")
     jobs = Map.get(metadata, :jobs, "unknown")
     "#{discarded_by} discarded #{count} Oban jobs that never finished: #{jobs}"
+  end
+
+  def format_message(:circuit_breaker_open, %{old_state: :half_open} = metadata) do
+    breaker = Map.get(metadata, :breaker, "unknown")
+    last_error = Map.get(metadata, :last_error) || "unknown"
+    "Circuit breaker #{breaker} reopened: its recovery probe failed (last error: #{last_error})"
+  end
+
+  def format_message(:circuit_breaker_open, metadata) do
+    breaker = Map.get(metadata, :breaker, "unknown")
+    count = Map.get(metadata, :failure_count) || "unknown"
+    last_error = Map.get(metadata, :last_error) || "unknown"
+    "Circuit breaker #{breaker} opened after #{count} failures (last error: #{last_error})"
+  end
+
+  def format_message(:database_pool_pressure, metadata) do
+    repo = Map.get(metadata, :repo, "unknown")
+    count = Map.get(metadata, :slow_checkouts, "unknown")
+    threshold = Map.get(metadata, :threshold_ms, "unknown")
+    window = Map.get(metadata, :window_seconds, "unknown")
+
+    "Database pool pressure on #{repo}: #{count} queries waited more than #{threshold} ms " <>
+      "for a connection in the last #{window} seconds"
+  end
+
+  def format_message(:stripe_webhook_secret_missing, metadata) do
+    env_var = Map.get(metadata, :env_var, "unknown")
+    summary = Map.get(metadata, :summary, "Stripe webhooks are rejected")
+    "#{env_var} is not set: #{summary}"
   end
 
   def format_message(type, metadata) when type in [:new_error, :error_regression] do
