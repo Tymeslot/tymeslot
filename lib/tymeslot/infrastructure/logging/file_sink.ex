@@ -9,7 +9,7 @@ defmodule Tymeslot.Infrastructure.Logging.FileSink do
 
   | Var | Default | Notes |
   |-----|---------|-------|
-  | `LOG_FILE_PATH` | `/app/data/logs/app.log` on cloudron, unset elsewhere | Sink stays disabled when both this and the cloudron default resolve to nil |
+  | `LOG_FILE_PATH` | `/app/data/logs/app.log` on cloudron (`DEPLOYMENT_TYPE` of `cloudron` or the legacy `main`), unset elsewhere | Sink stays disabled when both this and the cloudron default resolve to nil |
   | `LOG_FILE_MAX_BYTES` | `10_000_000` (10 MB) | Per file before rotation |
   | `LOG_FILE_MAX_FILES` | `30` | Rotated files kept (≈30 days at typical volumes) |
 
@@ -21,6 +21,7 @@ defmodule Tymeslot.Infrastructure.Logging.FileSink do
   require Logger
 
   alias LoggerJSON.Formatters.Basic, as: BasicFormatter
+  alias Tymeslot.Infrastructure.DeploymentType
 
   @handler_id :tymeslot_file_sink
 
@@ -63,7 +64,7 @@ defmodule Tymeslot.Infrastructure.Logging.FileSink do
   end
 
   defp cloudron_default_path do
-    if System.get_env("DEPLOYMENT_TYPE") == "cloudron" do
+    if DeploymentType.current() == "cloudron" do
       "/app/data/logs/app.log"
     end
   end

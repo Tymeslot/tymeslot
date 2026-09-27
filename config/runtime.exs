@@ -107,13 +107,8 @@ if config_env() == :prod do
       LoggerJSON.Formatters.Basic.new(metadata: {:all_except, [:conn, :socket, :mfa, :pid, :gl]})
 
   # Database configuration based on deployment type (define early as it's used for URL scheme)
-  # Defaults to "docker" if DEPLOYMENT_TYPE is not set or unknown
-  deployment_type =
-    case System.get_env("DEPLOYMENT_TYPE") do
-      "cloudron" -> "cloudron"
-      "main" -> "cloudron"
-      _ -> "docker"
-    end
+  # "cloudron" or the legacy "main"; "docker" if DEPLOYMENT_TYPE is unset or unknown
+  deployment_type = Tymeslot.Infrastructure.DeploymentType.current()
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
