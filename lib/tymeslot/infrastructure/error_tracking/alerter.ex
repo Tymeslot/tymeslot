@@ -14,7 +14,11 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Alerter do
       is not news to anyone.
 
   Further occurrences of an unresolved error raise nothing: the error is
-  already in front of the operator. A muted error raises nothing at all.
+  already in front of the operator. A muted error raises nothing at all, and
+  neither does a failed Oban job attempt that will be retried (occurrence
+  context `state: :failure`): a retry may well succeed, and a job that fails
+  for good is recorded, and alerted, as given up on by
+  `Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes`.
 
   The alert carries the error's identity (id, kind, reason, source) and
   what the occurrence context says about where it happened: the user and
@@ -59,7 +63,8 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Alerter do
     {"job.queue", :job_queue},
     {"job.id", :job_id},
     {"job.attempt", :job_attempt},
-    {"job.max_attempts", :job_max_attempts}
+    {"job.max_attempts", :job_max_attempts},
+    {"job_outcome", :job_outcome}
   ]
 
   @doc """
@@ -98,6 +103,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Alerter do
   end
 
   defp alert_type(_event, %{error: %Error{muted: true}}), do: nil
+  defp alert_type(_event, %{occurrence: %Occurrence{context: %{state: :failure}}}), do: nil
 
   defp alert_type([:error_tracker, :error, :new], %{error: %Error{}, occurrence: %Occurrence{}}),
     do: :new_error
@@ -149,8 +155,8 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Alerter do
   defp job_action(%{"job.args" => %{"action" => action}}), do: scalar(action)
   defp job_action(_context), do: nil
 
-  # ErrorTracker's Oban integration records the attempt's outcome as `state`:
-  # `:failure` while retries remain, `:discard` once they are exhausted.
+  # A retryable attempt is recorded with `state: :failure` and raises no
+  # alert, so this names what the few others were.
   defp job_state(%{state: state}) when state in [:failure, :discard], do: Atom.to_string(state)
   defp job_state(_context), do: nil
 

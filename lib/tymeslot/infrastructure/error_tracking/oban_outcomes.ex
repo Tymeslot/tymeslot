@@ -61,6 +61,21 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   `Tymeslot.Infrastructure.ErrorTracking.SafeIntegrations` calls it in place
   of the integration's own handler.
 
+  ErrorTracker gives an `{:error, reason}` returned by a worker a synthetic
+  frame, the worker's `perform/2`, so every returned error of one worker is
+  one error, retryable or not. An alert is raised for a new error or a
+  regression only, so once a worker had failed an attempt, a later job of it
+  that failed for good raised nothing. A job's last failed attempt (state
+  `:discard`) is therefore recorded here instead, as a `JobDiscardedError`
+  with the outcome `:exhausted`, grouped, filtered through the worker's
+  expected outcomes and masked exactly as a discard is. It is recorded once:
+  not also as the failure itself. Its stacktrace is the synthetic frame,
+  followed by the stacktrace of an exception the worker raised, so the
+  error's source is the worker and the raise site is still stored.
+  `Tymeslot.Infrastructure.ErrorTracking.Alerter` raises nothing for an
+  attempt that can still be retried, so a job alerts when it is given up on,
+  and a failure a retry recovers from alerts not at all.
+
   Telemetry detaches a handler that raises, so `handle_event/4` never raises:
   a failure is logged, naming only its module, and dropped.
   """
@@ -107,11 +122,22 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
 
   @doc """
   Records the job failure reported by an `[:oban, :job, :exception]` event,
-  as ErrorTracker's Oban integration does, but with the job's context taken
-  from `metadata.job` rather than from the reporting process. Raises when the
+  with the job's context taken from `metadata.job` rather than from the
+  reporting process. An attempt that can be retried is recorded as
+  ErrorTracker's Oban integration records it; the last attempt as the job
+  being given up on (see *Failed jobs*). Raises when a retryable attempt's
   report fails; the caller guards against that.
   """
   @spec report_exception(map()) :: :ok
+  def report_exception(%{job: %Oban.Job{} = job, state: :discard} = metadata) do
+    reason = exhausted_reason(metadata)
+
+    if not expected?(job.worker, reason),
+      do: record(job, :exhausted, reason, Map.get(metadata, :stacktrace))
+
+    :ok
+  end
+
   def report_exception(%{job: %Oban.Job{} = job, reason: reason} = metadata) do
     state = Map.get(metadata, :state, :failure)
     exception = if is_exception(reason), do: reason, else: {Map.get(metadata, :kind), reason}
@@ -125,6 +151,11 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
 
     :ok
   end
+
+  # What the worker failed with: the reason it returned, or what it raised,
+  # threw or exited with.
+  defp exhausted_reason(%{result: {:error, reason}}), do: reason
+  defp exhausted_reason(%{reason: reason}), do: reason
 
   # ErrorTracker's integration uses the same synthetic frame, so an error
   # returned from a worker keeps the fingerprint it had before.
@@ -159,7 +190,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
     outcome = if state == :discard, do: :discard, else: :cancel
     reason = result_reason(result)
 
-    if not expected?(worker, reason), do: record(job, outcome, reason)
+    if not expected?(worker, reason), do: record(job, outcome, reason, [])
 
     :ok
   rescue
@@ -282,12 +313,12 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
 
   # A job cancelled by a shutdown is reported from outside its process, so
   # the job's context is passed along here too.
-  defp record(%Oban.Job{worker: worker} = job, outcome, reason) do
+  defp record(%Oban.Job{worker: worker} = job, outcome, reason, raised_stacktrace) do
     exception = JobDiscardedError.exception({worker, outcome, reason})
 
     ErrorTracking.report_error(
       exception,
-      stacktrace(worker, outcome, reason),
+      stacktrace(worker, outcome, reason) ++ List.wrap(raised_stacktrace),
       Map.merge(job_context(job), %{
         job_outcome: Atom.to_string(outcome),
         job_reason: exception.reason

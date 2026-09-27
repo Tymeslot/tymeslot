@@ -17,6 +17,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.AlerterTest do
   alias ExUnit.CaptureLog
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Infrastructure.ErrorTracking.Alerter
+  alias Tymeslot.Infrastructure.ErrorTracking.JobDiscardedError
   alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.EmailWorker.AdminAlertScheduler
@@ -122,21 +123,28 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.AlerterTest do
       assert payload.job_action == "deliver"
     end
 
-    test "a failed job attempt carries the attempt, the limit and its outcome" do
+    test "a job failing on its last attempt carries the attempt, the limit and its outcome" do
       expect(EmailServiceMock, :send_admin_alert, fn _to, _category, _severity, _msg, _meta ->
         {:error, :smtp_unreachable}
       end)
 
       CaptureLog.capture_log(fn ->
         assert {:error, _reason} =
-                 perform_job(EmailWorker, admin_alert_args(), attempt: 2, max_attempts: 5)
+                 perform_job(EmailWorker, admin_alert_args(), attempt: 5, max_attempts: 5)
       end)
 
       assert_receive {:send_alert, :new_error, payload}
       assert payload.job_worker == "Tymeslot.Workers.EmailWorker"
-      assert payload.job_attempt == 2
+      assert payload.job_attempt == 5
       assert payload.job_max_attempts == 5
-      assert payload.job_state == "failure"
+      assert payload.job_outcome == "exhausted"
+    end
+
+    test "a job attempt that will be retried raises nothing" do
+      report("job exploded", %{"job.worker" => "Tymeslot.Workers.WebhookWorker", state: :failure})
+
+      refute_receive {:send_alert, _type, _payload}
+      assert [%Error{}] = Repo.all(Error)
     end
 
     test "a second occurrence of a known error raises nothing" do
@@ -200,10 +208,12 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.AlerterTest do
 
       log =
         CaptureLog.capture_log(fn ->
-          assert {:error, _reason} = perform_job(EmailWorker, admin_alert_args())
+          assert {:error, _reason} =
+                   perform_job(EmailWorker, admin_alert_args(), attempt: 5, max_attempts: 5)
         end)
 
-      assert [%Error{kind: "Elixir.Oban.PerformError"}] = Repo.all(Error)
+      kind = Atom.to_string(JobDiscardedError)
+      assert [%Error{kind: ^kind}] = Repo.all(Error)
       assert log =~ "Admin alert email suppressed"
       refute_enqueued(worker: EmailWorker, args: %{"action" => "send_admin_alert"})
     end
