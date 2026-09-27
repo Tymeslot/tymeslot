@@ -4,6 +4,7 @@ defmodule Tymeslot.Payments.PendingTransactions do
   require Logger
 
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Payments.Config
   alias Tymeslot.Payments.PaymentQueries
   alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
@@ -41,7 +42,7 @@ defmodule Tymeslot.Payments.PendingTransactions do
         :ok
 
       {:error, error} ->
-        Logger.error("Failed to supersede pending transaction", error: inspect(error))
+        Logger.error("Failed to supersede pending transaction", error: LogFormat.reason(error))
         {:error, :transaction_update_failed}
     end
   end
@@ -54,7 +55,7 @@ defmodule Tymeslot.Payments.PendingTransactions do
       {:error, reason} ->
         Logger.warning("Failed to expire superseded checkout session",
           session_id: session_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
   end

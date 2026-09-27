@@ -30,6 +30,7 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
 
   alias Tymeslot.Infrastructure.CacheStore
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Webhooks.WebhookQueries
 
   use CacheStore,
@@ -128,7 +129,7 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
         # same exposure this cache had before the database tier existed.
         Logger.error("IdempotencyCache: database check failed, failing open",
           event_id: event_id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:ok, :reserved}

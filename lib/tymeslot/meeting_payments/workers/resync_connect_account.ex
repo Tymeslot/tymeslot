@@ -24,6 +24,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.MeetingPayments.StripeAdapter
 
@@ -41,7 +42,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
       {:error, reason} ->
         Logger.warning("ResyncConnectAccount could not retrieve Stripe account",
           stripe_account_id: stripe_account_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -49,7 +50,7 @@ defmodule Tymeslot.MeetingPayments.Workers.ResyncConnectAccount do
   end
 
   def perform(%Oban.Job{args: args}) do
-    Logger.error("ResyncConnectAccount missing stripe_account_id", args: inspect(args))
+    Logger.error("ResyncConnectAccount missing stripe_account_id", args: LogFormat.reason(args))
     {:discard, "missing stripe_account_id"}
   end
 end

@@ -22,6 +22,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessor do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Webhooks.WebhookRegistry
   alias Tymeslot.Payments.Webhooks.Idempotency
@@ -68,7 +69,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessor do
         {:ok, event}
 
       {:error, reason} ->
-        Logger.warning("Connect webhook signature verification failed", reason: inspect(reason))
+        Logger.warning("Connect webhook signature verification failed",
+          reason: LogFormat.reason(reason)
+        )
+
         {:error, :invalid_signature}
     end
   end

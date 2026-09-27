@@ -7,6 +7,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Payments.Errors.WebhookError
   alias Tymeslot.Payments.Webhooks.WebhookRegistry
@@ -114,7 +115,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
           reason: reason,
           message: message,
           object_keys: Map.keys(object),
-          object_sample: object |> Map.take(["id", "object", "type"]) |> inspect()
+          object_sample: object |> Map.take(["id", "object", "type"]) |> LogFormat.reason()
         )
 
         {:error, %WebhookError.ValidationError{reason: reason, message: message}, nil}
@@ -212,7 +213,9 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
         :ok
 
       {:error, reason} ->
-        Logger.error("Failed to start unhandled-event recorder task", reason: inspect(reason))
+        Logger.error("Failed to start unhandled-event recorder task",
+          reason: LogFormat.reason(reason)
+        )
     end
   end
 
