@@ -26,6 +26,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
 
   alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
 
   require Logger
 
@@ -188,7 +189,7 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
           "Failed to persist needs_reauth flag",
           provider: provider,
           integration_id: integration.id,
-          errors: inspect(changeset.errors)
+          errors: LogFormat.reason(changeset.errors)
         )
 
         {:error, changeset}

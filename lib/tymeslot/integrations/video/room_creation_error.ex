@@ -31,6 +31,7 @@ defmodule Tymeslot.Integrations.Video.RoomCreationError do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Video.RoomData
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
@@ -258,7 +259,7 @@ defmodule Tymeslot.Integrations.Video.RoomCreationError do
     Logger.error("Failed to queue the email about a video room creation refusal",
       integration_id: integration.id,
       code: code,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     :ok

@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   require Logger
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.EventColour
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour
@@ -375,7 +376,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
       {:ok, body} ->
         Logger.warning("Google events listing returned a non-object body",
           calendar_id: calendar_id,
-          body: inspect(body)
+          body: LogFormat.reason(body)
         )
 
         body

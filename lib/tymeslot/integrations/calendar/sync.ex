@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -417,7 +418,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
           calendar_integration_id: integration.id,
           meeting_id: meeting.id,
           provider_event_id: meeting.provider_event_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
   end

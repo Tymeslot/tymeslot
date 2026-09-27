@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Shared.OAuth.TokenFlow do
   """
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Common.OAuth.LogContext
 
@@ -89,7 +90,7 @@ defmodule Tymeslot.Integrations.Shared.OAuth.TokenFlow do
       {:error, reason} ->
         Logger.error(
           messages.network,
-          log_context ++ [reason: inspect(reason)]
+          log_context ++ [reason: LogFormat.reason(reason)]
         )
 
         {:error, {:network_error, reason}}

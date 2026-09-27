@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.Events, as: CalDAVEvents
   alias Tymeslot.Integrations.Calendar.CalDAV.Sync.State
   alias Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler
@@ -117,7 +118,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
           calendar_integration_id: integration.id,
           phase: "full fetch",
           calendar_path: calendar_path,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -141,7 +142,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
         Logger.error("CalDAV full fetch event processing failed; sync token NOT updated",
           calendar_integration_id: integration.id,
           calendar_path: calendar_path,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -179,7 +180,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch do
       {:error, changeset} ->
         Logger.error("Failed to remove missing CalDAV calendar paths",
           calendar_integration_id: integration.id,
-          error: inspect(changeset.errors)
+          error: LogFormat.reason(changeset.errors)
         )
 
         :ok

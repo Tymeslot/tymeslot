@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
   require Logger
 
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalDAV.Base
 
@@ -79,7 +80,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
         new_state = put_in(state.requests[key], updated_request)
 
         Logger.debug("Coalescing request",
-          key: inspect(key),
+          key: LogFormat.reason(key),
           waiter_count: length(waiters) + 1
         )
 
@@ -115,7 +116,10 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
           waiters = get_in(state, [:requests, key, :waiters]) || []
           Process.demonitor(ref, [:flush])
 
-          Logger.warning("Fetch task crashed", key: inspect(key), reason: inspect(reason))
+          Logger.warning("Fetch task crashed",
+            key: LogFormat.reason(key),
+            reason: LogFormat.reason(reason)
+          )
 
           Enum.each(waiters, fn waiter -> GenServer.reply(waiter, {:error, :task_died}) end)
           {:noreply, %{state | requests: Map.delete(state.requests, key)}}
@@ -139,7 +143,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
         elapsed = System.monotonic_time(:millisecond) - start_time
 
         Logger.debug("Request completed",
-          key: inspect(key),
+          key: LogFormat.reason(key),
           duration_ms: elapsed,
           clients_served: length(waiters)
         )
@@ -150,7 +154,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
 
   @impl GenServer
   def handle_info(msg, state) do
-    Logger.warning("RequestCoalescer received unexpected message", message: inspect(msg))
+    Logger.warning("RequestCoalescer received unexpected message", message: LogFormat.reason(msg))
     {:noreply, state}
   end
 

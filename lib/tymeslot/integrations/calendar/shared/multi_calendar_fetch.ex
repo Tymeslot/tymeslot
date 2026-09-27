@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
@@ -156,7 +157,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
       {:error, changeset} ->
         Logger.error("Failed to de-select missing calendars",
           calendar_integration_id: integration.id,
-          error: inspect(changeset.errors)
+          error: LogFormat.reason(changeset.errors)
         )
 
         :ok

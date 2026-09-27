@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   """
 
   require Logger
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -146,7 +147,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
             Logger.error("Failed to get events in range",
               provider: adapter_client.provider_type,
               error_type: type,
-              reason: inspect(reason)
+              reason: LogFormat.reason(reason)
             )
 
             error
@@ -170,7 +171,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
           {:error, reason} = error ->
             Logger.error("Failed to get events in range",
               provider: adapter_client.provider_type,
-              reason: inspect(reason)
+              reason: LogFormat.reason(reason)
             )
 
             error
@@ -200,7 +201,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
             Logger.error("Failed to create event",
               provider: adapter_client.provider_type,
               error_type: type,
-              reason: inspect(reason)
+              reason: LogFormat.reason(reason)
             )
 
             error
@@ -208,7 +209,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
           {:error, reason} = error ->
             Logger.error("Failed to create event",
               provider: adapter_client.provider_type,
-              reason: inspect(reason)
+              reason: LogFormat.reason(reason)
             )
 
             error
@@ -247,7 +248,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
               provider: adapter_client.provider_type,
               error_type: type,
               uid: uid,
-              reason: inspect(reason)
+              reason: LogFormat.reason(reason)
             )
 
             error
@@ -256,7 +257,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
             Logger.error("Failed to update event",
               provider: adapter_client.provider_type,
               uid: uid,
-              reason: inspect(reason)
+              reason: LogFormat.reason(reason)
             )
 
             error
@@ -328,7 +329,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
               provider: adapter_client.provider_type,
               error_type: type,
               uid: uid,
-              reason: inspect(reason)
+              reason: LogFormat.reason(reason)
             )
 
             error
@@ -337,7 +338,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
             Logger.error("Failed to delete event",
               provider: adapter_client.provider_type,
               uid: uid,
-              reason: inspect(reason)
+              reason: LogFormat.reason(reason)
             )
 
             error

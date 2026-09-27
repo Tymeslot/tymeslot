@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   """
 
   alias Tymeslot.Clock
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CreatedEvent
 
   require Logger
@@ -128,7 +129,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   defp log_typed_error(type, message) do
     Logger.warning("Calendar provider API call failed",
       error_type: type,
-      reason: inspect(message)
+      reason: LogFormat.reason(message)
     )
 
     {:error, type}

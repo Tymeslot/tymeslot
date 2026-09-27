@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -296,7 +297,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   defp log_push_channel_failure(integration, reason) do
     Logger.error("Google push channel registration failed",
       integration_id: integration.id,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
   end
 
@@ -313,7 +314,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
       {:error, reason} ->
         Logger.error("Failed to enqueue initial Google Calendar sync",
           integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         :ok

@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.NeedsReauth
@@ -178,7 +179,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   end
 
   defp log_create_meeting_room_error(reason) do
-    Logger.error("Failed to create Teams meeting", error: inspect(reason))
+    Logger.error("Failed to create Teams meeting", error: LogFormat.reason(reason))
   end
 
   # A rejected/expired grant (`invalid_grant`, `invalid_client`,
@@ -420,7 +421,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
         {:ok, refreshed_tokens}
 
       {:error, reason} ->
-        Logger.error("Failed to refresh Teams OAuth token", reason: inspect(reason))
+        Logger.error("Failed to refresh Teams OAuth token", reason: LogFormat.reason(reason))
         {:error, "Token refresh failed: #{reason}"}
     end
   end
@@ -561,7 +562,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
       other ->
         Logger.warning("Could not delete Teams calendar event left without a join link",
-          result: inspect(other)
+          result: LogFormat.reason(other)
         )
 
         :ok

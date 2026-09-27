@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalDAV.Http, as: CalDAVHttp
   alias Tymeslot.Integrations.Calendar.Utils.XmlEscape
@@ -165,11 +166,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
     end
   rescue
     e ->
-      Logger.error("Failed to parse sync-collection response", error: inspect(e))
+      Logger.error("Failed to parse sync-collection response", error: LogFormat.reason(e))
       {:error, :invalid_response}
   catch
     :exit, reason ->
-      Logger.error("Failed to parse sync-collection response", error: inspect(reason))
+      Logger.error("Failed to parse sync-collection response", error: LogFormat.reason(reason))
       {:error, :invalid_response}
   end
 
@@ -250,11 +251,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
     {:ok, ctag}
   rescue
     e ->
-      Logger.warning("Failed to parse CTag response", error: inspect(e))
+      Logger.warning("Failed to parse CTag response", error: LogFormat.reason(e))
       {:ok, nil}
   catch
     :exit, reason ->
-      Logger.warning("Failed to parse CTag response", error: inspect(reason))
+      Logger.warning("Failed to parse CTag response", error: LogFormat.reason(reason))
       {:ok, nil}
   end
 end

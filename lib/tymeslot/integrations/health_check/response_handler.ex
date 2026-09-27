@@ -44,6 +44,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.BreakerOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
@@ -96,7 +97,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
         now
       ) do
     Logger.error("Integration health critical",
-      previous_status: inspect(old_status),
+      previous_status: LogFormat.reason(old_status),
       type: type,
       integration_id: integration.id,
       provider: integration.provider
@@ -117,7 +118,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
       type: type,
       integration_id: integration.id,
       provider: integration.provider,
-      previous_status: inspect(old_status)
+      previous_status: LogFormat.reason(old_status)
     )
 
     clear_notification_state(type, integration.id)
@@ -200,7 +201,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
         type: type,
         integration_id: integration.id,
         provider: integration.provider,
-        reason: inspect(reason)
+        reason: LogFormat.reason(reason)
       )
 
       case flag_for_reauth(type, integration, ReauthHandling.rejection_cause(reason)) do

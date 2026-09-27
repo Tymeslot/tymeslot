@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   enforcing primary-integration invariants.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
@@ -170,7 +171,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
       {:error, reason} ->
         Logger.warning("Failed to enqueue initial subscription sync",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         :ok

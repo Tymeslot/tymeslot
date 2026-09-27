@@ -43,6 +43,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.Errors
   alias Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue
   alias Tymeslot.Integrations.Calendar.CalDAV.Sync.EventFetch
@@ -256,7 +257,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
 
     Logger.warning("CalDAV server refused sync-collection it advertised; falling back",
       calendar_integration_id: integration.id,
-      error: inspect(reason),
+      error: LogFormat.reason(reason),
       tier: tier
     )
 
@@ -275,7 +276,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
         Logger.error("CalDAV Tier 1 event processing failed; sync token NOT updated",
           calendar_integration_id: integration.id,
           calendar_path: path,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -342,7 +343,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Sync do
     Logger.error("CalDAV sync failed",
       calendar_integration_id: integration.id,
       phase: phase,
-      error: inspect(reason)
+      error: LogFormat.reason(reason)
     )
   end
 end

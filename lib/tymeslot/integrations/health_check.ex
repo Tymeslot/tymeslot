@@ -41,6 +41,7 @@ defmodule Tymeslot.Integrations.HealthCheck do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
@@ -179,7 +180,7 @@ defmodule Tymeslot.Integrations.HealthCheck do
         Logger.warning("Failed to enqueue immediate verification probe after user recovery",
           integration_type: type,
           integration_id: integration_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok

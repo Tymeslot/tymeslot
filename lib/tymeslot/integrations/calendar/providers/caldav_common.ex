@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Client, Discovery, Events, Http, UrlBuilder}
   alias Tymeslot.Integrations.Calendar.CalendarEntry
@@ -250,7 +251,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     Enum.each(errors, fn {path, {:error, reason}} ->
       Logger.warning("CalDAV fetch failed for one calendar path",
         path: path,
-        reason: inspect(reason)
+        reason: LogFormat.reason(reason)
       )
     end)
 

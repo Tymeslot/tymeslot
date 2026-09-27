@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
 
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
@@ -323,7 +324,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
       mod
     else
       Logger.warning("Configured calendar_module is not loaded, falling back to Operations",
-        calendar_module: inspect(mod)
+        calendar_module: LogFormat.reason(mod)
       )
 
       Tymeslot.Integrations.Calendar.Operations

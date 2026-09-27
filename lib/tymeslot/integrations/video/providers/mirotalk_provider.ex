@@ -14,6 +14,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.Providers.Capabilities
@@ -359,7 +360,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
         {:error, reason} ->
           Logger.warning(
             "Failed to create join URL via MiroTalk API, falling back to manual generation",
-            reason: inspect(reason)
+            reason: LogFormat.reason(reason)
           )
 
           # Fallback to manual generation if API fails

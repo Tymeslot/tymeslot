@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
@@ -232,7 +233,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
       {:error, changeset} ->
         Logger.warning("Failed to persist Outlook delta link in fallback sweep",
           calendar_integration_id: integration.id,
-          error: inspect(changeset)
+          error: LogFormat.reason(changeset)
         )
 
         {:error, :delta_link_persistence_failed}
