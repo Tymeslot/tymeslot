@@ -116,8 +116,15 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
   """
   @type write ::
           {:edited, map()}
-          | {:split, map(), %{uid: String.t(), id: String.t()}}
-          | {:moved, pos_integer(), %{uid: String.t(), id: String.t()}}
+          | {:split, map(), written()}
+          | {:moved, pos_integer(), written()}
+
+  @typedoc "The new series as its writer reports it; any further keys are ignored."
+  @type written :: %{
+          required(:uid) => String.t(),
+          required(:id) => String.t(),
+          optional(atom()) => term()
+        }
 
   @typedoc "What `carry/1` writes."
   @opaque plan :: %{
