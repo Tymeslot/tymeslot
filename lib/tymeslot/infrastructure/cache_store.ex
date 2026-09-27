@@ -20,8 +20,6 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   leaving the coalescing that ships exercised by almost nothing.
   """
 
-  alias Tymeslot.Infrastructure.Logging.LogFormat
-
   require Logger
 
   @typedoc """
@@ -268,6 +266,8 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   # Not recorded through `ErrorTracking.report_error/3`: modules `use` this one,
   # so anything it references becomes a compile-time dependency of each of
   # them, and ErrorTracking would pull its queries and the Repo in with it.
+  # For the same reason the key and reason are rendered by `render/1` below
+  # rather than `LogFormat.reason/1`.
   @spec compute_and_store(atom(), any(), (-> any()), integer(), keyword()) :: any()
   def compute_and_store(table_name, key, fun, ttl, opts \\ []) do
     result =
@@ -289,7 +289,7 @@ defmodule Tymeslot.Infrastructure.CacheStore do
       {:raised, exception, stacktrace} ->
         Logger.warning("Cache computation raised an exception",
           table: table_name,
-          key: LogFormat.reason(key),
+          key: render(key),
           exception: Exception.message(exception)
         )
 
@@ -302,9 +302,9 @@ defmodule Tymeslot.Infrastructure.CacheStore do
       {:caught, kind, reason, stacktrace} ->
         Logger.warning("Cache computation failed",
           table: table_name,
-          key: LogFormat.reason(key),
+          key: render(key),
           kind: kind,
-          reason: LogFormat.reason(reason)
+          reason: render(reason)
         )
 
         Logger.debug("Cache computation stacktrace",
@@ -314,6 +314,13 @@ defmodule Tymeslot.Infrastructure.CacheStore do
         {:error, :computation_failed}
     end
   end
+
+  # A bounded `inspect/2` standing in for `LogFormat.reason/1`, which would
+  # put LogFormat and the redaction modules behind it on the compile-time
+  # graph of every cache (see `compute_and_store/5`). Cache keys are built from
+  # ids and dates, not credentials; a thrown or exited reason is the one term
+  # here that is not, and it is capped so it cannot carry much.
+  defp render(term), do: inspect(term, limit: 20, printable_limit: 256)
 
   @doc false
   @spec cleanup_expired(atom()) :: integer()
