@@ -315,6 +315,35 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   end
 
   @doc """
+  Moves the event `event_id` from `calendar_id` to `destination_calendar_id`
+  of the same account (`events.move`). The event keeps its id and
+  `iCalUID`, and a recurring event's master takes every instance with it,
+  instances edited on their own and exceptions included, and its
+  conference. Answers the event as it now is on the destination. Google's
+  own notifications are suppressed, as on every write here.
+  """
+  @impl CalendarAPIBehaviour
+  @spec move_event(CalendarIntegrationSchema.t(), String.t(), String.t(), String.t()) ::
+          {:ok, calendar_event()} | api_error()
+  def move_event(
+        %CalendarIntegrationSchema{} = integration,
+        calendar_id,
+        event_id,
+        destination_calendar_id
+      ) do
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      google_event_id = EventMapper.uuid_to_google_event_id(event_id)
+
+      make_request(
+        :post,
+        "/calendars/#{URI.encode(calendar_id)}/events/#{google_event_id}/move",
+        token,
+        %{"destination" => destination_calendar_id, "sendUpdates" => "none"}
+      )
+    end)
+  end
+
+  @doc """
   Fetches the incremental event list for the integration using the stored sync token.
 
   Returns `{:ok, %{events: [...], next_sync_token: token}}` on success,

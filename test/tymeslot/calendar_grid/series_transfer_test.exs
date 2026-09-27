@@ -8,9 +8,10 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
   The steps after the write are driven through a writer handed to
   `SeriesTransfer.move/4`, which answers as a real one would; the CalDAV
   family's own writer is exercised down to the HTTP client in
-  `Tymeslot.CalendarGrid.SeriesTransferCalDAVTest`. The one-off move's provider writes sit behind
-  `Tymeslot.CalendarMock`, which every refusal here asserts is never
-  reached.
+  `Tymeslot.CalendarGrid.SeriesTransferCalDAVTest`, and the Google family's
+  in `Tymeslot.CalendarGrid.SeriesTransferGoogleTest`. The one-off move's
+  provider writes sit behind `Tymeslot.CalendarMock`, which every refusal
+  here asserts is never reached.
   """
 
   use Tymeslot.DataCase, async: true
@@ -289,15 +290,6 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
   # Each family's writer lands on its own; until then the move is refused
   # without writing anything.
   describe "move_event/3 of a series member within its family, before its writer lands" do
-    test "Google to another Google integration", %{user: user, google: google} do
-      event = google_occurrence(google)
-      refute_one_off_writes()
-
-      destination = insert(:calendar_integration, user: user, provider: "google")
-      assert move(user, event, destination) == {:error, :unsupported_scope}
-      assert_untouched(event)
-    end
-
     test "Outlook to Outlook", %{user: user} do
       outlook = insert(:calendar_integration, user: user, provider: "outlook")
       event = insert_row(outlook, %{uid: "AAMk-occ", recurring_event_id: "AAMk-master"})

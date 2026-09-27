@@ -19,21 +19,17 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesSplit do
       second before for a timed one), and the `EXDATE` and `RDATE` values at
       or after the slot go.
 
-  What Google assigns or manages itself is not copied into the tail: its
-  identifiers (`id`, `iCalUID`, `recurringEventId`), its bookkeeping (`etag`,
-  `sequence`, `created`, `updated`, `htmlLink`, `kind`) and its people
-  (`organizer`, `creator`, which belong to the account that inserts it). A
-  conference is copied as the join details it has (`conferenceData` without
-  any `createRequest`), which `events.insert` accepts with
-  `conferenceDataVersion=1` without making a new one, so the tail's
-  occurrences keep the series' Meet link; `hangoutLink` is derived from it
-  and is not sent.
+  The tail is built from the master as `Google.CreatableEvent` makes any
+  event creatable: what Google assigns or manages itself is not copied, and
+  a conference is copied as the join details it has, so the tail's
+  occurrences keep the series' Meet link.
 
   Occurrences edited on their own in Google are separate events that name
   the master. Those from the slot on are not carried to the tail: Google
   drops them once the master's rule no longer makes their slot.
   """
 
+  alias Tymeslot.Integrations.Calendar.Google.CreatableEvent
   alias Tymeslot.Integrations.Calendar.Google.SeriesPatch
   alias Tymeslot.Integrations.Calendar.ICalBuilder.ContentLines
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Document
@@ -42,10 +38,6 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesSplit do
   alias Tymeslot.Integrations.Calendar.Recurrence.SeriesMove
   alias Tymeslot.Integrations.Calendar.Recurrence.SeriesSplit
   alias Tymeslot.Utils.DateTimeUtils
-
-  # Read-only on an insert, or Google's to assign.
-  @not_copied ~w(id iCalUID recurringEventId originalStartTime etag sequence created updated
-                 htmlLink kind organizer creator hangoutLink privateCopy locked attendeesOmitted)
 
   @slot_lists ["EXDATE", "RDATE"]
 
@@ -134,13 +126,12 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesSplit do
     {start, finish} = SeriesSplit.at_slot(timing, split.slot)
 
     master
-    |> Map.drop(@not_copied)
+    |> CreatableEvent.from_event()
     |> Map.merge(%{
       "start" => timing_value(start, split.zone),
       "end" => timing_value(finish, split.zone),
       "recurrence" => lines
     })
-    |> copy_conference()
   end
 
   defp timing_value(%Date{} = date, _zone), do: %{"date" => Date.to_iso8601(date)}
@@ -157,17 +148,4 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesSplit do
 
     %{"dateTime" => DateTime.to_iso8601(instant), "timeZone" => zone}
   end
-
-  # A request for a new conference would give the tail a Meet of its own; the
-  # join details the master has are copied instead, or nothing when it has
-  # none yet.
-  defp copy_conference(%{"conferenceData" => conference} = tail) do
-    copied = Map.delete(conference, "createRequest")
-
-    if Map.has_key?(copied, "conferenceId") or Map.has_key?(copied, "entryPoints"),
-      do: Map.put(tail, "conferenceData", copied),
-      else: Map.delete(tail, "conferenceData")
-  end
-
-  defp copy_conference(tail), do: tail
 end

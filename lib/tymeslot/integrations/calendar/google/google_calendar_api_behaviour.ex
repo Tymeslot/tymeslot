@@ -38,6 +38,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour do
               {:ok, map()} | api_error()
   @callback delete_event(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
               :ok | api_error()
+  @callback move_event(CalendarIntegrationSchema.t(), String.t(), String.t(), String.t()) ::
+              {:ok, map()} | api_error()
   @callback refresh_token(CalendarIntegrationSchema.t()) ::
               {:ok, {String.t(), String.t(), DateTime.t()}} | api_error()
   @callback token_valid?(CalendarIntegrationSchema.t()) :: boolean()

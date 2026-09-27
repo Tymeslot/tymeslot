@@ -54,8 +54,18 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
   the destination collection, which must be one the destination integration
   writes to, and then deletes the original under that ETag
   (`CalendarEvents.move_caldav_series/4`). Each request goes out on its own
-  integration's client, so the two ends may be different servers. Google and
-  Outlook have no writer yet, and refuse with `:unsupported_scope`. A writer
+  integration's client, so the two ends may be different servers.
+
+  The Google writer moves the series' master from the calendar its rows are
+  cached under (`"primary"` when they name none). Within one integration it
+  uses Google's own move, which keeps the master's id and `iCalUID`, every
+  instance edited on its own and the Meet; across integrations it copies
+  the master, its whole recurrence included, into the destination and then
+  deletes it at the source, each on its own integration's credentials
+  (`CalendarEvents.move_google_series/3`). A move to the calendar the series
+  is already on is refused with `:same_calendar`.
+
+  Outlook has no writer yet, and refuses with `:unsupported_scope`. A writer
   can be handed to `move/4` as its `:writer` option, which is how the steps
   after the write are exercised on their own.
 
@@ -141,6 +151,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
              | :unaddressable_series
              | :no_destination_calendar
              | :unsupported_scope
+             | :same_calendar
              | term()}
   def move(user_id, stored, %{integration: integration} = destination, opts \\ []) do
     writer = Keyword.get(opts, :writer, &write/2)
@@ -203,7 +214,17 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
     end
   end
 
-  defp write(:google, _transfer), do: {:error, :unsupported_scope}
+  defp write(:google, %{address: {:master, master_id}, stored: stored} = transfer) do
+    source = %{
+      integration_id: stored.calendar_integration_id,
+      calendar_id: stored.provider_calendar_id || "primary",
+      master_id: master_id
+    }
+
+    destination = %{integration_id: transfer.integration.id, calendar_id: transfer.calendar_id}
+    CalendarEvents.move_google_series(transfer.user_id, source, destination)
+  end
+
   defp write(:outlook, _transfer), do: {:error, :unsupported_scope}
 
   # The steps every writer shares once the destination `integration` holds

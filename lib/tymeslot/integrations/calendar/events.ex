@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.Google.SeriesTransfer, as: GoogleSeriesTransfer
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
   alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
@@ -365,6 +366,53 @@ defmodule Tymeslot.Integrations.Calendar.Events do
       {:ok,
        %{client | writable_calendar_paths: ProviderCommon.caldav_writable_paths(integration)}}
     else
+      _none -> {:error, missing}
+    end
+  end
+
+  @doc """
+  Moves a Google recurring series, addressed by its master's id
+  (`source.master_id`) on `source.calendar_id` of `user_id`'s Google
+  integration `source.integration_id`, to `destination.calendar_id` of
+  their Google integration `destination.integration_id`: the same
+  integration, with Google's own move, or another, by a copy of the master
+  and a delete of the original. See `Google.SeriesTransfer` for what each
+  way carries and what each failure leaves.
+
+  Returns `{:ok, %{uid:, id:, calendar_id:, source: :removed |
+  :left_behind}}` once the destination holds the series, `uid` and `id`
+  being the new master's `iCalUID` and id, or `{:error, reason}` with
+  nothing written, including `:not_found` when the source integration is
+  not the user's Google integration, `:no_destination_calendar` when the
+  destination integration is not, and `:same_calendar` for a move to the
+  calendar the series is on.
+  """
+  @spec move_google_series(
+          user_id(),
+          %{integration_id: integration_id(), calendar_id: String.t(), master_id: String.t()},
+          %{integration_id: integration_id(), calendar_id: String.t()}
+        ) :: {:ok, GoogleSeriesTransfer.moved()} | {:error, term()}
+  def move_google_series(user_id, source, destination) do
+    with {:ok, source_integration} <-
+           google_integration(source.integration_id, user_id, :not_found),
+         {:ok, destination_integration} <-
+           google_integration(destination.integration_id, user_id, :no_destination_calendar) do
+      GoogleSeriesTransfer.move(
+        %{
+          integration: source_integration,
+          calendar_id: source.calendar_id,
+          master_id: source.master_id
+        },
+        %{integration: destination_integration, calendar_id: destination.calendar_id}
+      )
+    end
+  end
+
+  # Looked up as the user's, so an integration of anyone else, or one of
+  # another provider, resolves to nothing.
+  defp google_integration(integration_id, user_id, missing) do
+    case CalendarManagement.fetch_integration_for_user(integration_id, user_id) do
+      {:ok, %{provider: "google"} = integration} -> {:ok, integration}
       _none -> {:error, missing}
     end
   end
