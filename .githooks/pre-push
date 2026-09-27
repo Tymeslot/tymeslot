@@ -1,25 +1,23 @@
 #!/bin/bash
 # Pre-push gate. Two jobs, in order:
 #
-#   1. Keep private work off the public remote. Branches and worktrees are
-#      private work in progress until they merge; GitHub is the publication
-#      surface, so anything landing there is a deliberate act. Git runs this
-#      hook once per push URL, so origin's GitHub and Gitea URLs are gated
-#      independently: one push publishes a branch to the internal Gitea backup
-#      and is refused for GitHub. Publishing a branch anyway is a conscious
-#      opt-in, TYMESLOT_PUBLISH=1, never --no-verify (which would also skip the
-#      compile gate below).
-#   2. Compile with warnings-as-errors before publishing, but only when the
-#      outgoing commits actually touch Elixir code. Docs-only pushes go straight
-#      through. CI remains the authoritative gate; this is the fast local safety
-#      net.
+#   1. Keep private work off the public remote. GitHub takes main and vX.Y.Z
+#      release tags only; every other branch stays private, with no opt-in.
+#      Git runs this hook once per push URL, so origin's GitHub and Gitea URLs
+#      are gated independently: one push backs a branch up to the internal
+#      Gitea remote and is refused for GitHub.
+#   2. Compile with warnings-as-errors before publishing to GitHub, but only
+#      when the outgoing commits actually touch Elixir code. Docs-only pushes go
+#      straight through. Gitea pushes skip it: they are backups and must always
+#      land, broken work in progress included. CI remains the authoritative
+#      gate; this is the fast local safety net.
 #
 # The sibling repository carries a byte-identical copy of this hook. Each repo
 # must be self-contained (Core is cloned standalone by contributors, so it
 # cannot source a shared file from the workspace root), so keep the two in sync
-# by hand when editing either. The publication guard is inert in the SaaS repo,
-# which is internal and has no public remote; that is deliberate, so the copies
-# stay identical.
+# by hand when editing either. Both jobs are inert in the SaaS repo, which is
+# internal and has no public remote; that is deliberate, so the copies stay
+# identical.
 set -euo pipefail
 
 remote_name="${1:-}"
@@ -37,9 +35,8 @@ esac
 refs=$(cat)
 
 if [ "$is_public" -eq 1 ]; then
-  # main and release tags are the repo's published history by definition and
-  # need no opt-in; everything else is private work until someone says
-  # otherwise.
+  # main and release tags are the repo's published history; everything else
+  # is private work and never reaches the public remote.
   private=()
   while read -r _local_ref local_sha remote_ref _remote_sha; do
     [ -z "${remote_ref:-}" ] && continue
@@ -55,22 +52,17 @@ if [ "$is_public" -eq 1 ]; then
   done <<<"$refs"
 
   if [ "${#private[@]}" -gt 0 ]; then
-    if [ "${TYMESLOT_PUBLISH:-0}" = "1" ]; then
-      echo "pre-push: TYMESLOT_PUBLISH=1, publishing to $remote_url:" >&2
-      printf 'pre-push:   %s\n' "${private[@]}" >&2
-      echo "pre-push: these refs become public and stay in the public history." >&2
-    else
-      echo "pre-push: refusing to publish private work to $remote_url." >&2
-      echo "pre-push: branches are private work in progress until they merge; the public repo takes main and vX.Y.Z tags without asking." >&2
-      printf 'pre-push:   %s\n' "${private[@]}" >&2
-      echo "pre-push: only the public half is refused. Git continues to this remote's other push URLs," >&2
-      echo "pre-push: so on Core's origin the internal Gitea backup still receives these refs from this" >&2
-      echo "pre-push: same command, and the non-zero exit reports the public half alone." >&2
-      echo "pre-push: to publish them on purpose: TYMESLOT_PUBLISH=1 git push origin <branch>" >&2
-      exit 1
-    fi
+    echo "pre-push: refusing to push to $remote_url; the public repo takes main and vX.Y.Z tags only:" >&2
+    printf 'pre-push:   %s\n' "${private[@]}" >&2
+    echo "pre-push: only the public half is refused. Git continues to this remote's other push URLs," >&2
+    echo "pre-push: so on Core's origin the internal Gitea backup still receives these refs from this" >&2
+    echo "pre-push: same command, and the non-zero exit reports the public half alone." >&2
+    exit 1
   fi
 fi
+
+# Everything below guards publication only; internal remotes take any push.
+[ "$is_public" -eq 1 ] || exit 0
 
 while read -r _local_ref local_sha _remote_ref remote_sha; do
   [ -z "${local_sha:-}" ] && continue
