@@ -18,6 +18,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   # repeat a send it already made.
   @action_handlers %{
     "send_admin_alert" => {AdminEmails, :handle_admin_alert},
+    "send_admin_alert_digest" => {AdminEmails, :handle_admin_alert_digest},
     "send_confirmation_emails" => {MeetingEmails, :handle_confirmation_emails},
     "send_cancellation_emails" => {MeetingEmails, :handle_cancellation_emails, :with_job_id},
     "send_reminder_emails" => {MeetingEmails, :handle_reminder_emails},

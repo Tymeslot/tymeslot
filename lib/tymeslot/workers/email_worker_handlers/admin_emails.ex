@@ -1,6 +1,6 @@
 defmodule Tymeslot.Workers.EmailWorkerHandlers.AdminEmails do
   @moduledoc """
-  Handles admin alert email actions.
+  Handles admin alert email actions: a single alert and the daily digest.
   """
 
   require Logger
@@ -41,6 +41,26 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AdminEmails do
         )
 
         DeliveryOutcome.from_error(reason, "Failed to deliver admin alert")
+    end
+  end
+
+  @spec handle_admin_alert_digest(%{String.t() => term()}) :: :ok | {:error, term()}
+  def handle_admin_alert_digest(%{"recipient" => recipient} = args) do
+    digest = Map.take(args, ["entries", "omitted", "deployment"])
+
+    case Config.email_service_module().send_admin_alert_digest(recipient, digest) do
+      {:ok, _result} ->
+        Logger.info("Admin alert digest email delivered",
+          entries: length(Map.get(digest, "entries", [])),
+          recipient: recipient
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to deliver admin alert digest email", error: inspect(reason))
+
+        DeliveryOutcome.from_error(reason, "Failed to deliver admin alert digest")
     end
   end
 

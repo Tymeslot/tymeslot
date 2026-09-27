@@ -44,6 +44,9 @@ defmodule Tymeslot.Workers.EmailWorker do
   @headroom_deadlines 1
   # 1 second base for exponential backoff
   @backoff_base_ms 1_000
+  # The actions that deliver admin alerts (`AdminAlertScheduler.actions/0`),
+  # as a literal for use in guards.
+  @admin_alert_actions ["send_admin_alert", "send_admin_alert_digest"]
 
   @doc """
   Performs the email job based on the action specified in the args.
@@ -174,11 +177,13 @@ defmodule Tymeslot.Workers.EmailWorker do
     end
   end
 
-  # An admin alert is the one email where a duplicate costs nothing and a
-  # loss costs the operator the incident. An SMTP outage often shows as a
-  # hang rather than a refusal, so a discard here would defeat the long retry
-  # schedule `AdminAlertScheduler` gives the alert: retry instead.
-  defp handle_timeout("send_admin_alert" = action, timeout_ms, job) do
+  # An admin alert, or the daily digest of them, is the one email where a
+  # duplicate costs nothing and a loss costs the operator the incident. An
+  # SMTP outage often shows as a hang rather than a refusal, so a discard here
+  # would defeat the long retry schedule `AdminAlertScheduler` gives the
+  # alert: retry instead.
+  defp handle_timeout(action, timeout_ms, job)
+       when action in @admin_alert_actions do
     Logger.warning("Admin alert email timed out; retrying",
       action: action,
       timeout_ms: timeout_ms,
@@ -214,11 +219,12 @@ defmodule Tymeslot.Workers.EmailWorker do
     round(min(@backoff_base_ms * :math.pow(2, attempt - 1), 16_000))
   end
 
-  # Admin alerts retry on their own, much longer schedule; see
-  # `AdminAlertScheduler` for why.
+  # Admin alerts and their daily digest retry on their own, much longer
+  # schedule; see `AdminAlertScheduler` for why.
   @impl Oban.Worker
-  def backoff(%Oban.Job{args: %{"action" => "send_admin_alert"}} = job),
-    do: AdminAlertScheduler.backoff(job)
+  def backoff(%Oban.Job{args: %{"action" => action}} = job)
+      when action in @admin_alert_actions,
+      do: AdminAlertScheduler.backoff(job)
 
   def backoff(%Oban.Job{attempt: attempt}) do
     # convert ms to seconds for Oban backoff

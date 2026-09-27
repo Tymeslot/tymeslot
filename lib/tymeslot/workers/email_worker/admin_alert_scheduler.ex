@@ -45,6 +45,9 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
   @backoff_base_seconds 60
   @backoff_cap_seconds 3_600
 
+  @alert_action "send_admin_alert"
+  @digest_action "send_admin_alert_digest"
+
   @doc """
   Builds the args map for an admin alert job, including the SHA-256 dedup hash.
 
@@ -65,13 +68,13 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
     dedup_key = Keyword.get(opts, :dedup_key) || message
 
     %{
-      "action" => "send_admin_alert",
+      "action" => @alert_action,
       "recipient" => recipient,
       "category" => category,
       "severity" => to_string(severity),
       "message" => message,
       "metadata" => serialize_metadata(metadata),
-      "alert_hash" => compute_alert_hash(category, dedup_key)
+      "alert_hash" => alert_hash(category, dedup_key)
     }
   end
 
@@ -162,13 +165,57 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
     {:error, "Failed to schedule job"}
   end
 
-  defp compute_alert_hash(category, message) do
-    "#{category}:#{message}"
+  @doc """
+  Inserts the daily digest of info-severity admin alerts as one email job.
+
+  No uniqueness: the digest's entries are deleted as it is handed off, so a
+  second digest can only carry alerts the first did not. It retries on the
+  same long schedule as an alert email.
+  """
+  @spec schedule_digest(recipient :: String.t(), digest :: map()) :: :ok | {:error, term()}
+  def schedule_digest(recipient, digest) do
+    result =
+      digest
+      |> Map.merge(%{"action" => @digest_action, "recipient" => recipient})
+      |> EmailWorker.new(queue: :emails, priority: 3, max_attempts: @max_attempts)
+      |> Oban.insert()
+
+    case result do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule admin alert digest email", error: inspect(reason))
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  The email worker actions that deliver admin alerts: an alert email and the
+  daily digest. They share the long retry schedule, and a failure of either
+  must not raise an alert that would travel the same broken path.
+  """
+  @spec actions() :: [String.t()]
+  def actions, do: [@alert_action, @digest_action]
+
+  @doc """
+  The SHA-256 dedup hash of an alert: its category plus its dedup key. Keys
+  both the alert email's uniqueness and the digest entry an info alert
+  collapses into.
+  """
+  @spec alert_hash(String.t(), String.t()) :: String.t()
+  def alert_hash(category, dedup_key) do
+    "#{category}:#{dedup_key}"
     |> then(&:crypto.hash(:sha256, &1))
     |> Base.encode16()
   end
 
-  defp serialize_metadata(metadata) when is_map(metadata) do
+  @doc """
+  Converts alert metadata to JSON-safe values with string keys, as stored in
+  job args and digest entries. Anything without a JSON form is `inspect`ed.
+  """
+  @spec serialize_metadata(map()) :: map()
+  def serialize_metadata(metadata) when is_map(metadata) do
     Map.new(metadata, fn {k, v} -> {to_string(k), serialize_value(v)} end)
   end
 

@@ -2,9 +2,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   @moduledoc """
   Default implementation of `Tymeslot.Infrastructure.AdminAlerts`.
 
-  Always logs the alert at the registry-defined severity. Additionally enqueues
-  an admin alert email via `Tymeslot.Workers.EmailWorker` when **all** of the
-  following are true:
+  Always logs the alert at the registry-defined severity. Additionally delivers
+  it when **all** of the following are true:
 
     1. `:admin_alerts_enabled` is `true`
     2. `:admin_alert_email` is configured to a valid email address
@@ -12,7 +11,12 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
     4. The Oban uniqueness constraint allows the job (i.e. an identical alert
        has not been enqueued within the last 24 hours)
 
-  The headline, the logged metadata and the job's metadata are all built from
+  Warnings and errors are delivered as an admin alert email via
+  `Tymeslot.Workers.EmailWorker` at once. Info alerts are recorded for the
+  daily digest instead (`Tymeslot.Infrastructure.AdminAlerts.Digest`), where
+  the same dedup key collapses repeats into one counted entry.
+
+  The headline, the logged metadata and the delivered metadata are all built from
   a `PIIScrubber`-scrubbed copy of the caller's metadata; only the dedup key is
   derived from the raw values, and it is persisted as a hash.
 
@@ -28,7 +32,9 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.AdminAlerts.AlertTypes
+  alias Tymeslot.Infrastructure.AdminAlerts.Digest
   alias Tymeslot.Infrastructure.AdminAlerts.PIIScrubber
+  alias Tymeslot.Workers.EmailWorker.AdminAlertScheduler
   alias TymeslotWeb.Endpoint
 
   @impl Tymeslot.Infrastructure.AdminAlerts
@@ -59,7 +65,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
         # ("owner@" and "olivia@" both become "o***@"), which would drop the
         # second alert. The key only ever leaves as a SHA-256 hash.
         dedup_key = AlertTypes.dedup_key(type, metadata)
-        maybe_enqueue_email(category, severity, message, scrubbed_metadata, dedup_key)
+        alert = {type, category, severity, message, scrubbed_metadata, dedup_key}
+        with_valid_recipient(category, &deliver(alert, &1))
 
       true ->
         :noop
@@ -76,13 +83,14 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   # the undeliverable email is skipped.
   #
   # An error raised while delivering an admin alert email is one: its alert
-  # would travel the same broken delivery path. Only the admin alert action
-  # counts; an error in any other email the worker sends is alerted as usual.
+  # would travel the same broken delivery path, and so is one raised while
+  # delivering the daily digest. Only those two actions count; an error in any
+  # other email the worker sends is alerted as usual.
   # `ErrorTracking.Alerter` carries the job's worker and action from the
   # occurrence context.
-  defp self_referential?(type, %{job_worker: worker, job_action: "send_admin_alert"})
+  defp self_referential?(type, %{job_worker: worker, job_action: action})
        when type in [:new_error, :error_regression],
-       do: worker == email_worker_name()
+       do: worker == email_worker_name() and action in AdminAlertScheduler.actions()
 
   # A rejected recipient alert about the admin-alert email itself (e.g. the
   # configured `:admin_alert_email` bounces) would otherwise re-enqueue
@@ -90,8 +98,9 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   # raising another alert — the exact feedback loop this function exists to
   # break. `TransactionalEmailDelivery`/`EmailWorker` tag every
   # `:recipient_email_rejected` report with the job's `action`, and
-  # `"send_admin_alert"` is the action `AdminAlertScheduler` uses exclusively.
-  defp self_referential?(:recipient_email_rejected, %{action: "send_admin_alert"}), do: true
+  # `AdminAlertScheduler.actions/0` are used by admin alert emails alone.
+  defp self_referential?(:recipient_email_rejected, %{action: action}),
+    do: action in AdminAlertScheduler.actions()
 
   defp self_referential?(_type, _metadata), do: false
 
@@ -101,25 +110,39 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   # without the `Elixir.` prefix.
   defp email_worker_name, do: inspect(Tymeslot.Workers.EmailWorker)
 
-  defp maybe_enqueue_email(category, severity, message, metadata, dedup_key) do
+  # The digest is gated exactly like an email: with no usable recipient the
+  # digest could never be sent, so nothing is recorded for it.
+  defp with_valid_recipient(category, fun) do
     recipient = AdminAlerts.recipient()
 
     if AdminAlerts.valid_email?(recipient) do
-      enriched = enrich_metadata(metadata)
-
-      EmailScheduler.schedule_admin_alert(recipient, category, severity, message, enriched,
-        dedup_key: dedup_key
-      )
+      fun.(recipient)
     else
       AdminAlerts.log_missing_recipient(category: category)
     end
   end
 
-  defp enrich_metadata(metadata) do
-    Map.merge(metadata, deployment_context())
+  # Info alerts wait for the daily digest; the deployment context is added
+  # once to the digest rather than to every entry.
+  defp deliver({type, category, :info, message, metadata, dedup_key}, _recipient) do
+    Digest.record(type, category, message, metadata, dedup_key)
   end
 
-  defp deployment_context do
+  defp deliver({_type, category, severity, message, metadata, dedup_key}, recipient) do
+    enriched = Map.merge(metadata, deployment_context())
+
+    EmailScheduler.schedule_admin_alert(recipient, category, severity, message, enriched,
+      dedup_key: dedup_key
+    )
+  end
+
+  @doc """
+  The deployment an alert comes from: `tymeslot_version`, `deployment_type`,
+  `domain`, `hostname` and `timestamp`. Added to every alert email, and once
+  to each digest.
+  """
+  @spec deployment_context() :: map()
+  def deployment_context do
     %{
       tymeslot_version: tymeslot_version(),
       deployment_type: System.get_env("DEPLOYMENT_TYPE") || "unknown",

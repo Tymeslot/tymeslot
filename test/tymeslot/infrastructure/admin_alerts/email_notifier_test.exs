@@ -112,10 +112,10 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
 
     test "enqueued job carries the registry severity as a string" do
       assert :ok =
-               AdminAlerts.send_alert(:refund_processed, %{user_id: 7, total_refunded: 100})
+               AdminAlerts.send_alert(:dispute_lost, %{dispute_id: "dp_sev", user_id: 7})
 
       [job] = all_enqueued(worker: EmailWorker)
-      assert job.args["severity"] == "info"
+      assert job.args["severity"] == "error"
     end
 
     test "metadata is enriched with deployment context" do
