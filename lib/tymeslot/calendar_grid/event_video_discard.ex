@@ -41,10 +41,11 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscard do
   does every occurrence of a series; deleting or re-linking one of them must
   not take the meeting from the others.
 
-  A recorded room is kept the same way when another cached event of its
-  calendar still carries its link (`EventVideoRooms.link_holder/2`): a
-  series' room is recorded for the whole series, so giving one occurrence
-  another video, or none, leaves it to the rest.
+  A recorded room is kept the same way when another cached event of the
+  organiser's calendars still carries its link
+  (`EventVideoRooms.link_holder/3`): a series' room is recorded for the
+  whole series, so giving one occurrence another video, or none, leaves it
+  to the rest.
   """
 
   require Logger
@@ -74,7 +75,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscard do
       when is_integer(video_integration_id) and is_tuple(ref) do
     case recorded(event, video_integration_id, ref) do
       [] -> discard_unrecorded(user_id, event, video_integration_id, ref)
-      rooms -> discard_recorded(rooms, event, video_integration_id, ref)
+      rooms -> discard_recorded(user_id, rooms, event, video_integration_id, ref)
     end
   end
 
@@ -112,8 +113,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscard do
 
   # A recorded room known by its link can be one a whole series shares, which
   # its other occurrences keep when one of them is given another video.
-  defp discard_recorded(rooms, event, video_integration_id, {:link, link}) do
-    if EventVideoRooms.link_holder(event, [link]) do
+  defp discard_recorded(user_id, rooms, event, video_integration_id, {:link, link}) do
+    if EventVideoRooms.link_holder(user_id, event, [link]) do
       Logger.info("Video room left in place: another calendar event still uses it",
         video_integration_id: video_integration_id,
         room_ref: Redactor.fingerprint(link)
@@ -123,7 +124,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscard do
     end
   end
 
-  defp discard_recorded(rooms, _event, _video_integration_id, {:id, _room_id}),
+  defp discard_recorded(_user_id, rooms, _event, _video_integration_id, {:id, _room_id}),
     do: EventVideoRooms.discard(rooms)
 
   defp discard_unrecorded(user_id, event, video_integration_id, {:link, link} = ref) do

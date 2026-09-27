@@ -313,6 +313,84 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
     end
   end
 
+  describe "deleting the later half of a split series whose earlier half moved" do
+    @moved_link "https://cloud.example.com/call/room-review"
+
+    # The earlier half, `head-master`, was moved to a second Google account
+    # after the split, keeping its occurrences' Talk link; the room stayed
+    # with the later half, `tail-master`, on the first.
+    setup %{user: user} do
+      first = insert(:calendar_integration, user: user, provider: "google")
+      second = insert(:calendar_integration, user: user, provider: "google")
+      talk = insert(:video_integration, user: user, provider: "nextcloud_talk", is_active: true)
+
+      day = Calendar.strftime(Date.utc_today(), "%Y%m%d")
+
+      video = %{
+        description: "Agenda\n\nJoin video call: #{@moved_link}",
+        video_link: @moved_link,
+        video_integration_id: talk.id
+      }
+
+      _head =
+        insert_event(
+          second,
+          "head-master"
+          |> google_occurrence("#{day}T090000Z", ~T[09:00:00])
+          |> Map.merge(video)
+          |> Map.put(:provider_calendar_id, "second-primary")
+        )
+
+      tail =
+        insert_event(
+          first,
+          "tail-master" |> google_occurrence("#{day}T140000Z", ~T[14:00:00]) |> Map.merge(video)
+        )
+
+      {:ok, room} =
+        EventVideoRoomQueries.insert(%{
+          user_id: user.id,
+          video_integration_id: talk.id,
+          provider: "nextcloud_talk",
+          calendar_integration_id: first.id,
+          event_uid: "tail-master@google.com",
+          provider_event_id: "tail-master",
+          room_id: "room-review",
+          lobby_opens_at: tail.start_at,
+          ends_at: DateTime.add(tail.end_at, 90, :day)
+        })
+
+      %{second: second, tail: tail, room: room}
+    end
+
+    test "keeps the video room and hands it to the moved half", %{
+      conn: conn,
+      second: second,
+      tail: tail,
+      room: room
+    } do
+      stub_delete(:ok)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      request_delete(lv, tail)
+      confirm_scope(lv, "series")
+
+      assert {:delete, _uid, _context, opts} = await_delete(lv)
+      assert opts[:provider_event_id] == "tail-master"
+
+      refute_enqueued(worker: VideoSyncWorker, args: %{"event_room_id" => room.id})
+
+      assert %{
+               calendar_integration_id: second_id,
+               event_uid: "head-master@google.com",
+               provider_event_id: "head-master",
+               provider_calendar_id: "second-primary"
+             } = Repo.reload(room)
+
+      assert second_id == second.id
+    end
+  end
+
   describe "deleting an event that is not in a series" do
     test "confirms without asking for a scope", %{conn: conn, integration: integration} do
       event = insert_event(integration)
