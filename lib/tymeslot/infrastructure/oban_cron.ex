@@ -15,6 +15,8 @@ defmodule Tymeslot.Infrastructure.ObanCron do
   service outright. Only the first two can carry a crontab of ours.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   require Logger
 
   @critical_workers [
@@ -55,7 +57,7 @@ defmodule Tymeslot.Infrastructure.ObanCron do
       accumulation and queue problems going unreported. Add
       `cron: [crontab: [...]]` to the Oban config with the required jobs.
       """,
-      critical_workers: inspect(@critical_workers)
+      critical_workers: LogFormat.reason(@critical_workers)
     )
   end
 

@@ -8,6 +8,7 @@ defmodule Tymeslot.Dashboard.DashboardContext do
 
   alias Tymeslot.Agenda
   alias Tymeslot.Infrastructure.DashboardCache
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.BookingEligibility
   alias Tymeslot.Integrations.CalendarManagement
@@ -56,7 +57,7 @@ defmodule Tymeslot.Dashboard.DashboardContext do
         # If cache computation fails, return empty default to maintain contract
         Logger.warning("Failed to get integration status from cache",
           user_id: user_id,
-          reason: inspect(error_reason)
+          reason: LogFormat.reason(error_reason)
         )
 
         default_integration_status()

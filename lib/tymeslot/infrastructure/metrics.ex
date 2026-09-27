@@ -7,6 +7,7 @@ defmodule Tymeslot.Infrastructure.Metrics do
   require Logger
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
 
   @doc """
@@ -330,7 +331,7 @@ defmodule Tymeslot.Infrastructure.Metrics do
       # Telemetry detaches a handler that raises, which would silence every
       # later state change until the next restart.
       Logger.error("Circuit breaker state change handler failed",
-        error: inspect(exception.__struct__)
+        error: LogFormat.reason(exception.__struct__)
       )
 
       :ok

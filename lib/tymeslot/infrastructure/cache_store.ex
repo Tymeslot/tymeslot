@@ -20,6 +20,8 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   leaving the coalescing that ships exercised by almost nothing.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   require Logger
 
   @typedoc """
@@ -287,7 +289,7 @@ defmodule Tymeslot.Infrastructure.CacheStore do
       {:raised, exception, stacktrace} ->
         Logger.warning("Cache computation raised an exception",
           table: table_name,
-          key: inspect(key),
+          key: LogFormat.reason(key),
           exception: Exception.message(exception)
         )
 
@@ -300,9 +302,9 @@ defmodule Tymeslot.Infrastructure.CacheStore do
       {:caught, kind, reason, stacktrace} ->
         Logger.warning("Cache computation failed",
           table: table_name,
-          key: inspect(key),
+          key: LogFormat.reason(key),
           kind: kind,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         Logger.debug("Cache computation stacktrace",

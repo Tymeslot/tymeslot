@@ -26,6 +26,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
   require Logger
 
   alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Integrations.Video
@@ -351,7 +352,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
       {:error, reason} = error ->
         Logger.error("Failed to create video room",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         error
@@ -478,7 +479,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
     Logger.error("Failed to create secure join URL",
       room_ref: room_ref,
       role: role,
-      error: inspect(error)
+      error: LogFormat.reason(error)
     )
 
     case UrlValidation.validate_http_url(meeting_url) do

@@ -7,6 +7,7 @@ defmodule Tymeslot.Notifications.Events do
   require Logger
 
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Slack.Dispatcher, as: SlackDispatcher
@@ -277,7 +278,7 @@ defmodule Tymeslot.Notifications.Events do
       {:error, reason} ->
         Logger.warning("Failed to cancel reminder jobs",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok
@@ -295,7 +296,7 @@ defmodule Tymeslot.Notifications.Events do
       {:error, reason} ->
         Logger.warning("Failed to schedule reminder jobs",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok

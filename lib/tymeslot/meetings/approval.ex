@@ -82,6 +82,7 @@ defmodule Tymeslot.Meetings.Approval do
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
@@ -446,7 +447,7 @@ defmodule Tymeslot.Meetings.Approval do
       {:error, reason} ->
         Logger.error("Failed to schedule calendar update after approval",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok
@@ -500,7 +501,7 @@ defmodule Tymeslot.Meetings.Approval do
       {:error, reason} ->
         Logger.warning("Failed to enqueue provider video deletion on request release",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok

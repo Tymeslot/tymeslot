@@ -7,6 +7,7 @@ defmodule Tymeslot.Meetings.CalendarEventCache do
 
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Meetings.CalendarEventLink
@@ -72,7 +73,7 @@ defmodule Tymeslot.Meetings.CalendarEventCache do
   defp log_write_through_failure(meeting, reason) do
     Logger.warning("Failed to write through outbound calendar update to local cache",
       meeting_id: meeting.id,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     :ok

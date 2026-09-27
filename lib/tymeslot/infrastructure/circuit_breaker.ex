@@ -36,6 +36,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   require Logger
   alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Metrics
 
   @typedoc """
@@ -179,7 +180,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       Logger.error("Circuit breaker caught a non-local exit",
         name: breaker_name,
         kind: kind,
-        reason: inspect(reason)
+        reason: LogFormat.reason(reason)
       )
 
       GenServer.cast(breaker_name, {:record_outcome, :ignore, nil})
@@ -446,7 +447,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   defp normalize_outcome(other) do
     Logger.warning(
       "Circuit breaker classifier returned an unrecognised outcome, treating as :ignore",
-      outcome: inspect(other)
+      outcome: LogFormat.reason(other)
     )
 
     :ignore
@@ -548,7 +549,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
     # caller, but a stray message must not take the breaker down with it.
     Logger.debug("Circuit breaker received unexpected message",
       name: state.name,
-      message: inspect(msg)
+      message: LogFormat.reason(msg)
     )
 
     {:noreply, state, state.idle_timeout}

@@ -27,6 +27,8 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ClientError do
   answers `false`, which means "record it".
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   require Logger
 
   @request_prefixes ["request.", "live_view."]
@@ -75,7 +77,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ClientError do
     Logger.warning(
       "Could not tell whether an exception is a client error; treating it as a server error",
       exception: exception_name,
-      error: inspect(error.__struct__)
+      error: LogFormat.reason(error.__struct__)
     )
 
     false

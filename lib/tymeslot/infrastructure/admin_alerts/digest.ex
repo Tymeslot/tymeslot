@@ -34,6 +34,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.Digest do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.AdminAlerts.DigestEntryQueries
   alias Tymeslot.Infrastructure.AdminAlerts.EmailNotifier
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker.AdminAlertScheduler
 
@@ -61,7 +62,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.Digest do
       {:error, reason} ->
         Logger.error("Failed to record admin alert for the digest",
           category: category,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -121,7 +122,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.Digest do
 
       {:error, reason} ->
         Logger.error("Failed to hand off the admin alert digest; entries kept",
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}

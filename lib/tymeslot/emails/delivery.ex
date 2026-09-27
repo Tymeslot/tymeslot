@@ -10,6 +10,7 @@ defmodule Tymeslot.Emails.Delivery do
 
   alias Tymeslot.Infrastructure.CircuitBreaker
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Mailer
 
@@ -132,7 +133,7 @@ defmodule Tymeslot.Emails.Delivery do
     Logger.warning("Email permanently undeliverable — recipient rejected by the provider",
       to: email.to,
       subject: email.subject,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     {:error, {:recipient_rejected, reason}}
@@ -147,7 +148,7 @@ defmodule Tymeslot.Emails.Delivery do
     Logger.warning("Email delivery timed out; assuming delivered to avoid duplicate sends",
       to: email.to,
       subject: email.subject,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     {:ok, :assumed_delivered}

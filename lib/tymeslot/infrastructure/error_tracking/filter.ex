@@ -34,6 +34,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Filter do
   @behaviour ErrorTracker.Filter
 
   alias Tymeslot.Infrastructure.AdminAlerts.PIIScrubber
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.MetadataRedactor
   alias Tymeslot.Infrastructure.Logging.PathMasker
   alias Tymeslot.Infrastructure.Logging.Redactor
@@ -57,7 +58,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Filter do
   rescue
     exception ->
       Logger.warning("ErrorTracker context redaction failed; context discarded",
-        exception: inspect(exception.__struct__)
+        exception: LogFormat.reason(exception.__struct__)
       )
 
       @failed_context

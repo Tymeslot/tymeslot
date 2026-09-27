@@ -40,6 +40,7 @@ defmodule Tymeslot.Security.SecurityLogger do
   """
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
 
   require Logger
@@ -463,7 +464,7 @@ defmodule Tymeslot.Security.SecurityLogger do
   rescue
     error ->
       Logger.error("Exception sending security event to monitoring service",
-        error: inspect(error)
+        error: LogFormat.reason(error)
       )
   end
 end

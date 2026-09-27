@@ -57,6 +57,7 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   alias String.Chars
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.ErrorTracking.UnmatchedEvent
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
 
   require Logger
@@ -238,7 +239,7 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
       end
 
     Logger.warning("Client sent a LiveView event no handle_event/3 clause matches",
-      live_module: inspect(module),
+      live_module: LogFormat.reason(module),
       event: event,
       domain: @own_domain
     )
@@ -297,13 +298,13 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
           # Logged under our own domain, which attach/0's own_logs filter
           # drops, so a failing report never loops back into this handler.
           Logger.error("CrashReporter failed to record a crash",
-            error: inspect(exception.__struct__),
+            error: LogFormat.reason(exception.__struct__),
             domain: @own_domain
           )
       catch
         failure_kind, _failure ->
           Logger.error("CrashReporter failed to record a crash",
-            error: inspect(failure_kind),
+            error: LogFormat.reason(failure_kind),
             domain: @own_domain
           )
       end

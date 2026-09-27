@@ -12,6 +12,7 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
@@ -98,7 +99,7 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
         # `room_ref` instead.
         Logger.error("Failed to persist video room attachment",
           meeting_id: meeting.id,
-          reason: inspect(reason),
+          reason: LogFormat.reason(reason),
           orphaned_video_room_id: Map.get(video_room_attrs, :video_room_id),
           orphaned_meeting_url: Map.get(video_room_attrs, :meeting_url)
         )
@@ -115,7 +116,7 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
       {:error, reason} ->
         Logger.warning("Failed to schedule calendar update after video room attachment",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
   end
@@ -171,7 +172,7 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
         Logger.error("Failed to enqueue release of an unattached video room",
           meeting_id: meeting.id,
           orphaned_video_room_id: room_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
   end
@@ -194,7 +195,7 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
       {:error, changeset} ->
         Logger.error("Failed to update meeting with video room",
           meeting_id: meeting.id,
-          errors: inspect(changeset.errors)
+          errors: LogFormat.reason(changeset.errors)
         )
 
         {:error, :database_update_failed}

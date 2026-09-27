@@ -43,6 +43,7 @@ defmodule Tymeslot.AppSettings do
   alias Tymeslot.AppSettings.{AppSettingsQueries, AppSettingsSchema, Env}
   alias Tymeslot.AppSettings.LockoutPolicy
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Payments.Webhooks.SecretCheck
 
   @type setting_key ::
@@ -226,7 +227,7 @@ defmodule Tymeslot.AppSettings do
         error
 
       {:error, changeset} = error ->
-        Logger.warning("App settings update failed", errors: inspect(changeset.errors))
+        Logger.warning("App settings update failed", errors: LogFormat.reason(changeset.errors))
         error
     end
   end

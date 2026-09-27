@@ -46,6 +46,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscard do
 
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRooms
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Workers.VideoSyncWorker
@@ -157,7 +158,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoDiscard do
         Logger.warning("Failed to enqueue the delete of a video room a calendar event dropped",
           video_integration_id: video_integration_id,
           room_ref: room_ref,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
   end

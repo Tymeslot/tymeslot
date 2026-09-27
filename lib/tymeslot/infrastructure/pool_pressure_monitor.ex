@@ -37,6 +37,7 @@ defmodule Tymeslot.Infrastructure.PoolPressureMonitor do
   require Logger
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.Logging.LogFormat
 
   @default_threshold_ms 500
   @default_limit 20
@@ -186,8 +187,8 @@ defmodule Tymeslot.Infrastructure.PoolPressureMonitor do
   rescue
     exception ->
       Logger.warning("Pool pressure monitor cannot watch a repo",
-        repo: inspect(repo),
-        error: inspect(exception.__struct__)
+        repo: LogFormat.reason(repo),
+        error: LogFormat.reason(exception.__struct__)
       )
 
       []

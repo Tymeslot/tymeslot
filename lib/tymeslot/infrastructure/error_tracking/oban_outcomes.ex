@@ -57,6 +57,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   alias Tymeslot.Infrastructure.ErrorTracking.HandledError
   alias Tymeslot.Infrastructure.ErrorTracking.JobDiscardedError
   alias Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Jobs
 
   require Logger
@@ -179,7 +180,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   rescue
     exception ->
       Logger.error("Could not look up the workers of force-discarded jobs",
-        error: inspect(exception.__struct__)
+        error: LogFormat.reason(exception.__struct__)
       )
 
       %{}
@@ -216,7 +217,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   # A broken callback must not hide the outcome it was asked about.
   defp callback_failed(module, error) do
     Logger.error("Expected outcome check failed; recording the outcome",
-      worker: inspect(module),
+      worker: LogFormat.reason(module),
       error: error
     )
 

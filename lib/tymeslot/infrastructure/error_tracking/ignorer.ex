@@ -17,6 +17,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Ignorer do
 
   alias Tymeslot.Infrastructure.ErrorTracking.ClientError
   alias Tymeslot.Infrastructure.ErrorTracking.UnmatchedEvent
+  alias Tymeslot.Infrastructure.Logging.LogFormat
 
   require Logger
 
@@ -27,7 +28,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Ignorer do
   rescue
     exception ->
       Logger.warning("ErrorTracker ignorer failed; tracking the error",
-        exception: inspect(exception.__struct__)
+        exception: LogFormat.reason(exception.__struct__)
       )
 
       false

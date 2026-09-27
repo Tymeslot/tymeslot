@@ -16,6 +16,7 @@ defmodule Tymeslot.Webhooks do
   require Logger
 
   alias Tymeslot.Features
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Notifications.EventTypes
@@ -319,7 +320,7 @@ defmodule Tymeslot.Webhooks do
               Logger.warning("Failed to schedule webhook delivery",
                 webhook_id: webhook.id,
                 event_type: event_type,
-                reason: inspect(reason)
+                reason: LogFormat.reason(reason)
               )
           end
         end)

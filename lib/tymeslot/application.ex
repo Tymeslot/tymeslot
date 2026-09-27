@@ -31,7 +31,7 @@ defmodule Tymeslot.Application do
   alias Tymeslot.Infrastructure.ErrorTracking.Alerter, as: ErrorAlerter
   alias Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes
   alias Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber
-  alias Tymeslot.Infrastructure.Logging.{FileSink, MetadataRedactor}
+  alias Tymeslot.Infrastructure.Logging.{FileSink, LogFormat, MetadataRedactor}
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Integrations.{HealthCheck, Telemetry}
   alias Tymeslot.Integrations.Shared.Lock
@@ -177,7 +177,7 @@ defmodule Tymeslot.Application do
 
     case Supervisor.start_link(children, opts) do
       {:ok, pid} ->
-        Logger.info("Tymeslot application started successfully", pid: inspect(pid))
+        Logger.info("Tymeslot application started successfully", pid: LogFormat.reason(pid))
 
         # Apply DB-backed admin overrides on top of config-layer values.
         # Must run after Repo is started; safe in test mode (the singleton row
@@ -209,7 +209,7 @@ defmodule Tymeslot.Application do
         {:ok, pid}
 
       {:error, reason} = error ->
-        Logger.error("Failed to start Tymeslot application", reason: inspect(reason))
+        Logger.error("Failed to start Tymeslot application", reason: LogFormat.reason(reason))
         error
     end
   end
@@ -420,8 +420,8 @@ defmodule Tymeslot.Application do
   @impl Application
   def config_change(changed, _new, removed) do
     Logger.info("Application configuration changed",
-      changed: inspect(changed),
-      removed: inspect(removed)
+      changed: LogFormat.reason(changed),
+      removed: LogFormat.reason(removed)
     )
 
     Endpoint.config_change(changed, removed)
@@ -468,7 +468,7 @@ defmodule Tymeslot.Application do
       {:error, reason} ->
         Logger.error("Failed to schedule post-startup task",
           task: name,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
   end

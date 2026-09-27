@@ -37,6 +37,8 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   require Logger
   alias Req.{Request, Response}
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   alias Tymeslot.Infrastructure.{
     CorrelationId,
     FinchPool,
@@ -340,7 +342,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
       {:error, reason} ->
         Logger.warning("Blocked outbound request by SSRF protection",
           url: log_safe_origin(url),
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:error, %SsrfBlockedError{url: url, reason: reason}}

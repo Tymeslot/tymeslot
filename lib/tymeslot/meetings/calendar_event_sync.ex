@@ -29,6 +29,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   alias Ecto.UUID
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Meetings.CalendarEventCache
@@ -463,7 +464,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       other ->
         Logger.error("Failed to delete orphaned calendar event after persistence failure",
           meeting_id: meeting.id,
-          result: inspect(other)
+          result: LogFormat.reason(other)
         )
 
         :ok
@@ -515,7 +516,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       {:error, reason} ->
         Logger.warning("Failed to send calendar sync error notification",
           meeting_id: meeting.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
     end
   end
@@ -552,7 +553,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       {:error, changeset} ->
         Logger.error("Failed to persist calendar mapping",
           meeting_id: meeting.id,
-          error: inspect(changeset.errors)
+          error: LogFormat.reason(changeset.errors)
         )
 
         {:error, :calendar_mapping_persistence_failed}

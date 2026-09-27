@@ -31,6 +31,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
   alias Tymeslot.CalendarGrid.EventVideo
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
@@ -453,7 +454,7 @@ defmodule Tymeslot.CalendarGrid.EventCreation do
         Logger.warning("Failed to provision video room for new event",
           user_id: user_id,
           video_integration_id: integration_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         %{}

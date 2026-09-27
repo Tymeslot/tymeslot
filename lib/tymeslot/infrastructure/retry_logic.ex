@@ -14,6 +14,7 @@ defmodule Tymeslot.Infrastructure.RetryLogic do
   - Selective retry based on error types
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
 
   require Logger
@@ -191,7 +192,7 @@ defmodule Tymeslot.Infrastructure.RetryLogic do
         attempt: attempt + 1,
         max_retries: max_retries,
         delay_ms: delay,
-        error: inspect(reason)
+        error: LogFormat.reason(reason)
       )
 
       Process.sleep(delay)
@@ -200,7 +201,7 @@ defmodule Tymeslot.Infrastructure.RetryLogic do
       if attempt > 0 do
         Logger.error("Retry exhausted",
           attempts: attempt + 1,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
       end
 

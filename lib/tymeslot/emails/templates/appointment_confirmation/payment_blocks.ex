@@ -26,6 +26,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
   """
 
   alias Tymeslot.Emails.Shared.{Formatting, Sanitise, Stack, Styles, Text}
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
 
   require Logger
@@ -299,7 +300,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation.PaymentBlocks do
       {:error, reason} ->
         Logger.warning("Failed to fetch Stripe receipt URL for confirmation email",
           charge_id: charge_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         nil

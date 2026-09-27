@@ -15,6 +15,8 @@ defmodule Tymeslot.Mailer.SmtpProbe do
 
   @compile {:no_warn_undefined, CAStore}
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   require Logger
 
   @dns_timeout_ms 3_000
@@ -41,7 +43,7 @@ defmodule Tymeslot.Mailer.SmtpProbe do
         Logger.error("✗ SMTP connection test failed",
           host: host_string,
           port: port,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:error, format_connection_error(reason, host_string, port)}

@@ -34,6 +34,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Alerter do
   alias ErrorTracker.Occurrence
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber
+  alias Tymeslot.Infrastructure.Logging.LogFormat
 
   require Logger
 
@@ -83,13 +84,16 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.Alerter do
   rescue
     exception ->
       Logger.error("Error tracking alerter failed to raise an alert",
-        error: inspect(exception.__struct__)
+        error: LogFormat.reason(exception.__struct__)
       )
 
       :ok
   catch
     kind, _reason ->
-      Logger.error("Error tracking alerter failed to raise an alert", error: inspect(kind))
+      Logger.error("Error tracking alerter failed to raise an alert",
+        error: LogFormat.reason(kind)
+      )
+
       :ok
   end
 

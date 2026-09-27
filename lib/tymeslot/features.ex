@@ -8,6 +8,7 @@ defmodule Tymeslot.Features do
   require Logger
 
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
 
   @type access_error ::
           :insufficient_plan
@@ -47,7 +48,7 @@ defmodule Tymeslot.Features do
           Logger.warning("Feature access checker returned error",
             user_id: user_id,
             feature: feature,
-            reason: inspect(reason)
+            reason: LogFormat.reason(reason)
           )
 
           {:error, :feature_access_checker_failed}
@@ -56,7 +57,7 @@ defmodule Tymeslot.Features do
           Logger.warning("Feature access checker returned unexpected value",
             user_id: user_id,
             feature: feature,
-            result: inspect(other)
+            result: LogFormat.reason(other)
           )
 
           {:error, :feature_access_checker_failed}

@@ -22,6 +22,7 @@ defmodule Tymeslot.Infrastructure.Logging.FileSink do
 
   alias LoggerJSON.Formatters.Basic, as: BasicFormatter
   alias Tymeslot.Infrastructure.DeploymentType
+  alias Tymeslot.Infrastructure.Logging.LogFormat
 
   @handler_id :tymeslot_file_sink
 
@@ -79,7 +80,7 @@ defmodule Tymeslot.Infrastructure.Logging.FileSink do
       {:error, reason} = error ->
         Logger.warning("File log sink disabled: cannot create log directory",
           path: dir,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         error
@@ -115,7 +116,7 @@ defmodule Tymeslot.Infrastructure.Logging.FileSink do
         :ok
 
       {:error, reason} = error ->
-        Logger.warning("File log sink could not be installed", reason: inspect(reason))
+        Logger.warning("File log sink could not be installed", reason: LogFormat.reason(reason))
         error
     end
   end
