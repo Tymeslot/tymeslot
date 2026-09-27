@@ -1,8 +1,8 @@
 defmodule Tymeslot.Integrations.Calendar.CreationPrevalidationSkipTest do
   @moduledoc """
-  A CalDAV-family provider the operator has switched off is not in the
-  registry, so its connection probe cannot run and creation goes ahead
-  unprobed. That skip is logged rather than silent.
+  A CalDAV-family provider the operator has switched off has no enabled
+  provider to probe with, so creation goes ahead unprobed. That skip is
+  logged rather than silent.
   """
 
   # async: false: the provider toggle is global application env.
@@ -31,9 +31,22 @@ defmodule Tymeslot.Integrations.Calendar.CreationPrevalidationSkipTest do
 
     assert Creation.prevalidate_config(attrs) == {:ok, attrs}
 
-    event = LogCapture.await_log("Skipped the connection probe")
+    event =
+      LogCapture.await_log(
+        "Skipped the connection probe for a calendar provider that is switched off"
+      )
+
     assert event.level == :warning
     assert event.meta.provider == "zimbra"
     assert event.meta.user_id == 42
+  end
+
+  test "never logs a provider string outside the known CalDAV family" do
+    LogCapture.attach()
+
+    attrs = %{provider: String.duplicate("x", 10_000), user_id: 42}
+
+    assert Creation.prevalidate_config(attrs) == {:ok, attrs}
+    refute_receive {:captured_log, %{meta: %{provider: _provider}}}
   end
 end

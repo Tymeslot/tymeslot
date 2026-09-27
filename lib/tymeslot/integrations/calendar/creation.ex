@@ -487,11 +487,14 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
           {:error, %{discovery: message}}
       end
     else
-      # A CalDAV-family provider the operator has switched off is not in the
-      # registry, so there is nothing to probe with; creation goes ahead
-      # unprobed, as it always has, but no longer silently.
+      # A CalDAV-family provider the operator has switched off fails
+      # validation, so there is nothing to probe with; creation goes ahead
+      # unprobed, as it always has, but no longer silently. `provider` is one
+      # of the fixed CalDAV-family names (the clause's guard), never
+      # arbitrary input.
       {:error, _error} ->
-        Logger.warning("Skipped the connection probe for a calendar provider not in the registry",
+        Logger.warning(
+          "Skipped the connection probe for a calendar provider that is switched off",
           provider: provider,
           user_id: attrs[:user_id]
         )
