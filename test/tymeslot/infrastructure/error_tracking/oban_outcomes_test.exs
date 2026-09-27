@@ -14,7 +14,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomesTest do
   alias ErrorTracker.Error
   alias ExUnit.CaptureLog
   alias Oban.Engine
-  alias Tymeslot.Infrastructure.ErrorTracking.JobDiscarded
+  alias Tymeslot.Infrastructure.ErrorTracking.JobDiscardedError
   alias Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Repo
@@ -150,7 +150,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomesTest do
     test "has a discard recorded with its worker and reason" do
       assert {:discard, :x} = run("discard_atom", "x")
 
-      kind = Atom.to_string(JobDiscarded)
+      kind = Atom.to_string(JobDiscardedError)
       assert [%Error{kind: ^kind} = error] = errors()
       assert error.reason =~ inspect(OutcomeWorker)
       assert error.reason =~ "discarded the job: :x"

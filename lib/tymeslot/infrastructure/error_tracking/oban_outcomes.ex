@@ -12,7 +12,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
       reports that as `[:oban, :job, :stop]` with state `:discard` or
       `:cancelled`. This module records it through
       `Tymeslot.Infrastructure.ErrorTracking.report_error/3`, as a
-      `Tymeslot.Infrastructure.ErrorTracking.JobDiscarded`, unless the
+      `Tymeslot.Infrastructure.ErrorTracking.JobDiscardedError`, unless the
       worker declares the outcome expected (below). Because the integration
       ignores `:stop` and this module ignores `:exception`, no job outcome is
       recorded by both.
@@ -55,7 +55,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.ErrorTracking.HandledError
-  alias Tymeslot.Infrastructure.ErrorTracking.JobDiscarded
+  alias Tymeslot.Infrastructure.ErrorTracking.JobDiscardedError
   alias Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber
   alias Tymeslot.Jobs
 
@@ -224,7 +224,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   end
 
   defp record(worker, outcome, reason) do
-    exception = JobDiscarded.exception({worker, outcome, reason})
+    exception = JobDiscardedError.exception({worker, outcome, reason})
 
     ErrorTracking.report_error(exception, stacktrace(worker, outcome, reason), %{
       job_outcome: Atom.to_string(outcome),

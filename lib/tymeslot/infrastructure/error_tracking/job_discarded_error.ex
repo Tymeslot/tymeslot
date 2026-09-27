@@ -1,4 +1,4 @@
-defmodule Tymeslot.Infrastructure.ErrorTracking.JobDiscarded do
+defmodule Tymeslot.Infrastructure.ErrorTracking.JobDiscardedError do
   @moduledoc """
   Carries an Oban job that its worker gave up on, by returning
   `{:discard, reason}` or `{:cancel, reason}`, into ErrorTracker.
