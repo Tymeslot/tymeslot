@@ -178,24 +178,8 @@ defmodule Tymeslot.Application do
         # has all nils on a fresh test DB, so load!/0 is effectively a no-op).
         AppSettings.load!()
 
-        # Record every process crash ErrorTracker's integrations do not see
-        # (GenServers, Tasks, bare processes) in ErrorTracker. Attached only
-        # after the supervision tree is up, since the handler offloads to
-        # Tymeslot.TaskSupervisor. It reads ErrorTracker's `enabled` switch on
-        # every crash, so switching error tracking off stops it without a
-        # restart. Skipped in test, where deliberately crashed processes would
-        # otherwise be recorded; tests attach it explicitly.
         if Application.get_env(:tymeslot, :environment) != :test do
           check_deployment_config()
-
-          CrashReporter.attach()
-
-          # Record jobs a worker discards or cancels, and alert on jobs the
-          # Lifeline discards, neither of which ErrorTracker sees. Skipped
-          # in test for the same reason: every test job that discards on
-          # purpose would be reported. Tests attach it explicitly.
-          ObanOutcomes.attach()
-
           schedule_periodic_jobs()
           AdminBootstrap.warn_if_orphaned_install()
         end
@@ -223,6 +207,25 @@ defmodule Tymeslot.Application do
     # Mask email addresses and credentials in the exception messages
     # ErrorTracker stores, which its context Filter does not reach.
     ReasonScrubber.attach()
+
+    # Both skipped in test, where deliberately crashed processes and jobs
+    # that discard on purpose would otherwise be recorded; tests attach them
+    # explicitly.
+    if Application.get_env(:tymeslot, :environment) != :test do
+      # Record every process crash ErrorTracker's integrations do not see
+      # (GenServers, Tasks, bare processes). Attached before the supervision
+      # tree starts, so a child crashing on boot is recorded. The handler
+      # offloads to Tymeslot.TaskSupervisor, one of the first children and
+      # started after the Repo; a crash before that is dropped, never raised. It reads ErrorTracker's
+      # `enabled` switch on every crash, so switching error tracking off
+      # stops it without a restart.
+      CrashReporter.attach()
+
+      # Record jobs a worker discards or cancels, and alert on jobs the
+      # Lifeline discards. Oban starts inside the tree, so attaching first
+      # misses nothing.
+      ObanOutcomes.attach()
+    end
   end
 
   # Checks that read DB-backed settings, so they run after AppSettings.load!/0.
