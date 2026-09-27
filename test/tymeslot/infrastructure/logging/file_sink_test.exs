@@ -137,6 +137,10 @@ defmodule Tymeslot.Infrastructure.Logging.FileSinkTest do
     test "returns {:error, _} and leaves handler uninstalled when the cloudron default path directory cannot be created" do
       System.put_env("DEPLOYMENT_TYPE", "cloudron")
       System.delete_env("LOG_FILE_PATH")
+      # The real default, /app/data/logs, can be created on a machine whose
+      # /app/data is writable, so point the default somewhere that never is.
+      Application.put_env(:tymeslot, :cloudron_log_file_path, "/proc/impossible/app.log")
+      on_exit(fn -> Application.delete_env(:tymeslot, :cloudron_log_file_path) end)
 
       assert {:error, _reason} = FileSink.attach()
       assert {:error, {:not_found, _id}} = :logger.get_handler_config(FileSink.handler_id())

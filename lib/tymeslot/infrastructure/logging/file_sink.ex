@@ -64,7 +64,7 @@ defmodule Tymeslot.Infrastructure.Logging.FileSink do
 
   defp cloudron_default_path do
     if System.get_env("DEPLOYMENT_TYPE") == "cloudron" do
-      "/app/data/logs/app.log"
+      Application.get_env(:tymeslot, :cloudron_log_file_path, "/app/data/logs/app.log")
     end
   end
 
