@@ -49,9 +49,15 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
   since deleting it again would lose the move the organiser asked for, and
   the result says the original was left behind.
 
-  No family has a writer yet; each refuses with `:unsupported_scope`. A
-  writer can be handed to `move/4` as its `:writer` option, which is how the
-  steps after the write are exercised on their own.
+  The CalDAV family's writer copies the series' resource, the cached
+  document with its ETag or else the server's copy, under a fresh UID into
+  the destination collection, which must be one the destination integration
+  writes to, and then deletes the original under that ETag
+  (`CalendarEvents.move_caldav_series/4`). Each request goes out on its own
+  integration's client, so the two ends may be different servers. Google and
+  Outlook have no writer yet, and refuse with `:unsupported_scope`. A writer
+  can be handed to `move/4` as its `:writer` option, which is how the steps
+  after the write are exercised on their own.
 
   ## After the write
 
@@ -84,6 +90,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.SeriesEdit
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderConfig
 
   require Logger
@@ -180,7 +187,22 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
   end
 
   @spec write(family(), transfer()) :: {:ok, written()} | {:error, term()}
-  defp write(:caldav, _transfer), do: {:error, :unsupported_scope}
+  defp write(:caldav, %{address: {:resource, href}, stored: stored} = transfer) do
+    source = %{
+      integration_id: stored.calendar_integration_id,
+      href: href,
+      document: stored.raw_ical,
+      etag: stored.etag
+    }
+
+    destination = %{integration_id: transfer.integration.id, calendar_path: transfer.calendar_id}
+
+    with {:ok, moved} <- CalendarEvents.move_caldav_series(transfer.user_id, source, destination) do
+      {:ok,
+       %{uid: moved.uid, id: moved.href, calendar_id: moved.calendar_path, source: moved.source}}
+    end
+  end
+
   defp write(:google, _transfer), do: {:error, :unsupported_scope}
   defp write(:outlook, _transfer), do: {:error, :unsupported_scope}
 

@@ -23,6 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split do
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Document
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Master
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Shift
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Uid
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Timing
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
@@ -46,8 +47,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split do
     with {:ok, plan} <- plan(components, key, timezone),
          :ok <- ensure_occurrences_before(plan),
          {:ok, head} <- head(components, plan),
-         {:ok, tail} <- tail(components, plan, uid),
+         {:ok, tail} <- tail(components, plan),
          {:ok, tail} <- Document.serialise(tail),
+         {:ok, tail} <- Uid.put(tail, uid),
          {:ok, tail} <- Master.edit(tail, key, changes, timezone, mode) do
       {:ok, %{head: head, tail: tail, tail_uid: uid}}
     end
@@ -181,36 +183,31 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split do
 
   # --- The tail: a new resource, starting at the slot ---
 
-  defp tail(components, plan, uid) do
+  # Timing and the slot lists only: the tail takes its new UID once it is
+  # written out, as any copy of a series does (`Series.Uid`).
+
+  defp tail(components, plan) do
     components
     |> Enum.filter(&(not vevent?(&1) or Document.master?(&1) or from_slot?(&1, plan)))
     |> Document.map_ok(fn
       {:vevent, items} = vevent ->
-        line_fun =
-          if Document.master?(vevent),
-            do: &tail_master_line(&1, plan, uid),
-            else: &{:ok, put_uid(&1, uid)}
-
-        map_items(items, line_fun)
+        if Document.master?(vevent),
+          do: map_items(items, &tail_master_line(&1, plan)),
+          else: {:ok, vevent}
 
       line ->
         {:ok, line}
     end)
   end
 
-  defp tail_master_line(line, plan, uid) do
+  defp tail_master_line(line, plan) do
     case ContentLines.property_name(line) do
-      "UID" -> {:ok, put_uid(line, uid)}
       "DTSTART" -> Shift.shift_line(line, plan.shift)
       "DTEND" -> Shift.shift_line(line, plan.shift)
       "RRULE" -> {:ok, map_value(line, &RRule.reduce_count(&1, plan.before))}
       name when name in @slot_lists -> keep_values(line, plan.slot, plan.zones, :from)
       _other -> {:ok, line}
     end
-  end
-
-  defp put_uid(line, uid) do
-    if ContentLines.property_name(line) == "UID", do: "UID:" <> uid, else: line
   end
 
   # --- Dividing the slots ---

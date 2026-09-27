@@ -6,6 +6,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   `CalDAV.Events.delete_occurrence/4`, `update_occurrence/4`,
   `update_series/4` and `split_series/4`, which delegate here.
 
+  `move_series/5` copies a whole series into another collection, on the same
+  server or another, and deletes the original; it has no entry point on
+  `CalDAV.Events`, since it needs two clients rather than one (see
+  `Tymeslot.Integrations.Calendar.Events.move_caldav_series/4`).
+
   Each write rewrites the series' resource (see `ICalBuilder.Series`) and
   PUTs it back under `If-Match`: the cached document under its ETag when the
   cache holds both, else the server's copy, and on a 412 one re-read of the
@@ -25,7 +30,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
     UrlBuilder
   }
 
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series
+  alias Tymeslot.Utils.UriUtils
 
   @typedoc "One occurrence of the series stored at `href`, keyed as the cache keys it."
   @type occurrence :: %{
@@ -40,6 +47,112 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
 
   @typedoc "The resource a split series' following occurrences were written to."
   @type tail :: %{uid: String.t(), href: String.t(), document: String.t()}
+
+  @typedoc "The series a move copies: its resource, and the document and ETag the cache holds of it."
+  @type source :: %{href: String.t(), document: String.t() | nil, etag: String.t() | nil}
+
+  @typedoc "Where a moved series now lives."
+  @type moved :: %{
+          uid: String.t(),
+          href: String.t(),
+          calendar_path: String.t(),
+          source: :removed | :left_behind
+        }
+
+  @doc """
+  Moves the series stored at `source.href` on `source_client`'s server into
+  the collection `calendar_path` on `destination_client`'s, which may be
+  another server with other credentials. Every request goes out on the
+  client of the server it addresses.
+
+  The series is copied first, the document as it stands (the cached one
+  when the cache holds it with its ETag, else the server's copy) under a
+  fresh `UID` on the master and every override (`ICalBuilder.Series.reuid/2`),
+  created as `<calendar_path><uid>.ics` under `If-None-Match: *`. Only once
+  the destination has accepted it is the original deleted, under `If-Match`
+  with the ETag the copy was made from, so a series changed in the meantime
+  is not deleted unseen.
+
+  `calendar_path` must be one of the destination's writable collections,
+  else `{:error, :no_destination_calendar}` before anything is sent. A copy
+  the destination refuses is `{:error, reason}` with nothing written, and
+  the original is not touched. A delete that fails once the copy is made is
+  not an error: the answer says `source: :left_behind`, the copy stays, and
+  nothing is queued.
+  """
+  @spec move_series(Base.client(), Base.client(), source(), String.t(), keyword()) ::
+          {:ok, moved()} | {:error, term()}
+  def move_series(source_client, destination_client, source, calendar_path, opts \\ []) do
+    with {:ok, collection} <- writable_collection(destination_client, calendar_path),
+         {:ok, source_url} <- event_url(source_client, nil, source.href),
+         {:ok, document, etag} <- series_document(source_client, source_url, source, opts),
+         {:ok, copy} <- copy(document),
+         {:ok, created} <- create_copy(destination_client, collection, copy, opts) do
+      {:ok,
+       %{
+         uid: created.uid,
+         href: created.href,
+         calendar_path: collection,
+         source: delete_original(source_client, source_url, etag, opts)
+       }}
+    end
+  end
+
+  # The destination's own spelling of the collection, and only one it lists
+  # as writable: the path arrives from the caller, and is a URL taken from a
+  # payload until it has matched one.
+  defp writable_collection(client, calendar_path) do
+    case Enum.find(client.writable_calendar_paths, &UriUtils.uri_safe_match?(&1, calendar_path)) do
+      nil -> {:error, :no_destination_calendar}
+      collection -> {:ok, collection}
+    end
+  end
+
+  # The breaker passes two-element answers through, so the pair travels
+  # through it as one.
+  defp series_document(client, url, source, opts) do
+    result =
+      with_breaker(client, opts, fn ->
+        case starting_copy(client, url, source, opts) do
+          {:ok, document, etag} -> {:ok, {document, etag}}
+          other -> other
+        end
+      end)
+
+    case result do
+      {:ok, {document, etag}} -> {:ok, document, etag}
+      {:ok, :gone} -> {:error, :not_found}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp copy(document) do
+    uid = Format.generate_uid()
+
+    case Series.reuid(document, uid) do
+      {:ok, copy} -> {:ok, %{tail: copy, tail_uid: uid}}
+      :empty -> {:error, :not_found}
+    end
+  end
+
+  defp create_copy(client, collection, copy, opts) do
+    url = UrlBuilder.build_event_url(client.base_url, collection, copy.tail_uid)
+    with_breaker(client, opts, fn -> create_tail(client, url, copy, opts) end)
+  end
+
+  defp delete_original(client, url, etag, opts) do
+    delete_opts = Keyword.merge(timeout(opts), if_match: etag)
+
+    result =
+      with_breaker(client, opts, fn ->
+        Http.delete_event(url, client.username, client.password, delete_opts)
+      end)
+
+    case result do
+      {:ok, %Req.Response{}} -> :removed
+      {:error, _reason} -> :left_behind
+    end
+  end
 
   @doc "See `CalDAV.Events.delete_occurrence/4`."
   @spec delete_occurrence(Base.client(), String.t() | nil, occurrence(), keyword()) ::

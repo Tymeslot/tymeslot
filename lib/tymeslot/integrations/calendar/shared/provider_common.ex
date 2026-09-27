@@ -236,7 +236,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   @spec caldav_build_client_configs(map()) :: [map()]
   def caldav_build_client_configs(integration) do
     integration
-    |> caldav_selected_paths()
+    |> caldav_writable_paths()
     |> Enum.map(&caldav_path_config(integration, &1))
   end
 
@@ -254,11 +254,17 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       path ->
         integration
         |> caldav_path_config(path)
-        |> Map.put(:writable_calendar_paths, caldav_selected_paths(integration))
+        |> Map.put(:writable_calendar_paths, caldav_writable_paths(integration))
     end
   end
 
-  defp caldav_selected_paths(integration) do
+  @doc """
+  The collections of a CalDAV-family integration a write may be aimed at:
+  its selected calendars that are not read-only, or its stored paths when it
+  predates calendar selection.
+  """
+  @spec caldav_writable_paths(map()) :: [String.t()]
+  def caldav_writable_paths(integration) do
     if integration.calendar_list && integration.calendar_list != [] do
       integration.calendar_list
       |> Selection.writable_calendars()

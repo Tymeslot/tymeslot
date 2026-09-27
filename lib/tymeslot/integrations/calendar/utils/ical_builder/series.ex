@@ -40,6 +40,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Document
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Master
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Uid
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Timing
 
   # Where a new EXDATE goes in the master, in order of preference: after the
@@ -228,6 +229,19 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   def truncate(document, key, timezone) when is_binary(document) and is_binary(key) do
     Split.truncate(document, key, timezone)
   end
+
+  @doc """
+  The series in `document` under the new identifier `uid`: the `UID` of the
+  master and of every override replaced, so the copy is one series apart
+  from the original. Every other byte is kept as the server wrote it, its
+  folding and line endings included, and so is a subcomponent's own `UID`
+  (an alarm's, RFC 9074). A split's tail takes its new `UID` the same way.
+
+  Returns `{:ok, document}`, or `:empty` when `document` holds no `VEVENT`.
+  """
+  @spec reuid(String.t(), String.t()) :: {:ok, String.t()} | :empty
+  def reuid(document, uid) when is_binary(document) and is_binary(uid),
+    do: Uid.put(document, uid)
 
   # --- Writing an override ---
 

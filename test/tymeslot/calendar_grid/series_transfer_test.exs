@@ -5,9 +5,10 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
   series move, which moves are refused before anything is written, and what
   every family's writer shares once the destination holds the series.
 
-  No family has a writer yet, so the steps after the write are driven
-  through a writer handed to `SeriesTransfer.move/4`, which answers as a
-  real one would. The one-off move's provider writes sit behind
+  The steps after the write are driven through a writer handed to
+  `SeriesTransfer.move/4`, which answers as a real one would; the CalDAV
+  family's own writer is exercised down to the HTTP client in
+  `Tymeslot.CalendarGrid.SeriesTransferCalDAVTest`. The one-off move's provider writes sit behind
   `Tymeslot.CalendarMock`, which every refusal here asserts is never
   reached.
   """
@@ -303,16 +304,6 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferTest do
       refute_one_off_writes()
 
       assert move(user, event, outlook, "AAMk-other-calendar") == {:error, :unsupported_scope}
-      assert_untouched(event)
-    end
-
-    test "CalDAV to another server of the CalDAV family", %{user: user} do
-      event = caldav_series(caldav_integration(user))
-      refute_one_off_writes()
-
-      assert move(user, event, caldav_integration(user, "nextcloud")) ==
-               {:error, :unsupported_scope}
-
       assert_untouched(event)
     end
   end

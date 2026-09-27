@@ -214,6 +214,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   Performs a DELETE request to remove a calendar event.
 
   A 404 response is treated as success — deletes are idempotent.
+
+  Pass `if_match: etag` to delete only the version that ETag names; a
+  resource changed since is left in place and answered with
+  `{:error, :precondition_failed}`.
   """
   @spec delete_event(String.t(), String.t(), String.t(), keyword()) ::
           {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
@@ -221,8 +225,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     # Matches put_event — see the note there for rationale.
     timeout = Keyword.get(opts, :timeout, 45_000)
 
+    extra_headers =
+      case Keyword.get(opts, :if_match) do
+        nil -> []
+        etag -> [{"If-Match", if_match_value(etag)}]
+      end
+
     result =
-      authed_request("DELETE", url, username, password, [], fn headers ->
+      authed_request("DELETE", url, username, password, extra_headers, fn headers ->
         Config.http_client_module().delete(url, headers,
           receive_timeout: timeout,
           ssrf_protect: true
@@ -232,7 +242,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     case result do
       {:ok, response} ->
         # 404 counts as success — the event may already be gone.
-        classify(response, :delete, url, success: [200, 204, 404])
+        classify(response, :delete, url,
+          success: [200, 204, 404],
+          status_overrides: %{412 => :precondition_failed}
+        )
 
       {:error, reason} ->
         handle_write_transport_error(reason)

@@ -141,6 +141,35 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
     end
   end
 
+  @series_resource "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:standup@example.com\r\n" <>
+                     "DTSTART:20261005T090000Z\r\nRRULE:FREQ=WEEKLY;COUNT=3\r\n" <>
+                     "SUMMARY:Weekly standup\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+
+  # A CalDAV series move writes at the HTTP client rather than through the
+  # one-off seam: the copy into the destination collection, then the delete
+  # of the original resource.
+  defp expect_series_move_writes do
+    test_pid = self()
+
+    expect(Tymeslot.HTTPClientMock, :put, fn url, _body, _headers, _opts ->
+      send(test_pid, {:series_write, :put, url})
+      {:ok, %Req.Response{status: 201, body: "", headers: %{}}}
+    end)
+
+    expect(Tymeslot.HTTPClientMock, :delete, fn url, _headers, _opts ->
+      send(test_pid, {:series_write, :delete, url})
+      {:ok, %Req.Response{status: 204, body: "", headers: %{}}}
+    end)
+  end
+
+  defp assert_series_moved(result, destination) do
+    assert {:ok, %{uid: uid, integration_id: integration_id}} = result
+    assert integration_id == destination.id
+    assert_received {:series_write, :put, put_url}
+    assert put_url == "https://calendar.example.com/dest/home/#{uid}.ics"
+    assert_received {:series_write, :delete, "https://calendar.example.com/src/" <> _resource}
+  end
+
   defp move(user, event, integration, calendar_id \\ nil) do
     CalendarGrid.move_event(user.id, event, %{integration: integration, calendar_id: calendar_id})
   end
@@ -415,22 +444,25 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
           occurrence: quote(do: %{recurring_event_id: "series-1"})
         ] do
       # A member of a series moves the whole series, never itself as a
-      # one-off. No series writer exists yet, so the series move refuses.
+      # one-off: its resource is copied and deleted by the series move.
       test "a recurring #{kind} goes to the series move, never the one-off create", %{
         user: user,
         source: source,
         destination: destination
       } do
-        event = insert_event(source, unquote(attrs))
+        event = insert_event(source, Map.put(unquote(attrs), :raw_ical, @series_resource))
 
         expect(Tymeslot.CalendarMock, :create_event, 0, fn _payload, _context ->
           {:ok, CreatedEvent.new("never")}
         end)
 
         refute_delete()
+        expect_series_move_writes()
 
-        assert {:error, :unsupported_scope} = move(user, event, destination)
-        assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(source.id, event.uid)
+        assert_series_moved(move(user, event, destination), destination)
+
+        assert ProviderCalendarEventQueries.get_by_uid(source.id, event.uid) ==
+                 {:error, :not_found}
       end
     end
 
@@ -501,9 +533,10 @@ defmodule Tymeslot.CalendarGrid.EventMoveTest do
       end)
 
       refute_delete()
+      expect_series_move_writes()
 
-      assert {:error, :unsupported_scope} = move(user, event, destination)
-      assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(source.id, event.uid)
+      assert_series_moved(move(user, event, destination), destination)
+      assert ProviderCalendarEventQueries.get_by_uid(source.id, event.uid) == {:error, :not_found}
     end
 
     # EWS marks a series only by its item type: the normaliser writes no repeat

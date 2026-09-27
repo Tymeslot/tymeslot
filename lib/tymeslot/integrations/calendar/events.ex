@@ -8,10 +8,15 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   """
 
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.Integrations.Calendar.CalDAV.Client, as: CalDAVClient
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
+  alias Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites
   alias Tymeslot.Integrations.Calendar.CreatedEvent
+  alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Runtime.EventFetcher
+  alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
   alias Tymeslot.Integrations.Calendar.Sync
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.Alerting
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
@@ -303,6 +308,65 @@ defmodule Tymeslot.Integrations.Calendar.Events do
           boolean()
   def event_linked_to_booking?(integration_id, provider_event_id, uid) do
     match?({:ok, _meeting}, Sync.find_meeting(integration_id, provider_event_id, uid))
+  end
+
+  @doc """
+  Moves a recurring series stored as one CalDAV resource into a collection
+  of `user_id`'s CalDAV-family integration `destination.integration_id`,
+  from their integration `source.integration_id`: the same integration or
+  another, on the same server or another. See
+  `CalDAV.SeriesWrites.move_series/5` for the order of the writes and what
+  each failure leaves.
+
+  `source` names the series' resource (`:href`) and carries the cached
+  `:document` and `:etag` of it when the cache holds them; `destination`
+  names the collection (`:calendar_path`), which must be one the
+  destination integration writes to.
+
+  Returns `{:ok, %{uid:, href:, calendar_path:, source: :removed |
+  :left_behind}}` once the destination holds the series, or
+  `{:error, reason}` with nothing written, including `:not_found` when the
+  source integration is not the user's and `:no_destination_calendar` when
+  the destination integration or collection is not one they can write to.
+  """
+  @spec move_caldav_series(
+          user_id(),
+          %{
+            integration_id: integration_id(),
+            href: String.t(),
+            document: String.t() | nil,
+            etag: String.t() | nil
+          },
+          %{integration_id: integration_id(), calendar_path: String.t()},
+          keyword()
+        ) :: {:ok, SeriesWrites.moved()} | {:error, term()}
+  def move_caldav_series(user_id, source, destination, opts \\ []) do
+    with {:ok, source_client} <- caldav_client(source.integration_id, user_id, :not_found),
+         {:ok, destination_client} <-
+           caldav_client(destination.integration_id, user_id, :no_destination_calendar) do
+      SeriesWrites.move_series(
+        source_client,
+        destination_client,
+        %{href: source.href, document: source.document, etag: source.etag},
+        destination.calendar_path,
+        opts
+      )
+    end
+  end
+
+  # The client each integration's own writes go out on: its server, its
+  # credentials, and the collections it writes to. Looked up as the user's,
+  # so an integration of anyone else resolves to nothing.
+  defp caldav_client(integration_id, user_id, missing) do
+    with {:ok, integration} <-
+           CalendarManagement.fetch_integration_for_user(integration_id, user_id),
+         {:ok, %{client: %CalDAVClient{} = client}} <-
+           ProviderAdapter.new_client_from_integration(integration) do
+      {:ok,
+       %{client | writable_calendar_paths: ProviderCommon.caldav_writable_paths(integration)}}
+    else
+      _none -> {:error, missing}
+    end
   end
 
   @doc """
