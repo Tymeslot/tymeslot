@@ -11,40 +11,53 @@ defmodule Tymeslot.Infrastructure.ObanCronTest do
 
   alias Config.Reader
   alias Tymeslot.Infrastructure.ObanCron
+  alias Tymeslot.Workers.AdminAlertDigestWorker
+  alias Tymeslot.Workers.ErrorTrackerMaintenanceWorker
   alias Tymeslot.Workers.ObanMaintenanceWorker
   alias Tymeslot.Workers.ObanQueueMonitorWorker
 
   defp cron_config(crontab), do: [repo: Tymeslot.Repo, cron: [crontab: crontab]]
 
-  defp both_workers do
+  defp all_workers do
     [
       {"*/30 * * * *", ObanMaintenanceWorker},
-      {"0 * * * *", ObanQueueMonitorWorker}
+      {"0 * * * *", ObanQueueMonitorWorker},
+      {"5 3 * * *", ErrorTrackerMaintenanceWorker},
+      {"0 7 * * *", AdminAlertDigestWorker}
     ]
   end
 
   describe "missing_workers/1" do
-    test "finds nothing missing when the crontab schedules both critical workers" do
-      assert ObanCron.missing_workers(cron_config(both_workers())) == []
+    test "finds nothing missing when the crontab schedules every critical worker" do
+      assert ObanCron.missing_workers(cron_config(all_workers())) == []
     end
 
     test "reads a crontab entry that carries its own options" do
-      crontab = [
-        {"*/30 * * * *", ObanMaintenanceWorker, args: %{}},
-        {"0 * * * *", ObanQueueMonitorWorker, args: %{}}
-      ]
+      crontab = Enum.map(all_workers(), fn {schedule, worker} -> {schedule, worker, args: %{}} end)
 
       assert ObanCron.missing_workers(cron_config(crontab)) == []
     end
 
     test "names the worker the crontab leaves out" do
-      crontab = [{"*/30 * * * *", ObanMaintenanceWorker}]
+      crontab = List.delete(all_workers(), {"0 * * * *", ObanQueueMonitorWorker})
 
       assert ObanCron.missing_workers(cron_config(crontab)) == [ObanQueueMonitorWorker]
     end
 
+    # Without them, resolved errors are never pruned and info alerts never
+    # reach the operator, and neither failure makes a sound of its own.
+    test "counts the error tracking and alert digest workers as critical" do
+      crontab = [
+        {"*/30 * * * *", ObanMaintenanceWorker},
+        {"0 * * * *", ObanQueueMonitorWorker}
+      ]
+
+      assert ObanCron.missing_workers(cron_config(crontab)) ==
+               [ErrorTrackerMaintenanceWorker, AdminAlertDigestWorker]
+    end
+
     test "reads the {module, opts} form of the cron service" do
-      config = [cron: {Oban.Cron, crontab: both_workers()}]
+      config = [cron: {Oban.Cron, crontab: all_workers()}]
 
       assert ObanCron.missing_workers(config) == []
     end
@@ -61,7 +74,7 @@ defmodule Tymeslot.Infrastructure.ObanCronTest do
     # having no crontab at all, which is precisely the silent failure this
     # pairing has to be tested for rather than assumed.
     test "does not find a crontab left behind in the pre-2.24 plugins list" do
-      config = [plugins: [{Oban.Plugins.Cron, crontab: both_workers()}]]
+      config = [plugins: [{Oban.Plugins.Cron, crontab: all_workers()}]]
 
       assert ObanCron.missing_workers(config) == :no_crontab
     end
@@ -87,10 +100,10 @@ defmodule Tymeslot.Infrastructure.ObanCronTest do
   end
 
   describe "warn_on_missing_workers/1" do
-    test "stays quiet when both critical workers are scheduled" do
+    test "stays quiet when every critical worker is scheduled" do
       log =
         capture_log(fn ->
-          assert :ok = ObanCron.warn_on_missing_workers(cron_config(both_workers()))
+          assert :ok = ObanCron.warn_on_missing_workers(cron_config(all_workers()))
         end)
 
       refute log =~ "Critical Oban worker"
@@ -98,7 +111,7 @@ defmodule Tymeslot.Infrastructure.ObanCronTest do
     end
 
     test "names each unscheduled worker" do
-      crontab = [{"0 * * * *", ObanQueueMonitorWorker}]
+      crontab = List.delete(all_workers(), {"*/30 * * * *", ObanMaintenanceWorker})
 
       log = capture_log(fn -> ObanCron.warn_on_missing_workers(cron_config(crontab)) end)
 
