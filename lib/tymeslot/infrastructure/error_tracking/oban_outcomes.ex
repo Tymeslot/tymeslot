@@ -57,6 +57,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   alias Tymeslot.Infrastructure.ErrorTracking.HandledError
   alias Tymeslot.Infrastructure.ErrorTracking.JobDiscarded
   alias Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber
+  alias Tymeslot.Jobs
 
   require Logger
 
@@ -68,6 +69,8 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   ]
 
   @max_label_length 80
+  @unknown_worker "unknown worker"
+
   @max_listed_job_ids 20
 
   @doc """
@@ -127,8 +130,13 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   Raises one `:oban_jobs_force_discarded` alert for `jobs`, discarded by
   `discarded_by` without their worker returning: the count, the jobs per
   worker and queue, and the first job ids. Does nothing for an empty list.
+
+  Each job needs `:id` and `:queue`. `Oban.Lifeline` reports plain maps of
+  `:id`, `:queue` and `:state`, so a job without `:worker` has it looked up
+  by id; one whose row is gone by then, or when the lookup fails, is counted
+  as an unknown worker in its queue.
   """
-  @spec report_force_discarded([Oban.Job.t()], module()) :: :ok
+  @spec report_force_discarded([map()], module()) :: :ok
   def report_force_discarded([], _discarded_by), do: :ok
 
   def report_force_discarded(jobs, discarded_by) when is_list(jobs) do
@@ -147,10 +155,34 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
   end
 
   defp per_worker_and_queue(jobs) do
+    workers = workers(jobs)
+
     jobs
-    |> Enum.frequencies_by(&{&1.worker, &1.queue})
+    |> Enum.frequencies_by(&{Map.get(workers, &1.id, @unknown_worker), &1.queue})
     |> Enum.sort()
     |> Enum.map_join("; ", fn {{worker, queue}, count} -> "#{worker} (#{queue}): #{count}" end)
+  end
+
+  defp workers(jobs) do
+    {known, unknown} = Enum.split_with(jobs, &is_binary(Map.get(&1, :worker)))
+    known = Map.new(known, &{&1.id, &1.worker})
+
+    case Enum.map(unknown, & &1.id) do
+      [] -> known
+      ids -> Map.merge(lookup_workers(ids), known)
+    end
+  end
+
+  # The alert is worth more with the queues alone than not at all.
+  defp lookup_workers(ids) do
+    Jobs.workers_by_id(ids)
+  rescue
+    exception ->
+      Logger.error("Could not look up the workers of force-discarded jobs",
+        error: inspect(exception.__struct__)
+      )
+
+      %{}
   end
 
   defp job_ids(jobs) do
@@ -211,12 +243,34 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes do
     reason
     |> String.split(": ", parts: 2)
     |> hd()
+    |> normalise_values()
     |> String.slice(0, @max_label_length)
     |> ReasonScrubber.scrub()
   end
 
   defp group_label(reason) when is_atom(reason), do: inspect(reason)
   defp group_label(reason), do: HandledError.exception(reason).message
+
+  defp normalise_values(text) do
+    Enum.reduce(label_placeholders(), text, fn {pattern, placeholder}, acc ->
+      Regex.replace(pattern, acc, placeholder)
+    end)
+  end
+
+  # Variable values a reason may interpolate without a colon, replaced in the
+  # error's group label so each value does not mint a new error. Most specific
+  # first: a timestamp or UUID would otherwise be eaten as digit runs.
+  # A function rather than an attribute: compiled regexes cannot be stored
+  # in module attributes.
+  defp label_placeholders do
+    [
+      {~r/\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?/, "<time>"},
+      {~r/\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/,
+       "<uuid>"},
+      {~r/\b(?=[0-9a-fA-F]*\d)(?=[0-9a-fA-F]*[a-fA-F])[0-9a-fA-F]{8,}\b/, "<hex>"},
+      {~r/\d+/, "<n>"}
+    ]
+  end
 
   defp worker_module(worker) do
     case Worker.from_string(worker) do

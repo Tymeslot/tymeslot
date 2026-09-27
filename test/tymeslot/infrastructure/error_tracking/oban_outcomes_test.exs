@@ -13,6 +13,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomesTest do
 
   alias ErrorTracker.Error
   alias ExUnit.CaptureLog
+  alias Oban.Engine
   alias Tymeslot.Infrastructure.ErrorTracking.JobDiscarded
   alias Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
@@ -182,6 +183,24 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomesTest do
       assert [%Error{occurrences: [_first, _second]}] = errors()
     end
 
+    # A reason that interpolates an id or a time without a colon must not
+    # mint a new error group, and with it a new alert, for every value.
+    for {label, first, second} <- [
+          {"digits", "Meeting 123 not found", "Meeting 4567 not found"},
+          {"a UUID", "Room 3f1c2a4e-9b7d-4c1e-8a2f-5d6b7c8e9f01 gone",
+           "Room 0b7e1f3a-4c1d-4a8e-9f3b-2d6c8e1a5b7c gone"},
+          {"a hex id", "Event a3f9c0d2e1b4 unreadable", "Event 77ffee001122 unreadable"},
+          {"an ISO timestamp", "Not due until 2026-09-27T18:00:00Z",
+           "Not due until 2026-10-01 09:30:15.123456Z"}
+        ] do
+      test "keeps reasons differing only in #{label} in one error" do
+        run("discard", unquote(first))
+        run("discard", unquote(second))
+
+        assert [%Error{occurrences: [_first, _second]}] = errors()
+      end
+    end
+
     test "has even a reason another worker expects recorded" do
       run("discard", "Expected for this worker")
       assert [%Error{}] = errors()
@@ -224,37 +243,87 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ObanOutcomesTest do
   describe "jobs the Lifeline plugin discards" do
     setup :capture_admin_alerts
 
-    # Dispatched through telemetry, as `Oban.Lifeline` reports a sweep.
-    defp lifeline_stop(discarded, rescued) do
+    defp insert_abandoned_job(worker, queue, attempt, max_attempts) do
+      abandoned_at = DateTime.add(DateTime.utc_now(), -2, :hour)
+
+      Repo.insert!(%Oban.Job{
+        state: "executing",
+        worker: worker,
+        queue: queue,
+        args: %{},
+        attempt: attempt,
+        max_attempts: max_attempts,
+        attempted_at: abandoned_at,
+        inserted_at: abandoned_at
+      })
+    end
+
+    # Runs one Lifeline sweep the way `Oban.Lifeline` does: the engine rescues
+    # the abandoned rows, returning plain maps of `id`, `queue` and `state`,
+    # and the sweep reports the ones it discarded through telemetry.
+    defp lifeline_sweep do
+      {:ok, rescued} =
+        Engine.rescue_jobs(Oban.config(), Oban.Job, rescue_after: :timer.hours(1))
+
+      {rescued, discarded} = Enum.split_with(rescued, &(&1.state == "available"))
+
       :telemetry.execute([:oban, :plugin, :stop], %{duration: 1}, %{
         plugin: Oban.Lifeline,
         discarded_jobs: discarded,
         rescued_jobs: rescued
       })
+
+      discarded
     end
 
     test "raise one force-discarded alert naming each worker and queue" do
-      jobs = [
-        %Oban.Job{id: 1, worker: "Tymeslot.Workers.EmailWorker", queue: "emails"},
-        %Oban.Job{id: 2, worker: "Tymeslot.Workers.EmailWorker", queue: "emails"},
-        %Oban.Job{id: 3, worker: "Tymeslot.Workers.VideoRoomWorker", queue: "video"}
-      ]
+      ids =
+        for {worker, queue} <- [
+              {"Tymeslot.Workers.EmailWorker", "emails"},
+              {"Tymeslot.Workers.EmailWorker", "emails"},
+              {"Tymeslot.Workers.VideoRoomWorker", "video_rooms"}
+            ] do
+          insert_abandoned_job(worker, queue, 3, 3).id
+        end
 
-      lifeline_stop(jobs, [])
+      # A job with attempts left is rescued, not discarded.
+      insert_abandoned_job("Tymeslot.Workers.SlackWorker", "notifications", 1, 3)
+
+      assert [%{id: _id, queue: _queue, state: "discarded"} | _more] = lifeline_sweep()
 
       assert_receive {:send_alert, :oban_jobs_force_discarded, payload}
       assert payload.count == 3
       assert payload.discarded_by == "Oban.Lifeline"
       assert payload.jobs =~ "Tymeslot.Workers.EmailWorker (emails): 2"
-      assert payload.jobs =~ "Tymeslot.Workers.VideoRoomWorker (video): 1"
-      assert payload.job_ids == "1, 2, 3"
+      assert payload.jobs =~ "Tymeslot.Workers.VideoRoomWorker (video_rooms): 1"
+      refute payload.jobs =~ "SlackWorker"
+      assert payload.job_ids == ids |> Enum.sort() |> Enum.join(", ")
       refute_receive {:send_alert, _type, _payload}
     end
 
-    test "raise nothing when the plugin discarded nothing" do
-      lifeline_stop([], [%Oban.Job{id: 1, worker: "W", queue: "q"}])
+    # The engine's maps carry no worker, which is looked up by id. A row gone
+    # by then (pruned, or deleted by hand) still counts under its queue.
+    test "count a job whose row is gone under its queue alone" do
+      lifeline_stop_event([%{id: -1, queue: "emails", state: "discarded"}])
 
+      assert_receive {:send_alert, :oban_jobs_force_discarded, payload}
+      assert payload.count == 1
+      assert payload.jobs == "unknown worker (emails): 1"
+    end
+
+    test "raise nothing when the plugin discarded nothing" do
+      insert_abandoned_job("Tymeslot.Workers.SlackWorker", "notifications", 1, 3)
+
+      assert lifeline_sweep() == []
       refute_receive {:send_alert, _type, _payload}
+    end
+
+    defp lifeline_stop_event(discarded) do
+      :telemetry.execute([:oban, :plugin, :stop], %{duration: 1}, %{
+        plugin: Oban.Lifeline,
+        discarded_jobs: discarded,
+        rescued_jobs: []
+      })
     end
   end
 end
