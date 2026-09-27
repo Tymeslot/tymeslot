@@ -106,6 +106,28 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.FilterTest do
              }
     end
 
+    test "masks capabilities in URL-bearing request headers" do
+      token = String.duplicate("reset", 5)
+
+      context = %{
+        "request.headers" => %{
+          "referer" => "https://book.example.com/auth/reset-password/#{token}",
+          "origin" => "https://book.example.com",
+          "x-original-url" => "/jane/meeting/#{@uid}/cancel",
+          "accept" => "text/html"
+        }
+      }
+
+      assert Filter.sanitize(context) == %{
+               "request.headers" => %{
+                 "referer" => "https://book.example.com/auth/reset-password/:id",
+                 "origin" => "https://book.example.com",
+                 "x-original-url" => "/jane/meeting/:id/cancel",
+                 "accept" => "text/html"
+               }
+             }
+    end
+
     test "keeps an ordinary path unchanged" do
       assert Filter.sanitize(%{"request.path" => "/dashboard/settings"}) ==
                %{"request.path" => "/dashboard/settings"}
