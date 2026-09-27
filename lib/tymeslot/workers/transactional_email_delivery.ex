@@ -30,6 +30,7 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.CircuitBreakerSupervisor
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Workers.SnoozePolicy
 
   @circuit_open_jitter_seconds 30
@@ -143,7 +144,7 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   def handle_failure({:recipient_rejected, reason}, _failure_message, metadata) do
     Logger.warning(
       "Recipient permanently undeliverable, discarding job",
-      Keyword.put(metadata, :reason, inspect(reason))
+      Keyword.put(metadata, :reason, LogFormat.reason(reason))
     )
 
     AdminAlerts.report(:recipient_email_rejected,
@@ -156,7 +157,7 @@ defmodule Tymeslot.Workers.TransactionalEmailDelivery do
   end
 
   def handle_failure(reason, failure_message, metadata) do
-    Logger.error(failure_message, Keyword.put(metadata, :reason, inspect(reason)))
+    Logger.error(failure_message, Keyword.put(metadata, :reason, LogFormat.reason(reason)))
     {:error, reason}
   end
 end

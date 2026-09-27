@@ -20,6 +20,7 @@ defmodule Tymeslot.Workers.SyncDebugCalendarWorker do
   require Logger
 
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.DebugCalendarProvider
   alias Tymeslot.Integrations.Calendar.Sync
@@ -106,7 +107,7 @@ defmodule Tymeslot.Workers.SyncDebugCalendarWorker do
       {:error, changeset} ->
         Logger.warning("Failed to persist debug sync state",
           calendar_integration_id: integration.id,
-          error: inspect(changeset)
+          error: LogFormat.reason(changeset)
         )
 
         :ok

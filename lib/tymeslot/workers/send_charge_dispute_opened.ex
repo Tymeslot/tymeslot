@@ -26,6 +26,7 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpened do
   alias Tymeslot.Emails.Templates.ChargeDisputeOpened
   alias Tymeslot.Emails.Templates.ChargeDisputeOpened.DisputeContext
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.MeetingQueries
@@ -67,7 +68,7 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpened do
 
   def perform(%Oban.Job{args: args}) do
     Logger.error("SendChargeDisputeOpened missing booking_payment_id",
-      args: inspect(args)
+      args: LogFormat.reason(args)
     )
 
     {:discard, "missing booking_payment_id"}

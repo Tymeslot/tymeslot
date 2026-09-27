@@ -17,6 +17,7 @@ defmodule Tymeslot.Workers.IntegrationHealthWorker do
     ]
 
   require Logger
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.HealthCheck
 
@@ -24,7 +25,7 @@ defmodule Tymeslot.Workers.IntegrationHealthWorker do
   def perform(%Oban.Job{args: %{"type" => type_str, "integration_id" => integration_id}} = job)
       when is_binary(type_str) and is_integer(integration_id) do
     Logger.debug("IntegrationHealthWorker performing job",
-      args: inspect(job.args),
+      args: LogFormat.reason(job.args),
       job_id: job.id
     )
 

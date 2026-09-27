@@ -45,6 +45,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   alias Ecto.Changeset
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Video
@@ -356,7 +357,10 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
   defp log_failure(reason, meeting_id),
     do:
-      Logger.error("Failed to create video room", meeting_id: meeting_id, reason: inspect(reason))
+      Logger.error("Failed to create video room",
+        meeting_id: meeting_id,
+        reason: LogFormat.reason(reason)
+      )
 
   defp handle_timeout(meeting_id, announcement, execution) do
     if Recovery.recovering?(execution, Announcement.owed?(announcement)) do
@@ -372,7 +376,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   defp to_oban_result({:error, reason}, execution), do: ErrorPolicy.to_result(reason, execution)
 
   defp to_oban_result(other, _execution) do
-    Logger.error("Unexpected result from video room job", result: inspect(other))
+    Logger.error("Unexpected result from video room job", result: LogFormat.reason(other))
     {:error, "Unexpected result"}
   end
 end

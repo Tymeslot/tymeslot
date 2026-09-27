@@ -33,6 +33,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   alias Tymeslot.Emails.Templates.BookingPaymentRefunded
   alias Tymeslot.Emails.Templates.BookingPaymentRefunded.RefundContext
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.MeetingQueries
@@ -73,7 +74,7 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
 
   def perform(%Oban.Job{args: args}) do
     Logger.error("SendBookingPaymentRefunded missing booking_payment_id",
-      args: inspect(args)
+      args: LogFormat.reason(args)
     )
 
     {:discard, "missing booking_payment_id"}

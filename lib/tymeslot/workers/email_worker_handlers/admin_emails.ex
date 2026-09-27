@@ -6,6 +6,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AdminEmails do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
   @spec handle_admin_alert(%{String.t() => term()}) ::
@@ -37,7 +38,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AdminEmails do
       {:error, reason} ->
         Logger.error("Failed to deliver admin alert email",
           category: category,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         DeliveryOutcome.from_error(reason, "Failed to deliver admin alert")
@@ -58,7 +59,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AdminEmails do
         :ok
 
       {:error, reason} ->
-        Logger.error("Failed to deliver admin alert digest email", error: inspect(reason))
+        Logger.error("Failed to deliver admin alert digest email",
+          error: LogFormat.reason(reason)
+        )
 
         DeliveryOutcome.from_error(reason, "Failed to deliver admin alert digest")
     end

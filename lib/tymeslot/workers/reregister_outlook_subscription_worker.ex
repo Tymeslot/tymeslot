@@ -22,6 +22,7 @@ defmodule Tymeslot.Workers.ReregisterOutlookSubscriptionWorker do
   require Logger
 
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.CalendarManagement
@@ -74,7 +75,7 @@ defmodule Tymeslot.Workers.ReregisterOutlookSubscriptionWorker do
   defp log_failure(integration, reason) do
     Logger.error("Outlook Graph subscription re-registration failed",
       integration_id: integration.id,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
   end
 end

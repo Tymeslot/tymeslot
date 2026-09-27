@@ -59,6 +59,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
@@ -552,7 +553,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
        ) do
     Logger.error(
       "Video provider refused the change for good, discarding job",
-      target.log ++ [action: action, reason: inspect(reason)]
+      target.log ++ [action: action, reason: LogFormat.reason(reason)]
     )
 
     {:error, categorized} = ErrorPolicy.categorize(reason)
@@ -578,7 +579,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
   defp handle_result({:error, reason}, action, target, _executions) do
     Logger.warning(
       "Provider video sync failed, will retry",
-      target.log ++ [action: action, reason: inspect(reason)]
+      target.log ++ [action: action, reason: LogFormat.reason(reason)]
     )
 
     {:error, reason}
@@ -619,7 +620,7 @@ defmodule Tymeslot.Workers.VideoSyncWorker do
         # harmlessly.
         Logger.warning("Failed to clear video room marker after provider delete",
           meeting_id: meeting.id,
-          errors: inspect(changeset.errors)
+          errors: LogFormat.reason(changeset.errors)
         )
 
         :ok

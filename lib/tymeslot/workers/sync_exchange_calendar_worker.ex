@@ -170,6 +170,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   require Logger
 
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.Errors, as: CalDAVErrors
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
@@ -454,7 +455,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
       {:error, changeset} ->
         Logger.warning("Failed to persist Exchange sync state",
           calendar_integration_id: integration.id,
-          error: inspect(changeset)
+          error: LogFormat.reason(changeset)
         )
 
         :ok
@@ -471,7 +472,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorker do
   defp record_failure(integration, reason) do
     Logger.error("Exchange calendar sync failed",
       calendar_integration_id: integration.id,
-      error: inspect(reason)
+      error: LogFormat.reason(reason)
     )
 
     CalendarIntegrationQueries.mark_sync_error(integration, error_message(reason))

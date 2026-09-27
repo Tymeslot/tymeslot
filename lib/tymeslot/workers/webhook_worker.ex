@@ -32,6 +32,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
@@ -470,7 +471,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
         end
 
       {:error, reason} ->
-        Logger.warning("Failed to create webhook delivery log", error: inspect(reason))
+        Logger.warning("Failed to create webhook delivery log", error: LogFormat.reason(reason))
         {:error, :delivery_log_failed}
     end
   end

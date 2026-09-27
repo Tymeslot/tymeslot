@@ -35,6 +35,7 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
   require Logger
 
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Ics.Feed
   alias Tymeslot.Integrations.Calendar.Ics.Provider
@@ -197,7 +198,7 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
       {:error, changeset} ->
         Logger.warning("Failed to persist calendar subscription sync state",
           calendar_integration_id: integration.id,
-          error: inspect(changeset)
+          error: LogFormat.reason(changeset)
         )
 
         :ok
@@ -211,7 +212,7 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
   defp record_failure(integration, reason) do
     Logger.error("Calendar subscription sync failed",
       calendar_integration_id: integration.id,
-      error: inspect(reason)
+      error: LogFormat.reason(reason)
     )
 
     CalendarIntegrationQueries.mark_sync_error(integration, error_message(reason))

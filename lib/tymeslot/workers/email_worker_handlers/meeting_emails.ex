@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
@@ -180,8 +181,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
       {organizer_result, attendee_result} ->
         Logger.warning("Some cancellation emails may have failed",
           meeting_id: meeting.id,
-          organizer_result: inspect(organizer_result),
-          attendee_result: inspect(attendee_result)
+          organizer_result: LogFormat.reason(organizer_result),
+          attendee_result: LogFormat.reason(attendee_result)
         )
 
         if match?({:ok, _}, organizer_result) or match?({:ok, _}, attendee_result) do
@@ -243,7 +244,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
             {:error, reason} ->
               Logger.error("Organizer confirmation step failed",
                 meeting_id: meeting.id,
-                error: inspect(reason)
+                error: LogFormat.reason(reason)
               )
 
               {:error, reason}
@@ -265,7 +266,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
             {:error, reason} ->
               Logger.error("Attendee confirmation step failed",
                 meeting_id: meeting.id,
-                error: inspect(reason)
+                error: LogFormat.reason(reason)
               )
 
               {:error, reason}
@@ -316,7 +317,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           Logger.error("Guest confirmation email failed",
             meeting_id: meeting.id,
             guest_email: guest.email,
-            result: inspect(other)
+            result: LogFormat.reason(other)
           )
       end
     end)
@@ -392,7 +393,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           Logger.error("Guest reminder email failed",
             meeting_id: meeting.id,
             guest_id: guest.id,
-            result: inspect(other)
+            result: LogFormat.reason(other)
           )
       end
     end)
@@ -414,7 +415,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
         Logger.error("Failed to send reschedule request email",
           meeting_id: meeting.id,
           to: meeting.attendee_email,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -527,7 +528,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
             meeting_id: meeting.id,
             reminder_value: reminder_value,
             reminder_unit: reminder_unit,
-            error: inspect(reason)
+            error: LogFormat.reason(reason)
           )
 
           {:error, "Failed to track reminder: #{inspect(reason)}"}

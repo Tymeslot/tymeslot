@@ -31,6 +31,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
   alias Tymeslot.Integrations.Calendar.InvalidEventReport
@@ -145,7 +146,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, _type, reason} ->
         Logger.error("Google Calendar incremental sync failed",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -153,7 +154,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, reason} ->
         Logger.error("Google Calendar incremental sync failed",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -202,7 +203,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, _type, reason} ->
         Logger.error("Google Calendar bootstrap failed",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -210,7 +211,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, reason} ->
         Logger.error("Google Calendar bootstrap failed",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -227,7 +228,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, reason} ->
         Logger.error("Google Calendar event processing failed; sync token NOT updated",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -314,7 +315,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         Logger.error("Google Calendar secondary sync failed",
           calendar_integration_id: integration.id,
           calendar_id: calendar_id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:halt, {:error, reason}}
@@ -323,7 +324,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         Logger.error("Google Calendar secondary sync failed",
           calendar_integration_id: integration.id,
           calendar_id: calendar_id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:halt, {:error, reason}}
@@ -404,7 +405,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         Logger.error("Failed to de-select missing Google calendars",
           calendar_integration_id: integration.id,
           calendar_ids: missing_ids,
-          error: inspect(changeset.errors)
+          error: LogFormat.reason(changeset.errors)
         )
 
         :ok
@@ -451,7 +452,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, changeset} ->
         Logger.warning("Failed to persist Google Calendar sync state",
           calendar_integration_id: integration.id,
-          error: inspect(changeset)
+          error: LogFormat.reason(changeset)
         )
 
         :ok

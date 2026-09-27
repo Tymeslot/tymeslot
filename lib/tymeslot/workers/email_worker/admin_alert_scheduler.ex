@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Workers.EmailWorker
 
   # Dedup window for identical admin alerts (24 hours, in seconds).
@@ -159,7 +160,7 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
   defp handle_insert_result({:error, reason}, category, _hash) do
     Logger.error("Failed to schedule admin alert email",
       category: category,
-      error: inspect(reason)
+      error: LogFormat.reason(reason)
     )
 
     {:error, "Failed to schedule job"}
@@ -185,7 +186,10 @@ defmodule Tymeslot.Workers.EmailWorker.AdminAlertScheduler do
         :ok
 
       {:error, reason} ->
-        Logger.error("Failed to schedule admin alert digest email", error: inspect(reason))
+        Logger.error("Failed to schedule admin alert digest email",
+          error: LogFormat.reason(reason)
+        )
+
         {:error, reason}
     end
   end

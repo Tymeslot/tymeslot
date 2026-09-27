@@ -37,6 +37,7 @@ defmodule Tymeslot.Workers.SyncHealth do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.HealthCheck
@@ -95,7 +96,7 @@ defmodule Tymeslot.Workers.SyncHealth do
       {:error, changeset} ->
         Logger.warning("Failed to clear calendar reconnection flag after a successful sync",
           calendar_integration_id: integration.id,
-          error: inspect(changeset)
+          error: LogFormat.reason(changeset)
         )
 
         :ok

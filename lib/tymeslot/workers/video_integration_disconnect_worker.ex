@@ -35,6 +35,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -281,7 +282,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
       {:error, reason} ->
         Logger.warning("Failed to release attached video room during disconnect",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :error
@@ -329,7 +330,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
       {:error, reason} ->
         Logger.warning(
           "Failed to delete provider room during disconnect",
-          opts[:log] ++ [reason: inspect(reason)]
+          opts[:log] ++ [reason: LogFormat.reason(reason)]
         )
 
         :error
@@ -349,7 +350,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
       {:error, changeset} ->
         Logger.warning("Failed to clear video room after disconnect cleanup",
           meeting_id: meeting.id,
-          errors: inspect(changeset.errors)
+          errors: LogFormat.reason(changeset.errors)
         )
 
         :ok
@@ -364,7 +365,7 @@ defmodule Tymeslot.Workers.VideoIntegrationDisconnectWorker do
       {:error, reason} ->
         Logger.warning("Failed to schedule calendar update after room removal",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok

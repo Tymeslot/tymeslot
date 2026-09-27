@@ -10,6 +10,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Infrastructure.Config
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
@@ -82,7 +83,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
           Logger.error("Failed to send integration unhealthy notification",
             user_id: user_id,
             integration_id: integration_id,
-            error: inspect(reason)
+            error: LogFormat.reason(reason)
           )
 
           DeliveryOutcome.from_error(reason, "Failed to send notification")
@@ -152,7 +153,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
         Logger.error("Failed to send integration reauth notification",
           user_id: user.id,
           integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         DeliveryOutcome.from_error(reason, "Failed to send notification")
@@ -190,7 +191,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
           Logger.error("Failed to send integration paused notification",
             user_id: user_id,
             integration_id: integration_id,
-            error: inspect(reason)
+            error: LogFormat.reason(reason)
           )
 
           DeliveryOutcome.from_error(reason, "Failed to send notification")
@@ -277,7 +278,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
         Logger.error("Failed to send video room creation error notification",
           user_id: user.id,
           integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         delivery_failure(reason, integration, code)
@@ -321,7 +322,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
       {:error, reason} ->
         Logger.error("Failed to send calendar invitation",
           attendee_email: args["attendee_email"],
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         DeliveryOutcome.from_error(reason, "Failed to send calendar invitation")

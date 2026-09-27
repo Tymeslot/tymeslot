@@ -35,6 +35,7 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.Outlook.DeltaSync, as: OutlookDeltaSync
@@ -132,7 +133,7 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorker do
       error ->
         Logger.warning("Outlook bootstrap failed during manual refresh",
           calendar_integration_id: integration.id,
-          error: inspect(error)
+          error: LogFormat.reason(error)
         )
 
         give_up_or_retry(error_class(error), job, :bootstrap_failed)

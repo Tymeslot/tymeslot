@@ -23,6 +23,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
 
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
@@ -191,7 +192,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
         Logger.error("Calendar operation crashed",
           action: action,
           meeting_id: meeting_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:error, "Calendar operation crashed: #{inspect(reason)}"}

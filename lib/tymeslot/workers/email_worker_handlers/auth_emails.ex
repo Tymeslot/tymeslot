@@ -9,6 +9,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.EmailScheduler.LinkArg
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Utils.UrlBuilder
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
 
@@ -57,7 +58,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
       {:error, reason} ->
         Logger.error("Failed to send email verification",
           user_id: user.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         DeliveryOutcome.from_error(reason, "Failed to send email verification")
@@ -87,7 +88,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
       {:error, reason} ->
         Logger.error("Failed to send password reset email",
           user_id: user.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         DeliveryOutcome.from_error(reason, "Failed to send password reset email")
@@ -134,7 +135,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
           :ok
 
         {:error, reason} ->
-          Logger.error("Failed to send sign-up confirmation", error: inspect(reason))
+          Logger.error("Failed to send sign-up confirmation", error: LogFormat.reason(reason))
           DeliveryOutcome.from_error(reason, "Failed to send sign-up confirmation")
       end
     end
@@ -151,7 +152,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
     Logger.error("Failed to send account notice",
       notice: label,
       user_id: user.id,
-      error: inspect(reason)
+      error: LogFormat.reason(reason)
     )
 
     DeliveryOutcome.from_error(reason, "Failed to send #{label}")
@@ -189,7 +190,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
         Logger.error("Failed to send email change verification",
           user_id: user.id,
           new_email: new_email,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         DeliveryOutcome.from_error(reason, "Failed to send email change verification")
@@ -214,7 +215,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AuthEmails do
             Logger.error("Failed to send email change notification",
               user_id: user_id,
               new_email: new_email,
-              error: inspect(reason)
+              error: LogFormat.reason(reason)
             )
 
             DeliveryOutcome.from_error(reason, "Failed to send email change notification")

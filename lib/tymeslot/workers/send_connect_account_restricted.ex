@@ -31,6 +31,7 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
   alias Tymeslot.Emails.Templates.ConnectAccountRestricted
   alias Tymeslot.Emails.Templates.ConnectAccountRestricted.RestrictionContext
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Workers.DeliveryClaims
@@ -73,7 +74,7 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
 
   def perform(%Oban.Job{args: args}) do
     Logger.error("SendConnectAccountRestricted missing connect_account_id",
-      args: inspect(args)
+      args: LogFormat.reason(args)
     )
 
     {:discard, "missing connect_account_id"}

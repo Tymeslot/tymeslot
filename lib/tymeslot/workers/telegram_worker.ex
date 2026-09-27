@@ -32,6 +32,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Telegram
@@ -207,7 +208,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
         :ok
 
       {:error, reason} ->
-        Logger.warning("Failed to create Telegram delivery log", error: inspect(reason))
+        Logger.warning("Failed to create Telegram delivery log", error: LogFormat.reason(reason))
     end
   end
 
@@ -281,7 +282,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
       {:error, changeset} ->
         Logger.warning("Failed to auto-disable Telegram integration",
           integration_id: integration.id,
-          reason: inspect(changeset)
+          reason: LogFormat.reason(changeset)
         )
     end
   end
@@ -335,7 +336,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
       {:error, reason} ->
         Logger.warning("Failed to migrate Telegram chat id after supergroup upgrade",
           integration_id: integration.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
 

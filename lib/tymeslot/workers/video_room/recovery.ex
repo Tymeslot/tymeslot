@@ -38,6 +38,7 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
   times.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Utils.ReminderUtils
@@ -226,8 +227,8 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
       exception ->
         Logger.warning("Ignoring unreadable reminder interval",
           meeting_id: meeting.id,
-          value: inspect(value),
-          unit: inspect(unit),
+          value: LogFormat.reason(value),
+          unit: LogFormat.reason(unit),
           error: Exception.message(exception)
         )
 

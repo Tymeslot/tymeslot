@@ -33,6 +33,7 @@ defmodule Tymeslot.Workers.SlackWorker do
   alias Tymeslot.Features
   alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Slack
@@ -158,7 +159,7 @@ defmodule Tymeslot.Workers.SlackWorker do
           {:error, reason} ->
             Logger.warning("Failed to auto-disable Slack integration after plan revocation",
               integration_id: integration_id,
-              reason: inspect(reason)
+              reason: LogFormat.reason(reason)
             )
         end
 
@@ -306,7 +307,7 @@ defmodule Tymeslot.Workers.SlackWorker do
         :ok
 
       {:error, reason} ->
-        Logger.warning("Failed to create Slack delivery log", error: inspect(reason))
+        Logger.warning("Failed to create Slack delivery log", error: LogFormat.reason(reason))
     end
   end
 

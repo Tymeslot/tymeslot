@@ -24,6 +24,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
@@ -156,7 +157,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
       {:error, reason} ->
         Logger.error("Outlook Calendar sync failed",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -228,7 +229,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
       {:error, changeset} ->
         Logger.warning("Failed to persist Outlook Calendar sync state",
           calendar_integration_id: integration.id,
-          error: inspect(changeset)
+          error: LogFormat.reason(changeset)
         )
 
         :ok

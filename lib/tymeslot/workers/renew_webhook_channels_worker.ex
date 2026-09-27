@@ -42,6 +42,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
 
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
@@ -166,7 +167,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
           Logger.warning("Failed to enqueue webhook renewal job",
             calendar_integration_id: integration.id,
             provider: provider,
-            error: inspect(reason)
+            error: LogFormat.reason(reason)
           )
 
           []
@@ -259,7 +260,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
     Logger.error("Failed to renew webhook channel",
       calendar_integration_id: integration.id,
       channel_kind: @renewal_labels[provider],
-      error: inspect(reason)
+      error: LogFormat.reason(reason)
     )
 
     {:error, reason}

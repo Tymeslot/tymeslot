@@ -12,6 +12,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.BookingApprovalEmails do
   alias Tymeslot.Emails.RecipientLocale
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
@@ -275,7 +276,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.BookingApprovalEmails do
       {:error, reason} ->
         Logger.error("Failed to mark approval nudge as sent after a successful send",
           meeting_id: meeting.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         :ok
