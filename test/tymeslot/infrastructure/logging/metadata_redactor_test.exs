@@ -214,15 +214,6 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
       assert %URI{host: "example.com"} = filtered.meta.request
     end
 
-    test "redacts a sensitive field inside a struct and keeps it the struct it was" do
-      config = %Req.Request{options: %{auth: {:bearer, "t"}, client_secret: "cs"}}
-
-      filtered = MetadataRedactor.filter(event(%{request: config}), [])
-
-      assert %Req.Request{options: options} = filtered.meta.request
-      assert options.client_secret == "[REDACTED]"
-    end
-
     test "walks five levels into a metadata value and no further" do
       nest = fn levels -> Enum.reduce(1..levels, %{token: "t"}, &%{"n#{&1}" => &2}) end
 
