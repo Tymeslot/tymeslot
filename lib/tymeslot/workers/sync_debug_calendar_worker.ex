@@ -19,6 +19,7 @@ defmodule Tymeslot.Workers.SyncDebugCalendarWorker do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.DebugCalendarProvider
   alias Tymeslot.Integrations.Calendar.Sync
@@ -27,6 +28,15 @@ defmodule Tymeslot.Workers.SyncDebugCalendarWorker do
   # Window synced into the cache: a week back, two months forward.
   @past_days 7
   @future_days 60
+
+  @behaviour ExpectedJobOutcome
+
+  # The integration was removed after the sync was queued. Credentials that
+  # no longer decrypt are recorded.
+  @integration_gone "Integration not found"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason), do: reason == @integration_gone
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
@@ -39,7 +49,7 @@ defmodule Tymeslot.Workers.SyncDebugCalendarWorker do
           calendar_integration_id: integration_id
         )
 
-        {:discard, "Integration not found"}
+        {:discard, @integration_gone}
 
       {:error, :requires_reencryption, _integration} ->
         {:discard, "Integration requires re-encryption"}

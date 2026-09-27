@@ -128,7 +128,13 @@ defmodule Tymeslot.Workers.ExpectedJobOutcomesTest do
     {Workers.ColourWriteBackWorker,
      expected: [:event_not_cached, :raw_ical_never_synced, :provider_has_no_event_colour],
      recorded: []},
-    {ApprovalExpiryWorker, expected: ["Request answered while expiring"], recorded: []},
+    {ApprovalExpiryWorker,
+     expected: [
+       "Request answered while expiring",
+       "Meeting not found: 3f1c2a4e-9b7d-4c1e-8a2f-5d6b7c8e9f01",
+       "Request already answered: confirmed"
+     ],
+     recorded: ["Request not due yet: 2026-09-27 18:00:00Z", "Meeting not found"]},
     {Workers.SendConnectAccountRestricted,
      expected: [
        "connect_account not found",
@@ -194,12 +200,15 @@ defmodule Tymeslot.Workers.ExpectedJobOutcomesTest do
        "Exchange server refused the sync request: forbidden"
      ],
      recorded: []},
+    {Workers.SyncDebugCalendarWorker,
+     expected: ["Integration not found"], recorded: ["Integration requires re-encryption"]},
     {Workers.SyncIcsCalendarWorker,
      expected: ["Integration not found", "Credentials require reauthentication"],
      recorded: ["Subscription has no feed URL"]},
     {TokenRefreshJob,
      expected: [
        "Integration not found",
+       "Credentials require reauthentication",
        "Credentials require reauthentication: invalid_grant",
        "Credentials require reauthentication: invalid_grant: Token has been expired"
      ],
