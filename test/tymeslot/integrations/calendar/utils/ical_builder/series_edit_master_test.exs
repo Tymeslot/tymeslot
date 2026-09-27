@@ -133,6 +133,22 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesEditMasterTest do
       assert "RECURRENCE-ID:20260518T093000Z" in override
       assert "DTSTART:20260518T143000Z" in override
     end
+
+    test "moves the rule's UNTIL by the same amount" do
+      document =
+        calendar(
+          String.replace(
+            master("DTSTART:20260504T080000Z"),
+            "RRULE:FREQ=WEEKLY",
+            "RRULE:FREQ=WEEKLY;UNTIL=20260601T080000Z"
+          )
+        )
+
+      changes = %{start_time: ~U[2026-05-25 09:30:00Z], end_time: ~U[2026-05-25 10:00:00Z]}
+      master = master_of(edit!(document, "20260525T080000", changes, nil))
+
+      assert "RRULE:FREQ=WEEKLY;UNTIL=20260601T093000Z" in master
+    end
   end
 
   describe "edit_master/4 moving an all-day series" do
@@ -166,6 +182,19 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesEditMasterTest do
       [override] = overrides_of(result)
       assert "RECURRENCE-ID;VALUE=DATE:20260520" in override
       assert "DTSTART;VALUE=DATE:20260521" in override
+    end
+
+    test "a date UNTIL moves by the same days and stays a date" do
+      document =
+        calendar(
+          String.replace(@all_day, "RRULE:FREQ=WEEKLY", "RRULE:FREQ=WEEKLY;UNTIL=20260615")
+        )
+
+      changes = %{start_time: ~D[2026-05-27], end_time: ~D[2026-05-28]}
+
+      assert "RRULE:FREQ=WEEKLY;UNTIL=20260617" in master_of(
+               edit!(document, "20260525", changes, nil)
+             )
     end
 
     test "refuses to move a date by part of a day" do
@@ -414,9 +443,11 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesEditMasterTest do
       {winter, summer} = winter_and_summer_mondays()
       excluded = Date.add(summer, -7)
       overridden = Date.add(summer, 7)
-      # The series ends days after the override, so no occurrence reaches the
-      # edge of the sync's window, where a day's shift could carry it across.
-      until = Date.add(overridden, 3)
+      # The series is bounded so no occurrence reaches the edge of the sync's
+      # window, where a day's shift could carry it across. Its UNTIL is the
+      # last occurrence's exact start, a week after the override, as many
+      # clients write it, so a move that left the end behind would lose it.
+      until = berlin_instant(Date.add(overridden, 7), ~T[10:00:00])
 
       document =
         calendar(
@@ -427,7 +458,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesEditMasterTest do
                 "EXDATE;TZID=Europe/Berlin:#{stamp(excluded)}T100000\n"
               ),
               "RRULE:FREQ=WEEKLY",
-              "RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=#{stamp(until)}T000000Z"
+              "RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=#{utc_stamp(until)}"
             ) <>
             """
             BEGIN:VEVENT
@@ -468,6 +499,76 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesEditMasterTest do
 
     defp berlin_weekday(instant),
       do: instant |> DateTime.shift_zone!("Europe/Berlin") |> Date.day_of_week()
+
+    defp utc_stamp(instant), do: Calendar.strftime(instant, "%Y%m%dT%H%M%SZ")
+
+    # A weekly Monday 10:00 Berlin series from the winter Monday to a week
+    # after the summer one, its UNTIL `until`.
+    defp bounded_series(until) do
+      {winter, _summer} = winter_and_summer_mondays()
+
+      calendar(
+        @vtimezone <>
+          String.replace(
+            master("DTSTART;TZID=Europe/Berlin:#{stamp(winter)}T100000"),
+            "RRULE:FREQ=WEEKLY",
+            "RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=#{until}"
+          )
+      )
+    end
+
+    defp last_start(events), do: events |> Enum.map(& &1.start_at) |> Enum.max(DateTime)
+
+    for {bound, time} <- [
+          {"the last occurrence's start", ~T[10:00:00]},
+          {"the end of the last occurrence's day", ~T[23:59:59]}
+        ],
+        {move, days, hour} <- [
+          {"an hour later", 0, 11},
+          {"a day later", 1, 10},
+          {"an hour earlier", 0, 9},
+          {"a day earlier", -1, 10}
+        ] do
+      test "a series ending at #{bound}, moved #{move}, keeps its last occurrence" do
+        {_winter, summer} = winter_and_summer_mondays()
+        last = Date.add(summer, 7)
+        document = bounded_series(utc_stamp(berlin_instant(last, unquote(Macro.escape(time)))))
+
+        new_start =
+          berlin_instant(Date.add(summer, unquote(days)), Time.new!(unquote(hour), 0, 0))
+
+        changes = %{start_time: new_start, end_time: DateTime.add(new_start, 30, :minute)}
+
+        before = normalised_events(document)
+        events = normalised_events(edit!(document, "#{stamp(summer)}T100000", changes, nil))
+
+        assert length(before) > 2
+        assert length(events) == length(before)
+
+        moved_last =
+          berlin_instant(Date.add(last, unquote(days)), Time.new!(unquote(hour), 0, 0))
+
+        assert DateTime.compare(last_start(events), moved_last) == :eq
+      end
+    end
+
+    test "a rule stated with the move is written as given, its UNTIL unmoved" do
+      {_winter, summer} = winter_and_summer_mondays()
+      # The end of a day, as the organiser's rule is written (`RRule.retarget/2`).
+      until = utc_stamp(berlin_instant(Date.add(summer, 14), ~T[23:59:59]))
+      document = bounded_series(utc_stamp(berlin_instant(Date.add(summer, 7), ~T[10:00:00])))
+      new_start = berlin_instant(summer, ~T[11:00:00])
+
+      changes = %{
+        start_time: new_start,
+        end_time: DateTime.add(new_start, 30, :minute),
+        recurrence_rule: "FREQ=WEEKLY;BYDAY=MO;UNTIL=#{until}"
+      }
+
+      master = master_of(edit!(document, "#{stamp(summer)}T100000", changes, nil))
+
+      assert "RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=#{until}" in master
+    end
 
     test "a moved series keeps its exceptions excluded and each override over its own slot" do
       {winter, summer} = winter_and_summer_mondays()

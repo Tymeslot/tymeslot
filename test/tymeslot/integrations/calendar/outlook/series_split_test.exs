@@ -138,6 +138,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesSplitTest do
     end
   end
 
+  describe "the tail, moved to another day" do
+    test "takes the end date along, so the last occurrence stays" do
+      range = %{"type" => "endDate", "startDate" => "2026-06-01", "endDate" => "2026-12-28"}
+      moved = %{start_time: ~U[2026-11-03 08:00:00Z], end_time: ~U[2026-11-03 09:00:00Z]}
+
+      assert {:ok, %{tail: tail}} = SeriesSplit.build(with_range(range), edit(moved))
+
+      assert get_in(tail, ["recurrence", "range"]) ==
+               %{range | "startDate" => "2026-11-03", "endDate" => "2026-12-29"}
+    end
+  end
+
   describe "the head" do
     test "ends on the day before the slot's date" do
       assert {:ok, %{head: head}} = SeriesSplit.build(@master, edit())

@@ -159,8 +159,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
       event, which is not an edit of every occurrence. Without one, the
       rule follows a move of the series (`Series.RuleShift`): the plain
       weekdays of a weekly or daily `BYDAY` turn by the days it moved, so a
-      Monday series moved to Tuesday reads `BYDAY=TU`. A rule the edit
-      states is written as given.
+      Monday series moved to Tuesday reads `BYDAY=TU`, and its `UNTIL`
+      moves with the series, so the move does not carry the last
+      occurrences past the end. A rule the edit states is written as given.
     * `:recurrence_exceptions` belongs to the document and is ignored.
 
   Refused before anything is written: a change of value type

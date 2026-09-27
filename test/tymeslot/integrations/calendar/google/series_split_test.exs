@@ -116,6 +116,19 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesSplitTest do
       assert tail["recurrence"] == ["RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261221T235959Z"]
     end
 
+    test "a move takes the UNTIL along, so the last occurrence stays" do
+      # UNTIL at the last occurrence's start, Monday 21 December at 09:00.
+      master = %{
+        @master
+        | "recurrence" => ["RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261221T080000Z"]
+      }
+
+      moved = %{start_time: ~U[2026-11-02 09:00:00Z], end_time: ~U[2026-11-02 10:00:00Z]}
+
+      assert {:ok, %{tail: tail}} = SeriesSplit.build(master, edit(moved))
+      assert tail["recurrence"] == ["RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261221T090000Z"]
+    end
+
     test "copies the Meet the series has, never asking for a new one" do
       conference = %{
         "conferenceId" => "abc-defg-hij",

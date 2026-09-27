@@ -9,15 +9,20 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.RuleShift do
 
     * `BYDAY` with plain weekdays in a `WEEKLY` or `DAILY` rule is rotated by
       the number of days the series moved, so a weekly Monday meeting moved
-      to Tuesday reads `BYDAY=TU`. Every other part stays as written.
+      to Tuesday reads `BYDAY=TU`. Every other part but `UNTIL` stays as
+      written.
     * Anything else that names a day (an ordinal `BYDAY` such as `2MO`,
       `BYMONTHDAY`, `BYYEARDAY`, `BYWEEKNO`, `BYSETPOS`, `BYMONTH`) cannot
       follow a move to another date, and any move at all is refused for a
       time part (`BYHOUR`, `BYMINUTE`, `BYSECOND`), with
       `{:error, :rule_pins_occurrences}`.
+    * `UNTIL` moves with the series (`Series.Shift.shift_bound/4`), in the
+      form it is written in, so the last occurrences are not pushed past
+      the end of the series and dropped. `COUNT` needs nothing.
   """
 
   alias Tymeslot.Integrations.Calendar.ICalBuilder.ContentLines
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Shift
 
   @weekdays ~w(MO TU WE TH FR SA SU)
   @day_parts ~w(BYMONTHDAY BYYEARDAY BYWEEKNO BYSETPOS BYMONTH)
@@ -25,32 +30,64 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.RuleShift do
   @rotatable_frequencies ~w(WEEKLY DAILY)
 
   @doc """
-  The `RRULE` content line `line` for a series moved by `shift` seconds, of
-  which `days` whole dates: `0` when the move stays on the same date.
-  """
-  @spec follow(String.t(), integer(), integer()) ::
-          {:ok, String.t()} | {:error, :rule_pins_occurrences}
-  def follow(line, 0, _days), do: {:ok, line}
+  The `RRULE` content line `line` for a series moved by `shift` seconds on
+  the wall clock of its zone, of which `days` whole dates: `0` when the move
+  stays on the same date.
 
-  def follow(line, _shift, days) do
+  Options:
+
+    * `:zone` - the series' zone, which a UTC `UNTIL` moves on the wall
+      clock of (UTC when `nil`, the default);
+    * `:keep_until` - `true` for a rule whose end is not the series' to
+      move: one the organiser stated in the same edit, which is written as
+      they gave it. Defaults to `false`.
+  """
+  @spec follow(String.t(), integer(), integer(), keyword()) ::
+          {:ok, String.t()}
+          | {:error, :rule_pins_occurrences | :unsupported_value | :unreadable_timing}
+  def follow(line, shift, days, opts \\ [])
+  def follow(line, 0, _days, _opts), do: {:ok, line}
+
+  def follow(line, shift, days, opts) do
     {name_and_params, value} = ContentLines.split_value(line)
     parts = parse(value)
 
-    cond do
-      has_any?(parts, @time_parts) -> pinned()
-      days == 0 -> {:ok, line}
-      has_any?(parts, @day_parts) -> pinned()
-      not has_any?(parts, ["BYDAY"]) -> {:ok, line}
-      true -> rotate(name_and_params, parts, days)
+    with {:ok, followed} <- follow_days(parts, days),
+         {:ok, followed} <- follow_until(followed, shift, days, opts) do
+      # Unchanged, the line goes back exactly as the server wrote it.
+      if followed == parts,
+        do: {:ok, line},
+        else: {:ok, name_and_params <> ":" <> join(followed)}
     end
   end
 
-  defp rotate(name_and_params, parts, days) do
+  defp follow_days(parts, days) do
+    cond do
+      has_any?(parts, @time_parts) -> pinned()
+      days == 0 -> {:ok, parts}
+      has_any?(parts, @day_parts) -> pinned()
+      not has_any?(parts, ["BYDAY"]) -> {:ok, parts}
+      true -> rotate(parts, days)
+    end
+  end
+
+  defp follow_until(parts, shift, days, opts) do
+    until = part(parts, "UNTIL")
+
+    if is_nil(until) or Keyword.get(opts, :keep_until, false) do
+      {:ok, parts}
+    else
+      with {:ok, moved} <- Shift.shift_bound(until, shift, days, Keyword.get(opts, :zone)),
+           do: {:ok, put_part(parts, "UNTIL", moved)}
+    end
+  end
+
+  defp rotate(parts, days) do
     weekdays = parts |> part("BYDAY") |> String.upcase() |> String.split(",", trim: true)
 
     if rotatable?(parts, weekdays) and not crosses_week?(parts, weekdays, days) do
       rotated = Enum.map_join(weekdays, ",", &rotate_weekday(&1, days))
-      {:ok, name_and_params <> ":" <> join(put_part(parts, "BYDAY", rotated))}
+      {:ok, put_part(parts, "BYDAY", rotated)}
     else
       pinned()
     end

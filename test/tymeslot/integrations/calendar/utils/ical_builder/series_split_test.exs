@@ -191,6 +191,16 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesSplitTest do
       assert "RECURRENCE-ID;TZID=Europe/Berlin:20260216T110000" in hd(overrides_of(tail))
     end
 
+    test "a move takes the UNTIL along, so the last occurrence stays" do
+      # UNTIL at the last occurrence's start, 16 March 10:00 in Berlin.
+      document = String.replace(berlin_document(), "COUNT=10", "UNTIL=20260316T090000Z")
+      changes = %{start_time: ~U[2026-01-26 10:00:00Z], end_time: ~U[2026-01-26 10:30:00Z]}
+
+      {_head, tail, _uid} = split!(document, @split_key, changes)
+
+      assert rrule_of(tail) == "RRULE:FREQ=WEEKLY;UNTIL=20260316T100000Z"
+    end
+
     test "is refused where the whole series would be" do
       changes = %{start_time: ~D[2026-01-26], end_time: ~D[2026-01-27]}
 

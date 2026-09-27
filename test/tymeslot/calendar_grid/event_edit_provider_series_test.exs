@@ -131,6 +131,9 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSeriesTest do
   defp an_hour_later,
     do: %{start_at: ~U[2026-11-02 09:00:00.000000Z], end_at: ~U[2026-11-02 10:00:00.000000Z]}
 
+  defp a_day_later,
+    do: %{start_at: ~U[2026-11-03 08:00:00.000000Z], end_at: ~U[2026-11-03 09:00:00.000000Z]}
+
   describe "every occurrence of a Google series" do
     @google_master %{
       "id" => "series1",
@@ -177,6 +180,28 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSeriesTest do
              ]
 
       refute Map.has_key?(sent, "summary")
+    end
+
+    test "a move to Tuesday carries the series' UNTIL with it", %{
+      user: user,
+      occurrence: occurrence
+    } do
+      # Monday 28 December, 09:00 in Berlin, the last occurrence's start.
+      serve_master(%{
+        @google_master
+        | "recurrence" => ["RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261228T080000Z"]
+      })
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, occurrence, a_day_later(),
+                 recurrence_scope: :all
+               )
+
+      assert_received {:patch, @master_url <> "?sendUpdates=none", body}
+
+      assert Jason.decode!(body)["recurrence"] == [
+               "RRULE:FREQ=WEEKLY;BYDAY=TU;UNTIL=20261229T080000Z"
+             ]
     end
 
     test "the series' rows are dropped, the rest kept, and a sync requested", %{
@@ -336,6 +361,32 @@ defmodule Tymeslot.CalendarGrid.EventEditProviderSeriesTest do
         worker: RefreshOutlookCalendarWorker,
         args: %{"calendar_integration_id" => integration.id}
       )
+    end
+
+    test "a move to Tuesday carries the series' end date with it", %{
+      user: user,
+      occurrence: occurrence
+    } do
+      serve_master(
+        put_in(@outlook_master, ["recurrence", "range"], %{
+          "type" => "endDate",
+          "startDate" => "2026-06-01",
+          "endDate" => "2026-12-28"
+        })
+      )
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, occurrence, a_day_later(),
+                 recurrence_scope: :all
+               )
+
+      assert_received {:patch, @outlook_url, body}
+
+      assert Jason.decode!(body)["recurrence"]["range"] == %{
+               "type" => "endDate",
+               "startDate" => "2026-06-02",
+               "endDate" => "2026-12-29"
+             }
     end
 
     test "a failed write is not queued, leaves the rows and requests no sync", %{

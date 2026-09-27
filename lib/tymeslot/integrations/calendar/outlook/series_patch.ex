@@ -25,13 +25,16 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
       the pattern is turned as `ICalBuilder.Series.RuleShift` turns an
       RRULE (a weekly Monday series moved to Tuesday repeats on Tuesday; an
       absolute monthly one moves to the new day of the month). The pattern's
-      other keys, `firstDayOfWeek` included, and the range's end are kept.
+      other keys, `firstDayOfWeek` included, are kept, and an `endDate`
+      range's end moves by as many dates as the start, so the move does not
+      carry the last occurrences past it.
       A relative pattern (the second Monday of the month) cannot follow a
       move to another date and refuses it
       (`{:error, :rule_pins_occurrences}`).
     * **A new rule** is sent as the whole `recurrence`: the pattern the
       rule describes, and its range when it states an end; a rule that
-      states none keeps the master's range, from the master's start date.
+      states none keeps the master's range, from the master's start date,
+      its `endDate` moved with the series as above.
 
   Occurrences edited on their own (exceptions) are not moved here; Graph
   keeps or drops them itself when the master changes.
@@ -188,48 +191,54 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
 
   defp recurrence(master, move, changes, {start, _finish}, zone) do
     start_date = date_of(if move == :unmoved, do: start, else: move.start)
+    days = if move == :unmoved, do: 0, else: move.days
 
     case Map.fetch(changes, :recurrence_rule) do
-      {:ok, rule} -> with_rule(master["recurrence"], rule, start_date, zone)
+      {:ok, rule} -> with_rule(master["recurrence"], rule, start_date, days, zone)
       :error -> follow(master["recurrence"], move, start_date, zone)
     end
   end
 
-  defp with_rule(_recurrence, nil, _start_date, _zone), do: {:error, :rule_removal}
+  defp with_rule(_recurrence, nil, _start_date, _days, _zone), do: {:error, :rule_removal}
 
-  defp with_rule(recurrence, rule, start_date, zone) do
+  defp with_rule(recurrence, rule, start_date, days, zone) do
     case RecurrenceConverter.rrule_to_outlook(rule, start_date, zone) do
-      nil -> {:error, :unsupported_rule}
-      built -> {:ok, %{built | "range" => range(built, recurrence, rule, start_date, zone)}}
+      nil ->
+        {:error, :unsupported_rule}
+
+      built ->
+        with {:ok, range} <- range(built, recurrence, rule, {start_date, days}, zone),
+             do: {:ok, %{built | "range" => range}}
     end
   end
 
-  defp range(built, recurrence, rule, start_date, zone) do
+  # A rule that states an end is written with it; one that states none keeps
+  # the master's, which moves with the series as it would without a rule.
+  defp range(built, recurrence, rule, {start_date, days}, zone) do
     parsed = RRule.parse(rule, timezone: zone)
 
     case recurrence do
       %{"range" => %{} = master_range}
       when not is_map_key(parsed, :count) and not is_map_key(parsed, :until) ->
-        Map.put(master_range, "startDate", Date.to_iso8601(start_date))
+        move_range(master_range, days, start_date)
 
       _stated_or_none ->
-        built["range"]
+        {:ok, built["range"]}
     end
   end
 
   defp follow(_recurrence, :unmoved, _start_date, _zone), do: {:ok, nil}
   defp follow(_recurrence, %{days: 0}, _start_date, _zone), do: {:ok, nil}
 
+  # Only the pattern is taken from the turned rule; the range moves itself.
   defp follow(%{"pattern" => pattern, "range" => range}, move, start_date, zone) do
     with {:ok, rule} <- pattern_rule(pattern, range),
-         {:ok, "RRULE:" <> turned} <- RuleShift.follow("RRULE:" <> rule, move.shift, move.days),
+         {:ok, "RRULE:" <> turned} <-
+           RuleShift.follow("RRULE:" <> rule, move.shift, move.days, keep_until: true),
          %{"pattern" => turned_pattern} <-
-           RecurrenceConverter.rrule_to_outlook(turned, start_date, zone) do
-      {:ok,
-       %{
-         "pattern" => Map.merge(pattern, turned_pattern),
-         "range" => Map.put(range, "startDate", Date.to_iso8601(start_date))
-       }}
+           RecurrenceConverter.rrule_to_outlook(turned, start_date, zone),
+         {:ok, range} <- move_range(range, move.days, start_date) do
+      {:ok, %{"pattern" => Map.merge(pattern, turned_pattern), "range" => range}}
     else
       {:error, _reason} = error -> error
       _unreadable -> {:error, :rule_pins_occurrences}
@@ -237,6 +246,25 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatch do
   end
 
   defp follow(_recurrence, _move, _start_date, _zone), do: {:error, :unreadable_rule}
+
+  # The range starts on the master's new date, and an `endDate` moves by as
+  # many dates as the series did, or the occurrences the move carries past it
+  # would no longer be made. Graph reads both as dates in the series' zone,
+  # where the occurrences move by the same whole dates as the start.
+  defp move_range(range, days, start_date) do
+    moved = Map.put(range, "startDate", Date.to_iso8601(start_date))
+
+    case range do
+      %{"type" => "endDate", "endDate" => end_date} ->
+        case Date.from_iso8601(end_date) do
+          {:ok, date} -> {:ok, Map.put(moved, "endDate", Date.to_iso8601(Date.add(date, days)))}
+          {:error, _reason} -> {:error, :unreadable_rule}
+        end
+
+      _numbered_or_no_end ->
+        {:ok, moved}
+    end
+  end
 
   @doc """
   The pattern and range of a Graph `recurrence` as an RRULE, with the week

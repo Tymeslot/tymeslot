@@ -62,6 +62,47 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Shift do
   end
 
   @doc """
+  Moves the end of a series, a rule's `UNTIL` `value`, with a move of the
+  series by `seconds` on the wall clock of `series_zone` (UTC when `nil`), of
+  which `days` whole dates, so it bounds the same occurrences as before:
+
+    * a date moves by `days`, and stays a date;
+    * a wall clock (floating) moves by `seconds`;
+    * a UTC value moves by `seconds` on the series' wall clock, as its
+      occurrences do, so it stays level with the last of them when the move
+      crosses a change of the clocks.
+
+  Returns `{:error, :unsupported_value}` for a value it cannot read, and
+  `{:error, :unreadable_timing}` for a zone it cannot place it in.
+  """
+  @spec shift_bound(String.t(), integer(), integer(), String.t() | nil) ::
+          {:ok, String.t()} | {:error, :unsupported_value | :unreadable_timing}
+  def shift_bound(value, seconds, days, series_zone) do
+    case read(value) do
+      {:ok, {:date, date}} ->
+        {:ok, Format.format_date(Date.add(date, days))}
+
+      {:ok, {:date_time, naive, false}} ->
+        {:ok, naive |> NaiveDateTime.add(seconds) |> Format.format_naive_datetime()}
+
+      {:ok, {:date_time, naive, true}} ->
+        shift_instant(naive, seconds, series_zone)
+
+      :error ->
+        {:error, :unsupported_value}
+    end
+  end
+
+  defp shift_instant(naive, seconds, series_zone) do
+    with {:ok, wall} <- in_zone(naive, "Etc/UTC", series_zone),
+         {:ok, moved} <- in_zone(NaiveDateTime.add(wall, seconds), series_zone, "Etc/UTC") do
+      {:ok, Format.format_naive_datetime(moved) <> "Z"}
+    else
+      :error -> {:error, :unreadable_timing}
+    end
+  end
+
+  @doc """
   Reads the first value of the timing property `line` as a wall clock in
   `series_zone` (UTC when `nil`), a date as its midnight. The line's own zone
   is resolved as `ICalBuilder.Timing.zone/2` resolves it, with `fallback` for

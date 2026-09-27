@@ -190,17 +190,19 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Master do
 
   defp put_rule(items, _changes, _zone), do: {:ok, items}
 
-  # The rule follows the move (`Series.RuleShift`). A rule the edit itself
-  # states is the organiser's for the moved series, so it is written as they
-  # gave it: only a part pinning a time of day is refused.
+  # The rule follows the move (`Series.RuleShift`), its end included, so the
+  # last occurrences are not moved past it. A rule the edit itself states is
+  # the organiser's for the moved series, so it is written as they gave it,
+  # its end as well: only a part pinning a time of day is refused.
   defp follow_rule(components, _reference, 0, _zones, _changes), do: {:ok, components}
 
   defp follow_rule(components, reference, shift, zones, changes) do
     index = Enum.find_index(components, &Document.master?/1)
     {:vevent, items} = Enum.at(components, index)
+    opts = [zone: elem(zones, 0), keep_until: Map.has_key?(changes, :recurrence_rule)]
 
     with {:ok, days} <- days_moved(reference, shift, zones, changes),
-         {:ok, items} <- Document.map_ok(items, &follow_line(&1, shift, days)) do
+         {:ok, items} <- Document.map_ok(items, &follow_line(&1, shift, days, opts)) do
       {:ok, List.replace_at(components, index, {:vevent, items})}
     end
   end
@@ -219,11 +221,11 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Master do
     end
   end
 
-  defp follow_line(line, shift, days) when is_binary(line) do
+  defp follow_line(line, shift, days, opts) when is_binary(line) do
     if ContentLines.property_name(line) == "RRULE",
-      do: RuleShift.follow(line, shift, days),
+      do: RuleShift.follow(line, shift, days, opts),
       else: {:ok, line}
   end
 
-  defp follow_line(subcomponent, _shift, _days), do: {:ok, subcomponent}
+  defp follow_line(subcomponent, _shift, _days, _opts), do: {:ok, subcomponent}
 end

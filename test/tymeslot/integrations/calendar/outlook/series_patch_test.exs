@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatchTest do
   @moduletag :unit
 
   alias Tymeslot.Integrations.Calendar.Outlook.SeriesPatch
+  alias Tymeslot.Integrations.Calendar.RecurrenceExpander
 
   @zone "W. Europe Standard Time"
 
@@ -77,7 +78,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatchTest do
                  "daysOfWeek" => ["tuesday"],
                  "firstDayOfWeek" => "sunday"
                },
-               "range" => %{@range | "startDate" => "2026-06-02"}
+               "range" => %{@range | "startDate" => "2026-06-02", "endDate" => "2027-01-01"}
              }
     end
 
@@ -130,6 +131,90 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.SeriesPatchTest do
 
       assert SeriesPatch.build(master, edit(%{summary: "Standup"})) ==
                {:ok, %{"subject" => "Standup"}}
+    end
+  end
+
+  describe "a move of a series with an end date" do
+    # How many occurrences the master makes once `body` is merged into it,
+    # expanded as the sync expands a series, on its own wall clock.
+    defp occurrences(master, body) do
+      patched = Map.merge(master, body)
+      assert {:ok, {start, _end}, {zone, _label}} = SeriesPatch.master_timing(patched)
+
+      %{"pattern" => pattern, "range" => range} = patched["recurrence"]
+      assert {:ok, rule} = SeriesPatch.pattern_rule(pattern, range)
+
+      RecurrenceExpander.count_before(
+        rule,
+        DateTime.from_naive!(start, zone),
+        ~U[2030-01-01 00:00:00Z]
+      )
+    end
+
+    # Monday 28 December 2026 is the last occurrence.
+    defp ending_on(master, end_date),
+      do: put_in(master, ["recurrence", "range"], %{@range | "endDate" => end_date})
+
+    for {move, start, end_date} <- [
+          {"an hour later", ~U[2026-11-02 09:00:00Z], "2026-12-28"},
+          {"a day later", ~U[2026-11-03 08:00:00Z], "2026-12-29"},
+          {"an hour earlier", ~U[2026-11-02 07:00:00Z], "2026-12-28"},
+          {"a day earlier", ~U[2026-11-01 08:00:00Z], "2026-12-27"}
+        ] do
+      test "ending on the last occurrence's date, moved #{move}, keeps every occurrence" do
+        master = ending_on(@master, "2026-12-28")
+        start = unquote(Macro.escape(start))
+        edit = edit(%{start_time: start, end_time: DateTime.add(start, 1, :hour)})
+
+        assert {:ok, body} = SeriesPatch.build(master, edit)
+
+        assert (body["recurrence"] || master["recurrence"])["range"]["endDate"] ==
+                 unquote(end_date)
+
+        assert occurrences(master, %{}) == 31
+        assert occurrences(master, body) == 31
+      end
+    end
+
+    test "a move across midnight moves the end date by the day it crosses" do
+      # 23:30 in Berlin, Monday 2 November: 22:30 UTC, moved to 00:30.
+      master =
+        ending_on(
+          %{
+            @master
+            | "start" => %{"dateTime" => "2026-06-01T21:30:00.0000000", "timeZone" => "UTC"},
+              "end" => %{"dateTime" => "2026-06-01T22:00:00.0000000", "timeZone" => "UTC"}
+          },
+          "2026-12-28"
+        )
+
+      edit = %{
+        scope: :all,
+        master_id: "master-1",
+        start: ~U[2026-11-02 22:30:00Z],
+        end: ~U[2026-11-02 23:00:00Z],
+        changes: %{start_time: ~U[2026-11-02 23:30:00Z], end_time: ~U[2026-11-03 00:00:00Z]}
+      }
+
+      assert {:ok, body} = SeriesPatch.build(master, edit)
+      assert body["recurrence"]["pattern"]["daysOfWeek"] == ["tuesday"]
+      assert body["recurrence"]["range"]["startDate"] == "2026-06-02"
+      assert body["recurrence"]["range"]["endDate"] == "2026-12-29"
+    end
+
+    test "a rule stated with the move keeps the end it states" do
+      edit =
+        edit(Map.merge(tuesday(), %{recurrence_rule: "FREQ=WEEKLY;BYDAY=TU;UNTIL=20270105"}))
+
+      assert {:ok, body} = SeriesPatch.build(ending_on(@master, "2026-12-28"), edit)
+      assert body["recurrence"]["range"]["endDate"] == "2027-01-05"
+    end
+
+    test "a rule stated with the move but without an end moves the master's end" do
+      edit = edit(Map.merge(tuesday(), %{recurrence_rule: "FREQ=WEEKLY;BYDAY=TU"}))
+
+      assert {:ok, body} = SeriesPatch.build(ending_on(@master, "2026-12-28"), edit)
+      assert body["recurrence"]["range"]["endDate"] == "2026-12-29"
     end
   end
 

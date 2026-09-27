@@ -19,9 +19,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesPatch do
       `Recurrence.SeriesMove`). The `recurrence` lines follow it: the
       `RRULE` (and any `EXRULE`) as `ICalBuilder.Series.RuleShift` keeps a
       rule in step with a move, so a weekly Monday series moved to Tuesday
-      reads `BYDAY=TU`, and every `EXDATE` and `RDATE` by the same amount in
-      the form it is written in (`ICalBuilder.Series.Shift`), or the dates
-      the series excludes would come back. A rule that pins its occurrences
+      reads `BYDAY=TU` and its `UNTIL` moves with it; and every `EXDATE`
+      and `RDATE` by the same amount in the form it is written in
+      (`ICalBuilder.Series.Shift`), or the dates the series excludes would
+      come back. A rule that pins its occurrences
       in a way the move cannot follow refuses it
       (`{:error, :rule_pins_occurrences}`).
     * **A new rule** replaces only the `RRULE` line, its `UNTIL` refitted to
@@ -159,7 +160,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesPatch do
         with_rule(lines, rule, shift, match?(%Date{}, start), zone)
 
       :error ->
-        Document.map_ok(lines, &follow(&1, shift, if(move == :unmoved, do: 0, else: move.days)))
+        days = if move == :unmoved, do: 0, else: move.days
+        Document.map_ok(lines, &follow(&1, shift, days, zone: zone))
     end
   end
 
@@ -170,15 +172,17 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesPatch do
       line = "RRULE:" <> RRule.strip_prefix(rule)
       # A stated rule is written as given, so only the exceptions move.
       Document.map_ok(lines, fn written ->
-        if rule_line?(written, "RRULE"), do: {:ok, line}, else: follow(written, shift, 0)
+        if rule_line?(written, "RRULE"),
+          do: {:ok, line},
+          else: follow(written, shift, 0, zone: zone, keep_until: true)
       end)
     end
   end
 
-  defp follow(line, shift, days) do
+  defp follow(line, shift, days, opts) do
     cond do
       rule_line?(line, "RRULE") or rule_line?(line, "EXRULE") ->
-        RuleShift.follow(line, shift, days)
+        RuleShift.follow(line, shift, days, opts)
 
       rule_line?(line, "EXDATE") or rule_line?(line, "RDATE") ->
         Shift.shift_line(line, shift)
