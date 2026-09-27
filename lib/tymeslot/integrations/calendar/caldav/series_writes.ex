@@ -14,10 +14,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   Each write rewrites the series' resource (see `ICalBuilder.Series`) and
   PUTs it back under `If-Match`: the cached document under its ETag when the
   cache holds both, else the server's copy, and on a 412 one re-read of the
-  server's copy with the same rewrite applied to it. Always under the
-  `:fail` policy: `:keep_local` would force a document built on a stale copy
-  over a concurrent change, and `:keep_server` would report a change as made
-  that is not on the calendar.
+  server's copy with the same rewrite applied to it (a split is made again
+  whole from that copy, rather than ending it beside a tail split from the
+  stale one). Always under the `:fail` policy: `:keep_local` would force a
+  document built on a stale copy over a concurrent change, and
+  `:keep_server` would report a change as made that is not on the calendar.
   """
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
@@ -33,6 +34,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series
   alias Tymeslot.Utils.UriUtils
+
+  require Logger
+
+  # The answers to a conditional write that mean the resource changed since
+  # the document it was made from was read.
+  @stale [:precondition_failed, :conditional_not_supported]
 
   @typedoc "One occurrence of the series stored at `href`, keyed as the cache keys it."
   @type occurrence :: %{
@@ -215,12 +222,26 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
     end
   end
 
-  defp split_and_write(client, url, occurrence, split, opts) do
+  # Both halves are made from one document. A head the server refuses
+  # because the series changed since that document was read has its tail
+  # deleted, and the whole split is made again, once, from the server's copy:
+  # ending the server's copy beside a tail split from the stale one would
+  # bring back what was changed meanwhile from the split on. A second
+  # refusal is reported rather than chased.
+  defp split_and_write(client, url, occurrence, split, opts, retry? \\ true) do
     with {:ok, document, etag} <- starting_copy(client, url, occurrence, opts) do
       case split.(document) do
         {:ok, halves} ->
           head = %{occurrence | document: document, etag: etag}
-          create_tail_then_truncate(client, url, head, halves, opts)
+
+          case create_tail_then_truncate(client, url, head, halves, opts) do
+            {:error, reason} when retry? and reason in @stale ->
+              fresh = %{occurrence | document: nil, etag: nil}
+              split_and_write(client, url, fresh, split, opts, false)
+
+            result ->
+              result
+          end
 
         :first_occurrence ->
           {:ok, :first_occurrence}
@@ -234,22 +255,35 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   # The tail is created first, so the following occurrences are never off
   # the calendar: if the head cannot be ended after it, the tail is deleted
   # again and the series stands as it was. `head` is the occurrence with the
-  # document the split was made from and its ETag; the head is ended by the
-  # rewrite loop, so a 412 ends the server's copy instead.
+  # document the split was made from and its ETag, which the head's write is
+  # conditional on.
   defp create_tail_then_truncate(client, url, head, halves, opts) do
     tail_url = tail_url(url, halves.tail_uid)
 
     with {:ok, tail} <- create_tail(client, tail_url, halves, opts) do
       truncate = &Series.truncate(&1, head.key, head.timezone)
 
-      case rewrite_and_write(client, url, head, truncate, opts) do
+      case write_rewrite(client, url, head.document, head.etag, truncate, opts) do
         {:ok, %{document: document}} ->
           {:ok, %{document: document, tail: tail}}
 
         failure ->
-          _deleted = Http.delete_event(tail_url, client.username, client.password, timeout(opts))
+          delete_tail(client, tail_url, opts)
           failure
       end
+    end
+  end
+
+  defp delete_tail(client, tail_url, opts) do
+    case Http.delete_event(tail_url, client.username, client.password, timeout(opts)) do
+      {:ok, %Req.Response{}} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("CalDAV series split left its following occurrences behind",
+          tail_url: tail_url,
+          reason: inspect(reason)
+        )
     end
   end
 
@@ -320,7 +354,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   defp rewrite_and_write(client, url, %{document: document, etag: etag}, fun, opts)
        when is_binary(document) and document != "" and is_binary(etag) and etag != "" do
     case write_rewrite(client, url, document, etag, fun, opts) do
-      {:error, reason} when reason in [:precondition_failed, :conditional_not_supported] ->
+      {:error, reason} when reason in @stale ->
         refresh_and_rewrite(client, url, fun, opts)
 
       result ->

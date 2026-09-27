@@ -449,10 +449,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   series in the same collection (`<collection><tail uid>.ics`, under
   `If-None-Match: *`); a tail that cannot be created leaves the series as it
   was. The series' own resource is then ended before the occurrence, under
-  `If-Match`, the way `update_series/4` writes: the cached document under its
-  ETag, else the server's copy, and one re-read on a 412. If that fails, the
-  tail is deleted again and the failure reported, so the series is never
-  left showing its following occurrences twice.
+  `If-Match`: the cached document under its ETag, else the server's copy.
+  On a 412 the tail is deleted and the whole split made again, once, from a
+  re-read of the server's copy, so both halves carry what changed there
+  meanwhile. If the series still cannot be ended, the tail is deleted again
+  and the failure reported, so the series is never left showing its
+  following occurrences twice.
 
   An occurrence the rule makes nothing before is the series' first, and the
   edit is written as `update_series/4` writes it.

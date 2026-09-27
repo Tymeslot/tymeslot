@@ -209,6 +209,60 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVSplitTest do
       refute Enum.any?(head_master, &String.starts_with?(&1, "EXDATE"))
     end
 
+    test "a series changed on the server since the last sync is split from the server's copy",
+         %{user: user, integration: integration, occurrence: occurrence} do
+      test_pid = self()
+
+      # Another client cancelled 6 October after the cache was filled.
+      server_copy =
+        String.replace(
+          @series_ical,
+          "EXDATE;TZID=Europe/Berlin:20260929T090000",
+          "EXDATE;TZID=Europe/Berlin:20260929T090000,20261006T090000"
+        )
+
+      # The series' write under the cached ETag is refused; every other
+      # write is accepted.
+      expect(Tymeslot.HTTPClientMock, :put, 4, fn url, body, headers, _opts ->
+        send(test_pid, {:put, url, body, headers})
+        status = if {"If-Match", "\"etag-1\""} in headers, do: 412, else: 201
+        {:ok, %Req.Response{status: status, body: "", headers: %{}}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :delete, fn url, _headers, _opts ->
+        send(test_pid, {:delete, url})
+        {:ok, %Req.Response{status: 204, body: "", headers: %{}}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :get, fn @series_url, _headers, _opts ->
+        {:ok, %Req.Response{status: 200, body: server_copy, headers: %{"etag" => ["\"etag-2\""]}}}
+      end)
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+                 recurrence_scope: :following
+               )
+
+      assert_received {:put, stale_tail_url, _stale_tail, _headers}
+      assert_received {:put, @series_url, _stale_head, _headers}
+      assert_received {:delete, ^stale_tail_url}
+
+      # Exactly one tail stays on the calendar, and it keeps the cancellation.
+      assert_received {:put, tail_url, tail, _headers}
+      assert tail_url == "https://caldav.example.com/cal/#{tail_uid(tail)}.ics"
+      refute_received {:delete, ^tail_url}
+      assert [tail_master] = vevent_blocks(tail)
+      assert "SUMMARY:Standup" in tail_master
+      assert "EXDATE;TZID=Europe/Berlin:20260929T090000,20261006T090000" in tail_master
+
+      assert_received {:put, @series_url, head, head_headers}
+      assert {"If-Match", "\"etag-2\""} in head_headers
+      assert [head_master] = vevent_blocks(head)
+      assert "RRULE:FREQ=WEEKLY;BYDAY=TU;UNTIL=20260915T065959Z" in head_master
+
+      assert_enqueued(caldav_sync_job(integration))
+    end
+
     test "the series' rows are dropped and a full sync of the integration is requested", %{
       user: user,
       integration: integration,

@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsSplitSeriesTest do
   alias Tymeslot.Integrations.Calendar.CalDAV.Events
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
+  alias Tymeslot.Test.LogCapture
 
   setup :verify_on_exit!
 
@@ -118,29 +119,30 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsSplitSeriesTest do
       assert "SUMMARY:Weekly sync" in lines(head_body)
     end
 
-    test "a series changed meanwhile is re-read once and the server's copy is ended" do
-      server_copy = String.replace(@series, "SUMMARY:Weekly sync", "SUMMARY:Changed elsewhere")
-
-      expect_put(201)
-      expect_put(412)
-      expect_get(server_copy, "\"etag-2\"")
-      expect_put(204)
-
-      assert {:ok, %{document: head}} = split_series(occurrence())
-
-      assert_received {:put, _tail_url, _tail, nil, "*"}
-      assert_received {:put, @url, _stale_head, "\"etag-1\"", nil}
-      assert_received {:put, @url, ^head, "\"etag-2\"", nil}
-      assert "SUMMARY:Changed elsewhere" in lines(head)
-      assert "RRULE:FREQ=WEEKLY;UNTIL=20260126T085959Z" in lines(head)
-    end
-
-    test "a series that cannot be ended has its tail deleted again, and the error reported" do
+    test "a series changed meanwhile is split again from the server's copy, both halves" do
       test_pid = self()
 
+      # Since the cache was filled, another client cancelled 2 February,
+      # moved 9 February to the afternoon and gave the series a room.
+      server_copy =
+        @series
+        |> String.replace(
+          "SUMMARY:Weekly sync\r\n",
+          "SUMMARY:Weekly sync\r\nLOCATION:Room 4\r\nEXDATE;TZID=Europe/Berlin:20260202T100000\r\n"
+        )
+        |> String.replace("END:VCALENDAR\r\n", """
+        BEGIN:VEVENT\r
+        UID:weekly-sync@example.com\r
+        DTSTAMP:20260101T090000Z\r
+        RECURRENCE-ID;TZID=Europe/Berlin:20260209T100000\r
+        DTSTART;TZID=Europe/Berlin:20260209T150000\r
+        DURATION:PT30M\r
+        SUMMARY:Weekly sync\r
+        END:VEVENT\r
+        END:VCALENDAR\r
+        """)
+
       expect_put(201)
-      expect_put(412)
-      expect_get(@series, "\"etag-2\"")
       expect_put(412)
 
       expect(Tymeslot.HTTPClientMock, :delete, fn url, _headers, _opts ->
@@ -148,10 +150,79 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsSplitSeriesTest do
         {:ok, %Req.Response{status: 204, body: "", headers: %{}}}
       end)
 
+      expect_get(server_copy, "\"etag-2\"")
+      expect_put(201)
+      expect_put(204)
+
+      assert {:ok, %{document: head, tail: %{uid: uid, document: tail}}} =
+               split_series(occurrence())
+
+      # The tail split from the cached copy is deleted by its own URL
+      # before the second is created beside it.
+      assert_received {:put, stale_tail_url, stale_tail, nil, "*"}
+      assert_received {:put, @url, _stale_head, "\"etag-1\"", nil}
+      assert_received {:delete, ^stale_tail_url}
+      refute "EXDATE;TZID=Europe/Berlin:20260202T100000" in lines(stale_tail)
+
+      assert_received {:put, tail_put_url, ^tail, nil, "*"}
+      assert tail_put_url == tail_url(uid)
+      assert tail_put_url != stale_tail_url
+      refute_received {:delete, ^tail_put_url}
+
+      assert "EXDATE;TZID=Europe/Berlin:20260202T100000" in lines(tail)
+      assert "RECURRENCE-ID;TZID=Europe/Berlin:20260209T100000" in lines(tail)
+      assert "DTSTART;TZID=Europe/Berlin:20260209T150000" in lines(tail)
+      assert "LOCATION:Room 4" in lines(tail)
+      assert "SUMMARY:Weekly sync\\, renamed" in lines(tail)
+
+      assert_received {:put, @url, ^head, "\"etag-2\"", nil}
+      assert "LOCATION:Room 4" in lines(head)
+      assert "RRULE:FREQ=WEEKLY;UNTIL=20260126T085959Z" in lines(head)
+    end
+
+    test "a series still changing after the split is made again is left as it was" do
+      test_pid = self()
+
+      expect_put(201)
+      expect_put(412)
+
+      expect(Tymeslot.HTTPClientMock, :delete, 2, fn url, _headers, _opts ->
+        send(test_pid, {:delete, url})
+        {:ok, %Req.Response{status: 204, body: "", headers: %{}}}
+      end)
+
+      expect_get(@series, "\"etag-2\"")
+      expect_put(201)
+      expect_put(412)
+
       assert split_series(occurrence()) == {:error, :precondition_failed}
 
-      assert_received {:put, tail_put_url, _tail, nil, "*"}
-      assert_received {:delete, ^tail_put_url}
+      assert_received {:put, first_tail_url, _tail, nil, "*"}
+      assert_received {:put, @url, _head, "\"etag-1\"", nil}
+      assert_received {:delete, ^first_tail_url}
+      assert_received {:put, second_tail_url, _tail, nil, "*"}
+      assert_received {:put, @url, _head, "\"etag-2\"", nil}
+      assert_received {:delete, ^second_tail_url}
+    end
+
+    test "a tail that cannot be deleted again is logged" do
+      expect_put(201)
+      expect_put(412)
+
+      expect(Tymeslot.HTTPClientMock, :delete, fn _url, _headers, _opts ->
+        {:error, %Req.TransportError{reason: :econnrefused}}
+      end)
+
+      expect_get(@series, "\"etag-2\"")
+      expect_put(201)
+      expect_put(204)
+
+      LogCapture.attach()
+
+      assert {:ok, %{tail: %{uid: _uid}}} = split_series(occurrence())
+
+      assert_received {:put, first_tail_url, _tail, nil, "*"}
+      assert_receive {:captured_log, %{level: :warning, meta: %{tail_url: ^first_tail_url}}}
     end
 
     test "a tail that cannot be created leaves the series alone" do
