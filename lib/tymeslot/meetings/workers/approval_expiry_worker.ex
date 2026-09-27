@@ -34,6 +34,7 @@ defmodule Tymeslot.Meetings.Workers.ApprovalExpiryWorker do
 
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingState
@@ -116,7 +117,8 @@ defmodule Tymeslot.Meetings.Workers.ApprovalExpiryWorker do
     exception ->
       Logger.error("Approval expiry could not release a request",
         meeting_id: meeting.id,
-        error: Exception.format(:error, exception, __STACKTRACE__)
+        error: LogFormat.reason(exception),
+        stacktrace: LogFormat.stacktrace(__STACKTRACE__)
       )
 
       {:error, exception}

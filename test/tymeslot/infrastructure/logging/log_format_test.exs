@@ -62,4 +62,26 @@ defmodule Tymeslot.Infrastructure.Logging.LogFormatTest do
       assert LogFormat.reason(["abc" | "def"]) == inspect(["abc" | "def"])
     end
   end
+
+  describe "stacktrace/1" do
+    test "renders each frame's arity, never its arguments" do
+      # The shape a FunctionClauseError leaves at the top of its stacktrace:
+      # the call's arguments in place of its arity.
+      stacktrace = [
+        {Tymeslot.Sync, :apply_event, [%{password: "pw-leak"}], [file: ~c"lib/sync.ex", line: 3]}
+      ]
+
+      rendered = LogFormat.stacktrace(stacktrace)
+
+      assert rendered =~ "Tymeslot.Sync.apply_event/1"
+      refute rendered =~ "pw-leak"
+    end
+
+    test "passes a frame that already carries its arity through" do
+      rendered = LogFormat.stacktrace([{Enum, :map, 2, [file: ~c"lib/enum.ex", line: 1]}])
+
+      assert rendered =~ "Enum.map/2"
+      assert rendered =~ "lib/enum.ex:1"
+    end
+  end
 end

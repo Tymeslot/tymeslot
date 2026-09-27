@@ -91,6 +91,43 @@ defmodule CredoChecks.NoInspectInLoggerMetadataTest do
     end
   end
 
+  describe "flagged Exception.format" do
+    test "flags Exception.format/2,3 as a metadata value" do
+      """
+      defmodule Tymeslot.Integrations.Sync do
+        require Logger
+
+        def run(kind, reason, stacktrace) do
+          Logger.error("a", error: Exception.format(kind, reason, stacktrace))
+          Logger.error("b", error: Exception.format(kind, reason))
+        end
+      end
+      """
+      |> run_on()
+      |> assert_issues(fn issues ->
+        assert length(issues) == 2
+        assert Enum.all?(issues, &(&1.trigger == "Exception.format"))
+        assert Enum.all?(issues, &(&1.message =~ "LogFormat.stacktrace/1"))
+      end)
+    end
+
+    test "accepts Exception.message/1 and Exception.format outside metadata" do
+      """
+      defmodule Tymeslot.Integrations.Sync do
+        require Logger
+
+        def run(exception, stacktrace) do
+          Logger.error("a", error: Exception.message(exception))
+          Logger.error(Exception.format(:error, exception, stacktrace))
+          {:error, Exception.format(:error, exception, stacktrace)}
+        end
+      end
+      """
+      |> run_on()
+      |> refute_issues()
+    end
+  end
+
   describe "accepted code" do
     test "accepts LogFormat.reason/1 and plain values" do
       """

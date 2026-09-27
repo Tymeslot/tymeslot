@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Selection
@@ -169,7 +170,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     kind, reason ->
       Logger.error("Calendar grid task crashed",
         task: tag,
-        error: Exception.format(kind, reason, __STACKTRACE__)
+        kind: kind,
+        error: LogFormat.reason(reason),
+        stacktrace: LogFormat.stacktrace(__STACKTRACE__)
       )
 
       crash_result

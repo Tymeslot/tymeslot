@@ -39,4 +39,29 @@ defmodule Tymeslot.Infrastructure.Logging.LogFormat do
     |> PIIScrubber.mask_emails()
     |> Redactor.redact_and_truncate(@max_bytes)
   end
+
+  @doc """
+  Formats `stacktrace` for a log line with every frame's arguments reduced to
+  their count.
+
+  A frame can carry the call's arguments in place of its arity (the top
+  frame of a `FunctionClauseError` does), and `Exception.format_stacktrace/1`
+  and `Exception.format/3` print them inspected: a crash while applying a
+  calendar event puts the whole event, attendees' addresses included, into
+  the log line. The arity says which clause was called without that.
+  """
+  @spec stacktrace(Exception.stacktrace()) :: String.t()
+  def stacktrace(stacktrace) when is_list(stacktrace) do
+    stacktrace
+    |> Enum.map(&without_arguments/1)
+    |> Exception.format_stacktrace()
+  end
+
+  defp without_arguments({module, function, args, location}) when is_list(args),
+    do: {module, function, length(args), location}
+
+  defp without_arguments({function, args, location}) when is_list(args),
+    do: {function, length(args), location}
+
+  defp without_arguments(frame), do: frame
 end
