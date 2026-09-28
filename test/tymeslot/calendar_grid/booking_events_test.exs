@@ -60,7 +60,8 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
 
     assert event.id == "booking-#{meeting.id}"
     assert event.meeting_id == meeting.id
-    assert event.uid == meeting.uid
+    assert event.uid == meeting.calendar_uid
+    refute event.uid == meeting.uid
     assert event.summary == "Discovery call"
     assert event.attendee_name == "Ada Lovelace"
     assert event.location == "Video call"
@@ -124,11 +125,12 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
   test "drops a CalDAV booking whose synced copy is keyed by href, not provider event id" do
     user = insert(:user)
 
-    # The CalDAV write path persists its caller-supplied UID and never sets
+    # The CalDAV write path persists its caller-supplied UID (the meeting's
+    # calendar_uid) and never sets
     # provider_event_id, while the synced copy carries the server's href
     # there. The only identifier the two sides share is the UID.
-    synced = insert_meeting(user, %{uid: "abc123@tymeslot.com", provider_event_id: nil})
-    unsynced = insert_meeting(user, %{title: "Unsynced", uid: "def456@tymeslot.com"})
+    synced = insert_meeting(user, %{calendar_uid: "abc123@tymeslot.com", provider_event_id: nil})
+    unsynced = insert_meeting(user, %{title: "Unsynced", calendar_uid: "def456@tymeslot.com"})
 
     {start_dt, end_dt} = window()
 
@@ -147,7 +149,7 @@ defmodule Tymeslot.CalendarGrid.BookingEventsTest do
 
   test "keeps a booking whose UID merely resembles an unrelated cached event" do
     user = insert(:user)
-    booking = insert_meeting(user, %{uid: "abc123@tymeslot.com", provider_event_id: nil})
+    booking = insert_meeting(user, %{calendar_uid: "abc123@tymeslot.com", provider_event_id: nil})
 
     {start_dt, end_dt} = window()
     cached = [cached_event(provider_event_id: "/calendars/x/other.ics", uid: "other@example.com")]

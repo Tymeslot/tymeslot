@@ -47,7 +47,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncOwnershipFlagTest do
       insert(:meeting,
         calendar_integration_id: integration.id,
         provider_event_id: nil,
-        uid: uid,
+        calendar_uid: uid,
         start_time: start_time
       )
 
@@ -82,7 +82,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncOwnershipFlagTest do
       insert(:meeting,
         calendar_integration_id: integration.id,
         provider_event_id: nil,
-        uid: booking_uid,
+        calendar_uid: booking_uid,
         start_time: start_time
       )
 

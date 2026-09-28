@@ -306,7 +306,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
 
       meeting =
         insert(:meeting,
-          uid: uid,
+          calendar_uid: uid,
           calendar_integration_id: integration.id,
           provider_event_id: nil
         )
@@ -323,7 +323,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
 
       meeting =
         insert(:meeting,
-          uid: uid,
+          calendar_uid: uid,
           calendar_integration_id: integration.id,
           provider_event_id: nil
         )
@@ -520,7 +520,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
         insert(:meeting,
           calendar_integration_id: integration.id,
           provider_event_id: nil,
-          uid: "caldav-uid-1"
+          calendar_uid: "caldav-uid-1"
         )
 
       assert :ok =
@@ -548,7 +548,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
         insert(:meeting,
           calendar_integration_id: integration.id,
           provider_event_id: "dup-evt-1",
-          uid: "dup-uid-1"
+          calendar_uid: "dup-uid-1"
         )
 
       assert :ok =

@@ -200,7 +200,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncPersistTest do
         insert(:meeting,
           calendar_integration_id: integration.id,
           provider_event_id: nil,
-          uid: uid,
+          calendar_uid: uid,
           start_time: old_start
         )
 
@@ -235,7 +235,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncPersistTest do
         insert(:meeting,
           calendar_integration_id: integration.id,
           provider_event_id: nil,
-          uid: uid,
+          calendar_uid: uid,
           start_time: start_time,
           calendar_sync_status: "externally_modified",
           calendar_sync_status_dismissed_at: DateTime.utc_now(:second)
@@ -275,7 +275,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncPersistTest do
         insert(:meeting,
           calendar_integration_id: integration.id,
           provider_event_id: nil,
-          uid: uid,
+          calendar_uid: uid,
           start_time: start_time,
           status: "cancelled",
           calendar_sync_status: "externally_deleted"
@@ -308,7 +308,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncPersistTest do
         insert(:meeting,
           calendar_integration_id: integration.id,
           provider_event_id: nil,
-          uid: "mine-#{System.unique_integer([:positive])}@tymeslot.com",
+          calendar_uid: "mine-#{System.unique_integer([:positive])}@tymeslot.com",
           start_time: start_time
         )
 
@@ -330,7 +330,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncPersistTest do
       insert(:meeting,
         calendar_integration_id: integration.id,
         provider_event_id: nil,
-        uid: uid,
+        calendar_uid: uid,
         start_time: start_time
       )
 

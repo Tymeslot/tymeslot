@@ -21,8 +21,9 @@ defmodule Tymeslot.Notifications.ContentBuilder do
     attendee_timezone = Recipients.get_attendee_timezone(meeting)
 
     %{
-      # Meeting identification
-      uid: meeting.uid,
+      # The calendar event's UID, as in `AppointmentBuilder`: never the
+      # booking's capability-bearing `uid`.
+      uid: meeting.calendar_uid,
       title: meeting.title,
 
       # Attendee information
@@ -86,8 +87,9 @@ defmodule Tymeslot.Notifications.ContentBuilder do
     attendee_timezone = Recipients.get_attendee_timezone(meeting)
 
     %{
-      # Meeting identification
-      uid: meeting.uid,
+      # The calendar event's UID, as in `AppointmentBuilder`: never the
+      # booking's capability-bearing `uid`.
+      uid: meeting.calendar_uid,
       title: meeting.title,
 
       # Participant information

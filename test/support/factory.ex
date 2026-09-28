@@ -53,6 +53,7 @@ defmodule Tymeslot.Factory do
 
     %MeetingSchema{
       uid: UUID.generate(),
+      calendar_uid: UUID.generate(),
       organizer_user: nil,
       organizer_user_id: nil,
       title: "Test Meeting",

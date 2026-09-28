@@ -423,10 +423,10 @@ defmodule Tymeslot.Meetings.Approval do
   # "update": whether there is anything to flip is `CalendarEventSync`'s call,
   # not a pre-check made here. There used to be one — "has an event to flip"
   # tested for a present `provider_event_id` or a `uid` that didn't look like
-  # a plain UUID — but CalDAV addresses its event by `uid` alone, and that
-  # `uid` *is* the meeting's own id until CalDAV's own create job overwrites
-  # it (`CalendarEventSync.put_provider_mapping/2`), so the check passed the
-  # UUID test and the gate was permanently false for every CalDAV host: their
+  # a plain UUID — but CalDAV addresses its event by that UID alone (now the
+  # meeting's `calendar_uid`), which is a Tymeslot-minted UUID until CalDAV's
+  # own create job confirms it (`CalendarEventSync.put_provider_mapping/2`),
+  # so the check passed the UUID test and the gate was permanently false for every CalDAV host: their
   # calendars kept showing TENTATIVE forever regardless of approval. The
   # "update" job this schedules already falls back to uid-addressing, recreates
   # the event on a missing-event 404, and errors out gracefully when there is

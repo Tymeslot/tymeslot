@@ -9,8 +9,8 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   - the create→update fallback when a meeting already carries a provider mapping,
   - the update→create-on-404 recovery,
   - replacing an event an update cannot correct (`replace/3`),
-  - persistence of the resulting provider UID / event-id mapping back onto the
-    meeting (via `Tymeslot.Meetings.MeetingQueries`),
+  - persistence of the resulting calendar UID / provider event-id mapping back
+    onto the meeting (via `Tymeslot.Meetings.MeetingQueries`),
   - sending an error notification to the calendar owner on persistent create
     failures.
 
@@ -55,7 +55,8 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
         # Another worker may already have created the event. OAuth providers
         # persist that mapping in provider_event_id; legacy flows may still
-        # carry an external identifier in uid.
+        # carry an external identifier in calendar_uid (copied from uid when
+        # the column was added).
         if calendar_mapping?(meeting) do
           Logger.info("Meeting already has a calendar mapping, switching to update",
             meeting_id: meeting_id,
@@ -291,17 +292,19 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   end
 
   defp calendar_mapping?(meeting) do
-    present_identifier?(meeting.provider_event_id) or external_id?(meeting.uid)
+    present_identifier?(meeting.provider_event_id) or external_id?(meeting.calendar_uid)
   end
 
   defp present_identifier?(identifier) when is_binary(identifier), do: byte_size(identifier) > 0
   defp present_identifier?(_identifier), do: false
 
+  # Never `meeting.uid`: that is the booking's cancel/reschedule capability,
+  # and whatever is returned here is sent to the provider and logged.
   defp calendar_event_identifier(meeting) do
     if present_identifier?(meeting.provider_event_id) do
       meeting.provider_event_id
     else
-      meeting.uid
+      meeting.calendar_uid
     end
   end
 
@@ -561,16 +564,19 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   end
 
   # A provider that reported an iCalendar UID (the CalDAV family) has confirmed
-  # the value the meeting is keyed by. Every other provider answers with an
-  # identifier it minted, which belongs in `provider_event_id`: writing it to
-  # `uid` would key the meeting by a value no sync ever produces.
+  # the value the meeting's event is keyed by, which is `calendar_uid`. It is
+  # never written to `uid`: that is the booking's public identifier, already
+  # embedded in the links the attendee was sent. Every other provider answers
+  # with an identifier it minted, which belongs in `provider_event_id`:
+  # writing it to `calendar_uid` would key the meeting by a value no sync ever
+  # produces.
   #
   # A CalDAV create now also reports the resource's href, and that is
   # deliberately not persisted here. `calendar_event_identifier/1` hands
   # `provider_event_id` back as the uid of the next write, and an href is not
   # one. It belongs on the cached grid row, which addresses events by URL.
   defp put_provider_mapping(attrs, %CreatedEvent{uid: uid}) when is_binary(uid),
-    do: Map.put(attrs, :uid, uid)
+    do: Map.put(attrs, :calendar_uid, uid)
 
   defp put_provider_mapping(attrs, %CreatedEvent{provider_event_id: id}) when is_binary(id),
     do: Map.put(attrs, :provider_event_id, id)

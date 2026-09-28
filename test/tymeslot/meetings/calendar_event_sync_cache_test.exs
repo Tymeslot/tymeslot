@@ -38,7 +38,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncCacheTest do
         insert(:provider_calendar_event,
           calendar_integration: integration,
           provider: "caldav",
-          uid: meeting.uid,
+          uid: meeting.calendar_uid,
           provider_event_id: nil,
           summary: "Old title",
           start_at: stale_start,
@@ -58,7 +58,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncCacheTest do
 
       assert_receive {:calendar_events_updated, user_id, uids}
       assert user_id == meeting.organizer_user_id
-      assert meeting.uid in uids
+      assert meeting.calendar_uid in uids
     end
 
     test "writes through by provider_event_id for OAuth-linked meetings, not uid" do
@@ -71,7 +71,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncCacheTest do
         MeetingQueries.update_meeting(meeting, %{provider_event_id: provider_event_id})
 
       # The cache row's own `uid` is the provider's iCalUID, which is a
-      # different value than the Tymeslot-generated `meeting.uid` for OAuth
+      # different value than the Tymeslot-generated `meeting.calendar_uid` for OAuth
       # providers — only `provider_event_id` links the two.
       cached =
         insert(:provider_calendar_event,
@@ -109,7 +109,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncCacheTest do
       assert {:error, :not_found} =
                ProviderCalendarEventQueries.get_by_uid(
                  meeting.calendar_integration_id,
-                 meeting.uid
+                 meeting.calendar_uid
                )
 
       refute_receive {:calendar_events_updated, _, _}, 100
@@ -125,7 +125,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncCacheTest do
         insert(:provider_calendar_event,
           calendar_integration: integration,
           provider: "caldav",
-          uid: meeting.uid,
+          uid: meeting.calendar_uid,
           provider_event_id: nil,
           start_at: stale_start,
           end_at: stale_end
@@ -164,7 +164,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncCacheTest do
         insert(:provider_calendar_event,
           calendar_integration: integration,
           provider: "caldav",
-          uid: meeting.uid,
+          uid: meeting.calendar_uid,
           provider_event_id: "caldav-href-unrelated-to-the-meeting",
           start_at: stale_start,
           end_at: DateTime.add(meeting.end_time, -3600, :second)
@@ -185,7 +185,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncCacheTest do
         insert(:provider_calendar_event,
           calendar_integration: integration,
           provider: "caldav",
-          uid: meeting.uid,
+          uid: meeting.calendar_uid,
           provider_event_id: nil,
           status: "tentative"
         )
@@ -207,7 +207,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncCacheTest do
         insert(:provider_calendar_event,
           calendar_integration: integration,
           provider: "caldav",
-          uid: meeting.uid,
+          uid: meeting.calendar_uid,
           provider_event_id: nil,
           transparency: "opaque"
         )
@@ -230,7 +230,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncCacheTest do
         insert(:provider_calendar_event,
           calendar_integration: integration,
           provider: "caldav",
-          uid: meeting.uid,
+          uid: meeting.calendar_uid,
           provider_event_id: nil,
           timezone: nil
         )
@@ -248,7 +248,7 @@ defmodule Tymeslot.Meetings.CalendarEventSyncCacheTest do
       insert(:provider_calendar_event,
         calendar_integration: integration,
         provider: "caldav",
-        uid: meeting.uid,
+        uid: meeting.calendar_uid,
         provider_event_id: nil
       )
 
