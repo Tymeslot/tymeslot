@@ -20,6 +20,8 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
 
   alias Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueries
   alias Tymeslot.Infrastructure.ErrorTracking.HandledError
+  alias Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
 
   require Logger
@@ -167,7 +169,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
     stacktrace = stacktrace_or_caller(stacktrace)
     context = Map.new(context)
 
-    log_handled_error(exception, context)
+    log_handled_error(exception, exception_or_reason, context)
     record(exception, stacktrace, tracker_context(exception, context))
   rescue
     failure -> log_report_failure(failure)
@@ -198,22 +200,23 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
 
   defp string_keys(context), do: Map.new(context, fn {key, value} -> {to_string(key), value} end)
 
-  defp log_handled_error(exception, context) do
+  # The reason is rendered from the term the caller gave, through
+  # `LogFormat.reason/1`, so a credential inside it is redacted by key before
+  # it becomes text; `HandledError`'s own copy is a plain `inspect`. The
+  # message gets the scrub its stored copy gets.
+  defp log_handled_error(exception, exception_or_reason, context) do
     metadata =
       context
       |> Enum.filter(fn {key, _value} -> is_atom(key) end)
       |> Keyword.new()
       |> Keyword.merge(
         error_kind: inspect(exception.__struct__),
-        error_message: Exception.message(exception),
-        reason: reason_for_log(exception)
+        error_message: ReasonScrubber.scrub(Exception.message(exception)),
+        reason: LogFormat.reason(exception_or_reason)
       )
 
     Logger.error("Handled an unexpected error", metadata)
   end
-
-  defp reason_for_log(%HandledError{reason: reason}), do: reason
-  defp reason_for_log(exception), do: HandledError.bounded_inspect(exception)
 
   defp record(exception, stacktrace, context) do
     if ErrorTrackingQueries.in_transaction?() do

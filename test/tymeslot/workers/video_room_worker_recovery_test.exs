@@ -14,6 +14,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerRecoveryTest do
   alias Oban.Job
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Test.LogCapture
   alias Tymeslot.Webhooks
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.VideoRoom.Recovery
@@ -79,6 +80,27 @@ defmodule Tymeslot.Workers.VideoRoomWorkerRecoveryTest do
 
       email_jobs_after_second = all_enqueued(worker: EmailWorker)
       assert length(email_jobs_after_second) == length(email_jobs_after_first)
+    end
+
+    test "logs the cause of entering recovery with credentials redacted" do
+      %{meeting: meeting} = setup_future_meeting_scenario()
+
+      stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:error, %RuntimeError{message: "proxy said: Authorization: Bearer tok_video_secret_987"}}
+      end)
+
+      LogCapture.with_capture([logger_level: :warning], fn ->
+        assert {:snooze, _seconds} =
+                 perform_job(
+                   VideoRoomWorker,
+                   %{"meeting_id" => meeting.id, "announce" => true},
+                   attempt: 5
+                 )
+      end)
+
+      event = LogCapture.await_log("Video room creation entering recovery")
+      assert event.meta.cause =~ "creation failed"
+      refute event.meta.cause =~ "tok_video_secret_987"
     end
 
     test "exhausts recovery even when snoozes no longer advance the job's attempt" do

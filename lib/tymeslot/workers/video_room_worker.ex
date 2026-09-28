@@ -348,7 +348,12 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
         {:discard, ErrorPolicy.discard_reason(categorized)}
 
       Recovery.recovering?(execution, Announcement.owed?(announcement)) ->
-        Recovery.enter(meeting_id, execution, "creation failed: #{inspect(reason)}", announcement)
+        Recovery.enter(
+          meeting_id,
+          execution,
+          "creation failed: #{LogFormat.reason(reason)}",
+          announcement
+        )
 
       true ->
         {:error, categorized}

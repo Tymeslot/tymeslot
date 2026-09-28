@@ -53,4 +53,26 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessorErrorTrackingTest do
     assert context["event_id"] == "evt_handler_raise"
     assert context["event_type"] == "charge.dispute.created"
   end
+
+  test "an exception raised outside a handler is recorded by exception module alone" do
+    # An object that is not a map: validating it, before any handler runs,
+    # raises a BadMapError whose message quotes it.
+    event = %{
+      "id" => "evt_outer_raise",
+      "type" => "payment_method.attached",
+      "data" => %{"object" => "cus_secret owner@example.com"}
+    }
+
+    capture_log(fn ->
+      assert {:error, %{reason: :exception}, nil} = WebhookProcessor.process_event(event)
+    end)
+
+    assert [%Error{reason: "{:raised, BadMapError}"} = error] =
+             Error |> Repo.all() |> Repo.preload(:occurrences)
+
+    assert [%{context: context} = occurrence] = error.occurrences
+    refute inspect(error) =~ "cus_secret"
+    refute inspect(occurrence) =~ "cus_secret"
+    assert context["event_id"] == "evt_outer_raise"
+  end
 end

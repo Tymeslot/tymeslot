@@ -195,7 +195,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
           reason: LogFormat.reason(reason)
         )
 
-        {:error, "Calendar operation crashed: #{inspect(reason)}"}
+        {:error, "Calendar operation crashed: #{LogFormat.reason(reason)}"}
 
       nil ->
         Logger.error("Calendar operation timed out",

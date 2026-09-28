@@ -109,7 +109,30 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ReportErrorTest do
 
       event = LogCapture.await_log("Handled an unexpected error")
       assert event.meta.error_message == ~s({:error, "..."})
-      assert String.length(event.meta.reason) < 300
+      assert String.length(event.meta.reason) < 2_000
+    end
+
+    test "redacts credentials in the logged reason" do
+      LogCapture.attach()
+
+      :ok = report_reason({:error, %{"access_token" => "tok_log_secret_123"}}, %{})
+
+      event = LogCapture.await_log("Handled an unexpected error")
+      assert event.meta.reason =~ "access_token"
+      refute event.meta.reason =~ "tok_log_secret_123"
+    end
+  end
+
+  describe "report_error/3 logging an exception" do
+    test "masks email addresses in the logged message and reason" do
+      LogCapture.attach()
+      {exception, stacktrace} = raise_and_capture("no calendar for owner@example.com")
+
+      :ok = ErrorTracking.report_error(exception, stacktrace, %{})
+
+      event = LogCapture.await_log("Handled an unexpected error")
+      refute event.meta.error_message =~ "owner@example.com"
+      refute event.meta.reason =~ "owner@example.com"
     end
   end
 
