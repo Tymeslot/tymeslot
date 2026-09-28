@@ -39,8 +39,12 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   ## Safety
 
     * The handler callback does no database work. It filters and offloads
-      the report to `Tymeslot.TaskSupervisor`, so a slow or failing database
-      can never block or kill the logging pipeline. The crashing process's
+      the report to `ErrorTracking.task_supervisor/0`, so a slow or failing
+      database can never block or kill the logging pipeline. That supervisor
+      runs a bounded number of tasks, so a crash storm cannot become one
+      concurrent database writer per crash: a crash arriving while every
+      task is busy is dropped, and counted by the
+      `[:tymeslot, :crash_reporter, :dropped]` telemetry event. The crashing process's
       ErrorTracker context is captured first and passed along, since the
       offloaded task has none of its own.
     * A failure inside the offloaded report is logged under this module's own
@@ -284,8 +288,24 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
     end
   end
 
+  # The supervisor is bounded: with every task busy, `start_child/2` returns
+  # `{:error, :max_children}` and the crash is dropped, counted by the
+  # `[:tymeslot, :crash_reporter, :dropped]` telemetry event rather than a log
+  # line, which in a crash storm would be one more line per crash.
   defp offload(kind, reason, stacktrace, context) do
-    Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
+    case Tasks.start_child(
+           ErrorTracking.task_supervisor(),
+           report_fun(kind, reason, stacktrace, context)
+         ) do
+      {:ok, _pid} -> :ok
+      {:error, _reason} -> :telemetry.execute([:tymeslot, :crash_reporter, :dropped], %{count: 1})
+    end
+
+    :ok
+  end
+
+  defp report_fun(kind, reason, stacktrace, context) do
+    fn ->
       try do
         ErrorTracker.report(exception(kind, reason), stacktrace, context)
       rescue
@@ -303,9 +323,7 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
             domain: @own_domain
           )
       end
-    end)
-
-    :ok
+    end
   end
 
   defp exception(:error, reason) when is_exception(reason), do: reason

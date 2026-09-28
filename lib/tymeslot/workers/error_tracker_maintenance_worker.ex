@@ -29,7 +29,9 @@ defmodule Tymeslot.Workers.ErrorTrackerMaintenanceWorker do
   3. **Trim.** An unresolved error that keeps recurring is never resolved,
      so its occurrences are trimmed instead: those older than the window go,
      except the newest `:error_tracking_occurrences_kept` of the error,
-     which are always kept whatever their age.
+     which are always kept whatever their age. Inside the window an error
+     keeps at most its newest `:error_tracking_occurrences_max`, so a
+     chronic failure cannot fill the table for a month before it ages out.
 
   The tunables are read on every run, so `config/runtime.exs` can set them.
   Maintenance runs whether or not error tracking is switched on
@@ -56,7 +58,8 @@ defmodule Tymeslot.Workers.ErrorTrackerMaintenanceWorker do
     trimmed =
       ErrorTrackingQueries.trim_unresolved_occurrences(
         cutoff,
-        Application.get_env(:tymeslot, :error_tracking_occurrences_kept, 50)
+        Application.get_env(:tymeslot, :error_tracking_occurrences_kept, 50),
+        Application.get_env(:tymeslot, :error_tracking_occurrences_max, 1_000)
       )
 
     Logger.info("ErrorTracker maintenance completed",

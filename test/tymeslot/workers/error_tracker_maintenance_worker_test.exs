@@ -93,6 +93,20 @@ defmodule Tymeslot.Workers.ErrorTrackerMaintenanceWorkerTest do
       assert length(remaining_occurrence_ids(error)) == 60
     end
 
+    test "caps an error's occurrences inside the window at the configured max" do
+      with_config(:tymeslot,
+        error_tracking_occurrences_kept: 5,
+        error_tracking_occurrences_max: 10
+      )
+
+      error = insert_error(last_seen_days_ago: 0)
+      for _n <- 1..60, do: insert_occurrence(error, days_ago: 2)
+
+      assert :ok = perform_job()
+
+      assert length(remaining_occurrence_ids(error)) == 10
+    end
+
     # Read on every run, so a runtime.exs override takes effect without a
     # rebuild; compiled in, it would be ignored.
     test "reads the resolve window from the application environment at run time" do

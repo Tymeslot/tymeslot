@@ -123,6 +123,21 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
     pid
   end
 
+  # Fills the bounded recording supervisor, so the next report finds no room.
+  defp occupy_recording_tasks do
+    supervisor = ErrorTracking.task_supervisor()
+
+    Stream.repeatedly(fn ->
+      Task.Supervisor.start_child(supervisor, fn ->
+        receive do
+          :release -> :ok
+        end
+      end)
+    end)
+    |> Enum.take_while(&match?({:ok, _pid}, &1))
+    |> Enum.map(fn {:ok, pid} -> pid end)
+  end
+
   describe "reportable?/2" do
     test "orderly exits are not reportable" do
       refute CrashReporter.reportable?(:exit, :normal)
@@ -179,6 +194,35 @@ defmodule Tymeslot.Infrastructure.CrashReporterTest do
       end)
 
       assert errors() |> Enum.map(& &1.kind) |> Enum.sort() == ["exit", "throw"]
+    end
+
+    test "a crash arriving while every recording task is busy is dropped and counted" do
+      test_pid = self()
+      handler_id = "crash-reporter-test-dropped"
+
+      :ok =
+        :telemetry.attach(
+          handler_id,
+          [:tymeslot, :crash_reporter, :dropped],
+          fn _event, measurements, _metadata, _config ->
+            send(test_pid, {:dropped, measurements})
+          end,
+          nil
+        )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+
+      blockers = occupy_recording_tasks()
+
+      CaptureLog.capture_log(fn ->
+        crash_task(fn -> raise "crash while busy" end)
+
+        assert_receive {:dropped, %{count: 1}}, 2_000
+        refute_occurrence()
+      end)
+
+      Enum.each(blockers, &send(&1, :release))
+      assert errors() == []
     end
 
     test "an orderly exit is not recorded" do

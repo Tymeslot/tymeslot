@@ -243,10 +243,11 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
 
   # The task runs with the caller's ErrorTracker context, which `Tasks`
   # carries into it. It exits once the report is made, so no dedup memory is
-  # left behind to guard against.
+  # left behind to guard against. With every task of the bounded supervisor
+  # busy the report is dropped, and logged as a failure to record.
   defp offload(exception, stacktrace, context) do
-    {:ok, _pid} =
-      Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
+    result =
+      Tasks.start_child(task_supervisor(), fn ->
         try do
           ErrorTracker.report(exception, stacktrace, context)
         rescue
@@ -256,8 +257,20 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
         end
       end)
 
-    :ok
+    case result do
+      {:ok, _pid} -> :ok
+      {:error, reason} -> log_report_failure(reason)
+    end
   end
+
+  @doc """
+  The task supervisor that records errors off the calling process: the
+  crash reporter's reports, and `report_error/3` inside a transaction. Its
+  `max_children` (`:error_tracking_max_concurrent_reports`) bounds how many
+  database writers error tracking runs at once.
+  """
+  @spec task_supervisor() :: atom()
+  def task_supervisor, do: __MODULE__.TaskSupervisor
 
   # Names only the failure's module or kind: its message could carry the data
   # the report was about.
