@@ -70,6 +70,7 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   alias Tymeslot.Integrations.Calendar.Google.ConferenceData
   alias Tymeslot.Integrations.Calendar.Operations, as: CalendarOperations
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.Recurrence.Series
   alias Tymeslot.Integrations.MeetingProvisioning
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.EventDetails
@@ -88,6 +89,12 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
       the integration it already holds a link from, or "None" on an event
       with no video. An integration with no link is not a no-op, since that
       is how an organiser provisions a room after a failed earlier attempt;
+    * `{:ok, :unchanged}` too when `event` belongs to a series that already
+      has a recorded room on that integration but its row holds no link, as
+      when a sync brought the series back before its video was carried
+      (`Tymeslot.CalendarGrid.SeriesCarry`). The series keeps that room and
+      the row is given the integration back: a second room would put a
+      second join link on the series;
     * `{:error, :not_found}` when the video integration is not the organiser's;
     * `{:error, :linked_to_booking}` when the event is the calendar copy of a
       Tymeslot booking (see `ensure_video_changeable/1`). Nothing is changed;
@@ -117,8 +124,24 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
 
   def change_event_video(user_id, event, video_integration_id) do
     with :ok <- ensure_video_changeable(event) do
-      apply_video_change(user_id, event, video_integration_id)
+      if series_room?(event, video_integration_id),
+        do: keep_series_room(event, video_integration_id),
+        else: apply_video_change(user_id, event, video_integration_id)
     end
+  end
+
+  # A row of a series that has lost track of its link, while the series has
+  # a room on the chosen integration (see `change_event_video/3`).
+  defp series_room?(%{video_link: link} = event, video_integration_id)
+       when link in [nil, ""] and is_integer(video_integration_id),
+       do:
+         Series.member?(event) and
+           EventVideoRooms.rooms_on_integration(event, video_integration_id) != []
+
+  defp series_room?(_event, _video_integration_id), do: false
+
+  defp keep_series_room(event, video_integration_id) do
+    with :ok <- cache_link(event, video_integration_id, nil), do: {:ok, :unchanged}
   end
 
   @doc """
@@ -359,6 +382,18 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
     |> remove_join_line(previous_url)
     |> append_join_line(url)
   end
+
+  @doc """
+  The URLs of the "Join video call" lines in `description`.
+  """
+  @spec join_links(String.t() | nil) :: [String.t()]
+  def join_links(description) when is_binary(description) do
+    ~r/^#{Regex.escape(@join_line_prefix)}(\S+)/m
+    |> Regex.scan(description, capture: :all_but_first)
+    |> List.flatten()
+  end
+
+  def join_links(_description), do: []
 
   defp remove_join_line(description, url) when is_binary(description) and is_binary(url) do
     line = join_line(url)

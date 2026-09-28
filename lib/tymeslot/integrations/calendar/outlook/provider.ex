@@ -18,6 +18,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.EventNormaliser
+  alias Tymeslot.Integrations.Calendar.Outlook.SeriesExceptions
+  alias Tymeslot.Integrations.Calendar.Outlook.SeriesPatch
+  alias Tymeslot.Integrations.Calendar.Outlook.SeriesSplit
+  alias Tymeslot.Integrations.Calendar.Recurrence.SeriesSplit, as: RecurrenceSplit
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, MultiCalendarFetch, ProviderCommon}
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
 
@@ -133,8 +137,38 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     end
   end
 
+  @doc """
+  Writes `event_attrs` to the event.
+
+  An `:occurrence` of scope `:all` in `event_attrs` (see
+  `Recurrence.SeriesMove.edit/0`, naming the series master in `:master_id`)
+  edits every occurrence of a recurring event instead: the master is read,
+  with its body as stored so that a copy keeps an HTML description as HTML,
+  and patched with only what the edit changes (`Outlook.SeriesPatch`). One
+  of scope `:following`, with the occurrence's original start in `:slot`,
+  splits the series there (`Outlook.SeriesSplit`): the following
+  occurrences are created as a new series in the calendar Graph says holds
+  the master, which takes the edit, then the master's range is ended
+  before them, and if that fails the new series is deleted again. The
+  occurrences from the split on that were edited or cancelled on their own
+  are read before anything is written, and carried to the new series once
+  the split is (`Outlook.SeriesExceptions`); one that cannot be carried is
+  logged, and does not fail the split. The answer is then
+  `{:ok, %{tail: %{uid: uid, id: id}}}`, the new series' `iCalUId` and id;
+  an edit of the first occurrence is written as one of every occurrence. A
+  refusal of the edit is answered before anything is written.
+  """
   @spec call_update_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
-          {:ok, map()} | {:error, atom(), String.t()}
+          {:ok, map()} | {:error, atom(), String.t()} | {:error, term()}
+  def call_update_event(integration, _event_id, %{occurrence: %{scope: scope} = edit})
+      when scope in [:all, :following] do
+    with {:ok, master} <- api_module().get_event(integration, edit.master_id, body: :stored) do
+      if scope == :all,
+        do: patch_series(integration, master, edit),
+        else: split_series(integration, master, edit)
+    end
+  end
+
   def call_update_event(integration, event_id, event_attrs) do
     calendar_id = event_attrs[:calendar_id] || integration.default_booking_calendar_id
     # Prefer the provider-native event ID when available (avoids iCalUID→ID conversion)
@@ -144,6 +178,44 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
       api_module().update_event(integration, calendar_id, effective_id, event_attrs)
     else
       api_module().update_event(integration, effective_id, event_attrs)
+    end
+  end
+
+  defp patch_series(integration, master, edit) do
+    with {:ok, body} <- SeriesPatch.build(master, edit) do
+      if body == %{},
+        do: {:ok, master},
+        else: api_module().patch_event(integration, edit.master_id, body)
+    end
+  end
+
+  # The tail goes into the calendar Graph says holds the master: the cached
+  # row's calendar can read "primary" for a series in another calendar, and
+  # a tail created there would move the following occurrences with it. A
+  # calendar that cannot be read refuses the split before anything is
+  # written.
+  defp split_series(integration, master, edit) do
+    case SeriesSplit.build(master, edit) do
+      {:ok, %{tail: tail, head: head}} ->
+        api = api_module()
+
+        with {:ok, calendar_id} <- api.get_event_calendar_id(integration, edit.master_id),
+             {:ok, carries} <- SeriesExceptions.plan(api, integration, master, edit),
+             {:ok, created} <-
+               RecurrenceSplit.write(
+                 fn -> api.insert_event(integration, calendar_id, tail) end,
+                 fn -> api.patch_event(integration, edit.master_id, head) end,
+                 &api.delete_event(integration, &1["id"])
+               ) do
+          SeriesExceptions.carry(api, integration, master, created["id"], carries)
+          {:ok, %{tail: %{uid: created["iCalUId"], id: created["id"]}}}
+        end
+
+      :first_occurrence ->
+        patch_series(integration, master, edit)
+
+      error ->
+        error
     end
   end
 

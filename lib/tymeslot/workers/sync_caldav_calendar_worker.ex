@@ -12,7 +12,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   `unique: [period: 300, keys: [:calendar_integration_id]]` prevents duplicate
   jobs from accumulating when a sweep worker or external trigger enqueues a job
-  for an integration that already has one queued or running.
+  for an integration that already has one queued or running. A requested full
+  fetch (`enqueue_full_fetch/1`) is the exception that is not absorbed: it
+  upgrades a waiting job, or makes a running one run again, see
+  `Tymeslot.Workers.SyncRequest`.
 
   ## Auth errors (REQ-012)
 
@@ -41,9 +44,27 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Workers.SyncHealth
+  alias Tymeslot.Workers.SyncRequest
+
+  @doc """
+  Enqueues a full fetch of the CalDAV integration `integration_id`, the sync
+  the dashboard's Refresh asks for: every calendar is read in full rather
+  than by delta, so a change the delta would not report (or a cached row
+  removed on purpose) comes back. A sync already waiting for the
+  integration runs in its place, as a full fetch; one already running runs
+  again as a full fetch once it finishes, since it may have read the server
+  before the request (see `Tymeslot.Workers.SyncRequest`).
+  """
+  @spec enqueue_full_fetch(pos_integer()) :: {:ok, Oban.Job.t()} | {:error, term()}
+  def enqueue_full_fetch(integration_id) do
+    SyncRequest.insert(__MODULE__, %{
+      "calendar_integration_id" => integration_id,
+      "force_full_fetch" => true
+    })
+  end
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: args}) do
+  def perform(%Oban.Job{args: args} = job) do
     integration_id = Map.fetch!(args, "calendar_integration_id")
     force_full_fetch? = Map.get(args, "force_full_fetch", false) == true
 
@@ -55,6 +76,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         |> Sync.run(force_full_fetch?)
         |> handle_sync_result(integration)
         |> tap(&SyncHealth.record_outcome(integration, &1))
+        |> SyncRequest.rerun_if_requested(job)
 
       {:error, :not_found} ->
         Logger.warning("CalDAV integration not found, discarding sync job",

@@ -7,9 +7,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.CalendarGrid.AllDay
+  alias Tymeslot.CalendarGrid.SeriesEdit
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.SeriesMove
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -38,7 +40,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   def handle_close_event_detail(_params, socket) do
     sub_modal_open =
       socket.assigns.confirm_remove_attendee != nil or
-        socket.assigns.confirm_discard_attendees
+        socket.assigns.confirm_discard_attendees or
+        socket.assigns.series_move_prompt != nil
 
     cond do
       sub_modal_open ->
@@ -81,13 +84,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         tz = socket.assigns.user_timezone
 
         with {:ok, {start_date, start_time, end_date, end_time}} <- parse_time_inputs(params),
-             :ok <- EditWorkflow.assert_event_editable(socket, event),
+             :ok <- EditWorkflow.assert_event_writable(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket),
              {:ok, new_start} <- Shared.to_utc(start_date, start_time.hour, start_time.minute, tz),
              {:ok, raw_end} <- Shared.to_utc(end_date, end_time.hour, end_time.minute, tz) do
           apply_time_change(socket, event, new_start, raw_end)
         else
-          {:error, reason} = error when reason in [:unauthorized, :read_only, :recurring_event] ->
+          {:error, reason} = error when reason in [:unauthorized, :read_only] ->
             Shared.flash_guard_error(socket, error)
 
           {:error, :rate_limited, _message} = error ->
@@ -118,13 +121,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         {:noreply, socket}
 
       event ->
-        with :ok <- EditWorkflow.assert_event_editable(socket, event),
+        with :ok <- EditWorkflow.assert_event_writable(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           optimistic_event = AllDay.toggle(event, socket.assigns.user_timezone)
 
           push_all_day_change(socket, event, optimistic_event)
         else
-          {:error, reason} = error when reason in [:unauthorized, :read_only, :recurring_event] ->
+          {:error, reason} = error when reason in [:unauthorized, :read_only] ->
             Shared.flash_guard_error(socket, error)
 
           {:error, :rate_limited, _message} = error ->
@@ -143,7 +146,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       %{all_day: true} = event ->
         with {:ok, start_date} <- Date.from_iso8601(params["start-date"]),
              {:ok, end_date} <- parse_end_date(params["end-date"], start_date),
-             :ok <- EditWorkflow.assert_event_editable(socket, event),
+             :ok <- EditWorkflow.assert_event_writable(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           # The form presents inclusive dates; storage keeps `end_date`
           # exclusive, so a single-day range (start == end) is stored as +1.
@@ -157,7 +160,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
             push_all_day_change(socket, event, optimistic_event)
           end
         else
-          {:error, reason} = error when reason in [:unauthorized, :read_only, :recurring_event] ->
+          {:error, reason} = error when reason in [:unauthorized, :read_only] ->
             Shared.flash_guard_error(socket, error)
 
           {:error, :rate_limited, _message} = error ->
@@ -184,14 +187,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
              existing = event.reminders || [],
              new_reminders = Shared.add_reminder(existing, reminder),
              true <- new_reminders != existing,
-             :ok <- EditWorkflow.assert_event_editable(socket, event),
+             :ok <- EditWorkflow.assert_event_writable(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           push_reminders_change(socket, event, new_reminders)
         else
           false ->
             {:noreply, socket}
 
-          {:error, reason} = error when reason in [:unauthorized, :read_only, :recurring_event] ->
+          {:error, reason} = error when reason in [:unauthorized, :read_only] ->
             Shared.flash_guard_error(socket, error)
 
           {:error, :rate_limited, _message} = error ->
@@ -212,12 +215,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
       event ->
         with {:ok, index} <- Shared.parse_int(params["index"]),
-             :ok <- EditWorkflow.assert_event_editable(socket, event),
+             :ok <- EditWorkflow.assert_event_writable(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           new_reminders = List.delete_at(event.reminders || [], index)
           push_reminders_change(socket, event, new_reminders)
         else
-          {:error, reason} = error when reason in [:unauthorized, :read_only, :recurring_event] ->
+          {:error, reason} = error when reason in [:unauthorized, :read_only] ->
             Shared.flash_guard_error(socket, error)
 
           {:error, :rate_limited, _message} = error ->
@@ -251,12 +254,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
             if new_rule == event.recurrence_rule do
               {:noreply, socket}
             else
-              with :ok <- EditWorkflow.assert_event_editable(socket, event),
+              with :ok <- EditWorkflow.assert_event_writable(socket, event),
                    :ok <- Shared.check_edit_rate_limit(socket) do
                 push_recurrence_change(socket, event, new_rule)
               else
                 {:error, reason} = error
-                when reason in [:unauthorized, :read_only, :recurring_event] ->
+                when reason in [:unauthorized, :read_only] ->
                   Shared.flash_guard_error(socket, error)
 
                 {:error, :rate_limited, _message} = error ->
@@ -280,12 +283,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         if new_colour == Map.get(event, :colour) do
           {:noreply, socket}
         else
-          with :ok <- EditWorkflow.assert_event_editable(socket, event),
+          with :ok <- EditWorkflow.assert_event_writable(socket, event),
                :ok <- Shared.check_edit_rate_limit(socket) do
             push_colour_change(socket, event, new_colour)
           else
             {:error, reason} = error
-            when reason in [:unauthorized, :read_only, :recurring_event] ->
+            when reason in [:unauthorized, :read_only] ->
               Shared.flash_guard_error(socket, error)
 
             {:error, :rate_limited, _message} = error ->
@@ -315,6 +318,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
              :ok <- Shared.check_move_rate_limit(socket) do
           {:noreply, start_move(socket, event, new_id, cal_id)}
         else
+          {:ok, :series} -> SeriesMove.prompt(socket, event, new_id, cal_id)
           error -> flash_move_error(socket, error)
         end
 
@@ -338,8 +342,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   end
 
   # The move guard's refusals, each with its own wording: the target calendar
-  # rejects writes, the event is not the organiser's, the event repeats, or
-  # the move rate limit has been hit.
+  # rejects writes, the event is not the organiser's, the event repeats on a
+  # calendar that cannot move a series, or the move rate limit has been hit.
   defp flash_move_error(socket, {:error, :read_only} = error),
     do: Shared.flash_guard_error(socket, error)
 
@@ -360,12 +364,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   end
 
   defp flash_move_error(socket, {:error, :rate_limited, _message}) do
-    send(
-      self(),
-      {:flash,
-       {:warning, dgettext("dashboard_calendar_events", "Too many moves. Please wait a moment.")}}
-    )
-
+    send(self(), {:flash, {:warning, EditWorkflow.move_rate_limited_message()}})
     {:noreply, socket}
   end
 
@@ -382,7 +381,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
                ),
              trimmed = String.trim(sanitised),
              false <- trimmed == (Map.get(event, field) || ""),
-             :ok <- EditWorkflow.assert_event_editable(socket, event),
+             :ok <- EditWorkflow.assert_event_writable(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           updated_event = Map.put(event, field, trimmed)
           updated_events = Shared.replace_event(socket.assigns.events, event.id, updated_event)
@@ -399,7 +398,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
           true ->
             {:noreply, socket}
 
-          {:error, reason} = error when reason in [:unauthorized, :read_only, :recurring_event] ->
+          {:error, reason} = error when reason in [:unauthorized, :read_only] ->
             Shared.flash_guard_error(socket, error)
 
           {:error, :rate_limited, _message} = error ->
@@ -444,10 +443,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     result
   end
 
-  # Applies a recurrence-rule change. When the event is already part of a
-  # recurring series, the scope prompt (this / this-and-following / all events)
-  # is shown first and the actual write is deferred to confirmation; otherwise
-  # the rule is written straight away.
+  # Applies a recurrence-rule change. When the event is part of a series whose
+  # provider takes a scope (see `EditWorkflow.series_edit?/1`), the scope
+  # prompt is shown first and the actual write is deferred to confirmation;
+  # otherwise the rule is written straight away.
   #
   # Recurrence changes deviate from the standard `apply_optimistic_update`
   # pattern: the async step is conditional on whether the event belongs to a
@@ -464,13 +463,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       |> assign(:events, updated_events)
       |> Helpers.precompute_derived()
 
-    if original_event.recurring_event_id do
+    if EditWorkflow.series_edit?(original_event) do
       prompt = %{
         kind: :recurrence_rule,
         event: original_event,
         optimistic_event: optimistic_event,
         recurrence_rule: new_rule,
-        original_event: original_event
+        original_event: original_event,
+        following_notes: SeriesEdit.following_notes(original_event, %{recurrence_rule: new_rule})
       }
 
       {:noreply, assign(socket, :recurrence_prompt, prompt)}

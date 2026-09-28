@@ -338,9 +338,32 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   the `COLOR` property on the event's cached `raw_ical` rather than rebuilding
   the VEVENT from a reduced payload, which would silently drop
   RRULE/ATTENDEE/VALARM data.
+
+  When `event_data` carries an `:occurrence` (see `Events.occurrence/0`, with
+  its `:changes`), only that one occurrence of the series is edited, by
+  writing its override into the resource at its href
+  (`Events.update_occurrence/4`); with `scope: :all` every occurrence is
+  edited through the series' master instead (`Events.update_series/4`), and
+  with `scope: :following` the series is split in two at the occurrence and
+  the edit written to the second half (`Events.split_series/4`). The answer
+  is then `{:ok, %{document: document}}` with the document now on the
+  server, and for a split the new resource under `:tail`; the rest of the
+  payload is not read.
   """
-  @spec update_event(caldav_client(), String.t(), map(), keyword()) :: :ok | {:error, term()}
+  @spec update_event(caldav_client(), String.t(), map(), keyword()) ::
+          :ok
+          | {:ok, %{required(:document) => String.t(), optional(:tail) => map()}}
+          | {:error, term()}
   def update_event(client, uid, event_data, opts \\ [])
+
+  def update_event(client, _uid, %{occurrence: %{scope: :all} = occurrence}, opts),
+    do: Events.update_series(client, primary_calendar_path(client), occurrence, opts)
+
+  def update_event(client, _uid, %{occurrence: %{scope: :following} = occurrence}, opts),
+    do: Events.split_series(client, primary_calendar_path(client), occurrence, opts)
+
+  def update_event(client, _uid, %{occurrence: %{} = occurrence}, opts),
+    do: Events.update_occurrence(client, primary_calendar_path(client), occurrence, opts)
 
   def update_event(client, uid, %{colour_only: true, colour: colour} = event_data, opts) do
     case primary_calendar_path(client) do
@@ -373,12 +396,20 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   directly — required when the event lives on a calendar other than the first
   configured path. Otherwise falls back to the primary calendar path and
   constructs the URL from the UID.
+
+  When `opts[:occurrence]` is set (see `Events.occurrence/0`), only that one
+  occurrence of the series is deleted, by rewriting the resource at its href
+  (`Events.delete_occurrence/4`), and the answer is
+  `{:ok, %{document: document}}` with the document now on the server, `nil`
+  once nothing of the series was left and the resource was deleted.
   """
-  @spec delete_event(caldav_client(), String.t(), keyword()) :: :ok | {:error, term()}
+  @spec delete_event(caldav_client(), String.t(), keyword()) ::
+          :ok | {:ok, %{document: String.t() | nil}} | {:error, term()}
   def delete_event(client, uid, opts \\ []) do
-    case primary_calendar_path(client) do
-      nil -> :ok
-      path -> Events.delete_calendar_event(client, path, uid, opts)
+    case {opts[:occurrence], primary_calendar_path(client)} do
+      {%{} = occurrence, path} -> Events.delete_occurrence(client, path, occurrence, opts)
+      {nil, nil} -> :ok
+      {nil, path} -> Events.delete_calendar_event(client, path, uid, opts)
     end
   end
 

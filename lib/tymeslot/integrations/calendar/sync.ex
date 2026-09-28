@@ -200,7 +200,10 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
       |> flag_tymeslot_owned(calendar_events)
       |> Enum.map(&ProviderCalendarEventSchema.from_calendar_event/1)
 
-    ProviderCalendarEventQueries.upsert_batch(attrs_list)
+    with {:ok, count} <- ProviderCalendarEventQueries.upsert_batch(attrs_list) do
+      drop_replaced_masters(integration.id, calendar_events)
+      {:ok, count}
+    end
   rescue
     e ->
       Logger.error("Calendar event cache upsert raised an exception",
@@ -210,6 +213,19 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
       )
 
       {:error, Exception.message(e)}
+  end
+
+  # Google and Outlook are listed as single occurrences, each naming its
+  # series' master in `recurring_event_id`. A row cached for the master itself
+  # (the grid caches a series it created that way) stands in for the whole
+  # series and would show its first occurrence twice beside them, so it goes
+  # once they arrive. CalDAV occurrences name no master, so this is inert there.
+  defp drop_replaced_masters(integration_id, calendar_events) do
+    calendar_events
+    |> Enum.map(& &1.recurring_event_id)
+    |> Enum.filter(&(is_binary(&1) and &1 != ""))
+    |> Enum.uniq()
+    |> then(&ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, &1))
   end
 
   @doc """
@@ -385,6 +401,14 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     |> Enum.map(&Map.get(&1, :provider_event_id))
     |> Enum.filter(&is_binary/1)
     |> then(&ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, &1))
+
+    # A deleted series master takes its occurrences with it: Google and
+    # Outlook cache each occurrence under its own uid, naming the master in
+    # `recurring_event_id`. CalDAV rows never carry one, so this is inert there.
+    refs
+    |> Enum.map(&Map.get(&1, :provider_event_id))
+    |> Enum.filter(&is_binary/1)
+    |> then(&ProviderCalendarEventQueries.delete_by_recurring_event_ids(integration_id, &1))
 
     :ok
   end

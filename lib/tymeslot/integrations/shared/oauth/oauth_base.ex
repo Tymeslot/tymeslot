@@ -188,11 +188,16 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
         )
       end
 
+      # A split series answers with the new series it made, which is not an
+      # event of the provider's to convert.
       @impl Tymeslot.Integrations.Calendar.Provider
       def update_event(integration, event_id, event_attrs) do
         OAuthBase.handle_api_call(
           fn -> call_update_event(integration, event_id, event_attrs) end,
-          &convert_event/1
+          fn
+            %{tail: _tail} = split -> split
+            updated -> convert_event(updated)
+          end
         )
       end
 

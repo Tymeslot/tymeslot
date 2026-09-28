@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventWrites
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   require Logger
@@ -76,7 +77,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   end
 
   defp with_editable_event_found(socket, event, fun) do
-    case assert_event_editable(socket, event) do
+    case assert_event_writable(socket, event) do
       :ok -> {:noreply, fun.(event)}
       {:error, _reason} = error -> Shared.flash_guard_error(socket, error)
     end
@@ -84,45 +85,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   @doc """
   Applies a new start and end to `event`: optimistically on screen, then
-  either through the recurrence prompt or straight to the provider.
-
-  An edit the provider can only write to a whole series is refused here,
-  before the optimistic update and before the prompt. The prompt offers "this
-  event only", so putting it in front of a write that moves every occurrence
-  would be the bug with a dialog on top of it; see
-  `Tymeslot.CalendarGrid.EventEdit.ensure_editable/1`. The gate the handlers
-  call, and the domain itself, refuse the same edit again — this clause is
-  what keeps the prompt out of a path either of them somehow let through.
+  either through the recurrence prompt (see `series_edit?/1`) or straight to
+  the provider.
   """
   @spec apply_event_change(Phoenix.LiveView.Socket.t(), map(), map(), DateTime.t(), DateTime.t()) ::
           Phoenix.LiveView.Socket.t()
   def apply_event_change(socket, event, optimistic_event, new_start, new_end) do
-    case CalendarGrid.ensure_editable(event) do
-      :ok -> reschedule(socket, event, optimistic_event, new_start, new_end)
-      {:error, :recurring_event} -> refuse_recurring_edit(socket)
-    end
-  end
-
-  @doc """
-  Flashes the refusal for an edit that would change a whole series and leaves
-  `socket` untouched, so nothing optimistic is left on screen.
-  """
-  @spec refuse_recurring_edit(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
-  def refuse_recurring_edit(socket) do
-    send(self(), {:flash, {:error, recurring_edit_refused_message()}})
-    socket
-  end
-
-  @doc "The message shown when an organiser tries to edit a recurring event."
-  @spec recurring_edit_refused_message() :: String.t()
-  def recurring_edit_refused_message do
-    dgettext(
-      "dashboard_calendar_events",
-      "Recurring events cannot be edited here yet. Please change this one in your calendar app."
-    )
-  end
-
-  defp reschedule(socket, event, optimistic_event, new_start, new_end) do
     new_events = Shared.replace_event(socket.assigns.events, event.id, optimistic_event)
 
     socket =
@@ -130,7 +98,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       |> assign(:events, new_events)
       |> Helpers.precompute_derived()
 
-    if event.recurring_event_id do
+    if series_edit?(event) do
       prompt = %{
         event: event,
         optimistic_event: optimistic_event,
@@ -144,6 +112,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       update_event_async(socket, event, %{start_at: new_start, end_at: new_end})
     end
   end
+
+  @doc """
+  Whether an edit of `event` asks the organiser which occurrences of its
+  series it applies to: this event, this and following, or all of them.
+
+  Only a member of a series whose provider can write each of those scopes is
+  asked (`Tymeslot.CalendarGrid.edit_scopes/1` answers `:series`): Google,
+  Outlook and the CalDAV family. An event outside a series, and a member of a
+  series whose provider writes only the one event (Exchange), are written
+  straight away, as that one event.
+  """
+  @spec series_edit?(map()) :: boolean()
+  def series_edit?(event), do: CalendarGrid.edit_scopes(event) == {:ok, :series}
 
   @doc """
   Runs `fun` in a supervised Task and sends `{tag, result}` back to this
@@ -180,78 +161,33 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   @doc """
   Writes `changes` to `event` in the background through
-  `Tymeslot.CalendarGrid.update_event/4` and reports back with
-  `{:event_update_result, :ok}` or `{:event_update_result, {:error, payload}}`,
-  where `payload` carries `:original_event`, `:reason` and `:retry`
-  (`:queued` when the edit is saved locally and will sync, `:not_queued`
-  otherwise).
+  `Tymeslot.CalendarGrid.update_event/4`, after any write to the same event
+  still in flight. See `TymeslotWeb.Dashboard.CalendarGrid.EventWrites`, which
+  also describes the `{:event_update_result, result}` message it answers with.
 
   `opts` are passed through to `CalendarGrid.update_event/4`.
   """
   @spec update_event_async(Phoenix.LiveView.Socket.t(), map(), map(), keyword()) ::
           Phoenix.LiveView.Socket.t()
-  def update_event_async(socket, event, changes, opts \\ []) do
-    user_id = socket.assigns.current_user.id
-
-    run_async(
-      socket,
-      :event_update_result,
-      fn ->
-        case CalendarGrid.update_event(user_id, event, changes, opts) do
-          {:ok, _updated} -> :ok
-          {:error, %{reason: reason, retry: retry}} -> update_failure(event, reason, retry)
-        end
-      end,
-      update_failure(event, :crashed, :not_queued)
-    )
-  end
-
-  defp update_failure(event, reason, retry),
-    do: {:error, original_event: event, reason: reason, retry: retry}
+  def update_event_async(socket, event, changes, opts \\ []),
+    do: EventWrites.update(socket, event, changes, opts)
 
   @doc """
   Gives `event` a room on the video integration `video_integration_id`, or
   removes its video link when that is `nil`, in the background through
-  `Tymeslot.CalendarGrid.change_event_video/3`.
+  `Tymeslot.CalendarGrid.change_event_video/3`, after any write to the same
+  event still in flight.
 
-  Reports back with `{:event_video_result, {:ok, original_event: event,
-  updated_event: event}}`, where the updated event carries the new link, its
-  integration and the description the calendar was given, so the result
-  handler can diff the two for the attendee-notification decision. A choice
-  that changed nothing reports `{:event_video_result, {:ok, :unchanged}}`, and
-  a failure `{:event_video_result, {:error, original_event: event, reason:
-  reason}}`.
+  Reports back with `{:event_video_result, result}`; a successful change
+  carries the updated event, with the new link, its integration and the
+  description the calendar was given, so the result handler can diff it
+  against the original for the attendee-notification decision. See
+  `TymeslotWeb.Dashboard.CalendarGrid.EventWrites`.
   """
   @spec change_event_video_async(Phoenix.LiveView.Socket.t(), map(), pos_integer() | nil) ::
           Phoenix.LiveView.Socket.t()
-  def change_event_video_async(socket, event, video_integration_id) do
-    user_id = socket.assigns.current_user.id
-
-    run_async(
-      socket,
-      :event_video_result,
-      fn ->
-        case CalendarGrid.change_event_video(user_id, event, video_integration_id) do
-          {:ok, :unchanged} ->
-            {:ok, :unchanged}
-
-          # The event as the change wrote it, so the grid shows what the
-          # calendar has and the notification diff sees exactly what the
-          # attendees' invitation will carry.
-          {:ok, url} ->
-            {:ok,
-             original_event: event,
-             updated_event: CalendarGrid.changed_event(user_id, event, video_integration_id, url)}
-
-          {:error, reason} ->
-            video_failure(event, reason)
-        end
-      end,
-      video_failure(event, :crashed)
-    )
-  end
-
-  defp video_failure(event, reason), do: {:error, original_event: event, reason: reason}
+  def change_event_video_async(socket, event, video_integration_id),
+    do: EventWrites.change_video(socket, event, video_integration_id)
 
   @doc "The message shown once an event's video room has been changed."
   @spec video_changed_message(String.t() | nil) :: String.t()
@@ -266,16 +202,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   when `nil`) in the background through `Tymeslot.CalendarGrid.move_event/3`.
 
   Reports back with `{:event_move_result, {:ok, uid: uid, integration_id: id,
-  source: source}}`, where `source` is `nil` when the original was removed,
-  `:queued_delete` or `:left_behind` otherwise; or with
+  source: source, original_event: event}}`, where `source` is `nil` when the
+  original was removed, `:queued_delete` or `:left_behind` otherwise; or with
   `{:event_move_result, {:error, original_event: event, reason: reason}}`
   when nothing was moved.
+
+  `opts` takes `:series_to`, the name of the destination calendar, for the
+  move of a whole series the organiser has confirmed; both answers then
+  carry it, so the result handler can tell a series move from the move of
+  one event.
   """
-  @spec move_event_async(Phoenix.LiveView.Socket.t(), map(), map(), String.t() | nil) ::
+  @spec move_event_async(Phoenix.LiveView.Socket.t(), map(), map(), String.t() | nil, keyword()) ::
           Phoenix.LiveView.Socket.t()
-  def move_event_async(socket, event, integration, calendar_id) do
+  def move_event_async(socket, event, integration, calendar_id, opts \\ []) do
     user_id = socket.assigns.current_user.id
     destination = %{integration: integration, calendar_id: calendar_id}
+    series = Keyword.take(opts, [:series_to])
 
     run_async(
       socket,
@@ -283,24 +225,88 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       fn ->
         case CalendarGrid.move_event(user_id, event, destination) do
           {:ok, moved} ->
-            {:ok, uid: moved.uid, integration_id: moved.integration_id, source: moved[:source]}
+            {:ok,
+             [
+               uid: moved.uid,
+               integration_id: moved.integration_id,
+               source: moved[:source],
+               original_event: event
+             ] ++ series}
 
           {:error, reason} ->
-            move_failure(event, reason)
+            move_failure(event, reason, series)
         end
       end,
-      move_failure(event, :crashed)
+      move_failure(event, :crashed, series)
     )
   end
 
-  defp move_failure(event, reason), do: {:error, original_event: event, reason: reason}
+  defp move_failure(event, reason, series),
+    do: {:error, [original_event: event, reason: reason] ++ series}
 
-  @doc "The message shown when an organiser tries to move a recurring event."
+  @doc """
+  The message shown when an organiser tries to move a recurring event whose
+  calendar provider cannot move a whole series (Exchange).
+  """
   @spec recurring_move_refused_message() :: String.t()
   def recurring_move_refused_message do
     dgettext(
       "dashboard_calendar_events",
-      "Recurring events cannot be moved to another calendar yet. Only single events can be moved."
+      "Recurring events on this calendar cannot be moved to another calendar. Only single events can be moved."
+    )
+  end
+
+  @doc "The message shown when an organiser has moved events too often in a short while."
+  @spec move_rate_limited_message() :: String.t()
+  def move_rate_limited_message,
+    do: dgettext("dashboard_calendar_events", "Too many moves. Please wait a moment.")
+
+  @doc """
+  The message shown when a recurring series could not be moved, for each
+  reason `Tymeslot.CalendarGrid.move_event/3` and
+  `Tymeslot.CalendarGrid.series_move_notes/2` give. Every one of them means
+  the series is still where it was.
+  """
+  @spec series_move_failed_message(term()) :: String.t()
+  def series_move_failed_message(:recurring_event), do: recurring_move_refused_message()
+
+  def series_move_failed_message(:cross_provider_series) do
+    dgettext(
+      "dashboard_calendar_events",
+      "A recurring event can only be moved to a calendar of the same kind of account: Google to Google, Outlook to Outlook, or CalDAV to CalDAV."
+    )
+  end
+
+  def series_move_failed_message(reason)
+      when reason in [:unaddressable_series, :not_recurring, :unreadable_timing],
+      do: unmatched_series_message()
+
+  def series_move_failed_message(:same_calendar),
+    do: dgettext("dashboard_calendar_events", "The series is already on that calendar.")
+
+  def series_move_failed_message(:no_destination_calendar) do
+    dgettext(
+      "dashboard_calendar_events",
+      "That calendar cannot be written to. Please choose another calendar."
+    )
+  end
+
+  def series_move_failed_message(_reason) do
+    dgettext(
+      "dashboard_calendar_events",
+      "Could not move the series. It is still on its original calendar."
+    )
+  end
+
+  @doc """
+  The message shown when the grid cannot tell which series, or which
+  occurrence of it, an event is.
+  """
+  @spec unmatched_series_message() :: String.t()
+  def unmatched_series_message do
+    dgettext(
+      "dashboard_calendar_events",
+      "This event could not be matched to its series. Refresh your calendars and try again."
     )
   end
 
@@ -342,25 +348,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   def assert_event_writable(socket, event) do
     with :ok <- assert_owns_event(socket, event) do
       if writable_event?(socket.assigns, event), do: :ok, else: {:error, :read_only}
-    end
-  end
-
-  @doc """
-  The gate every edit of an existing grid event goes through: it must pass
-  `assert_event_writable/2`, and it must not be an occurrence of a series the
-  provider can only write as a whole.
-
-  The second half is `Tymeslot.CalendarGrid.ensure_editable/1`, and it is
-  deliberately not folded into `assert_event_writable/2`: a delete asks the
-  narrower question (see `EventHandlers.EventDelete`, which pairs that gate
-  with `ensure_deletable/1` instead), and `event_editable?/2` must keep
-  agreeing with the writability half alone.
-  """
-  @spec assert_event_editable(Phoenix.LiveView.Socket.t(), map()) ::
-          :ok | {:error, :unauthorized | :read_only | :recurring_event}
-  def assert_event_editable(socket, event) do
-    with :ok <- assert_event_writable(socket, event) do
-      CalendarGrid.ensure_editable(event)
     end
   end
 

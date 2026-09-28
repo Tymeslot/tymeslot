@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   use Gettext, backend: TymeslotWeb.Gettext
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
+  import Phoenix.LiveView, only: [clear_flash: 2, put_flash: 3, send_update: 2]
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Video.RoomCreationError
@@ -83,16 +83,25 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   end
 
   @doc """
-  Handles the result of an event update: nothing to do on success; on
-  failure, keeps the edit when it was queued to sync later and reverts it
-  otherwise.
+  Handles the result of an event update: on failure, keeps the edit when it
+  was queued to sync later and reverts it otherwise. Either way the grid is
+  told the write has answered, so the next write to the same event can start
+  (see `TymeslotWeb.Dashboard.CalendarGrid.EventWrites`).
   """
-  @spec handle_event_update_result(:ok | {:error, keyword()}, Phoenix.LiveView.Socket.t()) ::
+  @spec handle_event_update_result(
+          {:ok, keyword()} | {:error, keyword()},
+          Phoenix.LiveView.Socket.t()
+        ) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_event_update_result(:ok, socket), do: {:noreply, socket}
+  def handle_event_update_result({:ok, payload}, socket) do
+    settle_write(payload[:write], {:ok, payload[:updated_event]})
+    {:noreply, socket}
+  end
 
   def handle_event_update_result({:error, payload}, socket) do
     if payload[:retry] == :queued do
+      settle_write(payload[:write], :queued)
+
       {:noreply,
        put_flash(
          socket,
@@ -107,10 +116,20 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     end
   end
 
+  defp settle_write(write, outcome) do
+    send_update(CalendarGridComponent,
+      id: "calendar",
+      action: :event_write_settled,
+      write: write,
+      outcome: outcome
+    )
+  end
+
   defp revert_failed_update(payload, socket) do
     send_update(CalendarGridComponent,
       id: "calendar",
       action: :revert_event,
+      write: payload[:write],
       original_event: payload[:original_event]
     )
 
@@ -118,9 +137,41 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   end
 
   # A refusal the domain made names its own reason; everything else is a
-  # provider failure the organiser can do nothing about.
-  defp update_failed_message(:recurring_event),
-    do: EditWorkflow.recurring_edit_refused_message()
+  # provider failure the organiser can do nothing about. The scoped edits of
+  # a recurring series refuse before anything is written, so each of their
+  # reasons says what the organiser can do instead (see
+  # `Tymeslot.CalendarGrid.SeriesEdit`).
+  defp update_failed_message(:value_type_change) do
+    dgettext(
+      "dashboard_calendar_events",
+      "Events of a repeating series cannot be switched between all-day and timed here. Please make this change in your calendar app."
+    )
+  end
+
+  defp update_failed_message(reason) when reason in [:unsupported_scope, :rule_removal] do
+    dgettext(
+      "dashboard_calendar_events",
+      "That change cannot be made to the events you chose. A repeat rule can only be changed for all events, or this and following events, and cannot be removed here."
+    )
+  end
+
+  defp update_failed_message(:rule_pins_occurrences) do
+    dgettext(
+      "dashboard_calendar_events",
+      "This series repeats on fixed days, such as the second Monday of the month, so it cannot be moved like this. Please make this change in your calendar app."
+    )
+  end
+
+  defp update_failed_message(:unsupported_rule) do
+    dgettext(
+      "dashboard_calendar_events",
+      "This series' repeat rule cannot be split here. Please make this change in your calendar app."
+    )
+  end
+
+  defp update_failed_message(reason)
+       when reason in [:unaddressable_occurrence, :unreadable_timing, :not_recurring],
+       do: EditWorkflow.unmatched_series_message()
 
   defp update_failed_message(_reason),
     do: dgettext("dashboard_calendar_events", "Failed to update event - changes reverted")
@@ -128,31 +179,65 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   @doc """
   Handles the result of an event move: shows the moved event and says where
   the original ended up, or reverts the grid when nothing was moved.
+
+  A whole series the organiser confirmed moving (the result carries
+  `:series_to`, the destination calendar's name) was never shown moved, so
+  nothing is reverted when it fails, and the note that it is moving is
+  cleared either way, and the changes held while it moved are made. When
+  it succeeds the grid reloads, as
+  after any write to a whole series, since the series' rows are gone from
+  the source until the destination's sync brings them back.
   """
   @spec handle_event_move_result(
           {:ok, keyword()} | {:error, keyword()},
           Phoenix.LiveView.Socket.t()
         ) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event_move_result({:ok, new_event_info}, socket) do
-    send_update(CalendarGridComponent,
-      id: "calendar",
-      action: :event_moved,
-      new_event_uid: new_event_info[:uid],
-      new_event_integration_id: new_event_info[:integration_id]
-    )
+    case new_event_info[:series_to] do
+      nil ->
+        send_update(CalendarGridComponent,
+          id: "calendar",
+          action: :event_moved,
+          new_event_uid: new_event_info[:uid],
+          new_event_integration_id: new_event_info[:integration_id]
+        )
 
-    {level, message} = moved_flash(new_event_info[:source])
-    {:noreply, put_flash(socket, level, message)}
+        {level, message} = moved_flash(new_event_info[:source])
+        {:noreply, put_flash(socket, level, message)}
+
+      calendar ->
+        send_update(CalendarGridComponent,
+          id: "calendar",
+          action: :series_moved,
+          moved_event: new_event_info[:original_event]
+        )
+
+        {level, message} = series_moved_flash(new_event_info[:source], calendar)
+        {:noreply, socket |> clear_flash(:info) |> put_flash(level, message)}
+    end
   end
 
   def handle_event_move_result({:error, payload}, socket) do
-    send_update(CalendarGridComponent,
-      id: "calendar",
-      action: :revert_event,
-      original_event: payload[:original_event]
-    )
+    case payload[:series_to] do
+      nil ->
+        send_update(CalendarGridComponent,
+          id: "calendar",
+          action: :revert_event,
+          original_event: payload[:original_event]
+        )
 
-    {:noreply, put_flash(socket, :error, move_failed_message(payload[:reason]))}
+        {:noreply, put_flash(socket, :error, move_failed_message(payload[:reason]))}
+
+      _calendar ->
+        send_update(CalendarGridComponent,
+          id: "calendar",
+          action: :series_move_failed,
+          moved_event: payload[:original_event]
+        )
+
+        message = EditWorkflow.series_move_failed_message(payload[:reason])
+        {:noreply, socket |> clear_flash(:info) |> put_flash(:error, message)}
+    end
   end
 
   defp moved_flash(nil),
@@ -181,6 +266,22 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
      dgettext(
        "dashboard_calendar_events",
        "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
+     )}
+  end
+
+  defp series_moved_flash(nil, calendar) do
+    {:info,
+     dgettext("dashboard_calendar_events", "The series was moved to %{calendar}.",
+       calendar: calendar
+     )}
+  end
+
+  defp series_moved_flash(:left_behind, calendar) do
+    {:warning,
+     dgettext(
+       "dashboard_calendar_events",
+       "The series was copied to %{calendar}, but the original series could not be removed. Please delete it from its original calendar.",
+       calendar: calendar
      )}
   end
 
@@ -265,10 +366,13 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   discarded.
   """
   @spec handle_event_video_result(
-          {:ok, :unchanged | keyword()} | {:error, keyword()},
+          {:ok | :unchanged | :error, keyword()},
           Phoenix.LiveView.Socket.t()
         ) :: {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_event_video_result({:ok, :unchanged}, socket), do: {:noreply, socket}
+  def handle_event_video_result({:unchanged, payload}, socket) do
+    settle_write(payload[:write], :unchanged)
+    {:noreply, socket}
+  end
 
   def handle_event_video_result({:ok, result}, socket) do
     updated_event = result[:updated_event]
@@ -277,6 +381,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       send_update(CalendarGridComponent,
         id: "calendar",
         action: :video_link_updated,
+        write: result[:write],
         original_event: result[:original_event],
         updated_event: updated_event
       )
@@ -290,6 +395,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     send_update(CalendarGridComponent,
       id: "calendar",
       action: :revert_event,
+      write: payload[:write],
       original_event: payload[:original_event]
     )
 
@@ -328,22 +434,24 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
       dgettext("dashboard_calendar_events", "Could not change the video link - changes reverted")
 
   @doc """
-  Deletes the event `payload` names in the background through
-  `Tymeslot.CalendarGrid.delete_event/2`, reporting back with
+  Deletes the event `payload` names, in the scope it names, in the background
+  through `Tymeslot.CalendarGrid.delete_event/3`, reporting back with
   `{:delete_event_result, result}`.
   """
   @spec handle_execute_delete_event(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_execute_delete_event(payload, socket) do
-    notify_on_delete = Map.get(payload, :notify_on_delete, false)
-
     socket
     |> EditWorkflow.run_async(
       :delete_event_result,
-      fn -> CalendarGrid.delete_event(payload.user_id, payload) end,
+      fn ->
+        CalendarGrid.delete_event(payload.user_id, payload, payload.scope,
+          notify_attendees: payload.notify_on_delete
+        )
+      end,
       {:error, %{reason: :crashed, retry: :not_queued}}
     )
-    |> assign(:pending_delete_notify, notify_on_delete)
+    |> assign(:pending_delete, Map.take(payload, [:notify_on_delete, :scope]))
     |> then(&{:noreply, &1})
   end
 

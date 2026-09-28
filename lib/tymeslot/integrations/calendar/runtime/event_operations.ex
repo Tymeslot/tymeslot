@@ -86,15 +86,17 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   Accepts optional context (MeetingSchema, user_id, or {integration_id, user_id}) to use specific calendar.
   """
   @spec update_event(event_uid(), event_data(), context() | {integration_id(), user_id()}) ::
-          :ok | {:error, term()}
+          :ok
+          | {:ok, %{optional(:document) => String.t(), optional(:tail) => map()}}
+          | {:error, term()}
   def update_event(uid, event_data, context) do
     Metrics.time_operation(:update_event, %{uid: uid}, fn ->
       Logger.info("Updating calendar event", uid: uid)
 
       with %{} = client <- ClientManager.resolve_client(context),
-           :ok <- ProviderAdapter.update_event(client, uid, event_data) do
+           {:written, written} <- written(ProviderAdapter.update_event(client, uid, event_data)) do
         Logger.info("Successfully updated calendar event", uid: uid)
-        :ok
+        written
       else
         nil ->
           Logger.error("No calendar integration found for update", context: log_context(context))
@@ -121,15 +123,15 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   Accepts optional context (MeetingSchema, user_id, or {integration_id, user_id}) to use specific calendar.
   """
   @spec delete_event(event_uid(), context() | {integration_id(), user_id()}, keyword()) ::
-          :ok | {:error, term()}
+          :ok | {:ok, %{document: String.t() | nil}} | {:error, term()}
   def delete_event(uid, context, opts) do
     Metrics.time_operation(:delete_event, %{uid: uid}, fn ->
       Logger.info("Deleting calendar event", uid: uid)
 
       with %{} = client <- ClientManager.resolve_client(context),
-           :ok <- ProviderAdapter.delete_event(client, uid, opts) do
+           {:deleted, deleted} <- deleted(ProviderAdapter.delete_event(client, uid, opts)) do
         Logger.info("Successfully deleted calendar event", uid: uid)
-        :ok
+        deleted
       else
         nil ->
           Logger.error("No calendar integration found for deletion",
@@ -212,6 +214,20 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   defp unproven(earlier_error, _error), do: earlier_error
 
   # --- Private Helpers ---
+
+  # A whole event goes with `:ok`; one occurrence of a series with the
+  # document the rest of the series now lives in, which the caller needs to
+  # refresh its cache.
+  # A whole event is written with `:ok`; one occurrence of a CalDAV series
+  # with the document the series now lives in.
+  defp written(:ok), do: {:written, :ok}
+  defp written({:ok, %{document: _document}} = occurrence), do: {:written, occurrence}
+  defp written({:ok, %{tail: _tail}} = split), do: {:written, split}
+  defp written(error), do: error
+
+  defp deleted(:ok), do: {:deleted, :ok}
+  defp deleted({:ok, %{document: _document}} = occurrence), do: {:deleted, occurrence}
+  defp deleted(error), do: error
 
   defp validate_event(event_data) do
     case EventValidator.validate(event_data) do

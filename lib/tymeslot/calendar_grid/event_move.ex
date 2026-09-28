@@ -37,10 +37,15 @@ defmodule Tymeslot.CalendarGrid.EventMove do
 
   ## Recurring events
 
-  A series or one of its occurrences is refused. The create path writes a
+  A member of a series is never moved on its own. The create path writes a
   single event, so a move would turn a series into a one-off and, on CalDAV
   where an occurrence is addressed through its series' resource, delete
-  every occurrence rather than the one the organiser picked.
+  every occurrence rather than the one the organiser picked. A move of any
+  member is therefore a move of the whole series, which
+  `Tymeslot.CalendarGrid.SeriesTransfer` does on Google, Outlook and the
+  CalDAV family. Whether an event is a member is read off its cached row,
+  as a delete reads it (`Tymeslot.CalendarGrid.Occurrence.cached_row/1`),
+  since the event handed in may be an optimistic copy.
 
   An occurrence edited on its own needs its own check on the iCalendar
   providers. It is a VEVENT with a `RECURRENCE-ID` and no `RRULE`, so its row
@@ -52,18 +57,19 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   type the sync keeps in `provider_metadata`, and it matters most for the
   series itself: a server that does not expand series (grommunio) puts the
   `RecurringMaster` on the grid, and deleting it by its item id removes every
-  occurrence.
+  occurrence. Exchange has no series-wide write, so its series are refused.
   """
 
   alias Tymeslot.CalendarGrid.EventVideoRooms
+  alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.CalendarGrid.ProviderPayload
+  alias Tymeslot.CalendarGrid.SeriesTransfer
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
-  alias Tymeslot.Integrations.Calendar.Recurrence.Series
 
   require Logger
 
@@ -86,21 +92,44 @@ defmodule Tymeslot.CalendarGrid.EventMove do
         }
 
   @doc """
-  Whether `event` may be moved to another calendar.
+  Whether `event` may be moved to another calendar, and how much of it
+  moves. Reads the cached row, as `move_event/3` does.
 
-  Returns `{:error, :recurring_event}` for a recurring series (it carries a
-  repeat rule), for an occurrence of one (it names its series), for an
-  occurrence edited on its own (it carries a recurrence id) and for any
-  Exchange item that is not a `Single` one.
+  Returns `:ok` for an event outside any series, and `{:ok, :series}` for a
+  member of a series on Google, Outlook or the CalDAV family (a series, an
+  occurrence of one, or an occurrence edited on its own), whose move takes
+  the whole series with it. Returns `{:error, :recurring_event}` for any
+  Exchange item that is not a `Single` one, since Exchange has no
+  series-wide write.
   """
-  @spec ensure_movable(map()) :: :ok | {:error, :recurring_event}
-  def ensure_movable(event) do
-    if Series.member?(event), do: {:error, :recurring_event}, else: :ok
+  @spec ensure_movable(map()) :: :ok | {:ok, :series} | {:error, :recurring_event}
+  def ensure_movable(event), do: event |> Occurrence.cached_row() |> movable()
+
+  defp movable(stored) do
+    case Occurrence.series_family(stored) do
+      :single -> :ok
+      :unsupported -> {:error, :recurring_event}
+      _series_wide -> {:ok, :series}
+    end
   end
 
   @doc """
+  Whether the series `event` belongs to can move to `integration`, and what
+  the organiser should be told the move will not carry. Reads the cached
+  row, as `move_event/3` does; see `SeriesTransfer.notes/2`.
+  """
+  @spec series_move_notes(map(), map()) ::
+          {:ok, [SeriesTransfer.note()]}
+          | {:error, :recurring_event | :cross_provider_series | :unaddressable_series}
+  def series_move_notes(event, integration),
+    do: event |> Occurrence.cached_row() |> SeriesTransfer.notes(integration)
+
+  @doc """
   Moves `event` to `destination`'s integration, on the calendar named by
-  `:calendar_id` or that integration's default when it is `nil`.
+  `:calendar_id` or that integration's default when it is `nil`. A member
+  of a series moves the whole series (see
+  `Tymeslot.CalendarGrid.SeriesTransfer.move/4`, which answers in the same
+  shape and has refusals of its own).
 
   Returns `{:ok, %{uid: uid, integration_id: id}}` once the event is on the
   destination and gone from the source. When the source delete failed, the
@@ -115,11 +144,27 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   """
   @spec move_event(pos_integer(), map(), destination()) ::
           {:ok, moved()}
-          | {:error, :recurring_event | :no_destination_calendar | :invalid_timing | term()}
-  def move_event(user_id, event, %{integration: integration} = destination) do
-    with :ok <- ensure_movable(event),
-         moved = moved_event(event, integration, Map.get(destination, :calendar_id)),
-         :ok <- ensure_destination(moved),
+          | {:error,
+             :recurring_event
+             | :cross_provider_series
+             | :unaddressable_series
+             | :no_destination_calendar
+             | :invalid_timing
+             | term()}
+  def move_event(user_id, event, destination) do
+    stored = Occurrence.cached_row(event)
+
+    case movable(stored) do
+      :ok -> move_single(user_id, event, destination)
+      {:ok, :series} -> SeriesTransfer.move(user_id, stored, destination)
+      {:error, _reason} = refused -> refused
+    end
+  end
+
+  defp move_single(user_id, event, %{integration: integration} = destination) do
+    moved = moved_event(event, integration, Map.get(destination, :calendar_id))
+
+    with :ok <- ensure_destination(moved),
          {:ok, payload} <- ProviderPayload.from_event(moved),
          {:ok, created} <- create_on_destination(user_id, moved, payload) do
       settle_move(user_id, event, moved, created)
@@ -199,6 +244,12 @@ defmodule Tymeslot.CalendarGrid.EventMove do
     }
   end
 
+  @doc """
+  The calendar a move to `integration` writes to: `calendar_id` when the
+  organiser chose one, else the integration's booking calendar. `nil` for a
+  CalDAV integration whose discovery left no collection at all.
+  """
+  @spec destination_calendar_id(map(), String.t() | nil) :: String.t() | nil
   # The chosen calendar first, for every provider: CalDAV writes now honour
   # `event_data[:calendar_id]` when it names a writable collection, so filing
   # the row under the booking collection regardless is no longer the truth.
@@ -208,7 +259,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   # the row follows it rather than being filed under a null the column rejects.
   # The "primary" placeholder is only meaningful to the OAuth providers, where
   # it names the account's own calendar.
-  defp destination_calendar_id(integration, calendar_id) do
+  def destination_calendar_id(integration, calendar_id) do
     if integration.provider in Calendar.caldav_based_provider_strings() do
       calendar_id || Calendar.booking_calendar_path(integration) ||
         List.first(integration.calendar_paths)

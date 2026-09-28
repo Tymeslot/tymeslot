@@ -34,7 +34,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.CalendarEventDetails do
   @typedoc "One announced change: the field, its previous value (nil when unknown) and its current one."
   @type change :: {:title | :location | :description | :time, term(), term()}
 
-  @doc "Invitation details from the job args of a `send_calendar_invitation` job."
+  @doc """
+  Invitation details from the job args of a `send_calendar_invitation` job.
+  `:method` is `:cancel` for a cancellation (`:request` otherwise, and for a
+  job enqueued before the method was read), and `:series` whether that
+  cancellation takes every occurrence of a recurring event.
+  """
   @spec invitation_details(map(), map()) :: {:ok, map()} | {:error, String.t()}
   def invitation_details(user, args) do
     with {:ok, timing} <- invitation_timing(args) do
@@ -45,7 +50,10 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.CalendarEventDetails do
          location: args["event_location"],
          description: args["event_description"],
          organizer_name: user.name || user.email,
-         organizer_email: user.email
+         organizer_email: user.email,
+         method: parse_method(args["method"]),
+         sequence: args["sequence"],
+         series: args["event_series"] == true
        })}
     end
   end

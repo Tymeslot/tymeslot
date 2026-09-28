@@ -41,9 +41,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InitialState do
       show_shortcuts_help: false,
       creating_event: nil,
       recurrence_prompt: nil,
+      # A move of a whole series awaiting confirmation; see `SeriesMove`.
+      series_move_prompt: nil,
       confirm_delete_event: nil,
+      confirm_delete_scopes: :single,
       confirm_delete_linked_to_booking: false,
       saving_event: false,
+      # Writes to existing events, serialised per event; see `EventWrites`.
+      event_writes: %{},
+      event_write_seq: 0,
+      # Series held while written whole or moved; see `EventWrites`.
+      series_holds: %{},
       deleting_event: false,
       video_integrations: [],
       confirm_remove_attendee: nil,

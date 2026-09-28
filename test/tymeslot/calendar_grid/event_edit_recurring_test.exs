@@ -4,18 +4,20 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
   series on the CalDAV family.
 
   The sync never stores such a series' master: it expands it into one cached
-  row per occurrence, all sharing the series' href, and the writer patches
-  that master. Because the payload is always the complete event, it carries
-  the occurrence's own `DTSTART` with it, so a rename relocates the series
-  onto that occurrence's date exactly as a drag would. Every edit is
-  therefore refused before the provider seam, and what is pinned here is that
-  the refusal is scoped: it catches the series markers a CalDAV sync can
-  produce, and nothing outside the family.
+  row per occurrence, all sharing the series' href. The ordinary write
+  patches that master, so an edit of one occurrence is addressed instead: the
+  payload carries an `:occurrence` naming the series' href and the
+  occurrence's key, and only what the edit changed plus the occurrence's
+  timing, which the CalDAV writer turns into a `RECURRENCE-ID` override.
+  What is pinned here is that addressing, read off the cached row, and the
+  edits refused before anything is written because they are not edits of one
+  occurrence.
 
   The provider write is stubbed at the suite-wide `:calendar_module` seam
   (`Tymeslot.CalendarMock`); under `verify_on_exit!` a write that reached it
   without an expectation fails the test, which is how "nothing was written"
-  is asserted.
+  is asserted. `EventEditCalDAVWriteTest` takes the same edit down to the
+  wire.
   """
 
   use Tymeslot.DataCase, async: true
@@ -31,6 +33,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
   setup :verify_on_exit!
 
   @rrule "FREQ=WEEKLY;BYDAY=MO"
+  @series_document "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:weekly-sync\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
 
   setup do
     user = insert(:user)
@@ -42,49 +45,142 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
   end
 
   describe "an occurrence of a CalDAV series" do
-    for {kind, changes} <- [
-          reschedule:
-            quote(do: %{start_at: ~U[2026-06-01 11:00:00Z], end_at: ~U[2026-06-01 12:00:00Z]}),
-          rename: quote(do: %{summary: "Renamed"}),
-          colour: quote(do: %{colour: "grape"})
-        ] do
-      test "a #{kind} is refused before anything is written", %{user: user, caldav: caldav} do
-        event = insert_event(caldav, %{recurrence_rule: @rrule})
-
-        assert {:error, %{reason: :recurring_event, retry: :not_queued}} =
-                 CalendarGrid.update_event(user.id, event, unquote(changes))
-
-        {:ok, row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
-        assert row.summary == "Weekly sync"
-        assert row.colour == "tomato"
-        assert row.start_at == ~U[2026-06-01 09:00:00.000000Z]
-      end
-    end
-
-    test "one already edited on its own is refused too", %{user: user, caldav: caldav} do
-      # A detached override: no repeat rule of its own, named only by the
-      # recurrence id the sync keeps in `provider_metadata`. It lives in the
-      # series' resource all the same, and the patcher skips it, so a write
-      # against it lands on the master.
-      event =
-        insert_event(caldav, %{provider_metadata: %{"recurrence_id" => "20260601T090000"}})
-
-      assert {:error, %{reason: :recurring_event}} =
-               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
-    end
-
-    test "is refused on the strength of the cached row, not the copy passed in", %{
+    test "a rename is addressed to the occurrence, with only the change and its timing", %{
       user: user,
       caldav: caldav
     } do
-      event = insert_event(caldav, %{recurrence_rule: @rrule})
+      event = insert_occurrence(caldav, %{})
+      expect_provider_update({:ok, %{document: "NEW DOCUMENT"}})
+
+      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+
+      assert_received {:provider_update, uid, payload}
+      assert uid == event.uid
+
+      assert payload.occurrence == %{
+               href: "/cal/weekly-sync.ics",
+               key: "20260601T110000",
+               scope: :this_only,
+               timezone: "Europe/Berlin",
+               document: @series_document,
+               etag: "\"etag-1\"",
+               changes: %{
+                 summary: "Renamed",
+                 start_time: ~U[2026-06-01 09:00:00.000000Z],
+                 end_time: ~U[2026-06-01 10:00:00.000000Z]
+               }
+             }
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
+      assert {row.summary, row.raw_ical, row.etag} == {"Renamed", "NEW DOCUMENT", nil}
+    end
+
+    test "the rest of the series is given the document the provider answered with", %{
+      user: user,
+      caldav: caldav
+    } do
+      event = insert_occurrence(caldav, %{})
+      sibling = insert_occurrence(caldav, %{uid: "weekly-sync_20260608T110000"})
+      expect_provider_update({:ok, %{document: "NEW DOCUMENT"}})
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, event, %{
+                 start_at: ~U[2026-06-01 11:00:00Z],
+                 end_at: ~U[2026-06-01 12:00:00Z]
+               })
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, sibling.uid)
+
+      assert {row.raw_ical, row.etag, row.start_at} ==
+               {"NEW DOCUMENT", nil, ~U[2026-06-01 09:00:00.000000Z]}
+    end
+
+    test "one already edited on its own is addressed by its own key", %{
+      user: user,
+      caldav: caldav
+    } do
+      # A detached override: no repeat rule of its own, named only by the
+      # recurrence id the sync keeps in `provider_metadata`.
+      event =
+        insert_occurrence(caldav, %{
+          uid: "weekly-sync_20260615T110000",
+          recurrence_rule: nil,
+          provider_metadata: %{"uid" => "weekly-sync", "recurrence_id" => "20260615T110000"}
+        })
+
+      expect_provider_update({:ok, %{document: "NEW DOCUMENT"}})
+
+      assert {:ok, _updated} = CalendarGrid.update_event(user.id, event, %{colour: "grape"})
+
+      assert_received {:provider_update, _uid, %{occurrence: occurrence}}
+      assert occurrence.key == "20260615T110000"
+      assert occurrence.changes.colour == "grape"
+    end
+
+    test "is addressed on the strength of the cached row, not the copy passed in", %{
+      user: user,
+      caldav: caldav
+    } do
+      event = insert_occurrence(caldav, %{})
+      expect_provider_update({:ok, %{document: "NEW DOCUMENT"}})
 
       # What a LiveView holds mid-drag, or what a caller outside the grid
       # could construct: the repeat rule edited away.
-      assert {:error, %{reason: :recurring_event}} =
+      assert {:ok, _updated} =
                CalendarGrid.update_event(user.id, %{event | recurrence_rule: nil}, %{
                  summary: "Renamed"
                })
+
+      assert_received {:provider_update, _uid, %{occurrence: %{key: "20260601T110000"}}}
+    end
+
+    for {kind, {changes, reason}} <- [
+          repeat_rule: {quote(do: %{recurrence_rule: "FREQ=DAILY"}), :unsupported_scope},
+          all_day:
+            {quote(
+               do: %{
+                 all_day: true,
+                 start_at: nil,
+                 end_at: nil,
+                 start_date: ~D[2026-06-01],
+                 end_date: ~D[2026-06-02]
+               }
+             ), :value_type_change}
+        ] do
+      test "a change of #{kind} is refused before anything is written", %{
+        user: user,
+        caldav: caldav
+      } do
+        event = insert_occurrence(caldav, %{})
+
+        assert {:error, %{reason: unquote(reason), retry: :not_queued}} =
+                 CalendarGrid.update_event(user.id, event, unquote(changes))
+
+        {:ok, row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
+        assert {row.all_day, row.recurrence_rule} == {false, @rrule}
+      end
+    end
+
+    test "a row that does not name its occurrence is refused", %{user: user, caldav: caldav} do
+      # No series UID to strip, so no key to find the occurrence by.
+      event = insert_occurrence(caldav, %{provider_metadata: %{}})
+
+      assert {:error, %{reason: :unaddressable_occurrence, retry: :not_queued}} =
+               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+    end
+
+    test "a failed write is not queued and leaves the row as it was", %{
+      user: user,
+      caldav: caldav
+    } do
+      event = insert_occurrence(caldav, %{})
+      expect_provider_update({:error, :network_error})
+
+      assert {:error, %{reason: :network_error, retry: :not_queued}} =
+               CalendarGrid.update_event(user.id, event, %{summary: "Renamed"})
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
+      assert {row.summary, row.sync_state} == {"Weekly sync", "synced"}
     end
   end
 
@@ -146,7 +242,29 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
     insert(:provider_calendar_event, Map.merge(defaults, attrs))
   end
 
-  defp expect_provider_update do
-    expect(Tymeslot.CalendarMock, :update_event, fn _uid, _payload, _context -> :ok end)
+  # An expanded occurrence of a Berlin series: 11:00 local on 1 June.
+  defp insert_occurrence(integration, attrs) do
+    insert_event(
+      integration,
+      Map.merge(
+        %{
+          uid: "weekly-sync_20260601T110000",
+          timezone: "Europe/Berlin",
+          recurrence_rule: @rrule,
+          provider_metadata: %{"uid" => "weekly-sync"},
+          raw_ical: @series_document
+        },
+        attrs
+      )
+    )
+  end
+
+  defp expect_provider_update(result \\ :ok) do
+    test_pid = self()
+
+    expect(Tymeslot.CalendarMock, :update_event, fn uid, payload, _context ->
+      send(test_pid, {:provider_update, uid, payload})
+      result
+    end)
   end
 end

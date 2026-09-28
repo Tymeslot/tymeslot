@@ -3,6 +3,7 @@ defmodule Tymeslot.WorkerTestHelpers do
   Shared helper functions for worker tests to reduce duplication and improve maintainability.
   """
 
+  import Ecto.Query, only: [from: 2]
   import Mox
   import Tymeslot.Factory
 
@@ -28,6 +29,22 @@ defmodule Tymeslot.WorkerTestHelpers do
   def persisted_job(worker, args) do
     {:ok, job} = args |> worker.new() |> Oban.insert()
     %{job | attempt: 1}
+  end
+
+  @doc """
+  Inserts a job for `worker` and marks its row as picked up by a queue, so it
+  holds the `executing` state a unique insert matches while it runs. Returns
+  the job as the running process sees it, with the args it started with.
+  """
+  @spec running_job(module(), map()) :: Oban.Job.t()
+  def running_job(worker, args) do
+    job = persisted_job(worker, args)
+
+    Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id),
+      set: [state: "executing", attempted_at: DateTime.utc_now(), attempt: 1]
+    )
+
+    %{job | state: "executing"}
   end
 
   @doc """

@@ -165,6 +165,7 @@ msgstr "Calendriers actualisés"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
@@ -205,11 +206,6 @@ msgstr "Couleur"
 #, elixir-autogen, elixir-format
 msgid "Could not schedule notification. Changes were saved."
 msgstr "Impossible de planifier la notification. Les modifications ont été enregistrées."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/notification_flows.ex
-#, elixir-autogen, elixir-format
-msgid "Could not schedule notification. Please try again."
-msgstr "Impossible de planifier la notification. Veuillez réessayer."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
@@ -752,7 +748,7 @@ msgstr "Afficher ou masquer cette aide"
 msgid "Too many edits. Please wait a moment."
 msgstr "Trop de modifications. Veuillez patienter un instant."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/inline_edit.ex
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
 #, elixir-autogen, elixir-format
 msgid "Too many moves. Please wait a moment."
 msgstr "Trop de déplacements. Veuillez patienter un instant."
@@ -1018,11 +1014,6 @@ msgstr "Événement copié dans le nouveau calendrier. L’original sera supprim
 msgid "Event moved to the new calendar."
 msgstr "Événement déplacé vers le nouveau calendrier."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
-#, elixir-autogen, elixir-format
-msgid "Recurring events cannot be moved to another calendar yet. Only single events can be moved."
-msgstr "Les événements récurrents ne peuvent pas encore être déplacés vers un autre calendrier. Seuls les événements uniques peuvent être déplacés."
-
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "The video provider did not return a meeting link, so the video link was not changed."
@@ -1043,26 +1034,6 @@ msgstr "Salle de réunion créée."
 msgid "Your calendar could not be reached. The change is saved and will sync on the next attempt."
 msgstr "Votre calendrier est injoignable. La modification est enregistrée et sera synchronisée lors de la prochaine tentative."
 
-#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
-#, elixir-autogen, elixir-format
-msgid "Recurring events cannot be deleted here yet. Please delete this one in your calendar app."
-msgstr "Les événements récurrents ne peuvent pas encore être supprimés ici. Veuillez supprimer celui-ci dans votre application de calendrier."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "This event is part of a repeating series. Your change applies to this event only, and the rest of the series stays as it is. To change the whole series, use your calendar app."
-msgstr "Cet événement fait partie d'une série. Votre modification s'applique uniquement à cet événement, et le reste de la série reste inchangé. Pour modifier toute la série, utilisez votre application de calendrier."
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
-#, elixir-autogen, elixir-format
-msgid "Update this event"
-msgstr "Mettre à jour cet événement"
-
-#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
-#, elixir-autogen, elixir-format
-msgid "Recurring events cannot be edited here yet. Please change this one in your calendar app."
-msgstr "Les événements récurrents ne peuvent pas encore être modifiés ici. Veuillez modifier celui-ci dans votre application de calendrier."
-
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Event copied to the new calendar, but the move did not finish. Please check its original calendar and delete the original if it is still there."
@@ -1077,3 +1048,227 @@ msgstr "Cet événement est une réservation : son lien vidéo appartient donc �
 #, elixir-autogen, elixir-format
 msgid "Google Calendar added Google Meet to the event but has not returned its link yet. Choose Google Meet again to fetch it."
 msgstr "Google Agenda a ajouté Google Meet à l’événement mais n’a pas encore renvoyé son lien. Choisissez à nouveau Google Meet pour le récupérer."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
+#, elixir-autogen, elixir-format
+msgid "%{title} is part of a repeating series. Do you want to delete only this event, or every event in the series?"
+msgstr "%{title} fait partie d’une série. Voulez-vous supprimer uniquement cet événement, ou tous les événements de la série ?"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete all events"
+msgstr "Supprimer tous les événements"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete recurring event"
+msgstr "Supprimer l’événement récurrent"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Delete this event"
+msgstr "Supprimer cet événement"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted events are also removed from your calendar provider."
+msgstr "Les événements supprimés sont également retirés de votre fournisseur de calendrier."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring Exchange events cannot be deleted here yet. Please delete this one in your calendar app."
+msgstr "Les événements Exchange récurrents ne peuvent pas encore être supprimés ici. Veuillez supprimer celui-ci dans votre application de calendrier."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring event deleted."
+msgstr "Événement récurrent supprimé."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring event deleted. Attendees have been notified."
+msgstr "Événement récurrent supprimé. Les participants ont été informés."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "This event could not be deleted here. Please delete it in your calendar app."
+msgstr "Cet événement n’a pas pu être supprimé ici. Veuillez le supprimer dans votre application de calendrier."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "All events"
+msgstr "Tous les événements"
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "Events of a repeating series cannot be switched between all-day and timed here. Please make this change in your calendar app."
+msgstr "Les événements d’une série ne peuvent pas passer ici de « toute la journée » à un horaire, ni l’inverse. Veuillez effectuer cette modification dans votre application de calendrier."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "That change cannot be made to the events you chose. A repeat rule can only be changed for all events, or this and following events, and cannot be removed here."
+msgstr "Cette modification ne peut pas être appliquée aux événements choisis. Une règle de répétition ne peut être modifiée que pour tous les événements, ou pour cet événement et les suivants, et ne peut pas être supprimée ici."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex
+#, elixir-autogen, elixir-format
+msgid "That choice is not available for this event, so nothing was changed."
+msgstr "Ce choix n’est pas disponible pour cet événement, rien n’a donc été modifié."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_writes.ex
+#, elixir-autogen, elixir-format
+msgid "The series was updated, but a change you made while it was saving was not applied. Please make it again."
+msgid_plural "The series was updated, but %{count} changes you made while it was saving were not applied. Please make them again."
+msgstr[0] "La série a été mise à jour, mais une modification faite pendant l’enregistrement n’a pas été appliquée. Veuillez la refaire."
+msgstr[1] "La série a été mise à jour, mais %{count} modifications faites pendant l’enregistrement n’ont pas été appliquées. Veuillez les refaire."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This and following events"
+msgstr "Cet événement et les suivants"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This event"
+msgstr "Cet événement"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "This event could not be matched to its series. Refresh your calendars and try again."
+msgstr "Cet événement n’a pas pu être rattaché à sa série. Actualisez vos calendriers et réessayez."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "This event is part of a repeating series. Which events should your change apply to?"
+msgstr "Cet événement fait partie d’une série. À quels événements votre modification doit-elle s’appliquer ?"
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "This series repeats on fixed days, such as the second Monday of the month, so it cannot be moved like this. Please make this change in your calendar app."
+msgstr "Cette série se répète à des jours fixes, par exemple le deuxième lundi du mois, et ne peut donc pas être déplacée ainsi. Veuillez effectuer cette modification dans votre application de calendrier."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "This series' repeat rule cannot be split here. Please make this change in your calendar app."
+msgstr "La règle de répétition de cette série ne peut pas être scindée ici. Veuillez effectuer cette modification dans votre application de calendrier."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "every occurrence in the series changes, earlier ones included."
+msgstr "toutes les occurrences de la série changent, y compris les précédentes."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "only this occurrence changes, and the rest of the series stays as it is."
+msgstr "seule cette occurrence change, le reste de la série reste inchangé."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
+#, elixir-autogen, elixir-format
+msgid "this occurrence and every later one change, and the earlier ones stay as they are."
+msgstr "cette occurrence et toutes les suivantes changent, les précédentes restent inchangées."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/series_notes.ex
+#, elixir-autogen, elixir-format
+msgid "A Teams meeting on the series is not carried over."
+msgstr "Une réunion Teams de la série n’est pas reprise."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/series_move.ex
+#, elixir-autogen, elixir-format
+msgid "A change to this series is still saving. Please move the series once it has saved."
+msgstr "Une modification de cette série est encore en cours d’enregistrement. Veuillez déplacer la série une fois l’enregistrement terminé."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "A recurring event can only be moved to a calendar of the same kind of account: Google to Google, Outlook to Outlook, or CalDAV to CalDAV."
+msgstr "Un événement récurrent ne peut être déplacé que vers un calendrier du même type de compte : de Google vers Google, d’Outlook vers Outlook ou de CalDAV vers CalDAV."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Could not move the series. It is still on its original calendar."
+msgstr "Impossible de déplacer la série. Elle se trouve toujours dans son calendrier d’origine."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/series_notes.ex
+#, elixir-autogen, elixir-format
+msgid "Events in the series that were changed on their own go back to the series' usual pattern."
+msgstr "Les événements de la série modifiés individuellement reprennent le modèle habituel de la série."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/series_notes.ex
+#, elixir-autogen, elixir-format
+msgid "Events in the series that were changed or cancelled on their own go back to the series' usual pattern."
+msgstr "Les événements de la série modifiés ou annulés individuellement reprennent le modèle habituel de la série."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/series_notes.ex
+#, elixir-autogen, elixir-format
+msgid "Guests are sent a cancellation for the original series and an invitation to the moved one."
+msgstr "Les invités reçoivent une annulation de la série d’origine et une invitation à la série déplacée."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move every event in this series to %{calendar}?"
+msgstr "Déplacer tous les événements de cette série vers %{calendar} ?"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move recurring event"
+msgstr "Déplacer l’événement récurrent"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_series_move_modal.ex
+#, elixir-autogen, elixir-format
+msgid "Move series"
+msgstr "Déplacer la série"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/series_move.ex
+#, elixir-autogen, elixir-format
+msgid "Moving the series to %{calendar}..."
+msgstr "Déplacement de la série vers %{calendar}..."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "Recurring events on this calendar cannot be moved to another calendar. Only single events can be moved."
+msgstr "Les événements récurrents de ce calendrier ne peuvent pas être déplacés vers un autre calendrier. Seuls les événements uniques peuvent être déplacés."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "That calendar cannot be written to. Please choose another calendar."
+msgstr "Impossible d’écrire dans ce calendrier. Veuillez choisir un autre calendrier."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/edit_workflow.ex
+#, elixir-autogen, elixir-format
+msgid "The series is already on that calendar."
+msgstr "La série se trouve déjà dans ce calendrier."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "The series was copied to %{calendar}, but the original series could not be removed. Please delete it from its original calendar."
+msgstr "La série a été copiée vers %{calendar}, mais la série d’origine n’a pas pu être supprimée. Veuillez la supprimer de son calendrier d’origine."
+
+#: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
+#, elixir-autogen, elixir-format
+msgid "The series was moved to %{calendar}."
+msgstr "La série a été déplacée vers %{calendar}."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_writes.ex
+#, elixir-autogen, elixir-format
+msgid "The series was moved, but a change you made while it was moving was not applied. Please make it again."
+msgid_plural "The series was moved, but %{count} changes you made while it was moving were not applied. Please make them again."
+msgstr[0] "La série a été déplacée, mais une modification faite pendant le déplacement n’a pas été appliquée. Veuillez la refaire."
+msgstr[1] "La série a été déplacée, mais %{count} modifications faites pendant le déplacement n’ont pas été appliquées. Veuillez les refaire."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_recurrence.ex
+#, elixir-autogen, elixir-format
+msgid "A change to this series is still saving. Please make this change once it has saved."
+msgstr "Une modification de cette série est encore en cours d’enregistrement. Veuillez refaire cette modification une fois l’enregistrement terminé."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/series_notes.ex
+#, elixir-autogen, elixir-format
+msgid "Later events that were changed or cancelled on their own keep that only on dates the new pattern still includes."
+msgstr "Les événements suivants modifiés ou annulés individuellement ne le restent qu'aux dates que le nouveau modèle comprend encore."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "Delete failed - queued to retry on next sync. Attendees have not been notified."
+msgstr "Échec de la suppression - nouvelle tentative programmée à la prochaine synchronisation. Les participants n'ont pas été informés."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/event_delete.ex
+#, elixir-autogen, elixir-format
+msgid "Event deleted, but the attendees could not be notified."
+msgstr "Événement supprimé, mais les participants n'ont pas pu être informés."

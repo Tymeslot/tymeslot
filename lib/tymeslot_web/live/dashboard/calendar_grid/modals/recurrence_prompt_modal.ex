@@ -1,32 +1,43 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal do
   @moduledoc """
-  Confirmation shown before an edit to one occurrence of a repeating event.
+  Asks which occurrences of a repeating event an edit applies to: this
+  event, this and every following one, or all of them.
 
-  The edit is written to the occurrence the organiser clicked (Google and
-  Outlook address it by its own id), so the prompt offers that and nothing
-  else. "This and following" and "All events" come back once a provider
-  write honours a scope.
+  Each button sends its `Tymeslot.CalendarGrid.RecurrenceScope` as the
+  `scope` value of `confirm_recurrence_scope`. The prompt is shown only for
+  a member of a series whose provider writes each scope (Google, Outlook and
+  the CalDAV family; see `EditWorkflow.series_edit?/1`), so every button it
+  offers is one the domain can honour.
 
-  The copy below promises per-occurrence behaviour, so the prompt must never
-  be shown for a provider that cannot deliver it. Two things keep that true:
-  it is gated on `recurring_event_id`, which only the Google and Outlook
-  normalisers set, and an edit the CalDAV writer could only apply to a
-  whole series is refused before it reaches here, by
-  `Tymeslot.CalendarGrid.EventEdit.ensure_editable/1`. Setting
-  `recurring_event_id` on a CalDAV occurrence would make this text a lie; the
-  provider write has to learn `RECURRENCE-ID` first.
+  A change of repeat rule belongs to the series, not to one of its
+  occurrences, so its prompt leaves out "This event" (see
+  `offered_scopes/1`).
+
+  The prompt's `:following_notes`, when it has any, say under "This and
+  following events" what that choice will not carry
+  (`Tymeslot.CalendarGrid.SeriesEdit.following_notes/2`).
   """
 
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.CalendarGrid.RecurrenceScope
+  alias TymeslotWeb.Dashboard.CalendarGrid.SeriesNotes
 
   attr :recurrence_prompt, :map, required: true
   attr :myself, :any, required: true
 
   @spec recurrence_prompt_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def recurrence_prompt_modal(assigns) do
+    prompt = assigns.recurrence_prompt
+
+    assigns =
+      assign(assigns,
+        scopes: offered_scopes(prompt),
+        following_notes: Map.get(prompt, :following_notes, [])
+      )
+
     ~H"""
     <.modal
       id="recurrence-prompt-modal"
@@ -39,26 +50,80 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal do
       <p class="text-token-sm text-tymeslot-500 mb-4">
         {dgettext(
           "dashboard_calendar_events",
-          "This event is part of a repeating series. Your change applies to this event only, and the rest of the series stays as it is. To change the whole series, use your calendar app."
+          "This event is part of a repeating series. Which events should your change apply to?"
         )}
       </p>
 
+      <ul class="space-y-2 text-token-sm text-tymeslot-600">
+        <li :for={scope <- @scopes}>
+          <span class="font-semibold text-tymeslot-800">{scope_label(scope)}:</span>
+          {scope_description(scope)}
+          <ul
+            :if={scope == :following and @following_notes != []}
+            id="recurrence-following-notes"
+            class="mt-1 space-y-1 list-disc pl-5 text-tymeslot-500"
+          >
+            <li :for={note <- @following_notes}>{SeriesNotes.text(note)}</li>
+          </ul>
+        </li>
+      </ul>
+
       <:footer>
-        <.action_button
-          variant={:secondary}
-          phx-click={JS.push("cancel_recurrence_prompt", target: @myself)}
-        >
-          {dgettext("dashboard_calendar_events", "Cancel")}
-        </.action_button>
-        <.action_button
-          phx-click="confirm_recurrence_scope"
-          phx-value-scope="this_only"
-          phx-target={@myself}
-        >
-          {dgettext("dashboard_calendar_events", "Update this event")}
-        </.action_button>
+        <div class="flex flex-wrap gap-2">
+          <.action_button
+            :for={scope <- @scopes}
+            phx-click="confirm_recurrence_scope"
+            phx-value-scope={scope}
+            phx-target={@myself}
+          >
+            {scope_label(scope)}
+          </.action_button>
+          <.action_button
+            variant={:secondary}
+            phx-click={JS.push("cancel_recurrence_prompt", target: @myself)}
+          >
+            {dgettext("dashboard_calendar_events", "Cancel")}
+          </.action_button>
+        </div>
       </:footer>
     </.modal>
     """
   end
+
+  @doc """
+  The scopes `prompt` offers, in the order the buttons show them. A change of
+  repeat rule is not offered for this event alone, which cannot take a rule
+  of its own.
+  """
+  @spec offered_scopes(map()) :: [RecurrenceScope.t()]
+  def offered_scopes(%{kind: :recurrence_rule}), do: RecurrenceScope.values() -- [:this_only]
+  def offered_scopes(_prompt), do: RecurrenceScope.values()
+
+  defp scope_label(:this_only), do: dgettext("dashboard_calendar_events", "This event")
+
+  defp scope_label(:following),
+    do: dgettext("dashboard_calendar_events", "This and following events")
+
+  defp scope_label(:all), do: dgettext("dashboard_calendar_events", "All events")
+
+  defp scope_description(:this_only),
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "only this occurrence changes, and the rest of the series stays as it is."
+      )
+
+  defp scope_description(:following),
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "this occurrence and every later one change, and the earlier ones stay as they are."
+      )
+
+  defp scope_description(:all),
+    do:
+      dgettext(
+        "dashboard_calendar_events",
+        "every occurrence in the series changes, earlier ones included."
+      )
 end

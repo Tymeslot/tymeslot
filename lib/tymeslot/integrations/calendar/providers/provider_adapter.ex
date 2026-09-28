@@ -219,9 +219,21 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
 
   @doc """
   Updates an existing event in the calendar.
+
+  An edit of one or more occurrences of a CalDAV series (an `:occurrence`
+  in `event_data`) answers `{:ok, %{document: document}}`, the document the
+  series now lives in, which the caller needs to refresh its cache, with the
+  resource made for the following occurrences under `:tail` when the edit
+  split the series. An edit of every occurrence of a Google or Outlook
+  series (an `:occurrence` of scope `:all`) is written to the series' master
+  and answers `:ok`; one that split the series (scope `:following`) answers
+  `{:ok, %{tail: tail}}`, the series made for the following occurrences.
   """
   @spec update_event(adapter_client(), String.t(), map()) ::
-          :ok | {:error, atom(), term()} | {:error, term()}
+          :ok
+          | {:ok, %{optional(:document) => String.t(), optional(:tail) => map()}}
+          | {:error, atom(), term()}
+          | {:error, term()}
   def update_event(adapter_client, uid, event_data) do
     Metrics.time_operation(
       :calendar_update_event,
@@ -236,6 +248,20 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
           :ok ->
             Logger.info("Successfully updated event", uid: uid)
             :ok
+
+          # A rewritten CalDAV series, and for a split the resource made
+          # for its following occurrences.
+          {:ok, %{document: _document} = rewritten} = updated_occurrence
+          when map_size(rewritten) == 1 or
+                 (map_size(rewritten) == 2 and is_map_key(rewritten, :tail)) ->
+            Logger.info("Successfully updated event occurrence", uid: uid)
+            updated_occurrence
+
+          # A split Google or Outlook series: the series made for its
+          # following occurrences.
+          {:ok, %{tail: _tail} = split} = split_series when map_size(split) == 1 ->
+            Logger.info("Successfully split event series", uid: uid)
+            split_series
 
           {:ok, _updated} ->
             # Be tolerant of providers that return {:ok, event}
@@ -288,7 +314,10 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   Deletes an event from the calendar.
   """
   @spec delete_event(adapter_client(), String.t(), keyword()) ::
-          :ok | {:error, atom(), term()} | {:error, term()}
+          :ok
+          | {:ok, %{document: String.t() | nil}}
+          | {:error, atom(), term()}
+          | {:error, term()}
   def delete_event(adapter_client, uid, opts \\ []) do
     Metrics.time_operation(
       :calendar_delete_event,
@@ -317,6 +346,12 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
           :ok ->
             Logger.info("Successfully deleted event", uid: uid)
             :ok
+
+          # One occurrence of a series went, and the rest of the series is
+          # what the resource now holds: the caller refreshes its cache from it.
+          {:ok, %{document: _document}} = deleted_occurrence ->
+            Logger.info("Successfully deleted event occurrence", uid: uid)
+            deleted_occurrence
 
           {:ok, _deleted} ->
             # Be tolerant of providers that return {:ok, payload}

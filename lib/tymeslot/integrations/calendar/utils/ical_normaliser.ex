@@ -40,11 +40,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
     now = DateTime.utc_now()
     range_start = DateTime.add(now, -@expansion_past_days, :day)
     range_end = DateTime.add(now, @expansion_future_days, :day)
-    overrides = index_overrides(raw_events)
+    series_zones = index_series_zones(raw_events)
+    overrides = index_overrides(raw_events, series_zones)
 
     events =
       raw_events
-      |> Enum.flat_map(&expand_event(&1, range_start, range_end, overrides))
+      |> Enum.flat_map(&expand_event(&1, range_start, range_end, overrides, series_zones))
       |> Enum.reduce([], fn raw, acc ->
         case build_calendar_event(raw, context, provider) do
           {:ok, event} ->
@@ -86,10 +87,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   # the pair `{uid, occurrence}` is what tells them apart. Indexed here once so
   # that expanding a master can skip the slots its overrides take over, rather
   # than generating an occurrence at the original time beside the edited one.
-  defp index_overrides(raw_events) do
+  defp index_overrides(raw_events, series_zones) do
     for raw <- raw_events,
         override?(raw),
-        key = override_key(raw),
+        key = override_key(raw, series_zones),
         is_binary(key),
         into: MapSet.new(),
         do: {raw[:uid], key}
@@ -102,9 +103,24 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   # truncated as well and is not attempted here.
   defp override?(raw), do: is_binary(raw[:recurrence_id]) and raw[:recurrence_id] != ""
 
-  defp override_key(raw), do: recurrence_id_suffix(raw[:recurrence_id], raw[:timezone])
+  # RFC 5545 §3.8.4.4 names an override's slot in the value type and zone of
+  # the master's DTSTART, and the master's occurrences are keyed in that zone,
+  # so a UTC `RECURRENCE-ID` is read in it too. The override's own DTSTART
+  # zone is used only when the resource carries no master; another client may
+  # have written the override's timing in UTC or in any other zone.
+  defp index_series_zones(raw_events) do
+    for raw <- raw_events,
+        not override?(raw),
+        rrule = raw[:rrule] || raw[:recurrence_rule],
+        is_binary(rrule) and rrule != "",
+        into: %{},
+        do: {raw[:uid], raw[:timezone]}
+  end
 
-  defp expand_event(raw, range_start, range_end, overrides) do
+  defp override_key(raw, series_zones),
+    do: occurrence_key(raw[:recurrence_id], Map.get(series_zones, raw[:uid], raw[:timezone]))
+
+  defp expand_event(raw, range_start, range_end, overrides, series_zones) do
     rrule = raw[:rrule] || raw[:recurrence_rule]
 
     cond do
@@ -115,7 +131,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
         # occurrence it stands in for, and suffixing from it would file the row
         # beside that occurrence instead of over it. Its timing, summary and
         # the rest still come from its own properties.
-        [Map.put(raw, :_uid_suffix, override_key(raw) || own_suffix(raw))]
+        [Map.put(raw, :_uid_suffix, override_key(raw, series_zones) || own_suffix(raw))]
 
       rrule && rrule != "" ->
         expand_series(raw, rrule, range_start, range_end, overrides)
@@ -265,8 +281,13 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
     resolve_timing_values(occ_start, occ_end)
   end
 
+  # The parser hands DTSTART over in UTC, so an event that is not expanded (a
+  # one-off, or an occurrence override) is put back in its own zone first, as
+  # `expand_series/5` does for a master: the zone its start carries is the one
+  # the row records, and a row that recorded UTC for a Berlin event would have
+  # its next edit written as a UTC wall clock under the Berlin TZID.
   defp resolve_timing(raw) do
-    start_val = raw[:dtstart] || raw[:start_time]
+    start_val = in_event_zone(raw[:dtstart] || raw[:start_time], raw[:timezone])
     end_val = raw[:dtend] || raw[:end_time]
     resolve_timing_values(start_val, end_val)
   end
@@ -372,24 +393,37 @@ defmodule Tymeslot.Integrations.Calendar.ICalNormaliser do
   defp occurrence_suffix(%DateTime{} = dt), do: Calendar.strftime(dt, "%Y%m%dT%H%M%S")
   defp occurrence_suffix(_other), do: "unknown"
 
-  # `RECURRENCE-ID` reaches here as the raw property value: `20260501T100000`
-  # when its TZID parameter named a zone (the event's own), `20260501T080000Z`
-  # for a UTC instant, `20260501` for an all-day series. Each is reduced to the
-  # same wall-clock stamp `occurrence_suffix/1` builds from an expanded
-  # occurrence, so an override lines up with the occurrence it replaces
-  # whichever of the three forms the server wrote.
+  # The UTC marker's group always takes part in a timed match, so a value
+  # without one captures it as "" rather than leaving it out.
   @recurrence_id ~r/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z?))?$/
 
-  defp recurrence_id_suffix(value, timezone) when is_binary(value) do
+  @doc """
+  Reduces a raw `RECURRENCE-ID` value to the key the cache files the
+  occurrence it names under: the wall-clock stamp in the series' own zone,
+  `YYYYMMDDTHHMMSS` for a timed series or `YYYYMMDD` for an all-day one, the
+  same stamp an expanded occurrence's uid is suffixed with.
+
+  The value arrives as written on the wire: `20260501T100000` when its `TZID`
+  parameter named a zone (the event's own) and taken as written, likewise
+  `20260501` for an all-day series, and `20260501T080000Z` for a UTC instant,
+  which is shifted into `timezone` (the series' IANA zone, or `nil` to keep it
+  in UTC). Every reader of a `RECURRENCE-ID` goes through this one rule, so an
+  override lines up with the occurrence it replaces whichever of the three
+  forms the server wrote.
+
+  Returns `nil` for a value it cannot read.
+  """
+  @spec occurrence_key(String.t() | nil, String.t() | nil) :: String.t() | nil
+  def occurrence_key(value, timezone) when is_binary(value) do
     case Regex.run(@recurrence_id, String.trim(value)) do
       [_all, y, m, d] -> y <> m <> d
-      [_all, y, m, d, hh, mm, ss] -> "#{y}#{m}#{d}T#{hh}#{mm}#{ss}"
+      [_all, y, m, d, hh, mm, ss, ""] -> "#{y}#{m}#{d}T#{hh}#{mm}#{ss}"
       [_all, y, m, d, hh, mm, ss, "Z"] -> utc_suffix_in_zone([y, m, d, hh, mm, ss], timezone)
       _unrecognised -> nil
     end
   end
 
-  defp recurrence_id_suffix(_value, _timezone), do: nil
+  def occurrence_key(_value, _timezone), do: nil
 
   defp utc_suffix_in_zone([y, m, d, hh, mm, ss], timezone) do
     with {:ok, date} <- Date.new(to_int(y), to_int(m), to_int(d)),
