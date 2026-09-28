@@ -125,8 +125,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       class="confirmation-border-top mt-3 pt-3 border-t"
                     >
                       <div class="confirmation-email-row" data-testid="confirmation-location">
-                        <div class="confirmation-icon-wrapper rounded-full center-content">
-                          <.icon name="hero-map-pin" class="confirmation-email-link w-3.5 h-3.5" />
+                        <div class="confirmation-icon-wrapper rounded-full">
+                          <.icon name="hero-map-pin" class="confirmation-email-link w-4 h-4" />
                         </div>
                         <p class="text-sm text-white">
                           {dgettext("booking", "Location")}:
@@ -139,9 +139,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
                     <div class="confirmation-border-top mt-3 pt-3 border-t">
                       <div class="confirmation-email-row">
-                        <div class="confirmation-icon-wrapper rounded-full center-content">
+                        <div class="confirmation-icon-wrapper rounded-full">
                           <svg
-                            class="confirmation-email-link w-3.5 h-3.5"
+                            class="confirmation-email-link w-4 h-4"
                             fill="currentColor"
                             viewBox="0 0 20 20"
                           >
@@ -165,9 +165,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                       class="confirmation-border-top mt-3 pt-3 border-t"
                     >
                       <div class="confirmation-email-row">
-                        <div class="confirmation-icon-wrapper rounded-full center-content">
+                        <div class="confirmation-icon-wrapper rounded-full">
                           <svg
-                            class="confirmation-email-link w-3.5 h-3.5"
+                            class="confirmation-email-link w-4 h-4"
                             fill="currentColor"
                             viewBox="0 0 20 20"
                           >
