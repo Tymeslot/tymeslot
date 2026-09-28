@@ -34,6 +34,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   alias Tymeslot.Infrastructure.AdminAlerts.AlertTypes
   alias Tymeslot.Infrastructure.AdminAlerts.Digest
   alias Tymeslot.Infrastructure.AdminAlerts.PIIScrubber
+  alias Tymeslot.Infrastructure.DeploymentType
   alias Tymeslot.Workers.EmailWorker.AdminAlertScheduler
   alias TymeslotWeb.Endpoint
 
@@ -139,13 +140,15 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   @doc """
   The deployment an alert comes from: `tymeslot_version`, `deployment_type`,
   `domain`, `hostname` and `timestamp`. Added to every alert email, and once
-  to each digest.
+  to each digest. `deployment_type` is the normalised value
+  (`Tymeslot.Infrastructure.DeploymentType.current/0`), so the legacy `main`
+  reads `cloudron`, as it does everywhere else.
   """
   @spec deployment_context() :: map()
   def deployment_context do
     %{
       tymeslot_version: tymeslot_version(),
-      deployment_type: System.get_env("DEPLOYMENT_TYPE") || "unknown",
+      deployment_type: DeploymentType.current(),
       domain: domain(),
       hostname: hostname(),
       timestamp: DateTime.to_iso8601(DateTime.utc_now())
