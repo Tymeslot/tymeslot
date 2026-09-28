@@ -39,8 +39,12 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   ## Safety
 
     * The handler callback does no database work. It filters and offloads
-      the report to `Tymeslot.TaskSupervisor`, so a slow or failing database
-      can never block or kill the logging pipeline. The crashing process's
+      the report to `ErrorTracking.task_supervisor/0`, so a slow or failing
+      database can never block or kill the logging pipeline. That supervisor
+      runs a bounded number of tasks, so a crash storm cannot become one
+      concurrent database writer per crash: a crash arriving while every
+      task is busy is dropped, and counted by the
+      `[:tymeslot, :crash_reporter, :dropped]` telemetry event. The crashing process's
       ErrorTracker context is captured first and passed along, since the
       offloaded task has none of its own.
     * A failure inside the offloaded report is logged under this module's own
@@ -169,7 +173,7 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   defp handle_crash(kind, reason, stacktrace, meta) do
     cond do
       UnmatchedEvent.exception?(reason) -> log_unmatched_client_event(reason, stacktrace)
-      not tracking_enabled?() -> :ok
+      not ErrorTracking.enabled?() -> :ok
       not reportable?(kind, reason) -> :ok
       already_recorded?(kind, reason, stacktrace) -> :ok
       true -> offload(kind, reason, stacktrace, crash_context(meta))
@@ -189,11 +193,6 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   catch
     _kind, _reason -> :ok
   end
-
-  # Read per crash, as ErrorTracker reads it per report, so switching error
-  # tracking off also stops the offloaded work here.
-  defp tracking_enabled?,
-    do: Application.get_env(:error_tracker, :enabled, true) not in [false, nil]
 
   # Compares the crash with what ErrorTracker last recorded in this process,
   # normalised the way ErrorTracker normalises it. The entry is consumed, so
@@ -289,8 +288,24 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
     end
   end
 
+  # The supervisor is bounded: with every task busy, `start_child/2` returns
+  # `{:error, :max_children}` and the crash is dropped, counted by the
+  # `[:tymeslot, :crash_reporter, :dropped]` telemetry event rather than a log
+  # line, which in a crash storm would be one more line per crash.
   defp offload(kind, reason, stacktrace, context) do
-    Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
+    case Tasks.start_child(
+           ErrorTracking.task_supervisor(),
+           report_fun(kind, reason, stacktrace, context)
+         ) do
+      {:ok, _pid} -> :ok
+      {:error, _reason} -> :telemetry.execute([:tymeslot, :crash_reporter, :dropped], %{count: 1})
+    end
+
+    :ok
+  end
+
+  defp report_fun(kind, reason, stacktrace, context) do
+    fn ->
       try do
         ErrorTracker.report(exception(kind, reason), stacktrace, context)
       rescue
@@ -308,9 +323,7 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
             domain: @own_domain
           )
       end
-    end)
-
-    :ok
+    end
   end
 
   defp exception(:error, reason) when is_exception(reason), do: reason

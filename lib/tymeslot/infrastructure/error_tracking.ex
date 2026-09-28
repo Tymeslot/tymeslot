@@ -20,6 +20,8 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
 
   alias Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueries
   alias Tymeslot.Infrastructure.ErrorTracking.HandledError
+  alias Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
 
   require Logger
@@ -106,6 +108,15 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
     end
   end
 
+  @doc """
+  Whether error tracking records anything: ErrorTracker's own `enabled`
+  switch, set from `ERROR_TRACKING_ENABLED` at boot. Read on every call, as
+  ErrorTracker reads it on every report, so the crash reporter and
+  `report_error/3` stop doing work the moment it is off.
+  """
+  @spec enabled?() :: boolean()
+  def enabled?, do: Application.get_env(:error_tracker, :enabled, true) not in [false, nil]
+
   @doc "Returns true inside `with_direct_report/1` in the calling process."
   @spec direct_report?() :: boolean()
   def direct_report?, do: Process.get(@direct_report_key) == true
@@ -113,7 +124,8 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
   @doc """
   Records a failure that was handled but not expected, and logs it at
   `:error`. Always returns `:ok`, and never raises: a failure to record is
-  logged instead.
+  logged instead. With error tracking switched off (`enabled?/0`) it only
+  logs.
 
   For a bug or an outage the caller recovered from (a rescued exception, an
   `{:error, reason}` nothing anticipated), not for expected failures such as
@@ -167,8 +179,11 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
     stacktrace = stacktrace_or_caller(stacktrace)
     context = Map.new(context)
 
-    log_handled_error(exception, context)
-    record(exception, stacktrace, tracker_context(exception, context))
+    log_handled_error(exception, exception_or_reason, context)
+
+    if enabled?(),
+      do: record(exception, stacktrace, tracker_context(exception, context)),
+      else: :ok
   rescue
     failure -> log_report_failure(failure)
   catch
@@ -198,22 +213,23 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
 
   defp string_keys(context), do: Map.new(context, fn {key, value} -> {to_string(key), value} end)
 
-  defp log_handled_error(exception, context) do
+  # The reason is rendered from the term the caller gave, through
+  # `LogFormat.reason/1`, so a credential inside it is redacted by key before
+  # it becomes text; `HandledError`'s own copy is a plain `inspect`. The
+  # message gets the scrub its stored copy gets.
+  defp log_handled_error(exception, exception_or_reason, context) do
     metadata =
       context
       |> Enum.filter(fn {key, _value} -> is_atom(key) end)
       |> Keyword.new()
       |> Keyword.merge(
         error_kind: inspect(exception.__struct__),
-        error_message: Exception.message(exception),
-        reason: reason_for_log(exception)
+        error_message: ReasonScrubber.scrub(Exception.message(exception)),
+        reason: LogFormat.reason(exception_or_reason)
       )
 
     Logger.error("Handled an unexpected error", metadata)
   end
-
-  defp reason_for_log(%HandledError{reason: reason}), do: reason
-  defp reason_for_log(exception), do: HandledError.bounded_inspect(exception)
 
   defp record(exception, stacktrace, context) do
     if ErrorTrackingQueries.in_transaction?() do
@@ -227,10 +243,11 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
 
   # The task runs with the caller's ErrorTracker context, which `Tasks`
   # carries into it. It exits once the report is made, so no dedup memory is
-  # left behind to guard against.
+  # left behind to guard against. With every task of the bounded supervisor
+  # busy the report is dropped, and logged as a failure to record.
   defp offload(exception, stacktrace, context) do
-    {:ok, _pid} =
-      Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
+    result =
+      Tasks.start_child(task_supervisor(), fn ->
         try do
           ErrorTracker.report(exception, stacktrace, context)
         rescue
@@ -240,8 +257,20 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
         end
       end)
 
-    :ok
+    case result do
+      {:ok, _pid} -> :ok
+      {:error, reason} -> log_report_failure(reason)
+    end
   end
+
+  @doc """
+  The task supervisor that records errors off the calling process: the
+  crash reporter's reports, and `report_error/3` inside a transaction. Its
+  `max_children` (`:error_tracking_max_concurrent_reports`) bounds how many
+  database writers error tracking runs at once.
+  """
+  @spec task_supervisor() :: atom()
+  def task_supervisor, do: __MODULE__.TaskSupervisor
 
   # Names only the failure's module or kind: its message could carry the data
   # the report was about.

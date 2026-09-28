@@ -14,7 +14,9 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   Warnings and errors are delivered as an admin alert email via
   `Tymeslot.Workers.EmailWorker` at once. Info alerts are recorded for the
   daily digest instead (`Tymeslot.Infrastructure.AdminAlerts.Digest`), where
-  the same dedup key collapses repeats into one counted entry.
+  the same dedup key collapses repeats into one counted entry. New-error and
+  regression alerts are emailed at once only up to a few an hour; the rest
+  wait for one roll-up email (`Tymeslot.Infrastructure.AdminAlerts.ErrorBurst`).
 
   The headline, the logged metadata and the delivered metadata are all built from
   a `PIIScrubber`-scrubbed copy of the caller's metadata; only the dedup key is
@@ -33,7 +35,9 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.AdminAlerts.AlertTypes
   alias Tymeslot.Infrastructure.AdminAlerts.Digest
+  alias Tymeslot.Infrastructure.AdminAlerts.ErrorBurst
   alias Tymeslot.Infrastructure.AdminAlerts.PIIScrubber
+  alias Tymeslot.Infrastructure.DeploymentType
   alias Tymeslot.Workers.EmailWorker.AdminAlertScheduler
   alias TymeslotWeb.Endpoint
 
@@ -128,24 +132,30 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
     Digest.record(type, category, message, metadata, dedup_key)
   end
 
-  defp deliver({_type, category, severity, message, metadata, dedup_key}, recipient) do
+  defp deliver({type, category, severity, message, metadata, dedup_key} = alert, recipient) do
     enriched = Map.merge(metadata, deployment_context())
 
-    EmailScheduler.schedule_admin_alert(recipient, category, severity, message, enriched,
-      dedup_key: dedup_key
-    )
+    if ErrorBurst.applies?(type) do
+      ErrorBurst.deliver(alert, enriched, recipient)
+    else
+      EmailScheduler.schedule_admin_alert(recipient, category, severity, message, enriched,
+        dedup_key: dedup_key
+      )
+    end
   end
 
   @doc """
   The deployment an alert comes from: `tymeslot_version`, `deployment_type`,
   `domain`, `hostname` and `timestamp`. Added to every alert email, and once
-  to each digest.
+  to each digest. `deployment_type` is the normalised value
+  (`Tymeslot.Infrastructure.DeploymentType.current/0`), so the legacy `main`
+  reads `cloudron`, as it does everywhere else.
   """
   @spec deployment_context() :: map()
   def deployment_context do
     %{
       tymeslot_version: tymeslot_version(),
-      deployment_type: System.get_env("DEPLOYMENT_TYPE") || "unknown",
+      deployment_type: DeploymentType.current(),
       domain: domain(),
       hostname: hostname(),
       timestamp: DateTime.to_iso8601(DateTime.utc_now())

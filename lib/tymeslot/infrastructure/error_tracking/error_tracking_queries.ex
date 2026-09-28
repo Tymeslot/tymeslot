@@ -51,6 +51,24 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueries do
   end
 
   @doc """
+  The number of stored occurrences of each error in `error_ids`, as a map
+  from error id to count. An error with none, or no longer stored, is
+  absent.
+  """
+  @spec occurrence_counts([pos_integer()]) :: %{pos_integer() => non_neg_integer()}
+  def occurrence_counts([]), do: %{}
+
+  def occurrence_counts(error_ids) when is_list(error_ids) do
+    from(o in Occurrence,
+      where: o.error_id in ^error_ids,
+      group_by: o.error_id,
+      select: {o.error_id, count(o.id)}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
   Marks every unresolved error last seen before `cutoff` as resolved,
   muted ones included. Returns the number of errors resolved.
 
@@ -91,33 +109,41 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueries do
   end
 
   @doc """
-  Deletes occurrences of unresolved errors inserted before `cutoff`, except
-  that each error keeps its newest `keep` occurrences whatever their age.
-  An occurrence inside the window is never deleted.
+  Deletes occurrences of unresolved errors: those inserted before `cutoff`,
+  except that each error keeps its newest `keep` occurrences whatever their
+  age, and, inside the window, any beyond the error's newest `cap`. A `cap`
+  below `keep` is taken as `keep`, so the newest `keep` always survive.
 
   Walks the unresolved errors by id, a batch at a time, and deletes in
   bounded batches within each, so a large backlog never becomes one long
   statement. Returns the number of occurrences deleted.
   """
-  @spec trim_unresolved_occurrences(DateTime.t(), non_neg_integer(), keyword()) ::
-          non_neg_integer()
-  def trim_unresolved_occurrences(%DateTime{} = cutoff, keep, opts \\ [])
-      when is_integer(keep) and keep >= 0 do
-    batch_sizes = %{
+  @spec trim_unresolved_occurrences(
+          DateTime.t(),
+          non_neg_integer(),
+          non_neg_integer(),
+          keyword()
+        ) :: non_neg_integer()
+  def trim_unresolved_occurrences(%DateTime{} = cutoff, keep, cap, opts \\ [])
+      when is_integer(keep) and keep >= 0 and is_integer(cap) and cap >= 0 do
+    limits = %{
+      cutoff: cutoff,
+      keep: keep,
+      cap: max(keep, cap),
       errors: Keyword.get(opts, :error_batch_size, @error_batch_size),
       occurrences: Keyword.get(opts, :occurrence_batch_size, @occurrence_batch_size)
     }
 
-    trim_error_batches(cutoff, keep, batch_sizes, 0, 0)
+    trim_error_batches(limits, 0, 0)
   end
 
-  defp trim_error_batches(cutoff, keep, batch_sizes, after_id, total) do
+  defp trim_error_batches(limits, after_id, total) do
     error_ids =
       Repo.all(
         from e in Error,
           where: e.status == :unresolved and e.id > ^after_id,
           order_by: e.id,
-          limit: ^batch_sizes.errors,
+          limit: ^limits.errors,
           select: e.id
       )
 
@@ -126,14 +152,14 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueries do
         total
 
       ids ->
-        deleted = delete_ranked_out(ids, cutoff, keep, batch_sizes.occurrences, 0)
-        trim_error_batches(cutoff, keep, batch_sizes, List.last(ids), total + deleted)
+        deleted = delete_ranked_out(ids, limits, 0)
+        trim_error_batches(limits, List.last(ids), total + deleted)
     end
   end
 
   # Every deleted row ranks below the `keep` newest of its error, so the
   # survivors' ranks are stable across batches and re-ranking is safe.
-  defp delete_ranked_out(error_ids, cutoff, keep, batch_size, total) do
+  defp delete_ranked_out(error_ids, limits, total) do
     ranked =
       from o in Occurrence,
         where: o.error_id in ^error_ids,
@@ -149,15 +175,15 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueries do
 
     doomed =
       from r in subquery(ranked),
-        where: r.rank > ^keep and r.inserted_at < ^cutoff,
-        limit: ^batch_size,
+        where: r.rank > ^limits.cap or (r.rank > ^limits.keep and r.inserted_at < ^limits.cutoff),
+        limit: ^limits.occurrences,
         select: r.id
 
     {deleted, _rows} = Repo.delete_all(from o in Occurrence, where: o.id in subquery(doomed))
     total = total + deleted
 
-    if deleted < batch_size,
+    if deleted < limits.occurrences,
       do: total,
-      else: delete_ranked_out(error_ids, cutoff, keep, batch_size, total)
+      else: delete_ranked_out(error_ids, limits, total)
   end
 end

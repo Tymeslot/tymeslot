@@ -73,8 +73,11 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
      }, nil}
   end
 
+  # Recorded by module alone, as a handler's exception is below: the message
+  # of anything raised while reading the event can quote the Stripe object,
+  # customer details included.
   defp handle_exception(exception, event, event_type, stacktrace) do
-    ErrorTracking.report_error(exception, stacktrace, %{
+    ErrorTracking.report_error({:raised, exception.__struct__}, stacktrace, %{
       event_type: event_type,
       event_id: get_field(event, :id)
     })

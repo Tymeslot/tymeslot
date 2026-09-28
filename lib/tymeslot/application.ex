@@ -28,10 +28,12 @@ defmodule Tymeslot.Application do
     Tasks
   }
 
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Infrastructure.ErrorTracking.Alerter, as: ErrorAlerter
   alias Tymeslot.Infrastructure.ErrorTracking.ObanOutcomes
   alias Tymeslot.Infrastructure.ErrorTracking.ReasonScrubber
   alias Tymeslot.Infrastructure.ErrorTracking.SafeIntegrations
+  alias Tymeslot.Infrastructure.ErrorTracking.Throttle
   alias Tymeslot.Infrastructure.Logging.{FileSink, LogFormat, MetadataRedactor}
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Integrations.{HealthCheck, Telemetry}
@@ -85,6 +87,9 @@ defmodule Tymeslot.Application do
     # Base children that are always started
     base_children = [
       TymeslotWeb.Telemetry,
+      # Per-fingerprint cap on stored error occurrences; before the Repo so
+      # that no report can reach the database unthrottled once it is up.
+      Throttle,
       Tymeslot.Repo,
       {DNSCluster, query: Application.get_env(:tymeslot, :dns_cluster_query) || :ignore},
       {PubSub, name: Tymeslot.PubSub},
@@ -93,7 +98,11 @@ defmodule Tymeslot.Application do
       # Start token refresh lock manager
       {Lock, []},
       # Task Supervisor for async operations
-      {Task.Supervisor, name: Tymeslot.TaskSupervisor}
+      {Task.Supervisor, name: Tymeslot.TaskSupervisor},
+      # Bounded, so a crash storm cannot spawn one database writer per crash
+      {Task.Supervisor,
+       name: ErrorTracking.task_supervisor(),
+       max_children: Application.get_env(:tymeslot, :error_tracking_max_concurrent_reports, 10)}
     ]
 
     # Additional children for non-test environments
@@ -215,8 +224,9 @@ defmodule Tymeslot.Application do
       # Record every process crash ErrorTracker's integrations do not see
       # (GenServers, Tasks, bare processes). Attached before the supervision
       # tree starts, so a child crashing on boot is recorded. The handler
-      # offloads to Tymeslot.TaskSupervisor, one of the first children and
-      # started after the Repo; a crash before that is dropped, never raised. It reads ErrorTracker's
+      # offloads to the bounded ErrorTracking.TaskSupervisor, started among
+      # the first children after the Repo; a crash before that, or while all
+      # its tasks are busy, is dropped, never raised. It reads ErrorTracker's
       # `enabled` switch on every crash, so switching error tracking off
       # stops it without a restart.
       CrashReporter.attach()

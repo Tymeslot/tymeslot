@@ -1,6 +1,9 @@
 defmodule Tymeslot.Infrastructure.AdminAlerts.DigestEntrySchema do
   @moduledoc """
-  An info-severity admin alert waiting for the daily digest email.
+  An admin alert waiting to be emailed with others: an info-severity alert
+  waiting for the daily digest (`batch` `"daily"`), or an error alert held
+  back by `Tymeslot.Infrastructure.AdminAlerts.ErrorBurst` for its roll-up
+  (`"errors"`).
 
   One row per distinct alert: `alert_hash` is the alert's dedup hash, so a
   repeat before the next digest raises `occurrences` (and refreshes the
@@ -21,6 +24,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.DigestEntrySchema do
           metadata: map() | nil,
           alert_hash: String.t() | nil,
           occurrences: integer() | nil,
+          batch: String.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -32,16 +36,23 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.DigestEntrySchema do
     field :metadata, :map, default: %{}
     field :alert_hash, :string
     field :occurrences, :integer, default: 1
+    field :batch, :string, default: "daily"
 
     timestamps(type: :utc_datetime_usec)
   end
 
   @required [:alert_type, :category, :message, :metadata, :alert_hash]
+  @batches ~w(daily errors)
+
+  @doc "The emails an entry can wait for: the daily digest and the error roll-up."
+  @spec batches() :: [String.t()]
+  def batches, do: @batches
 
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(entry, attrs) do
     entry
-    |> cast(attrs, @required)
+    |> cast(attrs, [:batch | @required])
     |> validate_required(@required -- [:metadata])
+    |> validate_inclusion(:batch, @batches)
   end
 end

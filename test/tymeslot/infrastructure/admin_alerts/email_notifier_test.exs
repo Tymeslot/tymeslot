@@ -8,6 +8,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
   import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.AdminAlerts.EmailNotifier
   alias Tymeslot.Repo
   alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.EmailWorker
@@ -133,6 +134,19 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
       assert Map.has_key?(metadata, "timestamp")
       # Caller-provided metadata is preserved
       assert metadata["event_id"] == "evt_enrich_007"
+    end
+
+    test "deployment context reports the normalised deployment type" do
+      previous = System.get_env("DEPLOYMENT_TYPE")
+      System.put_env("DEPLOYMENT_TYPE", "main")
+
+      on_exit(fn ->
+        if previous,
+          do: System.put_env("DEPLOYMENT_TYPE", previous),
+          else: System.delete_env("DEPLOYMENT_TYPE")
+      end)
+
+      assert EmailNotifier.deployment_context().deployment_type == "cloudron"
     end
 
     test "deployment context names the domain the instance serves" do

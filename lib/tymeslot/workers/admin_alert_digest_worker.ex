@@ -1,6 +1,9 @@
 defmodule Tymeslot.Workers.AdminAlertDigestWorker do
   @moduledoc """
-  Sends the daily digest of info-severity admin alerts, from the crontab.
+  Sends the daily digest of info-severity admin alerts, from the crontab,
+  and, with args `%{"batch" => "errors"}`, the roll-up of error alerts
+  `Tymeslot.Infrastructure.AdminAlerts.ErrorBurst` held back, scheduled by
+  it for the end of the hour.
 
   The work is `Tymeslot.Infrastructure.AdminAlerts.Digest.deliver/0`: the
   waiting entries are handed to `Tymeslot.Workers.EmailWorker` as one email
@@ -14,5 +17,6 @@ defmodule Tymeslot.Workers.AdminAlertDigestWorker do
   alias Tymeslot.Infrastructure.AdminAlerts.Digest
 
   @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"batch" => batch}}), do: Digest.deliver(batch)
   def perform(_job), do: Digest.deliver()
 end

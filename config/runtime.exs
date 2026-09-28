@@ -447,6 +447,29 @@ config :tymeslot, :email,
       System.get_env("CLOUDRON_APP_DOMAIN") ||
       "tymeslot.app"
 
+# Error tracking: every exception, crash and discarded job is stored in the
+# application database (ErrorTracker) with its request, LiveView or job
+# context. On by default; ERROR_TRACKING_ENABLED=false switches recording off
+# everywhere, crash reporting included, and stops new-error alerts with it.
+# Unset leaves the compile-time default (on; off under test). A value that is
+# neither on nor off fails the boot rather than guess which the operator meant.
+case System.get_env("ERROR_TRACKING_ENABLED") do
+  value when value in [nil, ""] ->
+    :ok
+
+  value ->
+    case String.downcase(String.trim(value)) do
+      on when on in ["true", "1", "yes", "on"] ->
+        config :error_tracker, enabled: true
+
+      off when off in ["false", "0", "no", "off"] ->
+        config :error_tracker, enabled: false
+
+      _other ->
+        raise "ERROR_TRACKING_ENABLED must be true or false, got: #{inspect(value)}"
+    end
+end
+
 # Admin alerts — disabled by default. Self-hosters can opt in by setting
 # ADMIN_ALERTS_ENABLED=true and ADMIN_ALERT_EMAIL=<recipient>. Both must be
 # set for emails to be delivered. See CONTRIBUTING.md for how to share alerts

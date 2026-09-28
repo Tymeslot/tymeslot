@@ -26,7 +26,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueriesTest do
     end
   end
 
-  describe "trim_unresolved_occurrences/3" do
+  describe "trim_unresolved_occurrences/4" do
     test "trims every unresolved error when both errors and occurrences span several batches" do
       cutoff = days_ago(30)
       errors = for _n <- 1..3, do: insert_error(status: :unresolved, last_seen_days_ago: 0)
@@ -37,7 +37,7 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueriesTest do
           do: insert_occurrence(error, days_ago: days)
 
       deleted =
-        ErrorTrackingQueries.trim_unresolved_occurrences(cutoff, 5,
+        ErrorTrackingQueries.trim_unresolved_occurrences(cutoff, 5, 1_000,
           error_batch_size: 2,
           occurrence_batch_size: 4
         )
@@ -50,6 +50,27 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueriesTest do
 
       # Resolved errors are the pruner's business, not the trim's.
       assert length(occurrence_ages(resolved)) == 20
+    end
+
+    test "caps an error's occurrences inside the window at its newest max" do
+      error = insert_error(status: :unresolved, last_seen_days_ago: 0)
+      for days <- 0..19, do: insert_occurrence(error, days_ago: days)
+
+      deleted =
+        ErrorTrackingQueries.trim_unresolved_occurrences(days_ago(30), 5, 8,
+          occurrence_batch_size: 3
+        )
+
+      assert deleted == 12
+      assert occurrence_ages(error) == Enum.to_list(0..7)
+    end
+
+    test "never trims below keep, even with a max smaller than it" do
+      error = insert_error(status: :unresolved, last_seen_days_ago: 0)
+      for days <- 0..9, do: insert_occurrence(error, days_ago: days)
+
+      assert ErrorTrackingQueries.trim_unresolved_occurrences(days_ago(30), 5, 2) == 5
+      assert occurrence_ages(error) == Enum.to_list(0..4)
     end
   end
 
