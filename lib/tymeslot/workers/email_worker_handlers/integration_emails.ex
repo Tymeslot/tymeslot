@@ -339,8 +339,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
         job_id
       ) do
     with {:ok, user} <- UserQueries.get_user(args["user_id"]),
-         {:ok, current_event} <-
-           CalendarGrid.get_cached_event(integration_id, event_uid),
+         {:ok, current_event} <- updated_event(args, integration_id, event_uid),
          changes = CalendarEventDetails.changes(current_event, args),
          false <- nothing_to_announce?(changes, args),
          {:ok, details} <-
@@ -369,6 +368,14 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
         :ok
     end
   end
+
+  # A job that carries the event as the update left it describes that: it
+  # was sent for a write to a whole series, whose cached rows are gone.
+  defp updated_event(%{"event" => %{} = snapshot}, _integration_id, _event_uid),
+    do: CalendarEventDetails.snapshot_event(snapshot)
+
+  defp updated_event(_args, integration_id, event_uid),
+    do: CalendarGrid.get_cached_event(integration_id, event_uid)
 
   # An empty diff against a recorded baseline is a genuine no-op (an Oban
   # retry of a change already applied lands here) and stays `:ok`. A first

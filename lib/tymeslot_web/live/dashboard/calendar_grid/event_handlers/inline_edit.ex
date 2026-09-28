@@ -548,9 +548,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
       socket =
         socket
         |> assign(:selected_event, optimistic_event)
-        |> EditWorkflow.apply_event_change(event, optimistic_event, new_start, new_end)
+        |> EditWorkflow.apply_event_change(event, optimistic_event, new_start, new_end,
+          saved_message: dgettext("dashboard_calendar_events", "Changes saved.")
+        )
 
-      {:noreply, EditWorkflow.apply_notify_result(socket, event, optimistic_event)}
+      {:noreply, socket}
     end
   end
 end

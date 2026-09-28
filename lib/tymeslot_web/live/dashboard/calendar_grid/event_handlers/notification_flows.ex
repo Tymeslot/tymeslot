@@ -14,6 +14,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
       nil ->
         {:noreply, socket}
 
+      %{kind: :update, scope: scope} = prompt when scope in [:following, :all] ->
+        prompt.original_event
+        |> AttendeeNotifications.series_updated_confirm(
+          prompt.event,
+          socket.assigns.current_user.id,
+          scope
+        )
+        |> series_notified(socket)
+
       %{kind: :update, summary: summary, event: event, attendees: attendees} ->
         case AttendeeNotifications.event_updated_confirm(event, summary, attendees) do
           {:ok, :sent} ->
@@ -61,6 +70,36 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.NotificationFlows do
          |> assign(:notify_prompt, nil)
          |> assign(:deleting_event, true)}
     end
+  end
+
+  # The update of a whole series is sent, not scheduled, so there is no
+  # pending notification to show or cancel afterwards.
+  defp series_notified({:ok, _sent_or_noop}, socket) do
+    send(
+      self(),
+      {:flash,
+       {:info,
+        dgettext(
+          "dashboard_calendar_events",
+          "Changes saved. Attendees will be notified shortly."
+        )}}
+    )
+
+    {:noreply, assign(socket, :notify_prompt, nil)}
+  end
+
+  defp series_notified({:error, _reason}, socket) do
+    send(
+      self(),
+      {:flash,
+       {:warning,
+        dgettext(
+          "dashboard_calendar_events",
+          "Could not schedule notification. Changes were saved."
+        )}}
+    )
+
+    {:noreply, assign(socket, :notify_prompt, nil)}
   end
 
   @spec handle_notify_prompt_cancel(map(), Phoenix.LiveView.Socket.t()) ::

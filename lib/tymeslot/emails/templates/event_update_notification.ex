@@ -51,6 +51,10 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
       - `:first_notification`: true when no previous state was ever
         recorded; the changes then carry nil old values and render as the
         event's current details rather than a before/after diff (optional)
+      - `:series`: `:all` or `:following` for the update of every
+        occurrence of a repeating event, or of this and every following
+        one, whose details are then those of the occurrence edited
+        (optional)
       - `:attendee_locale`: optional locale string (default: `"en"`)
   """
   @spec render(String.t(), map()) :: Swoosh.Email.t()
@@ -88,10 +92,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
           intent: @intent,
           eyebrow: dgettext("emails_booking", "Updated"),
           stage_title: dgettext("emails_booking", "Event updated"),
-          stage_subtitle:
-            dgettext("emails_booking", "%{name} has updated an event you're attending.",
-              name: details.organizer_name
-            )
+          stage_subtitle: updated_line(details)
         )
 
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
@@ -221,6 +222,30 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
 
   defp first_notification?(details), do: Map.get(details, :first_notification) == true
 
+  # The details shown are those of the occurrence the organiser edited, so an
+  # update of more of the series says how much more it changed.
+  defp updated_line(%{series: :all} = details) do
+    dgettext(
+      "emails_booking",
+      "%{name} has updated every occurrence of a repeating event you're attending.",
+      name: details.organizer_name
+    )
+  end
+
+  defp updated_line(%{series: :following} = details) do
+    dgettext(
+      "emails_booking",
+      "%{name} has updated this and every following occurrence of a repeating event you're attending.",
+      name: details.organizer_name
+    )
+  end
+
+  defp updated_line(details) do
+    dgettext("emails_booking", "%{name} has updated an event you're attending.",
+      name: details.organizer_name
+    )
+  end
+
   # The first-notification variant of the change table: the event's current
   # details, one row per populated field, with no "before" column, because
   # nothing was ever recorded to put in it.
@@ -299,7 +324,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
     """
     #{dgettext("emails_booking", "Event Updated")}
 
-    #{dgettext("emails_booking", "%{name} has updated an event you're attending.", name: details.organizer_name)}
+    #{updated_line(details)}
 
     #{dgettext("emails_booking", "MEETING DETAILS:")}
     #{TextBodyHelper.format_meeting_details(meeting_details, locale)}

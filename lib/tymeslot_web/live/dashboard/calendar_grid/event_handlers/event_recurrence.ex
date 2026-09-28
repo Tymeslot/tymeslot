@@ -81,12 +81,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
     socket
   end
 
+  # Whether to tell the attendees is asked once the write in `scope` has
+  # succeeded (see `EditWorkflow.apply_event_change/6`).
   defp replay_with_scope(prompt, scope, socket) do
     EditWorkflow.update_event_async(
       socket,
       prompt.event,
       %{start_at: prompt.new_start, end_at: prompt.new_end},
-      recurrence_scope: scope
+      recurrence_scope: scope,
+      notify: Map.get(prompt, :notify)
     )
   end
 

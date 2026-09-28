@@ -321,6 +321,63 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
     end
   end
 
+  describe "series_updated_confirm/4" do
+    test "enqueues one update at once, carrying the event before and after the edit" do
+      user = insert(:user, email: "owner@x.com")
+      integration = insert(:calendar_integration, user: user)
+
+      original =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          summary: "Weekly sync",
+          ical_sequence: 2,
+          all_day: false,
+          start_at: ~U[2026-06-01 09:00:00.000000Z],
+          end_at: ~U[2026-06-01 10:00:00.000000Z],
+          attendees: [
+            %{"email" => "a@x.com"},
+            %{"email" => "owner@x.com"},
+            %{"email" => "no@x.com", "response_status" => "declined"}
+          ]
+        )
+
+      updated = %{
+        original
+        | start_at: ~U[2026-06-01 14:00:00.000000Z],
+          end_at: ~U[2026-06-01 15:00:00.000000Z]
+      }
+
+      assert {:ok, :sent} =
+               AttendeeNotifications.series_updated_confirm(original, updated, user.id, :all)
+
+      assert [job] = all_enqueued(worker: EmailWorker)
+
+      assert %{
+               "action" => "send_event_update_notification",
+               "attendee_emails" => ["a@x.com"],
+               "before_start_at" => "2026-06-01T09:00:00.000000Z",
+               "method" => "request",
+               "sequence" => 3,
+               "series" => "all",
+               "event" => %{"start_at" => "2026-06-01T14:00:00.000000Z", "uid" => uid}
+             } = job.args
+
+      assert uid == original.uid
+      refute job.scheduled_at > DateTime.utc_now()
+      assert all_enqueued(worker: Worker) == []
+    end
+
+    test "returns {:ok, :noop} when nobody is left to tell" do
+      event = insert(:provider_calendar_event, attendees: [])
+      user = event.calendar_integration.user
+
+      assert {:ok, :noop} =
+               AttendeeNotifications.series_updated_confirm(event, event, user.id, :following)
+
+      assert all_enqueued(worker: EmailWorker) == []
+    end
+  end
+
   describe "pending?/1 and cancel_pending/1" do
     test "pending?/1 is false before scheduling, true after" do
       event = insert(:provider_calendar_event)
