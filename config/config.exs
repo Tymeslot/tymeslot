@@ -578,6 +578,15 @@ config :error_tracker,
   filter: Tymeslot.Infrastructure.ErrorTracking.Filter,
   ignorer: Tymeslot.Infrastructure.ErrorTracking.Ignorer
 
+# New-error and regression alerts: the first `immediate_per_window` of a
+# rolling window are emailed at once; the rest wait for one roll-up email at
+# the end of the window, listing the newest `listed` of them
+# (`Tymeslot.Infrastructure.AdminAlerts.ErrorBurst`). Read on every alert.
+config :tymeslot, :error_alert_burst,
+  immediate_per_window: 3,
+  window_seconds: 3_600,
+  listed: 10
+
 # ErrorTracker housekeeping, run daily by
 # `Tymeslot.Workers.ErrorTrackerMaintenanceWorker`: an error not seen for
 # this many days is marked resolved, deleted a further window later, and an

@@ -1,6 +1,7 @@
 defmodule Tymeslot.Workers.EmailWorkerHandlers.AdminEmails do
   @moduledoc """
-  Handles admin alert email actions: a single alert and the daily digest.
+  Handles admin alert email actions: a single alert, and the daily digest or
+  the error roll-up.
   """
 
   require Logger
@@ -47,7 +48,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.AdminEmails do
 
   @spec handle_admin_alert_digest(%{String.t() => term()}) :: :ok | {:error, term()}
   def handle_admin_alert_digest(%{"recipient" => recipient} = args) do
-    digest = Map.take(args, ["entries", "omitted", "deployment"])
+    digest = Map.take(args, ["kind", "entries", "omitted", "deployment"])
 
     case Config.email_service_module().send_admin_alert_digest(recipient, digest) do
       {:ok, _result} ->

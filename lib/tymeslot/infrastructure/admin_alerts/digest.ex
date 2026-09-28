@@ -26,6 +26,15 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.Digest do
   the entries in its args, so a mail outage never grows the table. One email
   lists at most 100 entries, the oldest; the rest are counted by type and
   dropped with them, so every run empties the table however many arrived.
+
+  ## The error roll-up
+
+  The same storage and hand-off carry a second batch, `"errors"`: the error
+  alerts `Tymeslot.Infrastructure.AdminAlerts.ErrorBurst` held back once the
+  hour's immediate emails were spent. `deliver("errors")` runs when that
+  window frees a slot, and lists the newest `ErrorBurst.listed/0` entries
+  instead of the oldest hundred, counting the rest by type. Each batch is
+  delivered, and dropped, on its own.
   """
 
   require Logger
@@ -34,20 +43,33 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.Digest do
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.AdminAlerts.DigestEntryQueries
   alias Tymeslot.Infrastructure.AdminAlerts.EmailNotifier
+  alias Tymeslot.Infrastructure.AdminAlerts.ErrorBurst
+  alias Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueries
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker.AdminAlertScheduler
 
   @max_entries 100
 
+  @daily "daily"
+  @errors "errors"
+
+  @doc "The batch of the error roll-up, beside the daily digest's `\"daily\"`."
+  @spec errors_batch() :: String.t()
+  def errors_batch, do: @errors
+
   @doc """
-  Records an info alert for the next digest. `metadata` must already be
-  scrubbed; `dedup_key` is the alert's `AlertTypes.dedup_key/2`, built from
-  the raw metadata and stored only as a hash.
+  Records an alert for the next email of `batch`: an info alert for the
+  daily digest (the default), or an error alert `ErrorBurst` held back for
+  its roll-up (`"errors"`). `metadata` must already be scrubbed; `dedup_key`
+  is the alert's `AlertTypes.dedup_key/2` (or `ErrorBurst`'s per-error key),
+  built from the raw metadata and stored only as a hash.
   """
-  @spec record(atom(), String.t(), String.t(), map(), String.t()) :: :ok | {:error, term()}
-  def record(type, category, message, metadata, dedup_key) do
+  @spec record(atom(), String.t(), String.t(), map(), String.t(), String.t()) ::
+          :ok | {:error, term()}
+  def record(type, category, message, metadata, dedup_key, batch \\ @daily) do
     attrs = %{
+      batch: batch,
       alert_type: to_string(type),
       category: category,
       message: message,
@@ -78,37 +100,38 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.Digest do
   recipient, keeps them (none are recorded meanwhile) and logs the missing
   recipient.
   """
-  @spec deliver() :: :ok | {:error, term()}
-  def deliver do
+  @spec deliver(String.t()) :: :ok | {:error, term()}
+  def deliver(batch \\ @daily) when batch in [@daily, @errors] do
     recipient = AdminAlerts.recipient()
 
     cond do
-      not AdminAlerts.enabled?() -> drop_waiting()
+      not AdminAlerts.enabled?() -> drop_waiting(batch)
       not AdminAlerts.valid_email?(recipient) -> AdminAlerts.log_missing_recipient()
-      true -> hand_off(recipient)
+      true -> hand_off(batch, recipient)
     end
   end
 
-  defp drop_waiting do
-    case DigestEntryQueries.delete_all() do
+  defp drop_waiting(batch) do
+    case DigestEntryQueries.delete_all(batch) do
       0 ->
         :ok
 
       count ->
         Logger.info("Admin alerts are switched off; dropped the waiting digest entries",
-          entries: count
+          entries: count,
+          batch: batch
         )
 
         :ok
     end
   end
 
-  defp hand_off(recipient) do
+  defp hand_off(batch, recipient) do
     result =
       Repo.transaction(fn ->
-        case DigestEntryQueries.take_all() do
+        case DigestEntryQueries.take_all(batch) do
           [] -> 0
-          entries -> schedule(recipient, entries)
+          entries -> schedule(batch, recipient, entries)
         end
       end)
 
@@ -117,23 +140,25 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.Digest do
         :ok
 
       {:ok, count} ->
-        Logger.info("Admin alert digest handed to the email worker", entries: count)
+        Logger.info("Admin alert digest handed to the email worker", entries: count, batch: batch)
         :ok
 
       {:error, reason} ->
         Logger.error("Failed to hand off the admin alert digest; entries kept",
-          error: LogFormat.reason(reason)
+          error: LogFormat.reason(reason),
+          batch: batch
         )
 
         {:error, reason}
     end
   end
 
-  defp schedule(recipient, entries) do
-    {listed, omitted} = Enum.split(entries, @max_entries)
+  defp schedule(batch, recipient, entries) do
+    {listed, omitted} = batch |> in_listing_order(entries) |> Enum.split(listing_limit(batch))
 
     digest = %{
-      "entries" => Enum.map(listed, &serialise_entry/1),
+      "kind" => batch,
+      "entries" => serialise_entries(batch, listed),
       "omitted" => count_by_type(omitted),
       "deployment" => AdminAlertScheduler.serialize_metadata(EmailNotifier.deployment_context())
     }
@@ -142,6 +167,36 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.Digest do
       :ok -> length(entries)
       {:error, reason} -> Repo.rollback(reason)
     end
+  end
+
+  # The daily digest lists the oldest, in the order they arrived. The error
+  # roll-up lists the most recently seen, newest first: after a bad deploy,
+  # the latest failures are the ones worth reading first.
+  defp in_listing_order(@daily, entries), do: entries
+
+  defp in_listing_order(@errors, entries),
+    do: Enum.sort_by(entries, &{DateTime.to_unix(&1.updated_at, :microsecond), &1.id}, :desc)
+
+  defp listing_limit(@daily), do: @max_entries
+  defp listing_limit(@errors), do: ErrorBurst.listed()
+
+  defp serialise_entries(@daily, listed), do: Enum.map(listed, &serialise_entry/1)
+
+  # Each roll-up entry also says how often its error has happened in all, as
+  # stored: the alert fires once per error, so its own count says little.
+  defp serialise_entries(@errors, listed) do
+    counts =
+      listed
+      |> Enum.map(& &1.metadata["error_id"])
+      |> Enum.filter(&is_integer/1)
+      |> ErrorTrackingQueries.occurrence_counts()
+
+    Enum.map(listed, fn entry ->
+      case Map.fetch(counts, entry.metadata["error_id"]) do
+        {:ok, count} -> Map.put(serialise_entry(entry), "error_occurrences", count)
+        :error -> serialise_entry(entry)
+      end
+    end)
   end
 
   defp serialise_entry(entry) do

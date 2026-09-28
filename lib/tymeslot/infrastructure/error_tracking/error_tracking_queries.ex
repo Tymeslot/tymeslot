@@ -51,6 +51,24 @@ defmodule Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueries do
   end
 
   @doc """
+  The number of stored occurrences of each error in `error_ids`, as a map
+  from error id to count. An error with none, or no longer stored, is
+  absent.
+  """
+  @spec occurrence_counts([pos_integer()]) :: %{pos_integer() => non_neg_integer()}
+  def occurrence_counts([]), do: %{}
+
+  def occurrence_counts(error_ids) when is_list(error_ids) do
+    from(o in Occurrence,
+      where: o.error_id in ^error_ids,
+      group_by: o.error_id,
+      select: {o.error_id, count(o.id)}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
   Marks every unresolved error last seen before `cutoff` as resolved,
   muted ones included. Returns the number of errors resolved.
 

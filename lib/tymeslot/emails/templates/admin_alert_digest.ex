@@ -1,6 +1,8 @@
 defmodule Tymeslot.Emails.Templates.AdminAlertDigest do
   @moduledoc """
-  The daily digest of info-severity admin alerts.
+  The daily digest of info-severity admin alerts, and the hourly roll-up of
+  error alerts held back by `Tymeslot.Infrastructure.AdminAlerts.ErrorBurst`
+  (`"kind" => "errors"`).
 
   Renders the payload `Tymeslot.Infrastructure.AdminAlerts.Digest` hands to the
   email worker, with string keys as the job stores them:
@@ -11,6 +13,8 @@ defmodule Tymeslot.Emails.Templates.AdminAlertDigest do
     * `"omitted"`: alert type to occurrence count, for alerts beyond the
       per-email cap
     * `"deployment"`: the instance's deployment context
+    * `"kind"`: `"errors"` for the roll-up, which also gives each entry its
+      error's stored `"error_occurrences"`; absent or `"daily"` otherwise
   """
 
   alias Tymeslot.Emails.Shared.{Sanitise, Styles, TemplateHelper, Text}
@@ -20,6 +24,10 @@ defmodule Tymeslot.Emails.Templates.AdminAlertDigest do
   number of alerts it reports, repeats and omitted ones included.
   """
   @spec subject(map()) :: String.t()
+  def subject(%{"kind" => "errors"} = digest) do
+    "[ERROR] Tymeslot: #{pluralise(total_alerts(digest), "more error alert")} this hour"
+  end
+
   def subject(digest) do
     "[INFO] Tymeslot: daily digest (#{pluralise(total_alerts(digest), "alert")})"
   end
@@ -31,8 +39,10 @@ defmodule Tymeslot.Emails.Templates.AdminAlertDigest do
   def render(digest) do
     entries = Map.get(digest, "entries", [])
 
+    copy = copy(digest)
+
     mjml_content = """
-    #{Text.title_section("#{pluralise(total_alerts(digest), "info alert")} since the last digest")}
+    #{Text.title_section(copy.headline)}
 
     #{Enum.map_join(entries, "\n", &entry_html/1)}
 
@@ -42,16 +52,16 @@ defmodule Tymeslot.Emails.Templates.AdminAlertDigest do
 
     #{context_html(Map.get(digest, "deployment", %{}))}
 
-    #{Text.system_footer_note("This is an automated daily digest from Tymeslot. Warnings and errors are emailed as they happen; informational alerts are collected here.")}
+    #{Text.system_footer_note(copy.footer)}
     """
 
     TemplateHelper.compile_system_template(
       mjml_content,
       "Tymeslot Admin Alert Digest",
       subject(digest),
-      intent: :confirmed,
+      intent: copy.intent,
       eyebrow: "Admin",
-      stage_title: "Daily alert digest",
+      stage_title: copy.stage_title,
       stage_subtitle: pluralise(length(entries), "distinct alert")
     )
   end
@@ -61,10 +71,12 @@ defmodule Tymeslot.Emails.Templates.AdminAlertDigest do
   """
   @spec render_text(map()) :: String.t()
   def render_text(digest) do
-    """
-    TYMESLOT ADMIN ALERT DIGEST
+    copy = copy(digest)
 
-    #{pluralise(total_alerts(digest), "info alert")} since the last digest.
+    """
+    #{copy.text_title}
+
+    #{copy.headline}.
 
     #{Enum.map_join(Map.get(digest, "entries", []), "\n", &entry_text/1)}
     #{omitted_text(Map.get(digest, "omitted", %{}))}
@@ -72,9 +84,36 @@ defmodule Tymeslot.Emails.Templates.AdminAlertDigest do
     #{pairs_text(Map.get(digest, "deployment", %{}))}
 
     ---
-    This is an automated daily digest from Tymeslot. Warnings and errors are
-    emailed as they happen; informational alerts are collected here.
+    #{copy.footer}
     """
+  end
+
+  # --- Copy -------------------------------------------------------------------
+
+  defp copy(%{"kind" => "errors"} = digest) do
+    %{
+      headline:
+        "#{pluralise(total_alerts(digest), "error alert")} held back after this hour's " <>
+          "first ones, newest first",
+      footer:
+        "Tymeslot emails the first few new or returning errors of an hour at once and " <>
+          "collects the rest here, so a bad deploy sends one email rather than one per error.",
+      text_title: "TYMESLOT ERROR ALERT ROLL-UP",
+      stage_title: "Error alert roll-up",
+      intent: :alert
+    }
+  end
+
+  defp copy(digest) do
+    %{
+      headline: "#{pluralise(total_alerts(digest), "info alert")} since the last digest",
+      footer:
+        "This is an automated daily digest from Tymeslot. Warnings and errors are emailed " <>
+          "as they happen; informational alerts are collected here.",
+      text_title: "TYMESLOT ADMIN ALERT DIGEST",
+      stage_title: "Daily alert digest",
+      intent: :confirmed
+    }
   end
 
   # --- Entries --------------------------------------------------------------
@@ -112,8 +151,13 @@ defmodule Tymeslot.Emails.Templates.AdminAlertDigest do
   defp summary_line(entry) do
     "#{entry["category"]} / #{entry["alert_type"]}: " <>
       "#{pluralise(entry["occurrences"], "time")}, first #{entry["first_seen_at"]}, " <>
-      "last #{entry["last_seen_at"]}"
+      "last #{entry["last_seen_at"]}#{stored_occurrences(entry)}"
   end
+
+  defp stored_occurrences(%{"error_occurrences" => count}) when is_integer(count),
+    do: "; #{pluralise(count, "occurrence")} stored"
+
+  defp stored_occurrences(_entry), do: ""
 
   # --- Omitted --------------------------------------------------------------
 
