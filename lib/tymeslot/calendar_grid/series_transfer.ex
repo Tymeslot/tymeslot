@@ -319,6 +319,11 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
     source_id = stored.calendar_integration_id
     context = [user_id: user_id, calendar_integration_id: source_id]
 
+    # Planned while the series' video rooms still hang off the source,
+    # where the plan looks for a recorded room to tell whether the video
+    # travels with the series.
+    carried = SeriesCarry.plan(user_id, stored, {:moved, integration.id, written})
+
     after_move("move the series' video rooms", context, fn ->
       :ok =
         EventVideoRooms.series_moved(
@@ -329,8 +334,6 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
           written.calendar_id
         )
     end)
-
-    carried = SeriesCarry.plan(user_id, stored, {:moved, integration.id, written})
 
     after_move("delete the series' cached rows", context, fn ->
       {:ok, address} = Occurrence.series_address(stored)

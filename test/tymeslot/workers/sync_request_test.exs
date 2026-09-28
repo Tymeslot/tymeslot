@@ -93,6 +93,12 @@ defmodule Tymeslot.Workers.SyncRequestTest do
         {:ok, %{events: [], next_sync_token: "token-2"}}
       end)
 
+      # The run the request asked for reads the booking calendar in full.
+      expect(GoogleCalendarAPIMock, :list_events, fn _integration, "primary", _start, _end ->
+        send(test_pid, :booking_calendar_listed)
+        {:ok, []}
+      end)
+
       {:ok, _job} =
         %{"calendar_integration_id" => integration.id}
         |> SyncGoogleCalendarWorker.new()
@@ -101,6 +107,7 @@ defmodule Tymeslot.Workers.SyncRequestTest do
       assert %{snoozed: 1, success: 1} = drain(:calendar_events)
       assert_received :listed
       assert_received :listed
+      assert_received :booking_calendar_listed
       assert live_jobs(SyncGoogleCalendarWorker, integration.id) == []
     end
 

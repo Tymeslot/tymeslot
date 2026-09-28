@@ -41,6 +41,26 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries do
   end
 
   @doc """
+  The videos the rows cached for the masters `master_ids` themselves carry,
+  in the integration `calendar_integration_id`: `{master_id,
+  video_integration_id, video_link}` for each master row with both a video
+  integration and a link.
+  """
+  @spec list_master_videos(integer(), [String.t()]) ::
+          [{String.t(), pos_integer(), String.t()}]
+  def list_master_videos(_calendar_integration_id, []), do: []
+
+  def list_master_videos(calendar_integration_id, master_ids) do
+    ProviderCalendarEventSchema
+    |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+    |> where([e], e.provider_event_id in ^master_ids)
+    |> where([e], is_nil(e.recurring_event_id) or e.recurring_event_id == "")
+    |> where([e], not is_nil(e.video_integration_id) and e.video_link != "")
+    |> select([e], {e.provider_event_id, e.video_integration_id, e.video_link})
+    |> Repo.all()
+  end
+
+  @doc """
   Gives every cached occurrence of the series at `address` that has no video
   of its own the link `video_link` from the video integration
   `video_integration_id`.

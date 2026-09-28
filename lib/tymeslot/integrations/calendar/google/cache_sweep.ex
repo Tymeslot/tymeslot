@@ -5,12 +5,18 @@ defmodule Tymeslot.Integrations.Calendar.Google.CacheSweep do
 
   Google reports a deletion as a `cancelled` entry only in a sync-token
   delta. The windowed listings the sync also makes, every secondary calendar
-  on every run and the booking calendar's bootstrap, return what exists and
-  nothing about what has gone, so an event deleted in Google stayed in the
-  cache (grid, agenda, search, reminders, the free/busy feed) until the prune
-  dropped it long after it ended. Each occurrence of a series is cached under
-  its original start (`EventNormaliser.cache_uid/1`), so a series retimed in
-  Google showed every occurrence twice, old and new.
+  on every run and the booking calendar's bootstrap and requested runs,
+  return what exists and nothing about what has gone, so an event deleted in
+  Google stayed in the cache (grid, agenda, search, reminders, the free/busy
+  feed) until the prune dropped it long after it ended. Each occurrence of a
+  series is cached under its original start (`EventNormaliser.cache_uid/1`),
+  so a series retimed in Google showed every occurrence twice, old and new.
+
+  A delta is not a complete listing, and nobody has confirmed that it
+  cancels the old instances of a series retimed in Google. So each series a
+  booking calendar's delta names has its instances listed in full as well,
+  and that listing sweeps the series' own rows alone: one request per
+  changed series, however many of its occurrences changed.
 
   After such a listing, a row of that calendar is swept when all of these
   hold:
@@ -57,8 +63,14 @@ defmodule Tymeslot.Integrations.Calendar.Google.CacheSweep do
 
   @edge_inset_days 1
 
-  @typedoc "One calendar a complete listing read, and the window it read."
-  @type listed :: {calendar_id :: String.t(), {DateTime.t(), DateTime.t()}}
+  @typedoc """
+  One calendar a complete listing read, and the window it read; or, with a
+  master's id, the complete listing of that recurring event's instances in
+  the calendar, which is swept of that series' rows alone.
+  """
+  @type listed ::
+          {calendar_id :: String.t(), {DateTime.t(), DateTime.t()}}
+          | {calendar_id :: String.t(), {DateTime.t(), DateTime.t()}, master_id :: String.t()}
 
   @doc """
   The window a windowed listing started at `now` reads: the configured sync
@@ -95,7 +107,14 @@ defmodule Tymeslot.Integrations.Calendar.Google.CacheSweep do
       :ok
   end
 
-  defp sweep_calendar(integration, {calendar_id, {window_start, window_end}}, run_started_at) do
+  defp sweep_calendar(integration, {calendar_id, window}, run_started_at),
+    do: sweep_calendar(integration, {calendar_id, window, nil}, run_started_at)
+
+  defp sweep_calendar(
+         integration,
+         {calendar_id, {window_start, window_end}, series},
+         run_started_at
+       ) do
     range_start = DateTime.add(window_start, @edge_inset_days, :day)
     range_end = DateTime.add(window_end, -@edge_inset_days, :day)
 
@@ -105,7 +124,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CacheSweep do
         calendar_id,
         range_start,
         range_end,
-        run_started_at
+        run_started_at,
+        series
       )
       |> reject_booking_rows(integration)
       |> Enum.map(& &1.id)

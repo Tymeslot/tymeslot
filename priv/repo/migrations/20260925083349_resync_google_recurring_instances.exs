@@ -21,18 +21,30 @@ defmodule Tymeslot.Repo.Migrations.ResyncGoogleRecurringInstances do
 
   ## What this does
 
-  * Deletes every cached Google row with a `recurring_event_id`. That column is
-    set only on the instances of a recurring series, so the predicate selects
+  * Deletes every cached Google row with a `recurring_event_id`, except the
+    rows kept for a series' video (below). That column is set only on the
+    instances of a recurring series, so the predicate selects
     exactly the rows cached under the old shared UID, plus any per-instance
     rows a database running the unreleased code already wrote. Those come back
     on the next sync too, so there is no reason to tell them apart. Single
     events and every other provider are untouched: CalDAV, ICS and Exchange
     occurrences have always carried their own UIDs.
-  * Deletes every cached Google row with a `recurrence_rule`: a series cached
-    as its unexpanded master. The incremental sync used to omit
+  * Deletes every cached Google row with a `recurrence_rule`, with the same
+    exception: a series cached as its unexpanded master. The incremental
+    sync used to omit
     `singleEvents`, so a series created or changed after the bootstrap
     arrived that way, as did a series the grid created and cached itself. The
     bootstrap brings its occurrences back in its place.
+  * Keeps, for each Google series whose rows carry a video, one row as the
+    series' master: its row for the master itself where there is one, or
+    else one of its instances' rows, re-filed under the master's id with no
+    `recurring_event_id`. A sync never writes a row's video, so a series the
+    grid created with a video (its link on the master row it cached, or on
+    the collapsed row the sync later made of it) would otherwise come back
+    without one, with no row left to recover it from. When the bootstrap
+    caches the series' instances, the sync gives them that row's video and
+    then drops it, as it drops any master row its occurrences replace
+    (`Sync.upsert_cache/2`).
   * Drops the sync token of every Google integration. With no token,
     `SyncGoogleCalendarWorker` takes its bootstrap path, a full listing of the
     sync window, which caches every instance afresh and stores a new token.
@@ -62,10 +74,38 @@ defmodule Tymeslot.Repo.Migrations.ResyncGoogleRecurringInstances do
   # excellent_migrations:safety-assured-for-this-file operation_delete
 
   def up do
+    # One statement: the DELETE reads the rows as they were before the
+    # UPDATE, and spares the rows the UPDATE kept.
     execute("""
+    WITH series_rows AS (
+      SELECT id,
+             calendar_integration_id,
+             COALESCE(NULLIF(recurring_event_id, ''), provider_event_id) AS master_id,
+             NULLIF(recurring_event_id, '') IS NULL AS master_row,
+             updated_at
+      FROM provider_calendar_events
+      WHERE provider = 'google'
+        AND (recurring_event_id IS NOT NULL OR recurrence_rule IS NOT NULL)
+        AND video_integration_id IS NOT NULL
+        AND video_link <> ''
+    ),
+    carriers AS (
+      SELECT DISTINCT ON (calendar_integration_id, master_id) id, master_id
+      FROM series_rows
+      WHERE master_id IS NOT NULL AND master_id <> ''
+      ORDER BY calendar_integration_id, master_id, master_row DESC, updated_at DESC, id
+    ),
+    kept AS (
+      UPDATE provider_calendar_events AS e
+      SET provider_event_id = c.master_id, recurring_event_id = NULL
+      FROM carriers AS c
+      WHERE e.id = c.id
+      RETURNING e.id
+    )
     DELETE FROM provider_calendar_events
     WHERE provider = 'google'
       AND (recurring_event_id IS NOT NULL OR recurrence_rule IS NOT NULL)
+      AND id NOT IN (SELECT id FROM kept)
     """)
 
     execute("""

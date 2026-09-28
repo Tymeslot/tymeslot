@@ -12,8 +12,11 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   delta.
 
   The selected secondary calendars are read in full each run, over the sync
-  window, as is the booking calendar when it bootstraps. Those listings carry
-  no deletions, so once a run has read every calendar, the rows the listings
+  window, as is the booking calendar when it bootstraps or a sync was
+  requested (`enqueue/1`). The instances of every series the booking
+  calendar's delta names are read in full too, since a delta need not
+  cancel the old instances of a retimed series. Those listings carry no
+  deletions, so once a run has read every calendar, the rows the listings
   no longer returned are swept (`Tymeslot.Integrations.Calendar.Google.CacheSweep`).
 
   Whatever the cycle ends up doing, its verdict is recorded against the
@@ -48,16 +51,28 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   alias Tymeslot.Workers.SyncHealth
   alias Tymeslot.Workers.SyncRequest
 
+  # The job arg asking a run to read the booking calendar in full.
+  @list_booking_calendar "list_booking_calendar"
+
   @doc """
   Enqueues a sync of the Google integration `integration_id`, the one the
-  dashboard's Refresh asks for. A sync already waiting for the integration
-  runs in its place; one already running runs again once it finishes, since
-  it may have read Google before the request (see
+  dashboard's Refresh and a write of a whole series from the grid ask for.
+  Besides the delta, it reads the booking calendar in full over the sync
+  window and sweeps what the listing no longer returns: a delta only says
+  what changed after the token it runs from, and a bootstrap that read a
+  series before the grid rewrote it may have cached it again after the
+  grid dropped its rows. A sync already waiting for the integration runs in
+  its place, as such a sync; one already running runs again once it
+  finishes, since it may have read Google before the request (see
   `Tymeslot.Workers.SyncRequest`).
   """
   @spec enqueue(pos_integer()) :: {:ok, Oban.Job.t()} | {:error, term()}
   def enqueue(integration_id),
-    do: SyncRequest.insert(__MODULE__, %{"calendar_integration_id" => integration_id})
+    do:
+      SyncRequest.insert(__MODULE__, %{
+        "calendar_integration_id" => integration_id,
+        @list_booking_calendar => true
+      })
 
   @behaviour ExpectedJobOutcome
 
@@ -75,14 +90,14 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         reason == ReauthHandling.discard_reason()
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}} = job) do
+  def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id} = args} = job) do
     Logger.metadata(calendar_integration_id: integration_id)
 
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
         fn ->
           integration
-          |> sync_integration()
+          |> sync_integration(args[@list_booking_calendar] == true)
           |> tap(&SyncHealth.record_outcome(integration, &1))
         end
         |> InvalidEventReport.collect()
@@ -107,7 +122,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   # `started_at` is taken before anything is read from Google: every row this
   # run writes is written after it, which is what lets `CacheSweep` tell the
   # rows a listing returned from the ones it no longer does.
-  defp sync_integration(integration) do
+  defp sync_integration(integration, list_booking_calendar?) do
     started_at = DateTime.utc_now(:microsecond)
 
     case Config.google_calendar_api_module().list_events_incremental(integration) do
@@ -117,7 +132,8 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
           event_count: length(events)
         )
 
-        process_incremental_sync(integration, events, next_sync_token, {started_at, []})
+        relist = if list_booking_calendar?, do: :calendar, else: {:series, events}
+        process_incremental_sync(integration, events, next_sync_token, {started_at, relist})
 
       {:error, :gone, _message} ->
         Logger.warning(
@@ -248,11 +264,16 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   # calendar of the integration now returns (an event moved between them,
   # its row still filed under the calendar it came from), and that listing
   # rewrites it, which spares it.
+  #
+  # `listed` is what the booking calendar's own read covered: the bootstrap's
+  # complete listing, or for a delta what is read of it besides
+  # (`relist_booking_calendar/2`).
   defp process_incremental_sync(integration, events, next_sync_token, {started_at, listed}) do
     with :ok <- safe_process_events(integration, events),
          :ok <- persist_sync_state(integration, next_sync_token),
+         {:ok, booking_listed} <- relist_booking_calendar(integration, listed),
          {:ok, secondary_listed} <- sync_secondary_calendars(integration) do
-      CacheSweep.sweep(integration, listed ++ secondary_listed, started_at)
+      CacheSweep.sweep(integration, booking_listed ++ secondary_listed, started_at)
       SyncBroadcast.broadcast_sync_complete(integration.user_id, integration.id)
       :ok
     else
@@ -266,6 +287,61 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
       other ->
         other
+    end
+  end
+
+  defp relist_booking_calendar(_integration, listed) when is_list(listed), do: {:ok, listed}
+
+  # A requested sync reads the booking calendar in full, as a secondary
+  # calendar is read on every run.
+  defp relist_booking_calendar(integration, :calendar) do
+    {start_time, end_time} = window = CacheSweep.listing_window(DateTime.utc_now())
+    calendar_id = booking_calendar_id(integration)
+
+    case sync_one_secondary_calendar(integration, calendar_id, start_time, end_time) do
+      :listed -> {:ok, [{calendar_id, window}]}
+      {:halt, value} -> value
+      # Refused or missing: nothing is swept, and the delta has done its work.
+      _skipped -> {:ok, []}
+    end
+  end
+
+  # Each series the delta names is listed whole, and swept of its own rows
+  # alone. A series whose listing fails is not swept this run.
+  defp relist_booking_calendar(integration, {:series, events}) do
+    {start_time, end_time} = window = CacheSweep.listing_window(DateTime.utc_now())
+    calendar_id = booking_calendar_id(integration)
+
+    listed =
+      events
+      |> Enum.map(& &1["recurringEventId"])
+      |> Enum.filter(&(is_binary(&1) and &1 != ""))
+      |> Enum.uniq()
+      |> Enum.filter(&relist_series(integration, calendar_id, &1, start_time, end_time))
+      |> Enum.map(&{calendar_id, window, &1})
+
+    {:ok, listed}
+  end
+
+  defp relist_series(integration, calendar_id, master_id, start_time, end_time) do
+    with {:ok, instances} <-
+           Config.google_calendar_api_module().list_instances(
+             integration,
+             calendar_id,
+             master_id,
+             start_time,
+             end_time
+           ),
+         :ok <- safe_process_events(integration, instances, calendar_id) do
+      true
+    else
+      failure ->
+        Logger.warning("Could not list a changed Google series' instances; not sweeping it",
+          calendar_integration_id: integration.id,
+          error: LogFormat.reason(failure)
+        )
+
+        false
     end
   end
 

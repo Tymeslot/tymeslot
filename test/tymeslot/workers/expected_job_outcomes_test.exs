@@ -128,6 +128,7 @@ defmodule Tymeslot.Workers.ExpectedJobOutcomesTest do
     {Workers.ColourWriteBackWorker,
      expected: [:event_not_cached, :raw_ical_never_synced, :provider_has_no_event_colour],
      recorded: []},
+    {Workers.SeriesVideoWorker, expected: [:series_never_cached], recorded: [nil]},
     {ApprovalExpiryWorker,
      expected: [
        "Request answered while expiring",

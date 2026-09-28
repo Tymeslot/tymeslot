@@ -288,6 +288,33 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   end
 
   @doc """
+  Lists every instance of the recurring event `master_id` in `calendar_id`
+  within a date range (`events.instances`), every page of it, so the sync
+  may take an instance's absence from it as the instance's removal. Only
+  instances that exist are returned: cancelled ones are left out.
+  """
+  @impl CalendarAPIBehaviour
+  @spec list_instances(
+          CalendarIntegrationSchema.t(),
+          String.t(),
+          String.t(),
+          DateTime.t(),
+          DateTime.t()
+        ) :: {:ok, [calendar_event()]} | {:error, :circuit_open} | api_error()
+  def list_instances(integration, calendar_id, master_id, start_time, end_time) do
+    params = %{
+      "timeMin" => DateTime.to_iso8601(start_time),
+      "timeMax" => DateTime.to_iso8601(end_time)
+    }
+
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      with {:ok, %{events: events}} <-
+             EventListing.fetch_all(token, calendar_id, params, instances_of: master_id),
+           do: {:ok, events}
+    end)
+  end
+
+  @doc """
   Lists the events that make up the recurring event `ical_uid` in
   `calendar_id`, unexpanded: its master, the occurrences edited on their
   own, and, with `status` `cancelled`, those cancelled on their own. Each

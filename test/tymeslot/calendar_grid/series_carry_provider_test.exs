@@ -21,6 +21,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryProviderTest do
   import Mox
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.SeriesTransfer
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
@@ -384,6 +385,88 @@ defmodule Tymeslot.CalendarGrid.SeriesCarryProviderTest do
       assert [:ok, :ok] = run_video_jobs()
       assert video_of(integration, head.uid) == {video.id, @link}
       assert video_of(integration, tail.uid) == {video.id, @link}
+    end
+
+    # Teams on the calendar's own Microsoft account would attach its meeting
+    # to the event, which a moved copy does not keep; a meeting recorded as
+    # a Teams event of its own does travel, and so does its link.
+    test "a move to another account's calendar takes the video of a separate Teams event", %{
+      user: user
+    } do
+      source =
+        insert(:calendar_integration,
+          user: user,
+          provider: "outlook",
+          provider_account_id: "microsoft-account-1"
+        )
+
+      teams =
+        insert(:video_integration,
+          user: user,
+          provider: "teams",
+          provider_account_id: "microsoft-account-1"
+        )
+
+      teams_link = "https://teams.microsoft.com/l/meetup-join/weekly-sync"
+
+      occurrence =
+        series_row(
+          source,
+          teams,
+          "040000008200E00074C5B7101A82E008-november",
+          "master-1",
+          ~U[2026-11-02 08:00:00Z],
+          %{
+            provider_calendar_id: "primary",
+            provider_metadata: %{"type" => "occurrence"},
+            description: "Join video call: #{teams_link}",
+            video_link: teams_link
+          }
+        )
+
+      {:ok, _room} =
+        EventVideoRoomQueries.insert(%{
+          user_id: user.id,
+          video_integration_id: teams.id,
+          provider: "teams",
+          calendar_integration_id: source.id,
+          event_uid: "040000008200E00074C5B7101A82E008",
+          provider_event_id: "master-1",
+          provider_calendar_id: "primary",
+          room_id: "AAMk-separate-teams-event",
+          lobby_opens_at: ~U[2026-06-01 06:45:00Z],
+          ends_at: nil
+        })
+
+      destination =
+        insert(:calendar_integration,
+          user: user,
+          provider: "outlook",
+          provider_account_id: "microsoft-account-2"
+        )
+
+      written = %{
+        uid: "040000008200E00074C5B7101A82E009",
+        id: "copy-1",
+        calendar_id: "projects",
+        source: :removed
+      }
+
+      assert {:ok, _moved} =
+               SeriesTransfer.move(user.id, occurrence, %{integration: destination},
+                 writer: fn :outlook, _transfer -> {:ok, written} end
+               )
+
+      moved =
+        synced_row(
+          destination,
+          "040000008200E00074C5B7101A82E009-november",
+          "copy-1",
+          ~U[2026-11-02 08:00:00Z]
+        )
+
+      assert [:ok] = run_video_jobs()
+      assert video_of(destination, moved.uid) == {teams.id, teams_link}
     end
   end
 end

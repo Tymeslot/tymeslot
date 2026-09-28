@@ -29,20 +29,29 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarSweepQueries do
   The rows of the integration `calendar_integration_id` filed under
   `provider_calendar_id` that overlap `range_start`..`range_end` (with the
   overlap `ProviderCalendarEventQueries.where_overlapping_range/3` applies)
-  and have not been written since `unwritten_since`.
+  and have not been written since `unwritten_since`: all of them, or with
+  `series` a master's id, only the rows of that recurring event's instances.
   """
-  @spec list_candidates(integer(), String.t(), DateTime.t(), DateTime.t(), DateTime.t()) ::
-          [candidate()]
+  @spec list_candidates(
+          integer(),
+          String.t(),
+          DateTime.t(),
+          DateTime.t(),
+          DateTime.t(),
+          String.t() | nil
+        ) :: [candidate()]
   def list_candidates(
         calendar_integration_id,
         provider_calendar_id,
         range_start,
         range_end,
-        unwritten_since
+        unwritten_since,
+        series \\ nil
       ) do
     ProviderCalendarEventSchema
     |> where_sweepable(calendar_integration_id, provider_calendar_id, unwritten_since)
     |> ProviderCalendarEventQueries.where_overlapping_range(range_start, range_end)
+    |> where_in_series(series)
     |> select([e], %{id: e.id, uid: e.uid, provider_event_id: e.provider_event_id})
     |> Repo.all()
   end
@@ -70,6 +79,11 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarSweepQueries do
       uids
     end)
   end
+
+  defp where_in_series(query, nil), do: query
+
+  defp where_in_series(query, master_id),
+    do: where(query, [e], e.recurring_event_id == ^master_id)
 
   defp where_sweepable(query, calendar_integration_id, provider_calendar_id, unwritten_since) do
     where(

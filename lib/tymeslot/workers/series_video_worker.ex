@@ -35,6 +35,13 @@ defmodule Tymeslot.Workers.SeriesVideoWorker do
   require Logger
 
   alias Tymeslot.CalendarGrid.SeriesCarry
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
+
+  @behaviour ExpectedJobOutcome
+
+  # The sync never brought the series back: the documented end of the job,
+  # which the organiser repairs by choosing the video again.
+  @series_never_cached :series_never_cached
 
   # 30s, 60s, ... doubling up to ten minutes: about two hours in all.
   @first_snooze_seconds 30
@@ -59,6 +66,9 @@ defmodule Tymeslot.Workers.SeriesVideoWorker do
     |> Oban.insert()
   end
 
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason), do: reason == @series_never_cached
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: args, meta: meta}) do
     series = %{
@@ -81,7 +91,7 @@ defmodule Tymeslot.Workers.SeriesVideoWorker do
             calendar_integration_id: series.integration_id
           )
 
-          {:discard, :series_never_cached}
+          {:discard, @series_never_cached}
         end
     end
   end
