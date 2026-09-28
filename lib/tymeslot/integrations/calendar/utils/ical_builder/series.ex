@@ -39,6 +39,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Patcher
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Document
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Master
+  alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Shift
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Uid
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Timing
@@ -103,9 +104,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   §3.6.1 allows only one): the payload names the occurrence's end as an
   instant, and a `DURATION` recomputed from it would say the same thing less
   directly. Without `:end_time` an edited override keeps whichever it had. A
-  new override needs both `:start_time` and `:end_time`, since the master's
-  own timing is the first occurrence's, not this one's; without them it is
-  `{:error, :missing_timing}`.
+  new override without `:start_time` and `:end_time` starts at its slot and
+  lasts as long as the master, both read from `document` rather than from
+  any copy of the occurrence the caller holds; one of the two without the
+  other is `{:error, :missing_timing}`.
 
   Changing the value type of one occurrence (an all-day occurrence in a timed
   series, or the reverse) is `{:error, :value_type_change}`: RFC 5545 allows
@@ -264,8 +266,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   defp own_start({:vevent, items}), do: ContentLines.find("DTSTART", Document.properties(items))
 
   defp write_override(components, nil, reference, key, changes, timezone, mode) do
-    with :ok <- ensure_timing(changes),
-         {:vevent, items} <- Enum.find(components, &Document.master?/1),
+    zones = {Document.series_zone(components, timezone), timezone}
+
+    with {:vevent, items} <- Enum.find(components, &Document.master?/1),
+         {:ok, items} <- at_slot(items, key, changes, zones),
          {:ok, override} <-
            edit_items(from_master(items, reference, key), reference, changes, timezone, mode) do
       {:ok, insert_after_last_vevent(components, {:vevent, override})}
@@ -280,12 +284,40 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
     end
   end
 
-  # Timing arrives as a `Date` or a `DateTime`; anything else is no timing.
-  defp ensure_timing(%{start_time: start, end_time: finish})
+  # The timing a new override starts from. With both ends of the timing in
+  # `changes` it is theirs, which `edit_items/5` writes. With neither, the
+  # occurrence is where the document puts it: the master's DTSTART and DTEND
+  # moved to the slot on the series' wall clock, so it lasts as long as the
+  # master does now. One end without the other says nothing whole about
+  # where the occurrence goes. Timing arrives as a `Date` or a `DateTime`;
+  # anything else is no timing.
+  defp at_slot(items, _key, %{start_time: start, end_time: finish}, _zones)
        when is_struct(start) and is_struct(finish),
-       do: :ok
+       do: {:ok, items}
 
-  defp ensure_timing(_changes), do: {:error, :missing_timing}
+  defp at_slot(items, key, changes, {zone, timezone})
+       when not is_map_key(changes, :start_time) and not is_map_key(changes, :end_time) do
+    dtstart = ContentLines.find("DTSTART", Document.properties(items))
+
+    with {:ok, slot} <- Shift.key_wall(key),
+         {:ok, start} <- Shift.wall(dtstart, zone, timezone) do
+      shift = NaiveDateTime.diff(slot, start)
+
+      Document.map_ok(items, fn
+        line when is_binary(line) ->
+          if ContentLines.property_name(line) in ["DTSTART", "DTEND"],
+            do: Shift.shift_line(line, shift),
+            else: {:ok, line}
+
+        subcomponent ->
+          {:ok, subcomponent}
+      end)
+    else
+      :error -> {:error, :unreadable_timing}
+    end
+  end
+
+  defp at_slot(_items, _key, _changes, _zones), do: {:error, :missing_timing}
 
   # The master's own lines stand in for the occurrence's until `changes` say
   # otherwise, named by the slot it replaces; a fresh DTSTAMP comes with the

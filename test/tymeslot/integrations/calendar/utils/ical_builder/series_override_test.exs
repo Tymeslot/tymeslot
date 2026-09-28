@@ -146,11 +146,43 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesOverrideTest do
              ) == {:error, :value_type_change}
     end
 
-    test "a new override without its timing is refused" do
+    test "a new override without its timing takes its slot and the master's length" do
+      # The master lasts 45 minutes on the server, whatever a cached copy of
+      # the occurrence says.
+      document = String.replace(berlin_series(), "DURATION:PT30M", "DURATION:PT45M")
+
+      assert {:ok, result} =
+               Series.put_override(document, "20260511T100000", %{summary: "X"}, "Europe/Berlin")
+
+      override = override_in(result, "RECURRENCE-ID;TZID=Europe/Berlin:20260511T100000")
+      assert "DTSTART;TZID=Europe/Berlin:20260511T100000" in override
+      assert "DURATION:PT45M" in override
+      assert "SUMMARY:X" in override
+    end
+
+    test "a new override without its timing starts at a slot after a DST change" do
+      # From 2 March (winter, UTC+1) to 30 March (summer, UTC+2): the slot
+      # stays at 10:00 on the Berlin wall clock.
+      document =
+        String.replace(
+          berlin_series_from("DTSTART;TZID=Europe/Berlin:20260302T100000"),
+          "DURATION:PT30M",
+          "DTEND;TZID=Europe/Berlin:20260302T104500"
+        )
+
+      assert {:ok, result} =
+               Series.put_override(document, "20260330T100000", %{summary: "X"}, "Europe/Berlin")
+
+      override = override_in(result, "RECURRENCE-ID;TZID=Europe/Berlin:20260330T100000")
+      assert "DTSTART;TZID=Europe/Berlin:20260330T100000" in override
+      assert "DTEND;TZID=Europe/Berlin:20260330T104500" in override
+    end
+
+    test "a new override with only one end of its timing is refused" do
       assert Series.put_override(
                berlin_series(),
                "20260511T100000",
-               %{summary: "X"},
+               %{summary: "X", start_time: ~U[2026-05-11 09:00:00Z]},
                "Europe/Berlin"
              ) ==
                {:error, :missing_timing}

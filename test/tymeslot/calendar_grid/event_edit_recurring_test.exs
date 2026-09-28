@@ -45,7 +45,7 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
   end
 
   describe "an occurrence of a CalDAV series" do
-    test "a rename is addressed to the occurrence, with only the change and its timing", %{
+    test "a rename is addressed to the occurrence, with only the change", %{
       user: user,
       caldav: caldav
     } do
@@ -64,11 +64,8 @@ defmodule Tymeslot.CalendarGrid.EventEditRecurringTest do
                timezone: "Europe/Berlin",
                document: @series_document,
                etag: "\"etag-1\"",
-               changes: %{
-                 summary: "Renamed",
-                 start_time: ~U[2026-06-01 09:00:00.000000Z],
-                 end_time: ~U[2026-06-01 10:00:00.000000Z]
-               }
+               # Timing the rename did not change is left to the document.
+               changes: %{summary: "Renamed"}
              }
 
       {:ok, row} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)

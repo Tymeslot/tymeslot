@@ -172,8 +172,8 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
                changes: changes
              } = captured_payload().occurrence
 
-      assert Enum.sort(Map.keys(changes)) == [:end_time, :start_time, :summary]
-      assert changes.summary == "Renamed"
+      # Timing the rename did not change is not carried as a move.
+      assert changes == %{summary: "Renamed"}
     end
 
     test "a scope that is not a RecurrenceScope raises before anything is written", %{
@@ -243,8 +243,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       assert %{scope: :following, href: "/cal/weekly-sync.ics", key: "20260601T090000"} =
                occurrence = captured_payload().occurrence
 
-      assert %{summary: "Renamed", recurrence_rule: "FREQ=WEEKLY;BYDAY=TU"} = occurrence.changes
-      assert Map.has_key?(occurrence.changes, :start_time)
+      assert occurrence.changes == %{summary: "Renamed", recurrence_rule: "FREQ=WEEKLY;BYDAY=TU"}
     end
 
     test "following on a CalDAV occurrence cannot take the repeat rule away", %{user: user} do
@@ -281,8 +280,30 @@ defmodule Tymeslot.CalendarGrid.SeriesEditTest do
       assert %{scope: :all, key: "20260601T090000", changes: changes} =
                captured_payload().occurrence
 
-      assert %{summary: "Renamed", recurrence_rule: "FREQ=WEEKLY;BYDAY=MO;COUNT=4"} = changes
-      assert Map.has_key?(changes, :start_time)
+      assert changes == %{summary: "Renamed", recurrence_rule: "FREQ=WEEKLY;BYDAY=MO;COUNT=4"}
+    end
+
+    test "all on a CalDAV occurrence carries the timing of a move, and only then", %{
+      user: user
+    } do
+      caldav =
+        insert(:calendar_integration, user: user, provider: "caldav", calendar_paths: ["/cal/"])
+
+      event = insert_event(caldav, Map.merge(caldav_occurrence(), %{provider: "caldav"}))
+      expect_provider_update({:ok, %{document: "NEW DOCUMENT"}})
+
+      # The same start as the cache's, which moves nothing, and a later end.
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(
+                 user.id,
+                 event,
+                 %{start_at: event.start_at, end_at: DateTime.add(event.end_at, 30, :minute)},
+                 recurrence_scope: :all
+               )
+
+      assert %{changes: %{start_time: start, end_time: finish}} = captured_payload().occurrence
+      assert DateTime.compare(start, event.start_at) == :eq
+      assert DateTime.compare(finish, DateTime.add(event.end_at, 30, :minute)) == :eq
     end
 
     test "all on a CalDAV occurrence cannot take the repeat rule away", %{user: user} do

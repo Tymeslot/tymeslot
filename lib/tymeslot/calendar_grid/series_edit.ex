@@ -149,8 +149,12 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   require Logger
 
   # The fields of a series member an edit can change, in the cache's
-  # vocabulary, which the payload shares for these; timing is always written.
+  # vocabulary, which the payload shares for these; timing is written when
+  # the edit changed it (`changed_fields/3`).
   @override_fields [:summary, :description, :location, :colour, :reminders, :attendees]
+
+  # The cache fields an edit moves an occurrence or resizes it by.
+  @timing_fields [:start_at, :end_at, :start_date, :end_date]
 
   @typedoc """
   Something an edit of this and every following occurrence does not carry,
@@ -275,13 +279,30 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
     end
   end
 
-  defp changed_fields(:this_only, _stored, changes),
-    do: Enum.filter(@override_fields, &Map.has_key?(changes, &1))
+  # The payload keys the edit changed. Timing is among them only when the
+  # edit moved the occurrence or changed how long it lasts: the writer reads
+  # timing it is given as where the occurrence is going, so timing carried
+  # from the cache would pin it, and the series with it, where the cache
+  # last saw it, undoing a change made on the server since.
+  defp changed_fields(:this_only, stored, changes) do
+    fields = Enum.filter(@override_fields, &Map.has_key?(changes, &1))
+    if timing_changed?(stored, changes), do: [:start_time, :end_time | fields], else: fields
+  end
 
   defp changed_fields(scope, stored, changes) when scope in [:following, :all] do
     fields = changed_fields(:this_only, stored, changes)
     if rule_changed?(stored, changes), do: [:recurrence_rule | fields], else: fields
   end
+
+  defp timing_changed?(stored, changes) do
+    Enum.any?(@timing_fields, fn field ->
+      Map.has_key?(changes, field) and not same_value?(changes[field], Map.get(stored, field))
+    end)
+  end
+
+  defp same_value?(%DateTime{} = a, %DateTime{} = b), do: DateTime.compare(a, b) == :eq
+  defp same_value?(%Date{} = a, %Date{} = b), do: Date.compare(a, b) == :eq
+  defp same_value?(a, b), do: a == b
 
   defp address_fields(payload, %{provider_event_id: href} = stored, scope, fields)
        when is_binary(href) and href != "" do
@@ -293,7 +314,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
         timezone: stored.timezone,
         document: stored.raw_ical,
         etag: stored.etag,
-        changes: Map.take(payload, [:start_time, :end_time | fields])
+        changes: Map.take(payload, fields)
       }
 
       {:ok, Map.put(payload, :occurrence, occurrence)}
@@ -313,7 +334,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
       master_id: master_id,
       start: if(stored.all_day, do: stored.start_date, else: stored.start_at),
       end: if(stored.all_day, do: stored.end_date, else: stored.end_at),
-      changes: Map.take(payload, [:start_time, :end_time | fields])
+      changes: Map.take(payload, fields)
     }
 
     with {:ok, occurrence} <- put_slot(occurrence, scope, stored),
