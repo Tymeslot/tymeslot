@@ -209,6 +209,50 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.SeriesSplitTest do
     end
   end
 
+  describe "split/5 of a series with a COUNT" do
+    defp utc_series(rule, first \\ "20260101") do
+      "DTSTART:#{first}T100000Z"
+      |> master()
+      |> String.replace("RRULE:FREQ=WEEKLY", "RRULE:" <> rule)
+      |> calendar()
+    end
+
+    test "refuses a COUNT over days of the month, which it cannot count" do
+      # The 1st and 15th of each month: 1 March is the fifth occurrence, so
+      # a tail of 19 would be right, and a count stepping monthly makes 21.
+      document = utc_series("FREQ=MONTHLY;BYMONTHDAY=1,15;COUNT=24")
+
+      assert Series.split(document, "20260301T100000", %{summary: "Renamed"}, nil) ==
+               {:error, :unsupported_rule}
+    end
+
+    test "refuses a COUNT over an ordinal weekday, which it cannot count" do
+      # The second Monday of each month from 12 January: 9 March is the
+      # third, so a tail of 10 would be right, and reading 2MO as MO makes 11.
+      document = utc_series("FREQ=MONTHLY;BYDAY=2MO;COUNT=12", "20260112")
+
+      assert Series.split(document, "20260309T100000", %{summary: "Renamed"}, nil) ==
+               {:error, :unsupported_rule}
+    end
+
+    test "still ends such a series with an UNTIL when only the head is wanted" do
+      document = utc_series("FREQ=MONTHLY;BYMONTHDAY=1,15;COUNT=24")
+
+      assert {:ok, head} = Series.truncate(document, "20260301T100000", nil)
+      assert rrule_of(head) == "RRULE:FREQ=MONTHLY;BYMONTHDAY=1,15;UNTIL=20260301T095959Z"
+    end
+
+    test "counts past the expander's cap on occurrences" do
+      # Day 601 of 800: 600 come before it, so 200 are left.
+      document = utc_series("FREQ=DAILY;COUNT=800")
+      key = Calendar.strftime(Date.add(~D[2026-01-01], 600), "%Y%m%dT100000")
+
+      {_head, tail, _uid} = split!(document, key)
+
+      assert rrule_of(tail) == "RRULE:FREQ=DAILY;COUNT=200"
+    end
+  end
+
   describe "split/5 at the first occurrence" do
     test "is an edit of every occurrence" do
       assert Series.split(berlin_document(), "20260105T100000", %{summary: "Renamed"}, nil) ==

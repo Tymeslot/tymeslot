@@ -32,11 +32,6 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.SeriesSplit do
 
   require Logger
 
-  # The rule parts `RecurrenceExpander` steps through as the providers do.
-  # A COUNT over any other part (BYMONTHDAY, BYSETPOS, an ordinal BYDAY)
-  # would be counted wrongly, and the tail would end on another date.
-  @countable_parts ~w(FREQ INTERVAL COUNT UNTIL BYDAY WKST)
-
   @typedoc """
   An occurrence's original start: the day of an all-day series, or the
   instant of a timed one.
@@ -108,13 +103,13 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.SeriesSplit do
   @doc """
   How many occurrences `rule` makes before `slot`, from the start of
   `timing`, on the wall clock of `zone`. A rule with parts the count cannot
-  follow is `{:error, :unsupported_rule}`, rather than a tail that ends on
-  another date than the original did.
+  follow (`RecurrenceExpander.countable?/1`) is `{:error, :unsupported_rule}`,
+  rather than a tail that ends on another date than the original did.
   """
   @spec count_before(String.t(), tuple(), Date.t() | NaiveDateTime.t(), String.t() | nil) ::
           {:ok, non_neg_integer()} | {:error, :unsupported_rule}
   def count_before(rule, {start, _finish}, slot, zone) do
-    if countable?(rule),
+    if RecurrenceExpander.countable?(rule),
       do: {:ok, RecurrenceExpander.count_before(rule, point(start, zone), point(slot, zone))},
       else: {:error, :unsupported_rule}
   end
@@ -128,29 +123,6 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.SeriesSplit do
       NaiveDateTime.to_time(wall),
       zone || "Etc/UTC"
     )
-  end
-
-  # `RecurrenceExpander` counts weeks from Monday, so a rule that repeats on
-  # several days every few weeks from another week start is counted only
-  # when that makes no difference.
-  defp countable?(rule) do
-    parts =
-      rule
-      |> String.replace_prefix("RRULE:", "")
-      |> String.split(";", trim: true)
-      |> Map.new(fn part ->
-        case String.split(part, "=", parts: 2) do
-          [name, value] -> {String.upcase(name), String.upcase(value)}
-          [name] -> {String.upcase(name), ""}
-        end
-      end)
-
-    days = parts |> Map.get("BYDAY", "") |> String.split(",", trim: true)
-
-    Enum.all?(Map.keys(parts), &(&1 in @countable_parts)) and
-      not Enum.any?(days, &String.match?(&1, ~r/\d/)) and
-      (Map.get(parts, "WKST", "MO") == "MO" or Map.get(parts, "INTERVAL", "1") == "1" or
-         length(days) < 2)
   end
 
   @doc """

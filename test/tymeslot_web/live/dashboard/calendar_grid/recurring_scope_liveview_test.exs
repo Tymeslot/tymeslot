@@ -31,12 +31,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeLiveViewTest do
   import Tymeslot.Factory
   import Tymeslot.TestHelpers.Eventually
 
+  alias Ecto.Changeset
   alias Plug.Test
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleAPI
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
   alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
@@ -343,6 +345,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.RecurringScopeLiveViewTest do
         worker: SyncCalDavCalendarWorker,
         args: %{"calendar_integration_id" => integration.id, "force_full_fetch" => true}
       )
+    end
+
+    test "this and following of a count it cannot follow is refused as on Google", %{
+      conn: conn,
+      event: event
+    } do
+      # A count over days of the month: the following occurrences' share of
+      # it cannot be counted, so no tail is made and nothing is written.
+      rule = "FREQ=MONTHLY;BYMONTHDAY=#{first_day().day},#{today().day};COUNT=24"
+
+      event
+      |> Changeset.change(
+        recurrence_rule: rule,
+        raw_ical: String.replace(caldav_series(), "RRULE:FREQ=WEEKLY", "RRULE:" <> rule)
+      )
+      |> Repo.update!()
+
+      lv = move_and_choose(conn, event, "following")
+
+      eventually(
+        fn -> assert render(lv) =~ "repeat rule cannot be split here" end,
+        timeout: @task_timeout
+      )
+
+      refute render(lv) =~ "Failed to update event - changes reverted"
     end
 
     test "a change of rule opens the prompt, without this event alone", %{

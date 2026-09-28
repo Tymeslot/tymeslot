@@ -38,6 +38,10 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
   # malformed rules like FREQ=SECONDLY with no COUNT/UNTIL.
   @max_occurrences 500
 
+  # The rule parts `generate_occurrences/6` steps through as the providers do
+  # (see `countable?/1`).
+  @countable_parts ~w(FREQ INTERVAL COUNT UNTIL BYDAY WKST)
+
   @doc """
   Expands a single event into its occurrences within `[range_start, range_end]`.
 
@@ -62,7 +66,7 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
 
     case parse_rrule(rrule) do
       {:ok, rule} ->
-        generate_occurrences(event, rule, range_start, range_end, exdates)
+        generate_occurrences(event, rule, range_start, range_end, exdates, @max_occurrences)
 
       :error ->
         # Fail-open: return the original event rather than silently dropping it
@@ -82,15 +86,55 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
   second half's `COUNT`. `first` is a `Date` for an all-day series and a
   `DateTime` in the series' own zone for a timed one, so the count steps on
   its wall clock across a DST change.
+
+  Unlike `expand/4`, the count is not capped at #{@max_occurrences}
+  occurrences: `boundary` bounds it, and so does the rule's own `COUNT`, so
+  a split far into a long series still takes the right number off. The count
+  is only right for a rule `countable?/1` accepts.
   """
   @spec count_before(String.t(), Date.t() | DateTime.t(), Date.t() | DateTime.t()) ::
           non_neg_integer()
   def count_before(rule, first, boundary) do
     last = boundary |> DateTimeUtils.to_datetime() |> DateTime.add(-1, :second)
+    event = %{start_time: first, end_time: first, recurrence_rule: rule}
 
-    %{start_time: first, end_time: first, recurrence_rule: rule}
-    |> expand(first, last)
-    |> length()
+    case parse_rrule(rule) do
+      {:ok, parsed} -> event |> generate_occurrences(parsed, first, last, [], nil) |> length()
+      # `expand/4` shows an unreadable rule's event once, as it is.
+      :error -> 1
+    end
+  end
+
+  @doc """
+  Whether `rule` repeats only by the parts this module steps through as the
+  providers do, so that `count_before/3` counts its occurrences exactly: a
+  `COUNT` over any other part (`BYMONTHDAY`, `BYSETPOS`, an ordinal `BYDAY`
+  such as `2MO`) would be counted wrongly, and a series split by that count
+  would end on another date than it did.
+
+  Weeks are counted from Monday, so a rule repeating on several days every
+  few weeks from another week start is countable only when that makes no
+  difference.
+  """
+  @spec countable?(String.t()) :: boolean()
+  def countable?(rule) when is_binary(rule) do
+    parts =
+      rule
+      |> String.replace_prefix("RRULE:", "")
+      |> String.split(";", trim: true)
+      |> Map.new(fn part ->
+        case String.split(part, "=", parts: 2) do
+          [name, value] -> {String.upcase(name), String.upcase(value)}
+          [name] -> {String.upcase(name), ""}
+        end
+      end)
+
+    days = parts |> Map.get("BYDAY", "") |> String.split(",", trim: true)
+
+    Enum.all?(Map.keys(parts), &(&1 in @countable_parts)) and
+      not Enum.any?(days, &String.match?(&1, ~r/\d/)) and
+      (Map.get(parts, "WKST", "MO") == "MO" or Map.get(parts, "INTERVAL", "1") == "1" or
+         length(days) < 2)
   end
 
   @doc """
@@ -196,26 +240,30 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
 
   # --- Private: Occurrence generation ---
 
-  defp generate_occurrences(event, rule, range_start, range_end, exdates) do
+  # `cap` is the most occurrences stepped through, `nil` for no cap but the
+  # rule's own end and `range_end`.
+  defp generate_occurrences(event, rule, range_start, range_end, exdates, cap) do
     # All-day events store Date structs; normalise to DateTime for uniform arithmetic
     all_day? = is_struct(event.start_time, Date) and not is_struct(event.start_time, DateTime)
     start_dt = DateTimeUtils.to_datetime(event.start_time)
     end_dt = DateTimeUtils.to_datetime(event.end_time) || DateTime.add(start_dt, 30, :minute)
     duration = DateTime.diff(end_dt, start_dt, :second)
-    safety_cap = min(@max_occurrences, rule.count || @max_occurrences)
     range_start_dt = DateTimeUtils.to_datetime(range_start)
     range_end_dt = DateTimeUtils.to_datetime(range_end)
     exdates_dt = exdates |> Enum.map(&DateTimeUtils.to_datetime/1) |> Enum.reject(&is_nil/1)
 
     start_dt
     |> Stream.iterate(&advance(&1, rule))
-    |> Stream.take(safety_cap)
+    |> take_at_most([cap, rule.count] |> Enum.reject(&is_nil/1) |> Enum.min(fn -> nil end))
     |> Stream.take_while(&before_end?(&1, rule, range_end_dt))
     |> Stream.filter(&in_range?(&1, range_start_dt, range_end_dt))
     |> Stream.filter(&matches_byday?(&1, rule))
     |> Stream.reject(&excluded?(&1, exdates_dt))
     |> Enum.map(&build_occurrence(event, &1, duration, all_day?))
   end
+
+  defp take_at_most(occurrences, nil), do: occurrences
+  defp take_at_most(occurrences, most), do: Stream.take(occurrences, most)
 
   defp build_occurrence(event, occ_start, duration, true = _all_day?) do
     Map.merge(event, %{

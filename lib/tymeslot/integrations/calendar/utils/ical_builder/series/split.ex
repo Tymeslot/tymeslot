@@ -45,6 +45,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split do
     uid = Format.generate_uid()
 
     with {:ok, plan} <- plan(components, key, timezone),
+         :ok <- ensure_countable(plan),
          :ok <- ensure_occurrences_before(plan),
          {:ok, head} <- head(components, plan),
          {:ok, tail} <- tail(components, plan),
@@ -90,6 +91,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split do
          shift: NaiveDateTime.diff(slot, start),
          zones: zones,
          before: count_before(dtstart, rule, start, slot, elem(zones, 0)),
+         countable?: countable?(rule),
          boundary: boundary(dtstart, slot, elem(zones, 0))
        }}
     end
@@ -125,6 +127,19 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series.Split do
     first = if Timing.date?(dtstart), do: NaiveDateTime.to_date(start), else: instant(start, zone)
     RecurrenceExpander.count_before(rule, first, instant(slot, zone))
   end
+
+  # The tail's COUNT is the one value the count is written into, so a split
+  # of a rule with a COUNT the expander cannot count
+  # (`RecurrenceExpander.countable?/1`) is refused, as it is for Google and
+  # Outlook, rather than a tail that ends on another date. The head takes an
+  # UNTIL whatever the rule, so a truncation needs no count. It is checked
+  # before the first occurrence is, since a count that cannot be trusted
+  # cannot say which occurrence is the first either.
+  defp countable?(rule),
+    do: not Map.has_key?(RRule.parse(rule), :count) or RecurrenceExpander.countable?(rule)
+
+  defp ensure_countable(%{countable?: true}), do: :ok
+  defp ensure_countable(_plan), do: {:error, :unsupported_rule}
 
   # The head's rule ends before the slot, in the value type of DTSTART
   # (RFC 5545 §3.3.10, see `RRule.end_before/2`).

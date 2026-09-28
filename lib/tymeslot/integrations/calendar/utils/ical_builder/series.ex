@@ -207,8 +207,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder.Series do
   which is an edit of every occurrence (`edit_master/5`). Refused before
   anything is written: a resource with no master (`{:error,
   :master_not_found}`) or no `RRULE` (`{:error, :not_recurring}`), timing
-  it cannot read (`{:error, :unreadable_timing}`), and every refusal of
-  `edit_master/5`.
+  it cannot read (`{:error, :unreadable_timing}`), a `COUNT` over rule parts
+  the occurrences before the slot cannot be counted by
+  (`RecurrenceExpander.countable?/1`; `{:error, :unsupported_rule}`), and
+  every refusal of `edit_master/5`.
   """
   @spec split(String.t(), String.t(), map(), String.t() | nil, Scheduling.mode()) ::
           {:ok, %{head: String.t(), tail: String.t(), tail_uid: String.t()}}
