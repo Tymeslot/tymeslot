@@ -168,10 +168,11 @@ defmodule Tymeslot.Migrations.ExcludeVoidedSlotsFromMeetingUniqueIndexTest do
   defp insert_meeting!(organizer_id, status, reschedule_requested_at) do
     Repo.query!(
       """
-      INSERT INTO meetings (id, uid, title, start_time, end_time, organizer_name,
+      INSERT INTO meetings (id, uid, calendar_uid, title, start_time, end_time, organizer_name,
         organizer_email, attendee_name, attendee_email, organizer_user_id, status,
         reschedule_requested_at, inserted_at, updated_at)
-      VALUES (gen_random_uuid(), gen_random_uuid()::text, 'Voided slot test', $1, $2,
+      VALUES (gen_random_uuid(), gen_random_uuid()::text, gen_random_uuid()::text,
+        'Voided slot test', $1, $2,
         'Organizer', $3, 'Attendee', 'attendee@example.com', $4, $5, $6, NOW(), NOW())
       """,
       [
