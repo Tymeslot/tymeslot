@@ -19,12 +19,14 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       to the Dispatcher debounce window.
     * `attendees_added/2` / `attendees_removed/2` — immediate send path for
       membership-only changes (method `:request` or `:cancel` respectively).
-    * `event_deleted/2` — returns `{:needs_confirmation, count}` so the caller
+    * `event_deleted/3` — returns `{:needs_confirmation, count}` so the caller
       knows to show a confirmation prompt; `{:ok, :no_attendees}` if there is
-      nobody to notify.
+      nobody to notify, and `{:ok, :not_organiser}` for an event the user
+      only attends, whose cancellation is not theirs to send.
     * `event_deleted_confirm/3` — sends the cancellation at once, one per
-      attendee, from the event as it was. Called once the event has actually
-      been deleted, never before: see its docs.
+      attendee, from the event as it was, and only for an event the user
+      organises. Called once the event has actually been deleted, never
+      before: see its docs.
     * `pending?/1` / `cancel_pending/1` — inspection and cancellation of the
       debounced pipeline. Both take the event, not its id: `meetings` and
       `provider_calendar_events` number their rows independently, so an id
@@ -108,12 +110,24 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     {:ok, :sent}
   end
 
-  @spec event_deleted(event, [attendee]) ::
-          {:ok, :no_attendees} | {:needs_confirmation, non_neg_integer}
-  def event_deleted(_event, []), do: {:ok, :no_attendees}
+  @doc """
+  Whether deleting `event` should ask the user `user_id` about telling its
+  attendees: `{:needs_confirmation, count}` when it has attendees and the
+  user organises it (`Recipients.organised_by?/2`).
 
-  def event_deleted(_event, attendees) when is_list(attendees) do
-    {:needs_confirmation, length(attendees)}
+  `{:ok, :not_organiser}` for an event someone else organises, which the
+  user only attends: deleting it removes it from their calendar alone, and a
+  cancellation in their name would tell the real organiser and every other
+  guest that the event is off.
+  """
+  @spec event_deleted(event, [attendee], pos_integer()) ::
+          {:ok, :no_attendees | :not_organiser} | {:needs_confirmation, non_neg_integer}
+  def event_deleted(_event, [], _user_id), do: {:ok, :no_attendees}
+
+  def event_deleted(event, attendees, user_id) when is_list(attendees) do
+    if Recipients.organised_by?(event, user_id),
+      do: {:needs_confirmation, length(attendees)},
+      else: {:ok, :not_organiser}
   end
 
   @doc """
@@ -131,11 +145,19 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   the recipients, less anyone who declined and the user `owner_user_id`
   (who made the delete). `scope` is `:series` when the whole series was
   deleted, which the email says; anything else cancels the one event.
-  `{:ok, :noop}` when nobody is left to tell.
+  `{:ok, :noop}` when nobody is left to tell, and for an event someone else
+  organises, whose cancellation is not the user's to send (see
+  `event_deleted/3`).
   """
   @spec event_deleted_confirm(event, pos_integer(), :occurrence | :series) ::
           {:ok, :sent | :noop} | {:error, term}
   def event_deleted_confirm(event, owner_user_id, scope) do
+    if Recipients.organised_by?(event, owner_user_id),
+      do: cancel_for_attendees(event, owner_user_id, scope),
+      else: {:ok, :noop}
+  end
+
+  defp cancel_for_attendees(event, owner_user_id, scope) do
     excluded = Recipients.excluded(event, owner_user_id)
 
     recipients =

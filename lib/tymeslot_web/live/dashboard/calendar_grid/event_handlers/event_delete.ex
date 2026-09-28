@@ -94,13 +94,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
   defp parse_scope(%{"scope" => "series"}), do: :series
   defp parse_scope(_params), do: :occurrence
 
+  # An event someone else organises is deleted from the user's calendar
+  # without the prompt: its cancellation is not theirs to send.
   defp proceed_with_delete(socket, event, scope) do
     attendees = normalise_attendees(event)
+    user_id = socket.assigns.current_user.id
 
-    case AttendeeNotifications.event_deleted(event, attendees) do
-      {:ok, :no_attendees} ->
-        user_id = socket.assigns.current_user.id
-
+    case AttendeeNotifications.event_deleted(event, attendees, user_id) do
+      {:ok, reason} when reason in [:no_attendees, :not_organiser] ->
         send(
           self(),
           {:execute_delete_event,

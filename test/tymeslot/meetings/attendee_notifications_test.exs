@@ -212,17 +212,59 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
     end
   end
 
-  describe "event_deleted/2" do
+  describe "event_deleted/3" do
     test "returns {:ok, :no_attendees} when there is nobody to notify" do
       event = insert(:provider_calendar_event)
-      assert {:ok, :no_attendees} = AttendeeNotifications.event_deleted(event, [])
+      user = event.calendar_integration.user
+      assert {:ok, :no_attendees} = AttendeeNotifications.event_deleted(event, [], user.id)
     end
 
     test "returns {:needs_confirmation, N} with the attendee count" do
       event = insert(:provider_calendar_event)
+      user = event.calendar_integration.user
       attendees = [%{email: "a@x.com"}, %{email: "b@x.com"}, %{email: "c@x.com"}]
 
-      assert {:needs_confirmation, 3} = AttendeeNotifications.event_deleted(event, attendees)
+      assert {:needs_confirmation, 3} =
+               AttendeeNotifications.event_deleted(event, attendees, user.id)
+    end
+
+    test "asks the organiser, known by their own address, the integration's or the calendar's" do
+      user = insert(:user, email: "Me@Example.com")
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          provider_account_email: "me@work.example"
+        )
+
+      attendees = [%{email: "a@x.com"}]
+
+      for {organiser, calendar_id} <- [
+            {" me@example.com ", "primary"},
+            {"ME@WORK.EXAMPLE", "primary"},
+            {"team123@group.calendar.google.com", "team123@group.calendar.google.com"},
+            {nil, "primary"}
+          ] do
+        event =
+          insert(:provider_calendar_event,
+            calendar_integration: integration,
+            provider_calendar_id: calendar_id,
+            organiser: organiser && %{"email" => organiser}
+          )
+
+        assert {:needs_confirmation, 1} =
+                 AttendeeNotifications.event_deleted(event, attendees, user.id),
+               "expected #{inspect(organiser)} to count as the user's own address"
+      end
+    end
+
+    test "returns {:ok, :not_organiser} for an event someone else organises" do
+      event = insert(:provider_calendar_event, organiser: %{"email" => "boss@elsewhere.example"})
+      user = event.calendar_integration.user
+
+      assert {:ok, :not_organiser} =
+               AttendeeNotifications.event_deleted(event, [%{email: "a@x.com"}], user.id)
     end
   end
 
@@ -263,6 +305,19 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
       end
 
       assert all_enqueued(worker: Worker) == []
+    end
+
+    test "sends nothing for an event someone else organises" do
+      event =
+        insert(:provider_calendar_event,
+          organiser: %{"email" => "boss@elsewhere.example"},
+          attendees: [%{"email" => "boss@elsewhere.example"}, %{"email" => "b@x.com"}]
+        )
+
+      user = event.calendar_integration.user
+
+      assert {:ok, :noop} = AttendeeNotifications.event_deleted_confirm(event, user.id, :series)
+      assert all_enqueued(worker: EmailWorker) == []
     end
   end
 

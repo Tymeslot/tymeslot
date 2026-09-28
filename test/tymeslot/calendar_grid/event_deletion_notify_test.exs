@@ -152,6 +152,24 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
     end
   end
 
+  describe "delete_event/4 and an event someone else organises" do
+    test "deletes it and sends its attendees nothing", %{user: user, caldav: caldav} do
+      event =
+        insert_event(caldav, %{
+          organiser: %{"email" => "boss@elsewhere.example"},
+          attendees: [%{"email" => "boss@elsewhere.example"} | @attendees]
+        })
+
+      expect_delete(:ok)
+
+      assert {:ok, %{attendees_notified: :none}} =
+               CalendarGrid.delete_event(user.id, event, :occurrence, notify_attendees: true)
+
+      assert cancelled_to() == []
+      assert {:error, :not_found} = ProviderCalendarEventQueries.get_by_uid(caldav.id, event.uid)
+    end
+  end
+
   describe "delete_event/4 when the cancellation cannot be sent" do
     # An all-day row without its end date makes building the cancellation
     # raise, as any unexpected row shape could. The delete has happened, so
