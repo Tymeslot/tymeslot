@@ -79,32 +79,69 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
   created as `<calendar_path><uid>.ics` under `If-None-Match: *`. Only once
   the destination has accepted it is the original deleted, under `If-Match`
   with the ETag the copy was made from, so a series changed in the meantime
-  is not deleted unseen.
+  is not deleted unseen. A delete refused for that reason means the copy is
+  stale: it is deleted from the destination again, and the move is made
+  once more from the server's copy. Refused a second time, the move is
+  `{:error, :precondition_failed}` with nothing moved.
 
   `calendar_path` must be one of the destination's writable collections,
   else `{:error, :no_destination_calendar}` before anything is sent. A copy
   the destination refuses is `{:error, reason}` with nothing written, and
-  the original is not touched. A delete that fails once the copy is made is
-  not an error: the answer says `source: :left_behind`, the copy stays, and
-  nothing is queued.
+  the original is not touched. A delete that fails otherwise once the copy
+  is made, or a stale copy that cannot be deleted again, is not an error:
+  the answer says `source: :left_behind`, the copy stays, and nothing is
+  queued.
   """
   @spec move_series(Base.client(), Base.client(), source(), String.t(), keyword()) ::
           {:ok, moved()} | {:error, term()}
   def move_series(source_client, destination_client, source, calendar_path, opts \\ []) do
     with {:ok, collection} <- writable_collection(destination_client, calendar_path),
-         {:ok, source_url} <- event_url(source_client, nil, source.href),
-         {:ok, document, etag} <- series_document(source_client, source_url, source, opts),
-         {:ok, copy} <- copy(document),
-         {:ok, created} <- create_copy(destination_client, collection, copy, opts) do
-      {:ok,
-       %{
-         uid: created.uid,
-         href: created.href,
-         calendar_path: collection,
-         source: delete_original(source_client, source_url, etag, opts)
-       }}
+         {:ok, source_url} <- event_url(source_client, nil, source.href) do
+      clients = {source_client, destination_client}
+      copy_then_delete(clients, source_url, source, collection, opts, true)
     end
   end
+
+  # The copy is made from the document the cache holds, so the happy path
+  # reads nothing first; the delete under that document's ETag is what
+  # notices a series changed since. That copy is stale, so it is deleted
+  # again and the move made once more from the server's copy, as a split is
+  # (`split_and_write/6`). A second refusal is reported rather than chased,
+  # with nothing moved. Only a copy that cannot be taken back again stays,
+  # beside the original (`:left_behind`).
+  defp copy_then_delete(clients, source_url, source, collection, opts, retry?) do
+    {source_client, destination_client} = clients
+
+    with {:ok, document, etag} <- series_document(source_client, source_url, source, opts),
+         {:ok, copy} <- copy(document),
+         {:ok, created} <- create_copy(destination_client, collection, copy, opts) do
+      moved = fn outcome ->
+        {:ok, %{uid: created.uid, href: created.href, calendar_path: collection, source: outcome}}
+      end
+
+      case delete_original(source_client, source_url, etag, opts) do
+        :removed ->
+          moved.(:removed)
+
+        {:stale, reason} ->
+          case {discard_copy(destination_client, created, opts), retry?} do
+            {:ok, true} ->
+              copy_then_delete(clients, source_url, fresh(source), collection, opts, false)
+
+            {:ok, false} ->
+              {:error, reason}
+
+            {:kept, _retry?} ->
+              moved.(:left_behind)
+          end
+
+        :failed ->
+          moved.(:left_behind)
+      end
+    end
+  end
+
+  defp fresh(source), do: %{source | document: nil, etag: nil}
 
   # The destination's own spelling of the collection, and only one it lists
   # as writable: the path arrives from the caller, and is a URL taken from a
@@ -145,7 +182,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
 
   defp create_copy(client, collection, copy, opts) do
     url = UrlBuilder.build_event_url(client.base_url, collection, copy.tail_uid)
-    with_breaker(client, opts, fn -> create_tail(client, url, copy, opts) end)
+
+    with {:ok, created} <-
+           with_breaker(client, opts, fn -> create_tail(client, url, copy, opts) end),
+         do: {:ok, Map.put(created, :url, url)}
   end
 
   defp delete_original(client, url, etag, opts) do
@@ -158,7 +198,30 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
 
     case result do
       {:ok, %Req.Response{}} -> :removed
-      {:error, _reason} -> :left_behind
+      {:error, reason} when reason in @stale -> {:stale, reason}
+      {:error, _reason} -> :failed
+    end
+  end
+
+  # The copy of a series whose original could not be deleted because it
+  # changed since the copy was made.
+  defp discard_copy(client, created, opts) do
+    result =
+      with_breaker(client, opts, fn ->
+        Http.delete_event(created.url, client.username, client.password, timeout(opts))
+      end)
+
+    case result do
+      {:ok, %Req.Response{}} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("CalDAV series move could not take back a copy made from a stale series",
+          copy_url: created.url,
+          reason: LogFormat.reason(reason)
+        )
+
+        :kept
     end
   end
 

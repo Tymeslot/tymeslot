@@ -343,6 +343,101 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferCalDAVTest do
       assert all_enqueued() == []
     end
 
+    test "a series changed on the source since the cache read it is moved from the server's copy",
+         %{user: user, source: source, destination: destination, occurrence: occurrence} do
+      room =
+        insert_room(user, source, %{
+          event_uid: "standup@example.com",
+          provider_event_id: @series_href,
+          provider_calendar_id: "/cal/"
+        })
+
+      test_pid = self()
+
+      expect(Tymeslot.HTTPClientMock, :get, fn url, _headers, _opts ->
+        send(test_pid, {:http, :get, url, nil, []})
+
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body: String.replace(@series_ical, "Weekly standup", "Daily standup"),
+           headers: %{"etag" => [~s("etag-2")]}
+         }}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :put, 2, fn url, body, headers, _opts ->
+        send(test_pid, {:http, :put, url, body, headers})
+        ok(201)
+      end)
+
+      # The original changed on the server since the cache read it, so the
+      # delete under the cached ETag is refused; every other is accepted.
+      stub(Tymeslot.HTTPClientMock, :delete, fn url, headers, _opts ->
+        send(test_pid, {:http, :delete, url, nil, headers})
+        if header(headers, "If-Match") == [~s("etag-1")], do: ok(412), else: ok(204)
+      end)
+
+      assert {:ok, %{uid: uid} = moved} = move(user, occurrence, destination, "/dav/team/")
+      refute Map.has_key?(moved, :source)
+
+      assert [
+               {:put, stale_url, _stale_copy, _headers},
+               {:delete, @series_url, nil, _stale_delete},
+               {:delete, stale_url, nil, _discard_headers},
+               {:get, @series_url, nil, _get_headers},
+               {:put, put_url, copy, _put_headers},
+               {:delete, @series_url, nil, delete_headers}
+             ] = requests()
+
+      # The stale copy is gone again; the one that stays is the server's.
+      assert stale_url != put_url
+      assert put_url == "#{@destination_base}/dav/team/#{uid}.ics"
+      assert copy =~ "SUMMARY:Daily standup"
+      assert uids(copy) == [uid, uid]
+      assert header(delete_headers, "If-Match") == [~s("etag-2")]
+
+      assert %{event_uid: ^uid, provider_event_id: room_href} = Repo.reload!(room)
+      assert room_href == "/dav/team/#{uid}.ics"
+    end
+
+    test "a series still changing on the source is not moved, and no copy stays", %{
+      user: user,
+      source: source,
+      destination: destination,
+      occurrence: occurrence
+    } do
+      test_pid = self()
+
+      expect(Tymeslot.HTTPClientMock, :get, fn _url, _headers, _opts ->
+        {:ok,
+         %Req.Response{status: 200, body: @series_ical, headers: %{"etag" => [~s("etag-2")]}}}
+      end)
+
+      expect(Tymeslot.HTTPClientMock, :put, 2, fn url, body, headers, _opts ->
+        send(test_pid, {:http, :put, url, body, headers})
+        ok(201)
+      end)
+
+      # Every delete of the original is refused; the copies' are accepted.
+      stub(Tymeslot.HTTPClientMock, :delete, fn url, headers, _opts ->
+        send(test_pid, {:http, :delete, url, nil, headers})
+        if url == @series_url, do: ok(412), else: ok(204)
+      end)
+
+      assert {:error, :precondition_failed} = move(user, occurrence, destination, "/dav/team/")
+
+      sent = requests()
+      copies = for {:put, url, _body, _headers} <- sent, do: url
+      deleted = for {:delete, url, _body, _headers} <- sent, url != @series_url, do: url
+
+      # Both copies were deleted again, so nothing of the series is left on
+      # the destination, and the source's rows stay.
+      assert length(copies) == 2
+      assert deleted == copies
+      assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(source.id, occurrence.uid)
+      assert all_enqueued() == []
+    end
+
     test "an original the source will not delete is left behind, and the copy kept", %{
       user: user,
       source: source,
@@ -350,8 +445,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransferCalDAVTest do
       occurrence: occurrence
     } do
       expect_put(ok(201))
-      # Changed on the server since the cache read it.
-      stub_delete(ok(412))
+      stub_delete(ok(403))
 
       assert {:ok, %{uid: uid, source: :left_behind}} =
                move(user, occurrence, destination, "/dav/team/")
