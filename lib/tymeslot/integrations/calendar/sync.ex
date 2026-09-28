@@ -25,6 +25,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Meetings
 
@@ -220,12 +221,31 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   # (the grid caches a series it created that way) stands in for the whole
   # series and would show its first occurrence twice beside them, so it goes
   # once they arrive. CalDAV occurrences name no master, so this is inert there.
+  #
+  # The master's row may be the only place the series' video is recorded, as
+  # it is for a series the grid created with one, and a sync never writes a
+  # row's video; so before the row goes, its video is given to the
+  # occurrences just cached that have none of their own.
   defp drop_replaced_masters(integration_id, calendar_events) do
-    calendar_events
-    |> Enum.map(& &1.recurring_event_id)
-    |> Enum.filter(&(is_binary(&1) and &1 != ""))
-    |> Enum.uniq()
-    |> then(&ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, &1))
+    master_ids =
+      calendar_events
+      |> Enum.map(& &1.recurring_event_id)
+      |> Enum.filter(&(is_binary(&1) and &1 != ""))
+      |> Enum.uniq()
+
+    integration_id
+    |> ProviderCalendarSeriesQueries.list_master_videos(master_ids)
+    |> Enum.each(fn {master_id, video_integration_id, video_link} ->
+      ProviderCalendarSeriesQueries.put_video(
+        integration_id,
+        {:master, master_id},
+        nil,
+        video_integration_id,
+        video_link
+      )
+    end)
+
+    ProviderCalendarEventQueries.delete_by_provider_event_ids(integration_id, master_ids)
   end
 
   @doc """
