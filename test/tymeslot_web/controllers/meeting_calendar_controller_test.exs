@@ -51,7 +51,10 @@ defmodule TymeslotWeb.MeetingCalendarControllerTest do
       assert conn.resp_body =~ "BEGIN:VEVENT"
       assert conn.resp_body =~ "SUMMARY"
       assert conn.resp_body =~ "Strategy Session"
-      assert conn.resp_body =~ "UID:#{meeting.uid}@"
+      # The event is the same one the organiser's calendar holds, so it carries
+      # the calendar uid; the booking's uid appears only in the link used here.
+      assert conn.resp_body =~ "UID:#{meeting.calendar_uid}@"
+      refute conn.resp_body =~ "UID:#{meeting.uid}@"
     end
 
     test "404s when the meeting belongs to a different organiser (IDOR guard)", %{conn: conn} do

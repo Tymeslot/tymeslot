@@ -217,7 +217,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
   end
 
   describe "the synthesised uid" do
-    test "never cancels a Tymeslot meeting whose uid collides with it", %{
+    test "never cancels a Tymeslot meeting whose calendar uid collides with it", %{
       integration: integration,
       user: user
     } do
@@ -230,7 +230,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
         insert(:meeting,
           organizer_user: user,
           calendar_integration_id: integration.id,
-          uid: busy.uid,
+          calendar_uid: busy.uid,
           provider_event_id: nil,
           status: "confirmed"
         )

@@ -191,10 +191,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.BookingEventsLiveviewTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
       uid = "abc123@tymeslot.com"
 
-      # The CalDAV write path stores its caller-supplied UID on the meeting and
-      # leaves provider_event_id unset, while the synced copy carries the
-      # server's href there. Matching on provider_event_id alone drew both.
-      meeting = insert_booking(user, %{uid: uid, provider_event_id: nil})
+      # The CalDAV write path stores its caller-supplied UID on the meeting (as
+      # its calendar_uid) and leaves provider_event_id unset, while the synced
+      # copy carries the server's href there. Matching on provider_event_id alone drew both.
+      meeting = insert_booking(user, %{calendar_uid: uid, provider_event_id: nil})
 
       insert(:provider_calendar_event,
         calendar_integration: integration,

@@ -474,7 +474,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventVideoLiveViewTest do
           video_integration_id: nil
         })
 
-      insert(:meeting, calendar_integration_id: integration.id, uid: event.uid)
+      insert(:meeting, calendar_integration_id: integration.id, calendar_uid: event.uid)
 
       # Neither the video provider nor the calendar may be reached.
       expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _opts -> :ok end)

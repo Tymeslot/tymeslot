@@ -310,7 +310,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerSweepTest do
       meeting =
         insert(:meeting,
           calendar_integration_id: integration.id,
-          uid: "booking-uid",
+          calendar_uid: "booking-uid",
           start_time: DateTime.truncate(base, :second),
           end_time: base |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
         )

@@ -108,7 +108,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
     test "marks a delta event that mirrors one of our meetings" do
       # The delta sweep used to write straight to the queries module, skipping
       # the ownership flagging every other cache write gets. A booking Tymeslot
-      # wrote to an Outlook calendar carries a bare UUID uid, which the
+      # wrote to an Outlook calendar carries a bare UUID uid (its calendar_uid), which the
       # payload-level origin check cannot recognise, so it cached as
       # server-owned and OfflineQueue-style recovery never applied to it.
       integration =
@@ -117,7 +117,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
             "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old-token"
         )
 
-      insert(:meeting, calendar_integration_id: integration.id, uid: "uid-ours")
+      insert(:meeting, calendar_integration_id: integration.id, calendar_uid: "uid-ours")
 
       ours = graph_event(%{"iCalUId" => "uid-ours"})
       theirs = graph_event(%{"iCalUId" => "uid-theirs"})
