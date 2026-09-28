@@ -236,6 +236,27 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerEventMappingTest do
         {:ok, %{events: [cancelled_event], next_sync_token: "new-token"}}
       end)
 
+      # The series the delta names is listed whole, and still holds the
+      # sibling.
+      expect(GoogleCalendarAPIMock, :list_instances, fn _integration,
+                                                        "primary",
+                                                        "series1234",
+                                                        _start,
+                                                        _end ->
+        {:ok,
+         [
+           %{
+             "id" => "series1234_20260511T080000Z",
+             "iCalUID" => "series-uid@google.com",
+             "recurringEventId" => "series1234",
+             "originalStartTime" => %{"dateTime" => "2026-05-11T08:00:00Z"},
+             "status" => "confirmed",
+             "start" => %{"dateTime" => "2026-05-11T08:00:00Z"},
+             "end" => %{"dateTime" => "2026-05-11T09:00:00Z"}
+           }
+         ]}
+      end)
+
       assert :ok =
                perform_job(SyncGoogleCalendarWorker, %{
                  "calendar_integration_id" => integration.id

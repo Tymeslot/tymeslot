@@ -101,6 +101,24 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerSweepTest do
     end)
   end
 
+  defp expect_instances(master, result) do
+    expect(GoogleCalendarAPIMock, :list_instances, fn _integration, "primary", ^master, _s, _e ->
+      result
+    end)
+  end
+
+  # The booking calendar's rows of the series `master`, one per original
+  # start, as an earlier sync cached them.
+  defp cached_series(integration, master, originals) do
+    for original <- originals do
+      cached(integration, "#{master}@google.com_#{stamp(original)}", original,
+        provider_calendar_id: "primary",
+        provider_event_id: "#{master}_#{stamp(original)}",
+        recurring_event_id: master
+      )
+    end
+  end
+
   defp expect_work_listing(result) do
     expect(GoogleCalendarAPIMock, :list_events, fn _integration, @work, _start, _end ->
       result
@@ -211,15 +229,122 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerSweepTest do
   end
 
   describe "the booking calendar" do
-    test "an incremental run leaves its rows to the sync token's cancellations",
+    # A delta is not a listing: a row it does not mention may still exist.
+    test "an incremental run naming no series leaves its rows to the sync token's cancellations",
          %{integration: integration, base: base} do
       cached(integration, "primary-row", base, provider_calendar_id: "primary")
+      cached_series(integration, "series", [base])
 
-      expect_delta()
+      expect_delta([google_event("changed-one-off", DateTime.add(base, 2, :day))])
       expect_work_listing({:ok, []})
 
       assert :ok = run(integration)
-      assert cached_uids(integration) == ["primary-row"]
+
+      assert cached_uids(integration) ==
+               Enum.sort(["changed-one-off", "primary-row", "series@google.com_#{stamp(base)}"])
+    end
+
+    test "a series retimed in Google leaves only its new occurrences, whatever the delta cancels",
+         %{integration: integration, base: base} do
+      originals = [base, DateTime.add(base, 7, :day)]
+      cached_series(integration, "series", originals)
+      cached(integration, "unrelated", base, provider_calendar_id: "primary")
+
+      retimed =
+        Enum.map(originals, fn original ->
+          moved = DateTime.add(original, 3600, :second)
+          instance("series", moved, moved)
+        end)
+
+      # The delta carries the new instances and no cancellation of the old.
+      expect_delta(retimed)
+      expect_instances("series", {:ok, retimed})
+      expect_work_listing({:ok, []})
+
+      assert :ok = run(integration)
+
+      assert cached_uids(integration) ==
+               Enum.sort([
+                 "unrelated"
+                 | Enum.map(
+                     originals,
+                     &"series@google.com_#{stamp(DateTime.add(&1, 3600, :second))}"
+                   )
+               ])
+    end
+
+    test "one occurrence changed keeps every other occurrence of its series, with one listing",
+         %{integration: integration, base: base} do
+      originals = [base, DateTime.add(base, 7, :day), DateTime.add(base, 14, :day)]
+      cached_series(integration, "series", originals)
+
+      [first, second, third] = originals
+      moved = instance("series", second, DateTime.add(second, 1800, :second))
+      listing = [instance("series", first, first), moved, instance("series", third, third)]
+
+      # Two changes to the series in the delta still cost one listing.
+      expect_delta([moved, instance("series", third, third)])
+      expect_instances("series", {:ok, listing})
+      expect_work_listing({:ok, []})
+
+      assert :ok = run(integration)
+
+      assert cached_uids(integration) ==
+               Enum.map(originals, &"series@google.com_#{stamp(&1)}")
+    end
+
+    test "a series whose instances cannot be listed is not swept",
+         %{integration: integration, base: base} do
+      cached_series(integration, "series", [base])
+      moved = DateTime.add(base, 3600, :second)
+
+      expect_delta([instance("series", moved, moved)])
+      expect_instances("series", {:error, :network_error, "Google returned 500"})
+      expect_work_listing({:ok, []})
+
+      assert :ok = run(integration)
+
+      assert cached_uids(integration) ==
+               Enum.sort([
+                 "series@google.com_#{stamp(base)}",
+                 "series@google.com_#{stamp(moved)}"
+               ])
+    end
+
+    # The rows a bootstrap cached from a listing read before the grid rewrote
+    # the series, after the grid had dropped the series' rows; the delta the
+    # requested rerun reads from the bootstrap's token need not name them.
+    test "a requested sync reads it in full and sweeps what the listing no longer returns",
+         %{integration: integration, base: base} do
+      cached_series(integration, "series", [base])
+      cached(integration, "primary-kept", base, provider_calendar_id: "primary")
+
+      expect_delta()
+
+      expect(GoogleCalendarAPIMock, :list_events, fn _integration, "primary", _start, _end ->
+        {:ok, [google_event("primary-kept", base)]}
+      end)
+
+      expect_work_listing({:ok, []})
+
+      assert {:ok, job} = SyncGoogleCalendarWorker.enqueue(integration.id)
+      assert :ok = perform_job(SyncGoogleCalendarWorker, job.args)
+      assert cached_uids(integration) == ["primary-kept"]
+    end
+
+    test "a requested sync whose listing of it fails sweeps nothing",
+         %{integration: integration, base: base} do
+      cached(integration, "unconfirmed", base, provider_calendar_id: "primary")
+
+      expect_delta()
+
+      expect(GoogleCalendarAPIMock, :list_events, fn _integration, "primary", _start, _end ->
+        {:error, :network_error, "Google returned 500 on page 2"}
+      end)
+
+      assert {:ok, job} = SyncGoogleCalendarWorker.enqueue(integration.id)
+      assert {:error, _reason} = perform_job(SyncGoogleCalendarWorker, job.args)
+      assert cached_uids(integration) == ["unconfirmed"]
     end
 
     test "a bootstrap after an expired sync token sweeps events deleted meanwhile",

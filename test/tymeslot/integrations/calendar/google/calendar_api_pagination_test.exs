@@ -313,4 +313,49 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIPaginationTest do
                CalendarAPI.list_events(integration, "work@example.com", from, to)
     end
   end
+
+  describe "list_instances/5" do
+    setup do
+      breaker_pid = Process.whereis(:calendar_breaker_google)
+      Mox.allow(Tymeslot.HTTPClientMock, self(), breaker_pid)
+      :ok
+    end
+
+    test "walks every page of the series' instances within the window" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
+        )
+
+      expect(Tymeslot.HTTPClientMock, :request, 2, fn :get, url, _body, _headers, _opts ->
+        assert String.starts_with?(
+                 url,
+                 "https://www.googleapis.com/calendar/v3/calendars/primary/events/series1/instances"
+               )
+
+        assert String.contains?(url, "timeMin=2026-01-01T00%3A00%3A00Z")
+        assert String.contains?(url, "timeMax=2027-01-01T00%3A00%3A00Z")
+
+        body =
+          if String.contains?(url, "pageToken=page2"),
+            do: %{"items" => [%{"id" => "series1_b"}]},
+            else: %{"items" => [%{"id" => "series1_a"}], "nextPageToken" => "page2"}
+
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(body)}}
+      end)
+
+      assert {:ok, instances} =
+               CalendarAPI.list_instances(
+                 integration,
+                 "primary",
+                 "series1",
+                 ~U[2026-01-01 00:00:00Z],
+                 ~U[2027-01-01 00:00:00Z]
+               )
+
+      assert Enum.map(instances, & &1["id"]) == ["series1_a", "series1_b"]
+    end
+  end
 end

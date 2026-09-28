@@ -45,7 +45,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventListing do
 
   Each page goes through the Google circuit breaker unless `breaker: false`
   is given, for a caller that has never gone through it and handles errors
-  without a `{:error, :circuit_open}` clause.
+  without a `{:error, :circuit_open}` clause. `instances_of:` a master's id
+  lists that recurring event's instances (`events.instances`) in place of
+  the calendar's events.
   """
   @spec fetch_all(String.t(), String.t(), map(), keyword()) ::
           {:ok, listing()} | {:error, :circuit_open} | {:error, atom(), String.t()} | term()
@@ -55,16 +57,25 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventListing do
         do: &CalendarCircuitBreaker.call(:google, &1),
         else: & &1.()
 
-    fetch_page(request, token, calendar_id, base_params, nil, [], 1)
+    path =
+      case Keyword.fetch(opts, :instances_of) do
+        {:ok, master_id} ->
+          "/calendars/#{URI.encode(calendar_id)}/events/#{URI.encode(master_id)}/instances"
+
+        :error ->
+          "/calendars/#{URI.encode(calendar_id)}/events"
+      end
+
+    fetch_page(request, token, path, base_params, nil, [], 1)
   end
 
-  defp fetch_page(_request, _token, _calendar_id, _base_params, _page_token, _acc, page)
+  defp fetch_page(_request, _token, _path, _base_params, _page_token, _acc, page)
        when page > @max_pages do
     {:error, :too_many_pages,
      "Event listing exceeded #{@max_pages} pages of #{@max_results} events"}
   end
 
-  defp fetch_page(request, token, calendar_id, base_params, page_token, acc, page) do
+  defp fetch_page(request, token, path, base_params, page_token, acc, page) do
     params =
       base_params
       |> Map.put("maxResults", @max_results)
@@ -72,12 +83,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventListing do
 
     result =
       request.(fn ->
-        CalendarAPI.make_request(
-          :get,
-          "/calendars/#{URI.encode(calendar_id)}/events",
-          token,
-          params
-        )
+        CalendarAPI.make_request(:get, path, token, params)
       end)
 
     case result do
@@ -89,7 +95,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventListing do
             {:ok, %{events: Enum.reverse(acc), next_sync_token: response["nextSyncToken"]}}
 
           next_page ->
-            fetch_page(request, token, calendar_id, base_params, next_page, acc, page + 1)
+            fetch_page(request, token, path, base_params, next_page, acc, page + 1)
         end
 
       # Not an error tuple: the success clause is guarded on a map, so this
@@ -98,7 +104,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventListing do
       # has always behaved, but no longer silently.
       {:ok, body} ->
         Logger.warning("Google events listing returned a non-object body",
-          calendar_id: calendar_id,
+          path: path,
           body: LogFormat.reason(body)
         )
 
