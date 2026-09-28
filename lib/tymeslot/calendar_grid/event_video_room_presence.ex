@@ -150,25 +150,42 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresence do
 
   defp learnt_ical_uid(_room, _events, _identifiers), do: nil
 
-  # The join link the event carries, learnt once: its own row's before an
-  # occurrence's, and the cached link before the one in the description,
+  # The join link the event carries, learnt once: its own row's before the
+  # occurrences', and the cached link before the one in the description,
   # which is all a row has while its cached link waits for
-  # `Tymeslot.Workers.SeriesVideoWorker`. It is only ever used to keep the
-  # room (`EventVideoRooms.hand_to_link_holder/1`).
-  defp learnt_join_link(%{join_link: nil}, events, identifiers) do
+  # `Tymeslot.Workers.SeriesVideoWorker`. Only cached links of the room's own
+  # video integration count, and among the occurrences the link most of them
+  # carry, so that an occurrence given a video of its own cannot lend the
+  # room its link. It is only ever used to keep the room
+  # (`EventVideoRooms.hand_to_link_holder/1`), which a wrong link would let
+  # go while still in use.
+  defp learnt_join_link(%{join_link: nil} = room, events, identifiers) do
     {own, occurrences} =
       Enum.split_with(events, &(&1.uid in identifiers or &1.provider_event_id in identifiers))
 
-    rows = own ++ occurrences
+    cached_link = &room_link(&1, room.video_integration_id)
+    described_link = &(&1.description |> EventVideo.join_links() |> List.first())
 
-    Enum.find_value(rows, &present(&1.video_link)) ||
-      Enum.find_value(rows, &(&1.description |> EventVideo.join_links() |> List.first()))
+    Enum.find_value(own, cached_link) || most_common(occurrences, cached_link) ||
+      Enum.find_value(own, described_link) || most_common(occurrences, described_link)
   end
 
   defp learnt_join_link(_room, _events, _identifiers), do: nil
 
-  defp present(link) when is_binary(link) and link != "", do: link
-  defp present(_link), do: nil
+  defp room_link(%{video_link: link, video_integration_id: video_id}, video_id)
+       when is_binary(link) and link != "" and is_integer(video_id),
+       do: link
+
+  defp room_link(_row, _video_integration_id), do: nil
+
+  defp most_common(rows, link_of) do
+    rows
+    |> Enum.map(link_of)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.frequencies()
+    |> Enum.max_by(fn {_link, count} -> count end, fn -> {nil, 0} end)
+    |> elem(0)
+  end
 
   defp ask_provider(room) do
     case CalendarOperations.fetch_event(

@@ -150,7 +150,9 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
     test "hands the conversation to the earlier half still linking to it", ctx do
       room = series_room(ctx, "grid-tail")
       link = talk_link(ctx, room)
-      tail = cache_occurrence(ctx, "grid-tail", video_link: link)
+
+      tail =
+        cache_occurrence(ctx, "grid-tail", video_link: link, video_integration_id: ctx.talk.id)
 
       # Only in its description: its cached link waits for the sync.
       cache_occurrence(ctx, "grid-head", description: "Agenda\n\nJoin video call: #{link}")
@@ -177,7 +179,13 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
 
     test "deletes the conversation when no other event carries its link", ctx do
       room = series_room(ctx, "grid-tail")
-      tail = cache_occurrence(ctx, "grid-tail", video_link: talk_link(ctx, room))
+
+      tail =
+        cache_occurrence(ctx, "grid-tail",
+          video_link: talk_link(ctx, room),
+          video_integration_id: ctx.talk.id
+        )
+
       cache_occurrence(ctx, "grid-head", video_link: "https://#{ctx.talk_host}/call/other")
 
       run_nightly_scan()
@@ -188,6 +196,56 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
 
       assert_received {:dav_get, ^url}
       assert_talk_deleted(ctx, room)
+    end
+  end
+
+  describe "the join link a series room is seen with" do
+    setup :caldav_calendar
+
+    test "is the room's own, not that of an occurrence with a video of its own", ctx do
+      room = series_room(ctx, "grid-series-7")
+      link = talk_link(ctx, room)
+      other_talk = insert_talk_integration(ctx.user, "other-#{ctx.talk_host}")
+
+      # Cached first, so the first link found would be this one.
+      cache_occurrence(ctx, "grid-series-7",
+        in_days: 2,
+        video_link: "https://other-#{ctx.talk_host}/call/own-room",
+        video_integration_id: other_talk.id
+      )
+
+      cache_occurrence(ctx, "grid-series-7",
+        in_days: 9,
+        video_link: link,
+        video_integration_id: ctx.talk.id
+      )
+
+      run_nightly_scan()
+
+      assert %{join_link: ^link} = Repo.reload!(room)
+    end
+
+    test "is the one most occurrences carry among the room's integration's links", ctx do
+      room = series_room(ctx, "grid-series-8")
+      link = talk_link(ctx, room)
+
+      cache_occurrence(ctx, "grid-series-8",
+        in_days: 2,
+        video_link: "https://#{ctx.talk_host}/call/another-room",
+        video_integration_id: ctx.talk.id
+      )
+
+      for in_days <- [9, 16] do
+        cache_occurrence(ctx, "grid-series-8",
+          in_days: in_days,
+          video_link: link,
+          video_integration_id: ctx.talk.id
+        )
+      end
+
+      run_nightly_scan()
+
+      assert %{join_link: ^link} = Repo.reload!(room)
     end
   end
 
@@ -334,7 +392,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
 
   # A CalDAV occurrence, cached under the series uid and its start.
   defp cache_occurrence(ctx, series_uid, attrs \\ []) do
-    start = DateTime.add(DateTime.utc_now(:second), 2 * @day, :second)
+    {in_days, attrs} = Keyword.pop(attrs, :in_days, 2)
+    start = DateTime.add(DateTime.utc_now(:second), in_days * @day, :second)
 
     insert(
       :provider_calendar_event,
