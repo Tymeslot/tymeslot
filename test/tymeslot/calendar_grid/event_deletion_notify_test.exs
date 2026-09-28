@@ -21,6 +21,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Test.LogCapture
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
 
@@ -148,6 +149,42 @@ defmodule Tymeslot.CalendarGrid.EventDeletionNotifyTest do
                job.args["event_series"] == false and job.args["event_uid"] == first.uid and
                  job.args["event_start_at"] == "2026-06-01T09:00:00.000000Z"
              end)
+    end
+  end
+
+  describe "delete_event/4 when the cancellation cannot be sent" do
+    # An all-day row without its end date makes building the cancellation
+    # raise, as any unexpected row shape could. The delete has happened, so
+    # the failure is logged, rendered through `LogFormat`: a stacktrace
+    # formatted with its arguments can carry the event and its attendees.
+    test "logs the failure without the arguments of the call that raised", %{
+      user: user,
+      caldav: caldav
+    } do
+      event =
+        insert_event(caldav, %{
+          attendees: @attendees,
+          all_day: true,
+          start_at: nil,
+          end_at: nil,
+          start_date: ~D[2026-06-01],
+          end_date: nil
+        })
+
+      expect_delete(:ok)
+
+      log_event =
+        LogCapture.with_capture(fn ->
+          assert {:ok, %{attendees_notified: :failed}} =
+                   CalendarGrid.delete_event(user.id, event, :occurrence, notify_attendees: true)
+
+          LogCapture.await_log("could not enqueue the attendees' cancellation")
+        end)
+
+      meta = LogCapture.user_metadata(log_event)
+      assert meta.error =~ "FunctionClauseError"
+      refute meta.error =~ "to_iso8601(nil"
+      assert meta.stacktrace =~ "Date.to_iso8601/2"
     end
   end
 

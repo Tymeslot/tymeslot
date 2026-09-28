@@ -72,6 +72,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarResourceQueries
@@ -401,18 +402,26 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
     case AttendeeNotifications.event_deleted_confirm(stored, user_id, email_scope(scope)) do
       {:ok, :sent} -> :sent
       {:ok, :noop} -> :none
-      {:error, reason} -> notify_failed(stored, user_id, inspect(reason))
+      {:error, reason} -> notify_failed(stored, user_id, error: LogFormat.reason(reason))
     end
   rescue
-    error -> notify_failed(stored, user_id, Exception.format(:error, error, __STACKTRACE__))
+    error ->
+      notify_failed(stored, user_id,
+        error: LogFormat.reason(error),
+        stacktrace: LogFormat.stacktrace(__STACKTRACE__)
+      )
   end
 
-  defp notify_failed(stored, user_id, error) do
-    Logger.error("Calendar grid delete: could not enqueue the attendees' cancellation",
-      user_id: user_id,
-      calendar_integration_id: Map.get(stored, :calendar_integration_id),
-      uid: Map.get(stored, :uid),
-      error: error
+  # `failure` is already rendered through `LogFormat`: a raw reason or a
+  # stacktrace formatted with its arguments can carry the event's attendees.
+  defp notify_failed(stored, user_id, failure) do
+    Logger.error(
+      "Calendar grid delete: could not enqueue the attendees' cancellation",
+      [
+        user_id: user_id,
+        calendar_integration_id: Map.get(stored, :calendar_integration_id),
+        uid: Map.get(stored, :uid)
+      ] ++ failure
     )
 
     :failed
