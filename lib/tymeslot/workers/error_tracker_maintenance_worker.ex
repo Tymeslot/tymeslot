@@ -30,6 +30,11 @@ defmodule Tymeslot.Workers.ErrorTrackerMaintenanceWorker do
      so its occurrences are trimmed instead: those older than the window go,
      except the newest `:error_tracking_occurrences_kept` of the error,
      which are always kept whatever their age.
+
+  The tunables are read on every run, so `config/runtime.exs` can set them.
+  Maintenance runs whether or not error tracking is switched on
+  (`ERROR_TRACKING_ENABLED`): what was stored before it was switched off
+  still ages out on the same schedule.
   """
 
   use Oban.Worker, queue: :default, max_attempts: 3, unique: [period: 3600]
@@ -38,22 +43,27 @@ defmodule Tymeslot.Workers.ErrorTrackerMaintenanceWorker do
 
   alias Tymeslot.Infrastructure.ErrorTracking.ErrorTrackingQueries
 
-  @resolve_after_days Application.compile_env(:tymeslot, :error_tracking_resolve_after_days, 30)
-  @occurrences_kept Application.compile_env(:tymeslot, :error_tracking_occurrences_kept, 50)
-
   @impl Oban.Worker
   def perform(_job) do
-    cutoff = DateTime.add(DateTime.utc_now(), -@resolve_after_days, :day)
+    # Read at run time rather than compiled in, so `config/runtime.exs` can
+    # tune them without a rebuild.
+    resolve_after_days = Application.get_env(:tymeslot, :error_tracking_resolve_after_days, 30)
+    cutoff = DateTime.add(DateTime.utc_now(), -resolve_after_days, :day)
 
     resolved = ErrorTrackingQueries.resolve_last_seen_before(cutoff)
-    pruned = ErrorTrackingQueries.prune_resolved(:timer.hours(24 * 2 * @resolve_after_days))
-    trimmed = ErrorTrackingQueries.trim_unresolved_occurrences(cutoff, @occurrences_kept)
+    pruned = ErrorTrackingQueries.prune_resolved(:timer.hours(24 * 2 * resolve_after_days))
+
+    trimmed =
+      ErrorTrackingQueries.trim_unresolved_occurrences(
+        cutoff,
+        Application.get_env(:tymeslot, :error_tracking_occurrences_kept, 50)
+      )
 
     Logger.info("ErrorTracker maintenance completed",
       errors_resolved: resolved,
       errors_pruned: pruned,
       occurrences_trimmed: trimmed,
-      resolve_after_days: @resolve_after_days
+      resolve_after_days: resolve_after_days
     )
 
     :ok

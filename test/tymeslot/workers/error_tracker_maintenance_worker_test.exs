@@ -92,6 +92,17 @@ defmodule Tymeslot.Workers.ErrorTrackerMaintenanceWorkerTest do
 
       assert length(remaining_occurrence_ids(error)) == 60
     end
+
+    # Read on every run, so a runtime.exs override takes effect without a
+    # rebuild; compiled in, it would be ignored.
+    test "reads the resolve window from the application environment at run time" do
+      with_config(:tymeslot, error_tracking_resolve_after_days: 5)
+      error = insert_error(last_seen_days_ago: 6)
+
+      assert :ok = perform_job()
+
+      assert raw_status(error) == "resolved"
+    end
   end
 
   describe "regression after auto-resolve" do

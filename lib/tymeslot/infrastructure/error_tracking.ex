@@ -108,6 +108,15 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
     end
   end
 
+  @doc """
+  Whether error tracking records anything: ErrorTracker's own `enabled`
+  switch, set from `ERROR_TRACKING_ENABLED` at boot. Read on every call, as
+  ErrorTracker reads it on every report, so the crash reporter and
+  `report_error/3` stop doing work the moment it is off.
+  """
+  @spec enabled?() :: boolean()
+  def enabled?, do: Application.get_env(:error_tracker, :enabled, true) not in [false, nil]
+
   @doc "Returns true inside `with_direct_report/1` in the calling process."
   @spec direct_report?() :: boolean()
   def direct_report?, do: Process.get(@direct_report_key) == true
@@ -115,7 +124,8 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
   @doc """
   Records a failure that was handled but not expected, and logs it at
   `:error`. Always returns `:ok`, and never raises: a failure to record is
-  logged instead.
+  logged instead. With error tracking switched off (`enabled?/0`) it only
+  logs.
 
   For a bug or an outage the caller recovered from (a rescued exception, an
   `{:error, reason}` nothing anticipated), not for expected failures such as
@@ -170,7 +180,10 @@ defmodule Tymeslot.Infrastructure.ErrorTracking do
     context = Map.new(context)
 
     log_handled_error(exception, exception_or_reason, context)
-    record(exception, stacktrace, tracker_context(exception, context))
+
+    if enabled?(),
+      do: record(exception, stacktrace, tracker_context(exception, context)),
+      else: :ok
   rescue
     failure -> log_report_failure(failure)
   catch

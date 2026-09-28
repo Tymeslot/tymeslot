@@ -569,7 +569,8 @@ config :excellent_migrations, start_after: "20260716094322"
 # ErrorTracker stores every exception in the application database, grouped by
 # fingerprint. Occurrence context passes through the Filter (credential and
 # email redaction) before it is written; the Ignorer drops client-error noise.
-# `enabled` is read on every report, so a test can switch it on locally.
+# `enabled` is read on every report, so a test can switch it on locally;
+# `ERROR_TRACKING_ENABLED` overrides it at boot (config/runtime.exs).
 config :error_tracker,
   repo: Tymeslot.Repo,
   otp_app: :tymeslot,
@@ -581,7 +582,7 @@ config :error_tracker,
 # `Tymeslot.Workers.ErrorTrackerMaintenanceWorker`: an error not seen for
 # this many days is marked resolved, deleted a further window later, and an
 # unresolved error's occurrences older than the window are trimmed down to
-# the newest `occurrences_kept`.
+# the newest `occurrences_kept`. Read at run time, so runtime.exs may set them.
 config :tymeslot, :error_tracking_resolve_after_days, 30
 config :tymeslot, :error_tracking_occurrences_kept, 50
 

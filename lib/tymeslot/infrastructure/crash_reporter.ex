@@ -169,7 +169,7 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   defp handle_crash(kind, reason, stacktrace, meta) do
     cond do
       UnmatchedEvent.exception?(reason) -> log_unmatched_client_event(reason, stacktrace)
-      not tracking_enabled?() -> :ok
+      not ErrorTracking.enabled?() -> :ok
       not reportable?(kind, reason) -> :ok
       already_recorded?(kind, reason, stacktrace) -> :ok
       true -> offload(kind, reason, stacktrace, crash_context(meta))
@@ -189,11 +189,6 @@ defmodule Tymeslot.Infrastructure.CrashReporter do
   catch
     _kind, _reason -> :ok
   end
-
-  # Read per crash, as ErrorTracker reads it per report, so switching error
-  # tracking off also stops the offloaded work here.
-  defp tracking_enabled?,
-    do: Application.get_env(:error_tracker, :enabled, true) not in [false, nil]
 
   # Compares the crash with what ErrorTracker last recorded in this process,
   # normalised the way ErrorTracker normalises it. The entry is consumed, so
