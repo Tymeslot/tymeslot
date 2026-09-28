@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.FormHelpers
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
@@ -135,7 +136,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Autosave do
     Logger.warning("Autosave context error",
       user_id: socket.assigns.current_user.id,
       meeting_type_id: socket.assigns.type.id,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     socket

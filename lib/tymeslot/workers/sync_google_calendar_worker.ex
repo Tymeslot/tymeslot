@@ -35,12 +35,16 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Google.CacheSweep
   alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Workers.SyncHealth
   alias Tymeslot.Workers.SyncRequest
 
@@ -55,15 +59,33 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   def enqueue(integration_id),
     do: SyncRequest.insert(__MODULE__, %{"calendar_integration_id" => integration_id})
 
+  @behaviour ExpectedJobOutcome
+
+  # The integration is gone, or only its owner can fix it by reconnecting.
+  # A sync past the pagination limit is recorded.
+  @integration_gone "Integration not found"
+  @calendar_gone "Booking calendar not found — user action required"
+  @credentials_rejected "Google rejected credentials — reauthentication required"
+  @calendar_disabled "Google Calendar not enabled for account: user action required"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do:
+      reason in [@integration_gone, @calendar_gone, @credentials_rejected, @calendar_disabled] or
+        reason == ReauthHandling.discard_reason()
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}} = job) do
     Logger.metadata(calendar_integration_id: integration_id)
 
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
-        integration
-        |> sync_integration()
-        |> tap(&SyncHealth.record_outcome(integration, &1))
+        fn ->
+          integration
+          |> sync_integration()
+          |> tap(&SyncHealth.record_outcome(integration, &1))
+        end
+        |> InvalidEventReport.collect()
         |> SyncRequest.rerun_if_requested(job)
 
       {:error, :not_found} ->
@@ -71,7 +93,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
           calendar_integration_id: integration_id
         )
 
-        {:discard, "Integration not found"}
+        {:discard, @integration_gone}
 
       {:error, :requires_reencryption, integration} ->
         CalendarManagement.handle_reauth_required(integration)
@@ -145,7 +167,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, _type, reason} ->
         Logger.error("Google Calendar incremental sync failed",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -153,7 +175,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, reason} ->
         Logger.error("Google Calendar incremental sync failed",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -206,7 +228,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, _type, reason} ->
         Logger.error("Google Calendar bootstrap failed",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -214,7 +236,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, reason} ->
         Logger.error("Google Calendar bootstrap failed",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -237,7 +259,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, reason} ->
         Logger.error("Google Calendar event processing failed; sync token NOT updated",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -329,7 +351,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         Logger.error("Google Calendar secondary sync failed",
           calendar_integration_id: integration.id,
           calendar_id: calendar_id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:halt, {:error, reason}}
@@ -338,7 +360,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         Logger.error("Google Calendar secondary sync failed",
           calendar_integration_id: integration.id,
           calendar_id: calendar_id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:halt, {:error, reason}}
@@ -361,7 +383,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         "dashboard_calendar_providers",
         "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
       ),
-      "Booking calendar not found — user action required"
+      @calendar_gone
     )
   end
 
@@ -384,7 +406,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         "dashboard_calendar_providers",
         "Google rejected the stored credentials. Please reconnect the integration."
       ),
-      "Google rejected credentials — reauthentication required"
+      @credentials_rejected
     )
   end
 
@@ -404,7 +426,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         "dashboard_calendar_providers",
         "This Google account doesn't have Google Calendar enabled. Turn on Google Calendar for the account (a Google Workspace administrator may need to do this), or connect a different Google account."
       ),
-      "Google Calendar not enabled for account: user action required"
+      @calendar_disabled
     )
   end
 
@@ -419,7 +441,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         Logger.error("Failed to de-select missing Google calendars",
           calendar_integration_id: integration.id,
           calendar_ids: missing_ids,
-          error: inspect(changeset.errors)
+          error: LogFormat.reason(changeset.errors)
         )
 
         :ok
@@ -471,7 +493,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, changeset} ->
         Logger.warning("Failed to persist Google Calendar sync state",
           calendar_integration_id: integration.id,
-          error: inspect(changeset)
+          error: LogFormat.reason(changeset)
         )
 
         :ok

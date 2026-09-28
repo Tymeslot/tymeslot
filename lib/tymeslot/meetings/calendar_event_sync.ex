@@ -28,6 +28,8 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
   alias Ecto.UUID
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Meetings.CalendarEventCache
@@ -49,7 +51,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   def create(meeting_id, attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
 
         # Another worker may already have created the event. OAuth providers
         # persist that mapping in provider_event_id; legacy flows may still
@@ -82,7 +84,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   def update(meeting_id, _attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
 
         Logger.info("Updating calendar event",
           meeting_id: meeting_id,
@@ -107,7 +109,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   def delete(meeting_id, _attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, %{calendar_integration_id: nil} = meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
 
         Logger.info("No calendar integration linked, skipping calendar deletion",
           meeting_id: meeting_id
@@ -116,7 +118,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
         :ok
 
       {:ok, meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
 
         if MeetingState.expects_calendar_event?(meeting) do
           # The meeting has become live again since this deletion was
@@ -125,8 +127,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
           # currently expects one — skip and let the live state stand.
           Logger.info(
             "Meeting now expects a calendar event, skipping stale deletion",
-            meeting_id: meeting_id,
-            uid: meeting.uid
+            meeting_id: meeting_id
           )
 
           :ok
@@ -176,7 +177,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   def replace(meeting_id, event_id, attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
         replace_event(meeting, event_id, attempt)
 
       {:error, :not_found} ->
@@ -379,7 +380,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   end
 
   defp create_event_for_meeting(meeting, meeting_id, attempt) do
-    Logger.info("Creating calendar event", meeting_id: meeting_id, uid: meeting.uid)
+    Logger.info("Creating calendar event", meeting_id: meeting_id)
 
     event_data = CalendarEventBuilder.build_event_data(meeting)
 
@@ -463,7 +464,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       other ->
         Logger.error("Failed to delete orphaned calendar event after persistence failure",
           meeting_id: meeting.id,
-          result: inspect(other)
+          result: LogFormat.reason(other)
         )
 
         :ok
@@ -515,7 +516,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       {:error, reason} ->
         Logger.warning("Failed to send calendar sync error notification",
           meeting_id: meeting.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
     end
   end
@@ -552,7 +553,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       {:error, changeset} ->
         Logger.error("Failed to persist calendar mapping",
           meeting_id: meeting.id,
-          error: inspect(changeset.errors)
+          error: LogFormat.reason(changeset.errors)
         )
 
         {:error, :calendar_mapping_persistence_failed}

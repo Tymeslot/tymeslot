@@ -48,6 +48,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Exchange.EventNormaliser
@@ -180,7 +181,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
     Logger.warning("Exchange rejected the stored sync token; forcing a full item read",
       calendar_integration_id: integration.id,
       folder: folder_key,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     integration.exchange_sync_states
@@ -329,7 +330,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.ItemCache do
       {:error, changeset} ->
         Logger.warning("Failed to persist Exchange sync states",
           calendar_integration_id: integration.id,
-          error: inspect(changeset)
+          error: LogFormat.reason(changeset)
         )
 
         %{integration | exchange_sync_states: states}

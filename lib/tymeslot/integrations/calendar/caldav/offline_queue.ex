@@ -59,6 +59,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.Base, as: CalDAVBase
   alias Tymeslot.Integrations.Calendar.CalDAV.Errors, as: CalDAVErrors
   alias Tymeslot.Integrations.Calendar.CalDAV.Events
@@ -171,7 +172,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
     Logger.error("CalDAV offline queue row carries an unknown sync_state",
       calendar_integration_id: integration.id,
       uid: row.uid,
-      sync_state: inspect(other)
+      sync_state: LogFormat.reason(other)
     )
 
     QueueQueries.mark_sync_failed(
@@ -379,7 +380,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
       calendar_integration_id: integration.id,
       uid: row.uid,
       operation: operation,
-      error: format_reason(reason)
+      error: LogFormat.reason(reason)
     )
 
     QueueQueries.mark_sync_failed(
@@ -406,9 +407,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
       operation: operation
     )
   end
-
-  defp format_reason(reason) when is_binary(reason), do: reason
-  defp format_reason(reason), do: inspect(reason)
 
   defp no_primary_path_message do
     dgettext(

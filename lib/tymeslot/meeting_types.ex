@@ -5,6 +5,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Ecto.UUID
   alias Tymeslot.BookingPage.Publication
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Video
@@ -167,8 +168,11 @@ defmodule Tymeslot.MeetingTypes do
       :ok
     else
       Logger.info("Creating default meeting types for user", user_id: user_id)
-      create_default_meeting_types(user_id)
-      :ok
+
+      case create_default_meeting_types(user_id) do
+        {:ok, _meeting_types} -> :ok
+        {:error, reason} -> ErrorTracking.report_error(reason, nil, %{user_id: user_id})
+      end
     end
   end
 

@@ -141,6 +141,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
   alias Tymeslot.CalendarGrid.RecurrenceScope
   alias Tymeslot.CalendarGrid.SeriesCarry
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Workers.RefreshOutlookCalendarWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
@@ -391,7 +392,7 @@ defmodule Tymeslot.CalendarGrid.SeriesEdit do
       {:error, reason} ->
         Logger.warning("Could not request a sync after writing a whole series",
           calendar_integration_id: integration_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
   end

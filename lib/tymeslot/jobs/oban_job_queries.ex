@@ -90,6 +90,19 @@ defmodule Tymeslot.Jobs.ObanJobQueries do
   end
 
   @doc """
+  Returns the worker of each job in `ids` whose row still exists, as a map of
+  job id to worker name. Ids without a row are left out.
+  """
+  @spec workers_by_id([integer()]) :: %{integer() => String.t()}
+  def workers_by_id([]), do: %{}
+
+  def workers_by_id(ids) when is_list(ids) do
+    from(j in Job, where: j.id in ^ids, select: {j.id, j.worker})
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
   Updates a job to discarded state with error information.
   """
   @spec update_job_to_discarded(Job.t(), map()) ::

@@ -150,6 +150,7 @@ defmodule Tymeslot.MixProject do
       {:mjml, "~> 6.0"},
       {:nodejs, "~> 3.0"},
       {:oban, "~> 2.20"},
+      {:error_tracker, "~> 0.9"},
       {:logger_json, "~> 7.0"},
       {:ecto_sql, "~> 3.13"},
       {:postgrex, "~> 0.22"},

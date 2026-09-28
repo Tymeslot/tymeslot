@@ -21,6 +21,8 @@ defmodule Tymeslot.Payments.RetryHelper do
       end)
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   require Logger
 
   @type retry_result :: {:ok, term()} | {:error, term()}
@@ -155,7 +157,7 @@ defmodule Tymeslot.Payments.RetryHelper do
       Logger.warning("Retrying operation after exception",
         attempt: attempt,
         max_attempts: max_attempts,
-        error: inspect(exception)
+        error: LogFormat.reason(exception)
       )
 
       Process.sleep(delay)
@@ -185,7 +187,10 @@ defmodule Tymeslot.Payments.RetryHelper do
   end
 
   defp log_final_error(error, attempts) do
-    Logger.error("Operation failed after max attempts", attempts: attempts, error: inspect(error))
+    Logger.error("Operation failed after max attempts",
+      attempts: attempts,
+      error: LogFormat.reason(error)
+    )
   end
 
   @doc """

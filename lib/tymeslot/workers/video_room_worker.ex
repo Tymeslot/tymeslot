@@ -43,7 +43,11 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     priority: 0
 
   alias Ecto.Changeset
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
@@ -91,6 +95,15 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     states: [:available, :scheduled, :executing, :retryable]
   ]
 
+  @behaviour ExpectedJobOutcome
+
+  # A missing meeting, an integration only the user can restore, and a
+  # meeting that started before recovery finished are expected; failed
+  # credentials, configuration and exhausted recovery are not.
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do: ErrorPolicy.expected_discard?(reason) or Recovery.expected_discard?(reason)
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"meeting_id" => meeting_id} = args, attempt: attempt} = job) do
     announcement = Announcement.from_args(args)
@@ -107,7 +120,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
         backoff(meeting_id, execution)
 
         Logger.info("Starting video room creation",
@@ -119,7 +132,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
       {:error, :not_found} ->
         Logger.warning("Meeting not found, discarding video room job", meeting_id: meeting_id)
-        {:discard, "Meeting not found"}
+        {:discard, ErrorPolicy.discard_reason(:meeting_not_found)}
     end
   end
 
@@ -200,7 +213,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   defp format_insert_error(%Changeset{} = changeset),
     do: Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
 
-  defp format_insert_error(other), do: inspect(other)
+  defp format_insert_error(other), do: LogFormat.reason(other)
 
   # Exponential backoff between ordinary retries: 1s, 2s, 4s, 8s, 16s. Sleeping
   # in the job rather than snoozing keeps the failure a genuine attempt, so it
@@ -254,7 +267,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     timeout_ms = creation_timeout_ms(meeting)
 
     task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+      Tasks.async(Tymeslot.TaskSupervisor, fn ->
         Meetings.add_video_room_to_meeting(meeting_id)
       end)
 
@@ -344,7 +357,10 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
   defp log_failure(reason, meeting_id),
     do:
-      Logger.error("Failed to create video room", meeting_id: meeting_id, reason: inspect(reason))
+      Logger.error("Failed to create video room",
+        meeting_id: meeting_id,
+        reason: LogFormat.reason(reason)
+      )
 
   defp handle_timeout(meeting_id, announcement, execution) do
     if Recovery.recovering?(execution, Announcement.owed?(announcement)) do
@@ -360,7 +376,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   defp to_oban_result({:error, reason}, execution), do: ErrorPolicy.to_result(reason, execution)
 
   defp to_oban_result(other, _execution) do
-    Logger.error("Unexpected result from video room job", result: inspect(other))
+    Logger.error("Unexpected result from video room job", result: LogFormat.reason(other))
     {:error, "Unexpected result"}
   end
 end

@@ -107,13 +107,8 @@ if config_env() == :prod do
       LoggerJSON.Formatters.Basic.new(metadata: {:all_except, [:conn, :socket, :mfa, :pid, :gl]})
 
   # Database configuration based on deployment type (define early as it's used for URL scheme)
-  # Defaults to "docker" if DEPLOYMENT_TYPE is not set or unknown
-  deployment_type =
-    case System.get_env("DEPLOYMENT_TYPE") do
-      "cloudron" -> "cloudron"
-      "main" -> "cloudron"
-      _ -> "docker"
-    end
+  # "cloudron" or the legacy "main"; "docker" if DEPLOYMENT_TYPE is unset or unknown
+  deployment_type = Tymeslot.Infrastructure.DeploymentType.current()
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
@@ -297,7 +292,11 @@ if config_env() == :prod do
         {"30 4 * * *", Tymeslot.Workers.AnalyticsReconciliationWorker},
         # Run every 15 min to release approval requests whose deadline passed
         # and whose per-meeting expiry job never fired
-        {"*/15 * * * *", Tymeslot.Meetings.Workers.ApprovalSweepWorker}
+        {"*/15 * * * *", Tymeslot.Meetings.Workers.ApprovalSweepWorker},
+        # Run daily at 03:05 UTC to resolve quiet errors and prune old ones
+        {"5 3 * * *", Tymeslot.Workers.ErrorTrackerMaintenanceWorker},
+        # Run daily at 07:00 UTC to email the digest of info-severity admin alerts
+        {"0 7 * * *", Tymeslot.Workers.AdminAlertDigestWorker}
       ]
     ]
 

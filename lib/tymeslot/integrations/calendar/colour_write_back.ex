@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.ColourWriteBack do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Workers.ColourWriteBackWorker
 
   @doc """
@@ -41,7 +42,7 @@ defmodule Tymeslot.Integrations.Calendar.ColourWriteBack do
     Logger.warning("Failed to enqueue colour write-back",
       user_id: user_id,
       integration_id: integration_id,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
   end
 end

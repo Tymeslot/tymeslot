@@ -77,6 +77,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
 
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.ColourOverrideQueries
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series.Shift
   alias Tymeslot.Integrations.Calendar.ProviderCalendarSeriesQueries
@@ -251,7 +252,7 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
         Logger.warning("Could not hand a series' video to the sync that brings it back",
           user_id: user_id,
           calendar_integration_id: series.integration_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
   end
@@ -456,7 +457,8 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
       Logger.error("Calendar grid: could not carry a series' state across a write",
         step: step,
         user_id: user_id,
-        error: Exception.format(:error, error, __STACKTRACE__)
+        error: LogFormat.reason(error),
+        stacktrace: LogFormat.stacktrace(__STACKTRACE__)
       )
 
       :ok
@@ -467,7 +469,8 @@ defmodule Tymeslot.CalendarGrid.SeriesCarry do
       step: step,
       user_id: user_id,
       calendar_integration_id: Map.get(stored, :calendar_integration_id),
-      error: Exception.format(:error, error, stacktrace)
+      error: LogFormat.reason(error),
+      stacktrace: LogFormat.stacktrace(stacktrace)
     )
   end
 end

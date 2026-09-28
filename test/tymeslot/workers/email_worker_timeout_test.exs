@@ -14,6 +14,7 @@ defmodule Tymeslot.Workers.EmailWorkerTimeoutTest do
   alias Tymeslot.EmailServiceMock
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Workers.EmailWorker
+  alias Tymeslot.Workers.EmailWorker.AdminAlertScheduler
 
   setup :verify_on_exit!
 
@@ -41,6 +42,25 @@ defmodule Tymeslot.Workers.EmailWorkerTimeoutTest do
                  "user_id" => user.id,
                  "verification_url" => "https://example.com/verify"
                })
+    end
+
+    # An admin alert is the one email where a duplicate costs nothing and a
+    # loss costs the operator the incident, and an SMTP outage often shows as
+    # a hang rather than a refusal. Discarding it on a timeout would defeat
+    # the long retry schedule `AdminAlertScheduler` gives it.
+    test "retries an admin alert whose send outlives the timeout" do
+      stub(EmailServiceMock, :send_admin_alert, fn _recipient, _category, _sev, _msg, _meta ->
+        receive do
+          :never -> {:ok, :sent}
+        end
+      end)
+
+      args =
+        AdminAlertScheduler.build_args("ops@example.com", "System", :error, "boom", %{},
+          dedup_key: "timeout-test"
+        )
+
+      assert {:error, "Email sending timed out"} = perform_job(EmailWorker, args)
     end
   end
 

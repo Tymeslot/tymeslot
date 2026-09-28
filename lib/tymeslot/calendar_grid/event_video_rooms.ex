@@ -76,6 +76,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.CalendarGrid.EventVideoRoomTimes
   alias Tymeslot.CalendarGrid.Occurrence
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Workers.VideoSyncWorker
 
@@ -483,7 +484,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
         Logger.warning("Failed to record the video room of a calendar event",
           user_id: event.user_id,
           video_integration_id: event.video_integration_id,
-          errors: inspect(changeset.errors)
+          errors: LogFormat.reason(changeset.errors)
         )
 
         :ok
@@ -530,7 +531,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRooms do
         Logger.warning("Failed to enqueue video room sync for a calendar event",
           calendar_event_video_room_id: room.id,
           action: action,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok

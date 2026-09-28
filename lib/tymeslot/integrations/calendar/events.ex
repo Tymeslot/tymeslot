@@ -8,6 +8,8 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   """
 
   alias Tymeslot.Availability.Schedules
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.Client, as: CalDAVClient
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites
@@ -292,12 +294,10 @@ defmodule Tymeslot.Integrations.Calendar.Events do
     Sync.reconcile(integration_id, provider_event_id, uid, :deleted)
   rescue
     error ->
-      Logger.error("Reconciliation crashed after the calendar event was deleted",
+      ErrorTracking.report_error(error, __STACKTRACE__, %{
         calendar_integration_id: integration_id,
-        provider_event_id: provider_event_id,
-        uid: uid,
-        error: Exception.format(:error, error, __STACKTRACE__)
-      )
+        provider_event_id: provider_event_id
+      })
 
       {:error, error}
   end
@@ -510,7 +510,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
       mod
     else
       Logger.warning("Configured calendar_module is not loaded, falling back to Operations",
-        calendar_module: inspect(mod)
+        calendar_module: LogFormat.reason(mod)
       )
 
       Tymeslot.Integrations.Calendar.Operations

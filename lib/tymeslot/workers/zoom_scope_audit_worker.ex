@@ -32,6 +32,7 @@ defmodule Tymeslot.Workers.ZoomScopeAuditWorker do
 
   use Oban.Worker, queue: :default, max_attempts: 1, unique: [period: 60]
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Reauth
   alias Tymeslot.Integrations.Video.Providers.ZoomProvider.Scopes
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -108,7 +109,8 @@ defmodule Tymeslot.Workers.ZoomScopeAuditWorker do
         "Zoom integrations blocked by a scope the Zoom app does not request; " <>
           "users cannot fix this by reconnecting",
         integrations: blocked,
-        missing_operations: inspect(Enum.reject(Scopes.operations(), &Scopes.requestable?/1))
+        missing_operations:
+          LogFormat.reason(Enum.reject(Scopes.operations(), &Scopes.requestable?/1))
       )
     end
 

@@ -18,6 +18,8 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   require Logger
 
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -161,12 +163,11 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     CalendarEventQueries.full_refresh_for_role(integration.id, role, calendar_events)
   rescue
     e ->
-      Logger.error("Calendar event cache role refresh raised an exception",
+      ErrorTracking.report_error(e, __STACKTRACE__, %{
         calendar_integration_id: integration.id,
         role: role,
-        event_count: length(calendar_events),
-        reason: Exception.message(e)
-      )
+        event_count: length(calendar_events)
+      })
 
       {:error, Exception.message(e)}
   end
@@ -206,11 +207,10 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     end
   rescue
     e ->
-      Logger.error("Calendar event cache upsert raised an exception",
+      ErrorTracking.report_error(e, __STACKTRACE__, %{
         calendar_integration_id: integration.id,
-        event_count: length(calendar_events),
-        reason: Exception.message(e)
-      )
+        event_count: length(calendar_events)
+      })
 
       {:error, Exception.message(e)}
   end
@@ -232,7 +232,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   Invalidates all cached availability data for a user after any sync mutation.
 
   Best-effort — if the cache GenServer is mid-restart and the ETS table is
-  temporarily absent, the error is logged as a warning and `:ok` is returned.
+  temporarily absent, the failure is recorded and `:ok` is returned.
   A committed sync transaction must not be unwound because of a transient
   cache state.
   """
@@ -242,13 +242,10 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     :ok
   rescue
     e ->
-      Logger.warning("Availability cache invalidation failed — cache may be mid-restart",
+      ErrorTracking.report_error(e, __STACKTRACE__, %{
         calendar_integration_id: integration.id,
-        user_id: integration.user_id,
-        reason: Exception.message(e)
-      )
-
-      :ok
+        user_id: integration.user_id
+      })
   end
 
   @doc """
@@ -445,8 +442,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
           calendar_integration_id: integration.id,
           meeting_id: meeting.id,
           provider_event_id: meeting.provider_event_id,
-          uid: meeting.uid,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
   end

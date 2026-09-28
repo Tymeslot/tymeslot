@@ -31,6 +31,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
     UrlBuilder
   }
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Format
   alias Tymeslot.Integrations.Calendar.ICalBuilder.Series
   alias Tymeslot.Utils.UriUtils
@@ -282,7 +283,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SeriesWrites do
       {:error, reason} ->
         Logger.warning("CalDAV series split left its following occurrences behind",
           tail_url: tail_url,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
   end

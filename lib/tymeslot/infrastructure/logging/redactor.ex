@@ -7,8 +7,10 @@ defmodule Tymeslot.Infrastructure.Logging.Redactor do
     {~r/Bearer\s+[a-zA-Z0-9\-\._~+\/]+=*/i, "Bearer [REDACTED]"},
     {~r/Basic\s+[a-zA-Z0-9\-\._~+\/]+=*/i, "Basic [REDACTED]"},
     {~r/token=[a-zA-Z0-9\-\._~+\/]+=*/i, "token=[REDACTED]"},
-    {~r/([&\?])code=[^&\s"]+/i, "\\1code=[REDACTED]"},
-    {~r/([&\?])state=[^&\s"]+/i, "\\1state=[REDACTED]"},
+    # A bare query string ("code=abc&state=xyz") starts with its first
+    # parameter, with no `?` in front of it.
+    {~r/(^|[&\?])code=[^&\s"]+/i, "\\1code=[REDACTED]"},
+    {~r/(^|[&\?])state=[^&\s"]+/i, "\\1state=[REDACTED]"},
     {~r/"?access_token"?[^a-zA-Z0-9]+"[^"]+"/i, "access_token: \"[REDACTED]\""},
     {~r/"?refresh_token"?[^a-zA-Z0-9]+"[^"]+"/i, "refresh_token: \"[REDACTED]\""},
     {~r/"?client_secret"?[^a-zA-Z0-9]+"[^"]+"/i, "client_secret: \"[REDACTED]\""},

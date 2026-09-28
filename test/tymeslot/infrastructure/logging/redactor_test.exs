@@ -74,6 +74,15 @@ defmodule Tymeslot.Infrastructure.Logging.RedactorTest do
       assert Redactor.redact("url?first=1&token=abc") == "url?first=1&token=[REDACTED]"
     end
 
+    test "redacts code and state at the start of a bare query string" do
+      assert Redactor.redact("code=abc&state=xyz&tab=1") ==
+               "code=[REDACTED]&state=[REDACTED]&tab=1"
+    end
+
+    test "leaves a parameter that only ends in code or state alone" do
+      assert Redactor.redact("zipcode=12345&estate=big") == "zipcode=12345&estate=big"
+    end
+
     test "redacts api_key in different formats" do
       assert Redactor.redact("api_key:\"key123\"") =~ "api_key: \"[REDACTED]\""
       assert Redactor.redact("api_key : \"key456\"") =~ "api_key: \"[REDACTED]\""

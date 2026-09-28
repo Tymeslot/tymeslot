@@ -28,6 +28,7 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.SplitExceptions do
   them.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Recurrence.SeriesMove
 
   require Logger
@@ -140,7 +141,7 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.SplitExceptions do
       carried: counts.carried,
       unmatched: counts.unmatched,
       failed: counts.failed,
-      reasons: inspect(Enum.reverse(reasons))
+      reasons: LogFormat.reason(Enum.reverse(reasons))
     )
   end
 

@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.TierDetector do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.Http, as: CalDAVHttp
   alias Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder
   alias Tymeslot.Integrations.Calendar.CalDAV.XmlHandler
@@ -95,7 +96,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.TierDetector do
       {:error, reason} ->
         Logger.debug("CalDAV tier detection PROPFIND failed, defaulting to Tier 3",
           calendar_integration_id: integration.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:ok, 3}

@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   """
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.ResponseTooLargeError
   alias Tymeslot.Infrastructure.RetryLogic
   # Aliased as CalDAVBase to avoid shadowing Elixir's built-in Base module,
@@ -471,7 +472,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     do: {:error, :response_too_large}
 
   defp handle_read_transport_error(reason, method) do
-    Logger.debug("CalDAV read network error", method: method, reason: inspect(reason))
+    Logger.debug("CalDAV read network error", method: method, reason: LogFormat.reason(reason))
     {:error, :network_error}
   end
 
@@ -485,7 +486,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     do: write_timeout_error()
 
   defp handle_write_transport_error(reason) do
-    Logger.debug("CalDAV PUT/DELETE network error", reason: inspect(reason))
+    Logger.debug("CalDAV PUT/DELETE network error", reason: LogFormat.reason(reason))
     {:error, :network_error}
   end
 

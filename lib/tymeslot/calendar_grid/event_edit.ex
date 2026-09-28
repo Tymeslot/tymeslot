@@ -76,6 +76,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
   alias Tymeslot.CalendarGrid.RecurrenceScope
   alias Tymeslot.CalendarGrid.SeriesEdit
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarResourceQueries
@@ -396,7 +397,7 @@ defmodule Tymeslot.CalendarGrid.EventEdit do
       {:error, reason} ->
         Logger.warning("Calendar event edit reached the provider but not the cache",
           calendar_integration_id: event.calendar_integration_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
 

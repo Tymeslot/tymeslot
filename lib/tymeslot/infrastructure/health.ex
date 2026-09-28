@@ -5,8 +5,16 @@ defmodule Tymeslot.Infrastructure.Health do
 
   The report backs the public `/healthcheck` endpoint, which container
   orchestrators (Cloudron's `healthCheckPath` among them) poll to decide
-  whether to restart the app, so every check here is essential: any check
-  that is not `:ok` makes the whole instance `:unhealthy`.
+  whether to restart the app. The overall status is the worst of the checks:
+
+  | Status | Meaning | Checks |
+  |--------|---------|--------|
+  | `:ok` | Fully working | every check `:ok` |
+  | `:degraded` | Serving, but some work is on hold; a restart would not help | an Oban queue `:paused`, nothing `:unavailable` |
+  | `:unhealthy` | Cannot do its job | any check `:unavailable` |
+
+  A paused queue is an operator's deliberate act and survives a restart, so it
+  must not make the orchestrator restart the instance in a loop.
   """
 
   require Logger
@@ -15,7 +23,8 @@ defmodule Tymeslot.Infrastructure.Health do
 
   @type check_status :: :ok | :paused | :unavailable
   @type checks :: %{database: check_status(), oban: check_status()}
-  @type report :: %{status: :ok | :unhealthy, checks: checks()}
+  @type status :: :ok | :degraded | :unhealthy
+  @type report :: %{status: status(), checks: checks()}
 
   @doc """
   Runs every check and summarises them.
@@ -27,7 +36,13 @@ defmodule Tymeslot.Infrastructure.Health do
   end
 
   defp summarise(checks) do
-    if Enum.all?(checks, fn {_name, status} -> status == :ok end), do: :ok, else: :unhealthy
+    statuses = Map.values(checks)
+
+    cond do
+      :unavailable in statuses -> :unhealthy
+      :paused in statuses -> :degraded
+      true -> :ok
+    end
   end
 
   defp check_database do

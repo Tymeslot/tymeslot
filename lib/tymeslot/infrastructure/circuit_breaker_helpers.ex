@@ -8,6 +8,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
   """
 
   alias Tymeslot.Infrastructure.CircuitBreaker
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   require Logger
 
   @typedoc """
@@ -62,7 +63,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
           Logger.error("Operation failed",
             service: service_type,
             provider: provider,
-            error: inspect(reason)
+            error: LogFormat.reason(reason)
           )
 
           {:error, reason}
@@ -71,7 +72,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
           Logger.error("Operation failed",
             service: service_type,
             provider: provider,
-            error: inspect(error)
+            error: LogFormat.reason(error)
           )
 
           error
@@ -80,7 +81,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
           Logger.error("Operation failed",
             service: service_type,
             provider: provider,
-            error: inspect(reason)
+            error: LogFormat.reason(reason)
           )
 
           error
@@ -88,7 +89,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
     else
       Logger.error("Circuit breaker not found - it should be started by supervisor",
         provider: provider,
-        breaker_name: inspect(breaker_name)
+        breaker_name: LogFormat.reason(breaker_name)
       )
 
       {:error, :breaker_not_found}
@@ -98,7 +99,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
       Logger.error("Circuit breaker error",
         service: service_type,
         provider: provider,
-        error: inspect(error)
+        error: LogFormat.reason(error)
       )
 
       {:error, :circuit_breaker_error}
@@ -111,7 +112,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
       Logger.error("Circuit breaker error",
         service: service_type,
         provider: provider,
-        error: inspect(reason)
+        error: LogFormat.reason(reason)
       )
 
       {:error, :circuit_breaker_error}
@@ -159,7 +160,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
           service_type: service_type,
           provider: provider,
           host: host,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -169,7 +170,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
           service_type: service_type,
           provider: provider,
           host: host,
-          error: inspect(error)
+          error: LogFormat.reason(error)
         )
 
         error
@@ -179,7 +180,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
           service_type: service_type,
           provider: provider,
           host: host,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         error
@@ -190,7 +191,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
         service_type: service_type,
         provider: provider,
         host: host,
-        error: inspect(error)
+        error: LogFormat.reason(error)
       )
 
       {:error, :circuit_breaker_error}
@@ -200,7 +201,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
         service_type: service_type,
         provider: provider,
         host: host,
-        error: inspect(reason)
+        error: LogFormat.reason(reason)
       )
 
       {:error, :circuit_breaker_error}

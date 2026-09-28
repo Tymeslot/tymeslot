@@ -268,9 +268,9 @@ defmodule Tymeslot.Workers.RefreshOutlookCalendarWorkerTest do
 
     test "discards once the retry ladder is spent, rather than alerting an operator",
          %{integration: integration} do
-      # A discard reaches Oban as `job:stop`, which ObanFailureAlerter never
-      # sees; only an unhandled `{:error, _}` on the last attempt raises the
-      # permanent-failure admin alert. FallbackSyncSweepWorker re-enqueues this
+      # A discard reaches Oban as `job:stop`, which error tracking never
+      # records; only an unhandled `{:error, _}` is recorded and can alert an
+      # operator. FallbackSyncSweepWorker re-enqueues this
       # integration within 15 minutes, and a remote that never recovers is the
       # health check's job to report.
       assert {:discard, message} =

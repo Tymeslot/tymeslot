@@ -9,6 +9,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Repo
+  alias Tymeslot.Test.LogCapture
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Endpoint
 
@@ -42,45 +43,36 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
     end
   end
 
+  # SaaS forces the flag on and relies on ADMIN_ALERT_EMAIL; a self-hoster can
+  # switch it on in the admin settings. Either way, an enabled flag with no
+  # usable recipient drops every alert email, so each drop is logged at :error.
   describe "when feature flag is enabled but email is missing or invalid" do
     setup do
       setup_config(:tymeslot, admin_alerts_enabled: true)
     end
 
-    test "does not enqueue when admin_alert_email is nil" do
-      with_config(:tymeslot, admin_alert_email: nil)
+    for {label, recipient} <- [nil: nil, empty: "", malformed: "not-an-email"] do
+      test "logs the dropped email at :error when admin_alert_email is #{label}" do
+        with_config(:tymeslot, admin_alert_email: unquote(recipient))
 
-      assert :ok =
-               AdminAlerts.send_alert(:unhandled_webhook, %{
-                 event_type: "charge.failed",
-                 event_id: "evt_no_email_002"
-               })
+        events =
+          LogCapture.with_capture(fn ->
+            assert :ok =
+                     AdminAlerts.send_alert(:unhandled_webhook, %{
+                       event_type: "charge.failed",
+                       event_id: "evt_no_recipient_#{unquote(label)}"
+                     })
 
-      assert all_enqueued(worker: EmailWorker) == []
-    end
+            LogCapture.drain()
+          end)
 
-    test "does not enqueue when admin_alert_email is an empty string" do
-      with_config(:tymeslot, admin_alert_email: "")
+        assert all_enqueued(worker: EmailWorker) == []
 
-      assert :ok =
-               AdminAlerts.send_alert(:unhandled_webhook, %{
-                 event_type: "charge.failed",
-                 event_id: "evt_empty_003"
-               })
-
-      assert all_enqueued(worker: EmailWorker) == []
-    end
-
-    test "does not enqueue when admin_alert_email is malformed" do
-      with_config(:tymeslot, admin_alert_email: "not-an-email")
-
-      assert :ok =
-               AdminAlerts.send_alert(:unhandled_webhook, %{
-                 event_type: "charge.failed",
-                 event_id: "evt_malformed_004"
-               })
-
-      assert all_enqueued(worker: EmailWorker) == []
+        assert [%{level: :warning}] = logged(events, "ADMIN ALERT")
+        assert [%{level: :error} = dropped] = logged(events, "no valid recipient")
+        assert LogCapture.message_text(dropped.msg) =~ "ADMIN_ALERT_EMAIL"
+        assert LogCapture.message_text(dropped.msg) =~ "Admin alert recipient"
+      end
     end
   end
 
@@ -107,23 +99,23 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
 
     test "enqueued job carries the formatted message" do
       assert :ok =
-               AdminAlerts.send_alert(:dispute_created, %{
-                 dispute_id: "dp_006",
-                 reason: "fraudulent"
-               })
+               AdminAlerts.report(:dispute_created,
+                 summary: "New dispute created",
+                 reason: {:dispute_created, "fraudulent"},
+                 context: %{dispute_id: "dp_006"}
+               )
 
       [job] = all_enqueued(worker: EmailWorker)
-      assert job.args["message"] =~ "dp_006"
-      assert job.args["message"] =~ "fraudulent"
+      assert job.args["message"] =~ "dp_006 (Reason: fraudulent)"
       assert job.args["message"] =~ "Manual review"
     end
 
     test "enqueued job carries the registry severity as a string" do
       assert :ok =
-               AdminAlerts.send_alert(:refund_processed, %{user_id: 7, total_refunded: 100})
+               AdminAlerts.send_alert(:dispute_lost, %{dispute_id: "dp_sev", user_id: 7})
 
       [job] = all_enqueued(worker: EmailWorker)
-      assert job.args["severity"] == "info"
+      assert job.args["severity"] == "error"
     end
 
     test "metadata is enriched with deployment context" do
@@ -194,6 +186,50 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
     end
   end
 
+  # The headline is built from the alert's metadata, so it must be built from
+  # the scrubbed copy: formatting first put the organiser's raw address into
+  # the log line, the persisted job args and the alert email.
+  describe "personal data in the alert headline" do
+    setup do
+      setup_config(:tymeslot,
+        admin_alerts_enabled: true,
+        admin_alert_email: "ops@example.com"
+      )
+    end
+
+    test "a calendar sync error never carries the owner's raw address" do
+      LogCapture.with_capture(fn ->
+        assert :ok =
+                 AdminAlerts.send_alert(:calendar_sync_error, %{
+                   owner_email: "owner@example.com",
+                   reason_message: "boom",
+                   meeting_id: 1,
+                   calendar_integration_id: 5
+                 })
+      end)
+
+      log_event = LogCapture.await_log("ADMIN ALERT")
+      refute inspect(log_event) =~ "owner@example.com"
+
+      [job] = all_enqueued(worker: EmailWorker)
+      refute Jason.encode!(job.args) =~ "owner@example.com"
+      assert job.args["message"] == "Calendar sync error for o***@example.com: boom"
+    end
+
+    test "a rejected recipient's address in the provider reason is masked" do
+      assert :ok =
+               AdminAlerts.send_alert(:recipient_email_rejected, %{
+                 summary: "Recipient permanently undeliverable, email discarded",
+                 reason_message: "Found inactive addresses: jane.doe@example.com",
+                 meeting_id: 7
+               })
+
+      [job] = all_enqueued(worker: EmailWorker)
+      refute Jason.encode!(job.args) =~ "jane.doe@example.com"
+      assert job.args["message"] =~ "Found inactive addresses: j***@example.com"
+    end
+  end
+
   describe "deduplication" do
     setup do
       setup_config(:tymeslot,
@@ -228,6 +264,36 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
       jobs = all_enqueued(worker: EmailWorker)
       assert length(jobs) == 2
     end
+
+    # The key identifies the failing calendar, not its owner: one owner with
+    # two broken calendars gets an alert for each.
+    test "calendar sync errors from different calendars both enqueue" do
+      for integration_id <- [1, 2] do
+        assert :ok =
+                 AdminAlerts.send_alert(:calendar_sync_error, %{
+                   owner_email: "owner@example.com",
+                   calendar_integration_id: integration_id,
+                   meeting_id: integration_id,
+                   reason_message: "boom"
+                 })
+      end
+
+      assert length(all_enqueued(worker: EmailWorker)) == 2
+    end
+
+    test "repeat calendar sync errors from one calendar collapse into one alert" do
+      for meeting_id <- [1, 2] do
+        assert :ok =
+                 AdminAlerts.send_alert(:calendar_sync_error, %{
+                   owner_email: "owner@example.com",
+                   calendar_integration_id: 5,
+                   meeting_id: meeting_id,
+                   reason_message: "boom"
+                 })
+      end
+
+      assert length(all_enqueued(worker: EmailWorker)) == 1
+    end
   end
 
   describe "alerts reporting a failure of the email pipeline itself" do
@@ -242,23 +308,42 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
     # reason the original did, its discard raises another alert, and so on. One
     # suppressed recipient once produced eighteen jobs and eighty-three failed
     # attempts this way.
-    test "an EmailWorker failure is logged but never enqueues another email" do
+    test "an error delivering an admin alert is logged but never enqueues another email" do
       assert :ok =
-               AdminAlerts.send_alert(:oban_job_failure, %{
-                 worker: "Tymeslot.Workers.EmailWorker",
-                 queue: "emails",
-                 job_id: 393_245
+               AdminAlerts.send_alert(:new_error, %{
+                 error_id: 12,
+                 job_worker: "Tymeslot.Workers.EmailWorker",
+                 job_action: "send_admin_alert"
+               })
+
+      assert :ok =
+               AdminAlerts.send_alert(:error_regression, %{
+                 error_id: 12,
+                 occurrence_id: 40,
+                 job_worker: "Tymeslot.Workers.EmailWorker",
+                 job_action: "send_admin_alert"
                })
 
       assert all_enqueued(worker: EmailWorker) == []
     end
 
-    test "a failure in any other worker still enqueues an alert email" do
+    test "an error in any other email the worker sends still enqueues an alert email" do
       assert :ok =
-               AdminAlerts.send_alert(:oban_job_failure, %{
-                 worker: "Tymeslot.Workers.WebhookWorker",
-                 queue: "webhooks",
-                 job_id: 393_246
+               AdminAlerts.send_alert(:new_error, %{
+                 error_id: 13,
+                 job_worker: "Tymeslot.Workers.EmailWorker",
+                 job_action: "send_booking_confirmation"
+               })
+
+      assert [_job] = all_enqueued(worker: EmailWorker)
+    end
+
+    test "an error in any other worker still enqueues an alert email" do
+      assert :ok =
+               AdminAlerts.send_alert(:new_error, %{
+                 error_id: 14,
+                 job_worker: "Tymeslot.Workers.WebhookWorker",
+                 job_action: "send_admin_alert"
                })
 
       assert [_job] = all_enqueued(worker: EmailWorker)
@@ -267,8 +352,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
     # The admin-alert email itself bouncing must not re-enqueue another
     # admin-alert email to the same dead recipient: that email would bounce
     # too, raising another :recipient_email_rejected report, forever. This is
-    # the same feedback loop as the EmailWorker case above, just reached
-    # through the recipient-rejected path instead of a permanent job failure.
+    # the same feedback loop as the delivery error case above, just reached
+    # through the recipient-rejected path instead of a recorded error.
     test "a rejected admin-alert recipient is logged but never enqueues another email" do
       assert :ok =
                AdminAlerts.send_alert(:recipient_email_rejected, %{
@@ -323,4 +408,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
       refute AdminAlerts.valid_email?(123)
     end
   end
+
+  defp logged(events, text),
+    do: Enum.filter(events, &(LogCapture.message_text(&1.msg) =~ text))
 end

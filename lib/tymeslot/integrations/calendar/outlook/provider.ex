@@ -25,6 +25,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, MultiCalendarFetch, ProviderCommon}
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
 
+  require Logger
+
   @typep converted_event :: %{
            required(:uid) => String.t() | nil,
            required(:ical_uid) => String.t() | nil,
@@ -91,8 +93,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
 
   @spec convert_event(map()) :: converted_event()
   def convert_event(outlook_event) do
-    start_time = parse_datetime(outlook_event[:start], outlook_event[:is_all_day])
-    end_time = parse_datetime(outlook_event[:end], outlook_event[:is_all_day])
+    start_time = event_time(outlook_event, :start)
+    end_time = event_time(outlook_event, :end)
 
     %{
       uid: outlook_event[:id] || outlook_event[:uid],
@@ -362,6 +364,25 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
 
   defp get_calendar_owner(_calendar), do: "Unknown"
 
+  # A time Outlook sent but that does not parse is read as missing, like an
+  # absent one, and logged: the id and field only, never the event's content.
+  defp event_time(outlook_event, field) do
+    case parse_datetime(outlook_event[field], outlook_event[:is_all_day]) do
+      {:error, reason} ->
+        Logger.warning("Could not parse a calendar event time",
+          provider: :outlook,
+          event_id: outlook_event[:id] || outlook_event[:uid],
+          field: Atom.to_string(field),
+          reason: reason
+        )
+
+        nil
+
+      time ->
+        time
+    end
+  end
+
   defp parse_datetime(time_map, is_all_day)
 
   defp parse_datetime(%{"dateTime" => datetime_str}, true) do
@@ -369,7 +390,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     # We strip the time part and return just the Date
     case Date.from_iso8601(String.slice(datetime_str, 0, 10)) do
       {:ok, date} -> date
-      {:error, _reason} -> nil
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -392,11 +413,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
         # Try appending Z if it's missing (often the case with some providers)
         case DateTime.from_iso8601(datetime_str <> "Z") do
           {:ok, datetime, _offset} -> datetime
-          {:error, _reason} -> nil
+          {:error, reason} -> {:error, reason}
         end
 
-      {:error, _reason} ->
-        nil
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 

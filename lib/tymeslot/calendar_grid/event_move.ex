@@ -65,6 +65,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
   alias Tymeslot.CalendarGrid.ProviderPayload
   alias Tymeslot.CalendarGrid.SeriesTransfer
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
@@ -347,7 +348,7 @@ defmodule Tymeslot.CalendarGrid.EventMove do
       _not_queued ->
         Logger.warning("Moved calendar event was copied but its original could not be deleted",
           calendar_integration_id: event.calendar_integration_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :left_behind

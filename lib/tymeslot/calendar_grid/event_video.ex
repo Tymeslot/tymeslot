@@ -66,6 +66,7 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
   alias Tymeslot.CalendarGrid.EventEdit
   alias Tymeslot.CalendarGrid.EventVideoDiscard
   alias Tymeslot.CalendarGrid.EventVideoRooms
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.Google.ConferenceData
   alias Tymeslot.Integrations.Calendar.Operations, as: CalendarOperations
@@ -458,7 +459,7 @@ defmodule Tymeslot.CalendarGrid.EventVideo do
         Logger.warning("Failed to create a video room for an event video change",
           user_id: user_id,
           video_integration_id: video_integration_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         error

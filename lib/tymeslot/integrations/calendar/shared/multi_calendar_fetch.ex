@@ -12,6 +12,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -48,7 +50,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
       selected ->
         results =
           Tymeslot.TaskSupervisor
-          |> Task.Supervisor.async_stream_nolink(
+          |> Tasks.async_stream_nolink(
             selected,
             fn calendar ->
               api_module.list_events(integration, calendar.id, start_time, end_time)
@@ -155,7 +157,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
       {:error, changeset} ->
         Logger.error("Failed to de-select missing calendars",
           calendar_integration_id: integration.id,
-          error: inspect(changeset.errors)
+          error: LogFormat.reason(changeset.errors)
         )
 
         :ok

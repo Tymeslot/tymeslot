@@ -26,6 +26,7 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   alias Tymeslot.Clock
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
@@ -131,7 +132,7 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
       {:error, reason} ->
         Logger.error("Failed to process reschedule request",
           meeting_id: meeting.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}

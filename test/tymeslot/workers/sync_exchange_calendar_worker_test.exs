@@ -361,7 +361,7 @@ defmodule Tymeslot.Workers.SyncExchangeCalendarWorkerTest do
     end
 
     # `sync_error` reaches only an owner who opens the dashboard, and a discard
-    # is invisible to `ObanFailureAlerter` by design. The failure streak is
+    # is never recorded by error tracking, by design. The failure streak is
     # what raises the badge on a mailbox that has stopped answering.
     test "counts each failed cycle against the integration's health, and a snooze against none",
          %{integration: integration} do

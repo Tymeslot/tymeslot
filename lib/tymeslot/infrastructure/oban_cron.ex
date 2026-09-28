@@ -3,11 +3,14 @@ defmodule Tymeslot.Infrastructure.ObanCron do
   Checks the `:cron` section of the Oban configuration for the maintenance
   workers the system depends on.
 
-  `Tymeslot.Workers.ObanMaintenanceWorker` and
-  `Tymeslot.Workers.ObanQueueMonitorWorker` run from the crontab and nowhere
-  else. Without them jobs accumulate and queue problems go unreported, and
-  nothing else notices they are gone, so startup says so loudly rather than
-  degrading in silence.
+  `Tymeslot.Workers.ObanMaintenanceWorker`,
+  `Tymeslot.Workers.ObanQueueMonitorWorker`,
+  `Tymeslot.Workers.ErrorTrackerMaintenanceWorker` and
+  `Tymeslot.Workers.AdminAlertDigestWorker` run from the crontab and nowhere
+  else. Without them jobs accumulate, queue problems go unreported, stored
+  errors are never resolved or pruned, and info alerts never reach the
+  operator. Nothing else notices they are gone, so startup says so loudly
+  rather than degrading in silence.
 
   The check reads the raw application environment rather than Oban's own
   normalised state, so it has to know the shapes `:cron` accepts: a keyword
@@ -15,11 +18,15 @@ defmodule Tymeslot.Infrastructure.ObanCron do
   service outright. Only the first two can carry a crontab of ours.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   require Logger
 
   @critical_workers [
     Tymeslot.Workers.ObanMaintenanceWorker,
-    Tymeslot.Workers.ObanQueueMonitorWorker
+    Tymeslot.Workers.ObanQueueMonitorWorker,
+    Tymeslot.Workers.ErrorTrackerMaintenanceWorker,
+    Tymeslot.Workers.AdminAlertDigestWorker
   ]
 
   @doc """
@@ -55,7 +62,7 @@ defmodule Tymeslot.Infrastructure.ObanCron do
       accumulation and queue problems going unreported. Add
       `cron: [crontab: [...]]` to the Oban config with the required jobs.
       """,
-      critical_workers: inspect(@critical_workers)
+      critical_workers: LogFormat.reason(@critical_workers)
     )
   end
 

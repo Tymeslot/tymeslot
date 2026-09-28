@@ -26,6 +26,7 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.SeriesSplit do
   are counted the same way for both (`RecurrenceExpander.count_before/3`).
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
   alias Tymeslot.Utils.DateTimeUtils
 
@@ -181,7 +182,7 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.SeriesSplit do
 
       other ->
         Logger.warning("Could not delete the new half of a series whose original was not ended",
-          reason: inspect(other)
+          reason: LogFormat.reason(other)
         )
     end
   end

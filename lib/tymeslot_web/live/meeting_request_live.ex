@@ -26,6 +26,7 @@ defmodule TymeslotWeb.MeetingRequestLive do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingState
@@ -78,7 +79,7 @@ defmodule TymeslotWeb.MeetingRequestLive do
         assign(socket, meeting: meeting, state: state_for(meeting))
 
       {:error, reason} ->
-        Logger.info("Rejected booking request link", reason: inspect(reason))
+        Logger.info("Rejected booking request link", reason: LogFormat.reason(reason))
         assign(socket, meeting: nil, state: :invalid)
     end
   end

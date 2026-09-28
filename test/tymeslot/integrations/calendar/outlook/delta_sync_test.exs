@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
   alias Tymeslot.Integrations.Calendar.Outlook.DeltaSync
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.LogCapture
 
   # The circuit breaker runs in a GenServer process that is separate from the
   # test process. Use global mode so mocks are visible from that process.
@@ -257,6 +258,23 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
         end)
 
       assert log =~ "Outlook token refresh failed"
+    end
+
+    test "redacts a token carried in the refresh error before logging it" do
+      LogCapture.attach()
+
+      expect(OutlookCalendarAPIMock, :refresh_token, fn _integration ->
+        {:error, :unauthorized, %{"error" => "invalid_grant", "refresh_token" => "rt-leak"}}
+      end)
+
+      integration = outlook_integration(graph_delta_link: nil, token_expires_at: nil)
+
+      assert {:error, :hard} = DeltaSync.fetch_and_apply(integration)
+
+      %{meta: meta} = LogCapture.await_log("Outlook token refresh failed")
+
+      assert meta.error =~ "invalid_grant"
+      refute meta.error =~ "rt-leak"
     end
   end
 

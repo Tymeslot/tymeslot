@@ -129,6 +129,33 @@ defmodule Tymeslot.Infrastructure.BreakerOutcome do
   # still untagged here came from a caller reporting its own result.
   def classify(_other), do: :success
 
+  @doc """
+  A short description of why a call counted as a `:failure`, safe to put in
+  an admin alert or a log line.
+
+  Only the classifying part of the result is kept: a reason atom, an HTTP
+  status, an exception's module. Response bodies, exception messages and free
+  text are dropped, because a provider call runs with decrypted credentials
+  in scope and any of them can echo one back.
+  """
+  @spec failure_summary(term()) :: String.t()
+  def failure_summary({:provider_error, reason}), do: "provider error: #{summarise(reason)}"
+  def failure_summary({:error, reason, _message}), do: summarise(reason)
+  def failure_summary({:error, reason}), do: summarise(reason)
+  def failure_summary(_result), do: "unclassified"
+
+  defp summarise({:http_error, status, _body}), do: summarise({:http_error, status})
+  defp summarise({:http_error, status}) when is_integer(status), do: "HTTP #{status}"
+  defp summarise(nil), do: "unclassified"
+  defp summarise(reason) when is_atom(reason), do: Atom.to_string(reason)
+  defp summarise(%module{reason: nil}), do: inspect(module)
+
+  defp summarise(%module{reason: reason}) when is_atom(reason),
+    do: "#{inspect(module)} (#{reason})"
+
+  defp summarise(%module{}), do: inspect(module)
+  defp summarise(_reason), do: "unclassified"
+
   # A breaker refusal from a nested call says nothing new about the provider,
   # and counting it would let an open breaker keep itself open.
   defp classify_error(:circuit_open), do: :ignore

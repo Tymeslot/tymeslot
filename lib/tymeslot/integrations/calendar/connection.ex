@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   Business logic for connection validation and provider checks.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.Provider
@@ -63,7 +64,7 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
       Logger.warning("CalDAV calendar discovery raised during connection validation",
         provider: provider,
         integration_id: integration.id,
-        error: inspect(error)
+        error: LogFormat.reason(error)
       )
 
       {:error, :network_error}

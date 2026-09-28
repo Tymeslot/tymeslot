@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   """
 
   require Logger
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
@@ -69,13 +70,13 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
         {:error, type, reason} ->
           Logger.error("Failed to create calendar event",
             error_type: type,
-            reason: inspect(reason)
+            reason: LogFormat.reason(reason)
           )
 
           {:error, type}
 
         {:error, reason} = error ->
-          Logger.error("Failed to create calendar event", reason: inspect(reason))
+          Logger.error("Failed to create calendar event", reason: LogFormat.reason(reason))
           error
       end
     end)
@@ -106,13 +107,17 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
           Logger.error("Failed to update calendar event",
             error_type: type,
             uid: uid,
-            reason: inspect(reason)
+            reason: LogFormat.reason(reason)
           )
 
           {:error, type}
 
         {:error, reason} = error ->
-          Logger.error("Failed to update calendar event", uid: uid, reason: inspect(reason))
+          Logger.error("Failed to update calendar event",
+            uid: uid,
+            reason: LogFormat.reason(reason)
+          )
+
           error
       end
     end)
@@ -145,7 +150,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
           Logger.error("Failed to delete calendar event",
             error_type: type,
             uid: uid,
-            reason: inspect(reason)
+            reason: LogFormat.reason(reason)
           )
 
           {:error, type}
@@ -153,7 +158,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
         {:error, reason} = error ->
           Logger.error("Failed to delete calendar event",
             uid: uid,
-            reason: inspect(reason)
+            reason: LogFormat.reason(reason)
           )
 
           error

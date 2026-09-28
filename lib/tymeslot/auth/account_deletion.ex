@@ -11,6 +11,7 @@ defmodule Tymeslot.Auth.AccountDeletion do
   require Logger
 
   alias Tymeslot.Auth.{Session, UserQueries, UserSchema, UserSessionQueries}
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
@@ -89,8 +90,9 @@ defmodule Tymeslot.Auth.AccountDeletion do
   defp log_transaction_failure({:error, reason} = error, user_id) do
     Logger.error(
       "Account deletion DB transaction failed after the external deletion hook already ran " <>
-        "(a subscription may have been cancelled) for user_id=#{user_id}: #{inspect(reason)}. " <>
-        "Manual reconciliation required."
+        "(a subscription may have been cancelled). Manual reconciliation required.",
+      user_id: user_id,
+      reason: LogFormat.reason(reason)
     )
 
     error
@@ -112,7 +114,7 @@ defmodule Tymeslot.Auth.AccountDeletion do
         profile_id: profile_id,
         files: kind,
         path: path,
-        reason: inspect(reason)
+        reason: LogFormat.reason(reason)
       )
     end
 

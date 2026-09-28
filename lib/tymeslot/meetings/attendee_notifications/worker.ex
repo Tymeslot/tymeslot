@@ -37,6 +37,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   use Oban.Worker, queue: :emails, max_attempts: 5
 
   alias Tymeslot.Emails.EmailScheduler.CalendarScheduler
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeDetector
@@ -90,7 +91,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
       event_id: id,
       kind: kind,
       action: action,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     {:error, reason}

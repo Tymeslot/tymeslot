@@ -33,6 +33,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesTransfer do
   """
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.CreatableEvent
 
@@ -123,7 +124,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.SeriesTransfer do
       error ->
         Logger.warning("Google series move: the original series could not be deleted",
           calendar_integration_id: source.integration.id,
-          reason: inspect(error_type(error))
+          reason: LogFormat.reason(error_type(error))
         )
 
         :left_behind

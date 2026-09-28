@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
   require Logger
 
   alias Tymeslot.Clock
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.CalendarManagement
@@ -137,7 +138,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
               # failure so callers can fail loudly instead.
               Logger.warning("OAuth token persistence failed",
                 integration_id: Map.get(integration, :id),
-                reason: inspect(reason)
+                reason: LogFormat.reason(reason)
               )
 
               {:error, :token_persist_failed}

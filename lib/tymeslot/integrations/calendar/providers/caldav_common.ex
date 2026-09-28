@@ -8,6 +8,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Client, Discovery, Events, Http, UrlBuilder}
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CreatedEvent
@@ -211,7 +213,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     tasks =
       Enum.map(paths, fn path ->
         {path,
-         Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+         Tasks.async(Tymeslot.TaskSupervisor, fn ->
            Events.fetch_events(client, path, start_time, end_time)
          end)}
       end)
@@ -249,7 +251,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     Enum.each(errors, fn {path, {:error, reason}} ->
       Logger.warning("CalDAV fetch failed for one calendar path",
         path: path,
-        reason: inspect(reason)
+        reason: LogFormat.reason(reason)
       )
     end)
 

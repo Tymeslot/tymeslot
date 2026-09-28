@@ -118,6 +118,7 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
   alias Tymeslot.CalendarGrid.SeriesCarry
   alias Tymeslot.CalendarGrid.SeriesEdit
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderConfig
 
@@ -365,7 +366,11 @@ defmodule Tymeslot.CalendarGrid.SeriesTransfer do
     error ->
       Logger.error(
         "Calendar grid series move: local cleanup failed after the series was moved",
-        [step: step, error: Exception.format(:error, error, __STACKTRACE__)] ++ context
+        [
+          step: step,
+          error: LogFormat.reason(error),
+          stacktrace: LogFormat.stacktrace(__STACKTRACE__)
+        ] ++ context
       )
 
       :ok

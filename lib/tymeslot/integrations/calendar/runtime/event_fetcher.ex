@@ -16,6 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventFetcher do
 
   require Logger
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalDAV.Base
   alias Tymeslot.Integrations.Calendar.EventsRead
   alias Tymeslot.Integrations.Calendar.RequestCoalescer
@@ -51,7 +52,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventFetcher do
 
           results =
             Tymeslot.TaskSupervisor
-            |> Task.Supervisor.async_stream_nolink(all_clients, &fetch_events_from_client/1,
+            |> Tasks.async_stream_nolink(all_clients, &fetch_events_from_client/1,
               timeout: 45_000,
               on_timeout: :kill_task
             )
@@ -109,7 +110,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventFetcher do
 
     results =
       Tymeslot.TaskSupervisor
-      |> Task.Supervisor.async_stream_nolink(
+      |> Tasks.async_stream_nolink(
         0..(length(all_clients) - 1)//1,
         fn index ->
           clients_by_index

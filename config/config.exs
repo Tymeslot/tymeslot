@@ -17,6 +17,11 @@ config :tymeslot,
   enable_admin_ui: true,
   # Controls whether users must accept T&C/Privacy during registration
   enforce_legal_agreements: false,
+  # Extra `{path_pattern, level}` request log rules for routes an overlay adds,
+  # appended to the endpoint's own. A pattern is a list of path segments, `:_`
+  # matching any one, matched as a prefix; `false` keeps the request out of the
+  # log entirely (routes carrying a capability token in the path).
+  extra_request_log_suppressed_paths: [],
   # Whether meeting payments (booker pays at booking time) is enabled.
   # Self-hosters opt in by setting :meeting_payments_enabled to true.
   # A downstream overlay may override this in its own config.
@@ -98,20 +103,9 @@ config :tymeslot,
   admin_alerts_enabled: false,
   admin_alert_email: nil,
 
-  # Crashes whose exception maps to a client (4xx) error are routine request
-  # noise, not operator-actionable — never raise an admin alert for them.
-  crash_reporter_ignored_exceptions: [
-    Phoenix.Router.NoRouteError,
-    Ecto.NoResultsError,
-    Plug.Parsers.UnsupportedMediaTypeError,
-    Plug.Parsers.RequestTooLargeError,
-    Plug.BadRequestError,
-    Plug.CSRFProtectionError
-  ],
-  # Global cap on crash alerts to survive a crash storm without flooding the
-  # logging subsystem or the email queue. Tune per deployment traffic.
-  crash_reporter_rate_limit_max: 20,
-  crash_reporter_rate_limit_window_ms: 60_000,
+  # Repos whose connection pool `PoolPressureMonitor` watches. A downstream
+  # overlay with its own repo adds it here.
+  pool_pressure_repos: [Tymeslot.Repo],
 
   # Dashboard Extensions
   dashboard_sidebar_extensions: [],
@@ -571,6 +565,25 @@ config :tymeslot, :analytics_salt_secret, nil
 # already shipped and run against real databases, so re-litigating them would
 # be noise rather than safety. Anything strictly after this timestamp is checked.
 config :excellent_migrations, start_after: "20260716094322"
+
+# ErrorTracker stores every exception in the application database, grouped by
+# fingerprint. Occurrence context passes through the Filter (credential and
+# email redaction) before it is written; the Ignorer drops client-error noise.
+# `enabled` is read on every report, so a test can switch it on locally.
+config :error_tracker,
+  repo: Tymeslot.Repo,
+  otp_app: :tymeslot,
+  enabled: true,
+  filter: Tymeslot.Infrastructure.ErrorTracking.Filter,
+  ignorer: Tymeslot.Infrastructure.ErrorTracking.Ignorer
+
+# ErrorTracker housekeeping, run daily by
+# `Tymeslot.Workers.ErrorTrackerMaintenanceWorker`: an error not seen for
+# this many days is marked resolved, deleted a further window later, and an
+# unresolved error's occurrences older than the window are trimmed down to
+# the newest `occurrences_kept`.
+config :tymeslot, :error_tracking_resolve_after_days, 30
+config :tymeslot, :error_tracking_occurrences_kept, 50
 
 # Import environment specific config
 import_config "#{config_env()}.exs"

@@ -3,6 +3,7 @@ defmodule Tymeslot.Availability.Events do
   Pure functions for event processing and timezone conversion.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Utils.DateTimeUtils
 
@@ -86,7 +87,7 @@ defmodule Tymeslot.Availability.Events do
       Logger.warning("Timezone shift raised while converting a calendar event",
         source_timezone: dt.time_zone,
         target_timezone: target_timezone,
-        error: inspect(error)
+        error: LogFormat.reason(error)
       )
 
       {:error, :invalid_timezone}

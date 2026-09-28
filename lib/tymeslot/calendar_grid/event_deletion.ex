@@ -71,6 +71,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.Occurrence
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarResourceQueries
@@ -308,7 +309,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
          stored,
          removal
        ) do
-    context = [user_id: user_id, calendar_integration_id: integration_id, uid: uid]
+    context = %{user_id: user_id, calendar_integration_id: integration_id}
 
     after_delete("delete the cached event rows", context, fn ->
       purge_cached_rows(integration_id, uid, removal)
@@ -387,12 +388,7 @@ defmodule Tymeslot.CalendarGrid.EventDeletion do
     :ok
   rescue
     error ->
-      Logger.error(
-        "Calendar grid delete: local cleanup failed after the event was deleted",
-        [step: step, error: Exception.format(:error, error, __STACKTRACE__)] ++ context
-      )
-
-      :ok
+      ErrorTracking.report_error(error, __STACKTRACE__, Map.put(context, :step, step))
   end
 
   # Runs once the provider has deleted the event, and before the cached rows

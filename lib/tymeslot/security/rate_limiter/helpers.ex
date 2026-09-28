@@ -5,6 +5,7 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Security.RateLimit
   alias Tymeslot.Security.SecurityLogger
 
@@ -184,7 +185,7 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
   def invalid_user_id(operation, user_id) do
     Logger.error("Invalid user_id for rate limit",
       operation: operation,
-      user_id: inspect(user_id)
+      user_id: LogFormat.reason(user_id)
     )
 
     {:error, :invalid_user_id}

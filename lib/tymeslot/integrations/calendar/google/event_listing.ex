@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventListing do
   require Logger
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
 
   # Google's own maximum per page. Set here rather than by any caller, so the
@@ -98,7 +99,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventListing do
       {:ok, body} ->
         Logger.warning("Google events listing returned a non-object body",
           calendar_id: calendar_id,
-          body: inspect(body)
+          body: LogFormat.reason(body)
         )
 
         body

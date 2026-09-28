@@ -5,6 +5,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookUtils do
 
   require Logger
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Mailer
 
   @doc """
@@ -35,12 +36,9 @@ defmodule Tymeslot.Payments.Webhooks.WebhookUtils do
               :ok
 
             {:error, reason} ->
-              Logger.error(
-                Keyword.get(
-                  opts,
-                  :error_msg,
-                  "Failed to send email to user #{user_id}: #{inspect(reason)}"
-                )
+              Logger.error(Keyword.get(opts, :error_msg, "Failed to send email to user"),
+                user_id: user_id,
+                reason: LogFormat.reason(reason)
               )
 
               :ok

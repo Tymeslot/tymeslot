@@ -26,6 +26,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
   alias Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch
 
+  require Logger
+
   @typep converted_event :: %{
            required(:uid) => String.t() | nil,
            required(:ical_uid) => String.t() | nil,
@@ -116,8 +118,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
       description: google_event["description"],
       location: google_event["location"],
       all_day: all_day_google_event?(google_event),
-      start_time: parse_datetime(google_event["start"]),
-      end_time: parse_datetime(google_event["end"]),
+      start_time: event_time(google_event, "start"),
+      end_time: event_time(google_event, "end"),
       status: google_event["status"],
       transparency: google_event["transparency"],
       meet_url: ConferenceData.meet_url_from_google_event(google_event)
@@ -336,17 +338,37 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   defp all_day_google_event?(%{"start" => %{"date" => _date}}), do: true
   defp all_day_google_event?(_other), do: false
 
+  # A time Google sent but that does not parse is read as missing, like an
+  # absent one, and logged: the field only, never the event's content. Nor
+  # its id: for an event this application created, Google's id is derived
+  # from the meeting uid, which authorises cancelling the booking.
+  defp event_time(google_event, field) do
+    case parse_datetime(google_event[field]) do
+      {:error, reason} ->
+        Logger.warning("Could not parse a calendar event time",
+          provider: :google,
+          field: field,
+          reason: reason
+        )
+
+        nil
+
+      time ->
+        time
+    end
+  end
+
   defp parse_datetime(%{"dateTime" => datetime_str}) do
     case DateTime.from_iso8601(datetime_str) do
       {:ok, datetime, _offset} -> datetime
-      {:error, _reason} -> nil
+      {:error, reason} -> {:error, reason}
     end
   end
 
   defp parse_datetime(%{"date" => date_str}) do
     case Date.from_iso8601(date_str) do
       {:ok, date} -> date
-      {:error, _reason} -> nil
+      {:error, reason} -> {:error, reason}
     end
   end
 
