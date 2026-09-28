@@ -82,6 +82,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   (`series_busy?/2`). The organiser is asked to wait instead. Events
   outside a series, and other series, are never held.
 
+  ## Telling the attendees
+
+  A write made with `:notify` (a change of an event's timing, see
+  `EditWorkflow.apply_event_change/6`) asks whether to tell the event's
+  attendees only once the provider has accepted it, in the scope it was
+  written in. Nobody is asked about a change that failed, and the
+  notification of a write to a whole series is sent from the event the
+  write answered with, not read back from the series' cached rows, which
+  the write dropped.
+
   ## Results
 
   Every write carries a reference, `{key, seq}`, where `seq` rises with every
@@ -121,8 +131,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   """
   @spec update(Phoenix.LiveView.Socket.t(), map(), map(), keyword()) ::
           Phoenix.LiveView.Socket.t()
-  def update(socket, event, changes, opts),
-    do: submit(socket, event, %{kind: :update, changes: changes, opts: opts})
+  def update(socket, event, changes, opts) do
+    {notify, opts} = Keyword.pop(opts, :notify)
+    submit(socket, event, %{kind: :update, changes: changes, opts: opts, notify: notify})
+  end
 
   @doc """
   Changes the video of `event` through
@@ -147,10 +159,28 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventWrites do
   @spec settle(Phoenix.LiveView.Socket.t(), ref(), outcome()) :: Phoenix.LiveView.Socket.t()
   def settle(socket, {key, _seq} = ref, outcome) do
     case socket.assigns.event_writes do
-      %{^key => %{in_flight: %{ref: ^ref}} = chain} -> advance(socket, key, chain, outcome)
-      _stale -> socket
+      %{^key => %{in_flight: %{ref: ^ref} = write} = chain} ->
+        socket
+        |> advance(key, chain, outcome)
+        |> notify_attendees(write, outcome)
+
+      _stale ->
+        socket
     end
   end
+
+  # See "Telling the attendees" in the moduledoc.
+  defp notify_attendees(socket, %{notify: %{} = notify, opts: opts}, {:ok, updated}) do
+    EditWorkflow.apply_notify_result(
+      socket,
+      notify.original,
+      updated,
+      notify.saved_message,
+      Keyword.get(opts, :recurrence_scope, :this_only)
+    )
+  end
+
+  defp notify_attendees(socket, _write, _outcome), do: socket
 
   @doc """
   Holds every write to an event of the series `event` belongs to while

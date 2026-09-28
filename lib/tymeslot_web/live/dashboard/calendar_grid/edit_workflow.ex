@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.CalendarGrid.RecurrenceScope
   alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar
@@ -89,11 +90,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   Applies a new start and end to `event`: optimistically on screen, then
   either through the recurrence prompt (see `series_edit?/1`) or straight to
   the provider.
+
+  Whether to tell the attendees is decided once the provider has accepted
+  the write, in the scope the organiser chose (see `EventWrites`): asked
+  before, the organiser could be told attendees will be notified of a
+  change that then failed, was cancelled at the recurrence prompt, or went
+  to a whole series whose cached rows the debounced notification reads.
+
+  `opts` takes `:saved_message`, what the organiser is told once the change
+  is saved with nobody to notify; without it nothing is said (a drag).
   """
-  @spec apply_event_change(Phoenix.LiveView.Socket.t(), map(), map(), DateTime.t(), DateTime.t()) ::
-          Phoenix.LiveView.Socket.t()
-  def apply_event_change(socket, event, optimistic_event, new_start, new_end) do
+  @spec apply_event_change(
+          Phoenix.LiveView.Socket.t(),
+          map(),
+          map(),
+          DateTime.t(),
+          DateTime.t(),
+          keyword()
+        ) :: Phoenix.LiveView.Socket.t()
+  def apply_event_change(socket, event, optimistic_event, new_start, new_end, opts \\ []) do
     new_events = Shared.replace_event(socket.assigns.events, event.id, optimistic_event)
+    notify = %{original: event, saved_message: Keyword.get(opts, :saved_message)}
 
     socket =
       socket
@@ -106,12 +123,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
         optimistic_event: optimistic_event,
         new_start: new_start,
         new_end: new_end,
-        original_event: event
+        original_event: event,
+        notify: notify
       }
 
       assign(socket, :recurrence_prompt, prompt)
     else
-      update_event_async(socket, event, %{start_at: new_start, end_at: new_end})
+      update_event_async(socket, event, %{start_at: new_start, end_at: new_end}, notify: notify)
     end
   end
 
@@ -169,7 +187,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   still in flight. See `TymeslotWeb.Dashboard.CalendarGrid.EventWrites`, which
   also describes the `{:event_update_result, result}` message it answers with.
 
-  `opts` are passed through to `CalendarGrid.update_event/4`.
+  `opts` are passed through to `CalendarGrid.update_event/4`, except
+  `:notify`: `%{original: event, saved_message: message}` runs the
+  attendee-notification decision (`apply_notify_result/5`) once the write
+  succeeds, diffing the event it wrote against `original`.
   """
   @spec update_event_async(Phoenix.LiveView.Socket.t(), map(), map(), keyword()) ::
           Phoenix.LiveView.Socket.t()
@@ -400,14 +421,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     * `{:needs_confirmation, ChangeSummary.t}` — notifiable changes, nothing
       pending. Caller should stash the summary and show the confirmation modal.
   """
-  @spec notify_event_updated(map(), map(), [map()]) ::
+  @spec notify_event_updated(map(), map(), [map()], RecurrenceScope.t()) ::
           {:ok, :no_changes}
           | {:ok, :already_pending}
           | {:needs_confirmation, ChangeSummary.t()}
-  def notify_event_updated(original_event, updated_event, attendees) do
+  def notify_event_updated(original_event, updated_event, attendees, scope \\ :this_only) do
     case AttendeeNotifications.event_updated(original_event, updated_event, attendees) do
       {:ok, :no_changes} ->
         {:ok, :no_changes}
+
+      # Sent at once, never joined to a debounced job: see
+      # `AttendeeNotifications.series_updated_confirm/4`.
+      {:needs_confirmation, summary} when scope in [:following, :all] ->
+        {:needs_confirmation, summary}
 
       {:needs_confirmation, summary} ->
         if AttendeeNotifications.pending?(updated_event) do
@@ -422,23 +448,39 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   end
 
   @doc """
-  Acts on the `notify_event_updated/3` decision for an edit that has already
+  Acts on the `notify_event_updated/4` decision for an edit that has already
   been applied: flashes `saved_message`, joins a pending notification, or
   stashes the summary so the component renders the "notify attendees?" prompt.
 
   Every inline edit ends here, so the prompt cannot be skipped for one field
   and offered for another. `saved_message` is what the organiser is told when
-  there is nobody to notify; the video path passes its own wording rather
-  than the generic one.
+  there is nobody to notify, or `nil` to say nothing; the video path passes
+  its own wording rather than the generic one.
+
+  `scope` is the recurrence scope the edit was written in. The prompt for an
+  edit of this and every following occurrence, or of all of them, carries
+  it and the event as it was, since confirming it sends the update at once
+  from both (`AttendeeNotifications.series_updated_confirm/4`).
   """
-  @spec apply_notify_result(Phoenix.LiveView.Socket.t(), map(), map(), String.t()) ::
-          Phoenix.LiveView.Socket.t()
-  def apply_notify_result(socket, original_event, updated_event, saved_message \\ changes_saved()) do
+  @spec apply_notify_result(
+          Phoenix.LiveView.Socket.t(),
+          map(),
+          map(),
+          String.t() | nil,
+          RecurrenceScope.t()
+        ) :: Phoenix.LiveView.Socket.t()
+  def apply_notify_result(
+        socket,
+        original_event,
+        updated_event,
+        saved_message \\ changes_saved(),
+        scope \\ :this_only
+      ) do
     attendees = updated_event.attendees || original_event.attendees || []
 
-    case notify_event_updated(original_event, updated_event, attendees) do
+    case notify_event_updated(original_event, updated_event, attendees, scope) do
       {:ok, :no_changes} ->
-        send(self(), {:flash, {:info, saved_message}})
+        if saved_message, do: send(self(), {:flash, {:info, saved_message}})
         socket
 
       {:ok, :already_pending} ->
@@ -459,7 +501,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
           kind: :update,
           summary: summary,
           event: updated_event,
-          attendees: attendees
+          original_event: original_event,
+          attendees: attendees,
+          scope: scope
         })
     end
   end

@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DeleteNotifyPromptTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.Changeset
   alias Plug.Test
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
@@ -181,6 +182,46 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.DeleteNotifyPromptTest do
       refute html =~ "Cancel Me"
       assert cancellation_jobs() == []
       refute_enqueued(worker: Worker, args: %{"event_id" => event.id})
+    end
+  end
+
+  describe "delete flow for an event someone else organises" do
+    # The user is a guest: the delete takes the event off their calendar, and
+    # a cancellation in their name would tell the organiser and every other
+    # guest that it is off.
+    test "skips the notify prompt and deletes without telling anyone", %{
+      conn: conn,
+      integration: integration
+    } do
+      event =
+        integration
+        |> insert_event_with_attendees([
+          %{"email" => "boss@elsewhere.example", "name" => "Boss"},
+          %{"email" => "guest@example.com", "name" => "Guest"}
+        ])
+        |> Changeset.change(organiser: %{"email" => "boss@elsewhere.example"})
+        |> Repo.update!()
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("request_delete_event", %{})
+
+      html =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("confirm_delete_event", %{})
+
+      refute html =~ "notify-prompt-modal"
+
+      await_delete(lv)
+      html = render(lv)
+      assert html =~ "Event deleted."
+      refute html =~ "Attendees have been notified"
+      refute html =~ "Cancel Me"
+      assert cancellation_jobs() == []
     end
   end
 

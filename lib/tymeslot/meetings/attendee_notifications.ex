@@ -17,14 +17,20 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
       confirmation modal.
     * `event_updated_confirm/3` — called after the user confirms; delegates
       to the Dispatcher debounce window.
+    * `series_updated_confirm/4` — the same, for an edit of this and every
+      following occurrence of a series or of all of them, sent at once from
+      the event as it was and as the edit left it, since such a write drops
+      the cached rows the debounced job would read.
     * `attendees_added/2` / `attendees_removed/2` — immediate send path for
       membership-only changes (method `:request` or `:cancel` respectively).
-    * `event_deleted/2` — returns `{:needs_confirmation, count}` so the caller
+    * `event_deleted/3` — returns `{:needs_confirmation, count}` so the caller
       knows to show a confirmation prompt; `{:ok, :no_attendees}` if there is
-      nobody to notify.
+      nobody to notify, and `{:ok, :not_organiser}` for an event the user
+      only attends, whose cancellation is not theirs to send.
     * `event_deleted_confirm/3` — sends the cancellation at once, one per
-      attendee, from the event as it was. Called once the event has actually
-      been deleted, never before: see its docs.
+      attendee, from the event as it was, and only for an event the user
+      organises. Called once the event has actually been deleted, never
+      before: see its docs.
     * `pending?/1` / `cancel_pending/1` — inspection and cancellation of the
       debounced pipeline. Both take the event, not its id: `meetings` and
       `provider_calendar_events` number their rows independently, so an id
@@ -86,6 +92,83 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     end
   end
 
+  @doc """
+  Sends the update of an edit of this and every following occurrence of a
+  recurring series, or of all of them (`scope` `:following` or `:all`), at
+  once: one email job for every attendee, carrying the event as it was and
+  as the edit left it.
+
+  Not debounced like `event_updated_confirm/3`, whose job reads the event's
+  cached row when it runs: a write to a whole series drops the series' rows
+  until a sync brings them back (`Tymeslot.CalendarGrid.SeriesEdit`), so
+  that job would find nothing and tell nobody. This one reads nothing back.
+
+  Call it only once the calendar has accepted the write. `original_event` is
+  the occurrence the organiser edited, as it was; `updated_event` is that
+  occurrence as the write left it, whose attendees are the recipients, less
+  anyone who declined and the user `owner_user_id`. `{:ok, :noop}` when
+  nobody is left to tell.
+  """
+  @spec series_updated_confirm(event, event, pos_integer(), :following | :all) ::
+          {:ok, :sent | :noop} | {:error, term}
+  def series_updated_confirm(original_event, updated_event, owner_user_id, scope)
+      when scope in [:following, :all] do
+    excluded = Recipients.excluded(updated_event, owner_user_id)
+
+    recipients =
+      (Map.get(updated_event, :attendees) || [])
+      |> Enum.map(&Recipients.email/1)
+      |> Enum.reject(&(is_nil(&1) or &1 in excluded))
+      |> Enum.uniq()
+
+    notify_series_updated(original_event, updated_event, recipients, owner_user_id, scope)
+  end
+
+  defp notify_series_updated(_original, _updated, [], _owner_user_id, _scope), do: {:ok, :noop}
+
+  defp notify_series_updated(original, updated, recipients, owner_user_id, scope) do
+    {method, sequence} =
+      IcalMethod.for(:event_updated, current_sequence: current_sequence(original))
+
+    params = %{
+      user_id: owner_user_id,
+      event_uid: Map.get(updated, :uid),
+      integration_id: Map.get(updated, :calendar_integration_id),
+      attendee_emails: recipients,
+      before_title: title_for(original),
+      before_location: Map.get(original, :location),
+      before_description: Map.get(original, :description),
+      before_start_at: start_at_for(original),
+      before_end_at: end_at_for(original),
+      before_start_date: iso_date(Map.get(original, :start_date)),
+      before_end_date: iso_date(Map.get(original, :end_date)),
+      method: method,
+      sequence: sequence,
+      event: event_snapshot(updated),
+      series: scope
+    }
+
+    case CalendarScheduler.schedule_event_update_notification(params) do
+      :ok -> {:ok, :sent}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # The event as the update email describes it, in the job's JSON args.
+  defp event_snapshot(event) do
+    %{
+      "uid" => Map.get(event, :uid),
+      "summary" => title_for(event),
+      "location" => Map.get(event, :location),
+      "description" => Map.get(event, :description),
+      "all_day" => Map.get(event, :all_day) == true,
+      "start_at" => iso(start_at_for(event)),
+      "end_at" => iso(end_at_for(event)),
+      "start_date" => iso_date(Map.get(event, :start_date)),
+      "end_date" => iso_date(Map.get(event, :end_date))
+    }
+  end
+
   @spec attendees_added(event, [attendee]) :: {:ok, :sent | :noop}
   def attendees_added(_event, []), do: {:ok, :noop}
 
@@ -108,12 +191,24 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     {:ok, :sent}
   end
 
-  @spec event_deleted(event, [attendee]) ::
-          {:ok, :no_attendees} | {:needs_confirmation, non_neg_integer}
-  def event_deleted(_event, []), do: {:ok, :no_attendees}
+  @doc """
+  Whether deleting `event` should ask the user `user_id` about telling its
+  attendees: `{:needs_confirmation, count}` when it has attendees and the
+  user organises it (`Recipients.organised_by?/2`).
 
-  def event_deleted(_event, attendees) when is_list(attendees) do
-    {:needs_confirmation, length(attendees)}
+  `{:ok, :not_organiser}` for an event someone else organises, which the
+  user only attends: deleting it removes it from their calendar alone, and a
+  cancellation in their name would tell the real organiser and every other
+  guest that the event is off.
+  """
+  @spec event_deleted(event, [attendee], pos_integer()) ::
+          {:ok, :no_attendees | :not_organiser} | {:needs_confirmation, non_neg_integer}
+  def event_deleted(_event, [], _user_id), do: {:ok, :no_attendees}
+
+  def event_deleted(event, attendees, user_id) when is_list(attendees) do
+    if Recipients.organised_by?(event, user_id),
+      do: {:needs_confirmation, length(attendees)},
+      else: {:ok, :not_organiser}
   end
 
   @doc """
@@ -131,11 +226,19 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   the recipients, less anyone who declined and the user `owner_user_id`
   (who made the delete). `scope` is `:series` when the whole series was
   deleted, which the email says; anything else cancels the one event.
-  `{:ok, :noop}` when nobody is left to tell.
+  `{:ok, :noop}` when nobody is left to tell, and for an event someone else
+  organises, whose cancellation is not the user's to send (see
+  `event_deleted/3`).
   """
   @spec event_deleted_confirm(event, pos_integer(), :occurrence | :series) ::
           {:ok, :sent | :noop} | {:error, term}
   def event_deleted_confirm(event, owner_user_id, scope) do
+    if Recipients.organised_by?(event, owner_user_id),
+      do: cancel_for_attendees(event, owner_user_id, scope),
+      else: {:ok, :noop}
+  end
+
+  defp cancel_for_attendees(event, owner_user_id, scope) do
     excluded = Recipients.excluded(event, owner_user_id)
 
     recipients =
@@ -264,6 +367,9 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
   defp user_id_for(%{organizer_user_id: id}) when is_integer(id), do: id
   defp user_id_for(%{calendar_integration: %{user_id: id}}) when is_integer(id), do: id
   defp user_id_for(_event), do: nil
+
+  defp iso_date(%Date{} = date), do: Date.to_iso8601(date)
+  defp iso_date(_none), do: nil
 
   defp iso(nil), do: nil
   defp iso(%DateTime{} = dt), do: DateTime.to_iso8601(dt)

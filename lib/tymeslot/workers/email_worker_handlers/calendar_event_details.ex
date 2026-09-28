@@ -82,8 +82,51 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.CalendarEventDetails do
   def first_notification?(_args), do: false
 
   @doc """
+  The event a job carries as the update left it (see
+  `Tymeslot.Emails.EmailScheduler.CalendarScheduler.schedule_event_update_notification/1`),
+  in the shape of a cached event, so the update is described exactly as one
+  read from the cache would be. `{:error, :no_timing}` when its timing does
+  not parse.
+  """
+  @spec snapshot_event(map()) :: {:ok, map()} | {:error, :no_timing}
+  def snapshot_event(snapshot) do
+    event = %{
+      uid: snapshot["uid"],
+      summary: snapshot["summary"],
+      location: snapshot["location"],
+      description: snapshot["description"],
+      all_day: snapshot["all_day"] == true,
+      start_at: snapshot_datetime(snapshot["start_at"]),
+      end_at: snapshot_datetime(snapshot["end_at"]),
+      start_date: snapshot_date(snapshot["start_date"]),
+      end_date: snapshot_date(snapshot["end_date"])
+    }
+
+    case moment(event) do
+      {:ok, _moment} -> {:ok, event}
+      :error -> {:error, :no_timing}
+    end
+  end
+
+  defp snapshot_datetime(iso) do
+    case parse_datetime(iso) do
+      {:ok, datetime} -> datetime
+      {:error, _invalid} -> nil
+    end
+  end
+
+  defp snapshot_date(iso) do
+    case parse_date(iso) do
+      {:ok, date} -> date
+      {:error, _invalid} -> nil
+    end
+  end
+
+  @doc """
   Update details for the cached event. `{:error, :no_timing}` for a row that
   carries neither representation's fields, which nothing can describe.
+  `:series` is `:all` or `:following` for the update of a whole series or
+  of its occurrences from the edited one on, `nil` for one event.
   """
   @spec update_details(map(), map(), [change()], map()) :: {:ok, map()} | {:error, :no_timing}
   def update_details(user, current_event, changes, args) do
@@ -99,7 +142,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.CalendarEventDetails do
          changes: changes,
          first_notification: first_notification?(args),
          method: parse_method(args["method"]),
-         sequence: args["sequence"]
+         sequence: args["sequence"],
+         series: parse_series(args["series"])
        })}
     end
   end
@@ -259,6 +303,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.CalendarEventDetails do
 
   defp display_moment({:all_day, start_date, end_date}),
     do: Date.range(start_date, AllDay.last_day(start_date, end_date))
+
+  # How much of a series the update changed: `nil` for one event.
+  defp parse_series("all"), do: :all
+  defp parse_series("following"), do: :following
+  defp parse_series(_one_event), do: nil
 
   defp parse_method("cancel"), do: :cancel
   defp parse_method("request"), do: :request
