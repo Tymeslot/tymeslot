@@ -95,7 +95,7 @@ msgstr "Nieprawidłowa"
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "JPG, PNG, GIF or WebP. Max 10MB."
-msgstr "JPG, PNG, GIF lub WebP. Maks. 10MB."
+msgstr "JPG, PNG, GIF lub WebP. Maks. 10 MB."
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
@@ -105,7 +105,7 @@ msgstr "Dostępna pod adresem:"
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Processing..."
-msgstr "Przetwarzanie..."
+msgstr "Przetwarzanie…"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
@@ -121,7 +121,7 @@ msgstr "Ustawienia profilu"
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Saving..."
-msgstr "Zapisywanie..."
+msgstr "Zapisywanie…"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
@@ -131,7 +131,7 @@ msgstr "Zajęta"
 #: lib/tymeslot_web/live/dashboard/profile_settings/display_name_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "This name will appear to visitors when they book meetings with you. Changes are saved automatically."
-msgstr "Tę nazwę zobaczą goście rezerwujący u Ciebie spotkania. Zmiany zapisują się automatycznie."
+msgstr "Tę nazwę zobaczą goście rezerwujący u ciebie spotkania. Zmiany zapisują się automatycznie."
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/timezone_form_component.ex
 #, elixir-autogen, elixir-format
@@ -151,27 +151,27 @@ msgstr "Zmień adres URL"
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Upload"
-msgstr "Wgraj"
+msgstr "Prześlij"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Upload New"
-msgstr "Wgraj nowe"
+msgstr "Prześlij nowe"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Upload failed"
-msgstr "Wgrywanie nie powiodło się"
+msgstr "Przesyłanie nie powiodło się"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Upload failed: %{reason}"
-msgstr "Wgrywanie nie powiodło się: %{reason}"
+msgstr "Przesyłanie nie powiodło się: %{reason}"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/avatar_upload_component.ex
 #, elixir-autogen, elixir-format
 msgid "Uploading..."
-msgstr "Wgrywanie..."
+msgstr "Przesyłanie…"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
@@ -181,7 +181,7 @@ msgstr "Nazwa użytkownika zmieniona! Twoja strona rezerwacji: %{url}"
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
 msgid "Your Custom URL"
-msgstr "Twój własny adres URL"
+msgstr "Twój adres URL"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format
@@ -249,12 +249,12 @@ msgstr "Zmień adres URL"
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Change your URL to %{username}?"
-msgstr "Zmienić Twój adres URL na %{username}?"
+msgstr "Zmienić adres URL na nowy: %{username}?"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Once released, %{username} can be claimed by anyone else."
-msgstr "Po zwolnieniu %{username} może zająć ktoś inny."
+msgstr "Po zwolnieniu nazwę %{username} może zająć ktoś inny."
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #, elixir-autogen, elixir-format
@@ -269,7 +269,7 @@ msgstr "linki w już wysłanych e-mailach z potwierdzeniami i przypomnieniami"
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "your booking page and every event link on it"
-msgstr "Twoją stronę rezerwacji i wszystkie linki do spotkań na niej"
+msgstr "stronę rezerwacji i wszystkie linki do spotkań na niej"
 
 #: lib/tymeslot_web/live/dashboard/profile_settings/username_form_component.ex
 #, elixir-autogen, elixir-format

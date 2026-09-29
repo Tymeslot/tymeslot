@@ -198,7 +198,7 @@ msgstr "Nie znaleziono strony"
 #: lib/tymeslot_web/controllers/error_html/404.html.heex
 #, elixir-autogen, elixir-format
 msgid "The link may be broken, or the page may have moved."
-msgstr "Link może być nieprawidłowy lub strona została przeniesiona."
+msgstr "Link może być nieprawidłowy albo strona mogła zostać przeniesiona."
 
 #: lib/tymeslot_web/controllers/error_html/404.html.heex
 #, elixir-autogen, elixir-format
@@ -230,7 +230,7 @@ msgstr "musi być po godzinie rozpoczęcia"
 #: lib/tymeslot/availability/time_off_period_schema.ex
 #, elixir-autogen, elixir-format
 msgid "must not be before the start date"
-msgstr "nie może być wcześniejsza niż data rozpoczęcia"
+msgstr "nie może być wcześniej niż data rozpoczęcia"
 
 #: lib/tymeslot/availability/time_off_period_schema.ex
 #, elixir-autogen, elixir-format

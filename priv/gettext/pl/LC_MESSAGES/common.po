@@ -100,7 +100,7 @@ msgstr "Hasło musi zawierać:"
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Processing..."
-msgstr "Przetwarzanie..."
+msgstr "Przetwarzanie…"
 
 #: lib/tymeslot_web/components/layouts.ex
 #, elixir-autogen, elixir-format
@@ -115,7 +115,7 @@ msgstr "Zarezerwuj spotkanie"
 #: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "Search cities, countries, or timezones..."
-msgstr "Szukaj miast, krajów lub stref czasowych..."
+msgstr "Szukaj miast, krajów lub stref czasowych…"
 
 #: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
@@ -140,7 +140,7 @@ msgstr "Ta aplikacja wymaga JavaScriptu. Włącz go w ustawieniach przeglądarki
 #: lib/tymeslot_web/components/timezone_dropdown.ex
 #, elixir-autogen, elixir-format
 msgid "This timezone will be used for your availability and scheduling."
-msgstr "Ta strefa czasowa będzie używana przy Twojej dostępności i rezerwacjach."
+msgstr "Ta strefa czasowa będzie używana dla dostępności i rezerwacji."
 
 #: lib/tymeslot_web/components/core_components/brand.ex
 #, elixir-autogen, elixir-format
@@ -200,12 +200,12 @@ msgstr "Wyloguj się"
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "Toggle menu"
-msgstr "Przełącz menu"
+msgstr "Otwórz lub zamknij menu"
 
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
 msgid "Beautiful, on-brand meeting scheduling. No ads, no tracking."
-msgstr "Piękna rezerwacja spotkań w Twoim stylu. Bez reklam, bez śledzenia."
+msgstr "Piękna rezerwacja spotkań w twoim stylu. Bez reklam, bez śledzenia."
 
 #: lib/tymeslot_web/components/site_components.ex
 #, elixir-autogen, elixir-format
@@ -220,12 +220,12 @@ msgstr "© %{year} Tymeslot. Wszelkie prawa zastrzeżone."
 #: lib/tymeslot_web/components/core_components/containers.ex
 #, elixir-autogen, elixir-format
 msgid "Saving changes..."
-msgstr "Zapisywanie zmian..."
+msgstr "Zapisywanie zmian…"
 
 #: lib/tymeslot_web/components/core_components/forms.ex
 #, elixir-autogen, elixir-format
 msgid "At least %{count} characters"
-msgstr "Co najmniej %{count} znaków"
+msgstr "Minimalna liczba znaków: %{count}"
 
 #: lib/tymeslot_web/components/core_components/forms.ex
 #, elixir-autogen, elixir-format

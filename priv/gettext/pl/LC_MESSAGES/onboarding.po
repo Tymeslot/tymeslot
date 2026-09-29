@@ -117,7 +117,7 @@ msgstr "Strony rezerwacji i e-maile także po niemiecku, francusku, ukraińsku i
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Collect payment automatically at the moment of booking, with Stripe-powered checkout built right into your booking page."
-msgstr "Pobieraj płatność automatycznie w chwili rezerwacji – płatności Stripe są wbudowane wprost w Twoją stronę rezerwacji."
+msgstr "Pobieraj płatność automatycznie w chwili rezerwacji – dzięki płatnościom Stripe wbudowanym wprost w stronę rezerwacji."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -172,7 +172,7 @@ msgstr "Sprytniejsze osadzenia, które same dopasowują wysokość, z opcjonalny
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Tymeslot now speaks your language"
-msgstr "Tymeslot mówi teraz w Twoim języku"
+msgstr "Tymeslot mówi teraz w twoim języku"
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -187,7 +187,7 @@ msgstr "Rezerwacja może teraz obejmować dodatkowych gości. Każdy gość dost
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Calendars, video and payments now live together in one Integrations hub. See at a glance what's connected and what needs attention, reconnect a provider in a click, and add something new - all from a single screen instead of hunting through separate settings pages."
-msgstr "Kalendarze, wideo i płatności są teraz razem w jednym miejscu – w sekcji Integracje. Od razu widzisz, co jest podłączone, a co wymaga uwagi, podłączasz dostawcę ponownie jednym kliknięciem i dodajesz nowe – wszystko na jednym ekranie, zamiast szukać po osobnych stronach ustawień."
+msgstr "Kalendarze, wideo i płatności są teraz razem w jednym miejscu – w sekcji Integracje. Od razu widzisz, co jest podłączone, a co wymaga uwagi, jednym kliknięciem ponownie łączysz dostawcę i dodajesz nowe – wszystko na jednym ekranie, zamiast szukać po osobnych stronach ustawień."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -197,17 +197,17 @@ msgstr "Podłącz konto Zoom, a Tymeslot utworzy spotkanie Zoom dla każdej reze
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Every meeting type now has its own direct link that takes people straight to booking it - without showing your other meeting types. Mark a type as unlisted to keep it off your public page, and randomise its link any time to make it unguessable or to retire an old one."
-msgstr "Każdy typ spotkania ma teraz własny bezpośredni link, który prowadzi prosto do rezerwacji – bez pokazywania pozostałych typów. Oznacz typ jako ukryty, żeby nie pojawiał się na Twojej publicznej stronie, i wylosuj jego link, kiedy chcesz, żeby stał się nie do odgadnięcia albo żeby wycofać stary."
+msgstr "Każdy typ spotkania ma teraz własny bezpośredni link, który prowadzi prosto do rezerwacji – bez pokazywania pozostałych typów. Oznacz typ jako ukryty, żeby nie pojawiał się na publicznej stronie, a jego link w każdej chwili wylosuj od nowa, żeby był nie do odgadnięcia albo żeby wycofać stary."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Give any event its own colour, right from your dashboard agenda. Colours you set in Tymeslot write back to your connected calendar, and colours already on your Google or CalDAV events show up here too - so your day is colour-coded exactly the way you like it, everywhere you look."
-msgstr "Nadaj każdemu wydarzeniu własny kolor, prosto z agendy w panelu. Kolory ustawione w Tymeslot zapisują się w podłączonym kalendarzu, a kolory, które masz już na wydarzeniach Google czy CalDAV, widać także tutaj – dzięki temu Twój dzień jest pokolorowany dokładnie tak, jak lubisz, gdziekolwiek spojrzysz."
+msgstr "Nadaj każdemu wydarzeniu własny kolor, prosto z agendy w panelu. Kolory ustawione w Tymeslot zapisują się w podłączonym kalendarzu, a kolory, które masz już na wydarzeniach Google czy CalDAV, widać także tutaj – dzięki temu twój dzień jest pokolorowany dokładnie tak, jak lubisz, gdziekolwiek spojrzysz."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Go create your first event type - and let people book you."
-msgstr "Utwórz swój pierwszy typ spotkania i pozwól ludziom rezerwować u Ciebie terminy."
+msgstr "Utwórz pierwszy typ spotkania i pozwól innym rezerwować u ciebie terminy."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -217,12 +217,12 @@ msgstr "Ogranicz liczbę przyjmowanych rezerwacji"
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Set a maximum number of bookings per day, week or month - for a single meeting type, or across your whole account. Once a day reaches its cap it disappears from your booking page, so nobody can book you past the limit you set."
-msgstr "Ustaw maksymalną liczbę rezerwacji na dzień, tydzień lub miesiąc – dla jednego typu spotkania albo dla całego konta. Gdy dzień osiągnie swój limit, znika ze strony rezerwacji, więc nikt nie zarezerwuje u Ciebie terminu ponad ustalony limit."
+msgstr "Ustaw maksymalną liczbę rezerwacji na dzień, tydzień lub miesiąc – dla jednego typu spotkania albo dla całego konta. Gdy dzień osiągnie swój limit, znika ze strony rezerwacji, więc nikt nie zarezerwuje u ciebie terminu ponad ustalony limit."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "The whole app - your dashboard, booking pages and every email - is now available in German, French, Italian, Ukrainian and Czech. Tymeslot follows your browser's language automatically, or pick one yourself in Account settings. Your invitees get booking pages and confirmations in their own language, too."
-msgstr "Cała aplikacja – panel, strony rezerwacji i każdy e-mail – jest już dostępna po niemiecku, francusku, włosku, ukraińsku i czesku. Tymeslot automatycznie podąża za językiem przeglądarki, możesz też wybrać język samodzielnie w ustawieniach konta. Twoi zaproszeni również dostają strony rezerwacji i potwierdzenia w swoim języku."
+msgstr "Cała aplikacja – panel, strony rezerwacji i każdy e-mail – jest już dostępna po niemiecku, francusku, włosku, ukraińsku i czesku. Tymeslot automatycznie dopasowuje się do języka przeglądarki, możesz też wybrać język samodzielnie w ustawieniach konta. Zaproszeni również dostają strony rezerwacji i potwierdzenia w swoim języku."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
@@ -232,7 +232,7 @@ msgstr "Tu jest wszystko"
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Your calendar is home. Meetings, availability, integrations, and your profile are all one click away."
-msgstr "Kalendarz to Twoje centrum. Spotkania, dostępność, integracje i profil masz o jedno kliknięcie stąd."
+msgstr "Kalendarz to twoje centrum. Spotkania, dostępność, integracje i profil masz o jedno kliknięcie stąd."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
@@ -262,12 +262,12 @@ msgstr "Zatwierdzaj rezerwacje przed potwierdzeniem"
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen
 msgid "The heading, greeting and instruction at the top of your booking page are now yours to write. Say what you actually do, in your own words, and watch it in the live preview as you type - every change saves itself. Switch it off any time to go back to the built-in wording, translated into every language Tymeslot supports."
-msgstr "Nagłówek, powitanie i instrukcja na górze Twojej strony rezerwacji są teraz do napisania po Twojemu. Powiedz własnymi słowami, czym się naprawdę zajmujesz, i obserwuj efekt w podglądzie na żywo w trakcie pisania – każda zmiana zapisuje się sama. Wyłącz to, kiedy chcesz, żeby wrócić do wbudowanych tekstów, przetłumaczonych na każdy język, który obsługuje Tymeslot."
+msgstr "Nagłówek, powitanie i instrukcja na górze strony rezerwacji są teraz do napisania po twojemu. Powiedz własnymi słowami, czym się naprawdę zajmujesz, i obserwuj efekt w podglądzie na żywo w trakcie pisania – każda zmiana zapisuje się sama. Wyłącz to, kiedy chcesz, żeby wrócić do wbudowanych tekstów, przetłumaczonych na każdy język, który obsługuje Tymeslot."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Turn on approval for a meeting type and its bookings wait for you. The slot is held so nobody else can take it, the person booking is told it's a request rather than a confirmed meeting, and your answer is one click from the email. Don't answer in time and the request lapses on its own."
-msgstr "Włącz zatwierdzanie dla typu spotkania, a jego rezerwacje będą czekać na Ciebie. Termin jest zablokowany, więc nikt inny go nie zajmie, osoba rezerwująca widzi, że to prośba, a nie potwierdzone spotkanie, a Ty odpowiadasz jednym kliknięciem prosto z e-maila. Jeśli nie odpowiesz na czas, prośba wygasa sama."
+msgstr "Włącz zatwierdzanie dla typu spotkania, a jego rezerwacje będą czekać na ciebie. Termin jest zablokowany, więc nikt inny go nie zajmie, osoba rezerwująca widzi, że to prośba, a nie potwierdzone spotkanie, a ty odpowiadasz jednym kliknięciem prosto z e-maila. Jeśli nie odpowiesz na czas, prośba wygasa sama."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen
@@ -277,12 +277,12 @@ msgstr "Napisz własne powitanie na stronie rezerwacji"
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Add a holiday on the availability page and those days stop being offered, across every schedule and every meeting type, without a blocking event in any calendar you have connected. Give the first and last day a time when you leave mid-afternoon or come back mid-morning. Bookings already in your diary keep their times, and you are shown which ones before you save. Nobody booking you sees why the days are closed."
-msgstr "Dodaj urlop na stronie dostępności, a te dni przestaną być oferowane – we wszystkich harmonogramach i wszystkich typach spotkań, bez blokującego wydarzenia w żadnym z podłączonych kalendarzy. Pierwszemu i ostatniemu dniowi nadaj godzinę, jeśli wychodzisz po południu albo wracasz przed południem. Rezerwacje już zapisane w kalendarzu zachowują swoje godziny, a przed zapisaniem zobaczysz, które to. Osoby rezerwujące nie widzą, dlaczego te dni są zamknięte."
+msgstr "Dodaj nieobecność na stronie dostępności, a te dni przestaną być oferowane – we wszystkich harmonogramach i wszystkich typach spotkań, bez blokującego wydarzenia w żadnym z podłączonych kalendarzy. Pierwszemu i ostatniemu dniowi nadaj godzinę, jeśli wychodzisz po południu albo wracasz przed południem. Rezerwacje już zapisane w kalendarzu zachowują swoje godziny, a przed zapisaniem zobaczysz, które to. Osoby rezerwujące nie widzą, dlaczego te dni są zamknięte."
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
 msgid "Close the days you are away"
-msgstr "Zamknij dni, w których Cię nie ma"
+msgstr "Zamknij dni, w których cię nie ma"
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format

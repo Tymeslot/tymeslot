@@ -57,7 +57,7 @@ msgstr "Podłącz Stripe, aby pobierać opłaty za spotkania."
 #: lib/tymeslot_web/live/dashboard/payments_settings/connect_cta.ex
 #, elixir-autogen, elixir-format
 msgid "Connect Stripe to start charging for meetings. Money goes directly to your Stripe account."
-msgstr "Podłącz Stripe, aby pobierać opłaty za spotkania. Pieniądze trafiają prosto na Twoje konto Stripe."
+msgstr "Podłącz Stripe, aby pobierać opłaty za spotkania. Pieniądze trafiają prosto na twoje konto Stripe."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
@@ -124,12 +124,12 @@ msgstr "Odłącz Stripe"
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Disconnect your Stripe account from Tymeslot. Existing payments remain visible. New paid bookings will fail until you reconnect."
-msgstr "Odłącz swoje konto Stripe od Tymeslot. Dotychczasowe płatności pozostaną widoczne. Nowe płatne rezerwacje nie powiodą się, dopóki nie podłączysz konta ponownie."
+msgstr "Odłącz konto Stripe od Tymeslot. Dotychczasowe płatności pozostaną widoczne. Nowe płatne rezerwacje nie powiodą się, dopóki nie podłączysz konta ponownie."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Disconnect your Stripe account from Tymeslot? Existing payments remain visible, but new paid bookings will fail until you reconnect."
-msgstr "Odłączyć Twoje konto Stripe od Tymeslot? Dotychczasowe płatności pozostaną widoczne, ale nowe płatne rezerwacje nie powiodą się, dopóki nie podłączysz konta ponownie."
+msgstr "Odłączyć konto Stripe od Tymeslot? Dotychczasowe płatności pozostaną widoczne, ale nowe płatne rezerwacje nie powiodą się, dopóki nie podłączysz konta ponownie."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
@@ -287,7 +287,7 @@ msgstr "Zwrócono"
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Refunding..."
-msgstr "Zwracanie..."
+msgstr "Zwracanie…"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -327,12 +327,12 @@ msgstr "Stripe nie pobrał jeszcze opłaty za tę rezerwację. Spróbuj ponownie
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Stripe is reviewing your account. Charges switch on automatically once approved."
-msgstr "Stripe weryfikuje Twoje konto. Po zatwierdzeniu obciążenia włączą się automatycznie."
+msgstr "Stripe weryfikuje twoje konto. Po zatwierdzeniu obciążenia włączą się automatycznie."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "The attendee receives the full amount you refund. Tymeslot's platform fee is reversed proportionally; Stripe processing fees on the original charge stay with you."
-msgstr "Uczestnik otrzymuje pełną zwracaną kwotę. Prowizja platformy Tymeslot jest cofana proporcjonalnie; opłaty Stripe za obsługę pierwotnej płatności pozostają po Twojej stronie."
+msgstr "Uczestnik otrzymuje pełną zwracaną kwotę. Prowizja platformy Tymeslot jest cofana proporcjonalnie; opłaty Stripe za obsługę pierwotnej płatności pozostają po twojej stronie."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -363,9 +363,9 @@ msgstr "Łącznie otrzymano"
 #, elixir-autogen, elixir-format
 msgid "You have %{count} pending booking awaiting payment. Disconnecting will cancel it."
 msgid_plural "You have %{count} pending bookings awaiting payment. Disconnecting will cancel them."
-msgstr[0] "Masz %{count} rezerwację oczekującą na płatność. Odłączenie ją anuluje."
-msgstr[1] "Masz %{count} rezerwacje oczekujące na płatność. Odłączenie je anuluje."
-msgstr[2] "Masz %{count} rezerwacji oczekujących na płatność. Odłączenie je anuluje."
+msgstr[0] "Masz %{count} rezerwację oczekującą na płatność. Odłączenie ją odwoła."
+msgstr[1] "Masz %{count} rezerwacje oczekujące na płatność. Odłączenie je odwoła."
+msgstr[2] "Masz %{count} rezerwacji oczekujących na płatność. Odłączenie je odwoła."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
@@ -375,12 +375,12 @@ msgstr "Podłączanie Stripe zostało rozpoczęte, ale konfiguracja nie jest dok
 #: lib/tymeslot_web/live/dashboard/payments_settings/status_card.ex
 #, elixir-autogen, elixir-format
 msgid "Your Stripe account is disconnected. Reconnect to accept payments again."
-msgstr "Twoje konto Stripe jest odłączone. Podłącz je ponownie, aby znów przyjmować płatności."
+msgstr "Konto Stripe jest odłączone. Podłącz je ponownie, aby znów przyjmować płatności."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/refund_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Refund %{attendee} for %{meeting_type}."
-msgstr "Zwrot dla %{attendee} za %{meeting_type}."
+msgstr "Zwrot płatności – uczestnik: %{attendee}, typ spotkania: %{meeting_type}."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/currency_selector.ex
 #, elixir-autogen, elixir-format
@@ -390,7 +390,7 @@ msgstr "Zmiana waluty ustawi wszystkie płatne typy spotkań jako bezpłatne –
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelled"
-msgstr "Anulowano"
+msgstr "Data odwołania"
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
@@ -410,15 +410,15 @@ msgstr "Zaległe zwroty"
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
 msgid "These bookings were cancelled while you still held the attendee's money. Cancelling never refunds on its own."
-msgstr "Te rezerwacje zostały anulowane, gdy pieniądze uczestnika wciąż były u Ciebie. Samo anulowanie nigdy nie wykonuje zwrotu."
+msgstr "Te rezerwacje zostały odwołane, gdy pieniądze uczestnika wciąż były u ciebie. Samo odwołanie nigdy nie wykonuje zwrotu."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} pending booking cancelled."
 msgid_plural "%{count} pending bookings cancelled."
-msgstr[0] "Anulowano %{count} oczekującą rezerwację."
-msgstr[1] "Anulowano %{count} oczekujące rezerwacje."
-msgstr[2] "Anulowano %{count} oczekujących rezerwacji."
+msgstr[0] "Odwołano %{count} oczekującą rezerwację."
+msgstr[1] "Odwołano %{count} oczekujące rezerwacje."
+msgstr[2] "Odwołano %{count} oczekujących rezerwacji."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -431,17 +431,17 @@ msgstr[2] "%{count} zwrotów jest wciąż zaległych i trzeba je teraz wykonać 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
 msgid "Showing the %{shown} oldest of %{total} outstanding refunds."
-msgstr "Pokazujemy %{shown} najstarszych z %{total} zaległych zwrotów."
+msgstr "Najstarsze zaległe zwroty: %{shown} z %{total}."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/disconnect_modal.ex
 #, elixir-autogen, elixir-format
 msgid "You still owe %{count} refund totalling %{total}. Disconnecting does not issue it, and afterwards you will have to refund it from your Stripe dashboard."
 msgid_plural "You still owe %{count} refunds totalling %{total}. Disconnecting does not issue them, and afterwards you will have to refund them from your Stripe dashboard."
-msgstr[0] "Masz wciąż do oddania %{count} zwrot na łączną kwotę %{total}. Odłączenie go nie wykona, a potem trzeba go będzie zwrócić w panelu Stripe."
-msgstr[1] "Masz wciąż do oddania %{count} zwroty na łączną kwotę %{total}. Odłączenie ich nie wykona, a potem trzeba je będzie zwrócić w panelu Stripe."
-msgstr[2] "Masz wciąż do oddania %{count} zwrotów na łączną kwotę %{total}. Odłączenie ich nie wykona, a potem trzeba je będzie zwrócić w panelu Stripe."
+msgstr[0] "Masz jeszcze %{count} zaległy zwrot na łączną kwotę %{total}. Odłączenie konta go nie wykona, a potem trzeba będzie wykonać go w panelu Stripe."
+msgstr[1] "Masz jeszcze %{count} zaległe zwroty na łączną kwotę %{total}. Odłączenie konta ich nie wykona, a potem trzeba będzie wykonać je w panelu Stripe."
+msgstr[2] "Masz jeszcze %{count} zaległych zwrotów na łączną kwotę %{total}. Odłączenie konta ich nie wykona, a potem trzeba będzie wykonać je w panelu Stripe."
 
 #: lib/tymeslot_web/live/dashboard/payments_settings/outstanding_refunds.ex
 #, elixir-autogen, elixir-format
 msgid "Your Stripe account is not connected, so these refunds have to be issued from your Stripe dashboard. The money is still owed."
-msgstr "Twoje konto Stripe nie jest podłączone, więc te zwroty trzeba wykonać w panelu Stripe. Pieniądze wciąż są do oddania."
+msgstr "Konto Stripe nie jest podłączone, więc te zwroty trzeba wykonać w panelu Stripe. Te pieniądze nadal należą się uczestnikom."

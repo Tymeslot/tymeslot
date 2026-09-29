@@ -25,7 +25,7 @@ msgstr "Zaktualizowano: %{name}."
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
 msgid "(you)"
-msgstr "(Ty)"
+msgstr "(ty)"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
@@ -149,7 +149,7 @@ msgstr "Odebrać sobie uprawnienia administratora?"
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Demoting..."
-msgstr "Odbieranie uprawnień..."
+msgstr "Odbieranie uprawnień…"
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #: lib/tymeslot_web/live/admin_live/formatters.ex
@@ -248,7 +248,7 @@ msgstr "Nadaj użytkownikowi uprawnienia administratora"
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Promoting..."
-msgstr "Nadawanie uprawnień..."
+msgstr "Nadawanie uprawnień…"
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex
 #, elixir-autogen, elixir-format
@@ -329,12 +329,12 @@ msgstr "Użytkownicy"
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
 msgid "You have been demoted from admin."
-msgstr "Odebrano Ci uprawnienia administratora."
+msgstr "Odebrano ci uprawnienia administratora."
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
 #, elixir-autogen, elixir-format
 msgid "You will lose access to admin settings and user management, and be returned to your dashboard."
-msgstr "Stracisz dostęp do ustawień administracyjnych i zarządzania użytkownikami, a następnie wrócisz do swojego panelu."
+msgstr "Stracisz dostęp do ustawień administracyjnych i zarządzania użytkownikami, a następnie wrócisz do panelu."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex
 #, elixir-autogen, elixir-format
@@ -404,12 +404,12 @@ msgstr "Włącz logowanie jednokrotne OAuth 2.0 / OIDC (Keycloak, Authentik, Lem
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a booking. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
-msgstr "Minimalny wynik reCAPTCHA v3 (0.0–1.0) wymagany do przyjęcia rezerwacji. Niższe wartości są bardziej pobłażliwe; domyślna wartość to 0.3 i odpowiada zaleceniu Google dla formularzy o niskim ryzyku nadużyć."
+msgstr "Minimalny wynik reCAPTCHA v3 (0.0–1.0) wymagany do przyjęcia rezerwacji. Niższe wartości są mniej restrykcyjne; domyślna wartość to 0.3 i odpowiada zaleceniu Google dla formularzy o niskim ryzyku nadużyć."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a signup. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
-msgstr "Minimalny wynik reCAPTCHA v3 (0.0–1.0) wymagany do przyjęcia rejestracji. Niższe wartości są bardziej pobłażliwe; domyślna wartość to 0.3 i odpowiada zaleceniu Google dla formularzy o niskim ryzyku nadużyć."
+msgstr "Minimalny wynik reCAPTCHA v3 (0.0–1.0) wymagany do przyjęcia rejestracji. Niższe wartości są mniej restrykcyjne; domyślna wartość to 0.3 i odpowiada zaleceniu Google dla formularzy o niskim ryzyku nadużyć."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -429,7 +429,7 @@ msgstr "Pokazuj przycisk „Kontynuuj z Google” na stronie logowania i rejestr
 #: lib/tymeslot_web/hooks/ensure_admin_hook.ex
 #, elixir-autogen, elixir-format
 msgid "Your admin access has been revoked."
-msgstr "Twoje uprawnienia administratora zostały cofnięte."
+msgstr "Cofnięto ci uprawnienia administratora."
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex
 #, elixir-autogen, elixir-format
@@ -455,12 +455,12 @@ msgstr "Nie można wyłączyć logowania hasłem, dopóki co najmniej jeden admi
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Collect privacy-friendly analytics for booking pages on this instance: page views, traffic source (UTM/referrer), and conversion. Counts unique visitors with a daily-rotating, cookieless fingerprint - no raw IP is stored. Off by default; review your privacy policy before enabling."
-msgstr "Zbieraj statystyki stron rezerwacji w tej instancji z poszanowaniem prywatności: odsłony, źródło ruchu (UTM/referrer) i konwersję. Unikalni odwiedzający są liczeni na podstawie bezciasteczkowego odcisku zmienianego codziennie – surowe adresy IP nie są przechowywane. Domyślnie wyłączone; przed włączeniem sprawdź swoją politykę prywatności."
+msgstr "Zbieraj statystyki stron rezerwacji w tej instancji z poszanowaniem prywatności: odsłony, źródło ruchu (UTM/strona odsyłająca) i konwersję. Unikalni odwiedzający są liczeni na podstawie odcisku cyfrowego zmienianego codziennie, bez plików cookie – surowe adresy IP nie są przechowywane. Domyślnie wyłączone; przed włączeniem przejrzyj politykę prywatności."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Let hosts on this instance take payment from bookers via Stripe Connect. Requires STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET to be set in the environment - without them the toggle stays locked."
-msgstr "Pozwól organizatorom w tej instancji przyjmować płatności od rezerwujących przez Stripe Connect. Wymaga ustawienia STRIPE_SECRET_KEY i STRIPE_CONNECT_WEBHOOK_SECRET w środowisku – bez nich przełącznik pozostaje zablokowany."
+msgstr "Pozwól organizatorom w tej instancji przyjmować płatności od gości przez Stripe Connect. Wymaga ustawienia STRIPE_SECRET_KEY i STRIPE_CONNECT_WEBHOOK_SECRET w środowisku – bez nich przełącznik pozostaje zablokowany."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
@@ -565,7 +565,7 @@ msgstr "Ten typ pliku nie jest obsługiwany."
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
 msgid "That image could not be read. Try a PNG or JPEG."
-msgstr "Nie udało się odczytać tego obrazu. Spróbuj pliku PNG lub JPEG."
+msgstr "Nie udało się odczytać tego obrazu. Użyj pliku PNG lub JPEG."
 
 #: lib/tymeslot_web/live/admin_live.ex
 #, elixir-autogen, elixir-format
@@ -615,7 +615,7 @@ msgstr "Zapasowy język panelu"
 #: lib/tymeslot_web/live/admin_live/formatters.ex
 #, elixir-autogen, elixir-format
 msgid "Localisation"
-msgstr "Lokalizacja"
+msgstr "Język i region"
 
 #: lib/tymeslot_web/live/admin_live/components/locale_setting.ex
 #, elixir-autogen, elixir-format

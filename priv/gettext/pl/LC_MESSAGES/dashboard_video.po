@@ -36,7 +36,7 @@ msgstr "Klucz API"
 #: lib/tymeslot/integrations/video/providers/mirotalk_provider.ex
 #, elixir-autogen, elixir-format
 msgid "API endpoint not found - Please verify the base URL is correct"
-msgstr "Nie znaleziono endpointu API – sprawdź, czy bazowy adres URL jest poprawny"
+msgstr "Nie znaleziono punktu końcowego API – sprawdź, czy bazowy adres URL jest poprawny"
 
 #: lib/tymeslot/integrations/video/input_validation.ex
 #, elixir-autogen, elixir-format
@@ -107,7 +107,7 @@ msgstr ""
 #: lib/tymeslot/integrations/video/providers/mirotalk_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication failed - Please check your API key"
-msgstr "Uwierzytelnianie nie powiodło się – sprawdź swój klucz API"
+msgstr "Uwierzytelnianie nie powiodło się – sprawdź klucz API"
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
 #, elixir-autogen, elixir-format
@@ -160,7 +160,7 @@ msgstr "Podłącz dowolną platformę wideo"
 #: lib/tymeslot_web/live/dashboard/video_settings/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Connect one so online meetings get a video link added automatically when they're booked."
-msgstr "Podłącz jednego, aby spotkania online automatycznie otrzymywały link wideo przy rezerwacji."
+msgstr "Podłącz dostawcę, aby spotkania online automatycznie otrzymywały link wideo przy rezerwacji."
 
 #: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
 #, elixir-autogen, elixir-format
@@ -185,7 +185,7 @@ msgstr "Połączenie odrzucone – serwer może być wyłączony lub adres URL j
 #: lib/tymeslot/integrations/video/providers/mirotalk_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Connection successful - API key is valid"
-msgstr "Połączenie udane – klucz API jest prawidłowy"
+msgstr "Połączono – klucz API jest prawidłowy"
 
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -215,7 +215,7 @@ msgstr ""
 #: lib/tymeslot/integrations/video/oauth_callback.ex
 #, elixir-autogen, elixir-format
 msgid "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."
-msgstr "Nie udało się zidentyfikować Twojego konta. Spróbuj ponownie. Jeśli problem się powtarza, usuń i dodaj integrację ponownie."
+msgstr "Nie udało się zidentyfikować konta. Spróbuj ponownie. Jeśli problem się powtarza, usuń integrację i dodaj ją ponownie."
 
 #: lib/tymeslot/integrations/video/providers/nextcloud_talk_provider.ex
 #, elixir-autogen, elixir-format
@@ -307,7 +307,7 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Enter your video meeting URL. Use {{meeting_id}} for unique rooms per meeting"
-msgstr "Wpisz adres URL swojego spotkania wideo. Użyj {{meeting_id}}, aby każde spotkanie miało własny pokój"
+msgstr "Wpisz adres URL spotkania wideo. Użyj {{meeting_id}}, aby każde spotkanie miało własny pokój"
 
 #: lib/tymeslot/integrations/video/provider_config.ex
 #, elixir-autogen, elixir-format
@@ -337,7 +337,7 @@ msgstr "Nie udało się połączyć z adresem URL: %{reason}"
 #: lib/tymeslot_web/live/dashboard/video_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to reconnect. Please try again."
-msgstr "Nie udało się połączyć ponownie. Spróbuj ponownie."
+msgstr "Ponowne połączenie nie powiodło się. Spróbuj jeszcze raz."
 
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
 #, elixir-autogen, elixir-format
@@ -357,7 +357,7 @@ msgstr ""
 #: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
 msgid "Found 'meeting_id' without brackets - use {{meeting_id}}"
-msgstr "Znaleziono 'meeting_id' bez nawiasów – użyj {{meeting_id}}"
+msgstr "Znaleziono „meeting_id” bez nawiasów – użyj {{meeting_id}}"
 
 #: lib/tymeslot/integrations/video/provider_config.ex
 #, elixir-autogen, elixir-format
@@ -372,12 +372,12 @@ msgstr "Klucz API znajdziesz w konfiguracji swojej instancji MiroTalk"
 #: lib/tymeslot/integrations/video/providers/google_meet_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Google Meet access was revoked. Please reconnect your Google account."
-msgstr "Dostęp do Google Meet został cofnięty. Podłącz ponownie swoje konto Google."
+msgstr "Dostęp do Google Meet został cofnięty. Połącz ponownie konto Google."
 
 #: lib/tymeslot/integrations/video/providers/google_meet_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Google Meet connected successfully!"
-msgstr "Google Meet podłączony!"
+msgstr "Podłączono Google Meet!"
 
 #: lib/tymeslot/integrations/video/providers/google_meet_provider.ex
 #, elixir-autogen, elixir-format
@@ -514,12 +514,12 @@ msgstr "Adres URL spotkania musi być tekstem"
 #: lib/tymeslot/integrations/video/providers/teams_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Microsoft Teams access was revoked. Please reconnect your Teams account."
-msgstr "Dostęp do Microsoft Teams został cofnięty. Podłącz ponownie swoje konto Teams."
+msgstr "Dostęp do Microsoft Teams został cofnięty. Połącz ponownie konto Teams."
 
 #: lib/tymeslot/integrations/video/providers/teams_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Microsoft Teams connected successfully!"
-msgstr "Microsoft Teams podłączony!"
+msgstr "Podłączono Microsoft Teams!"
 
 #: lib/tymeslot/integrations/video/providers/mirotalk_provider.ex
 #, elixir-autogen, elixir-format
@@ -690,7 +690,7 @@ msgstr "Nie podłączono jeszcze żadnego dostawcy wideo"
 #: lib/tymeslot/integrations/video/providers/mirotalk_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Not Acceptable - The MiroTalk server rejected the request. Please verify your base URL and API configuration"
-msgstr "Not Acceptable – serwer MiroTalk odrzucił żądanie. Sprawdź bazowy adres URL i konfigurację API"
+msgstr "Serwer MiroTalk odrzucił żądanie (Not Acceptable). Sprawdź bazowy adres URL i konfigurację API"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
@@ -735,12 +735,12 @@ msgstr "Wybierz dostawcę"
 #: lib/tymeslot/integrations/video/providers/link_room.ex
 #, elixir-autogen, elixir-format
 msgid "Processed URL exceeds maximum length of %{max_length} characters (got %{url_length})"
-msgstr "Przetworzony adres URL przekracza maksymalną długość %{max_length} znaków (ma %{url_length})"
+msgstr "Przetworzony adres URL jest za długi (maksymalna liczba znaków: %{max_length}, obecnie: %{url_length})"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Reconnect"
-msgstr "Podłącz ponownie"
+msgstr "Połącz ponownie"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
@@ -765,7 +765,7 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Saving..."
-msgstr "Zapisywanie..."
+msgstr "Zapisywanie…"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/provider_picker.ex
 #, elixir-autogen, elixir-format
@@ -832,7 +832,7 @@ msgstr "Wykryto zmienną szablonu: {{meeting_id}}"
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Test connection"
-msgstr "Testuj połączenie"
+msgstr "Przetestuj połączenie"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
@@ -867,7 +867,7 @@ msgstr ""
 #: lib/tymeslot_web/components/dashboard/integrations/video/mirotalk_config.ex
 #, elixir-autogen, elixir-format
 msgid "The full URL where your MiroTalk P2P instance is hosted"
-msgstr "Pełny adres URL, pod którym działa Twoja instancja MiroTalk P2P"
+msgstr "Pełny adres URL, pod którym działa instancja MiroTalk P2P"
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format
@@ -953,7 +953,7 @@ msgstr "Adres URL odpowiedział kodem HTTP %{status}"
 #: lib/tymeslot/integrations/video/providers/mirotalk_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Unexpected response (status %{status}) - Please verify your configuration"
-msgstr "Nieoczekiwana odpowiedź (status %{status}) – sprawdź swoją konfigurację"
+msgstr "Nieoczekiwana odpowiedź (status %{status}) – sprawdź konfigurację"
 
 #: lib/tymeslot/integrations/video/template_syntax.ex
 #, elixir-autogen, elixir-format
@@ -1048,7 +1048,7 @@ msgstr "Twój klucz API"
 #: lib/tymeslot_web/components/dashboard/integrations/video/edit_video_integration_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Your MiroTalk instance base URL"
-msgstr "Bazowy adres URL Twojej instancji MiroTalk"
+msgstr "Bazowy adres URL instancji MiroTalk"
 
 #: lib/tymeslot/integrations/video/provider_config.ex
 #: lib/tymeslot_web/components/dashboard/integrations/video/jitsi_config.ex
@@ -1059,32 +1059,32 @@ msgstr ""
 #: lib/tymeslot/integrations/video/providers/zoom_provider/reauth.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom access was revoked. Please reconnect your Zoom account."
-msgstr "Dostęp do Zoom został cofnięty. Podłącz ponownie swoje konto Zoom."
+msgstr "Dostęp do Zoom został cofnięty. Połącz ponownie konto Zoom."
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom connected successfully!"
-msgstr "Zoom podłączony!"
+msgstr "Podłączono Zoom!"
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom is missing the permission needed to cancel meetings. Please reconnect your Zoom account."
-msgstr "Zoom nie ma uprawnienia potrzebnego do odwoływania spotkań. Podłącz ponownie swoje konto Zoom."
+msgstr "Zoom nie ma uprawnienia potrzebnego do odwoływania spotkań. Połącz ponownie konto Zoom."
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom is missing the permission needed to create meetings. Please reconnect your Zoom account."
-msgstr "Zoom nie ma uprawnienia potrzebnego do tworzenia spotkań. Podłącz ponownie swoje konto Zoom."
+msgstr "Zoom nie ma uprawnienia potrzebnego do tworzenia spotkań. Połącz ponownie konto Zoom."
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider/scopes.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom is missing the permission needed to reschedule meetings. Please reconnect your Zoom account."
-msgstr "Zoom nie ma uprawnienia potrzebnego do zmiany terminu spotkań. Podłącz ponownie swoje konto Zoom."
+msgstr "Zoom nie ma uprawnienia potrzebnego do zmiany terminu spotkań. Połącz ponownie konto Zoom."
 
 #: lib/tymeslot/integrations/video/providers/zoom_provider.ex
 #, elixir-autogen, elixir-format
 msgid "Zoom token refresh failed after 401. Please reconnect your Zoom account."
-msgstr "Odświeżenie tokena Zoom nie powiodło się po błędzie 401. Podłącz ponownie swoje konto Zoom."
+msgstr "Odświeżenie tokena Zoom nie powiodło się po błędzie 401. Połącz ponownie konto Zoom."
 
 #: lib/tymeslot_web/live/dashboard/video_settings/components.ex
 #, elixir-autogen, elixir-format

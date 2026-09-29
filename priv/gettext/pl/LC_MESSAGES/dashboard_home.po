@@ -92,7 +92,7 @@ msgstr "Kalendarz zewnętrzny"
 #: lib/tymeslot_web/live/dashboard/dashboard_overview/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Here's an overview of your scheduling setup and recent activity."
-msgstr "Oto przegląd Twoich ustawień rezerwacji i ostatniej aktywności."
+msgstr "Oto przegląd ustawień rezerwacji i ostatniej aktywności."
 
 #: lib/tymeslot_web/live/dashboard/agenda_detail_modal.ex
 #, elixir-autogen, elixir-format
@@ -212,7 +212,7 @@ msgstr "Twój dzień"
 #: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex
 #, elixir-autogen, elixir-format
 msgid "in %{days}d"
-msgstr "za %{days} d"
+msgstr "za %{days} dn."
 
 #: lib/tymeslot_web/live/dashboard/dashboard_overview_formatters.ex
 #, elixir-autogen, elixir-format

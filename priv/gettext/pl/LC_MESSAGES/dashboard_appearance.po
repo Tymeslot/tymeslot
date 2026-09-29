@@ -35,7 +35,7 @@ msgstr "Wybierz swój styl"
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
 msgid "Choose a visual style that matches your professional identity."
-msgstr "Wybierz styl wizualny, który pasuje do Twojego wizerunku zawodowego."
+msgstr "Wybierz styl wizualny, który pasuje do twojego wizerunku zawodowego."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
@@ -118,7 +118,7 @@ msgstr "Nieprawidłowy wybór motywu"
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #, elixir-autogen, elixir-format
 msgid "JPG, PNG or WebP. Max 5MB."
-msgstr "JPG, PNG lub WebP. Maks. 5MB."
+msgstr "JPG, PNG lub WebP. Maks. 5 MB."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
@@ -130,7 +130,7 @@ msgstr "Podgląd na żywo"
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "MP4 or WebM. Max 20MB."
-msgstr "MP4 lub WebM. Maks. 20MB."
+msgstr "MP4 lub WebM. Maks. 20 MB."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -141,12 +141,12 @@ msgstr "Wkrótce więcej stylów"
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Or upload your own"
-msgstr "Albo wgraj własny"
+msgstr "Możesz też przesłać własny plik"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Our design team is busy crafting new themes to help you express your unique professional style."
-msgstr "Nasz zespół projektowy pracuje nad nowymi motywami, które pomogą Ci wyrazić Twój niepowtarzalny styl zawodowy."
+msgstr "Nasz zespół projektowy pracuje nad nowymi motywami, które pomogą ci wyrazić swój niepowtarzalny styl zawodowy."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #, elixir-autogen, elixir-format
@@ -176,7 +176,7 @@ msgstr "Wybierz kolor jednolity"
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Select the interface that best represents your personal brand and creates the best experience for your clients."
-msgstr "Wybierz interfejs, który najlepiej oddaje Twoją markę osobistą i zapewni klientom najlepsze wrażenia."
+msgstr "Wybierz interfejs, który najlepiej oddaje twoją markę osobistą i zapewni klientom najlepsze wrażenia."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
@@ -203,33 +203,33 @@ msgstr "Podgląd motywu"
 #: lib/tymeslot_web/live/dashboard/theme_settings_component.ex
 #, elixir-autogen, elixir-format
 msgid "Theme updated to %{theme_name}"
-msgstr "Motyw zmieniony na %{theme_name}"
+msgstr "Zmieniono motyw: %{theme_name}"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/theme_preview_inline.ex
 #, elixir-autogen, elixir-format
 msgid "This preview reflects your current color scheme and background."
-msgstr "Ten podgląd pokazuje Twoją bieżącą kolorystykę i tło."
+msgstr "Ten podgląd pokazuje bieżącą kolorystykę i tło."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/background_uploads.ex
 #, elixir-autogen, elixir-format
 msgid "Too many upload attempts. Please wait a few minutes and try again."
-msgstr "Zbyt wiele prób wgrania pliku. Odczekaj kilka minut i spróbuj ponownie."
+msgstr "Zbyt wiele prób przesłania pliku. Odczekaj kilka minut i spróbuj ponownie."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Upload Image"
-msgstr "Wgraj obraz"
+msgstr "Prześlij obraz"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Upload Video"
-msgstr "Wgraj wideo"
+msgstr "Prześlij wideo"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Upload not available"
-msgstr "Wgrywanie niedostępne"
+msgstr "Przesyłanie niedostępne"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/components.ex
 #, elixir-autogen, elixir-format
@@ -239,12 +239,12 @@ msgstr "Wideo"
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/image_picker.ex
 #, elixir-autogen, elixir-format
 msgid "You have a custom image. Selecting a preset will remove it."
-msgstr "Masz własny obraz. Wybranie gotowego ustawienia go usunie."
+msgstr "Masz własny obraz. Wybranie obrazu z kolekcji go usunie."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/theme_customization/pickers/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "You have a custom video. Selecting a preset will remove it."
-msgstr "Masz własne wideo. Wybranie gotowego ustawienia je usunie."
+msgstr "Masz własne wideo. Wybranie wideo z kolekcji je usunie."
 
 #: lib/tymeslot_web/themes/quill/theme.ex
 #, elixir-autogen, elixir-format
@@ -264,7 +264,7 @@ msgstr "Nie udało się zapisać dostosowania motywu. Spróbuj ponownie."
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "(your current theme)"
-msgstr "(Twój bieżący motyw)"
+msgstr "(bieżący motyw)"
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
@@ -299,12 +299,12 @@ msgstr "Brak podglądu"
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "Pick a username for your booking page to see it here."
-msgstr "Wybierz nazwę użytkownika dla swojej strony rezerwacji, aby zobaczyć ją tutaj."
+msgstr "Ustaw nazwę użytkownika, aby zobaczyć tutaj podgląd strony rezerwacji."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format
 msgid "Replace the wording that introduces you at the top of your booking page. Applies to every theme."
-msgstr "Zmień tekst, który przedstawia Cię na górze strony rezerwacji. Działa w każdym motywie."
+msgstr "Zmień tekst, który przedstawia cię na górze strony rezerwacji. Działa w każdym motywie."
 
 #: lib/tymeslot_web/live/dashboard/theme_settings/booking_text_form.ex
 #, elixir-autogen, elixir-format

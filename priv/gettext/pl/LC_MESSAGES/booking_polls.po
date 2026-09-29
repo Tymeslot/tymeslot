@@ -34,7 +34,7 @@ msgstr "Jeden z wybranych terminów nie jest już dostępny. Odśwież stronę i
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "One of your responses wasn't recognised. Please refresh and try again."
-msgstr "Jednej z Twoich odpowiedzi nie udało się rozpoznać. Odśwież stronę i spróbuj ponownie."
+msgstr "Jednej z odpowiedzi nie udało się rozpoznać. Odśwież stronę i spróbuj ponownie."
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
@@ -99,7 +99,7 @@ msgstr "Głosujesz jako %{name}"
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
 msgid "Voting closes %{deadline}"
-msgstr "Głosowanie kończy się %{deadline}"
+msgstr "Koniec głosowania: %{deadline}"
 
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
@@ -114,7 +114,7 @@ msgstr "Głosowanie zakończone. Oto ostateczne odpowiedzi."
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "We couldn't find your registration. Please register again."
-msgstr "Nie znaleźliśmy Twojej rejestracji. Zarejestruj się ponownie."
+msgstr "Nie znaleziono rejestracji. Zarejestruj się ponownie."
 
 #: lib/tymeslot_web/themes/shared/poll_voting_components.ex
 #, elixir-autogen, elixir-format
@@ -139,4 +139,4 @@ msgstr "Twoje imię i nazwisko"
 #: lib/tymeslot_web/themes/core/poll_voting.ex
 #, elixir-autogen, elixir-format
 msgid "Your responses have been saved."
-msgstr "Twoje odpowiedzi zostały zapisane."
+msgstr "Odpowiedzi zostały zapisane."

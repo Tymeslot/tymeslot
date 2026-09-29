@@ -73,7 +73,7 @@ msgstr "Podłącz kalendarz"
 #: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Connect a calendar so Tymeslot can read your availability and stop meetings being booked when you're already busy."
-msgstr "Podłącz kalendarz, aby Tymeslot mógł odczytywać Twoją dostępność i nie dopuszczał do rezerwacji w zajętych terminach."
+msgstr "Podłącz kalendarz, aby Tymeslot mógł odczytywać twoją dostępność i nie dopuszczał do rezerwacji w zajętych terminach."
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
@@ -158,12 +158,12 @@ msgstr "Wstrzymane kalendarze"
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Reconnect"
-msgstr "Podłącz ponownie"
+msgstr "Połącz ponownie"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Reconnect integration"
-msgstr "Podłącz integrację ponownie"
+msgstr "Połącz integrację ponownie"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
@@ -178,7 +178,7 @@ msgstr "Odświeżanie nieoczekiwanie się nie powiodło."
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Refreshing..."
-msgstr "Odświeżanie..."
+msgstr "Odświeżanie…"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
@@ -193,7 +193,7 @@ msgstr "Usuń połączenie"
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "Share a read-only link that publishes when you're busy (not the event details) as a standard iCalendar feed, so other calendar systems can overlay your availability."
-msgstr "Udostępnij link tylko do odczytu, który publikuje informację o tym, kiedy jesteś zajęty (bez szczegółów wydarzeń), jako standardowy kanał iCalendar, aby inne systemy kalendarzy mogły nałożyć Twoją dostępność."
+msgstr "Udostępnij link tylko do odczytu, który publikuje twoje zajęte terminy (bez szczegółów wydarzeń) jako standardowy kanał iCalendar, aby inne systemy kalendarzy mogły nałożyć twoją dostępność na własny widok."
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/component_view.ex
 #, elixir-autogen, elixir-format
@@ -233,12 +233,12 @@ msgstr "Będziemy sprawdzać te kalendarze, aby automatycznie unikać podwójnyc
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "books into %{calendar}"
-msgstr "zapisuje rezerwacje w %{calendar}"
+msgstr "kalendarz rezerwacji: %{calendar}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format
 msgid "conflict-checks %{selected} of %{total} calendars"
-msgstr "sprawdza konflikty w %{selected} z %{total} kalendarzy"
+msgstr "kalendarze sprawdzane pod kątem konfliktów: %{selected} z %{total}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_settings/components.ex
 #, elixir-autogen, elixir-format

@@ -10,7 +10,7 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/event_badges.ex
 #, elixir-autogen, elixir-format
 msgid "%{accepted} of %{total} guests going"
-msgstr "%{accepted} z %{total} gości bierze udział"
+msgstr "Udział potwierdzony: %{accepted} z %{total}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/event_badges.ex
 #, elixir-autogen, elixir-format
@@ -39,7 +39,7 @@ msgstr[2] "jeszcze %{count} wydarzeń"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex
 #, elixir-autogen, elixir-format
 msgid "%{days}d ago"
-msgstr "%{days} dni temu"
+msgstr "%{days} dn. temu"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
 #, elixir-autogen, elixir-format
@@ -117,7 +117,7 @@ msgstr "Całodniowe: %{event}"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar data may be outdated (last synced %{age})."
-msgstr "Dane kalendarza mogą być nieaktualne (ostatnia synchronizacja %{age})."
+msgstr "Dane kalendarza mogą być nieaktualne (ostatnia synchronizacja: %{age})."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
 #, elixir-autogen, elixir-format
@@ -235,7 +235,7 @@ msgstr "Zmień widok"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/status_banners.ex
 #, elixir-autogen, elixir-format
 msgid "Syncing calendars%{progress}..."
-msgstr "Synchronizacja kalendarzy%{progress}..."
+msgstr "Synchronizacja kalendarzy%{progress}…"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/desktop_reminder_feed.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/header.ex
@@ -295,7 +295,7 @@ msgstr "Bananowy"
 #: lib/tymeslot/integrations/calendar/event_colour.ex
 #, elixir-autogen, elixir-format
 msgid "Blueberry"
-msgstr "Borówkowy"
+msgstr "Jagodowy"
 
 #: lib/tymeslot/integrations/calendar/event_colour.ex
 #, elixir-autogen, elixir-format
@@ -345,7 +345,7 @@ msgstr "Wszystkie"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/booking_detail_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Booked through your Tymeslot page"
-msgstr "Zarezerwowane przez Twoją stronę Tymeslot"
+msgstr "Zarezerwowane na twojej stronie w Tymeslot"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
@@ -375,7 +375,7 @@ msgstr "Zarządzaj w sekcji Spotkania"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
 msgid "Meetings booked through your Tymeslot page will appear here."
-msgstr "Spotkania zarezerwowane przez Twoją stronę Tymeslot pojawią się tutaj."
+msgstr "Tutaj pojawią się spotkania zarezerwowane na twojej stronie w Tymeslot."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/agenda_view.ex
 #, elixir-autogen, elixir-format
@@ -385,4 +385,4 @@ msgstr "Brak nadchodzących rezerwacji"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/views/empty_state.ex
 #, elixir-autogen, elixir-format
 msgid "Your bookings already show here. Connect a calendar to see the rest of your events and prevent double-bookings."
-msgstr "Twoje rezerwacje już tu widać. Podłącz kalendarz, aby zobaczyć pozostałe wydarzenia i uniknąć podwójnych rezerwacji."
+msgstr "Rezerwacje są już tu widoczne. Podłącz kalendarz, aby zobaczyć pozostałe wydarzenia i uniknąć podwójnych rezerwacji."

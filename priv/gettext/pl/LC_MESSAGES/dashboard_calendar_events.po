@@ -68,17 +68,17 @@ msgstr "Zegar 12- lub 24-godzinny"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
 #, elixir-autogen, elixir-format
 msgid "12h"
-msgstr "12 godz."
+msgstr "12 h"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
 #, elixir-autogen, elixir-format
 msgid "24h"
-msgstr "24 godz."
+msgstr "24 h"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/shortcuts_help_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Actions"
-msgstr "Działania"
+msgstr "Akcje"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/attendee_editor.ex
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
@@ -225,7 +225,7 @@ msgstr "Utworzono w Tymeslot"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Creating..."
-msgstr "Tworzenie..."
+msgstr "Tworzenie…"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
 #, elixir-autogen, elixir-format
@@ -266,7 +266,7 @@ msgstr "Usuń wydarzenie"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Deleting..."
-msgstr "Usuwanie..."
+msgstr "Usuwanie…"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/event_detail_modal.ex
 #, elixir-autogen, elixir-format
@@ -276,7 +276,7 @@ msgstr "Opis"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/settings_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Desktop reminders"
-msgstr "Przypomnienia na pulpicie"
+msgstr "Przypomnienia w przeglądarce"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_discard_attendees_modal.ex
 #, elixir-autogen, elixir-format
@@ -296,7 +296,7 @@ msgstr "Nie powtarza się"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/attendee_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Each person will receive an invitation from your calendar provider."
-msgstr "Każda osoba otrzyma zaproszenie od dostawcy Twojego kalendarza."
+msgstr "Każda osoba otrzyma zaproszenie od dostawcy kalendarza."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_prompt_modal.ex
 #, elixir-autogen, elixir-format
@@ -562,9 +562,9 @@ msgstr "Główny"
 #, elixir-autogen, elixir-format
 msgid "Refresh failed for %{count} integration"
 msgid_plural "Refresh failed for %{count} integrations"
-msgstr[0] "Nie udało się odświeżyć %{count} integracji"
-msgstr[1] "Nie udało się odświeżyć %{count} integracji"
-msgstr[2] "Nie udało się odświeżyć %{count} integracji"
+msgstr[0] "Odświeżanie nie powiodło się: %{count} integracja"
+msgstr[1] "Odświeżanie nie powiodło się: %{count} integracje"
+msgstr[2] "Odświeżanie nie powiodło się: %{count} integracji"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
 #, elixir-autogen, elixir-format
@@ -574,7 +574,7 @@ msgstr "Przypomnienia"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/reminders_editor.ex
 #, elixir-autogen, elixir-format
 msgid "Reminders are synced to your calendar so it can alert you on your own devices."
-msgstr "Przypomnienia są synchronizowane z Twoim kalendarzem, aby mógł powiadamiać Cię na Twoich urządzeniach."
+msgstr "Przypomnienia są synchronizowane z kalendarzem, więc otrzymasz je na swoich urządzeniach."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex
 #, elixir-autogen, elixir-format
@@ -711,12 +711,12 @@ msgstr "To wydarzenie jest powiązane z rezerwacją. Uczestnik otrzyma powiadomi
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_remove_attendee_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This person will receive a cancellation from your calendar provider."
-msgstr "Ta osoba otrzyma odwołanie od dostawcy Twojego kalendarza."
+msgstr "Ta osoba otrzyma odwołanie od dostawcy kalendarza."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This will also remove it from your calendar provider."
-msgstr "Zostanie też usunięte u dostawcy Twojego kalendarza."
+msgstr "Zostanie też usunięte u dostawcy kalendarza."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
 #, elixir-autogen, elixir-format
@@ -860,27 +860,27 @@ msgstr "dzień/dni"
 #, elixir-autogen, elixir-format
 msgid "for %{count} occurrence"
 msgid_plural "for %{count} occurrences"
-msgstr[0] "przez %{count} wystąpienie"
-msgstr[1] "przez %{count} wystąpienia"
-msgstr[2] "przez %{count} wystąpień"
+msgstr[0] "łącznie %{count} raz"
+msgstr[1] "łącznie %{count} razy"
+msgstr[2] "łącznie %{count} razy"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "month(s)"
-msgstr "miesiąc/miesiące"
+msgstr "mies."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "occurrence"
 msgid_plural "occurrences"
-msgstr[0] "wystąpienie"
-msgstr[1] "wystąpienia"
-msgstr[2] "wystąpień"
+msgstr[0] "wystąpieniu"
+msgstr[1] "wystąpieniach"
+msgstr[2] "wystąpieniach"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "on %{days}"
-msgstr "w %{days}"
+msgstr "(%{days})"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
 #, elixir-autogen, elixir-format
@@ -890,17 +890,17 @@ msgstr "do %{date}"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "week(s)"
-msgstr "tydzień/tygodnie"
+msgstr "tyg."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/recurrence_editor.ex
 #, elixir-autogen, elixir-format
 msgid "year(s)"
-msgstr "rok/lata"
+msgstr "rok/lata/lat"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_delete_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete %{title}?"
-msgstr "Na pewno chcesz usunąć %{title}?"
+msgstr "Na pewno chcesz usunąć wydarzenie „%{title}”?"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
@@ -915,17 +915,17 @@ msgstr "Usuwanie nie powiodło się – ponowimy próbę przy następnej synchro
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to update event - changes reverted"
-msgstr "Nie udało się zaktualizować wydarzenia – zmiany cofnięte"
+msgstr "Nie udało się zaktualizować wydarzenia – cofnięto zmiany"
 
 #: lib/tymeslot/calendar_grid/event_creation.ex
 #, elixir-autogen, elixir-format
 msgid "Google Calendar saved the event but didn't return a Meet link — please try again or add it manually."
-msgstr "Google Calendar zapisał wydarzenie, ale nie zwrócił linku do Meet — spróbuj ponownie lub dodaj go ręcznie."
+msgstr "Google Calendar zapisał wydarzenie, ale nie zwrócił linku do Google Meet – spróbuj ponownie lub dodaj go ręcznie."
 
 #: lib/tymeslot/calendar_grid/event_creation.ex
 #, elixir-autogen, elixir-format
 msgid "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."
-msgstr "Trzeba ponownie podłączyć Twój kalendarz. Zrób to na stronie Integracje."
+msgstr "Kalendarz trzeba połączyć ponownie. Zrób to na stronie Integracje."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
@@ -940,7 +940,7 @@ msgstr "Ada Lovelace"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
 msgid "Books the slot, emails the guest an invitation, and adds it to your calendar."
-msgstr "Rezerwuje termin, wysyła gościowi zaproszenie e-mailem i dodaje je do Twojego kalendarza."
+msgstr "Rezerwuje termin, wysyła gościowi zaproszenie e-mailem i dodaje spotkanie do kalendarza."
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
@@ -965,7 +965,7 @@ msgstr "Imię i nazwisko gościa jest wymagane"
 #: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_execution.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting with %{name}"
-msgstr "Spotkanie z %{name}"
+msgstr "Spotkanie – %{name}"
 
 #: lib/tymeslot_web/live/dashboard/calendar_grid/modals/create_event_modal.ex
 #, elixir-autogen, elixir-format
@@ -1000,7 +1000,7 @@ msgstr "Ten kalendarz jest tylko do odczytu. Jego wydarzeń nie można zmieniać
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Could not change the video link - changes reverted"
-msgstr "Nie udało się zmienić linku do spotkania – zmiany cofnięte"
+msgstr "Nie udało się zmienić linku do spotkania wideo – cofnięto zmiany"
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
@@ -1040,7 +1040,7 @@ msgstr "Utworzono pokój wideo."
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Your calendar could not be reached. The change is saved and will sync on the next attempt."
-msgstr "Nie udało się połączyć z Twoim kalendarzem. Zmiana została zapisana i zsynchronizuje się przy następnej próbie."
+msgstr "Nie udało się połączyć z kalendarzem. Zmiana została zapisana i zostanie zsynchronizowana przy następnej próbie."
 
 #: lib/tymeslot_web/live/dashboard/calendar_event_handlers.ex
 #, elixir-autogen, elixir-format, fuzzy

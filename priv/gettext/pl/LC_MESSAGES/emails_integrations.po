@@ -19,7 +19,7 @@ msgstr ""
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "A meeting could not be added to your calendar."
-msgstr "Nie udało się dodać spotkania do Twojego kalendarza."
+msgstr "Nie udało się dodać spotkania do kalendarza."
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
@@ -54,7 +54,7 @@ msgstr "Błąd synchronizacji kalendarza"
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "Calendar Sync Error - Manual Action Required"
-msgstr "Błąd synchronizacji kalendarza – wymagane ręczne działanie"
+msgstr "Błąd synchronizacji kalendarza – wymagana interwencja"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
@@ -104,7 +104,7 @@ msgstr "Szczegóły błędu"
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar."
-msgstr "Nie udało się dodać tego spotkania do Twojego kalendarza. Rezerwacja została potwierdzona w Tymeslot, a Ty i uczestnik otrzymaliście e-maile z potwierdzeniem. Spotkanie trzeba jednak dodać do kalendarza ręcznie."
+msgstr "Nie udało się dodać tego spotkania do kalendarza. Rezerwacja została potwierdzona w Tymeslot, a e-maile z potwierdzeniem trafiły do ciebie i do uczestnika. Spotkanie trzeba jednak dodać do kalendarza ręcznie."
 
 #: lib/tymeslot/emails/templates/video_room_creation_error.ex
 #, elixir-autogen, elixir-format
@@ -114,7 +114,7 @@ msgstr ""
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format
 msgid "Location:"
-msgstr "Miejsce:"
+msgstr "Lokalizacja:"
 
 #: lib/tymeslot/emails/templates/calendar_sync_error.ex
 #, elixir-autogen, elixir-format

@@ -19,7 +19,7 @@ msgstr "%{name} ma już potwierdzenie i zaproszenie do kalendarza."
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} would like to book time with you."
-msgstr "%{name} chce zarezerwować u Ciebie termin."
+msgstr "%{name} chce zarezerwować u ciebie termin."
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
@@ -45,7 +45,7 @@ msgstr "Zatwierdź rezerwację"
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Approving..."
-msgstr "Zatwierdzanie..."
+msgstr "Zatwierdzanie…"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
@@ -90,7 +90,7 @@ msgstr "E-maile o odwołaniu trafiły do wszystkich uczestników."
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #, elixir-autogen, elixir-format
 msgid "Cancelling..."
-msgstr "Odwoływanie..."
+msgstr "Odwoływanie…"
 
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
@@ -155,7 +155,7 @@ msgstr "Jednak odmów"
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Declining..."
-msgstr "Odrzucanie..."
+msgstr "Odrzucanie…"
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
@@ -192,13 +192,13 @@ msgstr "Organizuje %{name}"
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "If you don't answer by %{deadline}, this request lapses and the slot is released."
-msgstr "Jeśli nie odpowiesz do %{deadline}, prośba wygaśnie, a termin zostanie zwolniony."
+msgstr "Czas na odpowiedź mija: %{deadline}. Jeśli do tego czasu nie odpowiesz, prośba wygaśnie, a termin zostanie zwolniony."
 
 #: lib/tymeslot_web/themes/quill/meeting/cancel.ex
 #: lib/tymeslot_web/themes/rhythm/meeting/cancel.ex
 #, elixir-autogen, elixir-format
 msgid "Keep Meeting"
-msgstr "Nie odwołuj"
+msgstr "Zachowaj spotkanie"
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
@@ -252,7 +252,7 @@ msgstr "Odczekaj chwilę i spróbuj ponownie."
 #: lib/tymeslot_web/themes/rhythm/meeting/reschedule.ex
 #, elixir-autogen, elixir-format
 msgid "Ready to pick a new time? Let's find one that works better for you."
-msgstr "Wybierzmy nowy termin, który będzie dla Ciebie wygodniejszy."
+msgstr "Wybierzmy nowy termin, który będzie dla ciebie wygodniejszy."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
@@ -285,7 +285,7 @@ msgstr "Wybierz nowy termin spotkania"
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "Shared with %{name}."
-msgstr "Widzi to %{name}."
+msgstr "%{name} zobaczy ten powód."
 
 #: lib/tymeslot_web/live/meeting_request_live.ex
 #, elixir-autogen, elixir-format
@@ -418,9 +418,9 @@ msgstr "Spotkanie zostało odwołane."
 #: lib/tymeslot_web/controllers/guest_rsvp_html.ex
 #, elixir-autogen, elixir-format
 msgid "Your response has been sent to %{name}."
-msgstr "%{name} ma już Twoją odpowiedź."
+msgstr "%{name} ma już twoją odpowiedź."
 
 #: lib/tymeslot_web/live/meeting_request_live/view.ex
 #, elixir-autogen, elixir-format
 msgid "the person who booked"
-msgstr "osoba, która rezerwowała"
+msgstr "osoba rezerwująca"

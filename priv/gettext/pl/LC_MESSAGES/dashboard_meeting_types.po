@@ -46,7 +46,7 @@ msgstr "Zapisz link"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "Unlisted"
-msgstr "Niepubliczny"
+msgstr "Ukryty"
 
 #: lib/tymeslot_web/components/dashboard/meeting_types/booking_link_modal.ex
 #, elixir-autogen, elixir-format
@@ -109,7 +109,7 @@ msgstr "Nie skonfigurowano jeszcze żadnego typu spotkania"
 #: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone and will permanently remove this meeting type from your account."
-msgstr "Tej operacji nie można cofnąć — ten typ spotkania zostanie trwale usunięty z Twojego konta."
+msgstr "Tej operacji nie można cofnąć – ten typ spotkania zostanie trwale usunięty z konta."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
@@ -180,12 +180,12 @@ msgstr "Tylko do odczytu"
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar this meeting type books into is no longer on the connected account. Edit it and choose another calendar."
-msgstr "Kalendarza, w którym ten typ spotkania rezerwuje terminy, nie ma już na podłączonym koncie. Edytuj go i wybierz inny kalendarz."
+msgstr "Kalendarza, do którego trafiają rezerwacje tego typu spotkania, nie ma już na podłączonym koncie. Edytuj typ spotkania i wybierz inny kalendarz."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format
 msgid "This meeting type books into a calendar you can no longer write to. Edit it and choose another calendar."
-msgstr "Ten typ spotkania rezerwuje terminy w kalendarzu, do którego nie masz już prawa zapisu. Edytuj go i wybierz inny kalendarz."
+msgstr "Rezerwacje tego typu spotkania trafiają do kalendarza, do którego nie masz już prawa zapisu. Edytuj typ spotkania i wybierz inny kalendarz."
 
 #: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
 #, elixir-autogen, elixir-format

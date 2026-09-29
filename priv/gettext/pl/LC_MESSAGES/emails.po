@@ -40,12 +40,12 @@ msgstr "E-mail:"
 #: lib/tymeslot/emails/shared/greeting.ex
 #, elixir-autogen, elixir-format
 msgid "Hi %{name},"
-msgstr "Cześć %{name},"
+msgstr "Cześć, %{name},"
 
 #: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
 msgid "I'll send you a reminder %{label} before our appointment."
-msgstr "Wyślę Ci przypomnienie %{label} przed naszym spotkaniem."
+msgstr "Wyślę ci przypomnienie %{label} przed naszym spotkaniem."
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
@@ -65,12 +65,12 @@ msgstr "Dołącz do spotkania wideo"
 #: lib/tymeslot/emails/shared/meeting/hero.ex
 #, elixir-autogen, elixir-format
 msgid "Location"
-msgstr "Miejsce"
+msgstr "Lokalizacja"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "Location:"
-msgstr "Miejsce:"
+msgstr "Lokalizacja:"
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -91,7 +91,7 @@ msgstr "Spotkanie"
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format
 msgid "Message from %{name}:"
-msgstr "Wiadomość od %{name}:"
+msgstr "%{name} pisze:"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
@@ -122,7 +122,7 @@ msgstr "Do ustalenia"
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
 msgid "The meeting room opens 5 minutes before your scheduled time."
-msgstr "Pokój spotkania otwiera się 5 minut przed umówioną godziną."
+msgstr "Do spotkania można dołączyć 5 minut przed zaplanowaną godziną."
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex
 #, elixir-autogen, elixir-format
@@ -172,7 +172,7 @@ msgstr[2] "minut"
 #: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
 msgid "reply to this email"
-msgstr "Odpisz na tego e-maila"
+msgstr "Odpowiedz na tę wiadomość"
 
 #: lib/tymeslot/emails/shared/text.ex
 #, elixir-autogen, elixir-format
@@ -200,7 +200,7 @@ msgstr "Rozmowa telefoniczna"
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} has invited you to an event."
-msgstr "%{name} zaprosił(a) Cię na wydarzenie."
+msgstr "%{name} zaprasza cię na wydarzenie."
 
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
@@ -250,7 +250,7 @@ msgstr "Piątek"
 #: lib/tymeslot/emails/templates/calendar_invitation.ex
 #, elixir-autogen, elixir-format
 msgid "Invited"
-msgstr "Zaproszony"
+msgstr "Zaproszenie"
 
 #: lib/tymeslot/emails/shared/meeting/hero.ex
 #, elixir-autogen, elixir-format
@@ -325,13 +325,13 @@ msgstr "Środa"
 #: lib/tymeslot/emails/shared/mjml_email.ex
 #, elixir-autogen, elixir-format
 msgid "Sent with care by"
-msgstr "Wysłane z troską przez"
+msgstr "Wysłano przez"
 
 #: lib/tymeslot/emails/shared/layouts.ex
 #: lib/tymeslot/emails/shared/mjml_email.ex
 #, elixir-autogen, elixir-format
 msgid "scheduling that respects your time"
-msgstr "rezerwacje, które szanują Twój czas"
+msgstr "rezerwacje, które szanują twój czas"
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format
@@ -376,17 +376,17 @@ msgstr "Adres e-mail został zmieniony"
 #: lib/tymeslot/emails/email_service/auth_emails.ex
 #, elixir-autogen, elixir-format
 msgid "Verify your email address"
-msgstr "Potwierdź swój adres e-mail"
+msgstr "Potwierdź adres e-mail"
 
 #: lib/tymeslot/emails/email_service/calendar_emails.ex
 #, elixir-autogen, elixir-format
 msgid "⚠️ Calendar Sync Error - Manual Action Required"
-msgstr "⚠️ Błąd synchronizacji kalendarza – wymagane ręczne działanie"
+msgstr "⚠️ Błąd synchronizacji kalendarza – wymagana interwencja"
 
 #: lib/tymeslot/emails/email_service/account_emails.ex
 #, elixir-autogen, elixir-format
 msgid "⚠️ Email Change Request - Security Alert"
-msgstr "⚠️ Prośba o zmianę adresu e-mail – alert bezpieczeństwa"
+msgstr "⚠️ Prośba o zmianę adresu e-mail – ostrzeżenie dotyczące bezpieczeństwa"
 
 #: lib/tymeslot/emails/appointment_builder.ex
 #, elixir-autogen, elixir-format
@@ -426,17 +426,17 @@ msgstr[2] "minut"
 #: lib/tymeslot/emails/shared/mjml_email.ex
 #, elixir-autogen, elixir-format
 msgid "Message from %{name}"
-msgstr "Wiadomość od %{name}"
+msgstr "Wiadomość od: %{name}"
 
 #: lib/tymeslot/emails/shared/mjml_email.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} via %{brand}"
-msgstr "%{name} przez %{brand}"
+msgstr "%{name} · %{brand}"
 
 #: lib/tymeslot/emails/shared/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Important notification from %{brand}"
-msgstr "Ważne powiadomienie od %{brand}"
+msgstr "Ważne powiadomienie – %{brand}"
 
 #: lib/tymeslot/emails/shared/formatting.ex
 #, elixir-autogen, elixir-format, fuzzy

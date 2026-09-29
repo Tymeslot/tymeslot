@@ -34,7 +34,7 @@ msgstr[2] "%{count} minut temu"
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "A verification email has been sent to"
-msgstr "E-mail z potwierdzeniem został wysłany na adres"
+msgstr "E-mail potwierdzający został wysłany na adres"
 
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
@@ -109,12 +109,12 @@ msgstr "Adres e-mail"
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Email Change Pending"
-msgstr "Zmiana adresu e-mail oczekuje"
+msgstr "Oczekująca zmiana adresu e-mail"
 
 #: lib/tymeslot_web/live/account_live/handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Email changes are managed through your %{provider} account"
-msgstr "Adresem e-mail zarządzasz w koncie %{provider}"
+msgstr "Adresem e-mail zarządzasz na koncie %{provider}"
 
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
@@ -129,7 +129,7 @@ msgstr "Ostatnia zmiana: %{last_changed}"
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Managed by %{provider}"
-msgstr "Zarządzane przez %{provider}"
+msgstr "Zarządzane przez konto %{provider}"
 
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
@@ -149,7 +149,7 @@ msgstr "Hasło"
 #: lib/tymeslot_web/live/account_live/handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Password authentication is not available for %{provider} login"
-msgstr "Logowanie hasłem nie jest dostępne przy logowaniu przez %{provider}"
+msgstr "Logowanie hasłem nie jest dostępne przy logowaniu przez konto %{provider}"
 
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
@@ -199,7 +199,7 @@ msgstr "przed chwilą"
 #: lib/tymeslot_web/live/account_live/forms.ex
 #, elixir-autogen, elixir-format
 msgid "your.new@email.com"
-msgstr "twoj.nowy@email.com"
+msgstr "nowy.adres@example.com"
 
 #: lib/tymeslot_web/live/account_live/helpers.ex
 #, elixir-autogen, elixir-format
@@ -209,7 +209,7 @@ msgstr "Nigdy"
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Choose the language for your dashboard. Automatic follows your browser's preference."
-msgstr "Wybierz język panelu. Automatyczny podąża za ustawieniem przeglądarki."
+msgstr "Wybierz język panelu. Opcja „Automatyczny” używa języka ustawionego w przeglądarce."
 
 #: lib/tymeslot_web/live/account_live/handlers.ex
 #, elixir-autogen, elixir-format
@@ -229,7 +229,7 @@ msgstr "Język"
 #: lib/tymeslot_web/live/account_live/handlers.ex
 #, elixir-autogen, elixir-format
 msgid "Language preference saved."
-msgstr "Ustawienie języka zapisane."
+msgstr "Zapisano ustawienie języka."
 
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
@@ -239,4 +239,4 @@ msgstr "Automatyczny"
 #: lib/tymeslot_web/live/account_live/components.ex
 #, elixir-autogen, elixir-format
 msgid "Follow your browser's language setting instead of a fixed choice."
-msgstr "Podążaj za ustawieniem języka w przeglądarce zamiast wybierać go na stałe."
+msgstr "Używaj języka ustawionego w przeglądarce zamiast stałego wyboru."

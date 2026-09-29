@@ -54,7 +54,7 @@ msgstr "Kopiuj link do schowka"
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Distribution"
-msgstr "Dystrybucja"
+msgstr "Udostępnianie"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #: lib/tymeslot_web/helpers/page_titles.ex
@@ -107,7 +107,7 @@ msgstr "Umawianie"
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
 msgid "Setup recommended"
-msgstr "Zalecana konfiguracja"
+msgstr "Warto dokończyć konfigurację"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format
@@ -147,7 +147,7 @@ msgstr "Wyloguj się"
 #: lib/tymeslot_web/live/dashboard/component_dispatch.ex
 #, elixir-autogen, elixir-format
 msgid "This feature (%{feature_name}) is not available on your current plan."
-msgstr "Ta funkcja (%{feature_name}) nie jest dostępna w Twoim obecnym planie."
+msgstr "Ta funkcja (%{feature_name}) nie jest dostępna w obecnym planie."
 
 #: lib/tymeslot_web/components/user_dropdown_component.ex
 #, elixir-autogen, elixir-format
@@ -162,7 +162,7 @@ msgstr "Ikona %{provider}"
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
 msgid "%{section} - Dashboard"
-msgstr "%{section} - Panel"
+msgstr "%{section} – Panel"
 
 #: lib/tymeslot_web/helpers/page_titles.ex
 #, elixir-autogen, elixir-format
@@ -302,7 +302,7 @@ msgstr "Proponowane terminy"
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "Checking your calendar for conflicts…"
-msgstr "Sprawdzanie konfliktów w Twoim kalendarzu…"
+msgstr "Sprawdzanie konfliktów w kalendarzu…"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
@@ -465,7 +465,7 @@ msgstr "Ta ankieta została anulowana. Głosowanie jest zamknięte."
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
 msgid "This time clashes with an event on your calendar"
-msgstr "Ten termin koliduje z wydarzeniem w Twoim kalendarzu"
+msgstr "Ten termin koliduje z wydarzeniem w twoim kalendarzu"
 
 #: lib/tymeslot_web/live/dashboard/polls/polls_component.ex
 #, elixir-autogen, elixir-format
@@ -496,7 +496,7 @@ msgstr "Tytuł"
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "Up to %{max} times"
-msgstr "Maksymalnie %{max} terminów"
+msgstr "Maksymalna liczba terminów: %{max}"
 
 #: lib/tymeslot_web/live/dashboard/polls/poll_results.ex
 #, elixir-autogen, elixir-format
@@ -531,7 +531,7 @@ msgstr "Tak"
 #: lib/tymeslot_web/live/dashboard/polls/poll_form.ex
 #, elixir-autogen, elixir-format
 msgid "e.g., Team sync"
-msgstr "np. Synchronizacja zespołu"
+msgstr "np. Spotkanie zespołu"
 
 #: lib/tymeslot_web/components/dashboard_sidebar.ex
 #, elixir-autogen, elixir-format

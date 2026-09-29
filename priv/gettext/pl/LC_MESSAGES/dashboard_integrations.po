@@ -10,7 +10,7 @@ msgstr ""
 #: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Anyone with this link can book this meeting type directly, without seeing your other meeting types."
-msgstr "Każdy, kto ma ten link, może zarezerwować ten typ spotkania bezpośrednio, bez podglądu Twoich pozostałych typów spotkań."
+msgstr "Każdy, kto ma ten link, może zarezerwować ten typ spotkania bezpośrednio, nie widząc pozostałych typów spotkań."
 
 #: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
 #, elixir-autogen, elixir-format
@@ -70,7 +70,7 @@ msgstr "%{name} wymaga ponownego połączenia."
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} stopped syncing."
-msgstr "Synchronizacja %{name} została przerwana."
+msgstr "%{name}: synchronizacja została przerwana."
 
 #: lib/tymeslot_web/components/dashboard/integrations/integration_form.ex
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
@@ -87,7 +87,7 @@ msgstr "Dodaj typ spotkania"
 #: lib/tymeslot_web/components/dashboard/integrations/shared/ui_components.ex
 #, elixir-autogen, elixir-format
 msgid "Adding..."
-msgstr "Dodawanie..."
+msgstr "Dodawanie…"
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
@@ -102,7 +102,7 @@ msgstr "Uwierzytelnianie nie powiodło się. Spróbuj ponownie."
 #: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Authentication session mismatch. Please sign in and try again."
-msgstr "Sesja uwierzytelniania nie pasuje. Zaloguj się i spróbuj ponownie."
+msgstr "Niezgodność sesji uwierzytelniania. Zaloguj się i spróbuj ponownie."
 
 #: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
@@ -149,7 +149,7 @@ msgstr "Test połączenia nie powiódł się: %{reason}"
 #: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Could not identify your Zoom account. Please try again."
-msgstr "Nie udało się zidentyfikować Twojego konta Zoom. Spróbuj ponownie."
+msgstr "Nie udało się zidentyfikować konta Zoom. Spróbuj ponownie."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
@@ -219,7 +219,7 @@ msgstr "Nieprawidłowy identyfikator integracji"
 #: lib/tymeslot_web/live/dashboard/service_settings/component_view.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Settings"
-msgstr "Ustawienia spotkania"
+msgstr "Ustawienia spotkań"
 
 #: lib/tymeslot_web/live/dashboard/service_settings_component.ex
 #, elixir-autogen, elixir-format
@@ -264,12 +264,12 @@ msgstr "Sprawdź"
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
 #, elixir-autogen, elixir-format
 msgid "Stripe is still reviewing your account."
-msgstr "Stripe wciąż weryfikuje Twoje konto."
+msgstr "Stripe wciąż weryfikuje twoje konto."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone and will remove all associated %{data}."
-msgstr "Tej operacji nie można cofnąć. Usunięte zostanie także wszystko, co jest z nią powiązane: %{data}."
+msgstr "Tej operacji nie można cofnąć. Usunie ona również wszystko, co jest powiązane z tą integracją: %{data}."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #: lib/tymeslot_web/live/dashboard/integrations_hub_component.ex
@@ -300,12 +300,12 @@ msgstr "konfiguracja wideokonferencji"
 #: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "%{service} connected successfully!"
-msgstr "%{service} podłączony!"
+msgstr "Podłączono usługę %{service}!"
 
 #: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "Failed to connect %{service}. Please try again."
-msgstr "Nie udało się podłączyć %{service}. Spróbuj ponownie."
+msgstr "Nie udało się podłączyć usługi %{service}. Spróbuj ponownie."
 
 #: lib/tymeslot_web/components/integrations/providers/generic_provider_form_component.ex
 #, elixir-autogen, elixir-format
@@ -333,7 +333,7 @@ msgstr[2] "%{count} połączeń wymaga uwagi – %{message}"
 #: lib/tymeslot_web/controllers/integrations/oauth_callback_handler.ex
 #, elixir-autogen, elixir-format
 msgid "%{service} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" - Tymeslot needs this to create meetings and Google Meet links."
-msgstr "%{service} nie został podłączony, ponieważ nie udzielono uprawnienia do Kalendarza. Spróbuj ponownie i zaznacz pole „Wyświetlanie, edytowanie, udostępnianie i trwałe usuwanie wszystkich kalendarzy, do których masz dostęp w Kalendarzu Google” – Tymeslot potrzebuje go, aby tworzyć spotkania i linki Google Meet."
+msgstr "Nie podłączono usługi %{service}, ponieważ nie przyznano uprawnień do kalendarza. Spróbuj ponownie i zaznacz pole „Wyświetlanie, edytowanie, udostępnianie i trwałe usuwanie wszystkich kalendarzy, do których masz dostęp w Kalendarzu Google” – Tymeslot potrzebuje tego uprawnienia, aby tworzyć spotkania i linki Google Meet."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/tab_nav.ex
 #, elixir-autogen, elixir-format
@@ -348,7 +348,7 @@ msgstr "Dostęp do podłączonego konta wygasł lub został cofnięty. Połącz 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format
 msgid "Connection test could not be attributed to your account. Please try again."
-msgstr "Nie udało się przypisać testu połączenia do Twojego konta. Spróbuj ponownie."
+msgstr "Nie udało się przypisać testu połączenia do twojego konta. Spróbuj ponownie."
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format
@@ -358,7 +358,7 @@ msgstr "Weryfikacja połączenia nie powiodła się"
 #: lib/tymeslot/integrations/shared/oauth/account_match.ex
 #, elixir-autogen, elixir-format
 msgid "Could not verify your account identity. Please try again. If the problem persists, remove and re-add the integration."
-msgstr "Nie udało się zweryfikować tożsamości Twojego konta. Spróbuj ponownie. Jeśli problem się powtarza, usuń i dodaj integrację ponownie."
+msgstr "Nie udało się zweryfikować tożsamości konta. Spróbuj ponownie. Jeśli problem się powtarza, usuń integrację i dodaj ją ponownie."
 
 #: lib/tymeslot/integrations/shared/input_validators.ex
 #, elixir-autogen, elixir-format
@@ -378,7 +378,7 @@ msgstr "Dostawca odrzucił zapisane dane logowania tej integracji. Połącz inte
 #: lib/tymeslot/integrations/shared/oauth/account_match.ex
 #, elixir-autogen, elixir-format
 msgid "You authenticated with a different account than the one linked to this integration. Please use the correct account."
-msgstr "Uwierzytelnienie nastąpiło na innym koncie niż powiązane z tą integracją. Użyj właściwego konta."
+msgstr "Zalogowano się na inne konto niż to powiązane z tą integracją. Użyj właściwego konta."
 
 #: lib/tymeslot_web/helpers/integration_providers.ex
 #, elixir-autogen, elixir-format
@@ -403,7 +403,7 @@ msgstr "✓ Zweryfikowano połączenie z MiroTalk – %{message}"
 #: lib/tymeslot/integrations/shared/reauth_handling.ex
 #, elixir-autogen, elixir-format
 msgid "The calendar feed rejected the stored link. It was probably revoked or reset — subscribe again with a fresh URL."
-msgstr "Kanał kalendarza odrzucił zapisany link. Prawdopodobnie został unieważniony lub zresetowany — subskrybuj ponownie z nowym adresem URL."
+msgstr "Kanał kalendarza odrzucił zapisany link. Prawdopodobnie został unieważniony lub zresetowany – subskrybuj kanał ponownie, podając nowy adres URL."
 
 #: lib/tymeslot_web/components/dashboard/integrations/shared/delete_integration_modal.ex
 #, elixir-autogen, elixir-format
