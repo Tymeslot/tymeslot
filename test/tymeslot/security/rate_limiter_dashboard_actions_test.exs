@@ -238,6 +238,70 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
   end
 
   # ---------------------------------------------------------------------------
+  # check_dashboard_add_guests_rate_limit/1 — 20 per 10 minutes
+  # ---------------------------------------------------------------------------
+
+  describe "check_dashboard_add_guests_rate_limit/1" do
+    test "blocks requests exceeding the limit, per user" do
+      user_id = 11_870
+      other_user_id = 11_871
+
+      for _i <- 1..20 do
+        assert :ok = RateLimiter.check_dashboard_add_guests_rate_limit(user_id)
+      end
+
+      assert {:error, :rate_limited, message} =
+               RateLimiter.check_dashboard_add_guests_rate_limit(user_id)
+
+      assert message =~ "guest invitation"
+      assert :ok = RateLimiter.check_dashboard_add_guests_rate_limit(other_user_id)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # check_dashboard_quick_add_meeting_rate_limit/1 — 20 per 10 minutes
+  # ---------------------------------------------------------------------------
+
+  describe "check_dashboard_quick_add_meeting_rate_limit/1" do
+    test "blocks requests exceeding the limit" do
+      user_id = 11_880
+
+      for _i <- 1..20 do
+        assert :ok = RateLimiter.check_dashboard_quick_add_meeting_rate_limit(user_id)
+      end
+
+      assert {:error, :rate_limited, message} =
+               RateLimiter.check_dashboard_quick_add_meeting_rate_limit(user_id)
+
+      assert message =~ "20"
+      assert message =~ "10 minutes"
+      assert message =~ "quick add meeting"
+    end
+
+    test "is scoped per user" do
+      for _i <- 1..20, do: RateLimiter.check_dashboard_quick_add_meeting_rate_limit(11_881)
+
+      assert {:error, :rate_limited, _message} =
+               RateLimiter.check_dashboard_quick_add_meeting_rate_limit(11_881)
+
+      assert :ok = RateLimiter.check_dashboard_quick_add_meeting_rate_limit(11_882)
+    end
+
+    test "resets after clearing bucket" do
+      user_id = 11_883
+
+      for _i <- 1..20, do: RateLimiter.check_dashboard_quick_add_meeting_rate_limit(user_id)
+
+      assert {:error, :rate_limited, _message} =
+               RateLimiter.check_dashboard_quick_add_meeting_rate_limit(user_id)
+
+      RateLimiter.clear_bucket("dashboard_quick_add_meeting:#{user_id}")
+
+      assert :ok = RateLimiter.check_dashboard_quick_add_meeting_rate_limit(user_id)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # check_dashboard_reschedule_rate_limit/1 — 20 per 10 minutes
   # ---------------------------------------------------------------------------
 

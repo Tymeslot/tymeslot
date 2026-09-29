@@ -203,6 +203,35 @@ defmodule Tymeslot.Security.RateLimiter.Dashboard do
 
   def check_reschedule(user_id), do: Helpers.invalid_user_id("reschedule request", user_id)
 
+  @spec check_add_guests(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_add_guests(user_id) when is_integer(user_id) and user_id > 0 do
+    Helpers.check_with_logging(
+      "dashboard_add_guests:#{user_id}",
+      20,
+      600_000,
+      "guest invitation",
+      to_string(user_id)
+    )
+  end
+
+  def check_add_guests(user_id), do: Helpers.invalid_user_id("guest invitation", user_id)
+
+  @spec check_quick_add_meeting(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_quick_add_meeting(user_id) when is_integer(user_id) and user_id > 0 do
+    Helpers.check_with_logging(
+      "dashboard_quick_add_meeting:#{user_id}",
+      20,
+      600_000,
+      "quick add meeting",
+      to_string(user_id)
+    )
+  end
+
+  def check_quick_add_meeting(user_id),
+    do: Helpers.invalid_user_id("quick add meeting", user_id)
+
   @spec check_meeting_filter(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_meeting_filter(user_id) when is_integer(user_id) and user_id > 0 do

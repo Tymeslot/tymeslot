@@ -91,6 +91,7 @@ msgstr "ПОВІДОМЛЕННЯ ВІД УЧАСНИКА:"
 msgid "Meeting"
 msgstr "Зустріч"
 
+#: lib/tymeslot/integrations/calendar/calendar_event_builder.ex
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex
 #, elixir-autogen, elixir-format
 msgid "Message from %{name}:"
@@ -533,3 +534,13 @@ msgstr "Скасовано - %{title}, %{date}"
 #, elixir-autogen, elixir-format
 msgid "Event Cancelled"
 msgstr "Подію скасовано"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex
+#, elixir-autogen, elixir-format
+msgid "NOTE FROM THE ORGANISER:"
+msgstr "ПРИМІТКА ВІД ОРГАНІЗАТОРА:"
+
+#: lib/tymeslot/emails/shared/meeting/notes.ex
+#, elixir-autogen, elixir-format
+msgid "Note from the organiser"
+msgstr "Примітка від організатора"

@@ -52,6 +52,29 @@ defmodule Tymeslot.LocalesTest do
     end
   end
 
+  describe "guest_default_locale/1" do
+    setup do
+      Application.put_env(:tymeslot, :locales,
+        default: "en",
+        supported: [%{code: "en"}, %{code: "de"}, %{code: "fr"}]
+      )
+
+      Application.put_env(:tymeslot, :admin_default_locale, "de")
+      Application.put_env(:tymeslot, :booking_default_locale, "fr")
+      :ok
+    end
+
+    test "is the host's own language when it is supported" do
+      assert Locales.guest_default_locale(%{locale: "de"}) == "de"
+    end
+
+    test "falls back to the booking pages' language, not the dashboard's" do
+      for host <- [%{locale: nil}, %{locale: "kl"}, nil] do
+        assert Locales.guest_default_locale(host) == "fr"
+      end
+    end
+  end
+
   describe "admin_default_locale/0 and booking_default_locale/0" do
     setup do
       Application.put_env(:tymeslot, :locales,

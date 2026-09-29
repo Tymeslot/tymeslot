@@ -476,7 +476,7 @@ defmodule Tymeslot.Bookings.Create do
       |> Map.get(:shared_availability_guests, [])
       |> SharedAvailability.merge_guest_emails(Map.get(booking_data, :guest_emails, []))
       |> Guests.sanitize_emails(meeting.attendee_email)
-      |> then(&Guests.create_for_meeting(meeting.id, &1))
+      |> then(&Guests.create_for_meeting(meeting.id, &1, :booker))
     else
       {:ok, []}
     end

@@ -313,6 +313,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   defp build_ics_description(meeting_details) do
     parts = [
       Map.get(meeting_details, :description),
+      build_organizer_note_section(meeting_details),
       build_attendee_message_section(meeting_details),
       build_video_url_section(meeting_details),
       build_custom_answers_section(meeting_details)
@@ -321,6 +322,18 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     parts
     |> Enum.filter(&(&1 && String.trim(&1) != ""))
     |> Enum.join("\n\n")
+  end
+
+  # Credited to the organiser by name, as the attendee's message is to the
+  # attendee, so the reader of the guest's copy can tell the two apart.
+  defp build_organizer_note_section(meeting_details) do
+    case Map.get(meeting_details, :organizer_note) do
+      note when is_binary(note) and note != "" ->
+        "#{dgettext("emails", "Message from %{name}:", name: meeting_details.organizer_name)}\n#{String.trim(note)}"
+
+      _other ->
+        nil
+    end
   end
 
   defp build_attendee_message_section(meeting_details) do

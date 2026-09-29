@@ -23,6 +23,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomExpiryTest do
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.CalDAVAccountStub
   alias Tymeslot.Workers.VideoSyncWorker
 
   @day 86_400
@@ -36,10 +37,20 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomExpiryTest do
     test = self()
 
     # Plays the organiser's Nextcloud server: every conversation deleted
-    # reaches the test.
-    stub(HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
-      send(test, {:talk_deleted, url})
-      {:ok, %Req.Response{status: 200, body: ocs(nil)}}
+    # reaches the test, and the CalDAV account, holding no calendar beyond
+    # the organiser's one, answers the search for a moved event.
+    stub(HTTPClientMock, :request, fn
+      :delete, url, _body, _headers, _opts ->
+        send(test, {:talk_deleted, url})
+        {:ok, %Req.Response{status: 200, body: ocs(nil)}}
+
+      method, url, body, _headers, _opts ->
+        CalDAVAccountStub.answer(%{calendars: ["/calendars/alice/work/"]}, method, url, body)
+    end)
+
+    # A Google account holding no calendar beyond its primary one.
+    stub(GoogleCalendarAPIMock, :list_calendars, fn _integration ->
+      {:ok, [%{"id" => "alice@example.com", "primary" => true}]}
     end)
 
     %{user: user, talk: insert_talk_integration(user, talk_host), talk_host: talk_host}
