@@ -3,6 +3,8 @@ defmodule Tymeslot.Infrastructure.Retry do
   Provides retry logic with exponential backoff for external service calls.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   require Logger
 
   @default_opts [
@@ -71,7 +73,7 @@ defmodule Tymeslot.Infrastructure.Retry do
       Logger.warning("Max retry attempts exceeded",
         attempt: attempt,
         max_attempts: opts[:max_attempts],
-        error: inspect(reason)
+        error: LogFormat.reason(reason)
       )
 
       {:error, :max_attempts_exceeded}
@@ -83,13 +85,13 @@ defmodule Tymeslot.Infrastructure.Retry do
           attempt: attempt,
           max_attempts: opts[:max_attempts],
           delay_ms: delay,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         Process.sleep(delay)
         do_retry(fun, attempt + 1, opts)
       else
-        Logger.debug("Error is not retriable", error: inspect(reason))
+        Logger.debug("Error is not retriable", error: LogFormat.reason(reason))
         {:error, reason}
       end
     end

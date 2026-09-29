@@ -16,6 +16,7 @@ defmodule Tymeslot.Meetings.ApprovalJobs do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Jobs
   alias Tymeslot.Meetings.Workers.ApprovalExpiryWorker
 
@@ -58,7 +59,7 @@ defmodule Tymeslot.Meetings.ApprovalJobs do
         # punctuality rather than correctness.
         Logger.error("Failed to schedule approval expiry",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
 

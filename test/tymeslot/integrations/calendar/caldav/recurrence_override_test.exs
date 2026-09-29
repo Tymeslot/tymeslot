@@ -110,5 +110,54 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.RecurrenceOverrideTest do
     end
   end
 
+  describe "a zoned series whose override names its slot with a TZID" do
+    @zoned_context %{
+      calendar_integration_id: 43,
+      provider_calendar_id: "default",
+      synced_at: ~U[2026-04-08 12:00:00Z]
+    }
+
+    # The form Apple Calendar, Nextcloud and Thunderbird write: the
+    # RECURRENCE-ID in the series' own zone rather than as a UTC instant.
+    defp zoned_series_with_override(first_occurrence) do
+      moved = Date.add(first_occurrence, 1)
+
+      """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      PRODID:-//Test//Test//EN
+      BEGIN:VEVENT
+      UID:zoned-series@example.com
+      DTSTART;TZID=Europe/Berlin:#{ical_date(first_occurrence)}T090000
+      DTEND;TZID=Europe/Berlin:#{ical_date(first_occurrence)}T093000
+      RRULE:FREQ=DAILY;COUNT=3
+      SUMMARY:Daily Standup
+      END:VEVENT
+      BEGIN:VEVENT
+      UID:zoned-series@example.com
+      RECURRENCE-ID;TZID=Europe/Berlin:#{ical_date(moved)}T090000
+      DTSTART;TZID=Europe/Berlin:#{ical_date(moved)}T140000
+      DTEND;TZID=Europe/Berlin:#{ical_date(moved)}T143000
+      SUMMARY:Standup, moved to the afternoon
+      END:VEVENT
+      END:VCALENDAR
+      """
+    end
+
+    test "the override takes over the slot it names instead of sitting beside it" do
+      first = Date.add(Date.utc_today(), 7)
+
+      assert {:ok, raws} = EventProcessor.parse_ical_events(zoned_series_with_override(first))
+      assert {:ok, events} = EventProcessor.normalise_events(raws, @zoned_context)
+
+      assert length(events) == 3
+
+      moved = Enum.find(events, &(&1.summary == "Standup, moved to the afternoon"))
+      assert moved.uid == "zoned-series@example.com_#{ical_date(Date.add(first, 1))}T090000"
+
+      assert Enum.map(events, & &1.uid) |> Enum.uniq() |> length() == 3
+    end
+  end
+
   defp ical_date(date), do: Calendar.strftime(date, "%Y%m%d")
 end

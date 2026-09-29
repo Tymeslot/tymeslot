@@ -29,6 +29,7 @@ defmodule Tymeslot.Bookings.Create.PaidBooking do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.Scheduling
 
@@ -97,8 +98,8 @@ defmodule Tymeslot.Bookings.Create.PaidBooking do
       {:error, expire_error} ->
         Logger.warning("Failed to expire meeting after checkout failure",
           meeting_id: meeting.id,
-          checkout_error: inspect(reason),
-          expire_error: inspect(expire_error)
+          checkout_error: LogFormat.reason(reason),
+          expire_error: LogFormat.reason(expire_error)
         )
 
         :ok

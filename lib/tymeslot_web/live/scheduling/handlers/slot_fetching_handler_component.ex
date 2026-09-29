@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Availability.Offer
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
 
   @doc """
@@ -91,7 +92,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
 
       {:error, reason} ->
         require Logger
-        Logger.error("Failed to fetch available slots", reason: inspect(reason))
+        Logger.error("Failed to fetch available slots", reason: LogFormat.reason(reason))
 
         socket =
           socket

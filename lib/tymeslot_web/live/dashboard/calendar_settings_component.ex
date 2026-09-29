@@ -8,6 +8,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   require Logger
 
   alias Tymeslot.FreeBusy
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.HealthCheck
@@ -221,19 +223,22 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
             {:noreply,
              socket
              |> assign(:is_refreshing, true)
-             |> start_async(:refresh_calendars, fn ->
-               Tymeslot.TaskSupervisor
-               |> Task.Supervisor.async_stream_nolink(
-                 active,
-                 fn integration ->
-                   {integration.name, Calendar.refresh_integration(integration)}
-                 end,
-                 max_concurrency: 5,
-                 timeout: 30_000,
-                 on_timeout: :kill_task
-               )
-               |> Enum.to_list()
-             end)}
+             |> start_async(
+               :refresh_calendars,
+               Tasks.with_context(fn ->
+                 Tymeslot.TaskSupervisor
+                 |> Tasks.async_stream_nolink(
+                   active,
+                   fn integration ->
+                     {integration.name, Calendar.refresh_integration(integration)}
+                   end,
+                   max_concurrency: 5,
+                   timeout: 30_000,
+                   on_timeout: :kill_task
+                 )
+                 |> Enum.to_list()
+               end)
+             )}
           end
       end
     end
@@ -407,7 +412,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   def handle_async(:refresh_calendars, {:exit, reason}, socket) do
-    Logger.error("Calendar refresh task crashed", reason: inspect(reason))
+    Logger.error("Calendar refresh task crashed", reason: LogFormat.reason(reason))
     Flash.error(dgettext("dashboard_calendar_settings", "Refresh process failed unexpectedly."))
     {:noreply, assign(socket, :is_refreshing, false)}
   end

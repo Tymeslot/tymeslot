@@ -16,6 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver
@@ -209,7 +210,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
     else
       _other ->
         Logger.warning("Unknown or unsupported calendar provider",
-          provider: inspect(integration.provider)
+          provider: LogFormat.reason(integration.provider)
         )
 
         []

@@ -31,6 +31,8 @@ defmodule Tymeslot.Bookings.CalendarCheck do
   require Logger
 
   alias Tymeslot.Bookings.Validation
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings
 
@@ -92,7 +94,7 @@ defmodule Tymeslot.Bookings.CalendarCheck do
     {start_date, end_date} = fetch_range(slot, Map.get(config, :buffer_minutes, 15))
 
     fetch =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+      Tasks.async(Tymeslot.TaskSupervisor, fn ->
         CalendarEvents.get_events_for_range_fresh(organizer_user_id, start_date, end_date)
       end)
 
@@ -143,7 +145,7 @@ defmodule Tymeslot.Bookings.CalendarCheck do
 
       {:error, reason} when reason in @unverifiable_reasons ->
         Logger.warning("Calendar availability could not be verified, refusing booking",
-          reason: inspect(reason),
+          reason: LogFormat.reason(reason),
           organizer_user_id: Map.get(slot, :organizer_user_id)
         )
 
@@ -151,7 +153,7 @@ defmodule Tymeslot.Bookings.CalendarCheck do
 
       {:error, reason} ->
         Logger.warning("Calendar availability check failed, proceeding with booking",
-          reason: inspect(reason),
+          reason: LogFormat.reason(reason),
           organizer_user_id: Map.get(slot, :organizer_user_id)
         )
 

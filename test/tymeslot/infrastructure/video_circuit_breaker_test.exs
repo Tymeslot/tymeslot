@@ -99,7 +99,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
           assert {:error, _reason} = result
         end)
 
-      assert log =~ "Circuit breaker caught exception"
+      assert log =~ "Handled an unexpected error"
     end
 
     test "works for all valid video providers" do

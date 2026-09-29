@@ -10,6 +10,17 @@ defmodule Tymeslot.Infrastructure.ObanLoggerTest do
   alias Tymeslot.Infrastructure.CorrelationId
   alias Tymeslot.Infrastructure.ObanLogger
 
+  # Runs job:start in a fresh process, as Oban does, and returns the user_id
+  # it left in Logger metadata and in the ErrorTracker context.
+  defp start_context(job) do
+    Task.await(
+      Task.async(fn ->
+        ObanLogger.handle_event([:oban, :job, :start], %{system_time: 0}, %{job: job}, [])
+        {Logger.metadata()[:user_id], ErrorTracker.get_context()["user_id"]}
+      end)
+    )
+  end
+
   defp job do
     %Oban.Job{
       id: 123,
@@ -57,6 +68,58 @@ defmodule Tymeslot.Infrastructure.ObanLoggerTest do
         end
 
       assert length(Enum.uniq(ids)) == 10
+    end
+  end
+
+  describe "handle_event/4 - user_id on job:start" do
+    test "tags the job with the user its args name, as Logger metadata and error context" do
+      for {key, user_id} <- [{"user_id", 41}, {"organizer_user_id", 42}] do
+        job = %{job() | args: %{key => user_id}}
+
+        assert start_context(job) == {user_id, user_id}
+      end
+    end
+
+    test "sets no user_id for a job whose args name no user" do
+      assert start_context(job()) == {nil, nil}
+    end
+
+    test "falls back to the user its enqueuer named in meta" do
+      assert start_context(%{job() | meta: %{"user_id" => 7}}) == {7, 7}
+    end
+
+    test "prefers the user its args name over the one in meta" do
+      job = %{job() | args: %{"user_id" => 9}, meta: %{"user_id" => 7}}
+
+      assert start_context(job) == {9, 9}
+    end
+  end
+
+  describe "handle_event/4 - correlation_id inherited from the enqueuer" do
+    defp start_correlation_id(job) do
+      Task.await(
+        Task.async(fn ->
+          ObanLogger.handle_event([:oban, :job, :start], %{system_time: 0}, %{job: job}, [])
+
+          {CorrelationId.get_from_process(), Logger.metadata()[:correlation_id],
+           ErrorTracker.get_context()["correlation_id"]}
+        end)
+      )
+    end
+
+    test "restores the correlation id the job's meta carries" do
+      job = %{job() | meta: %{"correlation_id" => "abc12345"}}
+
+      assert start_correlation_id(job) == {"abc12345", "abc12345", "abc12345"}
+    end
+
+    test "replaces an invalid correlation id in meta with a fresh one" do
+      job = %{job() | meta: %{"correlation_id" => "bad id\n"}}
+
+      {correlation_id, correlation_id, correlation_id} = start_correlation_id(job)
+
+      assert correlation_id != "bad id\n"
+      assert CorrelationId.valid?(correlation_id)
     end
   end
 

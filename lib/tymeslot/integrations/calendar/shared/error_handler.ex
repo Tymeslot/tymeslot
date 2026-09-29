@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.Shared.ErrorMessages
 
   @type error_category :: ErrorMessages.error_category()
@@ -198,7 +199,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   end
 
   def sanitize_error_message(error, provider) do
-    Logger.error("Unknown calendar error", provider: provider, error: inspect(error))
+    Logger.error("Unknown calendar error", provider: provider, error: LogFormat.reason(error))
     dgettext("dashboard_calendar_providers", "An unexpected error occurred. Please try again.")
   end
 
@@ -236,7 +237,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     Logger.debug("Calendar provider error",
       provider: provider,
       category: category,
-      error: inspect(error),
+      error: LogFormat.reason(error),
       context: context
     )
 

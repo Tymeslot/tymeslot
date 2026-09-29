@@ -8,9 +8,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliser do
 
   require Logger
 
-  alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Integrations.Calendar.Attendee
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.Outlook.RecurrenceConverter
   alias Tymeslot.Integrations.Calendar.Outlook.TymeslotFingerprint
   alias Tymeslot.Timezones
@@ -31,12 +31,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliser do
               calendar_integration_id: context.calendar_integration_id
             )
 
-            AdminAlerts.send_alert(:invalid_calendar_event, %{
-              provider: :outlook,
-              event_id: raw["id"],
-              reason: reason,
-              calendar_integration_id: context.calendar_integration_id
-            })
+            InvalidEventReport.record(:outlook, context, raw["id"], reason)
 
             acc
         end

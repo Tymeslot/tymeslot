@@ -17,6 +17,7 @@ defmodule Tymeslot.CalendarGrid do
   alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.CalendarGrid.EventVideoRooms
   alias Tymeslot.CalendarGrid.EventVideoRoomSchema
+  alias Tymeslot.CalendarGrid.SeriesCarry
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Appearance
   alias Tymeslot.Integrations.Calendar.CalendarAppearanceSchema
@@ -305,12 +306,14 @@ defmodule Tymeslot.CalendarGrid do
   immediately without waiting for the next sync cycle.
 
   Accepts a map with `:uid`, `:calendar_integration_id`, `:title`,
-  `:start_at`, `:end_at`, and optionally `:all_day`.
+  `:start_at`, `:end_at`, and optionally `:all_day`. A recurring event's
+  video is handed on to the occurrences its first sync caches
+  (`SeriesCarry.series_created/1`).
   """
   @spec cache_created_event(map()) :: :ok
   def cache_created_event(attrs) do
     {:ok, _count} = ProviderCalendarEventQueries.upsert_batch([normalise_cache_attrs(attrs)])
-    :ok
+    SeriesCarry.series_created(attrs)
   end
 
   # The cached events schema stores start/end/synced_at as :utc_datetime_usec
@@ -344,7 +347,8 @@ defmodule Tymeslot.CalendarGrid do
 
   @doc """
   Moves an event to another calendar, creating it on the destination before
-  deleting the original. See `Tymeslot.CalendarGrid.EventMove.move_event/3`.
+  deleting the original; a member of a series moves the whole series. See
+  `Tymeslot.CalendarGrid.EventMove.move_event/3`.
   """
   @spec move_event(pos_integer(), map(), EventMove.destination()) ::
           {:ok, EventMove.moved()} | {:error, term()}
@@ -386,33 +390,44 @@ defmodule Tymeslot.CalendarGrid do
 
   @doc """
   Deletes an event from its calendar, cancels the Tymeslot meeting it was
-  booked as, and removes its cached row. See
-  `Tymeslot.CalendarGrid.EventDeletion.delete_event/2`.
+  booked as, and removes its cached row; for a member of a series, `scope`
+  says whether one occurrence or the whole series goes. See
+  `Tymeslot.CalendarGrid.EventDeletion.delete_event/4`, also for `opts`.
   """
-  @spec delete_event(pos_integer(), EventDeletion.event()) ::
+  @spec delete_event(pos_integer(), EventDeletion.event(), EventDeletion.scope(), keyword()) ::
           {:ok, EventDeletion.deleted()} | {:error, EventDeletion.failure()}
-  defdelegate delete_event(user_id, event), to: EventDeletion
+  defdelegate delete_event(user_id, event, scope \\ :occurrence, opts \\ []), to: EventDeletion
 
   @doc """
-  Whether an event may be deleted from the grid. See
-  `Tymeslot.CalendarGrid.EventDeletion.ensure_deletable/1`.
+  How an event may be deleted from the grid: on its own, in a scope, or not
+  at all. See `Tymeslot.CalendarGrid.EventDeletion.deletion_scopes/1`.
   """
-  @spec ensure_deletable(map()) :: :ok | {:error, :recurring_event}
-  defdelegate ensure_deletable(event), to: EventDeletion
+  @spec deletion_scopes(map()) :: {:ok, :single | :series} | {:error, :recurring_event}
+  defdelegate deletion_scopes(event), to: EventDeletion
 
   @doc """
-  Whether an event may be moved to another calendar. See
+  Whether an event may be moved to another calendar: on its own, with its
+  whole series, or not at all. See
   `Tymeslot.CalendarGrid.EventMove.ensure_movable/1`.
   """
-  @spec ensure_movable(map()) :: :ok | {:error, :recurring_event}
+  @spec ensure_movable(map()) :: :ok | {:ok, :series} | {:error, :recurring_event}
   defdelegate ensure_movable(event), to: EventMove
 
   @doc """
-  Whether an event may be edited from the grid. See
-  `Tymeslot.CalendarGrid.EventEdit.ensure_editable/1`.
+  Whether the series an event belongs to can move to an integration, and
+  what the move will not carry. See
+  `Tymeslot.CalendarGrid.EventMove.series_move_notes/2`.
   """
-  @spec ensure_editable(map()) :: :ok | {:error, :recurring_event}
-  defdelegate ensure_editable(event), to: EventEdit
+  @spec series_move_notes(map(), map()) :: {:ok, [atom()]} | {:error, atom()}
+  defdelegate series_move_notes(event, integration), to: EventMove
+
+  @doc """
+  How an event may be edited from the grid: on its own, in a scope, or, for
+  a series whose provider has no scoped edit, as that one event only. See
+  `Tymeslot.CalendarGrid.EventEdit.edit_scopes/1`.
+  """
+  @spec edit_scopes(map()) :: {:ok, :single | :this_only | :series}
+  defdelegate edit_scopes(event), to: EventEdit
 
   @doc "Fetches a single cached event by integration ID and UID."
   @spec get_cached_event(integer(), String.t()) ::
@@ -595,17 +610,11 @@ defmodule Tymeslot.CalendarGrid do
 
   defp stale_threshold_minutes(_integration), do: @webhook_stale_minutes
 
-  defp enqueue_sync_worker(%{provider: "google"} = integration) do
-    %{"calendar_integration_id" => integration.id}
-    |> SyncGoogleCalendarWorker.new()
-    |> Oban.insert()
-  end
+  defp enqueue_sync_worker(%{provider: "google"} = integration),
+    do: SyncGoogleCalendarWorker.enqueue(integration.id)
 
-  defp enqueue_sync_worker(%{provider: "outlook"} = integration) do
-    %{"calendar_integration_id" => integration.id}
-    |> RefreshOutlookCalendarWorker.new()
-    |> Oban.insert()
-  end
+  defp enqueue_sync_worker(%{provider: "outlook"} = integration),
+    do: RefreshOutlookCalendarWorker.enqueue(integration.id)
 
   defp enqueue_sync_worker(%{provider: "debug"} = integration) do
     %{"calendar_integration_id" => integration.id}
@@ -632,12 +641,7 @@ defmodule Tymeslot.CalendarGrid do
       # Manual refresh always forces a full fetch: users click Refresh because
       # they believe something is missing, and delta sync is exactly what would
       # miss it. See docs/superpowers/specs/2026-04-13-caldav-periodic-full-resync-design.md.
-      %{
-        "calendar_integration_id" => integration.id,
-        "force_full_fetch" => true
-      }
-      |> SyncCalDavCalendarWorker.new()
-      |> Oban.insert()
+      SyncCalDavCalendarWorker.enqueue_full_fetch(integration.id)
     else
       {:error, "unknown provider: #{provider} for integration #{integration.id}"}
     end

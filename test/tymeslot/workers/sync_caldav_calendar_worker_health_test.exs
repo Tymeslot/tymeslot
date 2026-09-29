@@ -4,7 +4,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerHealthTest do
   integration.
 
   The worker discards a `:server_error` rather than retrying to exhaustion, and
-  `ObanFailureAlerter` deliberately ignores an intentional discard, so before
+  error tracking never records an intentional discard, so before
   this behaviour existed a remote could fail every sync for weeks with a green
   badge and no alert. These tests drive the real worker against a server that
   answers 500 and assert the streak reaches the badge.

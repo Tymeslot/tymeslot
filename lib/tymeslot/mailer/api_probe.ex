@@ -27,6 +27,8 @@ defmodule Tymeslot.Mailer.ApiProbe do
   a very early boot never blocks on the network.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   require Logger
 
   @timeout_ms 5_000
@@ -155,7 +157,7 @@ defmodule Tymeslot.Mailer.ApiProbe do
   defp interpret({:error, reason}, label) do
     Logger.error("✗ Mailer credential validation failed",
       provider: label,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     {:error, "Cannot connect to #{label}: #{inspect(reason)}"}

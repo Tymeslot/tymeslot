@@ -33,6 +33,7 @@ defmodule Tymeslot.Mailer.SMTPAdapter do
   alias Swoosh.Adapters.SMTP
   alias Swoosh.Adapters.SMTP.Helpers
   alias Swoosh.Email
+  alias Tymeslot.Infrastructure.Tasks
 
   # Mirrors gen_smtp_client's `#smtp_client_socket{}` record, so the socket and
   # host are read by field name rather than by tuple position.
@@ -67,7 +68,7 @@ defmodule Tymeslot.Mailer.SMTPAdapter do
   defp open_session(options, config) do
     owner = self()
     timeout = Keyword.get(config, :session_timeout, @default_session_timeout_ms)
-    task = Task.async(fn -> open_owned_by(options, owner) end)
+    task = Tasks.async(fn -> open_owned_by(options, owner) end)
 
     case Task.yield(task, timeout) || Task.shutdown(task, :brutal_kill) do
       {:ok, {:ok, client}} ->

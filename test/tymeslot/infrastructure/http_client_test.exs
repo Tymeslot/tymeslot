@@ -109,4 +109,44 @@ defmodule Tymeslot.Infrastructure.HTTPClientTest do
       assert :counters.get(call_count, 1) == 1
     end
   end
+
+  describe "request/5 correlation id" do
+    # Returns the x-request-id values the outgoing request carried.
+    defp sent_request_ids(headers \\ []) do
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        send(test_pid, {:request_ids, Conn.get_req_header(conn, "x-request-id")})
+        Conn.send_resp(conn, 200, "ok")
+      end)
+
+      assert {:ok, %Req.Response{status: 200}} =
+               HTTPClient.get("http://localhost/test", headers)
+
+      assert_received {:request_ids, request_ids}
+      request_ids
+    end
+
+    test "sends the caller's correlation id as x-request-id" do
+      Logger.metadata(correlation_id: "abc12345")
+
+      assert sent_request_ids() == ["abc12345"]
+    end
+
+    test "keeps an x-request-id the caller set, whatever its case" do
+      Logger.metadata(correlation_id: "abc12345")
+
+      assert sent_request_ids([{"X-Request-Id", "caller-set-id"}]) == ["caller-set-id"]
+    end
+
+    test "sends none without a correlation id" do
+      assert sent_request_ids() == []
+    end
+
+    test "sends none for an invalid correlation id" do
+      Logger.metadata(correlation_id: "bad id\r\nx-injected: 1")
+
+      assert sent_request_ids() == []
+    end
+  end
 end

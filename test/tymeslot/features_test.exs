@@ -12,11 +12,13 @@ defmodule Tymeslot.FeaturesTest do
   checker can't leak into another.
   """
 
-  use ExUnit.Case, async: false
+  use Tymeslot.DataCase, async: false
   @moduletag :infrastructure
 
+  import ExUnit.CaptureLog
   import Tymeslot.ConfigTestHelpers
 
+  alias ErrorTracker.Error
   alias Tymeslot.Features
 
   # ---- Stub checker modules ----
@@ -145,6 +147,18 @@ defmodule Tymeslot.FeaturesTest do
 
       assert {:error, :feature_access_checker_failed} =
                Features.check_access(42, :automations)
+    end
+
+    test "a raise in the checker is recorded with the user and feature" do
+      with_config(:tymeslot, :feature_access_checker, RaisingChecker)
+      with_config(:error_tracker, enabled: true)
+
+      capture_log(fn -> Features.check_access(42, :automations) end)
+
+      assert [%Error{kind: "Elixir.RuntimeError"} = error] =
+               Error |> Repo.all() |> Repo.preload(:occurrences)
+
+      assert [%{context: %{"user_id" => 42, "feature" => "automations"}}] = error.occurrences
     end
   end
 

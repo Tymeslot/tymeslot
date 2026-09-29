@@ -70,6 +70,23 @@ defmodule TymeslotWeb.Hooks.LoggerMetadataHookTest do
       assert Logger.metadata()[:correlation_id] == request_id
     end
 
+    test "replaces an invalid correlation_id handed over through the process dictionary" do
+      # The dead render adopts whatever the process dictionary holds; a value
+      # that fails the id format must never reach the socket or the logs.
+      forged_id = "forged\nlevel=error"
+      CorrelationId.put_in_process(forged_id)
+      socket = build_socket()
+
+      assert {:cont, updated_socket} =
+               LoggerMetadataHook.on_mount(:default, %{}, %{}, socket)
+
+      fresh_id = updated_socket.assigns[:correlation_id]
+
+      assert fresh_id =~ ~r/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+      assert CorrelationId.get_from_process() == fresh_id
+      assert Logger.metadata()[:correlation_id] == fresh_id
+    end
+
     test "mints a fresh correlation_id on a connected mount even when process dict holds a stale id" do
       # Simulates a live_redirect or push_navigate: the channel process is reused,
       # so the process dictionary still contains the previous mount's correlation_id.

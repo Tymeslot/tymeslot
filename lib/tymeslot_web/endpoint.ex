@@ -1,6 +1,14 @@
 defmodule TymeslotWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :tymeslot
 
+  # Records exceptions raised outside the router: in an endpoint plug, or in a
+  # router pipeline plug, which Phoenix runs before its `router_dispatch`
+  # telemetry span (so ErrorTracker's Phoenix integration never sees them).
+  # An error the router integration has already recorded is not recorded
+  # again: both report through one function that marks the process once it
+  # has reported.
+  use ErrorTracker.Integrations.Plug
+
   alias Plug.Static
   alias Tymeslot.Infrastructure.StaticCompressors
   alias TymeslotWeb.Helpers.ClientIP
@@ -190,18 +198,56 @@ defmodule TymeslotWeb.Endpoint do
     event_prefix: [:phoenix, :endpoint],
     log: {__MODULE__, :request_log_level, []}
 
-  # Routes that carry a single-use credential in the path must not appear in
-  # request logs — Phoenix.Logger writes the raw request path, so logging them
-  # would persist the token. Controller and LiveView logs still fire.
+  # Request log levels by path, matched as a prefix of `conn.path_info`, with
+  # `:_` standing for any one segment. Phoenix.Logger writes the raw request
+  # path at the start of the request, before the router runs, so a route that
+  # carries a capability token in its path must be silenced here (`false`) or
+  # the token lands in the log. Controller and LiveView logs still fire.
+  #
+  # A downstream overlay adds its own routes through
+  # `:extra_request_log_suppressed_paths`; Core's default is empty.
+  @core_request_log_levels [
+    {["healthcheck"], :debug},
+    {["auth", "verify-complete"], false},
+    {["auth", "reset-password", :_], false},
+    {["auth", "oauth", "confirm", :_], false},
+    {["email-change", :_], false},
+    {["guest", :_], false},
+    {["free-busy", :_], false},
+    {["meeting-request", :_], false},
+    {[:_, "poll", :_], false},
+    # Exact patterns: `/:username/meeting/book` is the booking page of a
+    # meeting type slugged "meeting". The meeting uid alone authorises
+    # cancelling and rescheduling, so it is as sensitive as any token.
+    {[:_, "meeting", :_, "cancel"], false},
+    {[:_, "meeting", :_, "cancel-confirmed"], false},
+    {[:_, "meeting", :_, "reschedule"], false},
+    {[:_, "meeting", :_, "calendar.ics"], false}
+  ]
+
+  @request_log_levels @core_request_log_levels ++
+                        Application.compile_env(
+                          :tymeslot,
+                          :extra_request_log_suppressed_paths,
+                          []
+                        )
+
   @doc false
   @spec request_log_level(Plug.Conn.t()) :: Logger.level() | false
-  def request_log_level(%Plug.Conn{path_info: ["auth", "verify-complete" | _rest]}), do: false
-  def request_log_level(%Plug.Conn{path_info: ["auth", "reset-password", _token]}), do: false
-  def request_log_level(%Plug.Conn{path_info: ["auth", "oauth", "confirm", _token]}), do: false
-  def request_log_level(%Plug.Conn{path_info: ["email-change", _token]}), do: false
-  def request_log_level(%Plug.Conn{path_info: ["guest", _token, _response]}), do: false
-  def request_log_level(%Plug.Conn{path_info: ["free-busy", _token]}), do: false
-  def request_log_level(_conn), do: :info
+  def request_log_level(%Plug.Conn{path_info: path_info}) do
+    # Enum.find rather than find_value: `false` is a level here, not a miss.
+    case Enum.find(@request_log_levels, fn {pattern, _level} ->
+           path_prefix?(pattern, path_info)
+         end) do
+      {_pattern, level} -> level
+      nil -> :info
+    end
+  end
+
+  defp path_prefix?([], _path_info), do: true
+  defp path_prefix?([:_ | pattern], [_segment | rest]), do: path_prefix?(pattern, rest)
+  defp path_prefix?([segment | pattern], [segment | rest]), do: path_prefix?(pattern, rest)
+  defp path_prefix?(_pattern, _path_info), do: false
 
   # Called by RemoteIp on every request. A local function rather than an MFA
   # naming `ClientIP` directly, so the plug options add no compile-time

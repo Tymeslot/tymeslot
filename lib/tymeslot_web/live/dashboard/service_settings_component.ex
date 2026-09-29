@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Dashboard.DashboardContext
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Security.RateLimiter
@@ -264,7 +265,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
           {:noreply, socket}
 
         {:error, reason} ->
-          Logger.error("Failed to reorder meeting types", reason: inspect(reason))
+          Logger.error("Failed to reorder meeting types", reason: LogFormat.reason(reason))
           Flash.error(dgettext("dashboard_integrations", "Failed to reorder meeting types"))
           {:noreply, socket}
       end

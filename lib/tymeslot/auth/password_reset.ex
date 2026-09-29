@@ -18,6 +18,7 @@ defmodule Tymeslot.Auth.PasswordReset do
 
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, RateLimiter, SecurityLogger, Token}
   alias Tymeslot.Utils.UrlBuilder
@@ -123,7 +124,7 @@ defmodule Tymeslot.Auth.PasswordReset do
         Logger.error("Failed to send password reset email",
           user_id: user.id,
           email_masked: SecurityLogger.mask_email(user.email),
-          reason: inspect(reason),
+          reason: LogFormat.reason(reason),
           event: :password_reset_email_failed
         )
 
@@ -177,7 +178,7 @@ defmodule Tymeslot.Auth.PasswordReset do
         Logger.error("Failed to schedule password reset email",
           user_id: user.id,
           email_masked: SecurityLogger.mask_email(user.email),
-          reason: inspect(reason),
+          reason: LogFormat.reason(reason),
           event: :password_reset_email_failed
         )
 
@@ -200,7 +201,7 @@ defmodule Tymeslot.Auth.PasswordReset do
       {:error, reason} ->
         Logger.error("Failed to schedule no-password notice",
           user_id: user.id,
-          reason: inspect(reason),
+          reason: LogFormat.reason(reason),
           event: :password_reset_no_password_notice_failed
         )
 
@@ -364,7 +365,7 @@ defmodule Tymeslot.Auth.PasswordReset do
         Logger.error("Failed to update password",
           user_id: user.id,
           email_masked: SecurityLogger.mask_email(user.email),
-          errors: inspect(errors),
+          errors: LogFormat.reason(errors),
           event: :password_reset_update_password_failed
         )
 

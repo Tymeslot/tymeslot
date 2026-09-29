@@ -12,6 +12,9 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
   use GenServer
   require Logger
 
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalDAV.Base
 
   # Client API
@@ -34,6 +37,12 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
           {:ok, list(map())} | {:error, term()}
   def coalesce(user_id, start_date, end_date, fetch_fn) when is_function(fetch_fn, 0) do
     key = {user_id, start_date, end_date}
+
+    # The fetch runs in a task the server starts, so it is wrapped here, in
+    # the caller, to carry the caller's correlation id and error context
+    # rather than the server's. Waiters that join an in-flight fetch share the
+    # first caller's.
+    fetch_fn = Tasks.with_context(fetch_fn)
 
     GenServer.call(__MODULE__, {:coalesce, key, fetch_fn}, Base.coalescer_call_timeout_ms())
   end
@@ -71,7 +80,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
         new_state = put_in(state.requests[key], updated_request)
 
         Logger.debug("Coalescing request",
-          key: inspect(key),
+          key: LogFormat.reason(key),
           waiter_count: length(waiters) + 1
         )
 
@@ -107,7 +116,10 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
           waiters = get_in(state, [:requests, key, :waiters]) || []
           Process.demonitor(ref, [:flush])
 
-          Logger.warning("Fetch task crashed", key: inspect(key), reason: inspect(reason))
+          Logger.warning("Fetch task crashed",
+            key: LogFormat.reason(key),
+            reason: LogFormat.reason(reason)
+          )
 
           Enum.each(waiters, fn waiter -> GenServer.reply(waiter, {:error, :task_died}) end)
           {:noreply, %{state | requests: Map.delete(state.requests, key)}}
@@ -131,7 +143,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
         elapsed = System.monotonic_time(:millisecond) - start_time
 
         Logger.debug("Request completed",
-          key: inspect(key),
+          key: LogFormat.reason(key),
           duration_ms: elapsed,
           clients_served: length(waiters)
         )
@@ -142,7 +154,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
 
   @impl GenServer
   def handle_info(msg, state) do
-    Logger.warning("RequestCoalescer received unexpected message", message: inspect(msg))
+    Logger.warning("RequestCoalescer received unexpected message", message: LogFormat.reason(msg))
     {:noreply, state}
   end
 
@@ -157,12 +169,20 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
     parent = self()
 
     {:ok, pid} =
-      Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+      Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
         result =
           try do
             fetch_fn.()
           rescue
             e ->
+              # Recorded by module alone: the fetch runs with decrypted
+              # credentials in scope, which an exception message can carry.
+              ErrorTracking.report_error(
+                {:raised, e.__struct__},
+                __STACKTRACE__,
+                key_context(key)
+              )
+
               {:error, {:task_failed, Exception.format(:error, e, __STACKTRACE__)}}
           catch
             :exit, {:timeout, _details} -> {:error, :timeout}
@@ -175,4 +195,9 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
     ref = Process.monitor(pid)
     %{pid: pid, ref: ref}
   end
+
+  defp key_context({user_id, _start_date, _end_date}) when is_integer(user_id),
+    do: %{user_id: user_id}
+
+  defp key_context(_key), do: %{}
 end

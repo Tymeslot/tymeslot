@@ -14,13 +14,19 @@ defmodule Tymeslot.Meetings.CalendarEventLink do
   | Provider | `meetings` | `provider_calendar_events` |
   |---|---|---|
   | Google, Outlook | provider event id | provider event id |
-  | CalDAV family | *unset* — the mapping lives in `uid` | the event's href |
+  | CalDAV family | *unset* — the mapping lives in `calendar_uid` | the event's href |
 
   So a join on `provider_event_id` alone silently matches nothing for every
-  CalDAV-family integration, and one on `uid` alone matches nothing for Google
-  and Outlook (whose cached `uid` is the provider's own iCalUID, not the UID
-  Tymeslot generated). The rule that holds for both: **two records describe the
-  same event when they share any non-blank identifier.** Identifiers are
+  CalDAV-family integration, and one on the event UID alone matches nothing
+  for Google and Outlook (whose cached `uid` is the provider's own iCalUID, not
+  the UID Tymeslot generated). The rule that holds for both: **two records
+  describe the same event when they share any non-blank identifier.**
+
+  A meeting's event UID is its `calendar_uid`, not its `uid`. The `uid` is the
+  booking's bearer capability and is never written to a calendar, so a meeting
+  contributes `calendar_uid` where every event-shaped record (cached events,
+  `CalendarEvent` structs, the grid's `BookingEvent` projections, busy
+  periods) contributes `uid`. Identifiers are
   compared within a single calendar integration, and the values are distinct
   enough across namespaces (hrefs, provider ids, `…@tymeslot.com` UIDs) that a
   cross-match cannot occur in practice.
@@ -28,18 +34,25 @@ defmodule Tymeslot.Meetings.CalendarEventLink do
   Callers reach this through the `Tymeslot.Meetings` context.
   """
 
-  @identity_fields [:provider_event_id, :uid]
+  alias Tymeslot.Meetings.MeetingSchema
+
+  @meeting_identity_fields [:provider_event_id, :calendar_uid]
+  @event_identity_fields [:provider_event_id, :uid]
 
   @doc """
   Returns the non-blank identifiers of a meeting or a calendar event.
 
-  Accepts any struct or map carrying `:provider_event_id` and/or `:uid` —
-  meetings, cached provider events, `CalendarEvent` structs, and the grid's
-  `BookingEvent` projections all qualify.
+  A `MeetingSchema` contributes `:provider_event_id` and `:calendar_uid`. Any
+  other struct or map is treated as event-shaped and contributes
+  `:provider_event_id` and `:uid`: cached provider events, `CalendarEvent`
+  structs, and the grid's `BookingEvent` projections all qualify.
   """
   @spec identifiers(map()) :: [String.t()]
-  def identifiers(record) when is_map(record) do
-    @identity_fields
+  def identifiers(%MeetingSchema{} = meeting), do: present(meeting, @meeting_identity_fields)
+  def identifiers(record) when is_map(record), do: present(record, @event_identity_fields)
+
+  defp present(record, fields) do
+    fields
     |> Enum.map(&Map.get(record, &1))
     |> Enum.reject(&blank_identifier?/1)
   end

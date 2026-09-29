@@ -35,6 +35,8 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   use GenServer, restart: :transient
   require Logger
   alias Tymeslot.Infrastructure.BreakerOutcome
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Metrics
 
   @typedoc """
@@ -92,6 +94,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       :success_count,
       :window_start,
       :last_failure_time,
+      :last_error,
       :half_open_attempts,
       :half_open_successes,
       :half_open_started_at,
@@ -170,17 +173,17 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
 
   defp run_protected(breaker_name, fun, classify_fun) do
     {result, outcome} = execute_function(fun, classify_fun)
-    GenServer.cast(breaker_name, {:record_outcome, outcome})
+    GenServer.cast(breaker_name, {:record_outcome, outcome, failure_detail(outcome, result)})
     result
   catch
     kind, reason ->
       Logger.error("Circuit breaker caught a non-local exit",
         name: breaker_name,
         kind: kind,
-        reason: inspect(reason)
+        reason: LogFormat.reason(reason)
       )
 
-      GenServer.cast(breaker_name, {:record_outcome, :ignore})
+      GenServer.cast(breaker_name, {:record_outcome, :ignore, nil})
       :erlang.raise(kind, reason, __STACKTRACE__)
   end
 
@@ -219,6 +222,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       success_count: 0,
       window_start: System.monotonic_time(:millisecond),
       last_failure_time: nil,
+      last_error: nil,
       half_open_attempts: 0,
       half_open_successes: 0,
       half_open_started_at: nil,
@@ -249,8 +253,8 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   end
 
   @impl GenServer
-  def handle_cast({:record_outcome, outcome}, state) do
-    new_state = record_outcome(outcome, state)
+  def handle_cast({:record_outcome, outcome, last_error}, state) do
+    new_state = record_outcome(outcome, remember_error(state, last_error))
     persist_state(new_state)
     {:noreply, new_state, new_state.idle_timeout}
   end
@@ -266,6 +270,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
         success_count: 0,
         window_start: System.monotonic_time(:millisecond),
         last_failure_time: nil,
+        last_error: nil,
         half_open_attempts: 0,
         half_open_successes: 0,
         half_open_started_at: nil
@@ -353,7 +358,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
         threshold: new_state.config.failure_threshold
       )
 
-      Metrics.track_circuit_breaker_state(state.name, :closed, :open)
+      Metrics.track_circuit_breaker_state(state.name, :closed, :open, opening_detail(new_state))
 
       %{new_state | status: :open, last_failure_time: now}
     else
@@ -388,7 +393,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       name: state.name
     )
 
-    Metrics.track_circuit_breaker_state(state.name, :half_open, :open)
+    Metrics.track_circuit_breaker_state(state.name, :half_open, :open, opening_detail(state))
 
     %{
       state
@@ -404,6 +409,19 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   # transition it would have caused has already happened.
   defp record_outcome(_outcome, %State{status: :open} = state), do: state
 
+  # Why the last failing call failed, kept so that the alert raised when the
+  # circuit opens can say what the provider was doing. Summarised in the
+  # caller (`BreakerOutcome.failure_summary/1`), so neither the raw result nor
+  # anything it carries is copied into this process.
+  defp failure_detail(:failure, result), do: BreakerOutcome.failure_summary(result)
+  defp failure_detail(_outcome, _result), do: nil
+
+  defp remember_error(state, nil), do: state
+  defp remember_error(state, last_error), do: %{state | last_error: last_error}
+
+  defp opening_detail(state),
+    do: %{failure_count: state.failure_count, last_error: state.last_error}
+
   defp execute_function(fun, classify_fun) do
     result = normalize_result(fun.())
     {result, normalize_outcome(classify_fun.(result))}
@@ -412,7 +430,11 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       # An exception out of our own code is not evidence the provider is
       # down, so it is never classified `:failure` — but it must still be
       # reported (as `:ignore`) so the breaker isn't left blind.
-      Logger.error("Circuit breaker caught exception", error: inspect(error))
+      #
+      # Recorded by module alone: the protected function is typically a
+      # provider call with decrypted credentials in scope, and an exception
+      # message can carry them.
+      ErrorTracking.report_error({:raised, error.__struct__}, __STACKTRACE__, %{})
       {{:error, error}, :ignore}
   end
 
@@ -425,7 +447,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   defp normalize_outcome(other) do
     Logger.warning(
       "Circuit breaker classifier returned an unrecognised outcome, treating as :ignore",
-      outcome: inspect(other)
+      outcome: LogFormat.reason(other)
     )
 
     :ignore
@@ -462,6 +484,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       success_count: state.success_count,
       window_start: state.window_start,
       last_failure_time: state.last_failure_time,
+      last_error: state.last_error,
       half_open_attempts: state.half_open_attempts,
       half_open_successes: state.half_open_successes,
       half_open_started_at: state.half_open_started_at
@@ -526,7 +549,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
     # caller, but a stray message must not take the breaker down with it.
     Logger.debug("Circuit breaker received unexpected message",
       name: state.name,
-      message: inspect(msg)
+      message: LogFormat.reason(msg)
     )
 
     {:noreply, state, state.idle_timeout}

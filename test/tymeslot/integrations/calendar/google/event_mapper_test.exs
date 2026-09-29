@@ -36,6 +36,21 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
     end
   end
 
+  describe "uuid_to_google_event_id/1 — recurring instance ids" do
+    test "passes a timed instance id through untouched" do
+      assert EventMapper.uuid_to_google_event_id("abc123def4_20260101T100000Z") ==
+               "abc123def4_20260101T100000Z"
+    end
+
+    test "passes an all-day instance id through untouched" do
+      assert EventMapper.uuid_to_google_event_id("abc123def4_20260101") == "abc123def4_20260101"
+    end
+
+    test "still hashes an arbitrary uid that merely contains an underscore" do
+      refute EventMapper.uuid_to_google_event_id("my_event_uid") == "my_event_uid"
+    end
+  end
+
   describe "uuid_to_google_event_id/1 — SHA-256 fallback path" do
     test "hashes a UID containing characters outside base32hex (e.g. g-z)" do
       # 'g' is outside a-v0-9, so this must fall back to SHA-256 + Base.encode32

@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.HealthCheck.Monitor
@@ -261,9 +262,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
         socket =
           socket
           |> assign(:testing_connection, int_id)
-          |> start_async(:test_connection, fn ->
-            {provider, Video.test_connection(user_id, int_id)}
-          end)
+          |> start_async(
+            :test_connection,
+            Tasks.with_context(fn -> {provider, Video.test_connection(user_id, int_id)} end)
+          )
 
         {:noreply, socket}
     end
@@ -451,9 +453,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   # task name: a second `start_async/3` under the same name would drop the
   # first save's result.
   defp maybe_probe_connection(socket, %{provider: "jitsi"} = integration) do
-    start_async(socket, {:connection_advisory, integration.id}, fn ->
-      Video.probe_integration(integration, scope: :interactive)
-    end)
+    start_async(
+      socket,
+      {:connection_advisory, integration.id},
+      Tasks.with_context(fn -> Video.probe_integration(integration, scope: :interactive) end)
+    )
   end
 
   defp maybe_probe_connection(socket, _integration), do: socket

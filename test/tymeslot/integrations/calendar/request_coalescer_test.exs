@@ -2,6 +2,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescerTest do
   use ExUnit.Case, async: false
   @moduletag :integrations
 
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Integrations.Calendar.RequestCoalescer
 
   @receive_timeout 2_000
@@ -158,5 +159,25 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescerTest do
     # Each key should have triggered its own fetch
     assert counter() == n
     assert Enum.all?(results, &match?({:ok, {:result, _}}, &1))
+  end
+
+  test "runs the fetch with the caller's correlation id and error context" do
+    ErrorTracking.put_context(correlation_id: "abc12345", user_id: 7)
+    user_id = System.unique_integer([:positive])
+
+    fetch_fn = fn ->
+      {:ok,
+       [
+         %{
+           correlation_id: Logger.metadata()[:correlation_id],
+           tracker: ErrorTracker.get_context()["correlation_id"]
+         }
+       ]}
+    end
+
+    assert {:ok, [seen]} =
+             RequestCoalescer.coalesce(user_id, ~D[2024-02-01], ~D[2024-02-07], fetch_fn)
+
+    assert seen == %{correlation_id: "abc12345", tracker: "abc12345"}
   end
 end

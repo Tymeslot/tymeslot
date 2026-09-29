@@ -30,6 +30,7 @@ defmodule Tymeslot.MeetingPayments do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.CheckoutOutcome
@@ -178,7 +179,7 @@ defmodule Tymeslot.MeetingPayments do
       {:error, reason} ->
         Logger.warning("Failed to enqueue Stripe account resync",
           stripe_account_id: stripe_account_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok

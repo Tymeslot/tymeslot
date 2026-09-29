@@ -11,33 +11,56 @@ defmodule TymeslotWeb.EndpointTest do
   alias TymeslotWeb.Endpoint
 
   describe "request_log_level/1" do
-    test "disables request logging for token-bearing paths" do
+    test "disables request logging for paths carrying a capability token" do
       for path_info <- [
             ["auth", "verify-complete", "secret-token"],
             ["auth", "reset-password", "secret-token"],
+            ["auth", "oauth", "confirm", "secret-token"],
             ["email-change", "secret-token"],
-            ["free-busy", "abc"]
+            ["guest", "secret-token", "accept"],
+            ["free-busy", "abc"],
+            ["meeting-request", "secret-token"],
+            ["alice", "poll", "secret-token"],
+            ["alice", "meeting", "secret-uid", "cancel"],
+            ["alice", "meeting", "secret-uid", "cancel-confirmed"],
+            ["alice", "meeting", "secret-uid", "reschedule"],
+            ["alice", "meeting", "secret-uid", "calendar.ics"]
           ] do
-        conn = %Plug.Conn{path_info: path_info}
-        assert Endpoint.request_log_level(conn) == false
+        assert {path_info, Endpoint.request_log_level(%Plug.Conn{path_info: path_info})} ==
+                 {path_info, false}
       end
     end
 
-    test "keeps :info logging for ordinary paths" do
-      for path_info <- [[], ["dashboard"], ["auth", "login"], ["email-change"]] do
-        conn = %Plug.Conn{path_info: path_info}
-        assert Endpoint.request_log_level(conn) == :info
+    test "demotes healthcheck requests to :debug" do
+      assert Endpoint.request_log_level(%Plug.Conn{path_info: ["healthcheck"]}) == :debug
+    end
+
+    test "keeps :info logging for ordinary paths, including look-alikes" do
+      for path_info <- [
+            [],
+            ["dashboard"],
+            ["auth", "login"],
+            ["auth", "reset-password"],
+            ["auth", "reset-password-sent"],
+            ["email-change"],
+            ["meeting-request"],
+            ["alice", "poll"],
+            # A meeting type slugged "meeting" has its booking page here.
+            ["alice", "meeting", "book"],
+            ["dashboard", "meetings"]
+          ] do
+        assert {path_info, Endpoint.request_log_level(%Plug.Conn{path_info: path_info})} ==
+                 {path_info, :info}
       end
     end
   end
 
   describe "correlation ID plug" do
-    test "response includes x-correlation-id header", %{conn: conn} do
+    test "the response's x-correlation-id is the request id", %{conn: conn} do
       conn = get(conn, ~p"/auth/login")
 
-      assert [id] = get_resp_header(conn, "x-correlation-id")
-      # CorrelationId.generate/0 hands out a v4 UUID.
-      assert id =~ ~r/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+      assert [request_id] = get_resp_header(conn, "x-request-id")
+      assert get_resp_header(conn, "x-correlation-id") == [request_id]
     end
 
     test "an incoming x-correlation-id becomes the log and process correlation id",
@@ -49,13 +72,21 @@ defmodule TymeslotWeb.EndpointTest do
         |> put_req_header("x-correlation-id", existing_id)
         |> get(~p"/auth/login")
 
-      # `ensure/1` adopts the caller's id rather than minting a fresh one, and
-      # never echoes an adopted id back — the response header is deliberately
-      # absent here. The observable that matters is what downstream logging and
-      # non-plug code see, both of which the plug writes in this process.
       assert Logger.metadata()[:correlation_id] == existing_id
       assert CorrelationId.get_from_process() == existing_id
-      assert get_resp_header(conn, "x-correlation-id") == []
+      assert get_resp_header(conn, "x-correlation-id") == [existing_id]
+    end
+
+    test "a malformed incoming x-correlation-id is neither adopted nor echoed",
+         %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("x-correlation-id", "bad id")
+        |> get(~p"/auth/login")
+
+      assert [request_id] = get_resp_header(conn, "x-request-id")
+      assert get_resp_header(conn, "x-correlation-id") == [request_id]
+      assert Logger.metadata()[:correlation_id] == request_id
     end
   end
 
