@@ -16,6 +16,8 @@ defmodule Tymeslot.Test.CalDAVAccountStub do
   The account is a map:
 
     * `:calendars`: the collection paths discovery finds.
+    * `:read_only`: those of them discovery reports the account can only
+      read, by a `current-user-privilege-set` without write.
     * `:resources`: `%{path => [{href, ical}]}`, the event resources each
       calendar holds.
     * `:failing`: statuses by path, for a REPORT, or for discovery
@@ -29,8 +31,16 @@ defmodule Tymeslot.Test.CalDAVAccountStub do
   @spec answer(map(), atom(), String.t(), String.t()) :: {:ok, Req.Response.t()}
   def answer(account, :propfind, _url, _body) do
     case get_in(account, [:failing, :discovery]) do
-      nil -> multistatus(Enum.map(Map.get(account, :calendars, []), &calendar_response/1))
-      status -> {:ok, %Req.Response{status: status, body: ""}}
+      nil ->
+        read_only = Map.get(account, :read_only, [])
+
+        account
+        |> Map.get(:calendars, [])
+        |> Enum.map(&calendar_response(&1, &1 in read_only))
+        |> multistatus()
+
+      status ->
+        {:ok, %Req.Response{status: status, body: ""}}
     end
   end
 
@@ -66,7 +76,7 @@ defmodule Tymeslot.Test.CalDAVAccountStub do
          """
        }}
 
-  defp calendar_response(path),
+  defp calendar_response(path, read_only?),
     do: """
     <D:response>
       <D:href>#{path}</D:href>
@@ -74,6 +84,7 @@ defmodule Tymeslot.Test.CalDAVAccountStub do
         <D:prop>
           <D:displayname>#{path}</D:displayname>
           <D:resourcetype><D:collection/><C:calendar/></D:resourcetype>
+          #{if read_only?, do: read_privileges()}
         </D:prop>
         <D:status>HTTP/1.1 200 OK</D:status>
       </D:propstat>
@@ -92,5 +103,13 @@ defmodule Tymeslot.Test.CalDAVAccountStub do
         <D:status>HTTP/1.1 200 OK</D:status>
       </D:propstat>
     </D:response>
+    """
+
+  defp read_privileges,
+    do: """
+    <D:current-user-privilege-set>
+      <D:privilege><D:read/></D:privilege>
+      <D:privilege><C:read-free-busy/></D:privilege>
+    </D:current-user-privilege-set>
     """
 end

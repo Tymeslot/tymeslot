@@ -444,7 +444,9 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   @doc """
   Fetches one event straight from the server (see the provider behaviour's
   `fetch_event/2`), by its href in `provider_event_id` or else by `uid` in the
-  client's calendar.
+  client's calendar. A resource whose every component is `STATUS:CANCELLED`
+  holds no live event and is `{:error, :not_found}`, as a cancelled event is
+  for Google and Outlook.
   """
   @spec fetch_event(caldav_client(), map()) ::
           {:ok, list()} | {:error, :not_found} | {:error, term()}
@@ -458,7 +460,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
     with {:ok, raw_events} <-
            Events.fetch_calendar_event(client, path, Map.get(event_ref, :uid), href) do
-      normalise_fetched(client, raw_events, path, event_ref)
+      normalise_live(client, raw_events, path, event_ref)
     end
   end
 
@@ -466,27 +468,49 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   Looks for an event in every calendar of the account (see the provider
   behaviour's `find_moved_event/2`), by its iCalendar UID in `uid`: a move
   between calendars changes the event's href, and the client that moved it
-  need not keep the resource's name. Every calendar discovery finds is asked,
-  those `fetch_event/2` already asked included, since it asked them by the
-  old href.
+  need not keep the resource's name. Every calendar discovery finds that the
+  organiser can write to is asked, those `fetch_event/2` already asked
+  included, since it asked them by the old href.
+
+  A calendar discovery reports read-only (a colleague's shared calendar, a
+  subscription) is never asked: an event can only be moved into a calendar
+  its organiser can write to, and asking one would let its 403 leave the
+  event's absence unproven for ever. Nor does a copy of the event whose every
+  component is `STATUS:CANCELLED` count as found, since that is what an
+  attendee's calendar keeps of a cancelled invitation; the search goes on to
+  the next calendar, so a live copy anywhere still wins.
   """
   @spec find_moved_event(caldav_client(), map()) ::
           {:ok, list()} | {:error, :not_found} | {:error, term()}
   def find_moved_event(client, %{uid: uid} = event_ref) when is_binary(uid) and uid != "" do
     with {:ok, calendars} <- discover_calendars(client) do
       calendars
+      |> Enum.reject(& &1.read_only)
       |> Enum.map(& &1.path)
       |> Enum.reject(&(&1 in [nil, ""]))
       |> Enum.uniq()
       |> EventSearch.first_found(fn path ->
         with {:ok, raw_events} <- Events.find_calendar_event(client, path, uid) do
-          normalise_fetched(client, raw_events, path, event_ref)
+          normalise_live(client, raw_events, path, event_ref)
         end
       end)
     end
   end
 
   def find_moved_event(_client, _event_ref), do: {:error, :unaddressable}
+
+  # A resource whose every component is cancelled holds no live event. One
+  # cancelled occurrence of a live series leaves the master live.
+  defp normalise_live(client, raw_events, path, event_ref) do
+    if Enum.all?(raw_events, &cancelled?/1),
+      do: {:error, :not_found},
+      else: normalise_fetched(client, raw_events, path, event_ref)
+  end
+
+  defp cancelled?(%{status: status}) when is_binary(status),
+    do: String.upcase(String.trim(status)) == "CANCELLED"
+
+  defp cancelled?(_raw_event), do: false
 
   defp normalise_fetched(client, raw_events, path, event_ref) do
     ICalNormaliser.normalise_events(
