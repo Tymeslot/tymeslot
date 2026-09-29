@@ -7,44 +7,15 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
-#: Error Messages
-msgid "something_went_wrong"
-msgstr "Coś poszło nie tak"
-
-msgid "try_again_later"
-msgstr "Spróbuj ponownie później"
-
-msgid "invalid_meeting_link"
-msgstr "Nieprawidłowy link do spotkania"
-
-msgid "slot_no_longer_available"
-msgstr "Ten termin nie jest już dostępny"
-
-msgid "name_required"
-msgstr "Podaj imię i nazwisko"
-
-msgid "email_required"
-msgstr "Podaj adres e-mail"
-
-msgid "email_invalid"
-msgstr "Podaj prawidłowy adres e-mail"
+#: lib/tymeslot_web/themes/shared/components/error_component.ex
+#, elixir-autogen
+msgid "We can't show this scheduling page yet"
+msgstr ""
 
 #: lib/tymeslot_web/themes/shared/components/error_component.ex
 #, elixir-autogen
-msgid "calendar_setup_required"
-msgstr "Ta strona rezerwacji nie jest jeszcze dostępna"
-
-#: lib/tymeslot_web/themes/shared/components/error_component.ex
-#, elixir-autogen
-msgid "connect_calendar_first"
-msgstr "Jeśli jesteś organizatorem, podłącz kalendarz w panelu."
-
-#: Status
-msgid "loading"
-msgstr "Wczytywanie"
-
-msgid "submitting"
-msgstr "Wysyłanie"
+msgid "If you are the organizer, please connect a calendar in your dashboard."
+msgstr ""
 
 #: lib/tymeslot_web/gettext/ecto_error_msgids.ex
 #, elixir-autogen, elixir-format
@@ -312,11 +283,6 @@ msgstr "Nazwa użytkownika musi zaczynać się od litery lub cyfry i może zawie
 
 #: lib/tymeslot/security/rate_limiter/helpers.ex
 #, elixir-autogen, elixir-format
-msgid "You've reached the limit of %{limit} %{action} per %{window_minutes} minutes. Please try again in %{wait}."
-msgstr "Osiągnięto limit %{limit} %{action} na %{window_minutes} minut. Spróbuj ponownie za %{wait}."
-
-#: lib/tymeslot/security/rate_limiter/helpers.ex
-#, elixir-autogen, elixir-format
 msgid "a moment"
 msgstr "chwilę"
 
@@ -347,3 +313,73 @@ msgstr[2] "musi przypadać w ciągu %{count} lat"
 #, elixir-autogen, elixir-format
 msgid "video server checks"
 msgstr "sprawdzeń serwera wideo"
+
+#: lib/tymeslot/security/rate_limiter/bookings.ex
+#, elixir-autogen, elixir-format
+msgid "bookings"
+msgstr ""
+
+#: lib/tymeslot/security/rate_limiter/calendar.ex
+#, elixir-autogen, elixir-format
+msgid "calendar event moves"
+msgstr ""
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "password reset requests"
+msgstr ""
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "signup attempts"
+msgstr ""
+
+#: lib/tymeslot/security/rate_limiter/auth.ex
+#, elixir-autogen, elixir-format
+msgid "verification emails"
+msgstr ""
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgid_plural "%{count} days"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgid_plural "%{count} hours"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "You've reached the limit of %{limit} %{action} per %{window}. Please try again in %{wait}."
+msgstr "Osiągnięto limit %{limit} %{action} na %{window_minutes} minut. Spróbuj ponownie za %{wait}."
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "day"
+msgid_plural "%{count} days"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format
+msgid "hour"
+msgid_plural "%{count} hours"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: lib/tymeslot/security/rate_limiter/helpers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "minute"
+msgid_plural "%{count} minutes"
+msgstr[0] "%{count} minutę"
+msgstr[1] "%{count} minuty"
+msgstr[2] "%{count} minut"

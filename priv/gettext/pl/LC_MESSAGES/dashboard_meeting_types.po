@@ -96,11 +96,6 @@ msgstr "Usuń typ spotkania"
 msgid "Edit"
 msgstr "Edytuj"
 
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
-#, elixir-autogen, elixir-format
-msgid "In-person"
-msgstr "Na miejscu"
-
 #: lib/tymeslot_web/live/dashboard/meeting_settings/meeting_types_list_component.ex
 #, elixir-autogen, elixir-format
 msgid "Meeting Types"
@@ -120,11 +115,6 @@ msgstr "Tej operacji nie można cofnąć — ten typ spotkania zostanie trwale u
 #, elixir-autogen, elixir-format
 msgid "Toggle %{name} availability"
 msgstr "Przełącz dostępność: %{name}"
-
-#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
-#, elixir-autogen, elixir-format
-msgid "Video"
-msgstr "Wideo"
 
 #: lib/tymeslot_web/components/dashboard/meeting_types/delete_meeting_type_modal.ex
 #, elixir-autogen, elixir-format
@@ -196,3 +186,11 @@ msgstr "Kalendarza, w którym ten typ spotkania rezerwuje terminy, nie ma już n
 #, elixir-autogen, elixir-format
 msgid "This meeting type books into a calendar you can no longer write to. Edit it and choose another calendar."
 msgstr "Ten typ spotkania rezerwuje terminy w kalendarzu, do którego nie masz już prawa zapisu. Edytuj go i wybierz inny kalendarz."
+
+#: lib/tymeslot_web/live/dashboard/meeting_settings/card.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} location"
+msgid_plural "%{count} locations"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""

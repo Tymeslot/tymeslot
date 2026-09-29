@@ -441,6 +441,7 @@ msgstr "Odebrać uprawnienia administratora użytkownikowi %{email}?"
 msgid "Promote %{email} to admin?"
 msgstr "Nadać uprawnienia administratora użytkownikowi %{email}?"
 
+#: lib/tymeslot_web/live/admin_live.ex
 #: lib/tymeslot_web/plugs/require_admin.ex
 #, elixir-autogen, elixir-format
 msgid "Admin access required."
