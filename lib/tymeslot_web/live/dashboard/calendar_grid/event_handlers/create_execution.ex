@@ -127,7 +127,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       organizer_user_id: socket.assigns.current_user.id,
       calendar_integration_id: creating[:integration_id],
       calendar_id: creating[:calendar_id],
-      video_integration_id: creating[:video_integration_id]
+      video_integration_id: creating[:video_integration_id],
+      organizer_note: creating[:organizer_note]
     }
   end
 

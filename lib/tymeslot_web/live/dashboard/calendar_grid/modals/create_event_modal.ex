@@ -124,6 +124,55 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         />
       </div>
 
+      <%!-- Note to the guest (meeting mode only): hidden behind a button so
+            the form stays short for the meetings that need none. --%>
+      <div :if={@meeting_mode} class="mb-3">
+        <button
+          :if={!@creating_event[:note_open]}
+          type="button"
+          phx-click="toggle_create_note"
+          phx-target={@myself}
+          data-testid="create-meeting-add-note"
+          class="inline-flex items-center gap-1.5 text-token-sm font-medium text-turquoise-700 hover:text-turquoise-800"
+        >
+          <.icon name="hero-plus-mini" class="w-4 h-4" />
+          {dgettext("dashboard_calendar_events", "Add a note")}
+        </button>
+        <div :if={@creating_event[:note_open]}>
+          <.input
+            type="textarea"
+            name="organizer_note"
+            value={@creating_event[:organizer_note] || ""}
+            label={dgettext("dashboard_calendar_events", "Note to the guest")}
+            placeholder={
+              dgettext("dashboard_calendar_events", "An agenda, or anything to bring or prepare")
+            }
+            id="create-meeting-note"
+            rows={3}
+            maxlength={2000}
+            phx-mounted={JS.focus()}
+            phx-blur="update_create_note"
+            phx-target={@myself}
+          />
+          <div class="mt-1 flex items-center justify-between gap-3">
+            <p class="text-token-xs text-tymeslot-400">
+              {dgettext(
+                "dashboard_calendar_events",
+                "Included in the invitation and on the calendar entry."
+              )}
+            </p>
+            <button
+              type="button"
+              phx-click="toggle_create_note"
+              phx-target={@myself}
+              class="shrink-0 text-token-xs font-medium text-tymeslot-500 hover:text-tymeslot-700"
+            >
+              {dgettext("dashboard_calendar_events", "Remove note")}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div :if={!@meeting_mode} class="mb-3 flex items-center justify-between">
         <p class="text-token-sm font-medium text-tymeslot-700">
           {dgettext("dashboard_calendar_events", "All day")}

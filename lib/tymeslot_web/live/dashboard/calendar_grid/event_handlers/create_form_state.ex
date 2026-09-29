@@ -10,6 +10,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
+  # Matches the meeting's own limit on `organizer_note`.
+  @organizer_note_max_length 2000
+
   @spec handle_show_create_form(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_show_create_form(%{"start-hour" => _start_hour} = params, socket) do
@@ -107,6 +110,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       mode: if(writable?(socket), do: :event, else: :meeting),
       guest_name: "",
       guest_email: "",
+      # The note field stays hidden until the organiser asks for it.
+      note_open: false,
+      organizer_note: "",
       integration_id: default_int_id,
       calendar_id: EditWorkflow.default_calendar_id(socket.assigns.integrations, default_int_id),
       attendees: [],
@@ -156,6 +162,46 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
         case UniversalSanitizer.sanitize_and_validate(name, mode: :plain_text, max_length: 200) do
           {:ok, sanitised} ->
             {:noreply, assign(socket, :creating_event, Map.put(creating, :guest_name, sanitised))}
+
+          {:error, _reason} ->
+            {:noreply, socket}
+        end
+    end
+  end
+
+  @spec handle_toggle_create_note(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_toggle_create_note(_params, socket) do
+    case socket.assigns.creating_event do
+      nil ->
+        {:noreply, socket}
+
+      # Removing the note discards what was typed, so a hidden field can never
+      # send a note the organiser no longer sees.
+      %{note_open: true} = creating ->
+        {:noreply,
+         assign(socket, :creating_event, %{creating | note_open: false, organizer_note: ""})}
+
+      creating ->
+        {:noreply, assign(socket, :creating_event, Map.put(creating, :note_open, true))}
+    end
+  end
+
+  @spec handle_update_create_note(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_create_note(%{"value" => note}, socket) do
+    case socket.assigns.creating_event do
+      nil ->
+        {:noreply, socket}
+
+      creating ->
+        case UniversalSanitizer.sanitize_and_validate(note,
+               mode: :plain_text,
+               max_length: @organizer_note_max_length
+             ) do
+          {:ok, sanitised} ->
+            {:noreply,
+             assign(socket, :creating_event, Map.put(creating, :organizer_note, sanitised))}
 
           {:error, _reason} ->
             {:noreply, socket}

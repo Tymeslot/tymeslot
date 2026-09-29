@@ -314,6 +314,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: EventCrud.handle_update_create_guest_email(params, socket)
 
   @impl Phoenix.LiveComponent
+  def handle_event("toggle_create_note", params, socket),
+    do: EventCrud.handle_toggle_create_note(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_create_note", params, socket),
+    do: EventCrud.handle_update_create_note(params, socket)
+
+  @impl Phoenix.LiveComponent
   def handle_event("update_create_title", params, socket),
     do: EventCrud.handle_update_create_title(params, socket)
 

@@ -182,7 +182,10 @@ defmodule Tymeslot.Polls.Confirm do
       attendee_timezone: primary.timezone || poll.timezone,
       calendar_integration_id: calendar_integration_id,
       video_integration_id: video_integration_id,
-      guest_emails: guest_emails(poll.participants, primary)
+      guest_emails: guest_emails(poll.participants, primary),
+      # What the host wrote to the participants while they voted is still
+      # their note to them once the meeting is set.
+      organizer_note: poll.description
     }
     |> CreateAdHoc.execute()
     |> map_booking_result()

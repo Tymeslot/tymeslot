@@ -7,9 +7,9 @@ defmodule Tymeslot.Emails.Shared.Meeting.Attendee do
   matches the surrounding stage band.
   """
 
-  alias Tymeslot.Emails.Shared.{Sanitise, Stack, Styles}
+  alias Tymeslot.Emails.Shared.Meeting.Notes
+  alias Tymeslot.Emails.Shared.{Sanitise, Styles}
   alias Tymeslot.Emails.Shared.Styles.Tokens
-  alias Tymeslot.Security.UniversalSanitizer
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -62,53 +62,8 @@ defmodule Tymeslot.Emails.Shared.Meeting.Attendee do
   caller supplies the email `intent` so the tint matches the stage band.
   """
   @spec attendee_message_box(Tokens.intent(), String.t() | nil) :: String.t()
-  def attendee_message_box(intent, message)
-      when is_atom(intent) and is_binary(message) and message != "" do
-    sanitized =
-      case UniversalSanitizer.sanitize_and_validate(message,
-             allow_html: false,
-             on_too_long: :truncate
-           ) do
-        {:ok, value} -> value
-        {:error, _reason} -> Sanitise.sanitize_for_email(message)
-      end
-
-    tokens = Styles.intent(intent)
-
-    Stack.spaced("""
-    <mj-section
-      padding="14px 18px"
-      background-color="#{tokens.tint}"
-      border-left="4px solid #{tokens.accent}"
-      border-radius="#{Styles.radius(:md)}"
-      css-class="mobile-card"
-    >
-      <mj-column>
-        <mj-text
-          font-size="11px"
-          font-weight="700"
-          color="#{tokens.accent_ink}"
-          letter-spacing="0.12em"
-          text-transform="uppercase"
-          padding="0 0 4px 0"
-        >
-          #{dgettext("emails", "Message from attendee")}
-        </mj-text>
-        <mj-text
-          font-size="14px"
-          color="#{tokens.accent_ink}"
-          line-height="1.6"
-          padding="0"
-          font-style="italic"
-        >
-          "#{sanitized}"
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    """)
-  end
-
-  def attendee_message_box(intent, _message) when is_atom(intent), do: ""
+  def attendee_message_box(intent, message),
+    do: Notes.callout(intent, dgettext("emails", "Message from attendee"), message)
 
   defp attendee_row(label, value) do
     """

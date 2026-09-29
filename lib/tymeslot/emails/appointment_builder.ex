@@ -145,6 +145,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       attendee_name: meeting.attendee_name,
       attendee_email: meeting.attendee_email,
       attendee_message: meeting.attendee_message,
+      organizer_note: meeting.organizer_note,
       attendee_phone: meeting.attendee_phone,
       attendee_company: meeting.attendee_company
     }
