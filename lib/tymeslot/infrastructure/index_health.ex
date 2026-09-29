@@ -36,6 +36,7 @@ defmodule Tymeslot.Infrastructure.IndexHealth do
   require Logger
 
   alias Tymeslot.Infrastructure.IndexHealthQueries
+  alias Tymeslot.Infrastructure.Logging.LogFormat
 
   @doc """
   Logs a warning for each invalid index and returns `:ok`.
@@ -54,7 +55,7 @@ defmodule Tymeslot.Infrastructure.IndexHealth do
       {:error, reason} ->
         # Debug, not warning: the database being unreachable is loud enough
         # elsewhere, and a failed diagnostic is not itself news.
-        Logger.debug("Invalid-index check did not run", reason: inspect(reason))
+        Logger.debug("Invalid-index check did not run", reason: LogFormat.reason(reason))
     end
 
     :ok

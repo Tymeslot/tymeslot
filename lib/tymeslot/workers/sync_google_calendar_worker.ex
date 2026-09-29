@@ -11,6 +11,14 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   obtain a fresh token; the next webhook or fallback sweep will pick up the full
   delta.
 
+  The selected secondary calendars are read in full each run, over the sync
+  window, as is the booking calendar when it bootstraps or a sync was
+  requested (`enqueue/1`). The instances of every series the booking
+  calendar's delta names are read in full too, since a delta need not
+  cancel the old instances of a retimed series. Those listings carry no
+  deletions, so once a run has read every calendar, the rows the listings
+  no longer returned are swept (`Tymeslot.Integrations.Calendar.Google.CacheSweep`).
+
   Whatever the cycle ends up doing, its verdict is recorded against the
   integration's health state at the job boundary; see
   `Tymeslot.Workers.SyncHealth`.
@@ -30,33 +38,77 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.Google.CacheSweep
   alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
-  alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Workers.SyncHealth
+  alias Tymeslot.Workers.SyncRequest
 
-  @sync_window_past_days ProviderConfig.sync_window_past_days()
-  @sync_window_future_days ProviderConfig.sync_window_future_days()
+  # The job arg asking a run to read the booking calendar in full.
+  @list_booking_calendar "list_booking_calendar"
+
+  @doc """
+  Enqueues a sync of the Google integration `integration_id`, the one the
+  dashboard's Refresh and a write of a whole series from the grid ask for.
+  Besides the delta, it reads the booking calendar in full over the sync
+  window and sweeps what the listing no longer returns: a delta only says
+  what changed after the token it runs from, and a bootstrap that read a
+  series before the grid rewrote it may have cached it again after the
+  grid dropped its rows. A sync already waiting for the integration runs in
+  its place, as such a sync; one already running runs again once it
+  finishes, since it may have read Google before the request (see
+  `Tymeslot.Workers.SyncRequest`).
+  """
+  @spec enqueue(pos_integer()) :: {:ok, Oban.Job.t()} | {:error, term()}
+  def enqueue(integration_id),
+    do:
+      SyncRequest.insert(__MODULE__, %{
+        "calendar_integration_id" => integration_id,
+        @list_booking_calendar => true
+      })
+
+  @behaviour ExpectedJobOutcome
+
+  # The integration is gone, or only its owner can fix it by reconnecting.
+  # A sync past the pagination limit is recorded.
+  @integration_gone "Integration not found"
+  @calendar_gone "Booking calendar not found — user action required"
+  @credentials_rejected "Google rejected credentials — reauthentication required"
+  @calendar_disabled "Google Calendar not enabled for account: user action required"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do:
+      reason in [@integration_gone, @calendar_gone, @credentials_rejected, @calendar_disabled] or
+        reason == ReauthHandling.discard_reason()
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
+  def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id} = args} = job) do
     Logger.metadata(calendar_integration_id: integration_id)
 
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
-        integration
-        |> sync_integration()
-        |> tap(&SyncHealth.record_outcome(integration, &1))
+        fn ->
+          integration
+          |> sync_integration(args[@list_booking_calendar] == true)
+          |> tap(&SyncHealth.record_outcome(integration, &1))
+        end
+        |> InvalidEventReport.collect()
+        |> SyncRequest.rerun_if_requested(job)
 
       {:error, :not_found} ->
         Logger.warning("Calendar integration not found, discarding sync job",
           calendar_integration_id: integration_id
         )
 
-        {:discard, "Integration not found"}
+        {:discard, @integration_gone}
 
       {:error, :requires_reencryption, integration} ->
         CalendarManagement.handle_reauth_required(integration)
@@ -67,7 +119,12 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   # Private helpers
   # ---------------------------------------------------------------------------
 
-  defp sync_integration(integration) do
+  # `started_at` is taken before anything is read from Google: every row this
+  # run writes is written after it, which is what lets `CacheSweep` tell the
+  # rows a listing returned from the ones it no longer does.
+  defp sync_integration(integration, list_booking_calendar?) do
+    started_at = DateTime.utc_now(:microsecond)
+
     case Config.google_calendar_api_module().list_events_incremental(integration) do
       {:ok, %{events: events, next_sync_token: next_sync_token}} ->
         Logger.info("Incremental Google Calendar sync fetched events",
@@ -75,7 +132,8 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
           event_count: length(events)
         )
 
-        process_incremental_sync(integration, events, next_sync_token)
+        relist = if list_booking_calendar?, do: :calendar, else: {:series, events}
+        process_incremental_sync(integration, events, next_sync_token, {started_at, relist})
 
       {:error, :gone, _message} ->
         Logger.warning(
@@ -83,7 +141,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
           calendar_integration_id: integration.id
         )
 
-        bootstrap_integration(integration)
+        bootstrap_integration(integration, started_at)
 
       {:error, :no_sync_token} ->
         Logger.info(
@@ -91,7 +149,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
           calendar_integration_id: integration.id
         )
 
-        bootstrap_integration(integration)
+        bootstrap_integration(integration, started_at)
 
       {:error, :unauthorized, _message} ->
         Logger.warning("Google Calendar sync unauthorised; flagging for reauth",
@@ -125,7 +183,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, _type, reason} ->
         Logger.error("Google Calendar incremental sync failed",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -133,14 +191,18 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, reason} ->
         Logger.error("Google Calendar incremental sync failed",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
     end
   end
 
-  defp bootstrap_integration(integration) do
+  # Unlike a delta, the bootstrap is a complete windowed listing of the
+  # booking calendar, so it is swept like a secondary calendar's.
+  defp bootstrap_integration(integration, started_at) do
+    listed = {booking_calendar_id(integration), CacheSweep.listing_window(DateTime.utc_now())}
+
     case Config.google_calendar_api_module().bootstrap_sync(integration) do
       {:ok, %{events: events, next_sync_token: next_sync_token}} ->
         Logger.info("Google Calendar bootstrap fetched events",
@@ -148,7 +210,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
           event_count: length(events)
         )
 
-        process_incremental_sync(integration, events, next_sync_token)
+        process_incremental_sync(integration, events, next_sync_token, {started_at, [listed]})
 
       {:error, :unauthorized, _message} ->
         Logger.warning("Google Calendar bootstrap unauthorised; flagging for reauth",
@@ -182,7 +244,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, _type, reason} ->
         Logger.error("Google Calendar bootstrap failed",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -190,24 +252,35 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, reason} ->
         Logger.error("Google Calendar bootstrap failed",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
     end
   end
 
-  defp process_incremental_sync(integration, events, next_sync_token) do
+  # The sweep runs once every calendar has been read, and only when every
+  # one was: a row a calendar's listing no longer returns may be one another
+  # calendar of the integration now returns (an event moved between them,
+  # its row still filed under the calendar it came from), and that listing
+  # rewrites it, which spares it.
+  #
+  # `listed` is what the booking calendar's own read covered: the bootstrap's
+  # complete listing, or for a delta what is read of it besides
+  # (`relist_booking_calendar/2`).
+  defp process_incremental_sync(integration, events, next_sync_token, {started_at, listed}) do
     with :ok <- safe_process_events(integration, events),
          :ok <- persist_sync_state(integration, next_sync_token),
-         :ok <- sync_secondary_calendars(integration) do
+         {:ok, booking_listed} <- relist_booking_calendar(integration, listed),
+         {:ok, secondary_listed} <- sync_secondary_calendars(integration) do
+      CacheSweep.sweep(integration, booking_listed ++ secondary_listed, started_at)
       SyncBroadcast.broadcast_sync_complete(integration.user_id, integration.id)
       :ok
     else
       {:error, reason} ->
         Logger.error("Google Calendar event processing failed; sync token NOT updated",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -217,15 +290,75 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     end
   end
 
+  defp relist_booking_calendar(_integration, listed) when is_list(listed), do: {:ok, listed}
+
+  # A requested sync reads the booking calendar in full, as a secondary
+  # calendar is read on every run.
+  defp relist_booking_calendar(integration, :calendar) do
+    {start_time, end_time} = window = CacheSweep.listing_window(DateTime.utc_now())
+    calendar_id = booking_calendar_id(integration)
+
+    case sync_one_secondary_calendar(integration, calendar_id, start_time, end_time) do
+      :listed -> {:ok, [{calendar_id, window}]}
+      {:halt, value} -> value
+      # Refused or missing: nothing is swept, and the delta has done its work.
+      _skipped -> {:ok, []}
+    end
+  end
+
+  # Each series the delta names is listed whole, and swept of its own rows
+  # alone. A series whose listing fails is not swept this run.
+  defp relist_booking_calendar(integration, {:series, events}) do
+    {start_time, end_time} = window = CacheSweep.listing_window(DateTime.utc_now())
+    calendar_id = booking_calendar_id(integration)
+
+    listed =
+      events
+      |> Enum.map(& &1["recurringEventId"])
+      |> Enum.filter(&(is_binary(&1) and &1 != ""))
+      |> Enum.uniq()
+      |> Enum.filter(&relist_series(integration, calendar_id, &1, start_time, end_time))
+      |> Enum.map(&{calendar_id, window, &1})
+
+    {:ok, listed}
+  end
+
+  defp relist_series(integration, calendar_id, master_id, start_time, end_time) do
+    with {:ok, instances} <-
+           Config.google_calendar_api_module().list_instances(
+             integration,
+             calendar_id,
+             master_id,
+             start_time,
+             end_time
+           ),
+         :ok <- safe_process_events(integration, instances, calendar_id) do
+      true
+    else
+      failure ->
+        Logger.warning("Could not list a changed Google series' instances; not sweeping it",
+          calendar_integration_id: integration.id,
+          error: LogFormat.reason(failure)
+        )
+
+        false
+    end
+  end
+
   defp sync_secondary_calendars(integration) do
     case selected_secondary_calendar_ids(integration) do
-      [] -> :ok
+      [] -> {:ok, []}
       ids -> sync_each_secondary_calendar(integration, ids)
     end
   end
 
+  # The calendar the booking calendar's rows are filed under, by the sync
+  # token listing and the bootstrap alike (`normalisation_context/2`), and so
+  # the one its sweep must name.
+  defp booking_calendar_id(integration), do: integration.default_booking_calendar_id || "primary"
+
   defp selected_secondary_calendar_ids(integration) do
-    primary_id = integration.default_booking_calendar_id || "primary"
+    primary_id = booking_calendar_id(integration)
 
     integration.calendar_list
     |> Enum.filter(fn cal -> cal.selected == true and cal.id != primary_id end)
@@ -235,23 +368,23 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   # Iterates each selected secondary calendar, accumulating the ids of any that
   # no longer exist on Google's side so they can be de-selected in a single write
   # afterwards — preventing a deleted calendar from being re-fetched (and 404ing)
-  # on every sync. The accumulator is `{status, missing_ids}`.
+  # on every sync — and the calendars read in full, for the sweep. The
+  # accumulator is `{status, missing_ids, listed}`.
   defp sync_each_secondary_calendar(integration, calendar_ids) do
-    now = DateTime.utc_now()
-    start_time = DateTime.add(now, -@sync_window_past_days, :day)
-    end_time = DateTime.add(now, @sync_window_future_days, :day)
+    {start_time, end_time} = window = CacheSweep.listing_window(DateTime.utc_now())
 
-    {status, missing_ids} =
-      Enum.reduce_while(calendar_ids, {:ok, []}, fn calendar_id, {:ok, missing} ->
+    {status, missing_ids, listed} =
+      Enum.reduce_while(calendar_ids, {:ok, [], []}, fn calendar_id, {:ok, missing, listed} ->
         case sync_one_secondary_calendar(integration, calendar_id, start_time, end_time) do
-          :ok -> {:cont, {:ok, missing}}
-          :not_found -> {:cont, {:ok, [calendar_id | missing]}}
-          {:halt, value} -> {:halt, {value, missing}}
+          :listed -> {:cont, {:ok, missing, [{calendar_id, window} | listed]}}
+          :skipped -> {:cont, {:ok, missing, listed}}
+          :not_found -> {:cont, {:ok, [calendar_id | missing], listed}}
+          {:halt, value} -> {:halt, {value, missing, listed}}
         end
       end)
 
     deselect_missing_calendars(integration, missing_ids)
-    status
+    if status == :ok, do: {:ok, listed}, else: status
   end
 
   defp sync_one_secondary_calendar(integration, calendar_id, start_time, end_time) do
@@ -263,7 +396,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
          ) do
       {:ok, events} ->
         case safe_process_events(integration, events, calendar_id) do
-          :ok -> :ok
+          :ok -> :listed
           error -> {:halt, error}
         end
 
@@ -288,13 +421,13 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
           calendar_id: calendar_id
         )
 
-        :ok
+        :skipped
 
       {:error, _type, reason} ->
         Logger.error("Google Calendar secondary sync failed",
           calendar_integration_id: integration.id,
           calendar_id: calendar_id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:halt, {:error, reason}}
@@ -303,7 +436,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         Logger.error("Google Calendar secondary sync failed",
           calendar_integration_id: integration.id,
           calendar_id: calendar_id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:halt, {:error, reason}}
@@ -326,14 +459,14 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         "dashboard_calendar_providers",
         "The booking calendar no longer exists on Google. Please reconnect the integration and choose a different calendar."
       ),
-      "Booking calendar not found — user action required"
+      @calendar_gone
     )
   end
 
   # Google is refusing the credentials themselves: either the token refresh
   # failed, so the grant is gone, or a 403 named insufficient permissions.
   # Rate limiting and a Calendar-less account are classified ahead of this in
-  # `GoogleCalendarAPI.classify_403/2`, so nothing merely transient lands here
+  # `Google.ApiStatus`, so nothing merely transient lands here
   # and no retry can re-authorise anything.
   #
   # The scheduled probe reaches the same verdict on its own cadence, but not
@@ -349,7 +482,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         "dashboard_calendar_providers",
         "Google rejected the stored credentials. Please reconnect the integration."
       ),
-      "Google rejected credentials — reauthentication required"
+      @credentials_rejected
     )
   end
 
@@ -369,7 +502,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         "dashboard_calendar_providers",
         "This Google account doesn't have Google Calendar enabled. Turn on Google Calendar for the account (a Google Workspace administrator may need to do this), or connect a different Google account."
       ),
-      "Google Calendar not enabled for account: user action required"
+      @calendar_disabled
     )
   end
 
@@ -384,7 +517,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         Logger.error("Failed to de-select missing Google calendars",
           calendar_integration_id: integration.id,
           calendar_ids: missing_ids,
-          error: inspect(changeset.errors)
+          error: LogFormat.reason(changeset.errors)
         )
 
         :ok
@@ -413,10 +546,15 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   defp normalisation_context(integration, calendar_id) do
     %{
       calendar_integration_id: integration.id,
-      provider_calendar_id: calendar_id || integration.default_booking_calendar_id || "primary",
+      provider_calendar_id: calendar_id || booking_calendar_id(integration),
       synced_at: DateTime.utc_now(:microsecond)
     }
   end
+
+  # An instance is cached under a uid built from its original start, which a
+  # cancellation may not carry; its own id addresses the row exactly.
+  defp cancelled_ref(%{"recurringEventId" => series_id} = event) when is_binary(series_id),
+    do: %{provider_event_id: event["id"], uid: nil}
 
   defp cancelled_ref(event), do: %{provider_event_id: event["id"], uid: event["iCalUID"]}
 
@@ -431,7 +569,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       {:error, changeset} ->
         Logger.warning("Failed to persist Google Calendar sync state",
           calendar_integration_id: integration.id,
-          error: inspect(changeset)
+          error: LogFormat.reason(changeset)
         )
 
         :ok

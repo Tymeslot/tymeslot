@@ -36,6 +36,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias Tymeslot.Bookings.DemoOrchestrator
   alias Tymeslot.CustomFields
   alias Tymeslot.Demo
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
@@ -101,7 +102,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
           validate_and_submit(socket, sanitized_params, booking_params)
 
         {:error, errors} ->
-          Logger.warning("Form validation failed", errors: inspect(errors))
+          Logger.warning("Form validation failed", errors: LogFormat.reason(errors))
 
           socket =
             socket
@@ -165,7 +166,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> BookingGuards.release_submission()
       |> Flash.put_flash(:error, BookingErrorMessage.message(reason))
 
-    Logger.error("Failed to create meeting appointment", reason: inspect(reason))
+    Logger.error("Failed to create meeting appointment", reason: LogFormat.reason(reason))
 
     {:error, socket}
   end
@@ -187,7 +188,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       process_booking_submission(socket, enriched_params)
     else
       {:error, field_errors} when is_map(field_errors) and not is_struct(field_errors) ->
-        Logger.warning("Custom field validation failed", errors: inspect(field_errors))
+        Logger.warning("Custom field validation failed", errors: LogFormat.reason(field_errors))
 
         socket =
           socket

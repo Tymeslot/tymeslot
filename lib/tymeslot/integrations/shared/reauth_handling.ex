@@ -25,6 +25,8 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Infrastructure.BreakerOutcome
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
 
   require Logger
 
@@ -47,6 +49,8 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
           | :rejected_subscription_url
 
   @default_cause :credentials_undecryptable
+
+  @discard_reason "Credentials require reauthentication"
 
   # One row per cause: the operator-facing log line and the message persisted
   # to the integration's `sync_error`, which the account owner reads. Keeping
@@ -103,6 +107,14 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
   def reauth_error_message(cause), do: fetch_cause(cause).message
 
   @doc """
+  The reason an Oban job is discarded with once its integration has been
+  flagged for reauthentication. Only the owner can fix that, so workers
+  declare it an expected outcome (`Tymeslot.Infrastructure.ExpectedJobOutcome`).
+  """
+  @spec discard_reason() :: String.t()
+  def discard_reason, do: @discard_reason
+
+  @doc """
   Which `t:cause/0` a permanent credential failure describes.
 
   `invalid_grant` and `:token_expired` mean the grant itself is gone: expired,
@@ -152,9 +164,13 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
     mark_needs_reauth = Keyword.fetch!(opts, :mark_needs_reauth)
     provider_label_fun = Keyword.get(opts, :provider_label, & &1.provider)
     log_prefix = Keyword.get(opts, :log_prefix, "Integration")
-    cause = fetch_cause(Keyword.get(opts, :cause, @default_cause))
+    cause_key = cause_key(Keyword.get(opts, :cause, @default_cause))
+    cause = fetch_cause(cause_key)
 
     provider = provider_label_fun.(integration)
+
+    if cause_key == :credentials_undecryptable,
+      do: report_undecryptable(integration, provider, log_prefix)
 
     Logger.warning(
       cause.log,
@@ -173,12 +189,30 @@ defmodule Tymeslot.Integrations.Shared.ReauthHandling do
           "Failed to persist needs_reauth flag",
           provider: provider,
           integration_id: integration.id,
-          errors: inspect(changeset.errors)
+          errors: LogFormat.reason(changeset.errors)
         )
 
         {:error, changeset}
     end
   end
 
-  defp fetch_cause(cause), do: Map.get(@causes, cause) || @causes[@default_cause]
+  defp cause_key(cause) when is_map_key(@causes, cause), do: cause
+  defp cause_key(_unknown), do: @default_cause
+
+  defp fetch_cause(cause), do: Map.fetch!(@causes, cause_key(cause))
+
+  # Credentials that no longer decrypt usually mean the encryption key was
+  # lost or rotated: the operator's to fix, and never one integration's
+  # alone. The job that meets them is discarded as an expected end, since
+  # only a reconnect recovers that integration, so the failure is recorded
+  # here instead. One call site and one reason, so however many
+  # integrations are affected it is one error, and one new-error alert.
+  defp report_undecryptable(integration, provider, log_prefix) do
+    ErrorTracking.report_error(:credentials_undecryptable, nil, %{
+      integration_type: log_prefix,
+      provider: provider,
+      integration_id: integration.id,
+      user_id: integration.user_id
+    })
+  end
 end

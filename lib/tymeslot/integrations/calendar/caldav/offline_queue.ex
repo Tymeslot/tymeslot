@@ -41,10 +41,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
   An update or delete of a row that belongs to a series is never sent. A
   CalDAV series lives in one resource, so the write for any one occurrence
   lands on all of them: an update is patched onto the master VEVENT and a
-  delete removes the resource. The grid refuses both before anything is
-  queued (`Tymeslot.CalendarGrid.EventEdit.ensure_editable/1`,
-  `Tymeslot.CalendarGrid.EventDeletion.ensure_deletable/1`), but a row queued
-  before those guards existed still reaches the queue, and replaying it would
+  delete removes the resource. The grid queues neither: it never queues a
+  failed edit or delete of a series member
+  (`Tymeslot.CalendarGrid.SeriesEdit`,
+  `Tymeslot.CalendarGrid.EventDeletion.delete_event/3`). A row queued before
+  those guards existed still reaches the queue, though, and replaying it would
   change or remove a series nobody asked to touch.
 
   Such a row is skipped like any other that no retry can make sendable: it
@@ -58,6 +59,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalDAV.Base, as: CalDAVBase
   alias Tymeslot.Integrations.Calendar.CalDAV.Errors, as: CalDAVErrors
   alias Tymeslot.Integrations.Calendar.CalDAV.Events
@@ -170,7 +172,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
     Logger.error("CalDAV offline queue row carries an unknown sync_state",
       calendar_integration_id: integration.id,
       uid: row.uid,
-      sync_state: inspect(other)
+      sync_state: LogFormat.reason(other)
     )
 
     QueueQueries.mark_sync_failed(
@@ -378,7 +380,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
       calendar_integration_id: integration.id,
       uid: row.uid,
       operation: operation,
-      error: format_reason(reason)
+      error: LogFormat.reason(reason)
     )
 
     QueueQueries.mark_sync_failed(
@@ -405,9 +407,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue do
       operation: operation
     )
   end
-
-  defp format_reason(reason) when is_binary(reason), do: reason
-  defp format_reason(reason), do: inspect(reason)
 
   defp no_primary_path_message do
     dgettext(

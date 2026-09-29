@@ -11,6 +11,7 @@ defmodule Tymeslot.Profiles do
 
   alias Tymeslot.Availability.Schedules
   alias Tymeslot.BookingPage.Publication
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Profiles.EmbedDomains
   alias Tymeslot.Profiles.OrganizerContext
@@ -220,7 +221,7 @@ defmodule Tymeslot.Profiles do
           {:error, reason} ->
             Logger.warning("Could not persist a prefilled profile timezone",
               profile_id: profile.id,
-              reason: inspect(reason)
+              reason: LogFormat.reason(reason)
             )
 
             {:ok, profile}

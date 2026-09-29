@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   """
 
   alias Tymeslot.Clock
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Common.OAuth.{ErrorParser, IdToken, State, TokenExchange}
   alias Tymeslot.Integrations.Google.Endpoints
   alias Tymeslot.Integrations.Shared.OAuth.ProviderHelpers
@@ -212,7 +213,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
           if response["id_token"] do
             Logger.warning(
               "Failed to decode Google id_token — account dedup falling back to legacy match",
-              reason: inspect(reason)
+              reason: LogFormat.reason(reason)
             )
           end
 

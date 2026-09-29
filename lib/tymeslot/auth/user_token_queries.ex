@@ -8,6 +8,7 @@ defmodule Tymeslot.Auth.UserTokenQueries do
 
   alias Ecto.Changeset
   alias Tymeslot.Auth.{AccountTokens, UserSchema}
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Repo
   alias Tymeslot.Security.IPNormaliser
   alias Tymeslot.Security.Token
@@ -63,7 +64,7 @@ defmodule Tymeslot.Auth.UserTokenQueries do
       {:error, reason} ->
         Logger.error("Failed to store reset token",
           user_id: user.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:error, reason}

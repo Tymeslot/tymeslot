@@ -10,6 +10,7 @@ defmodule Tymeslot.Auth.Session do
 
   require Logger
   alias Tymeslot.Auth.{UserQueries, UserSchema, UserSessionQueries}
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Security.{SecurityLogger, Token}
   alias TymeslotWeb.Endpoint
 
@@ -44,7 +45,7 @@ defmodule Tymeslot.Auth.Session do
         {:ok, token}
 
       {:error, changeset} ->
-        Logger.error("Failed to create session", error: inspect(changeset))
+        Logger.error("Failed to create session", error: LogFormat.reason(changeset))
         {:error, :session_creation_failed, "Failed to create session"}
     end
   end

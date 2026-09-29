@@ -29,7 +29,8 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
   defp meeting(attrs \\ %{}) do
     base = %Meeting{
       id: UUID.generate(),
-      uid: "abc-123",
+      uid: "booking-capability-uid",
+      calendar_uid: "abc-123",
       title: "Strategy call",
       meeting_type: "Strategy call",
       start_time: ~U[2026-09-01 13:00:00Z],
@@ -326,6 +327,8 @@ defmodule Tymeslot.Emails.Templates.BookingApprovalEmailsTest do
         assert ics, "expected a calendar file for #{variant}"
         assert ics.data =~ "STATUS:CANCELLED"
         assert ics.data =~ "UID:abc-123@"
+        refute ics.data =~ "booking-capability-uid"
+        assert ics.filename == "appointment-abc-123.ics"
         assert ics.data =~ "SEQUENCE:3"
         refute ics.data =~ "METHOD:CANCEL"
       end

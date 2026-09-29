@@ -7,6 +7,8 @@ defmodule TymeslotWeb.Plugs.ThemeProtectionPlug do
   """
   @behaviour Plug
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   require Logger
 
   @impl Plug
@@ -28,7 +30,7 @@ defmodule TymeslotWeb.Plugs.ThemeProtectionPlug do
       rescue
         e ->
           Logger.error("Theme protection plug raised an exception",
-            plug: inspect(plug_mod),
+            plug: LogFormat.reason(plug_mod),
             error: Exception.message(e)
           )
 

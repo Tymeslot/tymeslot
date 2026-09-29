@@ -54,6 +54,7 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Video.Providers.Capabilities
   alias Tymeslot.Integrations.Video.Providers.Jitsi.Token
@@ -309,7 +310,7 @@ defmodule Tymeslot.Integrations.Video.Providers.JitsiProvider do
         # fingerprint goes out, which is enough to correlate two lines.
         Logger.error("Failed to mint Jitsi access token, handing out the bare room URL",
           room_ref: Redactor.fingerprint(room_data.room_id),
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:ok, room_data.meeting_url}

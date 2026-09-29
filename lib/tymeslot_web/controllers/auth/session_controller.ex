@@ -8,6 +8,7 @@ defmodule TymeslotWeb.SessionController do
 
   alias Tymeslot.Auth
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias TymeslotWeb.EmailLinkConfirmHTML
   alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
   alias TymeslotWeb.UserAuth
@@ -112,7 +113,7 @@ defmodule TymeslotWeb.SessionController do
         |> redirect(to: ~p"/auth/login")
 
       {:error, reason} ->
-        Logger.warning("Email verification link rejected", reason: inspect(reason))
+        Logger.warning("Email verification link rejected", reason: LogFormat.reason(reason))
 
         conn
         |> put_flash(:error, link_superseded_message())

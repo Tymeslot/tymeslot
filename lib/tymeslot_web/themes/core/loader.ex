@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Themes.Core.Loader do
   maintaining compatibility with the static Registry.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias TymeslotWeb.Themes.Core.Registry
   require Logger
 
@@ -29,7 +30,7 @@ defmodule TymeslotWeb.Themes.Core.Loader do
         error
 
       {:error, reason} = error ->
-        Logger.error("Failed to load theme", theme_id: theme_id, reason: inspect(reason))
+        Logger.error("Failed to load theme", theme_id: theme_id, reason: LogFormat.reason(reason))
         error
     end
   end
@@ -74,8 +75,8 @@ defmodule TymeslotWeb.Themes.Core.Loader do
           error ->
             Logger.warning("Theme module failed to report its LiveView module",
               theme_id: theme_id,
-              theme_module: inspect(module),
-              error: inspect(error)
+              theme_module: LogFormat.reason(module),
+              error: LogFormat.reason(error)
             )
 
             nil

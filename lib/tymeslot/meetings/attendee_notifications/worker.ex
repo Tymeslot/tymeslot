@@ -22,18 +22,29 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   `ChangeSummary.next_sequence`. The whole read/dispatch/persist path runs
   inside a `Repo.transaction/1` so a failing step rolls back and the next
   Oban retry sees the same starting state.
+
+  ## Deletes
+
+  Only updates come through here. A deleted event has no row left to re-read,
+  so its cancellation is sent at once from the cached row as the delete
+  succeeds (`AttendeeNotifications.event_deleted_confirm/3`). A `"delete"` job
+  enqueued before that carries nothing but the event's id: its row is gone
+  once the delete succeeded, and still there only when the delete did not
+  happen, so either way there is nothing it may send, and it completes
+  without sending.
   """
 
   use Oban.Worker, queue: :emails, max_attempts: 5
 
-  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.EmailScheduler.CalendarScheduler
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeDetector
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
   alias Tymeslot.Meetings.AttendeeNotifications.IcalMethod
   alias Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState
+  alias Tymeslot.Meetings.AttendeeNotifications.Recipients
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
@@ -41,6 +52,16 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   require Logger
 
   @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"action" => "delete"} = args}) do
+    Logger.info("AttendeeNotifications.Worker skipped a legacy delete job",
+      event_id: args["event_id"],
+      kind: args["kind"],
+      action: "delete"
+    )
+
+    :ok
+  end
+
   def perform(%Oban.Job{args: %{"event_id" => id, "kind" => kind, "action" => action}}) do
     txn_result = Repo.transaction(fn -> do_run(id, kind, action) end)
     handle_result(txn_result, id, kind, action)
@@ -70,7 +91,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
       event_id: id,
       kind: kind,
       action: action,
-      reason: inspect(reason)
+      reason: LogFormat.reason(reason)
     )
 
     {:error, reason}
@@ -84,7 +105,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
       summary = ChangeDetector.diff(baseline, current, current_sequence: event.ical_sequence)
 
       if ChangeSummary.any_changes?(summary) do
-        :ok = dispatch(event, summary, action_atom)
+        :ok = dispatch(event, summary)
         persist_new_baseline(event, current, summary.next_sequence)
       else
         log_noop(event, action_atom)
@@ -149,16 +170,15 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   defp normalise_attendee(%{"email" => email}) when is_binary(email), do: %{email: email}
   defp normalise_attendee(other) when is_map(other), do: other
 
-  defp dispatch(event, %ChangeSummary{} = summary, action_atom) do
+  defp dispatch(event, %ChangeSummary{retained_attendees: retained}) do
     {method, sequence} =
-      IcalMethod.for(ical_action(action_atom), current_sequence: event.ical_sequence)
+      IcalMethod.for(:event_updated, current_sequence: event.ical_sequence)
 
-    excluded = MapSet.union(declined_emails(event), owner_emails(event))
+    excluded = Recipients.excluded(event, user_id_for(event))
 
     recipient_emails =
-      summary
-      |> recipients_for(action_atom)
-      |> Enum.reject(fn attendee -> recipient_email(attendee) in excluded end)
+      retained
+      |> Enum.reject(fn attendee -> Recipients.email(attendee) in excluded end)
       |> Enum.map(&Map.get(&1, :email))
       |> Enum.reject(&is_nil/1)
 
@@ -191,60 +211,6 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
     })
 
     :ok
-  end
-
-  defp recipients_for(%ChangeSummary{retained_attendees: retained}, :update), do: retained
-
-  defp recipients_for(
-         %ChangeSummary{retained_attendees: retained, added_attendees: added},
-         :delete
-       ),
-       do: retained ++ added
-
-  defp ical_action(:update), do: :event_updated
-  defp ical_action(:delete), do: :event_deleted
-
-  # Emails (lower-cased) of attendees who have declined on the current event.
-  # A guest who said no should not receive update or cancellation notices.
-  # Attendee maps come from the cached provider event, so keys/values may be
-  # atoms (in-memory) or strings (after a JSONB round-trip).
-  defp declined_emails(%{attendees: list}) when is_list(list) do
-    for attendee <- list, declined?(attendee), email = recipient_email(attendee), email != nil do
-      email
-    end
-    |> MapSet.new()
-  end
-
-  defp declined_emails(_event), do: MapSet.new()
-
-  # The address of the user whose integration owns this event, lower-cased to
-  # match `recipient_email/1`. Google and Outlook both list the organiser as an
-  # attendee of events created in their own UI, so without this the person who
-  # made the edit is emailed about their own edit, with an ICS attached.
-  #
-  # Deliberately the *owner's* address, not the event's `organizer` field: a
-  # user can be an attendee of someone else's event that syncs into their grid,
-  # and editing that one must still notify the real organiser.
-  defp owner_emails(event) do
-    with id when is_integer(id) <- user_id_for(event),
-         {:ok, user} <- UserQueries.get_user(id),
-         email when is_binary(email) <- user.email do
-      MapSet.new([email |> String.trim() |> String.downcase()])
-    else
-      _no_owner -> MapSet.new()
-    end
-  end
-
-  defp declined?(attendee) do
-    status = Map.get(attendee, :response_status) || Map.get(attendee, "response_status")
-    status in [:declined, "declined"]
-  end
-
-  defp recipient_email(attendee) do
-    case Map.get(attendee, :email) || Map.get(attendee, "email") do
-      email when is_binary(email) -> email |> String.trim() |> String.downcase()
-      _other -> nil
-    end
   end
 
   defp user_id_for(%{organizer_user_id: id}) when is_integer(id), do: id

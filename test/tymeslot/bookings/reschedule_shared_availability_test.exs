@@ -81,9 +81,18 @@ defmodule Tymeslot.Bookings.RescheduleSharedAvailabilityTest do
   test "does not treat the booking's own invitation in the guest's calendar as a conflict", ctx do
     busy_start = DateTime.new!(ctx.date, ~T[14:00:00], "Etc/UTC")
 
+    # The invitation in the guest's calendar carries `calendar_uid`, the name
+    # the booking goes by in external calendars — not `uid`, which is the
+    # capability behind its cancel and reschedule links.
     stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
       {:ok,
-       [%{uid: ctx.meeting.uid, start_time: busy_start, end_time: DateTime.add(busy_start, 3600)}]}
+       [
+         %{
+           uid: ctx.meeting.calendar_uid,
+           start_time: busy_start,
+           end_time: DateTime.add(busy_start, 3600)
+         }
+       ]}
     end)
 
     assert {:ok, _updated} =

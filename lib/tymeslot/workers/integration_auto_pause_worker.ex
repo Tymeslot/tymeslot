@@ -57,6 +57,7 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorker do
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.HealthCheck.Alerting
   alias Tymeslot.Integrations.HealthCheck.HealthStatus
@@ -126,7 +127,7 @@ defmodule Tymeslot.Workers.IntegrationAutoPauseWorker do
                 Logger.error("Failed to auto-pause integration",
                   type: type,
                   integration_id: row.integration_id,
-                  error: inspect(changeset)
+                  error: LogFormat.reason(changeset)
                 )
 
                 :error

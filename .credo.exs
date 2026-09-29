@@ -106,6 +106,7 @@
           # Logger hygiene: violations are :low while being cleared; raise to :high after Phase 3-4
           {CredoChecks.NoStringInterpolationInLogger, [priority: :high]},
           {CredoChecks.NoMapMetadataInLogger, [priority: :high]},
+          {CredoChecks.NoInspectInLoggerMetadata, [priority: :high]},
           {CredoChecks.MigrationConstraintSafety, [priority: :high, enforce_after: "20260329"]},
           {CredoChecks.RepoCallBoundary, [priority: :normal]},
           {CredoChecks.WebLayerBoundary, [priority: :normal]},
@@ -153,6 +154,7 @@
           {CredoChecks.PhantomLiveCallback, [priority: :high]},
           {CredoChecks.PutFlashInLiveComponent, [priority: :normal]},
           {CredoChecks.HttpClientBoundary, [priority: :normal]},
+          {CredoChecks.TaskSpawnBoundary, [priority: :normal]},
           {CredoChecks.NoSaasReferenceInCore, [priority: :high]},
           {CredoChecks.NoMixEnvInCoreLib, [priority: :high]},
           {CredoChecks.PreloadOrderThroughAssociation, [priority: :normal]},

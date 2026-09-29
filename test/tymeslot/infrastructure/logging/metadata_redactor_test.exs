@@ -13,6 +13,33 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
 
   defp event(meta), do: %{level: :info, msg: {:string, "test"}, meta: meta}
 
+  describe "redact/1" do
+    test "redacts sensitive keys at any depth, under atom and string keys, inside lists and tuples" do
+      term = %{
+        "request" => %{"headers" => %{"authorization" => "Bearer x", "accept" => "*/*"}},
+        job: [%{api_key: "sk-1", user_id: 7}],
+        pair: {:ok, %{"password" => "pw"}}
+      }
+
+      assert MetadataRedactor.redact(term) == %{
+               "request" => %{"headers" => %{"authorization" => "[REDACTED]", "accept" => "*/*"}},
+               job: [%{api_key: "[REDACTED]", user_id: 7}],
+               pair: {:ok, %{"password" => "[REDACTED]"}}
+             }
+    end
+
+    test "stops at max_depth/0, leaving deeper terms as they are" do
+      nest = fn levels, inner -> Enum.reduce(1..levels, inner, &%{"n#{&1}" => &2}) end
+      max = MetadataRedactor.max_depth()
+
+      assert MetadataRedactor.redact(nest.(max - 1, %{"password" => "pw"})) ==
+               nest.(max - 1, %{"password" => "[REDACTED]"})
+
+      deepest = nest.(max, %{"password" => "pw"})
+      assert MetadataRedactor.redact(deepest) == deepest
+    end
+  end
+
   describe "filter/2" do
     test "redacts sensitive atom keys" do
       filtered =
@@ -108,6 +135,20 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
       assert filtered.meta.provider_identifier == "evt_abc123"
     end
 
+    test "redacts the meeting uid, a bearer capability, but not a bare calendar event uid" do
+      filtered =
+        MetadataRedactor.filter(
+          event(%{
+            meeting_uid: "0b7e1f3a-4c1d-4a8e-9f3b-2d6c8e1a5b7c",
+            uid: "evt-123@google.com"
+          }),
+          []
+        )
+
+      assert filtered.meta.meeting_uid == "[REDACTED]"
+      assert filtered.meta.uid == "evt-123@google.com"
+    end
+
     test "leaves non-sensitive metadata untouched" do
       filtered =
         MetadataRedactor.filter(
@@ -136,6 +177,88 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
     test "leaves non-atom non-string keys alone" do
       filtered = MetadataRedactor.filter(event(%{{:tagged, "k"} => "v"}), [])
       assert filtered.meta == %{{:tagged, "k"} => "v"}
+    end
+  end
+
+  describe "filter/2 over nested metadata values" do
+    test "redacts a sensitive key inside a map value" do
+      filtered = MetadataRedactor.filter(event(%{error: %{"access_token" => "abc"}}), [])
+
+      assert filtered.meta.error == %{"access_token" => "[REDACTED]"}
+    end
+
+    test "redacts a token nested three levels down, keeping its siblings" do
+      meta = %{response: %{body: %{data: %{refresh_token: "rt-1", expires_in: 3600}}}}
+
+      filtered = MetadataRedactor.filter(event(meta), [])
+
+      assert filtered.meta.response.body.data == %{
+               refresh_token: "[REDACTED]",
+               expires_in: 3600
+             }
+    end
+
+    test "redacts inside keyword lists, lists and structs" do
+      meta = %{
+        opts: [api_key: "sk-1", timeout: 5_000],
+        attempts: [%{password: "pw", n: 1}],
+        exception: %RuntimeError{message: "boom"},
+        request: %URI{host: "example.com", userinfo: "user", query: "a=1"}
+      }
+
+      filtered = MetadataRedactor.filter(event(meta), [])
+
+      assert filtered.meta.opts == [api_key: "[REDACTED]", timeout: 5_000]
+      assert filtered.meta.attempts == [%{password: "[REDACTED]", n: 1}]
+      assert filtered.meta.exception == %RuntimeError{message: "boom"}
+      assert %URI{host: "example.com"} = filtered.meta.request
+    end
+
+    test "walks five levels into a metadata value and no further" do
+      nest = fn levels -> Enum.reduce(1..levels, %{token: "t"}, &%{"n#{&1}" => &2}) end
+
+      # The metadata key is level zero; the token's own key sits at level five.
+      assert MetadataRedactor.filter(event(%{ctx: nest.(4)}), []).meta.ctx ==
+               Enum.reduce(1..4, %{token: "[REDACTED]"}, &%{"n#{&1}" => &2})
+
+      deep = nest.(5)
+      assert MetadataRedactor.filter(event(%{ctx: deep}), []).meta.ctx == deep
+    end
+
+    test "passes odd terms through unchanged rather than raising inside the logger" do
+      pid = self()
+      ref = make_ref()
+      fun = fn -> :ok end
+      large = :binary.copy("x", 1_000_000)
+      large_key_map = %{large => "value"}
+
+      meta = %{
+        improper: ["abc" | "def"],
+        nested_improper: [%{password: "pw"} | :tail],
+        tuple: {:ok, 1, 2},
+        pid: pid,
+        ref: ref,
+        fun: fun,
+        large: large,
+        large_key_map: large_key_map,
+        charlist: ~c"plain text",
+        empty: [],
+        nil_value: nil
+      }
+
+      filtered = MetadataRedactor.filter(event(meta), []).meta
+
+      assert filtered.improper == ["abc" | "def"]
+      assert filtered.nested_improper == [%{password: "[REDACTED]"} | :tail]
+      assert filtered.tuple == {:ok, 1, 2}
+      assert filtered.pid == pid
+      assert filtered.ref == ref
+      assert filtered.fun == fun
+      assert filtered.large == large
+      assert filtered.large_key_map == large_key_map
+      assert filtered.charlist == ~c"plain text"
+      assert filtered.empty == []
+      assert filtered.nil_value == nil
     end
   end
 
@@ -245,15 +368,53 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactorTest do
     end
   end
 
+  defp primary_filter(id),
+    do: :logger.get_primary_config() |> Map.fetch!(:filters) |> Keyword.get(id)
+
+  defp restore_primary_filter(id, previous) do
+    _removed = :logger.remove_primary_filter(id)
+    if previous, do: :ok = :logger.add_primary_filter(id, previous)
+    :ok
+  end
+
   describe "attach/0" do
     test "is idempotent and survives repeated calls" do
-      on_exit(fn -> :logger.remove_primary_filter(:tymeslot_metadata_redactor) end)
+      # The application installs this filter at boot and other tests rely on
+      # it, so put back exactly what was there rather than removing it.
+      previous = primary_filter(:tymeslot_metadata_redactor)
+      on_exit(fn -> restore_primary_filter(:tymeslot_metadata_redactor, previous) end)
 
       assert :ok = MetadataRedactor.attach()
       assert :ok = MetadataRedactor.attach()
 
       filter_ids = :logger.get_primary_config() |> Map.fetch!(:filters) |> Keyword.keys()
       assert :tymeslot_metadata_redactor in filter_ids
+    end
+  end
+
+  describe "through the installed logger filter" do
+    alias Tymeslot.Bookings.Policy
+    alias Tymeslot.Test.LogCapture
+
+    # A real call site: blocking the reschedule of a meeting that has started
+    # logs its uid. The primary filter installed at boot must blank it before
+    # any handler sees it.
+    test "a logged meeting uid reaches handlers redacted" do
+      now = DateTime.utc_now()
+
+      meeting = %{
+        uid: "0b7e1f3a-4c1d-4a8e-9f3b-2d6c8e1a5b7c",
+        status: "confirmed",
+        start_time: DateTime.add(now, -600),
+        end_time: DateTime.add(now, 600)
+      }
+
+      LogCapture.with_capture([logger_level: :info], fn ->
+        assert {:error, _reason} = Policy.can_reschedule_meeting?(meeting)
+
+        %{meta: meta} = LogCapture.await_log("Blocked reschedule")
+        assert meta.meeting_uid == "[REDACTED]"
+      end)
     end
   end
 end

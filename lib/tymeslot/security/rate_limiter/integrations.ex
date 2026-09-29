@@ -5,6 +5,7 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Security.RateLimiter.Helpers
 
   @connection_test_limit 20
@@ -94,7 +95,7 @@ defmodule Tymeslot.Security.RateLimiter.Integrations do
       :error ->
         Logger.error("Unattributable connection test",
           operation: operation,
-          scope: inspect(scope)
+          scope: LogFormat.reason(scope)
         )
 
         # Nothing downstream reads a message for this refusal — `ConnectionProbe`

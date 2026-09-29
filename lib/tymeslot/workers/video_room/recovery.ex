@@ -38,10 +38,12 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
   times.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Workers.VideoRoom.Announcement
+  alias Tymeslot.Workers.VideoRoom.ErrorPolicy
 
   require Logger
 
@@ -56,8 +58,20 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
   # at the same moment still picks it up.
   @cutoff_buffer_seconds 300
 
+  # The meeting started before recovery produced a room: the booking went out
+  # without a link, as designed, and there is nothing left to do.
+  @meeting_started "Meeting already started"
+
   @typedoc "An Oban `perform/1` return value."
   @type decision :: {:snooze, pos_integer()} | {:discard, String.t()}
+
+  @doc """
+  Whether a discard reason from `decide/2` is an expected end of the job:
+  the meeting started or went away before recovery finished.
+  """
+  @spec expected_discard?(term()) :: boolean()
+  def expected_discard?(reason),
+    do: reason == @meeting_started or reason == ErrorPolicy.discard_reason(:meeting_not_found)
 
   @doc """
   Whether this attempt has exhausted ordinary retries and entered recovery.
@@ -174,9 +188,9 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
          {:ok, seconds} <- snooze_seconds(meeting, recovery_attempt) do
       {:snooze, seconds}
     else
-      {:error, :not_found} -> {:discard, "Meeting not found"}
+      {:error, :not_found} -> {:discard, ErrorPolicy.discard_reason(:meeting_not_found)}
       {:error, :deadline_passed} -> {:discard, "Recovery deadline passed"}
-      _started -> {:discard, "Meeting already started"}
+      _started -> {:discard, @meeting_started}
     end
   end
 
@@ -213,8 +227,8 @@ defmodule Tymeslot.Workers.VideoRoom.Recovery do
       exception ->
         Logger.warning("Ignoring unreadable reminder interval",
           meeting_id: meeting.id,
-          value: inspect(value),
-          unit: inspect(unit),
+          value: LogFormat.reason(value),
+          unit: LogFormat.reason(unit),
           error: Exception.message(exception)
         )
 

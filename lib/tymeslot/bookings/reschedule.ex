@@ -43,6 +43,7 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.Guests
   alias Tymeslot.Meetings.MeetingQueries
@@ -352,7 +353,7 @@ defmodule Tymeslot.Bookings.Reschedule do
       {:error, reason} ->
         Logger.warning("Failed to send booking request notifications on reschedule",
           meeting_id: updated.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok
@@ -418,7 +419,7 @@ defmodule Tymeslot.Bookings.Reschedule do
       {:error, reason} ->
         Logger.warning("Failed to cancel stale reminder jobs on reschedule",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok
@@ -520,7 +521,7 @@ defmodule Tymeslot.Bookings.Reschedule do
            end_dt,
            user_tz,
            config,
-           SharedAvailability.fresh_events_fetcher(meeting.uid)
+           SharedAvailability.fresh_events_fetcher(meeting.calendar_uid)
          ) do
       :ok ->
         :ok
@@ -531,7 +532,7 @@ defmodule Tymeslot.Bookings.Reschedule do
 
       {:error, reason} ->
         Logger.warning("Guest calendar availability check failed, proceeding with reschedule",
-          reason: inspect(reason),
+          reason: LogFormat.reason(reason),
           meeting_id: meeting.id
         )
 
@@ -623,7 +624,7 @@ defmodule Tymeslot.Bookings.Reschedule do
       {:error, reason} ->
         Logger.warning("Failed to enqueue provider video sync on reschedule",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok
@@ -639,7 +640,7 @@ defmodule Tymeslot.Bookings.Reschedule do
       {:error, reason} ->
         Logger.warning("Failed to send reschedule notifications",
           meeting_id: updated_meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok

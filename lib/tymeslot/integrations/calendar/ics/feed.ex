@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
   require Logger
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.RedirectLocation
   alias Tymeslot.Infrastructure.ResponseTooLargeError
   alias Tymeslot.Integrations.Calendar.ICalParser
@@ -225,7 +226,7 @@ defmodule Tymeslot.Integrations.Calendar.Ics.Feed do
 
       {:error, reason} ->
         Logger.warning("Subscribed calendar feed did not parse as iCalendar",
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:error, :invalid_ics}

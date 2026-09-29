@@ -4,6 +4,7 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
   """
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
 
   require Logger
 
@@ -82,7 +83,7 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
         {:error, :recaptcha_request_failed}
 
       {:error, exception} ->
-        Logger.error("reCAPTCHA verification request error", error: inspect(exception))
+        Logger.error("reCAPTCHA verification request error", error: LogFormat.reason(exception))
         {:error, :recaptcha_network_error}
     end
   end
@@ -103,17 +104,17 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
 
       {:ok, %{"success" => false, "error-codes" => error_codes}} ->
         Logger.error("reCAPTCHA verification failed with errors",
-          error_codes: inspect(error_codes)
+          error_codes: LogFormat.reason(error_codes)
         )
 
         {:error, :recaptcha_verification_failed}
 
       {:ok, response} ->
-        Logger.error("Unexpected reCAPTCHA response format", response: inspect(response))
+        Logger.error("Unexpected reCAPTCHA response format", response: LogFormat.reason(response))
         {:error, :recaptcha_invalid_response}
 
       {:error, reason} ->
-        Logger.error("Failed to parse reCAPTCHA response", reason: inspect(reason))
+        Logger.error("Failed to parse reCAPTCHA response", reason: LogFormat.reason(reason))
         {:error, :recaptcha_parse_error}
     end
   end
@@ -170,8 +171,8 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
     e in ArgumentError ->
       # Handle string encoding errors (rare but possible with malformed input)
       Logger.debug("Failed to validate IP address",
-        ip: inspect(ip_string),
-        error: inspect(e)
+        ip: LogFormat.reason(ip_string),
+        error: LogFormat.reason(e)
       )
 
       false
@@ -199,7 +200,7 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
   # This catches bugs like signup_min_score: "0.5" instead of 0.5
   def validate_min_score(_score, min_score) when not is_number(min_score) and min_score != nil do
     Logger.error("reCAPTCHA min_score configuration is invalid (not a number)",
-      min_score: inspect(min_score)
+      min_score: LogFormat.reason(min_score)
     )
 
     {:error, :recaptcha_configuration_error}

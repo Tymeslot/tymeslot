@@ -98,7 +98,8 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   Looks up a meeting linked to a calendar event by provider event ID or UID.
 
   Returns `{:ok, meeting}` if a linked meeting is found, `{:error, :not_found}`
-  otherwise. Tries `provider_event_id` first, falls back to `uid`.
+  otherwise. Tries `provider_event_id` first, then matches the event's `uid`
+  against the meeting's `calendar_uid`.
 
   The fallback runs when the first lookup *misses*, not merely when the ID is
   absent: a CalDAV event carries an href in `provider_event_id`, while the
@@ -128,7 +129,7 @@ defmodule Tymeslot.Meetings.ExternalCalendarChanges do
   defp by_uid(_calendar_integration_id, nil), do: {:error, :not_found}
 
   defp by_uid(calendar_integration_id, uid),
-    do: MeetingCalendarQueries.get_by_uid_and_integration(calendar_integration_id, uid)
+    do: MeetingCalendarQueries.get_by_calendar_uid_and_integration(calendar_integration_id, uid)
 
   @spec status_for(signal()) :: String.t()
   defp status_for(:deleted), do: @externally_deleted

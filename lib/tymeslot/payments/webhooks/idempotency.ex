@@ -28,6 +28,7 @@ defmodule Tymeslot.Payments.Webhooks.Idempotency do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
 
   @type result :: {:ok, :processed | :duplicate} | {:error, :retry_later | :permanent}
@@ -104,7 +105,7 @@ defmodule Tymeslot.Payments.Webhooks.Idempotency do
     Logger.info("Stripe webhook event processed",
       event_id: event_id,
       event_type: event_type,
-      status: inspect(result),
+      status: LogFormat.reason(result),
       processing_time_ms: duration_ms
     )
 
@@ -117,7 +118,7 @@ defmodule Tymeslot.Payments.Webhooks.Idempotency do
     Logger.warning("Stripe webhook event failed transiently, Stripe will retry",
       event_id: event_id,
       event_type: event_type,
-      error: inspect(result),
+      error: LogFormat.reason(result),
       processing_time_ms: duration_ms
     )
 
@@ -136,7 +137,7 @@ defmodule Tymeslot.Payments.Webhooks.Idempotency do
     Logger.error(message,
       event_id: event_id,
       event_type: event_type,
-      error: inspect(result),
+      error: LogFormat.reason(result),
       processing_time_ms: duration_ms
     )
 

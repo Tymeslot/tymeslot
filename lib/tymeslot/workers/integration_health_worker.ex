@@ -17,13 +17,15 @@ defmodule Tymeslot.Workers.IntegrationHealthWorker do
     ]
 
   require Logger
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.HealthCheck
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"type" => type_str, "integration_id" => integration_id}} = job)
       when is_binary(type_str) and is_integer(integration_id) do
     Logger.debug("IntegrationHealthWorker performing job",
-      args: inspect(job.args),
+      args: LogFormat.reason(job.args),
       job_id: job.id
     )
 
@@ -42,7 +44,7 @@ defmodule Tymeslot.Workers.IntegrationHealthWorker do
 
   defp run_with_timeout(type, integration_id, job_id) do
     task =
-      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+      Tasks.async(Tymeslot.TaskSupervisor, fn ->
         health_check_module().perform_single_check(type, integration_id)
       end)
 

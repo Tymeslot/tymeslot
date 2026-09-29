@@ -7,7 +7,8 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
   Each test runs the real nightly worker and drains the room jobs it queues.
   An event is judged gone only once it has been seen in the calendar cache,
   then missed by every sync for two days, and then denied by the calendar
-  provider itself; anything short of that keeps the conversation. Nextcloud
+  provider itself; anything short of that keeps the conversation, and so
+  does another event still carrying its link, which takes it over. Nextcloud
   (Talk and CalDAV) is played by the HTTP client, Google at its API boundary.
   """
 
@@ -47,31 +48,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
   end
 
   describe "an endless series on a CalDAV calendar" do
-    setup %{user: user} do
-      host = "dav-#{System.unique_integer([:positive])}.example.com"
-
-      calendar =
-        insert(:calendar_integration,
-          user: user,
-          provider: "caldav",
-          base_url: "https://#{host}",
-          username_encrypted: Encryption.encrypt("alice"),
-          password_encrypted: Encryption.encrypt("s3cret"),
-          calendar_paths: ["/calendars/alice/work/"],
-          last_external_sync_at: DateTime.utc_now(:second)
-        )
-
-      # Any question to the server the test did not expect is seen, not raised
-      # into the job, where the job's failure would pass for keeping the room.
-      test = self()
-
-      stub(HTTPClientMock, :get, fn url, _headers, _opts ->
-        send(test, {:dav_get, url})
-        {:ok, %Req.Response{status: 404, body: ""}}
-      end)
-
-      %{calendar: calendar, dav_host: host}
-    end
+    setup :caldav_calendar
 
     test "deletes the conversation of a series deleted in the calendar client", ctx do
       room = series_room(ctx, "grid-series-1")
@@ -165,6 +142,113 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
     end
   end
 
+  describe "the later half of a split CalDAV series, deleted in the calendar client" do
+    # The room moved to the later series, `grid-tail`, on the split, while
+    # the earlier one, `grid-head`, may keep occurrences linking to it.
+    setup :caldav_calendar
+
+    test "hands the conversation to the earlier half still linking to it", ctx do
+      room = series_room(ctx, "grid-tail")
+      link = talk_link(ctx, room)
+
+      tail =
+        cache_occurrence(ctx, "grid-tail", video_link: link, video_integration_id: ctx.talk.id)
+
+      # Only in its description: its cached link waits for the sync.
+      cache_occurrence(ctx, "grid-head", description: "Agenda\n\nJoin video call: #{link}")
+
+      run_nightly_scan()
+      assert %{join_link: ^link} = Repo.reload!(room)
+
+      deleted_in_client(tail, room, ctx.calendar)
+      url = expect_dav_get(ctx, "grid-tail", {404, ""})
+
+      run_nightly_scan()
+
+      assert_received {:dav_get, ^url}
+      assert_kept(room)
+      assert %{event_uid: "grid-head", event_seen_at: nil} = Repo.reload!(room)
+
+      # Judged from now on by the earlier half, which the next scan finds.
+      run_nightly_scan()
+
+      refute_received {:dav_get, _url}
+      assert_kept(room)
+      assert %{event_seen_at: %DateTime{}} = Repo.reload!(room)
+    end
+
+    test "deletes the conversation when no other event carries its link", ctx do
+      room = series_room(ctx, "grid-tail")
+
+      tail =
+        cache_occurrence(ctx, "grid-tail",
+          video_link: talk_link(ctx, room),
+          video_integration_id: ctx.talk.id
+        )
+
+      cache_occurrence(ctx, "grid-head", video_link: "https://#{ctx.talk_host}/call/other")
+
+      run_nightly_scan()
+      deleted_in_client(tail, room, ctx.calendar)
+      url = expect_dav_get(ctx, "grid-tail", {404, ""})
+
+      run_nightly_scan()
+
+      assert_received {:dav_get, ^url}
+      assert_talk_deleted(ctx, room)
+    end
+  end
+
+  describe "the join link a series room is seen with" do
+    setup :caldav_calendar
+
+    test "is the room's own, not that of an occurrence with a video of its own", ctx do
+      room = series_room(ctx, "grid-series-7")
+      link = talk_link(ctx, room)
+      other_talk = insert_talk_integration(ctx.user, "other-#{ctx.talk_host}")
+
+      # Cached first, so the first link found would be this one.
+      cache_occurrence(ctx, "grid-series-7",
+        in_days: 2,
+        video_link: "https://other-#{ctx.talk_host}/call/own-room",
+        video_integration_id: other_talk.id
+      )
+
+      cache_occurrence(ctx, "grid-series-7",
+        in_days: 9,
+        video_link: link,
+        video_integration_id: ctx.talk.id
+      )
+
+      run_nightly_scan()
+
+      assert %{join_link: ^link} = Repo.reload!(room)
+    end
+
+    test "is the one most occurrences carry among the room's integration's links", ctx do
+      room = series_room(ctx, "grid-series-8")
+      link = talk_link(ctx, room)
+
+      cache_occurrence(ctx, "grid-series-8",
+        in_days: 2,
+        video_link: "https://#{ctx.talk_host}/call/another-room",
+        video_integration_id: ctx.talk.id
+      )
+
+      for in_days <- [9, 16] do
+        cache_occurrence(ctx, "grid-series-8",
+          in_days: in_days,
+          video_link: link,
+          video_integration_id: ctx.talk.id
+        )
+      end
+
+      run_nightly_scan()
+
+      assert %{join_link: ^link} = Repo.reload!(room)
+    end
+  end
+
   describe "a one-off event on a Google calendar" do
     setup %{user: user} do
       calendar =
@@ -209,6 +293,32 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
       assert_received {:asked, "primary", "googlehex9"}
       assert_talk_deleted(ctx, room)
     end
+  end
+
+  defp caldav_calendar(%{user: user}) do
+    host = "dav-#{System.unique_integer([:positive])}.example.com"
+
+    calendar =
+      insert(:calendar_integration,
+        user: user,
+        provider: "caldav",
+        base_url: "https://#{host}",
+        username_encrypted: Encryption.encrypt("alice"),
+        password_encrypted: Encryption.encrypt("s3cret"),
+        calendar_paths: ["/calendars/alice/work/"],
+        last_external_sync_at: DateTime.utc_now(:second)
+      )
+
+    # Any question to the server the test did not expect is seen, not raised
+    # into the job, where the job's failure would pass for keeping the room.
+    test = self()
+
+    stub(HTTPClientMock, :get, fn url, _headers, _opts ->
+      send(test, {:dav_get, url})
+      {:ok, %Req.Response{status: 404, body: ""}}
+    end)
+
+    %{calendar: calendar, dav_host: host}
   end
 
   defp run_nightly_scan do
@@ -281,17 +391,24 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomPresenceTest do
   end
 
   # A CalDAV occurrence, cached under the series uid and its start.
-  defp cache_occurrence(ctx, series_uid) do
-    start = DateTime.add(DateTime.utc_now(:second), 2 * @day, :second)
+  defp cache_occurrence(ctx, series_uid, attrs \\ []) do
+    {in_days, attrs} = Keyword.pop(attrs, :in_days, 2)
+    start = DateTime.add(DateTime.utc_now(:second), in_days * @day, :second)
 
-    insert(:provider_calendar_event,
-      calendar_integration: ctx.calendar,
-      provider: "caldav",
-      uid: series_uid <> "_" <> Calendar.strftime(start, "%Y%m%dT%H%M%SZ"),
-      start_at: start,
-      end_at: DateTime.add(start, 1800, :second)
+    insert(
+      :provider_calendar_event,
+      [
+        calendar_integration: ctx.calendar,
+        provider: "caldav",
+        uid: series_uid <> "_" <> Calendar.strftime(start, "%Y%m%dT%H%M%SZ"),
+        start_at: start,
+        end_at: DateTime.add(start, 1800, :second)
+      ] ++ attrs
     )
   end
+
+  # The link the grid published for a room.
+  defp talk_link(ctx, room), do: "https://#{ctx.talk_host}/call/#{room.room_id}"
 
   defp expect_dav_get(ctx, uid, {status, body}) do
     test = self()

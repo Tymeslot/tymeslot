@@ -44,6 +44,11 @@ defmodule Tymeslot.Jobs do
   defdelegate get_stuck_executing_jobs(threshold_datetime), to: ObanJobQueries
 
   @doc """
+  The worker of each job in `ids` whose row still exists, as `%{id => worker}`.
+  """
+  defdelegate workers_by_id(ids), to: ObanJobQueries
+
+  @doc """
   Moves a job to `discarded`, recording `error_info` against it.
   """
   defdelegate update_job_to_discarded(job, error_info), to: ObanJobQueries

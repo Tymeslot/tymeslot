@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
   """
 
   use TymeslotWeb.LiveCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :calendar
   @moduletag :live
@@ -19,9 +20,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.CalendarGrid.EventVideoRoomQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Repo
   alias Tymeslot.TestMocks
+  alias Tymeslot.Workers.VideoSyncWorker
 
   setup :verify_on_exit!
 
@@ -135,30 +139,295 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
     end
   end
 
-  describe "deleting an event that repeats" do
+  describe "deleting an occurrence of a Google series" do
+    setup %{user: user} do
+      google = insert(:calendar_integration, user: user, provider: "google")
+
+      %{
+        google: google,
+        first: insert_event(google, google_occurrence("series-1", "T100000Z", ~T[10:00:00])),
+        second: insert_event(google, google_occurrence("series-1", "T140000Z", ~T[14:00:00]))
+      }
+    end
+
+    test "offers this event or all events", %{conn: conn, first: first} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      request_delete(lv, first)
+
+      html = render(lv)
+      assert html =~ "Delete recurring event"
+      assert has_element?(lv, ~s(#confirm-delete-event-modal [phx-value-scope="occurrence"]))
+      assert has_element?(lv, ~s(#confirm-delete-event-modal [phx-value-scope="series"]))
+    end
+
+    test "\"Delete this event\" deletes the occurrence by its own id and keeps the rest", %{
+      conn: conn,
+      google: google,
+      first: first,
+      second: second
+    } do
+      stub_delete(:ok)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      request_delete(lv, first)
+      confirm_scope(lv, "occurrence")
+
+      assert {:delete, _uid, _context, opts} = await_delete(lv)
+      assert opts[:provider_event_id] == first.provider_event_id
+
+      html = render(lv)
+      assert html =~ "Event deleted."
+      refute has_element?(lv, "[id^='event-#{first.id}-']")
+      assert has_element?(lv, "[id^='event-#{second.id}-']")
+      assert {:ok, _row} = ProviderCalendarEventQueries.get_by_uid(google.id, second.uid)
+    end
+
+    test "\"Delete all events\" deletes the series by its master's id", %{
+      conn: conn,
+      google: google,
+      first: first,
+      second: second
+    } do
+      stub_delete(:ok)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      request_delete(lv, first)
+      confirm_scope(lv, "series")
+
+      assert {:delete, _uid, _context, opts} = await_delete(lv)
+      assert opts[:provider_event_id] == "series-1"
+
+      assert render(lv) =~ "Recurring event deleted."
+      refute has_element?(lv, "[id^='event-#{first.id}-']")
+      refute has_element?(lv, "[id^='event-#{second.id}-']")
+
+      assert {:error, :not_found} =
+               ProviderCalendarEventQueries.get_by_uid(google.id, second.uid)
+    end
+
+    test "keeps the scope through the attendee notification prompt", %{
+      conn: conn,
+      google: google,
+      second: second
+    } do
+      attendee = %{"email" => "guest@example.com", "name" => "Guest"}
+      occurrence = google_occurrence("series-1", "T160000Z", ~T[16:00:00])
+      event = insert_event(google, Map.put(occurrence, :attendees, [attendee]))
+
+      stub_delete(:ok)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      request_delete(lv, event)
+      confirm_scope(lv, "series")
+
+      assert render(lv) =~ "notify-prompt-modal"
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("notify_prompt_confirm", %{})
+
+      assert {:delete, _uid, _context, opts} = await_delete(lv)
+      assert opts[:provider_event_id] == "series-1"
+
+      assert render(lv) =~ "Recurring event deleted. Attendees have been notified."
+      refute has_element?(lv, "[id^='event-#{second.id}-']")
+    end
+  end
+
+  describe "deleting the later half of a split Google series" do
+    @talk_link "https://cloud.example.com/call/room-standup"
+
+    # A series split for an edit of one occurrence and every following one:
+    # its Talk room moved to the later series, `tail-master`, while the
+    # earlier one, `head-master`, keeps occurrences linking to it. Both halves
+    # as the sync brought them back, on today's grid.
+    setup %{user: user} do
+      google = insert(:calendar_integration, user: user, provider: "google")
+      talk = insert(:video_integration, user: user, provider: "nextcloud_talk", is_active: true)
+
+      day = Calendar.strftime(Date.utc_today(), "%Y%m%d")
+
+      video = %{
+        description: "Agenda\n\nJoin video call: #{@talk_link}",
+        video_link: @talk_link,
+        video_integration_id: talk.id
+      }
+
+      head =
+        insert_event(
+          google,
+          "head-master" |> google_occurrence("#{day}T090000Z", ~T[09:00:00]) |> Map.merge(video)
+        )
+
+      tail =
+        insert_event(
+          google,
+          "tail-master" |> google_occurrence("#{day}T140000Z", ~T[14:00:00]) |> Map.merge(video)
+        )
+
+      {:ok, room} =
+        EventVideoRoomQueries.insert(%{
+          user_id: user.id,
+          video_integration_id: talk.id,
+          provider: "nextcloud_talk",
+          calendar_integration_id: google.id,
+          event_uid: "tail-master@google.com",
+          provider_event_id: "tail-master",
+          room_id: "room-standup",
+          lobby_opens_at: head.start_at,
+          ends_at: DateTime.add(tail.end_at, 90, :day)
+        })
+
+      %{head: head, tail: tail, talk: talk, room: room}
+    end
+
+    test "keeps the video room the earlier half still links to", %{
+      conn: conn,
+      head: head,
+      tail: tail,
+      talk: talk,
+      room: room
+    } do
+      stub_delete(:ok)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      request_delete(lv, tail)
+      confirm_scope(lv, "series")
+
+      assert {:delete, _uid, _context, opts} = await_delete(lv)
+      assert opts[:provider_event_id] == "tail-master"
+      assert render(lv) =~ "Recurring event deleted."
+
+      refute_enqueued(worker: VideoSyncWorker, args: %{"event_room_id" => room.id})
+
+      assert %{event_uid: "head-master@google.com", provider_event_id: "head-master"} =
+               Repo.reload(room)
+
+      # The earlier half still shows the room as its video.
+      lv |> element("[id^='event-#{head.id}-']") |> render_click()
+
+      assert has_element?(
+               lv,
+               ~s|button[phx-value-video_integration_id="#{talk.id}"].border-turquoise-400|
+             )
+    end
+  end
+
+  describe "deleting the later half of a split series whose earlier half moved" do
+    @moved_link "https://cloud.example.com/call/room-review"
+
+    # The earlier half, `head-master`, was moved to a second Google account
+    # after the split, keeping its occurrences' Talk link; the room stayed
+    # with the later half, `tail-master`, on the first.
+    setup %{user: user} do
+      first = insert(:calendar_integration, user: user, provider: "google")
+      second = insert(:calendar_integration, user: user, provider: "google")
+      talk = insert(:video_integration, user: user, provider: "nextcloud_talk", is_active: true)
+
+      day = Calendar.strftime(Date.utc_today(), "%Y%m%d")
+
+      video = %{
+        description: "Agenda\n\nJoin video call: #{@moved_link}",
+        video_link: @moved_link,
+        video_integration_id: talk.id
+      }
+
+      _head =
+        insert_event(
+          second,
+          "head-master"
+          |> google_occurrence("#{day}T090000Z", ~T[09:00:00])
+          |> Map.merge(video)
+          |> Map.put(:provider_calendar_id, "second-primary")
+        )
+
+      tail =
+        insert_event(
+          first,
+          "tail-master" |> google_occurrence("#{day}T140000Z", ~T[14:00:00]) |> Map.merge(video)
+        )
+
+      {:ok, room} =
+        EventVideoRoomQueries.insert(%{
+          user_id: user.id,
+          video_integration_id: talk.id,
+          provider: "nextcloud_talk",
+          calendar_integration_id: first.id,
+          event_uid: "tail-master@google.com",
+          provider_event_id: "tail-master",
+          room_id: "room-review",
+          lobby_opens_at: tail.start_at,
+          ends_at: DateTime.add(tail.end_at, 90, :day)
+        })
+
+      %{second: second, tail: tail, room: room}
+    end
+
+    test "keeps the video room and hands it to the moved half", %{
+      conn: conn,
+      second: second,
+      tail: tail,
+      room: room
+    } do
+      stub_delete(:ok)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      request_delete(lv, tail)
+      confirm_scope(lv, "series")
+
+      assert {:delete, _uid, _context, opts} = await_delete(lv)
+      assert opts[:provider_event_id] == "tail-master"
+
+      refute_enqueued(worker: VideoSyncWorker, args: %{"event_room_id" => room.id})
+
+      assert %{
+               calendar_integration_id: second_id,
+               event_uid: "head-master@google.com",
+               provider_event_id: "head-master",
+               provider_calendar_id: "second-primary"
+             } = Repo.reload(room)
+
+      assert second_id == second.id
+    end
+  end
+
+  describe "deleting an event that is not in a series" do
+    test "confirms without asking for a scope", %{conn: conn, integration: integration} do
+      event = insert_event(integration)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      request_delete(lv, event)
+
+      assert render(lv) =~ "confirm-delete-event-modal"
+      refute has_element?(lv, "#confirm-delete-event-modal [phx-value-scope]")
+    end
+  end
+
+  describe "deleting an occurrence of an Exchange series" do
     # No provider stub: under `verify_on_exit!` a delete that reached the
     # calendar would fail the test as an unexpected call.
     test "is refused before the confirmation, and the series stays", %{
       conn: conn,
-      integration: integration
+      user: user
     } do
-      event = insert_event(integration, %{recurrence_rule: "FREQ=WEEKLY;BYDAY=TU"})
+      exchange = insert(:calendar_integration, user: user, provider: "exchange")
+
+      event =
+        insert_event(exchange, %{
+          provider: "exchange",
+          provider_calendar_id: "calendar",
+          provider_event_id: "AAMkAD-occurrence",
+          provider_metadata: %{"calendar_item_type" => "Occurrence"}
+        })
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-
-      lv
-      |> element("#calendar-grid")
-      |> render_hook("show_event", %{"event-id" => to_string(event.id)})
-
-      lv
-      |> element("#calendar-grid")
-      |> render_hook("request_delete_event", %{})
+      request_delete(lv, event)
 
       html = render(lv)
-      assert html =~ "Recurring events cannot be deleted here yet."
+      assert html =~ "Recurring Exchange events cannot be deleted here yet."
       refute html =~ "confirm-delete-event-modal"
 
-      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+      assert {:ok, row} = ProviderCalendarEventQueries.get_by_uid(exchange.id, event.uid)
       assert row.sync_state == "synced"
     end
   end
@@ -181,8 +450,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
     insert(:provider_calendar_event, Map.merge(defaults, attrs))
   end
 
-  # Opens the event, asks to delete it and confirms in the modal.
-  defp confirm_delete(lv, event) do
+  # An expanded Google occurrence on today's grid: an id of its own, naming
+  # its master's.
+  defp google_occurrence(series_id, stamp, time) do
+    today = Date.utc_today()
+    start_at = DateTime.new!(today, time, "Etc/UTC")
+
+    %{
+      provider: "google",
+      uid: "#{series_id}@google.com_#{stamp}",
+      provider_calendar_id: "primary",
+      provider_event_id: "#{series_id}_#{stamp}",
+      recurring_event_id: series_id,
+      summary: "Weekly standup",
+      start_at: start_at,
+      end_at: DateTime.add(start_at, 30, :minute)
+    }
+  end
+
+  # Opens the event and asks to delete it.
+  defp request_delete(lv, event) do
     lv
     |> element("#calendar-grid")
     |> render_hook("show_event", %{"event-id" => to_string(event.id)})
@@ -190,12 +477,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventDeleteLiveViewTest do
     lv
     |> element("#calendar-grid")
     |> render_hook("request_delete_event", %{})
+  end
 
+  # Opens the event, asks to delete it and confirms in the modal.
+  defp confirm_delete(lv, event) do
+    request_delete(lv, event)
     assert render(lv) =~ "confirm-delete-event-modal"
 
     lv
     |> element("#calendar-grid")
     |> render_hook("confirm_delete_event", %{})
+  end
+
+  # Clicks the modal's button for `scope`, as the organiser would.
+  defp confirm_scope(lv, scope) do
+    lv
+    |> element(~s(#confirm-delete-event-modal [phx-value-scope="#{scope}"]))
+    |> render_click()
   end
 
   defp stub_delete(result) do

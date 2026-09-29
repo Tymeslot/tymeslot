@@ -26,6 +26,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.LastNotifiedState
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.EmailWorker
 
   setup do
@@ -196,6 +197,121 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeEmailDeliveryTest do
       assert :ok = perform_job(EmailWorker, Map.put(args, "before_title", "Standup"))
 
       refute_received {:email, _email}
+    end
+  end
+
+  describe "a deleted event" do
+    setup %{user: user, integration: integration} do
+      event =
+        insert_timed_event(integration,
+          summary: "Standup",
+          ical_sequence: 2,
+          start_at: ~U[2026-11-03 09:30:00.000000Z],
+          end_at: ~U[2026-11-03 09:45:00.000000Z],
+          attendees: [
+            %{"email" => "ana@example.com"},
+            %{"email" => "ben@example.com", "response_status" => "accepted"},
+            %{"email" => "cat@example.com", "response_status" => "declined"},
+            %{"email" => String.upcase(user.email)}
+          ]
+        )
+
+      %{event: event}
+    end
+
+    # The cancellation is enqueued as the delete succeeds and the cached row
+    # is removed straight after, so the email jobs must carry everything they
+    # say: nothing is left to read back when they run.
+    test "delivers a cancellation to each attendee after its row is gone", %{
+      user: user,
+      event: event
+    } do
+      assert {:ok, :sent} =
+               AttendeeNotifications.event_deleted_confirm(event, user.id, :occurrence)
+
+      Repo.delete!(event)
+
+      emails = deliver_all("send_calendar_invitation")
+
+      assert emails |> Enum.map(& &1.to) |> Enum.sort() ==
+               [[{"", "ana@example.com"}], [{"", "ben@example.com"}]]
+
+      for email <- emails do
+        assert email.subject == "Cancelled - Standup on Nov 3"
+        assert email.text_body =~ "Event Cancelled"
+        assert email.text_body =~ "Olive Organiser has cancelled an event you were invited to."
+        assert email.text_body =~ "Date: November 03, 2026\nTime: 09:30 AM UTC"
+        refute email.text_body =~ "invited you"
+
+        ics = calendar_attachment(email)
+        assert ics.data =~ "STATUS:CANCELLED"
+        assert ics.data =~ "SEQUENCE:3"
+      end
+    end
+
+    test "says every occurrence is cancelled when the whole series went", %{
+      user: user,
+      event: event
+    } do
+      assert {:ok, :sent} = AttendeeNotifications.event_deleted_confirm(event, user.id, :series)
+      Repo.delete!(event)
+
+      assert [email | _rest] = deliver_all("send_calendar_invitation")
+      assert email.subject == "Cancelled - Standup (every occurrence)"
+
+      assert email.text_body =~
+               "Olive Organiser has cancelled a recurring event you were invited to. Every occurrence is cancelled."
+    end
+
+    test "sends nothing when only the owner and a declined guest are on it", %{
+      user: user,
+      integration: integration
+    } do
+      event =
+        insert_timed_event(integration,
+          attendees: [
+            %{"email" => user.email},
+            %{"email" => "cat@example.com", "response_status" => "declined"}
+          ]
+        )
+
+      assert {:ok, :noop} =
+               AttendeeNotifications.event_deleted_confirm(event, user.id, :occurrence)
+
+      assert enqueued_jobs("send_calendar_invitation") == []
+    end
+  end
+
+  describe "a removed attendee" do
+    test "receives a cancellation, not an invitation", %{integration: integration} do
+      event =
+        insert_timed_event(integration,
+          summary: "Standup",
+          start_at: ~U[2026-11-03 09:30:00.000000Z],
+          end_at: ~U[2026-11-03 09:45:00.000000Z]
+        )
+
+      assert {:ok, :sent} =
+               AttendeeNotifications.attendees_removed(event, [%{email: "gone@example.com"}])
+
+      assert [email] = deliver_all("send_calendar_invitation")
+      assert email.to == [{"", "gone@example.com"}]
+      assert email.subject == "Cancelled - Standup on Nov 3"
+      refute email.text_body =~ "You're Invited"
+      assert calendar_attachment(email).data =~ "STATUS:CANCELLED"
+    end
+  end
+
+  # Performs every enqueued email job of `action` with its own args and
+  # returns the emails they delivered, one per job.
+  defp deliver_all(action) do
+    jobs = enqueued_jobs(action)
+    assert jobs != []
+
+    for job <- jobs do
+      assert :ok = perform_job(EmailWorker, job.args)
+      assert_received {:email, email}
+      email
     end
   end
 

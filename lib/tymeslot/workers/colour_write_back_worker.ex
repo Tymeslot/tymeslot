@@ -32,6 +32,7 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
       states: [:available, :scheduled, :executing, :retryable, :suspended]
     ]
 
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
 
@@ -45,6 +46,17 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
   # snooze forever. Sixteen snoozes is a day, past the 24h forced full fetch,
   # after which the colour is only ever going to be Tymeslot's own.
   @max_raw_ical_snoozes 16
+
+  @behaviour ExpectedJobOutcome
+
+  # Each means there is no colour to write back to this event.
+  @event_not_cached :event_not_cached
+  @never_synced :raw_ical_never_synced
+  @no_event_colour :provider_has_no_event_colour
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do: reason in [@event_not_cached, @never_synced, @no_event_colour]
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args, meta: meta}) do
@@ -62,7 +74,7 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
         |> handle_unsynced_document(meta)
 
       {:error, :not_found} ->
-        {:discard, :event_not_cached}
+        {:discard, @event_not_cached}
     end
   end
 
@@ -77,7 +89,7 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
     if Map.get(meta, "snoozed", 0) < @max_raw_ical_snoozes do
       {:snooze, @raw_ical_snooze_seconds}
     else
-      {:discard, :raw_ical_never_synced}
+      {:discard, @never_synced}
     end
   end
 
@@ -85,7 +97,7 @@ defmodule Tymeslot.Workers.ColourWriteBackWorker do
 
   # Microsoft Graph exposes no per-event colour, so there is nothing to push.
   defp write_back(%{provider: "outlook"}, _integration_id, _user_id, _colour),
-    do: {:discard, :provider_has_no_event_colour}
+    do: {:discard, @no_event_colour}
 
   defp write_back(event, integration_id, user_id, colour) do
     event_data = colour_only_event_data(event, colour)

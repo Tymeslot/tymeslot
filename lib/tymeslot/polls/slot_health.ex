@@ -12,6 +12,7 @@ defmodule Tymeslot.Polls.SlotHealth do
   host's calendar events returns every slot as `:ok` and never blocks anything.
   """
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Utils.TimeRange
@@ -40,7 +41,7 @@ defmodule Tymeslot.Polls.SlotHealth do
       {:error, reason} ->
         Logger.warning("Poll slot-health calendar fetch failed; treating all slots as available",
           poll_id: poll.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         Map.new(slots, &{&1.id, :ok})

@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Helpers.OAuthStateGuard do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Shared.{MicrosoftConfig, ZoomConfig}
@@ -55,7 +56,7 @@ defmodule TymeslotWeb.Helpers.OAuthStateGuard do
       {:error, reason} ->
         Logger.warning("OAuth callback rejected: invalid or tampered state",
           provider: provider,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:error, :invalid_state}

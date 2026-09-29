@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
   alias Phoenix.Component
   alias Tymeslot.Availability.{Calculate, Offer, Schedules}
   alias Tymeslot.Demo
+  alias Tymeslot.Infrastructure.Tasks
 
   require Logger
 
@@ -149,7 +150,7 @@ defmodule TymeslotWeb.Live.Scheduling.AvailabilityHelpers do
     fetch = fn -> Offer.days_in_range(request, start_date, end_date, duration_minutes) end
 
     if async_fetch?() do
-      task = Task.async(fetch)
+      task = Tasks.async(fetch)
 
       socket
       |> assign(:availability_task, task)

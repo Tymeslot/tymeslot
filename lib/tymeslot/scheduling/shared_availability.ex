@@ -31,6 +31,7 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Availability.{Calculate, Schedules, TimeSlots}
   alias Tymeslot.Bookings.Validation
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Guests
@@ -171,13 +172,15 @@ defmodule Tymeslot.Scheduling.SharedAvailability do
 
   Events with the UID `exclude_uid` are left out. When a booking is
   rescheduled, the invitation a guest accepted into their own calendar carries
-  the booking's UID, and must not block the booking from moving.
+  the booking's *calendar* UID — `meetings.calendar_uid`, what the booking is
+  called in external calendars, not the `uid` behind its cancel and reschedule
+  links — and must not block the booking from moving.
   """
   @spec fresh_events_fetcher(String.t() | nil) :: events_fetcher()
   def fresh_events_fetcher(exclude_uid \\ nil) do
     fn guest, date ->
       task =
-        Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+        Tasks.async(Tymeslot.TaskSupervisor, fn ->
           CalendarEvents.get_events_for_range_fresh(guest.user_id, date, date)
         end)
 

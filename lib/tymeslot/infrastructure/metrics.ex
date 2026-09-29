@@ -6,6 +6,10 @@ defmodule Tymeslot.Infrastructure.Metrics do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
+
   @doc """
   Emits a calendar operation metric.
   """
@@ -45,7 +49,7 @@ defmodule Tymeslot.Infrastructure.Metrics do
 
         emit_calendar_operation(
           operation,
-          Map.merge(metadata, %{status: :error, error: inspect(error)}),
+          Map.merge(metadata, %{status: :error, error: LogFormat.reason(error)}),
           %{duration: duration_ms}
         )
 
@@ -57,7 +61,7 @@ defmodule Tymeslot.Infrastructure.Metrics do
   # raised. Recording it as a success overstated the calendar success rate and
   # meant the "Calendar operation failed" line never fired for the ordinary
   # case where a provider call returns an error tuple.
-  defp result_status({:error, reason}), do: %{status: :error, error: inspect(reason)}
+  defp result_status({:error, reason}), do: %{status: :error, error: LogFormat.reason(reason)}
   defp result_status(_result), do: %{status: :success}
 
   @doc """
@@ -78,17 +82,20 @@ defmodule Tymeslot.Infrastructure.Metrics do
 
   @doc """
   Tracks circuit breaker state changes.
+
+  `detail` is merged into the event metadata; a transition to `:open`
+  carries the breaker's `:failure_count` and `:last_error` there.
   """
-  @spec track_circuit_breaker_state(any(), atom(), atom()) :: :ok
-  def track_circuit_breaker_state(breaker_name, old_state, new_state) do
+  @spec track_circuit_breaker_state(any(), atom(), atom(), map()) :: :ok
+  def track_circuit_breaker_state(breaker_name, old_state, new_state, detail \\ %{}) do
     :telemetry.execute(
       [:tymeslot, :circuit_breaker, :state_change],
       %{},
-      %{
+      Map.merge(detail, %{
         breaker: breaker_name,
         old_state: old_state,
         new_state: new_state
-      }
+      })
     )
   end
 
@@ -140,10 +147,6 @@ defmodule Tymeslot.Infrastructure.Metrics do
         &__MODULE__.handle_circuit_breaker_event/4
       },
       {
-        [:tymeslot, :connection_pool, :usage],
-        &__MODULE__.handle_pool_event/4
-      },
-      {
         [:tymeslot, :parser, :performance],
         &__MODULE__.handle_parser_event/4
       }
@@ -177,15 +180,10 @@ defmodule Tymeslot.Infrastructure.Metrics do
   @typep circuit_breaker_metadata :: %{
            optional(:breaker) => any(),
            optional(:old_state) => atom(),
-           optional(:new_state) => atom()
+           optional(:new_state) => atom(),
+           optional(:failure_count) => non_neg_integer(),
+           optional(:last_error) => String.t() | nil
          }
-
-  @typep pool_measurements :: %{
-           optional(:queue) => non_neg_integer(),
-           optional(:free) => non_neg_integer(),
-           optional(:in_use) => non_neg_integer()
-         }
-  @typep pool_metadata :: %{optional(:pool) => atom()}
 
   @typep parser_measurements :: %{
            optional(:duration) => number(),
@@ -325,20 +323,51 @@ defmodule Tymeslot.Infrastructure.Metrics do
       old_state: metadata[:old_state],
       new_state: metadata[:new_state]
     )
+
+    if metadata[:new_state] == :open, do: alert_breaker_open(metadata)
+    :ok
+  rescue
+    exception ->
+      # Telemetry detaches a handler that raises, which would silence every
+      # later state change until the next restart.
+      Logger.error("Circuit breaker state change handler failed",
+        error: LogFormat.reason(exception.__struct__)
+      )
+
+      :ok
   end
 
-  @spec handle_pool_event(list(atom()), pool_measurements(), pool_metadata(), term()) :: :ok
-  def handle_pool_event(_event_name, measurements, metadata, _config) do
-    # Only log when pool is under stress
-    if measurements[:queue] > 0 or measurements[:free] == 0 do
-      Logger.warning("Connection pool stress",
-        pool: metadata[:pool],
-        in_use: measurements[:in_use],
-        free: measurements[:free],
-        queue: measurements[:queue]
+  # Runs in the breaker's own process, which every caller of the provider
+  # asks for permission with a short timeout, so the alert (an Oban insert
+  # when alert emails are on) is sent from a task rather than here. Deduplicated
+  # per breaker and clock hour (`AlertTypes.dedup_key/2`), so a breaker
+  # flapping open and half-open alerts once an hour at most.
+  defp alert_breaker_open(metadata) do
+    context = %{
+      breaker: breaker_label(metadata[:breaker]),
+      old_state: metadata[:old_state],
+      failure_count: metadata[:failure_count],
+      last_error: metadata[:last_error],
+      opened_at: DateTime.to_iso8601(DateTime.utc_now())
+    }
+
+    Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
+      AdminAlerts.report(:circuit_breaker_open,
+        summary: "Circuit breaker opened",
+        context: context
       )
-    end
+    end)
+  catch
+    # The task supervisor is not running (boot, shutdown): the state change
+    # is still logged above.
+    :exit, _reason -> :ok
   end
+
+  # Statically supervised breakers are named by an atom; per-host breakers
+  # by their registry key, which names the provider and host.
+  defp breaker_label(name) when is_atom(name), do: Atom.to_string(name)
+  defp breaker_label({:via, Registry, {_registry, key}}), do: inspect(key)
+  defp breaker_label(name), do: inspect(name)
 
   @spec handle_parser_event(list(atom()), parser_measurements(), parser_metadata(), term()) :: :ok
   def handle_parser_event(_event_name, measurements, metadata, _config) do

@@ -7,9 +7,10 @@ defmodule Tymeslot.Security.SecurityLoggerTest do
 
   @moduletag :security
 
+  @redactor_filter :tymeslot_metadata_redactor
+
   import Mox, only: [verify_on_exit!: 1]
 
-  alias Tymeslot.Infrastructure.Logging.MetadataRedactor
   alias Tymeslot.Security.SecurityLogger
   alias Tymeslot.Test.LogCapture
 
@@ -21,12 +22,16 @@ defmodule Tymeslot.Security.SecurityLoggerTest do
   # it. Lift it here so these tests observe what SecurityLogger itself emits;
   # that global belt-and-braces layer has its own tests.
   defp capture_security_logs(fun) do
-    _previous = :logger.remove_primary_filter(:tymeslot_metadata_redactor)
+    previous =
+      :logger.get_primary_config() |> Map.fetch!(:filters) |> Keyword.get(@redactor_filter)
+
+    _removed = :logger.remove_primary_filter(@redactor_filter)
 
     try do
       LogCapture.with_capture([logger_level: :info], fun)
     after
-      MetadataRedactor.attach()
+      # Put back exactly what was installed, and nothing when nothing was.
+      if previous, do: :ok = :logger.add_primary_filter(@redactor_filter, previous)
     end
   end
 

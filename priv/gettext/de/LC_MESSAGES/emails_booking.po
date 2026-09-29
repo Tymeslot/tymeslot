@@ -1060,3 +1060,13 @@ msgstr "• Materialien vorbereitet"
 #, elixir-autogen, elixir-format
 msgid "⏰ Meeting with %{name} in %{time_until}"
 msgstr "⏰ Termin mit %{name} in %{time_until}"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has updated every occurrence of a repeating event you're attending."
+msgstr "%{name} hat alle Vorkommen eines wiederkehrenden Termins aktualisiert, an dem Sie teilnehmen."
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} has updated this and every following occurrence of a repeating event you're attending."
+msgstr "%{name} hat dieses und alle folgenden Vorkommen eines wiederkehrenden Termins aktualisiert, an dem Sie teilnehmen."

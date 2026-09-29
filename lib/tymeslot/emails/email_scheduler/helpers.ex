@@ -2,6 +2,7 @@ defmodule Tymeslot.Emails.EmailScheduler.Helpers do
   @moduledoc "Shared helpers for EmailScheduler sub-modules."
 
   alias Ecto.Changeset
+  alias Tymeslot.Infrastructure.Logging.LogFormat
 
   @doc """
   Formats an Oban insert error into a loggable string.
@@ -11,5 +12,5 @@ defmodule Tymeslot.Emails.EmailScheduler.Helpers do
     Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
   end
 
-  def format_insert_error(other), do: inspect(other)
+  def format_insert_error(other), do: LogFormat.reason(other)
 end

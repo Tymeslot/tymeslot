@@ -34,15 +34,19 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Ics.Feed
   alias Tymeslot.Integrations.Calendar.Ics.Provider
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Workers.SyncHealth
 
   @calendar_id "subscription"
@@ -64,20 +68,32 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
     end
   end
 
+  @behaviour ExpectedJobOutcome
+
+  # The integration is gone, or only its owner can fix it by reconnecting.
+  # A subscription without a feed URL is recorded.
+  @integration_gone "Integration not found"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do: reason in [@integration_gone] or reason == ReauthHandling.discard_reason()
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
-        integration
-        |> sync()
-        |> tap(&SyncHealth.record_outcome(integration, &1))
+        InvalidEventReport.collect(fn ->
+          integration
+          |> sync()
+          |> tap(&SyncHealth.record_outcome(integration, &1))
+        end)
 
       {:error, :not_found} ->
         Logger.warning("Calendar subscription not found, discarding sync job",
           calendar_integration_id: integration_id
         )
 
-        {:discard, "Integration not found"}
+        {:discard, @integration_gone}
 
       {:error, :requires_reencryption, integration} ->
         CalendarManagement.handle_reauth_required(integration)
@@ -182,7 +198,7 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
       {:error, changeset} ->
         Logger.warning("Failed to persist calendar subscription sync state",
           calendar_integration_id: integration.id,
-          error: inspect(changeset)
+          error: LogFormat.reason(changeset)
         )
 
         :ok
@@ -196,7 +212,7 @@ defmodule Tymeslot.Workers.SyncIcsCalendarWorker do
   defp record_failure(integration, reason) do
     Logger.error("Calendar subscription sync failed",
       calendar_integration_id: integration.id,
-      error: inspect(reason)
+      error: LogFormat.reason(reason)
     )
 
     CalendarIntegrationQueries.mark_sync_error(integration, error_message(reason))
