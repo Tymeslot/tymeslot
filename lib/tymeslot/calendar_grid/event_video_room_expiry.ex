@@ -30,7 +30,9 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomExpiry do
     * Found and ending later, or recurring: kept, and the room follows it.
     * Found and still over: deleted.
     * Not found (a 404 or 410, or for Google and Outlook a cancelled event):
-      deleted.
+      deleted. Outlook changes an event's id when it moves to another
+      calendar, so it confirms a 404 by the iCalendar UID the event's cached
+      row carries, and without one the event is kept.
     * Any error, timeout or refused credentials: kept, and the next scan asks
       again.
     * A provider that cannot fetch one event (Exchange, and the read-only
@@ -89,7 +91,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomExpiry do
   defp cached_event_verdict(room, cutoff) do
     case EventVideoRoomQueries.list_cached_events(
            room.calendar_integration_id,
-           room_identifiers(room),
+           EventVideoRooms.cached_identifiers(room),
            [room.event_uid]
          ) do
       [] ->
@@ -104,13 +106,10 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomExpiry do
   end
 
   defp ask_provider(room, verdict, cutoff) do
-    event_ref = %{
-      uid: room.event_uid,
-      provider_event_id: room.provider_event_id,
-      calendar_id: room.provider_calendar_id
-    }
-
-    case CalendarOperations.fetch_event(event_ref, {room.calendar_integration_id, room.user_id}) do
+    case CalendarOperations.fetch_event(
+           EventVideoRooms.provider_event_ref(room),
+           {room.calendar_integration_id, room.user_id}
+         ) do
       {:error, :not_found} ->
         :expired
 
@@ -187,12 +186,6 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomExpiry do
        do: DateTime.after?(synced_at, DateTime.add(ends_at, retention_seconds(), :second))
 
   defp synced_since_due?(_room), do: false
-
-  defp room_identifiers(room),
-    do:
-      [room.event_uid, room.provider_event_id]
-      |> Enum.filter(&(is_binary(&1) and String.trim(&1) != ""))
-      |> Enum.uniq()
 
   defp cutoff, do: DateTime.add(DateTime.utc_now(), -retention_seconds(), :second)
 

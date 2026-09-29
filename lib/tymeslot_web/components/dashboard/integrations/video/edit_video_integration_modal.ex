@@ -127,8 +127,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
           {:ok, _updated} ->
             send(
               self(),
-              {:flash,
-               {:info, dgettext("dashboard_integrations", "Integration updated successfully")}}
+              {:flash, {:info, dgettext("dashboard_video", "Integration updated successfully")}}
             )
 
             send_update(VideoSettingsComponent, id: "video")
@@ -167,7 +166,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
         <:header>
           <div class="flex items-center gap-2">
             <.icon name="hero-pencil-square" class="w-5 h-5 text-turquoise-600" />
-            {dgettext("dashboard_integrations", "Edit Integration")}
+            {dgettext("dashboard_video", "Edit Integration")}
           </div>
         </:header>
 
@@ -193,7 +192,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                   <SharedForm.url_field
                     id="edit_custom_meeting_url"
                     name="integration[custom_meeting_url]"
-                    label={dgettext("dashboard_integrations", "Meeting URL")}
+                    label={dgettext("dashboard_video", "Meeting URL")}
                     value={
                       Map.get(
                         @form_values,
@@ -202,14 +201,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                       )
                     }
                     placeholder={
-                      dgettext("dashboard_integrations", "https://jitsi.example.org/{{meeting_id}}")
+                      dgettext("dashboard_video", "https://jitsi.example.org/{{meeting_id}}")
                     }
                     form_errors={@form_errors}
                     error_key={:custom_meeting_url}
                     target={@myself}
                     helper_text={
                       dgettext(
-                        "dashboard_integrations",
+                        "dashboard_video",
                         "Enter your video meeting URL. Use {{meeting_id}} for unique rooms per meeting"
                       )
                     }
@@ -218,17 +217,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                   <SharedForm.url_field
                     id="edit_base_url"
                     name="integration[base_url]"
-                    label={dgettext("dashboard_integrations", "Base URL")}
+                    label={dgettext("dashboard_video", "Base URL")}
                     value={Map.get(@form_values, "base_url", @integration.base_url || "")}
-                    placeholder={
-                      dgettext("dashboard_integrations", "https://mirotalk.yourdomain.com")
-                    }
+                    placeholder={dgettext("dashboard_video", "https://mirotalk.yourdomain.com")}
                     form_errors={@form_errors}
                     error_key={:base_url}
                     target={@myself}
-                    helper_text={
-                      dgettext("dashboard_integrations", "Your MiroTalk instance base URL")
-                    }
+                    helper_text={dgettext("dashboard_video", "Your MiroTalk instance base URL")}
                   />
 
                   <div class="md:col-span-2">
@@ -237,7 +232,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                       name="integration[api_key]"
                       form_errors={@form_errors}
                       value={Map.get(@form_values, "api_key", "")}
-                      placeholder={dgettext("dashboard_integrations", "Enter new API key")}
+                      placeholder={dgettext("dashboard_video", "Enter new API key")}
                       target={@myself}
                     />
                   </div>
@@ -287,34 +282,32 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                 <% {:ok, :valid_template, preview, _message} -> %>
                   <TemplatePreviewBox.render
                     status={:valid}
-                    title={dgettext("dashboard_integrations", "✓ Valid Template")}
+                    title={dgettext("dashboard_video", "✓ Valid Template")}
                     message={
-                      dgettext("dashboard_integrations", "Template variable detected: {{meeting_id}}")
+                      dgettext("dashboard_video", "Template variable detected: {{meeting_id}}")
                     }
                     preview={preview}
                   />
                 <% {:warning, _type, preview, error_message} -> %>
                   <TemplatePreviewBox.render
                     status={:warning}
-                    title={dgettext("dashboard_integrations", "⚠ Invalid Syntax")}
+                    title={dgettext("dashboard_video", "⚠ Invalid Syntax")}
                     message={error_message}
                     preview={preview}
                   />
                 <% {:ok, :static, _url, _message} -> %>
                   <TemplatePreviewBox.render
                     status={:static}
-                    title={dgettext("dashboard_integrations", "Static Meeting Room")}
-                    message={
-                      dgettext("dashboard_integrations", "All meetings will use the same room URL")
-                    }
+                    title={dgettext("dashboard_video", "Static Meeting Room")}
+                    message={dgettext("dashboard_video", "All meetings will use the same room URL")}
                   />
                 <% {:ok, :empty, _url, _message} -> %>
                   <TemplatePreviewBox.render
                     status={:empty}
-                    title={dgettext("dashboard_integrations", "No URL Configured")}
+                    title={dgettext("dashboard_video", "No URL Configured")}
                     message={
                       dgettext(
-                        "dashboard_integrations",
+                        "dashboard_video",
                         "Enter a custom video link to configure meeting rooms"
                       )
                     }
@@ -328,13 +321,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
                 phx-click={JS.push("hide", target: @myself)}
                 class="btn btn-secondary"
               >
-                {dgettext("dashboard_integrations", "Cancel")}
+                {dgettext("dashboard_video", "Cancel")}
               </button>
 
               <TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents.form_submit_button
                 saving={@saving}
-                text={dgettext("dashboard_integrations", "Save Changes")}
-                saving_text={dgettext("dashboard_integrations", "Saving...")}
+                text={dgettext("dashboard_video", "Save Changes")}
+                saving_text={dgettext("dashboard_video", "Saving...")}
               />
             </div>
           </form>
@@ -376,14 +369,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   defp duplicate_message("nextcloud_talk"),
     do:
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "This Nextcloud account is already connected. Edit or remove the existing integration instead."
       )
 
   defp duplicate_message(_provider),
     do:
       dgettext(
-        "dashboard_integrations",
+        "dashboard_video",
         "A video integration with this configuration already exists"
       )
 
@@ -405,12 +398,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   end
 
   defp update_error_message(_reason, _provider),
-    do: dgettext("dashboard_integrations", "Failed to update integration")
+    do: dgettext("dashboard_video", "Failed to update integration")
 
   defp url_field_label(provider) when provider in ["jitsi", "nextcloud_talk"],
-    do: dgettext("dashboard_integrations", "Server URL")
+    do: dgettext("dashboard_video", "Server URL")
 
-  defp url_field_label("mirotalk"), do: dgettext("dashboard_integrations", "Base URL")
+  defp url_field_label("mirotalk"), do: dgettext("dashboard_video", "Base URL")
   defp url_field_label(_provider), do: nil
 
   defp stored_credentials?(%{client_id_encrypted: nil, client_secret_encrypted: nil}), do: false

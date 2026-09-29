@@ -100,7 +100,7 @@ defmodule Tymeslot.AgendaTest do
 
       # A CalDAV booking carries no provider_event_id; its synced copy is keyed
       # by href. Only the UID links the two.
-      booking(user, slot, title: "Real booking", uid: uid, provider_event_id: nil)
+      booking(user, slot, title: "Real booking", calendar_uid: uid, provider_event_id: nil)
 
       external_event(user, slot,
         summary: "Duplicate",

@@ -15,6 +15,8 @@ defmodule Tymeslot.Mailer.SmtpProbe do
 
   @compile {:no_warn_undefined, CAStore}
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
   require Logger
 
   @dns_timeout_ms 3_000
@@ -41,7 +43,7 @@ defmodule Tymeslot.Mailer.SmtpProbe do
         Logger.error("✗ SMTP connection test failed",
           host: host_string,
           port: port,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:error, format_connection_error(reason, host_string, port)}
@@ -284,7 +286,7 @@ defmodule Tymeslot.Mailer.SmtpProbe do
   defp format_readable_reason(:starttls_not_offered),
     do: "Server does not offer STARTTLS, which this port requires"
 
-  defp format_readable_reason(reason), do: inspect(reason)
+  defp format_readable_reason(reason), do: LogFormat.reason(reason)
 
   defp get_error_suggestion(:econnrefused, 587) do
     "\n\nPort 587 (STARTTLS) connection refused. Common causes:\n" <>

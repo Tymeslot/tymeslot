@@ -44,7 +44,7 @@ msgid "%{month} %{day}, %{year}"
 msgstr "%{day}. %{month} %{year}"
 ```
 
-A dropped or invented placeholder is a runtime crash, not a typo.
+An invented placeholder is a runtime crash in that locale; a dropped one silently loses the value it carried. `GettextCompletenessTest` rejects both.
 
 **Never interpolate with `#{}`.** Elixir interpolates before extraction, so the string
 becomes a unique literal on every call and can never be translated. Always `%{variable}`.
@@ -78,7 +78,7 @@ rewrites it as `# `/`# #`; that is corruption, and it has landed in this repo be
 
 ## Plural forms
 
-Most languages have two forms. Ukrainian has three.
+Most languages have two forms. Ukrainian and Czech have three. Every plural entry must carry exactly as many `msgstr[n]` lines as its file's `nplurals`.
 
 ```po
 # de, fr, it — nplurals=2
@@ -101,6 +101,14 @@ registry of valid domain names. Using the wrong domain is a silent failure — t
 falls back to English with no error.
 
 A string belongs in `common` only when genuinely shared across two or more areas.
+
+Catalogues are deliberately small, so a change to one area of the app means reading one
+small file. No domain may exceed 300 messages (`GettextCompletenessTest` enforces it); when
+one grows past that, split it by area into a new domain, add the domain to the Credo
+check's `:domains` list, and move the existing translations across with the strings.
+
+Msgids are always the English text, never keys such as `"meeting_confirmed"`: a key renders
+verbatim wherever a translation is missing, English included.
 
 ## Do not translate
 
@@ -151,10 +159,11 @@ two clauses stays outside them.
 `config :tymeslot, :locales` is the single source of truth. A locale listed there appears in the
 language switcher, so **every** string a user can reach must exist in it.
 `TymeslotWeb.GettextCompletenessTest` holds us to that: it derives its locale list from the
-config (there is no allowlist to update) and, for every `.pot` domain in
-`apps/tymeslot/priv/gettext`, in every supported locale, checks structure, msgid consistency,
-no empty msgstr, and no fuzzy entries. It skips the default locale for the emptiness check — its
-msgstrs are intentionally empty, and gettext falls back to the msgid, which is already English.
+config (there is no allowlist to update) and, for every `.pot` domain in this directory, in
+every supported locale, checks that the catalogue matches its template, that no msgstr is
+empty or fuzzy, and that placeholders and plural forms are intact. The default locale is the
+exception: its msgstrs must all be empty, since gettext falls back to the msgid, which is
+already English.
 
 So the order of work for a new language is: translate every catalogue, *then* add the locale to
 the config. Adding it first turns the suite red, which is the point — the alternative is shipping
@@ -162,8 +171,11 @@ a language switcher that quietly serves English.
 
 ## Locale resolution
 
-For HTTP requests, `LocalePlug` resolves in priority order: `?locale=` query param →
-session → `Accept-Language` → `"en"`.
+For HTTP requests, `LocalePlug` resolves in priority order: a locale-prefixed path, the
+signed-in user's saved language (authenticated pages only), the `?locale=` query param, a
+language the visitor chose explicitly earlier in the session, `Accept-Language`, and finally
+the admin-configured fallback for that surface. Only an explicit `?locale=` choice is
+remembered in the session. LiveViews reuse what the page's first HTTP render resolved.
 
 For **emails**, locale is the *recipient's* stored locale (`attendee_locale`), never the
 current request's. Always wrap email rendering in `Gettext.with_locale/3`.

@@ -35,6 +35,7 @@ defmodule Tymeslot.Notifications.GuestNotifications do
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.ParticipantSchema
@@ -188,7 +189,7 @@ defmodule Tymeslot.Notifications.GuestNotifications do
           Logger.error("Guest email failed",
             email_kind: kind,
             meeting_id: meeting_id,
-            result: inspect(other)
+            result: LogFormat.reason(other)
           )
       end
     end)

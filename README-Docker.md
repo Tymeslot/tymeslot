@@ -567,6 +567,18 @@ ENABLE_GOOGLE_AUTH=false     # Enable Google login/signup
 ENABLE_GITHUB_AUTH=false     # Enable GitHub login/signup
 ```
 
+### Error tracking
+
+Tymeslot records every unexpected error, process crash and failed background job in its own database, with the user id and the request, LiveView or job it happened in (request path, parameters, headers and client IP included; credentials, tokens, cookies and email addresses are redacted first). Nothing leaves your server unless you enable admin alert emails. Records of an error not seen for 30 days are resolved, and deleted 30 days later.
+
+To store nothing, set:
+
+```bash
+ERROR_TRACKING_ENABLED=false
+```
+
+Errors are then only logged. See the `ERROR TRACKING` section of [`.env.example`](.env.example) for exactly what is kept and for how long.
+
 ### Booking Analytics (optional)
 
 Booking analytics — page-view tracking, cookie-less visitor counting, and the

@@ -23,6 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
@@ -296,7 +297,11 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
         :ok
 
       {:error, reason} ->
-        Logger.error(failure_message, integration_id: integration.id, reason: inspect(reason))
+        Logger.error(failure_message,
+          integration_id: integration.id,
+          reason: LogFormat.reason(reason)
+        )
+
         {:error, :enqueue_failed}
     end
   end
@@ -310,7 +315,7 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
         Logger.error("Failed to update the webhook notification timestamp",
           integration_id: integration.id,
           field: field,
-          reason: inspect(changeset)
+          reason: LogFormat.reason(changeset)
         )
 
         :ok

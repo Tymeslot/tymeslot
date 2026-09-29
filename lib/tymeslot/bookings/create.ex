@@ -366,14 +366,14 @@ defmodule Tymeslot.Bookings.Create do
         PaidBooking.create(meeting_attrs, booking_data,
           create_meeting: &create_meeting/1,
           create_guests: &create_guests/2,
-          classify_error: &Errors.classify_error/1,
+          classify_error: &Errors.classify_creation_error(&1, booking_data),
           on_created: &Telemetry.booking_created/0
         )
 
       true ->
         meeting_attrs
         |> run_meeting_transaction(booking_data, opts)
-        |> map_transaction_result()
+        |> map_transaction_result(booking_data)
     end
   end
 
@@ -452,11 +452,12 @@ defmodule Tymeslot.Bookings.Create do
     CalendarJobs.schedule_job(meeting, "create")
   end
 
-  defp map_transaction_result({:ok, meeting}) do
+  defp map_transaction_result({:ok, meeting}, _booking_data) do
     AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
     Telemetry.booking_created()
     {:ok, meeting}
   end
 
-  defp map_transaction_result({:error, reason}), do: {:error, Errors.classify_error(reason)}
+  defp map_transaction_result({:error, reason}, booking_data),
+    do: {:error, Errors.classify_creation_error(reason, booking_data)}
 end

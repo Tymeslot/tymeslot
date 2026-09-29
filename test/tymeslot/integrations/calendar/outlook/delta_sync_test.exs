@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
   alias Tymeslot.Integrations.Calendar.Outlook.DeltaSync
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.LogCapture
 
   # The circuit breaker runs in a GenServer process that is separate from the
   # test process. Use global mode so mocks are visible from that process.
@@ -107,7 +108,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
     test "marks a delta event that mirrors one of our meetings" do
       # The delta sweep used to write straight to the queries module, skipping
       # the ownership flagging every other cache write gets. A booking Tymeslot
-      # wrote to an Outlook calendar carries a bare UUID uid, which the
+      # wrote to an Outlook calendar carries a bare UUID uid (its calendar_uid), which the
       # payload-level origin check cannot recognise, so it cached as
       # server-owned and OfflineQueue-style recovery never applied to it.
       integration =
@@ -116,7 +117,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
             "https://graph.microsoft.com/v1.0/me/calendarView/delta?$deltatoken=old-token"
         )
 
-      insert(:meeting, calendar_integration_id: integration.id, uid: "uid-ours")
+      insert(:meeting, calendar_integration_id: integration.id, calendar_uid: "uid-ours")
 
       ours = graph_event(%{"iCalUId" => "uid-ours"})
       theirs = graph_event(%{"iCalUId" => "uid-theirs"})
@@ -257,6 +258,23 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSyncTest do
         end)
 
       assert log =~ "Outlook token refresh failed"
+    end
+
+    test "redacts a token carried in the refresh error before logging it" do
+      LogCapture.attach()
+
+      expect(OutlookCalendarAPIMock, :refresh_token, fn _integration ->
+        {:error, :unauthorized, %{"error" => "invalid_grant", "refresh_token" => "rt-leak"}}
+      end)
+
+      integration = outlook_integration(graph_delta_link: nil, token_expires_at: nil)
+
+      assert {:error, :hard} = DeltaSync.fetch_and_apply(integration)
+
+      %{meta: meta} = LogCapture.await_log("Outlook token refresh failed")
+
+      assert meta.error =~ "invalid_grant"
+      refute meta.error =~ "rt-leak"
     end
   end
 

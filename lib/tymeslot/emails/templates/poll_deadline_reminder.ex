@@ -42,16 +42,16 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
       html_body =
         TemplateHelper.compile_system_template(
           mjml_content,
-          dgettext("emails", "Vote on %{title}", title: poll.title),
-          dgettext("emails", "%{host} is waiting for your vote on %{title}.",
+          dgettext("emails_polls", "Vote on %{title}", title: poll.title),
+          dgettext("emails_polls", "%{host} is waiting for your vote on %{title}.",
             host: host_name,
             title: poll.title
           ),
           intent: @intent,
-          eyebrow: dgettext("emails", "Reminder"),
-          stage_title: dgettext("emails", "Your vote is needed"),
+          eyebrow: dgettext("emails_polls", "Reminder"),
+          stage_title: dgettext("emails_polls", "Your vote is needed"),
           stage_subtitle:
-            dgettext("emails", "Help %{host} lock in a time for %{title}.",
+            dgettext("emails_polls", "Help %{host} lock in a time for %{title}.",
               host: host_name,
               title: poll.title
             )
@@ -62,7 +62,7 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
       |> from({host_name, MjmlEmail.fetch_from_email()})
       |> subject(
         Sanitise.sanitize_for_header(
-          dgettext("emails", "Reminder: vote on \"%{title}\"", title: poll.title)
+          dgettext("emails_polls", "Reminder: vote on \"%{title}\"", title: poll.title)
         )
       )
       |> html_body(html_body)
@@ -72,11 +72,11 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
 
   defp mjml_content(poll, host_name, deadline, voting_url) do
     """
-    #{Text.centered_text(dgettext("emails", "%{host} invited you to help pick a time for %{title}. Your vote is still outstanding.", host: host_name, title: poll.title), padding: "4px 0 12px 0")}
+    #{Text.centered_text(dgettext("emails_polls", "%{host} invited you to help pick a time for %{title}. Your vote is still outstanding.", host: host_name, title: poll.title), padding: "4px 0 12px 0")}
 
     #{deadline_block(deadline)}
 
-    #{Buttons.action_button(@intent, dgettext("emails", "Cast Your Vote"), voting_url, full_width: true, size: :large)}
+    #{Buttons.action_button(@intent, dgettext("emails_polls", "Cast Your Vote"), voting_url, full_width: true, size: :large)}
 
     #{Text.troubleshooting_link(voting_url)}
     """
@@ -86,7 +86,7 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
 
   defp deadline_block(deadline) do
     """
-    #{Text.section_title(dgettext("emails", "Voting closes"))}
+    #{Text.section_title(dgettext("emails_polls", "Voting closes"))}
     <mj-text font-size="16px" color="#{Styles.ink_soft()}" line-height="24px" align="center" padding="0 0 8px 0">
       #{Sanitise.sanitize_for_email(deadline)}
     </mj-text>
@@ -95,11 +95,11 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
 
   defp build_text_body(poll, host_name, deadline, voting_url) do
     """
-    #{dgettext("emails", "Reminder: vote on \"%{title}\"", title: poll.title)}
+    #{dgettext("emails_polls", "Reminder: vote on \"%{title}\"", title: poll.title)}
 
-    #{dgettext("emails", "%{host} invited you to help pick a time for %{title}. Your vote is still outstanding.", host: host_name, title: poll.title)}
+    #{dgettext("emails_polls", "%{host} invited you to help pick a time for %{title}. Your vote is still outstanding.", host: host_name, title: poll.title)}
     #{deadline_text(deadline)}
-    #{dgettext("emails", "Cast your vote:")}
+    #{dgettext("emails_polls", "Cast your vote:")}
     #{voting_url}
     """
   end
@@ -107,7 +107,7 @@ defmodule Tymeslot.Emails.Templates.PollDeadlineReminder do
   defp deadline_text(nil), do: ""
 
   defp deadline_text(deadline) do
-    "\n#{dgettext("emails", "Voting closes:")} #{deadline}\n"
+    "\n#{dgettext("emails_polls", "Voting closes:")} #{deadline}\n"
   end
 
   defp formatted_deadline(%PollSchema{deadline_at: nil}, _participant, _locale), do: nil

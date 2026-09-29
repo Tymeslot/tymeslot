@@ -11,6 +11,8 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   require Logger
 
   alias Tymeslot.Features
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
@@ -187,7 +189,8 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
       {:ok, :skipped} ->
         :skipped
 
-      {:error, _reason} ->
+      {:error, reason} ->
+        ErrorTracking.report_error(reason, nil, %{booking_payment_id: payment.id})
         :skipped
     end
   end
@@ -202,7 +205,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
       {:error, reason} ->
         Logger.warning("disconnect: failed to expire meeting",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
   end
@@ -227,7 +230,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
         {:error, reason} ->
           Logger.warning("disconnect: failed to expire Stripe checkout session",
             session_id: session_id,
-            reason: inspect(reason)
+            reason: LogFormat.reason(reason)
           )
       end
     end)

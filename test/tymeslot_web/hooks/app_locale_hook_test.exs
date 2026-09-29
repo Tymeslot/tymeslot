@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Hooks.AppLocaleHookTest do
         AppLocaleHook.on_mount(
           :default,
           %{},
-          %{"path_locale" => "de", "locale" => "en"},
+          %{"path_locale" => "de", "ambient_locale" => "en"},
           socket(%{current_user: %{locale: "en"}})
         )
 
@@ -22,24 +22,46 @@ defmodule TymeslotWeb.Hooks.AppLocaleHookTest do
       assert Gettext.get_locale(TymeslotWeb.Gettext) == "de"
     end
 
-    test "user preference wins over the session locale without a path locale" do
+    test "user preference wins over the ambient locale without a path locale" do
       {:cont, socket} =
         AppLocaleHook.on_mount(
           :default,
           %{},
-          %{"locale" => "en"},
+          %{"ambient_locale" => "en"},
           socket(%{current_user: %{locale: "de"}})
         )
 
       assert socket.assigns.locale == "de"
     end
 
-    test "falls back to the session locale, then the default" do
-      {:cont, socket} = AppLocaleHook.on_mount(:default, %{}, %{"locale" => "de"}, socket())
+    test "falls back to the ambient locale, then the default" do
+      {:cont, socket} =
+        AppLocaleHook.on_mount(:default, %{}, %{"ambient_locale" => "de"}, socket())
+
       assert socket.assigns.locale == "de"
 
       {:cont, socket} = AppLocaleHook.on_mount(:default, %{}, %{}, socket())
       assert socket.assigns.locale == "en"
+    end
+
+    test "ignores the retired locale key once the dead render has an ambient locale" do
+      {:cont, socket} =
+        AppLocaleHook.on_mount(
+          :default,
+          %{},
+          %{"ambient_locale" => "en", "locale" => "de"},
+          socket()
+        )
+
+      assert socket.assigns.locale == "en"
+    end
+
+    test "keeps a page rendered before the ambient locale existed in its language" do
+      # A session signed before a deploy carries only the retired key.
+      {:cont, socket} = AppLocaleHook.on_mount(:default, %{}, %{"locale" => "de"}, socket())
+
+      assert socket.assigns.locale == "de"
+      assert socket.assigns.ambient_locale == "de"
     end
 
     test "an unsupported path locale with no other source falls back to the default" do
@@ -49,14 +71,14 @@ defmodule TymeslotWeb.Hooks.AppLocaleHookTest do
   end
 
   describe "per-source validation (matching LocalePlug)" do
-    test "an unsupported user locale falls through to the valid session locale" do
+    test "an unsupported user locale falls through to the valid ambient locale" do
       # A stale "es" preference must not be coerced to the default; the valid
-      # "de" session locale (what LocalePlug resolved on the dead render) wins.
+      # "de" ambient locale (what LocalePlug detected on the dead render) wins.
       {:cont, socket} =
         AppLocaleHook.on_mount(
           :default,
           %{},
-          %{"locale" => "de"},
+          %{"ambient_locale" => "de"},
           socket(%{current_user: %{locale: "es"}})
         )
 
@@ -69,11 +91,38 @@ defmodule TymeslotWeb.Hooks.AppLocaleHookTest do
         AppLocaleHook.on_mount(
           :default,
           %{},
-          %{"path_locale" => "xx", "locale" => "en"},
+          %{"path_locale" => "xx", "ambient_locale" => "en"},
           socket(%{current_user: %{locale: "de"}})
         )
 
       assert socket.assigns.locale == "de"
+    end
+  end
+
+  describe ":ambient_locale assign" do
+    test "is the resolution without the user's saved preference" do
+      {:cont, socket} =
+        AppLocaleHook.on_mount(
+          :default,
+          %{},
+          %{"ambient_locale" => "fr"},
+          socket(%{current_user: %{locale: "de"}})
+        )
+
+      assert socket.assigns.locale == "de"
+      assert socket.assigns.ambient_locale == "fr"
+    end
+
+    test "follows the path locale when the route carries one" do
+      {:cont, socket} =
+        AppLocaleHook.on_mount(
+          :default,
+          %{},
+          %{"path_locale" => "it", "ambient_locale" => "it"},
+          socket(%{current_user: %{locale: "de"}})
+        )
+
+      assert socket.assigns.ambient_locale == "it"
     end
   end
 end

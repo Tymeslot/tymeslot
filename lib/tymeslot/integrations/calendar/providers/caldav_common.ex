@@ -8,10 +8,13 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Client, Discovery, Events, Http, UrlBuilder}
   alias Tymeslot.Integrations.Calendar.CalendarEntry
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Integrations.Calendar.ICalNormaliser
+  alias Tymeslot.Integrations.Calendar.Shared.EventSearch
   alias Tymeslot.Utils.UriUtils
 
   require Logger
@@ -28,10 +31,35 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   end
 
   @doc """
+  Builds a provider's client from the config its `new/1` is given, with the
+  base URL and calendar paths already put into that provider's own form.
+
+  The credentials and `:writable_calendar_paths` are carried over as given.
+  A provider that rebuilt the config by hand used to drop the writable paths,
+  and the client then wrote every event to its booking calendar, whichever
+  calendar the organiser had picked.
+  """
+  @spec build_provider_client(map(), atom(), String.t() | nil, [String.t()]) :: caldav_client()
+  def build_provider_client(config, provider, base_url, calendar_paths) do
+    build_client(
+      %{
+        base_url: base_url,
+        username: config[:username],
+        password: config[:password],
+        calendar_paths: calendar_paths,
+        writable_calendar_paths: config[:writable_calendar_paths],
+        verify_ssl: true
+      },
+      provider: provider
+    )
+  end
+
+  @doc """
   Builds the client struct downstream Base.* functions run on.
 
   Accepts atom- or string-keyed config with `:base_url`, `:username`,
-  `:password`, `:calendar_paths` and `:verify_ssl`; takes the provider from
+  `:password`, `:calendar_paths`, `:writable_calendar_paths` and
+  `:verify_ssl`; takes the provider from
   `opts`. This is the only place a `Client` is constructed, which is what
   makes the password's inspect-time redaction hold for every CalDAV-family
   provider.
@@ -211,7 +239,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     tasks =
       Enum.map(paths, fn path ->
         {path,
-         Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+         Tasks.async(Tymeslot.TaskSupervisor, fn ->
            Events.fetch_events(client, path, start_time, end_time)
          end)}
       end)
@@ -249,7 +277,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     Enum.each(errors, fn {path, {:error, reason}} ->
       Logger.warning("CalDAV fetch failed for one calendar path",
         path: path,
-        reason: inspect(reason)
+        reason: LogFormat.reason(reason)
       )
     end)
 
@@ -338,9 +366,32 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   the `COLOR` property on the event's cached `raw_ical` rather than rebuilding
   the VEVENT from a reduced payload, which would silently drop
   RRULE/ATTENDEE/VALARM data.
+
+  When `event_data` carries an `:occurrence` (see `Events.occurrence/0`, with
+  its `:changes`), only that one occurrence of the series is edited, by
+  writing its override into the resource at its href
+  (`Events.update_occurrence/4`); with `scope: :all` every occurrence is
+  edited through the series' master instead (`Events.update_series/4`), and
+  with `scope: :following` the series is split in two at the occurrence and
+  the edit written to the second half (`Events.split_series/4`). The answer
+  is then `{:ok, %{document: document}}` with the document now on the
+  server, and for a split the new resource under `:tail`; the rest of the
+  payload is not read.
   """
-  @spec update_event(caldav_client(), String.t(), map(), keyword()) :: :ok | {:error, term()}
+  @spec update_event(caldav_client(), String.t(), map(), keyword()) ::
+          :ok
+          | {:ok, %{required(:document) => String.t(), optional(:tail) => map()}}
+          | {:error, term()}
   def update_event(client, uid, event_data, opts \\ [])
+
+  def update_event(client, _uid, %{occurrence: %{scope: :all} = occurrence}, opts),
+    do: Events.update_series(client, primary_calendar_path(client), occurrence, opts)
+
+  def update_event(client, _uid, %{occurrence: %{scope: :following} = occurrence}, opts),
+    do: Events.split_series(client, primary_calendar_path(client), occurrence, opts)
+
+  def update_event(client, _uid, %{occurrence: %{} = occurrence}, opts),
+    do: Events.update_occurrence(client, primary_calendar_path(client), occurrence, opts)
 
   def update_event(client, uid, %{colour_only: true, colour: colour} = event_data, opts) do
     case primary_calendar_path(client) do
@@ -373,12 +424,20 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   directly — required when the event lives on a calendar other than the first
   configured path. Otherwise falls back to the primary calendar path and
   constructs the URL from the UID.
+
+  When `opts[:occurrence]` is set (see `Events.occurrence/0`), only that one
+  occurrence of the series is deleted, by rewriting the resource at its href
+  (`Events.delete_occurrence/4`), and the answer is
+  `{:ok, %{document: document}}` with the document now on the server, `nil`
+  once nothing of the series was left and the resource was deleted.
   """
-  @spec delete_event(caldav_client(), String.t(), keyword()) :: :ok | {:error, term()}
+  @spec delete_event(caldav_client(), String.t(), keyword()) ::
+          :ok | {:ok, %{document: String.t() | nil}} | {:error, term()}
   def delete_event(client, uid, opts \\ []) do
-    case primary_calendar_path(client) do
-      nil -> :ok
-      path -> Events.delete_calendar_event(client, path, uid, opts)
+    case {opts[:occurrence], primary_calendar_path(client)} do
+      {%{} = occurrence, path} -> Events.delete_occurrence(client, path, occurrence, opts)
+      {nil, nil} -> :ok
+      {nil, path} -> Events.delete_calendar_event(client, path, uid, opts)
     end
   end
 
@@ -395,25 +454,50 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     # identifier (a Google or Outlook id) does not address a resource here.
     href = if is_binary(href) and String.starts_with?(href, ["/", "http"]), do: href
 
-    with {:ok, raw_events} <-
-           Events.fetch_calendar_event(
-             client,
-             primary_calendar_path(client),
-             Map.get(event_ref, :uid),
-             href
-           ) do
-      provider = Map.get(client, :provider, :caldav)
+    path = primary_calendar_path(client)
 
-      ICalNormaliser.normalise_events(
-        raw_events,
-        %{
-          calendar_integration_id: Map.get(event_ref, :calendar_integration_id),
-          provider_calendar_id: primary_calendar_path(client) || "",
-          synced_at: DateTime.utc_now()
-        },
-        provider
-      )
+    with {:ok, raw_events} <-
+           Events.fetch_calendar_event(client, path, Map.get(event_ref, :uid), href) do
+      normalise_fetched(client, raw_events, path, event_ref)
     end
+  end
+
+  @doc """
+  Looks for an event in every calendar of the account (see the provider
+  behaviour's `find_moved_event/2`), by its iCalendar UID in `uid`: a move
+  between calendars changes the event's href, and the client that moved it
+  need not keep the resource's name. Every calendar discovery finds is asked,
+  those `fetch_event/2` already asked included, since it asked them by the
+  old href.
+  """
+  @spec find_moved_event(caldav_client(), map()) ::
+          {:ok, list()} | {:error, :not_found} | {:error, term()}
+  def find_moved_event(client, %{uid: uid} = event_ref) when is_binary(uid) and uid != "" do
+    with {:ok, calendars} <- discover_calendars(client) do
+      calendars
+      |> Enum.map(& &1.path)
+      |> Enum.reject(&(&1 in [nil, ""]))
+      |> Enum.uniq()
+      |> EventSearch.first_found(fn path ->
+        with {:ok, raw_events} <- Events.find_calendar_event(client, path, uid) do
+          normalise_fetched(client, raw_events, path, event_ref)
+        end
+      end)
+    end
+  end
+
+  def find_moved_event(_client, _event_ref), do: {:error, :unaddressable}
+
+  defp normalise_fetched(client, raw_events, path, event_ref) do
+    ICalNormaliser.normalise_events(
+      raw_events,
+      %{
+        calendar_integration_id: Map.get(event_ref, :calendar_integration_id),
+        provider_calendar_id: path || "",
+        synced_at: DateTime.utc_now()
+      },
+      Map.get(client, :provider, :caldav)
+    )
   end
 
   # Helpers

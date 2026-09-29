@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
   require Logger
 
   alias Phoenix.LiveView
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
   alias TymeslotWeb.Themes.Shared.BookingTracking
@@ -53,7 +54,7 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
         {:noreply, updated_socket}
 
       {:error, reason} ->
-        Logger.warning("Timezone change failed", reason: inspect(reason))
+        Logger.warning("Timezone change failed", reason: LogFormat.reason(reason))
         {:noreply, socket}
     end
   end

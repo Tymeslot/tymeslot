@@ -14,6 +14,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Repo
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
@@ -127,6 +129,120 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingModeTest do
       # The save dispatched to the async ad-hoc path and the button shows its
       # loading state while the meeting is created.
       assert html =~ "Creating..."
+    end
+  end
+
+  describe "the note to the guest" do
+    defp fill_guest(lv) do
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_create_guest_name", %{"value" => "Ada Lovelace"})
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_create_guest_email", %{"value" => "ada@example.com"})
+    end
+
+    test "is hidden until the organiser asks to add one", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      html = open_create_form(lv)
+
+      assert html =~ ~s(data-testid="create-meeting-add-note")
+      refute html =~ ~s(id="create-meeting-note")
+
+      html = lv |> element(~s([data-testid="create-meeting-add-note"])) |> render_click()
+
+      assert html =~ ~s(id="create-meeting-note")
+      refute html =~ ~s(data-testid="create-meeting-add-note")
+    end
+
+    test "is saved on the meeting the organiser creates", %{conn: conn, user: user} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_create_form(lv)
+      fill_guest(lv)
+
+      lv |> element(~s([data-testid="create-meeting-add-note"])) |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_create_note", %{"value" => "Agenda: the Q3 roadmap."})
+
+      lv |> element("#calendar-grid") |> render_hook("save_event", %{})
+
+      # Creation runs in a supervised task; wait for the row it writes.
+      meeting = eventually(fn -> Repo.one(MeetingSchema) end, timeout: 5000)
+      assert meeting.organizer_user_id == user.id
+      assert meeting.organizer_note == "Agenda: the Q3 roadmap."
+      assert meeting.attendee_message == nil
+    end
+
+    test "removing it discards what was typed", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_create_form(lv)
+      fill_guest(lv)
+
+      lv |> element(~s([data-testid="create-meeting-add-note"])) |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_create_note", %{"value" => "Never mind this."})
+
+      html = lv |> element("button", "Remove note") |> render_click()
+      refute html =~ ~s(id="create-meeting-note")
+
+      lv |> element("#calendar-grid") |> render_hook("save_event", %{})
+
+      # Creation runs in a supervised task; wait for the row it writes.
+      meeting = eventually(fn -> Repo.one(MeetingSchema) end, timeout: 5000)
+      assert meeting.organizer_note == nil
+    end
+  end
+
+  describe "with only a subscribed calendar" do
+    # A feed can be read and never written, so for the purpose of creating an
+    # event it is no different from having no calendar at all.
+    setup %{user: user} do
+      insert(:calendar_integration,
+        user: user,
+        is_active: true,
+        name: "Fixture list",
+        provider: "ics_url",
+        calendar_list: [
+          %{"id" => "ics", "name" => "Fixture list", "selected" => true, "read_only" => true}
+        ]
+      )
+
+      :ok
+    end
+
+    test "quick add opens in meeting mode and offers no event mode", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+      html = open_create_form(lv)
+
+      assert html =~ "New Meeting"
+      refute html =~ ~s(data-testid="create-mode-meeting")
+    end
+
+    test "the subscription is not offered as somewhere to put the meeting", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+
+      html = open_create_form(lv)
+
+      # Neither by name nor through the "Default calendar" button that used to
+      # stand in for a connection with no writable calendar left in its list.
+      refute html =~ "Fixture list"
+      refute html =~ "Default calendar"
+    end
+
+    test "switching to event mode is refused", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_create_form(lv)
+
+      html =
+        lv |> element("#calendar-grid") |> render_hook("set_create_mode", %{"mode" => "event"})
+
+      assert html =~ "New Meeting"
     end
   end
 

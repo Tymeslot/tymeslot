@@ -26,6 +26,7 @@ defmodule Tymeslot.Auth.OAuth.SignupConfirmation do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Repo
   alias Tymeslot.Security.{RateLimiter, SecurityLogger}
   alias Tymeslot.Utils.UrlBuilder
@@ -74,7 +75,7 @@ defmodule Tymeslot.Auth.OAuth.SignupConfirmation do
         SecurityLogger.log_rate_limit_violation(email, "social_signup_confirmation", %{})
 
       {:error, reason} ->
-        Logger.error("Failed to schedule sign-up confirmation", reason: inspect(reason))
+        Logger.error("Failed to schedule sign-up confirmation", reason: LogFormat.reason(reason))
     end
   end
 
@@ -109,7 +110,7 @@ defmodule Tymeslot.Auth.OAuth.SignupConfirmation do
       {:ok, provider, user}
     else
       reason ->
-        Logger.info("Sign-up confirmation link refused", reason: inspect(reason))
+        Logger.info("Sign-up confirmation link refused", reason: LogFormat.reason(reason))
         {:error, :invalid_link}
     end
   end

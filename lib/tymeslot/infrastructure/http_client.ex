@@ -36,7 +36,17 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
 
   require Logger
   alias Req.{Request, Response}
-  alias Tymeslot.Infrastructure.{FinchPool, Metrics, ProxyConfig, ResponseTooLargeError}
+
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+
+  alias Tymeslot.Infrastructure.{
+    CorrelationId,
+    FinchPool,
+    Metrics,
+    ProxyConfig,
+    ResponseTooLargeError
+  }
+
   alias Tymeslot.Security.{ConnectionPinning, SsrfBlockedError, SsrfGuard}
 
   # Generous enough that no legitimate response comes close: the largest bodies
@@ -332,7 +342,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
       {:error, reason} ->
         Logger.warning("Blocked outbound request by SSRF protection",
           url: log_safe_origin(url),
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:error, %SsrfBlockedError{url: url, reason: reason}}
@@ -356,7 +366,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     base_options = [
       method: req_method,
       url: url,
-      headers: headers,
+      headers: put_request_id(headers),
       receive_timeout: timeout,
       # Disable Req's default retry: :safe_transient which silently retries
       # GET/HEAD/OPTIONS on 5xx and transient errors. Retries are handled
@@ -408,6 +418,24 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     options_with_cap
     |> Keyword.merge(Keyword.delete(user_opts_clean, :connect_options))
     |> apply_connect_options(url, connect_options)
+  end
+
+  # The request carries the correlation id of the work that made it as
+  # `x-request-id`, so a provider's logs or support ticket for it can be
+  # matched to ours. A header the caller set is left as it is, and an id
+  # that fails `CorrelationId.valid?/1` is never sent.
+  defp put_request_id(headers) do
+    correlation_id = Logger.metadata()[:correlation_id]
+
+    if CorrelationId.valid?(correlation_id) and not has_request_id?(headers),
+      do: Enum.to_list(headers) ++ [{"x-request-id", correlation_id}],
+      else: headers
+  end
+
+  defp has_request_id?(headers) do
+    Enum.any?(headers, fn {name, _value} ->
+      String.downcase(to_string(name)) == "x-request-id"
+    end)
   end
 
   # Req refuses `:finch` and `:connect_options` on the same request: hand it

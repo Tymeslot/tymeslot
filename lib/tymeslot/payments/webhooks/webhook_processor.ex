@@ -6,6 +6,9 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
   require Logger
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Payments.Errors.WebhookError
   alias Tymeslot.Payments.Webhooks.WebhookRegistry
 
@@ -24,7 +27,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
     exception ->
       event_type = get_field(event, :type) || "unknown"
 
-      map_transient_errors(handle_exception(exception, event_type, __STACKTRACE__))
+      map_transient_errors(handle_exception(exception, event, event_type, __STACKTRACE__))
   end
 
   defp map_transient_errors({:error, :retry_later, _message} = result), do: result
@@ -70,12 +73,14 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
      }, nil}
   end
 
-  defp handle_exception(exception, event_type, stacktrace) do
-    Logger.error("Error processing webhook event",
+  # Recorded by module alone, as a handler's exception is below: the message
+  # of anything raised while reading the event can quote the Stripe object,
+  # customer details included.
+  defp handle_exception(exception, event, event_type, stacktrace) do
+    ErrorTracking.report_error({:raised, exception.__struct__}, stacktrace, %{
       event_type: event_type,
-      error: inspect(exception),
-      stacktrace: stacktrace
-    )
+      event_id: get_field(event, :id)
+    })
 
     {:error,
      %WebhookError.ProcessingError{
@@ -113,7 +118,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
           reason: reason,
           message: message,
           object_keys: Map.keys(object),
-          object_sample: object |> Map.take(["id", "object", "type"]) |> inspect()
+          object_sample: object |> Map.take(["id", "object", "type"]) |> LogFormat.reason()
         )
 
         {:error, %WebhookError.ValidationError{reason: reason, message: message}, nil}
@@ -159,12 +164,14 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
 
     handler.process(normalized_event, object)
   rescue
+    # Recorded by module alone: a handler's exception message can quote the
+    # Stripe object it was processing, customer details included.
     exception ->
-      Logger.error("Handler error",
-        error: inspect(exception),
-        handler: handler,
-        stacktrace: __STACKTRACE__
-      )
+      ErrorTracking.report_error({:raised, exception.__struct__}, __STACKTRACE__, %{
+        handler: inspect(handler),
+        event_type: get_field(event, :type),
+        event_id: get_field(event, :id)
+      })
 
       {:error,
        %WebhookError.ProcessingError{
@@ -182,7 +189,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
     # We use a supervised task to record unhandled events asynchronously so
     # that the webhook response is never blocked and a crash inside the
     # recorder cannot take down the webhook handler process.
-    case Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+    case Tasks.start_child(Tymeslot.TaskSupervisor, fn ->
            attrs = %{
              event_type: "stripe.#{event_type}",
              payload: %{
@@ -209,7 +216,9 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
         :ok
 
       {:error, reason} ->
-        Logger.error("Failed to start unhandled-event recorder task", reason: inspect(reason))
+        Logger.error("Failed to start unhandled-event recorder task",
+          reason: LogFormat.reason(reason)
+        )
     end
   end
 

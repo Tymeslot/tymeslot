@@ -83,10 +83,15 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
       <div class="modal-container p-6">
         <div
           id={"#{@id}-content"}
-          class={[
-            "modal-content bg-white rounded-[2.5rem] shadow-2xl border-2 border-tymeslot-50 relative overflow-hidden",
-            modal_size_class(@size)
-          ]}
+          class={
+            [
+              # Scrolling and the height cap belong to `.modal-content` in
+              # modal.css; an `overflow-hidden` here would win over it and cut a
+              # tall dialog off again.
+              "modal-content bg-white rounded-[2.5rem] shadow-2xl border-2 border-tymeslot-50 relative",
+              modal_size_class(@size)
+            ]
+          }
           role="dialog"
           aria-modal="true"
           {@dialog_label_attrs}
@@ -121,7 +126,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
           <% end %>
 
           <%!-- Body --%>
-          <div class="modal-body p-8">
+          <%!-- `scrollable` is the app's own scrollbar styling, shared with
+                the body and the other scrolling panels. --%>
+          <div class="modal-body scrollable p-8">
             {render_slot(@inner_block)}
           </div>
 

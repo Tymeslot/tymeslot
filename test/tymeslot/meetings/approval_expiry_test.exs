@@ -245,15 +245,29 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
       meeting = held_meeting()
       {:ok, _confirmed} = Approval.approve(meeting)
 
-      assert {:discard, _reason} =
+      assert {:discard, reason} =
                perform_job(ApprovalExpiryWorker, %{"meeting_id" => meeting.id})
 
       assert reload(meeting).status == "confirmed"
+      # The host answering first is the normal race, not a fault.
+      assert ApprovalExpiryWorker.expected_outcome?(reason)
     end
 
     test "discards rather than retries when the meeting is gone" do
-      assert {:discard, _reason} =
+      assert {:discard, reason} =
                perform_job(ApprovalExpiryWorker, %{"meeting_id" => UUID.generate()})
+
+      # A stale job outliving its deleted meeting is not a fault.
+      assert ApprovalExpiryWorker.expected_outcome?(reason)
+    end
+
+    # The meeting id is detail after the reason, never part of it, so one
+    # missing meeting after another stays a single error group.
+    test "keeps the missing meeting's id out of the reason's leading text" do
+      id = UUID.generate()
+
+      assert {:discard, "Meeting not found: " <> ^id} =
+               perform_job(ApprovalExpiryWorker, %{"meeting_id" => id})
     end
 
     test "discards a stale job whose meeting was re-armed with a later deadline" do
@@ -263,10 +277,13 @@ defmodule Tymeslot.Meetings.ApprovalExpiryTest do
       meeting =
         held_meeting(%{approval_deadline_at: DateTime.add(DateTime.utc_now(:second), 6, :hour)})
 
-      assert {:discard, _reason} =
+      assert {:discard, "Request not due yet: " <> _deadline = reason} =
                perform_job(ApprovalExpiryWorker, %{"meeting_id" => meeting.id})
 
       assert reload(meeting).status == "awaiting_approval"
+      # A stale job means a replacement's delete was lost, which the operator
+      # should hear about: recorded, as one error group.
+      refute ApprovalExpiryWorker.expected_outcome?(reason)
     end
   end
 

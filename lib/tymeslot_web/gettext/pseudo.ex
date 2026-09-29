@@ -19,10 +19,9 @@ defmodule TymeslotWeb.Gettext.Pseudo do
      `·`-padding widen every label, exposing fixed-width buttons, clipped
      table cells, and layouts that only ever saw English.
 
-  The transform is applied to the *resolved English string*, not the raw
-  msgid — see `TymeslotWeb.Gettext` — so key-based catalogs (e.g. the booking
-  domain, whose msgids are semantic keys like `"meeting_confirmed"`) pseudo-ise
-  the English text a user would actually see, not the developer key.
+  The transform is applied to the resolved English string, with its bindings
+  already interpolated (see `TymeslotWeb.Gettext`), so it pseudo-ises exactly
+  the text a user would see.
 
   Activation is gated behind `Tymeslot.Locales.pseudo_enabled?/0`, which is
   `false` everywhere except dev. It can never render in production.

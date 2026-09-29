@@ -16,6 +16,7 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Exchange.EventNormaliser
   alias Tymeslot.Integrations.Calendar.Exchange.Soap
+  alias Tymeslot.Integrations.Calendar.InvalidEventReport
   alias Tymeslot.Test.LogCapture
 
   @context %{
@@ -336,34 +337,51 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       assert log =~ "Skipping unusable Exchange calendar item"
     end
 
-    test "raises an operator alert for a skipped item, carrying no mailbox content" do
-      # A dropped event is a meeting missing from the diary with nothing on
-      # screen to say so, which is what this alert exists to surface. The
-      # subject and location are the item owner's data and must not travel
-      # into an alert email.
+    test "raises no operator alert itself for a skipped item" do
+      # The sync run raises one alert for everything it skipped
+      # (`InvalidEventReport`), so a normaliser called on its own sends none.
       undated = String.replace(@timed_item, ~r|<t:End>.*</t:End>|, "")
 
       capture_log(fn ->
         assert {:ok, []} = EventNormaliser.normalise_events(items([undated]), @context)
       end)
 
+      refute_received {:send_alert, :invalid_calendar_event, _payload}
+    end
+
+    test "a skipped item reaches the run's operator alert, carrying no mailbox content" do
+      # A dropped event is a meeting missing from the diary with nothing on
+      # screen to say so, which is what this alert exists to surface. The
+      # subject and location are the item owner's data and must not travel
+      # into an alert email.
+      undated = String.replace(@timed_item, ~r|<t:End>.*</t:End>|, "")
+
+      InvalidEventReport.collect(fn ->
+        capture_log(fn ->
+          assert {:ok, []} = EventNormaliser.normalise_events(items([undated]), @context)
+        end)
+      end)
+
       assert_receive {:send_alert, :invalid_calendar_event, payload}
 
       assert payload.provider == :exchange
-      assert payload.event_uid == "040000008200E00074C5B7101A82E008"
+      assert payload.count == 1
+      assert payload.sample_events =~ "040000008200E00074C5B7101A82E008 ("
       assert payload.calendar_integration_id == 7
-      assert payload.reason
+      assert payload.reason_message
 
       refute payload |> inspect() |> String.contains?("Standup")
       refute payload |> inspect() |> String.contains?("Room 1")
     end
 
     test "raises no alert for a batch every item of which is usable" do
-      assert {:ok, [_event]} = EventNormaliser.normalise_events(items([@timed_item]), @context)
+      InvalidEventReport.collect(fn ->
+        assert {:ok, [_event]} = EventNormaliser.normalise_events(items([@timed_item]), @context)
+      end)
 
-      # `normalise_events/2` sends the alert in-process before it returns, so a
-      # message that is going to arrive has already arrived by here and a
-      # timeout buys nothing.
+      # `collect/1` sends the alert in-process before it returns, so a message
+      # that is going to arrive has already arrived by here and a timeout buys
+      # nothing.
       refute_received {:send_alert, :invalid_calendar_event, _payload}
     end
 
@@ -376,17 +394,19 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.EventNormaliserTest do
       </t:CalendarItem>
       """
 
-      assert capture_log(fn ->
-               assert {:ok, []} = EventNormaliser.normalise_events(items([item]), @context)
-             end) =~ "Skipping unusable Exchange calendar item"
+      InvalidEventReport.collect(fn ->
+        assert capture_log(fn ->
+                 assert {:ok, []} = EventNormaliser.normalise_events(items([item]), @context)
+               end) =~ "Skipping unusable Exchange calendar item"
+      end)
 
       assert_receive {:send_alert, :invalid_calendar_event, payload}
 
       # The identifier is rendered straight into the operator's email, and
-      # this is the one item that has none, so a blank one would arrive as
-      # "(event_id: )" and name nothing at all.
+      # this is the one item that has none, so a blank one would name nothing
+      # at all.
       assert AlertTypes.format_message(:invalid_calendar_event, payload) =~
-               "(event_id: unknown)"
+               "First skipped: unknown ("
     end
   end
 

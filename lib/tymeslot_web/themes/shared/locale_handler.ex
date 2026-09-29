@@ -12,40 +12,24 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandler do
   alias Tymeslot.Locales
 
   @doc """
-  Changes the locale for the current socket.
-  Validates that the new locale is supported before applying the change.
+  Applies `new_locale` to the current process and the socket's `:locale`
+  assign, when it is acceptable; otherwise leaves both untouched.
 
-  The locale is applied to the current LiveView session. For session persistence
-  across navigation, the locale should be included in URL params (via push_patch)
-  which will be picked up by LocalePlug on subsequent page loads.
-
-  Changes are idempotent to avoid unnecessary updates.
+  Called from `handle_params/3` when the URL carries `?locale=`. It only
+  affects the running LiveView. The language switcher does not go through
+  here: its `change_locale` event does a full `redirect(external: ...)` to the
+  same page with `?locale=` (see `EventHandlers.handle_change_locale/3`), so
+  that `TymeslotWeb.Plugs.LocalePlug` sees the request and remembers the
+  choice in the session, which a websocket message cannot do.
   """
   @spec handle_locale_change(Phoenix.LiveView.Socket.t(), String.t()) ::
           Phoenix.LiveView.Socket.t()
   def handle_locale_change(socket, new_locale) do
-    current_locale = socket.assigns[:locale]
-
-    # Always ensure Gettext is set for the current process
-    # This handles cases where the process might have been reused or dictionary cleared
     if Locales.acceptable?(new_locale) do
       Gettext.put_locale(new_locale)
-    end
-
-    # Skip if locale is already set in assigns (idempotent for assigns)
-    cond do
-      new_locale == current_locale ->
-        socket
-
-      Locales.acceptable?(new_locale) ->
-        # Update socket assigns
-        # Note: For persistence across navigation, themes should use a full
-        # redirect (external: true) with the locale in query params to ensure
-        # the LocalePlug updates the session.
-        Component.assign(socket, :locale, new_locale)
-
-      true ->
-        socket
+      Component.assign(socket, :locale, new_locale)
+    else
+      socket
     end
   end
 end

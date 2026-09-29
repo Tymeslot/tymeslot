@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   import Phoenix.LiveView, only: [put_flash: 3]
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias TymeslotWeb.Components.MeetingUtils
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingErrorMessage
@@ -64,7 +65,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
     Process.demonitor(ref, [:flush])
 
     finalize_availability_task(socket, ref, :error, nil, fn ->
-      Logger.warning("Month availability fetch failed", reason: inspect(reason))
+      Logger.warning("Month availability fetch failed", reason: LogFormat.reason(reason))
     end)
   end
 

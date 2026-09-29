@@ -12,6 +12,7 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
@@ -98,7 +99,7 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
         # `room_ref` instead.
         Logger.error("Failed to persist video room attachment",
           meeting_id: meeting.id,
-          reason: inspect(reason),
+          reason: LogFormat.reason(reason),
           orphaned_video_room_id: Map.get(video_room_attrs, :video_room_id),
           orphaned_meeting_url: Map.get(video_room_attrs, :meeting_url)
         )
@@ -115,7 +116,7 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
       {:error, reason} ->
         Logger.warning("Failed to schedule calendar update after video room attachment",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
   end
@@ -159,8 +160,17 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
 
   defp left_booking_event?(_locked_meeting, _meeting, _attrs), do: false
 
-  defp release_unattached_room(meeting, %{video_room_id: room_id} = video_room_attrs)
-       when is_binary(room_id) do
+  @doc """
+  Enqueues deletion of a provider room created for `meeting` that was never
+  attached to it, so nothing in the database points at it. `video_room_attrs`
+  carries the room's `:video_room_id` and `:video_provider`.
+
+  Best-effort: a failure to enqueue is logged with the room id in the clear,
+  the one way left to find the room again, and never returned.
+  """
+  @spec release_unattached_room(MeetingSchema.t(), map()) :: :ok
+  def release_unattached_room(meeting, %{video_room_id: room_id} = video_room_attrs)
+      when is_binary(room_id) do
     room = %{meeting | video_room_id: room_id, video_provider: video_room_attrs.video_provider}
 
     case VideoSyncWorker.release(room) do
@@ -171,13 +181,13 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
         Logger.error("Failed to enqueue release of an unattached video room",
           meeting_id: meeting.id,
           orphaned_video_room_id: room_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
     end
   end
 
   # A provider with no room id (a static custom link) has nothing to delete.
-  defp release_unattached_room(_meeting, _video_room_attrs), do: :ok
+  def release_unattached_room(_meeting, _video_room_attrs), do: :ok
 
   @spec update_meeting_with_video_room(MeetingSchema.t(), map()) ::
           {:ok, MeetingSchema.t()} | {:error, :database_update_failed}
@@ -194,7 +204,7 @@ defmodule Tymeslot.Meetings.VideoRoomAttachment do
       {:error, changeset} ->
         Logger.error("Failed to update meeting with video room",
           meeting_id: meeting.id,
-          errors: inspect(changeset.errors)
+          errors: LogFormat.reason(changeset.errors)
         )
 
         {:error, :database_update_failed}

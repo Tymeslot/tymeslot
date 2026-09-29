@@ -22,9 +22,13 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     priority: 1
 
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.ExpectedJobOutcome
+  alias Tymeslot.Infrastructure.Logging.LogFormat
+  alias Tymeslot.Infrastructure.Tasks
   alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Jobs.ObanJobQueries
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.CalendarEventSync
@@ -58,6 +62,18 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   @doc """
   Performs the calendar event operation based on the action specified.
   """
+  @behaviour ExpectedJobOutcome
+
+  # The meeting is gone, a conflicting write was handed to the offline queue,
+  # or only the owner can fix the integration by reconnecting. A calendar
+  # refusing authentication is recorded.
+  @meeting_gone "Meeting not found"
+  @queued_for_replay "Conflicting server-side change; queued for offline replay"
+
+  @impl ExpectedJobOutcome
+  def expected_outcome?(reason),
+    do: reason in [@meeting_gone, @queued_for_replay] or reason == ReauthHandling.discard_reason()
+
   @impl Oban.Worker
   def perform(
         %Oban.Job{args: %{"action" => action, "meeting_id" => meeting_id}, attempt: attempt} = job
@@ -78,7 +94,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       handle_result(result, job)
     else
       task =
-        Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+        Tasks.async(Tymeslot.TaskSupervisor, fn ->
           dispatch_action(action, meeting_id, job.args, attempt)
         end)
 
@@ -177,10 +193,10 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
         Logger.error("Calendar operation crashed",
           action: action,
           meeting_id: meeting_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
-        {:error, "Calendar operation crashed: #{inspect(reason)}"}
+        {:error, "Calendar operation crashed: #{LogFormat.reason(reason)}"}
 
       nil ->
         Logger.error("Calendar operation timed out",
@@ -200,8 +216,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   defp handle_result(result, job) do
     case result do
       :ok ->
-        clear_offline_queue_tag(job)
-        maybe_invalidate_availability_cache(job)
+        tidy_after_write(job)
         :ok
 
       {:error, error_type} ->
@@ -244,10 +259,26 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     end
   end
 
-  defp clear_offline_queue_tag(%Oban.Job{args: args}) do
-    case MeetingQueries.get_meeting(args["meeting_id"]) do
-      {:ok, meeting} -> QueueWiring.clear(meeting, nil)
-      {:error, _reason} -> :ok
+  # A successful write leaves the meeting's offline queue tag to clear and,
+  # for a create, the organiser's availability cache to invalidate.
+  defp tidy_after_write(%Oban.Job{args: %{"action" => action, "meeting_id" => meeting_id}}) do
+    case MeetingQueries.get_meeting(meeting_id) do
+      {:ok, meeting} ->
+        QueueWiring.clear(meeting, nil)
+        maybe_invalidate_availability_cache(action, meeting)
+
+      # A deletion counts a meeting that is already gone as done.
+      {:error, :not_found} when action == "delete" ->
+        :ok
+
+      # Deleted while the write was in flight: the calendar now holds an
+      # event for a booking that no longer exists.
+      {:error, reason} ->
+        Logger.warning("Meeting gone after a successful calendar write",
+          meeting_id: meeting_id,
+          action: action,
+          reason: reason
+        )
     end
   end
 
@@ -261,16 +292,10 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   # booking-page load reflects it immediately rather than the cached window
   # from before the event existed. "update"/"delete" don't shift what counts
   # as busy in a way booking-page callers observe, so this is create-only.
-  defp maybe_invalidate_availability_cache(%Oban.Job{
-         args: %{"action" => "create", "meeting_id" => meeting_id}
-       }) do
-    case MeetingQueries.get_meeting(meeting_id) do
-      {:ok, meeting} -> AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
-      {:error, _reason} -> :ok
-    end
-  end
+  defp maybe_invalidate_availability_cache("create", meeting),
+    do: AvailabilityCache.invalidate_for_user(meeting.organizer_user_id)
 
-  defp maybe_invalidate_availability_cache(_job), do: :ok
+  defp maybe_invalidate_availability_cache(_action, _meeting), do: :ok
 
   # Group all handle_error_result/2 clauses together
   defp handle_error_result(:rate_limited, job) do
@@ -314,7 +339,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
 
   defp handle_error_result(:meeting_not_found, _job) do
     Logger.error("Meeting not found, discarding job")
-    {:discard, "Meeting not found"}
+    {:discard, @meeting_gone}
   end
 
   defp handle_error_result(:precondition_failed, %Oban.Job{args: %{"action" => "update"}}) do
@@ -329,7 +354,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     # Tymeslot owns, which force-writes and actually settles the conflict.
     Logger.info("Calendar event changed on the server, handing the write to the offline queue")
 
-    {:discard, "Conflicting server-side change; queued for offline replay"}
+    {:discard, @queued_for_replay}
   end
 
   defp handle_error_result(:precondition_failed, _job) do

@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.SingleEventFetchTest do
   alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookAPI
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Test.CalDAVAccountStub
 
   setup :verify_on_exit!
 
@@ -99,7 +100,20 @@ defmodule Tymeslot.Integrations.Calendar.SingleEventFetchTest do
           calendar_paths: ["/calendars/alice/home/", "/calendars/alice/work/"]
         )
 
-      %{integration: integration, user: user, base: "https://#{host}"}
+      # The account also holds a calendar Tymeslot does not read, where the
+      # search for a moved event reaches.
+      account = %{
+        calendars: [
+          "/calendars/alice/home/",
+          "/calendars/alice/work/",
+          "/calendars/alice/private/"
+        ],
+        notify: self()
+      }
+
+      answer_account(account)
+
+      %{integration: integration, user: user, base: "https://#{host}", account: account}
     end
 
     # The event may live in any calendar the integration reaches.
@@ -113,14 +127,71 @@ defmodule Tymeslot.Integrations.Calendar.SingleEventFetchTest do
                Operations.fetch_event(%{uid: "grid-1"}, {ctx.integration.id, ctx.user.id})
     end
 
-    test "is not found only when every calendar says so", ctx do
+    test "is not found only when no calendar of the account has it", ctx do
       answer_gets(ctx, %{
         "/calendars/alice/home/grid-2.ics" => {404, ""},
         "/calendars/alice/work/grid-2.ics" => {410, ""}
       })
 
+      # A UID the server's substring match also finds is another event.
+      answer_account(
+        Map.put(ctx.account, :resources, %{
+          "/calendars/alice/private/" => [{"/calendars/alice/private/x.ics", ical("grid-2-copy")}]
+        })
+      )
+
       assert {:error, :not_found} =
                Operations.fetch_event(%{uid: "grid-2"}, {ctx.integration.id, ctx.user.id})
+
+      for path <- ctx.account.calendars, do: assert_received({:dav_report, ^path, "grid-2"})
+    end
+
+    # A client that moves an event between calendars need not keep the name of
+    # its resource, and the event's href names the calendar it left.
+    test "finds an event moved to a calendar the integration does not read", ctx do
+      answer_gets(ctx, %{"/calendars/alice/work/moved.ics" => {404, ""}})
+
+      answer_account(
+        Map.put(ctx.account, :resources, %{
+          "/calendars/alice/private/" => [
+            {"/calendars/alice/private/D1F0-renamed.ics", ical("grid-7")}
+          ]
+        })
+      )
+
+      assert {:ok, [%{uid: "grid-7", provider_calendar_id: "/calendars/alice/private/"}]} =
+               Operations.fetch_event(
+                 %{uid: "grid-7", provider_event_id: "/calendars/alice/work/moved.ics"},
+                 {ctx.integration.id, ctx.user.id}
+               )
+    end
+
+    test "is not not-found when the account's calendars could not be listed", ctx do
+      answer_gets(ctx, %{
+        "/calendars/alice/home/grid-8.ics" => {404, ""},
+        "/calendars/alice/work/grid-8.ics" => {404, ""}
+      })
+
+      answer_account(Map.put(ctx.account, :failing, %{discovery: 500}))
+
+      assert {:error, reason} =
+               Operations.fetch_event(%{uid: "grid-8"}, {ctx.integration.id, ctx.user.id})
+
+      refute reason == :not_found
+    end
+
+    test "is not not-found when a calendar of the account could not be searched", ctx do
+      answer_gets(ctx, %{
+        "/calendars/alice/home/grid-9.ics" => {404, ""},
+        "/calendars/alice/work/grid-9.ics" => {404, ""}
+      })
+
+      answer_account(Map.put(ctx.account, :failing, %{"/calendars/alice/private/" => 500}))
+
+      assert {:error, reason} =
+               Operations.fetch_event(%{uid: "grid-9"}, {ctx.integration.id, ctx.user.id})
+
+      refute reason == :not_found
     end
 
     # One calendar that could not answer leaves the event's absence unproven.
@@ -174,6 +245,12 @@ defmodule Tymeslot.Integrations.Calendar.SingleEventFetchTest do
   defp expect_status(status) do
     expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
       {:ok, %Req.Response{status: status, body: ""}}
+    end)
+  end
+
+  defp answer_account(account) do
+    stub(HTTPClientMock, :request, fn method, url, body, _headers, _opts ->
+      CalDAVAccountStub.answer(account, method, url, body)
     end)
   end
 

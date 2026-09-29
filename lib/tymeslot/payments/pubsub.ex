@@ -15,6 +15,7 @@ defmodule Tymeslot.Payments.PubSub do
 
   alias Phoenix.PubSub
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.Logging.LogFormat
 
   # The topic every payment lifecycle event is published on.
   @payment_events_topic "payment_events:tymeslot"
@@ -85,7 +86,7 @@ defmodule Tymeslot.Payments.PubSub do
         Logger.error("PubSub broadcast failed for subscription_event",
           event: event_type,
           user_id: user_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         AdminAlerts.report(:pubsub_broadcast_failed,
@@ -121,7 +122,7 @@ defmodule Tymeslot.Payments.PubSub do
       {:error, reason} ->
         Logger.error("PubSub broadcast failed for payment_event",
           event: event_type,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         AdminAlerts.report(:pubsub_broadcast_failed,

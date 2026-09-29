@@ -35,13 +35,20 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Meetings.MeetingSchema
 
   @type action :: :create | :update | :delete
-  @type meeting :: %{
-          :uid => String.t(),
-          :calendar_integration_id => integer(),
-          optional(atom()) => term()
-        }
+  @typedoc """
+  What a queue row is for: a meeting, whose event is keyed by its
+  `calendar_uid`, or a calendar grid event target, keyed by its `uid`.
+  """
+  @type meeting ::
+          MeetingSchema.t()
+          | %{
+              :uid => String.t(),
+              :calendar_integration_id => integer(),
+              optional(atom()) => term()
+            }
 
   @doc """
   Tags a cache row for offline retry.
@@ -64,9 +71,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
       attrs = build_attrs(meeting, integration, action, event_data)
       _result = QueueQueries.upsert_queue_entry(attrs)
 
+      # A grid event target carries no meeting id.
       Logger.info("CalDAV queue wiring tagged cache row for offline retry",
         calendar_integration_id: integration_id,
-        uid: meeting.uid,
+        meeting_id: Map.get(meeting, :id),
         action: action
       )
 
@@ -81,18 +89,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
 
   Called from the worker's success path so a row tagged on a transient
   failure earlier in the same Oban run is untagged once the retry
-  succeeds. Matches on `(integration_id, uid)` and updates only if the
-  row exists — a missing row is a no-op.
+  succeeds. Matches on the integration and the event's UID and updates only
+  if the row exists — a missing row is a no-op.
 
   Returns `:ok` regardless of outcome.
   """
   @spec clear(meeting(), String.t() | nil) :: :ok
   def clear(%{calendar_integration_id: nil}, _etag), do: :ok
 
-  def clear(%{calendar_integration_id: integration_id, uid: uid}, etag) do
-    _result = QueueQueries.mark_synced(integration_id, uid, etag)
+  def clear(%{calendar_integration_id: integration_id} = meeting, etag) do
+    _result = QueueQueries.mark_synced(integration_id, event_uid(meeting), etag)
     :ok
   end
+
+  # The UID the provider event, and so its cache row, carries. A meeting's is
+  # its `calendar_uid`: its `uid` is the booking's cancel/reschedule
+  # capability and never reaches a calendar.
+  defp event_uid(%MeetingSchema{calendar_uid: calendar_uid}), do: calendar_uid
+  defp event_uid(%{uid: uid}), do: uid
 
   # ---------------------------------------------------------------------------
   # Private helpers
@@ -137,7 +151,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
     event_data = normalize_event_data(event_data)
 
     %{
-      uid: meeting.uid,
+      uid: event_uid(meeting),
       calendar_integration_id: integration.id,
       provider: integration.provider,
       # Only meaningful on a first insert, since the upsert never replaces it.

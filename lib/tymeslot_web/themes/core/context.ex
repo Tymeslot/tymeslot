@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Themes.Core.Context do
   """
 
   alias Phoenix.Component
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.ThemeCustomizations
   alias TymeslotWeb.Live.Scheduling.PreviewMode
   alias TymeslotWeb.Themes.Core.Registry
@@ -63,7 +64,7 @@ defmodule TymeslotWeb.Themes.Core.Context do
       error ->
         Logger.warning("Failed to load theme context",
           theme_id: theme_id,
-          reason: inspect(error)
+          reason: LogFormat.reason(error)
         )
 
         nil

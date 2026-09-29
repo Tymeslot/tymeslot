@@ -21,7 +21,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesCalendarSyncTest do
               organizer_user: user,
               calendar_integration_id: integration.id,
               provider_event_id: "provider-event-#{System.unique_integer([:positive])}",
-              uid: "meeting-uid-#{System.unique_integer([:positive])}"
+              calendar_uid: "calendar-uid-#{System.unique_integer([:positive])}"
             },
             overrides
           )
@@ -65,14 +65,26 @@ defmodule Tymeslot.Meetings.MeetingQueriesCalendarSyncTest do
     end
   end
 
-  describe "get_by_uid_and_integration/2" do
-    test "returns meeting when found by uid" do
+  describe "get_by_calendar_uid_and_integration/2" do
+    test "returns meeting when found by calendar uid" do
       {_user, integration, meeting} = create_meeting_with_calendar()
 
       assert {:ok, found} =
-               MeetingQueries.get_by_uid_and_integration(integration.id, meeting.uid)
+               MeetingQueries.get_by_calendar_uid_and_integration(
+                 integration.id,
+                 meeting.calendar_uid
+               )
 
       assert found.id == meeting.id
+    end
+
+    # The booking's own uid is never written to a calendar, so an event
+    # claiming it is not this booking's.
+    test "does not match the booking's own uid" do
+      {_user, integration, meeting} = create_meeting_with_calendar()
+
+      assert {:error, :not_found} =
+               MeetingQueries.get_by_calendar_uid_and_integration(integration.id, meeting.uid)
     end
 
     test "returns :not_found when no match" do
@@ -80,7 +92,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesCalendarSyncTest do
       integration = insert(:calendar_integration, user: user)
 
       assert {:error, :not_found} =
-               MeetingQueries.get_by_uid_and_integration(integration.id, "nonexistent")
+               MeetingQueries.get_by_calendar_uid_and_integration(integration.id, "nonexistent")
     end
   end
 
@@ -95,14 +107,21 @@ defmodule Tymeslot.Meetings.MeetingQueriesCalendarSyncTest do
         )
 
       assert Map.get(result, meeting.provider_event_id).id == meeting.id
-      assert Map.get(result, meeting.uid).id == meeting.id
+      assert Map.get(result, meeting.calendar_uid).id == meeting.id
+      refute Map.has_key?(result, meeting.uid)
+    end
+
+    test "does not match a meeting by its booking uid" do
+      {_user, integration, meeting} = create_meeting_with_calendar(%{provider_event_id: nil})
+
+      assert MeetingQueries.list_by_calendar_identifiers(integration.id, [meeting.uid]) == %{}
     end
 
     test "matches a CalDAV meeting by UID when it carries no provider event id" do
       {_user, integration, meeting} =
         create_meeting_with_calendar(%{
           provider_event_id: nil,
-          uid: "abc123@tymeslot.com"
+          calendar_uid: "abc123@tymeslot.com"
         })
 
       # The cached CalDAV row offers its href alongside the shared UID; only

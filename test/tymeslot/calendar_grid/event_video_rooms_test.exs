@@ -99,22 +99,33 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
     end
   end
 
-  describe "identified/4" do
+  describe "identified/5" do
     # Google and Outlook address the event by the id they returned from then on,
     # and Google only within the calendar it was written to.
-    test "records the identifier and calendar the provider wrote the event to", %{
-      user: user,
-      calendar: calendar
-    } do
+    test "records the identifier, calendar and iCalendar UID the provider wrote the event with",
+         %{
+           user: user,
+           calendar: calendar
+         } do
       room =
         insert_room(user, calendar, "identified.example.com", "iden0001", "grid-uid",
           provider_event_id: nil
         )
 
-      assert :ok = EventVideoRooms.identified(calendar.id, "grid-uid", "googleid0001", "work")
+      assert :ok =
+               EventVideoRooms.identified(
+                 calendar.id,
+                 "grid-uid",
+                 "googleid0001",
+                 "work",
+                 "googleid0001@google.com"
+               )
 
-      assert %{provider_event_id: "googleid0001", provider_calendar_id: "work"} =
-               Repo.reload!(room)
+      assert %{
+               provider_event_id: "googleid0001",
+               provider_calendar_id: "work",
+               event_ical_uid: "googleid0001@google.com"
+             } = Repo.reload!(room)
     end
   end
 
@@ -258,6 +269,7 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
       calendar: calendar
     } do
       room = insert_room(user, calendar, "relocate.example.com", "relo0001", "grid-old")
+      :ok = EventVideoRoomQueries.mark_seen(room, DateTime.utc_now(:second), "grid-old-ical")
       destination = insert(:calendar_integration, user: user)
 
       assert :ok =
@@ -272,7 +284,10 @@ defmodule Tymeslot.CalendarGrid.EventVideoRoomsTest do
       assert %{
                event_uid: "grid-new",
                provider_event_id: "outlookid0001",
-               provider_calendar_id: "destination-calendar"
+               provider_calendar_id: "destination-calendar",
+               # Not yet seen under its new identity.
+               event_seen_at: nil,
+               event_ical_uid: nil
              } =
                moved = Repo.reload!(room)
 

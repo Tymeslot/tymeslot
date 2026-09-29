@@ -5,6 +5,7 @@ defmodule Tymeslot.Timezones.Formatting do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Timezones.Data
 
   @spec format(term()) :: String.t()
@@ -30,7 +31,7 @@ defmodule Tymeslot.Timezones.Formatting do
   rescue
     exception ->
       Logger.warning("Could not determine UTC offset, falling back to UTC",
-        timezone_id: inspect(timezone_id),
+        timezone_id: LogFormat.reason(timezone_id),
         error: Exception.message(exception)
       )
 

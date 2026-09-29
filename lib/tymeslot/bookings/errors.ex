@@ -16,6 +16,8 @@ defmodule Tymeslot.Bookings.Errors do
   scope for this vocabulary.
   """
 
+  alias Tymeslot.Infrastructure.ErrorTracking
+
   @typedoc "Semantic booking error atoms shared across the booking domain."
   @type classified_error ::
           :meeting_type_inactive
@@ -91,6 +93,43 @@ defmodule Tymeslot.Bookings.Errors do
 
   def classify_error(reason) when is_binary(reason), do: reason
   def classify_error(_other), do: :booking_failed
+
+  # Once validation has passed, the only failures creating the meeting is
+  # expected to meet are the ones the classification names: a lost race, a
+  # limit reached, a changeset refusing the booker's input. Anything that
+  # classifies as nothing better than `:booking_failed` (a guest row the
+  # database refused after sanitising, a calendar job Oban would not insert,
+  # a reason nobody wrote a clause for) is a bug or an outage, and is
+  # recorded. Two reasons that also classify as `:booking_failed` are not:
+  # `:validation_error` is the booker's input refused, and `:database_error`
+  # was recorded, with its exception, by `Meetings.Scheduling` where it was
+  # raised.
+  @not_reported [:validation_error, :database_error]
+
+  @doc """
+  Classifies a failure from creating a booking's meeting, as
+  `classify_error/1` does, and records in error tracking any reason that
+  classifies as nothing better than `:booking_failed` (see the comment
+  above `@not_reported`).
+
+  Shared by `Tymeslot.Bookings.Create` and `Tymeslot.Bookings.CreateGroup`.
+  """
+  @spec classify_creation_error(term(), map()) :: classified_error() | String.t()
+  def classify_creation_error(reason, booking_data) do
+    case classify_error(reason) do
+      :booking_failed when reason not in @not_reported ->
+        :ok =
+          ErrorTracking.report_error(reason, nil, %{
+            organizer_user_id: booking_data.organizer_user_id,
+            meeting_type_id: booking_data.meeting_type_id
+          })
+
+        :booking_failed
+
+      classified ->
+        classified
+    end
+  end
 
   @doc """
   Classifies a `Tymeslot.Bookings.ScheduleCheck.validate_slot_on_schedule/6`

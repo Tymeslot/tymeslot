@@ -133,7 +133,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
     test "process_full_fetch/6 marks a row mirroring one of our meetings", %{
       integration: integration
     } do
-      insert(:meeting, calendar_integration_id: integration.id, uid: "ours-uid")
+      insert(:meeting, calendar_integration_id: integration.id, calendar_uid: "ours-uid")
 
       assert :ok =
                SyncReconciler.process_full_fetch(
@@ -155,7 +155,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
     test "process_tier1/3 marks a row mirroring one of our meetings", %{
       integration: integration
     } do
-      insert(:meeting, calendar_integration_id: integration.id, uid: "ours-uid")
+      insert(:meeting, calendar_integration_id: integration.id, calendar_uid: "ours-uid")
 
       assert :ok = SyncReconciler.process_tier1(integration, [raw_event("ours-uid")], [])
 
@@ -175,7 +175,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
       assert {:ok, %ProviderCalendarEventSchema{created_by_tymeslot: false}} =
                ProviderCalendarEventQueries.get_by_uid(integration.id, "ours-uid")
 
-      insert(:meeting, calendar_integration_id: integration.id, uid: "ours-uid")
+      insert(:meeting, calendar_integration_id: integration.id, calendar_uid: "ours-uid")
 
       assert :ok = SyncReconciler.process_tier1(integration, [raw_event("ours-uid")], [])
 

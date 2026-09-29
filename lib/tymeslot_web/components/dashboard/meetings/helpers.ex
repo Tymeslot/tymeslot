@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
   """
 
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Meetings.Guests
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.DateTimeUtils.TimeFormat
   alias TymeslotWeb.Helpers.LocaleFormat
@@ -22,6 +23,23 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
       {:error, _reason} -> false
     end
   end
+
+  @doc """
+  Whether the host may still add guests to this booking: the meeting takes
+  guests (`Guests.invitations_open?/1`) and has room for another.
+
+  The meeting type's `allow_guests` is deliberately not consulted — it governs
+  what the person booking may do on the public form, not whom the host may
+  invite to their own meeting afterwards.
+
+  Counted from the guests preloaded onto the card, so a list of bookings does
+  not turn into one query per row.
+  """
+  @spec can_add_guests?(Ecto.Schema.t() | map()) :: boolean()
+  def can_add_guests?(%{guests: guests} = meeting) when is_list(guests),
+    do: Guests.invitations_open?(meeting) and length(guests) < Guests.max_guests()
+
+  def can_add_guests?(meeting), do: Guests.invitations_open?(meeting)
 
   @spec can_reschedule?(Ecto.Schema.t()) :: boolean()
   def can_reschedule?(meeting) do

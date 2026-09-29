@@ -55,7 +55,11 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
 
     test ":dispute_created includes dispute_id, reason, and manual review" do
       msg =
-        AlertTypes.format_message(:dispute_created, %{dispute_id: "dp_1", reason: "fraudulent"})
+        AlertTypes.format_message(:dispute_created, %{
+          dispute_id: "dp_1",
+          reason_code: :dispute_created,
+          reason_message: "fraudulent"
+        })
 
       assert msg =~ "dp_1"
       assert msg =~ "fraudulent"
@@ -68,15 +72,36 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
       assert msg =~ "99"
     end
 
-    test ":calendar_sync_error includes email and reason" do
+    test ":calendar_sync_error includes the masked email and reason" do
       msg =
         AlertTypes.format_message(:calendar_sync_error, %{
-          owner_email: "a@b.com",
-          reason: :timeout
+          owner_email_masked: "a***@b.com",
+          reason_code: :timeout,
+          reason_message: "timeout"
         })
 
-      assert msg =~ "a@b.com"
+      assert msg =~ "a***@b.com"
       assert msg =~ "timeout"
+    end
+
+    test ":calendar_sync_error falls back to the reason code without a message" do
+      message =
+        AlertTypes.format_message(:calendar_sync_error, %{
+          owner_email_masked: "a***@b.com",
+          reason_code: :timeout
+        })
+
+      assert message == "Calendar sync error for a***@b.com: timeout"
+    end
+
+    test ":calendar_sync_error never renders a raw owner_email key" do
+      message =
+        AlertTypes.format_message(:calendar_sync_error, %{
+          owner_email: "a@b.com",
+          reason_code: :timeout
+        })
+
+      assert message == "Calendar sync error for unknown: timeout"
     end
 
     test ":pubsub_broadcast_failed includes event name" do
@@ -131,17 +156,34 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
       assert msg =~ "100"
     end
 
-    test ":oban_job_failure includes worker, queue, and reason" do
+    test ":oban_jobs_force_discarded names who discarded how many jobs of which workers" do
+      metadata = %{
+        count: 2,
+        discarded_by: "Oban.Lifeline",
+        jobs: "Tymeslot.Workers.EmailWorker (emails): 2",
+        job_ids: "4, 7"
+      }
+
+      assert AlertTypes.format_message(:oban_jobs_force_discarded, metadata) ==
+               "Oban.Lifeline discarded 2 Oban jobs that never finished: " <>
+                 "Tymeslot.Workers.EmailWorker (emails): 2"
+
+      # Two sweeps that each discard different jobs of the same worker read
+      # the same, and must still raise two alerts.
+      refute AlertTypes.dedup_key(:oban_jobs_force_discarded, metadata) ==
+               AlertTypes.dedup_key(:oban_jobs_force_discarded, %{metadata | job_ids: "8, 9"})
+    end
+
+    test ":new_error names the exception, its source and the reason" do
       msg =
-        AlertTypes.format_message(:oban_job_failure, %{
-          worker: "MyApp.SomeWorker",
-          queue: "calendar_events",
+        AlertTypes.format_message(:new_error, %{
+          summary: "New error",
+          kind: "Elixir.RuntimeError",
+          source_function: "Tymeslot.Bookings.create_booking/2",
           reason_message: "boom"
         })
 
-      assert msg =~ "MyApp.SomeWorker"
-      assert msg =~ "calendar_events"
-      assert msg =~ "boom"
+      assert msg == "New error: RuntimeError in Tymeslot.Bookings.create_booking/2: boom"
     end
 
     test ":reconciliation_discrepancies includes count" do
@@ -242,50 +284,6 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
 
       assert msg =~ "meeting 99"
     end
-
-    # The provider's rejection text can embed the recipient's own address
-    # (e.g. Postmark's inactive-address message); the message this function
-    # returns reaches Logger and the persisted Oban job args, so it must not
-    # carry the raw address.
-    test ":recipient_email_rejected masks an email address embedded in the reason" do
-      msg =
-        AlertTypes.format_message(:recipient_email_rejected, %{
-          summary: "Recipient permanently undeliverable, email discarded",
-          reason_message:
-            "{422, %{\"ErrorCode\" => 406, \"Message\" => \"Found inactive addresses: jane.doe@example.com\"}}"
-        })
-
-      refute msg =~ "jane.doe@example.com"
-      assert msg =~ "j***@example.com"
-    end
-  end
-
-  describe "unhandled_crash" do
-    test "is registered as a System/error alert" do
-      assert %{category: "System", severity: :error} = AlertTypes.get(:unhandled_crash)
-    end
-
-    test "format_message/2 includes the kind and reason detail" do
-      msg =
-        AlertTypes.format_message(:unhandled_crash, %{
-          kind: :error,
-          reason_message: "** (RuntimeError) boom"
-        })
-
-      assert msg =~ "error"
-      assert msg =~ "boom"
-    end
-
-    test "format_message/2 falls back to summary when no reason_message" do
-      msg =
-        AlertTypes.format_message(:unhandled_crash, %{
-          kind: :exit,
-          summary: "Unhandled exit crash"
-        })
-
-      assert msg =~ "exit"
-      assert msg =~ "Unhandled exit crash"
-    end
   end
 
   describe "format_message/2 — fallback" do
@@ -296,27 +294,20 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
   end
 
   describe "dedup_key/2" do
-    test "oban_job_failure is stable across different failure reasons" do
-      base = %{worker: "Tymeslot.Workers.SyncWorker", queue: "calendar_events", job_id: 1}
-
-      key_a = AlertTypes.dedup_key(:oban_job_failure, Map.put(base, :reason_message, "boom 1"))
-
-      key_b =
-        AlertTypes.dedup_key(
-          :oban_job_failure,
-          base |> Map.put(:reason_message, "boom 2") |> Map.put(:job_id, 2)
-        )
+    test "new_error is one key per ErrorTracker error, whatever the reason" do
+      key_a = AlertTypes.dedup_key(:new_error, %{error_id: 7, reason_message: "boom 1"})
+      key_b = AlertTypes.dedup_key(:new_error, %{error_id: 7, reason_message: "boom 2"})
 
       assert key_a == key_b
-      assert key_a =~ "Tymeslot.Workers.SyncWorker"
-      assert key_a =~ "calendar_events"
+      refute key_a == AlertTypes.dedup_key(:new_error, %{error_id: 8, reason_message: "boom 1"})
     end
 
-    test "oban_job_failure differs across workers" do
-      key_a = AlertTypes.dedup_key(:oban_job_failure, %{worker: "WorkerA", queue: "q"})
-      key_b = AlertTypes.dedup_key(:oban_job_failure, %{worker: "WorkerB", queue: "q"})
+    test "error_regression is one key per occurrence that brought the error back" do
+      key_a = AlertTypes.dedup_key(:error_regression, %{error_id: 7, occurrence_id: 40})
+      key_b = AlertTypes.dedup_key(:error_regression, %{error_id: 7, occurrence_id: 41})
 
       refute key_a == key_b
+      refute key_a == AlertTypes.dedup_key(:new_error, %{error_id: 7})
     end
 
     test "integration_health_failure for a signal ignores the live count" do
@@ -372,119 +363,10 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
                AlertTypes.format_message(:unhandled_webhook, metadata)
     end
 
-    test "unhandled_crash is stable across messages with the same reason_code and top frame" do
-      stacktrace =
-        "    (myapp 1.0.0) lib/myapp/worker.ex:42: MyApp.Worker.run/1\n    (oban 2.0.0) lib/oban/queue/executor.ex:10: Oban.Queue.Executor.call/2"
-
-      key_a =
-        AlertTypes.dedup_key(:unhandled_crash, %{
-          reason_code: Postgrex.Error,
-          stacktrace: stacktrace,
-          reason_message: "could not process user_id=1"
-        })
-
-      key_b =
-        AlertTypes.dedup_key(:unhandled_crash, %{
-          reason_code: Postgrex.Error,
-          stacktrace: stacktrace,
-          reason_message: "could not process user_id=9999"
-        })
-
-      assert key_a == key_b
-    end
-
-    test "unhandled_crash differs across reason_codes" do
-      stacktrace = "    (myapp 1.0.0) lib/myapp/worker.ex:42: MyApp.Worker.run/1"
-
-      key_a =
-        AlertTypes.dedup_key(:unhandled_crash, %{reason_code: KeyError, stacktrace: stacktrace})
-
-      key_b =
-        AlertTypes.dedup_key(:unhandled_crash, %{
-          reason_code: ArgumentError,
-          stacktrace: stacktrace
-        })
-
-      refute key_a == key_b
-    end
-
-    test "unhandled_crash differs across top stacktrace frames" do
-      key_a =
-        AlertTypes.dedup_key(:unhandled_crash, %{
-          reason_code: RuntimeError,
-          stacktrace: "    lib/myapp/foo.ex:10: Foo.bar/1"
-        })
-
-      key_b =
-        AlertTypes.dedup_key(:unhandled_crash, %{
-          reason_code: RuntimeError,
-          stacktrace: "    lib/myapp/baz.ex:99: Baz.qux/2"
-        })
-
-      refute key_a == key_b
-    end
-
-    test "unhandled_crash without reason_code or stacktrace falls back to the formatted message" do
-      metadata = %{kind: :error, reason_message: "boom"}
-
-      assert AlertTypes.dedup_key(:unhandled_crash, metadata) ==
-               AlertTypes.format_message(:unhandled_crash, metadata)
-    end
-
-    test "unhandled_crash with a reason_code but no stacktrace falls back to the message" do
-      key_a =
-        AlertTypes.dedup_key(:unhandled_crash, %{
-          reason_code: RuntimeError,
-          reason_message: "msg A"
-        })
-
-      key_b =
-        AlertTypes.dedup_key(:unhandled_crash, %{
-          reason_code: RuntimeError,
-          reason_message: "msg B"
-        })
-
-      refute key_a == key_b
-    end
-
     # analytics_tracking_anomaly dedup_key/2 — spam-prevention invariant:
     # two payloads with the same :kind but different per-run counts must produce
     # an identical key so that a recurring daily anomaly collapses to one alert
     # per dedup window.
-    test "invalid_calendar_event is stable across the events that failed" do
-      base = %{provider: :caldav, calendar_integration_id: 7, reason: "all_day is required"}
-
-      key_a = AlertTypes.dedup_key(:invalid_calendar_event, Map.put(base, :event_uid, "evt-1"))
-      key_b = AlertTypes.dedup_key(:invalid_calendar_event, Map.put(base, :event_uid, "evt-9999"))
-
-      assert key_a == key_b
-      assert key_a =~ "invalid_calendar_event"
-      assert key_a =~ "caldav"
-    end
-
-    test "invalid_calendar_event differs across integrations and reasons" do
-      base = %{provider: :caldav, calendar_integration_id: 7, reason: "all_day is required"}
-
-      refute AlertTypes.dedup_key(:invalid_calendar_event, base) ==
-               AlertTypes.dedup_key(
-                 :invalid_calendar_event,
-                 Map.put(base, :calendar_integration_id, 8)
-               )
-
-      refute AlertTypes.dedup_key(:invalid_calendar_event, base) ==
-               AlertTypes.dedup_key(
-                 :invalid_calendar_event,
-                 Map.put(base, :reason, "uid missing")
-               )
-    end
-
-    test "invalid_calendar_event without an integration keeps the message-based key" do
-      metadata = %{provider: :caldav, scenario: "audit"}
-
-      assert AlertTypes.dedup_key(:invalid_calendar_event, metadata) ==
-               AlertTypes.format_message(:invalid_calendar_event, metadata)
-    end
-
     test "analytics_tracking_anomaly is stable across different per-run counts" do
       key_a =
         AlertTypes.dedup_key(:analytics_tracking_anomaly, %{
@@ -526,6 +408,23 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypesTest do
     test "analytics_tracking_anomaly falls back to 'unknown' when :kind is absent" do
       key = AlertTypes.dedup_key(:analytics_tracking_anomaly, %{converting_visitors: 5})
       assert key == "analytics_tracking_anomaly:unknown"
+    end
+
+    # The headline names the owner by masked address, which two owners can
+    # share, so the key identifies the failing calendar, and never the owner.
+    test "calendar_sync_error keys on the integration, then the meeting, never the owner" do
+      base = %{owner_email: "owner@example.com", reason_message: "boom"}
+      with_meeting = Map.put(base, :meeting_id, 10)
+      with_integration = Map.put(with_meeting, :calendar_integration_id, 1)
+
+      assert AlertTypes.dedup_key(:calendar_sync_error, with_integration) ==
+               "calendar_sync_error:integration 1:boom"
+
+      assert AlertTypes.dedup_key(:calendar_sync_error, with_meeting) ==
+               "calendar_sync_error:meeting 10:boom"
+
+      assert AlertTypes.dedup_key(:calendar_sync_error, base) ==
+               "calendar_sync_error:unknown:boom"
     end
 
     # A rejected recipient's identity is the account it belongs to, not the

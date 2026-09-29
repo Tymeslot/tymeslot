@@ -14,16 +14,22 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
   `CONTACT` lines and their invitations dropped.
   """
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :calendar
   @moduletag :integration
 
   import Mox
+  import Tymeslot.WorkerTestHelpers, only: [running_job: 2]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.ICalBuilder.LineFolder
+  alias Tymeslot.Integrations.Calendar.ICalNormaliser
   alias Tymeslot.Integrations.Calendar.Operations
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Workers.SyncCalDavCalendarWorker
+  alias Tymeslot.Workers.SyncRequest
 
   setup :verify_on_exit!
 
@@ -198,95 +204,249 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
     end
   end
 
-  describe "rescheduling one occurrence of a synced CalDAV series" do
-    # The occurrence the sync expanded out of the series below: it carries the
-    # master's RRULE, and its href is the series' resource, because on CalDAV
-    # there is only ever the one document.
-    @series_ical """
-    BEGIN:VCALENDAR\r
-    VERSION:2.0\r
-    BEGIN:VEVENT\r
-    UID:weekly-standup\r
-    DTSTAMP:20260901T090000Z\r
-    DTSTART:20260908T090000Z\r
-    DTEND:20260908T091500Z\r
-    RRULE:FREQ=WEEKLY;BYDAY=TU\r
-    SUMMARY:Weekly standup\r
-    END:VEVENT\r
-    END:VCALENDAR\r
-    """
+  describe "editing one occurrence of a synced CalDAV series" do
+    # The series as the server holds it: a Berlin master whose 29 September
+    # occurrence was deleted earlier, which is the EXDATE a write of the
+    # master's properties would rewrite in UTC.
+    @series_href "/cal/weekly-standup.ics"
+    @series_url "https://caldav.example.com/cal/weekly-standup.ics"
+    @series_master [
+      "BEGIN:VEVENT",
+      "UID:weekly-standup",
+      "DTSTAMP:20260901T090000Z",
+      "DTSTART;TZID=Europe/Berlin:20260908T090000",
+      "DTEND;TZID=Europe/Berlin:20260908T091500",
+      "RRULE:FREQ=WEEKLY;BYDAY=TU",
+      "EXDATE;TZID=Europe/Berlin:20260929T090000",
+      "SUMMARY:Weekly standup",
+      "END:VEVENT"
+    ]
+    @series_ical Enum.join(
+                   ["BEGIN:VCALENDAR", "VERSION:2.0"] ++ @series_master ++ ["END:VCALENDAR"],
+                   "\r\n"
+                 ) <> "\r\n"
 
-    setup %{integration: integration} do
-      occurrence =
+    setup :insert_series
+
+    defp insert_series(%{integration: integration}) do
+      row = fn key, start_at ->
         insert(:provider_calendar_event,
           calendar_integration: integration,
-          uid: "weekly-standup_20260915T090000",
+          uid: "weekly-standup_#{key}",
           provider: "caldav",
           provider_calendar_id: "/cal/",
-          provider_event_id: "/cal/weekly-standup.ics",
+          provider_event_id: @series_href,
           summary: "Weekly standup",
-          start_at: ~U[2026-09-15 09:00:00.000000Z],
-          end_at: ~U[2026-09-15 09:15:00.000000Z],
+          start_at: start_at,
+          end_at: DateTime.add(start_at, 15, :minute),
           all_day: false,
+          timezone: "Europe/Berlin",
           recurrence_rule: "FREQ=WEEKLY;BYDAY=TU",
+          provider_metadata: %{"uid" => "weekly-standup"},
           etag: "\"etag-1\"",
           raw_ical: @series_ical,
           sync_state: "synced"
         )
+      end
 
-      %{occurrence: occurrence}
+      %{
+        occurrence: row.("20260915T090000", ~U[2026-09-15 07:00:00.000000Z]),
+        sibling: row.("20260922T090000", ~U[2026-09-22 07:00:00.000000Z])
+      }
     end
 
-    # No `expect`: under `verify_on_exit!` a PUT that reached the server would
-    # fail the test as an unexpected call. That is the assertion — the patcher
-    # would have rewritten the master's DTSTART and moved every Tuesday.
-    test "is refused before anything is written", %{user: user, occurrence: occurrence} do
-      assert {:error, %{reason: :recurring_event, retry: :not_queued}} =
+    defp expect_series_put do
+      test_pid = self()
+
+      expect(Tymeslot.HTTPClientMock, :put, fn url, body, headers, _opts ->
+        send(test_pid, {:put, url, body, headers})
+        {:ok, %Req.Response{status: 204, body: "", headers: %{}}}
+      end)
+    end
+
+    defp vevent_blocks(body) do
+      body
+      |> LineFolder.unfold_lines()
+      |> Enum.chunk_while(
+        nil,
+        fn
+          "BEGIN:VEVENT", nil -> {:cont, ["BEGIN:VEVENT"]}
+          "END:VEVENT", acc when is_list(acc) -> {:cont, Enum.reverse(["END:VEVENT" | acc]), nil}
+          line, acc when is_list(acc) -> {:cont, [line | acc]}
+          _line, nil -> {:cont, nil}
+        end,
+        fn _unterminated -> {:cont, nil} end
+      )
+    end
+
+    test "a reschedule PUTs the series with an override in the series' zone", %{
+      user: user,
+      occurrence: occurrence
+    } do
+      expect_series_put()
+
+      # 11:00 in Berlin (UTC+2) on 15 September.
+      assert {:ok, updated} =
                CalendarGrid.update_event(user.id, occurrence, %{
-                 start_at: ~U[2026-09-15 11:00:00.000000Z],
-                 end_at: ~U[2026-09-15 11:15:00.000000Z]
+                 start_at: ~U[2026-09-15 09:00:00.000000Z],
+                 end_at: ~U[2026-09-15 09:15:00.000000Z]
                })
+
+      assert updated.start_at == ~U[2026-09-15 09:00:00.000000Z]
+      assert_received {:put, @series_url, body, headers}
+      assert {"If-Match", "\"etag-1\""} in headers
+
+      [master, override] = vevent_blocks(body)
+      # The master goes back as the server wrote it, its EXDATE included.
+      assert master == @series_master
+
+      assert "RECURRENCE-ID;TZID=Europe/Berlin:20260915T090000" in override
+      assert "DTSTART;TZID=Europe/Berlin:20260915T110000" in override
+      assert "DTEND;TZID=Europe/Berlin:20260915T111500" in override
+      refute Enum.any?(override, &String.starts_with?(&1, ["RRULE", "EXDATE"]))
     end
 
-    test "leaves the cached occurrence at the time it was synced at", %{
+    test "the occurrence keeps its edit and the series' rows share the new document", %{
+      user: user,
+      integration: integration,
+      occurrence: occurrence,
+      sibling: sibling,
+      event: unrelated
+    } do
+      expect_series_put()
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup, moved"})
+
+      assert_received {:put, _url, body, _headers}
+      [_master, override] = vevent_blocks(body)
+      assert "SUMMARY:Standup\\, moved" in override
+      # A rename leaves the occurrence where it was.
+      assert "DTSTART;TZID=Europe/Berlin:20260915T090000" in override
+
+      {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, occurrence.uid)
+      assert row.summary == "Standup, moved"
+
+      for uid <- [occurrence.uid, sibling.uid] do
+        {:ok, cached} = ProviderCalendarEventQueries.get_by_uid(integration.id, uid)
+        # The PUT came back without an ETag, so the next write re-reads first.
+        assert {cached.raw_ical, cached.etag} == {body, nil}
+      end
+
+      {:ok, sibling_row} = ProviderCalendarEventQueries.get_by_uid(integration.id, sibling.uid)
+      assert sibling_row.summary == "Weekly standup"
+
+      {:ok, other} = ProviderCalendarEventQueries.get_by_uid(integration.id, unrelated.uid)
+      assert {other.raw_ical, other.etag} == {@synced_ical, "\"etag-1\""}
+    end
+
+    # The series as the grid's first edit of 15 September left it, read back
+    # by the sync: the override's cached row is whatever the normaliser makes
+    # of it, not a hand-built one.
+    defp synced_override_row(integration, recurrence_id) do
+      document =
+        Enum.join(
+          ["BEGIN:VCALENDAR", "VERSION:2.0"] ++
+            @series_master ++
+            [
+              "BEGIN:VEVENT",
+              "UID:weekly-standup",
+              "DTSTAMP:20260902T090000Z",
+              recurrence_id,
+              "DTSTART;TZID=Europe/Berlin:20260915T110000",
+              "DTEND;TZID=Europe/Berlin:20260915T111500",
+              "SUMMARY:Weekly standup, moved",
+              "END:VEVENT",
+              "END:VCALENDAR"
+            ],
+          "\r\n"
+        ) <> "\r\n"
+
+      {:ok, raws} = EventProcessor.parse_ical_events(document)
+
+      {:ok, events} =
+        ICalNormaliser.normalise_events(
+          Enum.map(raws, &Map.put(&1, :href, @series_href)),
+          %{
+            calendar_integration_id: integration.id,
+            provider_calendar_id: "/cal/",
+            synced_at: DateTime.utc_now()
+          },
+          :caldav
+        )
+
+      synced = Enum.find(events, &(&1.uid == "weekly-standup_20260915T090000"))
+
+      row =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: synced.uid,
+          provider: "caldav",
+          provider_calendar_id: "/cal/",
+          provider_event_id: @series_href,
+          summary: synced.summary,
+          start_at: synced.start_at,
+          end_at: synced.end_at,
+          all_day: false,
+          timezone: synced.timezone,
+          recurrence_rule: synced.recurrence_rule,
+          provider_metadata: synced.provider_metadata,
+          etag: "\"etag-2\"",
+          raw_ical: document,
+          sync_state: "synced"
+        )
+
+      {row, document}
+    end
+
+    for recurrence_id <- [
+          "RECURRENCE-ID;TZID=Europe/Berlin:20260915T090000",
+          "RECURRENCE-ID:20260915T070000Z"
+        ] do
+      test "a second edit keeps the occurrence in the series' zone (#{recurrence_id})", %{
+        user: user,
+        integration: integration,
+        occurrence: first_edit
+      } do
+        # The row the first edit left is gone once the sync has read the
+        # override back: it is replaced by the one the normaliser makes.
+        ProviderCalendarEventQueries.delete_by_uid(integration.id, first_edit.uid)
+        {occurrence, _document} = synced_override_row(integration, unquote(recurrence_id))
+        expect_series_put()
+
+        # 12:00 in Berlin (UTC+2) on 15 September.
+        assert {:ok, _updated} =
+                 CalendarGrid.update_event(user.id, occurrence, %{
+                   start_at: ~U[2026-09-15 10:00:00.000000Z],
+                   end_at: ~U[2026-09-15 10:15:00.000000Z]
+                 })
+
+        assert_received {:put, @series_url, body, _headers}
+        assert [master, override] = vevent_blocks(body)
+        assert master == @series_master
+        assert unquote(recurrence_id) in override
+        assert "DTSTART;TZID=Europe/Berlin:20260915T120000" in override
+        assert "DTEND;TZID=Europe/Berlin:20260915T121500" in override
+        assert "SUMMARY:Weekly standup, moved" in override
+      end
+    end
+
+    test "a failed write is not queued and leaves the cache as it was", %{
       user: user,
       integration: integration,
       occurrence: occurrence
     } do
-      assert {:error, _failure} =
-               CalendarGrid.update_event(user.id, occurrence, %{
-                 start_at: ~U[2026-09-15 11:00:00.000000Z],
-                 end_at: ~U[2026-09-15 11:15:00.000000Z]
-               })
+      expect(Tymeslot.HTTPClientMock, :put, fn _url, _body, _headers, _opts ->
+        {:error, %Req.TransportError{reason: :econnrefused}}
+      end)
+
+      assert {:error, %{retry: :not_queued}} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup, moved"})
 
       {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, occurrence.uid)
-      assert row.start_at == ~U[2026-09-15 09:00:00.000000Z]
-      assert row.end_at == ~U[2026-09-15 09:15:00.000000Z]
-    end
 
-    test "is refused for an optimistic copy whose own timing already moved", %{
-      user: user,
-      occurrence: occurrence
-    } do
-      # What the grid assigns while the drag is still in flight. The guard reads
-      # the cached row rather than this, so a caller cannot edit its way past it.
-      optimistic = %{occurrence | start_at: ~U[2026-09-15 11:00:00.000000Z]}
-
-      assert {:error, %{reason: :recurring_event}} =
-               CalendarGrid.update_event(user.id, optimistic, %{
-                 start_at: ~U[2026-09-15 11:00:00.000000Z],
-                 end_at: ~U[2026-09-15 11:15:00.000000Z]
-               })
-    end
-
-    # The payload is always the complete event, so a rename carries the
-    # occurrence's own DTSTART too: the patcher would write 15 September onto
-    # a series that starts on the 8th, dropping the first occurrence. No edit
-    # of an occurrence stays inside it, which is why the refusal is not
-    # limited to a reschedule.
-    test "a rename is refused for the same reason", %{user: user, occurrence: occurrence} do
-      assert {:error, %{reason: :recurring_event, retry: :not_queued}} =
-               CalendarGrid.update_event(user.id, occurrence, %{summary: "Daily standup"})
+      assert {row.summary, row.sync_state, row.etag, row.raw_ical} ==
+               {"Weekly standup", "synced", "\"etag-1\"", @series_ical}
     end
 
     test "the one-off event on the same calendar is still editable", %{
@@ -308,6 +468,148 @@ defmodule Tymeslot.CalendarGrid.EventEditCalDAVWriteTest do
 
       assert_received {:put, body}
       assert "DTSTART:20260910T110000Z" in LineFolder.unfold_lines(body)
+    end
+  end
+
+  describe "editing every occurrence of a synced CalDAV series" do
+    setup :insert_series
+
+    defp caldav_sync_job(integration),
+      do: [
+        worker: SyncCalDavCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id, "force_full_fetch" => true}
+      ]
+
+    test "a move PUTs the whole series moved, its exception with it", %{
+      user: user,
+      occurrence: occurrence
+    } do
+      expect_series_put()
+
+      # 11:00 in Berlin (UTC+2) on 15 September: two hours later.
+      assert {:ok, updated} =
+               CalendarGrid.update_event(
+                 user.id,
+                 occurrence,
+                 %{
+                   start_at: ~U[2026-09-15 09:00:00.000000Z],
+                   end_at: ~U[2026-09-15 09:15:00.000000Z]
+                 },
+                 recurrence_scope: :all
+               )
+
+      assert updated.start_at == ~U[2026-09-15 09:00:00.000000Z]
+      assert_received {:put, @series_url, body, headers}
+      assert {"If-Match", "\"etag-1\""} in headers
+
+      assert [master] = vevent_blocks(body)
+      assert "DTSTART;TZID=Europe/Berlin:20260908T110000" in master
+      assert "DTEND;TZID=Europe/Berlin:20260908T111500" in master
+      assert "EXDATE;TZID=Europe/Berlin:20260929T110000" in master
+      assert "RRULE:FREQ=WEEKLY;BYDAY=TU" in master
+    end
+
+    test "the series' rows are dropped and a full sync of the integration is requested", %{
+      user: user,
+      integration: integration,
+      occurrence: occurrence,
+      sibling: sibling,
+      event: unrelated
+    } do
+      expect_series_put()
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+                 recurrence_scope: :all
+               )
+
+      assert_received {:put, _url, body, _headers}
+      assert "SUMMARY:Standup" in hd(vevent_blocks(body))
+
+      for uid <- [occurrence.uid, sibling.uid] do
+        assert ProviderCalendarEventQueries.get_by_uid(integration.id, uid) ==
+                 {:error, :not_found}
+      end
+
+      {:ok, other} = ProviderCalendarEventQueries.get_by_uid(integration.id, unrelated.uid)
+
+      assert {other.summary, other.raw_ical, other.etag} ==
+               {"Sprint review", @synced_ical, "\"etag-1\""}
+
+      assert_enqueued(caldav_sync_job(integration))
+    end
+
+    # A delta sync that listed the server before the write would finish
+    # without the series; the full fetch asked for runs after it instead.
+    test "a delta sync already running runs again, as a full fetch", %{
+      user: user,
+      integration: integration,
+      occurrence: occurrence
+    } do
+      running =
+        running_job(SyncCalDavCalendarWorker, %{"calendar_integration_id" => integration.id})
+
+      expect_series_put()
+
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+                 recurrence_scope: :all
+               )
+
+      assert %{state: "executing", args: %{"force_full_fetch" => true}} =
+               Repo.get!(Oban.Job, running.id)
+
+      assert {:snooze, _seconds} = SyncRequest.rerun_if_requested(:ok, running)
+    end
+
+    test "a failed write is not queued, leaves the rows and requests no sync", %{
+      user: user,
+      integration: integration,
+      occurrence: occurrence,
+      sibling: sibling
+    } do
+      expect(Tymeslot.HTTPClientMock, :put, fn _url, _body, _headers, _opts ->
+        {:error, %Req.TransportError{reason: :econnrefused}}
+      end)
+
+      assert {:error, %{retry: :not_queued}} =
+               CalendarGrid.update_event(user.id, occurrence, %{summary: "Standup"},
+                 recurrence_scope: :all
+               )
+
+      for uid <- [occurrence.uid, sibling.uid] do
+        {:ok, row} = ProviderCalendarEventQueries.get_by_uid(integration.id, uid)
+
+        assert {row.summary, row.sync_state, row.etag, row.raw_ical} ==
+                 {"Weekly standup", "synced", "\"etag-1\"", @series_ical}
+      end
+
+      refute_enqueued(worker: SyncCalDavCalendarWorker)
+    end
+
+    test "a move to another weekday turns the weekday of the rule with it", %{
+      user: user,
+      occurrence: occurrence
+    } do
+      expect_series_put()
+
+      # Wednesday 16 September, still 09:00 in Berlin (UTC+2).
+      assert {:ok, _updated} =
+               CalendarGrid.update_event(
+                 user.id,
+                 occurrence,
+                 %{
+                   start_at: ~U[2026-09-16 07:00:00.000000Z],
+                   end_at: ~U[2026-09-16 07:15:00.000000Z]
+                 },
+                 recurrence_scope: :all
+               )
+
+      assert_received {:put, @series_url, body, _headers}
+      assert [master] = vevent_blocks(body)
+      assert "RRULE:FREQ=WEEKLY;BYDAY=WE" in master
+      assert "DTSTART;TZID=Europe/Berlin:20260909T090000" in master
+      assert "EXDATE;TZID=Europe/Berlin:20260930T090000" in master
     end
   end
 end

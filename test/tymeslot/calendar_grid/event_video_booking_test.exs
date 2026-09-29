@@ -87,12 +87,24 @@ defmodule Tymeslot.CalendarGrid.EventVideoBookingTest do
     end
   end
 
+  # `identity` is the event's side of the link; a meeting carries the event's
+  # uid as its `calendar_uid`.
   defp link_meeting(integration, identity) do
+    meeting_identity =
+      case Map.pop(identity, :uid) do
+        {nil, rest} -> rest
+        {uid, rest} -> Map.put(rest, :calendar_uid, uid)
+      end
+
     insert(
       :meeting,
       Map.merge(
-        %{calendar_integration_id: integration.id, uid: "unrelated-uid", provider_event_id: nil},
-        identity
+        %{
+          calendar_integration_id: integration.id,
+          calendar_uid: "unrelated-uid",
+          provider_event_id: nil
+        },
+        meeting_identity
       )
     )
   end

@@ -9,8 +9,8 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   - the create→update fallback when a meeting already carries a provider mapping,
   - the update→create-on-404 recovery,
   - replacing an event an update cannot correct (`replace/3`),
-  - persistence of the resulting provider UID / event-id mapping back onto the
-    meeting (via `Tymeslot.Meetings.MeetingQueries`),
+  - persistence of the resulting calendar UID / provider event-id mapping back
+    onto the meeting (via `Tymeslot.Meetings.MeetingQueries`),
   - sending an error notification to the calendar owner on persistent create
     failures.
 
@@ -28,6 +28,8 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
 
   alias Ecto.UUID
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.ErrorTracking
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Integrations.Calendar.CreatedEvent
   alias Tymeslot.Meetings
@@ -50,11 +52,12 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   def create(meeting_id, attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
 
         # Another worker may already have created the event. OAuth providers
         # persist that mapping in provider_event_id; legacy flows may still
-        # carry an external identifier in uid.
+        # carry an external identifier in calendar_uid (copied from uid when
+        # the column was added).
         if calendar_mapping?(meeting) do
           Logger.info("Meeting already has a calendar mapping, switching to update",
             meeting_id: meeting_id,
@@ -83,7 +86,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   def update(meeting_id, _attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
 
         Logger.info("Updating calendar event",
           meeting_id: meeting_id,
@@ -112,7 +115,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   def delete(meeting_id, _attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, %{calendar_integration_id: nil} = meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
 
         Logger.info("No calendar integration linked, skipping calendar deletion",
           meeting_id: meeting_id
@@ -121,7 +124,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
         :ok
 
       {:ok, meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
 
         if MeetingState.expects_calendar_event?(meeting) do
           # The meeting has become live again since this deletion was
@@ -130,8 +133,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
           # currently expects one — skip and let the live state stand.
           Logger.info(
             "Meeting now expects a calendar event, skipping stale deletion",
-            meeting_id: meeting_id,
-            uid: meeting.uid
+            meeting_id: meeting_id
           )
 
           :ok
@@ -181,7 +183,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   def replace(meeting_id, event_id, attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
-        Logger.metadata(user_id: meeting.organizer_user_id)
+        ErrorTracking.put_context(user_id: meeting.organizer_user_id)
         replace_event(meeting, event_id, attempt)
 
       {:error, :not_found} ->
@@ -298,17 +300,19 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   end
 
   defp calendar_mapping?(meeting) do
-    present_identifier?(meeting.provider_event_id) or external_id?(meeting.uid)
+    present_identifier?(meeting.provider_event_id) or external_id?(meeting.calendar_uid)
   end
 
   defp present_identifier?(identifier) when is_binary(identifier), do: byte_size(identifier) > 0
   defp present_identifier?(_identifier), do: false
 
+  # Never `meeting.uid`: that is the booking's cancel/reschedule capability,
+  # and whatever is returned here is sent to the provider and logged.
   defp calendar_event_identifier(meeting) do
     if present_identifier?(meeting.provider_event_id) do
       meeting.provider_event_id
     else
-      meeting.uid
+      meeting.calendar_uid
     end
   end
 
@@ -387,7 +391,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   end
 
   defp create_event_for_meeting(meeting, meeting_id, attempt) do
-    Logger.info("Creating calendar event", meeting_id: meeting_id, uid: meeting.uid)
+    Logger.info("Creating calendar event", meeting_id: meeting_id)
 
     event_data =
       CalendarEventBuilder.build_event_data(meeting,
@@ -474,7 +478,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       other ->
         Logger.error("Failed to delete orphaned calendar event after persistence failure",
           meeting_id: meeting.id,
-          result: inspect(other)
+          result: LogFormat.reason(other)
         )
 
         :ok
@@ -526,7 +530,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       {:error, reason} ->
         Logger.warning("Failed to send calendar sync error notification",
           meeting_id: meeting.id,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
     end
   end
@@ -563,7 +567,7 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
       {:error, changeset} ->
         Logger.error("Failed to persist calendar mapping",
           meeting_id: meeting.id,
-          error: inspect(changeset.errors)
+          error: LogFormat.reason(changeset.errors)
         )
 
         {:error, :calendar_mapping_persistence_failed}
@@ -571,16 +575,19 @@ defmodule Tymeslot.Meetings.CalendarEventSync do
   end
 
   # A provider that reported an iCalendar UID (the CalDAV family) has confirmed
-  # the value the meeting is keyed by. Every other provider answers with an
-  # identifier it minted, which belongs in `provider_event_id`: writing it to
-  # `uid` would key the meeting by a value no sync ever produces.
+  # the value the meeting's event is keyed by, which is `calendar_uid`. It is
+  # never written to `uid`: that is the booking's public identifier, already
+  # embedded in the links the attendee was sent. Every other provider answers
+  # with an identifier it minted, which belongs in `provider_event_id`:
+  # writing it to `calendar_uid` would key the meeting by a value no sync ever
+  # produces.
   #
   # A CalDAV create now also reports the resource's href, and that is
   # deliberately not persisted here. `calendar_event_identifier/1` hands
   # `provider_event_id` back as the uid of the next write, and an href is not
   # one. It belongs on the cached grid row, which addresses events by URL.
   defp put_provider_mapping(attrs, %CreatedEvent{uid: uid}) when is_binary(uid),
-    do: Map.put(attrs, :uid, uid)
+    do: Map.put(attrs, :calendar_uid, uid)
 
   defp put_provider_mapping(attrs, %CreatedEvent{provider_event_id: id}) when is_binary(id),
     do: Map.put(attrs, :provider_event_id, id)

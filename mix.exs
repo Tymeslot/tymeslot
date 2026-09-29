@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "1.18.0",
+      version: "1.19.0",
       elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -150,6 +150,7 @@ defmodule Tymeslot.MixProject do
       {:mjml, "~> 6.0"},
       {:nodejs, "~> 3.0"},
       {:oban, "~> 2.20"},
+      {:error_tracker, "~> 0.9"},
       {:logger_json, "~> 7.0"},
       {:ecto_sql, "~> 3.13"},
       {:postgrex, "~> 0.22"},

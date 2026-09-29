@@ -227,7 +227,7 @@ defmodule Tymeslot.Availability.OfferBookedSlotsTest do
   # identifier `Tymeslot.Meetings.CalendarEventLink` matches the two sides on.
   defp stub_calendar_mirror(meeting, opts \\ []) do
     event = %{
-      uid: meeting.uid,
+      uid: meeting.calendar_uid,
       provider_event_id: meeting.provider_event_id,
       start_time: meeting.start_time,
       end_time: meeting.end_time,

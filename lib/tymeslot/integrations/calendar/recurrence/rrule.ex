@@ -185,6 +185,90 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
     end
   end
 
+  @doc """
+  Ends a rule just before `boundary`, the start of the first occurrence it
+  must no longer generate: its `COUNT` or `UNTIL` gives way to an `UNTIL`
+  one step earlier, in the value type the event's `DTSTART` calls for (RFC
+  5545 §3.3.10):
+
+    * a `Date`, for an all-day event: the day before, `YYYYMMDD`;
+    * a `DateTime`, for a timed event whose `DTSTART` is zoned or UTC: the
+      instant a second earlier, in UTC, `YYYYMMDDTHHMMSSZ`;
+    * a `NaiveDateTime`, for a floating event: the wall clock a second
+      earlier, `YYYYMMDDTHHMMSS`.
+
+  The new `UNTIL` takes the place of the end the rule had, or follows its
+  other parts when it had none; every other part is kept as written.
+  """
+  @spec end_before(String.t(), Date.t() | DateTime.t() | NaiveDateTime.t()) :: String.t()
+  def end_before(rrule, boundary) when is_binary(rrule) do
+    replace_end(rrule, "UNTIL=" <> until_before(boundary))
+  end
+
+  @doc """
+  Takes `occurrences` off a rule's `COUNT`, for the part of a series that
+  starts that many occurrences later. A rule without a `COUNT` is returned
+  as it is. The count never falls below one.
+  """
+  @spec reduce_count(String.t(), non_neg_integer()) :: String.t()
+  def reduce_count(rrule, occurrences) when is_binary(rrule) and occurrences >= 0 do
+    case parse(rrule) do
+      %{count: count} -> replace_end(rrule, "COUNT=#{max(count - occurrences, 1)}")
+      _no_count -> rrule
+    end
+  end
+
+  defp until_before(%Date{} = date), do: date |> Date.add(-1) |> Date.to_iso8601(:basic)
+
+  defp until_before(%DateTime{} = instant) do
+    instant
+    |> DateTime.add(-1, :second)
+    |> DateTime.shift_zone!(@utc)
+    |> DateTime.truncate(:second)
+    |> DateTime.to_iso8601(:basic)
+  end
+
+  defp until_before(%NaiveDateTime{} = wall) do
+    wall
+    |> NaiveDateTime.add(-1, :second)
+    |> NaiveDateTime.truncate(:second)
+    |> NaiveDateTime.to_iso8601(:basic)
+  end
+
+  # Puts `end_part` where the rule's first COUNT or UNTIL stood, dropping any
+  # other, or after every other part when it had neither.
+  defp replace_end(rrule, end_part) do
+    {prefix, body} = split_prefix(rrule)
+    parts = String.split(body, ";", trim: true)
+
+    parts =
+      case Enum.find_index(parts, &end_part?/1) do
+        nil ->
+          parts ++ [end_part]
+
+        index ->
+          parts
+          |> List.replace_at(index, end_part)
+          |> Enum.with_index()
+          |> Enum.reject(fn {part, at} -> at != index and end_part?(part) end)
+          |> Enum.map(&elem(&1, 0))
+      end
+
+    prefix <> Enum.join(parts, ";")
+  end
+
+  defp end_part?(part), do: part_key(part) in ["COUNT", "UNTIL"]
+
+  defp part_key(part) do
+    case String.split(part, "=", parts: 2) do
+      [key, _value] -> String.upcase(key)
+      _other -> nil
+    end
+  end
+
+  defp split_prefix("RRULE:" <> body), do: {"RRULE:", body}
+  defp split_prefix(body), do: {"", body}
+
   defp validate_until_after_start(until, %Date{} = start_date) do
     if Date.compare(until, start_date) == :lt, do: {:error, :until_before_start}, else: :ok
   end
@@ -192,27 +276,16 @@ defmodule Tymeslot.Integrations.Calendar.Recurrence.RRule do
   defp validate_until_after_start(_until, _no_start), do: :ok
 
   defp replace_until(rrule, until_value) do
-    {prefix, body} =
-      case rrule do
-        "RRULE:" <> body -> {"RRULE:", body}
-        body -> {"", body}
-      end
+    {prefix, body} = split_prefix(rrule)
 
     parts =
       body
       |> String.split(";", trim: true)
       |> Enum.map(fn part ->
-        if until_part?(part), do: "UNTIL=" <> until_value, else: part
+        if part_key(part) == "UNTIL", do: "UNTIL=" <> until_value, else: part
       end)
 
     prefix <> Enum.join(parts, ";")
-  end
-
-  defp until_part?(part) do
-    case String.split(part, "=", parts: 2) do
-      [key, _value] -> String.upcase(key) == "UNTIL"
-      _other -> false
-    end
   end
 
   # --- build helpers ---

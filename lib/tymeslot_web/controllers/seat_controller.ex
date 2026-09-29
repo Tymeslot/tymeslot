@@ -27,7 +27,7 @@ defmodule TymeslotWeb.SeatController do
     with :ok <- rate_limit(conn),
          {:ok, %{participant: participant, meeting: meeting}} <- Meetings.fetch_live_seat(token) do
       conn
-      |> seat_page(dgettext("booking", "Cancel your spot"))
+      |> seat_page(dgettext("booking_manage", "Cancel your spot"))
       |> render(:cancel_confirm,
         participant: participant,
         meeting: meeting,
@@ -50,7 +50,7 @@ defmodule TymeslotWeb.SeatController do
          {:ok, participant, meeting} <- load_seat(token),
          {:ok, _outcome} <- Meetings.cancel_seat(token) do
       conn
-      |> seat_page(dgettext("booking", "Spot cancelled"))
+      |> seat_page(dgettext("booking_manage", "Spot cancelled"))
       |> render(:cancelled,
         participant: participant,
         meeting: meeting,
@@ -67,7 +67,7 @@ defmodule TymeslotWeb.SeatController do
       {:error, reason} when is_binary(reason) ->
         # Policy refusals (e.g. too close to start time) render a dedicated page.
         conn
-        |> seat_page(dgettext("booking", "Spot cannot be cancelled"))
+        |> seat_page(dgettext("booking_manage", "Spot cannot be cancelled"))
         |> render(:not_allowed)
 
       _other ->
@@ -111,7 +111,7 @@ defmodule TymeslotWeb.SeatController do
     case load_seat(token) do
       {:ok, participant, meeting} ->
         conn
-        |> seat_page(dgettext("booking", "Spot cancelled"))
+        |> seat_page(dgettext("booking_manage", "Spot cancelled"))
         |> render(:cancelled,
           participant: participant,
           meeting: meeting,
@@ -159,14 +159,14 @@ defmodule TymeslotWeb.SeatController do
   defp render_error(conn, :too_many_requests) do
     conn
     |> put_status(:too_many_requests)
-    |> seat_page(dgettext("booking", "Too many attempts"))
+    |> seat_page(dgettext("booking_manage", "Too many attempts"))
     |> render(:too_many_requests)
   end
 
   defp render_error(conn, http_status) do
     conn
     |> put_status(http_status)
-    |> seat_page(dgettext("booking", "Link no longer valid"))
+    |> seat_page(dgettext("booking_manage", "Link no longer valid"))
     |> render(:invalid)
   end
 end

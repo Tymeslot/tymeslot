@@ -93,8 +93,8 @@ defmodule Tymeslot.Workers.TransactionalEmailDeliveryTest do
              TransactionalEmailDelivery.deliver(valid_email(), "failed")
   end
 
-  # A discard emits Oban's `job:stop`, not `job:exception`, so it never
-  # reaches `ObanFailureAlerter`. A rejected recipient — a host whose payouts
+  # A discard emits Oban's `job:stop`, not `job:exception`, so error tracking
+  # never records it. A rejected recipient — a host whose payouts
   # are restricted, or whose dispute email never arrives — must still surface
   # somewhere, so the rejection is reported directly instead.
   test "reports a permanently rejected recipient to AdminAlerts" do

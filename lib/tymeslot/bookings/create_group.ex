@@ -49,11 +49,12 @@ defmodule Tymeslot.Bookings.CreateGroup do
     |> GroupScheduling.book_seat(build_seat_request(booking_data),
       on_booked: &schedule_calendar_job/1
     )
-    |> map_result(opts)
+    |> map_result(booking_data, opts)
   end
 
   defp map_result(
          {:ok, %{meeting: meeting, participant: participant, created_meeting?: created?}},
+         _booking_data,
          opts
        ) do
     Telemetry.booking_created()
@@ -66,7 +67,7 @@ defmodule Tymeslot.Bookings.CreateGroup do
     {:ok, meeting}
   end
 
-  defp map_result({:error, :slot_full}, _opts), do: {:error, :slot_taken}
+  defp map_result({:error, :slot_full}, _booking_data, _opts), do: {:error, :slot_taken}
 
   # `book_seat/3` exhausts its retry on a rare first-booker index collision
   # and surfaces the raw changeset. Its `organizer_user_id` error is worded
@@ -75,15 +76,16 @@ defmodule Tymeslot.Bookings.CreateGroup do
   # other lost-race case. A duplicate seat is worth naming: the booker has
   # this slot already, most likely from a second tab, and "try again" is the
   # wrong advice.
-  defp map_result({:error, %Ecto.Changeset{} = changeset}, _opts) do
+  defp map_result({:error, %Ecto.Changeset{} = changeset}, booking_data, _opts) do
     cond do
       GroupScheduling.lost_first_booker_race?(changeset) -> {:error, :slot_taken}
       duplicate_seat?(changeset) -> {:error, :already_booked}
-      true -> {:error, :booking_failed}
+      true -> {:error, Errors.classify_creation_error(changeset, booking_data)}
     end
   end
 
-  defp map_result({:error, reason}, _opts), do: {:error, Errors.classify_error(reason)}
+  defp map_result({:error, reason}, booking_data, _opts),
+    do: {:error, Errors.classify_creation_error(reason, booking_data)}
 
   defp duplicate_seat?(%Ecto.Changeset{errors: errors}) do
     Enum.any?(errors, fn {_field, {_message, opts}} ->

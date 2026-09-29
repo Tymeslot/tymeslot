@@ -23,12 +23,13 @@ defmodule Tymeslot.Integrations.Calendar.Exchange.IntervalNormaliser do
 
   The prefix is load-bearing rather than decorative.
   `Meetings.ExternalCalendarChanges.find_linked_meeting/3` resolves a vanished
-  provider event to a Tymeslot meeting **by uid** when no provider event id is
-  carried, and cancels the meeting it finds, emailing both parties. A
-  synthesised uid that collided with a real meeting's would therefore cancel a
-  confirmed booking during routine housekeeping. The `tymeslot:exchange-busy:`
-  prefix cannot be produced by anything that shares this integration's uid namespace:
-  a Tymeslot meeting uid is a UUID, an EWS `t:UID` is hex, and an EWS item id
+  provider event to a Tymeslot meeting **by uid** (the meeting's
+  `calendar_uid`) when no provider event id is carried, and cancels the
+  meeting it finds, emailing both parties. A synthesised uid that collided
+  with a real meeting's would therefore cancel a confirmed booking during
+  routine housekeeping. The `tymeslot:exchange-busy:` prefix cannot be
+  produced by anything that shares this integration's uid namespace: a
+  meeting's `calendar_uid` is a UUID, an EWS `t:UID` is hex, and an EWS item id
   is base64 — none of the three admits a colon. The structural half of the
   same defence is that nothing writing these rows runs the reconciliation at
   all; see `Calendar.Sync.full_refresh_for_role/3`.

@@ -42,11 +42,15 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   the description. The builder is pure: it never loads the list itself, so
   callers looping over many meetings (calendar sync) must fetch it once per
   meeting and pass it in.
+
+  The event's `:uid` is the meeting's `calendar_uid`, never its `uid`: the
+  `uid` is the bearer capability behind the cancel and reschedule links, and
+  anyone able to read the organiser's calendar would otherwise hold it.
   """
   @spec build_event_data(map(), keyword()) :: map()
   def build_event_data(meeting, opts \\ []) do
     %{
-      uid: meeting.uid,
+      uid: meeting.calendar_uid,
       summary: meeting.title,
       description: build_event_description(meeting, opts),
       start_time: meeting.start_time,
@@ -135,6 +139,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
       parts = [
         attendee_identity_line(meeting, Keyword.get(opts, :attendees, [])),
         meeting.description,
+        organizer_note_section(meeting),
         attendee_message_section(meeting),
         custom_answers_section(meeting),
         attachments_section(meeting),
@@ -236,6 +241,19 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
     do: "#{name} <#{email}>"
 
   defp participant_line(%{email: email}), do: email
+
+  # `Map.get/2`: the builder is also handed plain maps that predate the field.
+  defp organizer_note_section(meeting) do
+    case Map.get(meeting, :organizer_note) do
+      note when is_binary(note) and note != "" ->
+        "\n\n" <>
+          dgettext("emails", "Message from %{name}:", name: meeting.organizer_name) <>
+          "\n#{note}"
+
+      _none ->
+        nil
+    end
+  end
 
   defp attendee_message_section(meeting) do
     case meeting.attendee_message do

@@ -18,9 +18,15 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.ConferenceData
   alias Tymeslot.Integrations.Calendar.Google.EventNormaliser
-  alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
+  alias Tymeslot.Integrations.Calendar.Google.SeriesExceptions
+  alias Tymeslot.Integrations.Calendar.Google.SeriesPatch
+  alias Tymeslot.Integrations.Calendar.Google.SeriesSplit
+  alias Tymeslot.Integrations.Calendar.Recurrence.SeriesSplit, as: RecurrenceSplit
+  alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, EventSearch, ProviderCommon}
   alias Tymeslot.Integrations.Calendar.Shared.FetchAggregate.Outcome
   alias Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch
+
+  require Logger
 
   @typep converted_event :: %{
            required(:uid) => String.t() | nil,
@@ -112,8 +118,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
       description: google_event["description"],
       location: google_event["location"],
       all_day: all_day_google_event?(google_event),
-      start_time: parse_datetime(google_event["start"]),
-      end_time: parse_datetime(google_event["end"]),
+      start_time: event_time(google_event, "start"),
+      end_time: event_time(google_event, "end"),
       status: google_event["status"],
       transparency: google_event["transparency"],
       meet_url: ConferenceData.meet_url_from_google_event(google_event)
@@ -143,8 +149,38 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     api_module().create_event(integration, calendar_id, event_attrs)
   end
 
+  @doc """
+  Writes `event_attrs` to the event.
+
+  An `:occurrence` of scope `:all` in `event_attrs` (see
+  `Recurrence.SeriesMove.edit/0`, naming the series in `:master_id`) edits
+  every occurrence of a recurring event instead: the master is read, and
+  patched with only what the edit changes (`Google.SeriesPatch`). One of
+  scope `:following`, with the occurrence's original start in `:slot`,
+  splits the series there (`Google.SeriesSplit`): the following occurrences
+  are inserted as a new series, which takes the edit, then the master is
+  ended before them, and if that fails the new series is deleted again. The
+  occurrences from the split on that were edited or cancelled on their own
+  are read before anything is written, and carried to the new series once
+  the split is (`Google.SeriesExceptions`); one that cannot be carried is
+  logged, and does not fail the split. The answer is then
+  `{:ok, %{tail: %{uid: uid, id: id}}}`, the new series' `iCalUID` and id;
+  an edit of the first occurrence is written as one of every occurrence. A
+  refusal of the edit is answered before anything is written.
+  """
   @spec call_update_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
-          {:ok, map()} | {:error, atom(), String.t()}
+          {:ok, map()} | {:error, atom(), String.t()} | {:error, term()}
+  def call_update_event(integration, _event_id, %{occurrence: %{scope: scope} = edit} = attrs)
+      when scope in [:all, :following] do
+    calendar_id = attrs[:calendar_id] || integration.default_booking_calendar_id || "primary"
+
+    with {:ok, master} <- api_module().get_event(integration, calendar_id, edit.master_id) do
+      if scope == :all,
+        do: patch_series(integration, calendar_id, master, edit),
+        else: split_series(integration, calendar_id, master, edit)
+    end
+  end
+
   def call_update_event(integration, event_id, %{colour_only: true} = event_attrs) do
     calendar_id =
       event_attrs[:calendar_id] || integration.default_booking_calendar_id || "primary"
@@ -160,6 +196,38 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     # Prefer the provider-native event ID when available (avoids iCalUID→ID conversion)
     effective_id = event_attrs[:provider_event_id] || event_id
     api_module().update_event(integration, calendar_id, effective_id, event_attrs)
+  end
+
+  defp patch_series(integration, calendar_id, master, edit) do
+    with {:ok, body} <- SeriesPatch.build(master, edit) do
+      if body == %{},
+        do: {:ok, master},
+        else: api_module().patch_event(integration, calendar_id, edit.master_id, body)
+    end
+  end
+
+  defp split_series(integration, calendar_id, master, edit) do
+    case SeriesSplit.build(master, edit) do
+      {:ok, %{tail: tail, head: head}} ->
+        api = api_module()
+
+        with {:ok, carries} <- SeriesExceptions.plan(api, integration, calendar_id, master, edit),
+             {:ok, created} <-
+               RecurrenceSplit.write(
+                 fn -> api.insert_event(integration, calendar_id, tail) end,
+                 fn -> api.patch_event(integration, calendar_id, edit.master_id, head) end,
+                 &api.delete_event(integration, calendar_id, &1["id"])
+               ) do
+          SeriesExceptions.carry(api, integration, calendar_id, master, created["id"], carries)
+          {:ok, %{tail: %{uid: created["iCalUID"], id: created["id"]}}}
+        end
+
+      :first_occurrence ->
+        patch_series(integration, calendar_id, master, edit)
+
+      error ->
+        error
+    end
   end
 
   @doc """
@@ -189,6 +257,38 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   end
 
   def fetch_event(_integration, _ref), do: {:error, :unaddressable}
+
+  @doc """
+  Looks for an event in the account's other calendars, by the same Google
+  event id: Google keeps an event's id, a recurring event's included, when it
+  moves to another calendar.
+  """
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def find_moved_event(integration, %{calendar_id: calendar_id} = ref)
+      when is_binary(calendar_id) and calendar_id != "" do
+    case api_module().list_calendars(integration) do
+      {:ok, calendars} ->
+        calendars
+        |> Enum.reject(&already_asked?(&1, calendar_id))
+        |> Enum.map(& &1["id"])
+        |> Enum.reject(&(&1 in [nil, ""]))
+        |> EventSearch.first_found(&fetch_event(integration, %{ref | calendar_id: &1}))
+
+      {:error, type, _message} ->
+        {:error, type}
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  def find_moved_event(_integration, _ref), do: {:error, :unaddressable}
+
+  # The calendar list names the primary calendar by its address, never by
+  # the "primary" alias an event may have been recorded under.
+  defp already_asked?(%{"id" => calendar_id}, calendar_id), do: true
+  defp already_asked?(%{"primary" => true}, "primary"), do: true
+  defp already_asked?(_calendar, _calendar_id), do: false
 
   defp fetch_context(ref, calendar_id),
     do: %{
@@ -270,17 +370,37 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   defp all_day_google_event?(%{"start" => %{"date" => _date}}), do: true
   defp all_day_google_event?(_other), do: false
 
+  # A time Google sent but that does not parse is read as missing, like an
+  # absent one, and logged: the field only, never the event's content. Nor
+  # its id: for an event this application created, Google's id is derived
+  # from the meeting uid, which authorises cancelling the booking.
+  defp event_time(google_event, field) do
+    case parse_datetime(google_event[field]) do
+      {:error, reason} ->
+        Logger.warning("Could not parse a calendar event time",
+          provider: :google,
+          field: field,
+          reason: reason
+        )
+
+        nil
+
+      time ->
+        time
+    end
+  end
+
   defp parse_datetime(%{"dateTime" => datetime_str}) do
     case DateTime.from_iso8601(datetime_str) do
       {:ok, datetime, _offset} -> datetime
-      {:error, _reason} -> nil
+      {:error, reason} -> {:error, reason}
     end
   end
 
   defp parse_datetime(%{"date" => date_str}) do
     case Date.from_iso8601(date_str) do
       {:ok, date} -> date
-      {:error, _reason} -> nil
+      {:error, reason} -> {:error, reason}
     end
   end
 

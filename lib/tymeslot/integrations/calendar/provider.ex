@@ -230,12 +230,15 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
   What addresses one event on the provider. Any field may be nil: Google and
   Outlook address an event by `provider_event_id` (Google within
   `calendar_id`), CalDAV servers by its href in `provider_event_id` or else by
-  `uid` within the client's calendar. `calendar_integration_id` labels the
+  `uid` within the client's calendar. `ical_uid` is the iCalendar UID the
+  event's cached row carries, which Outlook falls back to when the event moved
+  to another calendar and its id changed. `calendar_integration_id` labels the
   events returned.
   """
   @type event_ref :: %{
           optional(:uid) => String.t() | nil,
           optional(:provider_event_id) => String.t() | nil,
+          optional(:ical_uid) => String.t() | nil,
           optional(:calendar_id) => String.t() | nil,
           optional(:calendar_integration_id) => integer() | nil
         }
@@ -253,9 +256,24 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
   @callback fetch_event(client :: any(), event_ref :: event_ref()) ::
               {:ok, [CalendarEvent.t()]} | {:error, :not_found} | {:error, term()}
 
+  @doc """
+  Looks for an event in every calendar of the account, once `fetch_event/2`
+  has been told by every calendar the integration reaches that it does not
+  exist there: the organiser may have moved it to a calendar Tymeslot does
+  not read. `client` is any one of the integration's clients.
+
+  Answers as `fetch_event/2` does, `{:error, :not_found}` only when no
+  calendar of the account has the event. Optional: a provider without it
+  takes `fetch_event/2`'s answer as final, as Outlook may, whose
+  `fetch_event/2` already searches the whole mailbox.
+  """
+  @callback find_moved_event(client :: any(), event_ref :: event_ref()) ::
+              {:ok, [CalendarEvent.t()]} | {:error, :not_found} | {:error, term()}
+
   @optional_callbacks discover_calendars_for_integration: 1,
                       discover_calendars: 1,
                       build_client_configs: 1,
                       build_booking_client_config: 1,
-                      fetch_event: 2
+                      fetch_event: 2,
+                      find_moved_event: 2
 end

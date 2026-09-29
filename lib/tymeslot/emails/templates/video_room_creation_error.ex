@@ -32,7 +32,7 @@ defmodule Tymeslot.Emails.Templates.VideoRoomCreationError do
   @doc "The subject line, in the current locale."
   @spec subject(integration()) :: String.t()
   def subject(integration) do
-    dgettext("emails", "Bookings on %{provider} are getting no video link",
+    dgettext("emails_integrations", "Bookings on %{provider} are getting no video link",
       provider: provider_label(integration)
     )
   end
@@ -48,7 +48,7 @@ defmodule Tymeslot.Emails.Templates.VideoRoomCreationError do
     mjml_content = """
     #{Callouts.alert_box(:alert, copy.reason, title: copy.title)}
 
-    #{Text.title_section(dgettext("emails", "What's happening?"))}
+    #{Text.title_section(dgettext("emails_integrations", "What's happening?"))}
 
     <mj-text
       font-size="16px"
@@ -62,7 +62,7 @@ defmodule Tymeslot.Emails.Templates.VideoRoomCreationError do
 
     #{Text.divider()}
 
-    #{Text.title_section(dgettext("emails", "What should I do?"))}
+    #{Text.title_section(dgettext("emails_integrations", "What should I do?"))}
 
     <mj-text color="#{Styles.ink_soft()}" font-size="14px" line-height="1.6">
       #{copy.action}
@@ -77,7 +77,7 @@ defmodule Tymeslot.Emails.Templates.VideoRoomCreationError do
 
     TemplateHelper.compile_system_template(mjml_content, copy.title, copy.subject,
       intent: @intent,
-      eyebrow: dgettext("emails", "Integration"),
+      eyebrow: dgettext("emails_integrations", "Integration"),
       stage_title: copy.title,
       stage_subtitle: copy.subject
     )
@@ -89,10 +89,10 @@ defmodule Tymeslot.Emails.Templates.VideoRoomCreationError do
 
     #{copy.reason}
 
-    #{String.upcase(dgettext("emails", "What's happening?"))}
+    #{String.upcase(dgettext("emails_integrations", "What's happening?"))}
     #{copy.happening}
 
-    #{String.upcase(dgettext("emails", "What should I do?"))}
+    #{String.upcase(dgettext("emails_integrations", "What should I do?"))}
     #{copy.action}
 
     #{copy.button}:
@@ -106,25 +106,25 @@ defmodule Tymeslot.Emails.Templates.VideoRoomCreationError do
     provider = provider_label(integration)
 
     %{
-      title: dgettext("emails", "Video rooms not created"),
+      title: dgettext("emails_integrations", "Video rooms not created"),
       subject: subject(integration),
       reason: RoomCreationError.message(code),
       happening:
         dgettext(
-          "emails",
+          "emails_integrations",
           "%{provider} refused to create a video room. Whatever it was for went ahead without one: a booking is still confirmed, and a calendar event is still in your calendar. Nothing on this integration gets a video link until the setting described above changes, and links already sent keep working.",
           provider: provider
         ),
       action:
         dgettext(
-          "emails",
+          "emails_integrations",
           "Change the setting described above, or ask whoever runs the server to. Once a booking gets its video link again, the notice on your video integration disappears."
         ),
-      button: dgettext("emails", "Open video settings"),
+      button: dgettext("emails_integrations", "Open video settings"),
       settings_url: UrlBuilder.build_url("/dashboard/settings?tab=video"),
       footer:
         dgettext(
-          "emails",
+          "emails_integrations",
           "This is the only email you will get about this for now. If the same problem is still there in %{days} days, you will hear about it again. Your video settings show the notice for as long as it lasts.",
           days: RoomCreationError.resend_after_days()
         )

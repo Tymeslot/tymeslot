@@ -61,9 +61,12 @@ defmodule Tymeslot.Meetings.BusyPeriods do
     |> Enum.concat(Enum.map(meetings, &to_busy_period/1))
   end
 
+  # Shaped as a calendar event, so it carries the booking's calendar identity:
+  # `calendar_uid` is what its mirror is keyed by, and the booking's own `uid`
+  # has no business in a list of busy periods.
   defp to_busy_period(meeting) do
     %{
-      uid: meeting.uid,
+      uid: meeting.calendar_uid,
       provider_event_id: meeting.provider_event_id,
       start_time: meeting.start_time,
       end_time: meeting.end_time

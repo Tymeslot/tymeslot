@@ -14,89 +14,89 @@ msgstr ""
 #: lib/tymeslot_web/components/announcement_modal_component.ex
 #, elixir-autogen, elixir-format
 msgid "%{current} / %{total}"
-msgstr "%{current} / %{total}"
+msgstr ""
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Account settings and log out are here in the top-right."
-msgstr "Account settings and log out are here in the top-right."
+msgstr ""
 
 #: lib/tymeslot_web/components/announcement_modal_component.ex
 #: lib/tymeslot_web/components/tour_overlay.ex
 #, elixir-autogen, elixir-format
 msgid "Back"
-msgstr "Back"
+msgstr ""
 
 #: lib/tymeslot_web/components/step_navigation.ex
 #, elixir-autogen, elixir-format
 msgid "Confirmation"
-msgstr "Confirmation"
+msgstr ""
 
 #: lib/tymeslot_web/components/step_navigation.ex
 #, elixir-autogen, elixir-format
 msgid "Date & Time"
-msgstr "Date & Time"
+msgstr ""
 
 #: lib/tymeslot_web/components/step_navigation.ex
 #, elixir-autogen, elixir-format
 msgid "Details"
-msgstr "Details"
+msgstr ""
 
 #: lib/tymeslot_web/components/step_navigation.ex
 #, elixir-autogen, elixir-format
 msgid "Duration"
-msgstr "Duration"
+msgstr ""
 
 #: lib/tymeslot_web/components/tour_overlay.ex
 #, elixir-autogen, elixir-format
 msgid "Finish"
-msgstr "Finish"
+msgstr ""
 
 #: lib/tymeslot_web/components/announcement_modal_component.ex
 #, elixir-autogen, elixir-format
 msgid "Got it"
-msgstr "Got it"
+msgstr ""
 
 #: lib/tymeslot_web/components/announcement_modal_component.ex
 #, elixir-autogen, elixir-format
 msgid "New feature"
-msgstr "New feature"
+msgstr ""
 
 #: lib/tymeslot_web/components/announcement_modal_component.ex
 #: lib/tymeslot_web/components/tour_overlay.ex
 #, elixir-autogen, elixir-format
 msgid "Next"
-msgstr "Next"
+msgstr ""
 
 #: lib/tymeslot_web/components/tour_overlay.ex
 #, elixir-autogen, elixir-format
 msgid "Skip"
-msgstr "Skip"
+msgstr ""
 
 #: lib/tymeslot_web/components/tour_overlay.ex
 #, elixir-autogen, elixir-format
 msgid "Step %{n} of %{total}"
-msgstr "Step %{n} of %{total}"
+msgstr ""
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Take 30 seconds to learn where everything lives."
-msgstr "Take 30 seconds to learn where everything lives."
+msgstr ""
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Welcome to your Tymeslot dashboard"
-msgstr "Welcome to your Tymeslot dashboard"
+msgstr ""
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "You're set"
-msgstr "You're set"
+msgstr ""
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Your account"
-msgstr "Your account"
+msgstr ""
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format
@@ -211,7 +211,7 @@ msgstr ""
 #: lib/tymeslot/onboarding/dashboard_tour.ex
 #, elixir-autogen, elixir-format
 msgid "Go create your first event type - and let people book you."
-msgstr "Go create your first event type - and let people book you."
+msgstr ""
 
 #: lib/tymeslot/announcements/catalog.ex
 #, elixir-autogen, elixir-format

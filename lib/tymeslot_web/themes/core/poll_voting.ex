@@ -89,7 +89,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
          put_flash(
            socket,
            :info,
-           dgettext("booking", "You're registered. Your responses are saved as you vote.")
+           dgettext("booking_polls", "You're registered. Your responses are saved as you vote.")
          )}
       end)
     else
@@ -133,13 +133,13 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
 
   defp recaptcha_error_message(:recaptcha_script_blocked) do
     dgettext(
-      "booking",
+      "booking_polls",
       "Security verification is currently unavailable. This may be caused by JavaScript being disabled, browser privacy extensions (Privacy Badger, uBlock Origin, etc.), or network security policies. Please adjust your settings or contact support if the problem persists."
     )
   end
 
   defp recaptcha_error_message(_reason),
-    do: dgettext("booking", "Security verification failed. Please try again.")
+    do: dgettext("booking_polls", "Security verification failed. Please try again.")
 
   defp do_register(socket, params) do
     attrs = Map.take(params, ["name", "email", "timezone", "locale"])
@@ -151,7 +151,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
          |> assign(participant: participant)
          |> put_flash(
            :info,
-           dgettext("booking", "You're registered. Your responses are saved as you vote.")
+           dgettext("booking_polls", "You're registered. Your responses are saved as you vote.")
          )
          |> push_patch(to: put_participant_in_url(socket, participant))}
 
@@ -190,7 +190,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
          put_flash(
            socket,
            :error,
-           dgettext("booking", "Too many attempts. Please wait a moment and try again.")
+           dgettext("booking_polls", "Too many attempts. Please wait a moment and try again.")
          )}
     end
   end
@@ -200,7 +200,8 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   # --- Vote casting ---
 
   defp cast_votes_for(%{assigns: %{participant: nil}} = socket, _votes_map) do
-    {:noreply, put_flash(socket, :error, dgettext("booking", "Please register before voting."))}
+    {:noreply,
+     put_flash(socket, :error, dgettext("booking_polls", "Please register before voting."))}
   end
 
   defp cast_votes_for(socket, votes_map) do
@@ -211,7 +212,7 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
         {:noreply,
          socket
          |> reload_tallies()
-         |> put_flash(:info, dgettext("booking", "Your responses have been saved."))}
+         |> put_flash(:info, dgettext("booking_polls", "Your responses have been saved."))}
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, cast_error_message(reason))}
@@ -254,31 +255,31 @@ defmodule TymeslotWeb.Themes.Core.PollVoting do
   # --- Flash messages ---
 
   defp register_error_message(:voting_closed),
-    do: dgettext("booking", "Voting has closed for this poll.")
+    do: dgettext("booking_polls", "Voting has closed for this poll.")
 
   defp register_error_message(:poll_full),
-    do: dgettext("booking", "This poll has reached its participant limit.")
+    do: dgettext("booking_polls", "This poll has reached its participant limit.")
 
   defp register_error_message(_changeset),
-    do: dgettext("booking", "Please check your name and email, then try again.")
+    do: dgettext("booking_polls", "Please check your name and email, then try again.")
 
   defp cast_error_message(:voting_closed),
-    do: dgettext("booking", "Voting has closed for this poll.")
+    do: dgettext("booking_polls", "Voting has closed for this poll.")
 
   defp cast_error_message(:unknown_participant),
-    do: dgettext("booking", "We couldn't find your registration. Please register again.")
+    do: dgettext("booking_polls", "We couldn't find your registration. Please register again.")
 
   defp cast_error_message(:invalid_slot),
     do:
       dgettext(
-        "booking",
+        "booking_polls",
         "One of the selected times is no longer available. Please refresh and try again."
       )
 
   defp cast_error_message(:invalid_response),
     do:
       dgettext(
-        "booking",
+        "booking_polls",
         "One of your responses wasn't recognised. Please refresh and try again."
       )
 end

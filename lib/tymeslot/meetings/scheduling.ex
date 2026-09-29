@@ -12,6 +12,7 @@ defmodule Tymeslot.Meetings.Scheduling do
 
   alias Ecto.Changeset
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Meetings.BookingLimits
   alias Tymeslot.Meetings.BookingLimits.Checker
   alias Tymeslot.Meetings.GroupMeetingQueries
@@ -53,7 +54,7 @@ defmodule Tymeslot.Meetings.Scheduling do
     create_with_conflict_check(
       attrs,
       &create_meeting_in_transaction/1,
-      "atomic meeting creation",
+      "create",
       opts
     )
   end
@@ -77,12 +78,12 @@ defmodule Tymeslot.Meetings.Scheduling do
     create_with_conflict_check(
       attrs,
       &create_group_meeting_in_transaction/1,
-      "atomic group meeting creation",
+      "create_group",
       opts
     )
   end
 
-  defp create_with_conflict_check(attrs, persist_fn, operation_label, opts) do
+  defp create_with_conflict_check(attrs, persist_fn, operation, opts) do
     start_time = MapKeys.get(attrs, :start_time)
     end_time = MapKeys.get(attrs, :end_time)
     organizer_user_id = MapKeys.get(attrs, :organizer_user_id)
@@ -112,7 +113,10 @@ defmodule Tymeslot.Meetings.Scheduling do
     end
   rescue
     error ->
-      handle_database_error(error, operation_label, __STACKTRACE__)
+      handle_database_error(error, __STACKTRACE__, %{
+        operation: operation,
+        organizer_user_id: MapKeys.get(attrs, :organizer_user_id)
+      })
   end
 
   @doc """
@@ -150,11 +154,7 @@ defmodule Tymeslot.Meetings.Scheduling do
     end
   rescue
     error ->
-      handle_database_error(
-        error,
-        "atomic meeting update (meeting_id=#{meeting.id})",
-        __STACKTRACE__
-      )
+      handle_database_error(error, __STACKTRACE__, %{operation: "update", meeting_id: meeting.id})
   end
 
   # Private functions
@@ -281,9 +281,8 @@ defmodule Tymeslot.Meetings.Scheduling do
     Logger.info("Meeting time conflict detected during booking attempt", log_attrs)
   end
 
-  defp handle_database_error(error, operation, stacktrace) do
-    formatted = Exception.format(:error, error, stacktrace)
-    Logger.error("Database error during #{operation}\n" <> formatted)
+  defp handle_database_error(error, stacktrace, context) do
+    :ok = ErrorTracking.report_error(error, stacktrace, context)
     {:error, :database_error}
   end
 

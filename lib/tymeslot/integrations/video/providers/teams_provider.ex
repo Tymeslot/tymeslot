@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   alias Tymeslot.Infrastructure.BreakerOutcome
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.NeedsReauth
@@ -178,7 +179,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   end
 
   defp log_create_meeting_room_error(reason) do
-    Logger.error("Failed to create Teams meeting", error: inspect(reason))
+    Logger.error("Failed to create Teams meeting", error: LogFormat.reason(reason))
   end
 
   # A rejected/expired grant (`invalid_grant`, `invalid_client`,
@@ -240,12 +241,12 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   def perform_connection_test(config) do
     case get_access_token(config) do
       {:ok, _token} ->
-        {:ok, dgettext("dashboard_integrations", "Microsoft Teams connected successfully!")}
+        {:ok, dgettext("dashboard_video", "Microsoft Teams connected successfully!")}
 
       {:error, reason} ->
         {:error,
          dgettext(
-           "dashboard_integrations",
+           "dashboard_video",
            "Failed to authenticate with Microsoft Teams: %{reason}",
            reason: inspect(reason)
          )}
@@ -420,7 +421,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
         {:ok, refreshed_tokens}
 
       {:error, reason} ->
-        Logger.error("Failed to refresh Teams OAuth token", reason: inspect(reason))
+        Logger.error("Failed to refresh Teams OAuth token", reason: LogFormat.reason(reason))
         {:error, "Token refresh failed: #{reason}"}
     end
   end
@@ -509,7 +510,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
       event: "teams_token_revoked",
       message:
         dgettext_noop(
-          "dashboard_integrations",
+          "dashboard_video",
           "Microsoft Teams access was revoked. Please reconnect your Teams account."
         )
     )
@@ -561,7 +562,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
       other ->
         Logger.warning("Could not delete Teams calendar event left without a join link",
-          result: inspect(other)
+          result: LogFormat.reason(other)
         )
 
         :ok

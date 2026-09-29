@@ -16,6 +16,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
   require Logger
 
   alias Tymeslot.Infrastructure.AdminAlerts
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Mailer
   alias Tymeslot.Payments.{Config, PaymentQueries, PubSub}
   alias Tymeslot.Security.SecurityLogger
@@ -221,7 +222,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
       {:error, reason} ->
         Logger.error("Failed to fetch charge from Stripe",
           charge_id: charge_id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         {:error, :stripe_api_error, "Failed to fetch charge from Stripe API"}
@@ -321,7 +322,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
       {:error, reason} ->
         Logger.error("Failed to send dispute email",
           template: template_fun,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok

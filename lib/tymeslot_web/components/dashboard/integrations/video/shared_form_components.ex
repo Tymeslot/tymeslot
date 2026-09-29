@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
     ~H"""
     <div>
       <label for="integration_name" class="label">
-        {dgettext("dashboard_integrations", "Integration Name")}
+        {dgettext("dashboard_video", "Integration Name")}
       </label>
       <div class="relative">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
               else: ""
             )
           ]}
-          placeholder={@placeholder || dgettext("dashboard_integrations", "My Video Integration")}
+          placeholder={@placeholder || dgettext("dashboard_video", "My Video Integration")}
         />
       </div>
       <%= for error <- FormValidationHelpers.field_errors(@form_errors, :name) do %>
@@ -174,7 +174,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
     <div class="group/field">
       <div class="flex items-center gap-1.5 mb-2">
         <label for={@id} class="label mb-0!">
-          {dgettext("dashboard_integrations", "Server URL")}
+          {dgettext("dashboard_video", "Server URL")}
         </label>
         <span class="group relative inline-flex text-tymeslot-500 shrink-0">
           <Icons.icon name="hero-information-circle-mini" class="w-4 h-4" />
@@ -225,7 +225,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
     ~H"""
     <div>
       <label for={@id} class="label">
-        {@label || dgettext("dashboard_integrations", "API Key")}
+        {@label || dgettext("dashboard_video", "API Key")}
       </label>
       <div class="relative">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -257,7 +257,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
               else: ""
             )
           ]}
-          placeholder={@placeholder || dgettext("dashboard_integrations", "Your API key")}
+          placeholder={@placeholder || dgettext("dashboard_video", "Your API key")}
         />
       </div>
       <%= if FormValidationHelpers.field_errors(@form_errors, @error_key) != [] do %>

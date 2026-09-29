@@ -19,6 +19,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
 
   @spec calendar_picker(map()) :: Phoenix.LiveView.Rendered.t()
   def calendar_picker(assigns) do
+    # A connection with nothing writable is not a target. Filtering here rather
+    # than at each call site means no picker can offer one, whatever list it is
+    # handed.
+    assigns =
+      assign(assigns, :integrations, Calendar.writable_integrations(assigns.integrations))
+
     ~H"""
     <div class="space-y-3">
       <div :for={integration <- @integrations}>
@@ -65,7 +71,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
             >{dgettext("dashboard_calendar_events", "Primary")}</span>
           </button>
         </div>
-        <%!-- Fallback: integration with no calendar list (single calendar) --%>
+        <%!-- Fallback: a connection whose calendars have not been discovered,
+              which is written to through the provider's own default. A
+              connection that *has* a list but nothing writable in it never
+              reaches this point — `writable_integrations/1` has already
+              dropped it. --%>
         <div :if={calendars == []} class="pl-3.5">
           <button
             type="button"

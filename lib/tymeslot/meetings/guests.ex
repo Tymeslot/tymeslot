@@ -2,9 +2,10 @@ defmodule Tymeslot.Meetings.Guests do
   @moduledoc """
   Domain logic for meeting guests.
 
-  Owns the two business operations around guests:
+  Owns the business operations around guests:
 
-    * sanitising the raw guest-email list submitted with a booking, and
+    * sanitising the raw guest-email list submitted with a booking,
+    * the host inviting further guests once the booking exists, and
     * recording a guest's RSVP from a tokenised link.
 
   Persistence is delegated to `Tymeslot.Meetings.GuestQueries`; this module
@@ -19,8 +20,11 @@ defmodule Tymeslot.Meetings.Guests do
   """
 
   alias Tymeslot.Clock
+  alias Tymeslot.Emails.EmailScheduler.MeetingScheduler
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.GuestSchema
+  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Meetings.MeetingState
   alias Tymeslot.Meetings.ParticipantQueries
   alias Tymeslot.Repo
@@ -90,6 +94,85 @@ defmodule Tymeslot.Meetings.Guests do
   end
 
   @doc """
+  Invites guests to a meeting the host already has, after the booking was made.
+
+  Scoped to the organiser: a meeting `organizer_user_id` does not own is
+  `{:error, :not_found}`, exactly as one that does not exist. The meeting must
+  still be open to guests (`invitations_open?/1`), or `{:error, :closed}`.
+
+  This is the host's own path. The meeting type's `allow_guests` decides what
+  the *booker* may do on the public form, and says nothing about whom the host
+  may invite to their own meeting afterwards; `Bookings.CreateAdHoc` treats it
+  the same way.
+
+  Returns only the guests actually added. Addresses already on the meeting are
+  dropped rather than refused, so inviting a list twice is harmless and never
+  produces a second invitation. `{:error, :full}` comes back when the meeting
+  is already at `max_guests/0`, counted across the guests it already has.
+
+  The meeting row is locked for the duration, so two additions cannot both
+  read the same count and overshoot the cap, and the invitation job is
+  enqueued in the same transaction as the rows it sends to: either both exist
+  or neither does.
+  """
+  @spec invite_for_organizer(binary(), integer(), [String.t()] | nil) ::
+          {:ok, [GuestSchema.t()]}
+          | {:error, :not_found | :closed | :full | Ecto.Changeset.t() | String.t()}
+  def invite_for_organizer(meeting_id, organizer_user_id, emails)
+      when is_integer(organizer_user_id) do
+    Repo.transaction(fn ->
+      with {:ok, meeting} <-
+             MeetingQueries.lock_meeting_for_organizer(meeting_id, organizer_user_id),
+           :ok <- ensure_open(meeting),
+           {:ok, added} <- add_to_meeting(meeting, emails),
+           :ok <- schedule_invitations(meeting, added) do
+        added
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+  end
+
+  @doc """
+  Whether a meeting takes new guests and their responses: the booking is live
+  and agreed, its time still holds (no reschedule is pending), and it has not
+  started. `awaiting_approval` is live for the invitee, but the host has not
+  agreed to it yet, so a guest would have nothing to answer.
+  """
+  @spec invitations_open?(MeetingSchema.t()) :: boolean()
+  def invitations_open?(meeting) do
+    MeetingState.active?(meeting) and not MeetingState.awaiting_approval?(meeting) and
+      not MeetingState.slot_void?(meeting) and
+      DateTime.after?(meeting.start_time, Clock.utc_now())
+  end
+
+  defp ensure_open(meeting) do
+    if invitations_open?(meeting), do: :ok, else: {:error, :closed}
+  end
+
+  defp add_to_meeting(meeting, emails) do
+    existing = GuestQueries.list_for_meeting(meeting.id)
+    known = MapSet.new(existing, &normalize(&1.email))
+    room = @max_guests - length(existing)
+
+    additions =
+      emails
+      |> sanitize_emails(meeting.attendee_email)
+      |> Enum.reject(&MapSet.member?(known, &1))
+
+    cond do
+      additions == [] -> {:ok, []}
+      room <= 0 -> {:error, :full}
+      true -> create_for_meeting(meeting.id, Enum.take(additions, room))
+    end
+  end
+
+  defp schedule_invitations(_meeting, []), do: :ok
+
+  defp schedule_invitations(meeting, added),
+    do: MeetingScheduler.schedule_guest_invitations(meeting.id, Enum.map(added, & &1.id))
+
+  @doc """
   Looks up the open invitation behind an RSVP token without mutating anything.
 
   Returns the guest with its `:meeting` preloaded. Returns
@@ -104,7 +187,7 @@ defmodule Tymeslot.Meetings.Guests do
          :ok <- ensure_participant_open(guest) do
       guest = Repo.preload(guest, :meeting)
 
-      if rsvp_open?(guest.meeting), do: {:ok, guest}, else: {:error, :meeting_closed}
+      if invitations_open?(guest.meeting), do: {:ok, guest}, else: {:error, :meeting_closed}
     end
   end
 
@@ -182,15 +265,6 @@ defmodule Tymeslot.Meetings.Guests do
       {:ok, guests} -> {:ok, Enum.reverse(guests)}
       error -> error
     end
-  end
-
-  # An invitation is open while the booking is live and agreed, and the
-  # meeting has not started. `awaiting_approval` is live for the invitee but
-  # the host has not agreed to it yet, so its guests have nothing to answer.
-  defp rsvp_open?(meeting) do
-    MeetingState.active?(meeting) and not MeetingState.awaiting_approval?(meeting) and
-      not MeetingState.slot_void?(meeting) and
-      DateTime.after?(meeting.start_time, Clock.utc_now())
   end
 
   defp broadcast_rsvp_update(%{organizer_user_id: user_id, id: meeting_id})

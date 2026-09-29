@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
   """
 
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.TokenUtils
@@ -151,7 +152,7 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
       {:error, changeset} ->
         Logger.error("Failed to persist refreshed OAuth tokens",
           integration_id: integration.id,
-          error: inspect(changeset.errors)
+          error: LogFormat.reason(changeset.errors)
         )
 
         {:error, :token_persistence_failed}

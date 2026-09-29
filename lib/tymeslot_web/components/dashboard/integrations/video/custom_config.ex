@@ -40,10 +40,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig do
         <ProviderIcon.provider_icon provider="custom" type="video" size="large" />
         <div>
           <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">
-            {dgettext("dashboard_integrations", "Custom Video Link")}
+            {dgettext("dashboard_video", "Custom Video Link")}
           </h3>
           <p class="text-sm text-tymeslot-500 font-medium">
-            {dgettext("dashboard_integrations", "Connect any video platform")}
+            {dgettext("dashboard_video", "Connect any video platform")}
           </p>
         </div>
       </div>
@@ -60,9 +60,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig do
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <SharedForm.integration_name_field
             form_errors={@form_errors}
-            value={
-              Map.get(@form_values, "name", dgettext("dashboard_integrations", "My Custom Video"))
-            }
+            value={Map.get(@form_values, "name", dgettext("dashboard_video", "My Custom Video"))}
             target={@target}
           />
 
@@ -70,17 +68,15 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig do
             <SharedForm.url_field
               id="custom_meeting_url"
               name="integration[custom_meeting_url]"
-              label={dgettext("dashboard_integrations", "Meeting URL")}
+              label={dgettext("dashboard_video", "Meeting URL")}
               value={Map.get(@form_values, "custom_meeting_url", "")}
-              placeholder={
-                dgettext("dashboard_integrations", "https://jitsi.example.org/{{meeting_id}}")
-              }
+              placeholder={dgettext("dashboard_video", "https://jitsi.example.org/{{meeting_id}}")}
               form_errors={@form_errors}
               error_key={:custom_meeting_url}
               target={@target}
               helper_text={
                 dgettext(
-                  "dashboard_integrations",
+                  "dashboard_video",
                   "Enter your video meeting URL. Use {{meeting_id}} for unique rooms per meeting"
                 )
               }
@@ -90,34 +86,30 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig do
               <% {:ok, :valid_template, preview, _message} -> %>
                 <TemplatePreviewBox.render
                   status={:valid}
-                  title={dgettext("dashboard_integrations", "✓ Valid Template")}
-                  message={
-                    dgettext("dashboard_integrations", "Template variable detected: {{meeting_id}}")
-                  }
+                  title={dgettext("dashboard_video", "✓ Valid Template")}
+                  message={dgettext("dashboard_video", "Template variable detected: {{meeting_id}}")}
                   preview={preview}
                 />
               <% {:warning, _type, preview, error_message} -> %>
                 <TemplatePreviewBox.render
                   status={:warning}
-                  title={dgettext("dashboard_integrations", "⚠ Invalid Syntax")}
+                  title={dgettext("dashboard_video", "⚠ Invalid Syntax")}
                   message={error_message}
                   preview={preview}
                 />
               <% {:ok, :static, _url, _message} -> %>
                 <TemplatePreviewBox.render
                   status={:static}
-                  title={dgettext("dashboard_integrations", "Static Meeting Room")}
-                  message={
-                    dgettext("dashboard_integrations", "All meetings will use the same room URL")
-                  }
+                  title={dgettext("dashboard_video", "Static Meeting Room")}
+                  message={dgettext("dashboard_video", "All meetings will use the same room URL")}
                 />
               <% {:ok, :empty, _url, _message} -> %>
                 <TemplatePreviewBox.render
                   status={:empty}
-                  title={dgettext("dashboard_integrations", "No URL Configured")}
+                  title={dgettext("dashboard_video", "No URL Configured")}
                   message={
                     dgettext(
-                      "dashboard_integrations",
+                      "dashboard_video",
                       "Enter a custom video link to configure meeting rooms"
                     )
                   }
@@ -137,7 +129,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig do
             phx-target={@target}
             class="btn-secondary"
           >
-            {dgettext("dashboard_integrations", "Cancel")}
+            {dgettext("dashboard_video", "Cancel")}
           </button>
           <TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents.form_submit_button saving={
             @saving

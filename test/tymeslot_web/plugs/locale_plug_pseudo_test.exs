@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Plugs.LocalePlugPseudoTest do
       conn = call_with_locale_param("pseudo")
 
       assert conn.assigns.locale == "pseudo"
-      assert get_session(conn, :locale) == "pseudo"
+      assert get_session(conn, :chosen_locale) == "pseudo"
       assert Gettext.get_locale(TymeslotWeb.Gettext) == "pseudo"
     end
 

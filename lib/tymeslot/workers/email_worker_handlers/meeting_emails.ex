@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.GuestQueries
   alias Tymeslot.Meetings.MeetingQueries
@@ -19,6 +20,22 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   alias Tymeslot.Workers.EmailWorkerHandlers.DeliveryOutcome
   alias Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.GuestEmails
+
+  # The meeting is gone, started, or changed state since the email was
+  # scheduled. A partial cancellation delivery is recorded.
+  @meeting_started "Meeting already started"
+  @meeting_cancelled "Meeting cancelled"
+  @meeting_not_cancelled "Meeting not cancelled"
+  @meeting_gone "Meeting not found"
+
+  @doc """
+  Whether `reason`, from a discard this module returned, is an expected end
+  of the email job rather than a fault
+  (see `Tymeslot.Infrastructure.ExpectedJobOutcome`).
+  """
+  @spec expected_discard?(term()) :: boolean()
+  def expected_discard?(reason),
+    do: reason in [@meeting_started, @meeting_cancelled, @meeting_not_cancelled, @meeting_gone]
 
   @spec handle_confirmation_emails(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
@@ -54,7 +71,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
             start_time: meeting.start_time
           )
 
-          {:discard, "Meeting already started"}
+          {:discard, @meeting_started}
 
         true ->
           reminder_value = Map.get(args, "reminder_value", 30)
@@ -82,7 +99,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           meeting_id: meeting_id
         )
 
-        {:discard, "Meeting cancelled"}
+        {:discard, @meeting_cancelled}
       else
         send_reschedule_request_email(meeting)
       end
@@ -101,7 +118,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           status: meeting.status
         )
 
-        {:discard, "Meeting not cancelled"}
+        {:discard, @meeting_not_cancelled}
       end
     end)
   end
@@ -128,7 +145,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
           meeting_id: meeting_id
         )
 
-        {:discard, "Meeting not found"}
+        {:discard, @meeting_gone}
     end
   end
 
@@ -164,7 +181,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   end
 
   defp send_participant_cancellations(meeting, appointment_details) do
-    Logger.info("Sending cancellation emails", meeting_id: meeting.id, uid: meeting.uid)
+    Logger.info("Sending cancellation emails", meeting_id: meeting.id)
 
     if Meetings.group?(meeting) do
       # `group?/1` is capacity-based, not "has live participants": a meeting
@@ -222,7 +239,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
 
       :ok
     else
-      Logger.info("Sending confirmation emails", meeting_id: meeting.id, uid: meeting.uid)
+      Logger.info("Sending confirmation emails", meeting_id: meeting.id)
 
       appointment_details = AppointmentBuilder.from_meeting(meeting)
 
@@ -253,7 +270,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
             {:error, reason} ->
               Logger.error("Organizer confirmation step failed",
                 meeting_id: meeting.id,
-                error: inspect(reason)
+                error: LogFormat.reason(reason)
               )
 
               {:error, reason}
@@ -275,7 +292,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
             {:error, reason} ->
               Logger.error("Attendee confirmation step failed",
                 meeting_id: meeting.id,
-                error: inspect(reason)
+                error: LogFormat.reason(reason)
               )
 
               {:error, reason}
@@ -306,7 +323,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   # retry, not this job's. The live participants' guests are reminded inline,
   # as on a solo meeting, each stamped per offset so a retry skips them.
   defp send_reminder_emails(meeting, reminder_value, reminder_unit) do
-    Logger.info("Sending reminder emails", meeting_id: meeting.id, uid: meeting.uid)
+    Logger.info("Sending reminder emails", meeting_id: meeting.id)
 
     if Meetings.group?(meeting) do
       participants = Enum.filter(Meetings.recipients(meeting), &(&1.kind == :participant))
@@ -403,7 +420,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
   end
 
   defp send_reschedule_request_email(meeting) do
-    Logger.info("Sending reschedule request email", meeting_id: meeting.id, uid: meeting.uid)
+    Logger.info("Sending reschedule request email", meeting_id: meeting.id)
 
     if Meetings.group?(meeting) do
       participants = Enum.filter(Meetings.recipients(meeting), &(&1.kind == :participant))
@@ -430,7 +447,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
         Logger.error("Failed to send reschedule request email",
           meeting_id: meeting.id,
           to: meeting.attendee_email,
-          error: inspect(reason)
+          error: LogFormat.reason(reason)
         )
 
         {:error, reason}
@@ -531,7 +548,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails do
             meeting_id: meeting.id,
             reminder_value: reminder_value,
             reminder_unit: reminder_unit,
-            error: inspect(reason)
+            error: LogFormat.reason(reason)
           )
 
           {:error, "Failed to track reminder: #{inspect(reason)}"}

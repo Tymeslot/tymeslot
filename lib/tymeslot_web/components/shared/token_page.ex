@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Components.Shared.TokenPage do
         <.icon name="hero-link-slash" class="h-9 w-9" />
       </div>
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
-        {dgettext("booking", "This link is no longer valid")}
+        {dgettext("booking_manage", "This link is no longer valid")}
       </h1>
       <p class="mt-2 text-token-base text-tymeslot-600">{@body}</p>
     </.shell>
@@ -64,10 +64,10 @@ defmodule TymeslotWeb.Components.Shared.TokenPage do
         <.icon name="hero-clock" class="h-9 w-9" />
       </div>
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
-        {dgettext("booking", "Too many attempts")}
+        {dgettext("booking_manage", "Too many attempts")}
       </h1>
       <p class="mt-2 text-token-base text-tymeslot-600">
-        {dgettext("booking", "Please wait a moment and try again.")}
+        {dgettext("booking_manage", "Please wait a moment and try again.")}
       </p>
     </.shell>
     """

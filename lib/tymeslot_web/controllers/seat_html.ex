@@ -25,11 +25,11 @@ defmodule TymeslotWeb.SeatHTML do
       </div>
 
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
-        {dgettext("booking", "Cancel your spot?")}
+        {dgettext("booking_manage", "Cancel your spot?")}
       </h1>
 
       <p class="mt-2 text-token-base text-tymeslot-600">
-        {dgettext("booking", "Confirm to give up your spot in this meeting with %{name}.",
+        {dgettext("booking_manage", "Confirm to give up your spot in this meeting with %{name}.",
           name: @meeting.organizer_name
         )}
       </p>
@@ -42,7 +42,7 @@ defmodule TymeslotWeb.SeatHTML do
           type="submit"
           class="w-full rounded-token-xl bg-amber-500 px-6 py-3 text-token-base font-semibold text-white hover:bg-amber-600"
         >
-          {dgettext("booking", "Yes, cancel my spot")}
+          {dgettext("booking_manage", "Yes, cancel my spot")}
         </button>
       </form>
 
@@ -53,7 +53,7 @@ defmodule TymeslotWeb.SeatHTML do
         href={@keep_path}
         class="mt-4 inline-block text-token-sm font-semibold text-tymeslot-500 hover:text-turquoise-600"
       >
-        {dgettext("booking", "Keep my spot")}
+        {dgettext("booking_manage", "Keep my spot")}
       </a>
     </TokenPage.shell>
     """
@@ -73,11 +73,11 @@ defmodule TymeslotWeb.SeatHTML do
       </div>
 
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
-        {dgettext("booking", "Your spot has been cancelled")}
+        {dgettext("booking_manage", "Your spot has been cancelled")}
       </h1>
 
       <p class="mt-2 text-token-base text-tymeslot-600">
-        {dgettext("booking", "We've let %{name} know. A confirmation email is on its way.",
+        {dgettext("booking_manage", "We've let %{name} know. A confirmation email is on its way.",
           name: @meeting.organizer_name
         )}
       </p>
@@ -89,7 +89,7 @@ defmodule TymeslotWeb.SeatHTML do
         href={@booking_path}
         class="mt-6 inline-block text-token-sm font-semibold text-turquoise-600 hover:text-turquoise-700"
       >
-        {dgettext("booking", "Book another time")}
+        {dgettext("booking_manage", "Book another time")}
       </a>
     </TokenPage.shell>
     """
@@ -104,11 +104,11 @@ defmodule TymeslotWeb.SeatHTML do
         <.icon name="hero-clock" class="h-9 w-9" />
       </div>
       <h1 class="mt-6 text-token-2xl font-bold text-tymeslot-800">
-        {dgettext("booking", "This spot can no longer be cancelled online")}
+        {dgettext("booking_manage", "This spot can no longer be cancelled online")}
       </h1>
       <p class="mt-2 text-token-base text-tymeslot-600">
         {dgettext(
-          "booking",
+          "booking_manage",
           "The meeting is too close to its start time. Please contact the host directly."
         )}
       </p>
@@ -122,7 +122,7 @@ defmodule TymeslotWeb.SeatHTML do
     ~H"""
     <TokenPage.invalid body={
       dgettext(
-        "booking",
+        "booking_manage",
         "The link may have expired or already been used. Please contact the meeting host."
       )
     } />
@@ -146,7 +146,7 @@ defmodule TymeslotWeb.SeatHTML do
       </p>
       <p class="flex items-center gap-2 text-token-sm text-tymeslot-600">
         <.icon name="hero-user-mini" class="h-4 w-4 text-turquoise-500" />
-        {dgettext("booking", "Hosted by %{name}", name: @meeting.organizer_name)}
+        {dgettext("booking_manage", "Hosted by %{name}", name: @meeting.organizer_name)}
       </p>
     </div>
     """

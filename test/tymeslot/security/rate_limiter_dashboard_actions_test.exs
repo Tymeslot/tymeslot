@@ -238,6 +238,27 @@ defmodule Tymeslot.Security.RateLimiterDashboardActionsTest do
   end
 
   # ---------------------------------------------------------------------------
+  # check_dashboard_add_guests_rate_limit/1 — 20 per 10 minutes
+  # ---------------------------------------------------------------------------
+
+  describe "check_dashboard_add_guests_rate_limit/1" do
+    test "blocks requests exceeding the limit, per user" do
+      user_id = 11_870
+      other_user_id = 11_871
+
+      for _i <- 1..20 do
+        assert :ok = RateLimiter.check_dashboard_add_guests_rate_limit(user_id)
+      end
+
+      assert {:error, :rate_limited, message} =
+               RateLimiter.check_dashboard_add_guests_rate_limit(user_id)
+
+      assert message =~ "guest invitation"
+      assert :ok = RateLimiter.check_dashboard_add_guests_rate_limit(other_user_id)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # check_dashboard_reschedule_rate_limit/1 — 20 per 10 minutes
   # ---------------------------------------------------------------------------
 

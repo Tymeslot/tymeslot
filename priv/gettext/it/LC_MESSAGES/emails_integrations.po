@@ -1,0 +1,187 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: it\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "%{provider} refused to create a video room. Whatever it was for went ahead without one: a booking is still confirmed, and a calendar event is still in your calendar. Nothing on this integration gets a video link until the setting described above changes, and links already sent keep working."
+msgstr "%{provider} ha rifiutato di creare una stanza video. Ciò per cui serviva è andato avanti senza: una prenotazione resta confermata e un evento resta nel tuo calendario. Niente su questa integrazione riceve un link video finché l'impostazione descritta sopra non cambia, e i link già inviati continuano a funzionare."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "A meeting could not be added to your calendar."
+msgstr "Non è stato possibile aggiungere una riunione al tuo calendario."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "ACTION REQUIRED:"
+msgstr "AZIONE RICHIESTA:"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Action Required"
+msgstr "Azione richiesta"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Action required"
+msgstr "Azione richiesta"
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Bookings on %{provider} are getting no video link"
+msgstr "Le prenotazioni su %{provider} non ricevono un link video"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "CalDAV server temporarily unavailable"
+msgstr "Server CalDAV temporaneamente non disponibile"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar Sync Error"
+msgstr "Errore di sincronizzazione del calendario"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar Sync Error - Manual Action Required"
+msgstr "Errore di sincronizzazione del calendario - è richiesto un intervento manuale"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar didn't sync"
+msgstr "Il calendario non si è sincronizzato"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar permissions or authentication problems"
+msgstr "Problemi di autorizzazione o autenticazione del calendario"
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Change the setting described above, or ask whoever runs the server to. Once a booking gets its video link again, the notice on your video integration disappears."
+msgstr "Modifica l'impostazione descritta sopra, oppure chiedilo a chi gestisce il server. Non appena una prenotazione riceve di nuovo il suo link video, l'avviso sulla tua integrazione video scompare."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Common causes:"
+msgstr "Cause comuni:"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Date:"
+msgstr "Data:"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Duration:"
+msgstr "Durata:"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "ERROR DETAILS:"
+msgstr "DETTAGLI DELL'ERRORE:"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Error"
+msgstr "Errore"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Error Details"
+msgstr "Dettagli dell'errore"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar."
+msgstr "Non è stato possibile aggiungere questa riunione al tuo calendario. L'appuntamento è stato confermato correttamente su Tymeslot e sia tu sia il partecipante avete ricevuto le email di conferma. Dovrai però aggiungerlo manualmente al tuo calendario."
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Integration"
+msgstr "Integrazione"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Location:"
+msgstr "Luogo:"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "MEETING DETAILS:"
+msgstr "DETTAGLI DELLA RIUNIONE:"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Maximum retries exceeded"
+msgstr "Numero massimo di tentativi superato"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Meeting Details"
+msgstr "Dettagli della riunione"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Network connectivity issues"
+msgstr "Problemi di connettività di rete"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Not specified"
+msgstr "Non specificato"
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Open video settings"
+msgstr "Apri le impostazioni video"
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails - this is purely a technical calendar sync issue that doesn't affect the booking itself."
+msgstr "Aggiungi manualmente questa riunione al tuo calendario per non perderla. Sia tu sia il partecipante avete già ricevuto le email di conferma: si tratta solo di un problema tecnico di sincronizzazione del calendario, che non riguarda la prenotazione in sé."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "The booking is safe - but please add it to your calendar manually."
+msgstr "La prenotazione è al sicuro, ma aggiungila manualmente al tuo calendario."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "This is an automated system notification. Please check your calendar sync settings if this issue persists."
+msgstr "Questa è una notifica automatica del sistema. Se il problema persiste, controlla le impostazioni di sincronizzazione del calendario."
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "This is the only email you will get about this for now. If the same problem is still there in %{days} days, you will hear about it again. Your video settings show the notice for as long as it lasts."
+msgstr "Per ora questa è l'unica email che riceverai in merito. Se tra %{days} giorni lo stesso problema è ancora lì, te lo faremo sapere di nuovo. Le tue impostazioni video mostrano l'avviso finché vale."
+
+#: lib/tymeslot/emails/templates/calendar_sync_error.ex
+#, elixir-autogen, elixir-format
+msgid "Time:"
+msgstr "Orario:"
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "Video rooms not created"
+msgstr "Stanze video non create"
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "What should I do?"
+msgstr "Cosa devo fare?"
+
+#: lib/tymeslot/emails/templates/video_room_creation_error.ex
+#, elixir-autogen, elixir-format
+msgid "What's happening?"
+msgstr "Cosa sta succedendo?"

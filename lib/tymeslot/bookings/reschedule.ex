@@ -43,6 +43,7 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   alias Tymeslot.Clock
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.MeetingQueries
@@ -342,7 +343,7 @@ defmodule Tymeslot.Bookings.Reschedule do
       {:error, reason} ->
         Logger.warning("Failed to send booking request notifications on reschedule",
           meeting_id: updated.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok
@@ -408,7 +409,7 @@ defmodule Tymeslot.Bookings.Reschedule do
       {:error, reason} ->
         Logger.warning("Failed to cancel stale reminder jobs on reschedule",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok
@@ -587,7 +588,7 @@ defmodule Tymeslot.Bookings.Reschedule do
       {:error, reason} ->
         Logger.warning("Failed to enqueue provider video sync on reschedule",
           meeting_id: meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok
@@ -603,7 +604,7 @@ defmodule Tymeslot.Bookings.Reschedule do
       {:error, reason} ->
         Logger.warning("Failed to send reschedule notifications",
           meeting_id: updated_meeting.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         :ok

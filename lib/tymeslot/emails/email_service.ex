@@ -37,6 +37,7 @@ defmodule Tymeslot.Emails.EmailService do
           required(:meeting_type) => String.t(),
           optional(:attendee_locale) => String.t(),
           optional(:organizer_locale) => String.t(),
+          optional(:organizer_note) => String.t() | nil,
           optional(:start_time_attendee_tz) => DateTime.t(),
           optional(:start_time_owner_tz) => DateTime.t(),
           optional(:attendee_video_url) => String.t() | nil,
@@ -219,4 +220,7 @@ defmodule Tymeslot.Emails.EmailService do
   @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_admin_alert(recipient, category, severity, message, metadata),
     to: IntegrationEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_admin_alert_digest(recipient, digest), to: IntegrationEmails
 end

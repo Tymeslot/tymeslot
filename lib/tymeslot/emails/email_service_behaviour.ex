@@ -104,4 +104,6 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               message :: String.t(),
               metadata :: map()
             ) :: {:ok, any()} | {:error, any()}
+  @callback send_admin_alert_digest(recipient :: String.t(), digest :: map()) ::
+              {:ok, any()} | {:error, any()}
 end

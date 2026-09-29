@@ -226,7 +226,12 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
       confirm_traffic_flows(response, test_url, timeout, result)
     else
       error = "Proxy reachable but returned status #{response.status}"
-      Logger.warning(error)
+
+      Logger.warning("Proxy verification reached the test URL, which answered non-2xx",
+        status: response.status,
+        test_url: test_url,
+        proxy: "#{proxy_config.host}:#{proxy_config.port}"
+      )
 
       %{
         result

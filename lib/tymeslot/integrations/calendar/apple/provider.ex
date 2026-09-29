@@ -105,18 +105,11 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def new(config) do
-    CaldavCommon.build_client(
-      %{
-        base_url: normalize_base_url(config[:base_url] || @default_base_url),
-        username: config[:username],
-        password: config[:password],
-        calendar_paths: config[:calendar_paths] || [],
-        verify_ssl: true,
-        connection_timeout: config[:connection_timeout] || 10_000,
-        request_timeout: config[:request_timeout] || 30_000,
-        discovery_timeout: config[:discovery_timeout] || 15_000
-      },
-      provider: :apple
+    CaldavCommon.build_provider_client(
+      config,
+      :apple,
+      normalize_base_url(config[:base_url] || @default_base_url),
+      config[:calendar_paths] || []
     )
   end
 
@@ -174,6 +167,9 @@ defmodule Tymeslot.Integrations.Calendar.Apple.Provider do
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def fetch_event(client, event_ref), do: CaldavCommon.fetch_event(client, event_ref)
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def find_moved_event(client, event_ref), do: CaldavCommon.find_moved_event(client, event_ref)
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def list_events(client, opts), do: CaldavCommon.list_events(client, opts)

@@ -26,6 +26,7 @@ defmodule TymeslotWeb.MeetingRequestLive do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Meetings.Approval
   alias Tymeslot.Meetings.ApprovalToken
   alias Tymeslot.Meetings.MeetingState
@@ -40,7 +41,7 @@ defmodule TymeslotWeb.MeetingRequestLive do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, dgettext("booking", "Booking request"))
+     |> assign(:page_title, dgettext("booking_manage", "Booking request"))
      |> assign(:decline_reason, "")
      |> assign(:token, nil)
      |> assign(:choosing, :approve)
@@ -78,7 +79,7 @@ defmodule TymeslotWeb.MeetingRequestLive do
         assign(socket, meeting: meeting, state: state_for(meeting))
 
       {:error, reason} ->
-        Logger.info("Rejected booking request link", reason: inspect(reason))
+        Logger.info("Rejected booking request link", reason: LogFormat.reason(reason))
         assign(socket, meeting: nil, state: :invalid)
     end
   end
@@ -164,7 +165,7 @@ defmodule TymeslotWeb.MeetingRequestLive do
         put_flash(
           socket,
           :error,
-          dgettext("booking", "Too many attempts. Try again in a moment.")
+          dgettext("booking_manage", "Too many attempts. Try again in a moment.")
         )
     end
   end
@@ -210,7 +211,7 @@ defmodule TymeslotWeb.MeetingRequestLive do
     |> put_flash(
       :error,
       dgettext(
-        "booking",
+        "booking_manage",
         "This request has changed since this page was opened, so it can no longer be answered here. Open the most recent request email to answer it."
       )
     )
@@ -226,12 +227,15 @@ defmodule TymeslotWeb.MeetingRequestLive do
       {:error, :not_awaiting_approval} ->
         socket
         |> load_request(socket.assigns.token)
-        |> put_flash(:info, dgettext("booking", "This request had already been answered."))
+        |> put_flash(:info, dgettext("booking_manage", "This request had already been answered."))
 
       {:error, :meeting_started} ->
         socket
         |> assign(:state, :too_late)
-        |> put_flash(:error, dgettext("booking", "This meeting's start time has already passed."))
+        |> put_flash(
+          :error,
+          dgettext("booking_manage", "This meeting's start time has already passed.")
+        )
 
       # Another booking took the slot while this request was held, and the
       # partial unique index refused the confirmation
@@ -245,7 +249,7 @@ defmodule TymeslotWeb.MeetingRequestLive do
         |> put_flash(
           :error,
           dgettext(
-            "booking",
+            "booking_manage",
             "That time has since been booked by somebody else, so this request can no longer be approved."
           )
         )

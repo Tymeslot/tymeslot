@@ -403,7 +403,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       variant={:secondary}
                       class="flex-1"
                     >
-                      ← {dgettext("booking", "back")}
+                      ← {dgettext("booking", "Back")}
                     </.action_button>
 
                     <.action_button
@@ -413,7 +413,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       disabled={!(@selected_date && @selected_time)}
                       class="flex-1"
                     >
-                      {dgettext("booking", "next_step")} →
+                      {dgettext("booking", "Next Step")} →
                     </.action_button>
                   </div>
                 </div>

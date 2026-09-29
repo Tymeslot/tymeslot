@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Layouts do
 
   import TymeslotWeb.Components.CoreComponents
 
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
   alias TymeslotWeb.Endpoint
@@ -225,7 +226,7 @@ defmodule TymeslotWeb.Layouts do
           require Logger
 
           Logger.warning("Theme extension is configured but not available",
-            module: inspect(mod),
+            module: LogFormat.reason(mod),
             function: func
           )
 
@@ -234,7 +235,7 @@ defmodule TymeslotWeb.Layouts do
 
       other ->
         require Logger
-        Logger.error("Invalid theme extension configuration", value: inspect(other))
+        Logger.error("Invalid theme extension configuration", value: LogFormat.reason(other))
         false
     end)
   end

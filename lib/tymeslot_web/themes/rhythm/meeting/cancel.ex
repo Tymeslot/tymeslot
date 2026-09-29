@@ -58,11 +58,14 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                     </div>
 
                     <h1 class="confirmation-headline">
-                      {dgettext("booking", "Meeting Confirmed")}
+                      {dgettext("booking_manage", "Meeting Confirmed")}
                     </h1>
 
                     <p class="confirmation-message">
-                      {dgettext("booking", "Great! Your meeting is still scheduled as planned.")}
+                      {dgettext(
+                        "booking_manage",
+                        "Great! Your meeting is still scheduled as planned."
+                      )}
                     </p>
                   <% else %>
                     <div class="success-badge success-badge--transparent">
@@ -84,18 +87,18 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                     </div>
 
                     <h1 class="confirmation-headline">
-                      {dgettext("booking", "Cancel Appointment")}
+                      {dgettext("booking_manage", "Cancel Appointment")}
                     </h1>
 
                     <p class="confirmation-message">
-                      {dgettext("booking", "Are you sure you want to cancel this appointment?")}
+                      {dgettext("booking_manage", "Are you sure you want to cancel this appointment?")}
                     </p>
                   <% end %>
                 </div>
 
                 <div class="meeting-ticket">
                   <div class="ticket-header">
-                    <span class="ticket-label">{dgettext("booking", "Meeting Details")}</span>
+                    <span class="ticket-label">{dgettext("booking_manage", "Meeting Details")}</span>
                     <span class="ticket-badge">{@meeting.duration} min</span>
                   </div>
 
@@ -125,7 +128,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                           />
                         </svg>
                         <span>{dgettext(
-                          "booking",
+                          "booking_manage",
                           "We look forward to seeing you at the scheduled time."
                         )}</span>
                       </div>
@@ -142,7 +145,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                           />
                         </svg>
                         <span>{dgettext(
-                          "booking",
+                          "booking_manage",
                           "A cancellation email will be sent to all participants"
                         )}</span>
                       </div>
@@ -157,7 +160,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                       class="action-button-primary action-button-success"
                       type="button"
                     >
-                      {dgettext("booking", "Done")}
+                      {dgettext("booking_manage", "Done")}
                     </button>
                   </div>
                 <% else %>
@@ -170,9 +173,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                       disabled={@loading}
                     >
                       <%= if @loading do %>
-                        {dgettext("booking", "Cancelling...")}
+                        {dgettext("booking_manage", "Cancelling...")}
                       <% else %>
-                        {dgettext("booking", "Yes, Cancel Meeting")}
+                        {dgettext("booking_manage", "Yes, Cancel Meeting")}
                       <% end %>
                     </button>
 
@@ -183,7 +186,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                       data-testid="keep-meeting"
                       disabled={@loading}
                     >
-                      {dgettext("booking", "Keep Meeting")}
+                      {dgettext("booking_manage", "Keep Meeting")}
                     </button>
                   </div>
                 <% end %>

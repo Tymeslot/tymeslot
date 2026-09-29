@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   use Gettext, backend: TymeslotWeb.Gettext
   import Ecto.Changeset
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
+  alias Tymeslot.Infrastructure.ErrorTracking
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.SsrfGuard
@@ -251,14 +252,10 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   defp safe_decrypt(encrypted, field, id) do
     Encryption.decrypt(encrypted)
   rescue
-    _e ->
-      require Logger
-
-      Logger.error("Failed to decrypt video integration field",
-        field: field,
-        integration_id: id
-      )
-
+    # Data this application encrypted no longer decrypts: corrupted, or the
+    # key it was written under is gone. The field reads as unset.
+    e ->
+      ErrorTracking.report_error(e, __STACKTRACE__, %{field: field, integration_id: id})
       nil
   end
 

@@ -20,6 +20,7 @@ defmodule Tymeslot.Integrations.Video.Disconnect do
   """
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Infrastructure.Logging.LogFormat
   alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
@@ -115,7 +116,7 @@ defmodule Tymeslot.Integrations.Video.Disconnect do
         # hidden row behind with nothing scheduled to clean it up.
         Logger.warning("Failed to schedule video room cleanup, removing integration directly",
           integration_id: integration.id,
-          reason: inspect(reason)
+          reason: LogFormat.reason(reason)
         )
 
         remove(integration, false)

@@ -8,6 +8,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   alias Tymeslot.Workers.EmailWorkerHandlers.AuthEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.BookingApprovalEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.GroupMeetingEmails
+  alias Tymeslot.Workers.EmailWorkerHandlers.GuestEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.MeetingEmails
   alias Tymeslot.Workers.EmailWorkerHandlers.PollEmails
@@ -26,6 +27,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   # `:seat_meeting_cancellation` are named that closely apart on purpose.
   @action_handlers %{
     "send_admin_alert" => {AdminEmails, :handle_admin_alert},
+    "send_admin_alert_digest" => {AdminEmails, :handle_admin_alert_digest},
     "send_confirmation_emails" => {MeetingEmails, :handle_confirmation_emails},
     MeetingScheduler.seat_action(:seat_confirmation) =>
       {GroupMeetingEmails, :handle_seat_confirmation_emails},
@@ -38,6 +40,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
       {GroupMeetingEmails, :handle_seat_reschedule_emails},
     MeetingScheduler.seat_action(:seat_reschedule_request) =>
       {GroupMeetingEmails, :handle_seat_reschedule_request},
+    "send_guest_invitations" => {GuestEmails, :handle_guest_invitations},
     "send_reminder_emails" => {MeetingEmails, :handle_reminder_emails},
     MeetingScheduler.seat_action(:seat_reminder) =>
       {GroupMeetingEmails, :handle_seat_reminder_emails},
@@ -69,6 +72,26 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     "send_event_update_notification" =>
       {IntegrationEmails, :handle_event_update_notification, :with_job_id}
   }
+
+  # The handlers that declare some of their discards an expected end of the
+  # job. `AdminEmails` discards nothing of its own.
+  @declaring_handlers [
+    AuthEmails,
+    BookingApprovalEmails,
+    GuestEmails,
+    IntegrationEmails,
+    MeetingEmails,
+    PollEmails
+  ]
+
+  @doc """
+  Whether `reason`, from a discard one of the handlers returned, is an
+  expected end of the email job rather than a fault
+  (see `Tymeslot.Infrastructure.ExpectedJobOutcome`).
+  """
+  @spec expected_discard?(term()) :: boolean()
+  def expected_discard?(reason),
+    do: Enum.any?(@declaring_handlers, & &1.expected_discard?(reason))
 
   @doc """
   Executes the specified email action with the given arguments.

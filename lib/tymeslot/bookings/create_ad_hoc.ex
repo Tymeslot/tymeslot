@@ -30,7 +30,9 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
           optional(:calendar_integration_id) => pos_integer() | nil,
           optional(:calendar_path) => String.t() | nil,
           optional(:video_integration_id) => pos_integer() | nil,
-          optional(:guest_emails) => [String.t()]
+          optional(:guest_emails) => [String.t()],
+          optional(:organizer_note) => String.t() | nil,
+          optional(:attendee_locale) => String.t() | nil
         }
 
   @spec execute(params()) ::
@@ -87,6 +89,15 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
 
   defp normalise_address(email), do: email |> String.trim() |> String.downcase()
 
+  defp blank_to_nil(note) when is_binary(note) do
+    case String.trim(note) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+  end
+
+  defp blank_to_nil(_note), do: nil
+
   defp blank?(nil), do: true
   defp blank?(s) when is_binary(s), do: String.trim(s) == ""
   defp blank?(_other), do: false
@@ -114,9 +125,21 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
       video_integration_id: params[:video_integration_id],
       attendee_name: params.attendee_name,
       attendee_email: params.attendee_email,
+      # The organiser is the author of everything on this meeting, so any note
+      # is theirs; `attendee_message` stays for words the attendee wrote.
       attendee_message: nil,
+      organizer_note: blank_to_nil(params[:organizer_note]),
+      # Explicitly none, not "unset". A nil here is read by
+      # `Notifications.Orchestrator` as a meeting from before the reminders
+      # column existed, and answered with the legacy default of 30 minutes —
+      # so a booking whose own confirmation says no reminders are scheduled
+      # sends one anyway. An empty list is honoured as the answer it is.
+      reminders: [],
       attendee_timezone: params[:attendee_timezone] || "Etc/UTC",
-      attendee_locale: Locales.booking_default_locale(),
+      # The organiser chooses which language the guests are written to; a
+      # missing or unsupported choice falls back to the booking default.
+      attendee_locale:
+        Locales.acceptable(params[:attendee_locale]) || Locales.booking_default_locale(),
       status: "confirmed",
       view_url: build_meeting_url(uid, "", org_username),
       reschedule_url: build_meeting_url(uid, "/reschedule", org_username),

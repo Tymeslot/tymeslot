@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Themes.Core.ErrorBoundary do
   require Logger
 
   alias Phoenix.Component
+  alias Tymeslot.Infrastructure.ErrorTracking
 
   @type error_context :: %{
           theme_id: String.t(),
@@ -91,12 +92,10 @@ defmodule TymeslotWeb.Themes.Core.ErrorBoundary do
   end
 
   defp log_theme_error(context) do
-    Logger.error("Theme error",
+    ErrorTracking.report_error(context.error, context.stacktrace, %{
       theme_id: context.theme_id,
-      function: context.function,
-      error: inspect(context.error),
-      args: inspect(context.args)
-    )
+      function: context.function
+    })
 
     if Application.get_env(:tymeslot, :debug_theme_errors, false) do
       Logger.error("Theme error stacktrace",

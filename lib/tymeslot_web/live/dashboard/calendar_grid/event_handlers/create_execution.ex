@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   alias Tymeslot.CalendarGrid.EventCreation
   alias Tymeslot.Integrations.Calendar.Recurrence.RRule
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGridComponent
 
@@ -31,11 +32,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
   defp handle_save_event_with(%{mode: :meeting} = creating, socket) do
     with :ok <- authorize_optional_integration(socket, creating[:integration_id]),
          {:ok, start_at, end_at} <- resolve_timed_range(creating, socket),
-         :ok <- validate_meeting_fields(creating, socket.assigns.current_user.email) do
-      send(
-        self(),
-        {:execute_create_ad_hoc_meeting, ad_hoc_params(creating, socket, start_at, end_at)}
-      )
+         :ok <- validate_meeting_fields(creating, socket.assigns.current_user.email),
+         {:ok, guest_emails} <- extra_guest_emails(creating) do
+      params =
+        creating
+        |> ad_hoc_params(socket, start_at, end_at)
+        |> Map.put(:guest_emails, guest_emails)
+
+      send(self(), {:execute_create_ad_hoc_meeting, params})
 
       {:noreply, assign(socket, :saving_event, true)}
     else
@@ -127,7 +131,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
       organizer_user_id: socket.assigns.current_user.id,
       calendar_integration_id: creating[:integration_id],
       calendar_id: creating[:calendar_id],
-      video_integration_id: creating[:video_integration_id]
+      video_integration_id: creating[:video_integration_id],
+      organizer_note: creating[:organizer_note],
+      attendee_locale: creating[:locale]
     }
   end
 
@@ -346,6 +352,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateExecution do
 
       true ->
         :ok
+    end
+  end
+
+  # An address typed into the extra-guest field but never added is still one
+  # the host means to invite, so it is taken along rather than lost. Only an
+  # invalid one stops the save; a repeat or the main guest's own address is
+  # settled by `EventCreation` like any other.
+  defp extra_guest_emails(creating) do
+    added = creating[:guest_emails] || []
+    pending = (creating[:guest_email_input] || "") |> String.trim() |> String.downcase()
+
+    cond do
+      pending == "" -> {:ok, added}
+      Shared.valid_email?(pending) -> {:ok, added ++ [pending]}
+      true -> CreateFormState.check_extra_guest(creating, pending)
     end
   end
 

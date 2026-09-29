@@ -18,9 +18,9 @@ defmodule TymeslotWeb.Live.Dashboard.VideoSettings.ProviderPicker do
   @groups [:hosted, :self_hosted, :other]
 
   @group_labels %{
-    hosted: dgettext_noop("dashboard_integrations", "Hosted services"),
-    self_hosted: dgettext_noop("dashboard_integrations", "Self-hosted"),
-    other: dgettext_noop("dashboard_integrations", "Other")
+    hosted: dgettext_noop("dashboard_video", "Hosted services"),
+    self_hosted: dgettext_noop("dashboard_video", "Self-hosted"),
+    other: dgettext_noop("dashboard_video", "Other")
   }
 
   @provider_groups %{
@@ -71,7 +71,7 @@ defmodule TymeslotWeb.Live.Dashboard.VideoSettings.ProviderPicker do
   defp label(group) do
     Gettext.dgettext(
       TymeslotWeb.Gettext,
-      "dashboard_integrations",
+      "dashboard_video",
       Map.fetch!(@group_labels, group)
     )
   end

@@ -4,7 +4,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  import TymeslotWeb.Components.UI.LocaleButton
+
   alias Phoenix.LiveView.JS
+  alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Locales
+  alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.MeetingSchema
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -23,7 +29,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
 
   @spec create_event_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def create_event_modal(assigns) do
-    assigns = assign(assigns, :meeting_mode, assigns.creating_event[:mode] == :meeting)
+    assigns =
+      assigns
+      |> assign(:meeting_mode, assigns.creating_event[:mode] == :meeting)
+      # A subscribed calendar is no more a target than no calendar at all, so
+      # the mode toggle and the picker follow what can be written to, not what
+      # is connected.
+      |> assign(:targets, Calendar.writable_integrations(assigns.integrations))
 
     ~H"""
     <.modal
@@ -41,7 +53,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       <%!-- Mode toggle: a bare provider event vs an ad-hoc Tymeslot meeting.
             Hidden when no calendar is connected — the form is then fixed to
             meeting mode, the only kind that can exist without one. --%>
-      <div :if={@integrations != []} class="mb-4">
+      <div :if={@targets != []} class="mb-4">
         <div
           class="inline-flex rounded-token-lg border border-tymeslot-200 p-0.5 gap-0.5"
           role="tablist"
@@ -117,6 +129,144 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
         />
       </div>
 
+      <%!-- Further guests and the language every email about the meeting is
+            written in. Meeting mode only: a bare provider event has its own
+            attendee list further down, and no Tymeslot email to translate. --%>
+      <div :if={@meeting_mode} class="mb-3 space-y-3">
+        <div>
+          <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
+            {dgettext("dashboard_calendar_events", "More guests (optional)")}
+          </p>
+          <div :if={@creating_event[:guest_emails] != []} class="flex flex-wrap gap-1.5 mb-2">
+            <span
+              :for={email <- @creating_event[:guest_emails] || []}
+              class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
+            >
+              {email}
+              <button
+                type="button"
+                phx-click="remove_create_guest"
+                phx-value-email={email}
+                phx-target={@myself}
+                class="w-4 h-4 rounded-full hover:bg-turquoise-200 flex items-center justify-center transition-colors"
+                aria-label={dgettext("dashboard_calendar_events", "Remove %{email}", email: email)}
+              >
+                <.icon name="hero-x-mark" class="w-2.5 h-2.5" />
+              </button>
+            </span>
+          </div>
+          <form
+            :if={length(@creating_event[:guest_emails] || []) < Guests.max_guests()}
+            id="create-add-guest-form"
+            phx-submit="add_create_guest"
+            phx-target={@myself}
+            class="flex gap-2"
+          >
+            <input
+              type="email"
+              id="create-guest-email-input"
+              name="email"
+              value={@creating_event[:guest_email_input] || ""}
+              phx-change="update_create_guest_input"
+              phx-target={@myself}
+              placeholder="colleague@example.com"
+              class="flex-1 rounded-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
+            />
+            <button
+              type="submit"
+              class="px-3 py-1.5 rounded-md border border-tymeslot-300 text-token-xs text-tymeslot-600 hover:bg-tymeslot-50 transition-colors"
+            >
+              {dgettext("dashboard_calendar_events", "Add")}
+            </button>
+          </form>
+          <p class="text-token-xs text-tymeslot-400 mt-1">
+            {dgettext(
+              "dashboard_calendar_events",
+              "Each one is invited by email and can accept or decline."
+            )}
+          </p>
+        </div>
+
+        <div>
+          <p
+            id="create-meeting-locale-label"
+            class="text-token-xs font-medium text-tymeslot-400 mb-1.5"
+          >
+            {dgettext("dashboard_calendar_events", "Language of the invitation")}
+          </p>
+          <div
+            id="create-meeting-locale"
+            role="group"
+            aria-labelledby="create-meeting-locale-label"
+            class="inline-flex flex-wrap items-center p-1 bg-white border-2 border-tymeslot-100 rounded-token-xl shadow-sm gap-1 max-w-full"
+          >
+            <.locale_button
+              :for={locale <- Locales.supported()}
+              locale={locale}
+              active={@creating_event[:locale] == locale.code}
+              phx-click="update_create_locale"
+              phx-value-locale={locale.code}
+              phx-target={@myself}
+            />
+          </div>
+          <p class="text-token-xs text-tymeslot-400 mt-1">
+            {dgettext(
+              "dashboard_calendar_events",
+              "The language every email about this meeting is written in, for the guest and anyone else invited."
+            )}
+          </p>
+        </div>
+      </div>
+
+      <%!-- Note to the guest (meeting mode only): hidden behind a button so
+            the form stays short for the meetings that need none. --%>
+      <div :if={@meeting_mode} class="mb-3">
+        <button
+          :if={!@creating_event[:note_open]}
+          type="button"
+          phx-click="toggle_create_note"
+          phx-target={@myself}
+          data-testid="create-meeting-add-note"
+          class="inline-flex items-center gap-1.5 text-token-sm font-medium text-turquoise-700 hover:text-turquoise-800"
+        >
+          <.icon name="hero-plus-mini" class="w-4 h-4" />
+          {dgettext("dashboard_calendar_events", "Add a note")}
+        </button>
+        <div :if={@creating_event[:note_open]}>
+          <.input
+            type="textarea"
+            name="organizer_note"
+            value={@creating_event[:organizer_note] || ""}
+            label={dgettext("dashboard_calendar_events", "Note to the guest")}
+            placeholder={
+              dgettext("dashboard_calendar_events", "An agenda, or anything to bring or prepare")
+            }
+            id="create-meeting-note"
+            rows={3}
+            maxlength={MeetingSchema.organizer_note_max_length()}
+            phx-mounted={JS.focus()}
+            phx-blur="update_create_note"
+            phx-target={@myself}
+          />
+          <div class="mt-1 flex items-center justify-between gap-3">
+            <p class="text-token-xs text-tymeslot-400">
+              {dgettext(
+                "dashboard_calendar_events",
+                "Included in the invitation and on the calendar entry."
+              )}
+            </p>
+            <button
+              type="button"
+              phx-click="toggle_create_note"
+              phx-target={@myself}
+              class="shrink-0 text-token-xs font-medium text-tymeslot-500 hover:text-tymeslot-700"
+            >
+              {dgettext("dashboard_calendar_events", "Remove note")}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div :if={!@meeting_mode} class="mb-3 flex items-center justify-between">
         <p class="text-token-sm font-medium text-tymeslot-700">
           {dgettext("dashboard_calendar_events", "All day")}
@@ -180,7 +330,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
       </div>
 
       <CalendarPicker.calendar_picker
-        :if={@integrations != []}
+        :if={@targets != []}
         integrations={@integrations}
         integration_colors={@integration_colors}
         selected_integration_id={@creating_event.integration_id}

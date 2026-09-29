@@ -89,16 +89,54 @@ defmodule Tymeslot.Locales do
   @doc """
   Returns `code` unchanged when it is acceptable (see `acceptable?/1`), or
   `nil` otherwise.
-
-  Designed for per-source locale-resolution `||` chains: an unacceptable
-  candidate falls through to the next source instead of short-circuiting the
-  chain and then being coerced to the default, which would silently discard a
-  perfectly valid lower-priority source (e.g. a valid session locale behind a
-  stale, unsupported user preference or an invalid `?locale=` param).
   """
   @spec acceptable(term()) :: String.t() | nil
   def acceptable(code) do
     if acceptable?(code), do: code
+  end
+
+  @doc """
+  The language to write to a guest the host invites directly, from the host's
+  own account setting.
+
+  A booking page resolves its visitor's language from the request; a meeting
+  the host creates from the dashboard has no visitor to ask, so the host's own
+  choice stands in. `users.locale` is nullable, and a host who has never chosen
+  falls back to the language public booking pages use rather than the
+  dashboard's fallback: the reader here is a guest, not an admin.
+
+  Only the *default* a form offers. Which language a given guest was actually
+  written to is stored on the meeting.
+  """
+  @spec guest_default_locale(map() | nil) :: String.t()
+  def guest_default_locale(%{locale: locale}) do
+    if acceptable?(locale), do: locale, else: booking_default_locale()
+  end
+
+  def guest_default_locale(_user), do: booking_default_locale()
+
+  @doc """
+  Resolves a locale from `candidates`, highest priority first: the first
+  acceptable one (see `acceptable?/1`) wins, otherwise `fallback`.
+
+  This is the one precedence rule every resolution point shares (the HTTP
+  `LocalePlug` and the LiveView locale hooks), so they cannot drift apart.
+  Each candidate is validated on its own: an unacceptable one (a stale,
+  unsupported user preference, an invalid `?locale=` param, `nil` for an
+  absent source) falls through to the next instead of short-circuiting the
+  chain and discarding a perfectly valid lower-priority source. `fallback` is
+  returned as given, so pass one of the surface defaults, which are validated
+  already.
+
+      iex> Tymeslot.Locales.resolve([nil, "xx", "de", "fr"], "en")
+      "de"
+
+      iex> Tymeslot.Locales.resolve([nil, "xx"], "en")
+      "en"
+  """
+  @spec resolve([term()], String.t()) :: String.t()
+  def resolve(candidates, fallback) when is_list(candidates) and is_binary(fallback) do
+    Enum.find(candidates, fallback, &acceptable?/1)
   end
 
   @doc """
