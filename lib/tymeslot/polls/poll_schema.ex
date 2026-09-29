@@ -74,6 +74,7 @@ defmodule Tymeslot.Polls.PollSchema do
     |> validate_required([:user_id, :title, :duration_minutes, :timezone])
     |> validate_number(:duration_minutes, Constraints.poll_duration_minutes_opts())
     |> validate_length(:title, max: 255)
+    |> validate_description_length()
     |> put_new_token()
     |> unique_constraint(:token)
     |> foreign_key_constraint(:user_id)
@@ -99,8 +100,13 @@ defmodule Tymeslot.Polls.PollSchema do
     |> update_change(:description, &trim_to_nil/1)
     |> validate_required([:title])
     |> validate_length(:title, max: 255)
-    |> validate_length(:description, max: 2000)
+    |> validate_description_length()
   end
+
+  # The description becomes the confirmed meeting's organiser note, so it is
+  # held to that limit from the start.
+  defp validate_description_length(changeset),
+    do: validate_length(changeset, :description, max: MeetingSchema.organizer_note_max_length())
 
   @spec confirm_changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
   def confirm_changeset(poll, attrs) do

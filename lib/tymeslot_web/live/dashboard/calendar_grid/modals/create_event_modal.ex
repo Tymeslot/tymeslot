@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.MeetingSchema
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -235,7 +236,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             }
             id="create-meeting-note"
             rows={3}
-            maxlength={2000}
+            maxlength={MeetingSchema.organizer_note_max_length()}
             phx-mounted={JS.focus()}
             phx-blur="update_create_note"
             phx-target={@myself}

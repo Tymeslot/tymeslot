@@ -15,6 +15,7 @@ defmodule Tymeslot.Polls.Confirm do
   alias Tymeslot.Emails.EmailScheduler.PollScheduler
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Polls
   alias Tymeslot.Polls.{PollQueries, PollSchema, PollTimeSlotQueries}
@@ -185,11 +186,19 @@ defmodule Tymeslot.Polls.Confirm do
       guest_emails: guest_emails(poll.participants, primary),
       # What the host wrote to the participants while they voted is still
       # their note to them once the meeting is set.
-      organizer_note: poll.description
+      organizer_note: organizer_note(poll.description)
     }
     |> CreateAdHoc.execute()
     |> map_booking_result()
   end
+
+  # Polls created before their description was capped can hold more than a
+  # note may. Cut it to fit rather than let an over-long description stop the
+  # host confirming the poll at all.
+  defp organizer_note(description) when is_binary(description),
+    do: description |> String.trim() |> String.slice(0, MeetingSchema.organizer_note_max_length())
+
+  defp organizer_note(nil), do: nil
 
   defp map_booking_result({:ok, meeting}), do: {:ok, meeting}
   defp map_booking_result({:error, :time_conflict}), do: {:error, :slot_taken}

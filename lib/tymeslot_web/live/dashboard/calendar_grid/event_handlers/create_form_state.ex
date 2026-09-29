@@ -1,19 +1,19 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   @moduledoc "Event creation form-field handlers for the calendar grid (presentation layer)."
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Clock
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Guests
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
-
-  # Matches the meeting's own limit on `organizer_note`.
-  @organizer_note_max_length 2000
 
   @spec handle_show_create_form(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -204,7 +204,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
       creating ->
         case UniversalSanitizer.sanitize_and_validate(note,
                mode: :plain_text,
-               max_length: @organizer_note_max_length
+               max_length: MeetingSchema.organizer_note_max_length()
              ) do
           {:ok, sanitised} ->
             {:noreply,
@@ -219,9 +219,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
   @doc """
   Adds one more guest to an ad-hoc meeting.
 
-  Capped at `Guests.max_guests/0`, the same number a booker may bring. The main
-  guest's own address and repeats are refused here rather than silently dropped
-  later, so the host can see why nothing happened.
+  Capped at `Guests.max_guests/0`, the same number a booker may bring. An
+  invalid address, the main guest's own and repeats are refused here with a
+  flash saying why, rather than silently dropped later.
   """
   @spec handle_add_create_guest(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -230,15 +230,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
 
     case socket.assigns.creating_event do
       %{} = creating ->
-        if addable_guest?(creating, email) do
-          {:noreply,
-           assign(socket, :creating_event, %{
-             creating
-             | guest_emails: creating.guest_emails ++ [email],
-               guest_email_input: ""
-           })}
-        else
-          {:noreply, socket}
+        case check_extra_guest(creating, email) do
+          :ok ->
+            {:noreply,
+             assign(socket, :creating_event, %{
+               creating
+               | guest_emails: creating.guest_emails ++ [email],
+                 guest_email_input: ""
+             })}
+
+          {:error, message} ->
+            send(self(), {:flash, {:error, message}})
+            {:noreply, socket}
         end
 
       nil ->
@@ -272,11 +275,37 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.CreateFormState do
     end
   end
 
-  defp addable_guest?(creating, email) do
-    Shared.valid_email?(email) and
-      email not in creating.guest_emails and
-      email != creating.guest_email |> String.trim() |> String.downcase() and
-      length(creating.guest_emails) < Guests.max_guests()
+  @doc """
+  Whether `email` (already trimmed and downcased) can join the meeting's extra
+  guests, or the reason it cannot. Save runs the same check over an address
+  still sitting in the input, so the two cannot disagree.
+  """
+  @spec check_extra_guest(map(), String.t()) :: :ok | {:error, String.t()}
+  def check_extra_guest(creating, email) do
+    cond do
+      not Shared.valid_email?(email) ->
+        {:error,
+         dgettext("dashboard_calendar_events", "%{email} is not a valid email address.",
+           email: email
+         )}
+
+      email == creating.guest_email |> String.trim() |> String.downcase() ->
+        {:error,
+         dgettext("dashboard_calendar_events", "%{email} is already the main guest.",
+           email: email
+         )}
+
+      email in creating.guest_emails ->
+        {:error,
+         dgettext("dashboard_calendar_events", "%{email} is already invited.", email: email)}
+
+      length(creating.guest_emails) >= Guests.max_guests() ->
+        {:error,
+         dgettext("dashboard_calendar_events", "No more guests can be added to this meeting.")}
+
+      true ->
+        :ok
+    end
   end
 
   defp put_field(socket, key, value) do

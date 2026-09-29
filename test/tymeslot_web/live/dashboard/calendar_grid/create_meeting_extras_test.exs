@@ -26,6 +26,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingExtrasTest do
     {:ok, conn: log_in_user(conn, user), user: user}
   end
 
+  # The host's dashboard is in German (`locale: "de"` above), so the reasons
+  # a guest is refused are asserted as the host reads them.
   defp open_form(lv), do: hook(lv, "show_create_form", %{})
 
   defp hook(lv, event, params) do
@@ -74,10 +76,46 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.CreateMeetingExtrasTest do
       fill_guest(lv)
 
       refute add_guest(lv, "ada@example.com") =~ ~s(phx-value-email="ada@example.com")
+      assert render(lv) =~ "ada@example.com ist bereits der Hauptgast."
       add_guest(lv, "one@example.com")
       add_guest(lv, "one@example.com")
+      assert render(lv) =~ "one@example.com ist bereits eingeladen."
 
       assert guest_emails(save_and_fetch(lv)) == ["one@example.com"]
+    end
+
+    test "says why an invalid address was not added", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_form(lv)
+      fill_guest(lv)
+
+      refute add_guest(lv, "not-an-email") =~ ~s(phx-value-email="not-an-email")
+      assert render(lv) =~ "not-an-email ist keine gültige E-Mail-Adresse."
+    end
+
+    test "invites an address typed into the field but never added", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_form(lv)
+      fill_guest(lv)
+
+      add_guest(lv, "one@example.com")
+
+      lv
+      |> element("#create-guest-email-input")
+      |> render_change(%{"email" => " Two@Example.com "})
+
+      assert guest_emails(save_and_fetch(lv)) == ["one@example.com", "two@example.com"]
+    end
+
+    test "an invalid address left in the field stops the save and says why", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard")
+      open_form(lv)
+      fill_guest(lv)
+
+      lv |> element("#create-guest-email-input") |> render_change(%{"email" => "two@"})
+      hook(lv, "save_event", %{})
+
+      assert render(lv) =~ "two@ ist keine gültige E-Mail-Adresse."
     end
 
     test "drops a guest who became the main guest after being added", %{conn: conn} do

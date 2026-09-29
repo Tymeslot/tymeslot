@@ -1317,3 +1317,23 @@ msgstr "Weitere Gäste (optional)"
 #, elixir-autogen, elixir-format
 msgid "The language every email about this meeting is written in, for the guest and anyone else invited."
 msgstr "Die Sprache aller E-Mails zu diesem Termin – für den Gast und alle weiteren Eingeladenen."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} is already invited."
+msgstr "%{email} ist bereits eingeladen."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} is already the main guest."
+msgstr "%{email} ist bereits der Hauptgast."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
+#, elixir-autogen, elixir-format
+msgid "%{email} is not a valid email address."
+msgstr "%{email} ist keine gültige E-Mail-Adresse."
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/event_handlers/create_form_state.ex
+#, elixir-autogen, elixir-format
+msgid "No more guests can be added to this meeting."
+msgstr "Diesem Meeting können keine weiteren Gäste hinzugefügt werden."

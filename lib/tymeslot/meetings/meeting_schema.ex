@@ -360,6 +360,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :visitor_hash
   ]
 
+  @organizer_note_max_length 2000
+
   @valid_statuses [
     "pending",
     # Held pending the host's manual approval. Occupies its slot like
@@ -372,6 +374,13 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     "awaiting_payment",
     "expired"
   ]
+
+  @doc """
+  The longest note an organiser may leave for the guest. Anything that
+  becomes one (a poll's description) is held to the same limit.
+  """
+  @spec organizer_note_max_length() :: pos_integer()
+  def organizer_note_max_length, do: @organizer_note_max_length
 
   @doc false
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
@@ -395,7 +404,7 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     |> validate_length(:utm_term, max: 255)
     |> validate_length(:referrer_host, max: 255)
     |> validate_length(:decline_reason, max: 500)
-    |> validate_length(:organizer_note, max: 2000)
+    |> validate_length(:organizer_note, max: @organizer_note_max_length)
     |> validate_length(:visitor_hash, max: 64)
     # Google Calendar's documented maximum event id length.
     |> validate_length(:provider_event_id, max: 1024)
