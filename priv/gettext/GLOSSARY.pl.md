@@ -186,3 +186,29 @@ fragment: read how the code uses it.
 - "Event" from a connected calendar is "wydarzenie"; a Tymeslot booking stays "spotkanie".
 - Keep "e-mail" hyphenated (Polish spelling); "adres e-mail", not "email".
 - "Link" is a Polish word now; use it rather than "odnośnik".
+
+## Marketing and SaaS terms
+
+| English | Polish |
+|---|---|
+| no-show | niestawiennictwo / niestawienie się (never "nieobecność", which is time off); no-show fee: opłata za niestawiennictwo |
+| deposit / prepayment | zaliczka / przedpłata |
+| discovery call / scoping call | rozmowa wstępna |
+| intake form | formularz wstępny |
+| self-hosting / self-host | na własnym serwerze / hostuj na własnym serwerze |
+| managed cloud | zarządzana chmura |
+| white-label branding | własny branding bez logo Tymeslot |
+| per seat | za użytkownika |
+| free plan / no card | darmowy plan / bez karty |
+| Pro price | Pro (%{pro_monthly}/mies.); "/year" is "/rok" |
+| trial | okres próbny |
+| billing period | okres rozliczeniowy |
+| upgrade to Pro | przejdź na Pro |
+| cancel a subscription | anuluj subskrypcję |
+| GDPR / DPA | RODO / umowa powierzenia przetwarzania danych (DPA) |
+| single sign-on / identity provider | logowanie jednokrotne (SSO) / dostawca tożsamości |
+| widget | widżet |
+
+The /for profession pages price in złoty at Polish market rates, and the savings calculator's
+`hourly_rate` for `pl` is a złoty figure. Tymeslot's own plan prices stay as the placeholders
+give them.
