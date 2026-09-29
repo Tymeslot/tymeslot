@@ -1,4 +1,17 @@
 
+[1.20.0]
+* calendar: Limit how often quick add can create meetings
+* calendar: Delete a removed event's video room despite shared calendars
+* emails: Restore the missing "in" in the attendee reminder subject
+* calendar: Keep a grid event's video room when it moves to another calendar
+* calendar: Save CalDAV grid events to the calendar you picked
+* booking: Stop quick add sending a reminder nobody asked for
+* meetings: Let quick add invite more guests in a chosen language
+* meetings: Let quick add include a note to the guest
+* bookings: Show a booking's reminders on its card
+* meetings: Let the host add guests to a booking
+
+
 [1.19.0]
 * themes: Centre the icons in Quill's booking confirmation rows
 * calendar: Notify attendees of recurring event time changes after saving
